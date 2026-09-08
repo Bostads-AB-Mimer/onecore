@@ -8,6 +8,47 @@ type UpdateAdminApplicationProfileRequestParams = z.infer<
   typeof schemas.admin.applicationProfile.UpdateApplicationProfileRequestParams
 >
 
+type UpdateClientApplicationProfileRequestParams = z.infer<
+  typeof schemas.client.applicationProfile.UpdateApplicationProfileRequestParams
+>
+
+/**
+ * Builds the update payload for the client-facing application profile flow,
+ * where the applicant supplies their own household details.
+ *
+ * Unlike the admin variant, this never touches the review fields — reviewing a
+ * housing reference is a caseworker action, so an incoming client update
+ * carries the existing review verdict forward untouched, and a brand new
+ * profile starts at 'PENDING'.
+ *
+ * Pass `existingProfile` as undefined when the contact has no profile yet,
+ * which is the case when a contact has just been created.
+ */
+export function makeClientApplicationProfileRequestParams(
+  body: UpdateClientApplicationProfileRequestParams,
+  existingProfile?: leasingAdapter.GetApplicationProfileResponseData
+): leasingAdapter.CreateOrUpdateApplicationProfileRequestParams {
+  return {
+    expiresAt: dayjs(new Date()).add(6, 'months').toDate(),
+    numChildren: body.numChildren,
+    numAdults: body.numAdults,
+    housingType: body.housingType,
+    landlord: body.landlord,
+    housingTypeDescription: body.housingTypeDescription,
+    lastUpdatedAt: new Date(),
+    housingReference: {
+      comment: existingProfile?.housingReference.comment ?? null,
+      email: body.housingReference.email,
+      phone: body.housingReference.phone,
+      reviewedAt: existingProfile?.housingReference.reviewedAt ?? null,
+      reviewedBy: existingProfile?.housingReference.reviewedBy ?? null,
+      reasonRejected: existingProfile?.housingReference.reasonRejected ?? null,
+      reviewStatus: existingProfile?.housingReference.reviewStatus ?? 'PENDING',
+      expiresAt: existingProfile?.housingReference.expiresAt ?? null,
+    },
+  }
+}
+
 /**
  * This function takes the incoming update payload and the optional existing profile
  * and returns a new update payload based on conditions.

@@ -6,7 +6,6 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import dayjs from 'dayjs'
 import {
   GetActiveOfferByListingIdErrorCodes,
   RouteErrorResponse,
@@ -22,7 +21,10 @@ import { ProcessStatus } from '../../common/types'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
-import { makeAdminApplicationProfileRequestParams } from './helpers/application-profile'
+import {
+  makeAdminApplicationProfileRequestParams,
+  makeClientApplicationProfileRequestParams,
+} from './helpers/application-profile'
 import { schemas } from './schemas'
 import { isAllowedNumResidents } from './services/is-allowed-num-residents'
 
@@ -1968,37 +1970,6 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
-
-  type UpdateClientApplicationProfileRequestParams = z.infer<
-    typeof schemas.client.applicationProfile.UpdateApplicationProfileRequestParams
-  >
-
-  function makeClientApplicationProfileRequestParams(
-    body: UpdateClientApplicationProfileRequestParams,
-    existingProfile?: leasingAdapter.GetApplicationProfileResponseData
-  ): leasingAdapter.CreateOrUpdateApplicationProfileRequestParams {
-    return {
-      expiresAt: dayjs(new Date()).add(6, 'months').toDate(),
-      numChildren: body.numChildren,
-      numAdults: body.numAdults,
-      housingType: body.housingType,
-      landlord: body.landlord,
-      housingTypeDescription: body.housingTypeDescription,
-      lastUpdatedAt: new Date(),
-      housingReference: {
-        comment: existingProfile?.housingReference.comment ?? null,
-        email: body.housingReference.email,
-        phone: body.housingReference.phone,
-        reviewedAt: existingProfile?.housingReference.reviewedAt ?? null,
-        reviewedBy: existingProfile?.housingReference.reviewedBy ?? null,
-        reasonRejected:
-          existingProfile?.housingReference.reasonRejected ?? null,
-        reviewStatus:
-          existingProfile?.housingReference.reviewStatus ?? 'PENDING',
-        expiresAt: existingProfile?.housingReference.expiresAt ?? null,
-      },
-    }
-  }
 
   /**
    * @swagger

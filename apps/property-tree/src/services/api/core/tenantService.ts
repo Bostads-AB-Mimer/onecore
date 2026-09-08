@@ -6,6 +6,7 @@ import type {
 } from '@/services/types'
 
 import { GET, POST } from './baseApi'
+import type { paths } from './generated/api-types'
 
 export interface ContactSearchResult {
   fullName: string
@@ -100,6 +101,26 @@ async function sendBulkEmail(
   return { content: data.content, warnings: data.warnings }
 }
 
+export type CreateContactRequestBody = NonNullable<
+  paths['/v1/contacts']['post']['requestBody']
+>['content']['application/json']
+
+export type CreateContactResponse =
+  paths['/v1/contacts']['post']['responses'][201]['content']['application/json']
+
+/** Error body shared by every non-2xx response from POST /v1/contacts. */
+export type CreateContactError = { error: string; detail?: string }
+
+async function createContact(
+  body: CreateContactRequestBody
+): Promise<CreateContactResponse> {
+  const { data, error } = await POST('/v1/contacts', { body })
+
+  if (error) throw error
+
+  return data
+}
+
 export const tenantService = {
   getByContactCode,
   getContactByContactCode,
@@ -107,4 +128,5 @@ export const tenantService = {
   searchContacts,
   sendBulkSms,
   sendBulkEmail,
+  createContact,
 }

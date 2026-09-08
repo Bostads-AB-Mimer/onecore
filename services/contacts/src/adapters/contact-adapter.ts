@@ -149,6 +149,25 @@ export interface ContactsRepository {
   getByNationalIdNumber: (nid: NationalIdNumber) => Promise<Contact | null>
 
   /**
+   * Checks whether a contact with the given national ID number already exists,
+   * matching on both the ten- and twelve-digit forms.
+   *
+   * Distinct from `getByNationalIdNumber`, which matches the stored value
+   * verbatim and is what the read endpoints use. This one normalises both
+   * sides, because it guards contact creation: ONECore cannot remove a contact
+   * it created, so a missed match becomes a duplicate that only manual work in
+   * Xpand can clear.
+   *
+   * @param nid - The national ID number in any common notation.
+   *
+   * @returns The existing contact code, or null when there is no match —
+   *          including when `nid` is not a valid identity number.
+   */
+  existsByNationalIdNumber: (
+    nid: NationalIdNumber
+  ) => Promise<ContactCode | null>
+
+  /**
    * Retrieves contacts by their phone number.
    *
    * Phone numbers are not unique, and may result in multiple matches.

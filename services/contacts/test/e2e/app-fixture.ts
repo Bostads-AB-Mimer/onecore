@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 import makeApp from '@src/app'
 import config from '@src/common/config'
 import { makeAppContext } from '@src/context'
+import { ContactWriter } from '@src/adapters/contact-writer'
 import axios from 'axios'
 import sql, { ConnectionPool } from 'mssql'
 import { Server, Agent } from 'node:http'
@@ -48,11 +49,42 @@ export const connect = async (): Promise<ConnectionPool> => {
   return pool
 }
 
+/**
+ * A ContactWriter that refuses to do anything.
+ *
+ * Creating a contact in Xpand is irreversible — there is no delete — so the
+ * test suite must be structurally unable to reach a live environment. Relying
+ * on `XPAND_SOAP__URL` happening to be unset in `.env.test` is not a guarantee:
+ * one stray value in a local env file and a test run starts registering real
+ * customers. This is the same reasoning as `refuseSetup` above, applied to the
+ * write path.
+ *
+ * A test that exercises contact creation passes its own writer via
+ * `contactWriter` rather than removing this default.
+ */
+const refusingContactWriter: ContactWriter = {
+  async createContact() {
+    throw new Error(
+      [
+        'Refusing to create a contact from the test suite.',
+        'Pass a fake ContactWriter through makeTestAppFixture({ contactWriter }).',
+        'You were just prevented from registering a real customer in Xpand,',
+        'which nothing here can take back. Rejoice and be happy!',
+      ].join('\n')
+    )
+  },
+}
+
 export type FixtureOptions = {
   /**
    * The data set to apply to the test database.
    */
   dataSet: string[]
+  /**
+   * The ContactWriter to run the app with. Defaults to one that refuses every
+   * write, so no test can reach a live Xpand by accident.
+   */
+  contactWriter?: ContactWriter
 }
 
 /**
@@ -65,7 +97,9 @@ export type FixtureOptions = {
  *         and makeClient methods.
  */
 export const makeTestAppFixture = async (opts: FixtureOptions) => {
-  const ctx = makeAppContext(config)
+  const ctx = makeAppContext(config, {
+    contactWriter: opts.contactWriter ?? refusingContactWriter,
+  })
   const app = makeApp(ctx)
   let server: Server | undefined = undefined
 

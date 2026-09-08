@@ -87,6 +87,14 @@ app.use(async (ctx, next) => {
     return requireRole('infobip-webhook')(ctx, next)
   }
 
+  // Creating a contact writes to the system of record and cannot be undone,
+  // so it is gated separately from reading. requireRole is ANY-of, so
+  // contacts:write must stand alone here — listing api-access alongside it
+  // would open the write to every api-access holder.
+  if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'POST') {
+    return requireRole('contacts:write')(ctx, next)
+  }
+
   if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {
     return requireRole(['api-access', 'contacts:read'])(ctx, next)
   }
