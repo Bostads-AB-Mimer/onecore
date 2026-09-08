@@ -173,14 +173,60 @@ export const exportRentalInvoicesAccounting = async (
   }
 }
 
+/**
+ * Default allowance for the difference between the ledger sum and the
+ * aggregate sum. The two sums are computed independently and the aggregate
+ * side rounds each grouped row separately, so small deviations are expected.
+ */
+export const DEFAULT_ACCEPTED_SUM_DIFFERENCE = 1
+
+/**
+ * Verifies that the ledger sum equals the aggregate sum. The ledger sum is
+ * the total of the invoice amounts (what ends up in the ledger CSV) and the
+ * aggregate sum is the total of the exported invoice row amounts, including
+ * round-off rows (what ends up in the aggregate CSV). A difference above
+ * acceptedDifference (allowed for rounding errors) throws, aborting the
+ * export before anything is uploaded.
+ */
+export const verifyLedgerAndAggregateSums = (
+  invoices: InvoiceWithAccounting[],
+  invoiceRows: ExportedInvoiceRow[],
+  acceptedDifference: number
+): void => {
+  const ledgerSum = roundCurrency(
+    invoices.reduce((sum, invoice) => sum + (invoice.amount ?? 0), 0)
+  )
+  const aggregateSum = roundCurrency(
+    invoiceRows.reduce((sum, row) => sum + (row.totalAmount ?? 0), 0)
+  )
+  const difference = roundCurrency(Math.abs(ledgerSum - aggregateSum))
+
+  logger.info(
+    { ledgerSum, aggregateSum, difference, acceptedDifference },
+    'Verifying ledger sum against aggregate sum'
+  )
+
+  if (difference > acceptedDifference) {
+    throw new Error(
+      `Ledger sum (${ledgerSum}) and aggregate sum (${aggregateSum}) differ by ${difference}, which exceeds the accepted difference of ${acceptedDifference}`
+    )
+  }
+}
+
 export const createAccounting = async (
-  invoices: InvoiceWithAccounting[]
+  invoices: InvoiceWithAccounting[],
+  acceptedDifference: number = DEFAULT_ACCEPTED_SUM_DIFFERENCE
 ): Promise<{
   aggregateAccountingCsv: string[]
   ledgerAccountingCsv: string[]
   errors: { invoiceNumber: string; error: string }[]
 }> => {
   const invoiceRowsForExport = await getExportInvoiceRows(invoices)
+  verifyLedgerAndAggregateSums(
+    invoices,
+    invoiceRowsForExport,
+    acceptedDifference
+  )
   const aggregateAccountingCsv = await createAggregateCsv(invoiceRowsForExport)
   const ledgerAccountingCsv = await createLedgerCsv(invoices)
   //c§onst contactsCsv = await getContacts(invoices)

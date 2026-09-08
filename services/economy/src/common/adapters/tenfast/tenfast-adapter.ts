@@ -71,7 +71,7 @@ const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
 const companyId = config.tenfast.companyId
 
-const makeTenfastRequest = async (
+export const makeTenfastRequest = async (
   url: string,
   config?: {
     method?: string

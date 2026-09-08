@@ -20,6 +20,7 @@ import {
 import {
   createAccounting,
   createRentalLossAccounting,
+  DEFAULT_ACCEPTED_SUM_DIFFERENCE,
   exportRentalInvoicesAccounting,
   exportRentalLosses,
   handleRentalBlocks,
@@ -40,6 +41,22 @@ import {
 import * as invoiceService from './service'
 import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
 
+// Parses the optional accepted difference between the ledger sum and the
+// aggregate sum (default DEFAULT_ACCEPTED_SUM_DIFFERENCE). Returns null when
+// the provided value is not a non-negative number.
+const parseAcceptedDifference = (value: unknown): number | null => {
+  if (value === undefined) {
+    return DEFAULT_ACCEPTED_SUM_DIFFERENCE
+  }
+
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null
+  }
+
+  return parsed
+}
+
 export const routes = (router: KoaRouter) => {
   router.post('(.*)/accounting/import-invoices/{:companyId}', async (ctx) => {
     try {
@@ -50,18 +67,32 @@ export const routes = (router: KoaRouter) => {
         ctx.body = 'Company with specified ID could not be found'
       }
 
+      const acceptedDifference = parseAcceptedDifference(
+        ctx.query.acceptedDifference
+      )
+
+      if (acceptedDifference === null) {
+        ctx.status = 400
+        ctx.body =
+          'Query parameter acceptedDifference must be a non-negative number'
+        return
+      }
+
       const invoicesResult = await exportRentalInvoicesAccounting(companyId)
 
       if (invoicesResult.exportedInvoices.length > 0) {
         const { aggregateAccountingCsv, ledgerAccountingCsv, errors } =
-          await createAccounting(invoicesResult.exportedInvoices)
+          await createAccounting(
+            invoicesResult.exportedInvoices,
+            acceptedDifference
+          )
 
         await uploadCsvFiles(
           companyId,
           aggregateAccountingCsv,
           ledgerAccountingCsv
         )
-        //await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
+        await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
       }
 
       ctx.status = 200

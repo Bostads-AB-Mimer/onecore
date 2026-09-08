@@ -260,6 +260,83 @@ describe('servicev2', () => {
 
       expect(mockGetRoundOffInformation).toHaveBeenCalled()
     })
+
+    it('does not throw when the ledger and aggregate sums match', async () => {
+      const invoice = buildInvoice({
+        totalAccount: '2970',
+        ledgerAccount: '1530',
+      })
+
+      await expect(
+        createAccounting([invoice], 1)
+      ).resolves.toMatchObject({ errors: [] })
+    })
+
+    it('throws when the ledger and aggregate sums differ more than the accepted difference', async () => {
+      const invoice = buildInvoice({
+        totalAccount: '2970',
+        ledgerAccount: '1530',
+        invoiceRows: [
+          {
+            amount: 900,
+            totalAmount: 900,
+            vat: 0,
+            deduction: 0,
+            account: '3012',
+            costCode: '123',
+            invoiceRowText: 'Hyra bostad',
+          } as any,
+        ],
+      })
+
+      await expect(createAccounting([invoice], 1)).rejects.toThrow(
+        'exceeds the accepted difference of 1'
+      )
+    })
+
+    it('allows a difference within the accepted difference (rounding errors)', async () => {
+      const invoice = buildInvoice({
+        totalAccount: '2970',
+        ledgerAccount: '1530',
+        invoiceRows: [
+          {
+            amount: 999.99,
+            totalAmount: 999.99,
+            vat: 0,
+            deduction: 0,
+            account: '3012',
+            costCode: '123',
+            invoiceRowText: 'Hyra bostad',
+          } as any,
+        ],
+      })
+
+      await expect(
+        createAccounting([invoice], 0.01)
+      ).resolves.toMatchObject({ errors: [] })
+    })
+
+    it('throws at the default accepted difference when none is provided', async () => {
+      const invoice = buildInvoice({
+        totalAccount: '2970',
+        ledgerAccount: '1530',
+        invoiceRows: [
+          {
+            amount: 5,
+            totalAmount: 5,
+            vat: 0,
+            deduction: 0,
+            account: '3012',
+            costCode: '123',
+            invoiceRowText: 'Hyra bostad',
+          } as any,
+        ],
+      })
+
+      await expect(createAccounting([invoice])).rejects.toThrow(
+        'differ by 995, which exceeds the accepted difference of 1'
+      )
+    })
   })
 
   describe('createLedgerRows', () => {
