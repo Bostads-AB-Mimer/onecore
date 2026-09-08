@@ -38,6 +38,40 @@ describe('listing-text-content-adapter', () => {
       }))
   })
 
+  describe(listingTextContentAdapter.getAllRentalObjectCodes, () => {
+    it('returns empty array when no content exists', () =>
+      withContext(async (ctx) => {
+        const result = await listingTextContentAdapter.getAllRentalObjectCodes(
+          ctx.db
+        )
+
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data).toEqual([])
+        }
+      }))
+
+    it('returns the code of every rental object that has content', () =>
+      withContext(async (ctx) => {
+        for (const rentalObjectCode of ['CODE-1', 'CODE-2']) {
+          const createResult = await listingTextContentAdapter.create(
+            factory.listingTextContent.build({ rentalObjectCode }),
+            ctx.db
+          )
+          expect(createResult.ok).toBe(true)
+        }
+
+        const result = await listingTextContentAdapter.getAllRentalObjectCodes(
+          ctx.db
+        )
+
+        expect(result.ok).toBe(true)
+        if (result.ok) {
+          expect(result.data.sort()).toEqual(['CODE-1', 'CODE-2'])
+        }
+      }))
+  })
+
   describe(listingTextContentAdapter.create, () => {
     it('creates new content successfully', () =>
       withContext(async (ctx) => {

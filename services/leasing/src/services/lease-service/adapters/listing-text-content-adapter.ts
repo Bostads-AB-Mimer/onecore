@@ -59,6 +59,27 @@ const getByRentalObjectCode = async (
   return transformFromDbListingTextContent(result)
 }
 
+// Every rental object code that has listing text content. The table holds
+// one row per object with text, so the full list is small and is used to
+// flag rental objects that live outside the leasing DB (Xpand parking
+// spaces) with hasListingTextContent.
+const getAllRentalObjectCodes = async (
+  dbConnection = db
+): Promise<AdapterResult<string[], 'database-error'>> => {
+  try {
+    const rows = await dbConnection
+      .from('listing_text_content')
+      .select<
+        Array<Pick<DbListingTextContent, 'RentalObjectCode'>>
+      >('RentalObjectCode')
+
+    return { ok: true, data: rows.map((row) => row.RentalObjectCode) }
+  } catch (err) {
+    logger.error({ err }, 'listingTextContentAdapter.getAllRentalObjectCodes')
+    return { ok: false, err: 'database-error' }
+  }
+}
+
 const create = async (
   listingTextContent: CreateListingTextContentRequest,
   dbConnection = db
@@ -199,6 +220,7 @@ const remove = async (
 
 export default {
   getByRentalObjectCode,
+  getAllRentalObjectCodes,
   create,
   update,
   remove,

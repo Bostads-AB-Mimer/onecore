@@ -5,6 +5,7 @@ import {
   getParkingSpace,
   getParkingSpaces,
 } from '../adapters/xpand/rental-object-adapter'
+import listingTextContentAdapter from '../adapters/listing-text-content-adapter'
 
 /**
  * @swagger
@@ -157,7 +158,11 @@ export const routes = (router: KoaRouter) => {
    * /vacant-parkingspaces:
    *   get:
    *     summary: Get all vacant parking spaces
-   *     description: Fetches a list of all vacant parking spaces available in the system.
+   *     description: |
+   *       Fetches a list of all vacant parking spaces available in the system.
+   *       Each parking space carries hasListingTextContent, telling whether
+   *       listing text content exists for it. The flag is omitted if the
+   *       text content lookup fails.
    *     tags:
    *       - Listings
    *     responses:
@@ -187,7 +192,10 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(metadata, 'Fetching all vacant parking spaces')
 
-    const vacantParkingSpaces = await getAllVacantParkingSpaces()
+    const [vacantParkingSpaces, textContentCodes] = await Promise.all([
+      getAllVacantParkingSpaces(),
+      listingTextContentAdapter.getAllRentalObjectCodes(),
+    ])
 
     if (!vacantParkingSpaces.ok) {
       logger.error(
@@ -202,7 +210,22 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // The parking spaces come from Xpand, so the text content flag is
+    // attached here from the leasing DB. If that lookup fails the list is
+    // still returned, without the flag, since it only drives an icon.
+    const codesWithTextContent = textContentCodes.ok
+      ? new Set(textContentCodes.data)
+      : undefined
+    const content = codesWithTextContent
+      ? vacantParkingSpaces.data.map((parkingSpace) => ({
+          ...parkingSpace,
+          hasListingTextContent: codesWithTextContent.has(
+            parkingSpace.rentalObjectCode
+          ),
+        }))
+      : vacantParkingSpaces.data
+
     ctx.status = 200
-    ctx.body = { content: vacantParkingSpaces.data, ...metadata }
+    ctx.body = { content, ...metadata }
   })
 }

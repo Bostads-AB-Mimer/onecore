@@ -361,6 +361,11 @@ interface RentalObject {
   boaArea?: number
   isSpecialResidentialArea?: boolean
   isSpecialProperty?: boolean
+  // Whether listing text content ("annonsinnehåll") exists for the rental
+  // object. Only populated by the leasing vacant parking spaces route, which
+  // attaches it from the leasing DB since the objects themselves come from
+  // Xpand.
+  hasListingTextContent?: boolean
 }
 
 interface MaintenanceUnitInfo {

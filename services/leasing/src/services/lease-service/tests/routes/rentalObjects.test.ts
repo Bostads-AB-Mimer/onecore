@@ -3,6 +3,7 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import * as rentalObjectAdapter from '../../adapters/xpand/rental-object-adapter'
+import listingTextContentAdapter from '../../adapters/listing-text-content-adapter'
 import { routes } from '../../routes/rental-objects'
 import * as factory from '../factories'
 
@@ -127,6 +128,9 @@ describe('parking spaces', () => {
       const getAllVacantParkingSpacesSpy = jest
         .spyOn(rentalObjectAdapter, 'getAllVacantParkingSpaces')
         .mockResolvedValue({ ok: true, data: mockedVacantParkingSpaces })
+      jest
+        .spyOn(listingTextContentAdapter, 'getAllRentalObjectCodes')
+        .mockResolvedValue({ ok: true, data: [] })
 
       const res = await request(app.callback()).get('/vacant-parkingspaces')
 
@@ -134,8 +138,58 @@ describe('parking spaces', () => {
       expect(getAllVacantParkingSpacesSpy).toHaveBeenCalled()
 
       expect(res.body.content).toStrictEqual(
-        JSON.parse(JSON.stringify(mockedVacantParkingSpaces))
+        JSON.parse(JSON.stringify(mockedVacantParkingSpaces)).map(
+          (parkingSpace: object) => ({
+            ...parkingSpace,
+            hasListingTextContent: false,
+          })
+        )
       )
+    })
+
+    it('flags parking spaces that have listing text content', async () => {
+      const [withText, withoutText] = [
+        factory.rentalObject.build({ rentalObjectCode: '123-456-789-0001' }),
+        factory.rentalObject.build({ rentalObjectCode: '123-456-789-0002' }),
+      ]
+      jest
+        .spyOn(rentalObjectAdapter, 'getAllVacantParkingSpaces')
+        .mockResolvedValue({ ok: true, data: [withText, withoutText] })
+      jest
+        .spyOn(listingTextContentAdapter, 'getAllRentalObjectCodes')
+        .mockResolvedValue({ ok: true, data: [withText.rentalObjectCode] })
+
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([
+        expect.objectContaining({
+          rentalObjectCode: withText.rentalObjectCode,
+          hasListingTextContent: true,
+        }),
+        expect.objectContaining({
+          rentalObjectCode: withoutText.rentalObjectCode,
+          hasListingTextContent: false,
+        }),
+      ])
+    })
+
+    it('returns the parking spaces without the flag when the text content lookup fails', async () => {
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: '123-456-789-0001',
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getAllVacantParkingSpaces')
+        .mockResolvedValue({ ok: true, data: [parkingSpace] })
+      jest
+        .spyOn(listingTextContentAdapter, 'getAllRentalObjectCodes')
+        .mockResolvedValue({ ok: false, err: 'database-error' })
+
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0]).not.toHaveProperty('hasListingTextContent')
     })
 
     it('should handle errors gracefully', async () => {

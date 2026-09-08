@@ -37,12 +37,13 @@ const setCachedContent = (
         : { content, marketArea: null, areaContent: null }
   )
 
-// Listings carry a hasListingTextContent flag (used for the icon link in the
-// parking space tables and detail view), so they must be refetched after a
-// text content change.
+// Listings and vacant parking spaces carry a hasListingTextContent flag (used
+// for the icon link in the parking space tables and detail view), so they
+// must be refetched after a text content change.
 const invalidateListingQueries = (queryClient: QueryClient) => {
   queryClient.invalidateQueries({ queryKey: ['parkingSpaceListings'] })
   queryClient.invalidateQueries({ queryKey: ['parkingSpaceListing'] })
+  queryClient.invalidateQueries({ queryKey: ['vacantParkingSpaces'] })
 }
 
 // GET - Fetch listing text content by rental object code, together with the
