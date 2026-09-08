@@ -83,6 +83,7 @@ describe('runImport', () => {
       inserted: 7,
       softDeleted: 0,
       unchanged: 0,
+      protected: 0,
     })
     expect(report.conflicts).toEqual([
       {
@@ -102,7 +103,12 @@ describe('runImport', () => {
     await runImport({ xpandDb: xpand, contactsDb: contacts })
     const report = await runImport({ xpandDb: xpand, contactsDb: contacts })
 
-    expect(report).toMatchObject({ inserted: 0, softDeleted: 0, unchanged: 7 })
+    expect(report).toMatchObject({
+      inserted: 0,
+      softDeleted: 0,
+      unchanged: 7,
+      protected: 0,
+    })
     expect(await activeTriples()).toEqual(EXPECTED_FIRST_RUN)
   })
 
@@ -115,7 +121,12 @@ describe('runImport', () => {
 
     const report = await runImport({ xpandDb: xpand, contactsDb: contacts })
 
-    expect(report).toMatchObject({ inserted: 0, softDeleted: 1, unchanged: 6 })
+    expect(report).toMatchObject({
+      inserted: 0,
+      softDeleted: 1,
+      unchanged: 6,
+      protected: 0,
+    })
     expect(await activeTriples()).toEqual(
       EXPECTED_FIRST_RUN.filter(([subject]) => subject !== 'P000666')
     )
@@ -156,5 +167,28 @@ describe('runImport', () => {
 
     expect(report).toMatchObject({ dryRun: true, inserted: 7 })
     expect(await contacts('contact_relation')).toEqual([])
+  })
+
+  it('keeps a previously imported recipient when the holder becomes a conflict', async () => {
+    // First run: P900001 has a single recipient P900010 (leases OBJ1 + OBJ5).
+    await runImport({ xpandDb: xpand, contactsDb: contacts })
+
+    // Xpand changes: OBJ5's recipient becomes P900013 → P900001 now conflicts.
+    await xpand('hyavk')
+      .where({ keyhyavk: '_AVKFM00005    ' })
+      .update({
+        keycmctc: xpand('cmctc')
+          .select('keycmctc')
+          .where({ cmctckod: 'P900013' }),
+      })
+
+    const report = await runImport({ xpandDb: xpand, contactsDb: contacts })
+
+    expect(report).toMatchObject({ inserted: 0, softDeleted: 0, protected: 1 })
+    expect(report.conflicts.map((c) => c.holderContactCode)).toEqual([
+      'P900001',
+      'P900006',
+    ])
+    expect(await activeTriples()).toEqual(EXPECTED_FIRST_RUN)
   })
 })

@@ -31,11 +31,12 @@ const parseArgs = (argv: string[]): { dryRun: boolean } => ({
 
 const formatReport = (report: ImportReport): string =>
   [
-    `import-contact-relations ${report.dryRun ? '(DRY RUN — inget skrivet)' : ''}`,
+    `import-contact-relations${report.dryRun ? ' (DRY RUN — inget skrivet)' : ''}`,
     `Relationer i Xpand:    god man ${report.desired.god_man}, förvaltare ${report.desired.forvaltare}, annan fakturamottagare ${report.desired.annan_fakturamottagare}`,
     `Nya rader:             ${report.inserted}`,
     `Borttagna (soft):      ${report.softDeleted}`,
     `Oförändrade:           ${report.unchanged}`,
+    `Skyddade (konflikt):   ${report.protected}`,
     `Konflikter:            ${report.conflicts.length}`,
     ...report.conflicts.flatMap((c) => [
       `  ${c.holderContactCode}:`,

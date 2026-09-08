@@ -23,6 +23,7 @@ export type ImportReport = {
   inserted: number
   softDeleted: number
   unchanged: number
+  protected: number
   conflicts: Conflict[]
 }
 
@@ -40,6 +41,8 @@ const countByRole = (edges: RelationEdge[]): Record<RoleType, number> => {
  * level, and makes the import-owned rows in `contact_relation` mirror the
  * result. Idempotent: rerunning against unchanged data writes nothing.
  * All writes happen in one transaction; `dryRun` skips them entirely.
+ * Rows kept only because their holder is a conflict this run are reported as
+ * `protected`.
  */
 export const runImport = async ({
   xpandDb,
@@ -79,6 +82,7 @@ export const runImport = async ({
     inserted: plan.toInsert.length,
     softDeleted: plan.toDelete.length,
     unchanged: plan.unchangedCount,
+    protected: plan.protectedCount,
     conflicts,
   }
 }
