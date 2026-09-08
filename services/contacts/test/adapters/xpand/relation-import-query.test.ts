@@ -16,6 +16,7 @@ const RELATION_DATA_SET = [
   'P900004',
   'P900005',
   'P900006',
+  'P900007',
   'P900010',
   'P900011',
   'P900012',
@@ -69,7 +70,7 @@ describe('allGuardianEdges', () => {
       ])
     )
     expect(edges).toHaveLength(4)
-    expect(edges.map((e) => e.subjectContactCode)).not.toContain('P900010')
+    expect(edges.map((e) => e.subjectContactCode)).not.toContain('P900007')
     expect(edges.map((e) => e.subjectContactCode)).not.toContain('RENSAD_GDPR')
   })
 })
@@ -116,7 +117,7 @@ describe('allInvoiceRecipientCandidates', () => {
     expect(rows).toHaveLength(6)
     expect(rows.map((r) => r.holderContactCode)).not.toContain('P900002')
     expect(rows.map((r) => r.holderContactCode)).not.toContain('P900003')
-    expect(rows.map((r) => r.recipientContactCode)).not.toContain('P900001')
+    expect(rows.map((r) => r.holderContactCode)).not.toContain('P900007')
     expect(rows.map((r) => r.recipientContactCode)).not.toContain('RENSAD_GDPR')
   })
 

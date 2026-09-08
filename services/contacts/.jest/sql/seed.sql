@@ -418,11 +418,19 @@ SELECT '_AVKFM00010    ', '_OBJ000008     ', keycmctc, 'ANNANFM', '2020-01-01', 
 -- Rows the relation import must ignore. Without the guards in
 -- relation-import-query.ts each of these would change the exact counts
 -- asserted in relation-import-query.test.ts.
--- 1) Self-edges: P900001 listed as ANNANFM on their own lease OBJ1, and
---    P900010 pointing keycmctc2 at themself with forvtyp = 1.
+-- 1) Self-edges on a dedicated contact so the live Xpand-backed e2e reads
+--    (which have no self-edge guard) never see them: P900007 is INNEHAVARE
+--    and ANNANFM on their own lease OBJ9, and points keycmctc2 at themself
+--    with forvtyp = 1.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_OIRC900007    ', '_OIRO900007    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900007', 'Holder SelfEdge', 1053, 'OIR9000007');
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000009     ', '100-001-01-0009/01', NULL);
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
-SELECT '_AVKFM00011    ', '_OBJ000001     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900001';
-UPDATE cmctc SET keycmctc2 = keycmctc, forvtyp = 1 WHERE cmctckod = 'P900010';
+SELECT '_AVKTEN0009    ', '_OBJ000009     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900007';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00011    ', '_OBJ000009     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900007';
+UPDATE cmctc SET keycmctc2 = keycmctc, forvtyp = 1 WHERE cmctckod = 'P900007';
 -- 2) The GDPR-erased placeholder contact: ANNANFM on P900004's lease OBJ4
 --    and a förvaltare pointer at P000444.
 INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
