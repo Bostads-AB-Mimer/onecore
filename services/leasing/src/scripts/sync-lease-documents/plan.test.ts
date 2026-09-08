@@ -316,6 +316,78 @@ describe('planLease — contract bundle fallback', () => {
   })
 })
 
+describe('planLease — bare object-number scans', () => {
+  // Paper contracts scanned and filed under just the object number: nothing in
+  // the name says contract, so only a signed or scanned PDF may qualify.
+  const bare = (
+    keydorev: string,
+    overrides: Partial<XpandLeaseDocument> = {}
+  ) =>
+    doc(keydorev, '307-714-00-0102', {
+      filename: '307-714-00-0102.pdf',
+      ...overrides,
+    })
+
+  it('needs inspection even for a single object-number document', () => {
+    const plan = planLease(lease(), [bare('s1')])
+    expect(plan.needsInspection).toBe(true)
+    expect(plan.contract).toBeNull()
+    expect(plan.contractCandidates.map((d) => d.keydorev)).toEqual(['s1'])
+  })
+
+  it('promotes a scanned object-number document to main file', () => {
+    const plan = planLease(
+      lease(),
+      [bare('s1'), doc('r', 'Nyckelkvittens')],
+      new Map([['s1', { signed: false, isScan: true }]])
+    )
+    expect(plan.contract?.keydorev).toBe('s1')
+    expect(plan.related.map((d) => d.keydorev)).toEqual(['r'])
+  })
+
+  it('never promotes an unsigned, non-scanned object-number document', () => {
+    const plan = planLease(
+      lease(),
+      [bare('s1')],
+      new Map([['s1', { signed: false, isScan: false }]])
+    )
+    expect(plan.contract).toBeNull()
+    expect(plan.contractSkippedReason).toBe('no contract document found')
+    expect(plan.related.map((d) => d.keydorev)).toEqual(['s1'])
+  })
+
+  it('loses to a contract-titled document and to a bundle', () => {
+    const bundle = doc('b', 'Hyreskontrakt för digital signering, Bilaga A')
+    const plan = planLease(lease(), [bare('s1'), bundle])
+    expect(plan.contractCandidates.map((d) => d.keydorev)).toEqual(['b'])
+  })
+
+  it("ignores documents titled with another lease's object number", () => {
+    const other = doc('x', '924-030-01-0103', {
+      filename: '924-030-01-0103.pdf',
+    })
+    const plan = planLease(lease(), [other])
+    expect(plan.contract).toBeNull()
+    expect(plan.contractCandidates).toEqual([])
+    expect(plan.needsInspection).toBe(false)
+  })
+
+  it('picks between two scans on the usual tie-break', () => {
+    const older = bare('s1', { createdAt: new Date('2024-01-01') })
+    const newer = bare('s2', { createdAt: new Date('2025-01-01') })
+    const plan = planLease(
+      lease(),
+      [older, newer],
+      new Map([
+        ['s1', { signed: false, isScan: true }],
+        ['s2', { signed: false, isScan: true }],
+      ])
+    )
+    expect(plan.contract?.keydorev).toBe('s2')
+    expect(plan.related.map((d) => d.keydorev)).toEqual(['s1'])
+  })
+})
+
 describe('planLease — main-file copies in related-docs', () => {
   it('uploads the contract even when an earlier run put it in related-docs, and marks the copy for deletion', () => {
     const contract = doc('c', 'Hyreskontrakt för digital signering, Bilaga K', {

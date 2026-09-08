@@ -63,6 +63,23 @@ export const isKontraktBilaga = (title: string | null | undefined): boolean => {
   )
 }
 
+/**
+ * A document titled with nothing but the lease's own object number — the
+ * filing convention for paper contracts that were scanned in (manual signing:
+ * municipalities, god man cases). The name alone proves nothing, so callers
+ * must confirm via inspectPdf that the file is a scan or carries a signature
+ * before treating it as the contract.
+ */
+export const isObjektnummerTitle = (
+  title: string | null | undefined,
+  externalId: string
+): boolean => {
+  const name = (title ?? '').trim()
+  if (!name) return false
+  const objektnummer = externalId.split('/')[0]
+  return name === objektnummer || name === objektnummer.replace(/-/g, ' ')
+}
+
 // Uppsägning-classified documents that are about a termination without being
 // the termination itself: Mimer's outgoing confirmation letter, a change of
 // notice period, a withdrawal. They stay related documents — only an actual

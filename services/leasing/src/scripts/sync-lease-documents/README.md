@@ -144,6 +144,13 @@ document, its hyreskontrakt-titled bilagor become the candidates instead;
 contract-titled document always beats a bundle, and plain `Bilaga A` titles
 without a contract word never qualify.
 
+**A third tier catches scanned paper contracts** (`isObjektnummerTitle`): a
+document titled with nothing but the lease's own object number is how manually
+signed contracts get filed (municipal tenants, god man cases — 711 such leases
+in test data, every sampled one an ink-signed contract scan). The name proves
+nothing, so these always go through PDF inspection and qualify only as a scan
+or with a signature — a plain unsigned rendering never becomes the main file.
+
 When a lease has several candidates the PDFs break the tie, and only those
 leases get opened:
 

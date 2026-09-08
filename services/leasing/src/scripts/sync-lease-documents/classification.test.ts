@@ -1,6 +1,7 @@
 import {
   classifyDocument,
   inspectPdf,
+  isObjektnummerTitle,
   isOperativeUppsagning,
   isKontraktBilaga,
   isUppsagningsbekraftelse,
@@ -117,6 +118,25 @@ describe('isKontraktBilaga', () => {
     '',
   ])('does not treat "%s" as a contract bundle', (title) => {
     expect(isKontraktBilaga(title)).toBe(false)
+  })
+})
+
+describe('isObjektnummerTitle', () => {
+  it.each(['206-036-01-0405', ' 206-036-01-0405 ', '206 036 01 0405'])(
+    'treats "%s" as the object number of lease 206-036-01-0405/05',
+    (title) => {
+      expect(isObjektnummerTitle(title, '206-036-01-0405/05')).toBe(true)
+    }
+  )
+
+  it.each([
+    '924-030-01-0103', // another lease's object number
+    '206-036-01-0405 Kvittenser',
+    '206-036-01-0405_05N_2025-04-01',
+    'Nyckelkvittens',
+    '',
+  ])('does not treat "%s" as it', (title) => {
+    expect(isObjektnummerTitle(title, '206-036-01-0405/05')).toBe(false)
   })
 })
 

@@ -3,6 +3,7 @@ import path from 'path'
 import {
   classifyDocument,
   isKontraktBilaga,
+  isObjektnummerTitle,
   isOperativeUppsagning,
   isUppsagningsbekraftelse,
   pickContract,
@@ -93,9 +94,23 @@ export const planLease = (
   const actualContracts = documents.filter(
     (document) => classifyDocument(document.title) === 'kontrakt'
   )
+  const bundleDocs = documents.filter((document) =>
+    isKontraktBilaga(document.title)
+  )
+  // Third tier: a document titled with just the object number is how scanned
+  // paper contracts are filed. The name proves nothing, so these only qualify
+  // after pdf inspection — a scan or a signature, never a plain rendering.
+  const scanCandidates =
+    !actualContracts.length && !bundleDocs.length
+      ? documents.filter((document) =>
+          isObjektnummerTitle(document.title, lease.externalId)
+        )
+      : []
   const candidates = actualContracts.length
     ? actualContracts
-    : documents.filter((document) => isKontraktBilaga(document.title))
+    : bundleDocs.length
+      ? bundleDocs
+      : scanCandidates
   // An actual uppsägning wins; when the lease holds none (the digital flow
   // produces only the tenant-signed bekräftelse) the bekräftelse stands in.
   const actualUppsagningar = documents.filter((document) =>
@@ -115,6 +130,23 @@ export const planLease = (
     contractSkippedReason = 'lease already has a main file'
   } else if (!candidates.length) {
     contractSkippedReason = 'no contract document found'
+  } else if (scanCandidates.length) {
+    if (!traits) {
+      needsInspection = true
+    } else {
+      const qualified = candidates
+        .map((document) => ({
+          ...document,
+          signed: traits.get(document.keydorev)?.signed ?? false,
+          isScan: traits.get(document.keydorev)?.isScan ?? false,
+        }))
+        .filter((candidate) => candidate.signed || candidate.isScan)
+      const picked = pickContract(qualified)
+      contract =
+        candidates.find((document) => document.keydorev === picked?.keydorev) ??
+        null
+      if (!contract) contractSkippedReason = 'no contract document found'
+    }
   } else if (candidates.length === 1) {
     contract = candidates[0]
   } else if (traits) {

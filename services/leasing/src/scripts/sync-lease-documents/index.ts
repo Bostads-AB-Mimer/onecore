@@ -339,7 +339,13 @@ export const syncLeaseDocuments = async (options: Options) => {
       'leaseId,candidateKeydorev,candidateTitle,candidateCreated,signed,isScan,chosen',
     ]
     for (const plan of resolved) {
-      if (plan.contractCandidates.length < 2) continue
+      // everything that went through inspection is auditable — contested
+      // picks, and object-number scans even when there was only one
+      if (
+        plan.contractCandidates.length < 2 &&
+        !traitsByLease.has(plan.lease.externalId)
+      )
+        continue
       const traits = traitsByLease.get(plan.lease.externalId)
       for (const candidate of plan.contractCandidates) {
         const trait = traits?.get(candidate.keydorev)
