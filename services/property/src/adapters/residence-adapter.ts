@@ -14,6 +14,7 @@ import {
   getPrismaOperator,
 } from '../utils/rentalBlockSearchAnalyzer'
 
+import { OPERATING_COMPANY_CODES } from './company-scope'
 import { prisma } from './db'
 //todo: add types
 
@@ -483,6 +484,7 @@ export const searchResidences = async (
               })),
             },
             none: { rentalId: { endsWith: 'X' } },
+            some: { companyCode: { in: [...OPERATING_COMPANY_CODES] } },
           },
         },
       },

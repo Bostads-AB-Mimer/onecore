@@ -27,6 +27,7 @@ import {
   UpdateKeyRequestSchema,
   CreateKeySystemRequestSchema,
   UpdateKeySystemRequestSchema,
+  DeactivateKeySystemResponseSchema,
   CreateKeyLoanRequestSchema,
   UpdateKeyLoanRequestSchema,
   KeyLoanSearchParamsSchema,
@@ -87,6 +88,9 @@ export type CreateKeySystemRequest = z.infer<
 >
 export type UpdateKeySystemRequest = z.infer<
   typeof UpdateKeySystemRequestSchema
+>
+export type DeactivateKeySystemResponse = z.infer<
+  typeof DeactivateKeySystemResponseSchema
 >
 
 // Request types for key loans

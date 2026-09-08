@@ -6,6 +6,7 @@ import type {
   UpdateKeyRequest,
   CreateKeySystemRequest,
   UpdateKeySystemRequest,
+  DeactivateKeySystemResponse,
   PaginatedResponse,
   ContactV1,
 } from '@/services/types'
@@ -232,6 +233,22 @@ export const keyService = {
       throw err
     }
     return data?.content as KeySystem
+  },
+
+  async deactivateKeySystem(id: string): Promise<DeactivateKeySystemResponse> {
+    const { data, error, response } = await POST(
+      '/key-systems/{id}/deactivate',
+      {
+        params: { path: { id } },
+      }
+    )
+    if (error || !response.ok) {
+      const msg = (error as any)?.error ?? 'Failed to deactivate key system'
+      const err = new Error(msg)
+      ;(err as any).status = response.status
+      throw err
+    }
+    return data?.content as DeactivateKeySystemResponse
   },
 
   async deleteKeySystem(id: string): Promise<void> {

@@ -1,13 +1,8 @@
-import { Building, CarFront, Home, Warehouse, Wrench } from 'lucide-react'
+import { Building, Home, Wrench } from 'lucide-react'
 
 import { FilterChip } from '@/shared/ui/filters'
 
-type SearchTypeFilter =
-  | 'property'
-  | 'residence'
-  | 'parking-space'
-  | 'facility'
-  | 'maintenance-unit'
+import type { SearchTypeFilter } from '../hooks/usePropertyFilters'
 
 interface PropertyTypeFiltersProps {
   searchTypeFilter: SearchTypeFilter
@@ -28,25 +23,11 @@ export const PropertyTypeFilters = ({
         <span>Fastigheter</span>
       </FilterChip>
       <FilterChip
-        selected={searchTypeFilter === 'residence'}
-        onSelect={() => setSearchTypeFilter('residence')}
+        selected={searchTypeFilter === 'rental-object'}
+        onSelect={() => setSearchTypeFilter('rental-object')}
       >
         <Home className="h-4 w-4" />
-        <span>Lägenheter</span>
-      </FilterChip>
-      <FilterChip
-        selected={searchTypeFilter === 'parking-space'}
-        onSelect={() => setSearchTypeFilter('parking-space')}
-      >
-        <CarFront className="h-4 w-4" />
-        <span>Parkeringar</span>
-      </FilterChip>
-      <FilterChip
-        selected={searchTypeFilter === 'facility'}
-        onSelect={() => setSearchTypeFilter('facility')}
-      >
-        <Warehouse className="h-4 w-4" />
-        <span>Lokaler</span>
+        <span>Hyresobjekt</span>
       </FilterChip>
       <FilterChip
         selected={searchTypeFilter === 'maintenance-unit'}

@@ -4,8 +4,7 @@
     "date": "2026-08-06",
     "title": "Nytt flöde för lägenhetsbesiktningar",
     "description": "Besiktningsflödet är omgjort med ny design och fungerar nu lika bra i mobilen som på datorn. Du guidas rum för rum och bedömer skicket (God/Ok/Skadad) på ytor och komponenter, lägger till detaljer, anteckningar och foton, och avslutar med kontrollfrågor och en sammanställning innan besiktningen slutförs.",
-    "category": "feature",
-    "pinned": true
+    "category": "feature"
   },
   {
     "id": "rn-2026-08-06-v360-2",

@@ -952,6 +952,74 @@ describe('keys-service', () => {
     })
   })
 
+  describe('POST /key-systems/:id/deactivate', () => {
+    it('deactivates system, returns disposed keys and writes audit logs', async () => {
+      const keySystem = factory.keySystem.build({
+        systemCode: 'SYS-001',
+        name: 'Huvudsystem',
+        isActive: false,
+      })
+      const disposedKeys = factory.key.buildList(2, {
+        keySystemId: keySystem.id,
+        disposed: true,
+      })
+
+      const deactivateSpy = jest
+        .spyOn(keysAdapter.KeySystemsApi, 'deactivate')
+        .mockResolvedValue({ ok: true, data: { keySystem, disposedKeys } })
+      const logSpy = jest
+        .spyOn(keysAdapter.LogsApi, 'create')
+        .mockResolvedValue({ ok: true, data: undefined as never })
+
+      const res = await request(app.callback()).post(
+        `/key-systems/${keySystem.id}/deactivate`
+      )
+
+      expect(res.status).toBe(200)
+      expect(deactivateSpy).toHaveBeenCalledWith(keySystem.id)
+      expect(res.body.content.keySystem.id).toBe(keySystem.id)
+      expect(res.body.content.disposedKeys).toHaveLength(2)
+
+      // One summary entry with the full disposed-key id list (rollback record)
+      expect(logSpy).toHaveBeenCalledTimes(1)
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: 'update',
+          objectType: 'keySystem',
+          objectId: keySystem.id,
+          description: expect.stringContaining('2 nycklar kasserade'),
+        })
+      )
+      const description = logSpy.mock.calls[0][0].description
+      expect(description).toContain(disposedKeys[0].id)
+      expect(description).toContain(disposedKeys[1].id)
+    })
+
+    it('responds with 404 if key system not found', async () => {
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'deactivate')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+
+      const res = await request(app.callback()).post(
+        '/key-systems/00000000-0000-0000-0000-000000000999/deactivate'
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(keysAdapter.KeySystemsApi, 'deactivate')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).post(
+        '/key-systems/00000000-0000-0000-0000-000000000001/deactivate'
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
   describe('DELETE /key-systems/:id', () => {
     it('responds with 200 on successful deletion', async () => {
       const keySystem = factory.keySystem.build()

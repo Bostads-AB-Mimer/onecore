@@ -6,7 +6,7 @@ import { useCompanyByPropertyId } from '@/features/companies'
 import { useProperty } from '@/features/properties'
 import { useResidence } from '@/features/residences'
 
-import { matchesRoute, routes } from '@/shared/routes'
+import { matchesRoute, parseStaircaseId, routes } from '@/shared/routes'
 
 interface LocationState {
   organizationNumber?: string
@@ -47,12 +47,18 @@ export function useHierarchicalSelection() {
   // otherwise fall back to navigation state → fetched data
   const selectedResidenceId = onResidence ? (params.rentalId ?? null) : null
 
+  // The staircase route carries one composite id, not separate codes.
+  const staircaseParts = onStaircase
+    ? parseStaircaseId(params.staircaseId)
+    : null
+
   const selectedStaircaseCode = onStaircase
-    ? (params.staircaseCode ?? null)
+    ? (staircaseParts?.staircaseCode ?? null)
     : (state.staircaseCode ?? residence?.staircase?.code ?? null)
 
-  const selectedBuildingCode =
-    onBuilding || onStaircase
+  const selectedBuildingCode = onStaircase
+    ? (staircaseParts?.buildingCode ?? null)
+    : onBuilding
       ? (params.buildingCode ?? null)
       : (state.buildingCode ?? residence?.building?.code ?? null)
 

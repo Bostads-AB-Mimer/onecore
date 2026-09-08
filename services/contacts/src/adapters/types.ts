@@ -10,5 +10,4 @@
  * `detail` is advisory. Callers must branch on `err`, never on `detail`.
  */
 export type AdapterResult<T, E> =
-  | { ok: true; data: T }
-  | { ok: false; err: E; detail?: string }
+  { ok: true; data: T } | { ok: false; err: E; detail?: string }

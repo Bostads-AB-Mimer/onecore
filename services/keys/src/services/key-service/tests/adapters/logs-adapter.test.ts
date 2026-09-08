@@ -144,9 +144,12 @@ describe('logs-adapter', () => {
         await logsAdapter.createLog(log3Data, ctx.db)
 
         const query = logsAdapter.getAllLogsQuery(ctx.db)
-        const logs = await query
+        const allLogs = await query
 
-        // Should return only most recent per objectId
+        // Only assert on our own rows — the dev DB may hold other logs
+        const logs = allLogs.filter((l: any) =>
+          [objectId1, objectId2].includes(l.objectId)
+        )
         expect(logs).toHaveLength(2)
 
         const object1Log = logs.find((l: any) => l.objectId === objectId1)

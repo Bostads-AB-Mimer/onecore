@@ -491,6 +491,158 @@ export interface paths {
       }
     }
   }
+  '/listing-area-text-content': {
+    /**
+     * List listing area text content
+     * @description Fetch the listing text content for all market areas.
+     */
+    get: {
+      responses: {
+        /** @description List of listing area text content objects */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create listing area text content
+     * @description Create new listing text content for a market area.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateListingAreaTextContentRequest']
+        }
+      }
+      responses: {
+        /** @description Listing area text content created successfully */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Listing area text content already exists for market area code */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/listing-area-text-content/{marketAreaCode}': {
+    /**
+     * Get listing area text content by market area code
+     * @description Fetch the listing text content for a specific market area.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The market area code to fetch text content for. */
+          marketAreaCode: string
+        }
+      }
+      responses: {
+        /** @description Listing area text content object */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update listing area text content
+     * @description Update existing listing text content for a market area.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The market area code of the listing text content to update. */
+          marketAreaCode: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateListingAreaTextContentRequest']
+        }
+      }
+      responses: {
+        /** @description Listing area text content updated successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Delete listing area text content
+     * @description Delete listing area text content.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The market area code of the listing text content to delete. */
+          marketAreaCode: string
+        }
+      }
+      responses: {
+        /** @description Listing area text content deleted successfully */
+        200: {
+          content: never
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/comments/{targetType}/thread/{targetId}/{commentId}': {
     /**
      * Update a comment in a comment thread
@@ -3078,11 +3230,7 @@ export interface paths {
         query: {
           /** @description The type of the identifier used to fetch work order data. */
           handler:
-            | 'rentalObjectId'
-            | 'leaseId'
-            | 'pnr'
-            | 'phoneNumber'
-            | 'contactCode'
+            'rentalObjectId' | 'leaseId' | 'pnr' | 'phoneNumber' | 'contactCode'
         }
         path: {
           /** @description The identifier value for fetching work order data. */
@@ -6421,25 +6569,26 @@ export interface paths {
   }
   '/kvv-areas': {
     /**
-     * List kvv-area codes filtered by responsible Keycloak users
-     * @description Returns the codes of kvv-areas (förvaltningsområden) whose
-     * responsibleKeycloakUserId is one of the provided user ids. Repeat the
-     * responsibleUserId query param for each user id. Returns an empty list
-     * if the param is omitted.
+     * List kvv-areas (förvaltningsområden) with cost center and responsible
+     * @description Returns every kvv-area with its cost center (distrikt) and the
+     * responsible kvartersvärd hydrated from Keycloak (`null` if unset or
+     * if Keycloak is unreachable). Repeat `responsibleUserId` to restrict
+     * the list to areas whose responsible is one of the given Keycloak user
+     * ids; omit it to list all areas.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Keycloak user ids (repeatable) */
+          /** @description Keycloak user ids (repeatable). Omit to list all areas. */
           responsibleUserId?: string[]
         }
       }
       responses: {
-        /** @description List of kvv-area codes */
+        /** @description List of kvv-areas */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KvvAreaSummary'][]
+              content?: components['schemas']['KvvAreaWithResponsible'][]
             }
           }
         }
@@ -6504,7 +6653,67 @@ export interface paths {
       }
     }
   }
+  '/market-areas': {
+    /**
+     * List market areas
+     * @description Returns every market area (Xpand babya, "marknadsområde"). No
+     * filters, no pagination — there are only a few dozen rows.
+     */
+    get: {
+      responses: {
+        /** @description List of market areas */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MarketArea'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/properties/{propertyCode}/kvv-area': {
+    /**
+     * Get the KVV-area (förvaltningsområde) and district of a property
+     * @description Reverse lookup from a property code to the KVV-area it belongs to,
+     * the cost center (distrikt) of that area and the responsible
+     * kvartersvärd (hydrated from Keycloak; `null` if unset or if Keycloak
+     * is unreachable). Used by Odoo to stamp maintenance requests with
+     * their district. 404 when the property has no KVV-area link.
+     */
+    get: {
+      parameters: {
+        path: {
+          propertyCode: string
+        }
+      }
+      responses: {
+        /** @description KVV-area, cost center and responsible for the property */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /**
+         * @description Property has no KVV-area link. The body carries
+         * `code: PROPERTY_KVV_AREA_NOT_FOUND` so callers can tell this
+         * apart from a routing 404.
+         */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
     /**
      * Set the KVV-area (förvaltningsområde) of a property
      * @description Sets the KVV-area a property belongs to. Cross-cost-center moves are
@@ -6542,6 +6751,203 @@ export interface paths {
         /** @description Property or KVV-area not found */
         404: {
           content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/property-tree': {
+    /**
+     * Get the property tree for one grouping root
+     * @description Properties with their buildings, trapphus, parkeringsområden and
+     * per-type counts, beneath one grouping root. `groups` carries the
+     * intermediate level when the grouping has one (KVV-areas for
+     * costCenter); otherwise properties hang directly off the root.
+     *
+     * Only operating-company stock is returned — Xpand moves sold
+     * properties to a pseudo-company rather than delete-marking them.
+     */
+    get: {
+      parameters: {
+        query: {
+          groupBy: 'costCenter' | 'marketArea' | 'company'
+          /** @description Cost center id (uuid), market area code, or company code */
+          rootId: string
+          /** @description Pass 'false' to omit the rental-object leaves */
+          includeObjects?: 'true' | 'false'
+        }
+      }
+      responses: {
+        /** @description Property tree */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['PropertyTree']
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Root not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects': {
+    /**
+     * List rental objects of a property or building
+     * @description Returns every rental object (residence, parking space, facility,
+     * other) under one property or one building as flat structure rows
+     * with type, subtype caption, postal address and building/staircase
+     * placement. Provide exactly one of propertyCode or buildingCode.
+     */
+    get: {
+      parameters: {
+        query?: {
+          propertyCode?: string
+          buildingCode?: string
+          /** @description Object types to exclude (repeatable) */
+          exclude?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+        }
+      }
+      responses: {
+        /** @description List of rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/search': {
+    /**
+     * Search rental objects across several scopes
+     * @description Rental objects under ANY of the given scopes — cost centres,
+     * marknadsområden, properties, buildings, trapphus, parkeringsområden —
+     * narrowed by type, subtype and a free-text match on rental id, address
+     * or property name. At least one scope is required, and results are
+     * paginated since a district is thousands of objects.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+          types?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+          subtypes?: string[]
+          q?: string
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Matching rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSummary'][]
+              totalCount: number
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/details': {
+    /**
+     * Listing-only values for the objects a selection covers
+     * @description Grundhyra, BRA, "annan information av vikt" and anläggnings-ID per
+     * rental id. Separate from the objects themselves so pages that don't
+     * show these never fetch them. Takes the same scopes as the search,
+     * minus the type and subtype filters: the values are looked up by
+     * rental id, so narrowing them would only cost cache hits.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+        }
+      }
+      responses: {
+        /** @description Details per rental id */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectDetails'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-object-subtypes': {
+    /**
+     * List rental object subtype captions
+     * @description Subtype captions grouped by object type, limited to those in use by
+     * operating-company stock. Codes are unique within a type only.
+     */
+    get: {
+      responses: {
+        /** @description List of subtypes */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSubtype'][]
+            }
+          }
         }
         /** @description Internal server error */
         500: {
@@ -9357,6 +9763,42 @@ export interface paths {
       }
     }
   }
+  '/key-systems/{id}/deactivate': {
+    /**
+     * Deactivate a key system and dispose all its keys
+     * @description Sets isActive=false and disposes every non-disposed key in the system in one transaction. Writes an audit log entry on the system listing all disposed key ids (the manual-rollback record).
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to deactivate */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key system deactivated and keys disposed */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DeactivateKeySystemResponse']
+            }
+          }
+        }
+        /** @description Key system not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
   '/key-systems/{id}/upload-schema': {
     /** Upload a schema file for a key system */
     post: {
@@ -11450,6 +11892,137 @@ export interface components {
           }
       )[]
     }
+    ListingAreaTextContent: {
+      /** Format: uuid */
+      id: string
+      marketAreaCode: string
+      contentBlocks: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateListingAreaTextContentRequest: {
+      marketAreaCode: string
+      contentBlocks: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+    }
+    UpdateListingAreaTextContentRequest: {
+      contentBlocks?: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+    }
     WorkOrder: {
       accessCaption: string
       caption: string
@@ -11551,7 +12124,7 @@ export interface components {
       property?: {
         name: string | null
         code: string
-        id: string
+        id?: string
       } | null
     }
     Company: {
@@ -12665,35 +13238,81 @@ export interface components {
       mobilePhone?: string
       employeeId?: string
     }
-    CostCenterTreeAddress: {
+    CostCenterTreeStaircase: {
+      code: string
+      name: string | null
+      residenceCount: number
+      parkingCount: number
+      facilityCount: number
+      otherCount: number
+    }
+    CostCenterTreeBuilding: {
       buildingCode: string
       buildingName: string | null
       buildingType: {
         code: string | null
         name: string | null
       } | null
+      staircases: {
+        code: string
+        name: string | null
+        residenceCount: number
+        parkingCount: number
+        facilityCount: number
+        otherCount: number
+      }[]
+      residenceCount: number
+      parkingCount: number
+      facilityCount: number
+      otherCount: number
+    }
+    CostCenterTreeParkingArea: {
+      code: string
+      name: string | null
+      parkingCount: number
     }
     CostCenterTreeAggregates: {
       residenceCount: number
       parkingCount: number
       entranceCount: number
+      facilityCount: number
+      otherCount: number
     }
     CostCenterTreeProperty: {
       code: string
       designation: string | null
       tract: string | null
-      addresses: {
+      buildings: {
         buildingCode: string
         buildingName: string | null
         buildingType: {
           code: string | null
           name: string | null
         } | null
+        staircases: {
+          code: string
+          name: string | null
+          residenceCount: number
+          parkingCount: number
+          facilityCount: number
+          otherCount: number
+        }[]
+        residenceCount: number
+        parkingCount: number
+        facilityCount: number
+        otherCount: number
+      }[]
+      parkingAreas: {
+        code: string
+        name: string | null
+        parkingCount: number
       }[]
       aggregates: {
         residenceCount: number
         parkingCount: number
         entranceCount: number
+        facilityCount: number
+        otherCount: number
       }
     }
     CostCenterTreeKvvArea: {
@@ -12714,18 +13333,37 @@ export interface components {
         code: string
         designation: string | null
         tract: string | null
-        addresses: {
+        buildings: {
           buildingCode: string
           buildingName: string | null
           buildingType: {
             code: string | null
             name: string | null
           } | null
+          staircases: {
+            code: string
+            name: string | null
+            residenceCount: number
+            parkingCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          residenceCount: number
+          parkingCount: number
+          facilityCount: number
+          otherCount: number
+        }[]
+        parkingAreas: {
+          code: string
+          name: string | null
+          parkingCount: number
         }[]
         aggregates: {
           residenceCount: number
           parkingCount: number
           entranceCount: number
+          facilityCount: number
+          otherCount: number
         }
       }[]
     }
@@ -12757,18 +13395,37 @@ export interface components {
           code: string
           designation: string | null
           tract: string | null
-          addresses: {
+          buildings: {
             buildingCode: string
             buildingName: string | null
             buildingType: {
               code: string | null
               name: string | null
             } | null
+            staircases: {
+              code: string
+              name: string | null
+              residenceCount: number
+              parkingCount: number
+              facilityCount: number
+              otherCount: number
+            }[]
+            residenceCount: number
+            parkingCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          parkingAreas: {
+            code: string
+            name: string | null
+            parkingCount: number
           }[]
           aggregates: {
             residenceCount: number
             parkingCount: number
             entranceCount: number
+            facilityCount: number
+            otherCount: number
           }
         }[]
       }[]
@@ -12779,8 +13436,54 @@ export interface components {
       code: string
       name: string
     }
-    KvvAreaSummary: {
+    KvvAreaWithResponsible: {
+      /** Format: uuid */
+      id: string
       code: string
+      name: string | null
+      costCenter: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string
+      }
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
+    }
+    MarketArea: {
+      id: string
+      code: string
+      name: string | null
+    }
+    PropertyKvvAreaLookup: {
+      kvvArea: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string | null
+      }
+      costCenter: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string
+      }
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
     }
     PutPropertyKvvAreaBody: {
       /** Format: uuid */
@@ -12808,6 +13511,198 @@ export interface components {
         employeeId?: string
       } | null
     }
+    RentalObjectSummary: {
+      rentalId: string
+      /** @enum {string} */
+      type: 'residence' | 'parkingSpace' | 'facility' | 'other'
+      code: string | null
+      name: string | null
+      subtypeCode: string | null
+      subtypeName: string | null
+      address: string | null
+      buildingCode: string | null
+      staircaseCode: string | null
+      staircaseName: string | null
+      parkingAreaCode: string | null
+      propertyCode: string | null
+      propertyName: string | null
+    }
+    RentalObjectDetails: {
+      rentalId: string
+      baseRent: number | null
+      area: number | null
+      additionalInfo: string | null
+      malarEnergiFacilityId: string | null
+    }
+    RentalObjectSubtype: {
+      /** @enum {string} */
+      type: 'residence' | 'parkingSpace' | 'facility' | 'other'
+      code: string
+      name: string
+    }
+    PropertyTreeGroup: {
+      id: string
+      code: string
+      name: string | null
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
+      properties: {
+        /** @enum {string} */
+        type:
+          | 'property'
+          | 'building'
+          | 'staircase'
+          | 'parkingArea'
+          | 'residence'
+          | 'parkingSpace'
+          | 'facility'
+          | 'other'
+        code: string
+        name: string | null
+        subtypeCode: string | null
+        subtypeName: string | null
+        children?: {
+          /** @enum {string} */
+          type:
+            | 'property'
+            | 'building'
+            | 'staircase'
+            | 'parkingArea'
+            | 'residence'
+            | 'parkingSpace'
+            | 'facility'
+            | 'other'
+          code: string
+          name: string | null
+          subtypeCode: string | null
+          subtypeName: string | null
+          children?: {
+            /** @enum {string} */
+            type:
+              | 'property'
+              | 'building'
+              | 'staircase'
+              | 'parkingArea'
+              | 'residence'
+              | 'parkingSpace'
+              | 'facility'
+              | 'other'
+            code: string
+            name: string | null
+            subtypeCode: string | null
+            subtypeName: string | null
+            children?: {
+              /** @enum {string} */
+              type:
+                | 'property'
+                | 'building'
+                | 'staircase'
+                | 'parkingArea'
+                | 'residence'
+                | 'parkingSpace'
+                | 'facility'
+                | 'other'
+              code: string
+              name: string | null
+              subtypeCode: string | null
+              subtypeName: string | null
+            }[]
+          }[]
+        }[]
+      }[]
+    }
+    PropertyTree: {
+      /** @enum {string} */
+      grouping: 'costCenter' | 'marketArea' | 'company'
+      id: string
+      code: string
+      name: string | null
+      groups: {
+        id: string
+        code: string
+        name: string | null
+        responsible: {
+          id: string
+          username: string
+          firstName?: string
+          lastName?: string
+          email?: string
+          mobilePhone?: string
+          employeeId?: string
+        } | null
+        properties: {
+          /** @enum {string} */
+          type:
+            | 'property'
+            | 'building'
+            | 'staircase'
+            | 'parkingArea'
+            | 'residence'
+            | 'parkingSpace'
+            | 'facility'
+            | 'other'
+          code: string
+          name: string | null
+          subtypeCode: string | null
+          subtypeName: string | null
+          children?: {
+            /** @enum {string} */
+            type:
+              | 'property'
+              | 'building'
+              | 'staircase'
+              | 'parkingArea'
+              | 'residence'
+              | 'parkingSpace'
+              | 'facility'
+              | 'other'
+            code: string
+            name: string | null
+            subtypeCode: string | null
+            subtypeName: string | null
+            children?: {
+              /** @enum {string} */
+              type:
+                | 'property'
+                | 'building'
+                | 'staircase'
+                | 'parkingArea'
+                | 'residence'
+                | 'parkingSpace'
+                | 'facility'
+                | 'other'
+              code: string
+              name: string | null
+              subtypeCode: string | null
+              subtypeName: string | null
+              children?: {
+                /** @enum {string} */
+                type:
+                  | 'property'
+                  | 'building'
+                  | 'staircase'
+                  | 'parkingArea'
+                  | 'residence'
+                  | 'parkingSpace'
+                  | 'facility'
+                  | 'other'
+                code: string
+                name: string | null
+                subtypeCode: string | null
+                subtypeName: string | null
+              }[]
+            }[]
+          }[]
+        }[]
+      }[]
+    }
     Key: {
       /** Format: uuid */
       id: string
@@ -12827,6 +13722,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -12903,6 +13800,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -12975,6 +13874,8 @@ export interface components {
           | 'HL'
           | 'FÖR'
           | 'SOP'
+          | 'MB'
+          | 'TV'
           | 'ÖVR'
         /** Format: uuid */
         keySystemId?: string | null
@@ -13170,6 +14071,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -13192,6 +14095,8 @@ export interface components {
         | 'HL'
         | 'FÖR'
         | 'SOP'
+        | 'MB'
+        | 'TV'
         | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
@@ -13273,6 +14178,10 @@ export interface components {
       isActive?: boolean
       notes?: string | null
       schemaFileId?: string | null
+    }
+    DeactivateKeySystemResponse: {
+      keySystem: components['schemas']['KeySystem']
+      disposedKeys: components['schemas']['Key'][]
     }
     CreateLogRequest: {
       userName: string
@@ -13358,6 +14267,8 @@ export interface components {
           | 'HL'
           | 'FÖR'
           | 'SOP'
+          | 'MB'
+          | 'TV'
           | 'ÖVR'
         /** Format: uuid */
         keySystemId?: string | null
@@ -13645,7 +14556,7 @@ export interface components {
       property?: {
         /** @description Property associated with the building */
         name: string | null
-        id: string
+        id?: string
         code: string
       } | null
     }
@@ -13721,7 +14632,7 @@ export interface components {
           property?: {
             /** @description Property associated with the building */
             name: string | null
-            id: string
+            id?: string
             code: string
           } | null
         }
@@ -15180,12 +16091,7 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          | 'pending'
-          | 'sent'
-          | 'delivered'
-          | 'failed'
-          | 'bounced'
-          | 'received'
+          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -15228,12 +16134,7 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          | 'pending'
-          | 'sent'
-          | 'delivered'
-          | 'failed'
-          | 'bounced'
-          | 'received'
+          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
