@@ -414,3 +414,19 @@ INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKFM00009    ', '_OBJ000007     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900014';
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKFM00010    ', '_OBJ000008     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900015';
+
+-- Rows the relation import must ignore. Without the guards in
+-- relation-import-query.ts each of these would change the exact counts
+-- asserted in relation-import-query.test.ts.
+-- 1) Self-edges: P900001 listed as ANNANFM on their own lease OBJ1, and
+--    P900010 pointing keycmctc2 at themself with forvtyp = 1.
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00011    ', '_OBJ000001     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900001';
+UPDATE cmctc SET keycmctc2 = keycmctc, forvtyp = 1 WHERE cmctckod = 'P900010';
+-- 2) The GDPR-erased placeholder contact: ANNANFM on P900004's lease OBJ4
+--    and a förvaltare pointer at P000444.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_GDPR0000001   ', '_GDPRO000001   ', '_0EI00000P     ', '00001          ', '00001          ', 'RENSAD_GDPR', 'Rensad GDPR', 1053, 'GDPR000001');
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00012    ', '_OBJ000004     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'RENSAD_GDPR';
+UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 2 WHERE cmctckod = 'RENSAD_GDPR';

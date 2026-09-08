@@ -22,6 +22,7 @@ const RELATION_DATA_SET = [
   'P900013',
   'P900014',
   'P900015',
+  'RENSAD_GDPR',
 ]
 
 const xpandResource = xpandDbClient(config.xpandDatabase)
@@ -68,6 +69,8 @@ describe('allGuardianEdges', () => {
       ])
     )
     expect(edges).toHaveLength(4)
+    expect(edges.map((e) => e.subjectContactCode)).not.toContain('P900010')
+    expect(edges.map((e) => e.subjectContactCode)).not.toContain('RENSAD_GDPR')
   })
 })
 
@@ -113,5 +116,15 @@ describe('allInvoiceRecipientCandidates', () => {
     expect(rows).toHaveLength(6)
     expect(rows.map((r) => r.holderContactCode)).not.toContain('P900002')
     expect(rows.map((r) => r.holderContactCode)).not.toContain('P900003')
+    expect(rows.map((r) => r.recipientContactCode)).not.toContain('P900001')
+    expect(rows.map((r) => r.recipientContactCode)).not.toContain('RENSAD_GDPR')
+  })
+
+  it('excludes holders and recipients that are not yet valid at the given time', async () => {
+    const rows = await allInvoiceRecipientCandidates(
+      xpand,
+      new Date('2019-01-01')
+    )
+    expect(rows).toEqual([])
   })
 })
