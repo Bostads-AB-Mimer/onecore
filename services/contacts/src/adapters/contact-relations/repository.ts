@@ -31,23 +31,16 @@ const chunked = <T>(items: T[], size: number): T[][] => {
   return out
 }
 
-/**
- * All active (not soft-deleted) rows created by the given actor.
- */
-export const listActiveByCreator = async (
-  db: Knex,
-  createdBy: string
-): Promise<DbContactRelationRow[]> => {
-  const rows: DbContactRelationRow[] = await db(TABLE)
-    .where({ created_by: createdBy })
-    .whereNull('deleted_at')
+/** Every row that has not been soft-deleted, whoever created it. */
+export const listActive = async (db: Knex): Promise<DbContactRelationRow[]> => {
+  const rows: DbContactRelationRow[] = await db(TABLE).whereNull('deleted_at')
   return rows
 }
 
-/**
- * Inserts one row per edge, attributed to `createdBy`. No-op on empty input.
- * The caller owns the transaction; chunks are separate statements.
- */
+// insertMany and softDeleteByIds are no-ops on empty input. The caller owns
+// the transaction; chunks are separate statements.
+
+/** Inserts one row per edge, attributed to `createdBy`. */
 export const insertMany = async (
   db: Knex,
   edges: RelationEdge[],
@@ -67,8 +60,7 @@ export const insertMany = async (
 
 /**
  * Soft-deletes the given rows (by id), attributed to `deletedBy`. Rows that
- * are already soft-deleted are left untouched. No-op on empty input.
- * The caller owns the transaction; chunks are separate statements.
+ * are already soft-deleted are left untouched.
  */
 export const softDeleteByIds = async (
   db: Knex,

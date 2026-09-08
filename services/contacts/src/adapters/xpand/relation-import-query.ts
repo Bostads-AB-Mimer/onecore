@@ -1,27 +1,32 @@
 import { Knex } from 'knex'
 import { RelationEdge, RoleType } from '@src/adapters/contact-relations'
+import {
+  ADMINISTRATOR_FORVTYP,
+  ANNANFM,
+  currentRelation,
+  GUARDIAN_FORVTYPS,
+  GuardianForvtyp,
+  INNEHAVARE,
+  RENSAD_GDPR,
+  TRUSTEE_FORVTYP,
+} from './relation-sql'
 
 /**
  * One current ANNANFM row on one of the holder's active leases. Several rows
  * per holder are normal (one per lease); collapsing happens in the import
- * script.
+ * script. `leaseKey` identifies the lease; `leaseId` is the operator-facing
+ * label that goes into the conflict report.
  */
 export type InvoiceRecipientCandidate = {
   holderContactCode: string
   recipientContactCode: string
+  leaseKey: string
   leaseId: string
 }
 
-const RENSAD_GDPR = 'RENSAD_GDPR'
-const INNEHAVARE = 'INNEHAVARE'
-const ANNANFM = 'ANNANFM'
-
-// forvtyp on the ward's cmctc row: 1 = god man, 2 = förvaltare.
-const GUARDIAN_FORVTYPS = [1, 2] as const
-type GuardianForvtyp = (typeof GUARDIAN_FORVTYPS)[number]
 const ROLE_BY_FORVTYP: Record<GuardianForvtyp, RoleType> = {
-  1: 'god_man',
-  2: 'forvaltare',
+  [TRUSTEE_FORVTYP]: 'god_man',
+  [ADMINISTRATOR_FORVTYP]: 'forvaltare',
 }
 
 type GuardianRow = {
@@ -41,8 +46,8 @@ export const allGuardianEdges = async (db: Knex): Promise<RelationEdge[]> => {
     .innerJoin('cmctc as related', 'subject.keycmctc2', 'related.keycmctc')
     .whereIn('subject.forvtyp', [...GUARDIAN_FORVTYPS])
     .whereRaw('subject.keycmctc <> subject.keycmctc2')
-    .whereNot('subject.cmctckod', RENSAD_GDPR)
-    .whereNot('related.cmctckod', RENSAD_GDPR)
+    .whereRaw('TRIM(subject.cmctckod) <> ?', [RENSAD_GDPR])
+    .whereRaw('TRIM(related.cmctckod) <> ?', [RENSAD_GDPR])
     .select(
       'subject.cmctckod as subjectCode',
       'related.cmctckod as relatedCode',
@@ -59,51 +64,57 @@ export const allGuardianEdges = async (db: Knex): Promise<RelationEdge[]> => {
 type CandidateRow = {
   holderCode: string
   recipientCode: string
-  leaseId: string
+  leaseKey: string
+  leaseLabel: string | null
 }
 
 /**
  * Every (holder, recipient, lease) triple where the holder currently holds an
  * active lease (`hyobj.sistadeb IS NULL`) that has a current ANNANFM row.
- * "Current" treats NULL fdate/tdate as unbounded (legacy ANNANFM rows often
- * have NULL fdate). Excludes `ten.keycmctc = fm.keycmctc` (a contact listed
- * as their own invoice recipient), which is bad data and would otherwise
- * become a false conflict. Duplicate triples are expected (co-tenants,
- * overlapping rows) and are deduped by the collapse and reconcile steps.
+ * Excludes `ten.keycmctc = fm.keycmctc` (a contact listed as their own invoice
+ * recipient), which is bad data and would otherwise become a false conflict.
+ * Duplicate triples are expected (co-tenants, overlapping rows) and are
+ * deduped by the collapse and reconcile steps.
  */
 export const allInvoiceRecipientCandidates = async (
   db: Knex,
   now: Date
 ): Promise<InvoiceRecipientCandidate[]> => {
+  const [tenFrom, tenTo] = currentRelation(db, 'ten', now)
+  const [fmFrom, fmTo] = currentRelation(db, 'fm', now)
+
   const rows: CandidateRow[] = await db('hyobj as o')
     .innerJoin('hyavk as ten', function () {
       this.on('ten.keyhyobj', 'o.keyhyobj')
-        .andOnVal('ten.keyhyakt', INNEHAVARE)
-        .andOn(db.raw('(ten.fdate IS NULL OR ten.fdate <= ?)', [now]))
-        .andOn(db.raw('(ten.tdate IS NULL OR ten.tdate >= ?)', [now]))
+        .andOn(db.raw('TRIM(ten.keyhyakt) = ?', [INNEHAVARE]))
+        .andOn(tenFrom)
+        .andOn(tenTo)
     })
     .innerJoin('hyavk as fm', function () {
       this.on('fm.keyhyobj', 'o.keyhyobj')
-        .andOnVal('fm.keyhyakt', ANNANFM)
-        .andOn(db.raw('(fm.fdate IS NULL OR fm.fdate <= ?)', [now]))
-        .andOn(db.raw('(fm.tdate IS NULL OR fm.tdate >= ?)', [now]))
+        .andOn(db.raw('TRIM(fm.keyhyakt) = ?', [ANNANFM]))
+        .andOn(fmFrom)
+        .andOn(fmTo)
     })
     .innerJoin('cmctc as holder', 'holder.keycmctc', 'ten.keycmctc')
     .innerJoin('cmctc as recipient', 'recipient.keycmctc', 'fm.keycmctc')
     .whereNull('o.sistadeb')
     .whereRaw('ten.keycmctc <> fm.keycmctc')
-    .whereNot('holder.cmctckod', RENSAD_GDPR)
-    .whereNot('recipient.cmctckod', RENSAD_GDPR)
+    .whereRaw('TRIM(holder.cmctckod) <> ?', [RENSAD_GDPR])
+    .whereRaw('TRIM(recipient.cmctckod) <> ?', [RENSAD_GDPR])
     .select(
       'holder.cmctckod as holderCode',
       'recipient.cmctckod as recipientCode',
-      'o.hyobjben as leaseId'
+      'o.keyhyobj as leaseKey',
+      'o.hyobjben as leaseLabel'
     )
 
   return rows.map((r) => ({
     holderContactCode: r.holderCode.trim(),
     recipientContactCode: r.recipientCode.trim(),
-    // hyobjben is a display label; be tolerant of NULL on a whole-DB scan.
-    leaseId: (r.leaseId ?? '').trim(),
+    leaseKey: r.leaseKey.trim(),
+    // The label is what verksamheten calls the lease, but it is not a key and
+    // legacy rows may have none; identity always comes from leaseKey.
+    leaseId: (r.leaseLabel ?? '').trim(),
   }))
 }

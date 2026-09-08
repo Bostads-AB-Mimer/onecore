@@ -4,9 +4,13 @@ import {
 } from '@src/adapters/contact-relations'
 
 export type ReconcilePlan = {
+  /** Deduped desired edges with no active row yet, whoever would own it. */
   toInsert: RelationEdge[]
+  /** Ids of import-owned rows that are undesired or redundant duplicates. */
   toDelete: string[]
+  /** Desired edges already covered by an active row. */
   unchangedCount: number
+  /** Rows kept only because their holder is a conflict this run. */
   protectedCount: number
 }
 
@@ -19,57 +23,72 @@ const rowToEdge = (r: DbContactRelationRow): RelationEdge => ({
   roleType: r.role_type,
 })
 
+const oldestFirst = (a: DbContactRelationRow, b: DbContactRelationRow) =>
+  a.created_at.getTime() - b.created_at.getTime() || (a.id < b.id ? -1 : 1)
+
 /**
- * Computes what to write so that the import-owned rows mirror `desired`.
+ * Computes what to write so that `contact_relation` mirrors `desired`.
  *
- * - `existing` must be the active rows created by the import itself; rows
- *   created by anyone else are never passed in and therefore never touched.
+ * - `existing` must be *all* active rows, so an edge someone else already
+ *   created is not inserted a second time. Only rows created by `ownedBy` may
+ *   be deleted; anyone else's rows are left alone and left uncounted.
+ * - One active row per edge survives: extra import-owned rows for the same
+ *   edge are deleted (oldest kept), and an import-owned row that merely
+ *   duplicates someone else's row is dropped in favour of theirs.
  * - `conflictHolders` are holders whose fakturamottagare could not be
- *   collapsed. Their existing annan_fakturamottagare rows are left as-is
- *   (neither inserted nor deleted) so a rerun cannot silently remove a
- *   previously imported recipient because the Xpand data became ambiguous.
- *
- * Return fields: `toInsert` are deduped desired edges with no active
- * import-owned row; `toDelete` are ids of import-owned rows no longer
- * desired; `unchangedCount` counts existing rows whose key is desired (not
- * desired edges matched — they differ if duplicates exist); `protectedCount`
- * counts rows kept only because of the conflict-holder exception. A conflict
- * holder never appears in `desired` for annan_fakturamottagare (collapse
- * puts each holder in either edges or conflicts), so the exception only ever
- * suppresses deletes.
+ *   collapsed. Their import-owned annan_fakturamottagare rows are left as-is
+ *   so a rerun cannot silently remove a previously imported recipient because
+ *   the Xpand data became ambiguous. Such a holder never appears in `desired`
+ *   for that role (collapse puts each holder in either edges or conflicts), so
+ *   the exception only ever suppresses deletes.
  */
 export const reconcile = (
   desired: RelationEdge[],
   existing: DbContactRelationRow[],
-  conflictHolders: Set<string>
+  conflictHolders: Set<string>,
+  ownedBy: string
 ): ReconcilePlan => {
   const desiredByKey = new Map<string, RelationEdge>()
   for (const e of desired) desiredByKey.set(keyOf(e), e)
 
-  const existingKeys = new Set<string>()
+  const existingByKey = new Map<string, DbContactRelationRow[]>()
+  for (const r of existing) {
+    const key = keyOf(rowToEdge(r))
+    existingByKey.set(key, [...(existingByKey.get(key) ?? []), r])
+  }
+
   const toDelete: string[] = []
   let unchangedCount = 0
   let protectedCount = 0
-  for (const r of existing) {
-    const key = keyOf(rowToEdge(r))
-    existingKeys.add(key)
+
+  for (const [key, rows] of existingByKey) {
+    const owned = rows.filter((r) => r.created_by === ownedBy).sort(oldestFirst)
+    const keptByOthers = rows.length > owned.length
+
     if (desiredByKey.has(key)) {
       unchangedCount += 1
+      // Someone else's row already covers the edge, so every import-owned row
+      // is redundant; otherwise keep our oldest one.
+      toDelete.push(...owned.slice(keptByOthers ? 0 : 1).map((r) => r.id))
       continue
     }
-    if (
-      r.role_type === 'annan_fakturamottagare' &&
-      conflictHolders.has(r.subject_contact_code)
-    ) {
-      protectedCount += 1
+
+    const isProtected = owned.some(
+      (r) =>
+        r.role_type === 'annan_fakturamottagare' &&
+        conflictHolders.has(r.subject_contact_code)
+    )
+    if (isProtected) {
+      protectedCount += owned.length
       continue
     }
-    toDelete.push(r.id)
+
+    toDelete.push(...owned.map((r) => r.id))
   }
 
-  const toInsert = [...desiredByKey.values()].filter(
-    (e) => !existingKeys.has(keyOf(e))
-  )
+  const toInsert = [...desiredByKey.entries()]
+    .filter(([key]) => !existingByKey.has(key))
+    .map(([, edge]) => edge)
 
   return { toInsert, toDelete, unchangedCount, protectedCount }
 }

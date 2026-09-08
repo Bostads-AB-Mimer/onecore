@@ -6,25 +6,20 @@ import {
   IMPORT_ACTOR,
   runImport,
 } from '@src/scripts/import-contact-relations/import'
-import { DbContactRelationRow } from '@src/adapters/contact-relations'
+import {
+  DbContactRelationRow,
+  insertMany,
+} from '@src/adapters/contact-relations'
 import * as relationsRepository from '@src/adapters/contact-relations/repository'
 import { connect, prepareDataSet } from '../../e2e/app-fixture'
 import { FULL_TEST_DATA_SET } from '../../e2e/data-set'
+import { requireContactsTestDb, requireXpandTestDb } from '../../db-support'
 
-if (config.contactsDatabase.database !== 'contacts-test') {
-  throw new Error(
-    `Refusing to run against database "${config.contactsDatabase.database}". Must be "contacts-test".`
-  )
-}
-
+requireContactsTestDb()
 // This suite mutates Xpand rows (cmctc, hyavk) to simulate changes between
 // import runs, so guard the Xpand side explicitly too — not only via the
 // e2e fixture's connect() check.
-if (config.xpandDatabase.database !== 'contacts-xpand-test') {
-  throw new Error(
-    `Refusing to run against database "${config.xpandDatabase.database}". Must be "contacts-xpand-test".`
-  )
-}
+requireXpandTestDb()
 
 const RELATION_DATA_SET = [
   ...FULL_TEST_DATA_SET,
@@ -79,7 +74,6 @@ beforeEach(async () => {
   const pool = await connect()
   await prepareDataSet(pool, RELATION_DATA_SET)
   await pool.close()
-  await contacts('contact_relation').del()
 })
 
 // These tests write real rows (no rollback transaction), so leave the shared
@@ -232,5 +226,99 @@ describe('runImport', () => {
       spy.mockRestore()
     }
     expect(await activeTriples()).toEqual([['P000111', 'P000222', 'god_man']])
+  })
+
+  it('does not duplicate a desired edge that another actor already created', async () => {
+    await contacts('contact_relation').insert({
+      subject_contact_code: 'P000666',
+      related_contact_code: 'P000444',
+      role_type: 'god_man',
+      created_by: 'manual-admin',
+    })
+
+    const report = await runImport({ xpandDb: xpand, contactsDb: contacts })
+
+    expect(report).toMatchObject({
+      inserted: 6,
+      softDeleted: 0,
+      unchanged: 1,
+    })
+    expect(await activeTriples()).toEqual(EXPECTED_FIRST_RUN)
+    const rows: DbContactRelationRow[] = await contacts(
+      'contact_relation'
+    ).where({ subject_contact_code: 'P000666' })
+    expect(rows).toHaveLength(1)
+    expect(rows[0].created_by).toBe('manual-admin')
+  })
+
+  it('soft-deletes an import-owned duplicate of the same edge', async () => {
+    await runImport({ xpandDb: xpand, contactsDb: contacts })
+    await insertMany(
+      contacts,
+      [
+        {
+          subjectContactCode: 'P000666',
+          relatedContactCode: 'P000444',
+          roleType: 'god_man',
+        },
+      ],
+      IMPORT_ACTOR
+    )
+
+    const report = await runImport({ xpandDb: xpand, contactsDb: contacts })
+
+    expect(report).toMatchObject({ inserted: 0, softDeleted: 1, unchanged: 7 })
+    expect(await activeTriples()).toEqual(EXPECTED_FIRST_RUN)
+  })
+
+  it('refuses a run that would soft-delete most of the existing rows', async () => {
+    const stale = Array.from({ length: 12 }, (_, i) => ({
+      subjectContactCode: `P8000${String(i).padStart(2, '0')}`,
+      relatedContactCode: 'P800099',
+      roleType: 'god_man' as const,
+    }))
+    await insertMany(contacts, stale, IMPORT_ACTOR)
+
+    await expect(
+      runImport({ xpandDb: xpand, contactsDb: contacts })
+    ).rejects.toThrow(/--force/)
+
+    expect(await activeTriples()).toHaveLength(12)
+  })
+
+  it('performs the same run when forced', async () => {
+    const stale = Array.from({ length: 12 }, (_, i) => ({
+      subjectContactCode: `P8000${String(i).padStart(2, '0')}`,
+      relatedContactCode: 'P800099',
+      roleType: 'god_man' as const,
+    }))
+    await insertMany(contacts, stale, IMPORT_ACTOR)
+
+    const report = await runImport({
+      xpandDb: xpand,
+      contactsDb: contacts,
+      force: true,
+    })
+
+    expect(report).toMatchObject({ inserted: 7, softDeleted: 12 })
+    expect(await activeTriples()).toEqual(EXPECTED_FIRST_RUN)
+  })
+
+  it('does not trip the delete guard on a dry run', async () => {
+    const stale = Array.from({ length: 12 }, (_, i) => ({
+      subjectContactCode: `P8000${String(i).padStart(2, '0')}`,
+      relatedContactCode: 'P800099',
+      roleType: 'god_man' as const,
+    }))
+    await insertMany(contacts, stale, IMPORT_ACTOR)
+
+    const report = await runImport({
+      xpandDb: xpand,
+      contactsDb: contacts,
+      dryRun: true,
+    })
+
+    expect(report).toMatchObject({ dryRun: true, softDeleted: 12 })
+    expect(await activeTriples()).toHaveLength(12)
   })
 })

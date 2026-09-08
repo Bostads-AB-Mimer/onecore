@@ -1,7 +1,7 @@
 import { Knex } from 'knex'
 import {
   insertMany,
-  listActiveByCreator,
+  listActive,
   softDeleteByIds,
   RelationEdge,
   RoleType,
@@ -14,8 +14,14 @@ import {
 import { collapseInvoiceRecipients, Conflict } from './collapse'
 import { reconcile } from './reconcile'
 
-/** `created_by` / `deleted_by` value for every row this script writes. */
 export const IMPORT_ACTOR = 'xpand-import'
+
+// A run that removes most of what it owns is far more likely to be pointed at
+// the wrong database than to reflect a real change in Xpand, so it needs
+// `force`. Below MIN_ROWS a large share proves nothing (one of two rows
+// legitimately disappearing is 50%).
+const DELETE_GUARD_MIN_ROWS = 10
+const DELETE_GUARD_MAX_SHARE = 0.2
 
 export type ImportReport = {
   dryRun: boolean
@@ -39,28 +45,29 @@ const countByRole = (edges: RelationEdge[]): Record<RoleType, number> => {
 /**
  * Reads today's relations from Xpand, collapses fakturamottagare to contact
  * level, and makes the import-owned rows in `contact_relation` mirror the
- * result. Idempotent: rerunning against unchanged data writes nothing.
- * All writes happen in one transaction; `dryRun` skips them entirely.
- * Rows kept only because their holder is a conflict this run are reported as
- * `protected`.
+ * result. Idempotent: rerunning against unchanged data writes nothing. All
+ * writes happen in one transaction; `dryRun` skips them entirely.
  *
  * `inserted`/`softDeleted`/`unchanged`/`protected` on the returned report are
  * the planned counts from the reconcile step, not affected-row counts read
  * back from the database. `now` is the as-of date used only for lease and
  * relation validity in Xpand, never for the written rows: `created_at` uses
  * the database clock (`GETUTCDATE()`), `deleted_at` the writing process's
- * clock.
+ * clock. Throws rather than writing when the plan deletes an implausible
+ * share of the import's own rows, unless `force` is set.
  */
 export const runImport = async ({
   xpandDb,
   contactsDb,
   now = new Date(),
   dryRun = false,
+  force = false,
 }: {
   xpandDb: Knex
   contactsDb: Knex
   now?: Date
   dryRun?: boolean
+  force?: boolean
 }): Promise<ImportReport> => {
   const [guardians, candidates] = await Promise.all([
     allGuardianEdges(xpandDb),
@@ -69,14 +76,30 @@ export const runImport = async ({
   const { edges: recipients, conflicts } = collapseInvoiceRecipients(candidates)
   const desired = [...guardians, ...recipients]
 
-  const existing = await listActiveByCreator(contactsDb, IMPORT_ACTOR)
+  const existing = await listActive(contactsDb)
   const plan = reconcile(
     desired,
     existing,
-    new Set(conflicts.map((c) => c.holderContactCode))
+    new Set(conflicts.map((c) => c.holderContactCode)),
+    IMPORT_ACTOR
   )
 
   if (!dryRun) {
+    const ownedCount = existing.filter(
+      (r) => r.created_by === IMPORT_ACTOR
+    ).length
+    if (
+      !force &&
+      ownedCount >= DELETE_GUARD_MIN_ROWS &&
+      plan.toDelete.length > ownedCount * DELETE_GUARD_MAX_SHARE
+    ) {
+      throw new Error(
+        `Refusing to soft-delete ${plan.toDelete.length} of ${ownedCount} rows owned by ${IMPORT_ACTOR}. ` +
+          'Check that XPAND_DATABASE__* and CONTACTS_DATABASE__* point at the databases you intend, ' +
+          'then rerun with --force if this is really the change you want.'
+      )
+    }
+
     await contactsDb.transaction(async (trx) => {
       await insertMany(trx, plan.toInsert, IMPORT_ACTOR)
       await softDeleteByIds(trx, plan.toDelete, IMPORT_ACTOR)

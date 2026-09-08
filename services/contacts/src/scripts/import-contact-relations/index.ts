@@ -1,9 +1,9 @@
 /**
  * import-contact-relations
  *
- * One-shot / rerunnable import of god man, förvaltare and annan
- * fakturamottagare relations from Xpand into the contacts database
- * (`contact_relation`). Run locally; Xpand is only read.
+ * Rerunnable import of god man, förvaltare and annan fakturamottagare
+ * relations from Xpand into the contacts database. Run locally; Xpand is only
+ * read.
  *
  * Setup: point services/contacts/.env at the databases you intend to use —
  *   XPAND_DATABASE__*      the Xpand database to read from
@@ -12,22 +12,24 @@
  * Usage (from services/contacts):
  *   pnpm dev:script:import-contact-relations --dry-run   # report only
  *   pnpm dev:script:import-contact-relations             # write
+ *   pnpm dev:script:import-contact-relations --force     # allow a mass delete
  *
- * Output: a summary on stdout and, when there are holders with conflicting
- * recipients, a CSV file ./contact-relations-conflicts-<timestamp>.csv (or
- * ./contact-relations-conflicts-dry-run-<timestamp>.csv in --dry-run mode) in
- * the current working directory — written in dry-run mode too, since it
- * doesn't touch contact_relation. Exit code 1 on failure; nothing is
- * partially written (single transaction).
+ * Conflicting holders are written to ./contact-relations-conflicts-<ts>.csv in
+ * the current working directory — in dry-run mode too, since that touches
+ * nothing.
  */
 import fs from 'node:fs/promises'
 import knex, { Knex } from 'knex'
 import { KnexConnectionParameters, logger } from '@onecore/utilities'
 import config from '@src/common/config'
-import { ImportReport, runImport } from './import'
-import { Conflict } from './collapse'
-
-const USAGE = 'Usage: pnpm dev:script:import-contact-relations [--dry-run]'
+import { runImport } from './import'
+import {
+  conflictsCsv,
+  conflictsFileName,
+  formatReport,
+  formatTargets,
+  parseArgs,
+} from './cli'
 
 // Plain, one-shot knex instances rather than the app's Resource wrapper: a
 // Resource whose init() throws skips its own finally (the other resource's
@@ -48,63 +50,33 @@ const connect = (params: KnexConnectionParameters): Knex =>
     pool: { min: 1, max: 5 },
   })
 
-const parseArgs = (argv: string[]): { dryRun: boolean } => {
-  const unknown = argv.filter((a) => a !== '--dry-run')
-  if (unknown.length > 0) {
-    throw new Error(`Unknown argument(s): ${unknown.join(' ')}\n${USAGE}`)
-  }
-  return { dryRun: argv.includes('--dry-run') }
-}
-
-const formatReport = (report: ImportReport): string =>
-  [
-    `import-contact-relations${report.dryRun ? ' (DRY RUN — inget skrivet)' : ''}`,
-    `Relationer i Xpand:    god man ${report.desired.god_man}, förvaltare ${report.desired.forvaltare}, annan fakturamottagare ${report.desired.annan_fakturamottagare}`,
-    `Nya rader:             ${report.inserted}`,
-    `Borttagna (soft):      ${report.softDeleted}`,
-    `Oförändrade:           ${report.unchanged}`,
-    `Skyddade (konflikt):   ${report.protected}`,
-    `Konflikter:            ${report.conflicts.length}`,
-    ...report.conflicts.flatMap((c) => [
-      `  ${c.holderContactCode}:`,
-      ...c.recipients.map(
-        (r) => `    ${r.contactCode}  (avtal ${r.leaseIds.join(', ')})`
-      ),
-    ]),
-  ].join('\n')
-
-const conflictsCsv = (conflicts: Conflict[]): string =>
-  [
-    'holder_contact_code,recipient_contact_code,lease_ids',
-    ...conflicts.flatMap((c) =>
-      c.recipients.map(
-        (r) => `${c.holderContactCode},${r.contactCode},${r.leaseIds.join(';')}`
-      )
-    ),
-  ].join('\n')
-
 const main = async () => {
-  const { dryRun } = parseArgs(process.argv.slice(2))
+  const { dryRun, force } = parseArgs(process.argv.slice(2))
 
   let xpandDb: Knex | undefined
   let contactsDb: Knex | undefined
   try {
+    process.stdout.write(
+      `${formatTargets(config.xpandDatabase, config.contactsDatabase)}\n\n`
+    )
     xpandDb = connect(config.xpandDatabase)
     contactsDb = connect(config.contactsDatabase)
 
-    const report = await runImport({
-      xpandDb,
-      contactsDb,
-      dryRun,
-    })
-    logger.info({ report }, 'import-contact-relations: summary')
+    const report = await runImport({ xpandDb, contactsDb, dryRun, force })
+    logger.info({ report }, 'importContactRelations.summary')
     process.stdout.write(`${formatReport(report)}\n`)
 
     if (report.conflicts.length > 0) {
-      const stamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const file = `contact-relations-conflicts-${dryRun ? 'dry-run-' : ''}${stamp}.csv`
-      await fs.writeFile(file, `${conflictsCsv(report.conflicts)}\n`, 'utf8')
-      process.stdout.write(`Konflikter skrivna till ${file}\n`)
+      const file = conflictsFileName(new Date(), dryRun)
+      // The import already committed; conflicts are on stdout either way, so a
+      // failed CSV write must not report the run itself as failed.
+      try {
+        await fs.writeFile(file, `${conflictsCsv(report.conflicts)}\n`, 'utf8')
+        process.stdout.write(`Konflikter skrivna till ${file}\n`)
+      } catch (err) {
+        logger.warn({ err, file }, 'importContactRelations.conflictsCsvFailed')
+        process.stdout.write(`Kunde inte skriva ${file} — se listan ovan\n`)
+      }
     }
   } finally {
     // allSettled: a teardown failure must not replace the import's own error.
@@ -113,6 +85,6 @@ const main = async () => {
 }
 
 main().catch((err) => {
-  logger.error({ err }, 'import-contact-relations failed')
+  logger.error({ err }, 'importContactRelations.failed')
   process.exitCode = 1
 })

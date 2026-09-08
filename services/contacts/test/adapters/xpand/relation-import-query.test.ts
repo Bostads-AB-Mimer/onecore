@@ -76,7 +76,7 @@ describe('allGuardianEdges', () => {
 })
 
 describe('allInvoiceRecipientCandidates', () => {
-  it('returns one row per current ANNANFM on an active lease, with the lease id', async () => {
+  it('returns one row per current ANNANFM on an active lease, keyed by the lease', async () => {
     const rows = await allInvoiceRecipientCandidates(xpand, new Date())
 
     expect(rows).toEqual(
@@ -84,31 +84,37 @@ describe('allInvoiceRecipientCandidates', () => {
         {
           holderContactCode: 'P900001',
           recipientContactCode: 'P900010',
+          leaseKey: '_OBJ000001',
           leaseId: '100-001-01-0001/01',
         },
         {
           holderContactCode: 'P900001',
           recipientContactCode: 'P900010',
+          leaseKey: '_OBJ000005',
           leaseId: '100-001-01-0005/01',
         },
         {
           holderContactCode: 'P900004',
           recipientContactCode: 'P000888',
+          leaseKey: '_OBJ000004',
           leaseId: '100-001-01-0004/01',
         },
         {
           holderContactCode: 'P900005',
           recipientContactCode: 'P900013',
+          leaseKey: '_OBJ000006',
           leaseId: '100-001-01-0006/01',
         },
         {
           holderContactCode: 'P900006',
           recipientContactCode: 'P900014',
+          leaseKey: '_OBJ000007',
           leaseId: '100-001-01-0007/01',
         },
         {
           holderContactCode: 'P900006',
           recipientContactCode: 'P900015',
+          leaseKey: '_OBJ000008',
           leaseId: '100-001-01-0008/01',
         },
       ])

@@ -1,19 +1,19 @@
-import { Knex } from 'knex'
 import config from '@src/common/config'
 import { contactsDbClient } from '@src/adapters/db'
 import {
   insertMany,
-  listActiveByCreator,
+  listActive,
   softDeleteByIds,
 } from '@src/adapters/contact-relations'
+import { makeWithContext, requireContactsTestDb } from '../../db-support'
 
-if (config.contactsDatabase.database !== 'contacts-test') {
-  throw new Error(
-    `Refusing to run against database "${config.contactsDatabase.database}". Must be "contacts-test".`
-  )
-}
+requireContactsTestDb()
+
+const ACTOR = 'test-actor'
+const OTHER_ACTOR = 'another-actor'
 
 const dbResource = contactsDbClient(config.contactsDatabase)
+const withContext = makeWithContext(dbResource)
 
 beforeAll(async () => {
   await dbResource.init()
@@ -22,20 +22,6 @@ beforeAll(async () => {
 afterAll(async () => {
   await dbResource.close()
 })
-
-const withContext = async (
-  callback: (ctx: { db: Knex.Transaction }) => Promise<unknown>
-) => {
-  try {
-    await dbResource.get().transaction(async (trx) => {
-      await callback({ db: trx })
-      throw 'rollback'
-    })
-  } catch (e: unknown) {
-    if (e === 'rollback') return
-    throw e
-  }
-}
 
 describe('contact-relations repository', () => {
   it('insertMany writes one row per edge with the given creator', () =>
@@ -54,54 +40,23 @@ describe('contact-relations repository', () => {
             roleType: 'annan_fakturamottagare',
           },
         ],
-        'xpand-import'
+        ACTOR
       )
 
-      const rows = await listActiveByCreator(db, 'xpand-import')
+      const rows = await listActive(db)
       expect(rows).toHaveLength(2)
       expect(rows.map((r) => r.role_type).sort()).toEqual([
         'annan_fakturamottagare',
         'god_man',
       ])
-      expect(rows[0].created_by).toBe('xpand-import')
+      expect(rows[0].created_by).toBe(ACTOR)
       expect(rows[0].deleted_at).toBeNull()
     }))
 
   it('insertMany with an empty list is a no-op', () =>
     withContext(async ({ db }) => {
-      await insertMany(db, [], 'xpand-import')
-      expect(await listActiveByCreator(db, 'xpand-import')).toEqual([])
-    }))
-
-  it('listActiveByCreator excludes soft-deleted rows and other creators', () =>
-    withContext(async ({ db }) => {
-      await insertMany(
-        db,
-        [
-          {
-            subjectContactCode: 'P000001',
-            relatedContactCode: 'P000002',
-            roleType: 'god_man',
-          },
-        ],
-        'xpand-import'
-      )
-      await insertMany(
-        db,
-        [
-          {
-            subjectContactCode: 'P000005',
-            relatedContactCode: 'P000006',
-            roleType: 'forvaltare',
-          },
-        ],
-        'someone-else'
-      )
-      const [row] = await listActiveByCreator(db, 'xpand-import')
-      await softDeleteByIds(db, [row.id], 'xpand-import')
-
-      expect(await listActiveByCreator(db, 'xpand-import')).toEqual([])
-      expect(await listActiveByCreator(db, 'someone-else')).toHaveLength(1)
+      await insertMany(db, [], ACTOR)
+      expect(await listActive(db)).toEqual([])
     }))
 
   it('softDeleteByIds sets deleted_at and deleted_by and leaves other rows alone', () =>
@@ -120,18 +75,18 @@ describe('contact-relations repository', () => {
             roleType: 'god_man',
           },
         ],
-        'xpand-import'
+        ACTOR
       )
-      const rows = await listActiveByCreator(db, 'xpand-import')
+      const rows = await listActive(db)
       const target = rows.find((r) => r.subject_contact_code === 'P000001')!
 
-      await softDeleteByIds(db, [target.id], 'xpand-import')
+      await softDeleteByIds(db, [target.id], ACTOR)
 
       const [deleted] = await db('contact_relation').where({ id: target.id })
       expect(deleted.deleted_at).toEqual(expect.any(Date))
-      expect(deleted.deleted_by).toBe('xpand-import')
+      expect(deleted.deleted_by).toBe(ACTOR)
 
-      const remaining = await listActiveByCreator(db, 'xpand-import')
+      const remaining = await listActive(db)
       expect(remaining.map((r) => r.subject_contact_code)).toEqual(['P000003'])
     }))
 
@@ -146,12 +101,12 @@ describe('contact-relations repository', () => {
             roleType: 'god_man',
           },
         ],
-        'xpand-import'
+        ACTOR
       )
 
-      await softDeleteByIds(db, [], 'xpand-import')
+      await softDeleteByIds(db, [], ACTOR)
 
-      expect(await listActiveByCreator(db, 'xpand-import')).toHaveLength(1)
+      expect(await listActive(db)).toHaveLength(1)
     }))
 
   it('insertMany and softDeleteByIds handle more rows than one chunk', () =>
@@ -161,16 +116,16 @@ describe('contact-relations repository', () => {
         relatedContactCode: `Q${String(i).padStart(6, '0')}`,
         roleType: 'god_man' as const,
       }))
-      await insertMany(db, edges, 'xpand-import')
-      const rows = await listActiveByCreator(db, 'xpand-import')
+      await insertMany(db, edges, ACTOR)
+      const rows = await listActive(db)
       expect(rows).toHaveLength(1501)
 
       await softDeleteByIds(
         db,
         rows.map((r) => r.id),
-        'xpand-import'
+        ACTOR
       )
-      expect(await listActiveByCreator(db, 'xpand-import')).toEqual([])
+      expect(await listActive(db)).toEqual([])
     }))
 
   it('softDeleteByIds leaves an already soft-deleted row untouched', () =>
@@ -184,9 +139,9 @@ describe('contact-relations repository', () => {
             roleType: 'god_man',
           },
         ],
-        'xpand-import'
+        ACTOR
       )
-      const [row] = await listActiveByCreator(db, 'xpand-import')
+      const [row] = await listActive(db)
 
       await softDeleteByIds(db, [row.id], 'first-run')
       const [afterFirst] = await db('contact_relation').where({ id: row.id })
@@ -195,5 +150,56 @@ describe('contact-relations repository', () => {
 
       expect(afterSecond.deleted_by).toBe('first-run')
       expect(afterSecond.deleted_at).toEqual(afterFirst.deleted_at)
+    }))
+
+  it('listActive returns active rows from every creator', () =>
+    withContext(async ({ db }) => {
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P000001',
+            relatedContactCode: 'P000002',
+            roleType: 'god_man',
+          },
+        ],
+        ACTOR
+      )
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P000005',
+            relatedContactCode: 'P000006',
+            roleType: 'forvaltare',
+          },
+        ],
+        OTHER_ACTOR
+      )
+
+      const rows = await listActive(db)
+
+      expect(rows.map((r) => r.created_by).sort()).toEqual(
+        [OTHER_ACTOR, ACTOR].sort()
+      )
+    }))
+
+  it('listActive excludes soft-deleted rows', () =>
+    withContext(async ({ db }) => {
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P000001',
+            relatedContactCode: 'P000002',
+            roleType: 'god_man',
+          },
+        ],
+        ACTOR
+      )
+      const [row] = await listActive(db)
+      await softDeleteByIds(db, [row.id], ACTOR)
+
+      expect(await listActive(db)).toEqual([])
     }))
 })

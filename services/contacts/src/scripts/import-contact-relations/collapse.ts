@@ -10,7 +10,9 @@ export type Conflict = {
   recipients: { contactCode: string; leaseIds: string[] }[]
 }
 
-const ascending = (a: string, b: string) => a.localeCompare(b)
+// Code-unit order, not localeCompare: contact codes are not pure ASCII (Ö
+// prefixes organisations) and the report must not depend on the runtime locale.
+const ascending = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
 /**
  * Collapses Xpand's per-lease annan fakturamottagare rows to contact level:
@@ -21,13 +23,15 @@ const ascending = (a: string, b: string) => a.localeCompare(b)
 export const collapseInvoiceRecipients = (
   candidates: InvoiceRecipientCandidate[]
 ): { edges: RelationEdge[]; conflicts: Conflict[] } => {
-  const byHolder = new Map<string, Map<string, Set<string>>>()
+  // holder → recipient → lease key → lease label
+  const byHolder = new Map<string, Map<string, Map<string, string>>>()
 
   for (const c of candidates) {
     const recipients =
-      byHolder.get(c.holderContactCode) ?? new Map<string, Set<string>>()
-    const leases = recipients.get(c.recipientContactCode) ?? new Set<string>()
-    leases.add(c.leaseId)
+      byHolder.get(c.holderContactCode) ??
+      new Map<string, Map<string, string>>()
+    const leases = recipients.get(c.recipientContactCode) ?? new Map()
+    leases.set(c.leaseKey, c.leaseId)
     recipients.set(c.recipientContactCode, leases)
     byHolder.set(c.holderContactCode, recipients)
   }
@@ -50,9 +54,9 @@ export const collapseInvoiceRecipients = (
         holderContactCode: holder,
         recipients: [...recipients.entries()]
           .sort(([a], [b]) => ascending(a, b))
-          .map(([contactCode, leaseIds]) => ({
+          .map(([contactCode, leases]) => ({
             contactCode,
-            leaseIds: [...leaseIds].sort(ascending),
+            leaseIds: [...leases.values()].sort(ascending),
           })),
       })
     }

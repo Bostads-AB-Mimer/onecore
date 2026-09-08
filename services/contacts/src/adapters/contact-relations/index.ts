@@ -1,6 +1,6 @@
 export {
   insertMany,
-  listActiveByCreator,
+  listActive,
   softDeleteByIds,
   type RelationEdge,
 } from './repository'
