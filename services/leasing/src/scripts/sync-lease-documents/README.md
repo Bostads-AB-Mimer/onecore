@@ -18,10 +18,11 @@ the script dies with `Failed to connect`.
 
 ## Status, as of 2026-09-07
 
-**The full run against the test environment is done**: 39,121 documents
+**The full run against the test environment is done**: 39,827 documents
 uploaded across 20,411 leases (~5.5 h wall clock at `--concurrency 4`,
-including reruns), 96 stale related-docs copies deleted. End state: 15,442
-leases carry a main file, 1,110 a termination file. What remains:
+including reruns), 801 stale related-docs copies deleted. End state: **16,148
+leases carry a main file** (8,340 contract-titled, ~7,100 bundles, 706
+object-number scans), 1,110 a termination file. What remains:
 
 - **39 oversized documents** (over Tenfast's 15 **decimal** MB cap) in
   `oversized.csv` — Mimer imports these manually.
