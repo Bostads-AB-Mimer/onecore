@@ -137,8 +137,63 @@ describe('contact-relations repository', () => {
 
   it('softDeleteByIds with an empty list is a no-op', () =>
     withContext(async ({ db }) => {
-      await expect(
-        softDeleteByIds(db, [], 'xpand-import')
-      ).resolves.toBeUndefined()
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P000001',
+            relatedContactCode: 'P000002',
+            roleType: 'god_man',
+          },
+        ],
+        'xpand-import'
+      )
+
+      await softDeleteByIds(db, [], 'xpand-import')
+
+      expect(await listActiveByCreator(db, 'xpand-import')).toHaveLength(1)
+    }))
+
+  it('insertMany and softDeleteByIds handle more rows than one chunk', () =>
+    withContext(async ({ db }) => {
+      const edges = Array.from({ length: 1501 }, (_, i) => ({
+        subjectContactCode: `P${String(i).padStart(6, '0')}`,
+        relatedContactCode: `Q${String(i).padStart(6, '0')}`,
+        roleType: 'god_man' as const,
+      }))
+      await insertMany(db, edges, 'xpand-import')
+      const rows = await listActiveByCreator(db, 'xpand-import')
+      expect(rows).toHaveLength(1501)
+
+      await softDeleteByIds(
+        db,
+        rows.map((r) => r.id),
+        'xpand-import'
+      )
+      expect(await listActiveByCreator(db, 'xpand-import')).toEqual([])
+    }))
+
+  it('softDeleteByIds leaves an already soft-deleted row untouched', () =>
+    withContext(async ({ db }) => {
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P000001',
+            relatedContactCode: 'P000002',
+            roleType: 'god_man',
+          },
+        ],
+        'xpand-import'
+      )
+      const [row] = await listActiveByCreator(db, 'xpand-import')
+
+      await softDeleteByIds(db, [row.id], 'first-run')
+      const [afterFirst] = await db('contact_relation').where({ id: row.id })
+      await softDeleteByIds(db, [row.id], 'second-run')
+      const [afterSecond] = await db('contact_relation').where({ id: row.id })
+
+      expect(afterSecond.deleted_by).toBe('first-run')
+      expect(afterSecond.deleted_at).toEqual(afterFirst.deleted_at)
     }))
 })

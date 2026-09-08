@@ -14,9 +14,13 @@ export type RelationEdge = {
 
 const TABLE = 'contact_relation'
 
-// MSSQL caps a statement at 2100 parameters; 4 columns × 500 rows stays well
-// under it.
-const CHUNK_SIZE = 500
+// MSSQL rejects a statement with 2100 or more parameters. Derive the insert
+// chunk from the column count so adding a column shrinks the chunk instead of
+// breaking the import; the delete chunk is bounded by the whereIn list.
+const MSSQL_PARAM_BUDGET = 2000
+const INSERT_COLUMN_COUNT = 4
+const INSERT_CHUNK_SIZE = Math.floor(MSSQL_PARAM_BUDGET / INSERT_COLUMN_COUNT)
+const DELETE_CHUNK_SIZE = 500
 
 const chunked = <T>(items: T[], size: number): T[][] => {
   const out: T[][] = []
@@ -41,13 +45,14 @@ export const listActiveByCreator = async (
 
 /**
  * Inserts one row per edge, attributed to `createdBy`. No-op on empty input.
+ * The caller owns the transaction; chunks are separate statements.
  */
 export const insertMany = async (
   db: Knex,
   edges: RelationEdge[],
   createdBy: string
 ): Promise<void> => {
-  for (const chunk of chunked(edges, CHUNK_SIZE)) {
+  for (const chunk of chunked(edges, INSERT_CHUNK_SIZE)) {
     await db(TABLE).insert(
       chunk.map((e) => ({
         subject_contact_code: e.subjectContactCode,
@@ -62,6 +67,7 @@ export const insertMany = async (
 /**
  * Soft-deletes the given rows (by id), attributed to `deletedBy`. Rows that
  * are already soft-deleted are left untouched. No-op on empty input.
+ * The caller owns the transaction; chunks are separate statements.
  */
 export const softDeleteByIds = async (
   db: Knex,
@@ -69,7 +75,7 @@ export const softDeleteByIds = async (
   deletedBy: string
 ): Promise<void> => {
   const now = new Date()
-  for (const chunk of chunked(ids, CHUNK_SIZE)) {
+  for (const chunk of chunked(ids, DELETE_CHUNK_SIZE)) {
     await db(TABLE)
       .whereIn('id', chunk)
       .whereNull('deleted_at')
