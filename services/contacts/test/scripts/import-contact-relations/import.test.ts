@@ -69,6 +69,12 @@ beforeEach(async () => {
   await contacts('contact_relation').del()
 })
 
+// These tests write real rows (no rollback transaction), so leave the shared
+// contacts-test table empty for the suites that run after this one.
+afterEach(async () => {
+  await contacts('contact_relation').del()
+})
+
 afterAll(async () => {
   await Promise.all([xpandResource.close(), contactsResource.close()])
 })

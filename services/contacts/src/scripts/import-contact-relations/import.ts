@@ -47,8 +47,9 @@ const countByRole = (edges: RelationEdge[]): Record<RoleType, number> => {
  * `inserted`/`softDeleted`/`unchanged`/`protected` on the returned report are
  * the planned counts from the reconcile step, not affected-row counts read
  * back from the database. `now` is the as-of date used only for lease and
- * relation validity in Xpand; `created_at`/`deleted_at` on the written rows
- * use the database clock (write time), not `now`.
+ * relation validity in Xpand, never for the written rows: `created_at` uses
+ * the database clock (`GETUTCDATE()`), `deleted_at` the writing process's
+ * clock.
  */
 export const runImport = async ({
   xpandDb,

@@ -107,7 +107,8 @@ const main = async () => {
       process.stdout.write(`Konflikter skrivna till ${file}\n`)
     }
   } finally {
-    await Promise.all([xpandDb?.destroy(), contactsDb?.destroy()])
+    // allSettled: a teardown failure must not replace the import's own error.
+    await Promise.allSettled([xpandDb?.destroy(), contactsDb?.destroy()])
   }
 }
 
