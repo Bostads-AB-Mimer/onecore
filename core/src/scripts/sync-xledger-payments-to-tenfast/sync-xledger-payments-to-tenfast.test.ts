@@ -36,7 +36,7 @@ const makePaymentEvent = (
   type: 'OCR',
   invoiceId: '55123456',
   matchId: 1,
-  amount: 1000,
+  amount: -1000,
   paymentDate: '2026-04-01T00:00:00.000Z',
   text: 'Hyra',
   transactionSourceCode: 'OCR',
@@ -93,6 +93,7 @@ describe('syncPayments', () => {
   describe('normal run (cursor exists)', () => {
     it('records payments in Tenfast and advances the cursor', async () => {
       const store = makeStore('cursor-start')
+      let postedPaymentBody: unknown
 
       nock(ECONOMY_URL)
         .get('/payments/since')
@@ -100,11 +101,18 @@ describe('syncPayments', () => {
         .reply(200, makePaymentsResponse())
 
       nock(ECONOMY_URL)
-        .post('/invoices/55123456/payments')
+        .post('/invoices/55123456/payments', (body) => {
+          postedPaymentBody = body
+          return true
+        })
         .reply(200, { content: null })
 
       await syncPayments(store)
 
+      expect(postedPaymentBody).toMatchObject({
+        amount: -1000,
+        method: 'OCR',
+      })
       expect(store.cursor).toBe('cursor-new')
     })
 

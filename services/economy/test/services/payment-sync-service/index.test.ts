@@ -116,7 +116,7 @@ describe('Payment Sync Service', () => {
 
   describe('POST /invoices/:invoiceId/payments', () => {
     const validBody = {
-      amount: 1000,
+      amount: -1000,
       dateTime: '2026-04-02T10:00:00.000Z',
       method: 'bank',
     }
@@ -151,12 +151,6 @@ describe('Payment Sync Service', () => {
         .send(validBody)
 
       expect(res.status).toBe(200)
-      expect(tenfastAdapter.recordPaymentForInvoice).toHaveBeenCalledWith({
-        ocr: '55123456',
-        amount: 1000,
-        dateTime: new Date('2026-04-02T10:00:00.000Z'),
-        method: 'bank',
-      })
     })
 
     it('responds with 500 on unknown adapter error', async () => {
@@ -181,6 +175,45 @@ describe('Payment Sync Service', () => {
         .send(validBody)
 
       expect(res.status).toBe(500)
+    })
+  })
+
+  describe('Xledger to Tenfast payment amount conversion', () => {
+    it('records a positive amount in Tenfast when the payment from Xledger is negative', async () => {
+      const xledgerPayment = factory.invoicePaymentEvent.build({
+        invoiceId: '55123456',
+        amount: -2500,
+        paymentDate: new Date('2026-04-02T10:00:00.000Z'),
+        transactionSourceCode: 'OCR',
+      })
+
+      jest.spyOn(xledgerAdapter, 'getPaymentsSince').mockResolvedValueOnce({
+        events: [xledgerPayment],
+        lastCursor: 'cursor-abc',
+      })
+      jest
+        .spyOn(tenfastAdapter, 'recordPaymentForInvoice')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      const sinceRes = await request(app.callback()).get(
+        '/payments/since?after=cursor-abc'
+      )
+      expect(sinceRes.body.content.events[0].amount).toBe(-2500)
+
+      await request(app.callback())
+        .post(`/invoices/${xledgerPayment.invoiceId}/payments`)
+        .send({
+          amount: xledgerPayment.amount,
+          dateTime: xledgerPayment.paymentDate.toISOString(),
+          method: xledgerPayment.transactionSourceCode,
+        })
+
+      expect(tenfastAdapter.recordPaymentForInvoice).toHaveBeenCalledWith({
+        ocr: '55123456',
+        amount: 2500,
+        dateTime: xledgerPayment.paymentDate,
+        method: 'OCR',
+      })
     })
   })
 })

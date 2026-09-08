@@ -22,7 +22,7 @@ const makePaymentEvent = (
   type: 'OCR',
   invoiceId: '55123456',
   matchId: 42,
-  amount: 1000,
+  amount: -1000,
   paymentDate: '2026-04-01T00:00:00.000Z',
   text: 'Hyra',
   transactionSourceCode: 'OCR',
