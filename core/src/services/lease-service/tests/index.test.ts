@@ -129,6 +129,48 @@ describe('lease-service', () => {
     })
   })
 
+  describe('POST /leases/batch', () => {
+    it('responds with 400 if leaseIds is missing', async () => {
+      const res = await request(app.callback()).post('/leases/batch').send({})
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with 400 if leaseIds is an empty array', async () => {
+      const res = await request(app.callback())
+        .post('/leases/batch')
+        .send({ leaseIds: [] })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with 500 if adapter fails', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesBatch')
+        .mockRejectedValue(new Error('Adapter error'))
+
+      const res = await request(app.callback())
+        .post('/leases/batch')
+        .send({ leaseIds: ['1337'] })
+
+      expect(res.status).toBe(500)
+    })
+
+    it('responds with 200 and the leases for the given ids', async () => {
+      const getLeasesBatchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesBatch')
+        .mockResolvedValue(factory.lease.buildList(2))
+
+      const res = await request(app.callback())
+        .post('/leases/batch')
+        .send({ leaseIds: ['1337', '1338'] })
+
+      expect(res.status).toBe(200)
+      expect(getLeasesBatchSpy).toHaveBeenCalledWith(['1337', '1338'])
+      expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
+    })
+  })
+
   describe('GET /contacts/by-pnr/:pnr', () => {
     it('responds with a contact', async () => {
       const contact = factory.contact.build()
