@@ -103,6 +103,7 @@ export const allInvoiceRecipientCandidates = async (
   return rows.map((r) => ({
     holderContactCode: r.holderCode.trim(),
     recipientContactCode: r.recipientCode.trim(),
-    leaseId: r.leaseId.trim(),
+    // hyobjben is a display label; be tolerant of NULL on a whole-DB scan.
+    leaseId: (r.leaseId ?? '').trim(),
   }))
 }

@@ -15,8 +15,9 @@ export type RelationEdge = {
 const TABLE = 'contact_relation'
 
 // MSSQL rejects a statement with 2100 or more parameters. Derive the insert
-// chunk from the column count so adding a column shrinks the chunk instead of
-// breaking the import; the delete chunk is bounded by the whereIn list.
+// chunk from the column count; keep INSERT_COLUMN_COUNT in sync with the
+// insert below (the chunk-boundary test fails loudly if it drifts). The delete
+// chunk is bounded by the whereIn list.
 const MSSQL_PARAM_BUDGET = 2000
 const INSERT_COLUMN_COUNT = 4
 const INSERT_CHUNK_SIZE = Math.floor(MSSQL_PARAM_BUDGET / INSERT_COLUMN_COUNT)

@@ -17,6 +17,15 @@ if (config.contactsDatabase.database !== 'contacts-test') {
   )
 }
 
+// This suite mutates Xpand rows (cmctc, hyavk) to simulate changes between
+// import runs, so guard the Xpand side explicitly too — not only via the
+// e2e fixture's connect() check.
+if (config.xpandDatabase.database !== 'contacts-xpand-test') {
+  throw new Error(
+    `Refusing to run against database "${config.xpandDatabase.database}". Must be "contacts-xpand-test".`
+  )
+}
+
 const RELATION_DATA_SET = [
   ...FULL_TEST_DATA_SET,
   'P900001',
@@ -31,6 +40,10 @@ const RELATION_DATA_SET = [
   'P900013',
   'P900014',
   'P900015',
+  // Self-edge (P900007) and GDPR-placeholder fixtures: kept in the data set
+  // so the run proves the query guards keep them out of contact_relation.
+  'P900007',
+  'RENSAD_GDPR',
 ]
 
 const EXPECTED_FIRST_RUN = [
