@@ -4,17 +4,13 @@ import {
   RelationEdge,
 } from '@src/adapters/contact-relations'
 
-const row = (
-  id: string,
-  edge: RelationEdge,
-  createdBy = 'xpand-import'
-): DbContactRelationRow => ({
+const row = (id: string, edge: RelationEdge): DbContactRelationRow => ({
   id,
   subject_contact_code: edge.subjectContactCode,
   related_contact_code: edge.relatedContactCode,
   role_type: edge.roleType,
   created_at: new Date('2026-09-01T00:00:00Z'),
-  created_by: createdBy,
+  created_by: 'xpand-import',
   deleted_at: null,
   deleted_by: null,
 })
@@ -42,6 +38,7 @@ describe('reconcile', () => {
       toInsert: [godMan, forvaltare],
       toDelete: [],
       unchangedCount: 0,
+      protectedCount: 0,
     })
   })
 
@@ -51,7 +48,12 @@ describe('reconcile', () => {
       [row('a', godMan), row('b', forvaltare)],
       new Set()
     )
-    expect(plan).toEqual({ toInsert: [], toDelete: [], unchangedCount: 2 })
+    expect(plan).toEqual({
+      toInsert: [],
+      toDelete: [],
+      unchangedCount: 2,
+      protectedCount: 0,
+    })
   })
 
   it('soft-deletes import-owned rows that are no longer desired', () => {
@@ -60,7 +62,12 @@ describe('reconcile', () => {
       [row('a', godMan), row('b', forvaltare)],
       new Set()
     )
-    expect(plan).toEqual({ toInsert: [], toDelete: ['b'], unchangedCount: 1 })
+    expect(plan).toEqual({
+      toInsert: [],
+      toDelete: ['b'],
+      unchangedCount: 1,
+      protectedCount: 0,
+    })
   })
 
   it('treats a changed role for the same pair as delete + insert', () => {
@@ -70,12 +77,18 @@ describe('reconcile', () => {
       toInsert: [changed],
       toDelete: ['a'],
       unchangedCount: 0,
+      protectedCount: 0,
     })
   })
 
   it('never deletes fakturamottagare rows for a conflict holder', () => {
     const plan = reconcile([], [row('a', recipient)], new Set(['P5']))
-    expect(plan).toEqual({ toInsert: [], toDelete: [], unchangedCount: 0 })
+    expect(plan).toEqual({
+      toInsert: [],
+      toDelete: [],
+      unchangedCount: 0,
+      protectedCount: 1,
+    })
   })
 
   it('still deletes guardian rows for a conflict holder', () => {
@@ -85,11 +98,45 @@ describe('reconcile', () => {
       roleType: 'god_man',
     }
     const plan = reconcile([], [row('a', guardianOfP5)], new Set(['P5']))
-    expect(plan.toDelete).toEqual(['a'])
+    expect(plan).toEqual({
+      toInsert: [],
+      toDelete: ['a'],
+      unchangedCount: 0,
+      protectedCount: 0,
+    })
   })
 
   it('dedupes desired edges before inserting', () => {
     const plan = reconcile([godMan, godMan], [], new Set())
     expect(plan.toInsert).toEqual([godMan])
+  })
+
+  it('does not collide keys that share a separator-like substring', () => {
+    const a: RelationEdge = {
+      subjectContactCode: 'A|B',
+      relatedContactCode: 'C',
+      roleType: 'god_man',
+    }
+    const b: RelationEdge = {
+      subjectContactCode: 'A',
+      relatedContactCode: 'B|C',
+      roleType: 'god_man',
+    }
+    const plan = reconcile([a, b], [], new Set())
+    expect(plan.toInsert).toHaveLength(2)
+  })
+
+  it('counts duplicate existing rows for a desired key as unchanged', () => {
+    const plan = reconcile(
+      [godMan],
+      [row('a', godMan), row('b', godMan)],
+      new Set()
+    )
+    expect(plan).toEqual({
+      toInsert: [],
+      toDelete: [],
+      unchangedCount: 2,
+      protectedCount: 0,
+    })
   })
 })
