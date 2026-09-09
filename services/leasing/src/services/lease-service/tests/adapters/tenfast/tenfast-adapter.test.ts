@@ -2365,3 +2365,44 @@ describe(tenfastAdapter.uploadTerminationFile, () => {
   })
 })
 
+describe(tenfastAdapter.uploadLeaseFile, () => {
+  beforeEach(() => {
+    jest.restoreAllMocks()
+    ;(request as jest.Mock).mockReset()
+  })
+
+  it('returns ok when upload-file succeeds', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 200, data: {} })
+
+    const result = await tenfastAdapter.uploadLeaseFile(
+      'tenfast-lease-id',
+      Buffer.from('pdf'),
+      'kontrakt.pdf'
+    )
+
+    expect(result).toEqual({ ok: true, data: undefined })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'post',
+        url: expect.stringContaining('/upload-file'),
+      }),
+      { contentType: false }
+    )
+  })
+
+  it('returns upload-failed when Tenfast rejects the file', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: 'bad request',
+    })
+
+    const result = await tenfastAdapter.uploadLeaseFile(
+      'tenfast-lease-id',
+      Buffer.from('pdf'),
+      'kontrakt.pdf'
+    )
+
+    expect(result).toEqual({ ok: false, err: 'upload-failed' })
+  })
+})
+
