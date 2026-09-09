@@ -3,6 +3,7 @@ import { logger } from '@onecore/utilities'
 import { ContactCode } from '@src/domain'
 import { RelatedContact, RelatedContactRole } from '@src/domain/contact'
 import { contactNamesByCodes } from '@src/adapters/xpand/contact-lookup-query'
+import { RENSAD_GDPR } from '@src/adapters/xpand/relation-sql'
 import { activeRelationsForMany } from './repository'
 import { RoleType } from './db-model'
 
@@ -46,11 +47,15 @@ const relatedContactsForMany = async (
   // whitespace even though the requested codes above are already trimmed.
   // Use these trimmed values everywhere below (requested-set checks,
   // counterpart lookup and `push`) so such a row isn't silently dropped.
-  const trimmedRows = rows.map((r) => ({
-    subject: r.subject_contact_code.trim(),
-    related: r.related_contact_code.trim(),
-    roleType: r.role_type,
-  }))
+  // The GDPR-erased placeholder is never a real party (services/CLAUDE.md);
+  // the import excludes it at write time, this guards other writers.
+  const trimmedRows = rows
+    .map((r) => ({
+      subject: r.subject_contact_code.trim(),
+      related: r.related_contact_code.trim(),
+      roleType: r.role_type,
+    }))
+    .filter((r) => r.subject !== RENSAD_GDPR && r.related !== RENSAD_GDPR)
 
   // Only the counterpart of each requested code needs a name lookup — not
   // the requested codes themselves.
@@ -62,7 +67,9 @@ const relatedContactsForMany = async (
   const names = await contactNamesByCodes(xpandDb, [...counterpartCodes])
 
   const push = (owner: string, other: string, role: RelatedContactRole) => {
-    // A self-edge would list the contact as its own guardian/recipient.
+    // Self-edges (subject === related) are prevented by the import's query
+    // guards, not by the table; skip them so a contact is never listed as
+    // its own guardian/recipient.
     if (owner === other) return
     const name = names.get(other)
     if (!name) return
@@ -72,29 +79,28 @@ const relatedContactsForMany = async (
     result.set(owner, list)
   }
 
-  let dropped = 0
-  // Self-edges (subject === related) are prevented by the import's query
-  // guards, not by the table; they would surface as a self-referential pair
-  // here.
+  // Counts per direction: an edge requested from both sides whose
+  // counterparts are both missing counts twice.
+  let droppedDirections = 0
   for (const r of trimmedRows) {
     if (requested.has(r.subject)) {
       if (names.has(r.related)) {
         push(r.subject, r.related, SUBJECT_ROLE[r.roleType])
       } else {
-        dropped++
+        droppedDirections++
       }
     }
     if (requested.has(r.related)) {
       if (names.has(r.subject)) {
         push(r.related, r.subject, RELATED_ROLE[r.roleType])
       } else {
-        dropped++
+        droppedDirections++
       }
     }
   }
-  if (dropped > 0) {
+  if (droppedDirections > 0) {
     logger.debug(
-      { dropped, requested: requested.size },
+      { droppedDirections, requested: requested.size },
       'relatedContactsForMany.missingInXpand'
     )
   }

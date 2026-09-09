@@ -5,7 +5,7 @@ export const RelatedContactRoleSchema = z.enum([
   'administrator', // förvaltare
   'trusteeFor', // the subject is god man for this contact (its huvudman)
   'administratorFor', // the subject is förvaltare for this contact (its huvudman)
-  'otherInvoiceRecipient', // annan fakturamottagare — receives invoices for the subject's leases
+  'otherInvoiceRecipient', // annan fakturamottagare — receives the subject's invoices
   'otherInvoiceRecipientFor', // the subject is the annan fakturamottagare for this contact
 ])
 
