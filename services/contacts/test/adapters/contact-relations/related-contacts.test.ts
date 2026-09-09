@@ -165,4 +165,59 @@ describe('relatedContactsFor', () => {
     ])
     expect(await relatedContactsFor(xpand, contacts, 'P001000')).toEqual([])
   })
+
+  it('merges forward and reverse roles when a code is subject in one row and related in another', async () => {
+    await insertMany(
+      contacts,
+      [
+        {
+          subjectContactCode: 'P000444',
+          relatedContactCode: 'P000222',
+          roleType: 'annan_fakturamottagare',
+        },
+      ],
+      'test'
+    )
+
+    const list = await relatedContactsFor(xpand, contacts, 'P000444')
+
+    expect(list.map((r) => [r.contactCode, r.role]).sort()).toEqual([
+      ['P000222', 'otherInvoiceRecipient'],
+      ['P000555', 'administratorFor'],
+      ['P000666', 'trusteeFor'],
+    ])
+  })
+
+  it('returns one entry when the same edge is stored as two active rows', async () => {
+    await insertMany(
+      contacts,
+      [
+        {
+          subjectContactCode: 'P000555',
+          relatedContactCode: 'P000444',
+          roleType: 'forvaltare',
+        },
+      ],
+      'test'
+    )
+
+    const list = await relatedContactsFor(xpand, contacts, 'P000555')
+
+    expect(list).toHaveLength(1)
+  })
+
+  it('tolerates stored codes with trailing whitespace', async () => {
+    await contacts('contact_relation').insert({
+      subject_contact_code: 'P001000 ',
+      related_contact_code: 'P000444 ',
+      role_type: 'god_man',
+      created_by: 'test',
+    })
+
+    const list = await relatedContactsFor(xpand, contacts, 'P001000')
+
+    expect(list).toEqual([
+      expect.objectContaining({ contactCode: 'P000444', role: 'trustee' }),
+    ])
+  })
 })

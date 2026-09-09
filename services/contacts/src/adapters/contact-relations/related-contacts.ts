@@ -1,4 +1,5 @@
 import { Knex } from 'knex'
+import { logger } from '@onecore/utilities'
 import { ContactCode } from '@src/domain'
 import { RelatedContact, RelatedContactRole } from '@src/domain/contact'
 import { contactNamesByCodes } from '@src/adapters/xpand/contact-lookup-query'
@@ -40,12 +41,25 @@ const relatedContactsForMany = async (
   const rows = await activeRelationsForMany(contactsDb, [...requested])
   if (rows.length === 0) return result
 
-  const otherCodes = new Set<string>()
-  for (const r of rows) {
-    otherCodes.add(r.subject_contact_code)
-    otherCodes.add(r.related_contact_code)
+  // Trim once here: MSSQL ignores trailing blanks in comparisons, so
+  // `activeRelationsForMany` can return a stored code with trailing
+  // whitespace even though the requested codes above are already trimmed.
+  // Use these trimmed values everywhere below (requested-set checks,
+  // counterpart lookup and `push`) so such a row isn't silently dropped.
+  const trimmedRows = rows.map((r) => ({
+    subject: r.subject_contact_code.trim(),
+    related: r.related_contact_code.trim(),
+    roleType: r.role_type,
+  }))
+
+  // Only the counterpart of each requested code needs a name lookup — not
+  // the requested codes themselves.
+  const counterpartCodes = new Set<string>()
+  for (const r of trimmedRows) {
+    if (requested.has(r.subject)) counterpartCodes.add(r.related)
+    if (requested.has(r.related)) counterpartCodes.add(r.subject)
   }
-  const names = await contactNamesByCodes(xpandDb, [...otherCodes])
+  const names = await contactNamesByCodes(xpandDb, [...counterpartCodes])
 
   const push = (owner: string, other: string, role: RelatedContactRole) => {
     const name = names.get(other)
@@ -56,26 +70,41 @@ const relatedContactsForMany = async (
     result.set(owner, list)
   }
 
-  for (const r of rows) {
-    if (requested.has(r.subject_contact_code)) {
-      push(
-        r.subject_contact_code,
-        r.related_contact_code,
-        SUBJECT_ROLE[r.role_type]
-      )
+  let dropped = 0
+  // Self-edges (subject === related) are prevented by the import's query
+  // guards, not by the table; they would surface as a self-referential pair
+  // here.
+  for (const r of trimmedRows) {
+    if (requested.has(r.subject)) {
+      if (names.has(r.related)) {
+        push(r.subject, r.related, SUBJECT_ROLE[r.roleType])
+      } else {
+        dropped++
+      }
     }
-    if (requested.has(r.related_contact_code)) {
-      push(
-        r.related_contact_code,
-        r.subject_contact_code,
-        RELATED_ROLE[r.role_type]
-      )
+    if (requested.has(r.related)) {
+      if (names.has(r.subject)) {
+        push(r.related, r.subject, RELATED_ROLE[r.roleType])
+      } else {
+        dropped++
+      }
     }
+  }
+  if (dropped > 0) {
+    logger.debug(
+      { dropped, requested: requested.size },
+      'relatedContactsForMany.missingInXpand'
+    )
   }
 
   return result
 }
 
+/**
+ * Related contacts for one code; `[]` both for an unknown contact and for
+ * one with no relations — existence is checked separately via
+ * `contactExists`.
+ */
 const relatedContactsFor = async (
   xpandDb: Knex,
   contactsDb: Knex,
