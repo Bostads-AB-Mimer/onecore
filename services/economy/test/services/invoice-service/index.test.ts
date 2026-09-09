@@ -475,8 +475,11 @@ describe('Invoice Service', () => {
       const submitMiscellaneousInvoiceSpy = jest
         .spyOn(xledgerAdapter, 'submitMiscellaneousInvoice')
         .mockResolvedValueOnce({
-          externalIdentifier: 'ext-1',
-          invoiceBaseItemDbIds: ['xdb-1'],
+          ok: true,
+          data: {
+            externalIdentifier: 'ext-1',
+            invoiceBaseItemDbIds: ['xdb-1'],
+          },
         })
 
       const invoiceBaseRow = {
@@ -523,8 +526,11 @@ describe('Invoice Service', () => {
       jest
         .spyOn(xledgerAdapter, 'submitMiscellaneousInvoice')
         .mockResolvedValueOnce({
-          externalIdentifier: 'ext-1',
-          invoiceBaseItemDbIds: ['xdb-1'],
+          ok: true,
+          data: {
+            externalIdentifier: 'ext-1',
+            invoiceBaseItemDbIds: ['xdb-1'],
+          },
         })
 
       jest
