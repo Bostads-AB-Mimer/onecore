@@ -1,14 +1,11 @@
-import { Knex } from 'knex'
 import config from '@src/common/config'
 import { contactsDbClient } from '@src/adapters/db'
+import { makeWithContext, requireContactsTestDb } from '../db-support'
 
-if (config.contactsDatabase.database !== 'contacts-test') {
-  throw new Error(
-    `Refusing to run against database "${config.contactsDatabase.database}". Must be "contacts-test".`
-  )
-}
+requireContactsTestDb()
 
 const dbResource = contactsDbClient(config.contactsDatabase)
+const withContext = makeWithContext(dbResource)
 
 beforeAll(async () => {
   await dbResource.init()
@@ -17,21 +14,6 @@ beforeAll(async () => {
 afterAll(async () => {
   await dbResource.close()
 })
-
-const withContext = async (
-  callback: (ctx: { db: Knex.Transaction }) => Promise<unknown>
-) => {
-  try {
-    await dbResource.get().transaction(async (trx) => {
-      await callback({ db: trx })
-
-      throw 'rollback'
-    })
-  } catch (e: unknown) {
-    if (e === 'rollback') return
-    throw e
-  }
-}
 
 describe('contact_relation', () => {
   it('round-trips a row with defaults applied', () =>

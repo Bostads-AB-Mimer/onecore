@@ -1,6 +1,14 @@
 import knex from 'knex'
 import { ContactCode } from '@src/domain'
 import { RelatedContact, RelatedContactRole } from '@src/domain/contact'
+import {
+  ADMINISTRATOR_FORVTYP,
+  ANNANFM,
+  currentRelation,
+  GUARDIAN_FORVTYPS,
+  INNEHAVARE,
+  TRUSTEE_FORVTYP,
+} from './relation-sql'
 
 // ───────────────────────────── Section 1: shared primitives ─────────────────
 
@@ -9,24 +17,17 @@ export type RelationsResult = {
   related: RelatedContact[]
 }
 
-const ANNANFM = 'ANNANFM'
-const INNEHAVARE = 'INNEHAVARE'
-
 const ROLE_BY_FORVTYP: Record<number, RelatedContactRole> = {
-  1: 'trustee',
-  2: 'administrator',
+  [TRUSTEE_FORVTYP]: 'trustee',
+  [ADMINISTRATOR_FORVTYP]: 'administrator',
 }
 
 // Reverse direction: the subject is the god man/förvaltare *for* the related
 // contact (the related contact is the subject's huvudman).
 const REVERSE_ROLE_BY_FORVTYP: Record<number, RelatedContactRole> = {
-  1: 'trusteeFor',
-  2: 'administratorFor',
+  [TRUSTEE_FORVTYP]: 'trusteeFor',
+  [ADMINISTRATOR_FORVTYP]: 'administratorFor',
 }
-
-export const TRUSTEE_FORVTYP = 1
-export const ADMINISTRATOR_FORVTYP = 2
-const GUARDIAN_FORVTYPS = Object.keys(ROLE_BY_FORVTYP).map(Number)
 
 type RelatedRow = {
   subjectCode?: string | null
@@ -96,17 +97,6 @@ const collect = (rows: RelatedRow[], spec: RoleSpec): RelatedContact[] =>
       .map((row) => toRelatedContact(row, spec))
       .filter((r): r is RelatedContact => r !== null)
   )
-
-// Active lease + currently-valid relation row, expressed as raw ON predicates.
-// NULL fdate/tdate means unbounded validity (legacy ANNANFM rows often have
-// NULL fdate).
-// knex `raw` predicates are single-use bindings: a fresh pair must be built for
-// every query because the same `Raw` instance cannot be reused across `.andOn`
-// chains without corrupting its bindings — don't "simplify" by hoisting these.
-const currentRelation = (db: knex.Knex, alias: string, now: Date) => [
-  db.raw(`(${alias}.fdate IS NULL OR ${alias}.fdate <= ?)`, [now]),
-  db.raw(`(${alias}.tdate IS NULL OR ${alias}.tdate >= ?)`, [now]),
-]
 
 const whereSubjectIn = (
   query: knex.Knex.QueryBuilder,
@@ -349,8 +339,8 @@ export const relatedContactsForMany = async (
   const trimmed = contactCodes.map((c) => c.trim())
   const [guardians, guardianFor, invoiceRecipients, tenants] =
     await Promise.all([
-      guardianRows(db, trimmed, GUARDIAN_FORVTYPS),
-      guardianForRows(db, trimmed, GUARDIAN_FORVTYPS),
+      guardianRows(db, trimmed, [...GUARDIAN_FORVTYPS]),
+      guardianForRows(db, trimmed, [...GUARDIAN_FORVTYPS]),
       invoiceRecipientRows(db, trimmed, now),
       tenantRows(db, trimmed, now),
     ])
