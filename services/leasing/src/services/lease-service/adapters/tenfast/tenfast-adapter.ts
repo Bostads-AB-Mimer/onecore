@@ -263,6 +263,72 @@ export const importLease = async (
  * `tenfastApi.request` wrapper doesn't handle multipart, so we use native
  * fetch + FormData here, replicating the api-token header.
  */
+export const hasTerminationFile = async (
+  tenfastLeaseId: string
+): Promise<AdapterResult<boolean, 'lookup-failed' | 'unknown'>> => {
+  try {
+    const response = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/termination-file-url?hyresvard=${tenfastCompanyId}`,
+    })
+
+    if (response.status === 200) return { ok: true, data: true }
+    if (response.status === 404) return { ok: true, data: false }
+
+    logger.error(
+      { status: response.status, tenfastLeaseId },
+      'tenfast-adapter.hasTerminationFile'
+    )
+    return { ok: false, err: 'lookup-failed' }
+  } catch (err) {
+    logger.error({ err, tenfastLeaseId }, 'tenfast-adapter.hasTerminationFile')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const uploadTerminationFile = async (
+  tenfastLeaseId: string,
+  content: Buffer,
+  filename: string
+): Promise<AdapterResult<undefined, 'upload-failed' | 'unknown'>> => {
+  try {
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
+    const form = new FormData()
+    form.append(
+      'file',
+      new Blob([content], { type: 'application/pdf' }),
+      filename
+    )
+
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
+    const response = await fetch(
+      `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-termination-file?hyresvard=${tenfastCompanyId}`,
+      {
+        method: 'POST',
+        headers: { 'api-token': config.tenfast.apiKey },
+        body: form,
+      }
+    )
+
+    if (response.ok) {
+      return { ok: true, data: undefined }
+    }
+
+    const errorBody = await response.text()
+    logger.error(
+      { status: response.status, error: errorBody, tenfastLeaseId },
+      'tenfast-adapter.uploadTerminationFile'
+    )
+    return { ok: false, err: 'upload-failed' }
+  } catch (err) {
+    logger.error(
+      { err, tenfastLeaseId },
+      'tenfast-adapter.uploadTerminationFile: caught exception'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export const uploadLeaseFile = async (
   tenfastLeaseId: string,
   content: Buffer,

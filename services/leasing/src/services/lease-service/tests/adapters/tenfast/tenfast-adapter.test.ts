@@ -2286,3 +2286,82 @@ describe(tenfastAdapter.voidLease, () => {
     if (!result.ok) expect(result.err).toBe('unknown')
   })
 })
+
+describe(tenfastAdapter.hasTerminationFile, () => {
+  beforeEach(() => {
+    jest.restoreAllMocks()
+    ;(request as jest.Mock).mockReset()
+  })
+
+  it('returns true when termination-file-url responds 200', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 200 })
+
+    const result = await tenfastAdapter.hasTerminationFile('tenfast-lease-id')
+
+    expect(result).toEqual({ ok: true, data: true })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'get',
+        url: expect.stringContaining('/termination-file-url'),
+      })
+    )
+  })
+
+  it('returns false when termination-file-url responds 404', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 404 })
+
+    const result = await tenfastAdapter.hasTerminationFile('tenfast-lease-id')
+
+    expect(result).toEqual({ ok: true, data: false })
+  })
+
+  it('returns lookup-failed on unexpected status', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 500 })
+
+    const result = await tenfastAdapter.hasTerminationFile('tenfast-lease-id')
+
+    expect(result).toEqual({ ok: false, err: 'lookup-failed' })
+  })
+})
+
+describe(tenfastAdapter.uploadTerminationFile, () => {
+  const fetchMock = jest.fn()
+
+  beforeEach(() => {
+    jest.restoreAllMocks()
+    fetchMock.mockReset()
+    global.fetch = fetchMock
+  })
+
+  it('returns ok when upload-termination-file succeeds', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true })
+
+    const result = await tenfastAdapter.uploadTerminationFile(
+      'tenfast-lease-id',
+      Buffer.from('pdf'),
+      'Uppsägning av bostad.pdf'
+    )
+
+    expect(result).toEqual({ ok: true, data: undefined })
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/upload-termination-file'),
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+
+  it('returns upload-failed when Tenfast rejects the file', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      text: async () => 'bad request',
+    })
+
+    const result = await tenfastAdapter.uploadTerminationFile(
+      'tenfast-lease-id',
+      Buffer.from('pdf'),
+      'Uppsägning av bostad.pdf'
+    )
+
+    expect(result).toEqual({ ok: false, err: 'upload-failed' })
+  })
+})

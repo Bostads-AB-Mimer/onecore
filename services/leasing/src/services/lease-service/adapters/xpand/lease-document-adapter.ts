@@ -79,3 +79,152 @@ export const getSignedContractPdf = async (
     return null
   }
 }
+
+// DOKOP couples documents to other entities; CONTYPE 4 is the lease (hyobj) link.
+const LEASE_CONTEXT_TYPE = 4
+
+type TerminationDocument = {
+  filename: string
+  content: Buffer
+}
+
+type TerminationDocumentMeta = {
+  keydorev: string
+  title: string
+  filename: string | null
+  createdAt: Date | null
+}
+
+const terminationUploadFilename = (document: TerminationDocumentMeta): string => {
+  const UNSAFE = /[\\/:*?"<>|]/g
+  const raw = (document.filename ?? '').trim() || document.title.trim()
+  const cleaned = raw
+    .replace(UNSAFE, '_')
+    .replace(/\s+/g, ' ')
+    .replace(/_+/g, '_')
+    .replace(/^[._ ]+|[._ ]+$/g, '')
+  const name = cleaned || document.keydorev
+  return name.toLowerCase().endsWith('.pdf') ? name : `${name}.pdf`
+}
+
+const fetchTerminationDocumentMeta = async (
+  leaseId: string
+): Promise<TerminationDocumentMeta[]> => {
+  const rows = (await xpandDb('dokop as k')
+    .join('hyobj as h', 'h.keyhyobj', 'k.keycode')
+    .join('dorev as r', 'r.keydorev', 'k.keydorev')
+    .where('k.contype', LEASE_CONTEXT_TYPE)
+    .where('h.hyobjben', leaseId)
+    .select(
+      'r.keydorev as keydorev',
+      'r.revben as title',
+      'r.path as filename',
+      'r.skapdat as createdAt'
+    )) as Array<Record<string, unknown>>
+
+  return rows.map((row) => ({
+    keydorev: String(row.keydorev ?? '').trim(),
+    title: String(row.title ?? '').trim(),
+    filename: row.filename ? String(row.filename).trim() : null,
+    createdAt: row.createdAt ? new Date(row.createdAt as string) : null,
+  }))
+}
+
+const fetchTerminationDocumentContent = async (
+  keydorev: string
+): Promise<Buffer | null> => {
+  const files = (await xpandDb('dofil')
+    .where({ keydorev })
+    .select('fildata')) as Array<{ fildata: string | null }>
+
+  for (const file of files) {
+    const content = decodeFildata(file.fildata)
+    if (content) return content
+  }
+  return null
+}
+
+const isUppsagningTitle = (title: string): boolean => {
+  const name = title.toLowerCase()
+  return name.includes('uppsägning') || name.includes('uppsagning')
+}
+
+// Uppsägning-classified documents that are not the termination itself.
+const NOT_THE_TERMINATION = [
+  'bekräftelse',
+  'bekraftelse',
+  'ändring',
+  'andring',
+  'återtagen',
+  'atertagen',
+]
+
+const isOperativeUppsagning = (title: string): boolean =>
+  isUppsagningTitle(title) &&
+  !NOT_THE_TERMINATION.some((word) => title.toLowerCase().includes(word))
+
+const isUppsagningsbekraftelse = (title: string): boolean =>
+  isUppsagningTitle(title) &&
+  ['bekräftelse', 'bekraftelse'].some((word) =>
+    title.toLowerCase().includes(word)
+  )
+
+const newestTerminationDocument = (
+  documents: TerminationDocumentMeta[]
+): TerminationDocumentMeta | null =>
+  documents.length
+    ? documents.reduce((best, document) =>
+        (document.createdAt?.getTime() ?? 0) > (best.createdAt?.getTime() ?? 0)
+          ? document
+          : best
+      )
+    : null
+
+const pickTerminationDocument = (
+  documents: TerminationDocumentMeta[]
+): TerminationDocumentMeta | null => {
+  const actualUppsagningar = documents.filter((document) =>
+    isOperativeUppsagning(document.title)
+  )
+  const candidates = actualUppsagningar.length
+    ? actualUppsagningar
+    : documents.filter((document) => isUppsagningsbekraftelse(document.title))
+
+  return newestTerminationDocument(candidates)
+}
+
+/**
+ * Fetches the operative uppsägning PDF for an xpand lease.
+ *
+ * Picks the newest actual uppsägning, with tenant-signed bekräftelse as
+ * fallback when the digital flow produced nothing else.
+ */
+export const getTerminationDocumentPdf = async (
+  leaseId: string
+): Promise<TerminationDocument | null> => {
+  try {
+    const documents = await fetchTerminationDocumentMeta(leaseId)
+    const picked = pickTerminationDocument(documents)
+    if (!picked) {
+      logger.warn(
+        { leaseId },
+        'getTerminationDocumentPdf: no uppsägning document found'
+      )
+      return null
+    }
+
+    const content = await fetchTerminationDocumentContent(picked.keydorev)
+    if (!content) {
+      logger.warn(
+        { leaseId, keydorev: picked.keydorev },
+        'getTerminationDocumentPdf: document has no decodable file content'
+      )
+      return null
+    }
+
+    return { filename: terminationUploadFilename(picked), content }
+  } catch (err) {
+    logger.error({ err, leaseId }, 'getTerminationDocumentPdf failed')
+    return null
+  }
+}
