@@ -256,20 +256,35 @@ export const importLease = async (
   }
 }
 
-/**
- * Uploads a PDF as the main contract document for an existing Tenfast lease.
- *
- * Posts multipart/form-data to POST /v1/hyresvard/avtal/{id}/upload-file. The
- * `tenfastApi.request` wrapper doesn't handle multipart, so we use native
- * fetch + FormData here, replicating the api-token header.
- */
-export const uploadLeaseFile = async (
+export const hasTerminationFile = async (
+  tenfastLeaseId: string
+): Promise<AdapterResult<boolean, 'lookup-failed' | 'unknown'>> => {
+  try {
+    const response = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/termination-file-url?hyresvard=${tenfastCompanyId}`,
+    })
+
+    if (response.status === 200) return { ok: true, data: true }
+    if (response.status === 404) return { ok: true, data: false }
+
+    logger.error(
+      { status: response.status, tenfastLeaseId },
+      'tenfast-adapter.hasTerminationFile'
+    )
+    return { ok: false, err: 'lookup-failed' }
+  } catch (err) {
+    logger.error({ err, tenfastLeaseId }, 'tenfast-adapter.hasTerminationFile')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export const uploadTerminationFile = async (
   tenfastLeaseId: string,
   content: Buffer,
   filename: string
 ): Promise<AdapterResult<undefined, 'upload-failed' | 'unknown'>> => {
   try {
-    // Native FormData/fetch are stable in Node 20 despite the experimental flag.
     // eslint-disable-next-line n/no-unsupported-features/node-builtins
     const form = new FormData()
     form.append(
@@ -278,23 +293,65 @@ export const uploadLeaseFile = async (
       filename
     )
 
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins
-    const response = await fetch(
-      `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-file?hyresvard=${tenfastCompanyId}`,
+    const response = await tenfastApi.request(
       {
-        method: 'POST',
-        headers: { 'api-token': config.tenfast.apiKey },
-        body: form,
-      }
+        method: 'post',
+        url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-termination-file?hyresvard=${tenfastCompanyId}`,
+        data: form,
+      },
+      { contentType: false }
     )
 
-    if (response.ok) {
+    if (response.status >= 200 && response.status < 300) {
       return { ok: true, data: undefined }
     }
 
-    const errorBody = await response.text()
     logger.error(
-      { status: response.status, error: errorBody, tenfastLeaseId },
+      { status: response.status, error: response.data, tenfastLeaseId },
+      'tenfast-adapter.uploadTerminationFile'
+    )
+    return { ok: false, err: 'upload-failed' }
+  } catch (err) {
+    logger.error(
+      { err, tenfastLeaseId },
+      'tenfast-adapter.uploadTerminationFile: caught exception'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/**
+ * Uploads a PDF as the main contract document for an existing Tenfast lease.
+ */
+export const uploadLeaseFile = async (
+  tenfastLeaseId: string,
+  content: Buffer,
+  filename: string
+): Promise<AdapterResult<undefined, 'upload-failed' | 'unknown'>> => {
+  try {
+    // eslint-disable-next-line n/no-unsupported-features/node-builtins
+    const form = new FormData()
+    form.append(
+      'file',
+      new Blob([content], { type: 'application/pdf' }),
+      filename
+    )
+
+    const response = await tenfastApi.request(
+      {
+        method: 'post',
+        url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-file?hyresvard=${tenfastCompanyId}`,
+        data: form,
+      },
+      { contentType: false }
+    )
+
+    if (response.status >= 200 && response.status < 300) {
+      return { ok: true, data: undefined }
+    }
+
+    logger.error(
+      { status: response.status, error: response.data, tenfastLeaseId },
       'tenfast-adapter.uploadLeaseFile'
     )
     return { ok: false, err: 'upload-failed' }
@@ -1199,10 +1256,15 @@ export const terminateLease = async (
       return { ok: true, data: { action: 'terminated', leaseId } }
     }
 
-    if (
-      response.status === 400 &&
-      response.data?.error === 'Avtalet kan inte sägas upp'
-    ) {
+    const skipErrors = new Set([
+      'Avtalet kan inte sägas upp',
+      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
+    ])
+    if (response.status === 400 && skipErrors.has(response.data?.error)) {
+      logger.info(
+        { leaseId, error: response.data?.error },
+        'Tenfast terminate skipped — lease already handled or termination not required'
+      )
       return { ok: true, data: { action: 'skipped', leaseId } }
     }
 
