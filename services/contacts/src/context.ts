@@ -96,7 +96,7 @@ export const makeAppContext = (
       middlewares: middlewares,
     },
     modules: {
-      contactsRepository: xpandContactsRepository(xpandDb),
+      contactsRepository: xpandContactsRepository(xpandDb, contactsDb),
       contactWriter: xpandSoapContactWriter(config.xpandSoap),
       ...overrides,
     },

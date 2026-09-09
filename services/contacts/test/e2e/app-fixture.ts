@@ -4,9 +4,16 @@ import makeApp from '@src/app'
 import config from '@src/common/config'
 import { makeAppContext } from '@src/context'
 import { ContactWriter } from '@src/adapters/contact-writer'
+import { Knex } from 'knex'
+import { insertMany } from '@src/adapters/contact-relations'
 import axios from 'axios'
 import sql, { ConnectionPool } from 'mssql'
 import { Server, Agent } from 'node:http'
+import { resetContactRelations } from '../db-support'
+import {
+  RELATION_FIXTURES,
+  SOFT_DELETED_RELATION_FIXTURES,
+} from './relation-fixtures'
 
 /**
  * Throws exception indicating that we are attempting to perform writes to a database that
@@ -75,6 +82,25 @@ const refusingContactWriter: ContactWriter = {
   },
 }
 
+/**
+ * Resets `contact_relation` in the contacts test DB and seeds the standard
+ * relation fixtures (plus soft-deleted rows that must never surface).
+ */
+export const seedContactRelations = async (contactsDb: Knex) => {
+  await resetContactRelations(contactsDb)
+  await insertMany(contactsDb, RELATION_FIXTURES, 'test-seed')
+  await contactsDb('contact_relation').insert(
+    SOFT_DELETED_RELATION_FIXTURES.map((e) => ({
+      subject_contact_code: e.subjectContactCode,
+      related_contact_code: e.relatedContactCode,
+      role_type: e.roleType,
+      created_by: 'test-seed',
+      deleted_at: new Date('2026-01-01T00:00:00Z'),
+      deleted_by: 'test-seed',
+    }))
+  )
+}
+
 export type FixtureOptions = {
   /**
    * The data set to apply to the test database.
@@ -109,6 +135,9 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
 
   await pool.close()
 
+  await ctx.infrastructure.contactsDb.init()
+  await seedContactRelations(ctx.infrastructure.contactsDb.get())
+
   return {
     async start(): Promise<void> {
       return new Promise((resolve) => {
@@ -126,8 +155,19 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
           })
         })
       }
-      await ctx.infrastructure.xpandDb.close()
-      await ctx.infrastructure.contactsDb.close()
+      try {
+        await resetContactRelations(ctx.infrastructure.contactsDb.get())
+      } finally {
+        // Every pool closes even if the reset throws (a resource that healed
+        // into `failed` makes `get()` throw) and even if one close throws.
+        // A leaked pool hangs the run behind a confusing open-handles error
+        // instead of the real failure; allSettled also keeps a close failure
+        // from replacing the reset error on its way out of the finally.
+        await Promise.allSettled([
+          ctx.infrastructure.xpandDb.close(),
+          ctx.infrastructure.contactsDb.close(),
+        ])
+      }
     },
     port() {
       if (server) {
@@ -143,6 +183,9 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
         httpAgent: httpAgent,
         baseURL: `http://localhost:${this.port()}`,
       })
+    },
+    contactsDb() {
+      return ctx.infrastructure.contactsDb.get()
     },
   }
 }

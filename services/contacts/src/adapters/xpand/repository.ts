@@ -9,6 +9,8 @@ import {
   Contact,
   ContactCode,
   NationalIdNumber,
+  RelatedContact,
+  RelatedContactRole,
 } from '@src/domain'
 import {
   cmlogContactChanges,
@@ -21,46 +23,66 @@ import { parseNationalId } from '@src/domain/national-id'
 import { contactsByCodesQuery, ContactIncludeOptions } from './batch-query'
 import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
+import { contactExists } from './contact-lookup-query'
 import {
-  guardianRelations,
-  guardianForRelations,
   relatedContactsFor,
   relatedContactsForMany,
-  otherInvoiceRecipientRelations,
-  otherInvoiceRecipientForRelations,
-} from './related-contacts-query'
-import { ADMINISTRATOR_FORVTYP, TRUSTEE_FORVTYP } from './relation-sql'
+  relatedContactsInRole,
+} from '@src/adapters/related-contacts'
 
 /**
- * Populates `relatedContacts` on a batch of contacts using a single grouped
- * relation query (not N+1). Contacts with no relations get an empty array.
- */
-const withRelatedContacts = async (
-  db: knex.Knex,
-  contacts: Contact[]
-): Promise<Contact[]> => {
-  if (contacts.length === 0) return contacts
-  const byCode = await relatedContactsForMany(
-    db,
-    contacts.map((c) => c.contactCode)
-  )
-  for (const c of contacts) {
-    c.relatedContacts = byCode.get(c.contactCode) ?? []
-  }
-  return contacts
-}
-
-/**
- * Creates a ContactsRepository that interacts with the Xpand database,
- * using the provided Knex database resource.
+ * Creates a ContactsRepository that reads contact data from the Xpand
+ * database and related contacts from the contacts service's own database.
  *
- * @param db - A Resource wrapping a Knex database connection.
+ * @param db - A Resource wrapping a Knex connection to the Xpand database.
+ * @param contactsDb - A Resource wrapping a Knex connection to the contacts
+ *                     service's own database.
  *
  * @returns An implementation of the ContactsRepository interface.
  */
 export const xpandContactsRepository = (
-  db: Resource<knex.Knex>
+  db: Resource<knex.Knex>,
+  contactsDb: Resource<knex.Knex>
 ): ContactsRepository => {
+  /**
+   * Populates `relatedContacts` on a batch of contacts using a single grouped
+   * relation query (not N+1). Contacts with no relations get an empty array.
+   */
+  const withRelatedContacts = async (
+    contacts: Contact[]
+  ): Promise<Contact[]> => {
+    if (contacts.length === 0) return contacts
+    const byCode = await relatedContactsForMany(
+      db.get(),
+      contactsDb.get(),
+      contacts.map((c) => c.contactCode)
+    )
+    for (const c of contacts) {
+      c.relatedContacts = byCode.get(c.contactCode) ?? []
+    }
+    return contacts
+  }
+
+  /**
+   * The subject's related contacts filtered to one role. Null when the
+   * subject does not exist in Xpand; empty array when it exists but has no
+   * relations in that role.
+   */
+  const relationsByRole = async (
+    contactCode: ContactCode,
+    role: RelatedContactRole
+  ): Promise<RelatedContact[] | null> => {
+    // Resolve both handles before creating any promise, so a resource that is
+    // not ready throws without leaving the other call unawaited.
+    const xpand = db.get()
+    const relations = contactsDb.get()
+    const [exists, related] = await Promise.all([
+      contactExists(xpand, contactCode),
+      relatedContactsInRole(xpand, relations, contactCode, role),
+    ])
+    return exists ? related : null
+  }
+
   return {
     /**
      * Retrieve a paginated and, optionally, filtered list of contacts
@@ -111,6 +133,7 @@ export const xpandContactsRepository = (
       if (!contact) return null
       contact.relatedContacts = await relatedContactsFor(
         db.get(),
+        contactsDb.get(),
         contact.contactCode
       )
       return contact
@@ -131,64 +154,25 @@ export const xpandContactsRepository = (
       const contacts = transformDbContactRows(rows)
 
       return options?.includeRelations
-        ? withRelatedContacts(db.get(), contacts)
+        ? withRelatedContacts(contacts)
         : contacts
     },
 
-    getAdministrators: async (contactCode: ContactCode) => {
-      const { subjectExists, related } = await guardianRelations(
-        db.get(),
-        contactCode,
-        ADMINISTRATOR_FORVTYP
-      )
-      return subjectExists ? related : null
-    },
+    getAdministrators: (contactCode) =>
+      relationsByRole(contactCode, 'administrator'),
 
-    getAdministratorsFor: async (contactCode: ContactCode) => {
-      const { subjectExists, related } = await guardianForRelations(
-        db.get(),
-        contactCode,
-        ADMINISTRATOR_FORVTYP
-      )
-      return subjectExists ? related : null
-    },
+    getAdministratorsFor: (contactCode) =>
+      relationsByRole(contactCode, 'administratorFor'),
 
-    getTrustees: async (contactCode: ContactCode) => {
-      const { subjectExists, related } = await guardianRelations(
-        db.get(),
-        contactCode,
-        TRUSTEE_FORVTYP
-      )
-      return subjectExists ? related : null
-    },
+    getTrustees: (contactCode) => relationsByRole(contactCode, 'trustee'),
 
-    getTrusteesFor: async (contactCode: ContactCode) => {
-      const { subjectExists, related } = await guardianForRelations(
-        db.get(),
-        contactCode,
-        TRUSTEE_FORVTYP
-      )
-      return subjectExists ? related : null
-    },
+    getTrusteesFor: (contactCode) => relationsByRole(contactCode, 'trusteeFor'),
 
-    getOtherInvoiceRecipients: async (contactCode: ContactCode) => {
-      const { subjectExists, related } = await otherInvoiceRecipientRelations(
-        db.get(),
-        contactCode,
-        new Date()
-      )
-      return subjectExists ? related : null
-    },
+    getOtherInvoiceRecipients: (contactCode) =>
+      relationsByRole(contactCode, 'otherInvoiceRecipient'),
 
-    getOtherInvoiceRecipientsFor: async (contactCode: ContactCode) => {
-      const { subjectExists, related } =
-        await otherInvoiceRecipientForRelations(
-          db.get(),
-          contactCode,
-          new Date()
-        )
-      return subjectExists ? related : null
-    },
+    getOtherInvoiceRecipientsFor: (contactCode) =>
+      relationsByRole(contactCode, 'otherInvoiceRecipientFor'),
 
     /**
      * Retrieves a contact by their national ID number.
@@ -206,6 +190,7 @@ export const xpandContactsRepository = (
       if (!contact) return null
       contact.relatedContacts = await relatedContactsFor(
         db.get(),
+        contactsDb.get(),
         contact.contactCode
       )
       return contact
@@ -252,7 +237,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return withRelatedContacts(db.get(), transformDbContactRows(rows))
+        return withRelatedContacts(transformDbContactRows(rows))
       }
 
       return []
@@ -282,7 +267,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return withRelatedContacts(db.get(), transformDbContactRows(rows))
+        return withRelatedContacts(transformDbContactRows(rows))
       }
 
       return []
@@ -304,7 +289,7 @@ export const xpandContactsRepository = (
         .getPage(db.get(), { page: 0, pageSize: codes.length })
       const contacts = transformDbContactRows(rows)
       return options?.includeRelations
-        ? withRelatedContacts(db.get(), contacts)
+        ? withRelatedContacts(contacts)
         : contacts
     },
 

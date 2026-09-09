@@ -18,6 +18,16 @@ export const requireXpandTestDb = () =>
   requireDatabase(config.xpandDatabase.database, 'contacts-xpand-test')
 
 /**
+ * Empties `contact_relation` in the contacts test DB. For the e2e fixture,
+ * which runs the real app and so cannot wrap its rows in a rolled-back
+ * transaction the way `makeWithContext` suites do.
+ */
+export const resetContactRelations = async (db: Knex) => {
+  requireContactsTestDb()
+  await db('contact_relation').del()
+}
+
+/**
  * Wraps each case in a transaction that is always rolled back, so cases
  * neither see nor leave each other's rows.
  */
