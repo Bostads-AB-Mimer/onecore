@@ -62,7 +62,6 @@ export function routes(router: KoaRouter) {
 
   // Records a payment transaction in Tenfast for the invoice identified by OCR number.
   // Tenfast updates the invoice state internally based on accumulated transactions.
-  // Xledger AR payments are credits (negative amounts); Tenfast expects positive payment amounts.
   router.post('(.*)/invoices/:invoiceId/payments', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -82,7 +81,8 @@ export function routes(router: KoaRouter) {
     try {
       const result = await recordPaymentForInvoice({
         ocr: invoiceId,
-        amount: -amount,
+        // Xledger payments are negative AR credits; convert to positive for Tenfast.
+        amount: Math.abs(amount),
         dateTime: new Date(dateTime),
         method,
       })
