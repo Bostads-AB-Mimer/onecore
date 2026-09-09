@@ -199,16 +199,6 @@ describe('relatedContacts endpoints', () => {
       })
     })
 
-    it('does not return a soft-deleted relation', async () => {
-      // [] is only meaningful because a soft-deleted row exists for this pair.
-      const [softDeleted] = SOFT_DELETED_RELATION_FIXTURES
-      const response = await httpClient.get(
-        `/contacts/${softDeleted.subjectContactCode}/other-invoice-recipients`
-      )
-      expect(response.status).toBe(200)
-      expect(response.data.content.relations).toEqual([])
-    })
-
     it('returns 404 for an unknown contact', async () => {
       const response = await httpClient.get(
         '/contacts/P999999/other-invoice-recipients',
@@ -230,16 +220,6 @@ describe('relatedContacts endpoints', () => {
         contactCode: 'P900001',
         role: 'otherInvoiceRecipientFor',
       })
-    })
-
-    it('does not return a soft-deleted relation from the recipient side', async () => {
-      // [] is only meaningful because a soft-deleted row exists for this pair.
-      const [softDeleted] = SOFT_DELETED_RELATION_FIXTURES
-      const response = await httpClient.get(
-        `/contacts/${softDeleted.relatedContactCode}/other-invoice-recipient-for`
-      )
-      expect(response.status).toBe(200)
-      expect(response.data.content.relations).toEqual([])
     })
 
     it('returns an empty list for a contact that is recipient for no one', async () => {
@@ -353,29 +333,68 @@ describe('relatedContacts endpoints', () => {
     })
   })
 
+  describe('soft-deleted relations', () => {
+    it('are returned from neither side', async () => {
+      const [{ subjectContactCode, relatedContactCode }] =
+        SOFT_DELETED_RELATION_FIXTURES
+
+      const [holder, recipient] = await Promise.all([
+        httpClient.get(
+          `/contacts/${subjectContactCode}/other-invoice-recipients`
+        ),
+        httpClient.get(
+          `/contacts/${relatedContactCode}/other-invoice-recipient-for`
+        ),
+      ])
+
+      expect(holder.status).toBe(200)
+      expect(holder.data.content.relations).toEqual([])
+      expect(recipient.status).toBe(200)
+      expect(recipient.data.content.relations).toEqual([])
+    })
+  })
+
   describe('source of truth is contact_relation', () => {
-    it('returns a relation that exists only in the contacts DB, not in Xpand', async () => {
-      // P000333 has no guardian in the Xpand seed. Seed a DB-only edge.
-      const contactsDb = testApp!.contactsDb()
-      await contactsDb('contact_relation').insert({
-        subject_contact_code: 'P000333',
-        related_contact_code: 'P000444',
+    // Edges written outside the fixture's seeding, so each case cleans up
+    // after itself; the fixture only resets on setup and teardown.
+    const seededSubjects: string[] = []
+
+    const seedEdge = async (subject: string, related: string) => {
+      await testApp!.contactsDb()('contact_relation').insert({
+        subject_contact_code: subject,
+        related_contact_code: related,
         role_type: 'god_man',
         created_by: 'test',
       })
+      seededSubjects.push(subject)
+    }
 
-      try {
-        const response = await httpClient.get('/contacts/P000333/trustee')
-        expect(response.status).toBe(200)
-        expect(response.data.content).toMatchObject({ contactCode: 'P000444' })
-      } finally {
-        // Written outside the fixture's seeding, so clean it up here to keep
-        // later tests in this file independent of it (the fixture itself
-        // resets the table on setup and teardown).
-        await contactsDb('contact_relation')
-          .where({ subject_contact_code: 'P000333' })
-          .del()
-      }
+    afterEach(async () => {
+      await testApp!
+        .contactsDb()('contact_relation')
+        .whereIn('subject_contact_code', seededSubjects.splice(0))
+        .del()
+    })
+
+    it('returns a relation that exists only in the contacts DB, not in Xpand', async () => {
+      // P000333 has no guardian in the Xpand seed.
+      await seedEdge('P000333', 'P000444')
+
+      const response = await httpClient.get('/contacts/P000333/trustee')
+
+      expect(response.status).toBe(200)
+      expect(response.data.content).toMatchObject({ contactCode: 'P000444' })
+    })
+
+    it('404s for a contact that has relations but no Xpand record', async () => {
+      // Xpand still owns existence: P999999 is absent from the data set.
+      await seedEdge('P999999', 'P000444')
+
+      const response = await httpClient.get('/contacts/P999999/trustee', {
+        validateStatus: () => true,
+      })
+
+      expect(response.status).toBe(404)
     })
   })
 })

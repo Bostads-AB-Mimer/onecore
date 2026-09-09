@@ -1,9 +1,8 @@
 import { RelationEdge } from '@src/adapters/contact-relations'
 
 /**
- * `contact_relation` rows seeded before every e2e run. They mirror the
- * guardian / ANNANFM fixtures in `.jest/sql/seed.sql` so existing e2e
- * assertions hold after the read flip. Names still come from the Xpand seed.
+ * `contact_relation` rows seeded before every e2e run, mirroring the guardian
+ * / ANNANFM fixtures in `.jest/sql/seed.sql`. Names come from the Xpand seed.
  */
 export const RELATION_FIXTURES: RelationEdge[] = [
   {
@@ -51,9 +50,9 @@ export const RELATION_FIXTURES: RelationEdge[] = [
 ]
 
 /**
- * Soft-deleted rows: must never surface. P900002 ↔ P900011 used to be a
- * terminated-lease case in the Xpand-backed tests; it now proves the
- * `deleted_at IS NULL` filter.
+ * Seeded soft-deleted: must never surface from either side. Present in every
+ * e2e run, so every relation assertion in the suite also stands as proof that
+ * the `deleted_at IS NULL` filter holds.
  */
 export const SOFT_DELETED_RELATION_FIXTURES: RelationEdge[] = [
   {
