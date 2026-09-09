@@ -197,14 +197,10 @@ export const routes = (router: KoaRouter) => {
 
           logger.info({ leaseId }, 'Lease terminated in Tenfast')
 
-          // Best-effort attach the uppsägning PDF from xpand. A missing PDF or
-          // failed upload is logged but does not fail the terminate.
-          if (result.data.action !== 'terminated') {
-            ctx.status = 200
-            ctx.body = makeSuccessResponseBody(result.data, metadata)
-            return
-          }
-
+          // Best-effort attach the uppsägning PDF from xpand. Also runs when
+          // terminate returns skipped (already terminated) so a failed prior
+          // upload can be repaired on retry. A missing PDF or failed upload is
+          // logged but does not fail the terminate.
           const tenfastLease =
             await tenfastAdapter.getLeaseByExternalId(leaseId)
           if (!tenfastLease.ok) {
