@@ -31,6 +31,70 @@ import {
   getLeaseDetails,
 } from './service'
 
+// A loss is recorded in Xledger as a transaction on this account.
+const LOSS_ACCOUNT_CODE = '1529'
+
+const normalizeContactCode = (contactCode: string) =>
+  contactCode.trim().toUpperCase()
+
+/*
+ * Replaces Xpand invoices with their Xledger counterpart, looked up by invoice
+ * number. Xledger owns payment status, debt collection, remaining amount and
+ * the invoice PDF, but its transform carries no lease context — leaseId is
+ * hardcoded to 'missing' and transactionTypeName generated — so those values
+ * are kept from the Xpand invoice.
+ *
+ * Mirrors the contact-scoped merge in the route: one Xledger invoice yields
+ * exactly one result, even if several Xpand rows share its invoice number.
+ */
+const enrichFromXledgerByNumber = (
+  xpandInvoices: Invoice[],
+  xledgerInvoices: Invoice[]
+): Invoice[] => {
+  const lossInvoiceIds = new Set<string>()
+  const regularById = new Map<string, Invoice>()
+  for (const invoice of xledgerInvoices) {
+    if (invoice.accountCode === LOSS_ACCOUNT_CODE) {
+      lossInvoiceIds.add(invoice.invoiceId)
+    } else if (!regularById.has(invoice.invoiceId)) {
+      regularById.set(invoice.invoiceId, invoice)
+    }
+  }
+
+  const enrichedInvoiceIds = new Set<string>()
+  const result: Invoice[] = []
+  for (const xpandInvoice of xpandInvoices) {
+    const xledgerInvoice = regularById.get(xpandInvoice.invoiceId)
+    const isExpectedLoss = lossInvoiceIds.has(xpandInvoice.invoiceId)
+
+    if (!xledgerInvoice) {
+      // An invoice can be recorded in Xledger as a loss only, with no
+      // regular transaction row to enrich from.
+      result.push(
+        isExpectedLoss ? { ...xpandInvoice, expectedLoss: true } : xpandInvoice
+      )
+      continue
+    }
+
+    if (enrichedInvoiceIds.has(xpandInvoice.invoiceId)) {
+      continue
+    }
+    enrichedInvoiceIds.add(xpandInvoice.invoiceId)
+
+    result.push({
+      ...xledgerInvoice,
+      leaseId: xpandInvoice.leaseId,
+      transactionType: xpandInvoice.transactionType,
+      transactionTypeName: xpandInvoice.transactionTypeName,
+      fromDate: xpandInvoice.fromDate ?? xledgerInvoice.fromDate,
+      toDate: xpandInvoice.toDate ?? xledgerInvoice.toDate,
+      ...(isExpectedLoss ? { expectedLoss: true } : {}),
+    })
+  }
+
+  return result
+}
+
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -60,8 +124,7 @@ export const routes = (router: KoaRouter) => {
       const losses: Invoice[] = []
 
       xledgerInvoices.forEach((i) => {
-        // A loss is recorded as a transaction on account 1529
-        if (i.accountCode === '1529') {
+        if (i.accountCode === LOSS_ACCOUNT_CODE) {
           losses.push(i)
         } else {
           regularInvoices.push(i)
@@ -76,61 +139,32 @@ export const routes = (router: KoaRouter) => {
         }
       })
 
-      // Invoices found only in Xpand — e.g. invoices for a shared lease
-      // billed to the other lease holder (MIM-1160) — are missed by the
-      // contact-scoped Xledger lookup above, so their Xledger data (payment
-      // status, debt collection, remaining amount, invoice PDF) is fetched
-      // by invoice number instead.
-      let xpandOnlyInvoices = xpandInvoices.filter(
+      const xpandOnlyInvoices = xpandInvoices.filter(
         (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
       )
 
-      if (xpandOnlyInvoices.length > 0) {
+      // Invoices for a shared lease billed to the other lease holder
+      // (MIM-1160) are missed by the contact-scoped Xledger lookup above, so
+      // their Xledger data is fetched by invoice number instead. The contact's
+      // own Xpand-only invoices are left alone: they predate Xledger, and a
+      // lookup would only add round trips that return nothing.
+      const isBilledToOtherContact = (invoice: Invoice) =>
+        normalizeContactCode(invoice.reference) !==
+        normalizeContactCode(contactCode)
+      const ownXpandOnlyInvoices = xpandOnlyInvoices.filter(
+        (invoice) => !isBilledToOtherContact(invoice)
+      )
+      let householdInvoices = xpandOnlyInvoices.filter(isBilledToOtherContact)
+
+      if (householdInvoices.length > 0) {
         try {
           const xledgerByNumber = await getXledgerInvoicesByInvoiceNumbers(
-            xpandOnlyInvoices.map((invoice) => invoice.invoiceId)
+            householdInvoices.map((invoice) => invoice.invoiceId)
           )
-          const byNumberLosses = xledgerByNumber.filter(
-            (i) => i.accountCode === '1529'
+          householdInvoices = enrichFromXledgerByNumber(
+            householdInvoices,
+            xledgerByNumber
           )
-          const byNumberRegular = xledgerByNumber.filter(
-            (i) => i.accountCode !== '1529'
-          )
-
-          xpandOnlyInvoices = xpandOnlyInvoices.map((xpandInvoice) => {
-            const xledgerInvoice = byNumberRegular.find(
-              (i) => i.invoiceId === xpandInvoice.invoiceId
-            )
-            const isExpectedLoss = byNumberLosses.some(
-              (l) => l.invoiceId === xpandInvoice.invoiceId
-            )
-
-            if (!xledgerInvoice) {
-              // An invoice can be recorded in Xledger as a loss only, with no
-              // regular transaction row to enrich from.
-              return isExpectedLoss
-                ? { ...xpandInvoice, expectedLoss: true }
-                : xpandInvoice
-            }
-
-            const enriched: Invoice = {
-              ...xledgerInvoice,
-              // The Xledger transform carries no lease context — leaseId is
-              // hardcoded to 'missing' and transactionTypeName generated — so
-              // those values are taken from the Xpand invoice.
-              leaseId: xpandInvoice.leaseId,
-              transactionType: xpandInvoice.transactionType,
-              transactionTypeName: xpandInvoice.transactionTypeName,
-              fromDate: xpandInvoice.fromDate ?? xledgerInvoice.fromDate,
-              toDate: xpandInvoice.toDate ?? xledgerInvoice.toDate,
-            }
-
-            if (isExpectedLoss) {
-              enriched.expectedLoss = true
-            }
-
-            return enriched
-          })
         } catch (error) {
           // Enrichment is best-effort: fall back to the plain Xpand invoices
           // rather than failing the whole invoice list.
@@ -159,7 +193,7 @@ export const routes = (router: KoaRouter) => {
             return invoice
           }
         })
-        .concat(xpandOnlyInvoices)
+        .concat(ownXpandOnlyInvoices, householdInvoices)
 
       const invoiceRows = await getInvoiceRows(
         '001', // Mimer company id.

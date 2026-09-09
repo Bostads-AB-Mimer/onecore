@@ -810,16 +810,6 @@ export const getInvoicesByContactCode = async (
 export const getInvoicesByInvoiceNumbers = async (
   invoiceNumbers: string[]
 ): Promise<Invoice[]> => {
-  // Invoice numbers are interpolated into the GraphQL document — only accept
-  // the known Xledger format (digits with an optional K suffix for credits).
-  const validInvoiceNumbers = invoiceNumbers.filter((invoiceNumber) =>
-    /^\d{1,20}K?$/i.test(invoiceNumber)
-  )
-
-  if (validInvoiceNumbers.length === 0) {
-    return []
-  }
-
   const CHUNK_SIZE = 50
   // One invoice number can match several transaction rows (e.g. a regular row
   // plus a loss row on account 1529), so the page size must be well above the
@@ -827,39 +817,55 @@ export const getInvoicesByInvoiceNumbers = async (
   const PAGE_SIZE = 10000
   const invoices: Invoice[] = []
 
-  for (let i = 0; i < validInvoiceNumbers.length; i += CHUNK_SIZE) {
-    const chunk = validInvoiceNumbers.slice(i, i + CHUNK_SIZE)
+  for (let i = 0; i < invoiceNumbers.length; i += CHUNK_SIZE) {
+    const chunk = invoiceNumbers.slice(i, i + CHUNK_SIZE)
 
+    // Invoice numbers are passed as GraphQL variables, never interpolated
+    // into the query document.
     const query = {
-      query: `{
-        arTransactions(
-          first: ${PAGE_SIZE},
-          filter: {
-            invoiceNumber_in: [${chunk.map((n) => `"${n}"`).join(', ')}],
-            headerTransactionSourceDbId_in: [600, 797, 3536]
-          }
-        )
-        {
-          edges {
-            node {
-              ${invoiceNodeFragment}
+      query: gql`
+        query($filter: ARTransaction_Filter, $first: Int) {
+          arTransactions(first: $first, filter: $filter) {
+            edges {
+              node {
+                ${invoiceNodeFragment}
+              }
             }
           }
         }
-      }`,
+      `,
+      variables: {
+        first: PAGE_SIZE,
+        filter: {
+          invoiceNumber_in: chunk,
+          headerTransactionSourceDbId_in: [
+            TransactionSourceDbId.SO,
+            TransactionSourceDbId.AR,
+            TransactionSourceDbId.OS,
+          ],
+        },
+      },
     }
 
-    const result = await makeXledgerRequest(query)
-    const edges = result.data?.arTransactions?.edges ?? []
+    try {
+      const result = await makeXledgerRequest(query)
+      const edges = result.data?.arTransactions?.edges ?? []
 
-    if (edges.length >= PAGE_SIZE) {
-      logger.warn(
-        { invoiceNumbers: chunk.length, returnedRows: edges.length },
-        'Xledger invoice-number lookup hit the page size, results may be truncated'
+      if (edges.length >= PAGE_SIZE) {
+        logger.warn(
+          { invoiceNumbers: chunk.length, returnedRows: edges.length },
+          'Xledger invoice-number lookup hit the page size, results may be truncated'
+        )
+      }
+
+      invoices.push(...edges.map(transformToInvoice))
+    } catch (err) {
+      logger.error(
+        { err, invoiceNumbers: chunk.length },
+        'adapter.getInvoicesByInvoiceNumbers'
       )
+      throw err
     }
-
-    invoices.push(...edges.map(transformToInvoice))
   }
 
   return invoices

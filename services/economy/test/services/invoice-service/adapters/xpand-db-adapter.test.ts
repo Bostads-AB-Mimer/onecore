@@ -406,17 +406,36 @@ describe(adapter.getInvoicesByContactCode, () => {
     expect(result?.[0].reference).toBe('P083974')
   })
 
-  it('excludes leases that are no longer billed (terminated)', async () => {
+  it('excludes terminated leases', async () => {
+    const today = new Date()
     mockTableQueries['hyavk'] = [
-      { leaseId: sharedLeaseId, lastDebitDate: null },
-      { leaseId: '111-111-11-1111/01', lastDebitDate: new Date('2023-01-31') },
+      { leaseId: sharedLeaseId, lastDebitDate: null, terminationDate: null },
+      // Still billed today: the last debit day counts as active.
+      {
+        leaseId: `${sharedLeaseId.slice(0, -1)}1`,
+        lastDebitDate: today,
+        terminationDate: null,
+      },
+      // Last debit date has passed.
+      {
+        leaseId: '111-111-11-1111/01',
+        lastDebitDate: new Date('2023-01-31'),
+        terminationDate: null,
+      },
+      // Termination date has passed, even though billing never stopped —
+      // the leasing service treats this as terminated too.
+      {
+        leaseId: '222-222-22-2222/01',
+        lastDebitDate: null,
+        terminationDate: new Date('2023-01-31'),
+      },
     ]
     mockTableQueries['krfkh'] = [invoiceRow]
 
     await adapter.getInvoicesByContactCode('P083975')
 
     // A former co-holder must not keep seeing invoices for a lease that has
-    // stopped being billed.
+    // ended.
     const leaseQuery = (mockTableChains['krfkh'] ?? []).find((chain) =>
       chain.whereIn.mock.calls.some(
         (call: unknown[]) => call[0] === 'krfkh.reference'
@@ -424,6 +443,7 @@ describe(adapter.getInvoicesByContactCode, () => {
     )
     expect(leaseQuery?.whereIn).toHaveBeenCalledWith('krfkh.reference', [
       sharedLeaseId,
+      `${sharedLeaseId.slice(0, -1)}1`,
     ])
   })
 

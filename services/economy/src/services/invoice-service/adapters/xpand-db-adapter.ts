@@ -549,7 +549,8 @@ const buildInvoicesByContactCodeQuery = (filters?: { from?: Date }) => {
  * isLeaseHolderRelation in the leasing service — other relation types (e.g.
  * guarantors) must not expose invoices.
  *
- * Terminated leases are excluded (like the leasing service's default): hyavk
+ * Terminated leases are excluded, using the leasing service's rule
+ * (isLeaseTerminated: last debit date or termination date has passed): hyavk
  * rows survive termination, and a former co-holder must not keep seeing
  * invoices issued to whoever remains on the contract. Upcoming leases are
  * kept — their advance invoices are relevant to both holders.
@@ -558,18 +559,26 @@ const getHolderLeaseIds = async (contactKey: string): Promise<string[]> => {
   try {
     const rows = await db
       .from('hyavk')
-      .select('hyobj.hyobjben as leaseId', 'hyobj.sistadeb as lastDebitDate')
+      .select(
+        'hyobj.hyobjben as leaseId',
+        'hyobj.sistadeb as lastDebitDate',
+        'hyobj.makuldatum as terminationDate'
+      )
       .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
       .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
       .where('cmctc.cmctckod', contactKey)
       .where('hyavk.keyhyakt', 'INNEHAVARE')
 
-    const startOfToday = new Date()
-    startOfToday.setHours(0, 0, 0, 0)
+    // Compared on calendar dates, like the leasing service does.
+    const toIsoDate = (date: Date) => date.toISOString().split('T')[0]
+    const today = toIsoDate(new Date())
+    const hasPassed = (date: Date | null | undefined) =>
+      date != null && toIsoDate(new Date(date)) < today
 
     return rows
       .filter(
-        (row) => row.lastDebitDate == null || row.lastDebitDate >= startOfToday
+        (row) =>
+          !hasPassed(row.lastDebitDate) && !hasPassed(row.terminationDate)
       )
       .map((row) => row.leaseId?.trimEnd())
       .filter((leaseId: string | undefined): leaseId is string =>
@@ -632,7 +641,7 @@ export const getInvoicesByContactCode = async (
     (a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime()
   )
 
-  if (rows && rows.length > 0) {
+  if (rows.length > 0) {
     const invoices: Invoice[] = rows
       .filter((row) => {
         // Only include invoices with invoiceIds
