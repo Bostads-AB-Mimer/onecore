@@ -63,16 +63,22 @@ const hydrate = async (
   )
 
   let dropped = 0
+  // Keyed rather than scanned: one role of a high-degree contact can hold
+  // thousands of edges, and re-scanning the accumulated list per edge would
+  // put back the quadratic cost that filtering in SQL removes.
+  const seen = new Set<string>()
   for (const { owner, other, role } of distinct) {
     const name = names.get(other)
     if (!name) {
       dropped++
       continue
     }
+    const key = `${owner}|${other}|${role}`
+    if (seen.has(key)) continue
+    seen.add(key)
+
     const list = result.get(owner) ?? []
-    if (!list.some((r) => r.contactCode === other && r.role === role)) {
-      list.push({ contactCode: other, role, ...name })
-    }
+    list.push({ contactCode: other, role, ...name })
     result.set(owner, list)
   }
   if (dropped > 0) {

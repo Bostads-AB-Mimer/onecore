@@ -158,11 +158,15 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
       try {
         await resetContactRelations(ctx.infrastructure.contactsDb.get())
       } finally {
-        // Both pools close even if the reset throws — a resource that healed
-        // into `failed` makes `get()` throw, and leaked pools hang the run
-        // behind a confusing open-handles error instead of the real failure.
-        await ctx.infrastructure.xpandDb.close()
-        await ctx.infrastructure.contactsDb.close()
+        // Every pool closes even if the reset throws (a resource that healed
+        // into `failed` makes `get()` throw) and even if one close throws.
+        // A leaked pool hangs the run behind a confusing open-handles error
+        // instead of the real failure; allSettled also keeps a close failure
+        // from replacing the reset error on its way out of the finally.
+        await Promise.allSettled([
+          ctx.infrastructure.xpandDb.close(),
+          ctx.infrastructure.contactsDb.close(),
+        ])
       }
     },
     port() {
