@@ -1256,10 +1256,15 @@ export const terminateLease = async (
       return { ok: true, data: { action: 'terminated', leaseId } }
     }
 
-    if (
-      response.status === 400 &&
-      response.data?.error === 'Avtalet kan inte sägas upp'
-    ) {
+    const skipErrors = new Set([
+      'Avtalet kan inte sägas upp',
+      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
+    ])
+    if (response.status === 400 && skipErrors.has(response.data?.error)) {
+      logger.info(
+        { leaseId, error: response.data?.error },
+        'Tenfast terminate skipped — lease already handled or termination not required'
+      )
       return { ok: true, data: { action: 'skipped', leaseId } }
     }
 

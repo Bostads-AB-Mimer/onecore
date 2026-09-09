@@ -2160,26 +2160,32 @@ describe(tenfastAdapter.terminateLease, () => {
     expect(result).toEqual({ ok: false, err: 'lease-not-found' })
   })
 
-  it('returns ok:true with action:skipped when Tenfast returns 400 already-terminated', async () => {
-    const lease = factory.tenfastLease.build()
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
-      .mockResolvedValueOnce({ ok: true, data: lease })
-    ;(request as jest.Mock).mockResolvedValueOnce({
-      status: 400,
-      data: { error: 'Avtalet kan inte sägas upp' },
-    })
+  it.each([
+    'Avtalet kan inte sägas upp',
+    'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
+  ])(
+    'returns ok:true with action:skipped when Tenfast returns 400: %s',
+    async (error) => {
+      const lease = factory.tenfastLease.build()
+      jest
+        .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+        .mockResolvedValueOnce({ ok: true, data: lease })
+      ;(request as jest.Mock).mockResolvedValueOnce({
+        status: 400,
+        data: { error },
+      })
 
-    const result = await tenfastAdapter.terminateLease(
-      lease.externalId,
-      terminateBody
-    )
+      const result = await tenfastAdapter.terminateLease(
+        lease.externalId,
+        terminateBody
+      )
 
-    expect(result).toEqual({
-      ok: true,
-      data: { action: 'skipped', leaseId: lease.externalId },
-    })
-  })
+      expect(result).toEqual({
+        ok: true,
+        data: { action: 'skipped', leaseId: lease.externalId },
+      })
+    }
+  )
 
   it('returns ok:false err:terminate-failed on unexpected 4xx response', async () => {
     const lease = factory.tenfastLease.build()
