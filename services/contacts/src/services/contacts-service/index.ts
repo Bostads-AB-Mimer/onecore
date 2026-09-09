@@ -541,8 +541,8 @@ export const routes = (
       summary:
         'List the other invoice recipients (annan fakturamottagare) of a contact',
       description:
-        'Returns the contacts registered as annan fakturamottagare on the ' +
-        "contact's current leases, as RelatedContact objects with role " +
+        'Returns the contacts registered as annan fakturamottagare for the ' +
+        'contact, as RelatedContact objects with role ' +
         "'otherInvoiceRecipient'. Empty list when there are none; 404 when the " +
         'contact does not exist.',
       tags: ['Contacts'],
@@ -575,7 +575,7 @@ export const routes = (
     {
       summary: 'List the contacts a person is annan fakturamottagare for',
       description:
-        'Returns the current lease holders that have the given contact ' +
+        'Returns the contacts that have the given contact ' +
         'registered as their annan fakturamottagare, as RelatedContact objects ' +
         "with role 'otherInvoiceRecipientFor'. Empty list when there are none; " +
         '404 when the contact does not exist.',
