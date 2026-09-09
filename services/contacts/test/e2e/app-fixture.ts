@@ -155,9 +155,15 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
           })
         })
       }
-      await resetContactRelations(ctx.infrastructure.contactsDb.get())
-      await ctx.infrastructure.xpandDb.close()
-      await ctx.infrastructure.contactsDb.close()
+      try {
+        await resetContactRelations(ctx.infrastructure.contactsDb.get())
+      } finally {
+        // Both pools close even if the reset throws — a resource that healed
+        // into `failed` makes `get()` throw, and leaked pools hang the run
+        // behind a confusing open-handles error instead of the real failure.
+        await ctx.infrastructure.xpandDb.close()
+        await ctx.infrastructure.contactsDb.close()
+      }
     },
     port() {
       if (server) {
