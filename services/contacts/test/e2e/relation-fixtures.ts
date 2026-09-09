@@ -31,6 +31,13 @@ export const RELATION_FIXTURES: RelationEdge[] = [
     relatedContactCode: 'P900010',
     roleType: 'annan_fakturamottagare',
   },
+  // Stored twice on purpose: there is no unique index on active edges yet,
+  // and the read path must collapse duplicates.
+  {
+    subjectContactCode: 'P900001',
+    relatedContactCode: 'P900010',
+    roleType: 'annan_fakturamottagare',
+  },
   {
     subjectContactCode: 'P900004',
     relatedContactCode: 'P000888',

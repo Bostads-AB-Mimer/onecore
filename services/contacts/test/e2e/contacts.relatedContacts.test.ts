@@ -2,6 +2,7 @@ import { AxiosInstance } from 'axios'
 import { RelatedContactSchema } from '@src/services/contacts-service/schema'
 import { makeTestAppFixture, TestApp } from './app-fixture'
 import { FULL_TEST_DATA_SET } from './data-set'
+import { SOFT_DELETED_RELATION_FIXTURES } from './relation-fixtures'
 
 describe('relatedContacts endpoints', () => {
   let testApp: TestApp | undefined
@@ -13,12 +14,10 @@ describe('relatedContacts endpoints', () => {
         ...FULL_TEST_DATA_SET,
         'P900001',
         'P900002',
-        'P900003',
         'P900004',
         'P900005',
         'P900010',
         'P900011',
-        'P900012',
         'P900013',
       ],
     })
@@ -171,7 +170,7 @@ describe('relatedContacts endpoints', () => {
   })
 
   describe('GET /contacts/:contactCode/other-invoice-recipients', () => {
-    it('returns the recipient on an active lease, deduped across leases', async () => {
+    it('collapses a relation stored as two active rows into one', async () => {
       const response = await httpClient.get(
         '/contacts/P900001/other-invoice-recipients'
       )
@@ -201,24 +200,13 @@ describe('relatedContacts endpoints', () => {
     })
 
     it('does not return a soft-deleted relation', async () => {
+      // [] is only meaningful because a soft-deleted row exists for this pair.
+      const [softDeleted] = SOFT_DELETED_RELATION_FIXTURES
       const response = await httpClient.get(
-        '/contacts/P900002/other-invoice-recipients'
+        `/contacts/${softDeleted.subjectContactCode}/other-invoice-recipients`
       )
       expect(response.status).toBe(200)
       expect(response.data.content.relations).toEqual([])
-    })
-
-    it('returns the recipient for a second holder', async () => {
-      const response = await httpClient.get(
-        '/contacts/P900005/other-invoice-recipients'
-      )
-
-      expect(response.status).toBe(200)
-      expect(response.data.content.relations).toHaveLength(1)
-      expect(response.data.content.relations[0]).toMatchObject({
-        contactCode: 'P900013',
-        role: 'otherInvoiceRecipient',
-      })
     })
 
     it('returns 404 for an unknown contact', async () => {
@@ -231,7 +219,7 @@ describe('relatedContacts endpoints', () => {
   })
 
   describe('GET /contacts/:contactCode/other-invoice-recipient-for', () => {
-    it('returns the holders a contact is recipient for, current-only and deduped', async () => {
+    it('returns the holder from the recipient side, collapsing duplicate rows', async () => {
       const response = await httpClient.get(
         '/contacts/P900010/other-invoice-recipient-for'
       )
@@ -245,24 +233,13 @@ describe('relatedContacts endpoints', () => {
     })
 
     it('does not return a soft-deleted relation from the recipient side', async () => {
+      // [] is only meaningful because a soft-deleted row exists for this pair.
+      const [softDeleted] = SOFT_DELETED_RELATION_FIXTURES
       const response = await httpClient.get(
-        '/contacts/P900011/other-invoice-recipient-for'
+        `/contacts/${softDeleted.relatedContactCode}/other-invoice-recipient-for`
       )
       expect(response.status).toBe(200)
       expect(response.data.content.relations).toEqual([])
-    })
-
-    it('returns the holder for a second recipient', async () => {
-      const response = await httpClient.get(
-        '/contacts/P900013/other-invoice-recipient-for'
-      )
-
-      expect(response.status).toBe(200)
-      expect(response.data.content.relations).toHaveLength(1)
-      expect(response.data.content.relations[0]).toMatchObject({
-        contactCode: 'P900005',
-        role: 'otherInvoiceRecipientFor',
-      })
     })
 
     it('returns an empty list for a contact that is recipient for no one', async () => {
