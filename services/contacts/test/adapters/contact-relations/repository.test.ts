@@ -204,7 +204,7 @@ describe('contact-relations repository', () => {
       expect(await listActive(db)).toEqual([])
     }))
 
-  it('activeRelationsForMany returns active rows where a requested code is subject or related', () =>
+  it('activeRelationsForMany returns active rows where a requested code is subject or related, and ignores soft-deleted rows on either side', () =>
     withContext(async ({ db }) => {
       await insertMany(
         db,
@@ -229,13 +229,23 @@ describe('contact-relations repository', () => {
             relatedContactCode: 'P6',
             roleType: 'forvaltare',
           },
+          {
+            subjectContactCode: 'P7',
+            relatedContactCode: 'P1',
+            roleType: 'god_man',
+          },
         ],
         ACTOR
       )
-      const [toDelete] = (await listActive(db)).filter(
-        (r) => r.related_contact_code === 'P6'
+      const toDelete = (await listActive(db)).filter(
+        (r) =>
+          r.related_contact_code === 'P6' || r.subject_contact_code === 'P7'
       )
-      await softDeleteByIds(db, [toDelete.id], ACTOR)
+      await softDeleteByIds(
+        db,
+        toDelete.map((r) => r.id),
+        ACTOR
+      )
 
       const rows = await activeRelationsForMany(db, ['P1'])
 
@@ -266,11 +276,46 @@ describe('contact-relations repository', () => {
         ],
         ACTOR
       )
-      expect(await activeRelationsForMany(db, ['P1  '])).toHaveLength(1)
+      expect(await activeRelationsForMany(db, [' P1 '])).toHaveLength(1)
     }))
 
   it('activeRelationsForMany returns an empty list for no codes', () =>
     withContext(async ({ db }) => {
       expect(await activeRelationsForMany(db, [])).toEqual([])
+    }))
+
+  it('activeRelationsForMany returns each row once when both sides are requested', () =>
+    withContext(async ({ db }) => {
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P1',
+            relatedContactCode: 'P2',
+            roleType: 'god_man',
+          },
+          {
+            subjectContactCode: 'P3',
+            relatedContactCode: 'P4',
+            roleType: 'forvaltare',
+          },
+        ],
+        ACTOR
+      )
+
+      const rows = await activeRelationsForMany(db, ['P1', 'P2', 'P3'])
+
+      expect(
+        rows
+          .map((r) => [
+            r.subject_contact_code,
+            r.related_contact_code,
+            r.role_type,
+          ])
+          .sort()
+      ).toEqual([
+        ['P1', 'P2', 'god_man'],
+        ['P3', 'P4', 'forvaltare'],
+      ])
     }))
 })

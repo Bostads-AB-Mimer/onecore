@@ -79,7 +79,9 @@ export const softDeleteByIds = async (
 /**
  * All active rows touching any of the given contact codes, in either
  * direction (as subject or as related). The caller decides the perspective.
- * Codes are trimmed; the stored codes are already trimmed by the writers.
+ * Requested codes are trimmed; stored codes are expected to be trimmed by
+ * whoever inserts them (today only the Xpand import, which trims before
+ * building edges).
  */
 export const activeRelationsForMany = async (
   db: Knex,
