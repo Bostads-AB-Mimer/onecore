@@ -76,6 +76,11 @@ export const ContentBlockEditor = ({
   const isLinkBlock = block.type === 'link'
   const urlValid = isLinkBlock ? isValidUrl(block.url || '') : true
   const contentMissing = showEmptyError && !block.content?.trim()
+  // A missing link name is flagged as soon as a URL is typed, and both link
+  // fields are flagged after a failed save (mirrors hasInvalidBlock).
+  const nameMissing =
+    !block.name?.trim() && (showEmptyError || !!block.url?.trim())
+  const urlMissing = showEmptyError && !block.url?.trim()
 
   return (
     <Paper
@@ -161,12 +166,8 @@ export const ContentBlockEditor = ({
                   value={block.name || ''}
                   onChange={(e) => onUpdate(block.id, 'name', e.target.value)}
                   placeholder="T.ex. Virtuell visning"
-                  error={!!block.url?.trim() && !block.name?.trim()}
-                  helperText={
-                    !!block.url?.trim() && !block.name?.trim()
-                      ? 'Namn krävs'
-                      : ''
-                  }
+                  error={nameMissing}
+                  helperText={nameMissing ? 'Namn krävs' : ''}
                 />
               </Box>
               <Box flex={2}>
@@ -183,8 +184,14 @@ export const ContentBlockEditor = ({
                   value={block.url || ''}
                   onChange={(e) => onUpdate(block.id, 'url', e.target.value)}
                   placeholder="https://example.com"
-                  error={!urlValid}
-                  helperText={!urlValid ? 'Ogiltig URL-format' : ''}
+                  error={!urlValid || urlMissing}
+                  helperText={
+                    urlMissing
+                      ? 'URL krävs'
+                      : !urlValid
+                        ? 'Ogiltig URL-format'
+                        : ''
+                  }
                 />
               </Box>
             </Box>

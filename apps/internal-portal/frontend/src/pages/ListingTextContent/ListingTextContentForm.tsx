@@ -72,6 +72,12 @@ const ListingTextContentForm = () => {
   // saving; a failed lookup (not just a 404) also blocks the save.
   const objectNotFound = !isEditMode && validationQuery.data === null
   const objectLookupFailed = !isEditMode && validationQuery.isError
+  // The lookup answers for the debounced code, so a code that is still being
+  // debounced or fetched is not verified yet even though neither flag above
+  // is set.
+  const objectVerified =
+    isEditMode ||
+    (validationQuery.data != null && validatedCode === objectCode.trim())
   const {
     data: existingData,
     isLoading: isLoadingExisting,
@@ -106,6 +112,11 @@ const ListingTextContentForm = () => {
 
     if (objectLookupFailed) {
       toast.error('Objektsnumret kunde inte verifieras, försök igen')
+      return
+    }
+
+    if (!objectVerified) {
+      toast.error('Objektsnumret verifieras fortfarande, försök igen strax')
       return
     }
 
