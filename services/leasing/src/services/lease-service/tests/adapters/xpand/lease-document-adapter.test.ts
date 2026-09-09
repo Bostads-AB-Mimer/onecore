@@ -1,14 +1,19 @@
 let dokopRows: Array<Record<string, unknown>> = []
+let dorevRows: Array<Record<string, unknown>> = []
 let dofilRows: Array<{ fildata: string | null }> = []
 
 const chainableSelect = (result: unknown) => {
   const builder = {
     join: jest.fn(),
     where: jest.fn(),
+    andWhereLike: jest.fn(),
+    orderBy: jest.fn(),
     select: jest.fn().mockResolvedValue(result),
   }
   builder.join.mockReturnValue(builder)
   builder.where.mockReturnValue(builder)
+  builder.andWhereLike.mockReturnValue(builder)
+  builder.orderBy.mockReturnValue(builder)
   return builder
 }
 
@@ -21,16 +26,23 @@ jest.mock('../../../adapters/xpand/xpandDb', () => ({
         }),
       }
     }
+    if (table === 'dorev') {
+      return chainableSelect(dorevRows)
+    }
     return chainableSelect(dokopRows)
   }),
 }))
 
-import { getTerminationDocumentPdf } from '../../../adapters/xpand/lease-document-adapter'
+import {
+  getSignedContractPdf,
+  getTerminationDocumentPdf,
+} from '../../../adapters/xpand/lease-document-adapter'
 
 const pdfHex = Buffer.from('pdf-bytes').toString('hex')
 
 beforeEach(() => {
   dokopRows = []
+  dorevRows = []
   dofilRows = []
 })
 
@@ -105,5 +117,39 @@ describe(getTerminationDocumentPdf, () => {
     const result = await getTerminationDocumentPdf('123-456/01')
 
     expect(result).toBeNull()
+  })
+})
+
+describe(getSignedContractPdf, () => {
+  it('returns a contract-titled document from dokop', async () => {
+    dokopRows = [
+      {
+        keydorev: 'kontrakt',
+        title: 'Hyreskontrakt för digital signering',
+        filename: 'kontrakt.pdf',
+        createdAt: '2025-01-01T00:00:00.000Z',
+      },
+    ]
+    dofilRows = [{ fildata: pdfHex }]
+
+    const result = await getSignedContractPdf('123-456/01')
+
+    expect(result).toEqual({
+      filename: 'kontrakt.pdf',
+      content: Buffer.from('pdf-bytes'),
+    })
+  })
+
+  it('falls back to DO_SLUTF dorev rows when dokop finds no contract', async () => {
+    dokopRows = []
+    dorevRows = [{ keydorev: 'slutf', path: 'signed.pdf' }]
+    dofilRows = [{ fildata: pdfHex }]
+
+    const result = await getSignedContractPdf('123-456/01')
+
+    expect(result).toEqual({
+      filename: 'signed.pdf',
+      content: Buffer.from('pdf-bytes'),
+    })
   })
 })
