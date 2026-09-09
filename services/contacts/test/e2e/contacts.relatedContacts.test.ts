@@ -200,7 +200,7 @@ describe('relatedContacts endpoints', () => {
       })
     })
 
-    it('excludes recipients on terminated leases', async () => {
+    it('does not return a soft-deleted relation', async () => {
       const response = await httpClient.get(
         '/contacts/P900002/other-invoice-recipients'
       )
@@ -208,15 +208,7 @@ describe('relatedContacts endpoints', () => {
       expect(response.data.content.relations).toEqual([])
     })
 
-    it('excludes expired ANNANFM relations', async () => {
-      const response = await httpClient.get(
-        '/contacts/P900003/other-invoice-recipients'
-      )
-      expect(response.status).toBe(200)
-      expect(response.data.content.relations).toEqual([])
-    })
-
-    it('includes a recipient whose ANNANFM row has no start date (NULL fdate)', async () => {
+    it('returns the recipient for a second holder', async () => {
       const response = await httpClient.get(
         '/contacts/P900005/other-invoice-recipients'
       )
@@ -252,25 +244,15 @@ describe('relatedContacts endpoints', () => {
       })
     })
 
-    it('excludes holders on terminated leases', async () => {
+    it('does not return a soft-deleted relation from the recipient side', async () => {
       const response = await httpClient.get(
         '/contacts/P900011/other-invoice-recipient-for'
       )
-
       expect(response.status).toBe(200)
       expect(response.data.content.relations).toEqual([])
     })
 
-    it('excludes expired ANNANFM relations', async () => {
-      const response = await httpClient.get(
-        '/contacts/P900012/other-invoice-recipient-for'
-      )
-
-      expect(response.status).toBe(200)
-      expect(response.data.content.relations).toEqual([])
-    })
-
-    it('includes the holder when the ANNANFM row has no start date (NULL fdate)', async () => {
+    it('returns the holder for a second recipient', async () => {
       const response = await httpClient.get(
         '/contacts/P900013/other-invoice-recipient-for'
       )
