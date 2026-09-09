@@ -72,10 +72,15 @@ describe('contactNamesByCodes', () => {
   })
 
   it('dedupes and chunks a long code list', async () => {
-    const codes = Array.from({ length: 2500 }, (_, i) =>
-      i % 2 === 0 ? 'P000444' : `X${String(i).padStart(6, '0')}`
-    )
+    // P000555 is appended last so, after dedupe, it lands in the second
+    // chunk: proves results are merged across chunks, not just the first.
+    const codes = [
+      ...Array.from({ length: 2500 }, (_, i) =>
+        i % 2 === 0 ? 'P000444' : `X${String(i).padStart(6, '0')}`
+      ),
+      'P000555',
+    ]
     const names = await contactNamesByCodes(xpand, codes)
-    expect([...names.keys()]).toEqual(['P000444'])
+    expect([...names.keys()].sort()).toEqual(['P000444', 'P000555'])
   })
 })

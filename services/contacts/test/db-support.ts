@@ -19,7 +19,7 @@ export const requireXpandTestDb = () =>
 
 /**
  * Empties `contact_relation` in the contacts test DB. Suites that commit real
- * rows (the e2e fixture, the import tests) call this on the way in and out so
+ * rows (the e2e fixture; other suites may use a plain delete) call this so
  * the shared table is empty for suites that assume it is.
  */
 export const resetContactRelations = async (db: Knex) => {

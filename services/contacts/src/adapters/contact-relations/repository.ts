@@ -1,4 +1,5 @@
 import { Knex } from 'knex'
+import { chunked } from '@src/common/chunked'
 import { DbContactRelationRow, RoleType } from './db-model'
 
 /**
@@ -22,14 +23,6 @@ const MSSQL_PARAM_BUDGET = 2000
 const INSERT_COLUMN_COUNT = 4
 const INSERT_CHUNK_SIZE = Math.floor(MSSQL_PARAM_BUDGET / INSERT_COLUMN_COUNT)
 const DELETE_CHUNK_SIZE = 500
-
-const chunked = <T>(items: T[], size: number): T[][] => {
-  const out: T[][] = []
-  for (let i = 0; i < items.length; i += size) {
-    out.push(items.slice(i, i + size))
-  }
-  return out
-}
 
 /** Every row that has not been soft-deleted, whoever created it. */
 export const listActive = async (db: Knex): Promise<DbContactRelationRow[]> => {
