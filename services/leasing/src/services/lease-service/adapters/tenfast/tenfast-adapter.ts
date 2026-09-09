@@ -256,13 +256,6 @@ export const importLease = async (
   }
 }
 
-/**
- * Uploads a PDF as the main contract document for an existing Tenfast lease.
- *
- * Posts multipart/form-data to POST /v1/hyresvard/avtal/{id}/upload-file. The
- * `tenfastApi.request` wrapper doesn't handle multipart, so we use native
- * fetch + FormData here, replicating the api-token header.
- */
 export const hasTerminationFile = async (
   tenfastLeaseId: string
 ): Promise<AdapterResult<boolean, 'lookup-failed' | 'unknown'>> => {
@@ -300,23 +293,21 @@ export const uploadTerminationFile = async (
       filename
     )
 
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins
-    const response = await fetch(
-      `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-termination-file?hyresvard=${tenfastCompanyId}`,
+    const response = await tenfastApi.request(
       {
-        method: 'POST',
-        headers: { 'api-token': config.tenfast.apiKey },
-        body: form,
-      }
+        method: 'post',
+        url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-termination-file?hyresvard=${tenfastCompanyId}`,
+        data: form,
+      },
+      { contentType: false }
     )
 
-    if (response.ok) {
+    if (response.status >= 200 && response.status < 300) {
       return { ok: true, data: undefined }
     }
 
-    const errorBody = await response.text()
     logger.error(
-      { status: response.status, error: errorBody, tenfastLeaseId },
+      { status: response.status, error: response.data, tenfastLeaseId },
       'tenfast-adapter.uploadTerminationFile'
     )
     return { ok: false, err: 'upload-failed' }
@@ -329,13 +320,19 @@ export const uploadTerminationFile = async (
   }
 }
 
+/**
+ * Uploads a PDF as the main contract document for an existing Tenfast lease.
+ *
+ * Posts multipart/form-data to POST /v1/hyresvard/avtal/{id}/upload-file. The
+ * `tenfastApi.request` wrapper doesn't handle multipart, so we use native
+ * fetch + FormData here, replicating the api-token header.
+ */
 export const uploadLeaseFile = async (
   tenfastLeaseId: string,
   content: Buffer,
   filename: string
 ): Promise<AdapterResult<undefined, 'upload-failed' | 'unknown'>> => {
   try {
-    // Native FormData/fetch are stable in Node 20 despite the experimental flag.
     // eslint-disable-next-line n/no-unsupported-features/node-builtins
     const form = new FormData()
     form.append(

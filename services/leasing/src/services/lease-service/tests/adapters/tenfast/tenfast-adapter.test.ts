@@ -2325,16 +2325,13 @@ describe(tenfastAdapter.hasTerminationFile, () => {
 })
 
 describe(tenfastAdapter.uploadTerminationFile, () => {
-  const fetchMock = jest.fn()
-
   beforeEach(() => {
     jest.restoreAllMocks()
-    fetchMock.mockReset()
-    global.fetch = fetchMock
+    ;(request as jest.Mock).mockReset()
   })
 
   it('returns ok when upload-termination-file succeeds', async () => {
-    fetchMock.mockResolvedValueOnce({ ok: true })
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 200, data: {} })
 
     const result = await tenfastAdapter.uploadTerminationFile(
       'tenfast-lease-id',
@@ -2343,17 +2340,19 @@ describe(tenfastAdapter.uploadTerminationFile, () => {
     )
 
     expect(result).toEqual({ ok: true, data: undefined })
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/upload-termination-file'),
-      expect.objectContaining({ method: 'POST' })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'post',
+        url: expect.stringContaining('/upload-termination-file'),
+      }),
+      { contentType: false }
     )
   })
 
   it('returns upload-failed when Tenfast rejects the file', async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: false,
+    ;(request as jest.Mock).mockResolvedValueOnce({
       status: 400,
-      text: async () => 'bad request',
+      data: 'bad request',
     })
 
     const result = await tenfastAdapter.uploadTerminationFile(
@@ -2365,3 +2364,4 @@ describe(tenfastAdapter.uploadTerminationFile, () => {
     expect(result).toEqual({ ok: false, err: 'upload-failed' })
   })
 })
+
