@@ -2,6 +2,7 @@ import config from '@src/common/config'
 import { contactsDbClient } from '@src/adapters/db'
 import {
   activeRelationsForMany,
+  activeRelationsInRole,
   insertMany,
   listActive,
   softDeleteByIds,
@@ -28,8 +29,9 @@ afterAll(async () => {
   await dbResource.close()
 })
 
-// Defensive: a crashed e2e run can leave committed rows behind; these tests
-// assert whole-table counts inside their rollback transaction.
+// The e2e fixture commits its rows, so a crashed e2e run can leave some
+// behind; these cases assert whole-table contents inside their rollback
+// transaction and would see them.
 beforeEach(async () => {
   await resetContactRelations(dbResource.get())
 })
@@ -345,5 +347,111 @@ describe('contact-relations repository', () => {
         ['P1', 'P2', 'god_man'],
         ['P3', 'P4', 'forvaltare'],
       ])
+    }))
+
+  it('activeRelationsForMany returns a row once even when its two endpoints fall in different read chunks', () =>
+    withContext(async ({ db }) => {
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'A000000',
+            relatedContactCode: 'B000000',
+            roleType: 'god_man',
+          },
+        ],
+        ACTOR
+      )
+
+      // The chunk loop matches either endpoint, so asking for both sides far
+      // enough apart puts them in separate queries.
+      const filler = Array.from(
+        { length: 1200 },
+        (_, i) => `F${String(i).padStart(6, '0')}`
+      )
+      const rows = await activeRelationsForMany(db, [
+        'A000000',
+        ...filler,
+        'B000000',
+      ])
+
+      expect(rows).toHaveLength(1)
+    }))
+
+  it('activeRelationsInRole returns only rows of that role type on that side of the edge', () =>
+    withContext(async ({ db }) => {
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P1',
+            relatedContactCode: 'P2',
+            roleType: 'god_man',
+          },
+          {
+            subjectContactCode: 'P1',
+            relatedContactCode: 'P3',
+            roleType: 'forvaltare',
+          },
+          {
+            subjectContactCode: 'P4',
+            relatedContactCode: 'P1',
+            roleType: 'god_man',
+          },
+        ],
+        ACTOR
+      )
+
+      expect(
+        (await activeRelationsInRole(db, 'P1', 'god_man', 'subject')).map(
+          (r) => r.related_contact_code
+        )
+      ).toEqual(['P2'])
+      expect(
+        (await activeRelationsInRole(db, 'P1', 'god_man', 'related')).map(
+          (r) => r.subject_contact_code
+        )
+      ).toEqual(['P4'])
+      expect(
+        await activeRelationsInRole(
+          db,
+          'P1',
+          'annan_fakturamottagare',
+          'subject'
+        )
+      ).toEqual([])
+    }))
+
+  it('activeRelationsInRole trims the requested code, skips blanks and ignores soft-deleted rows', () =>
+    withContext(async ({ db }) => {
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P1',
+            relatedContactCode: 'P2',
+            roleType: 'god_man',
+          },
+          {
+            subjectContactCode: 'P1',
+            relatedContactCode: 'P3',
+            roleType: 'god_man',
+          },
+        ],
+        ACTOR
+      )
+      const [gone] = (await listActive(db)).filter(
+        (r) => r.related_contact_code === 'P3'
+      )
+      await softDeleteByIds(db, [gone.id], ACTOR)
+
+      expect(
+        (await activeRelationsInRole(db, ' P1 ', 'god_man', 'subject')).map(
+          (r) => r.related_contact_code
+        )
+      ).toEqual(['P2'])
+      expect(
+        await activeRelationsInRole(db, '  ', 'god_man', 'subject')
+      ).toEqual([])
     }))
 })

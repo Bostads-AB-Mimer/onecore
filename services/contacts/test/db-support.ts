@@ -18,9 +18,9 @@ export const requireXpandTestDb = () =>
   requireDatabase(config.xpandDatabase.database, 'contacts-xpand-test')
 
 /**
- * Empties `contact_relation` in the contacts test DB. Suites that commit real
- * rows (the e2e fixture; other suites may use a plain delete) call this so
- * the shared table is empty for suites that assume it is.
+ * Empties `contact_relation` in the contacts test DB. For the e2e fixture,
+ * which runs the real app and so cannot wrap its rows in a rolled-back
+ * transaction the way `makeWithContext` suites do.
  */
 export const resetContactRelations = async (db: Knex) => {
   requireContactsTestDb()

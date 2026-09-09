@@ -1,8 +1,10 @@
 export {
   activeRelationsForMany,
+  activeRelationsInRole,
   insertMany,
   listActive,
   softDeleteByIds,
+  type RelationDirection,
   type RelationEdge,
 } from './repository'
 export {
@@ -10,4 +12,3 @@ export {
   type RoleType,
   type DbContactRelationRow,
 } from './db-model'
-export { relatedContactsFor, relatedContactsForMany } from './related-contacts'

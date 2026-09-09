@@ -23,7 +23,16 @@ const MSSQL_PARAM_BUDGET = 2000
 const INSERT_COLUMN_COUNT = 4
 const INSERT_CHUNK_SIZE = Math.floor(MSSQL_PARAM_BUDGET / INSERT_COLUMN_COUNT)
 const DELETE_CHUNK_SIZE = 500
-const READ_CHUNK_SIZE = 500
+// Each code is bound twice on the read (subject OR related), against once per
+// code in the writers' statements.
+const READ_CHUNK_SIZE = Math.floor(MSSQL_PARAM_BUDGET / 2)
+
+export type RelationDirection = 'subject' | 'related'
+
+const DIRECTION_COLUMN: Record<RelationDirection, string> = {
+  subject: 'subject_contact_code',
+  related: 'related_contact_code',
+}
 
 /** Every row that has not been soft-deleted, whoever created it. */
 export const listActive = async (db: Knex): Promise<DbContactRelationRow[]> => {
@@ -72,10 +81,10 @@ export const softDeleteByIds = async (
 
 /**
  * All active rows touching any of the given contact codes, in either
- * direction (as subject or as related). The caller decides the perspective.
- * Requested codes are trimmed; stored codes are expected to be trimmed by
- * whoever inserts them (today only the Xpand import, which trims before
- * building edges).
+ * direction (as subject or as related), each row at most once. The caller
+ * decides the perspective. Requested codes are trimmed; stored codes are
+ * expected to be trimmed by whoever inserts them (today only the Xpand
+ * import, which trims before building edges).
  */
 export const activeRelationsForMany = async (
   db: Knex,
@@ -85,9 +94,11 @@ export const activeRelationsForMany = async (
     ...new Set(contactCodes.map((c) => c.trim()).filter((c) => c.length > 0)),
   ]
   if (codes.length === 0) return []
-  const rows: DbContactRelationRow[] = []
-  // Each code is bound twice (subject OR related), so chunk at half the
-  // parameter budget used by the writers.
+
+  // Either endpoint matches, so a row whose subject falls in one chunk and
+  // whose related falls in another comes back from both queries. Key by id
+  // to hand each row out once.
+  const byId = new Map<string, DbContactRelationRow>()
   for (const chunk of chunked(codes, READ_CHUNK_SIZE)) {
     const found: DbContactRelationRow[] = await db(TABLE)
       .whereNull('deleted_at')
@@ -96,7 +107,37 @@ export const activeRelationsForMany = async (
           .whereIn('subject_contact_code', chunk)
           .orWhereIn('related_contact_code', chunk)
       )
-    rows.push(...found)
+      .orderBy('created_at')
+      .orderBy('id')
+    for (const row of found) byId.set(row.id, row)
   }
+  return [...byId.values()]
+}
+
+/**
+ * The active rows for one contact code in one role type, on the given side of
+ * the edge — what the single-role endpoints need, without reading the
+ * contact's other relations. Covered by
+ * `idx_contact_relation_subject`/`_related`.
+ *
+ * Ordered so that a caller taking the first row gets the same answer on every
+ * request; active edges have no unique index yet, so nothing else guarantees
+ * there is only one.
+ */
+export const activeRelationsInRole = async (
+  db: Knex,
+  contactCode: string,
+  roleType: RoleType,
+  direction: RelationDirection
+): Promise<DbContactRelationRow[]> => {
+  const code = contactCode.trim()
+  if (code.length === 0) return []
+
+  const rows: DbContactRelationRow[] = await db(TABLE)
+    .whereNull('deleted_at')
+    .where('role_type', roleType)
+    .where(DIRECTION_COLUMN[direction], code)
+    .orderBy('created_at')
+    .orderBy('id')
   return rows
 }

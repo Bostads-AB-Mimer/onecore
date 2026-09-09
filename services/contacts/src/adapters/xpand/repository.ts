@@ -27,7 +27,8 @@ import { contactExists } from './contact-lookup-query'
 import {
   relatedContactsFor,
   relatedContactsForMany,
-} from '@src/adapters/contact-relations'
+  relatedContactsInRole,
+} from '@src/adapters/related-contacts'
 
 /**
  * Creates a ContactsRepository that reads contact data from the Xpand
@@ -71,18 +72,15 @@ export const xpandContactsRepository = (
     contactCode: ContactCode,
     role: RelatedContactRole
   ): Promise<RelatedContact[] | null> => {
-    // Resolve both handles first: if one resource is not ready, get() throws
-    // before any promise is created, so nothing is left unawaited.
+    // Resolve both handles before creating any promise, so a resource that is
+    // not ready throws without leaving the other call unawaited.
     const xpand = db.get()
     const relations = contactsDb.get()
-    // The exists check and the relation fetch are independent; run them in
-    // one wave like the Xpand-backed predecessor did.
-    const [exists, all] = await Promise.all([
+    const [exists, related] = await Promise.all([
       contactExists(xpand, contactCode),
-      relatedContactsFor(xpand, relations, contactCode),
+      relatedContactsInRole(xpand, relations, contactCode, role),
     ])
-    if (!exists) return null
-    return all.filter((r) => r.role === role)
+    return exists ? related : null
   }
 
   return {
