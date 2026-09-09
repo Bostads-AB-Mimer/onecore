@@ -4,9 +4,15 @@ import makeApp from '@src/app'
 import config from '@src/common/config'
 import { makeAppContext } from '@src/context'
 import { ContactWriter } from '@src/adapters/contact-writer'
+import { Knex } from 'knex'
+import { insertMany } from '@src/adapters/contact-relations'
 import axios from 'axios'
 import sql, { ConnectionPool } from 'mssql'
 import { Server, Agent } from 'node:http'
+import {
+  RELATION_FIXTURES,
+  SOFT_DELETED_RELATION_FIXTURES,
+} from './relation-fixtures'
 
 /**
  * Throws exception indicating that we are attempting to perform writes to a database that
@@ -75,6 +81,30 @@ const refusingContactWriter: ContactWriter = {
   },
 }
 
+/**
+ * Resets `contact_relation` in the contacts test DB and seeds the standard
+ * relation fixtures (plus soft-deleted rows that must never surface).
+ */
+export const seedContactRelations = async (contactsDb: Knex) => {
+  if (config.contactsDatabase.database !== 'contacts-test') {
+    throw new Error(
+      `Refusing to modify database "${config.contactsDatabase.database}". Must be "contacts-test".`
+    )
+  }
+  await contactsDb('contact_relation').del()
+  await insertMany(contactsDb, RELATION_FIXTURES, 'test-seed')
+  await contactsDb('contact_relation').insert(
+    SOFT_DELETED_RELATION_FIXTURES.map((e) => ({
+      subject_contact_code: e.subjectContactCode,
+      related_contact_code: e.relatedContactCode,
+      role_type: e.roleType,
+      created_by: 'test-seed',
+      deleted_at: new Date('2026-01-01T00:00:00Z'),
+      deleted_by: 'test-seed',
+    }))
+  )
+}
+
 export type FixtureOptions = {
   /**
    * The data set to apply to the test database.
@@ -108,6 +138,9 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
   await prepareDataSet(pool, opts.dataSet)
 
   await pool.close()
+
+  await ctx.infrastructure.contactsDb.init()
+  await seedContactRelations(ctx.infrastructure.contactsDb.get())
 
   return {
     async start(): Promise<void> {
@@ -143,6 +176,9 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
         httpAgent: httpAgent,
         baseURL: `http://localhost:${this.port()}`,
       })
+    },
+    contactsDb() {
+      return ctx.infrastructure.contactsDb.get()
     },
   }
 }
