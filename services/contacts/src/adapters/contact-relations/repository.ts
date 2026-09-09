@@ -23,6 +23,7 @@ const MSSQL_PARAM_BUDGET = 2000
 const INSERT_COLUMN_COUNT = 4
 const INSERT_CHUNK_SIZE = Math.floor(MSSQL_PARAM_BUDGET / INSERT_COLUMN_COUNT)
 const DELETE_CHUNK_SIZE = 500
+const READ_CHUNK_SIZE = 500
 
 /** Every row that has not been soft-deleted, whoever created it. */
 export const listActive = async (db: Knex): Promise<DbContactRelationRow[]> => {
@@ -80,14 +81,22 @@ export const activeRelationsForMany = async (
   db: Knex,
   contactCodes: string[]
 ): Promise<DbContactRelationRow[]> => {
-  const codes = contactCodes.map((c) => c.trim()).filter((c) => c.length > 0)
+  const codes = [
+    ...new Set(contactCodes.map((c) => c.trim()).filter((c) => c.length > 0)),
+  ]
   if (codes.length === 0) return []
-  const rows: DbContactRelationRow[] = await db(TABLE)
-    .whereNull('deleted_at')
-    .andWhere((q) =>
-      q
-        .whereIn('subject_contact_code', codes)
-        .orWhereIn('related_contact_code', codes)
-    )
+  const rows: DbContactRelationRow[] = []
+  // Each code is bound twice (subject OR related), so chunk at half the
+  // parameter budget used by the writers.
+  for (const chunk of chunked(codes, READ_CHUNK_SIZE)) {
+    const found: DbContactRelationRow[] = await db(TABLE)
+      .whereNull('deleted_at')
+      .andWhere((q) =>
+        q
+          .whereIn('subject_contact_code', chunk)
+          .orWhereIn('related_contact_code', chunk)
+      )
+    rows.push(...found)
+  }
   return rows
 }

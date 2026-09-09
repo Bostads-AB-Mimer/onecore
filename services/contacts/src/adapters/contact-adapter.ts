@@ -122,18 +122,17 @@ export interface ContactsRepository {
   getTrusteesFor: (contactCode: ContactCode) => Promise<RelatedContact[] | null>
 
   /**
-   * Retrieves the annan fakturamottagare on the contact's current leases as
-   * RelatedContact objects with role 'otherInvoiceRecipient'. Null when the
-   * contact does not exist.
+   * Retrieves the contact's annan fakturamottagare as RelatedContact objects
+   * with role 'otherInvoiceRecipient'. Null when the contact does not exist.
    */
   getOtherInvoiceRecipients: (
     contactCode: ContactCode
   ) => Promise<RelatedContact[] | null>
 
   /**
-   * Retrieves the current lease holders this contact is the annan
-   * fakturamottagare for, as RelatedContact objects with role
-   * 'otherInvoiceRecipientFor'. Null when the contact does not exist.
+   * Retrieves the contacts this contact is the annan fakturamottagare for,
+   * as RelatedContact objects with role 'otherInvoiceRecipientFor'. Null when
+   * the contact does not exist.
    */
   getOtherInvoiceRecipientsFor: (
     contactCode: ContactCode

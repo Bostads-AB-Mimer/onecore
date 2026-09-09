@@ -294,6 +294,24 @@ describe('contact-relations repository', () => {
       expect(await activeRelationsForMany(db, [])).toEqual([])
     }))
 
+  it('activeRelationsForMany reads more codes than one chunk and dedupes the request', () =>
+    withContext(async ({ db }) => {
+      const edges = Array.from({ length: 1201 }, (_, i) => ({
+        subjectContactCode: `P${String(i).padStart(6, '0')}`,
+        relatedContactCode: `Q${String(i).padStart(6, '0')}`,
+        roleType: 'god_man' as const,
+      }))
+      await insertMany(db, edges, ACTOR)
+
+      const codes = [
+        ...edges.map((e) => e.subjectContactCode),
+        ...edges.map((e) => e.subjectContactCode),
+      ]
+      const rows = await activeRelationsForMany(db, codes)
+
+      expect(rows).toHaveLength(1201)
+    }))
+
   it('activeRelationsForMany returns each row once when both sides are requested', () =>
     withContext(async ({ db }) => {
       await insertMany(

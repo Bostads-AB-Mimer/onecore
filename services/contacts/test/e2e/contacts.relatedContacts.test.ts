@@ -369,8 +369,9 @@ describe('relatedContacts endpoints', () => {
         expect(response.status).toBe(200)
         expect(response.data.content).toMatchObject({ contactCode: 'P000444' })
       } finally {
-        // Written outside the fixture's seeding, so clean it up here: the
-        // contacts test DB is shared with suites that expect an empty table.
+        // Written outside the fixture's seeding, so clean it up here to keep
+        // later tests in this file independent of it (the fixture itself
+        // resets the table on setup and teardown).
         await contactsDb('contact_relation')
           .where({ subject_contact_code: 'P000333' })
           .del()

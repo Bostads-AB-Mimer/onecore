@@ -62,6 +62,8 @@ const relatedContactsForMany = async (
   const names = await contactNamesByCodes(xpandDb, [...counterpartCodes])
 
   const push = (owner: string, other: string, role: RelatedContactRole) => {
+    // A self-edge would list the contact as its own guardian/recipient.
+    if (owner === other) return
     const name = names.get(other)
     if (!name) return
     const list = result.get(owner) ?? []

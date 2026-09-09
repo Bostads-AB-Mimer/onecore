@@ -71,13 +71,13 @@ export const xpandContactsRepository = (
     contactCode: ContactCode,
     role: RelatedContactRole
   ): Promise<RelatedContact[] | null> => {
-    const exists = await contactExists(db.get(), contactCode)
+    // The exists check and the relation fetch are independent; run them in
+    // one wave like the Xpand-backed predecessor did.
+    const [exists, all] = await Promise.all([
+      contactExists(db.get(), contactCode),
+      relatedContactsFor(db.get(), contactsDb.get(), contactCode),
+    ])
     if (!exists) return null
-    const all = await relatedContactsFor(
-      db.get(),
-      contactsDb.get(),
-      contactCode
-    )
     return all.filter((r) => r.role === role)
   }
 
