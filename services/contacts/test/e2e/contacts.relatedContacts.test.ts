@@ -375,4 +375,29 @@ describe('relatedContacts endpoints', () => {
       })
     })
   })
+
+  describe('source of truth is contact_relation', () => {
+    it('returns a relation that exists only in the contacts DB, not in Xpand', async () => {
+      // P000333 has no guardian in the Xpand seed. Seed a DB-only edge.
+      const contactsDb = testApp!.contactsDb()
+      await contactsDb('contact_relation').insert({
+        subject_contact_code: 'P000333',
+        related_contact_code: 'P000444',
+        role_type: 'god_man',
+        created_by: 'test',
+      })
+
+      try {
+        const response = await httpClient.get('/contacts/P000333/trustee')
+        expect(response.status).toBe(200)
+        expect(response.data.content).toMatchObject({ contactCode: 'P000444' })
+      } finally {
+        // Written outside the fixture's seeding, so clean it up here: the
+        // contacts test DB is shared with suites that expect an empty table.
+        await contactsDb('contact_relation')
+          .where({ subject_contact_code: 'P000333' })
+          .del()
+      }
+    })
+  })
 })
