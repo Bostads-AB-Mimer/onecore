@@ -9,6 +9,7 @@ import { insertMany } from '@src/adapters/contact-relations'
 import axios from 'axios'
 import sql, { ConnectionPool } from 'mssql'
 import { Server, Agent } from 'node:http'
+import { resetContactRelations } from '../db-support'
 import {
   RELATION_FIXTURES,
   SOFT_DELETED_RELATION_FIXTURES,
@@ -86,12 +87,7 @@ const refusingContactWriter: ContactWriter = {
  * relation fixtures (plus soft-deleted rows that must never surface).
  */
 export const seedContactRelations = async (contactsDb: Knex) => {
-  if (config.contactsDatabase.database !== 'contacts-test') {
-    throw new Error(
-      `Refusing to modify database "${config.contactsDatabase.database}". Must be "contacts-test".`
-    )
-  }
-  await contactsDb('contact_relation').del()
+  await resetContactRelations(contactsDb)
   await insertMany(contactsDb, RELATION_FIXTURES, 'test-seed')
   await contactsDb('contact_relation').insert(
     SOFT_DELETED_RELATION_FIXTURES.map((e) => ({
@@ -159,6 +155,7 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
           })
         })
       }
+      await resetContactRelations(ctx.infrastructure.contactsDb.get())
       await ctx.infrastructure.xpandDb.close()
       await ctx.infrastructure.contactsDb.close()
     },
