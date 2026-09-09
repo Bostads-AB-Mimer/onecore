@@ -1,6 +1,7 @@
 import config from '@src/common/config'
 import { contactsDbClient } from '@src/adapters/db'
 import {
+  activeRelationsForMany,
   insertMany,
   listActive,
   softDeleteByIds,
@@ -201,5 +202,75 @@ describe('contact-relations repository', () => {
       await softDeleteByIds(db, [row.id], ACTOR)
 
       expect(await listActive(db)).toEqual([])
+    }))
+
+  it('activeRelationsForMany returns active rows where a requested code is subject or related', () =>
+    withContext(async ({ db }) => {
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P1',
+            relatedContactCode: 'P2',
+            roleType: 'god_man',
+          },
+          {
+            subjectContactCode: 'P3',
+            relatedContactCode: 'P1',
+            roleType: 'annan_fakturamottagare',
+          },
+          {
+            subjectContactCode: 'P4',
+            relatedContactCode: 'P5',
+            roleType: 'forvaltare',
+          },
+          {
+            subjectContactCode: 'P1',
+            relatedContactCode: 'P6',
+            roleType: 'forvaltare',
+          },
+        ],
+        ACTOR
+      )
+      const [toDelete] = (await listActive(db)).filter(
+        (r) => r.related_contact_code === 'P6'
+      )
+      await softDeleteByIds(db, [toDelete.id], ACTOR)
+
+      const rows = await activeRelationsForMany(db, ['P1'])
+
+      expect(
+        rows
+          .map((r) => [
+            r.subject_contact_code,
+            r.related_contact_code,
+            r.role_type,
+          ])
+          .sort()
+      ).toEqual([
+        ['P1', 'P2', 'god_man'],
+        ['P3', 'P1', 'annan_fakturamottagare'],
+      ])
+    }))
+
+  it('activeRelationsForMany trims requested codes', () =>
+    withContext(async ({ db }) => {
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P1',
+            relatedContactCode: 'P2',
+            roleType: 'god_man',
+          },
+        ],
+        ACTOR
+      )
+      expect(await activeRelationsForMany(db, ['P1  '])).toHaveLength(1)
+    }))
+
+  it('activeRelationsForMany returns an empty list for no codes', () =>
+    withContext(async ({ db }) => {
+      expect(await activeRelationsForMany(db, [])).toEqual([])
     }))
 })

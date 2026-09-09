@@ -75,3 +75,24 @@ export const softDeleteByIds = async (
       .update({ deleted_at: now, deleted_by: deletedBy })
   }
 }
+
+/**
+ * All active rows touching any of the given contact codes, in either
+ * direction (as subject or as related). The caller decides the perspective.
+ * Codes are trimmed; the stored codes are already trimmed by the writers.
+ */
+export const activeRelationsForMany = async (
+  db: Knex,
+  contactCodes: string[]
+): Promise<DbContactRelationRow[]> => {
+  const codes = contactCodes.map((c) => c.trim()).filter((c) => c.length > 0)
+  if (codes.length === 0) return []
+  const rows: DbContactRelationRow[] = await db(TABLE)
+    .whereNull('deleted_at')
+    .andWhere((q) =>
+      q
+        .whereIn('subject_contact_code', codes)
+        .orWhereIn('related_contact_code', codes)
+    )
+  return rows
+}

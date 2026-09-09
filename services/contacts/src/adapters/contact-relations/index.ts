@@ -1,4 +1,5 @@
 export {
+  activeRelationsForMany,
   insertMany,
   listActive,
   softDeleteByIds,
