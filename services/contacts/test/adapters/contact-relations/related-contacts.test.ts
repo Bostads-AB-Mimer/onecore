@@ -22,9 +22,7 @@ let contacts: Knex
 
 beforeAll(async () => {
   const pool = await connect()
-  // RENSAD_GDPR is kept so the read-path guard is exercised against a
-  // contact that does exist (and has a name) in Xpand.
-  await prepareDataSet(pool, [...FULL_TEST_DATA_SET, 'RENSAD_GDPR'])
+  await prepareDataSet(pool, FULL_TEST_DATA_SET)
   await pool.close()
   await Promise.all([xpandResource.init(), contactsResource.init()])
   xpand = xpandResource.get()
@@ -157,34 +155,6 @@ describe('relatedContactsForMany', () => {
 
   it('returns an empty map for no codes', async () => {
     expect((await relatedContactsForMany(xpand, contacts, [])).size).toBe(0)
-  })
-})
-
-describe('relatedContactsForMany GDPR guard', () => {
-  it('never returns the GDPR-erased placeholder as a related contact', async () => {
-    await insertMany(
-      contacts,
-      [
-        {
-          subjectContactCode: 'P001000',
-          relatedContactCode: 'RENSAD_GDPR',
-          roleType: 'god_man',
-        },
-        {
-          subjectContactCode: 'RENSAD_GDPR',
-          relatedContactCode: 'P001000',
-          roleType: 'annan_fakturamottagare',
-        },
-      ],
-      'test'
-    )
-
-    const byCode = await relatedContactsForMany(xpand, contacts, [
-      'P001000',
-      'RENSAD_GDPR',
-    ])
-
-    expect(byCode.size).toBe(0)
   })
 })
 

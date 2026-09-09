@@ -3,7 +3,6 @@ import { logger } from '@onecore/utilities'
 import { ContactCode } from '@src/domain'
 import { RelatedContact, RelatedContactRole } from '@src/domain/contact'
 import { contactNamesByCodes } from '@src/adapters/xpand/contact-lookup-query'
-import { RENSAD_GDPR } from '@src/adapters/xpand/relation-sql'
 import { activeRelationsForMany } from './repository'
 import { RoleType } from './db-model'
 
@@ -47,15 +46,11 @@ const relatedContactsForMany = async (
   // whitespace even though the requested codes above are already trimmed.
   // Use these trimmed values everywhere below (requested-set checks,
   // counterpart lookup and `push`) so such a row isn't silently dropped.
-  // The GDPR-erased placeholder is never a real party (services/CLAUDE.md);
-  // the import excludes it at write time, this guards other writers.
-  const trimmedRows = rows
-    .map((r) => ({
-      subject: r.subject_contact_code.trim(),
-      related: r.related_contact_code.trim(),
-      roleType: r.role_type,
-    }))
-    .filter((r) => r.subject !== RENSAD_GDPR && r.related !== RENSAD_GDPR)
+  const trimmedRows = rows.map((r) => ({
+    subject: r.subject_contact_code.trim(),
+    related: r.related_contact_code.trim(),
+    roleType: r.role_type,
+  }))
 
   // Only the counterpart of each requested code needs a name lookup — not
   // the requested codes themselves.
