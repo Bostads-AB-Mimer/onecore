@@ -27,6 +27,7 @@ describe('contactExists', () => {
   it('is true for a seeded contact and false for an unknown one', async () => {
     expect(await contactExists(xpand, 'P000444')).toBe(true)
     expect(await contactExists(xpand, 'P999999')).toBe(false)
+    expect(await contactExists(xpand, '   ')).toBe(false)
   })
 })
 
@@ -58,5 +59,23 @@ describe('contactNamesByCodes', () => {
   it('omits unknown codes and returns an empty map for no codes', async () => {
     expect((await contactNamesByCodes(xpand, ['P999999'])).size).toBe(0)
     expect((await contactNamesByCodes(xpand, [])).size).toBe(0)
+  })
+
+  it('trims requested codes', async () => {
+    const names = await contactNamesByCodes(xpand, [' P000444 '])
+    expect(names.get('P000444')?.firstName).toBe('Testy')
+  })
+
+  it('returns only the known codes when the list mixes known and unknown', async () => {
+    const names = await contactNamesByCodes(xpand, ['P000444', 'P999999'])
+    expect([...names.keys()]).toEqual(['P000444'])
+  })
+
+  it('dedupes and chunks a long code list', async () => {
+    const codes = Array.from({ length: 2500 }, (_, i) =>
+      i % 2 === 0 ? 'P000444' : `X${String(i).padStart(6, '0')}`
+    )
+    const names = await contactNamesByCodes(xpand, codes)
+    expect([...names.keys()]).toEqual(['P000444'])
   })
 })
