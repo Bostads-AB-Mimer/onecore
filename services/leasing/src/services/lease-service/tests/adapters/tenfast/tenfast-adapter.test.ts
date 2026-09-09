@@ -2405,4 +2405,3 @@ describe(tenfastAdapter.uploadLeaseFile, () => {
     expect(result).toEqual({ ok: false, err: 'upload-failed' })
   })
 })
-

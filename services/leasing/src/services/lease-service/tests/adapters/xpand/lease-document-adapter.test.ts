@@ -22,7 +22,9 @@ jest.mock('../../../adapters/xpand/xpandDb', () => ({
     if (table === 'dofil') {
       return {
         where: jest.fn().mockReturnValue({
-          select: jest.fn().mockImplementation(() => Promise.resolve(dofilRows)),
+          select: jest
+            .fn()
+            .mockImplementation(() => Promise.resolve(dofilRows)),
         }),
       }
     }

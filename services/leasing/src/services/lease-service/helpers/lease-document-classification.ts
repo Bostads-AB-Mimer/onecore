@@ -91,7 +91,9 @@ export const isUppsagningsbekraftelse = (
     (title ?? '').toLowerCase().includes(word)
   )
 
-export const inspectPdf = (content: Buffer): { signed: boolean; isScan: boolean } => {
+export const inspectPdf = (
+  content: Buffer
+): { signed: boolean; isScan: boolean } => {
   const raw = content.toString('latin1')
   const fonts = (raw.match(/\/Type\s*\/Font/g) ?? []).length
   const images = (raw.match(/DCTDecode|JPXDecode|CCITTFaxDecode/g) ?? []).length
@@ -181,7 +183,9 @@ export const pickContractDocument = (
     const qualified = candidates
       .map((document) => {
         const content = contentByKeydorev.get(document.keydorev)
-        const traits = content ? inspectPdf(content) : { signed: false, isScan: false }
+        const traits = content
+          ? inspectPdf(content)
+          : { signed: false, isScan: false }
         return { ...document, ...traits }
       })
       .filter((candidate) => candidate.signed || candidate.isScan)
@@ -196,12 +200,15 @@ export const pickContractDocument = (
 
   const withTraits = candidates.map((document) => {
     const content = contentByKeydorev.get(document.keydorev)
-    const traits = content ? inspectPdf(content) : { signed: false, isScan: false }
+    const traits = content
+      ? inspectPdf(content)
+      : { signed: false, isScan: false }
     return { ...document, ...traits }
   })
   const picked = pickContract(withTraits)
   return (
-    candidates.find((document) => document.keydorev === picked?.keydorev) ?? null
+    candidates.find((document) => document.keydorev === picked?.keydorev) ??
+    null
   )
 }
 
