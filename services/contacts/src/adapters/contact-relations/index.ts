@@ -10,3 +10,4 @@ export {
   type RoleType,
   type DbContactRelationRow,
 } from './db-model'
+export { relatedContactsFor, relatedContactsForMany } from './related-contacts'

@@ -1,0 +1,168 @@
+import { Knex } from 'knex'
+import config from '@src/common/config'
+import { xpandDbClient } from '@src/adapters/xpand/db'
+import { contactsDbClient } from '@src/adapters/db'
+import {
+  insertMany,
+  listActive,
+  relatedContactsFor,
+  relatedContactsForMany,
+  softDeleteByIds,
+} from '@src/adapters/contact-relations'
+import { connect, prepareDataSet } from '../../e2e/app-fixture'
+import { FULL_TEST_DATA_SET } from '../../e2e/data-set'
+import { requireContactsTestDb } from '../../db-support'
+
+requireContactsTestDb()
+
+const xpandResource = xpandDbClient(config.xpandDatabase)
+const contactsResource = contactsDbClient(config.contactsDatabase)
+let xpand: Knex
+let contacts: Knex
+
+beforeAll(async () => {
+  const pool = await connect()
+  await prepareDataSet(pool, FULL_TEST_DATA_SET)
+  await pool.close()
+  await Promise.all([xpandResource.init(), contactsResource.init()])
+  xpand = xpandResource.get()
+  contacts = contactsResource.get()
+})
+
+beforeEach(async () => {
+  await contacts('contact_relation').del()
+  await insertMany(
+    contacts,
+    [
+      {
+        subjectContactCode: 'P000555',
+        relatedContactCode: 'P000444',
+        roleType: 'forvaltare',
+      },
+      {
+        subjectContactCode: 'P000666',
+        relatedContactCode: 'P000444',
+        roleType: 'god_man',
+      },
+      {
+        subjectContactCode: 'P000777',
+        relatedContactCode: 'P000888',
+        roleType: 'forvaltare',
+      },
+      {
+        subjectContactCode: 'P000111',
+        relatedContactCode: 'P000222',
+        roleType: 'annan_fakturamottagare',
+      },
+      {
+        subjectContactCode: 'P000333',
+        relatedContactCode: 'P999999',
+        roleType: 'god_man',
+      },
+    ],
+    'test'
+  )
+})
+
+afterAll(async () => {
+  await contacts('contact_relation').del()
+  await Promise.all([xpandResource.close(), contactsResource.close()])
+})
+
+describe('relatedContactsForMany', () => {
+  it('maps subject-side rows to forward roles with hydrated names', async () => {
+    const byCode = await relatedContactsForMany(xpand, contacts, [
+      'P000555',
+      'P000111',
+    ])
+
+    expect(byCode.get('P000555')).toEqual([
+      {
+        contactCode: 'P000444',
+        role: 'administrator',
+        fullName: 'McTestface Testy',
+        firstName: 'Testy',
+        lastName: 'McTestface',
+      },
+    ])
+    expect(byCode.get('P000111')).toEqual([
+      expect.objectContaining({
+        contactCode: 'P000222',
+        role: 'otherInvoiceRecipient',
+      }),
+    ])
+  })
+
+  it('maps related-side rows to reverse roles', async () => {
+    const byCode = await relatedContactsForMany(xpand, contacts, [
+      'P000444',
+      'P000222',
+    ])
+
+    expect(byCode.get('P000444')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          contactCode: 'P000555',
+          role: 'administratorFor',
+        }),
+        expect.objectContaining({
+          contactCode: 'P000666',
+          role: 'trusteeFor',
+        }),
+      ])
+    )
+    expect(byCode.get('P000444')).toHaveLength(2)
+    expect(byCode.get('P000222')).toEqual([
+      expect.objectContaining({
+        contactCode: 'P000111',
+        role: 'otherInvoiceRecipientFor',
+      }),
+    ])
+  })
+
+  it('redacts names of protected identities', async () => {
+    const byCode = await relatedContactsForMany(xpand, contacts, ['P000777'])
+    expect(byCode.get('P000777')).toEqual([
+      {
+        contactCode: 'P000888',
+        role: 'administrator',
+        fullName: 'redacted',
+        firstName: 'redacted',
+        lastName: 'redacted',
+      },
+    ])
+  })
+
+  it('drops edges whose other side no longer exists in xpand', async () => {
+    const byCode = await relatedContactsForMany(xpand, contacts, ['P000333'])
+    expect(byCode.get('P000333')).toBeUndefined()
+  })
+
+  it('ignores soft-deleted rows', async () => {
+    const [row] = (await listActive(contacts)).filter(
+      (r) => r.subject_contact_code === 'P000555'
+    )
+    await softDeleteByIds(contacts, [row.id], 'test')
+
+    const byCode = await relatedContactsForMany(xpand, contacts, ['P000555'])
+    expect(byCode.get('P000555')).toBeUndefined()
+  })
+
+  it('trims requested codes and keys the result by the trimmed code', async () => {
+    const byCode = await relatedContactsForMany(xpand, contacts, ['P000555 '])
+    expect(byCode.get('P000555')).toHaveLength(1)
+  })
+
+  it('returns an empty map for no codes', async () => {
+    expect((await relatedContactsForMany(xpand, contacts, [])).size).toBe(0)
+  })
+})
+
+describe('relatedContactsFor', () => {
+  it('returns the list for one contact, or [] when there are none', async () => {
+    expect(await relatedContactsFor(xpand, contacts, 'P000666')).toEqual([
+      expect.objectContaining({ contactCode: 'P000444', role: 'trustee' }),
+    ])
+    expect(await relatedContactsFor(xpand, contacts, 'P001000')).toEqual([])
+  })
+})
