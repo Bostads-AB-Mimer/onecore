@@ -6,7 +6,11 @@ import {
   listActive,
   softDeleteByIds,
 } from '@src/adapters/contact-relations'
-import { makeWithContext, requireContactsTestDb } from '../../db-support'
+import {
+  makeWithContext,
+  requireContactsTestDb,
+  resetContactRelations,
+} from '../../db-support'
 
 requireContactsTestDb()
 
@@ -22,6 +26,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await dbResource.close()
+})
+
+// Defensive: a crashed e2e run can leave committed rows behind; these tests
+// assert whole-table counts inside their rollback transaction.
+beforeEach(async () => {
+  await resetContactRelations(dbResource.get())
 })
 
 describe('contact-relations repository', () => {
