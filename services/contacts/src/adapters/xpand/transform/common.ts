@@ -1,4 +1,4 @@
-const REDACTED = 'redacted'
+export const REDACTED = 'redacted'
 
 /**
  * Trim any and all string values of a DB result row, as Xpand

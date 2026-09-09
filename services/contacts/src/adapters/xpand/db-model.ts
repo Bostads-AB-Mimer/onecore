@@ -14,6 +14,19 @@ export type DbContact = {
   specialAttention: string | undefined
 }
 
+/**
+ * The name columns of `cmctc`, for resolving display names without pulling a
+ * whole contact. `protectedIdentity` is `lagsokt`, a DATETIME presence
+ * sentinel rather than a flag.
+ */
+export type DbContactName = {
+  contactCode: string
+  fullName: string | null
+  firstName: string | null
+  lastName: string | null
+  protectedIdentity: Date | null
+}
+
 export type DbPhoneNumber = {
   phoneId: string
   ownerObjectKey: string
