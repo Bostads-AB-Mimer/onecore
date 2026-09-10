@@ -3015,6 +3015,430 @@
         ]
       }
     },
+    "/v1/contacts/{contactCode}/relations": {
+      "post": {
+        "summary": "Add a related contact (god man, förvaltare, annan fakturamottagare)",
+        "description": "Adds a relation from the contact to another contact. A contact has at most one god man or förvaltare (409 guardian-exists, detail = the existing guardian's contact code). The acting user is recorded from the token. Returns the contact's relations after the change.",
+        "tags": [
+          "Contacts"
+        ],
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRelationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "_links": {},
+                    "content": {
+                      "type": "object",
+                      "properties": {
+                        "relations": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "contactCode": {
+                                "type": "string"
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "trustee",
+                                  "administrator",
+                                  "trusteeFor",
+                                  "administratorFor",
+                                  "otherInvoiceRecipient",
+                                  "otherInvoiceRecipientFor"
+                                ]
+                              },
+                              "fullName": {
+                                "type": "string"
+                              },
+                              "firstName": {
+                                "type": "string"
+                              },
+                              "lastName": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "contactCode",
+                              "role",
+                              "fullName",
+                              "firstName",
+                              "lastName"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "relations"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "content"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "subject-not-found",
+                        "related-not-found",
+                        "self-relation",
+                        "guardian-exists",
+                        "duplicate-relation",
+                        "relation-not-found",
+                        "invalid-role-type",
+                        "missing-deleted-by",
+                        "invalid-request",
+                        "contacts-service-error"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "subject-not-found",
+                        "related-not-found",
+                        "self-relation",
+                        "guardian-exists",
+                        "duplicate-relation",
+                        "relation-not-found",
+                        "invalid-role-type",
+                        "missing-deleted-by",
+                        "invalid-request",
+                        "contacts-service-error"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "subject-not-found",
+                        "related-not-found",
+                        "self-relation",
+                        "guardian-exists",
+                        "duplicate-relation",
+                        "relation-not-found",
+                        "invalid-role-type",
+                        "missing-deleted-by",
+                        "invalid-request",
+                        "contacts-service-error"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "subject-not-found",
+                        "related-not-found",
+                        "self-relation",
+                        "guardian-exists",
+                        "duplicate-relation",
+                        "relation-not-found",
+                        "invalid-role-type",
+                        "missing-deleted-by",
+                        "invalid-request",
+                        "contacts-service-error"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "subject-not-found",
+                        "related-not-found",
+                        "self-relation",
+                        "guardian-exists",
+                        "duplicate-relation",
+                        "relation-not-found",
+                        "invalid-role-type",
+                        "missing-deleted-by",
+                        "invalid-request",
+                        "contacts-service-error"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "contactCode",
+            "description": "Contact Code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/v1/contacts/{contactCode}/relations/{roleType}/{relatedContactCode}": {
+      "delete": {
+        "summary": "Remove a related contact",
+        "description": "Ends the relation from the contact to the related contact in the given role. History is kept in the contacts service. The acting user is recorded from the token.",
+        "tags": [
+          "Contacts"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "not": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "subject-not-found",
+                        "related-not-found",
+                        "self-relation",
+                        "guardian-exists",
+                        "duplicate-relation",
+                        "relation-not-found",
+                        "invalid-role-type",
+                        "missing-deleted-by",
+                        "invalid-request",
+                        "contacts-service-error"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "subject-not-found",
+                        "related-not-found",
+                        "self-relation",
+                        "guardian-exists",
+                        "duplicate-relation",
+                        "relation-not-found",
+                        "invalid-role-type",
+                        "missing-deleted-by",
+                        "invalid-request",
+                        "contacts-service-error"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "subject-not-found",
+                        "related-not-found",
+                        "self-relation",
+                        "guardian-exists",
+                        "duplicate-relation",
+                        "relation-not-found",
+                        "invalid-role-type",
+                        "missing-deleted-by",
+                        "invalid-request",
+                        "contacts-service-error"
+                      ]
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "contactCode",
+            "description": "Contact Code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleType",
+            "description": "Relation role",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "god_man",
+                "forvaltare",
+                "annan_fakturamottagare"
+              ]
+            }
+          },
+          {
+            "name": "relatedContactCode",
+            "description": "Related Contact Code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
     "/v1/contacts/by-phone-number/{phoneNumber}": {
       "get": {
         "summary": "List contacts by phone number",
@@ -4550,6 +4974,28 @@
           "lastName",
           "addresses",
           "emailAddresses"
+        ],
+        "additionalProperties": false
+      },
+      "AddRelationRequest": {
+        "type": "object",
+        "properties": {
+          "relatedContactCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "roleType": {
+            "type": "string",
+            "enum": [
+              "god_man",
+              "forvaltare",
+              "annan_fakturamottagare"
+            ]
+          }
+        },
+        "required": [
+          "relatedContactCode",
+          "roleType"
         ],
         "additionalProperties": false
       },
