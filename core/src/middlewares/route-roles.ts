@@ -3,7 +3,11 @@
  *
  * requireRole is ANY-of, so a list means "one of these".
  */
-export const requiredRolesFor = (path: string, method: string): string[] => {
+export const requiredRolesFor = (rawPath: string, method: string): string[] => {
+  // @koa/router matches paths case-insensitively, so compare in lower case —
+  // otherwise POST /V1/contacts reaches the handler but is gated as api-access.
+  const path = rawPath.toLowerCase()
+
   if (path.startsWith('/scan-receipt')) return ['scanner-upload']
 
   // All routes under /leases/for-csc require csc:get or api-access
@@ -20,10 +24,10 @@ export const requiredRolesFor = (path: string, method: string): string[] => {
   // service account (client_credentials) holding the infobip-webhook role.
   if (path.startsWith('/webhooks/infobip')) return ['infobip-webhook']
 
-  // Creating a contact or changing its relations writes to the system of
-  // record and cannot be undone, so it is gated separately from reading.
-  // requireRole is ANY-of, so contacts:write must stand alone here —
-  // listing api-access alongside it would open the write to every
+  // Creating a contact writes to the system of record and cannot be undone;
+  // changing relations mutates the contacts DB. Both are gated separately
+  // from reading, on contacts:write alone: requireRole is ANY-of, so
+  // listing api-access alongside it would open the writes to every
   // api-access holder.
   if (
     path.startsWith('/v1/contacts') &&
