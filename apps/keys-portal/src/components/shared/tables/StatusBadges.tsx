@@ -325,11 +325,11 @@ interface ItemTypeBadgeProps {
 /**
  * Badge showing the type of key or card.
  * For keys: Shows the key type label (Huvudnyckel, Fastighet, etc.)
- * For cards: Shows "Tagg"
+ * For cards: Shows "Droppe"
  */
 export function ItemTypeBadge({ itemType }: ItemTypeBadgeProps) {
   if (itemType === 'CARD') {
-    return <Badge variant="secondary">Tagg</Badge>
+    return <Badge variant="secondary">Droppe</Badge>
   }
   const label =
     KeyTypeLabels[itemType as keyof typeof KeyTypeLabels] || itemType

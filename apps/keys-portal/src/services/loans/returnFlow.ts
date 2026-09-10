@@ -84,7 +84,7 @@ export async function returnLoan(
   } catch (err: any) {
     return {
       success: false,
-      message: err?.message || 'Kunde inte återlämna nycklar/taggar.',
+      message: err?.message || 'Kunde inte återlämna nycklar/droppar.',
     }
   }
 }
@@ -132,7 +132,7 @@ export async function partialReturnLoan(
       return {
         success: false,
         message:
-          'Inga nycklar eller taggar kvar att överföra till nytt lån. Använd vanlig återlämning istället.',
+          'Inga nycklar eller droppar kvar att överföra till nytt lån. Använd vanlig återlämning istället.',
       }
     }
 

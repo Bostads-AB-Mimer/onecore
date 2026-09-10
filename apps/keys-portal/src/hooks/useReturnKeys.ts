@@ -228,7 +228,7 @@ export function useReturnKeys({
         return r.success ? null : { message: r.message ?? 'Okänt fel' }
       },
       {
-        success: 'Nycklar/taggar återlämnade',
+        success: 'Nycklar/droppar återlämnade',
         failure: 'Återlämning misslyckades för vissa lån',
       }
     )

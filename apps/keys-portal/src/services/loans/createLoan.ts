@@ -38,7 +38,7 @@ export async function createPendingLoan({
     return {
       success: false,
       title: 'Fel',
-      message: 'Inga nycklar eller taggar valda',
+      message: 'Inga nycklar eller droppar valda',
     }
   }
 
@@ -78,7 +78,7 @@ export async function createPendingLoan({
       success: false,
       title: is409 ? 'Kan inte låna ut' : 'Fel',
       message: is409
-        ? 'En eller flera nycklar/taggar är redan utlånade.'
+        ? 'En eller flera nycklar/droppar är redan utlånade.'
         : err?.message || 'Kunde inte skapa lån.',
     }
   }
