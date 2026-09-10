@@ -198,9 +198,19 @@ export const CreateContactErrorResponseBodySchema_APIv1 = z.object({
  * acting user from the token, so attribution cannot be spoofed.
  * ---------------------------------------------------------------------- */
 
+/**
+ * Zod strips unknown keys, so a client-sent `createdBy` is silently ignored
+ * rather than rejected, even though the generated contract documents
+ * `additionalProperties: false`.
+ */
 export const AddRelationRequestBodySchema_APIv1 =
   AddRelationRequestBodySchema.omit({ createdBy: true })
 
+/**
+ * Deliberately an alias, not a copy: a new role added in contacts widens this
+ * otherwise frozen v1 contract. The contract snapshot
+ * (test/api/contracts/v1/contacts.openapi.json) is the tripwire for that.
+ */
 export const RelationRoleTypeSchema_APIv1 = RelationRoleTypeSchema
 
 export const RelationsResponseBodySchema_APIv1 =
@@ -212,6 +222,10 @@ export const RelationsResponseBodySchema_APIv1 =
  * The contacts service's own failure codes plus the two core adds on its own.
  * Kept as an enum rather than a plain string so the generated client types
  * constrain the caseworker-facing error-to-message map in the UI.
+ *
+ * `invalid-role-type` is emitted by core itself, before contacts is called.
+ * `missing-deleted-by` is listed for completeness only — core always sends
+ * `deletedBy`, so it cannot surface on this API.
  */
 const RELATION_ERROR_CODES = [
   ...AddRelationErrorCodeSchema.options,

@@ -506,10 +506,14 @@ export const routes = (router: OkapiRouter, config: Config) => {
     }
   )
 
-  // The acting user: display name, falling back to the username. Same
-  // convention as communication, lease and keys.
+  // The acting user: display name, falling back to the username. The
+  // name -> preferred_username chain is the shared convention; communication
+  // and lease stop there, keys falls back to 'system'. Here 'unknown' is a
+  // terminal fallback that is effectively unreachable: a token carrying
+  // neither claim is a legacy api-access token, which the contacts:write gate
+  // rejects before the handler runs.
   const actingUser = (ctx: ParameterizedContext): string =>
-    ctx.state.user?.name ?? ctx.state.user?.preferred_username ?? 'unknown'
+    ctx.state.user?.name || ctx.state.user?.preferred_username || 'unknown'
 
   // Gated on contacts:write by requiredRolesFor (core/src/middlewares/
   // route-roles.ts) for POST and DELETE under /v1/contacts. Not visible in

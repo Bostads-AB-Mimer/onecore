@@ -23,17 +23,28 @@ import { routes } from '../index'
 import config from '../../../../common/config'
 import * as contactsAdapterModule from '../../../../adapters/contacts-adapter'
 
-const WRITER = {
+type TestUser = {
+  name?: string
+  preferred_username: string
+  realm_access: { roles: string[] }
+}
+
+const WRITER: TestUser = {
   name: 'Anna Andersson',
   preferred_username: 'anna',
   realm_access: { roles: ['api-access', 'contacts:write'] },
 }
-const READER = {
+// A token that carries no display name, only the username.
+const WRITER_WITHOUT_NAME: TestUser = {
+  preferred_username: 'cecilia',
+  realm_access: { roles: ['api-access', 'contacts:write'] },
+}
+const READER: TestUser = {
   name: 'Bo Reader',
   preferred_username: 'bo',
   realm_access: { roles: ['api-access'] },
 }
-let mockUser: typeof WRITER = WRITER
+let mockUser: TestUser = WRITER
 
 const adapter = {
   addRelation: jest.fn(),
@@ -126,6 +137,48 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
     expect(res.body).toMatchObject({ error: 'guardian-exists', detail: 'P9' })
   })
 
+  it('is 502 when the adapter reports a transport failure without a status', async () => {
+    adapter.addRelation.mockResolvedValue({
+      ok: false,
+      err: 'contacts-service-error',
+    })
+
+    const res = await request(app.callback())
+      .post('/v1/contacts/P1/relations')
+      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('contacts-service-error')
+  })
+
+  it('does not forward an upstream 500, but answers 502', async () => {
+    adapter.addRelation.mockResolvedValue({
+      ok: false,
+      err: 'contacts-service-error',
+      statusCode: 500,
+    })
+
+    const res = await request(app.callback())
+      .post('/v1/contacts/P1/relations')
+      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('contacts-service-error')
+  })
+
+  it('falls back to preferred_username when the token has no name', async () => {
+    mockUser = WRITER_WITHOUT_NAME
+    adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
+
+    await request(app.callback())
+      .post('/v1/contacts/P1/relations')
+      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
+
+    expect(adapter.addRelation).toHaveBeenCalledWith(
+      expect.objectContaining({ createdBy: 'cecilia' })
+    )
+  })
+
   it('rejects an invalid body with 400 before calling contacts', async () => {
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
@@ -174,6 +227,46 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
     )
     expect(res.status).toBe(404)
     expect(res.body).toMatchObject({ error: 'relation-not-found' })
+  })
+
+  it('is 502 when the adapter reports a transport failure without a status', async () => {
+    adapter.removeRelation.mockResolvedValue({
+      ok: false,
+      err: 'contacts-service-error',
+    })
+
+    const res = await request(app.callback()).delete(
+      '/v1/contacts/P1/relations/god_man/P2'
+    )
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('contacts-service-error')
+  })
+
+  it('does not forward an upstream 500, but answers 502', async () => {
+    adapter.removeRelation.mockResolvedValue({
+      ok: false,
+      err: 'contacts-service-error',
+      statusCode: 500,
+    })
+
+    const res = await request(app.callback()).delete(
+      '/v1/contacts/P1/relations/god_man/P2'
+    )
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('contacts-service-error')
+  })
+
+  it('falls back to preferred_username when the token has no name', async () => {
+    mockUser = WRITER_WITHOUT_NAME
+    adapter.removeRelation.mockResolvedValue({ ok: true, data: undefined })
+
+    await request(app.callback()).delete('/v1/contacts/P1/relations/god_man/P2')
+
+    expect(adapter.removeRelation).toHaveBeenCalledWith(
+      expect.objectContaining({ deletedBy: 'cecilia' })
+    )
   })
 
   it('rejects an unknown role type with 400', async () => {
