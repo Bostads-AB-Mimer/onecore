@@ -5,7 +5,7 @@ import type {
   Tenant,
 } from '@/services/types'
 
-import { GET, POST } from './baseApi'
+import { DELETE, GET, POST } from './baseApi'
 import type { paths } from './generated/api-types'
 
 export interface ContactSearchResult {
@@ -121,6 +121,46 @@ async function createContact(
   return data
 }
 
+export type RelationRoleType =
+  'god_man' | 'forvaltare' | 'annan_fakturamottagare'
+
+export type RelationRef = {
+  contactCode: string
+  relatedContactCode: string
+  roleType: RelationRoleType
+}
+
+/** Error body shared by every non-2xx response from the relation endpoints. */
+export type RelationError = { error: string; detail?: string }
+
+async function addRelation({
+  contactCode,
+  relatedContactCode,
+  roleType,
+}: RelationRef): Promise<RelatedContact[]> {
+  const { data, error } = await POST('/v1/contacts/{contactCode}/relations', {
+    params: { path: { contactCode } },
+    body: { relatedContactCode, roleType },
+  })
+
+  if (error) throw error
+
+  return (data?.content?.relations ?? []) as RelatedContact[]
+}
+
+async function removeRelation({
+  contactCode,
+  relatedContactCode,
+  roleType,
+}: RelationRef): Promise<void> {
+  const { error } = await DELETE(
+    '/v1/contacts/{contactCode}/relations/{roleType}/{relatedContactCode}',
+    { params: { path: { contactCode, roleType, relatedContactCode } } }
+  )
+
+  if (error) throw error
+}
+
 export const tenantService = {
   getByContactCode,
   getContactByContactCode,
@@ -129,4 +169,6 @@ export const tenantService = {
   sendBulkSms,
   sendBulkEmail,
   createContact,
+  addRelation,
+  removeRelation,
 }

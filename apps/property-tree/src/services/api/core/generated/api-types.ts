@@ -11373,6 +11373,237 @@ export interface paths {
       }
     }
   }
+  '/v1/contacts/{contactCode}/relations': {
+    /**
+     * Add a related contact (god man, förvaltare, annan fakturamottagare)
+     * @description Adds a relation from the contact to another contact. A contact has at most one god man or förvaltare (409 guardian-exists, detail = the existing guardian's contact code). The acting user is recorded from the token. Returns the contact's relations after the change.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Contact Code */
+          contactCode: string
+        }
+      }
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['AddRelationRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                relations: {
+                  contactCode: string
+                  /** @enum {string} */
+                  role:
+                    | 'trustee'
+                    | 'administrator'
+                    | 'trusteeFor'
+                    | 'administratorFor'
+                    | 'otherInvoiceRecipient'
+                    | 'otherInvoiceRecipientFor'
+                  fullName: string
+                  firstName: string
+                  lastName: string
+                }[]
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+              detail?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+              detail?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+              detail?: string
+            }
+          }
+        }
+        /** @description Unprocessable Entity */
+        422: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/contacts/{contactCode}/relations/{roleType}/{relatedContactCode}': {
+    /**
+     * Remove a related contact
+     * @description Ends the relation from the contact to the related contact in the given role. History is kept in the contacts service. The acting user is recorded from the token.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Contact Code */
+          contactCode: string
+          /** @description Relation role */
+          roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
+          /** @description Related Contact Code */
+          relatedContactCode: string
+        }
+      }
+      responses: {
+        /** @description No Content */
+        204: {
+          content: {
+            'application/json': unknown
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+              detail?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/v1/contacts/by-phone-number/{phoneNumber}': {
     /** List contacts by phone number */
     get: {
@@ -16251,6 +16482,11 @@ export interface components {
       }
       /** @default [] */
       waitingLists?: (1 | 2 | 3)[]
+    }
+    AddRelationRequest: {
+      relatedContactCode: string
+      /** @enum {string} */
+      roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
     }
     ContactV1:
       | {
