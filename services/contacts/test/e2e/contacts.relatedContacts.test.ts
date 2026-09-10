@@ -170,7 +170,7 @@ describe('relatedContacts endpoints', () => {
   })
 
   describe('GET /contacts/:contactCode/other-invoice-recipients', () => {
-    it('collapses a relation stored as two active rows into one', async () => {
+    it('returns the recipient for a holder', async () => {
       const response = await httpClient.get(
         '/contacts/P900001/other-invoice-recipients'
       )
@@ -209,7 +209,7 @@ describe('relatedContacts endpoints', () => {
   })
 
   describe('GET /contacts/:contactCode/other-invoice-recipient-for', () => {
-    it('returns the holder from the recipient side, collapsing duplicate rows', async () => {
+    it('returns the holder from the recipient side', async () => {
       const response = await httpClient.get(
         '/contacts/P900010/other-invoice-recipient-for'
       )

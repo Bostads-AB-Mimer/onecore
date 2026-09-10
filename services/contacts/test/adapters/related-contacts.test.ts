@@ -201,20 +201,9 @@ describe('relatedContactsFor', () => {
       ])
     }))
 
-  it('returns one entry when the same edge is stored as two active rows', () =>
+  it('returns one entry per active edge', () =>
     withContext(async ({ db }) => {
       await seed(db)
-      await insertMany(
-        db,
-        [
-          {
-            subjectContactCode: 'P000555',
-            relatedContactCode: 'P000444',
-            roleType: 'forvaltare',
-          },
-        ],
-        'test'
-      )
 
       expect(await relatedContactsFor(xpand, db, 'P000555')).toHaveLength(1)
     }))
