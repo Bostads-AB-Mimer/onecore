@@ -33,7 +33,7 @@ const listListingAreaTextContent = async (): Promise<
       content: ListingAreaTextContent[]
     }>(`${tenantsLeasesServiceUrl}/listing-area-text-content`)
 
-    return mapLeasingResponse(response, {}, (body) => body.content)
+    return mapLeasingResponse(response, 200, {}, (body) => body.content)
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.listListingAreaTextContent')
     return { ok: false, err: 'request-failed' }
@@ -54,6 +54,7 @@ const getListingAreaTextContentByMarketAreaCode = async (
 
     return mapLeasingResponse(
       response,
+      200,
       { 404: 'not-found' },
       (body) => body.content
     )
@@ -81,6 +82,7 @@ const createListingAreaTextContent = async (
 
     return mapLeasingResponse(
       response,
+      201,
       { 400: 'bad-request', 409: 'conflict' },
       (body) => body.content
     )
@@ -109,6 +111,7 @@ const updateListingAreaTextContent = async (
 
     return mapLeasingResponse(
       response,
+      200,
       { 400: 'bad-request', 404: 'not-found' },
       (body) => body.content
     )
@@ -126,7 +129,12 @@ const deleteListingAreaTextContent = async (
       `${tenantsLeasesServiceUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`
     )
 
-    return mapLeasingResponse(response, { 404: 'not-found' }, () => undefined)
+    return mapLeasingResponse(
+      response,
+      200,
+      { 404: 'not-found' },
+      () => undefined
+    )
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.deleteListingAreaTextContent')
     return { ok: false, err: 'request-failed' }

@@ -778,7 +778,6 @@ const toTextContentError = (
   err: unknown,
   context: string
 ): { ok: false; err: TextContentError; statusCode: number } => {
-  logger.error({ err }, context)
   const status = err instanceof AxiosError ? err.response?.status : undefined
   switch (status) {
     case HttpStatusCode.BadRequest:
@@ -788,6 +787,10 @@ const toTextContentError = (
     case HttpStatusCode.Conflict:
       return { ok: false, err: 'conflict', statusCode: 409 }
     default:
+      // Only unexpected failures are logged. 400/404/409 are expected
+      // outcomes (404 in particular is the normal state for an object
+      // without text content) and would drown real errors.
+      logger.error({ err }, context)
       return { ok: false, err: 'request-failed', statusCode: 500 }
   }
 }

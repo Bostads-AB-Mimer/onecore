@@ -129,7 +129,7 @@ describe('parking spaces', () => {
         .spyOn(rentalObjectAdapter, 'getAllVacantParkingSpaces')
         .mockResolvedValue({ ok: true, data: mockedVacantParkingSpaces })
       jest
-        .spyOn(listingTextContentAdapter, 'getAllRentalObjectCodes')
+        .spyOn(listingTextContentAdapter, 'getRentalObjectCodesWithTextContent')
         .mockResolvedValue({ ok: true, data: [] })
 
       const res = await request(app.callback()).get('/vacant-parkingspaces')
@@ -155,13 +155,17 @@ describe('parking spaces', () => {
       jest
         .spyOn(rentalObjectAdapter, 'getAllVacantParkingSpaces')
         .mockResolvedValue({ ok: true, data: [withText, withoutText] })
-      jest
-        .spyOn(listingTextContentAdapter, 'getAllRentalObjectCodes')
+      const getCodesWithTextContentSpy = jest
+        .spyOn(listingTextContentAdapter, 'getRentalObjectCodesWithTextContent')
         .mockResolvedValue({ ok: true, data: [withText.rentalObjectCode] })
 
       const res = await request(app.callback()).get('/vacant-parkingspaces')
 
       expect(res.status).toBe(200)
+      expect(getCodesWithTextContentSpy).toHaveBeenCalledWith([
+        withText.rentalObjectCode,
+        withoutText.rentalObjectCode,
+      ])
       expect(res.body.content).toEqual([
         expect.objectContaining({
           rentalObjectCode: withText.rentalObjectCode,
@@ -182,7 +186,7 @@ describe('parking spaces', () => {
         .spyOn(rentalObjectAdapter, 'getAllVacantParkingSpaces')
         .mockResolvedValue({ ok: true, data: [parkingSpace] })
       jest
-        .spyOn(listingTextContentAdapter, 'getAllRentalObjectCodes')
+        .spyOn(listingTextContentAdapter, 'getRentalObjectCodesWithTextContent')
         .mockResolvedValue({ ok: false, err: 'database-error' })
 
       const res = await request(app.callback()).get('/vacant-parkingspaces')

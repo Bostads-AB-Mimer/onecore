@@ -59,6 +59,12 @@ export const routes = (router: KoaRouter) => {
    *                         type: string
    *                       braArea:
    *                         type: number
+   *                       hasListingTextContent:
+   *                         type: boolean
+   *                         description: |
+   *                           Whether listing text content exists for the
+   *                           parking space. Omitted if the text content
+   *                           lookup in leasing failed.
    *       '500':
    *         description: Internal server error. Failed to retrieve vacant parking spaces.
    *         content:

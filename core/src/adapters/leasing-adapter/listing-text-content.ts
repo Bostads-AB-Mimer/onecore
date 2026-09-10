@@ -37,6 +37,7 @@ const getListingTextContentByRentalObjectCode = async (
 
     return mapLeasingResponse(
       response,
+      200,
       { 404: 'not-found' },
       (body) => body.content
     )
@@ -64,6 +65,7 @@ const createListingTextContent = async (
 
     return mapLeasingResponse(
       response,
+      201,
       { 400: 'bad-request', 409: 'conflict' },
       (body) => body.content
     )
@@ -92,6 +94,7 @@ const updateListingTextContent = async (
 
     return mapLeasingResponse(
       response,
+      200,
       { 400: 'bad-request', 404: 'not-found' },
       (body) => body.content
     )
@@ -109,7 +112,12 @@ const deleteListingTextContent = async (
       `${tenantsLeasesServiceUrl}/listing-text-content/${encodeURIComponent(rentalObjectCode)}`
     )
 
-    return mapLeasingResponse(response, { 404: 'not-found' }, () => undefined)
+    return mapLeasingResponse(
+      response,
+      200,
+      { 404: 'not-found' },
+      () => undefined
+    )
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.deleteListingTextContent')
     return { ok: false, err: 'request-failed' }

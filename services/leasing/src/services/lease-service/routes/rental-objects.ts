@@ -192,10 +192,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(metadata, 'Fetching all vacant parking spaces')
 
-    const [vacantParkingSpaces, textContentCodes] = await Promise.all([
-      getAllVacantParkingSpaces(),
-      listingTextContentAdapter.getAllRentalObjectCodes(),
-    ])
+    const vacantParkingSpaces = await getAllVacantParkingSpaces()
 
     if (!vacantParkingSpaces.ok) {
       logger.error(
@@ -213,6 +210,12 @@ export const routes = (router: KoaRouter) => {
     // The parking spaces come from Xpand, so the text content flag is
     // attached here from the leasing DB. If that lookup fails the list is
     // still returned, without the flag, since it only drives an icon.
+    const textContentCodes =
+      await listingTextContentAdapter.getRentalObjectCodesWithTextContent(
+        vacantParkingSpaces.data.map(
+          (parkingSpace) => parkingSpace.rentalObjectCode
+        )
+      )
     const codesWithTextContent = textContentCodes.ok
       ? new Set(textContentCodes.data)
       : undefined
