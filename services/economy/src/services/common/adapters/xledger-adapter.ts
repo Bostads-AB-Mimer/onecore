@@ -799,6 +799,78 @@ export const getInvoicesByContactCode = async (
   return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
 }
 
+/*
+ * Fetches invoices by invoice number, regardless of which customer they are
+ * billed to. Used to enrich invoices that were found via a shared lease in
+ * Xpand (MIM-1160) — those belong to another paying contact, so the
+ * contact-scoped lookup above cannot reach them. The headerTransactionSourceDbId
+ * filter is required: without it the same invoice number also matches payment
+ * and credit transaction rows.
+ */
+export const getInvoicesByInvoiceNumbers = async (
+  invoiceNumbers: string[]
+): Promise<Invoice[]> => {
+  const CHUNK_SIZE = 50
+  // One invoice number can match several transaction rows (e.g. a regular row
+  // plus a loss row on account 1529), so the page size must be well above the
+  // chunk size — Xledger truncates at `first` without reporting it.
+  const PAGE_SIZE = 10000
+  const invoices: Invoice[] = []
+
+  for (let i = 0; i < invoiceNumbers.length; i += CHUNK_SIZE) {
+    const chunk = invoiceNumbers.slice(i, i + CHUNK_SIZE)
+
+    // Invoice numbers are passed as GraphQL variables, never interpolated
+    // into the query document.
+    const query = {
+      query: gql`
+        query($filter: ARTransaction_Filter, $first: Int) {
+          arTransactions(first: $first, filter: $filter) {
+            edges {
+              node {
+                ${invoiceNodeFragment}
+              }
+            }
+          }
+        }
+      `,
+      variables: {
+        first: PAGE_SIZE,
+        filter: {
+          invoiceNumber_in: chunk,
+          headerTransactionSourceDbId_in: [
+            TransactionSourceDbId.SO,
+            TransactionSourceDbId.AR,
+            TransactionSourceDbId.OS,
+          ],
+        },
+      },
+    }
+
+    try {
+      const result = await makeXledgerRequest(query)
+      const edges = result.data?.arTransactions?.edges ?? []
+
+      if (edges.length >= PAGE_SIZE) {
+        logger.warn(
+          { invoiceNumbers: chunk.length, returnedRows: edges.length },
+          'Xledger invoice-number lookup hit the page size, results may be truncated'
+        )
+      }
+
+      invoices.push(...edges.map(transformToInvoice))
+    } catch (err) {
+      logger.error(
+        { err, invoiceNumbers: chunk.length },
+        'adapter.getInvoicesByInvoiceNumbers'
+      )
+      throw err
+    }
+  }
+
+  return invoices
+}
+
 export const getInvoices = async (from?: Date, to?: Date) => {
   const query = {
     query: `

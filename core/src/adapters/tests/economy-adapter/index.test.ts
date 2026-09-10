@@ -6,10 +6,16 @@ import * as economyAdapter from '../../economy-adapter'
 import { mockedInvoices } from './mocks'
 
 describe('economy-adapter', () => {
+  // The contact's own invoices — reference is the paying contact's code.
+  const ownInvoices = mockedInvoices.map((i) => ({
+    ...i,
+    reference: 'P123456',
+  }))
+
   it('returns empty list if no problematic invoices', async () => {
     nock(config.economyService.url)
       .get(/invoices\/bycontactcode/)
-      .reply(200, { content: mockedInvoices })
+      .reply(200, { content: ownInvoices })
 
     const result =
       await economyAdapter.getInvoicesSentToDebtCollection('P123456')
@@ -18,7 +24,7 @@ describe('economy-adapter', () => {
   })
 
   it('returns list of invoices if current problematic invoices', async () => {
-    const mockedProblematicInvoices = mockedInvoices.map((i) => ({
+    const mockedProblematicInvoices = ownInvoices.map((i) => ({
       ...i,
       sentToDebtCollection: i.expirationDate,
     }))
@@ -33,6 +39,45 @@ describe('economy-adapter', () => {
       ok: true,
       data: JSON.parse(JSON.stringify(mockedProblematicInvoices)),
     })
+  })
+
+  it('matches the paying contact regardless of casing', async () => {
+    // Contact codes are stored upper-case; a lower-cased lookup must not
+    // silently pass the credit check.
+    const mockedProblematicInvoices = ownInvoices.map((i) => ({
+      ...i,
+      sentToDebtCollection: i.expirationDate,
+    }))
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(200, { content: mockedProblematicInvoices })
+
+    const result =
+      await economyAdapter.getInvoicesSentToDebtCollection('p123456')
+
+    expect(result).toStrictEqual({
+      ok: true,
+      data: JSON.parse(JSON.stringify(mockedProblematicInvoices)),
+    })
+  })
+
+  it('does not count invoices billed to a co-holder against the contact', async () => {
+    // MIM-1160: the endpoint also returns invoices for shared leases where
+    // another contact is the payer (reference = the payer). Those must not
+    // fail this contact's credit check.
+    const householdInvoices = mockedInvoices.map((i) => ({
+      ...i,
+      reference: 'P999999',
+      sentToDebtCollection: i.expirationDate,
+    }))
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(200, { content: householdInvoices })
+
+    const result =
+      await economyAdapter.getInvoicesSentToDebtCollection('P123456')
+
+    expect(result).toStrictEqual({ ok: true, data: [] })
   })
 
   describe(economyAdapter.submitMiscellaneousInvoice, () => {
