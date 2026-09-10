@@ -10,7 +10,10 @@ import { ContactsRepository } from '@src/adapters/contact-adapter'
 import { ContactWriter } from '@src/adapters/contact-writer'
 import { withParsedBody } from '@src/middlewares/parse-request-body'
 import { createContact, CreateContactError } from './create-contact'
+import { addRelation, removeRelation, RelationDependencies } from './relations'
+import { AddRelationErrorCode, RemoveRelationErrorCode } from './api-types'
 import {
+  AddRelationRequestBodySchema,
   ContactSchema,
   CreateContactErrorResponseBodySchema,
   CreateContactRequestBodySchema,
@@ -20,6 +23,9 @@ import {
   GetContactsResponseBodySchema,
   GetRelatedContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
+  RelationActorSchema,
+  RelationErrorResponseBodySchema,
+  RelationRoleTypeSchema,
   SyncContactsResponseBodySchema,
 } from './schema'
 import { paginatedResponseSchema } from '@onecore/types'
@@ -50,12 +56,34 @@ const CREATE_CONTACT_STATUS: Record<CreateContactError, number> = {
   'write-backend-not-configured': 503,
 }
 
+/** 409 = the rule is about existing state; 422 = the request is coherent but semantically impossible. */
+const ADD_RELATION_STATUS: Record<AddRelationErrorCode, number> = {
+  'subject-not-found': 404,
+  'related-not-found': 404,
+  'self-relation': 422,
+  'guardian-exists': 409,
+  'duplicate-relation': 409,
+}
+
+/**
+ * `satisfies` rather than an annotation: the DELETE route narrows `ctx.status`
+ * to its declared statuses, so the values must stay literal.
+ */
+const REMOVE_RELATION_STATUS = {
+  'relation-not-found': 404,
+} as const satisfies Record<RemoveRelationErrorCode, number>
+
 export const routes = (
   router: OkapiRouter,
   {
     contactsRepository,
     contactWriter,
-  }: { contactsRepository: ContactsRepository; contactWriter: ContactWriter }
+    relationDependencies,
+  }: {
+    contactsRepository: ContactsRepository
+    contactWriter: ContactWriter
+    relationDependencies: RelationDependencies
+  }
 ) => {
   router.post(
     '/contacts',
@@ -601,6 +629,116 @@ export const routes = (
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody({ relations }, metadata)
+    }
+  )
+
+  router.post(
+    '/contacts/:contactCode/relations',
+    {
+      summary:
+        'Add a related contact (god man, förvaltare, annan fakturamottagare)',
+      description:
+        'Adds an active relation from the contact to another contact in the ' +
+        'given role. A contact can have at most one active god man or ' +
+        'förvaltare in total (409 guardian-exists, detail names the existing ' +
+        "guardian's contact code when known); the same relation cannot be " +
+        'added twice (409 duplicate-relation). Both contacts must exist (404). ' +
+        '`createdBy` is the acting user, supplied by the caller. Returns the ' +
+        "contact's relations after the change.",
+      tags: ['Contacts'],
+      params: {
+        contactCode: z.string(),
+      },
+      body: {
+        name: 'AddRelationRequest',
+        schema: AddRelationRequestBodySchema,
+      },
+      response: {
+        201: GetRelatedContactsResponseBodySchema,
+        400: ErrorResponseBodySchema,
+        404: RelationErrorResponseBodySchema,
+        409: RelationErrorResponseBodySchema,
+        422: RelationErrorResponseBodySchema,
+      },
+    },
+    withParsedBody(AddRelationRequestBodySchema, async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const result = await addRelation(relationDependencies, {
+        subjectContactCode: ctx.params.contactCode,
+        ...ctx.request.body,
+      })
+
+      if (!result.ok) {
+        ctx.status = ADD_RELATION_STATUS[result.err]
+        ctx.body = { error: result.err, detail: result.detail, ...metadata }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = makeSuccessResponseBody({ relations: result.data }, metadata)
+    })
+  )
+
+  router.delete(
+    '/contacts/:contactCode/relations/:roleType/:relatedContactCode',
+    {
+      summary: 'Remove a related contact',
+      description:
+        'Ends the active relation from the contact to the related contact in ' +
+        'the given role. The relation is kept as history rather than erased. ' +
+        '`deletedBy` (query) is the acting user, supplied by the caller. ' +
+        '404 when no such active relation exists.',
+      tags: ['Contacts'],
+      params: {
+        contactCode: z.string(),
+        roleType: RelationRoleTypeSchema,
+        relatedContactCode: z.string(),
+      },
+      query: {
+        deletedBy: {
+          description: 'The acting user, recorded on the removed relation',
+          schema: RelationActorSchema,
+        },
+      },
+      response: {
+        204: z.undefined(),
+        400: RelationErrorResponseBodySchema,
+        404: RelationErrorResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx, ['deletedBy'])
+
+      // OkapiRouter uses `params` schemas for OpenAPI only — `roleType` is typed as
+      // the enum but arrives unvalidated, so this parse is what actually narrows it.
+      const roleType = RelationRoleTypeSchema.safeParse(ctx.params.roleType)
+      if (!roleType.success) {
+        ctx.status = 400
+        ctx.body = { error: 'invalid-role-type', ...metadata }
+        return
+      }
+
+      const deletedBy = RelationActorSchema.safeParse(ctx.query.deletedBy)
+      if (!deletedBy.success) {
+        ctx.status = 400
+        ctx.body = { error: 'missing-deleted-by', ...metadata }
+        return
+      }
+
+      const result = await removeRelation(relationDependencies, {
+        subjectContactCode: ctx.params.contactCode,
+        relatedContactCode: ctx.params.relatedContactCode,
+        roleType: roleType.data,
+        deletedBy: deletedBy.data,
+      })
+
+      if (!result.ok) {
+        ctx.status = REMOVE_RELATION_STATUS[result.err]
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 204
     }
   )
 

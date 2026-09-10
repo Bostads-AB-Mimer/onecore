@@ -1,4 +1,3 @@
-
 # ONECore - Contacts Microservice
 
 Microservice providing the canonical source of contact and customer data in the ONECore platform.
@@ -8,7 +7,7 @@ Microservice providing the canonical source of contact and customer data in the 
 ## Service
 
 The service provides:
- 
+
 - **/contacts** - The contacts API. Search for or retrieve contact data by wildcard, canonical ID, phone number, etc
 - **/health** - Health and diagnostics endpoints
 - **/swagger** - Swagger UI
@@ -40,9 +39,9 @@ Related contacts (god man, förvaltare, annan fakturamottagare) are the exceptio
 service's own `contact_relation` table, populated from Xpand by `pnpm dev:script:import-contact-relations`.
 Only the names shown for a related contact still come from Xpand.
 
-The data quality of the production source is, for lack of better words, all over the place. 
+The data quality of the production source is, for lack of better words, all over the place.
 The bulk of the application deals with making the unstructured information searchable and presentable.
-For any meaningful testing, manual or automated, you will need a data set that is production-like. 
+For any meaningful testing, manual or automated, you will need a data set that is production-like.
 
 ### Build
 
@@ -52,6 +51,7 @@ from the legacy of **cjs**. The green-ness of the **esm** grass may have been ov
 ## Test setup
 
 There are two types of automated tests:
+
 - **Plain unit tests** that focus mainly on data transformation and inference.
 - **End-to-End tests** that apply their own data sets to the database, start an application on a random port and perform HTTP requests.
 
@@ -59,7 +59,7 @@ There are two types of automated tests:
 
 This script will clean out the local database and apply the full data set from `seed.sql`.
 
-This is useful for quickly adding data while testing in development mode, but running the test suite will 
+This is useful for quickly adding data while testing in development mode, but running the test suite will
 clean out, repopulate and trim the database.
 
 A number of end-to-end tests rely on a **known data set** so test failures are to be expected if you
@@ -78,6 +78,17 @@ run repeatedly to pick up the delta.
 Rows created by anyone else are never modified, and one active row survives per
 `(subject, related, role_type)` — an edge that already exists is not inserted
 again.
+
+A contact can have at most one active god man or förvaltare, so a guardian set
+outside the import — by a caseworker on the customer card — wins. If Xpand
+names a different guardian for that contact, the existing row is kept and the
+Xpand relation is reported as "Överhoppade" instead of being written.
+
+A guardian a caseworker _removes_ on the customer card is not protected in the
+same way. The import only looks at active rows, so once the caseworker's row is
+soft-deleted the contact has no active guardian and a later run re-adds the one
+Xpand names. The import is meant as a one-time migration: re-running it after
+go-live re-applies Xpand on top of caseworker removals.
 
 Always dry-run first. It prints both connection targets before it writes
 anything, which is the cheapest way to catch a half-edited environment:

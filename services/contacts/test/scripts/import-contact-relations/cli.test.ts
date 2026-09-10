@@ -15,6 +15,7 @@ const report = (overrides: Partial<ImportReport> = {}): ImportReport => ({
   unchanged: 2,
   protected: 0,
   conflicts: [],
+  skippedGuardians: [],
   ...overrides,
 })
 
@@ -71,6 +72,33 @@ describe('formatReport', () => {
 
     expect(text).toContain('P1:')
     expect(text).toContain('P9  (avtal L2, L3)')
+  })
+
+  it('lists guardians kept because someone else set them', () => {
+    const text = formatReport(
+      report({
+        skippedGuardians: [
+          {
+            subjectContactCode: 'P1',
+            desired: {
+              subjectContactCode: 'P1',
+              relatedContactCode: 'P2',
+              roleType: 'god_man',
+            },
+            existing: {
+              relatedContactCode: 'P3',
+              roleType: 'forvaltare',
+              createdBy: 'manual-admin',
+            },
+          },
+        ],
+      })
+    )
+
+    expect(text).toContain('Överhoppade:           1')
+    expect(text).toContain(
+      '  P1: Xpand säger god man P2 — behåller förvaltare P3 (satt av manual-admin)'
+    )
   })
 })
 

@@ -62,21 +62,25 @@ export const insertMany = async (
 }
 
 /**
- * Soft-deletes the given rows (by id), attributed to `deletedBy`. Rows that
- * are already soft-deleted are left untouched.
+ * Soft-deletes the given rows (by id), attributed to `deletedBy`. Returns how
+ * many rows this call deleted: the `deleted_at IS NULL` guard makes it a no-op
+ * for a row someone else soft-deleted in between, which is how a caller that
+ * lost the race can tell.
  */
 export const softDeleteByIds = async (
   db: Knex,
   ids: string[],
   deletedBy: string
-): Promise<void> => {
+): Promise<number> => {
   const now = new Date()
+  let deleted = 0
   for (const chunk of chunked(ids, DELETE_CHUNK_SIZE)) {
-    await db(TABLE)
+    deleted += await db(TABLE)
       .whereIn('id', chunk)
       .whereNull('deleted_at')
       .update({ deleted_at: now, deleted_by: deletedBy })
   }
+  return deleted
 }
 
 /**
@@ -120,9 +124,9 @@ export const activeRelationsForMany = async (
  * contact's other relations. Covered by
  * `idx_contact_relation_subject`/`_related`.
  *
- * Ordered so that a caller taking the first row gets the same answer on every
- * request; active edges have no unique index yet, so nothing else guarantees
- * there is only one.
+ * Ordered so that a caller taking the first row gets a stable answer; since
+ * migration 202609101000 the filtered unique indexes also guarantee at most
+ * one active guardian per subject.
  */
 export const activeRelationsInRole = async (
   db: Knex,

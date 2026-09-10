@@ -17,6 +17,7 @@ import { requireAuth, requireRole } from './middlewares/keycloak-auth'
 import { routes as apiRoutes } from './api/index'
 import { routes as swaggerRoutes } from './services/swagger'
 import { extractToken } from './middlewares/extract-token'
+import { requiredRolesFor } from './middlewares/route-roles'
 
 const app = new Koa()
 
@@ -75,46 +76,11 @@ app.use(extractToken)
 // Authentication — verifies the extracted token
 app.use(requireAuth)
 
-// Role-based authorization
-app.use(async (ctx, next) => {
-  if (ctx.path.startsWith('/scan-receipt')) {
-    return requireRole('scanner-upload')(ctx, next)
-  }
-
-  // All routes under /leases/for-csc require csc:get or api-access
-  if (ctx.path.startsWith('/leases/for-csc') && ctx.method === 'GET') {
-    return requireRole(['csc:get', 'api-access'])(ctx, next)
-  }
-
-  // All routes under invoices/notify-batch require invoice-notify:post or api-access
-  if (ctx.path.startsWith('/invoices/notify-batch') && ctx.method === 'POST') {
-    return requireRole(['invoice-notify:post', 'api-access'])(ctx, next)
-  }
-
-  // Infobip email delivery-report webhook — authenticated via a Keycloak
-  // service account (client_credentials) holding the infobip-webhook role.
-  if (ctx.path.startsWith('/webhooks/infobip')) {
-    return requireRole('infobip-webhook')(ctx, next)
-  }
-
-  // Creating a contact writes to the system of record and cannot be undone,
-  // so it is gated separately from reading. requireRole is ANY-of, so
-  // contacts:write must stand alone here — listing api-access alongside it
-  // would open the write to every api-access holder.
-  if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'POST') {
-    return requireRole('contacts:write')(ctx, next)
-  }
-
-  if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {
-    return requireRole(['api-access', 'contacts:read'])(ctx, next)
-  }
-
-  if (ctx.path.startsWith('/invoice-channels')) {
-    return requireRole(['invoice-channels:read', 'api-access'])(ctx, next)
-  }
-
-  return requireRole('api-access')(ctx, next)
-})
+// Role-based authorization. Path/method → roles lives in route-roles.ts so
+// it can be unit-tested.
+app.use(async (ctx, next) =>
+  requireRole(requiredRolesFor(ctx.path, ctx.method))(ctx, next)
+)
 
 // Requires 'keys-admin' in addition to 'api-access' for key deletion (single and bulk).
 // Kept as a separate middleware so api-access is always checked first.

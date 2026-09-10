@@ -2,6 +2,7 @@ import z from 'zod'
 import { OkapiRouter } from 'koa-okapi-router'
 
 import {
+  AddRelationRequestBodySchema_APIv1,
   ContactSchema,
   CreateContactErrorResponseBodySchema_APIv1,
   CreateContactRequestBodySchema_APIv1,
@@ -9,6 +10,9 @@ import {
   GetContactResponseBodySchema,
   GetContactsListResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
+  RelationErrorResponseBodySchema_APIv1,
+  RelationRoleTypeSchema_APIv1,
+  RelationsResponseBodySchema_APIv1,
 } from './schema'
 import {
   generateRouteMetadata,
@@ -18,7 +22,11 @@ import {
 } from '@onecore/utilities'
 import { paginatedResponseSchema, WaitingListType } from '@onecore/types'
 
-import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
+import {
+  makeContactsAdapter,
+  type AddRelationError,
+  type RemoveRelationError,
+} from '../../../adapters/contacts-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import { makeClientApplicationProfileRequestParams } from '../../../services/lease-service/helpers/application-profile'
 import { transformContact, transformContacts } from './transform'
@@ -47,6 +55,32 @@ const CREATE_CONTACT_STATUS: Record<string, CreateContactFailureStatus> = {
   'write-backend-not-configured': 503,
   'contacts-service-error': 502,
 }
+
+/**
+ * Relation-write statuses pass through so the caller can tell apart cases that
+ * share a code. `contacts-service-error` is the adapter's unnamed-failure
+ * catch-all, so it is 502 whatever status carried it: forwarding the 404 of an
+ * unrouted path would report an outage as a client error.
+ */
+const addRelationStatus = (
+  err: AddRelationError,
+  statusCode?: number
+): 400 | 404 | 409 | 422 | 502 =>
+  err !== 'contacts-service-error' &&
+  (statusCode === 400 ||
+    statusCode === 404 ||
+    statusCode === 409 ||
+    statusCode === 422)
+    ? statusCode
+    : 502
+
+const removeRelationStatus = (
+  err: RemoveRelationError,
+  statusCode?: number
+): 400 | 404 | 502 =>
+  err !== 'contacts-service-error' && (statusCode === 400 || statusCode === 404)
+    ? statusCode
+    : 502
 
 /** Swedish queue names for caseworker-facing warnings. */
 const WAITING_LIST_LABELS: Record<WaitingListType, string> = {
@@ -483,6 +517,149 @@ export const routes = (router: OkapiRouter, config: Config) => {
         await contactsAdapter.getByTrusteeOfContactCode(contactCode)
 
       encodeSingleResponse(ctx, response)
+    }
+  )
+
+  // Display name, else username. Trimmed *before* the chain: a blank `name`
+  // claim is truthy, so it would otherwise win and reach contacts, which
+  // rejects a blank actor. Sliced to the NVARCHAR(100) contacts stores it in.
+  const actingUser = (ctx: ParameterizedContext): string =>
+    (
+      ctx.state.user?.name?.trim() ||
+      ctx.state.user?.preferred_username?.trim() ||
+      'unknown'
+    ).slice(0, 100)
+
+  // Gated on contacts:write by requiredRolesFor (core/src/middlewares/
+  // route-roles.ts) for POST and DELETE under /v1/contacts. Not visible in
+  // this route definition — do not add api-access there.
+  router.post(
+    '/v1/contacts/:contactCode/relations',
+    {
+      summary:
+        'Add a related contact (god man, förvaltare, annan fakturamottagare)',
+      description:
+        'Adds a relation from the contact to another contact. A contact has at ' +
+        'most one god man or förvaltare (409 guardian-exists, detail = the ' +
+        "existing guardian's contact code). The acting user is recorded from " +
+        "the token. Returns the contact's relations after the change.",
+      tags: ['Contacts'],
+      params: {
+        contactCode: {
+          description: 'Contact Code',
+          schema: z.string(),
+        },
+      },
+      body: {
+        name: 'AddRelationRequest',
+        schema: AddRelationRequestBodySchema_APIv1,
+      },
+      response: {
+        201: RelationsResponseBodySchema_APIv1,
+        400: RelationErrorResponseBodySchema_APIv1,
+        404: RelationErrorResponseBodySchema_APIv1,
+        409: RelationErrorResponseBodySchema_APIv1,
+        422: RelationErrorResponseBodySchema_APIv1,
+        502: RelationErrorResponseBodySchema_APIv1,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      // OkapiRouter uses the body schema for documentation and typing only, so
+      // validation has to happen here or an unchecked body reaches the adapter.
+      const parsed = AddRelationRequestBodySchema_APIv1.safeParse(
+        ctx.request.body
+      )
+
+      if (!parsed.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'invalid-request',
+          detail: parsed.error.issues
+            .map((i) => `${i.path.join('.')}: ${i.message}`)
+            .join('; '),
+          ...metadata,
+        }
+        return
+      }
+
+      const result = await contactsAdapter.addRelation({
+        contactCode: ctx.params.contactCode,
+        relatedContactCode: parsed.data.relatedContactCode,
+        roleType: parsed.data.roleType,
+        createdBy: actingUser(ctx),
+      })
+
+      if (!result.ok) {
+        ctx.status = addRelationStatus(result.err, result.statusCode)
+        ctx.body = { error: result.err, detail: result.detail, ...metadata }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    }
+  )
+
+  // Gated on contacts:write by requiredRolesFor — see the POST above.
+  router.delete(
+    '/v1/contacts/:contactCode/relations/:roleType/:relatedContactCode',
+    {
+      summary: 'Remove a related contact',
+      description:
+        'Ends the relation from the contact to the related contact in the given ' +
+        'role. History is kept in the contacts service. The acting user is ' +
+        'recorded from the token.',
+      tags: ['Contacts'],
+      params: {
+        contactCode: {
+          description: 'Contact Code',
+          schema: z.string(),
+        },
+        roleType: {
+          description: 'Relation role',
+          schema: RelationRoleTypeSchema_APIv1,
+        },
+        relatedContactCode: {
+          description: 'Related Contact Code',
+          schema: z.string(),
+        },
+      },
+      response: {
+        204: z.undefined(),
+        400: RelationErrorResponseBodySchema_APIv1,
+        404: RelationErrorResponseBodySchema_APIv1,
+        502: RelationErrorResponseBodySchema_APIv1,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const roleType = RelationRoleTypeSchema_APIv1.safeParse(
+        ctx.params.roleType
+      )
+
+      if (!roleType.success) {
+        ctx.status = 400
+        ctx.body = { error: 'invalid-role-type', ...metadata }
+        return
+      }
+
+      const result = await contactsAdapter.removeRelation({
+        contactCode: ctx.params.contactCode,
+        relatedContactCode: ctx.params.relatedContactCode,
+        roleType: roleType.data,
+        deletedBy: actingUser(ctx),
+      })
+
+      if (!result.ok) {
+        ctx.status = removeRelationStatus(result.err, result.statusCode)
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 204
     }
   )
 

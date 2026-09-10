@@ -153,6 +153,44 @@ describe('runImport', () => {
     expect(deleted.deleted_by).toBe(IMPORT_ACTOR)
   })
 
+  it('replaces a guardian that changed in xpand', async () => {
+    await runImport({ xpandDb: xpand, contactsDb: contacts })
+
+    // P000666's god man becomes P001000: a delete and an insert for the same
+    // subject, which the unique guardian index only tolerates in that order.
+    await xpand('cmctc')
+      .where({ cmctckod: 'P000666' })
+      .update({
+        keycmctc2: xpand('cmctc')
+          .select('keycmctc')
+          .where({ cmctckod: 'P001000' }),
+      })
+
+    const report = await runImport({ xpandDb: xpand, contactsDb: contacts })
+
+    expect(report).toMatchObject({
+      inserted: 1,
+      softDeleted: 1,
+      unchanged: 6,
+      skippedGuardians: [],
+    })
+    expect(await activeTriples()).toEqual(
+      [
+        ...EXPECTED_FIRST_RUN.filter(([subject]) => subject !== 'P000666'),
+        ['P000666', 'P001000', 'god_man'],
+      ].sort()
+    )
+    const rows: DbContactRelationRow[] = await contacts(
+      'contact_relation'
+    ).where({ subject_contact_code: 'P000666' })
+    expect(
+      rows.map((r) => [r.related_contact_code, r.deleted_by]).sort()
+    ).toEqual([
+      ['P000444', IMPORT_ACTOR],
+      ['P001000', null],
+    ])
+  })
+
   it('leaves rows created by other actors untouched', async () => {
     await contacts('contact_relation').insert({
       subject_contact_code: 'P000111',
@@ -251,24 +289,40 @@ describe('runImport', () => {
     expect(rows[0].created_by).toBe('manual-admin')
   })
 
-  it('soft-deletes an import-owned duplicate of the same edge', async () => {
-    await runImport({ xpandDb: xpand, contactsDb: contacts })
-    await insertMany(
-      contacts,
-      [
-        {
+  it('keeps a guardian another actor set and reports the xpand one as skipped', async () => {
+    await contacts('contact_relation').insert({
+      subject_contact_code: 'P000666',
+      related_contact_code: 'P001000',
+      role_type: 'forvaltare',
+      created_by: 'manual-admin',
+    })
+
+    const report = await runImport({ xpandDb: xpand, contactsDb: contacts })
+
+    expect(report).toMatchObject({ inserted: 6, softDeleted: 0 })
+    expect(report.skippedGuardians).toEqual([
+      {
+        subjectContactCode: 'P000666',
+        desired: {
           subjectContactCode: 'P000666',
           relatedContactCode: 'P000444',
           roleType: 'god_man',
         },
-      ],
-      IMPORT_ACTOR
-    )
-
-    const report = await runImport({ xpandDb: xpand, contactsDb: contacts })
-
-    expect(report).toMatchObject({ inserted: 0, softDeleted: 1, unchanged: 7 })
-    expect(await activeTriples()).toEqual(EXPECTED_FIRST_RUN)
+        existing: {
+          relatedContactCode: 'P001000',
+          roleType: 'forvaltare',
+          createdBy: 'manual-admin',
+        },
+      },
+    ])
+    const rows: DbContactRelationRow[] = await contacts(
+      'contact_relation'
+    ).where({ subject_contact_code: 'P000666' })
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      created_by: 'manual-admin',
+      deleted_at: null,
+    })
   })
 
   it('refuses a run that would soft-delete most of the existing rows', async () => {

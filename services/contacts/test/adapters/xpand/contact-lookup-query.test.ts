@@ -2,6 +2,7 @@ import { Knex } from 'knex'
 import config from '@src/common/config'
 import { xpandDbClient } from '@src/adapters/xpand/db'
 import {
+  canonicalContactCode,
   contactExists,
   contactNamesByCodes,
 } from '@src/adapters/xpand/contact-lookup-query'
@@ -28,6 +29,21 @@ describe('contactExists', () => {
     expect(await contactExists(xpand, 'P000444')).toBe(true)
     expect(await contactExists(xpand, 'P999999')).toBe(false)
     expect(await contactExists(xpand, '   ')).toBe(false)
+  })
+})
+
+describe('canonicalContactCode', () => {
+  // Xpand collates case-insensitively, so it answers a lowercase lookup — but
+  // the read path keys names by the code Xpand returns. Writers persist this
+  // form so a relation cannot be stored in a casing the kundkort then drops.
+  it('answers with the code as Xpand spells it', async () => {
+    expect(await canonicalContactCode(xpand, 'p000444')).toBe('P000444')
+    expect(await canonicalContactCode(xpand, ' P000444 ')).toBe('P000444')
+  })
+
+  it('is null for an unknown or blank code', async () => {
+    expect(await canonicalContactCode(xpand, 'P999999')).toBeNull()
+    expect(await canonicalContactCode(xpand, '   ')).toBeNull()
   })
 })
 
