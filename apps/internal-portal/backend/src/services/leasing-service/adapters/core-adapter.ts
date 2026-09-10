@@ -769,10 +769,7 @@ type UpdateListingTextContentRequest = z.infer<
 //   'request-failed' core answered with an unexpected status, or the request
 //                    itself failed (5xx, network error)
 type TextContentError =
-  | 'bad-request'
-  | 'not-found'
-  | 'conflict'
-  | 'request-failed'
+  'bad-request' | 'not-found' | 'conflict' | 'request-failed'
 
 const toTextContentError = (
   err: unknown,

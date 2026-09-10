@@ -88,9 +88,9 @@ const getRentalObjectCodesWithTextContent = async (
     for (const batch of chunkArray(rentalObjectCodes, WHERE_IN_BATCH_SIZE)) {
       const rows = await dbConnection
         .from('listing_text_content')
-        .select<
-          Array<Pick<DbListingTextContent, 'RentalObjectCode'>>
-        >('RentalObjectCode')
+        .select<Array<Pick<DbListingTextContent, 'RentalObjectCode'>>>(
+          'RentalObjectCode'
+        )
         .whereIn('RentalObjectCode', batch)
 
       for (const row of rows) {
