@@ -46,26 +46,31 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
   const addRelation = useAddRelation()
   const search = useTenantSearch()
 
+  const close = () => {
+    setOpen(false)
+    setRoleType('god_man')
+    setSelected(null)
+    search.setSearchQuery('')
+  }
+
+  // Closing mid-flight would drop the pending add without telling anyone, so
+  // the overlay, the X and Escape are all inert until the mutation settles.
   const handleOpenChange = (next: boolean) => {
-    setOpen(next)
-    if (!next) {
-      setRoleType('god_man')
-      setSelected(null)
-      search.setSearchQuery('')
-    }
+    if (!next && addRelation.isPending) return
+    if (next) setOpen(true)
+    else close()
   }
 
   const submit = () => {
     if (!selected) return
-    const chosen = selected
     addRelation.mutate(
-      { contactCode, relatedContactCode: chosen.contactCode, roleType },
+      { contactCode, relatedContactCode: selected.contactCode, roleType },
       {
         onSuccess: () => {
-          handleOpenChange(false)
+          close()
           toast({
             title: `${GUARDIAN_ROLE_LABELS[roleType]} tillagd`,
-            description: `${chosen.fullName} (${chosen.contactCode})`,
+            description: `${selected.fullName} (${selected.contactCode})`,
           })
         },
         onError: (error) =>
@@ -175,7 +180,7 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
           <Button
             type="button"
             variant="outline"
-            onClick={() => handleOpenChange(false)}
+            onClick={close}
             disabled={addRelation.isPending}
           >
             Avbryt

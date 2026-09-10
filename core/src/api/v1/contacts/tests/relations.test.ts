@@ -45,6 +45,13 @@ const WRITER_WITH_EMPTY_NAME: TestUser = {
   preferred_username: 'cecilia',
   realm_access: { roles: ['api-access', 'contacts:write'] },
 }
+// A display name that is present but blank. `||` keeps it (it is truthy), so
+// only trimming stops it reaching contacts, which rejects a blank actor.
+const WRITER_WITH_BLANK_NAME: TestUser = {
+  name: '   ',
+  preferred_username: 'cecilia',
+  realm_access: { roles: ['api-access', 'contacts:write'] },
+}
 // A display name longer than the NVARCHAR(100) the contacts service stores.
 const WRITER_WITH_LONG_NAME: TestUser = {
   name: 'L'.repeat(120),
@@ -178,6 +185,37 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
     expect(res.body.error).toBe('contacts-service-error')
   })
 
+  // A 404 from contacts is only a client answer when it names a relation rule.
+  // An unrouted 404 — core deployed ahead of contacts — is an outage, and
+  // forwarding it would report a service fault as a client error.
+  it('answers 502 for an unrecognised failure that arrives with a 404', async () => {
+    adapter.addRelation.mockResolvedValue({
+      ok: false,
+      err: 'contacts-service-error',
+      statusCode: 404,
+    })
+
+    const res = await request(app.callback())
+      .post('/v1/contacts/P1/relations')
+      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('contacts-service-error')
+  })
+
+  it('falls back to preferred_username when the name is only whitespace', async () => {
+    mockUser = WRITER_WITH_BLANK_NAME
+    adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
+
+    await request(app.callback())
+      .post('/v1/contacts/P1/relations')
+      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
+
+    expect(adapter.addRelation).toHaveBeenCalledWith(
+      expect.objectContaining({ createdBy: 'cecilia' })
+    )
+  })
+
   it('falls back to preferred_username when the token has no name', async () => {
     mockUser = WRITER_WITHOUT_NAME
     adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
@@ -296,15 +334,19 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
     expect(res.body.error).toBe('contacts-service-error')
   })
 
-  it('falls back to preferred_username when the token has no name', async () => {
-    mockUser = WRITER_WITHOUT_NAME
-    adapter.removeRelation.mockResolvedValue({ ok: true, data: undefined })
+  it('answers 502 for an unrecognised failure that arrives with a 404', async () => {
+    adapter.removeRelation.mockResolvedValue({
+      ok: false,
+      err: 'contacts-service-error',
+      statusCode: 404,
+    })
 
-    await request(app.callback()).delete('/v1/contacts/P1/relations/god_man/P2')
-
-    expect(adapter.removeRelation).toHaveBeenCalledWith(
-      expect.objectContaining({ deletedBy: 'cecilia' })
+    const res = await request(app.callback()).delete(
+      '/v1/contacts/P1/relations/god_man/P2'
     )
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('contacts-service-error')
   })
 
   it('rejects an unknown role type with 400', async () => {

@@ -7,7 +7,12 @@ import {
 } from '@src/services/contacts-service/relations'
 import { DbContactRelationRowFactory } from '../../factories/contact-relation-row'
 
-const fakeDb = {} as Knex
+// addRelation reads the relations back inside its write transaction, so the
+// double has to hand the callback a usable handle. Handing back `fakeDb`
+// itself keeps the `insertMany(fakeDb, ...)` assertions readable.
+const fakeDb = {
+  transaction: <T>(cb: (trx: Knex) => Promise<T>) => cb(fakeDb as Knex),
+} as unknown as Knex
 
 const deps = (
   overrides: Partial<RelationDependencies> = {}
@@ -45,7 +50,7 @@ describe('addRelation', () => {
   it('inserts the edge attributed to createdBy', async () => {
     const result = await addRelation(deps(), add)
 
-    expect(result).toEqual({ ok: true, data: undefined })
+    expect(result).toEqual({ ok: true, data: [] })
     expect(insert).toHaveBeenCalledWith(
       fakeDb,
       [
@@ -154,7 +159,43 @@ describe('addRelation', () => {
       ...add,
       roleType: 'annan_fakturamottagare',
     })
-    expect(result).toEqual({ ok: true, data: undefined })
+    expect(result).toEqual({ ok: true, data: [] })
+  })
+
+  // Xpand matches contact codes case-insensitively, so a subject and related
+  // code differing only in case are the same contact. Letting the pair through
+  // writes a self-edge the read path cannot render but the guardian index
+  // still counts, leaving the subject unable to get a guardian at all.
+  it('rejects a self-relation that differs only in case', async () => {
+    const result = await addRelation(deps(), {
+      ...add,
+      relatedContactCode: 'p000111',
+    })
+
+    expect(result).toEqual({ ok: false, err: 'self-relation' })
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('answers with the subject relations read back after the insert', async () => {
+    const relations = [{ contactCode: 'P000222', role: 'trustee' }]
+    const relatedContactsFor = jest.fn().mockResolvedValue(relations)
+
+    const result = await addRelation(deps({ relatedContactsFor }), add)
+
+    expect(result).toEqual({ ok: true, data: relations })
+    expect(relatedContactsFor).toHaveBeenCalledWith('P000111', fakeDb)
+  })
+
+  // The read-back shares the write transaction, so a failure rolls the insert
+  // back rather than leaving a written relation behind a failed response.
+  it('does not swallow a failure reading the relations back', async () => {
+    const relatedContactsFor = jest
+      .fn()
+      .mockRejectedValue(new Error('xpand unavailable'))
+
+    await expect(
+      addRelation(deps({ relatedContactsFor }), add)
+    ).rejects.toThrow('xpand unavailable')
   })
 
   it('maps a lost race on the guardian index to guardian-exists', async () => {
@@ -189,9 +230,7 @@ describe('removeRelation', () => {
     inRole = jest
       .spyOn(repository, 'activeRelationsInRole')
       .mockResolvedValue([])
-    softDelete = jest
-      .spyOn(repository, 'softDeleteByIds')
-      .mockResolvedValue(undefined)
+    softDelete = jest.spyOn(repository, 'softDeleteByIds').mockResolvedValue(1)
   })
   afterEach(() => jest.restoreAllMocks())
 
@@ -222,6 +261,22 @@ describe('removeRelation', () => {
 
     expect(result).toEqual({ ok: true, data: undefined })
     expect(softDelete).toHaveBeenCalledWith(fakeDb, ['a', 'b'], 'handläggare')
+  })
+
+  // Two concurrent deletes both read the row; only one update touches it.
+  it('returns relation-not-found when a concurrent delete got there first', async () => {
+    inRole.mockResolvedValue([
+      DbContactRelationRowFactory.build({
+        id: 'a',
+        related_contact_code: 'P000222',
+      }),
+    ])
+    softDelete.mockResolvedValue(0)
+
+    expect(await removeRelation(deps(), remove)).toEqual({
+      ok: false,
+      err: 'relation-not-found',
+    })
   })
 
   it('returns relation-not-found when nothing matches', async () => {

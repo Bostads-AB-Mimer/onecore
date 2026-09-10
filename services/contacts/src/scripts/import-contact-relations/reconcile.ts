@@ -40,9 +40,14 @@ const isGuardianRole = (roleType: RoleType): boolean =>
 const keyOf = (e: RelationEdge): string =>
   JSON.stringify([e.subjectContactCode, e.relatedContactCode, e.roleType])
 
+// Desired edges arrive trimmed from Xpand, and MSSQL ignores trailing blanks
+// when comparing, so a padded stored code is the same code to the unique
+// indexes. Trimming here keeps a padded row matchable: seeing it as a
+// different edge would plan an insert the index then rejects, and since
+// migration 202609101000 that aborts the whole import.
 const rowToEdge = (r: DbContactRelationRow): RelationEdge => ({
-  subjectContactCode: r.subject_contact_code,
-  relatedContactCode: r.related_contact_code,
+  subjectContactCode: r.subject_contact_code.trim(),
+  relatedContactCode: r.related_contact_code.trim(),
   roleType: r.role_type,
 })
 
@@ -120,23 +125,24 @@ export const reconcile = (
 
   // The guardian each subject still has once this run's deletes are applied.
   const deletedIds = new Set(toDelete)
-  const keptRows = new Map<string, DbContactRelationRow>()
+  const keptGuardians = new Map<string, DbContactRelationRow>()
   for (const r of existing) {
     if (!isGuardianRole(r.role_type) || deletedIds.has(r.id)) continue
-    const current = keptRows.get(r.subject_contact_code)
-    if (!current || oldestFirst(r, current) < 0) {
-      keptRows.set(r.subject_contact_code, r)
-    }
+    const subject = r.subject_contact_code.trim()
+    const current = keptGuardians.get(subject)
+    if (!current || oldestFirst(r, current) < 0) keptGuardians.set(subject, r)
   }
 
-  const survivingGuardians = new Map<string, SurvivingGuardian>()
-  for (const [subjectContactCode, r] of keptRows) {
-    survivingGuardians.set(subjectContactCode, {
-      relatedContactCode: r.related_contact_code,
-      roleType: r.role_type,
-      createdBy: r.created_by,
-    })
-  }
+  const survivingGuardians = new Map<string, SurvivingGuardian>(
+    [...keptGuardians].map(([subject, r]) => [
+      subject,
+      {
+        relatedContactCode: r.related_contact_code.trim(),
+        roleType: r.role_type,
+        createdBy: r.created_by,
+      },
+    ])
+  )
 
   const toInsert: RelationEdge[] = []
   const skippedGuardians: SkippedGuardian[] = []

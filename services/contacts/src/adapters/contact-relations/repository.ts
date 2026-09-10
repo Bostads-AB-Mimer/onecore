@@ -64,19 +64,25 @@ export const insertMany = async (
 /**
  * Soft-deletes the given rows (by id), attributed to `deletedBy`. Rows that
  * are already soft-deleted are left untouched.
+ *
+ * Returns how many rows this call actually deleted, which is what tells a
+ * caller apart from one that lost a race: the `deleted_at IS NULL` guard makes
+ * the update a no-op for a row someone else soft-deleted in between.
  */
 export const softDeleteByIds = async (
   db: Knex,
   ids: string[],
   deletedBy: string
-): Promise<void> => {
+): Promise<number> => {
   const now = new Date()
+  let deleted = 0
   for (const chunk of chunked(ids, DELETE_CHUNK_SIZE)) {
-    await db(TABLE)
+    deleted += await db(TABLE)
       .whereIn('id', chunk)
       .whereNull('deleted_at')
       .update({ deleted_at: now, deleted_by: deletedBy })
   }
+  return deleted
 }
 
 /**

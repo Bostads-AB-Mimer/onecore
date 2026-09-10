@@ -13,6 +13,12 @@ export const GUARDIAN_ROLE_LABELS: Record<GuardianRoleType, string> = {
   forvaltare: 'Förvaltare',
 }
 
+/** Only the two guardian roles are administered here; AVTAL-176 adds the third. */
+export const isGuardianRoleType = (
+  roleType: RelationRoleType | undefined
+): roleType is GuardianRoleType =>
+  GUARDIAN_ROLE_TYPES.includes(roleType as GuardianRoleType)
+
 /** The stored role type behind a forward relation as seen from the subject. */
 export const ROLE_TYPE_FOR_RELATED_ROLE: Partial<
   Record<RelatedContactRole, RelationRoleType>

@@ -7,27 +7,13 @@ import type {
 } from '@/services/api/core/tenantService'
 import type { RelatedContact } from '@/services/types'
 
-/**
- * Adds a relation and refreshes both kundkort: the relation shows as
- * trustee/administrator on the subject and as trusteeFor/administratorFor on
- * the related contact, and either card's title may change.
- */
+import { invalidateRelationQueries } from '../lib/relationQueries'
+
 export const useAddRelation = () => {
   const queryClient = useQueryClient()
 
   return useMutation<RelatedContact[], RelationError, RelationRef>({
     mutationFn: (ref) => tenantService.addRelation(ref),
-    onSuccess: (_data, ref) => {
-      queryClient.invalidateQueries({
-        queryKey: ['related-contacts', ref.contactCode],
-      })
-      queryClient.invalidateQueries({
-        queryKey: ['related-contacts', ref.relatedContactCode],
-      })
-      queryClient.invalidateQueries({ queryKey: ['tenant', ref.contactCode] })
-      queryClient.invalidateQueries({
-        queryKey: ['tenant', ref.relatedContactCode],
-      })
-    },
+    onSuccess: (_data, ref) => invalidateRelationQueries(queryClient, ref),
   })
 }

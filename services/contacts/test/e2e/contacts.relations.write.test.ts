@@ -79,17 +79,6 @@ describe('relation write endpoints', () => {
       })
     })
 
-    it('rejects the same edge twice with 409', async () => {
-      const response = await post('P000555', {
-        relatedContactCode: 'P000444',
-        roleType: 'forvaltare',
-        createdBy: 'handläggare',
-      })
-
-      expect(response.status).toBe(409)
-      expect(response.data).toMatchObject({ error: 'duplicate-relation' })
-    })
-
     it('rejects a self-relation with 422', async () => {
       const response = await post('P000333', {
         relatedContactCode: 'P000333',

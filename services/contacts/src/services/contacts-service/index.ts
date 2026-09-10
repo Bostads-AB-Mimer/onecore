@@ -10,13 +10,8 @@ import { ContactsRepository } from '@src/adapters/contact-adapter'
 import { ContactWriter } from '@src/adapters/contact-writer'
 import { withParsedBody } from '@src/middlewares/parse-request-body'
 import { createContact, CreateContactError } from './create-contact'
-import {
-  addRelation,
-  AddRelationError,
-  removeRelation,
-  RemoveRelationError,
-  RelationDependencies,
-} from './relations'
+import { addRelation, removeRelation, RelationDependencies } from './relations'
+import { AddRelationErrorCode, RemoveRelationErrorCode } from './api-types'
 import {
   AddRelationRequestBodySchema,
   ContactSchema,
@@ -62,7 +57,7 @@ const CREATE_CONTACT_STATUS: Record<CreateContactError, number> = {
 }
 
 /** 409 = the rule is about existing state; 422 = the request is coherent but semantically impossible. */
-const ADD_RELATION_STATUS: Record<AddRelationError, number> = {
+const ADD_RELATION_STATUS: Record<AddRelationErrorCode, number> = {
   'subject-not-found': 404,
   'related-not-found': 404,
   'self-relation': 422,
@@ -71,13 +66,12 @@ const ADD_RELATION_STATUS: Record<AddRelationError, number> = {
 }
 
 /**
- * Exhaustive so a new removal failure has to pick a status rather than land on
- * 404. `satisfies` rather than an annotation: the DELETE route narrows
- * `ctx.status` to its declared statuses, so the values must stay literal.
+ * `satisfies` rather than an annotation: the DELETE route narrows `ctx.status`
+ * to its declared statuses, so the values must stay literal.
  */
 const REMOVE_RELATION_STATUS = {
   'relation-not-found': 404,
-} as const satisfies Record<RemoveRelationError, number>
+} as const satisfies Record<RemoveRelationErrorCode, number>
 
 export const routes = (
   router: OkapiRouter,
@@ -680,11 +674,8 @@ export const routes = (
         return
       }
 
-      const relations = await relationDependencies.relatedContactsFor(
-        ctx.params.contactCode
-      )
       ctx.status = 201
-      ctx.body = makeSuccessResponseBody({ relations }, metadata)
+      ctx.body = makeSuccessResponseBody({ relations: result.data }, metadata)
     })
   )
 

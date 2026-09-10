@@ -22,7 +22,11 @@ import {
 } from '@onecore/utilities'
 import { paginatedResponseSchema, WaitingListType } from '@onecore/types'
 
-import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
+import {
+  makeContactsAdapter,
+  type AddRelationError,
+  type RemoveRelationError,
+} from '../../../adapters/contacts-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import { makeClientApplicationProfileRequestParams } from '../../../services/lease-service/helpers/application-profile'
 import { transformContact, transformContacts } from './transform'
@@ -54,19 +58,33 @@ const CREATE_CONTACT_STATUS: Record<string, CreateContactFailureStatus> = {
 
 /**
  * Statuses the contacts service reports for a relation write, passed straight
- * through so the caller can tell apart cases that share a code. Anything else
- * is a fault in the service rather than in the request, and becomes 502.
+ * through so the caller can tell apart cases that share a code.
+ *
+ * `contacts-service-error` is the adapter's catch-all for a failure it could
+ * not name, which is a fault in the service rather than in the request — so it
+ * becomes 502 whatever status carried it. Keying on the status alone would
+ * forward, say, the 404 of an unrouted path during a rolling deploy, reporting
+ * an outage as a client error.
  */
-const addRelationStatus = (statusCode?: number): 400 | 404 | 409 | 422 | 502 =>
-  statusCode === 400 ||
-  statusCode === 404 ||
-  statusCode === 409 ||
-  statusCode === 422
+const addRelationStatus = (
+  err: AddRelationError,
+  statusCode?: number
+): 400 | 404 | 409 | 422 | 502 =>
+  err !== 'contacts-service-error' &&
+  (statusCode === 400 ||
+    statusCode === 404 ||
+    statusCode === 409 ||
+    statusCode === 422)
     ? statusCode
     : 502
 
-const removeRelationStatus = (statusCode?: number): 400 | 404 | 502 =>
-  statusCode === 400 || statusCode === 404 ? statusCode : 502
+const removeRelationStatus = (
+  err: RemoveRelationError,
+  statusCode?: number
+): 400 | 404 | 502 =>
+  err !== 'contacts-service-error' && (statusCode === 400 || statusCode === 404)
+    ? statusCode
+    : 502
 
 /** Swedish queue names for caseworker-facing warnings. */
 const WAITING_LIST_LABELS: Record<WaitingListType, string> = {
@@ -514,10 +532,13 @@ export const routes = (router: OkapiRouter, config: Config) => {
   // rejects before the handler runs.
   // Truncated to the NVARCHAR(100) the contacts service stores the actor in, so
   // an unusually long display name is shortened rather than rejected.
+  // Trimmed before the chain, not after: a blank `name` claim is truthy, so it
+  // would otherwise win and reach contacts, which rejects a blank actor and
+  // leaves that user unable to write any relation at all.
   const actingUser = (ctx: ParameterizedContext): string =>
     (
-      ctx.state.user?.name ||
-      ctx.state.user?.preferred_username ||
+      ctx.state.user?.name?.trim() ||
+      ctx.state.user?.preferred_username?.trim() ||
       'unknown'
     ).slice(0, 100)
 
@@ -583,7 +604,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
       })
 
       if (!result.ok) {
-        ctx.status = addRelationStatus(result.statusCode)
+        ctx.status = addRelationStatus(result.err, result.statusCode)
         ctx.body = { error: result.err, detail: result.detail, ...metadata }
         return
       }
@@ -645,7 +666,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
       })
 
       if (!result.ok) {
-        ctx.status = removeRelationStatus(result.statusCode)
+        ctx.status = removeRelationStatus(result.err, result.statusCode)
         ctx.body = { error: result.err, ...metadata }
         return
       }

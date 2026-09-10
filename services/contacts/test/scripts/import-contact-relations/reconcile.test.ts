@@ -47,6 +47,58 @@ describe('reconcile', () => {
     })
   })
 
+  // MSSQL ignores trailing blanks when comparing, so a padded stored code is
+  // the same code to the unique indexes. Matching it as different would plan
+  // an insert the index then rejects, aborting the whole run.
+  it('matches a stored code that carries trailing whitespace', () => {
+    const plan = reconcile(
+      [godMan],
+      [
+        row('a', {
+          ...godMan,
+          subjectContactCode: 'P1 ',
+          relatedContactCode: 'P2 ',
+        }),
+      ],
+      new Set(),
+      IMPORT_ACTOR
+    )
+
+    expect(plan.toInsert).toEqual([])
+    expect(plan.toDelete).toEqual([])
+    expect(plan.unchangedCount).toBe(1)
+  })
+
+  it('sees a padded stored guardian as the guardian already holding the slot', () => {
+    const plan = reconcile(
+      [{ ...godMan, relatedContactCode: 'P9' }],
+      [
+        row(
+          'a',
+          { ...godMan, subjectContactCode: 'P1 ' },
+          {
+            createdBy: OTHER_ACTOR,
+          }
+        ),
+      ],
+      new Set(),
+      IMPORT_ACTOR
+    )
+
+    expect(plan.toInsert).toEqual([])
+    expect(plan.skippedGuardians).toEqual([
+      {
+        subjectContactCode: 'P1',
+        desired: { ...godMan, relatedContactCode: 'P9' },
+        existing: {
+          relatedContactCode: 'P2',
+          roleType: 'god_man',
+          createdBy: OTHER_ACTOR,
+        },
+      },
+    ])
+  })
+
   it('is a no-op when desired equals existing', () => {
     const plan = reconcile(
       [godMan, forvaltare],
