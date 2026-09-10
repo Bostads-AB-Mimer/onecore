@@ -251,25 +251,8 @@ describe('runImport', () => {
     expect(rows[0].created_by).toBe('manual-admin')
   })
 
-  it('soft-deletes an import-owned duplicate of the same edge', async () => {
-    await runImport({ xpandDb: xpand, contactsDb: contacts })
-    await insertMany(
-      contacts,
-      [
-        {
-          subjectContactCode: 'P000666',
-          relatedContactCode: 'P000444',
-          roleType: 'god_man',
-        },
-      ],
-      IMPORT_ACTOR
-    )
-
-    const report = await runImport({ xpandDb: xpand, contactsDb: contacts })
-
-    expect(report).toMatchObject({ inserted: 0, softDeleted: 1, unchanged: 7 })
-    expect(await activeTriples()).toEqual(EXPECTED_FIRST_RUN)
-  })
+  // Duplicate active edges are prevented by the unique index (migration
+  // 202609101000); the reconcile dedupe remains as a defensive path.
 
   it('refuses a run that would soft-delete most of the existing rows', async () => {
     const stale = Array.from({ length: 12 }, (_, i) => ({
