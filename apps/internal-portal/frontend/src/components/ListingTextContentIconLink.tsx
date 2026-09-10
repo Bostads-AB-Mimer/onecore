@@ -2,7 +2,9 @@ import { IconButton, Tooltip } from '@mui/material'
 import { GridColDef, GridValidRowModel } from '@mui/x-data-grid'
 import TextSnippet from '@mui/icons-material/TextSnippet'
 import PostAddOutlined from '@mui/icons-material/PostAddOutlined'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+
+import { currentPath, FromState } from '../utils/navigationState'
 
 export interface ListingTextContentIconLinkProps {
   rentalObjectCode: string
@@ -16,7 +18,12 @@ export const ListingTextContentIconLink = (
   props: ListingTextContentIconLinkProps
 ) => {
   const { rentalObjectCode, hasTextContent } = props
+  const location = useLocation()
   const encodedCode = encodeURIComponent(rentalObjectCode)
+
+  // The editor's "Tillbaka" button returns to this origin instead of the
+  // listing text search page.
+  const state: FromState = { from: currentPath(location) }
 
   // When the flag is missing, fall back to the create view: it detects
   // existing content itself and offers a link to the editor.
@@ -32,7 +39,7 @@ export const ListingTextContentIconLink = (
 
   return (
     <Tooltip title={title}>
-      <Link to={to}>
+      <Link to={to} state={state}>
         <IconButton sx={{ color: 'black' }}>
           {hasTextContent ? <TextSnippet /> : <PostAddOutlined />}
         </IconButton>

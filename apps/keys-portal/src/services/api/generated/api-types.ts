@@ -4,231 +4,253 @@
  */
 
 export interface paths {
-  '/cards/by-rental-object/{rentalObjectCode}': {
-    /**
-     * Get cards by rental object code
-     * @description Fetch all access control cards from DAX for a specific rental object.
-     * Cards can optionally be enriched with loan information.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Whether to include loan information for cards */
-          includeLoans?: boolean
-        }
-        path: {
-          /** @description The rental object code to fetch cards for */
-          rentalObjectCode: string
+  '/signatures/send': {
+    /** Send a document for digital signature via SimpleSign */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['SendSignatureRequest']
         }
       }
       responses: {
-        /** @description An array of cards (with optional loan details) */
-        200: {
+        /** @description Signature request sent successfully */
+        201: {
           content: {
             'application/json': {
-              content?: components['schemas']['CardDetails'][]
+              content?: components['schemas']['Signature']
             }
           }
         }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/cards/{cardId}': {
-    /**
-     * Get a card by ID
-     * @description Fetch a single access control card from DAX by its ID
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The card ID */
-          cardId: string
-        }
-      }
-      responses: {
-        /** @description Card found */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Card']
-            }
-          }
-        }
-        /** @description Card not found */
+        /** @description Resource not found */
         404: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/dax/contracts': {
-    /**
-     * Get all contracts from DAX
-     * @description Retrieve all contracts from the Amido DAX API
-     */
-    get: {
-      responses: {
-        /** @description List of contracts retrieved successfully */
-        200: {
-          content: {
-            'application/json': {
-              contracts?: {
-                contractId?: string
-                promisee?: Record<string, never>
-                promisor?: Record<string, never>
-                accessControlInstance?: Record<string, never>
-                state?: string
-              }[]
-            }
-          }
-        }
-        /** @description Failed to fetch contracts */
-        500: {
           content: never
         }
       }
     }
   }
-  '/dax/card-owners/{cardOwnerId}': {
-    /**
-     * Get a specific card owner from DAX
-     * @description Retrieve a card owner by ID from the Amido DAX API
-     */
+  '/signatures/{id}': {
+    /** Get a signature by ID */
     get: {
       parameters: {
-        query?: {
-          /** @description The owning partner ID (defaults to configured partner) */
-          partnerId?: string
-          /** @description The owning instance ID (defaults to configured instance) */
-          instanceId?: string
-        }
         path: {
-          /** @description The card owner ID */
-          cardOwnerId: string
+          id: string
         }
       }
       responses: {
-        /** @description Card owner retrieved successfully */
+        /** @description Signature details */
         200: {
           content: {
             'application/json': {
-              cardOwner?: components['schemas']['CardOwner']
+              content?: components['schemas']['Signature']
             }
           }
         }
-        /** @description Missing required parameters */
+        /** @description Signature not found */
+        404: {
+          content: never
+        }
+      }
+    }
+  }
+  '/signatures/resource/{resourceType}/{resourceId}': {
+    /** Get all signatures for a resource */
+    get: {
+      parameters: {
+        path: {
+          resourceType: string
+          resourceId: string
+        }
+      }
+      responses: {
+        /** @description List of signatures */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Signature'][]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/webhooks/simplesign': {
+    /** Webhook endpoint for SimpleSign status updates */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['SimpleSignWebhookPayload']
+        }
+      }
+      responses: {
+        /** @description Webhook processed successfully */
+        200: {
+          content: never
+        }
+        /** @description Signature not found */
+        404: {
+          content: never
+        }
+      }
+    }
+  }
+  '/scan-receipt': {
+    /**
+     * Process a scanned receipt image (single or batch)
+     * @description Receives a scanned receipt image (JPEG, PNG, BMP, or multi-page PDF).
+     * Extracts QR codes from each page, groups pages by loan UUID,
+     * and creates a receipt for each unique loan.
+     * Returns an array of results and any errors.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: byte */
+            imageData?: string
+          }
+        }
+      }
+      responses: {
+        /** @description All receipts created successfully */
+        201: {
+          content: never
+        }
+        /** @description Partial success — some receipts created, some failed */
+        207: {
+          content: never
+        }
+        /** @description Missing image data */
         400: {
           content: never
         }
-        /** @description Card owner not found */
-        404: {
-          content: never
-        }
-        /** @description Failed to fetch card owner */
-        500: {
+        /** @description No receipts could be created (decode/QR errors) */
+        422: {
           content: never
         }
       }
     }
   }
-  '/dax/card-owners': {
-    /**
-     * Search card owners from DAX
-     * @description Search for card owners in the DAX access control system
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter by name (rental object ID / object code) */
-          nameFilter?: string
-          /** @description Comma-separated list of fields to expand (e.g., "cards") */
-          expand?: string
-          /** @description Filter by ID */
-          idfilter?: string
-          /** @description Filter by attribute */
-          attributeFilter?: string
-          /** @description Select specific attributes to return */
-          selectedAttributes?: string
-          /** @description Filter by folder */
-          folderFilter?: string
-          /** @description Filter by organisation */
-          organisationFilter?: string
-          /** @description Pagination offset */
-          offset?: number
-          /** @description Maximum number of results */
-          limit?: number
+  '/receipts': {
+    /** Create a receipt */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateReceiptRequest']
         }
       }
       responses: {
-        /** @description Card owners retrieved successfully */
-        200: {
+        /** @description Receipt created */
+        201: {
           content: {
             'application/json': {
-              cardOwners?: components['schemas']['CardOwner'][]
+              content?: components['schemas']['Receipt']
             }
           }
         }
-        /** @description Failed to fetch card owners */
-        500: {
+        /** @description Receipt already exists for this keyLoanId */
+        409: {
           content: never
         }
       }
     }
   }
-  '/dax/cards/{cardId}': {
-    /**
-     * Get a specific card from DAX
-     * @description Retrieve a card by ID from the Amido DAX API
-     */
+  '/receipts/{id}': {
+    /** Get a receipt by ID */
     get: {
       parameters: {
-        query?: {
-          /** @description Comma-separated list of fields to expand (e.g., "codes") */
-          expand?: string
-        }
         path: {
-          /** @description The card ID */
-          cardId: string
+          id: string
         }
       }
       responses: {
-        /** @description Card retrieved successfully */
+        /** @description Receipt */
         200: {
           content: {
             'application/json': {
-              card?: components['schemas']['Card']
+              content?: components['schemas']['Receipt']
             }
           }
         }
-        /** @description Card not found */
+        /** @description Receipt not found */
         404: {
           content: never
         }
-        /** @description Failed to fetch card */
-        500: {
+      }
+    }
+    /** Update a receipt (allows marking as signed) */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateReceiptRequest']
+        }
+      }
+      responses: {
+        /** @description Receipt updated */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Receipt']
+            }
+          }
+        }
+        /** @description Receipt not found */
+        404: {
+          content: never
+        }
+      }
+    }
+    /** Delete a receipt by id */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Deleted */
+        204: {
+          content: never
+        }
+        /** @description Receipt not found */
+        404: {
           content: never
         }
       }
     }
   }
-  '/key-bundles': {
+  '/receipts/by-key-loan/{keyLoanId}': {
+    /** Get receipt by keyLoanId */
+    get: {
+      parameters: {
+        path: {
+          keyLoanId: string
+        }
+      }
+      responses: {
+        /** @description Receipt */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Receipt'][]
+            }
+          }
+        }
+        /** @description Receipt not found */
+        404: {
+          content: never
+        }
+      }
+    }
+  }
+  '/logs': {
     /**
-     * List key bundles with pagination
-     * @description Fetches a paginated list of all key bundles ordered by name.
+     * List logs with pagination
+     * @description Returns paginated logs (most recent per objectId) ordered by eventTime (desc).
      */
     get: {
       parameters: {
@@ -240,15 +262,345 @@ export interface paths {
         }
       }
       responses: {
-        /** @description A paginated list of key bundles. */
+        /** @description A paginated list of logs */
         200: {
           content: {
             'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeyBundle'][]
+              content?: components['schemas']['Log'][]
             }
           }
         }
-        /** @description An error occurred while listing key bundles. */
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /** Create a log */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateLogRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Log']
+            }
+          }
+        }
+        /** @description Invalid or missing fields */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/search': {
+    /**
+     * Search logs with pagination
+     * @description Search logs with flexible filtering and pagination.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any Log field parameter for filtering
+     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - Only one OR group is supported, but you can combine it with multiple AND filters
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+          q?: string
+          /** @description Comma-separated list of fields for OR search. Defaults to objectId and userName. */
+          fields?: string
+          id?: string
+          userName?: string
+          eventType?: string
+          eventTime?: string
+          objectType?: string
+          objectId?: string
+          description?: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved paginated search results */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['Log'][]
+            }
+          }
+        }
+        /** @description Bad request */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/logs/object/{objectId}': {
+    /**
+     * Get all logs for a specific objectId
+     * @description Returns all log entries for a given objectId, ordered by most recent first
+     */
+    get: {
+      parameters: {
+        path: {
+          objectId: string
+        }
+      }
+      responses: {
+        /** @description List of logs for the objectId */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Log'][]
+            }
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/rental-object/{rentalObjectCode}': {
+    /**
+     * Get all logs for a specific rental object
+     * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
+     *
+     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, signatures
+     *
+     * Excluded: keySystem logs (infrastructure-level, not property-specific)
+     *
+     * Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
+     *
+     * Results ordered by most recent first
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+          /** @description Filter by event type (creation, update, delete) */
+          eventType?: string
+          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
+          objectType?: string
+          /** @description Filter by user name */
+          userName?: string
+        }
+        path: {
+          /** @description The rental object code (e.g., "705-011-03-0102") */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Paginated list of logs for the rental object */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['Log'][]
+            }
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/contact/{contactId}': {
+    /**
+     * Get all logs for a specific contact
+     * @description Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
+     *
+     * Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
+     *
+     * Excluded: keyEvents, keyBundles, keyNotes, keySystem (no contact relationship)
+     *
+     * Note: Matches both contact and contact2 fields (co-tenants supported)
+     *
+     * Results ordered by most recent first
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+          /** @description Filter by event type (creation, update, delete) */
+          eventType?: string
+          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
+          objectType?: string
+          /** @description Filter by user name */
+          userName?: string
+        }
+        path: {
+          /** @description The contact code (e.g., "P079586", "F123456") */
+          contactId: string
+        }
+      }
+      responses: {
+        /** @description Paginated list of logs for the contact */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['Log'][]
+            }
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/users': {
+    /**
+     * Get list of unique users who have created logs
+     * @description Returns a sorted list of distinct usernames from the logs table for populating filter dropdowns
+     */
+    get: {
+      responses: {
+        /** @description List of unique usernames */
+        200: {
+          content: {
+            'application/json': {
+              content?: string[]
+            }
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/metadata': {
+    /**
+     * Get metadata for logs (translations, allowed values)
+     * @description Returns Swedish translations and allowed values for eventTypes, objectTypes, and other enums used in logging
+     */
+    get: {
+      responses: {
+        /** @description Log metadata with translations */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                eventTypes?: {
+                  value?: string
+                  label?: string
+                }[]
+                objectTypes?: {
+                  value?: string
+                  label?: string
+                }[]
+              }
+            }
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/{id}': {
+    /** Get log by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Log found */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Log']
+            }
+          }
+        }
+        /** @description Not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys': {
+    /**
+     * List keys with pagination
+     * @description Returns paginated keys ordered by createdAt (desc). Use includeKeySystem to include key system details in the response.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+          /** @description Include key system information in the response. */
+          includeKeySystem?: boolean
+        }
+      }
+      responses: {
+        /** @description A paginated list of keys. When includeKeySystem=true, each key includes keySystem details. */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['KeyDetails'][]
+            }
+          }
+        }
+        /** @description An error occurred while listing keys. */
         500: {
           content: {
             'application/json': {
@@ -260,42 +612,60 @@ export interface paths {
       }
     }
     /**
-     * Create a new key bundle
-     * @description Create a new key bundle record.
+     * Create a key
+     * @description Create a new key record.
      */
     post: {
       requestBody: {
         content: {
-          'application/json': components['schemas']['CreateKeyBundleRequest']
+          'application/json': components['schemas']['CreateKeyRequest']
         }
       }
       responses: {
-        /** @description Key bundle created successfully. */
+        /** @description Key created successfully. */
         201: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyBundle']
+              content?: components['schemas']['Key']
             }
           }
         }
-        /** @description Invalid request body */
+        /** @description Invalid request body. */
         400: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Invalid request body */
+              error?: string
+            }
+          }
         }
-        /** @description An error occurred while creating the key bundle. */
+        /** @description An error occurred while creating the key. */
         500: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
         }
       }
     }
   }
-  '/key-bundles/search': {
+  '/keys/search': {
     /**
-     * Search key bundles with pagination
-     * @description Search key bundles with flexible filtering and pagination.
-     * - **OR search**: Use `q` with `fields` for multiple field search
-     * - **AND search**: Use any KeyBundle field parameter for filtering
+     * Search keys with pagination
+     * @description Search keys with flexible filtering and pagination support.
+     * - **OR search**: Use `q` with `fields` for fuzzy LIKE search across multiple fields
+     * - **AND search**: Use any Key field parameter for exact match filtering (uses strict equality)
+     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
      * - Only one OR group is supported, but you can combine it with multiple AND filters
+     *
+     * Examples:
+     * - `?q=master&fields=keyName` - Fuzzy search for "master" in keyName
+     * - `?keyType=LGH` - Exact match for keyType = 'LGH'
+     * - `?disposed=true` - Show only disposed keys
+     * - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
+     * - `?keyType=LGH&createdAt=<2024-12-31` - Exact keyType AND created before Dec 31, 2024
      */
     get: {
       parameters: {
@@ -304,21 +674,33 @@ export interface paths {
           page?: number
           /** @description Number of records per page */
           limit?: number
+          /** @description Search query for OR search across fields specified in 'fields' parameter. Minimum length requirement is waived when keySystemId filter is provided. */
           q?: string
-          /** @description Comma-separated list of fields for OR search. Defaults to name and description. */
+          /** @description Comma-separated list of fields for OR search (e.g., "keyName,keyType"). Defaults to keyName. */
           fields?: string
+          id?: string
+          keyName?: string
+          keySequenceNumber?: string
+          flexNumber?: string
+          rentalObjectCode?: string
+          keyType?: string
+          keySystemId?: string
+          createdAt?: string
+          updatedAt?: string
+          /** @description Include key system information in the response. */
+          includeKeySystem?: boolean
         }
       }
       responses: {
-        /** @description Paginated search results */
+        /** @description Successfully retrieved search results. When includeKeySystem=true, each key includes keySystem details. */
         200: {
           content: {
             'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeyBundle'][]
+              content?: components['schemas']['KeyDetails'][]
             }
           }
         }
-        /** @description Invalid search parameters */
+        /** @description Bad request. Invalid parameters or field names */
         400: {
           content: never
         }
@@ -329,336 +711,657 @@ export interface paths {
       }
     }
   }
-  '/key-bundles/by-key/{keyId}': {
+  '/keys/by-rental-object/{rentalObjectCode}': {
     /**
-     * Get all bundles containing a specific key
-     * @description Returns all bundle records containing the specified key ID, ordered by name
+     * Get all keys by rental object code with optional related data
+     * @description Returns all keys associated with a specific rental object code with optional related data.
+     * Use query parameters to include loans, events, and/or key system information.
+     *
+     * **Performance**: Optimized single-query fetch eliminates N+1 query problems (~95% faster).
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Include loans array (active + previous loans) for each key. */
+          includeLoans?: boolean
+          /** @description Include events array (latest event) for each key. */
+          includeEvents?: boolean
+          /** @description Include key system information in the response. */
+          includeKeySystem?: boolean
+        }
         path: {
-          /** @description The key ID to search for */
-          keyId: string
+          /** @description The rental object code to filter keys by. */
+          rentalObjectCode: string
         }
       }
       responses: {
-        /** @description Array of bundles containing this key */
+        /** @description List of keys with optional related data (loans, events, keySystem). */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyBundle'][]
+              content?: components['schemas']['KeyDetails'][]
             }
           }
         }
-        /** @description Internal server error */
+        /** @description An error occurred while fetching keys. */
         500: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
         }
       }
     }
   }
-  '/key-bundles/{id}': {
+  '/keys/{id}': {
     /**
-     * Get key bundle by ID
-     * @description Fetch a specific key bundle by its ID.
+     * Get key by ID
+     * @description Fetch a specific key by its ID.
      */
     get: {
       parameters: {
         path: {
-          /** @description The unique ID of the key bundle to retrieve. */
+          /** @description The unique ID of the key to retrieve. */
           id: string
         }
       }
       responses: {
-        /** @description A key bundle object. */
+        /** @description A key object. */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyBundle']
+              content?: components['schemas']['Key']
             }
           }
         }
-        /** @description Key bundle not found. */
+        /** @description Key not found. */
         404: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Key not found */
+              reason?: string
+            }
+          }
         }
-        /** @description An error occurred while fetching the key bundle. */
+        /** @description An error occurred while fetching the key. */
         500: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
         }
       }
     }
     /**
-     * Update a key bundle
-     * @description Update an existing key bundle.
+     * Update a key
+     * @description Update an existing key.
      */
     put: {
       parameters: {
         path: {
-          /** @description The unique ID of the key bundle to update. */
+          /** @description The unique ID of the key to update. */
           id: string
         }
       }
       requestBody: {
         content: {
-          'application/json': components['schemas']['UpdateKeyBundleRequest']
+          'application/json': components['schemas']['UpdateKeyRequest']
         }
       }
       responses: {
-        /** @description Key bundle updated successfully. */
+        /** @description Key updated successfully. */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyBundle']
+              content?: components['schemas']['Key']
             }
           }
         }
-        /** @description Invalid request body */
+        /** @description Invalid request body. */
         400: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Invalid request body */
+              error?: string
+            }
+          }
         }
-        /** @description Key bundle not found. */
+        /** @description Key not found. */
         404: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Key not found */
+              reason?: string
+            }
+          }
         }
-        /** @description An error occurred while updating the key bundle. */
+        /** @description An error occurred while updating the key. */
         500: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
         }
       }
     }
     /**
-     * Delete a key bundle
-     * @description Delete a key bundle by ID.
+     * Delete a key
+     * @description Delete an existing key by ID.
      */
     delete: {
       parameters: {
         path: {
-          /** @description The unique ID of the key bundle to delete. */
+          /** @description The unique ID of the key to delete. */
           id: string
         }
       }
       responses: {
-        /** @description Key bundle deleted successfully. */
-        204: {
-          content: never
-        }
-        /** @description An error occurred while deleting the key bundle. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/key-bundles/{id}/keys-with-loan-status': {
-    /**
-     * Get all keys in a bundle with optional related data
-     * @description Returns all keys that belong to this bundle with optional loans, events, and key system information.
-     * Use query parameters to include related data as needed.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Include loans array (active + previous loans) for each key */
-          includeLoans?: boolean
-          /** @description Include events array (latest event) for each key */
-          includeEvents?: boolean
-          /** @description Include key system information for each key */
-          includeKeySystem?: boolean
-        }
-        path: {
-          /** @description The unique ID of the key bundle */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Bundle information and keys with optional related data */
+        /** @description Key deleted successfully. */
         200: {
           content: {
-            'application/json': {
-              content?: components['schemas']['KeyBundleDetailsResponse']
-            }
+            'application/json': Record<string, never>
           }
         }
-        /** @description Key bundle not found */
+        /** @description Key not found. */
         404: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Key not found */
+              reason?: string
+            }
+          }
         }
-        /** @description Internal server error */
+        /** @description An error occurred while deleting the key. */
         500: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
         }
       }
     }
   }
-  '/key-bundles/by-contact/{contactCode}/with-loaned-keys': {
+  '/keys/bulk-update': {
     /**
-     * Get key bundles with keys loaned to a contact
-     * @description Fetches all key bundles that have keys currently loaned to a specific contact.
+     * Update multiple keys by ID
+     * @description Update multiple keys with the same values in a single request. Maximum 100 keys per request. Only provided fields will be updated.
      */
-    get: {
-      parameters: {
-        path: {
-          /** @description The contact code (F-number) to find bundles for */
-          contactCode: string
+    put: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['BulkUpdateKeysRequest']
         }
       }
       responses: {
-        /** @description A list of bundles with loaned keys info */
+        /** @description Keys updated successfully. */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['BundleWithLoanedKeysInfo'][]
+              /** @description Number of keys updated */
+              content?: number
             }
           }
         }
-        /** @description Internal server error */
+        /** @description Invalid request body. */
+        400: {
+          content: {
+            'application/json': {
+              /** @example Invalid request body */
+              error?: string
+            }
+          }
+        }
+        /** @description An error occurred while updating keys. */
         500: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
         }
       }
     }
   }
-  '/key-events': {
+  '/keys/bulk-update-flex': {
     /**
-     * Get all key events
-     * @description Returns all key events ordered by creation date.
-     */
-    get: {
-      responses: {
-        /** @description List of key events. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeyEvent'][]
-            }
-          }
-        }
-        /** @description An error occurred while fetching key events. */
-        500: {
-          content: never
-        }
-      }
-    }
-    /**
-     * Create a key event
-     * @description Create a new key event record. Will fail with 409 if any of the keys have an incomplete event (status not COMPLETED).
+     * Bulk update flex number for all keys on a rental object
+     * @description Update the flex number for all keys associated with a specific rental object code. Flex numbers range from 1-3.
      */
     post: {
       requestBody: {
         content: {
-          'application/json': components['schemas']['CreateKeyEventRequest']
+          'application/json': components['schemas']['BulkUpdateFlexRequest']
         }
       }
       responses: {
-        /** @description Key event created successfully. */
-        201: {
+        /** @description Flex numbers updated successfully. */
+        200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyEvent']
+              /** @description Number of keys updated */
+              content?: number
             }
           }
         }
         /** @description Invalid request body. */
         400: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Invalid request body */
+              error?: string
+            }
+          }
         }
-        /** @description Conflict - one or more keys have incomplete events. */
-        409: {
-          content: never
-        }
-        /** @description An error occurred while creating the key event. */
+        /** @description An error occurred while updating keys. */
         500: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
         }
       }
     }
   }
-  '/key-events/by-key/{keyId}': {
+  '/keys/bulk-delete': {
     /**
-     * Get all key events for a specific key
-     * @description Returns all key events associated with a specific key ID. Optionally limit results to get only the latest event(s).
+     * Delete multiple keys by ID
+     * @description Delete multiple keys in a single request. Maximum 100 keys per request.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['BulkDeleteKeysRequest']
+        }
+      }
+      responses: {
+        /** @description Keys deleted successfully. */
+        200: {
+          content: {
+            'application/json': {
+              /** @description Number of keys deleted */
+              content?: number
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: {
+            'application/json': {
+              /** @example Invalid request body */
+              error?: string
+            }
+          }
+        }
+        /** @description One or more keys have active loans and cannot be deleted. */
+        409: {
+          content: {
+            'application/json': {
+              /** @example Cannot delete keys with active loans */
+              error?: string
+              conflictingKeys?: string[]
+            }
+          }
+        }
+        /** @description An error occurred while deleting keys. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/key-systems': {
+    /**
+     * List all key systems with pagination
+     * @description Retrieve a paginated list of all key systems
      */
     get: {
       parameters: {
         query?: {
-          /** @description Optional limit on number of results (e.g., 1 for latest event only). */
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
           limit?: number
-        }
-        path: {
-          /** @description The key ID to filter events by. */
-          keyId: string
         }
       }
       responses: {
-        /** @description List of key events for the key. */
+        /** @description Successfully retrieved key systems */
         200: {
           content: {
-            'application/json': {
-              content?: components['schemas']['KeyEvent'][]
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['KeySystem'][]
             }
           }
         }
-        /** @description An error occurred while fetching key events. */
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create a new key system
+     * @description Create a new key system
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateKeySystemRequest']
+        }
+      }
+      responses: {
+        /** @description Key system created successfully */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeySystem']
+            }
+          }
+        }
+        /** @description Invalid type */
+        400: {
+          content: never
+        }
+        /** @description Key system with this system code already exists */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
         500: {
           content: never
         }
       }
     }
   }
-  '/key-events/{id}': {
+  '/key-systems/search': {
     /**
-     * Get key event by ID
-     * @description Fetch a specific key event by its ID.
+     * Search key systems
+     * @description Search key systems with flexible filtering.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any KeySystem field parameter for filtering
+     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - Only one OR group is supported, but you can combine it with multiple AND filters
+     *
+     * Examples:
+     * - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
+     * - `?manufacturer=assa&createdAt=<2024-12-31` - Manufacturer contains "assa" AND created before Dec 31, 2024
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+          /** @description Search query for OR search across fields specified in 'fields' parameter */
+          q?: string
+          /** @description Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode. */
+          fields?: string
+          id?: string
+          systemCode?: string
+          name?: string
+          manufacturer?: string
+          managingSupplier?: string
+          type?: string
+          propertyIds?: string
+          installationDate?: string
+          isActive?: string
+          notes?: string
+          createdAt?: string
+          updatedAt?: string
+          createdBy?: string
+          updatedBy?: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved paginated search results */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['KeySystem'][]
+            }
+          }
+        }
+        /** @description Bad request. Invalid parameters or field names */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-systems/{id}': {
+    /**
+     * Get key system by ID
+     * @description Retrieve a specific key system by its ID
      */
     get: {
       parameters: {
         path: {
-          /** @description The unique ID of the key event to retrieve. */
+          /** @description The ID of the key system */
           id: string
         }
       }
       responses: {
-        /** @description A key event object. */
+        /** @description Successfully retrieved key system */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyEvent']
+              content?: components['schemas']['KeySystem']
             }
           }
         }
-        /** @description Key event not found. */
+        /** @description Key system not found */
         404: {
           content: never
         }
-        /** @description An error occurred while fetching the key event. */
+        /** @description Internal server error */
         500: {
           content: never
         }
       }
     }
     /**
-     * Update a key event
-     * @description Update an existing key event.
+     * Update a key system
+     * @description Update a key system
      */
     put: {
       parameters: {
         path: {
-          /** @description The unique ID of the key event to update. */
+          /** @description The ID of the key system to update */
           id: string
         }
       }
       requestBody: {
         content: {
-          'application/json': components['schemas']['UpdateKeyEventRequest']
+          'application/json': components['schemas']['UpdateKeySystemRequest']
         }
       }
       responses: {
-        /** @description Key event updated successfully. */
+        /** @description Key system updated successfully */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyEvent']
+              content?: components['schemas']['KeySystem']
+            }
+          }
+        }
+        /** @description Invalid type */
+        400: {
+          content: never
+        }
+        /** @description Key system not found */
+        404: {
+          content: never
+        }
+        /** @description Key system with this system code already exists */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Delete a key system
+     * @description Delete a key system by ID
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to delete */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key system deleted successfully */
+        200: {
+          content: never
+        }
+        /** @description Key system not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-systems/{id}/deactivate': {
+    /**
+     * Deactivate a key system and dispose all its keys
+     * @description Sets isActive=false and marks every non-disposed key in the system as disposed, in one transaction. Returns the disposed keys.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to deactivate */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key system deactivated and keys disposed */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DeactivateKeySystemResponse']
+            }
+          }
+        }
+        /** @description Key system not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-notes/by-rental-object/{rentalObjectCode}': {
+    /**
+     * Get all key notes by rental object code
+     * @description Returns all key notes associated with a specific rental object code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to filter key notes by. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description List of key notes for the rental object code. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyNote'][]
+            }
+          }
+        }
+        /** @description An error occurred while fetching key notes. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-notes/{id}': {
+    /**
+     * Get key note by ID
+     * @description Fetch a specific key note by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key note to retrieve. */
+          id: string
+        }
+      }
+      responses: {
+        /** @description A key note object. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
+        /** @description Key note not found. */
+        404: {
+          content: never
+        }
+        /** @description An error occurred while fetching the key note. */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update a key note
+     * @description Update the description of an existing key note.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key note to update. */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateKeyNoteRequest']
+        }
+      }
+      responses: {
+        /** @description Key note updated successfully. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyNote']
             }
           }
         }
@@ -666,11 +1369,42 @@ export interface paths {
         400: {
           content: never
         }
-        /** @description Key event not found. */
+        /** @description Key note not found. */
         404: {
           content: never
         }
-        /** @description An error occurred while updating the key event. */
+        /** @description An error occurred while updating the key note. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-notes': {
+    /**
+     * Create a key note
+     * @description Create a new key note record.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateKeyNoteRequest']
+        }
+      }
+      responses: {
+        /** @description Key note created successfully. */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: never
+        }
+        /** @description An error occurred while creating the key note. */
         500: {
           content: never
         }
@@ -1157,122 +1891,43 @@ export interface paths {
       }
     }
   }
-  '/key-notes/by-rental-object/{rentalObjectCode}': {
+  '/key-events': {
     /**
-     * Get all key notes by rental object code
-     * @description Returns all key notes associated with a specific rental object code.
+     * Get all key events
+     * @description Returns all key events ordered by creation date.
      */
     get: {
-      parameters: {
-        path: {
-          /** @description The rental object code to filter key notes by. */
-          rentalObjectCode: string
-        }
-      }
       responses: {
-        /** @description List of key notes for the rental object code. */
+        /** @description List of key events. */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyNote'][]
+              content?: components['schemas']['KeyEvent'][]
             }
           }
         }
-        /** @description An error occurred while fetching key notes. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/key-notes/{id}': {
-    /**
-     * Get key note by ID
-     * @description Fetch a specific key note by its ID.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the key note to retrieve. */
-          id: string
-        }
-      }
-      responses: {
-        /** @description A key note object. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeyNote']
-            }
-          }
-        }
-        /** @description Key note not found. */
-        404: {
-          content: never
-        }
-        /** @description An error occurred while fetching the key note. */
+        /** @description An error occurred while fetching key events. */
         500: {
           content: never
         }
       }
     }
     /**
-     * Update a key note
-     * @description Update the description of an existing key note.
-     */
-    put: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the key note to update. */
-          id: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['UpdateKeyNoteRequest']
-        }
-      }
-      responses: {
-        /** @description Key note updated successfully. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeyNote']
-            }
-          }
-        }
-        /** @description Invalid request body. */
-        400: {
-          content: never
-        }
-        /** @description Key note not found. */
-        404: {
-          content: never
-        }
-        /** @description An error occurred while updating the key note. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/key-notes': {
-    /**
-     * Create a key note
-     * @description Create a new key note record.
+     * Create a key event
+     * @description Create a new key event record. Will fail with 409 if any of the keys have an incomplete event (status not COMPLETED).
      */
     post: {
       requestBody: {
         content: {
-          'application/json': components['schemas']['CreateKeyNoteRequest']
+          'application/json': components['schemas']['CreateKeyEventRequest']
         }
       }
       responses: {
-        /** @description Key note created successfully. */
+        /** @description Key event created successfully. */
         201: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyNote']
+              content?: components['schemas']['KeyEvent']
             }
           }
         }
@@ -1280,17 +1935,124 @@ export interface paths {
         400: {
           content: never
         }
-        /** @description An error occurred while creating the key note. */
+        /** @description Conflict - one or more keys have incomplete events. */
+        409: {
+          content: never
+        }
+        /** @description An error occurred while creating the key event. */
         500: {
           content: never
         }
       }
     }
   }
-  '/key-systems': {
+  '/key-events/by-key/{keyId}': {
     /**
-     * List all key systems with pagination
-     * @description Retrieve a paginated list of all key systems
+     * Get all key events for a specific key
+     * @description Returns all key events associated with a specific key ID. Optionally limit results to get only the latest event(s).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Optional limit on number of results (e.g., 1 for latest event only). */
+          limit?: number
+        }
+        path: {
+          /** @description The key ID to filter events by. */
+          keyId: string
+        }
+      }
+      responses: {
+        /** @description List of key events for the key. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyEvent'][]
+            }
+          }
+        }
+        /** @description An error occurred while fetching key events. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-events/{id}': {
+    /**
+     * Get key event by ID
+     * @description Fetch a specific key event by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key event to retrieve. */
+          id: string
+        }
+      }
+      responses: {
+        /** @description A key event object. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyEvent']
+            }
+          }
+        }
+        /** @description Key event not found. */
+        404: {
+          content: never
+        }
+        /** @description An error occurred while fetching the key event. */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update a key event
+     * @description Update an existing key event.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key event to update. */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateKeyEventRequest']
+        }
+      }
+      responses: {
+        /** @description Key event updated successfully. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyEvent']
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: never
+        }
+        /** @description Key event not found. */
+        404: {
+          content: never
+        }
+        /** @description An error occurred while updating the key event. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-bundles': {
+    /**
+     * List key bundles with pagination
+     * @description Fetches a paginated list of all key bundles ordered by name.
      */
     get: {
       parameters: {
@@ -1302,766 +2064,61 @@ export interface paths {
         }
       }
       responses: {
-        /** @description Successfully retrieved key systems */
+        /** @description A paginated list of key bundles. */
         200: {
           content: {
             'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeySystem'][]
+              content?: components['schemas']['KeyBundle'][]
             }
           }
         }
-        /** @description Internal server error */
+        /** @description An error occurred while listing key bundles. */
         500: {
-          content: never
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
         }
       }
     }
     /**
-     * Create a new key system
-     * @description Create a new key system
+     * Create a new key bundle
+     * @description Create a new key bundle record.
      */
     post: {
       requestBody: {
         content: {
-          'application/json': components['schemas']['CreateKeySystemRequest']
+          'application/json': components['schemas']['CreateKeyBundleRequest']
         }
       }
       responses: {
-        /** @description Key system created successfully */
+        /** @description Key bundle created successfully. */
         201: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeySystem']
+              content?: components['schemas']['KeyBundle']
             }
           }
         }
-        /** @description Invalid type */
+        /** @description Invalid request body */
         400: {
           content: never
         }
-        /** @description Key system with this system code already exists */
-        409: {
-          content: never
-        }
-        /** @description Internal server error */
+        /** @description An error occurred while creating the key bundle. */
         500: {
           content: never
         }
       }
     }
   }
-  '/key-systems/search': {
+  '/key-bundles/search': {
     /**
-     * Search key systems
-     * @description Search key systems with flexible filtering.
+     * Search key bundles with pagination
+     * @description Search key bundles with flexible filtering and pagination.
      * - **OR search**: Use `q` with `fields` for multiple field search
-     * - **AND search**: Use any KeySystem field parameter for filtering
-     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
-     * - Only one OR group is supported, but you can combine it with multiple AND filters
-     *
-     * Examples:
-     * - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
-     * - `?manufacturer=assa&createdAt=<2024-12-31` - Manufacturer contains "assa" AND created before Dec 31, 2024
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-          /** @description Search query for OR search across fields specified in 'fields' parameter */
-          q?: string
-          /** @description Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode. */
-          fields?: string
-          id?: string
-          systemCode?: string
-          name?: string
-          manufacturer?: string
-          managingSupplier?: string
-          type?: string
-          propertyIds?: string
-          installationDate?: string
-          isActive?: string
-          notes?: string
-          createdAt?: string
-          updatedAt?: string
-          createdBy?: string
-          updatedBy?: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved paginated search results */
-        200: {
-          content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeySystem'][]
-            }
-          }
-        }
-        /** @description Bad request. Invalid parameters or field names */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/key-systems/{id}': {
-    /**
-     * Get key system by ID
-     * @description Retrieve a specific key system by its ID
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the key system */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved key system */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeySystem']
-            }
-          }
-        }
-        /** @description Key system not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-    /**
-     * Update a key system
-     * @description Update a key system
-     */
-    put: {
-      parameters: {
-        path: {
-          /** @description The ID of the key system to update */
-          id: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['UpdateKeySystemRequest']
-        }
-      }
-      responses: {
-        /** @description Key system updated successfully */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeySystem']
-            }
-          }
-        }
-        /** @description Invalid type */
-        400: {
-          content: never
-        }
-        /** @description Key system not found */
-        404: {
-          content: never
-        }
-        /** @description Key system with this system code already exists */
-        409: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-    /**
-     * Delete a key system
-     * @description Delete a key system by ID
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description The ID of the key system to delete */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Key system deleted successfully */
-        200: {
-          content: never
-        }
-        /** @description Key system not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/key-systems/{id}/deactivate': {
-    /**
-     * Deactivate a key system and dispose all its keys
-     * @description Sets isActive=false and marks every non-disposed key in the system as disposed, in one transaction. Returns the disposed keys.
-     */
-    post: {
-      parameters: {
-        path: {
-          /** @description The ID of the key system to deactivate */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Key system deactivated and keys disposed */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['DeactivateKeySystemResponse']
-            }
-          }
-        }
-        /** @description Key system not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/keys': {
-    /**
-     * List keys with pagination
-     * @description Returns paginated keys ordered by createdAt (desc). Use includeKeySystem to include key system details in the response.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-          /** @description Include key system information in the response. */
-          includeKeySystem?: boolean
-        }
-      }
-      responses: {
-        /** @description A paginated list of keys. When includeKeySystem=true, each key includes keySystem details. */
-        200: {
-          content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeyDetails'][]
-            }
-          }
-        }
-        /** @description An error occurred while listing keys. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-    /**
-     * Create a key
-     * @description Create a new key record.
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['CreateKeyRequest']
-        }
-      }
-      responses: {
-        /** @description Key created successfully. */
-        201: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Key']
-            }
-          }
-        }
-        /** @description Invalid request body. */
-        400: {
-          content: {
-            'application/json': {
-              /** @example Invalid request body */
-              error?: string
-            }
-          }
-        }
-        /** @description An error occurred while creating the key. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/keys/search': {
-    /**
-     * Search keys with pagination
-     * @description Search keys with flexible filtering and pagination support.
-     * - **OR search**: Use `q` with `fields` for fuzzy LIKE search across multiple fields
-     * - **AND search**: Use any Key field parameter for exact match filtering (uses strict equality)
-     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
-     * - Only one OR group is supported, but you can combine it with multiple AND filters
-     *
-     * Examples:
-     * - `?q=master&fields=keyName` - Fuzzy search for "master" in keyName
-     * - `?keyType=LGH` - Exact match for keyType = 'LGH'
-     * - `?disposed=true` - Show only disposed keys
-     * - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
-     * - `?keyType=LGH&createdAt=<2024-12-31` - Exact keyType AND created before Dec 31, 2024
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-          /** @description Search query for OR search across fields specified in 'fields' parameter. Minimum length requirement is waived when keySystemId filter is provided. */
-          q?: string
-          /** @description Comma-separated list of fields for OR search (e.g., "keyName,keyType"). Defaults to keyName. */
-          fields?: string
-          id?: string
-          keyName?: string
-          keySequenceNumber?: string
-          flexNumber?: string
-          rentalObjectCode?: string
-          keyType?: string
-          keySystemId?: string
-          createdAt?: string
-          updatedAt?: string
-          /** @description Include key system information in the response. */
-          includeKeySystem?: boolean
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved search results. When includeKeySystem=true, each key includes keySystem details. */
-        200: {
-          content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeyDetails'][]
-            }
-          }
-        }
-        /** @description Bad request. Invalid parameters or field names */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/keys/by-rental-object/{rentalObjectCode}': {
-    /**
-     * Get all keys by rental object code with optional related data
-     * @description Returns all keys associated with a specific rental object code with optional related data.
-     * Use query parameters to include loans, events, and/or key system information.
-     *
-     * **Performance**: Optimized single-query fetch eliminates N+1 query problems (~95% faster).
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Include loans array (active + previous loans) for each key. */
-          includeLoans?: boolean
-          /** @description Include events array (latest event) for each key. */
-          includeEvents?: boolean
-          /** @description Include key system information in the response. */
-          includeKeySystem?: boolean
-        }
-        path: {
-          /** @description The rental object code to filter keys by. */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description List of keys with optional related data (loans, events, keySystem). */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeyDetails'][]
-            }
-          }
-        }
-        /** @description An error occurred while fetching keys. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/keys/{id}': {
-    /**
-     * Get key by ID
-     * @description Fetch a specific key by its ID.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the key to retrieve. */
-          id: string
-        }
-      }
-      responses: {
-        /** @description A key object. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Key']
-            }
-          }
-        }
-        /** @description Key not found. */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Key not found */
-              reason?: string
-            }
-          }
-        }
-        /** @description An error occurred while fetching the key. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-    /**
-     * Update a key
-     * @description Update an existing key.
-     */
-    put: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the key to update. */
-          id: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['UpdateKeyRequest']
-        }
-      }
-      responses: {
-        /** @description Key updated successfully. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Key']
-            }
-          }
-        }
-        /** @description Invalid request body. */
-        400: {
-          content: {
-            'application/json': {
-              /** @example Invalid request body */
-              error?: string
-            }
-          }
-        }
-        /** @description Key not found. */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Key not found */
-              reason?: string
-            }
-          }
-        }
-        /** @description An error occurred while updating the key. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-    /**
-     * Delete a key
-     * @description Delete an existing key by ID.
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the key to delete. */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Key deleted successfully. */
-        200: {
-          content: {
-            'application/json': Record<string, never>
-          }
-        }
-        /** @description Key not found. */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Key not found */
-              reason?: string
-            }
-          }
-        }
-        /** @description An error occurred while deleting the key. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/keys/bulk-update': {
-    /**
-     * Update multiple keys by ID
-     * @description Update multiple keys with the same values in a single request. Maximum 100 keys per request. Only provided fields will be updated.
-     */
-    put: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['BulkUpdateKeysRequest']
-        }
-      }
-      responses: {
-        /** @description Keys updated successfully. */
-        200: {
-          content: {
-            'application/json': {
-              /** @description Number of keys updated */
-              content?: number
-            }
-          }
-        }
-        /** @description Invalid request body. */
-        400: {
-          content: {
-            'application/json': {
-              /** @example Invalid request body */
-              error?: string
-            }
-          }
-        }
-        /** @description An error occurred while updating keys. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/keys/bulk-update-flex': {
-    /**
-     * Bulk update flex number for all keys on a rental object
-     * @description Update the flex number for all keys associated with a specific rental object code. Flex numbers range from 1-3.
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['BulkUpdateFlexRequest']
-        }
-      }
-      responses: {
-        /** @description Flex numbers updated successfully. */
-        200: {
-          content: {
-            'application/json': {
-              /** @description Number of keys updated */
-              content?: number
-            }
-          }
-        }
-        /** @description Invalid request body. */
-        400: {
-          content: {
-            'application/json': {
-              /** @example Invalid request body */
-              error?: string
-            }
-          }
-        }
-        /** @description An error occurred while updating keys. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/keys/bulk-delete': {
-    /**
-     * Delete multiple keys by ID
-     * @description Delete multiple keys in a single request. Maximum 100 keys per request.
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['BulkDeleteKeysRequest']
-        }
-      }
-      responses: {
-        /** @description Keys deleted successfully. */
-        200: {
-          content: {
-            'application/json': {
-              /** @description Number of keys deleted */
-              content?: number
-            }
-          }
-        }
-        /** @description Invalid request body. */
-        400: {
-          content: {
-            'application/json': {
-              /** @example Invalid request body */
-              error?: string
-            }
-          }
-        }
-        /** @description One or more keys have active loans and cannot be deleted. */
-        409: {
-          content: {
-            'application/json': {
-              /** @example Cannot delete keys with active loans */
-              error?: string
-              conflictingKeys?: string[]
-            }
-          }
-        }
-        /** @description An error occurred while deleting keys. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/logs': {
-    /**
-     * List logs with pagination
-     * @description Returns paginated logs (most recent per objectId) ordered by eventTime (desc).
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-        }
-      }
-      responses: {
-        /** @description A paginated list of logs */
-        200: {
-          content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['Log'][]
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-    /** Create a log */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['CreateLogRequest']
-        }
-      }
-      responses: {
-        /** @description Created */
-        201: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Log']
-            }
-          }
-        }
-        /** @description Invalid or missing fields */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/search': {
-    /**
-     * Search logs with pagination
-     * @description Search logs with flexible filtering and pagination.
-     * - **OR search**: Use `q` with `fields` for multiple field search
-     * - **AND search**: Use any Log field parameter for filtering
-     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - **AND search**: Use any KeyBundle field parameter for filtering
      * - Only one OR group is supported, but you can combine it with multiple AND filters
      */
     get: {
@@ -2072,27 +2129,20 @@ export interface paths {
           /** @description Number of records per page */
           limit?: number
           q?: string
-          /** @description Comma-separated list of fields for OR search. Defaults to objectId and userName. */
+          /** @description Comma-separated list of fields for OR search. Defaults to name and description. */
           fields?: string
-          id?: string
-          userName?: string
-          eventType?: string
-          eventTime?: string
-          objectType?: string
-          objectId?: string
-          description?: string
         }
       }
       responses: {
-        /** @description Successfully retrieved paginated search results */
+        /** @description Paginated search results */
         200: {
           content: {
             'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['Log'][]
+              content?: components['schemas']['KeyBundle'][]
             }
           }
         }
-        /** @description Bad request */
+        /** @description Invalid search parameters */
         400: {
           content: never
         }
@@ -2103,463 +2153,413 @@ export interface paths {
       }
     }
   }
-  '/logs/object/{objectId}': {
+  '/key-bundles/by-key/{keyId}': {
     /**
-     * Get all logs for a specific objectId
-     * @description Returns all log entries for a given objectId, ordered by most recent first
+     * Get all bundles containing a specific key
+     * @description Returns all bundle records containing the specified key ID, ordered by name
      */
     get: {
       parameters: {
         path: {
-          objectId: string
+          /** @description The key ID to search for */
+          keyId: string
         }
       }
       responses: {
-        /** @description List of logs for the objectId */
+        /** @description Array of bundles containing this key */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['Log'][]
+              content?: components['schemas']['KeyBundle'][]
             }
           }
         }
-        /** @description Server error */
+        /** @description Internal server error */
         500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/rental-object/{rentalObjectCode}': {
-    /**
-     * Get all logs for a specific rental object
-     * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
-     *
-     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, signatures
-     *
-     * Excluded: keySystem logs (infrastructure-level, not property-specific)
-     *
-     * Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
-     *
-     * Results ordered by most recent first
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-          /** @description Filter by event type (creation, update, delete) */
-          eventType?: string
-          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
-          objectType?: string
-          /** @description Filter by user name */
-          userName?: string
-        }
-        path: {
-          /** @description The rental object code (e.g., "705-011-03-0102") */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Paginated list of logs for the rental object */
-        200: {
-          content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['Log'][]
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/contact/{contactId}': {
-    /**
-     * Get all logs for a specific contact
-     * @description Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
-     *
-     * Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
-     *
-     * Excluded: keyEvents, keyBundles, keyNotes, keySystem (no contact relationship)
-     *
-     * Note: Matches both contact and contact2 fields (co-tenants supported)
-     *
-     * Results ordered by most recent first
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-          /** @description Filter by event type (creation, update, delete) */
-          eventType?: string
-          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
-          objectType?: string
-          /** @description Filter by user name */
-          userName?: string
-        }
-        path: {
-          /** @description The contact code (e.g., "P079586", "F123456") */
-          contactId: string
-        }
-      }
-      responses: {
-        /** @description Paginated list of logs for the contact */
-        200: {
-          content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['Log'][]
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/users': {
-    /**
-     * Get list of unique users who have created logs
-     * @description Returns a sorted list of distinct usernames from the logs table for populating filter dropdowns
-     */
-    get: {
-      responses: {
-        /** @description List of unique usernames */
-        200: {
-          content: {
-            'application/json': {
-              content?: string[]
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/metadata': {
-    /**
-     * Get metadata for logs (translations, allowed values)
-     * @description Returns Swedish translations and allowed values for eventTypes, objectTypes, and other enums used in logging
-     */
-    get: {
-      responses: {
-        /** @description Log metadata with translations */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                eventTypes?: {
-                  value?: string
-                  label?: string
-                }[]
-                objectTypes?: {
-                  value?: string
-                  label?: string
-                }[]
-              }
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/{id}': {
-    /** Get log by ID */
-    get: {
-      parameters: {
-        path: {
-          id: string
-        }
-      }
-      responses: {
-        /** @description Log found */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Log']
-            }
-          }
-        }
-        /** @description Not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/receipts': {
-    /** Create a receipt */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['CreateReceiptRequest']
-        }
-      }
-      responses: {
-        /** @description Receipt created */
-        201: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Receipt']
-            }
-          }
-        }
-        /** @description Receipt already exists for this keyLoanId */
-        409: {
           content: never
         }
       }
     }
   }
-  '/receipts/{id}': {
-    /** Get a receipt by ID */
+  '/key-bundles/{id}': {
+    /**
+     * Get key bundle by ID
+     * @description Fetch a specific key bundle by its ID.
+     */
     get: {
       parameters: {
         path: {
+          /** @description The unique ID of the key bundle to retrieve. */
           id: string
         }
       }
       responses: {
-        /** @description Receipt */
+        /** @description A key bundle object. */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['Receipt']
+              content?: components['schemas']['KeyBundle']
             }
           }
         }
-        /** @description Receipt not found */
+        /** @description Key bundle not found. */
         404: {
+          content: never
+        }
+        /** @description An error occurred while fetching the key bundle. */
+        500: {
           content: never
         }
       }
     }
-    /** Update a receipt (allows marking as signed) */
+    /**
+     * Update a key bundle
+     * @description Update an existing key bundle.
+     */
     put: {
       parameters: {
         path: {
+          /** @description The unique ID of the key bundle to update. */
           id: string
         }
       }
       requestBody: {
         content: {
-          'application/json': components['schemas']['UpdateReceiptRequest']
+          'application/json': components['schemas']['UpdateKeyBundleRequest']
         }
       }
       responses: {
-        /** @description Receipt updated */
+        /** @description Key bundle updated successfully. */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['Receipt']
+              content?: components['schemas']['KeyBundle']
             }
           }
         }
-        /** @description Receipt not found */
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Key bundle not found. */
         404: {
+          content: never
+        }
+        /** @description An error occurred while updating the key bundle. */
+        500: {
           content: never
         }
       }
     }
-    /** Delete a receipt by id */
+    /**
+     * Delete a key bundle
+     * @description Delete a key bundle by ID.
+     */
     delete: {
       parameters: {
         path: {
+          /** @description The unique ID of the key bundle to delete. */
           id: string
         }
       }
       responses: {
-        /** @description Deleted */
+        /** @description Key bundle deleted successfully. */
         204: {
           content: never
         }
-        /** @description Receipt not found */
-        404: {
+        /** @description An error occurred while deleting the key bundle. */
+        500: {
           content: never
         }
       }
     }
   }
-  '/receipts/by-key-loan/{keyLoanId}': {
-    /** Get receipt by keyLoanId */
-    get: {
-      parameters: {
-        path: {
-          keyLoanId: string
-        }
-      }
-      responses: {
-        /** @description Receipt */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Receipt'][]
-            }
-          }
-        }
-        /** @description Receipt not found */
-        404: {
-          content: never
-        }
-      }
-    }
-  }
-  '/scan-receipt': {
+  '/key-bundles/{id}/keys-with-loan-status': {
     /**
-     * Process a scanned receipt image (single or batch)
-     * @description Receives a scanned receipt image (JPEG, PNG, BMP, or multi-page PDF).
-     * Extracts QR codes from each page, groups pages by loan UUID,
-     * and creates a receipt for each unique loan.
-     * Returns an array of results and any errors.
+     * Get all keys in a bundle with optional related data
+     * @description Returns all keys that belong to this bundle with optional loans, events, and key system information.
+     * Use query parameters to include related data as needed.
      */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': {
-            /** Format: byte */
-            imageData?: string
-          }
-        }
-      }
-      responses: {
-        /** @description All receipts created successfully */
-        201: {
-          content: never
-        }
-        /** @description Partial success — some receipts created, some failed */
-        207: {
-          content: never
-        }
-        /** @description Missing image data */
-        400: {
-          content: never
-        }
-        /** @description No receipts could be created (decode/QR errors) */
-        422: {
-          content: never
-        }
-      }
-    }
-  }
-  '/signatures/send': {
-    /** Send a document for digital signature via SimpleSign */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['SendSignatureRequest']
-        }
-      }
-      responses: {
-        /** @description Signature request sent successfully */
-        201: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Signature']
-            }
-          }
-        }
-        /** @description Resource not found */
-        404: {
-          content: never
-        }
-      }
-    }
-  }
-  '/signatures/{id}': {
-    /** Get a signature by ID */
     get: {
       parameters: {
+        query?: {
+          /** @description Include loans array (active + previous loans) for each key */
+          includeLoans?: boolean
+          /** @description Include events array (latest event) for each key */
+          includeEvents?: boolean
+          /** @description Include key system information for each key */
+          includeKeySystem?: boolean
+        }
         path: {
+          /** @description The unique ID of the key bundle */
           id: string
         }
       }
       responses: {
-        /** @description Signature details */
+        /** @description Bundle information and keys with optional related data */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['Signature']
+              content?: components['schemas']['KeyBundleDetailsResponse']
             }
           }
         }
-        /** @description Signature not found */
+        /** @description Key bundle not found */
         404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
           content: never
         }
       }
     }
   }
-  '/signatures/resource/{resourceType}/{resourceId}': {
-    /** Get all signatures for a resource */
+  '/key-bundles/by-contact/{contactCode}/with-loaned-keys': {
+    /**
+     * Get key bundles with keys loaned to a contact
+     * @description Fetches all key bundles that have keys currently loaned to a specific contact.
+     */
     get: {
       parameters: {
         path: {
-          resourceType: string
-          resourceId: string
+          /** @description The contact code (F-number) to find bundles for */
+          contactCode: string
         }
       }
       responses: {
-        /** @description List of signatures */
+        /** @description A list of bundles with loaned keys info */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['Signature'][]
+              content?: components['schemas']['BundleWithLoanedKeysInfo'][]
             }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/dax/contracts': {
+    /**
+     * Get all contracts from DAX
+     * @description Retrieve all contracts from the Amido DAX API
+     */
+    get: {
+      responses: {
+        /** @description List of contracts retrieved successfully */
+        200: {
+          content: {
+            'application/json': {
+              contracts?: {
+                contractId?: string
+                promisee?: Record<string, never>
+                promisor?: Record<string, never>
+                accessControlInstance?: Record<string, never>
+                state?: string
+              }[]
+            }
+          }
+        }
+        /** @description Failed to fetch contracts */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/dax/card-owners/{cardOwnerId}': {
+    /**
+     * Get a specific card owner from DAX
+     * @description Retrieve a card owner by ID from the Amido DAX API
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The owning partner ID (defaults to configured partner) */
+          partnerId?: string
+          /** @description The owning instance ID (defaults to configured instance) */
+          instanceId?: string
+        }
+        path: {
+          /** @description The card owner ID */
+          cardOwnerId: string
+        }
+      }
+      responses: {
+        /** @description Card owner retrieved successfully */
+        200: {
+          content: {
+            'application/json': {
+              cardOwner?: components['schemas']['CardOwner']
+            }
+          }
+        }
+        /** @description Missing required parameters */
+        400: {
+          content: never
+        }
+        /** @description Card owner not found */
+        404: {
+          content: never
+        }
+        /** @description Failed to fetch card owner */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/dax/card-owners': {
+    /**
+     * Search card owners from DAX
+     * @description Search for card owners in the DAX access control system
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by name (rental object ID / object code) */
+          nameFilter?: string
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string
+          /** @description Filter by ID */
+          idfilter?: string
+          /** @description Filter by attribute */
+          attributeFilter?: string
+          /** @description Select specific attributes to return */
+          selectedAttributes?: string
+          /** @description Filter by folder */
+          folderFilter?: string
+          /** @description Filter by organisation */
+          organisationFilter?: string
+          /** @description Pagination offset */
+          offset?: number
+          /** @description Maximum number of results */
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Card owners retrieved successfully */
+        200: {
+          content: {
+            'application/json': {
+              cardOwners?: components['schemas']['CardOwner'][]
+            }
+          }
+        }
+        /** @description Failed to fetch card owners */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/dax/cards/{cardId}': {
+    /**
+     * Get a specific card from DAX
+     * @description Retrieve a card by ID from the Amido DAX API
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of fields to expand (e.g., "codes") */
+          expand?: string
+        }
+        path: {
+          /** @description The card ID */
+          cardId: string
+        }
+      }
+      responses: {
+        /** @description Card retrieved successfully */
+        200: {
+          content: {
+            'application/json': {
+              card?: components['schemas']['Card']
+            }
+          }
+        }
+        /** @description Card not found */
+        404: {
+          content: never
+        }
+        /** @description Failed to fetch card */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/cards/by-rental-object/{rentalObjectCode}': {
+    /**
+     * Get cards by rental object code
+     * @description Fetch all access control cards from DAX for a specific rental object.
+     * Cards can optionally be enriched with loan information.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include loan information for cards */
+          includeLoans?: boolean
+        }
+        path: {
+          /** @description The rental object code to fetch cards for */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description An array of cards (with optional loan details) */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CardDetails'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
           }
         }
       }
     }
   }
-  '/webhooks/simplesign': {
-    /** Webhook endpoint for SimpleSign status updates */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['SimpleSignWebhookPayload']
+  '/cards/{cardId}': {
+    /**
+     * Get a card by ID
+     * @description Fetch a single access control card from DAX by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The card ID */
+          cardId: string
         }
       }
       responses: {
-        /** @description Webhook processed successfully */
+        /** @description Card found */
         200: {
-          content: never
+          content: {
+            'application/json': {
+              content?: components['schemas']['Card']
+            }
+          }
         }
-        /** @description Signature not found */
+        /** @description Card not found */
         404: {
-          content: never
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
         }
       }
     }

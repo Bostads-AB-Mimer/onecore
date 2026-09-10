@@ -13,7 +13,13 @@ import {
 import SaveIcon from '@mui/icons-material/Save'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { AxiosError } from 'axios'
 
@@ -35,12 +41,18 @@ import {
 } from './utils/contentBlocks'
 import { roomCountFromProperty } from './utils/templates'
 import { listingTextTemplates } from './templates/listingTextTemplates'
+import { getReturnTo } from '../../utils/navigationState'
 
 const ListingTextContentForm = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { rentalObjectCode } = useParams<{ rentalObjectCode: string }>()
   const [searchParams] = useSearchParams()
   const codeFromQuery = searchParams.get('code')
+
+  // Where "Tillbaka" leads: the view the user opened the editor from (passed
+  // as router state by e.g. ListingTextContentIconLink), else the search page.
+  const returnTo = getReturnTo(location.state, '/annonsinnehall')
 
   const isEditMode = !!rentalObjectCode
   const [objectCode, setObjectCode] = useState<string>(
@@ -148,7 +160,11 @@ const ListingTextContentForm = () => {
           contentBlocks,
         })
         toast.success('Annonsinnehåll skapat!')
-        navigate(`/annonsinnehall/${objectCode}/redigera`, { replace: true })
+        // Forward the origin so "Tillbaka" still works after the redirect.
+        navigate(`/annonsinnehall/${objectCode}/redigera`, {
+          replace: true,
+          state: location.state,
+        })
       }
     } catch (error) {
       if (error instanceof AxiosError) {
@@ -171,7 +187,7 @@ const ListingTextContentForm = () => {
     try {
       await deleteMutation.mutateAsync({ rentalObjectCode })
       toast.success('Annonsinnehåll raderat')
-      navigate('/annonsinnehall')
+      navigate(returnTo)
     } catch (error) {
       toast.error('Ett fel inträffade vid radering')
     }
@@ -200,7 +216,7 @@ const ListingTextContentForm = () => {
         <Typography color="error" gutterBottom>
           Kunde inte ladda annonsinnehåll
         </Typography>
-        <Button variant="contained" onClick={() => navigate('/annonsinnehall')}>
+        <Button variant="contained" onClick={() => navigate(returnTo)}>
           Tillbaka
         </Button>
       </Box>
@@ -229,7 +245,7 @@ const ListingTextContentForm = () => {
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/annonsinnehall')}
+            onClick={() => navigate(returnTo)}
           >
             Tillbaka
           </Button>
@@ -327,6 +343,7 @@ const ListingTextContentForm = () => {
                     <Button
                       component={Link}
                       to={`/annonsinnehall/${objectCode.trim()}/redigera`}
+                      state={location.state}
                       size="small"
                     >
                       Öppna befintligt
