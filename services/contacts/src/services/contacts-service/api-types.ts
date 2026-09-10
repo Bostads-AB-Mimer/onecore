@@ -1,5 +1,7 @@
 import z from 'zod'
 import {
+  AddRelationErrorCodeSchema,
+  AddRelationRequestBodySchema,
   CreateContactErrorCodeSchema,
   CreateContactErrorResponseBodySchema,
   CreateContactRequestBodySchema,
@@ -7,6 +9,9 @@ import {
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
   GetRelatedContactsResponseBodySchema,
+  RelationErrorResponseBodySchema,
+  RelationRoleTypeSchema,
+  RemoveRelationErrorCodeSchema,
   SyncContactsResponseBodySchema,
 } from './schema'
 
@@ -40,4 +45,20 @@ export type CreateContactErrorResponseBody = z.infer<
 
 export type CreateContactErrorCode = z.infer<
   typeof CreateContactErrorCodeSchema
+>
+
+export type RelationRoleType = z.infer<typeof RelationRoleTypeSchema>
+
+export type AddRelationRequestBody = z.infer<
+  typeof AddRelationRequestBodySchema
+>
+
+export type AddRelationErrorCode = z.infer<typeof AddRelationErrorCodeSchema>
+
+export type RemoveRelationErrorCode = z.infer<
+  typeof RemoveRelationErrorCodeSchema
+>
+
+export type RelationErrorResponseBody = z.infer<
+  typeof RelationErrorResponseBodySchema
 >

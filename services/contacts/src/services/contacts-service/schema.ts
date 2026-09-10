@@ -230,3 +230,42 @@ export const CreateContactErrorResponseBodySchema = z.object({
    */
   detail: z.string().optional(),
 })
+
+/* -------------------------------------------------------------------------
+ * Administering relations
+ *
+ * Roles are stored as the contact_relation role types. god_man/forvaltare are
+ * exclusive: a contact has at most one active guardian in total.
+ * ---------------------------------------------------------------------- */
+
+export const RelationRoleTypeSchema = z.enum([
+  'god_man',
+  'forvaltare',
+  'annan_fakturamottagare',
+])
+
+export const AddRelationRequestBodySchema = z.object({
+  relatedContactCode: z.string().trim().min(1),
+  roleType: RelationRoleTypeSchema,
+  createdBy: z.string().trim().min(1),
+})
+
+export const AddRelationErrorCodeSchema = z.enum([
+  'subject-not-found',
+  'related-not-found',
+  'self-relation',
+  'guardian-exists',
+  'duplicate-relation',
+])
+
+export const RemoveRelationErrorCodeSchema = z.enum([
+  'relation-not-found',
+  'invalid-role-type',
+  'missing-deleted-by',
+])
+
+export const RelationErrorResponseBodySchema = z.object({
+  error: z.union([AddRelationErrorCodeSchema, RemoveRelationErrorCodeSchema]),
+  /** For `guardian-exists`: the existing guardian's contact code. */
+  detail: z.string().optional(),
+})
