@@ -13,11 +13,7 @@ import { ResourceError, ResourceNotReady } from './error'
  * - `closed`: The resource has been closed and is no longer usable.
  */
 export type ResourceStatus =
-  | 'uninitialized'
-  | 'initializing'
-  | 'ready'
-  | 'failed'
-  | 'closed'
+  'uninitialized' | 'initializing' | 'ready' | 'failed' | 'closed'
 
 /**
  * A managed resource with lifecycle and health management.

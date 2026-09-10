@@ -1,5 +1,6 @@
 import { Box, Button, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
+import PostAddIcon from '@mui/icons-material/PostAdd'
 import {
   DndContext,
   closestCenter,
@@ -17,18 +18,33 @@ import {
 } from '@dnd-kit/sortable'
 import { SortableItem } from './SortableItem'
 import { ContentBlock, ContentBlockEditor } from './ContentBlockEditor'
+import { ApplyTemplateMode, TemplateDialog } from './TemplateDialog'
+import type { ListingTextTemplate } from '../templates/listingTextTemplates'
+import { createBlockId } from '../utils/contentBlocks'
+import { buildBlocksFromTemplate } from '../utils/templates'
 import { useState } from 'react'
 
 interface ContentBlocksListProps {
   blocks: ContentBlock[]
   onBlocksChange: (blocks: ContentBlock[]) => void
+  // When non-empty, an "Använd mall" button lets the user insert a template.
+  templates?: ListingTextTemplate[]
+  // Room count derived from the rental object, when known.
+  suggestedRoomCount?: number
+  // Highlights blocks that would fail validation (set after a save attempt).
+  showValidationErrors?: boolean
 }
 
 export const ContentBlocksList = ({
   blocks,
   onBlocksChange,
+  templates = [],
+  suggestedRoomCount,
+  showValidationErrors = false,
 }: ContentBlocksListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
+  const hasTemplates = templates.length > 0
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -58,11 +74,22 @@ export const ContentBlocksList = ({
 
   const handleAddBlock = () => {
     const newBlock: ContentBlock = {
-      id: `block-${Date.now()}-${Math.random()}`,
+      id: createBlockId(),
       type: 'text',
       content: '',
     }
     onBlocksChange([...blocks, newBlock])
+  }
+
+  const handleApplyTemplate = (
+    template: ListingTextTemplate,
+    roomCount: number,
+    mode: ApplyTemplateMode
+  ) => {
+    const templateBlocks = buildBlocksFromTemplate(template, roomCount)
+    onBlocksChange(
+      mode === 'replace' ? templateBlocks : [...blocks, ...templateBlocks]
+    )
   }
 
   const handleUpdateBlock = (
@@ -75,20 +102,21 @@ export const ContentBlocksList = ({
 
       // When changing type, keep what the user has typed: text-style types
       // share `content`, and between text and link the text is carried over
-      // (content <-> name) instead of being dropped.
+      // (content <-> name) instead of being dropped. A template hint was
+      // written for the original type, so it is dropped.
       if (field === 'type') {
         const newType = value as ContentBlock['type']
         const wasLink = block.type === 'link'
         const isLink = newType === 'link'
+        const retyped = { ...block, type: newType, placeholder: undefined }
 
         if (wasLink === isLink) {
-          return { ...block, type: newType }
+          return retyped
         }
 
         if (isLink) {
           return {
-            ...block,
-            type: newType,
+            ...retyped,
             content: undefined,
             name: block.content ?? '',
             url: '',
@@ -96,8 +124,7 @@ export const ContentBlocksList = ({
         }
 
         return {
-          ...block,
-          type: newType,
+          ...retyped,
           content: block.name ?? '',
           name: undefined,
           url: undefined,
@@ -117,23 +144,47 @@ export const ContentBlocksList = ({
 
   const activeBlock = blocks.find((block) => block.id === activeId)
 
+  // Shared by the header and the empty state, which differ only in wording
+  // and emphasis.
+  const renderActions = (
+    templateLabel: string,
+    addLabel: string,
+    addVariant: 'contained' | 'outlined'
+  ) => (
+    <Box display="flex" gap={1} justifyContent="center">
+      {hasTemplates && (
+        <Button
+          variant="outlined"
+          startIcon={<PostAddIcon />}
+          onClick={() => setTemplateDialogOpen(true)}
+          size="small"
+        >
+          {templateLabel}
+        </Button>
+      )}
+      <Button
+        variant={addVariant}
+        startIcon={<AddIcon />}
+        onClick={handleAddBlock}
+        size="small"
+      >
+        {addLabel}
+      </Button>
+    </Box>
+  )
+
   return (
     <Box>
       <Box
         display="flex"
         justifyContent="space-between"
         alignItems="center"
+        flexWrap="wrap"
+        gap={1}
         marginBottom={2}
       >
         <Typography variant="h6">Innehållsblock ({blocks.length})</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleAddBlock}
-          size="small"
-        >
-          Lägg till
-        </Button>
+        {renderActions('Använd mall', 'Lägg till', 'contained')}
       </Box>
 
       {blocks.length === 0 ? (
@@ -150,14 +201,11 @@ export const ContentBlocksList = ({
           <Typography color="text.secondary" gutterBottom>
             Inga innehållsblock ännu
           </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={handleAddBlock}
-            size="small"
-          >
-            Lägg till ditt första block
-          </Button>
+          {renderActions(
+            'Börja från mall',
+            'Lägg till ditt första block',
+            'outlined'
+          )}
         </Box>
       ) : (
         <DndContext
@@ -177,6 +225,7 @@ export const ContentBlocksList = ({
                   index={index}
                   onUpdate={handleUpdateBlock}
                   onDelete={handleDeleteBlock}
+                  showEmptyError={showValidationErrors}
                 />
               </SortableItem>
             ))}
@@ -203,6 +252,17 @@ export const ContentBlocksList = ({
           till klickbara länkar.
         </Typography>
       </Box>
+
+      {hasTemplates && (
+        <TemplateDialog
+          open={templateDialogOpen}
+          onClose={() => setTemplateDialogOpen(false)}
+          templates={templates}
+          suggestedRoomCount={suggestedRoomCount}
+          hasExistingBlocks={blocks.length > 0}
+          onApply={handleApplyTemplate}
+        />
+      )}
     </Box>
   )
 }

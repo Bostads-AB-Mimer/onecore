@@ -136,10 +136,11 @@ export const ListingPreview = ({
             {renderParagraphs(
               block.content || '',
               {
-                // Mirrors the public site, where "Underrubrik 3" renders as an h3
-                // (Graphik 1.375rem, weight 500)
+                // "Underrubrik 3" is an h3 below "Underrubrik 2" (1.5rem Bison);
+                // Graphik is wider than Bison, so it needs a smaller size to read
+                // as smaller
                 width: '100%',
-                fontSize: '1.375rem',
+                fontSize: '1.125rem',
                 fontFamily: 'graphikRegular',
                 fontWeight: 500,
                 lineHeight: 1.1,

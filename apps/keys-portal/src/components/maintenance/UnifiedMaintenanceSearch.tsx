@@ -15,8 +15,7 @@ import {
 import type { Contact, KeyBundle } from '@/services/types'
 
 type SearchResult =
-  | { type: 'contact'; data: Contact }
-  | { type: 'bundle'; data: KeyBundle }
+  { type: 'contact'; data: Contact } | { type: 'bundle'; data: KeyBundle }
 
 interface UnifiedMaintenanceSearchProps {
   onSelectContact: (contactCode: string) => void

@@ -303,6 +303,8 @@ interface ApartmentInfo {
   number: string
   type: string
   roomTypeCode: string
+  // Whole-room count from Xpand (balgt.roomcount); null when not registered
+  roomCount: number | null
   entrance: string
   floor: string
   hasElevator: boolean

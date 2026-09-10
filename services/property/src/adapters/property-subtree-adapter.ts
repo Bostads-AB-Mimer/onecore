@@ -433,39 +433,35 @@ const toPropertyNode = (
     subtypeCode: null,
     subtypeName: null,
     children: [
-      ...subtree.buildings.map(
-        (b): PropertyTreeChildNode => ({
-          type: 'building',
-          code: b.buildingCode,
-          name: b.buildingName,
-          subtypeCode: b.buildingType?.code ?? null,
-          subtypeName: b.buildingType?.name ?? null,
-          children: [
-            ...b.staircases.map((s) => ({
-              type: 'staircase' as const,
-              // Canonical staircase id `<bygcode>-<vancode>` — the composite
-              // the search scopes and uppgång URLs already use (bygcodes
-              // contain dashes, vancodes never do). Do not emit the bare code.
-              code: `${b.buildingCode}-${s.code}`,
-              name: s.name,
-              subtypeCode: null,
-              subtypeName: null,
-              children: byStaircase.get(`${b.buildingCode}:${s.code}`) ?? [],
-            })),
-            ...(byBuilding.get(b.buildingCode) ?? []),
-          ],
-        })
-      ),
-      ...subtree.parkingAreas.map(
-        (pa): PropertyTreeChildNode => ({
-          type: 'parkingArea',
-          code: pa.code,
-          name: pa.name,
-          subtypeCode: null,
-          subtypeName: null,
-          children: byParkingArea.get(pa.code) ?? [],
-        })
-      ),
+      ...subtree.buildings.map((b): PropertyTreeChildNode => ({
+        type: 'building',
+        code: b.buildingCode,
+        name: b.buildingName,
+        subtypeCode: b.buildingType?.code ?? null,
+        subtypeName: b.buildingType?.name ?? null,
+        children: [
+          ...b.staircases.map((s) => ({
+            type: 'staircase' as const,
+            // Canonical staircase id `<bygcode>-<vancode>` — the composite
+            // the search scopes and uppgång URLs already use (bygcodes
+            // contain dashes, vancodes never do). Do not emit the bare code.
+            code: `${b.buildingCode}-${s.code}`,
+            name: s.name,
+            subtypeCode: null,
+            subtypeName: null,
+            children: byStaircase.get(`${b.buildingCode}:${s.code}`) ?? [],
+          })),
+          ...(byBuilding.get(b.buildingCode) ?? []),
+        ],
+      })),
+      ...subtree.parkingAreas.map((pa): PropertyTreeChildNode => ({
+        type: 'parkingArea',
+        code: pa.code,
+        name: pa.name,
+        subtypeCode: null,
+        subtypeName: null,
+        children: byParkingArea.get(pa.code) ?? [],
+      })),
       ...loose,
     ],
   }

@@ -45,9 +45,13 @@ const list = async (dbConnection = db): Promise<ListingAreaTextContent[]> => {
   try {
     const result = await dbConnection
       .from('listing_area_text_content AS latc')
-      .select<
-        DbListingAreaTextContent[]
-      >('latc.Id', 'latc.MarketAreaCode', 'latc.ContentBlocks', 'latc.CreatedAt', 'latc.UpdatedAt')
+      .select<DbListingAreaTextContent[]>(
+        'latc.Id',
+        'latc.MarketAreaCode',
+        'latc.ContentBlocks',
+        'latc.CreatedAt',
+        'latc.UpdatedAt'
+      )
       .orderBy('latc.MarketAreaCode')
 
     return result.map(transformFromDbListingAreaTextContent)
