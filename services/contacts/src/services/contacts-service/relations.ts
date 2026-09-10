@@ -1,5 +1,5 @@
 import { Knex } from 'knex'
-import { type Resource } from '@onecore/utilities'
+import { logger, type Resource } from '@onecore/utilities'
 import z from 'zod'
 
 import { AdapterResult } from '@src/adapters/types'
@@ -51,6 +51,8 @@ const GUARDIAN_ROLES: RoleType[] = ['god_man', 'forvaltare']
 // index, which tells us which rule the lost race broke.
 const UNIQUE_VIOLATION = 2601
 
+// A single 2601 message names exactly one violated index, so the check
+// order below is immaterial.
 const violatedIndex = (err: unknown): 'guardian' | 'edge' | null => {
   const e = err as { number?: number; message?: string }
   if (e?.number !== UNIQUE_VIOLATION) return null
@@ -123,6 +125,14 @@ const addRelation = async (
     )
   } catch (err) {
     const violated = violatedIndex(err)
+    if (violated !== null) {
+      logger.warn(
+        { subject, related, roleType: request.roleType, violated },
+        'addRelation.lostRace'
+      )
+    }
+    // No `detail` on the race path: unlike the pre-check branches above,
+    // the winning row is never read back, so we have nothing to name.
     if (violated === 'guardian') return { ok: false, err: 'guardian-exists' }
     if (violated === 'edge') return { ok: false, err: 'duplicate-relation' }
     throw err

@@ -247,7 +247,7 @@ export const RelationRoleTypeSchema = z.enum([
 export const AddRelationRequestBodySchema = z.object({
   relatedContactCode: z.string().trim().min(1),
   roleType: RelationRoleTypeSchema,
-  createdBy: z.string().trim().min(1),
+  createdBy: z.string().trim().min(1).max(100),
 })
 
 export const AddRelationErrorCodeSchema = z.enum([

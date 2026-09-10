@@ -109,6 +109,21 @@ describe('addRelation', () => {
     })
   })
 
+  it('rejects a different guardian in the same role, naming the existing one', async () => {
+    inRole.mockResolvedValue([
+      DbContactRelationRowFactory.build({
+        subject_contact_code: 'P000111',
+        related_contact_code: 'P000444',
+        role_type: 'god_man',
+      }),
+    ])
+    expect(await addRelation(deps(), add)).toEqual({
+      ok: false,
+      err: 'guardian-exists',
+      detail: 'P000444',
+    })
+  })
+
   it('rejects a second guardian of the other type, naming the existing one', async () => {
     inRole.mockImplementation(async (_db, _code, roleType) =>
       roleType === 'forvaltare'

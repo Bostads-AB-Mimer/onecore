@@ -120,9 +120,9 @@ export const activeRelationsForMany = async (
  * contact's other relations. Covered by
  * `idx_contact_relation_subject`/`_related`.
  *
- * Ordered so that a caller taking the first row gets the same answer on every
- * request; active edges have no unique index yet, so nothing else guarantees
- * there is only one.
+ * Ordered so that a caller taking the first row gets a stable answer; since
+ * migration 202609101000 the filtered unique indexes also guarantee at most
+ * one active guardian per subject.
  */
 export const activeRelationsInRole = async (
   db: Knex,
