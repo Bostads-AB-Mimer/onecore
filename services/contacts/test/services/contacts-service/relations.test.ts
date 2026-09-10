@@ -5,7 +5,7 @@ import {
   removeRelation,
   RelationDependencies,
 } from '@src/services/contacts-service/relations'
-import { DbContactRelationRowFactory } from '../../factories/contact-relation-row'
+import * as factory from '../../factories'
 
 // addRelation reads the relations back inside its write transaction, so the
 // double has to hand the callback a usable handle. Handing back `fakeDb`
@@ -106,7 +106,7 @@ describe('addRelation', () => {
 
   it('rejects a duplicate active edge', async () => {
     inRole.mockResolvedValue([
-      DbContactRelationRowFactory.build({
+      factory.dbContactRelationRow.build({
         subject_contact_code: 'P000111',
         related_contact_code: 'P000222',
         role_type: 'god_man',
@@ -120,7 +120,7 @@ describe('addRelation', () => {
 
   it('rejects a different guardian in the same role, naming the existing one', async () => {
     inRole.mockResolvedValue([
-      DbContactRelationRowFactory.build({
+      factory.dbContactRelationRow.build({
         subject_contact_code: 'P000111',
         related_contact_code: 'P000444',
         role_type: 'god_man',
@@ -137,7 +137,7 @@ describe('addRelation', () => {
     inRole.mockImplementation(async (_db, _code, roleType) =>
       roleType === 'forvaltare'
         ? [
-            DbContactRelationRowFactory.build({
+            factory.dbContactRelationRow.build({
               subject_contact_code: 'P000111',
               related_contact_code: 'P000999',
               role_type: 'forvaltare',
@@ -156,7 +156,7 @@ describe('addRelation', () => {
   it('does not apply the guardian rule to annan_fakturamottagare', async () => {
     inRole.mockImplementation(async (_db, _code, roleType) =>
       roleType === 'god_man'
-        ? [DbContactRelationRowFactory.build({ role_type: 'god_man' })]
+        ? [factory.dbContactRelationRow.build({ role_type: 'god_man' })]
         : []
     )
     const result = await addRelation(deps(), {
@@ -202,7 +202,9 @@ describe('addRelation', () => {
   })
 
   it('answers with the subject relations read back after the insert', async () => {
-    const relations = [{ contactCode: 'P000222', role: 'trustee' }]
+    const relations = [
+      factory.relatedContact.build({ contactCode: 'P000222', role: 'trustee' }),
+    ]
     const relatedContactsFor = jest.fn().mockResolvedValue(relations)
 
     const result = await addRelation(deps({ relatedContactsFor }), add)
@@ -268,15 +270,15 @@ describe('removeRelation', () => {
 
   it('soft-deletes every active row for the triple, attributed to deletedBy', async () => {
     inRole.mockResolvedValue([
-      DbContactRelationRowFactory.build({
+      factory.dbContactRelationRow.build({
         id: 'a',
         related_contact_code: 'P000222',
       }),
-      DbContactRelationRowFactory.build({
+      factory.dbContactRelationRow.build({
         id: 'b',
         related_contact_code: 'P000222 ',
       }),
-      DbContactRelationRowFactory.build({
+      factory.dbContactRelationRow.build({
         id: 'c',
         related_contact_code: 'P000333',
       }),
@@ -291,7 +293,7 @@ describe('removeRelation', () => {
   // Two concurrent deletes both read the row; only one update touches it.
   it('returns relation-not-found when a concurrent delete got there first', async () => {
     inRole.mockResolvedValue([
-      DbContactRelationRowFactory.build({
+      factory.dbContactRelationRow.build({
         id: 'a',
         related_contact_code: 'P000222',
       }),
