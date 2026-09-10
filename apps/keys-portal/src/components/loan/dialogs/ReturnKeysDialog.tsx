@@ -128,8 +128,8 @@ export function ReturnKeysDialog({
               }
             : undefined
         }
-        title="Återlämna nycklar och taggar"
-        description="Välj vilka nycklar och taggar som ska visas på kvittensen."
+        title="Återlämna nycklar och droppar"
+        description="Välj vilka nycklar och droppar som ska visas på kvittensen."
       />
 
       <ConfirmDialog
