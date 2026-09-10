@@ -121,8 +121,9 @@ async function createContact(
   return data
 }
 
-export type RelationRoleType =
-  'god_man' | 'forvaltare' | 'annan_fakturamottagare'
+export type RelationRoleType = NonNullable<
+  paths['/v1/contacts/{contactCode}/relations']['post']['requestBody']
+>['content']['application/json']['roleType']
 
 export type RelationRef = {
   contactCode: string
@@ -130,8 +131,11 @@ export type RelationRef = {
   roleType: RelationRoleType
 }
 
+export type RelationErrorCode =
+  paths['/v1/contacts/{contactCode}/relations']['post']['responses'][409]['content']['application/json']['error']
+
 /** Error body shared by every non-2xx response from the relation endpoints. */
-export type RelationError = { error: string; detail?: string }
+export type RelationError = { error: RelationErrorCode; detail?: string }
 
 async function addRelation({
   contactCode,
@@ -145,7 +149,7 @@ async function addRelation({
 
   if (error) throw error
 
-  return (data?.content?.relations ?? []) as RelatedContact[]
+  return data?.content?.relations ?? []
 }
 
 async function removeRelation({

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
 
 import type { RelationRoleType } from '@/services/api/core/tenantService'
@@ -17,7 +18,7 @@ import {
 import { Button } from '@/shared/ui/Button'
 
 import { useRemoveRelation } from '../hooks/useRemoveRelation'
-import { relationErrorMessage } from '../lib/relations'
+import { relationErrorMessage } from '../lib/guardians'
 
 interface RemoveRelationButtonProps {
   contactCode: string
@@ -34,6 +35,7 @@ export const RemoveRelationButton = ({
   roleType,
   roleLabel,
 }: RemoveRelationButtonProps) => {
+  const [open, setOpen] = useState(false)
   const { toast } = useToast()
   const removeRelation = useRemoveRelation()
   const lowerLabel = roleLabel.toLowerCase()
@@ -42,21 +44,35 @@ export const RemoveRelationButton = ({
     removeRelation.mutate(
       { contactCode, relatedContactCode, roleType },
       {
-        onSuccess: () =>
-          toast({ title: `${roleLabel} borttagen`, description: relatedName }),
-        onError: (error) =>
+        onSuccess: () => {
+          setOpen(false)
+          toast({ title: `${roleLabel} borttagen`, description: relatedName })
+        },
+        onError: (error) => {
+          setOpen(false)
           toast({
             variant: 'destructive',
             title: 'Kunde inte ta bort',
-            description: relationErrorMessage(error?.error),
-          }),
+            description: relationErrorMessage(error?.error, error?.detail),
+          })
+        },
       }
     )
 
   return (
-    <AlertDialog>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && removeRelation.isPending) return
+        setOpen(next)
+      }}
+    >
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="sm" aria-label={`Ta bort ${lowerLabel}`}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Ta bort ${lowerLabel}`}
+        >
           <Trash2 className="h-4 w-4" />
         </Button>
       </AlertDialogTrigger>
@@ -69,12 +85,17 @@ export const RemoveRelationButton = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Avbryt</AlertDialogCancel>
+          <AlertDialogCancel disabled={removeRelation.isPending}>
+            Avbryt
+          </AlertDialogCancel>
           <AlertDialogAction
-            onClick={confirm}
             disabled={removeRelation.isPending}
+            onClick={(e) => {
+              e.preventDefault()
+              confirm()
+            }}
           >
-            Ta bort
+            {removeRelation.isPending ? 'Tar bort...' : 'Ta bort'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

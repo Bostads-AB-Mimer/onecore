@@ -13,7 +13,7 @@ import type { RelatedContact } from '@/services/types'
 import { paths } from '@/shared/routes'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
-import { hasGuardian, ROLE_TYPE_FOR_RELATED_ROLE } from '../lib/relations'
+import { hasGuardian, ROLE_TYPE_FOR_RELATED_ROLE } from '../lib/guardians'
 import { AddGuardianDialog } from './AddGuardianDialog'
 import { RemoveRelationButton } from './RemoveRelationButton'
 

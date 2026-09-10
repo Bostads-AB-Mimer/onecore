@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { PlusCircle } from 'lucide-react'
 
-import { useTenantSearch } from '@/entities/tenant'
+import { type TenantSearchResult, useTenantSearch } from '@/entities/tenant'
 
 import { useToast } from '@/shared/hooks/useToast'
+import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
@@ -26,26 +27,21 @@ import {
 
 import { useAddRelation } from '../hooks/useAddRelation'
 import {
+  GUARDIAN_ROLE_LABELS,
   GUARDIAN_ROLE_TYPES,
-  guardianRoleLabels,
   type GuardianRoleType,
   relationErrorMessage,
-} from '../lib/relations'
+} from '../lib/guardians'
 
 interface AddGuardianDialogProps {
   /** The contact the guardian is added to (huvudman). */
   contactCode: string
 }
 
-interface Candidate {
-  contactCode: string
-  fullName: string
-}
-
 export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
   const [open, setOpen] = useState(false)
   const [roleType, setRoleType] = useState<GuardianRoleType>('god_man')
-  const [selected, setSelected] = useState<Candidate | null>(null)
+  const [selected, setSelected] = useState<TenantSearchResult | null>(null)
   const { toast } = useToast()
   const addRelation = useAddRelation()
   const search = useTenantSearch()
@@ -53,9 +49,9 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (!next) {
+      setRoleType('god_man')
       setSelected(null)
       search.setSearchQuery('')
-      addRelation.reset()
     }
   }
 
@@ -68,7 +64,7 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
         onSuccess: () => {
           handleOpenChange(false)
           toast({
-            title: `${guardianRoleLabels[roleType]} tillagd`,
+            title: `${GUARDIAN_ROLE_LABELS[roleType]} tillagd`,
             description: `${chosen.fullName} (${chosen.contactCode})`,
           })
         },
@@ -76,7 +72,7 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
           toast({
             variant: 'destructive',
             title: 'Kunde inte lägga till',
-            description: relationErrorMessage(error?.error),
+            description: relationErrorMessage(error?.error, error?.detail),
           }),
       }
     )
@@ -95,7 +91,11 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
           Lägg till god man/förvaltare
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent
+        onEscapeKeyDown={(e) => {
+          if (addRelation.isPending) e.preventDefault()
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Lägg till god man eller förvaltare</DialogTitle>
           <DialogDescription>
@@ -106,18 +106,18 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Roll</Label>
+            <Label htmlFor="guardian-role">Roll</Label>
             <Select
               value={roleType}
               onValueChange={(value) => setRoleType(value as GuardianRoleType)}
             >
-              <SelectTrigger>
+              <SelectTrigger id="guardian-role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {GUARDIAN_ROLE_TYPES.map((role) => (
                   <SelectItem key={role} value={role}>
-                    {guardianRoleLabels[role]}
+                    {GUARDIAN_ROLE_LABELS[role]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -148,12 +148,11 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
                     key={candidate.contactCode}
                     type="button"
                     onClick={() => setSelected(candidate)}
-                    className={
-                      'w-full text-left p-2 hover:bg-muted ' +
-                      (selected?.contactCode === candidate.contactCode
-                        ? 'bg-muted font-medium'
-                        : '')
-                    }
+                    className={cn(
+                      'w-full text-left p-2 hover:bg-muted',
+                      selected?.contactCode === candidate.contactCode &&
+                        'bg-muted font-medium'
+                    )}
                   >
                     {candidate.fullName}{' '}
                     <span className="text-muted-foreground">
