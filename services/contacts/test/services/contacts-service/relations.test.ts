@@ -18,7 +18,7 @@ const deps = (
   overrides: Partial<RelationDependencies> = {}
 ): RelationDependencies => ({
   db: () => fakeDb,
-  contactExists: jest.fn().mockResolvedValue(true),
+  canonicalContactCode: jest.fn(async (code: string) => code),
   relatedContactsFor: jest.fn().mockResolvedValue([]),
   ...overrides,
 })
@@ -76,12 +76,14 @@ describe('addRelation', () => {
       relatedContactCode: 'P000111',
     })
     expect(result).toEqual({ ok: false, err: 'self-relation' })
-    expect(d.contactExists).not.toHaveBeenCalled()
+    expect(d.canonicalContactCode).not.toHaveBeenCalled()
   })
 
   it('rejects when the subject does not exist in Xpand', async () => {
     const d = deps({
-      contactExists: jest.fn(async (code: string) => code !== 'P000111'),
+      canonicalContactCode: jest.fn(async (code: string) =>
+        code === 'P000111' ? null : code
+      ),
     })
     expect(await addRelation(d, add)).toEqual({
       ok: false,
@@ -92,7 +94,9 @@ describe('addRelation', () => {
 
   it('rejects when the related contact does not exist in Xpand', async () => {
     const d = deps({
-      contactExists: jest.fn(async (code: string) => code !== 'P000222'),
+      canonicalContactCode: jest.fn(async (code: string) =>
+        code === 'P000222' ? null : code
+      ),
     })
     expect(await addRelation(d, add)).toEqual({
       ok: false,
@@ -174,6 +178,27 @@ describe('addRelation', () => {
 
     expect(result).toEqual({ ok: false, err: 'self-relation' })
     expect(insert).not.toHaveBeenCalled()
+  })
+
+  // Xpand answers a lowercase lookup, but the read path keys names by the code
+  // Xpand returns, so a row stored in the caller's casing is dropped from both
+  // kundkort while still occupying the subject's guardian slot.
+  it('persists the codes as Xpand spells them, not as the caller sent them', async () => {
+    const canonicalContactCode = jest.fn(async (code: string) =>
+      code.toUpperCase()
+    )
+
+    await addRelation(deps({ canonicalContactCode }), {
+      ...add,
+      subjectContactCode: 'p000111',
+      relatedContactCode: 'p000222',
+    })
+
+    expect(insert.mock.calls[0][1][0]).toEqual({
+      subjectContactCode: 'P000111',
+      relatedContactCode: 'P000222',
+      roleType: 'god_man',
+    })
   })
 
   it('answers with the subject relations read back after the insert', async () => {

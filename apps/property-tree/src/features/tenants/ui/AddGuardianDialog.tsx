@@ -54,7 +54,9 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
   }
 
   // Closing mid-flight would drop the pending add without telling anyone, so
-  // the overlay, the X and Escape are all inert until the mutation settles.
+  // the overlay, the X and Escape are all inert until the mutation settles —
+  // as are the role and contact inputs, which would otherwise disagree with
+  // the request already on its way.
   const handleOpenChange = (next: boolean) => {
     if (!next && addRelation.isPending) return
     if (next) setOpen(true)
@@ -115,6 +117,7 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
             <Select
               value={roleType}
               onValueChange={(value) => setRoleType(value as GuardianRoleType)}
+              disabled={addRelation.isPending}
             >
               <SelectTrigger id="guardian-role">
                 <SelectValue />
@@ -135,6 +138,7 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
               id="guardian-search"
               placeholder="Sök på namn eller kundnummer (minst 3 tecken)"
               value={search.searchQuery}
+              disabled={addRelation.isPending}
               onChange={(event) => {
                 search.setSearchQuery(event.target.value)
                 setSelected(null)
@@ -152,6 +156,7 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
                   <button
                     key={candidate.contactCode}
                     type="button"
+                    disabled={addRelation.isPending}
                     onClick={() => setSelected(candidate)}
                     className={cn(
                       'w-full text-left p-2 hover:bg-muted',

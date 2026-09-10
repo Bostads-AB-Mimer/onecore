@@ -8,7 +8,7 @@ import {
   softDeleteByIds,
   RoleType,
 } from '@src/adapters/contact-relations'
-import { contactExists } from '@src/adapters/xpand/contact-lookup-query'
+import { canonicalContactCode } from '@src/adapters/xpand/contact-lookup-query'
 import { relatedContactsFor } from '@src/adapters/related-contacts'
 import { RelatedContact } from '@src/domain/contact'
 import { AddRelationErrorCode, RemoveRelationErrorCode } from './api-types'
@@ -22,7 +22,7 @@ import { AddRelationErrorCode, RemoveRelationErrorCode } from './api-types'
  */
 export type RelationDependencies = {
   db: () => Knex
-  contactExists: (contactCode: string) => Promise<boolean>
+  canonicalContactCode: (contactCode: string) => Promise<string | null>
   relatedContactsFor: (
     contactCode: string,
     db: Knex
@@ -72,9 +72,10 @@ const violatedIndex = (err: unknown): 'guardian' | 'edge' | null => {
 
 /**
  * Adds an active relation after checking, in order: self-edge, both contacts
- * exist in Xpand, the exact edge is not already active, and (for guardian
- * roles) the subject has no active guardian of either type. The unique
- * indexes are the backstop for a race between two requests.
+ * exist in Xpand (resolving each code to the spelling Xpand stores), the exact
+ * edge is not already active, and (for guardian roles) the subject has no
+ * active guardian of either type. The unique indexes are the backstop for a
+ * race between two requests.
  *
  * The insert and the read-back of the subject's relations share one
  * transaction, so a failure reading back rolls the insert away rather than
@@ -84,16 +85,18 @@ const addRelation = async (
   deps: RelationDependencies,
   request: AddRelationRequest
 ): Promise<AdapterResult<RelatedContact[], AddRelationErrorCode>> => {
-  const subject = request.subjectContactCode.trim()
-  const related = request.relatedContactCode.trim()
-  if (sameContact(subject, related)) return { ok: false, err: 'self-relation' }
+  if (sameContact(request.subjectContactCode, request.relatedContactCode)) {
+    return { ok: false, err: 'self-relation' }
+  }
 
-  const [subjectExists, relatedExists] = await Promise.all([
-    deps.contactExists(subject),
-    deps.contactExists(related),
+  // Everything below works in Xpand's spelling, not the caller's, so the row
+  // written is the row the read path can find again.
+  const [subject, related] = await Promise.all([
+    deps.canonicalContactCode(request.subjectContactCode.trim()),
+    deps.canonicalContactCode(request.relatedContactCode.trim()),
   ])
-  if (!subjectExists) return { ok: false, err: 'subject-not-found' }
-  if (!relatedExists) return { ok: false, err: 'related-not-found' }
+  if (subject === null) return { ok: false, err: 'subject-not-found' }
+  if (related === null) return { ok: false, err: 'related-not-found' }
 
   const db = deps.db()
 
@@ -194,7 +197,8 @@ const makeRelationDependencies = (
   contactsDb: Resource<Knex>
 ): RelationDependencies => ({
   db: () => contactsDb.get(),
-  contactExists: (contactCode) => contactExists(xpandDb.get(), contactCode),
+  canonicalContactCode: (contactCode) =>
+    canonicalContactCode(xpandDb.get(), contactCode),
   relatedContactsFor: (contactCode, db) =>
     relatedContactsFor(xpandDb.get(), db, contactCode),
 })
