@@ -5,6 +5,10 @@ import { ContentBlock } from '../components/ContentBlockEditor'
 
 export type ApiContentBlock = z.infer<typeof leasing.v1.ContentBlockSchema>
 
+// Local-only id for blocks created in the editor (drag-and-drop tracking and
+// React keys). Never sent to the API.
+export const createBlockId = () => `block-${Date.now()}-${Math.random()}`
+
 // Adds a stable local id to each block so it can be tracked in drag-and-drop
 // lists and React keys. The id is not sent back to the API.
 export const fromApiBlocks = (blocks: ApiContentBlock[]): ContentBlock[] =>

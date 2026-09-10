@@ -52,6 +52,7 @@ const housingRentalProperty: RentalPropertyInfo = {
     number: '1001',
     type: 'Apartment',
     roomTypeCode: '2RK',
+    roomCount: 2,
     entrance: 'A',
     floor: '1',
     hasElevator: false,

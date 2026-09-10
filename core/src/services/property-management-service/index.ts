@@ -51,6 +51,9 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
  *                   type: string
  *                 roomTypeCode:
  *                   type: string
+ *                 roomCount:
+ *                   type: integer
+ *                   nullable: true
  *                 entrance:
  *                   type: string
  *                 floor:

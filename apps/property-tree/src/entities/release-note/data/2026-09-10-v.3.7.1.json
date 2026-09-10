@@ -1,0 +1,23 @@
+[
+  {
+    "id": "rn-2026-09-04-v371-1",
+    "date": "2026-09-04",
+    "title": "Annonshantering i onecore",
+    "description": "Nu hanteras alla annonstexter som syns på hemsidan för lediga hyresobjekt i ONECore",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-09-10-v371-2",
+    "date": "2026-09-10",
+    "title": "Ikon och länkar till annonstexter",
+    "description": "Snabblänkar till att redigera annonstexter i portalen för bilplatser",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-09-10-v361-3",
+    "date": "2026-09-10",
+    "title": "Mallar för annonstexter",
+    "description": "Det finns nu mallar med rubriker för annonstexter",
+    "category": "feature"
+  }
+]

@@ -14968,6 +14968,7 @@ export interface components {
           number?: string
           type?: string
           roomTypeCode?: string
+          roomCount?: number | null
           entrance?: string
           floor?: string
           hasElevator?: boolean
