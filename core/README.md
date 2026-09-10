@@ -12,6 +12,7 @@ For example, see the parking space processes:
 
 - [Scored parking spaces — overview](./src/processes/parkingspaces/internal/DOCS_Overview.md)
 - [Non-scored parking spaces — create lease](./src/processes/parkingspaces/external/DOCS_Create_Lease_for_None_Scored_Parking_Space.md)
+- [Home insurance — overview](./src/processes/homeinsurance/DOCS_Overview.md)
 
 ### Swagger
 
