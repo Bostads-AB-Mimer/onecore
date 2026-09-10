@@ -12,7 +12,7 @@ import {
   allInvoiceRecipientCandidates,
 } from '@src/adapters/xpand/relation-import-query'
 import { collapseInvoiceRecipients, Conflict } from './collapse'
-import { reconcile } from './reconcile'
+import { reconcile, SkippedGuardian } from './reconcile'
 
 export const IMPORT_ACTOR = 'xpand-import'
 
@@ -31,6 +31,7 @@ export type ImportReport = {
   unchanged: number
   protected: number
   conflicts: Conflict[]
+  skippedGuardians: SkippedGuardian[]
 }
 
 const countByRole = (edges: RelationEdge[]): Record<RoleType, number> => {
@@ -47,6 +48,10 @@ const countByRole = (edges: RelationEdge[]): Record<RoleType, number> => {
  * level, and makes the import-owned rows in `contact_relation` mirror the
  * result. Idempotent: rerunning against unchanged data writes nothing. All
  * writes happen in one transaction; `dryRun` skips them entirely.
+ *
+ * A guardian someone else has set wins: the Xpand edge is reported in
+ * `skippedGuardians` instead of being written, since only one active guardian
+ * per subject is allowed and the import may not remove another actor's row.
  *
  * `inserted`/`softDeleted`/`unchanged`/`protected` on the returned report are
  * the planned counts from the reconcile step, not affected-row counts read
@@ -101,8 +106,11 @@ export const runImport = async ({
     }
 
     await contactsDb.transaction(async (trx) => {
-      await insertMany(trx, plan.toInsert, IMPORT_ACTOR)
+      // Deletes go first: a subject whose guardian changed has both a delete
+      // and an insert planned, and the unique index on the active guardian
+      // rejects the insert while the old row is still active.
       await softDeleteByIds(trx, plan.toDelete, IMPORT_ACTOR)
+      await insertMany(trx, plan.toInsert, IMPORT_ACTOR)
     })
   }
 
@@ -114,5 +122,6 @@ export const runImport = async ({
     unchanged: plan.unchangedCount,
     protected: plan.protectedCount,
     conflicts,
+    skippedGuardians: plan.skippedGuardians,
   }
 }

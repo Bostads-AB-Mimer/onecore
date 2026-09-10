@@ -1,4 +1,5 @@
 import { KnexConnectionParameters } from '@onecore/utilities'
+import { RoleType } from '@src/adapters/contact-relations'
 import { ImportReport } from './import'
 import { Conflict } from './collapse'
 
@@ -30,6 +31,12 @@ export const formatTargets = (
     `Skriver till contacts: ${contacts.host}/${contacts.database}`,
   ].join('\n')
 
+const ROLE_LABELS: Record<RoleType, string> = {
+  god_man: 'god man',
+  forvaltare: 'förvaltare',
+  annan_fakturamottagare: 'annan fakturamottagare',
+}
+
 export const formatReport = (report: ImportReport): string =>
   [
     `import-contact-relations${report.dryRun ? ' (DRY RUN — inget skrivet)' : ''}`,
@@ -45,6 +52,12 @@ export const formatReport = (report: ImportReport): string =>
         (r) => `    ${r.contactCode}  (avtal ${r.leaseIds.join(', ')})`
       ),
     ]),
+    `Överhoppade gode män/förvaltare: ${report.skippedGuardians.length}`,
+    ...report.skippedGuardians.map(
+      (s) =>
+        `  ${s.subjectContactCode}: Xpand säger ${ROLE_LABELS[s.desired.roleType]} ${s.desired.relatedContactCode}` +
+        ` — behåller ${ROLE_LABELS[s.existing.roleType]} ${s.existing.relatedContactCode} (satt av ${s.existing.createdBy})`
+    ),
   ].join('\n')
 
 export const conflictsCsv = (conflicts: Conflict[]): string =>

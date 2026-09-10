@@ -43,6 +43,7 @@ describe('reconcile', () => {
       toDelete: [],
       unchangedCount: 0,
       protectedCount: 0,
+      skippedGuardians: [],
     })
   })
 
@@ -58,6 +59,7 @@ describe('reconcile', () => {
       toDelete: [],
       unchangedCount: 2,
       protectedCount: 0,
+      skippedGuardians: [],
     })
   })
 
@@ -73,6 +75,7 @@ describe('reconcile', () => {
       toDelete: ['b'],
       unchangedCount: 1,
       protectedCount: 0,
+      skippedGuardians: [],
     })
   })
 
@@ -89,6 +92,7 @@ describe('reconcile', () => {
       toDelete: ['a'],
       unchangedCount: 0,
       protectedCount: 0,
+      skippedGuardians: [],
     })
   })
 
@@ -104,6 +108,7 @@ describe('reconcile', () => {
       toDelete: [],
       unchangedCount: 0,
       protectedCount: 1,
+      skippedGuardians: [],
     })
   })
 
@@ -124,6 +129,7 @@ describe('reconcile', () => {
       toDelete: ['a'],
       unchangedCount: 0,
       protectedCount: 0,
+      skippedGuardians: [],
     })
   })
 
@@ -163,6 +169,7 @@ describe('reconcile', () => {
       toDelete: ['newer', 'newest'],
       unchangedCount: 1,
       protectedCount: 0,
+      skippedGuardians: [],
     })
   })
 
@@ -178,6 +185,7 @@ describe('reconcile', () => {
       toDelete: [],
       unchangedCount: 1,
       protectedCount: 0,
+      skippedGuardians: [],
     })
   })
 
@@ -193,6 +201,7 @@ describe('reconcile', () => {
       toDelete: ['mine'],
       unchangedCount: 1,
       protectedCount: 0,
+      skippedGuardians: [],
     })
   })
 
@@ -208,6 +217,7 @@ describe('reconcile', () => {
       toDelete: [],
       unchangedCount: 0,
       protectedCount: 0,
+      skippedGuardians: [],
     })
   })
 
@@ -223,6 +233,104 @@ describe('reconcile', () => {
       toDelete: [],
       unchangedCount: 0,
       protectedCount: 0,
+      skippedGuardians: [],
     })
+  })
+
+  it('skips an xpand guardian when another actor already set one for the subject', () => {
+    const manual: RelationEdge = {
+      subjectContactCode: 'P1',
+      relatedContactCode: 'P9',
+      roleType: 'god_man',
+    }
+    const plan = reconcile(
+      [godMan],
+      [
+        row('manual', manual, { createdBy: OTHER_ACTOR }),
+        row('stale', forvaltare),
+      ],
+      new Set(),
+      IMPORT_ACTOR
+    )
+
+    expect(plan.toInsert).toEqual([])
+    expect(plan.toDelete).toEqual(['stale'])
+    expect(plan.skippedGuardians).toEqual([
+      {
+        subjectContactCode: 'P1',
+        desired: godMan,
+        existing: {
+          relatedContactCode: 'P9',
+          roleType: 'god_man',
+          createdBy: OTHER_ACTOR,
+        },
+      },
+    ])
+  })
+
+  it('skips an xpand god man when another actor set a forvaltare for the subject', () => {
+    const manual: RelationEdge = {
+      subjectContactCode: 'P1',
+      relatedContactCode: 'P9',
+      roleType: 'forvaltare',
+    }
+    const plan = reconcile(
+      [godMan],
+      [row('manual', manual, { createdBy: OTHER_ACTOR })],
+      new Set(),
+      IMPORT_ACTOR
+    )
+
+    expect(plan.toInsert).toEqual([])
+    expect(plan.skippedGuardians).toEqual([
+      {
+        subjectContactCode: 'P1',
+        desired: godMan,
+        existing: {
+          relatedContactCode: 'P9',
+          roleType: 'forvaltare',
+          createdBy: OTHER_ACTOR,
+        },
+      },
+    ])
+  })
+
+  it('replaces an import-owned guardian rather than skipping it', () => {
+    const previous: RelationEdge = {
+      subjectContactCode: 'P1',
+      relatedContactCode: 'P9',
+      roleType: 'god_man',
+    }
+    const plan = reconcile(
+      [godMan],
+      [row('old', previous)],
+      new Set(),
+      IMPORT_ACTOR
+    )
+
+    expect(plan).toEqual({
+      toInsert: [godMan],
+      toDelete: ['old'],
+      unchangedCount: 0,
+      protectedCount: 0,
+      skippedGuardians: [],
+    })
+  })
+
+  it('never skips a fakturamottagare edge because the subject has a guardian', () => {
+    const manualGuardian: RelationEdge = {
+      subjectContactCode: 'P5',
+      relatedContactCode: 'P9',
+      roleType: 'god_man',
+    }
+    const plan = reconcile(
+      [recipient],
+      [row('manual', manualGuardian, { createdBy: OTHER_ACTOR })],
+      new Set(),
+      IMPORT_ACTOR
+    )
+
+    expect(plan.toInsert).toEqual([recipient])
+    expect(plan.skippedGuardians).toEqual([])
   })
 })
