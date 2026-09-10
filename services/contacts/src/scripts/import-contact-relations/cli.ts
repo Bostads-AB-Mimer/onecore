@@ -52,7 +52,7 @@ export const formatReport = (report: ImportReport): string =>
         (r) => `    ${r.contactCode}  (avtal ${r.leaseIds.join(', ')})`
       ),
     ]),
-    `Överhoppade gode män/förvaltare: ${report.skippedGuardians.length}`,
+    `Överhoppade:           ${report.skippedGuardians.length}`,
     ...report.skippedGuardians.map(
       (s) =>
         `  ${s.subjectContactCode}: Xpand säger ${ROLE_LABELS[s.desired.roleType]} ${s.desired.relatedContactCode}` +

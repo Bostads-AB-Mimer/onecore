@@ -275,6 +275,6 @@ export const RelationErrorResponseBodySchema = z.object({
     RemoveRelationErrorCodeSchema,
     RemoveRelationRequestErrorCodeSchema,
   ]),
-  /** For `guardian-exists`: the existing guardian's contact code. */
+  /** For `guardian-exists`: the existing guardian's contact code, when known. */
   detail: z.string().optional(),
 })

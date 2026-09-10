@@ -317,6 +317,28 @@ describe('reconcile', () => {
     })
   })
 
+  it('skips a second xpand guardian for the same subject in one run', () => {
+    const second: RelationEdge = {
+      subjectContactCode: 'P1',
+      relatedContactCode: 'P9',
+      roleType: 'forvaltare',
+    }
+    const plan = reconcile([godMan, second], [], new Set(), IMPORT_ACTOR)
+
+    expect(plan.toInsert).toEqual([godMan])
+    expect(plan.skippedGuardians).toEqual([
+      {
+        subjectContactCode: 'P1',
+        desired: second,
+        existing: {
+          relatedContactCode: godMan.relatedContactCode,
+          roleType: godMan.roleType,
+          createdBy: IMPORT_ACTOR,
+        },
+      },
+    ])
+  })
+
   it('never skips a fakturamottagare edge because the subject has a guardian', () => {
     const manualGuardian: RelationEdge = {
       subjectContactCode: 'P5',

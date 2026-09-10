@@ -95,7 +95,7 @@ describe('formatReport', () => {
       })
     )
 
-    expect(text).toContain('Överhoppade gode män/förvaltare: 1')
+    expect(text).toContain('Överhoppade:           1')
     expect(text).toContain(
       '  P1: Xpand säger god man P2 — behåller förvaltare P3 (satt av manual-admin)'
     )

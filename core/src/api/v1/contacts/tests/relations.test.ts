@@ -39,6 +39,12 @@ const WRITER_WITHOUT_NAME: TestUser = {
   preferred_username: 'cecilia',
   realm_access: { roles: ['api-access', 'contacts:write'] },
 }
+// A token whose display name is present but empty, so `||` must skip it.
+const WRITER_WITH_EMPTY_NAME: TestUser = {
+  name: '',
+  preferred_username: 'cecilia',
+  realm_access: { roles: ['api-access', 'contacts:write'] },
+}
 const READER: TestUser = {
   name: 'Bo Reader',
   preferred_username: 'bo',
@@ -168,6 +174,19 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
 
   it('falls back to preferred_username when the token has no name', async () => {
     mockUser = WRITER_WITHOUT_NAME
+    adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
+
+    await request(app.callback())
+      .post('/v1/contacts/P1/relations')
+      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
+
+    expect(adapter.addRelation).toHaveBeenCalledWith(
+      expect.objectContaining({ createdBy: 'cecilia' })
+    )
+  })
+
+  it('falls back to preferred_username when the name is empty', async () => {
+    mockUser = WRITER_WITH_EMPTY_NAME
     adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
 
     await request(app.callback())

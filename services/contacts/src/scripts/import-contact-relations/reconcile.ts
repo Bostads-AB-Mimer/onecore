@@ -31,6 +31,9 @@ export type ReconcilePlan = {
   skippedGuardians: SkippedGuardian[]
 }
 
+/** The guardian a subject ends up with, from an existing row or this run. */
+type SurvivingGuardian = SkippedGuardian['existing']
+
 const isGuardianRole = (roleType: RoleType): boolean =>
   roleType === 'god_man' || roleType === 'forvaltare'
 
@@ -60,7 +63,8 @@ const oldestFirst = (a: DbContactRelationRow, b: DbContactRelationRow) =>
  *   it existed.
  * - A guardian edge is skipped when the subject already has an active
  *   guardian row (in either guardian role) that this run does not delete —
- *   typically one a caseworker set. The unique index allows only one active
+ *   typically one a caseworker set — or when an earlier edge in this same run
+ *   already claimed the subject. The unique index allows only one active
  *   guardian per subject, so inserting anyway would fail the whole run; the
  *   edge is reported in `skippedGuardians` instead.
  * - `conflictHolders` are holders whose fakturamottagare could not be
@@ -116,13 +120,22 @@ export const reconcile = (
 
   // The guardian each subject still has once this run's deletes are applied.
   const deletedIds = new Set(toDelete)
-  const survivingGuardians = new Map<string, DbContactRelationRow>()
+  const keptRows = new Map<string, DbContactRelationRow>()
   for (const r of existing) {
     if (!isGuardianRole(r.role_type) || deletedIds.has(r.id)) continue
-    const current = survivingGuardians.get(r.subject_contact_code)
+    const current = keptRows.get(r.subject_contact_code)
     if (!current || oldestFirst(r, current) < 0) {
-      survivingGuardians.set(r.subject_contact_code, r)
+      keptRows.set(r.subject_contact_code, r)
     }
+  }
+
+  const survivingGuardians = new Map<string, SurvivingGuardian>()
+  for (const [subjectContactCode, r] of keptRows) {
+    survivingGuardians.set(subjectContactCode, {
+      relatedContactCode: r.related_contact_code,
+      roleType: r.role_type,
+      createdBy: r.created_by,
+    })
   }
 
   const toInsert: RelationEdge[] = []
@@ -130,23 +143,29 @@ export const reconcile = (
   for (const [key, edge] of desiredByKey) {
     if (existingByKey.has(key)) continue
 
-    const blocking = isGuardianRole(edge.roleType)
+    const isGuardian = isGuardianRole(edge.roleType)
+    const blocking = isGuardian
       ? survivingGuardians.get(edge.subjectContactCode)
       : undefined
     if (blocking) {
       skippedGuardians.push({
         subjectContactCode: edge.subjectContactCode,
         desired: edge,
-        existing: {
-          relatedContactCode: blocking.related_contact_code,
-          roleType: blocking.role_type,
-          createdBy: blocking.created_by,
-        },
+        existing: blocking,
       })
       continue
     }
 
     toInsert.push(edge)
+    // This edge now holds the subject's single guardian slot, so a later
+    // guardian edge for the same subject is skipped rather than colliding.
+    if (isGuardian) {
+      survivingGuardians.set(edge.subjectContactCode, {
+        relatedContactCode: edge.relatedContactCode,
+        roleType: edge.roleType,
+        createdBy: ownedBy,
+      })
+    }
   }
 
   return {

@@ -46,8 +46,11 @@ export const relationErrorMessage = (
       return 'Den valda kontakten hittades inte.'
     case 'relation-not-found':
       return 'Relationen är redan borttagen.'
-    // Bugs or upstream failures: nothing the caseworker can act on.
+    // Bugs or upstream failures: nothing the caseworker can act on. Every such
+    // code is listed, so `default` only catches an unset or future code.
     case 'invalid-request':
+    case 'invalid-role-type':
+    case 'missing-deleted-by':
     case 'contacts-service-error':
     default:
       return 'Något gick fel. Försök igen.'
