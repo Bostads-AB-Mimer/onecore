@@ -3,6 +3,7 @@ import { contactsDbClient } from '@src/adapters/db'
 import {
   insertMany,
   listActive,
+  RoleType,
   softDeleteByIds,
 } from '@src/adapters/contact-relations'
 import {
@@ -29,11 +30,11 @@ afterAll(async () => {
   await dbResource.close()
 })
 
-const edge = (
-  subject: string,
-  related: string,
-  roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
-) => ({ subjectContactCode: subject, relatedContactCode: related, roleType })
+const edge = (subject: string, related: string, roleType: RoleType) => ({
+  subjectContactCode: subject,
+  relatedContactCode: related,
+  roleType,
+})
 
 describe('contact_relation unique indexes', () => {
   it('rejects a second active row for the same edge', () =>
@@ -41,7 +42,10 @@ describe('contact_relation unique indexes', () => {
       await insertMany(db, [edge('P1', 'P2', 'annan_fakturamottagare')], ACTOR)
       await expect(
         insertMany(db, [edge('P1', 'P2', 'annan_fakturamottagare')], ACTOR)
-      ).rejects.toMatchObject({ number: 2601 })
+      ).rejects.toMatchObject({
+        number: 2601,
+        message: expect.stringContaining('ux_contact_relation_active_edge'),
+      })
     }))
 
   it('rejects a second active guardian of any type for the same subject', () =>
@@ -49,7 +53,10 @@ describe('contact_relation unique indexes', () => {
       await insertMany(db, [edge('P1', 'P2', 'god_man')], ACTOR)
       await expect(
         insertMany(db, [edge('P1', 'P3', 'forvaltare')], ACTOR)
-      ).rejects.toMatchObject({ number: 2601 })
+      ).rejects.toMatchObject({
+        number: 2601,
+        message: expect.stringContaining('ux_contact_relation_active_guardian'),
+      })
     }))
 
   it('allows a new guardian once the previous one is soft-deleted', () =>
@@ -77,13 +84,15 @@ describe('contact_relation unique indexes', () => {
       expect(await listActive(db)).toHaveLength(2)
     }))
 
+  // Same pair in both roles: the edge index keys on role_type, so this also
+  // proves it does not collapse the two rows into one.
   it('allows a fakturamottagare alongside a guardian', () =>
     withContext(async ({ db }) => {
       await insertMany(
         db,
         [
           edge('P1', 'P2', 'god_man'),
-          edge('P1', 'P3', 'annan_fakturamottagare'),
+          edge('P1', 'P2', 'annan_fakturamottagare'),
         ],
         ACTOR
       )

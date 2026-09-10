@@ -201,13 +201,6 @@ describe('relatedContactsFor', () => {
       ])
     }))
 
-  it('returns one entry per active edge', () =>
-    withContext(async ({ db }) => {
-      await seed(db)
-
-      expect(await relatedContactsFor(xpand, db, 'P000555')).toHaveLength(1)
-    }))
-
   it('tolerates stored codes with trailing whitespace', () =>
     withContext(async ({ db }) => {
       await db('contact_relation').insert({

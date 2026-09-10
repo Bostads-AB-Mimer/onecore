@@ -37,7 +37,8 @@ beforeEach(async () => {
 })
 
 describe('contact-relations repository', () => {
-  // Fixtures respect the unique indexes from migration 202609101000: one active guardian per subject, no duplicate active edges.
+  // Fixtures respect the unique indexes from migration 202609101000: one
+  // active guardian per subject, no duplicate active edges.
   it('insertMany writes one row per edge with the given creator', () =>
     withContext(async ({ db }) => {
       await insertMany(
