@@ -1,23 +1,19 @@
+import { RELATED_CONTACT_GROUP_LABELS } from '@/entities/tenant'
+
 import type {
   RelationErrorCode,
   RelationRoleType,
 } from '@/services/api/core/tenantService'
 import type { RelatedContactRole } from '@/services/types'
 
-/** The two roles this dialog offers. Annan fakturamottagare is AVTAL-176. */
-export const GUARDIAN_ROLE_TYPES = ['god_man', 'forvaltare'] as const
-export type GuardianRoleType = (typeof GUARDIAN_ROLE_TYPES)[number]
+const GUARDIAN_ROLE_TYPES: RelationRoleType[] = ['god_man', 'forvaltare']
 
-export const GUARDIAN_ROLE_LABELS: Record<GuardianRoleType, string> = {
-  god_man: 'God man',
-  forvaltare: 'Förvaltare',
+/** Single-sourced with the group headings the list is rendered under. */
+export const RELATION_ROLE_LABELS: Record<RelationRoleType, string> = {
+  god_man: RELATED_CONTACT_GROUP_LABELS.trustee,
+  forvaltare: RELATED_CONTACT_GROUP_LABELS.administrator,
+  annan_fakturamottagare: RELATED_CONTACT_GROUP_LABELS.otherInvoiceRecipient,
 }
-
-/** Only the two guardian roles are administered here; AVTAL-176 adds the third. */
-export const isGuardianRoleType = (
-  roleType: RelationRoleType | undefined
-): roleType is GuardianRoleType =>
-  GUARDIAN_ROLE_TYPES.includes(roleType as GuardianRoleType)
 
 /** The stored role type behind a forward relation as seen from the subject. */
 export const ROLE_TYPE_FOR_RELATED_ROLE: Partial<
@@ -28,10 +24,22 @@ export const ROLE_TYPE_FOR_RELATED_ROLE: Partial<
   otherInvoiceRecipient: 'annan_fakturamottagare',
 }
 
-export const hasGuardian = (
-  relations: { role: RelatedContactRole }[]
-): boolean =>
+const hasGuardian = (relations: { role: RelatedContactRole }[]): boolean =>
   relations.some((r) => r.role === 'trustee' || r.role === 'administrator')
+
+/**
+ * Which roles can still be added to this contact. At most one guardian, so
+ * both guardian roles drop out once either is set; a contact may hold several
+ * fakturamottagare, and the same one twice is refused as duplicate-relation.
+ * Empty is impossible today — fakturamottagare is always addable — but the
+ * caller still hides the button on empty rather than assuming.
+ */
+export const addableRoleTypes = (
+  relations: { role: RelatedContactRole }[]
+): RelationRoleType[] =>
+  hasGuardian(relations)
+    ? ['annan_fakturamottagare']
+    : [...GUARDIAN_ROLE_TYPES, 'annan_fakturamottagare']
 
 export const relationErrorMessage = (
   error: RelationErrorCode | undefined,

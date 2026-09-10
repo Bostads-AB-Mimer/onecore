@@ -18,7 +18,7 @@ import {
 import { Button } from '@/shared/ui/Button'
 
 import { useRemoveRelation } from '../hooks/useRemoveRelation'
-import { relationErrorMessage } from '../lib/guardians'
+import { relationErrorMessage } from '../lib/relationRoles'
 
 interface RemoveRelationButtonProps {
   contactCode: string

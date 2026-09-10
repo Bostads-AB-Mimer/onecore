@@ -14,11 +14,10 @@ import { paths } from '@/shared/routes'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
 import {
-  hasGuardian,
-  isGuardianRoleType,
+  addableRoleTypes,
   ROLE_TYPE_FOR_RELATED_ROLE,
-} from '../lib/guardians'
-import { AddGuardianDialog } from './AddGuardianDialog'
+} from '../lib/relationRoles'
+import { AddRelationDialog } from './AddRelationDialog'
 import { RemoveRelationButton } from './RemoveRelationButton'
 
 interface TenantRelatedContactsTabContentProps {
@@ -31,8 +30,9 @@ export function TenantRelatedContactsTabContent({
   const { data, isLoading, error } = useRelatedContacts(contactCode)
   const relations = data ?? []
 
-  // A contact can only have one god man or förvaltare at a time.
-  const canAddGuardian = !hasGuardian(relations)
+  // Per role, not per button: a contact that already has a god man can still
+  // gain a fakturamottagare, so the button stays as long as anything is left.
+  const availableRoles = addableRoleTypes(relations)
 
   const groups = RELATED_CONTACT_GROUP_ORDER.map((role) => ({
     role,
@@ -49,9 +49,12 @@ export function TenantRelatedContactsTabContent({
       errorMessage="Kunde inte ladda relaterade kontakter"
     >
       <RequireRole roles={[CONTACTS_WRITE_ROLE]}>
-        {canAddGuardian && (
+        {availableRoles.length > 0 && (
           <div className="flex justify-end mb-4">
-            <AddGuardianDialog contactCode={contactCode} />
+            <AddRelationDialog
+              contactCode={contactCode}
+              availableRoles={availableRoles}
+            />
           </div>
         )}
       </RequireRole>
@@ -65,7 +68,7 @@ export function TenantRelatedContactsTabContent({
             // Only the forward roles map to a stored role type — the reverse
             // groups ("God man för") are administered from the other kundkort.
             const roleType = ROLE_TYPE_FOR_RELATED_ROLE[group.role]
-            const removable = isGuardianRoleType(roleType)
+            const removable = roleType !== undefined
 
             return (
               <div key={group.role} className="space-y-2">

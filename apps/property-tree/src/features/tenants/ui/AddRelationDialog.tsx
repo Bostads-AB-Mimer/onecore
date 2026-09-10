@@ -3,6 +3,8 @@ import { PlusCircle } from 'lucide-react'
 
 import { type TenantSearchResult, useTenantSearch } from '@/entities/tenant'
 
+import type { RelationRoleType } from '@/services/api/core/tenantService'
+
 import { useToast } from '@/shared/hooks/useToast'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
@@ -27,20 +29,23 @@ import {
 
 import { useAddRelation } from '../hooks/useAddRelation'
 import {
-  GUARDIAN_ROLE_LABELS,
-  GUARDIAN_ROLE_TYPES,
-  type GuardianRoleType,
+  RELATION_ROLE_LABELS,
   relationErrorMessage,
-} from '../lib/guardians'
+} from '../lib/relationRoles'
 
-interface AddGuardianDialogProps {
-  /** The contact the guardian is added to (huvudman). */
+interface AddRelationDialogProps {
+  /** The contact the relation is added to (huvudman for a guardian). */
   contactCode: string
+  /** Non-empty; the caller hides the dialog when nothing can be added. */
+  availableRoles: RelationRoleType[]
 }
 
-export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
+export const AddRelationDialog = ({
+  contactCode,
+  availableRoles,
+}: AddRelationDialogProps) => {
   const [open, setOpen] = useState(false)
-  const [roleType, setRoleType] = useState<GuardianRoleType>('god_man')
+  const [roleType, setRoleType] = useState<RelationRoleType>(availableRoles[0])
   const [selected, setSelected] = useState<TenantSearchResult | null>(null)
   const { toast } = useToast()
   const addRelation = useAddRelation()
@@ -48,7 +53,6 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
 
   const close = () => {
     setOpen(false)
-    setRoleType('god_man')
     setSelected(null)
     search.setSearchQuery('')
   }
@@ -57,8 +61,11 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
   // X, Escape and the form inputs are all inert until the mutation settles.
   const handleOpenChange = (next: boolean) => {
     if (!next && addRelation.isPending) return
-    if (next) setOpen(true)
-    else close()
+    if (!next) return close()
+    // Which roles are on offer depends on what the contact already has, so
+    // pick again on open rather than trusting the last selection.
+    setRoleType(availableRoles[0])
+    setOpen(true)
   }
 
   const submit = () => {
@@ -69,7 +76,7 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
         onSuccess: () => {
           close()
           toast({
-            title: `${GUARDIAN_ROLE_LABELS[roleType]} tillagd`,
+            title: `${RELATION_ROLE_LABELS[roleType]} tillagd`,
             description: `${selected.fullName} (${selected.contactCode})`,
           })
         },
@@ -83,7 +90,11 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
     )
   }
 
-  // A contact cannot be its own guardian; the server rejects it too.
+  const guardianOnOffer = availableRoles.some(
+    (role) => role === 'god_man' || role === 'forvaltare'
+  )
+
+  // A contact cannot be related to itself; the server rejects it too.
   const candidates = search.searchResults.filter(
     (candidate) => candidate.contactCode !== contactCode
   )
@@ -93,7 +104,7 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <PlusCircle className="h-4 w-4 mr-2" />
-          Lägg till god man/förvaltare
+          Lägg till relaterad kontakt
         </Button>
       </DialogTrigger>
       <DialogContent
@@ -102,10 +113,11 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
         }}
       >
         <DialogHeader>
-          <DialogTitle>Lägg till god man eller förvaltare</DialogTitle>
+          <DialogTitle>Lägg till relaterad kontakt</DialogTitle>
           <DialogDescription>
-            Sök bland befintliga kontakter. En kontakt kan bara ha en god man
-            eller förvaltare åt gången.
+            Sök bland befintliga kontakter.
+            {guardianOnOffer &&
+              ' En kontakt kan bara ha en god man eller förvaltare åt gången.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -114,16 +126,16 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
             <Label htmlFor="guardian-role">Roll</Label>
             <Select
               value={roleType}
-              onValueChange={(value) => setRoleType(value as GuardianRoleType)}
+              onValueChange={(value) => setRoleType(value as RelationRoleType)}
               disabled={addRelation.isPending}
             >
               <SelectTrigger id="guardian-role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {GUARDIAN_ROLE_TYPES.map((role) => (
+                {availableRoles.map((role) => (
                   <SelectItem key={role} value={role}>
-                    {GUARDIAN_ROLE_LABELS[role]}
+                    {RELATION_ROLE_LABELS[role]}
                   </SelectItem>
                 ))}
               </SelectContent>
