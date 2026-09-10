@@ -5,14 +5,23 @@ type CacheStatus = 'uninitialized' | 'syncing' | 'ready' | 'error'
 
 const DELTA_BUFFER_MS = 30_000
 
+type FetchFn = () => Promise<leasing.v1.LeaseSearchResult[]>
+type DeltaFetchFn = (since: Date) => Promise<leasing.v1.LeaseSearchResult[]>
+
 const state: {
   leases: leasing.v1.LeaseSearchResult[]
   lastSyncedAt: Date | null
   status: CacheStatus
+  fullFetchFn: FetchFn | null
+  deltaFetchFn: DeltaFetchFn | null
+  ongoingSync: Promise<void> | null
 } = {
   leases: [],
   lastSyncedAt: null,
   status: 'uninitialized',
+  fullFetchFn: null,
+  deltaFetchFn: null,
+  ongoingSync: null,
 }
 
 export function isReady(): boolean {
@@ -48,9 +57,66 @@ export function getCacheInfo() {
   }
 }
 
+/**
+ * If the cache is stale (older than thresholdMs), awaits a sync before returning.
+ * Concurrent callers share the same sync promise — only one sync runs at a time.
+ * Falls back to existing data if the sync exceeds timeoutMs.
+ */
+export async function refreshIfStale(
+  thresholdMs: number,
+  timeoutMs: number
+): Promise<void> {
+  if (!state.lastSyncedAt || !state.fullFetchFn || !state.deltaFetchFn) return
+
+  const ageMs = Date.now() - state.lastSyncedAt.getTime()
+  if (ageMs < thresholdMs) return
+
+  logger.info(
+    { ageMs, thresholdMs },
+    'lease-cache: cache is stale, awaiting sync'
+  )
+
+  const start = Date.now()
+
+  try {
+    await Promise.race([
+      sync(state.fullFetchFn, state.deltaFetchFn),
+      new Promise<void>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('refreshIfStale timed out')),
+          timeoutMs
+        )
+      ),
+    ])
+    logger.info(
+      { durationMs: Date.now() - start },
+      'lease-cache: stale refresh complete'
+    )
+  } catch (err) {
+    logger.warn(
+      { err, durationMs: Date.now() - start },
+      'lease-cache: stale refresh timed out or failed, using existing data'
+    )
+  }
+}
+
 async function sync(
-  fullFetchFn: () => Promise<leasing.v1.LeaseSearchResult[]>,
-  deltaFetchFn: (since: Date) => Promise<leasing.v1.LeaseSearchResult[]>
+  fullFetchFn: FetchFn,
+  deltaFetchFn: DeltaFetchFn
+): Promise<void> {
+  // Share ongoing sync promise across concurrent callers
+  if (state.ongoingSync) return state.ongoingSync
+
+  state.ongoingSync = doSync(fullFetchFn, deltaFetchFn).finally(() => {
+    state.ongoingSync = null
+  })
+
+  return state.ongoingSync
+}
+
+async function doSync(
+  fullFetchFn: FetchFn,
+  deltaFetchFn: DeltaFetchFn
 ): Promise<void> {
   if (state.status === 'syncing') return
 
@@ -93,10 +159,10 @@ async function sync(
 }
 
 export function startLeaseCache(
-  fullFetchFn: () => Promise<leasing.v1.LeaseSearchResult[]>,
-  deltaFetchFn: (since: Date) => Promise<leasing.v1.LeaseSearchResult[]>,
-  intervalMs = 10 * 60 * 1000
+  fullFetchFn: FetchFn,
+  deltaFetchFn: DeltaFetchFn
 ): void {
+  state.fullFetchFn = fullFetchFn
+  state.deltaFetchFn = deltaFetchFn
   sync(fullFetchFn, deltaFetchFn).catch(() => {})
-  setInterval(() => sync(fullFetchFn, deltaFetchFn).catch(() => {}), intervalMs)
 }

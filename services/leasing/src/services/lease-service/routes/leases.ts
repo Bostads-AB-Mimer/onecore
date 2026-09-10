@@ -397,6 +397,7 @@ export const routes = (router: KoaRouter) => {
         ctx
       )
 
+      // TODO(AVTAL-270): Route through contacts-service instead of querying Xpand directly
       // Enrich contacts with email/phone from Xpand (Tenfast only has names)
       const contactCodes = [
         ...new Set(

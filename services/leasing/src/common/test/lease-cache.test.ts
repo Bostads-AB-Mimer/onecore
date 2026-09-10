@@ -89,19 +89,17 @@ describe('lease-cache', () => {
   })
 
   describe('delta sync — data already in cache', () => {
-    const INTERVAL_MS = 1_000
-
     it('calls deltaFetchFn on subsequent syncs with lastSyncedAt minus 30s buffer', async () => {
       const fullFetchFn = jest.fn().mockResolvedValue([makeLease('lease-1')])
       const deltaFetchFn = jest.fn().mockResolvedValue([])
 
-      cache.startLeaseCache(fullFetchFn, deltaFetchFn, INTERVAL_MS)
+      cache.startLeaseCache(fullFetchFn, deltaFetchFn)
       await flushPromises() // full sync
 
       const { lastSyncedAt } = cache.getCacheInfo()
 
-      jest.advanceTimersByTime(INTERVAL_MS)
-      await flushPromises() // delta sync
+      await cache.refreshIfStale(0, 10_000)
+      await flushPromises()
 
       expect(deltaFetchFn).toHaveBeenCalledTimes(1)
       const sinceArg = deltaFetchFn.mock.calls[0][0] as Date
@@ -116,10 +114,10 @@ describe('lease-cache', () => {
       const fullFetchFn = jest.fn().mockResolvedValue([original, other])
       const deltaFetchFn = jest.fn().mockResolvedValue([updated])
 
-      cache.startLeaseCache(fullFetchFn, deltaFetchFn, INTERVAL_MS)
+      cache.startLeaseCache(fullFetchFn, deltaFetchFn)
       await flushPromises()
 
-      jest.advanceTimersByTime(INTERVAL_MS)
+      await cache.refreshIfStale(0, 10_000)
       await flushPromises()
 
       const all = cache.getAll()
@@ -134,11 +132,11 @@ describe('lease-cache', () => {
       const fullFetchFn = jest.fn().mockResolvedValue([makeLease('lease-1')])
       const deltaFetchFn = jest.fn().mockResolvedValue([makeLease('lease-2')])
 
-      cache.startLeaseCache(fullFetchFn, deltaFetchFn, INTERVAL_MS)
+      cache.startLeaseCache(fullFetchFn, deltaFetchFn)
       await flushPromises()
       expect(cache.getAll()).toHaveLength(1)
 
-      jest.advanceTimersByTime(INTERVAL_MS)
+      await cache.refreshIfStale(0, 10_000)
       await flushPromises()
 
       expect(cache.getAll()).toHaveLength(2)
@@ -149,10 +147,10 @@ describe('lease-cache', () => {
       const fullFetchFn = jest.fn().mockResolvedValue([lease1])
       const deltaFetchFn = jest.fn().mockRejectedValue(new Error('timeout'))
 
-      cache.startLeaseCache(fullFetchFn, deltaFetchFn, INTERVAL_MS)
+      cache.startLeaseCache(fullFetchFn, deltaFetchFn)
       await flushPromises()
 
-      jest.advanceTimersByTime(INTERVAL_MS)
+      await cache.refreshIfStale(0, 10_000)
       await flushPromises()
 
       expect(cache.isReady()).toBe(true)
@@ -161,27 +159,29 @@ describe('lease-cache', () => {
   })
 
   describe('concurrent sync guard', () => {
-    it('skips interval sync while a previous sync is still in progress', async () => {
-      let resolveFullFetch!: (v: leasing.v1.LeaseSearchResult[]) => void
-      const pendingFetch = new Promise<leasing.v1.LeaseSearchResult[]>(
+    it('shares ongoing sync promise — concurrent refreshIfStale calls only trigger one delta sync', async () => {
+      const lease1 = makeLease('lease-1')
+      let resolveDeltaFetch!: (v: leasing.v1.LeaseSearchResult[]) => void
+      const pendingDelta = new Promise<leasing.v1.LeaseSearchResult[]>(
         (resolve) => {
-          resolveFullFetch = resolve
+          resolveDeltaFetch = resolve
         }
       )
 
-      const fullFetchFn = jest.fn().mockReturnValue(pendingFetch)
-      const deltaFetchFn = jest.fn()
+      const fullFetchFn = jest.fn().mockResolvedValue([lease1])
+      const deltaFetchFn = jest.fn().mockReturnValue(pendingDelta)
 
-      cache.startLeaseCache(fullFetchFn, deltaFetchFn, 1_000)
-      // fullFetchFn has been called but not resolved — status is 'syncing'
+      cache.startLeaseCache(fullFetchFn, deltaFetchFn)
+      await flushPromises() // full sync complete
 
-      jest.advanceTimersByTime(1_000)
-      // interval fires while sync is still running — should be skipped
+      const p1 = cache.refreshIfStale(0, 10_000)
+      const p2 = cache.refreshIfStale(0, 10_000)
 
-      resolveFullFetch([])
+      resolveDeltaFetch([])
+      await Promise.all([p1, p2])
       await flushPromises()
 
-      expect(fullFetchFn).toHaveBeenCalledTimes(1) // only the initial call, not the interval
+      expect(deltaFetchFn).toHaveBeenCalledTimes(1)
     })
   })
 })

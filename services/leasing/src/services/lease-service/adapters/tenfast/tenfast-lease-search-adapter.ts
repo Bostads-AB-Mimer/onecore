@@ -663,15 +663,10 @@ export async function fetchAllLeasesForExport(
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
 ): Promise<leasing.v1.LeaseSearchResult[]> {
-  const READY_TIMEOUT_MS = 5_000
-
-  if (!leaseCache.isReady()) {
-    const ready = await leaseCache.whenReady(READY_TIMEOUT_MS)
-    if (!ready) {
-      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
-        headers: { 'Retry-After': '30' },
-      })
-    }
+  if (leaseCache.getAll().length === 0) {
+    ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+      headers: { 'Retry-After': '30' },
+    })
   }
 
   const needsXpandCodes =
@@ -1021,6 +1016,7 @@ async function searchLeasesFromCache(
     (params.kvvAreaCodes && params.kvvAreaCodes.length > 0)
 
   let rentalObjectCodes: Set<string> | undefined
+  let xpandMs = 0
 
   if (needsXpandCodes) {
     const codeSetPromises: Promise<string[]>[] = []
@@ -1044,7 +1040,9 @@ async function searchLeasesFromCache(
         getRentalObjectCodesByKvvAreaCodes(params.kvvAreaCodes)
       )
 
+    const xpandStart = Date.now()
     const codeSets = await Promise.all(codeSetPromises)
+    xpandMs = Date.now() - xpandStart
 
     let codes = codeSets[0]
     for (let i = 1; i < codeSets.length; i++) {
@@ -1053,6 +1051,10 @@ async function searchLeasesFromCache(
     }
 
     if (codes.length === 0) {
+      logger.info(
+        { xpandMs },
+        'lease-cache: xpand filter returned no codes, skipping cache search'
+      )
       return {
         content: [],
         _meta: { totalRecords: 0, page, limit, count: 0 },
@@ -1063,12 +1065,15 @@ async function searchLeasesFromCache(
     rentalObjectCodes = new Set(codes)
   }
 
+  const filterStart = Date.now()
   const filtered = applyCacheFilters(
     leaseCache.getAll(),
     params,
     rentalObjectCodes
   )
   const sorted = applySorting(filtered, params)
+  const filterMs = Date.now() - filterStart
+
   const totalCount = sorted.length
   const totalPages = Math.ceil(totalCount / limit)
   const pageSlice = sorted.slice((page - 1) * limit, page * limit)
@@ -1078,6 +1083,8 @@ async function searchLeasesFromCache(
       totalInCache: leaseCache.getAll().length,
       afterFilters: totalCount,
       page,
+      xpandMs,
+      filterMs,
     },
     'lease-cache: search served from cache'
   )
@@ -1093,16 +1100,20 @@ export const searchLeases = async (
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  const READY_TIMEOUT_MS = 5_000
+  const requestStart = Date.now()
+  const STALE_THRESHOLD_MS = 60_000
+  const STALE_SYNC_TIMEOUT_MS = 10_000
 
-  if (!leaseCache.isReady()) {
-    const ready = await leaseCache.whenReady(READY_TIMEOUT_MS)
-    if (!ready) {
-      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
-        headers: { 'Retry-After': '30' },
-      })
-    }
+  if (leaseCache.getAll().length === 0) {
+    // Initial sync in progress or failed — no data to serve yet
+    ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+      headers: { 'Retry-After': '30' },
+    })
   }
+
+  // Cache has data — if stale, await a delta sync before responding.
+  // Timeout falls back to existing data so the request never hangs indefinitely.
+  await leaseCache.refreshIfStale(STALE_THRESHOLD_MS, STALE_SYNC_TIMEOUT_MS)
 
   // idbeteckning (personnummer) is not stored in the cache — go to Tenfast.
   const apiFilters = params.q ? analyzeSearchTermForApi(params.q) : []
@@ -1125,6 +1136,10 @@ export const searchLeases = async (
     )
     const sortedResults = applySorting(searchResults, params)
     const totalPages = Math.ceil(totalCount / limit)
+    logger.info(
+      { totalMs: Date.now() - requestStart },
+      'lease-cache: searchLeases complete (personnummer path)'
+    )
     return {
       content: sortedResults,
       _meta: {
@@ -1137,5 +1152,10 @@ export const searchLeases = async (
     }
   }
 
-  return searchLeasesFromCache(params, ctx)
+  const result = await searchLeasesFromCache(params, ctx)
+  logger.info(
+    { totalMs: Date.now() - requestStart },
+    'lease-cache: searchLeases complete'
+  )
+  return result
 }
