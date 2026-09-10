@@ -258,14 +258,20 @@ export const AddRelationErrorCodeSchema = z.enum([
   'duplicate-relation',
 ])
 
-export const RemoveRelationErrorCodeSchema = z.enum([
-  'relation-not-found',
+export const RemoveRelationErrorCodeSchema = z.enum(['relation-not-found'])
+
+/** Rejections the DELETE route itself produces before calling the service. */
+export const RemoveRelationRequestErrorCodeSchema = z.enum([
   'invalid-role-type',
   'missing-deleted-by',
 ])
 
 export const RelationErrorResponseBodySchema = z.object({
-  error: z.union([AddRelationErrorCodeSchema, RemoveRelationErrorCodeSchema]),
+  error: z.union([
+    AddRelationErrorCodeSchema,
+    RemoveRelationErrorCodeSchema,
+    RemoveRelationRequestErrorCodeSchema,
+  ]),
   /** For `guardian-exists`: the existing guardian's contact code. */
   detail: z.string().optional(),
 })

@@ -12,6 +12,7 @@ import {
   RelationErrorResponseBodySchema,
   RelationRoleTypeSchema,
   RemoveRelationErrorCodeSchema,
+  RemoveRelationRequestErrorCodeSchema,
   SyncContactsResponseBodySchema,
 } from './schema'
 
@@ -57,6 +58,10 @@ export type AddRelationErrorCode = z.infer<typeof AddRelationErrorCodeSchema>
 
 export type RemoveRelationErrorCode = z.infer<
   typeof RemoveRelationErrorCodeSchema
+>
+
+export type RemoveRelationRequestErrorCode = z.infer<
+  typeof RemoveRelationRequestErrorCodeSchema
 >
 
 export type RelationErrorResponseBody = z.infer<
