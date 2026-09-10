@@ -6,6 +6,10 @@ import { ContactWriter } from './adapters/contact-writer'
 import { xpandSoapContactWriter } from './adapters/xpand/soap'
 import { xpandDbClient } from './adapters/xpand/db'
 import { contactsDbClient } from './adapters/db'
+import {
+  makeRelationDependencies,
+  RelationDependencies,
+} from './services/contacts-service/relations'
 import Koa from 'koa'
 
 /**
@@ -45,6 +49,11 @@ export interface AppContext {
      * The ContactWriter implementation to use for creating contacts.
      */
     contactWriter: ContactWriter
+    /**
+     * Everything the relation write rules need (contacts DB, Xpand existence
+     * and name lookups), resolved per request.
+     */
+    relationDependencies: RelationDependencies
   }
 }
 
@@ -98,6 +107,7 @@ export const makeAppContext = (
     modules: {
       contactsRepository: xpandContactsRepository(xpandDb, contactsDb),
       contactWriter: xpandSoapContactWriter(config.xpandSoap),
+      relationDependencies: makeRelationDependencies(xpandDb, contactsDb),
       ...overrides,
     },
   }
