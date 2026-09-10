@@ -51,9 +51,16 @@ export type RemoveRelationError =
 
 const KNOWN_ADD_RELATION_ERRORS: ReadonlySet<string> =
   new Set<AddRelationErrorCode>(AddRelationErrorCodeSchema.options)
+// Route-level 400 codes (`RemoveRelationRequestErrorCodeSchema`) are folded
+// into `invalid-request` by the 400 check, so they are deliberately not
+// listed here.
 const KNOWN_REMOVE_RELATION_ERRORS: ReadonlySet<string> =
   new Set<RemoveRelationErrorCode>(RemoveRelationErrorCodeSchema.options)
 
+/**
+ * Core-side call shape for a relation: the subject's code plus the
+ * counterpart and role.
+ */
 export type RelationRef = {
   contactCode: string
   relatedContactCode: string
@@ -324,7 +331,13 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
           statusCode: response.status,
         }
       } catch (err) {
-        logger.error({ err }, 'contactsAdapter.addRelation')
+        // Not the raw error: an AxiosError carries the request body, which
+        // holds the related contact's code.
+        const { code, message } = (err ?? {}) as {
+          code?: string
+          message?: string
+        }
+        logger.error({ code, message }, 'contactsAdapter.addRelation')
         return { ok: false, err: 'contacts-service-error' }
       }
     },
@@ -361,6 +374,7 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
             ok: false,
             err: reported as RemoveRelationErrorCode,
             statusCode: response.status,
+            detail: response.data?.detail,
           }
         }
 
@@ -370,7 +384,13 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
           statusCode: response.status,
         }
       } catch (err) {
-        logger.error({ err }, 'contactsAdapter.removeRelation')
+        // Not the raw error: an AxiosError carries the request config, which
+        // holds identifying query params.
+        const { code, message } = (err ?? {}) as {
+          code?: string
+          message?: string
+        }
+        logger.error({ code, message }, 'contactsAdapter.removeRelation')
         return { ok: false, err: 'contacts-service-error' }
       }
     },

@@ -12,6 +12,9 @@ const relation = {
   roleType: 'god_man' as const,
 }
 
+beforeAll(() => nock.disableNetConnect())
+afterAll(() => nock.enableNetConnect())
+
 describe('contactsAdapter.addRelation', () => {
   afterEach(() => nock.cleanAll())
 
@@ -56,15 +59,28 @@ describe('contactsAdapter.addRelation', () => {
       .reply(400, { error: 'invalid-request-body' })
     expect(
       await adapter.addRelation({ ...relation, createdBy: 'Anna' })
-    ).toMatchObject({
+    ).toEqual({
       ok: false,
       err: 'invalid-request',
+      statusCode: 400,
     })
 
     nock(base).post('/contacts/P000111/relations').reply(500, {})
     expect(
       await adapter.addRelation({ ...relation, createdBy: 'Anna' })
-    ).toMatchObject({
+    ).toEqual({
+      ok: false,
+      err: 'contacts-service-error',
+      statusCode: 500,
+    })
+  })
+
+  it('returns contacts-service-error with no statusCode on a transport failure', async () => {
+    nock(base).post('/contacts/P000111/relations').replyWithError('ECONNRESET')
+
+    expect(
+      await adapter.addRelation({ ...relation, createdBy: 'Anna' })
+    ).toEqual({
       ok: false,
       err: 'contacts-service-error',
     })
@@ -101,6 +117,48 @@ describe('contactsAdapter.removeRelation', () => {
       ok: false,
       err: 'relation-not-found',
       statusCode: 404,
+    })
+  })
+
+  it('maps 400 to invalid-request', async () => {
+    nock(base)
+      .delete('/contacts/P000111/relations/god_man/P000222')
+      .query(true)
+      .reply(400, { error: 'invalid-request-body' })
+    expect(
+      await adapter.removeRelation({ ...relation, deletedBy: 'Anna' })
+    ).toEqual({
+      ok: false,
+      err: 'invalid-request',
+      statusCode: 400,
+    })
+  })
+
+  it('maps an unrecognised failure to contacts-service-error', async () => {
+    nock(base)
+      .delete('/contacts/P000111/relations/god_man/P000222')
+      .query(true)
+      .reply(500, {})
+    expect(
+      await adapter.removeRelation({ ...relation, deletedBy: 'Anna' })
+    ).toEqual({
+      ok: false,
+      err: 'contacts-service-error',
+      statusCode: 500,
+    })
+  })
+
+  it('returns contacts-service-error with no statusCode on a transport failure', async () => {
+    nock(base)
+      .delete('/contacts/P000111/relations/god_man/P000222')
+      .query(true)
+      .replyWithError('ECONNRESET')
+
+    expect(
+      await adapter.removeRelation({ ...relation, deletedBy: 'Anna' })
+    ).toEqual({
+      ok: false,
+      err: 'contacts-service-error',
     })
   })
 })
