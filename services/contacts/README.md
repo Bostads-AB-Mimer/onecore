@@ -82,8 +82,13 @@ again.
 A contact can have at most one active god man or förvaltare, so a guardian set
 outside the import — by a caseworker on the customer card — wins. If Xpand
 names a different guardian for that contact, the existing row is kept and the
-Xpand relation is reported as "Överhoppade gode män/förvaltare" instead of
-being written.
+Xpand relation is reported as "Överhoppade" instead of being written.
+
+A guardian a caseworker _removes_ on the customer card is not protected in the
+same way. The import only looks at active rows, so once the caseworker's row is
+soft-deleted the contact has no active guardian and a later run re-adds the one
+Xpand names. The import is meant as a one-time migration: re-running it after
+go-live re-applies Xpand on top of caseworker removals.
 
 Always dry-run first. It prints both connection targets before it writes
 anything, which is the cheapest way to catch a half-edited environment:

@@ -45,6 +45,12 @@ const WRITER_WITH_EMPTY_NAME: TestUser = {
   preferred_username: 'cecilia',
   realm_access: { roles: ['api-access', 'contacts:write'] },
 }
+// A display name longer than the NVARCHAR(100) the contacts service stores.
+const WRITER_WITH_LONG_NAME: TestUser = {
+  name: 'L'.repeat(120),
+  preferred_username: 'ludvig',
+  realm_access: { roles: ['api-access', 'contacts:write'] },
+}
 const READER: TestUser = {
   name: 'Bo Reader',
   preferred_username: 'bo',
@@ -196,6 +202,19 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
     expect(adapter.addRelation).toHaveBeenCalledWith(
       expect.objectContaining({ createdBy: 'cecilia' })
     )
+  })
+
+  it('truncates a long display name to 100 characters', async () => {
+    mockUser = WRITER_WITH_LONG_NAME
+    adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
+
+    await request(app.callback())
+      .post('/v1/contacts/P1/relations')
+      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
+
+    const { createdBy } = adapter.addRelation.mock.calls[0][0]
+    expect(createdBy).toHaveLength(100)
+    expect(createdBy).toBe(WRITER_WITH_LONG_NAME.name?.slice(0, 100))
   })
 
   it('rejects an invalid body with 400 before calling contacts', async () => {

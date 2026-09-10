@@ -512,8 +512,14 @@ export const routes = (router: OkapiRouter, config: Config) => {
   // terminal fallback that is effectively unreachable: a token carrying
   // neither claim is a legacy api-access token, which the contacts:write gate
   // rejects before the handler runs.
+  // Truncated to the NVARCHAR(100) the contacts service stores the actor in, so
+  // an unusually long display name is shortened rather than rejected.
   const actingUser = (ctx: ParameterizedContext): string =>
-    ctx.state.user?.name || ctx.state.user?.preferred_username || 'unknown'
+    (
+      ctx.state.user?.name ||
+      ctx.state.user?.preferred_username ||
+      'unknown'
+    ).slice(0, 100)
 
   // Gated on contacts:write by requiredRolesFor (core/src/middlewares/
   // route-roles.ts) for POST and DELETE under /v1/contacts. Not visible in

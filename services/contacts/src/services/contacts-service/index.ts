@@ -14,6 +14,7 @@ import {
   addRelation,
   AddRelationError,
   removeRelation,
+  RemoveRelationError,
   RelationDependencies,
 } from './relations'
 import {
@@ -68,6 +69,15 @@ const ADD_RELATION_STATUS: Record<AddRelationError, number> = {
   'guardian-exists': 409,
   'duplicate-relation': 409,
 }
+
+/**
+ * Exhaustive so a new removal failure has to pick a status rather than land on
+ * 404. `satisfies` rather than an annotation: the DELETE route narrows
+ * `ctx.status` to its declared statuses, so the values must stay literal.
+ */
+const REMOVE_RELATION_STATUS = {
+  'relation-not-found': 404,
+} as const satisfies Record<RemoveRelationError, number>
 
 export const routes = (
   router: OkapiRouter,
@@ -732,7 +742,7 @@ export const routes = (
       })
 
       if (!result.ok) {
-        ctx.status = 404
+        ctx.status = REMOVE_RELATION_STATUS[result.err]
         ctx.body = { error: result.err, ...metadata }
         return
       }
