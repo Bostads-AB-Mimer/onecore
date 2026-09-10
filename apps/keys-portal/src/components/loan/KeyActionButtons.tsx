@@ -157,7 +157,7 @@ export function KeyActionButtons({
     if (keyCount > 0)
       parts.push(`${keyCount} ${keyCount === 1 ? 'nyckel' : 'nycklar'}`)
     if (cardCount > 0)
-      parts.push(`${cardCount} dropp${cardCount > 1 ? 'ar' : 'e'}`)
+      parts.push(`${cardCount} tagg${cardCount > 1 ? 'ar' : ''}`)
     return parts.join(' + ')
   }
 
