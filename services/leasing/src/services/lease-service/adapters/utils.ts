@@ -247,3 +247,15 @@ export const formatNoteWithSignature = (
 
   return `${dateStr} ${timeStr} ${author}: ${content}`
 }
+
+/**
+ * Splits an array into consecutive batches of at most `size` items.
+ * Used to keep `whereIn` parameter lists under SQL Server's ~2100 limit.
+ */
+export const chunkArray = <T>(array: T[], size: number): T[][] => {
+  const result: T[][] = []
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size))
+  }
+  return result
+}

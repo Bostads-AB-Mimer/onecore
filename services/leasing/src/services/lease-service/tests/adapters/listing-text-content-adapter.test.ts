@@ -38,6 +38,88 @@ describe('listing-text-content-adapter', () => {
       }))
   })
 
+  describe(
+    listingTextContentAdapter.getRentalObjectCodesWithTextContent,
+    () => {
+      it('returns empty array for no codes', () =>
+        withContext(async (ctx) => {
+          const result =
+            await listingTextContentAdapter.getRentalObjectCodesWithTextContent(
+              [],
+              ctx.db
+            )
+
+          expect(result).toEqual({ ok: true, data: [] })
+        }))
+
+      it('returns empty array when none of the codes has content', () =>
+        withContext(async (ctx) => {
+          const result =
+            await listingTextContentAdapter.getRentalObjectCodesWithTextContent(
+              ['CODE-1', 'CODE-2'],
+              ctx.db
+            )
+
+          expect(result).toEqual({ ok: true, data: [] })
+        }))
+
+      it('returns only the given codes that have content', () =>
+        withContext(async (ctx) => {
+          for (const rentalObjectCode of ['CODE-1', 'CODE-2', 'CODE-3']) {
+            const createResult = await listingTextContentAdapter.create(
+              factory.listingTextContent.build({ rentalObjectCode }),
+              ctx.db
+            )
+            expect(createResult.ok).toBe(true)
+          }
+
+          const result =
+            await listingTextContentAdapter.getRentalObjectCodesWithTextContent(
+              ['CODE-1', 'CODE-3', 'CODE-4'],
+              ctx.db
+            )
+
+          expect(result).toEqual({ ok: true, data: ['CODE-1', 'CODE-3'] })
+        }))
+
+      it('matches codes the way the DB does, ignoring case and trailing blanks', () =>
+        withContext(async (ctx) => {
+          const createResult = await listingTextContentAdapter.create(
+            factory.listingTextContent.build({ rentalObjectCode: 'code-1 ' }),
+            ctx.db
+          )
+          expect(createResult.ok).toBe(true)
+
+          const result =
+            await listingTextContentAdapter.getRentalObjectCodesWithTextContent(
+              ['CODE-1'],
+              ctx.db
+            )
+
+          // The requested code is returned as passed in, not as stored
+          expect(result).toEqual({ ok: true, data: ['CODE-1'] })
+        }))
+
+      it('handles more codes than fit in one whereIn', () =>
+        withContext(async (ctx) => {
+          const createResult = await listingTextContentAdapter.create(
+            factory.listingTextContent.build({ rentalObjectCode: 'CODE-2499' }),
+            ctx.db
+          )
+          expect(createResult.ok).toBe(true)
+
+          const codes = Array.from({ length: 2500 }, (_, i) => `CODE-${i}`)
+          const result =
+            await listingTextContentAdapter.getRentalObjectCodesWithTextContent(
+              codes,
+              ctx.db
+            )
+
+          expect(result).toEqual({ ok: true, data: ['CODE-2499'] })
+        }))
+    }
+  )
+
   describe(listingTextContentAdapter.create, () => {
     it('creates new content successfully', () =>
       withContext(async (ctx) => {

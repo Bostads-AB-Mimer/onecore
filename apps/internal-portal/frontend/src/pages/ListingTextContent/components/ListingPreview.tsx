@@ -110,7 +110,7 @@ export const ListingPreview = ({
               whiteSpace: 'pre-line',
             }}
           >
-            {block.content || 'Underrubrik...'}
+            {block.content || 'Underrubrik 2...'}
           </Typography>
         )
 
@@ -136,15 +136,16 @@ export const ListingPreview = ({
             {renderParagraphs(
               block.content || '',
               {
-                // "Underrubrik 2" is an h3 below "Underrubrik" (1.5rem Bison); Graphik
-                // is wider than Bison, so it needs a smaller size to read as smaller
+                // "Underrubrik 3" is an h3 below "Underrubrik 2" (1.5rem Bison);
+                // Graphik is wider than Bison, so it needs a smaller size to read
+                // as smaller
                 width: '100%',
                 fontSize: '1.125rem',
                 fontFamily: 'graphikRegular',
                 fontWeight: 500,
                 lineHeight: 1.1,
               },
-              'Underrubrik 2...'
+              'Underrubrik 3...'
             )}
           </Box>
         )

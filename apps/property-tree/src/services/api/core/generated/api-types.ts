@@ -2309,6 +2309,12 @@ export interface paths {
                 districtCaption?: string
                 districtCode?: string
                 braArea?: number
+                /**
+                 * @description Whether listing text content exists for the
+                 * parking space. Omitted if the text content
+                 * lookup in leasing failed.
+                 */
+                hasListingTextContent?: boolean
               }[]
             }
           }

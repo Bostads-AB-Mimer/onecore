@@ -1,4 +1,5 @@
 export * from './DataGridTable'
+export * from './ListingTextContentIconLink'
 export * from './PageGoBackTo'
 export * from './SearchBar'
 export * from './Tabs'
