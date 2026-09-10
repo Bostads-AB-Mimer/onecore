@@ -28,10 +28,13 @@ import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-ba
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
 import { registerSchema } from '../../utils/openapi'
+import { makeContactsAdapter } from '../../adapters/contacts-adapter'
+import config from '../../common/config'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 
 export const routes = (router: KoaRouter) => {
+  const contactsAdapter = makeContactsAdapter(config.contactsService.url)
   // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
   /**
    * @swagger
@@ -493,8 +496,50 @@ export const routes = (router: KoaRouter) => {
     try {
       const result = await leasingAdapter.searchLeases(resolved.query)
 
+      const contactCodes = [
+        ...new Set(
+          result.content.flatMap(
+            (lease) => lease.contacts?.map((c) => c.contactCode) ?? []
+          )
+        ),
+      ]
+
+      let enrichedContent = result.content
+      if (contactCodes.length > 0) {
+        const contactsResult = await contactsAdapter.getByContactCodeBatch(
+          contactCodes,
+          { includePhone: true, includeEmail: true }
+        )
+        if (contactsResult.ok) {
+          const contactMap = new Map(
+            contactsResult.data.map((c) => [
+              c.contactCode,
+              {
+                email:
+                  c.communication.emailAddresses.find((e) => e.isPrimary)
+                    ?.emailAddress ??
+                  c.communication.emailAddresses[0]?.emailAddress ??
+                  null,
+                phone:
+                  c.communication.phoneNumbers.find((p) => p.isPrimary)
+                    ?.phoneNumber ??
+                  c.communication.phoneNumbers[0]?.phoneNumber ??
+                  null,
+              },
+            ])
+          )
+          enrichedContent = result.content.map((lease) => ({
+            ...lease,
+            contacts: lease.contacts?.map((c) => ({
+              ...c,
+              ...contactMap.get(c.contactCode),
+            })),
+          }))
+        }
+      }
+
       ctx.status = 200
-      ctx.body = result
+      ctx.body = { ...result, content: enrichedContent }
     } catch (error: unknown) {
       logger.error({ error, metadata }, 'Error searching leases (Tenfast)')
       ctx.status = 500
