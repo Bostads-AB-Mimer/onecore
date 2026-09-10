@@ -1,6 +1,7 @@
 import { AxiosInstance } from 'axios'
 import { makeTestAppFixture, TestApp } from './app-fixture'
 import { FULL_TEST_DATA_SET } from './data-set'
+import { GetRelatedContactsResponseBodySchema } from '@src/services/contacts-service/schema'
 
 describe('relation write endpoints', () => {
   let testApp: TestApp | undefined
@@ -42,6 +43,9 @@ describe('relation write endpoints', () => {
       })
 
       expect(response.status).toBe(201)
+      expect(
+        GetRelatedContactsResponseBodySchema.safeParse(response.data).success
+      ).toBe(true)
       expect(response.data.content.relations).toEqual([
         expect.objectContaining({ contactCode: 'P000222', role: 'trustee' }),
       ])
@@ -123,11 +127,12 @@ describe('relation write endpoints', () => {
 
   describe('DELETE /contacts/:contactCode/relations/:roleType/:relatedContactCode', () => {
     it('soft-deletes the relation and returns 204; a second delete is 404', async () => {
-      await post('P001000', {
+      const created = await post('P001000', {
         relatedContactCode: 'P000222',
         roleType: 'forvaltare',
         createdBy: 'handläggare',
       })
+      expect(created.status).toBe(201)
 
       const response = await del(
         'P001000',
@@ -152,11 +157,13 @@ describe('relation write endpoints', () => {
       expect(again.data).toMatchObject({ error: 'relation-not-found' })
     })
 
-    it('returns 400 for an unknown role type or a missing deletedBy', async () => {
+    it('returns 400 for an unknown role type', async () => {
       const role = await del('P000555', 'nyttjare', 'P000444')
       expect(role.status).toBe(400)
       expect(role.data).toMatchObject({ error: 'invalid-role-type' })
+    })
 
+    it('returns 400 for a missing deletedBy', async () => {
       const actor = await httpClient.delete(
         '/contacts/P000555/relations/forvaltare/P000444',
         { validateStatus: () => true }

@@ -27,6 +27,7 @@ import {
   GetContactsResponseBodySchema,
   GetRelatedContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
+  RelationActorSchema,
   RelationErrorResponseBodySchema,
   RelationRoleTypeSchema,
   SyncContactsResponseBodySchema,
@@ -59,6 +60,7 @@ const CREATE_CONTACT_STATUS: Record<CreateContactError, number> = {
   'write-backend-not-configured': 503,
 }
 
+/** 409 = the rule is about existing state; 422 = the request is coherent but semantically impossible. */
 const ADD_RELATION_STATUS: Record<AddRelationError, number> = {
   'subject-not-found': 404,
   'related-not-found': 404,
@@ -66,9 +68,6 @@ const ADD_RELATION_STATUS: Record<AddRelationError, number> = {
   'guardian-exists': 409,
   'duplicate-relation': 409,
 }
-
-/** The acting user recorded on a removed relation; same bound as `createdBy`. */
-const DeletedBySchema = z.string().trim().min(1).max(100)
 
 export const routes = (
   router: OkapiRouter,
@@ -637,13 +636,15 @@ export const routes = (
       description:
         'Adds an active relation from the contact to another contact in the ' +
         'given role. A contact can have at most one active god man or ' +
-        'förvaltare in total (409 guardian-exists, detail = the existing ' +
-        "guardian's contact code); the same relation cannot be added twice " +
-        '(409 duplicate-relation). Both contacts must exist (404). ' +
+        'förvaltare in total (409 guardian-exists, detail names the existing ' +
+        "guardian's contact code when known); the same relation cannot be " +
+        'added twice (409 duplicate-relation). Both contacts must exist (404). ' +
         '`createdBy` is the acting user, supplied by the caller. Returns the ' +
         "contact's relations after the change.",
       tags: ['Contacts'],
-      params: { contactCode: z.string() },
+      params: {
+        contactCode: z.string(),
+      },
       body: {
         name: 'AddRelationRequest',
         schema: AddRelationRequestBodySchema,
@@ -695,11 +696,11 @@ export const routes = (
       query: {
         deletedBy: {
           description: 'The acting user, recorded on the removed relation',
-          schema: z.string(),
+          schema: RelationActorSchema,
         },
       },
       response: {
-        204: z.never(),
+        204: z.undefined(),
         400: RelationErrorResponseBodySchema,
         404: RelationErrorResponseBodySchema,
       },
@@ -707,6 +708,8 @@ export const routes = (
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx, ['deletedBy'])
 
+      // OkapiRouter uses `params` schemas for OpenAPI only — `roleType` is typed as
+      // the enum but arrives unvalidated, so this parse is what actually narrows it.
       const roleType = RelationRoleTypeSchema.safeParse(ctx.params.roleType)
       if (!roleType.success) {
         ctx.status = 400
@@ -714,7 +717,7 @@ export const routes = (
         return
       }
 
-      const deletedBy = DeletedBySchema.safeParse(ctx.query.deletedBy)
+      const deletedBy = RelationActorSchema.safeParse(ctx.query.deletedBy)
       if (!deletedBy.success) {
         ctx.status = 400
         ctx.body = { error: 'missing-deleted-by', ...metadata }

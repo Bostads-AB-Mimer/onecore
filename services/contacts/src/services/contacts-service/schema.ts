@@ -244,10 +244,13 @@ export const RelationRoleTypeSchema = z.enum([
   'annan_fakturamottagare',
 ])
 
+// The acting user, bounded by contact_relation.created_by/deleted_by NVARCHAR(100).
+export const RelationActorSchema = z.string().trim().min(1).max(100)
+
 export const AddRelationRequestBodySchema = z.object({
   relatedContactCode: z.string().trim().min(1),
   roleType: RelationRoleTypeSchema,
-  createdBy: z.string().trim().min(1).max(100),
+  createdBy: RelationActorSchema,
 })
 
 export const AddRelationErrorCodeSchema = z.enum([
