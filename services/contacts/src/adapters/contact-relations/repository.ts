@@ -62,12 +62,10 @@ export const insertMany = async (
 }
 
 /**
- * Soft-deletes the given rows (by id), attributed to `deletedBy`. Rows that
- * are already soft-deleted are left untouched.
- *
- * Returns how many rows this call actually deleted, which is what tells a
- * caller apart from one that lost a race: the `deleted_at IS NULL` guard makes
- * the update a no-op for a row someone else soft-deleted in between.
+ * Soft-deletes the given rows (by id), attributed to `deletedBy`. Returns how
+ * many rows this call deleted: the `deleted_at IS NULL` guard makes it a no-op
+ * for a row someone else soft-deleted in between, which is how a caller that
+ * lost the race can tell.
  */
 export const softDeleteByIds = async (
   db: Knex,

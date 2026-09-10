@@ -49,9 +49,9 @@ const countByRole = (edges: RelationEdge[]): Record<RoleType, number> => {
  * result. Idempotent: rerunning against unchanged data writes nothing. All
  * writes happen in one transaction; `dryRun` skips them entirely.
  *
- * A guardian someone else has set wins: the Xpand edge is reported in
- * `skippedGuardians` instead of being written, since only one active guardian
- * per subject is allowed and the import may not remove another actor's row.
+ * A guardian someone else set wins: only one is allowed per subject and the
+ * import may not remove another actor's row, so the Xpand edge is reported in
+ * `skippedGuardians` instead.
  *
  * `inserted`/`softDeleted`/`unchanged`/`protected` on the returned report are
  * the planned counts from the reconcile step, not affected-row counts read

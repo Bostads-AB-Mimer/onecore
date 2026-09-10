@@ -16,9 +16,8 @@ import { AddRelationErrorCode, RemoveRelationErrorCode } from './api-types'
 /**
  * What the relation rules need from the outside world. Getters rather than
  * handles: Resources must be resolved per request, never captured.
- *
- * `relatedContactsFor` takes the handle to read through so the caller can pass
- * the write transaction and see its own uncommitted insert.
+ * `relatedContactsFor` takes its handle so the caller can pass the write
+ * transaction and see its own uncommitted insert.
  */
 export type RelationDependencies = {
   db: () => Knex
@@ -50,12 +49,8 @@ const GUARDIAN_ROLES: RoleType[] = ['god_man', 'forvaltare']
 // index, which tells us which rule the lost race broke.
 const UNIQUE_VIOLATION = 2601
 
-/**
- * Xpand looks contact codes up under a case-insensitive collation and so do
- * the unique indexes, so `P000111` and `p000111` are one contact everywhere
- * that matters. Comparing them case-sensitively here would let a self-edge
- * through and let a duplicate reach the index as a lost race.
- */
+// Xpand and the unique indexes both collate case-insensitively, so P000111 and
+// p000111 are one contact; comparing case-sensitively would let a self-edge in.
 const sameContact = (a: string, b: string): boolean =>
   a.trim().toUpperCase() === b.trim().toUpperCase()
 
@@ -72,14 +67,12 @@ const violatedIndex = (err: unknown): 'guardian' | 'edge' | null => {
 
 /**
  * Adds an active relation after checking, in order: self-edge, both contacts
- * exist in Xpand (resolving each code to the spelling Xpand stores), the exact
- * edge is not already active, and (for guardian roles) the subject has no
- * active guardian of either type. The unique indexes are the backstop for a
- * race between two requests.
+ * exist in Xpand, the exact edge is not already active, and (for guardian
+ * roles) the subject has no active guardian of either type. The unique indexes
+ * are the backstop for a race between two requests.
  *
- * The insert and the read-back of the subject's relations share one
- * transaction, so a failure reading back rolls the insert away rather than
- * reporting an error for a relation that was in fact written.
+ * Insert and read-back share a transaction, so a failed read rolls the insert
+ * away instead of reporting an error for a relation that was written.
  */
 const addRelation = async (
   deps: RelationDependencies,
@@ -159,12 +152,9 @@ const addRelation = async (
 }
 
 /**
- * Soft-deletes every active row matching the triple. History is kept: rows
- * get deleted_at/deleted_by and stay in the table.
- *
- * The update, not the read before it, decides the answer: two concurrent
- * deletes both see the row, and the one whose update touches nothing has to
- * report `relation-not-found` rather than a second success.
+ * Soft-deletes every active row matching the triple; history is kept. The
+ * update, not the read before it, decides the answer — two concurrent deletes
+ * both see the row, and the one that touches nothing is `relation-not-found`.
  */
 const removeRelation = async (
   deps: RelationDependencies,

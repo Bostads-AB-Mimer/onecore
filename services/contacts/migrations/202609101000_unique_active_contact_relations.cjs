@@ -1,6 +1,7 @@
 /**
- * Both indexes are created over existing data, so a shared environment has to be
- * clean before this runs. Both queries must return no rows:
+ * Built over existing data, so both pre-flight queries must return no rows
+ * before this runs; otherwise it fails with MSSQL error 1505, naming the index
+ * and the duplicate key.
  *
  * SELECT subject_contact_code, related_contact_code, role_type, COUNT(*) AS n
  * FROM contact_relation WHERE deleted_at IS NULL
@@ -10,9 +11,6 @@
  * FROM contact_relation WHERE deleted_at IS NULL
  *   AND role_type IN ('god_man', 'forvaltare')
  * GROUP BY subject_contact_code HAVING COUNT(*) > 1;
- *
- * If they do not, the migration fails with MSSQL error 1505, which names the
- * index and the duplicate key value.
  */
 
 /**

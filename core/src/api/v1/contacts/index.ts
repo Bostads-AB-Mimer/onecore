@@ -57,14 +57,10 @@ const CREATE_CONTACT_STATUS: Record<string, CreateContactFailureStatus> = {
 }
 
 /**
- * Statuses the contacts service reports for a relation write, passed straight
- * through so the caller can tell apart cases that share a code.
- *
- * `contacts-service-error` is the adapter's catch-all for a failure it could
- * not name, which is a fault in the service rather than in the request — so it
- * becomes 502 whatever status carried it. Keying on the status alone would
- * forward, say, the 404 of an unrouted path during a rolling deploy, reporting
- * an outage as a client error.
+ * Relation-write statuses pass through so the caller can tell apart cases that
+ * share a code. `contacts-service-error` is the adapter's unnamed-failure
+ * catch-all, so it is 502 whatever status carried it: forwarding the 404 of an
+ * unrouted path would report an outage as a client error.
  */
 const addRelationStatus = (
   err: AddRelationError,
@@ -524,17 +520,9 @@ export const routes = (router: OkapiRouter, config: Config) => {
     }
   )
 
-  // The acting user: display name, falling back to the username. The
-  // name -> preferred_username chain is the shared convention; communication
-  // and lease stop there, keys falls back to 'system'. Here 'unknown' is a
-  // terminal fallback that is effectively unreachable: a token carrying
-  // neither claim is a legacy api-access token, which the contacts:write gate
-  // rejects before the handler runs.
-  // Truncated to the NVARCHAR(100) the contacts service stores the actor in, so
-  // an unusually long display name is shortened rather than rejected.
-  // Trimmed before the chain, not after: a blank `name` claim is truthy, so it
-  // would otherwise win and reach contacts, which rejects a blank actor and
-  // leaves that user unable to write any relation at all.
+  // Display name, else username. Trimmed *before* the chain: a blank `name`
+  // claim is truthy, so it would otherwise win and reach contacts, which
+  // rejects a blank actor. Sliced to the NVARCHAR(100) contacts stores it in.
   const actingUser = (ctx: ParameterizedContext): string =>
     (
       ctx.state.user?.name?.trim() ||

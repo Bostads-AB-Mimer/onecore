@@ -17,11 +17,8 @@ const NAME_COLUMNS = [
 
 /**
  * The contact code as Xpand spells it, or null when there is no such contact.
- *
- * Xpand collates case-insensitively, so it answers a lookup for `p000111` with
- * the contact stored as `P000111`. Anything that *persists* a code has to store
- * this form: the read path keys Xpand names by the code Xpand returned
- * (`contactNamesByCodes` below), so a row written in the caller's casing is
+ * Anything that persists a code must store this form: `contactNamesByCodes`
+ * keys on what Xpand returned, so a row written in the caller's casing is
  * dropped from every kundkort while still counting towards the unique indexes.
  */
 export const canonicalContactCode = async (

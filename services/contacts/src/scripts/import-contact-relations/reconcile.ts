@@ -40,11 +40,9 @@ const isGuardianRole = (roleType: RoleType): boolean =>
 const keyOf = (e: RelationEdge): string =>
   JSON.stringify([e.subjectContactCode, e.relatedContactCode, e.roleType])
 
-// Desired edges arrive trimmed from Xpand, and MSSQL ignores trailing blanks
-// when comparing, so a padded stored code is the same code to the unique
-// indexes. Trimming here keeps a padded row matchable: seeing it as a
-// different edge would plan an insert the index then rejects, and since
-// migration 202609101000 that aborts the whole import.
+// Desired edges arrive trimmed and MSSQL ignores trailing blanks, so a padded
+// stored code is the same code to the unique indexes. Untrimmed, it reads as a
+// different edge and plans an insert the index rejects, aborting the import.
 const rowToEdge = (r: DbContactRelationRow): RelationEdge => ({
   subjectContactCode: r.subject_contact_code.trim(),
   relatedContactCode: r.related_contact_code.trim(),
@@ -62,16 +60,11 @@ const oldestFirst = (a: DbContactRelationRow, b: DbContactRelationRow) =>
  *   be deleted; anyone else's rows are left alone and left uncounted.
  * - One active row per edge survives: extra import-owned rows for the same
  *   edge are deleted (oldest kept), and an import-owned row that merely
- *   duplicates someone else's row is dropped in favour of theirs. Duplicate
- *   active edges are prevented by the unique index (migration
- *   202609101000), so that branch is now a backstop for rows written before
- *   it existed.
- * - A guardian edge is skipped when the subject already has an active
- *   guardian row (in either guardian role) that this run does not delete —
- *   typically one a caseworker set — or when an earlier edge in this same run
- *   already claimed the subject. The unique index allows only one active
- *   guardian per subject, so inserting anyway would fail the whole run; the
- *   edge is reported in `skippedGuardians` instead.
+ *   duplicates someone else's row is dropped in favour of theirs — a backstop
+ *   for rows written before the unique index (migration 202609101000).
+ * - Only one active guardian per subject, so a guardian edge is skipped (and
+ *   reported in `skippedGuardians`) when a row this run does not delete already
+ *   holds the slot — a caseworker's, or an earlier edge in this same run.
  * - `conflictHolders` are holders whose fakturamottagare could not be
  *   collapsed. Their import-owned annan_fakturamottagare rows are left as-is
  *   so a rerun cannot silently remove a previously imported recipient because

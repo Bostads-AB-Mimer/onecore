@@ -53,10 +53,8 @@ export const AddGuardianDialog = ({ contactCode }: AddGuardianDialogProps) => {
     search.setSearchQuery('')
   }
 
-  // Closing mid-flight would drop the pending add without telling anyone, so
-  // the overlay, the X and Escape are all inert until the mutation settles —
-  // as are the role and contact inputs, which would otherwise disagree with
-  // the request already on its way.
+  // Closing mid-flight would drop the pending add silently, so the overlay, the
+  // X, Escape and the form inputs are all inert until the mutation settles.
   const handleOpenChange = (next: boolean) => {
     if (!next && addRelation.isPending) return
     if (next) setOpen(true)
