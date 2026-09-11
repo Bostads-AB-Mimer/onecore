@@ -1,7 +1,7 @@
 # ==========================
 # Build stage
 # ==========================
-FROM node:23-slim AS builder
+FROM node:24-slim AS builder
 
 ENV CI=true
 
@@ -33,7 +33,7 @@ RUN cd /out && pnpm generate:static
 # ==========================
 # Run stage
 # ==========================
-FROM node:23-slim AS runner
+FROM node:24-slim AS runner
 
 # Run on the same version of openssl as the prisma build
 RUN apt-get update -y && apt-get install -y openssl

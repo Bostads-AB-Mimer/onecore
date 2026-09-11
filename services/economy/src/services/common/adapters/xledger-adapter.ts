@@ -96,13 +96,11 @@ const makeXledgerHttpRequest = async (
   let result: axios.AxiosResponse
 
   if (attachment) {
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins
     const formData = new FormData()
 
     const fileBuffer = fs.readFileSync(attachment.filepath)
     formData.append(
       attachment.originalFilename,
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins
       new Blob([fileBuffer]),
       attachment.originalFilename
     )
