@@ -1,4 +1,5 @@
 import { logger } from '@onecore/utilities'
+import { decodeTenfastQueryString } from './tenfast-helpers'
 import { Contact, Lease, RentalObjectAvailabilityInfo } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import z from 'zod'
@@ -309,16 +310,11 @@ export async function getAllLeases(): Promise<
   AdapterResult<TenfastLease[], 'unknown'>
 > {
   try {
-    // Tenfast requires literal brackets/commas — URLSearchParams encodes them.
-    const qs = new URLSearchParams({
+    const qs = decodeTenfastQueryString(new URLSearchParams({
       populate: 'hyresobjekt,hyresgaster',
       'filter[isArchived]': 'false',
       limit: '500',
-    })
-      .toString()
-      .replace(/%5B/gi, '[')
-      .replace(/%5D/gi, ']')
-      .replace(/%2C/gi, ',')
+    }))
     const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${qs}`
     const records = await fetchAllPages(
       (cursor) => (cursor ? `${baseUrl}&paginate=${cursor}` : baseUrl),

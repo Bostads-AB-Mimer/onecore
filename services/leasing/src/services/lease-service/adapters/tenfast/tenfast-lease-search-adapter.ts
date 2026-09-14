@@ -7,12 +7,8 @@ import {
 } from '@onecore/utilities'
 
 import { TenfastLease } from './schemas'
-import * as tenfastApi from './tenfast-api'
 import * as tenfastAdapter from './tenfast-adapter'
-import { TenfastLeaseSchema } from './schemas'
-import config from '../../../../common/config'
 import * as leaseCache from '../../../../common/lease-cache'
-import { AdapterResult } from '../types'
 import {
   mapTenfastTypToLeaseType,
   calculateLeaseStatus,
@@ -25,8 +21,6 @@ import {
   getRentalObjectCodesByDistrictNames,
 } from '../xpand/lease-search-adapter'
 
-const tenfastBaseUrl = config.tenfast.baseUrl
-const tenfastCompanyId = config.tenfast.companyId
 
 /**
  * Lightweight lease type for data from the batch-get endpoint.
@@ -366,14 +360,6 @@ function mapBatchGetLeaseToSearchResult(
  * Pagination: cursor-based via `limit` + `paginate` (cursor token from prev response).
  */
 
-// TODO: add object subtypes (e.g. garage) here once the subtype
-// filter branch is merged into main
-const OBJECT_TYPE_TO_TENFAST_TYP: Record<string, string> = {
-  bostad: 'bostad',
-  parkering: 'parkering',
-  lokal: 'lokal',
-}
-
 // UI param value → LeaseType enum values that match.
 // 'ovrigt' is a catch-all for anything not bostad/parkering/lokal.
 const KNOWN_NON_OVRIGT_TYPES = new Set([
@@ -386,17 +372,6 @@ const OBJECT_TYPE_PARAM_TO_LEASE_TYPES: Record<string, LeaseType[]> = {
   bostad: [LeaseType.HousingContract],
   parkering: [LeaseType.ParkingSpaceContract],
   lokal: [LeaseType.CommercialTenantContract],
-}
-
-const STATUS_TO_TENFAST_STAGE: Record<string, string> = {
-  current: 'active',
-  active: 'active',
-  upcoming: 'upcoming',
-  abouttoend: 'terminationScheduled',
-  ended: 'terminated',
-  pendingsignature: 'signingInProgress',
-  preliminaryterminated: 'preTermination',
-  notsent: 'draft',
 }
 
 const STATUS_PARAM_TO_LEASE_STATUS: Record<string, LeaseStatus> = {
@@ -529,146 +504,9 @@ function applyLocalFilters(
   })
 }
 
-/**
- * Analyze free-text `q` and return matching Tenfast API filters.
- * Matches contact codes, personnummer and lease IDs.
- * Returns empty for names/addresses — use explicit `name`/`address` params instead.
- */
-export function analyzeSearchTermForApi(q: string): Array<{
-  filterKey: string
-  filterValue: string
-}> {
-  const trimmed = q.trim()
-  if (!trimmed) return []
-
-  // Contact code: starts with P,F,I,K,L,Ö,S followed by digits
-  if (/^[PFIKLÖS pfiklös]\d+$/.test(trimmed)) {
-    return [
-      {
-        filterKey: 'filter[hyresgaster][externalId]',
-        filterValue: trimmed.toUpperCase(),
-      },
-    ]
-  }
-
-  // Personnummer with dash: YYMMDD-XXXX or YYYYMMDD-XXXX
-  if (/^\d{6}-\d{4}$/.test(trimmed) || /^\d{8}-\d{4}$/.test(trimmed)) {
-    return [
-      {
-        filterKey: 'filter[hyresgaster][idbeteckning]',
-        filterValue: trimmed,
-      },
-    ]
-  }
-
-  // Lease ID pattern: contains / (e.g. 206-706-00-0005/04)
-  if (trimmed.includes('/')) {
-    return [{ filterKey: 'filter[externalId]', filterValue: trimmed }]
-  }
-
-  // Contains dash but not personnummer and not lease ID → contract number prefix
-  if (trimmed.includes('-')) {
-    return [{ filterKey: 'filter[externalId]', filterValue: trimmed }]
-  }
-
-  // Pure digits, 4+ → personnummer (last 4 digits or full without dash)
-  if (/^\d{4,}$/.test(trimmed)) {
-    return [
-      {
-        filterKey: 'filter[hyresgaster][idbeteckning]',
-        filterValue: trimmed,
-      },
-    ]
-  }
-
-  // Short numeric (1-3 digits): contract number prefix
-  if (/^\d{1,3}$/.test(trimmed)) {
-    return [{ filterKey: 'filter[externalId]', filterValue: trimmed }]
-  }
-
-  // Default: treat as address search
-  return [
-    {
-      filterKey: 'filter[hyresobjekt][postadress]',
-      filterValue: trimmed,
-    },
-  ]
-}
-
-export function buildTenfastQueryParams(
-  params: leasing.v1.LeaseSearchQueryParams
-): URLSearchParams {
-  const query = new URLSearchParams()
-
-  query.set('populate', 'hyresgaster,hyresobjekt')
-  query.set('filter[isArchived]', 'false')
-
-  if (params.q) {
-    const apiFilters = analyzeSearchTermForApi(params.q)
-    for (const filter of apiFilters) {
-      query.set(filter.filterKey, filter.filterValue)
-    }
-  }
-
-  if (params.name) {
-    query.set('filter[hyresgaster][displayName]', params.name)
-  }
-
-  if (params.address) {
-    query.set('filter[hyresobjekt][postadress]', params.address.trim())
-  }
-
-  if (params.startDateFrom || params.startDateTo) {
-    const from = params.startDateFrom ?? ''
-    const to = params.startDateTo ?? ''
-    query.set('filter[startDate]', `${from},${to}`)
-  }
-  if (params.endDateFrom || params.endDateTo) {
-    const from = params.endDateFrom ?? ''
-    const to = params.endDateTo ?? ''
-    query.set('filter[endDate]', `${from},${to}`)
-  }
-
-  if (params.objectType && params.objectType.length > 0) {
-    const tenfastTypes = params.objectType
-      .map((t) => OBJECT_TYPE_TO_TENFAST_TYP[t.toLowerCase()])
-      .filter((t) => t && t !== 'ovrigt') // 'ovrigt' not supported by Tenfast search API
-    if (tenfastTypes.length > 0) {
-      query.set('filter[hyresobjekt][typ]', tenfastTypes.join(','))
-    }
-  }
-
-  if (params.status && params.status.length > 0) {
-    const tenfastStages = params.status
-      .map((s) => STATUS_TO_TENFAST_STAGE[s.toLowerCase()])
-      .filter(Boolean)
-    if (tenfastStages.length > 0) {
-      query.set('filter[stage]', tenfastStages.join(','))
-    }
-  }
-
-  if (params.property && params.property.length > 0) {
-    query.set(
-      'filter[hyresobjekt][fastighet][fastighetsbeteckning]',
-      params.property.join(',')
-    )
-  }
-
-  query.set('limit', String(params.limit ?? 20))
-
-  return query
-}
-
 export async function fetchAllLeasesForExport(
-  params: leasing.v1.LeaseSearchQueryParams,
-  ctx: Context
+  params: leasing.v1.LeaseSearchQueryParams
 ): Promise<leasing.v1.LeaseSearchResult[]> {
-  if (leaseCache.getAll().length === 0) {
-    ctx.throw(503, 'Lease cache is warming up — retry shortly', {
-      headers: { 'Retry-After': '30' },
-    })
-  }
-
   const needsXpandCodes =
     (params.buildingManager && params.buildingManager.length > 0) ||
     (params.buildingCodes && params.buildingCodes.length > 0) ||
@@ -729,10 +567,8 @@ export async function fetchAllLeasesForExport(
 }
 
 /**
- * Fetches all leases for the in-memory cache using full cursor pagination on
- * the list endpoint (/v1/hyresvard/avtal). Uses getAllLeases() which follows
- * the `next` cursor across all pages, unlike getLeases() which returns only
- * the first page (Tenfast ignores the limit=100000 hint).
+ * Fetches all leases for the in-memory cache using full cursor pagination.
+ * Uses getAllLeases() which follows the `next` cursor across all pages.
  */
 export async function fetchAllLeasesForCache(): Promise<
   leasing.v1.LeaseSearchResult[]
@@ -761,85 +597,6 @@ export async function fetchLeasesUpdatedSinceForCache(
     )
   }
   return result.data.map((l) => mapTenfastLeaseToSearchResult(l))
-}
-
-export async function fetchLeases(
-  params: leasing.v1.LeaseSearchQueryParams
-): Promise<
-  AdapterResult<
-    { leases: TenfastLease[]; totalCount: number },
-    'unknown' | 'could-not-parse-leases'
-  >
-> {
-  try {
-    const page = params.page ?? 1
-    const queryParams = buildTenfastQueryParams(params)
-    // Tenfast API expects literal brackets and commas, not URL-encoded
-    const queryString = queryParams
-      .toString()
-      .replace(/%5B/gi, '[')
-      .replace(/%5D/gi, ']')
-      .replace(/%2C/gi, ',')
-    const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${queryString}`
-
-    let cursor = ''
-    let totalCount = 0
-    let records: unknown[] = []
-
-    // Navigate through Tenfast cursor pages to reach the requested page.
-    // Each iteration fetches one page; we only parse the final (target) page.
-    for (let currentPage = 1; currentPage <= page; currentPage++) {
-      const url = cursor ? `${baseUrl}&paginate=${cursor}` : baseUrl
-
-      const res = await tenfastApi.request({ method: 'get', url })
-
-      if (res.status !== 200) {
-        logger.error(
-          { status: res.status, data: res.data },
-          'tenfast-lease-search-adapter.fetchLeases: Failed to fetch leases'
-        )
-        return { ok: false, err: 'unknown' }
-      }
-
-      records = res.data.records
-
-      if (currentPage === 1) {
-        totalCount = res.data.totalCount ?? 0
-      }
-
-      cursor = res.data.next ?? ''
-
-      // If there are no more pages and we haven't reached the target yet,
-      // the requested page is beyond the available data.
-      if (!cursor && currentPage < page) {
-        return { ok: true, data: { leases: [], totalCount } }
-      }
-    }
-
-    // Parse only the target page's records
-    const parsed = TenfastLeaseSchema.array().safeParse(records)
-    if (!parsed.success) {
-      logger.error(
-        { error: JSON.stringify(parsed.error, null, 2) },
-        'tenfast-lease-search-adapter.fetchLeases: Failed to parse response'
-      )
-      return { ok: false, err: 'could-not-parse-leases' }
-    }
-
-    return {
-      ok: true,
-      data: {
-        leases: parsed.data,
-        totalCount: totalCount || parsed.data.length,
-      },
-    }
-  } catch (err) {
-    logger.error(
-      { err },
-      'tenfast-lease-search-adapter.fetchLeases: Unexpected error'
-    )
-    return { ok: false, err: 'unknown' }
-  }
 }
 
 const applySorting = (

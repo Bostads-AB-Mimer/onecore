@@ -184,4 +184,79 @@ describe('lease-cache', () => {
       expect(deltaFetchFn).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe('nightly full resync', () => {
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000
+
+    it('triggers a full sync after 24 hours even when data is already in cache', async () => {
+      const lease1 = makeLease('lease-1')
+      const lease2 = makeLease('lease-2')
+      const fullFetchFn = jest
+        .fn()
+        .mockResolvedValueOnce([lease1])
+        .mockResolvedValueOnce([lease1, lease2])
+      const deltaFetchFn = jest.fn().mockResolvedValue([])
+
+      cache.startLeaseCache(fullFetchFn, deltaFetchFn)
+      await flushPromises()
+
+      expect(cache.getAll()).toHaveLength(1)
+      expect(fullFetchFn).toHaveBeenCalledTimes(1)
+
+      jest.advanceTimersByTime(ONE_DAY_MS)
+      await flushPromises()
+
+      expect(fullFetchFn).toHaveBeenCalledTimes(2)
+      expect(deltaFetchFn).not.toHaveBeenCalled()
+      expect(cache.getAll()).toHaveLength(2)
+    })
+
+    it('keeps existing data and stays ready if nightly resync fails', async () => {
+      const lease1 = makeLease('lease-1')
+      const fullFetchFn = jest
+        .fn()
+        .mockResolvedValueOnce([lease1])
+        .mockRejectedValueOnce(new Error('network failure'))
+      const deltaFetchFn = jest.fn().mockResolvedValue([])
+
+      cache.startLeaseCache(fullFetchFn, deltaFetchFn)
+      await flushPromises()
+
+      jest.advanceTimersByTime(ONE_DAY_MS)
+      await flushPromises()
+
+      expect(cache.isReady()).toBe(true)
+      expect(cache.getAll()).toEqual([lease1])
+    })
+
+    it('waits for an ongoing sync before starting the nightly resync', async () => {
+      let resolveInitialFetch!: (v: leasing.v1.LeaseSearchResult[]) => void
+      const pendingInitial = new Promise<leasing.v1.LeaseSearchResult[]>(
+        (resolve) => {
+          resolveInitialFetch = resolve
+        }
+      )
+
+      const fullFetchFn = jest
+        .fn()
+        .mockReturnValueOnce(pendingInitial)
+        .mockResolvedValueOnce([makeLease('lease-2')])
+      const deltaFetchFn = jest.fn().mockResolvedValue([])
+
+      cache.startLeaseCache(fullFetchFn, deltaFetchFn)
+      // Initial sync is pending — do not flush yet
+
+      jest.advanceTimersByTime(ONE_DAY_MS)
+      // scheduledFullSync is waiting for the ongoing initial sync
+
+      resolveInitialFetch([makeLease('lease-1')])
+      await flushPromises() // initial sync settles, scheduledFullSync resumes
+      await flushPromises() // nightly full sync completes
+
+      // Both the initial and the nightly full sync should have run
+      expect(fullFetchFn).toHaveBeenCalledTimes(2)
+      expect(deltaFetchFn).not.toHaveBeenCalled()
+      expect(cache.getAll()).toEqual([makeLease('lease-2')])
+    })
+  })
 })

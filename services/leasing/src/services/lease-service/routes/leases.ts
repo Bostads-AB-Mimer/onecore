@@ -24,6 +24,7 @@ import {
 
 import { LeaseStatusLabel } from '@onecore/types'
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
+import * as leaseCache from '../../../common/lease-cache'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import config from '../../../common/config'
@@ -390,11 +391,15 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    if (leaseCache.getAll().length === 0) {
+      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+        headers: { 'Retry-After': '30' },
+      })
+    }
+
     try {
-      // Fetch all matching leases using cursor-based pagination (O(n) API calls)
       const rawLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
-        queryParams.data,
-        ctx
+        queryParams.data
       )
 
       // TODO(AVTAL-270): Route through contacts-service instead of querying Xpand directly
