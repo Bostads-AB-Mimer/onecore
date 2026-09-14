@@ -1,3 +1,5 @@
+// fetch is stable in Node.js 20 LTS but eslint-plugin-n still flags it as experimental
+/* eslint-disable n/no-unsupported-features/node-builtins */
 jest.mock('@onecore/utilities', () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
 }))
@@ -51,7 +53,10 @@ describe('sendLeaseTerminationConfirmation', () => {
     await sendLeaseTerminationConfirmation(email)
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const [url, options] = fetchMock.mock.calls[0] as [
+      string,
+      { method?: string; headers?: Record<string, string>; body?: string },
+    ]
     expect(url).toBe('https://infobip.test/email/4/messages')
     expect(options.method).toBe('POST')
     expect(options.headers).toMatchObject({
@@ -86,7 +91,7 @@ describe('sendLeaseTerminationConfirmation', () => {
     await sendLeaseTerminationConfirmation(withoutParking)
 
     const body = JSON.parse(
-      (fetchMock.mock.calls[0][1] as RequestInit).body as string
+      (fetchMock.mock.calls[0][1] as { body: string }).body
     )
     const placeholders = JSON.parse(
       body.messages[0].destinations[0].to[0].placeholders
