@@ -1115,43 +1115,6 @@ export const searchLeases = async (
   // Timeout falls back to existing data so the request never hangs indefinitely.
   await leaseCache.refreshIfStale(STALE_THRESHOLD_MS, STALE_SYNC_TIMEOUT_MS)
 
-  // idbeteckning (personnummer) is not stored in the cache — go to Tenfast.
-  const apiFilters = params.q ? analyzeSearchTermForApi(params.q) : []
-  const needsPersonnummerLookup = apiFilters.some(
-    (f) => f.filterKey === 'filter[hyresgaster][idbeteckning]'
-  )
-
-  if (needsPersonnummerLookup) {
-    const page = Math.max(1, params.page ?? 1)
-    const limit = Math.max(1, params.limit ?? 20)
-    const leasesResult = await fetchLeases(params)
-    if (!leasesResult.ok) {
-      throw new Error(
-        `Failed to fetch leases from Tenfast: ${leasesResult.err}`
-      )
-    }
-    const { leases: tenfastLeases, totalCount } = leasesResult.data
-    const searchResults = tenfastLeases.map((l) =>
-      mapTenfastLeaseToSearchResult(l)
-    )
-    const sortedResults = applySorting(searchResults, params)
-    const totalPages = Math.ceil(totalCount / limit)
-    logger.info(
-      { totalMs: Date.now() - requestStart },
-      'lease-cache: searchLeases complete (personnummer path)'
-    )
-    return {
-      content: sortedResults,
-      _meta: {
-        totalRecords: totalCount,
-        page,
-        limit,
-        count: sortedResults.length,
-      },
-      _links: buildPaginationLinks(ctx, page, limit, totalPages),
-    }
-  }
-
   const result = await searchLeasesFromCache(params, ctx)
   logger.info(
     { totalMs: Date.now() - requestStart },

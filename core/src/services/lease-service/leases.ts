@@ -494,7 +494,18 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await leasingAdapter.searchLeases(resolved.query)
+      let searchQuery = resolved.query
+      const rawQ = Array.isArray(searchQuery.q)
+        ? (searchQuery.q[0] ?? '')
+        : (searchQuery.q ?? '')
+      if (/^(\d{10}|\d{6}-\d{4}|\d{12}|\d{8}-\d{4})$/.test(rawQ)) {
+        const contactResult = await contactsAdapter.getByNationalId(rawQ)
+        if (contactResult.ok) {
+          searchQuery = { ...searchQuery, q: contactResult.data.contactCode }
+        }
+      }
+
+      const result = await leasingAdapter.searchLeases(searchQuery)
 
       const contactCodes = [
         ...new Set(

@@ -208,6 +208,13 @@ const LeasesPage = () => {
               searchPlaceholder="Sök på kontraktsnummer, kundnummer, personnummer, adress..."
               hasActiveFilters={filters.hasActiveFilters}
               onClearFilters={filters.clearFilters}
+              hint={
+                /^\d+$/.test(filters.searchInput) &&
+                filters.searchInput.length >= 4 &&
+                filters.searchInput.length < 10
+                  ? 'Ange hela personnumret (10 eller 12 siffror) för att söka på personnummer.'
+                  : undefined
+              }
             >
               <ObjectTypeFilter
                 objectTypeOptions={objectTypeOptions.map((o) => ({
