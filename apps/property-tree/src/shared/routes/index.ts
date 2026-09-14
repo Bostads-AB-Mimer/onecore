@@ -29,6 +29,7 @@ export const routes = {
   leases: '/hyreskontrakt',
   inspections: '/besiktningar',
   economy: '/economy',
+  miscellaneousInvoices: '/strofakturor',
   components: '/komponenter',
   callback: '/callback',
 } as const
