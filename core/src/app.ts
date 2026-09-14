@@ -91,6 +91,15 @@ app.use(async (ctx, next) => {
     return requireRole(['invoice-notify:post', 'api-access'])(ctx, next)
   }
 
+  // Tenant notifications: auth only here; each notification type requires its
+  // own role, checked in the route handler (see requiredRoleByNotificationType).
+  if (
+    ctx.path.startsWith('/v1/tenant-notifications') &&
+    ctx.method === 'POST'
+  ) {
+    return next()
+  }
+
   // Infobip email delivery-report webhook — authenticated via a Keycloak
   // service account (client_credentials) holding the infobip-webhook role.
   if (ctx.path.startsWith('/webhooks/infobip')) {
