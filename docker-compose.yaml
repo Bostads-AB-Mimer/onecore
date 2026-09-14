@@ -45,7 +45,8 @@ services:
       - 5608:5601
 
   minio:
-    image: minio/minio
+    # Last published community image; Docker Hub repo is gone. To be replaced.
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: onecore-minio
     command: server /data --console-address ":9001"
     ports:
