@@ -141,9 +141,10 @@ async function doSync(
         'lease-cache: delta sync complete'
       )
     } else {
+      const syncStartedAt = new Date()
       const leases = await fullFetchFn()
       state.leases = leases
-      state.lastSyncedAt = new Date()
+      state.lastSyncedAt = syncStartedAt
       state.status = 'ready'
       logger.info({ count: leases.length }, 'lease-cache: full sync complete')
     }

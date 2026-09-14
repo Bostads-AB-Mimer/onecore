@@ -36,16 +36,8 @@ export const toCommunicationFragment = (
   protectedIdentity: boolean
 ) => {
   return {
-    phoneNumbers: redact(
-      transformPhoneNumbers(contactDetails.phoneNumbers),
-      'phoneNumber',
-      protectedIdentity
-    ),
-    emailAddresses: redact(
-      transformEmailAddresses(contactDetails.emailAddresses),
-      'emailAddress',
-      protectedIdentity
-    ),
+    phoneNumbers: redact(transformPhoneNumbers(contactDetails.phoneNumbers), 'phoneNumber', protectedIdentity),
+    emailAddresses: redact(transformEmailAddresses(contactDetails.emailAddresses), 'emailAddress', protectedIdentity),
     specialAttention: !!row.specialAttention,
   }
 }

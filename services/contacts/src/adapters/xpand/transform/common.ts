@@ -1,4 +1,3 @@
-const REDACTED = 'redacted'
 
 /**
  * Trim any and all string values of a DB result row, as Xpand
@@ -22,7 +21,8 @@ export const redact = <T, Prop extends keyof T>(
   field: Prop,
   protectedIdentity: boolean
 ) => {
-  return protectedIdentity
-    ? details.map((pn) => ({ ...pn, [field]: REDACTED }))
-    : details
+  if (protectedIdentity) return []
+  if (process.env.NODE_ENV !== 'production')
+    return details.map((item) => ({ ...item, [field]: 'redacted' }))
+  return details
 }
