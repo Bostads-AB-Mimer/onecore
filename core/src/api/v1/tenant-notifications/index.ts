@@ -24,9 +24,9 @@ export const routes = (router: OkapiRouter, _config: Config) => {
       description:
         'Triggers a templated tenant notification on behalf of an integration ' +
         '(e.g. Tenfast) after a business event. Requires `Idempotency-Key` for ' +
-        'safe retries. OneCore owns delivery and the communication log. Each ' +
-        '`type` requires its own Keycloak role — see `requiredRoleByNotificationType` ' +
-        'in @onecore/types.',
+        'safe retries. OneCore owns delivery and the communication log. Requires ' +
+        'the type-specific Keycloak role or `api-access` — see ' +
+        '`requiredRoleByNotificationType` in @onecore/types.',
       tags: ['Tenant notifications'],
       body: {
         name: 'SendTenantNotificationRequest',

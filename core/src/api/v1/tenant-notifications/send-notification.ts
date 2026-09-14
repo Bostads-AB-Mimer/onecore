@@ -12,8 +12,19 @@ import {
   tenantNotificationIdempotencyStore,
 } from './idempotency'
 
-const hasRole = (ctx: ParameterizedContext, role: string) =>
-  (ctx.state.user?.realm_access?.roles ?? []).includes(role)
+const API_ACCESS_ROLE = 'api-access'
+
+/** Matches other integration routes: use-case role OR api-access. */
+const canSendNotificationType = (
+  ctx: ParameterizedContext,
+  type: TenantNotification['type']
+) => {
+  const userRoles = ctx.state.user?.realm_access?.roles ?? []
+  return (
+    userRoles.includes(API_ACCESS_ROLE) ||
+    userRoles.includes(requiredRoleByNotificationType[type])
+  )
+}
 
 const sendByType = (notification: TenantNotification) => {
   switch (notification.type) {
@@ -40,8 +51,7 @@ export const sendTenantNotification = async (
   idempotencyKey: string,
   store: IdempotencyStore = tenantNotificationIdempotencyStore
 ): Promise<SendTenantNotificationResult> => {
-  const requiredRole = requiredRoleByNotificationType[notification.type]
-  if (!hasRole(ctx, requiredRole)) {
+  if (!canSendNotificationType(ctx, notification.type)) {
     return { ok: false, error: 'insufficient-permissions' }
   }
 

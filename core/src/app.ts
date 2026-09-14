@@ -91,8 +91,8 @@ app.use(async (ctx, next) => {
     return requireRole(['invoice-notify:post', 'api-access'])(ctx, next)
   }
 
-  // Tenant notifications: auth only here; each notification type requires its
-  // own role, checked in the route handler (see requiredRoleByNotificationType).
+  // Tenant notifications: auth only here; the handler checks the type-specific
+  // role OR api-access once the body is parsed (see requiredRoleByNotificationType).
   if (
     ctx.path.startsWith('/v1/tenant-notifications') &&
     ctx.method === 'POST'

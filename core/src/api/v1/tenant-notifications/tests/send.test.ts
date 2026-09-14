@@ -97,10 +97,25 @@ describe('POST /v1/tenant-notifications', () => {
     ).not.toHaveBeenCalled()
   })
 
-  it('returns 403 when the caller lacks the type-specific role', async () => {
+  it('allows api-access without the type-specific role', async () => {
     mockUser = {
       ...TEST_USER,
       realm_access: { roles: ['api-access'] },
+    }
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({ sent: true })
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 403 when the caller lacks api-access and the type-specific role', async () => {
+    mockUser = {
+      ...TEST_USER,
+      realm_access: { roles: ['some-other-role'] },
     }
 
     const res = await postNotification()

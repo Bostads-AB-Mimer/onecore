@@ -5,7 +5,7 @@ import { z } from 'zod'
  * (e.g. Tenfast) after a business event.
  *
  * Public API: `POST /v1/tenant-notifications`
- * - Discriminated on `type` — one URL, per-type Keycloak roles
+ * - Discriminated on `type` — one URL, per-type Keycloak roles (or `api-access`)
  * - Requires `Idempotency-Key` header for safe retries
  * - Callers supply structured facts only; OneCore owns templates and delivery
  */
