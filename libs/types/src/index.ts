@@ -14,6 +14,18 @@ export * as economy from './economy'
 export * as inspection from './inspection'
 export * as property from './property'
 export * as communication from './communication'
+export {
+  TenantNotificationType,
+  TenantNotificationSchema,
+  TenantNotificationRole,
+  requiredRoleByNotificationType,
+  LeaseTerminationConfirmationNotificationSchema,
+  LeaseTerminationConfirmationEmailSchema,
+  LeaseTerminationConfirmationMessageType,
+  type TenantNotification,
+  type LeaseTerminationConfirmationNotification,
+  type LeaseTerminationConfirmationEmail,
+} from './communication/tenant-notification'
 export * from './room'
 
 export * as schemas from './schemas'
