@@ -8,6 +8,7 @@ import {
   Invoice,
   InvoicePaymentEvent,
   InvoiceTransactionType,
+  MiscellaneousInvoice,
   MiscellaneousInvoiceArticle,
   PaymentStatus,
   SubmitMiscellaneousInvoiceErrorCodes,
@@ -975,6 +976,101 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
   } catch (err) {
     logger.error(err, 'Error getting invoice match id from Xledger')
     throw err
+  }
+}
+
+export const getMiscellaneousInvoices = async ({
+  size = 100,
+  from,
+  to,
+}: {
+  size?: number
+  from?: Date
+  to?: Date
+}): Promise<AdapterResult<MiscellaneousInvoice[], 'unknown'>> => {
+  try {
+    const query = {
+      query: gql`
+        query ($first: Int, $filter: SalesOrder_Filter) {
+          salesOrders(last: $first, filter: $filter) {
+            edges {
+              node {
+                invoiceDate
+                invoiceNumber
+                ourRef {
+                  name
+                }
+                subledger {
+                  code
+                }
+                text
+                code
+                description
+                invoiceAmount
+                headerInfo
+                deliveryDate
+                dateConfirmed
+                invoiceFile {
+                  url
+                }
+                invoiceBaseItems(first: 100) {
+                  edges {
+                    node {
+                      dbId
+                      text
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `,
+      variables: {
+        first: size,
+        filter: {
+          invoiceDate_gte: from ? dateToGraphQlDateString(from) : undefined,
+          invoiceDate_lte: to ? dateToGraphQlDateString(to) : undefined,
+        },
+      },
+    }
+
+    const result = await makeXledgerRequest(query)
+
+    if (!result.data?.salesOrders?.edges) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    return {
+      ok: true,
+      data: result.data.salesOrders.edges.map((e: any) =>
+        transformToMiscellaneousInvoice(e.node)
+      ),
+    }
+  } catch (err) {
+    logger.error(err, 'Error getting sales orders from Xledger')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const transformToMiscellaneousInvoice = (node: any): MiscellaneousInvoice => {
+  let leaseId: string | null = null
+  const headerInfoLeaseIdRegex = /^(.+): .+$/
+  const match = headerInfoLeaseIdRegex.exec(node.headerInfo)
+  if (match?.[1]) {
+    leaseId = match[1]
+  }
+
+  return {
+    invoiceId: node.invoiceNumber,
+    leaseId,
+    amount: node.invoiceAmount,
+    invoiceBaseItems: node.invoiceBaseItems,
+    invoiceDate: node.invoiceDate,
+    reference: node.subledger.code,
+    ourReference: node.ourRef.name,
+    description: node.description,
+    invoiceFileUrl: node.invoiceFile?.url,
   }
 }
 

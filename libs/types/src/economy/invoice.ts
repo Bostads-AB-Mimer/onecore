@@ -18,3 +18,11 @@ export const GetInvoicesQueryParams = z
     pageSize: z.coerce.number().optional(),
   })
   .optional()
+
+export const GetMiscellaneousInvoicesQueryParams = z
+  .object({
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
+    size: z.coerce.number().optional(),
+  })
+  .optional()
