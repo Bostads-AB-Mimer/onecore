@@ -1,6 +1,12 @@
 import { logger, loggedAxios, PaginatedResponse } from '@onecore/utilities'
-import { CreateContactErrorCodeSchema } from '@onecore/contacts/schema'
+import {
+  AddRelationErrorCodeSchema,
+  CreateContactErrorCodeSchema,
+  RemoveRelationErrorCodeSchema,
+} from '@onecore/contacts/schema'
 import type {
+  AddRelationErrorCode,
+  AddRelationRequestBody,
   Contact,
   CreateContactErrorCode,
   CreateContactErrorResponseBody,
@@ -8,6 +14,10 @@ import type {
   CreateContactResponseBody,
   GetContactResponseBody,
   GetContactsResponseBody,
+  GetRelatedContactsResponseBody,
+  RelationErrorResponseBody,
+  RelationRoleType,
+  RemoveRelationErrorCode,
   SyncContactsResponseBody,
 } from '@onecore/contacts/schema'
 
@@ -29,6 +39,33 @@ export type CreateContactError =
  */
 const KNOWN_CREATE_ERRORS: ReadonlySet<string> =
   new Set<CreateContactErrorCode>(CreateContactErrorCodeSchema.options)
+
+/**
+ * Failures the contacts service can report when adding/removing a relation,
+ * plus the catch-alls for requests and responses we do not recognise.
+ */
+export type AddRelationError =
+  AddRelationErrorCode | 'invalid-request' | 'contacts-service-error'
+export type RemoveRelationError =
+  RemoveRelationErrorCode | 'invalid-request' | 'contacts-service-error'
+
+const KNOWN_ADD_RELATION_ERRORS: ReadonlySet<string> =
+  new Set<AddRelationErrorCode>(AddRelationErrorCodeSchema.options)
+// Route-level 400 codes (`RemoveRelationRequestErrorCodeSchema`) are folded
+// into `invalid-request` by the 400 check, so they are deliberately not
+// listed here.
+const KNOWN_REMOVE_RELATION_ERRORS: ReadonlySet<string> =
+  new Set<RemoveRelationErrorCode>(RemoveRelationErrorCodeSchema.options)
+
+/**
+ * Core-side call shape for a relation: the subject's code plus the
+ * counterpart and role.
+ */
+export type RelationRef = {
+  contactCode: string
+  relatedContactCode: string
+  roleType: RelationRoleType
+}
 
 export const makeContactsAdapter = (contactsServiceUrl: string) => {
   const axios = loggedAxios.create({
@@ -241,6 +278,119 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
           message?: string
         }
         logger.error({ code, message }, 'contactsAdapter.createContact')
+        return { ok: false, err: 'contacts-service-error' }
+      }
+    },
+
+    /**
+     * Adds a relation (e.g. god man/förvaltare) between two contacts.
+     *
+     * The service's own error code is passed through rather than re-derived
+     * from the status, so callers can distinguish cases that share a status.
+     */
+    async addRelation(
+      params: RelationRef & { createdBy: string }
+    ): Promise<
+      AdapterResult<GetRelatedContactsResponseBody['content'], AddRelationError>
+    > {
+      const body: AddRelationRequestBody = {
+        relatedContactCode: params.relatedContactCode,
+        roleType: params.roleType,
+        createdBy: params.createdBy,
+      }
+      try {
+        const response = await axios.post<
+          GetRelatedContactsResponseBody & RelationErrorResponseBody
+        >(`/contacts/${encodeURIComponent(params.contactCode)}/relations`, body)
+
+        if (response.status === 201) {
+          return { ok: true, data: response.data.content }
+        }
+
+        if (response.status === 400) {
+          return {
+            ok: false,
+            err: 'invalid-request',
+            statusCode: 400,
+          }
+        }
+
+        const reported = response.data?.error
+        if (reported && KNOWN_ADD_RELATION_ERRORS.has(reported)) {
+          return {
+            ok: false,
+            err: reported as AddRelationErrorCode,
+            statusCode: response.status,
+            detail: response.data?.detail,
+          }
+        }
+
+        return {
+          ok: false,
+          err: 'contacts-service-error',
+          statusCode: response.status,
+        }
+      } catch (err) {
+        // Not the raw error: an AxiosError carries the request body, which
+        // holds the related contact's code.
+        const { code, message } = (err ?? {}) as {
+          code?: string
+          message?: string
+        }
+        logger.error({ code, message }, 'contactsAdapter.addRelation')
+        return { ok: false, err: 'contacts-service-error' }
+      }
+    },
+
+    /**
+     * Removes a relation (e.g. god man/förvaltare) between two contacts.
+     */
+    async removeRelation(
+      params: RelationRef & { deletedBy: string }
+    ): Promise<AdapterResult<void, RemoveRelationError>> {
+      try {
+        const response = await axios.delete<RelationErrorResponseBody>(
+          `/contacts/${encodeURIComponent(params.contactCode)}/relations/` +
+            `${encodeURIComponent(params.roleType)}/` +
+            `${encodeURIComponent(params.relatedContactCode)}`,
+          { params: { deletedBy: params.deletedBy } }
+        )
+
+        if (response.status === 204) {
+          return { ok: true, data: undefined }
+        }
+
+        if (response.status === 400) {
+          return {
+            ok: false,
+            err: 'invalid-request',
+            statusCode: 400,
+          }
+        }
+
+        const reported = response.data?.error
+        if (reported && KNOWN_REMOVE_RELATION_ERRORS.has(reported)) {
+          return {
+            ok: false,
+            err: reported as RemoveRelationErrorCode,
+            statusCode: response.status,
+            detail: response.data?.detail,
+          }
+        }
+
+        return {
+          ok: false,
+          err: 'contacts-service-error',
+          statusCode: response.status,
+        }
+      } catch (err) {
+        // Not the raw error: an AxiosError carries the request config, which
+        // holds identifying query params.
+        const { code, message } = (err ?? {}) as {
+          code?: string
+          message?: string
+        }
+        logger.error({ code, message }, 'contactsAdapter.removeRelation')
         return { ok: false, err: 'contacts-service-error' }
       }
     },

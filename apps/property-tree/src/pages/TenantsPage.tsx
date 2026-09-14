@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChevronDown } from 'lucide-react'
 
 import { useTenantSearch } from '@/entities/tenant'
-import { CONTACT_CREATE_ROLE, RequireRole } from '@/entities/user'
+import { CONTACTS_WRITE_ROLE, RequireRole } from '@/entities/user'
 
 import { CreateContactDialog } from '@/features/tenants'
 
@@ -39,7 +39,7 @@ export function TenantsPage() {
             Sök och hitta hyresgäster och sökande
           </p>
         </div>
-        <RequireRole roles={[CONTACT_CREATE_ROLE]}>
+        <RequireRole roles={[CONTACTS_WRITE_ROLE]}>
           <CreateContactDialog />
         </RequireRole>
       </div>

@@ -65,7 +65,9 @@ const hydrate = async (
   let dropped = 0
   // Keyed rather than scanned: one role of a high-degree contact can hold
   // thousands of edges, and re-scanning the accumulated list per edge would
-  // put back the quadratic cost that filtering in SQL removes.
+  // put back the quadratic cost that filtering in SQL removes. Duplicate
+  // active edges are prevented by the unique index since migration
+  // 202609101000, so this dedupe is a backstop.
   const seen = new Set<string>()
   for (const { owner, other, role } of distinct) {
     const name = names.get(other)
