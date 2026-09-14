@@ -18,6 +18,7 @@ import {
   getInvoicePaymentEvents,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
   getInvoicesByInvoiceNumbers as getXledgerInvoicesByInvoiceNumbers,
+  getMiscellaneousInvoices,
   submitMiscellaneousInvoice,
 } from '../common/adapters/xledger-adapter'
 import {
@@ -336,6 +337,43 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody(result, metadata)
     } catch (error: any) {
       logger.error(error)
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.get('(.*)/miscellaneous-invoices', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = economy.GetMiscellaneousInvoicesQueryParams.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    try {
+      const result = await getMiscellaneousInvoices({
+        from: queryParams.data?.from,
+        to: queryParams.data?.to,
+        size: queryParams.data?.size,
+      })
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          message: result.err,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    } catch (error: any) {
+      logger.error({ err: error }, 'Error getting miscellaneous invoices')
       ctx.status = 500
       ctx.body = {
         message: error.message,
