@@ -1,7 +1,7 @@
 # ==========================
 # Build stage
 # ==========================
-FROM node:23-slim AS builder
+FROM node:24-slim AS builder
 
 ENV CI=true
 
@@ -29,7 +29,7 @@ RUN pnpm deploy --filter @onecore/keys --prod /out
 # ==========================
 # Run stage
 # ==========================
-FROM node:23-slim AS runner
+FROM node:24-slim AS runner
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@10.6.1 --activate
