@@ -1,0 +1,62 @@
+{{/*
+Copyright Bostads AB Mimer.
+SPDX-License-Identifier: AGPL-3.0-only
+*/}}
+
+# Traefik Middlewares
+{{- if $.Values.ingress.enabled }}
+{{- if $.Values.ingress.middlewares }}
+{{- $middlewares := $.Values.ingress.middlewares }}
+
+{{- if $middlewares.cors }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: cors
+  namespace: {{ $.Values.global.namespace | default $.Release.Namespace }}
+spec:
+  headers:
+    accessControlAllowOriginList:
+      - "*"
+    accessControlAllowMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    accessControlAllowHeaders:
+      - "*"
+{{- end }}
+
+{{- if $middlewares.basicAuth }}
+{{- if $middlewares.basicAuth.enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: basic-auth
+  namespace: {{ $.Values.global.namespace | default $.Release.Namespace }}
+spec:
+  basicAuth:
+    secret: {{ $middlewares.basicAuth.secretName | default "basic-auth" }}
+{{- end }}
+{{- end }}
+
+{{- if $middlewares.stripPrefix }}
+{{- if $middlewares.stripPrefix.enabled }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-prefix
+  namespace: {{ $.Values.global.namespace | default $.Release.Namespace }}
+spec:
+  stripPrefix:
+    prefixes:
+{{- toYaml $middlewares.stripPrefix.prefixes | nindent 6 }}
+{{- end }}
+{{- end }}
+
+{{- end }}
+{{- end }}
