@@ -34,6 +34,13 @@ export const requiredRoleByNotificationType: Record<
 export const LeaseTerminationConfirmationMessageType =
   'lease_termination_confirmation' as const
 
+/** Supported rental categories for lease-termination confirmation. Extend when housing is added. */
+export const LeaseTerminationRentalTypeSchema = z.enum(['Bilplats'])
+
+export type LeaseTerminationRentalType = z.infer<
+  typeof LeaseTerminationRentalTypeSchema
+>
+
 export const LeaseTerminationConfirmationNotificationSchema = z.object({
   type: z.literal(TenantNotificationType.LeaseTerminationConfirmation),
   to: z.string().email(),
@@ -43,7 +50,7 @@ export const LeaseTerminationConfirmationNotificationSchema = z.object({
   leaseId: z.string().min(1),
   endDate: z.string().min(1),
   objectId: z.string().min(1),
-  rentalType: z.string().min(1),
+  rentalType: LeaseTerminationRentalTypeSchema,
   parkingSpaceId: z.string().min(1).optional(),
   triggeredByUser: z.string().min(1).optional(),
   correlationId: z.string().min(1).optional(),

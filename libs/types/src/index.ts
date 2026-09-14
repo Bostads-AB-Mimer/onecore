@@ -22,6 +22,8 @@ export {
   LeaseTerminationConfirmationNotificationSchema,
   LeaseTerminationConfirmationEmailSchema,
   LeaseTerminationConfirmationMessageType,
+  LeaseTerminationRentalTypeSchema,
+  type LeaseTerminationRentalType,
   type TenantNotification,
   type LeaseTerminationConfirmationNotification,
   type LeaseTerminationConfirmationEmail,

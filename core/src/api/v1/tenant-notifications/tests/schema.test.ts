@@ -43,6 +43,15 @@ describe('LeaseTerminationConfirmationNotificationSchema', () => {
       }).success
     ).toBe(false)
   })
+
+  it('rejects an unsupported rentalType', () => {
+    expect(
+      LeaseTerminationConfirmationNotificationSchema.safeParse({
+        ...validTerminationNotification,
+        rentalType: 'Bostad',
+      }).success
+    ).toBe(false)
+  })
 })
 
 describe('TenantNotificationSchema', () => {
