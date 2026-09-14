@@ -393,7 +393,7 @@ const STATUS_TO_TENFAST_STAGE: Record<string, string> = {
   active: 'active',
   upcoming: 'upcoming',
   abouttoend: 'terminationScheduled',
-  ended: 'terminated,archived',
+  ended: 'terminated',
   pendingsignature: 'signingInProgress',
   preliminaryterminated: 'preTermination',
   notsent: 'draft',

@@ -4,6 +4,7 @@ import { logger } from '@onecore/utilities'
 type CacheStatus = 'uninitialized' | 'syncing' | 'ready' | 'error'
 
 const DELTA_BUFFER_MS = 30_000
+const FULL_RESYNC_INTERVAL_MS = 24 * 60 * 60 * 1000
 
 type FetchFn = () => Promise<leasing.v1.LeaseSearchResult[]>
 type DeltaFetchFn = (since: Date) => Promise<leasing.v1.LeaseSearchResult[]>
@@ -116,7 +117,8 @@ async function sync(
 
 async function doSync(
   fullFetchFn: FetchFn,
-  deltaFetchFn: DeltaFetchFn
+  deltaFetchFn: DeltaFetchFn,
+  forceFull = false
 ): Promise<void> {
   if (state.status === 'syncing') return
 
@@ -125,7 +127,7 @@ async function doSync(
   state.status = 'syncing'
 
   try {
-    if (hasData && lastSync) {
+    if (!forceFull && hasData && lastSync) {
       const syncStartedAt = new Date()
       const since = new Date(lastSync.getTime() - DELTA_BUFFER_MS)
       const changed = await deltaFetchFn(since)
@@ -159,6 +161,18 @@ async function doSync(
   }
 }
 
+async function scheduledFullSync(
+  fullFetchFn: FetchFn,
+  deltaFetchFn: DeltaFetchFn
+): Promise<void> {
+  if (state.ongoingSync) await state.ongoingSync.catch(() => {})
+  logger.info('lease-cache: starting scheduled nightly full resync')
+  state.ongoingSync = doSync(fullFetchFn, deltaFetchFn, true).finally(() => {
+    state.ongoingSync = null
+  })
+  await state.ongoingSync.catch(() => {})
+}
+
 export function startLeaseCache(
   fullFetchFn: FetchFn,
   deltaFetchFn: DeltaFetchFn
@@ -166,4 +180,8 @@ export function startLeaseCache(
   state.fullFetchFn = fullFetchFn
   state.deltaFetchFn = deltaFetchFn
   sync(fullFetchFn, deltaFetchFn).catch(() => {})
+  setInterval(
+    () => scheduledFullSync(fullFetchFn, deltaFetchFn).catch(() => {}),
+    FULL_RESYNC_INTERVAL_MS
+  )
 }
