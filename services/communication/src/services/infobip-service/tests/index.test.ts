@@ -869,7 +869,7 @@ describe('/sendLeaseTerminationConfirmation', () => {
     leaseId: '307-002-11-0201/11',
     endDate: '2026-10-31',
     objectId: '123-456',
-    rentalType: 'Bilplats',
+    rentalType: 'Bilplats' as const,
     parkingSpaceId: '123-456-789',
   }
 

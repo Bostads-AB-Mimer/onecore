@@ -51,7 +51,7 @@ const body = (overrides: Record<string, unknown> = {}) => ({
   leaseId: '307-002-11-0201/11',
   endDate: '2026-10-31',
   objectId: '123-456',
-  rentalType: 'Bilplats',
+  rentalType: 'Bilplats' as const,
   parkingSpaceId: '123-456-789',
   ...overrides,
 })
@@ -168,9 +168,7 @@ describe('POST /v1/tenant-notifications', () => {
   })
 
   it('allows retry after a failed send with the same Idempotency-Key', async () => {
-    ;(
-      communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock
-    )
+    ;(communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock)
       .mockResolvedValueOnce({ ok: false, err: 'unknown', statusCode: 500 })
       .mockResolvedValueOnce({ ok: true, data: null })
 

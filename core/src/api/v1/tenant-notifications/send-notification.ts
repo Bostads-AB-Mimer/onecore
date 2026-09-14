@@ -43,7 +43,10 @@ const sendByType = (notification: TenantNotification) => {
 
 export type SendTenantNotificationResult =
   | { ok: true; duplicate: boolean }
-  | { ok: false; error: 'insufficient-permissions' | 'idempotency-conflict' | 'send-failed' }
+  | {
+      ok: false
+      error: 'insufficient-permissions' | 'idempotency-conflict' | 'send-failed'
+    }
 
 export const sendTenantNotification = async (
   ctx: ParameterizedContext,
