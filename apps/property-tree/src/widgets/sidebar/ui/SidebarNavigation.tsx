@@ -12,6 +12,7 @@ import {
   FileText,
   Home,
   LayoutGrid,
+  ListOrdered,
   Receipt,
   Settings,
   ShieldX,
@@ -164,6 +165,11 @@ function SidebarNavigationContent() {
           to={routes.economy}
           icon={Receipt}
           label="Skapa ströfaktura"
+        />
+        <SidebarNavLink
+          to={routes.miscellaneousInvoices}
+          icon={ListOrdered}
+          label="Ströfakturor"
         />
         <SidebarNavLink
           to={routes.components}
