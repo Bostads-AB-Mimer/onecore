@@ -10,6 +10,7 @@ import {
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
   InvoiceNotificationEmail,
+  LeaseTerminationConfirmationEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
@@ -19,6 +20,7 @@ import {
   AcceptParkingSpaceOfferTemplateId,
   AdditionalParkingSpaceOfferTemplateId,
   InvoiceNotificationEmailTemplateId,
+  LeaseTerminationConfirmationTemplateId,
   NonScoredParkingSpaceApprovedTemplateId,
   NonScoredParkingSpaceDeniedTemplateId,
   ParkingSpaceAssignedToOtherTemplateId,
@@ -451,6 +453,53 @@ export const sendInvoiceNotificationEmail = async (
         sender: EMAIL_SENDER,
         destinations: [{ to: [{ destination: email.to, placeholders }] }],
         content: { templateId: InvoiceNotificationEmailTemplateId },
+      },
+    ])
+
+    return { data: response }
+  } catch (error) {
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendLeaseTerminationConfirmation = async (
+  email: LeaseTerminationConfirmationEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl, leaseId: email.leaseId },
+    'Sending lease termination confirmation email'
+  )
+
+  if (!LeaseTerminationConfirmationTemplateId) {
+    throw new Error(
+      'Lease termination confirmation Infobip template id is not configured'
+    )
+  }
+
+  try {
+    const placeholders = JSON.stringify({
+      firstName: email.firstName,
+      address: email.address,
+      leaseId: email.leaseId,
+      endDate: dateFormatter.format(new Date(email.endDate)),
+      objectId: email.objectId,
+      type: email.rentalType,
+      ...(email.parkingSpaceId && {
+        parkingSpaceId: email.parkingSpaceId,
+        parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
+      }),
+    })
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [
+          {
+            to: [{ destination: email.to, placeholders }],
+          },
+        ],
+        content: { templateId: LeaseTerminationConfirmationTemplateId },
       },
     ])
 

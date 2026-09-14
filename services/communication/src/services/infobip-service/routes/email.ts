@@ -12,6 +12,9 @@ import {
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
   InvoiceNotificationEmail,
+  LeaseTerminationConfirmationEmail,
+  LeaseTerminationConfirmationEmailSchema,
+  LeaseTerminationConfirmationMessageType,
 } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import z from 'zod'
@@ -26,6 +29,7 @@ import {
   sendNonScoredParkingSpaceApproved,
   sendNonScoredParkingSpaceDenied,
   sendInvoiceNotificationEmail,
+  sendLeaseTerminationConfirmation,
 } from '../adapters/email-adapter'
 import {
   getEmailTemplate,
@@ -37,6 +41,7 @@ import {
   AcceptParkingSpaceOfferTemplateId,
   NonScoredParkingSpaceApprovedTemplateId,
   NonScoredParkingSpaceDeniedTemplateId,
+  LeaseTerminationConfirmationTemplateId,
 } from '../adapters/infobip-template-ids'
 import {
   sendEmailInfobipSdk,
@@ -68,6 +73,7 @@ const logParkingSpaceEmail = async (params: {
   // The admin who initiated the send, if any; falls back to the automatic
   // dispatch label for flows with no human initiator.
   triggeredBy?: string
+  audienceCriteria?: Record<string, unknown>
   sendResult: { messages?: Array<{ messageId: string }> }
 }) => {
   try {
@@ -79,6 +85,7 @@ const logParkingSpaceEmail = async (params: {
       messageType: params.messageType,
       provider: EMAIL_PROVIDER,
       triggeredByUser: params.triggeredBy ?? AUTOMATIC_DISPATCH_USER,
+      audienceCriteria: params.audienceCriteria,
       recipients: [
         {
           contactCode: params.contactCode,
@@ -378,6 +385,53 @@ export const routes = (router: KoaRouter) => {
         logger.error(
           { error: error.message },
           'Error in sendNonScoredParkingSpaceDenied'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  )
+
+  const LEASE_TERMINATION_CONFIRMATION_SUBJECT = 'Bekräftelse på uppsägning'
+
+  router.post(
+    '(.*)/sendLeaseTerminationConfirmation',
+    parseRequestBody(LeaseTerminationConfirmationEmailSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as LeaseTerminationConfirmationEmail
+
+      try {
+        const result = await sendLeaseTerminationConfirmation(body)
+        const template = await getEmailTemplate(
+          LeaseTerminationConfirmationTemplateId
+        )
+        const rendered = template
+          ? renderTemplate(template, { ...body, type: body.rentalType })
+          : null
+        await logParkingSpaceEmail({
+          messageType: LeaseTerminationConfirmationMessageType,
+          to: body.to,
+          contactCode: body.contactCode,
+          triggeredBy: body.triggeredByUser,
+          audienceCriteria: body.correlationId
+            ? { correlationId: body.correlationId, leaseId: body.leaseId }
+            : { leaseId: body.leaseId },
+          subject: rendered?.subject || LEASE_TERMINATION_CONFIRMATION_SUBJECT,
+          body:
+            rendered?.body ||
+            `${LEASE_TERMINATION_CONFIRMATION_SUBJECT} av ${body.rentalType} ${body.address}, avtal ${body.leaseId}.`,
+          sendResult: result.data,
+        })
+        ctx.status = 204
+        ctx.body = { content: result.data, ...metadata }
+      } catch (error: any) {
+        logger.error(
+          { error: error.message },
+          'Error in sendLeaseTerminationConfirmation'
         )
         ctx.status = 500
         ctx.body = {
