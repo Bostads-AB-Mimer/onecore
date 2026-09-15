@@ -167,6 +167,33 @@ describe('POST /v1/tenant-notifications', () => {
     expect(res.body.error).toBe('send-failed')
   })
 
+  it('does not send twice when concurrent requests share an Idempotency-Key', async () => {
+    let releaseSend!: () => void
+    const sendBlocked = new Promise<void>((resolve) => {
+      releaseSend = resolve
+    })
+    ;(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock
+    ).mockImplementationOnce(async () => {
+      await sendBlocked
+      return { ok: true, data: null }
+    })
+
+    const first = postNotification()
+    const second = postNotification()
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    releaseSend()
+
+    const [firstRes, secondRes] = await Promise.all([first, second])
+
+    expect(firstRes.status).toBe(200)
+    expect(secondRes.status).toBe(200)
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).toHaveBeenCalledTimes(1)
+  })
+
   it('allows retry after a failed send with the same Idempotency-Key', async () => {
     ;(communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock)
       .mockResolvedValueOnce({ ok: false, err: 'unknown', statusCode: 500 })

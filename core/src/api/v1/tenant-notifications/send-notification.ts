@@ -60,22 +60,23 @@ export const sendTenantNotification = async (
   }
 
   const payloadHash = hashNotificationPayload(notification)
-  const idempotency = store.evaluate(idempotencyKey, payloadHash)
+  const claim = store.claim(idempotencyKey, payloadHash)
 
-  if (idempotency === 'conflict') {
+  if (claim === 'conflict') {
     return { ok: false, error: 'idempotency-conflict' }
   }
 
-  if (idempotency === 'duplicate') {
+  if (claim === 'duplicate' || claim === 'in-flight') {
     return { ok: true, duplicate: true }
   }
 
   const result = await sendByType(notification)
 
   if (!result.ok) {
+    store.release(idempotencyKey, payloadHash)
     return { ok: false, error: 'send-failed' }
   }
 
-  store.remember(idempotencyKey, payloadHash)
+  store.markSucceeded(idempotencyKey, payloadHash)
   return { ok: true, duplicate: false }
 }

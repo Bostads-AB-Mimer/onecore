@@ -36,16 +36,34 @@ describe('hashNotificationPayload', () => {
 })
 
 describe('createInMemoryIdempotencyStore', () => {
-  it('returns duplicate for the same key and payload hash', () => {
+  it('claims a new key synchronously', () => {
     const store = createInMemoryIdempotencyStore(60_000)
-    expect(store.evaluate('key-1', 'hash-a')).toBe('new')
-    store.remember('key-1', 'hash-a')
-    expect(store.evaluate('key-1', 'hash-a')).toBe('duplicate')
+    expect(store.claim('key-1', 'hash-a')).toBe('claimed')
+  })
+
+  it('returns duplicate after a successful claim', () => {
+    const store = createInMemoryIdempotencyStore(60_000)
+    expect(store.claim('key-1', 'hash-a')).toBe('claimed')
+    store.markSucceeded('key-1', 'hash-a')
+    expect(store.claim('key-1', 'hash-a')).toBe('duplicate')
+  })
+
+  it('returns in-flight when the same key is claimed while a send is pending', () => {
+    const store = createInMemoryIdempotencyStore(60_000)
+    expect(store.claim('key-1', 'hash-a')).toBe('claimed')
+    expect(store.claim('key-1', 'hash-a')).toBe('in-flight')
   })
 
   it('returns conflict when the key is reused with a different payload', () => {
     const store = createInMemoryIdempotencyStore(60_000)
-    store.remember('key-1', 'hash-a')
-    expect(store.evaluate('key-1', 'hash-b')).toBe('conflict')
+    expect(store.claim('key-1', 'hash-a')).toBe('claimed')
+    expect(store.claim('key-1', 'hash-b')).toBe('conflict')
+  })
+
+  it('allows reclaim after release on send failure', () => {
+    const store = createInMemoryIdempotencyStore(60_000)
+    expect(store.claim('key-1', 'hash-a')).toBe('claimed')
+    store.release('key-1', 'hash-a')
+    expect(store.claim('key-1', 'hash-a')).toBe('claimed')
   })
 })
