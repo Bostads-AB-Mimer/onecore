@@ -22,6 +22,7 @@ import {
   createRentalLossAccounting,
   DEFAULT_ACCEPTED_SUM_DIFFERENCE,
   exportRentalInvoicesAccounting,
+  exportRentalInvoicesAccountingByOcr,
   exportRentalLosses,
   handleRentalBlocks,
   markInvoicesAsExported,
@@ -110,6 +111,96 @@ export const routes = (router: KoaRouter) => {
       ctx.body = 'Could not export invoices ' + (error as any).message
     }
   })
+
+  /*
+    Debug variant of the import-invoices endpoint. Creates the accounting files
+    for the invoices with the given OCR numbers, without marking them as
+    exported. Request body: { "ocrNumbers": ["...", "..."] }
+  */
+  router.post(
+    '(.*)/accounting/import-invoices/{:companyId}/debug',
+    async (ctx) => {
+      try {
+        const companyId = ctx.params.companyId
+
+        if (!companyId) {
+          ctx.status = 400
+          ctx.body = 'Company with specified ID could not be found'
+          return
+        }
+
+        const ocrNumbers = ctx.request.body?.ocrNumbers
+        if (
+          !Array.isArray(ocrNumbers) ||
+          ocrNumbers.length === 0 ||
+          ocrNumbers.some((ocr) => typeof ocr !== 'string')
+        ) {
+          ctx.status = 400
+          ctx.body = {
+            message:
+              'Request body must contain a non-empty array of OCR numbers: { "ocrNumbers": ["..."] }',
+          }
+          return
+        }
+
+        const acceptedDifference = parseAcceptedDifference(
+          ctx.query.acceptedDifference
+        )
+
+        if (acceptedDifference === null) {
+          ctx.status = 400
+          ctx.body =
+            'Query parameter acceptedDifference must be a non-negative number'
+          return
+        }
+
+        const invoicesResult = await exportRentalInvoicesAccountingByOcr(
+          companyId,
+          ocrNumbers
+        )
+
+        let accountingErrors: { invoiceNumber: string; error: string }[] = []
+        let uploaded: { aggregate: number; ledger: number } | null = null
+
+        if (invoicesResult.exportedInvoices.length > 0) {
+          const { aggregateAccountingCsv, ledgerAccountingCsv, errors } =
+            await createAccounting(
+              invoicesResult.exportedInvoices,
+              acceptedDifference
+            )
+
+          await uploadCsvFiles(
+            companyId,
+            aggregateAccountingCsv,
+            ledgerAccountingCsv
+          )
+
+          accountingErrors = errors
+          uploaded = {
+            aggregate: aggregateAccountingCsv.length,
+            ledger: ledgerAccountingCsv.length,
+          }
+        }
+
+        // Intentionally not calling markInvoicesAsExported: this is a debug
+        // endpoint that only regenerates the accounting files.
+        ctx.status = 200
+        ctx.body = {
+          errors: [...invoicesResult.errors, ...accountingErrors],
+          uploadedFiles: uploaded,
+          successfulInvoices: invoicesResult.exportedInvoices.map(
+            (invoice) => invoice.invoiceId
+          ),
+          skippedInvoices: invoicesResult.skippedInvoices.map(
+            (invoice) => invoice.invoiceId
+          ),
+        }
+      } catch (error) {
+        ctx.status = 500
+        ctx.body = 'Could not export invoices ' + (error as any).message
+      }
+    }
+  )
 
   router.post(
     '(.*)/accounting/import-rental-loss/{:companyId}',

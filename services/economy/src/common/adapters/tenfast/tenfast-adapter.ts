@@ -1200,36 +1200,133 @@ export const getInvoicesNotExported = async (
       return { ok: false, err: 'schema-error' }
     }
 
-    const invoices: InvoiceWithAccounting[] = []
-    for (const invoiceResult of parsedResponse.data.records) {
-      const invoice: InvoiceWithAccounting = {
-        ...transformToInvoice(invoiceResult).invoice,
-        externalId: invoiceResult._id,
-        roundoff: invoiceResult.roundingAmount,
-        recipientContactCode: invoiceResult.recipientContactCode,
-        recipientName: invoiceResult.recipientName,
-      }
-
-      if (!invoice.invoiceId) {
-        console.error(`Invoice ${invoice.externalId} has no ocrNumber`)
-      }
-
-      await replaceRentalObjectExternalIds(invoice)
-
-      const invoiceRowsWithAccountingResult =
-        await enrichInvoiceRowsWithAccounting(invoice)
-
-      if (invoiceRowsWithAccountingResult.errors?.length === 0) {
-        invoice.invoiceRows = invoiceRowsWithAccountingResult.invoiceRows
-        invoices.push(invoice)
-      } else {
-        errors.push(...invoiceRowsWithAccountingResult.errors)
-      }
-    }
+    const invoices = await transformExportedInvoiceRecords(
+      parsedResponse.data.records,
+      errors
+    )
     return {
       ok: true,
       data: {
         invoices: invoices,
+        errors,
+      },
+    }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
+  }
+}
+
+const transformExportedInvoiceRecords = async (
+  records: z.infer<typeof TenfastInvoicesByExportedResponseSchema>['records'],
+  errors: { invoiceNumber: string; error: string }[]
+): Promise<InvoiceWithAccounting[]> => {
+  const invoices: InvoiceWithAccounting[] = []
+  for (const invoiceResult of records) {
+    const invoice: InvoiceWithAccounting = {
+      ...transformToInvoice(invoiceResult).invoice,
+      externalId: invoiceResult._id,
+      roundoff: invoiceResult.roundingAmount,
+      recipientContactCode: invoiceResult.recipientContactCode,
+      recipientName: invoiceResult.recipientName,
+    }
+
+    if (!invoice.invoiceId) {
+      console.error(`Invoice ${invoice.externalId} has no ocrNumber`)
+    }
+
+    await replaceRentalObjectExternalIds(invoice)
+
+    const invoiceRowsWithAccountingResult =
+      await enrichInvoiceRowsWithAccounting(invoice)
+
+    if (invoiceRowsWithAccountingResult.errors?.length === 0) {
+      invoice.invoiceRows = invoiceRowsWithAccountingResult.invoiceRows
+      invoices.push(invoice)
+    } else {
+      errors.push(...invoiceRowsWithAccountingResult.errors)
+    }
+  }
+  return invoices
+}
+
+/**
+ * Debug counterpart to getInvoicesNotExported: fetches specific invoices by
+ * OCR number regardless of whether they have already been exported. Used by
+ * the import-invoices debug endpoint to regenerate accounting files without
+ * marking the invoices as exported.
+ */
+export const getInvoicesByOcr = async (
+  ocrNumbers: string[],
+  company: MimerCompany
+): Promise<
+  AdapterResult<
+    {
+      invoices: InvoiceWithAccounting[]
+      errors: { invoiceNumber: string; error: string }[] | undefined
+    },
+    string
+  >
+> => {
+  const errors: { invoiceNumber: string; error: string }[] = []
+
+  try {
+    const allInvoices: InvoiceWithAccounting[] = []
+
+    for (const ocrNumber of ocrNumbers) {
+      const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
+        params: {
+          status: 'issued',
+          hyresvard: company.tenfastId,
+          ocrNumber,
+        },
+      })
+
+      if (result.status !== 200) {
+        logger.error(
+          { ocrNumber, status: result.status },
+          'Error getting invoice from Tenfast by OCR'
+        )
+        errors.push({
+          invoiceNumber: ocrNumber,
+          error: `Tenfast returned status ${result.status}`,
+        })
+        continue
+      }
+
+      const parsedResponse = TenfastInvoicesByExportedResponseSchema.safeParse(
+        result.data
+      )
+
+      if (!parsedResponse.success) {
+        logger.error(
+          { error: parsedResponse.error, ocrNumber },
+          'Error parsing Tenfast invoice'
+        )
+        errors.push({ invoiceNumber: ocrNumber, error: 'schema-error' })
+        continue
+      }
+
+      if (parsedResponse.data.records.length === 0) {
+        errors.push({
+          invoiceNumber: ocrNumber,
+          error: 'Invoice not found in Tenfast',
+        })
+        continue
+      }
+
+      allInvoices.push(
+        ...(await transformExportedInvoiceRecords(
+          parsedResponse.data.records,
+          errors
+        ))
+      )
+    }
+
+    return {
+      ok: true,
+      data: {
+        invoices: allInvoices,
         errors,
       },
     }

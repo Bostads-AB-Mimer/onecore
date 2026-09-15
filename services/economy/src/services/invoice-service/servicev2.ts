@@ -18,6 +18,7 @@ import {
   RentalLoss,
   RentalLossRow,
   RentalBlockWithAccounting,
+  MimerCompany,
 } from '../../common/types/typesv2'
 import {
   getPeriodInformationFromDateStrings,
@@ -27,6 +28,7 @@ import {
 import { logger } from '@onecore/utilities'
 import {
   getInvoicesNotExported,
+  getInvoicesByOcr,
   getRentalLosses,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import config from '@src/common/config'
@@ -37,6 +39,63 @@ export { markInvoicesAsExported } from '@src/common/adapters/tenfast/tenfast-ada
 /*
  *
  */
+/**
+ * Shared enrichment for invoices that are about to be exported as accounting:
+ * sets the company round-off cost code, enriches each invoice with accounting
+ * and tax rules, and resolves counter part customers. Returns only the
+ * invoices that were prepared successfully; failures are reported as errors.
+ */
+const prepareInvoicesForAccounting = async (
+  company: MimerCompany,
+  invoices: InvoiceWithAccounting[]
+): Promise<{
+  invoices: InvoiceWithAccounting[]
+  errors: { invoiceNumber: string; error: string }[]
+}> => {
+  const errors: { invoiceNumber: string; error: string }[] = []
+  const prepared: InvoiceWithAccounting[] = []
+
+  const counterPartCustomers = await getCounterPartCustomers()
+
+  for (const invoice of invoices) {
+    if (company.roundOffCostCode) {
+      invoice.roundOffCostCode = company.roundOffCostCode
+    }
+
+    try {
+      await enrichInvoiceWithAccounting(invoice)
+      await setInvoiceRowsTaxRule(invoice)
+    } catch (error) {
+      let message
+      if (error instanceof Error) {
+        message = error.message
+      } else {
+        message = String(error)
+      }
+      errors.push({ invoiceNumber: invoice.invoiceId, error: message })
+      continue
+    }
+
+    const counterPartCustomer = findCounterPartCustomer(
+      counterPartCustomers,
+      invoice.recipientName
+    )
+
+    if (counterPartCustomer) {
+      invoice.totalAccount = counterPartCustomer.totalAccount
+      invoice.ledgerAccount = counterPartCustomer.ledgerAccount
+      invoice.counterPartCode = counterPartCustomer.counterPartCode
+    } else {
+      invoice.totalAccount = TOTAL_ACCOUNT
+      invoice.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
+    }
+
+    prepared.push(invoice)
+  }
+
+  return { invoices: prepared, errors }
+}
+
 export const exportRentalInvoicesAccounting = async (
   companyId: string,
   numberOfChunks: number = 1
@@ -100,41 +159,8 @@ export const exportRentalInvoicesAccounting = async (
         }
       }
 
-      const counterPartCustomers = await getCounterPartCustomers()
-
-      for (const invoice of chunkInvoices) {
-        if (company.roundOffCostCode) {
-          invoice.roundOffCostCode = company.roundOffCostCode
-        }
-
-        try {
-          await enrichInvoiceWithAccounting(invoice)
-          await setInvoiceRowsTaxRule(invoice)
-        } catch (error) {
-          let message
-          if (error instanceof Error) {
-            message = error.message
-          } else {
-            message = String(error)
-          }
-          errors.push({ invoiceNumber: invoice.invoiceId, error: message })
-          continue
-        }
-
-        const counterPartCustomer = findCounterPartCustomer(
-          counterPartCustomers,
-          invoice.recipientName
-        )
-
-        if (counterPartCustomer) {
-          invoice.totalAccount = counterPartCustomer.totalAccount
-          invoice.ledgerAccount = counterPartCustomer.ledgerAccount
-          invoice.counterPartCode = counterPartCustomer.counterPartCode
-        } else {
-          invoice.totalAccount = TOTAL_ACCOUNT
-          invoice.ledgerAccount = CUSTOMER_LEDGER_ACCOUNT
-        }
-      }
+      const prepared = await prepareInvoicesForAccounting(company, chunkInvoices)
+      errors.push(...prepared.errors)
 
       // Remove invoices with errors
       if (errors && errors.length) {
@@ -170,6 +196,72 @@ export const exportRentalInvoicesAccounting = async (
     logger.error(error, 'Error importing invoices')
 
     throw error
+  }
+}
+
+/**
+ * Debug variant of exportRentalInvoicesAccounting: prepares accounting for the
+ * invoices with the given OCR numbers (regardless of export status) without
+ * pulling anything from the normal "not exported" queue. Intended for the
+ * debug import-invoices endpoint, which regenerates the accounting files
+ * without marking the invoices as exported.
+ */
+export const exportRentalInvoicesAccountingByOcr = async (
+  companyId: string,
+  ocrNumbers: string[]
+): Promise<{
+  exportedInvoices: InvoiceWithAccounting[]
+  skippedInvoices: InvoiceWithAccounting[]
+  errors: { invoiceNumber: string; error: string }[]
+}> => {
+  const company = config.companies.find(
+    (company) => company.xpandId.localeCompare(companyId) === 0
+  )
+
+  if (!company) {
+    throw new Error('Could not find company ' + companyId)
+  }
+
+  const invoicesResult = await getInvoicesByOcr(ocrNumbers, company)
+  if (!invoicesResult.ok) {
+    logger.error(
+      { error: invoicesResult.err },
+      'Could not get invoices by OCR for export'
+    )
+    throw new Error(invoicesResult.err)
+  }
+
+  const errors = [...(invoicesResult.data.errors ?? [])]
+
+  // TODO: add logic for internal customers instead of filtering them out.
+  const skippedInvoices = invoicesResult.data.invoices.filter((invoice) => {
+    return invoice.recipientContactCode?.startsWith('I')
+  })
+
+  const relevantInvoices = invoicesResult.data.invoices.filter((invoice) => {
+    return !invoice.recipientContactCode?.startsWith('I')
+  })
+
+  const prepared = await prepareInvoicesForAccounting(
+    company,
+    relevantInvoices
+  )
+  errors.push(...prepared.errors)
+
+  prepared.invoices.sort((a: InvoiceWithAccounting, b: InvoiceWithAccounting) => {
+    return (
+      a.ledgerAccount?.localeCompare(b.ledgerAccount ?? '') ||
+      a.totalAccount?.localeCompare(b.totalAccount ?? '') ||
+      dateString(a.fromDate)?.localeCompare(dateString(b.fromDate) ?? '') ||
+      dateString(a.toDate)?.localeCompare(dateString(b.toDate) ?? '') ||
+      0
+    )
+  })
+
+  return {
+    exportedInvoices: prepared.invoices,
+    skippedInvoices,
+    errors,
   }
 }
 
