@@ -1,5 +1,5 @@
 import config from '../../../../common/config'
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
+import axios, { AxiosRequestConfig, AxiosResponse, isAxiosError } from 'axios'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -20,5 +20,20 @@ export const request = async <T = any>(
 ): Promise<AxiosResponse<T, any>> => {
   config.headers = createHeaders()
 
-  return await axios(config)
+  try {
+    return await axios(config)
+  } catch (err) {
+    // Axios attaches the outgoing request headers (including the plaintext
+    // api-token) and the raw request/response sockets directly onto the
+    // thrown error. Several catch blocks in tenfast-adapter.ts log that
+    // error as-is, which would otherwise ship the token and megabytes of
+    // socket internals to stdout and Elasticsearch. Strip them here, once,
+    // before the error can reach a logger.
+    if (isAxiosError(err)) {
+      delete err.request
+      if (err.response) delete (err.response as { request?: unknown }).request
+      if (err.config?.headers) delete err.config.headers['api-token']
+    }
+    throw err
+  }
 }
