@@ -295,7 +295,7 @@ describe('Invoice Service', () => {
     })
   })
 
-  describe('POST /invoices/miscellaneous', () => {
+  describe('POST /miscellaneous-invoices', () => {
     const invoiceBody = { invoice: JSON.stringify({ contactCode: 'P123456' }) }
 
     it('responds with 200 and the created items on success', async () => {
@@ -304,7 +304,7 @@ describe('Invoice Service', () => {
         .mockResolvedValueOnce({ ok: true, data: [{ node: { dbId: 1 } }] })
 
       const res = await request(app.callback())
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .send(invoiceBody)
 
       expect(res.status).toBe(200)
@@ -320,7 +320,7 @@ describe('Invoice Service', () => {
         })
 
       const res = await request(app.callback())
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .send(invoiceBody)
 
       expect(res.status).toBe(404)
@@ -336,7 +336,7 @@ describe('Invoice Service', () => {
         })
 
       const res = await request(app.callback())
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .send(invoiceBody)
 
       expect(res.status).toBe(500)

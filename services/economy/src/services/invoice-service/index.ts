@@ -289,7 +289,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/invoices/miscellaneous', async (ctx) => {
+  router.post('(.*)/miscellaneous-invoices', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {

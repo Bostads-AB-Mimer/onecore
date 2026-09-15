@@ -127,7 +127,7 @@ export async function submitMiscellaneousInvoice(
   formData.append('invoice', JSON.stringify(invoice))
 
   try {
-    const url = `${config.economyService.url}/invoices/miscellaneous`
+    const url = `${config.economyService.url}/miscellaneous-invoices`
     const response = await axios.postForm(url, formData, {
       // Resolve on 4xx so error bodies from economy can be inspected. Matches
       // the repo-wide axios default (see leasing-adapter) without depending on
