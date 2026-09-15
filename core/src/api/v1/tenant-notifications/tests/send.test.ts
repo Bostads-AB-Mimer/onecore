@@ -7,6 +7,7 @@ import { TenantNotificationRole } from '@onecore/types'
 
 import { routes } from '../index'
 import { tenantNotificationIdempotencyStore } from '../idempotency'
+import { clearInFlightOperations } from '../send-notification'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 import { Config } from '@/common/config'
 
@@ -66,12 +67,12 @@ const postNotification = (
     .send(payload)
 
 beforeEach(() => {
-  jest.clearAllMocks()
   mockUser = TEST_USER
   tenantNotificationIdempotencyStore.clear()
-  ;(
-    communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock
-  ).mockResolvedValue({ ok: true, data: null })
+  clearInFlightOperations()
+  ;(communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock)
+    .mockReset()
+    .mockResolvedValue({ ok: true, data: null })
 })
 
 describe('POST /v1/tenant-notifications', () => {

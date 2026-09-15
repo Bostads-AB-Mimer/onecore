@@ -48,10 +48,10 @@ export const LeaseTerminationConfirmationNotificationSchema = z.object({
   firstName: z.string().min(1),
   address: z.string().min(1),
   leaseId: z.string().min(1),
-endDate: z
+  endDate: z
     .string()
     .date()
-    .transform((value) => new Date(`${value}T00:00:00.000Z`))
+    .transform((value) => new Date(`${value}T00:00:00.000Z`)),
   objectId: z.string().min(1),
   rentalType: LeaseTerminationRentalTypeSchema,
   parkingSpaceId: z.string().min(1).optional(),

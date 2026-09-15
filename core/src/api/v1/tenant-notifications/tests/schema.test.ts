@@ -62,6 +62,15 @@ describe('LeaseTerminationConfirmationNotificationSchema', () => {
     ).toBe(false)
   })
 
+  it('rejects a null endDate', () => {
+    expect(
+      LeaseTerminationConfirmationNotificationSchema.safeParse({
+        ...validTerminationNotification,
+        endDate: null,
+      }).success
+    ).toBe(false)
+  })
+
   it('coerces endDate to a Date', () => {
     const parsed = LeaseTerminationConfirmationNotificationSchema.safeParse(
       validTerminationNotification
