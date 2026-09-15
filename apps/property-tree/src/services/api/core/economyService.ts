@@ -156,7 +156,7 @@ async function submitMiscellaneousInvoice(
 
   const { data, error, response } = await POST(
     // @ts-expect-error
-    `/invoices/miscellaneous`,
+    `/miscellaneous-invoices`,
     {
       body: formData,
     }

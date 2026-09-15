@@ -85,7 +85,7 @@ describe('economy-adapter', () => {
 
     it('returns ok with the created items on success', async () => {
       nock(config.economyService.url)
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .reply(200, { content: [{ node: { dbId: 1 } }] })
 
       const result = await economyAdapter.submitMiscellaneousInvoice(
@@ -101,7 +101,7 @@ describe('economy-adapter', () => {
 
     it('passes through xledger-customer-not-found from economy', async () => {
       nock(config.economyService.url)
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .reply(404, { type: 'xledger-customer-not-found' })
 
       const result = await economyAdapter.submitMiscellaneousInvoice(
@@ -118,7 +118,7 @@ describe('economy-adapter', () => {
 
     it('returns unknown on other errors', async () => {
       nock(config.economyService.url)
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .reply(500, { message: 'boom' })
 
       const result = await economyAdapter.submitMiscellaneousInvoice(
