@@ -1,8 +1,9 @@
 import { ParameterizedContext } from 'koa'
 import {
-  LeaseTerminationConfirmationEmail,
   requiredRoleByNotificationType,
   TenantNotification,
+  TenantNotificationEmail,
+  TenantNotificationType,
 } from '@onecore/types'
 
 import * as communicationAdapter from '../../../adapters/communication-adapter'
@@ -26,8 +27,14 @@ const canSendNotificationType = (
   )
 }
 
-const sendByType = (notification: LeaseTerminationConfirmationEmail) =>
-  communicationAdapter.sendLeaseTerminationConfirmationEmail(notification)
+const sendByType = (notification: TenantNotificationEmail) => {
+  switch (notification.type) {
+    case TenantNotificationType.LeaseTerminationConfirmation:
+      return communicationAdapter.sendLeaseTerminationConfirmationEmail(
+        notification
+      )
+  }
+}
 
 type InFlightSendOutcome = { ok: true } | { ok: false; error: 'send-failed' }
 
@@ -51,7 +58,7 @@ const waitForInFlightOperation = async (
 }
 
 const startInFlightSend = (
-  notification: LeaseTerminationConfirmationEmail,
+  notification: TenantNotificationEmail,
   idempotencyKey: string,
   payloadHash: string,
   store: IdempotencyStore
@@ -98,7 +105,7 @@ export type SendTenantNotificationResult =
 
 export const sendTenantNotification = async (
   ctx: ParameterizedContext,
-  notification: LeaseTerminationConfirmationEmail,
+  notification: TenantNotificationEmail,
   idempotencyKey: string,
   store: IdempotencyStore = tenantNotificationIdempotencyStore
 ): Promise<SendTenantNotificationResult> => {

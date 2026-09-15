@@ -76,3 +76,11 @@ export const LeaseTerminationConfirmationEmailSchema =
 export type LeaseTerminationConfirmationEmail = z.infer<
   typeof LeaseTerminationConfirmationEmailSchema
 >
+
+export const TenantNotificationEmailSchema = z.discriminatedUnion('type', [
+  LeaseTerminationConfirmationEmailSchema,
+])
+
+export type TenantNotificationEmail = z.infer<
+  typeof TenantNotificationEmailSchema
+>

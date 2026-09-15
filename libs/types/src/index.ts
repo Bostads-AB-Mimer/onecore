@@ -21,12 +21,14 @@ export {
   requiredRoleByNotificationType,
   LeaseTerminationConfirmationNotificationSchema,
   LeaseTerminationConfirmationEmailSchema,
+  TenantNotificationEmailSchema,
   LeaseTerminationConfirmationMessageType,
   LeaseTerminationRentalTypeSchema,
   type LeaseTerminationRentalType,
   type TenantNotification,
   type LeaseTerminationConfirmationNotification,
   type LeaseTerminationConfirmationEmail,
+  type TenantNotificationEmail,
 } from './communication/tenant-notification'
 export * from './room'
 
