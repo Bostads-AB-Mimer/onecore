@@ -69,7 +69,7 @@ type ParkingSpaceEmailLike = Partial<
     | 'objectId'
     | 'offerURL'
     | 'leaseId'
-  > & { endDate?: string }
+  > & { endDate?: string | Date }
 >
 
 // Rebuilds the sent placeholders (same formatting as the send path). Superset of

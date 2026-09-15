@@ -1,5 +1,6 @@
 import { ParameterizedContext } from 'koa'
 import {
+  LeaseTerminationConfirmationEmail,
   requiredRoleByNotificationType,
   TenantNotification,
   TenantNotificationType,
@@ -26,7 +27,7 @@ const canSendNotificationType = (
   )
 }
 
-const sendByType = (notification: TenantNotification) => {
+const sendByType = (notification: LeaseTerminationConfirmationEmail) => {
   switch (notification.type) {
     case TenantNotificationType.LeaseTerminationConfirmation:
       return communicationAdapter.sendLeaseTerminationConfirmationEmail(
@@ -50,7 +51,7 @@ export type SendTenantNotificationResult =
 
 export const sendTenantNotification = async (
   ctx: ParameterizedContext,
-  notification: TenantNotification,
+  notification: LeaseTerminationConfirmationEmail,
   idempotencyKey: string,
   store: IdempotencyStore = tenantNotificationIdempotencyStore
 ): Promise<SendTenantNotificationResult> => {

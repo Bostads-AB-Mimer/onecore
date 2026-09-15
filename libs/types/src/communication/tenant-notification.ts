@@ -48,11 +48,10 @@ export const LeaseTerminationConfirmationNotificationSchema = z.object({
   firstName: z.string().min(1),
   address: z.string().min(1),
   leaseId: z.string().min(1),
-  endDate: z.string().min(1),
+  endDate: z.coerce.date(),
   objectId: z.string().min(1),
   rentalType: LeaseTerminationRentalTypeSchema,
   parkingSpaceId: z.string().min(1).optional(),
-  triggeredByUser: z.string().min(1).optional(),
   correlationId: z.string().min(1).optional(),
 })
 
@@ -65,9 +64,12 @@ export type LeaseTerminationConfirmationNotification = z.infer<
 >
 export type TenantNotification = z.infer<typeof TenantNotificationSchema>
 
-/** Payload shape passed to the communication service (channel: email). */
-export type LeaseTerminationConfirmationEmail =
-  LeaseTerminationConfirmationNotification
-
+/** Internal communication payload — adds server-set audit attribution. */
 export const LeaseTerminationConfirmationEmailSchema =
-  LeaseTerminationConfirmationNotificationSchema
+  LeaseTerminationConfirmationNotificationSchema.extend({
+    triggeredByUser: z.string().min(1).optional(),
+  })
+
+export type LeaseTerminationConfirmationEmail = z.infer<
+  typeof LeaseTerminationConfirmationEmailSchema
+>

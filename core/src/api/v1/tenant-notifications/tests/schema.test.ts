@@ -52,6 +52,38 @@ describe('LeaseTerminationConfirmationNotificationSchema', () => {
       }).success
     ).toBe(false)
   })
+
+  it('rejects an invalid endDate', () => {
+    expect(
+      LeaseTerminationConfirmationNotificationSchema.safeParse({
+        ...validTerminationNotification,
+        endDate: 'not-a-date',
+      }).success
+    ).toBe(false)
+  })
+
+  it('coerces endDate to a Date', () => {
+    const parsed = LeaseTerminationConfirmationNotificationSchema.safeParse(
+      validTerminationNotification
+    )
+
+    expect(parsed.success).toBe(true)
+    if (parsed.success) {
+      expect(parsed.data.endDate).toBeInstanceOf(Date)
+    }
+  })
+
+  it('does not accept triggeredByUser on the public schema', () => {
+    const parsed = LeaseTerminationConfirmationNotificationSchema.safeParse({
+      ...validTerminationNotification,
+      triggeredByUser: 'Evil Actor',
+    })
+
+    expect(parsed.success).toBe(true)
+    if (parsed.success) {
+      expect(parsed.data).not.toHaveProperty('triggeredByUser')
+    }
+  })
 })
 
 describe('TenantNotificationSchema', () => {

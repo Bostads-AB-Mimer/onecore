@@ -4,7 +4,7 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { TenantNotification } from '@onecore/types'
+import { LeaseTerminationConfirmationEmail } from '@onecore/types'
 
 import { Config } from '@/common/config'
 import { sendTenantNotification } from './send-notification'
@@ -70,12 +70,10 @@ export const routes = (router: OkapiRouter, _config: Config) => {
         return
       }
 
-      const notification: TenantNotification = {
+      const notification: LeaseTerminationConfirmationEmail = {
         ...parsed.data,
         triggeredByUser:
-          parsed.data.triggeredByUser ??
-          ctx.state.user?.name ??
-          ctx.state.user?.preferred_username,
+          ctx.state.user?.name ?? ctx.state.user?.preferred_username,
       }
 
       const result = await sendTenantNotification(
