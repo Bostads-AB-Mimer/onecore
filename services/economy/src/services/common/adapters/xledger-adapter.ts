@@ -10,6 +10,7 @@ import {
   InvoiceTransactionType,
   MiscellaneousInvoice,
   MiscellaneousInvoiceArticle,
+  MiscellaneousInvoiceBaseItem,
   PaymentStatus,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
@@ -980,20 +981,41 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
 }
 
 export const getMiscellaneousInvoices = async ({
-  size = 100,
   from,
   to,
+  after,
+  pageSize = 100,
 }: {
-  size?: number
   from?: Date
   to?: Date
-}): Promise<AdapterResult<MiscellaneousInvoice[], 'unknown'>> => {
+  after?: string
+  pageSize?: number
+}): Promise<
+  AdapterResult<
+    {
+      content: MiscellaneousInvoice[]
+      pageInfo: { hasNextPage: boolean; endCursor?: string }
+    },
+    'unknown'
+  >
+> => {
   try {
     const query = {
       query: gql`
-        query ($first: Int, $filter: SalesOrder_Filter) {
-          salesOrders(last: $first, filter: $filter) {
+        query (
+          $after: String
+          $first: Int
+          $filter: SalesOrder_Filter
+          $orderDirection: OrderDirection = DESC
+        ) {
+          salesOrders(
+            first: $first
+            after: $after
+            filter: $filter
+            orderBy: { field: CREATED_AT, direction: $orderDirection }
+          ) {
             edges {
+              cursor
               node {
                 invoiceDate
                 invoiceNumber
@@ -1008,26 +1030,42 @@ export const getMiscellaneousInvoices = async ({
                 description
                 invoiceAmount
                 headerInfo
-                deliveryDate
-                dateConfirmed
                 invoiceFile {
                   url
                 }
                 invoiceBaseItems(first: 100) {
                   edges {
                     node {
-                      dbId
                       text
+                      amount
+                      quantity
+                      unitPrice
+                      glObject1 {
+                        code
+                      }
+                      glObject2 {
+                        code
+                      }
+                      glObject3 {
+                        code
+                      }
+                      product {
+                        code
+                      }
                     }
                   }
                 }
               }
             }
+            pageInfo {
+              hasNextPage
+            }
           }
         }
       `,
       variables: {
-        first: size,
+        after: after ?? null,
+        first: pageSize,
         filter: {
           invoiceDate_gte: from ? dateToGraphQlDateString(from) : undefined,
           invoiceDate_lte: to ? dateToGraphQlDateString(to) : undefined,
@@ -1041,12 +1079,16 @@ export const getMiscellaneousInvoices = async ({
       return { ok: false, err: 'unknown' }
     }
 
-    return {
-      ok: true,
-      data: result.data.salesOrders.edges.map((e: any) =>
-        transformToMiscellaneousInvoice(e.node)
-      ),
+    const content = result.data.salesOrders.edges.map((e: any) =>
+      transformToMiscellaneousInvoice(e.node)
+    )
+    const lastEdge = result.data.salesOrders.edges.at(-1)
+    const pageInfo = {
+      hasNextPage: result.data.salesOrders.pageInfo.hasNextPage,
+      endCursor: lastEdge?.cursor,
     }
+
+    return { ok: true, data: { content, pageInfo } }
   } catch (err) {
     logger.error(err, 'Error getting sales orders from Xledger')
     return { ok: false, err: 'unknown' }
@@ -1065,12 +1107,28 @@ const transformToMiscellaneousInvoice = (node: any): MiscellaneousInvoice => {
     invoiceId: node.invoiceNumber,
     leaseId,
     amount: node.invoiceAmount,
-    invoiceBaseItems: node.invoiceBaseItems,
+    invoiceBaseItems: node.invoiceBaseItems?.edges?.map((e: any) =>
+      transformToMiscellaneousInvoiceBaseItem(e.node)
+    ),
     invoiceDate: node.invoiceDate,
     reference: node.subledger.code,
-    ourReference: node.ourRef.name,
-    description: node.description,
+    ourReference: node.ourRef?.name,
+    description: node.headerInfo,
     invoiceFileUrl: node.invoiceFile?.url,
+  }
+}
+
+const transformToMiscellaneousInvoiceBaseItem = (
+  node: any
+): MiscellaneousInvoiceBaseItem => {
+  return {
+    text: node.text,
+    amount: node.amount,
+    quantity: node.quantity,
+    unitPrice: node.unitPrice,
+    costCentre: node.glObject1?.code ?? null,
+    projectCode: node.glObject2?.code ?? null,
+    propertyCode: node.glObject3?.code ?? null,
   }
 }
 

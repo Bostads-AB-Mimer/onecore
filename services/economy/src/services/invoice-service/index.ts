@@ -263,7 +263,8 @@ export const routes = (router: KoaRouter) => {
       const result = await getMiscellaneousInvoices({
         from: queryParams.data?.from,
         to: queryParams.data?.to,
-        size: queryParams.data?.size,
+        after: queryParams.data?.after,
+        pageSize: queryParams.data?.pageSize,
       })
 
       if (!result.ok) {
@@ -275,7 +276,10 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(result.data, metadata)
+      ctx.body = makeSuccessResponseBody(
+        { content: result.data.content, pageInfo: result.data.pageInfo },
+        metadata
+      )
     } catch (error: any) {
       logger.error({ err: error }, 'Error getting miscellaneous invoices')
       ctx.status = 500

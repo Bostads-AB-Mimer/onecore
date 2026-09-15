@@ -206,16 +206,26 @@ export async function getInvoices({
 export async function getMiscellaneousInvoices({
   from,
   to,
-  size,
+  after,
+  pageSize,
 }: {
   from?: Date
   to?: Date
-  size?: number
-}): Promise<AdapterResult<MiscellaneousInvoice[], 'unknown'>> {
+  after?: string
+  pageSize?: number
+}): Promise<
+  AdapterResult<
+    {
+      content: MiscellaneousInvoice[]
+      pageInfo: { hasNextPage: boolean; endCursor?: string }
+    },
+    'unknown'
+  >
+> {
   try {
     const response = await axios.get(
       `${config.economyService.url}/miscellaneous-invoices`,
-      { params: { from, to, size } }
+      { params: { from, to, after, pageSize } }
     )
 
     if (response.status === 200) {
