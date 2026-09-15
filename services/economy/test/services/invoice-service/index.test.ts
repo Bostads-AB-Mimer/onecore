@@ -343,4 +343,45 @@ describe('Invoice Service', () => {
       expect(res.body.type).toBe('unknown')
     })
   })
+
+  describe('GET /miscellaneous-invoices', () => {
+    it('responds with 400 if invalid query params', async () => {
+      const res = await request(app.callback()).get(
+        `/miscellaneous-invoices?pageSize=notanumber`
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with invoices and pageInfo', async () => {
+      const invoices = factory.miscellaneousInvoice.buildList(2)
+
+      jest.spyOn(xledgerAdapter, 'getMiscellaneousInvoices').mockResolvedValueOnce({
+        ok: true,
+        data: { content: invoices, pageInfo: { hasNextPage: false } },
+      })
+
+      const res = await request(app.callback()).get(`/miscellaneous-invoices`)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.content).toHaveLength(2)
+      expect(res.body.content.pageInfo).toEqual({ hasNextPage: false })
+      expect(() =>
+        schemas.v1.MiscellaneousInvoiceSchema.array().parse(
+          res.body.content.content
+        )
+      ).not.toThrow()
+    })
+
+    it('responds with 500 on unknown errors', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getMiscellaneousInvoices')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(`/miscellaneous-invoices`)
+
+      expect(res.status).toBe(500)
+      expect(res.body.message).toBe('unknown')
+    })
+  })
 })

@@ -446,3 +446,90 @@ describe(adapter.submitMiscellaneousInvoice, () => {
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })
+
+describe(adapter.getMiscellaneousInvoices, () => {
+  it('returns transformed invoices and pageInfo on success', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          salesOrders: {
+            edges: [
+              {
+                cursor: 'cursor-1',
+                node: {
+                  invoiceDate: '2023-02-15T00:00:00.000Z',
+                  invoiceNumber: '552303315030452',
+                  ourRef: { name: 'Jane Doe' },
+                  subledger: { code: 'P123456' },
+                  invoiceAmount: 500,
+                  headerInfo: '705-025-03-0205/01: Skadedjursbekämpning',
+                  invoiceFile: { url: 'https://xledger.example.com/files/1' },
+                  invoiceBaseItems: {
+                    edges: [
+                      {
+                        node: {
+                          text: 'Skadedjursbekämpning',
+                          amount: 500,
+                          quantity: 1,
+                          unitPrice: 500,
+                          glObject1: { code: '12345' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+            pageInfo: { hasNextPage: true },
+          },
+        },
+      })
+
+    const result = await adapter.getMiscellaneousInvoices({})
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        content: [
+          {
+            invoiceId: '552303315030452',
+            leaseId: '705-025-03-0205/01',
+            amount: 500,
+            invoiceBaseItems: [
+              {
+                text: 'Skadedjursbekämpning',
+                amount: 500,
+                quantity: 1,
+                unitPrice: 500,
+                costCentre: '12345',
+              },
+            ],
+            invoiceDate: '2023-02-15T00:00:00.000Z',
+            reference: 'P123456',
+            ourReference: 'Jane Doe',
+            description: '705-025-03-0205/01: Skadedjursbekämpning',
+            invoiceFileUrl: 'https://xledger.example.com/files/1',
+          },
+        ],
+        pageInfo: { hasNextPage: true, endCursor: 'cursor-1' },
+      },
+    })
+  })
+
+  it('returns unknown when Xledger returns no edges', async () => {
+    nock(origin).post(pathname).reply(200, { data: {} })
+
+    const result = await adapter.getMiscellaneousInvoices({})
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown on request failure', async () => {
+    nock(origin).post(pathname).reply(500)
+
+    const result = await adapter.getMiscellaneousInvoices({})
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
