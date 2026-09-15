@@ -110,10 +110,6 @@ export const routes = (router: OkapiRouter, _config: Config) => {
             ctx.status = 502
             ctx.body = { error: 'send-failed', ...metadata }
             return
-          default: {
-            const _never: never = result.error
-            throw new Error(`Unhandled send error: ${JSON.stringify(_never)}`)
-          }
         }
       }
 
