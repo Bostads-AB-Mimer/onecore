@@ -3,7 +3,6 @@ import {
   LeaseTerminationConfirmationEmail,
   requiredRoleByNotificationType,
   TenantNotification,
-  TenantNotificationType,
 } from '@onecore/types'
 
 import * as communicationAdapter from '../../../adapters/communication-adapter'
@@ -27,20 +26,8 @@ const canSendNotificationType = (
   )
 }
 
-const sendByType = (notification: LeaseTerminationConfirmationEmail) => {
-  switch (notification.type) {
-    case TenantNotificationType.LeaseTerminationConfirmation:
-      return communicationAdapter.sendLeaseTerminationConfirmationEmail(
-        notification
-      )
-    default: {
-      const _never: never = notification.type
-      throw new Error(
-        `Unhandled tenant notification type: ${JSON.stringify(_never)}`
-      )
-    }
-  }
-}
+const sendByType = (notification: LeaseTerminationConfirmationEmail) =>
+  communicationAdapter.sendLeaseTerminationConfirmationEmail(notification)
 
 type InFlightSendOutcome = { ok: true } | { ok: false; error: 'send-failed' }
 
