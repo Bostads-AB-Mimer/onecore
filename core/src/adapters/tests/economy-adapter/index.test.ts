@@ -3,7 +3,7 @@ import nock from 'nock'
 import config from '../../../common/config'
 import * as economyAdapter from '../../economy-adapter'
 
-import { mockedInvoices } from './mocks'
+import { mockedInvoices, mockedMiscellaneousInvoices } from './mocks'
 
 describe('economy-adapter', () => {
   it('returns empty list if no problematic invoices', async () => {
@@ -40,7 +40,7 @@ describe('economy-adapter', () => {
 
     it('returns ok with the created items on success', async () => {
       nock(config.economyService.url)
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .reply(200, { content: [{ node: { dbId: 1 } }] })
 
       const result = await economyAdapter.submitMiscellaneousInvoice(
@@ -56,7 +56,7 @@ describe('economy-adapter', () => {
 
     it('passes through xledger-customer-not-found from economy', async () => {
       nock(config.economyService.url)
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .reply(404, { type: 'xledger-customer-not-found' })
 
       const result = await economyAdapter.submitMiscellaneousInvoice(
@@ -73,7 +73,7 @@ describe('economy-adapter', () => {
 
     it('returns unknown on other errors', async () => {
       nock(config.economyService.url)
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .reply(500, { message: 'boom' })
 
       const result = await economyAdapter.submitMiscellaneousInvoice(
@@ -82,6 +82,45 @@ describe('economy-adapter', () => {
       )
 
       expect(result).toStrictEqual({ ok: false, err: 'unknown' })
+    })
+  })
+
+  describe(economyAdapter.getMiscellaneousInvoices, () => {
+    it('returns content and pageInfo on success', async () => {
+      nock(config.economyService.url)
+        .get('/miscellaneous-invoices')
+        .query(true)
+        .reply(200, {
+          content: {
+            content: mockedMiscellaneousInvoices,
+            pageInfo: { hasNextPage: true, endCursor: 'abc' },
+          },
+        })
+
+      const result = await economyAdapter.getMiscellaneousInvoices({})
+
+      expect(result).toStrictEqual({
+        ok: true,
+        data: {
+          content: JSON.parse(JSON.stringify(mockedMiscellaneousInvoices)),
+          pageInfo: { hasNextPage: true, endCursor: 'abc' },
+        },
+      })
+    })
+
+    it('returns unknown on error', async () => {
+      nock(config.economyService.url)
+        .get('/miscellaneous-invoices')
+        .query(true)
+        .reply(500)
+
+      const result = await economyAdapter.getMiscellaneousInvoices({})
+
+      expect(result).toStrictEqual({
+        ok: false,
+        err: 'unknown',
+        statusCode: 500,
+      })
     })
   })
 })

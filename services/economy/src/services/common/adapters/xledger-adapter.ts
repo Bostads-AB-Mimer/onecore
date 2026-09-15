@@ -8,7 +8,9 @@ import {
   Invoice,
   InvoicePaymentEvent,
   InvoiceTransactionType,
+  MiscellaneousInvoice,
   MiscellaneousInvoiceArticle,
+  MiscellaneousInvoiceBaseItem,
   PaymentStatus,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
@@ -978,6 +980,144 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
   }
 }
 
+export const getMiscellaneousInvoices = async ({
+  from,
+  to,
+  after,
+  pageSize = 100,
+}: {
+  from?: Date
+  to?: Date
+  after?: string
+  pageSize?: number
+}): Promise<
+  AdapterResult<
+    {
+      content: MiscellaneousInvoice[]
+      pageInfo: { hasNextPage: boolean; endCursor?: string }
+    },
+    'unknown'
+  >
+> => {
+  try {
+    const query = {
+      query: gql`
+        query (
+          $after: String
+          $first: Int
+          $filter: SalesOrder_Filter
+          $orderDirection: OrderDirection = DESC
+        ) {
+          salesOrders(
+            first: $first
+            after: $after
+            filter: $filter
+            orderBy: { field: CREATED_AT, direction: $orderDirection }
+          ) {
+            edges {
+              cursor
+              node {
+                invoiceDate
+                invoiceNumber
+                ourRef {
+                  name
+                }
+                subledger {
+                  code
+                }
+                invoiceAmount
+                headerInfo
+                invoiceFile {
+                  url
+                }
+                invoiceBaseItems(first: 100) {
+                  edges {
+                    node {
+                      text
+                      amount
+                      quantity
+                      unitPrice
+                      glObject1 {
+                        code
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            pageInfo {
+              hasNextPage
+            }
+          }
+        }
+      `,
+      variables: {
+        after: after ?? null,
+        first: pageSize,
+        filter: {
+          invoiceDate_gte: from ? dateToGraphQlDateString(from) : undefined,
+          invoiceDate_lte: to ? dateToGraphQlDateString(to) : undefined,
+        },
+      },
+    }
+
+    const result = await makeXledgerRequest(query)
+
+    if (!result.data?.salesOrders?.edges) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    const content = result.data.salesOrders.edges.map((e: any) =>
+      transformToMiscellaneousInvoice(e.node)
+    )
+    const lastEdge = result.data.salesOrders.edges.at(-1)
+    const pageInfo = {
+      hasNextPage: result.data.salesOrders.pageInfo.hasNextPage,
+      endCursor: lastEdge?.cursor,
+    }
+
+    return { ok: true, data: { content, pageInfo } }
+  } catch (err) {
+    logger.error(err, 'Error getting sales orders from Xledger')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const transformToMiscellaneousInvoice = (node: any): MiscellaneousInvoice => {
+  let leaseId: string | null = null
+  const headerInfoLeaseIdRegex = /^(.+): .+$/
+  const match = headerInfoLeaseIdRegex.exec(node.headerInfo)
+  if (match?.[1]) {
+    leaseId = match[1]
+  }
+
+  return {
+    invoiceId: node.invoiceNumber,
+    leaseId,
+    amount: node.invoiceAmount,
+    invoiceBaseItems: node.invoiceBaseItems?.edges?.map((e: any) =>
+      transformToMiscellaneousInvoiceBaseItem(e.node)
+    ),
+    invoiceDate: node.invoiceDate,
+    reference: node.subledger.code,
+    ourReference: node.ourRef?.name,
+    description: node.headerInfo,
+    invoiceFileUrl: node.invoiceFile?.url,
+  }
+}
+
+const transformToMiscellaneousInvoiceBaseItem = (
+  node: any
+): MiscellaneousInvoiceBaseItem => {
+  return {
+    text: node.text,
+    amount: node.amount,
+    quantity: node.quantity,
+    unitPrice: node.unitPrice,
+    costCentre: node.glObject1?.code ?? null,
+  }
+}
+
 export const syncContact = async (
   dbContact: any
 ): Promise<AdapterResult<any, string>> => {
@@ -993,78 +1133,6 @@ export const syncContact = async (
     return { ok: true, data: xledgerContact }
   } catch (error) {
     return { ok: false, err: (error as any).message }
-  }
-}
-
-const accountJobIds: Record<string, string> = {}
-
-const getAccountDbId = async (account: string) => {
-  if (accountJobIds[account]) {
-    return accountJobIds[account]
-  } else {
-    const accountQuery = {
-      query: `query {
-        accounts(last: 10000, filter: { chartOfAccountDbId: 3 }, objectStatus: OPEN) {
-          edges {
-            node {
-              code
-              dbId
-            }
-          }
-        }
-      }`,
-    }
-
-    const result = await makeXledgerRequest(accountQuery)
-
-    result.data.accounts?.edges.forEach((edge: any) => {
-      accountJobIds[edge.node.code] = edge.node.dbId
-    })
-
-    return accountJobIds[account]
-  }
-}
-
-const _createAggregatedTransaction = async (
-  account: string,
-  postedDate: string,
-  amount: number,
-  vatPercent: number,
-  batchId: string
-) => {
-  const accountJobId = await getAccountDbId(account)
-
-  if (!accountJobId) {
-    logger.error({ account }, 'Job id not found for account')
-    return
-  }
-  const taxRule = vatPercent == 25 ? 'taxRule:{code:"2"},' : ''
-
-  const transactionQuery = {
-    query: `mutation {
-      addGLImportItems(inputs: [
-        {
-          node: {
-            postedDate: "${postedDate}",
-            account: {dbId: ${accountJobId}},
-            transactionSource: {code: "AR"},
-            invoiceAmount: ${amount},
-            ${taxRule}
-            jobLevel: {dbId: 14502},
-            trRegNumber: ${batchId}
-          }
-        }
-      ]) {
-        edges { node {dbId} }
-      }
-    }`,
-  }
-
-  try {
-    const result = await makeXledgerRequest(transactionQuery)
-    return result.data.addGLImportItems.edges
-  } catch (_error) {
-    return
   }
 }
 
