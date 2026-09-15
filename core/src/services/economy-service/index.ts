@@ -188,6 +188,35 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.get('/miscellaneous-invoices', async (ctx) => {
+    const queryParams = economy.GetMiscellaneousInvoicesQueryParams.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    const metadata = generateRouteMetadata(ctx)
+    const result = await economyAdapter.getMiscellaneousInvoices({
+      from: queryParams.data?.from,
+      to: queryParams.data?.to,
+      size: queryParams.data?.size,
+    })
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+      }
+      return
+    } else {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ data: result.data }, metadata)
+    }
+  })
+
   router.get('/xledger-contacts', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.getContacts()

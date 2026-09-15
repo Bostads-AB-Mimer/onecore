@@ -1,8 +1,12 @@
-import { Invoice, InvoicePaymentEvent, XledgerProject } from '@onecore/types'
+import {
+  Invoice,
+  InvoicePaymentEvent,
+  MiscellaneousInvoice,
+  XledgerProject,
+} from '@onecore/types'
+import { SubmitMiscellaneousInvoiceErrorCodes } from '@onecore/types'
 import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscellaneous-invoice'
 import { XledgerContact } from '@onecore/types/src/types'
-
-import { SubmitMiscellaneousInvoiceErrorCodes } from '@onecore/types'
 
 import { ApiError, GET, POST } from './baseApi'
 
@@ -93,6 +97,22 @@ async function getMiscellaneousInvoiceDataForLease(
   return data.content.data
 }
 
+async function getMiscellaneousInvoices(): Promise<MiscellaneousInvoice[]> {
+  const { data, error } = await GET(
+    // @ts-expect-error
+    `/miscellaneous-invoices`,
+    {}
+  )
+
+  if (error) throw error
+
+  // Type assertion needed because generated types are incomplete
+  const response = data as any
+  if (!response?.content) throw new Error('Response ok but missing content')
+
+  return response.content.data as MiscellaneousInvoice[]
+}
+
 async function submitMiscellaneousInvoice(
   invoice: MiscellaneousInvoicePayload
 ) {
@@ -176,6 +196,7 @@ export const economyService = {
   getInvoiceByNumber,
   getInvoicePaymentEvents,
   getMiscellaneousInvoiceDataForLease,
+  getMiscellaneousInvoices,
   submitMiscellaneousInvoice,
   getXledgerContacts,
   getXledgerProjects,

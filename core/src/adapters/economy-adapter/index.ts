@@ -3,6 +3,7 @@ import { loggedAxios as axios, logger } from '@onecore/utilities'
 import {
   Invoice,
   InvoicePaymentEvent,
+  MiscellaneousInvoice,
   RentInvoiceRow,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
@@ -198,6 +199,33 @@ export async function getInvoices({
     return { ok: true, data: allInvoices }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoices')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function getMiscellaneousInvoices({
+  from,
+  to,
+  size,
+}: {
+  from?: Date
+  to?: Date
+  size?: number
+}): Promise<AdapterResult<MiscellaneousInvoice[], 'unknown'>> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/miscellaneous-invoices`,
+      { params: { from, to, size } }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'economy-adapter.getMiscellaneousInvoices')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getMiscellaneousInvoices')
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
