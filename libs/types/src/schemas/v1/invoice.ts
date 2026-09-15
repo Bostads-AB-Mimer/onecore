@@ -98,8 +98,6 @@ export const MiscellaneousInvoiceBaseItemSchema = z.object({
   quantity: z.number(),
   unitPrice: z.number(),
   costCentre: z.string().nullable(),
-  projectCode: z.string().nullable(),
-  propertyCode: z.string().nullable(),
 })
 
 export const MiscellaneousInvoiceSchema = z.object({
