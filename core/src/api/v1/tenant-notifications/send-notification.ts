@@ -49,7 +49,7 @@ const inFlightOperations = new Map<string, Promise<InFlightSendOutcome>>()
 
 const waitForInFlightOperation = async (
   idempotencyKey: string
-): Promise<Promise<InFlightSendOutcome>> => {
+): Promise<InFlightSendOutcome> => {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const operation = inFlightOperations.get(idempotencyKey)
     if (operation) return operation
