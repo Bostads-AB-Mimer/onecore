@@ -1025,9 +1025,6 @@ export const getMiscellaneousInvoices = async ({
                 subledger {
                   code
                 }
-                text
-                code
-                description
                 invoiceAmount
                 headerInfo
                 invoiceFile {
@@ -1041,15 +1038,6 @@ export const getMiscellaneousInvoices = async ({
                       quantity
                       unitPrice
                       glObject1 {
-                        code
-                      }
-                      glObject2 {
-                        code
-                      }
-                      glObject3 {
-                        code
-                      }
-                      product {
                         code
                       }
                     }
@@ -1127,8 +1115,6 @@ const transformToMiscellaneousInvoiceBaseItem = (
     quantity: node.quantity,
     unitPrice: node.unitPrice,
     costCentre: node.glObject1?.code ?? null,
-    projectCode: node.glObject2?.code ?? null,
-    propertyCode: node.glObject3?.code ?? null,
   }
 }
 
