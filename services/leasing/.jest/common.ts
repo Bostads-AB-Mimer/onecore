@@ -9,5 +9,6 @@ jest.mock('@onecore/utilities', () => {
       },
     },
     generateRouteMetadata: jest.fn(() => ({})),
+    redactHeaders: jest.fn((headers) => headers ?? {}),
   }
 })
