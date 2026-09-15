@@ -19,7 +19,7 @@ export type TenantNotificationType =
 
 /** Keycloak role required to send each notification type via POST /v1/tenant-notifications. */
 export const TenantNotificationRole = {
-  LeaseTermination: 'tenant-notifications:lease-termination:send',
+  LeaseTermination: 'tenant-notifications:lease-termination',
 } as const
 
 export const requiredRoleByNotificationType: Record<
