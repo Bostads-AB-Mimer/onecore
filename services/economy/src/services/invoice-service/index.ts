@@ -328,7 +328,7 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(result.data, metadata)
     } catch (error) {
-      logger.error({ err: error }, 'POST /invoices/miscellaneous')
+      logger.error({ err: error }, 'POST /miscellaneous-invoices')
       ctx.status = 500
       ctx.body = {
         type: SubmitMiscellaneousInvoiceErrorCodes.Unknown,
