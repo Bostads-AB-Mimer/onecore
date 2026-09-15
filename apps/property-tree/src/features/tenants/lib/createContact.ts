@@ -255,10 +255,12 @@ export const createContactErrorMessages: Record<string, string> = {
 const DUPLICATE_ORGANISATION_MESSAGE =
   'En kund med det här organisationsnumret finns redan.'
 
-/** A person (P) or organisation contact code, e.g. `P069077` or `F069077`. */
-const CONTACT_CODE_PATTERN = new RegExp(
-  `^[P${ORGANISATION_CATEGORIES.join('')}]\\d+$`
-)
+/**
+ * A contact code: one letter and digits, e.g. `P069077` or `F069077`. Any
+ * letter is accepted, not only the categories that can be created here — the
+ * existing contact that blocks a create may carry a legacy prefix such as `O`.
+ */
+const CONTACT_CODE_PATTERN = /^[A-ZÖ]\d+$/
 
 /**
  * The existing customer's contact code, when the failure was a duplicate.

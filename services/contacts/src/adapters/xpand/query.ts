@@ -225,6 +225,17 @@ export const contactCodeForNationalId = async (
   return row?.contactCode ?? null
 }
 
+/**
+ * `cmlog.keydbtbl` for rows whose `keycode` is a `cmctc.keycmctc`.
+ *
+ * Log rows written against other tables also start their memo with
+ * "Kontakt …"; their keys belong to those tables and must not be joined
+ * against contacts, however unlikely a collision is. Same convention as the
+ * address lookups elsewhere in the platform, which pair `keycode` with the
+ * table key `_RQA11RNMA`.
+ */
+const CMLOG_CONTACT_TABLE_KEY = '_RXJ0UWYHC'
+
 export type DbContactChangeRow = {
   logtime: Date
   logmemo: string
@@ -260,7 +271,11 @@ export const cmlogContactChanges = (
 ): Promise<DbContactChangeRow[]> => {
   const base = db
     .from('cmlog')
-    .leftJoin('cmctc', 'cmctc.keycmctc', 'cmlog.keycode')
+    .leftJoin('cmctc', (join) =>
+      join
+        .on('cmctc.keycmctc', '=', 'cmlog.keycode')
+        .andOn('cmlog.keydbtbl', '=', db.raw('?', [CMLOG_CONTACT_TABLE_KEY]))
+    )
     .select({
       logtime: 'cmlog.logtime',
       logmemo: 'cmlog.logmemo',

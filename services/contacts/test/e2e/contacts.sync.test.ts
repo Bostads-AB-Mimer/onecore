@@ -5,6 +5,8 @@ import { FULL_TEST_DATA_SET } from './data-set'
 
 /** Table key of `cmctc` in cmlog.keydbtbl, as seen in the Xpand database. */
 const CMCTC_TABLE_KEY = '_RXJ0UWYHC'
+/** Table key of some other table whose log rows also start with "Kontakt". */
+const OTHER_TABLE_KEY = '_03Z0S9PRA'
 
 const keyOf = async (pool: ConnectionPool, contactCode: string) => {
   const result = await pool
@@ -17,10 +19,11 @@ const logRow = (
   key: string,
   keycode: string | null,
   logtime: string,
-  logmemo: string
+  logmemo: string,
+  keydbtbl: string = CMCTC_TABLE_KEY
 ) =>
   `INSERT INTO cmlog (keycmlog, keydbtbl, keycode, logtime, logcat, logmemo) VALUES ` +
-  `('${key}', '${CMCTC_TABLE_KEY}', ${keycode ? `'${keycode}'` : 'NULL'}, '${logtime}', 'Kontakt skapad', '${logmemo}');`
+  `('${key}', '${keydbtbl}', ${keycode ? `'${keycode}'` : 'NULL'}, '${logtime}', 'Kontakt skapad', '${logmemo}');`
 
 describe('/contacts/sync', () => {
   let testApp: TestApp | undefined
@@ -78,6 +81,16 @@ describe('/contacts/sync', () => {
           '2020-01-01T00:00:00',
           'Kontakt F111111'
         ),
+        // Logged against another table. Its key happens to equal a contact
+        // key, but keys are only meaningful together with their table, so
+        // the text must win here.
+        logRow(
+          '_LOG0000006    ',
+          p333,
+          '2026-09-01T14:00:00',
+          'Kontakt F111111',
+          OTHER_TABLE_KEY
+        ),
       ].join('\n')
     )
     await pool.close()
@@ -126,16 +139,30 @@ describe('/contacts/sync', () => {
     expect(await codesSince('2026-09-01T09:00:00Z')).toContain('P000555')
   })
 
+  /**
+   * The join is restricted to log rows written against the contact table. A
+   * row from another table is resolved from its text, as before this change,
+   * even when its key collides with a contact key.
+   */
+  it('ignores the key of a row logged against another table', async () => {
+    const codes = await codesSince('2026-09-01T13:30:00Z')
+
+    expect(codes).toEqual(['F111111'])
+  })
+
   it('returns rows in log order and honours since', async () => {
+    // F111111 appears once, at its latest log time, since codes are
+    // de-duplicated on the newest entry.
     expect(await codesSince('2026-09-01T09:00:00Z')).toEqual([
       'P000333',
-      'F111111',
       'K000444',
       'P000555',
+      'F111111',
     ])
     expect(await codesSince('2026-09-01T11:30:00Z')).toEqual([
       'K000444',
       'P000555',
+      'F111111',
     ])
   })
 })
