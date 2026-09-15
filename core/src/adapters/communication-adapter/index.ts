@@ -578,6 +578,14 @@ export const getLinearLabels = async (): Promise<
   }
 }
 
+/** Communication validates endDate as YYYY-MM-DD; JSON.stringify(Date) emits ISO datetime. */
+const leaseTerminationConfirmationWirePayload = (
+  email: LeaseTerminationConfirmationEmail
+) => ({
+  ...email,
+  endDate: email.endDate.toISOString().slice(0, 10),
+})
+
 export const sendLeaseTerminationConfirmationEmail = async (
   email: LeaseTerminationConfirmationEmail
 ): Promise<AdapterResult<null, 'unknown'>> => {
@@ -587,7 +595,7 @@ export const sendLeaseTerminationConfirmationEmail = async (
 
     const result = await axios.post(
       `${config.communicationService.url}/sendLeaseTerminationConfirmation`,
-      email
+      leaseTerminationConfirmationWirePayload(email)
     )
 
     if (result.status !== 204) {

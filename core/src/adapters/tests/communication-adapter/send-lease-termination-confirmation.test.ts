@@ -36,6 +36,7 @@ describe('sendLeaseTerminationConfirmationEmail', () => {
           type: 'lease-termination-confirmation',
           contactCode: 'P123456',
           leaseId: '307-002-11-0201/11',
+          endDate: '2026-10-31',
         })
         return true
       })
