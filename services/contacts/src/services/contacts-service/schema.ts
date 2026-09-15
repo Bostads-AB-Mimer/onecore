@@ -136,16 +136,20 @@ export const ErrorResponseBodySchema = z.object({
 /* -------------------------------------------------------------------------
  * Creating contacts
  *
- * This contract creates *private individuals only*. `nationalId` is validated
- * as a personnummer or samordningsnummer and a minimum age is enforced, so an
- * organisationsnummer is rejected as `invalid-national-id` — the person-ness is
- * a real constraint here, not merely an omission.
+ * The request is discriminated on `type`. An `individual` is a private person:
+ * `nationalId` is validated as a personnummer or samordningsnummer and a
+ * minimum age is enforced. An `organisation` is any legal person — company,
+ * municipality, region, state body, internal or other — identified by an
+ * organisation number and a single name, and placed in one of Xpand's
+ * organisation categories. The two are kept as separate arms rather than a
+ * widened field set because their validation rules genuinely differ.
  *
- * Creating a company will need its own seam: Xpand's create operation only
- * produces natural persons, so a commercial customer has to be converted to
- * contact category F afterwards, with the name in a single field and no birth
- * date, age check or name split. Expect a discriminator on this schema rather
- * than a widening of the fields below.
+ * Xpand's create operation only produces natural persons, so an organisation
+ * is created as one and then converted to its category (name in a single
+ * field, no birth date, no name split, contact code re-prefixed). That second
+ * step is idempotent but not transactional with the first; its outcome is
+ * reported under `conversion` in the response rather than as an error status,
+ * because the contact exists either way.
  *
  * Every contact created here does get the applicant role, because a contact
  * without it cannot sign in to Mina sidor at all. Whether housing queues are
@@ -156,6 +160,14 @@ export const ErrorResponseBodySchema = z.object({
  * stored in the leasing service's application profile. Xpand has a legacy
  * field for it that we deliberately leave unset.
  * ---------------------------------------------------------------------- */
+
+/**
+ * Xpand's contact categories for legal persons: company (F), internal (I),
+ * municipal (K), regional (L), other (Ö) and state (S). The letter is also
+ * the prefix of the contact code, which is how the business — and this
+ * service's read side — tells contact types apart.
+ */
+export const ContactCategorySchema = z.enum(['F', 'I', 'K', 'L', 'Ö', 'S'])
 
 export const CreateContactAddressSchema = z.object({
   careOf: z.string().optional(),
@@ -179,15 +191,8 @@ export const CreateContactPhoneNumberSchema = z.object({
   isPrimary: z.boolean().default(false),
 })
 
-export const CreateContactRequestBodySchema = z.object({
-  /**
-   * Personnummer. Accepted in any common notation; normalised and checksum
-   * validated by the service, which is the single source of truth for what
-   * counts as valid.
-   */
-  nationalId: z.string().min(10),
-  firstName: z.string().min(1).max(50),
-  lastName: z.string().min(1).max(50),
+/** Contact details shared by every kind of contact. */
+const CreateContactDetailsSchema = z.object({
   addresses: z.array(CreateContactAddressSchema).min(1),
   /**
    * At least one is required for every kind: the web account provisioned
@@ -197,9 +202,61 @@ export const CreateContactRequestBodySchema = z.object({
   phoneNumbers: z.array(CreateContactPhoneNumberSchema).default([]),
 })
 
+export const CreateContactIndividualRequestBodySchema =
+  CreateContactDetailsSchema.extend({
+    type: z.literal('individual'),
+    /**
+     * Personnummer. Accepted in any common notation; normalised and checksum
+     * validated by the service, which is the single source of truth for what
+     * counts as valid.
+     */
+    nationalId: z.string().min(10),
+    firstName: z.string().min(1).max(50),
+    lastName: z.string().min(1).max(50),
+  })
+
+export const CreateContactOrganisationRequestBodySchema =
+  CreateContactDetailsSchema.extend({
+    type: z.literal('organisation'),
+    /**
+     * Organisationsnummer. Accepted in any common notation; normalised and
+     * checksum validated by the service. A personal identity number is
+     * rejected here — a person must be created as an `individual`.
+     */
+    organisationNumber: z.string().min(10),
+    /** The registered name. Xpand stores it in a single 100-character field. */
+    name: z.string().min(1).max(100),
+    category: ContactCategorySchema.default('F'),
+  })
+
+export const CreateContactRequestBodySchema = z.discriminatedUnion('type', [
+  CreateContactIndividualRequestBodySchema,
+  CreateContactOrganisationRequestBodySchema,
+])
+
+/**
+ * Outcome of the category conversion that follows the creation of an
+ * organisation.
+ *
+ * `done`: the contact carries its organisation category and prefixed code.
+ * `not-applicable`: the contact is an individual; nothing to convert.
+ * `failed`: the contact exists as a natural person under the code returned
+ * in `contactCode`. The conversion is idempotent and can be completed later;
+ * `error` names the failure for the logs.
+ */
+export const CreateContactConversionSchema = z.object({
+  status: z.enum(['done', 'not-applicable', 'failed']),
+  error: z.string().optional(),
+})
+
 export const CreateContactResponseBodySchema =
   ONECoreHateOASResponseBodySchema.extend({
     content: z.object({
+      /**
+       * The contact's code. For an organisation this is the re-prefixed code
+       * (e.g. `F069077`) once conversion is done, and the original person code
+       * (`P069077`) when it failed — see `conversion`.
+       */
       contactCode: z.string(),
       /**
        * The created contact, read back immediately after creation. Null when
@@ -207,12 +264,14 @@ export const CreateContactResponseBodySchema =
        * `contactCode` is always authoritative.
        */
       contact: ContactSchema.nullable(),
+      conversion: CreateContactConversionSchema,
     }),
   })
 
 export const CreateContactErrorCodeSchema = z.enum([
   'duplicate-contact',
   'invalid-national-id',
+  'invalid-organisation-number',
   'write-backend-not-configured',
   'xpand-rejected',
   'xpand-fault',

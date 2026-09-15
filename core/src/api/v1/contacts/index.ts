@@ -4,6 +4,7 @@ import { OkapiRouter } from 'koa-okapi-router'
 import {
   ContactSchema,
   CreateContactErrorResponseBodySchema_APIv1,
+  CreateContactRequestBody_APIv1,
   CreateContactRequestBodySchema_APIv1,
   CreateContactResponseBodySchema_APIv1,
   GetContactResponseBodySchema,
@@ -38,6 +39,7 @@ type CreateContactFailureStatus = 400 | 409 | 422 | 502 | 503
 const CREATE_CONTACT_STATUS: Record<string, CreateContactFailureStatus> = {
   'duplicate-contact': 409,
   'invalid-national-id': 422,
+  'invalid-organisation-number': 422,
   'invalid-request': 400,
   'xpand-rejected': 422,
   'xpand-fault': 502,
@@ -53,6 +55,27 @@ const WAITING_LIST_LABELS: Record<WaitingListType, string> = {
   [WaitingListType.Housing]: 'bostad',
   [WaitingListType.ParkingSpace]: 'bilplats',
   [WaitingListType.Storage]: 'förråd',
+}
+
+/**
+ * Separates what the contacts service creates from what this route
+ * orchestrates afterwards.
+ *
+ * The extras only exist on the `individual` arm. An organisation is created
+ * with neither a profile nor queues, whatever the caller sent — the parser has
+ * already dropped them, and this makes that explicit for the steps below.
+ */
+const splitOrchestration = (body: CreateContactRequestBody_APIv1) => {
+  if (body.type === 'organisation') {
+    return {
+      contact: body,
+      applicationProfile: undefined,
+      waitingLists: [] as WaitingListType[],
+    }
+  }
+
+  const { applicationProfile, waitingLists, ...contact } = body
+  return { contact, applicationProfile, waitingLists }
 }
 
 export const routes = (router: OkapiRouter, config: Config) => {
@@ -112,12 +135,19 @@ export const routes = (router: OkapiRouter, config: Config) => {
       summary: 'Create a contact',
       description:
         'Creates a contact, then optionally records an application profile ' +
-        'and enrols the customer in the requested waiting lists. ' +
+        'and enrols the customer in the requested waiting lists. The body is ' +
+        'discriminated on `type`: an `individual` (personnummer, first and ' +
+        'last name) may carry `applicationProfile` and `waitingLists`; an ' +
+        '`organisation` (organisationsnummer, name, `category` F/I/K/L/Ö/S) ' +
+        'gets a web account but neither profile nor queues — both are ' +
+        'ignored if sent. ' +
         'NOT TRANSACTIONAL. The contact is created in Xpand and cannot be ' +
         'removed. Once it exists this endpoint always answers 201, reporting ' +
         'any later step that failed under `warnings` — those steps are ' +
         'idempotent and should be completed on the created contact rather than ' +
-        'by creating it again.',
+        'by creating it again. That includes an organisation whose category ' +
+        'conversion failed: `contactCode` is then the person code (P…) and ' +
+        '`content.conversion.status` is `failed`.',
       tags: ['Contacts'],
       body: {
         name: 'CreateContactRequest',
@@ -153,7 +183,9 @@ export const routes = (router: OkapiRouter, config: Config) => {
         return
       }
 
-      const { applicationProfile, waitingLists, ...contact } = parsed.data
+      const { contact, applicationProfile, waitingLists } = splitOrchestration(
+        parsed.data
+      )
 
       const created = await contactsAdapter.createContact(contact)
 
@@ -170,6 +202,25 @@ export const routes = (router: OkapiRouter, config: Config) => {
       // From here on the contact exists and we cannot remove it. Every remaining step
       // reports its own outcome; none of them may turn the response into an
       // error, because that would invite a retry that cannot succeed.
+
+      // A contacts service older than this route answers without `conversion`.
+      // The contact exists all the same, so default rather than throw — a
+      // throw here would turn a created contact into a 500 and a retry into
+      // a duplicate.
+      const conversion = created.data.conversion ?? {
+        status: 'not-applicable' as const,
+      }
+
+      // The service has already retried and logged the failure; what reaches
+      // here is for a person to finish in Xpand, so the warning names the
+      // code to find.
+      if (conversion.status === 'failed') {
+        warnings.push(
+          `Kunden skapades som ${contactCode} men kunde inte konverteras till ` +
+            'organisationskund. Konverteringen behöver slutföras i Xpand.'
+        )
+      }
+
       let profileStatus: 'created' | 'skipped' | 'failed' = 'skipped'
       let profileError: string | undefined
 
@@ -253,6 +304,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
             contact: created.data.contact
               ? transformContact(created.data.contact)
               : null,
+            conversion,
             applicationProfile: {
               status: profileStatus,
               ...(profileError ? { error: profileError } : {}),

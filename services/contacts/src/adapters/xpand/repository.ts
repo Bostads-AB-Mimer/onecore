@@ -17,7 +17,7 @@ import {
   contactObjectKeysForPhoneNumber,
   contactsQuery,
 } from './query'
-import { parseNationalId } from '@src/domain/national-id'
+import { NationalIdForms } from '@src/domain/national-id'
 import { contactsByCodesQuery, ContactIncludeOptions } from './batch-query'
 import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
@@ -211,18 +211,11 @@ export const xpandContactsRepository = (
       return contact
     },
 
-    existsByNationalIdNumber: async (nid: NationalIdNumber) => {
-      const forms = parseNationalId(nid)
-
-      // Not a valid identity number, so it cannot match an existing contact.
-      // The caller validates and reports that separately; returning null here
-      // simply means "no duplicate found", which is correct.
-      if (!forms) return null
-
+    existsByIdentityForms: async (forms: NationalIdForms) => {
       try {
         return await contactCodeForNationalId(db.get(), forms)
       } catch (err) {
-        logger.error({ err }, 'contactsRepository.existsByNationalIdNumber')
+        logger.error({ err }, 'contactsRepository.existsByIdentityForms')
         throw err
       }
     },
@@ -314,6 +307,12 @@ export const xpandContactsRepository = (
      * by timestamp ascending so callers can checkpoint per item. If no
      * timestamp is provided, returns all matching rows.
      *
+     * The code comes from the contact the log row points at, which is right
+     * even when the code written in the log text is not — see
+     * `cmlogContactChanges`. The text is only read for rows whose key does
+     * not resolve to a contact, which keeps the behaviour for log rows written
+     * against other tables unchanged.
+     *
      * @param since - The timestamp to query changes from, or null for all rows.
      * @returns A promise that resolves to contact codes with timestamps, ordered ascending.
      */
@@ -324,9 +323,10 @@ export const xpandContactsRepository = (
 
       const byContactCode = new Map<string, Date>()
       for (const row of rows) {
-        const match = (row['logmemo'] as string)?.match(/^Kontakt (\S+)/)
-        if (!match) continue
-        byContactCode.set(match[1], row['logtime'] as Date)
+        const contactCode =
+          row.contactCode?.trim() || row.logmemo.match(/^Kontakt (\S+)/)?.[1]
+        if (!contactCode) continue
+        byContactCode.set(contactCode, row.logtime)
       }
 
       const contactCodes = Array.from(byContactCode.entries())

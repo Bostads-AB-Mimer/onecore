@@ -11046,7 +11046,7 @@ export interface paths {
     }
     /**
      * Create a contact
-     * @description Creates a contact, then optionally records an application profile and enrols the customer in the requested waiting lists. NOT TRANSACTIONAL. The contact is created in Xpand and cannot be removed. Once it exists this endpoint always answers 201, reporting any later step that failed under `warnings` — those steps are idempotent and should be completed on the created contact rather than by creating it again.
+     * @description Creates a contact, then optionally records an application profile and enrols the customer in the requested waiting lists. The body is discriminated on `type`: an `individual` (personnummer, first and last name) may carry `applicationProfile` and `waitingLists`; an `organisation` (organisationsnummer, name, `category` F/I/K/L/Ö/S) gets a web account but neither profile nor queues — both are ignored if sent. NOT TRANSACTIONAL. The contact is created in Xpand and cannot be removed. Once it exists this endpoint always answers 201, reporting any later step that failed under `warnings` — those steps are idempotent and should be completed on the created contact rather than by creating it again. That includes an organisation whose category conversion failed: `contactCode` is then the person code (P…) and `content.conversion.status` is `failed`.
      */
     post: {
       requestBody?: {
@@ -11175,6 +11175,11 @@ export interface paths {
                         }
                     )
                   | null
+                conversion: {
+                  /** @enum {string} */
+                  status: 'done' | 'not-applicable' | 'failed'
+                  error?: string
+                }
                 applicationProfile: {
                   /** @enum {string} */
                   status: 'created' | 'skipped' | 'failed'
@@ -16196,62 +16201,105 @@ export interface components {
         }
       }
     }
-    CreateContactRequest: {
-      nationalId: string
-      firstName: string
-      lastName: string
-      addresses: {
-        careOf?: string
-        street: string
-        zipCode: string
-        city: string
-        country?: string
-      }[]
-      emailAddresses: {
-        /** Format: email */
-        emailAddress: string
-        /**
-         * @default private
-         * @enum {string}
-         */
-        type?: 'private' | 'work' | 'unspecified'
-        /** @default true */
-        isPrimary?: boolean
-      }[]
-      /** @default [] */
-      phoneNumbers?: {
-        phoneNumber: string
-        /**
-         * @default mobile
-         * @enum {string}
-         */
-        type?: 'mobile' | 'home' | 'work'
-        /** @default false */
-        isPrimary?: boolean
-      }[]
-      applicationProfile?: {
-        /** @enum {string} */
-        housingType:
-          | 'LIVES_WITH_FAMILY'
-          | 'LODGER'
-          | 'RENTAL'
-          | 'SUB_RENTAL'
-          | 'OWNS_HOUSE'
-          | 'OWNS_FLAT'
-          | 'OWNS_ROW_HOUSE'
-          | 'OTHER'
-        landlord: string | null
-        numAdults: number
-        numChildren: number
-        housingTypeDescription: string | null
-        housingReference: {
-          email: string | null
-          phone: string | null
+    CreateContactRequest:
+      | {
+          addresses: {
+            careOf?: string
+            street: string
+            zipCode: string
+            city: string
+            country?: string
+          }[]
+          emailAddresses: {
+            /** Format: email */
+            emailAddress: string
+            /**
+             * @default private
+             * @enum {string}
+             */
+            type?: 'private' | 'work' | 'unspecified'
+            /** @default true */
+            isPrimary?: boolean
+          }[]
+          /** @default [] */
+          phoneNumbers?: {
+            phoneNumber: string
+            /**
+             * @default mobile
+             * @enum {string}
+             */
+            type?: 'mobile' | 'home' | 'work'
+            /** @default false */
+            isPrimary?: boolean
+          }[]
+          /** @enum {string} */
+          type: 'individual'
+          nationalId: string
+          firstName: string
+          lastName: string
+          applicationProfile?: {
+            /** @enum {string} */
+            housingType:
+              | 'LIVES_WITH_FAMILY'
+              | 'LODGER'
+              | 'RENTAL'
+              | 'SUB_RENTAL'
+              | 'OWNS_HOUSE'
+              | 'OWNS_FLAT'
+              | 'OWNS_ROW_HOUSE'
+              | 'OTHER'
+            landlord: string | null
+            numAdults: number
+            numChildren: number
+            housingTypeDescription: string | null
+            housingReference: {
+              email: string | null
+              phone: string | null
+            }
+          }
+          /** @default [] */
+          waitingLists?: (1 | 2 | 3)[]
         }
-      }
-      /** @default [] */
-      waitingLists?: (1 | 2 | 3)[]
-    }
+      | {
+          addresses: {
+            careOf?: string
+            street: string
+            zipCode: string
+            city: string
+            country?: string
+          }[]
+          emailAddresses: {
+            /** Format: email */
+            emailAddress: string
+            /**
+             * @default private
+             * @enum {string}
+             */
+            type?: 'private' | 'work' | 'unspecified'
+            /** @default true */
+            isPrimary?: boolean
+          }[]
+          /** @default [] */
+          phoneNumbers?: {
+            phoneNumber: string
+            /**
+             * @default mobile
+             * @enum {string}
+             */
+            type?: 'mobile' | 'home' | 'work'
+            /** @default false */
+            isPrimary?: boolean
+          }[]
+          /** @enum {string} */
+          type: 'organisation'
+          organisationNumber: string
+          name: string
+          /**
+           * @default F
+           * @enum {string}
+           */
+          category?: 'F' | 'I' | 'K' | 'L' | 'Ö' | 'S'
+        }
     ContactV1:
       | {
           contactCode: string

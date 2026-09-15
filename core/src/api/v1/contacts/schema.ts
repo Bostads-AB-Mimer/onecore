@@ -1,6 +1,10 @@
 import z from 'zod'
 import { WaitingListType } from '@onecore/types'
-import { CreateContactRequestBodySchema } from '@onecore/contacts/schema'
+import {
+  CreateContactConversionSchema,
+  CreateContactIndividualRequestBodySchema,
+  CreateContactOrganisationRequestBodySchema,
+} from '@onecore/contacts/schema'
 
 import { UpdateApplicationProfileRequestParams } from '../../../services/lease-service/schemas/client/application-profile'
 
@@ -140,32 +144,50 @@ export const CreateContactWaitingListResultSchema = z.object({
 })
 
 /**
- * Request to create a contact together with the application profile a housing
- * applicant needs.
+ * Request to create a contact, discriminated on `type` exactly as the
+ * contacts service's own contract is.
  *
  * The contact fields are reused verbatim from the contacts service rather than
- * redeclared, so the two contracts cannot drift apart.
+ * redeclared, so the two contracts cannot drift apart. Only the `individual`
+ * arm gains the housing-applicant extras: an organisation is neither a housing
+ * applicant nor a household, so a profile or queue choice sent for one is
+ * dropped by the parser rather than rejected.
  */
-export const CreateContactRequestBodySchema_APIv1 =
-  CreateContactRequestBodySchema.extend({
-    /**
-     * Household and housing reference. Stored in ONECore's own application
-     * profile, not in Xpand. Omit for a customer who does not need one.
-     */
-    applicationProfile: UpdateApplicationProfileRequestParams.optional(),
-    /**
-     * Waiting lists to enrol the new customer in, mirroring the queue choice
-     * in the public registration flow. Queue time starts at enrolment, so
-     * omitting a queue the customer wanted costs them real seniority.
-     */
-    waitingLists: z.array(z.nativeEnum(WaitingListType)).default([]),
-  })
+export const CreateContactRequestBodySchema_APIv1 = z.discriminatedUnion(
+  'type',
+  [
+    CreateContactIndividualRequestBodySchema.extend({
+      /**
+       * Household and housing reference. Stored in ONECore's own application
+       * profile, not in Xpand. Omit for a customer who does not need one.
+       */
+      applicationProfile: UpdateApplicationProfileRequestParams.optional(),
+      /**
+       * Waiting lists to enrol the new customer in, mirroring the queue choice
+       * in the public registration flow. Queue time starts at enrolment, so
+       * omitting a queue the customer wanted costs them real seniority.
+       */
+      waitingLists: z.array(z.nativeEnum(WaitingListType)).default([]),
+    }),
+    CreateContactOrganisationRequestBodySchema,
+  ]
+)
+
+export type CreateContactRequestBody_APIv1 = z.infer<
+  typeof CreateContactRequestBodySchema_APIv1
+>
 
 export const CreateContactResponseBodySchema_APIv1 =
   ONECoreHateOASResponseBodySchema.extend({
     content: z.object({
       contactCode: z.string(),
       contact: ContactSchema.nullable(),
+      /**
+       * Whether an organisation's category conversion completed. `failed`
+       * means the contact exists under the person code in `contactCode` and
+       * a warning says so; `not-applicable` for an individual.
+       */
+      conversion: CreateContactConversionSchema,
       applicationProfile: z.object({
         status: CreateContactStepStatusSchema,
         error: z.string().optional(),

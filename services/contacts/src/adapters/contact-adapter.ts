@@ -6,6 +6,7 @@ import {
   PhoneNumber,
   RelatedContact,
 } from '@src/domain/contact'
+import { NationalIdForms } from '@src/domain/national-id'
 import { ContactIncludeOptions } from './xpand/batch-query'
 
 /**
@@ -149,7 +150,7 @@ export interface ContactsRepository {
   getByNationalIdNumber: (nid: NationalIdNumber) => Promise<Contact | null>
 
   /**
-   * Checks whether a contact with the given national ID number already exists,
+   * Checks whether a contact with the given identity number already exists,
    * matching on both the ten- and twelve-digit forms.
    *
    * Distinct from `getByNationalIdNumber`, which matches the stored value
@@ -158,14 +159,15 @@ export interface ContactsRepository {
    * it created, so a missed match becomes a duplicate that only manual work in
    * Xpand can clear.
    *
-   * @param nid - The national ID number in any common notation.
+   * Takes the already-parsed forms rather than raw input so the same lookup
+   * serves personal identity numbers and organisation numbers alike — the
+   * caller knows which kind it holds and parses accordingly.
    *
-   * @returns The existing contact code, or null when there is no match —
-   *          including when `nid` is not a valid identity number.
+   * @param forms - The ten- and twelve-digit forms of the identity number.
+   *
+   * @returns The existing contact code, or null when there is no match.
    */
-  existsByNationalIdNumber: (
-    nid: NationalIdNumber
-  ) => Promise<ContactCode | null>
+  existsByIdentityForms: (forms: NationalIdForms) => Promise<ContactCode | null>
 
   /**
    * Retrieves contacts by their phone number.

@@ -2,6 +2,7 @@ import { logger } from '@onecore/utilities'
 
 import {
   ContactWriteError,
+  ContactWriterParty,
   CreateContactInput,
 } from '@src/adapters/contact-writer'
 import { AdapterResult } from '@src/adapters/types'
@@ -43,8 +44,25 @@ const ADDRESS_KIND_INVOICE = 'Invoice'
 /** `PreferredContactMethod.Email`. */
 const PREFERRED_CONTACT_METHOD_EMAIL = 'Email'
 
-/** Xpand contact category `P` — a natural person. */
+/**
+ * Xpand contact category `P` — a natural person.
+ *
+ * Sent for organisations too. The operation ignores any other category and
+ * produces a P contact regardless (verified against the test environment:
+ * `ContactCategoryCode: "F"` is silently discarded), so the category is
+ * corrected afterwards by the `ContactCategoryWriter` instead. Sending the
+ * value that is known to work keeps this envelope identical for both kinds.
+ */
 const CONTACT_CATEGORY_PERSON = 'P'
+
+/**
+ * Column widths of `cmctc.fnamn` and `cmctc.enamn`. An organisation's name
+ * goes in both name fields only to satisfy the create operation — the fields
+ * are cleared during conversion — so a long name is cut rather than risking a
+ * rejection for a value nobody will keep.
+ */
+const FIRST_NAME_MAX_LENGTH = 30
+const LAST_NAME_MAX_LENGTH = 45
 
 /**
  * Everything inside `MainApplicant08352` consists of data-contract members and
@@ -98,6 +116,36 @@ const birthDateFrom = (nationalId: string): string | null => {
   const birthDate = getBirthDateFromNationalId(nationalId)
   return birthDate && `${birthDate}T00:00:00`
 }
+
+/**
+ * The identity members of the applicant, resolved per kind of party.
+ *
+ * An organisation has no birth date, so the element is omitted altogether —
+ * an empty element would be read as an explicit blank. Its number is sent in
+ * the same `CivicNumber` member a person's is, in the ten-digit form Xpand
+ * stores organisation numbers in.
+ */
+const identityMembers = (
+  party: ContactWriterParty
+): {
+  birthDate: string | null
+  civicNumber: string
+  firstName: string
+  lastName: string
+} =>
+  party.kind === 'person'
+    ? {
+        birthDate: birthDateFrom(party.nationalId),
+        civicNumber: party.nationalId,
+        firstName: party.firstName,
+        lastName: party.lastName,
+      }
+    : {
+        birthDate: null,
+        civicNumber: party.organisationNumber,
+        firstName: party.name.slice(0, FIRST_NAME_MAX_LENGTH),
+        lastName: party.name.slice(0, LAST_NAME_MAX_LENGTH),
+      }
 
 /**
  * Renders one `Address`. Members alphabetical, per the contract's ordering.
@@ -190,25 +238,30 @@ export const buildCreateApplicantEnvelope = (
   input: CreateContactInput,
   now: Date = new Date()
 ): string => {
+  const identity = identityMembers(input.party)
+
   const applicant = [
     // --- ContactRoleBaseDataContractOfApplicantEntity ---
     dataWrap(
       'Addresses',
       input.addresses.map((address) => renderAddress(address, now)).join('')
     ),
-    dataElOpt('BirthDate', birthDateFrom(input.nationalId)),
-    dataEl('CivicNumber', input.nationalId),
+    dataElOpt('BirthDate', identity.birthDate),
+    dataEl('CivicNumber', identity.civicNumber),
     dataEl('ContactCategoryCode', CONTACT_CATEGORY_PERSON),
     // Required by the contract (no minOccurs="0") but allocated by Xpand on
     // create — sent empty. Omitting it fails with "Expecting element
     // 'ContactCode'"; it is one of only three required members alongside
     // CivicNumber and ContactCategoryCode.
     dataEl('ContactCode', ''),
-    dataEl('FirstName', input.firstName),
+    dataEl('FirstName', identity.firstName),
     dataEl('IsActive', true),
+    // Always true, for the same reason the category is always P: the operation
+    // only creates natural persons, and the conversion step sets the record
+    // straight in the database afterwards.
     dataEl('IsNaturalPerson', true),
     dataEl('IsPresystemLocked', false),
-    dataEl('LastName', input.lastName),
+    dataEl('LastName', identity.lastName),
     dataEl('PreferredContactMethod', PREFERRED_CONTACT_METHOD_EMAIL),
 
     // --- ApplicantDataContract ---

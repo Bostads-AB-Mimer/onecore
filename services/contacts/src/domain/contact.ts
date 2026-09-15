@@ -1,5 +1,6 @@
 import z from 'zod'
 import {
+  ContactCategorySchema,
   ContactSchema,
   ContactAddressSchema,
   ContactCommunicationSchema,
@@ -18,6 +19,13 @@ export type PhoneNumberType = z.infer<typeof PhoneNumberTypeSchema>
 
 export type ContactType = 'individual' | 'organisation'
 export type ContactTypeFilter = 'any' | ContactType
+
+/**
+ * Xpand's contact categories for organisations. Every one of them is a legal
+ * person; only `P` (a natural person, not listed here) differs structurally.
+ * The letter doubles as the prefix of the contact code.
+ */
+export type ContactCategory = z.infer<typeof ContactCategorySchema>
 
 export type ContactCode = string
 export type ObjectKey = string
