@@ -148,7 +148,7 @@ const config = configPackage({
         arDirectory: '/AR',
         useSshDss: true,
       },
-      // Xledger bills per invoice gfetched we believe
+      // Xledger bills per invoice fetched (we believe), so retries and concurrency are capped.
       // Timeout is generous: the invoices tab can take >15 s for tenants with many leases.
       requestPolicy: {
         maxAttempts: 5,

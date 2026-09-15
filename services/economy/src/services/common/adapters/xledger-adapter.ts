@@ -61,7 +61,7 @@ const getCallerFromError = (error: Error) => {
 const stringifyGraphQlQuery = (query: XledgerGraphQlQuery) =>
   `Query: ${query.query}${query.variables ? `\nVariables: ${JSON.stringify(query.variables, null, 2)}` : ''}`
 
-// capped attempts, jittered backoff, a request timeout and a concurrency cap.
+// Bounds retry storms. Capped attempts, jittered backoff, a request timeout and a concurrency cap.
 export const xledgerRequestPolicy = { ...config.xledger.requestPolicy }
 
 // Test-only override; production values come from config.
