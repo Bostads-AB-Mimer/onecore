@@ -36,66 +36,6 @@ const sendByType = (notification: TenantNotificationEmail) => {
   }
 }
 
-type InFlightSendOutcome = { ok: true } | { ok: false; error: 'send-failed' }
-
-/** Coalesces concurrent requests sharing an Idempotency-Key onto one send. */
-const inFlightOperations = new Map<string, Promise<InFlightSendOutcome>>()
-
-const waitForInFlightOperation = async (
-  idempotencyKey: string
-): Promise<InFlightSendOutcome> => {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const operation = inFlightOperations.get(idempotencyKey)
-    if (operation) return operation
-    await new Promise<void>((resolve) => {
-      setImmediate(resolve)
-    })
-  }
-
-  throw new Error(
-    `In-flight idempotency reservation missing send operation for key: ${idempotencyKey}`
-  )
-}
-
-const startInFlightSend = (
-  notification: TenantNotificationEmail,
-  idempotencyKey: string,
-  payloadHash: string,
-  store: IdempotencyStore
-): Promise<InFlightSendOutcome> => {
-  let settleOperation!: (outcome: InFlightSendOutcome) => void
-  const operation = new Promise<InFlightSendOutcome>((resolve) => {
-    settleOperation = resolve
-  })
-
-  inFlightOperations.set(idempotencyKey, operation)
-
-  void (async () => {
-    try {
-      const result = await sendByType(notification)
-
-      if (!result.ok) {
-        store.release(idempotencyKey, payloadHash)
-        settleOperation({ ok: false, error: 'send-failed' })
-        return
-      }
-
-      store.markSucceeded(idempotencyKey, payloadHash)
-      settleOperation({ ok: true })
-    } finally {
-      if (inFlightOperations.get(idempotencyKey) === operation) {
-        inFlightOperations.delete(idempotencyKey)
-      }
-    }
-  })()
-
-  return operation
-}
-
-export const clearInFlightOperations = () => {
-  inFlightOperations.clear()
-}
-
 export type SendTenantNotificationResult =
   | { ok: true; duplicate: boolean }
   | {
@@ -120,20 +60,17 @@ export const sendTenantNotification = async (
     return { ok: false, error: 'idempotency-conflict' }
   }
 
-  if (claim === 'duplicate') {
+  if (claim === 'duplicate' || claim === 'in-flight') {
     return { ok: true, duplicate: true }
   }
 
-  const operation =
-    claim === 'claimed'
-      ? startInFlightSend(notification, idempotencyKey, payloadHash, store)
-      : await waitForInFlightOperation(idempotencyKey)
+  const result = await sendByType(notification)
 
-  const outcome = await operation
-
-  if (outcome.ok) {
-    return { ok: true, duplicate: claim !== 'claimed' }
+  if (!result.ok) {
+    store.release(idempotencyKey, payloadHash)
+    return { ok: false, error: 'send-failed' }
   }
 
-  return outcome
+  store.markSucceeded(idempotencyKey, payloadHash)
+  return { ok: true, duplicate: false }
 }
