@@ -1,5 +1,11 @@
 import { Fragment, ReactNode, useState } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { cn } from '@/shared/lib/utils'
