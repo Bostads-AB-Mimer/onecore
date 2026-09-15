@@ -202,7 +202,8 @@ export const routes = (router: KoaRouter) => {
     const result = await economyAdapter.getMiscellaneousInvoices({
       from: queryParams.data?.from,
       to: queryParams.data?.to,
-      size: queryParams.data?.size,
+      after: queryParams.data?.after,
+      pageSize: queryParams.data?.pageSize,
     })
 
     if (!result.ok) {
@@ -213,7 +214,10 @@ export const routes = (router: KoaRouter) => {
       return
     } else {
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody({ data: result.data }, metadata)
+      ctx.body = makeSuccessResponseBody(
+        { content: result.data.content, pageInfo: result.data.pageInfo },
+        metadata
+      )
     }
   })
 
