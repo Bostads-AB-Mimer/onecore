@@ -34,7 +34,11 @@ describe(pickContractDocument, () => {
 
   it('falls back to kontrakt bilaga when no contract-titled documents exist', () => {
     const documents = [
-      document('bilaga', 'Bilaga till hyreskontrakt', '2025-01-01T00:00:00.000Z'),
+      document(
+        'bilaga',
+        'Bilaga till hyreskontrakt',
+        '2025-01-01T00:00:00.000Z'
+      ),
     ]
     const content = Buffer.from('bundle-pdf')
     const contentByKeydorev = new Map([['bilaga', content]])
@@ -45,9 +49,7 @@ describe(pickContractDocument, () => {
   })
 
   it('uses object-number scan title when no contract or bilaga documents exist', () => {
-    const documents = [
-      document('scan', '123-456', '2025-01-01T00:00:00.000Z'),
-    ]
+    const documents = [document('scan', '123-456', '2025-01-01T00:00:00.000Z')]
     const contentByKeydorev = new Map([
       ['scan', Buffer.from('DCTDecode scanned image payload')],
     ])

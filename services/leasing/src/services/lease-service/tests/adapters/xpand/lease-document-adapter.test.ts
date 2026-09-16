@@ -22,15 +22,15 @@ const chainableSelect = (result: unknown) => {
 jest.mock('../../../adapters/xpand/xpandDb', () => ({
   xpandDb: jest.fn((table: string) => {
     if (table === 'dofil') {
-      dofilWhere = jest.fn().mockImplementation(
-        (criteria: { keydorev: string }) => ({
-          select: jest.fn().mockImplementation(() =>
-            Promise.resolve(
-              dofilByKeydorev[criteria.keydorev] ?? dofilRows
-            )
-          ),
-        })
-      )
+      dofilWhere = jest
+        .fn()
+        .mockImplementation((criteria: { keydorev: string }) => ({
+          select: jest
+            .fn()
+            .mockImplementation(() =>
+              Promise.resolve(dofilByKeydorev[criteria.keydorev] ?? dofilRows)
+            ),
+        }))
       return { where: dofilWhere }
     }
     if (table === 'dorev') {
