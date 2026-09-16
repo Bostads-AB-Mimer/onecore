@@ -53,6 +53,12 @@ export const allGuardianEdges = async (db: Knex): Promise<RelationEdge[]> => {
       'related.cmctckod as relatedCode',
       'subject.forvtyp as forvtyp'
     )
+    // Duplicate cmctc rows can give one subject a guardian edge in each role,
+    // and only one of them can be written. Without an order the engine picks,
+    // so a fresh import could seat a different guardian than the last one.
+    .orderBy('subject.cmctckod')
+    .orderBy('subject.forvtyp')
+    .orderBy('related.cmctckod')
 
   return rows.map((r) => ({
     subjectContactCode: r.subjectCode.trim(),

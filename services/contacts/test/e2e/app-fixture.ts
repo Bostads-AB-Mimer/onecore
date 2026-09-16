@@ -135,8 +135,19 @@ export const makeTestAppFixture = async (opts: FixtureOptions) => {
 
   await pool.close()
 
-  await ctx.infrastructure.contactsDb.init()
-  await seedContactRelations(ctx.infrastructure.contactsDb.get())
+  try {
+    await ctx.infrastructure.contactsDb.init()
+    await seedContactRelations(ctx.infrastructure.contactsDb.get())
+  } catch (err) {
+    // A failing setup here must not leak open pools: `stop()` (below) is
+    // never reached, so without this a broken fixture hangs the whole run
+    // behind an open-handles error instead of surfacing the real failure.
+    await Promise.allSettled([
+      ctx.infrastructure.xpandDb.close(),
+      ctx.infrastructure.contactsDb.close(),
+    ])
+    throw err
+  }
 
   return {
     async start(): Promise<void> {
