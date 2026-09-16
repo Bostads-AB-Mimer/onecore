@@ -656,6 +656,13 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = result
     } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error) {
+        const httpError = error as { status: number; message: string }
+        ctx.status = httpError.status
+        ctx.body = { error: httpError.message, ...metadata }
+        return
+      }
+
       ctx.status = 500
 
       if (error instanceof Error) {

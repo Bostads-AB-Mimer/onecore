@@ -552,6 +552,11 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { ...result, content: enrichedContent }
     } catch (error: unknown) {
+      if ((error as any)?.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error searching leases (Tenfast)')
       ctx.status = 500
       ctx.body = {
@@ -559,7 +564,7 @@ export const routes = (router: KoaRouter) => {
           error instanceof Error
             ? error.message
             : 'Unknown error occurred during lease search',
-        ...metadata,
+...metadata,
       }
     }
   })
