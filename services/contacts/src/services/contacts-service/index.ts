@@ -180,10 +180,7 @@ export const routes = (
     {
       summary: 'Get contacts updated since a given timestamp',
       description:
-        'Queries cmlog in Xpand for changes since the given timestamp. If no ' +
-        'timestamp is provided, returns all matching rows. Contacts are ' +
-        'resolved through the log row’s key, so a contact is returned under ' +
-        'its current code even when the log text names another one.',
+        'Queries cmlog in Xpand for changes since the given timestamp. If no timestamp is provided, returns all matching rows.',
       tags: ['Contacts'],
       query: {
         since: {
@@ -219,10 +216,21 @@ export const routes = (
         fetchedContacts.map((c) => [c.contactCode, c])
       )
 
-      const contacts = changedCodes.flatMap(({ contactCode, timestamp }) => {
-        const contact = contactByCode.get(contactCode)
-        return contact ? [{ contact, timestamp: timestamp.toISOString() }] : []
-      })
+      const contacts = changedCodes
+        .map((c) => {
+          const contact = contactByCode.get(c.contactCode)
+          return contact
+            ? { contact, timestamp: c.timestamp.toISOString() }
+            : null
+        })
+        .filter(
+          (
+            c
+          ): c is {
+            contact: (typeof fetchedContacts)[number]
+            timestamp: string
+          } => c !== null
+        )
 
       ctx.status = 200
       ctx.body = {

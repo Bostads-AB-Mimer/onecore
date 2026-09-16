@@ -236,7 +236,6 @@ export const applySeedDotSql = async (pool: ConnectionPool) => {
  */
 export const clearTables = async (pool: ConnectionPool) => {
   await pool.request().batch(`
-    DELETE FROM cmlog;
     DELETE FROM hyavk;
     DELETE FROM hyobj;
     DELETE FROM cmtel;
