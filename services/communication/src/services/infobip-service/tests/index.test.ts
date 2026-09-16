@@ -974,19 +974,6 @@ describe('/sendLeaseTerminationConfirmation', () => {
     )
   })
 
-  it('returns 500 when the send adapter rejects (template not configured)', async () => {
-    sendSpy.mockRestore()
-
-    const res = await request(app.callback())
-      .post('/sendLeaseTerminationConfirmation')
-      .send(terminationBody)
-
-    expect(res.status).toBe(500)
-    expect(res.body.error).toContain(
-      'Lease termination confirmation Infobip template id is not configured'
-    )
-  })
-
   it('returns 500 when the send adapter throws', async () => {
     sendSpy.mockRejectedValueOnce(new Error('Infobip down'))
 

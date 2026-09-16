@@ -11,6 +11,4 @@ export const WorkOrderEmailTemplateId = 200000000146435
 export const WorkOrderExternalContractorEmailTemplateId = 200000000173744
 export const InvoiceNotificationEmailTemplateId = 205000000057686
 // Published Infobip template for tenant lease-termination confirmation (AVTAL-232).
-// 0 until the template exists in Infobip — the send path refuses to call the
-// API with an unset id so we cannot silently ship the wrong mail.
-export const LeaseTerminationConfirmationTemplateId = 0
+export const LeaseTerminationConfirmationTemplateId = 205000000080539
