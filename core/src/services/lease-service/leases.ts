@@ -564,7 +564,7 @@ export const routes = (router: KoaRouter) => {
           error instanceof Error
             ? error.message
             : 'Unknown error occurred during lease search',
-...metadata,
+        ...metadata,
       }
     }
   })

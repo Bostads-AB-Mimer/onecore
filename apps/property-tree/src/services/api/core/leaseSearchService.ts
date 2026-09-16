@@ -69,7 +69,8 @@ async function search(
     },
   })
 
-  if (error) throw new ApiError((response as Response).status, 'lease search failed')
+  if (error)
+    throw new ApiError((response as Response).status, 'lease search failed')
 
   return {
     content: data.content ?? [],
