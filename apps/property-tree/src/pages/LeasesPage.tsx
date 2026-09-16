@@ -7,6 +7,7 @@ import { useCostCenters } from '@/features/property-areas'
 
 import { useLeaseFilters } from '@/entities/lease'
 
+import { ApiError } from '@/services/api/core/baseApi'
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 import { leaseSearchService } from '@/services/api/core/leaseSearchService'
 import { tenantService } from '@/services/api/core/tenantService'
@@ -332,7 +333,9 @@ const LeasesPage = () => {
             </div>
           ) : filters.error ? (
             <div className="text-center py-8 text-destructive">
-              Ett fel uppstod vid hämtning av hyreskontrakt
+              {filters.error instanceof ApiError && filters.error.status === 503
+                ? 'Systemet startar upp, försöker igen automatiskt...'
+                : 'Ett fel uppstod vid hämtning av hyreskontrakt'}
             </div>
           ) : filters.isFetching && filters.leases.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">

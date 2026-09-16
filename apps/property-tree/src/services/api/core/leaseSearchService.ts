@@ -1,4 +1,4 @@
-import { GET } from './baseApi'
+import { ApiError, GET } from './baseApi'
 import type { components } from './generated/api-types'
 
 export type LeaseSearchResult = components['schemas']['LeaseSearchResult']
@@ -59,7 +59,7 @@ async function search(
   page = 1,
   limit = 50
 ): Promise<PaginatedResponse<LeaseSearchResult>> {
-  const { data, error } = await GET('/leases/search', {
+  const { data, error, response } = await GET('/leases/search', {
     params: {
       query: {
         ...params,
@@ -69,7 +69,7 @@ async function search(
     },
   })
 
-  if (error) throw error
+  if (error) throw new ApiError((response as Response).status, 'lease search failed')
 
   return {
     content: data.content ?? [],
