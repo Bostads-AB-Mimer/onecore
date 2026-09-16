@@ -45,14 +45,24 @@ export const AddRelationDialog = ({
   availableRoles,
 }: AddRelationDialogProps) => {
   const [open, setOpen] = useState(false)
-  const [roleType, setRoleType] = useState<RelationRoleType>(availableRoles[0])
+  const [picked, setPicked] = useState<RelationRoleType | null>(null)
   const [selected, setSelected] = useState<TenantSearchResult | null>(null)
   const { toast } = useToast()
   const addRelation = useAddRelation()
   const search = useTenantSearch()
 
+  // A refetch can drop a role out of `availableRoles` while the dialog is open,
+  // so the pick is validated every render rather than stored and trusted. That
+  // way the Select can never show a value it no longer lists, and submit can
+  // never send one the server would reject.
+  const roleType =
+    picked !== null && availableRoles.includes(picked)
+      ? picked
+      : availableRoles[0]
+
   const close = () => {
     setOpen(false)
+    setPicked(null)
     setSelected(null)
     search.setSearchQuery('')
   }
@@ -62,9 +72,7 @@ export const AddRelationDialog = ({
   const handleOpenChange = (next: boolean) => {
     if (!next && addRelation.isPending) return
     if (!next) return close()
-    // Which roles are on offer depends on what the contact already has, so
-    // pick again on open rather than trusting the last selection.
-    setRoleType(availableRoles[0])
+    setPicked(null)
     setOpen(true)
   }
 
@@ -94,9 +102,12 @@ export const AddRelationDialog = ({
     (role) => role === 'god_man' || role === 'forvaltare'
   )
 
-  // A contact cannot be related to itself; the server rejects it too.
+  // A contact cannot be related to itself; the server rejects it too, and
+  // compares case-insensitively, so this filter does the same rather than
+  // letting a differently-cased hit through to be refused.
   const candidates = search.searchResults.filter(
-    (candidate) => candidate.contactCode !== contactCode
+    (candidate) =>
+      candidate.contactCode.toUpperCase() !== contactCode.toUpperCase()
   )
 
   return (
@@ -126,7 +137,7 @@ export const AddRelationDialog = ({
             <Label htmlFor="guardian-role">Roll</Label>
             <Select
               value={roleType}
-              onValueChange={(value) => setRoleType(value as RelationRoleType)}
+              onValueChange={(value) => setPicked(value as RelationRoleType)}
               disabled={addRelation.isPending}
             >
               <SelectTrigger id="guardian-role">

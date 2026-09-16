@@ -173,4 +173,28 @@ const relatedContactsInRole = async (
   return (await hydrate(xpandDb, edges)).get(owner) ?? []
 }
 
-export { relatedContactsFor, relatedContactsForMany, relatedContactsInRole }
+/**
+ * The RelatedContact the subject would gain from one edge, hydrated the same
+ * way the list is. Lets a writer compose its answer before the row exists,
+ * so nothing has to be read back while the write is still open.
+ * Null when the counterpart is no longer in Xpand.
+ */
+const relatedContactForEdge = async (
+  xpandDb: Knex,
+  subjectContactCode: ContactCode,
+  relatedContactCode: ContactCode,
+  roleType: RoleType
+): Promise<RelatedContact | null> => {
+  const owner = subjectContactCode.trim()
+  const hydrated = await hydrate(xpandDb, [
+    { owner, other: relatedContactCode.trim(), role: ROLES[roleType].subject },
+  ])
+  return hydrated.get(owner)?.[0] ?? null
+}
+
+export {
+  relatedContactForEdge,
+  relatedContactsFor,
+  relatedContactsForMany,
+  relatedContactsInRole,
+}

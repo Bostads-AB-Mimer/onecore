@@ -19,6 +19,7 @@ const deps = (
 ): RelationDependencies => ({
   db: () => fakeDb,
   canonicalContactCode: jest.fn(async (code: string) => code),
+  relatedContactForEdge: jest.fn().mockResolvedValue(null),
   relatedContactsFor: jest.fn().mockResolvedValue([]),
   ...overrides,
 })
@@ -201,21 +202,57 @@ describe('addRelation', () => {
     })
   })
 
-  it('answers with the subject relations read back after the insert', async () => {
-    const relations = [
-      factory.relatedContact.build({ contactCode: 'P000222', role: 'trustee' }),
-    ]
-    const relatedContactsFor = jest.fn().mockResolvedValue(relations)
+  // Holding the contacts-DB write open across an Xpand round-trip would keep
+  // row locks and a pooled connection for the length of an unrelated system's
+  // latency, so both reads happen before the insert.
+  it('reads the relations before inserting, not inside the write', async () => {
+    const order: string[] = []
+    const relatedContactsFor = jest.fn(async () => {
+      order.push('read')
+      return []
+    })
+    const relatedContactForEdge = jest.fn(async () => {
+      order.push('read-added')
+      return null
+    })
+    insert.mockImplementation(async () => {
+      order.push('insert')
+    })
 
-    const result = await addRelation(deps({ relatedContactsFor }), add)
+    await addRelation(deps({ relatedContactsFor, relatedContactForEdge }), add)
 
-    expect(result).toEqual({ ok: true, data: relations })
-    expect(relatedContactsFor).toHaveBeenCalledWith('P000111', fakeDb)
+    expect(order).toEqual(['read', 'read-added', 'insert'])
   })
 
-  // The read-back shares the write transaction, so a failure rolls the insert
-  // back rather than leaving a written relation behind a failed response.
-  it('does not swallow a failure reading the relations back', async () => {
+  it('answers with the existing relations plus the one just added', async () => {
+    const existing = factory.relatedContact.build({
+      contactCode: 'P000999',
+      role: 'otherInvoiceRecipient',
+    })
+    const added = factory.relatedContact.build({
+      contactCode: 'P000222',
+      role: 'trustee',
+    })
+
+    const result = await addRelation(
+      deps({
+        relatedContactsFor: jest.fn().mockResolvedValue([existing]),
+        relatedContactForEdge: jest.fn().mockResolvedValue(added),
+      }),
+      add
+    )
+
+    expect(result).toEqual({ ok: true, data: [existing, added] })
+  })
+
+  it('omits the new relation when its counterpart is gone from Xpand', async () => {
+    const result = await addRelation(deps(), add)
+
+    expect(result).toEqual({ ok: true, data: [] })
+  })
+
+  // The reads come first, so a failure leaves nothing written at all.
+  it('writes nothing when the relations cannot be read', async () => {
     const relatedContactsFor = jest
       .fn()
       .mockRejectedValue(new Error('xpand unavailable'))
@@ -223,6 +260,7 @@ describe('addRelation', () => {
     await expect(
       addRelation(deps({ relatedContactsFor }), add)
     ).rejects.toThrow('xpand unavailable')
+    expect(insert).not.toHaveBeenCalled()
   })
 
   it('maps a lost race on the guardian index to guardian-exists', async () => {
@@ -237,6 +275,22 @@ describe('addRelation', () => {
 
   it('maps a lost race on the edge index to duplicate-relation', async () => {
     insert.mockRejectedValue(uniqueViolation('ux_contact_relation_active_edge'))
+    expect(await addRelation(deps(), add)).toEqual({
+      ok: false,
+      err: 'duplicate-relation',
+    })
+  })
+
+  // A racing insert of an identical guardian edge breaks both indexes at once,
+  // and SQL Server decides which it names. The exact edge already exists, so
+  // that is what the caseworker is told either way.
+  it('reports a duplicate when the violation names both indexes', async () => {
+    insert.mockRejectedValue(
+      uniqueViolation(
+        'ux_contact_relation_active_guardian ... ux_contact_relation_active_edge'
+      )
+    )
+
     expect(await addRelation(deps(), add)).toEqual({
       ok: false,
       err: 'duplicate-relation',

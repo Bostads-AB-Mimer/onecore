@@ -5,27 +5,32 @@ import { AdapterResult } from '@src/adapters/types'
 import {
   activeRelationsInRole,
   insertMany,
+  isGuardianRole,
   softDeleteByIds,
+  GUARDIAN_ROLE_TYPES,
   RoleType,
 } from '@src/adapters/contact-relations'
 import { canonicalContactCode } from '@src/adapters/xpand/contact-lookup-query'
-import { relatedContactsFor } from '@src/adapters/related-contacts'
+import {
+  relatedContactForEdge,
+  relatedContactsFor,
+} from '@src/adapters/related-contacts'
 import { RelatedContact } from '@src/domain/contact'
 import { AddRelationErrorCode, RemoveRelationErrorCode } from './api-types'
 
 /**
  * What the relation rules need from the outside world. Getters rather than
  * handles: Resources must be resolved per request, never captured.
- * `relatedContactsFor` takes its handle so the caller can pass the write
- * transaction and see its own uncommitted insert.
  */
 export type RelationDependencies = {
   db: () => Knex
   canonicalContactCode: (contactCode: string) => Promise<string | null>
-  relatedContactsFor: (
-    contactCode: string,
-    db: Knex
-  ) => Promise<RelatedContact[]>
+  relatedContactsFor: (contactCode: string) => Promise<RelatedContact[]>
+  relatedContactForEdge: (
+    subjectContactCode: string,
+    relatedContactCode: string,
+    roleType: RoleType
+  ) => Promise<RelatedContact | null>
 }
 
 export type AddRelationRequest = {
@@ -42,9 +47,6 @@ export type RemoveRelationRequest = {
   deletedBy: string
 }
 
-/** A contact has at most one active guardian, of either type. */
-const GUARDIAN_ROLES: RoleType[] = ['god_man', 'forvaltare']
-
 // MSSQL error number for a unique-index violation. The message names the
 // index, which tells us which rule the lost race broke.
 const UNIQUE_VIOLATION = 2601
@@ -54,14 +56,16 @@ const UNIQUE_VIOLATION = 2601
 const sameContact = (a: string, b: string): boolean =>
   a.trim().toUpperCase() === b.trim().toUpperCase()
 
-// A single 2601 message names exactly one violated index, so the check
-// order below is immaterial.
+// An identical guardian edge breaks both indexes at once, and which one SQL
+// Server names in the 2601 is its choice, not ours. Check the edge first so
+// that case always reads as a duplicate: the exact relation does already
+// exist, which is both true and more use than "remove the other guardian".
 const violatedIndex = (err: unknown): 'guardian' | 'edge' | null => {
   const e = err as { number?: number; message?: string }
   if (e?.number !== UNIQUE_VIOLATION) return null
+  if (e.message?.includes('ux_contact_relation_active_edge')) return 'edge'
   if (e.message?.includes('ux_contact_relation_active_guardian'))
     return 'guardian'
-  if (e.message?.includes('ux_contact_relation_active_edge')) return 'edge'
   return null
 }
 
@@ -71,8 +75,9 @@ const violatedIndex = (err: unknown): 'guardian' | 'edge' | null => {
  * roles) the subject has no active guardian of either type. The unique indexes
  * are the backstop for a race between two requests.
  *
- * Insert and read-back share a transaction, so a failed read rolls the insert
- * away instead of reporting an error for a relation that was written.
+ * Both reads that shape the answer happen before the insert: a failure then
+ * means nothing was written, rather than reporting an error for a relation
+ * that was, and no Xpand round-trip happens while the write holds its locks.
  */
 const addRelation = async (
   deps: RelationDependencies,
@@ -103,8 +108,8 @@ const addRelation = async (
     return { ok: false, err: 'duplicate-relation' }
   }
 
-  if (GUARDIAN_ROLES.includes(request.roleType)) {
-    for (const role of GUARDIAN_ROLES) {
+  if (isGuardianRole(request.roleType)) {
+    for (const role of GUARDIAN_ROLE_TYPES) {
       const [existing] =
         role === request.roleType
           ? sameRole
@@ -119,22 +124,27 @@ const addRelation = async (
     }
   }
 
+  // Composed rather than read back: the list as it stands plus the edge about
+  // to be written. A concurrent write can still land in between, which is true
+  // of any read, and the client refetches on success anyway.
+  const [current, added] = await Promise.all([
+    deps.relatedContactsFor(subject),
+    deps.relatedContactForEdge(subject, related, request.roleType),
+  ])
+
   try {
-    const relations = await db.transaction(async (trx) => {
-      await insertMany(
-        trx,
-        [
-          {
-            subjectContactCode: subject,
-            relatedContactCode: related,
-            roleType: request.roleType,
-          },
-        ],
-        request.createdBy
-      )
-      return deps.relatedContactsFor(subject, trx)
-    })
-    return { ok: true, data: relations }
+    await insertMany(
+      db,
+      [
+        {
+          subjectContactCode: subject,
+          relatedContactCode: related,
+          roleType: request.roleType,
+        },
+      ],
+      request.createdBy
+    )
+    return { ok: true, data: added ? [...current, added] : current }
   } catch (err) {
     const violated = violatedIndex(err)
     if (violated !== null) {
@@ -189,8 +199,15 @@ const makeRelationDependencies = (
   db: () => contactsDb.get(),
   canonicalContactCode: (contactCode) =>
     canonicalContactCode(xpandDb.get(), contactCode),
-  relatedContactsFor: (contactCode, db) =>
-    relatedContactsFor(xpandDb.get(), db, contactCode),
+  relatedContactsFor: (contactCode) =>
+    relatedContactsFor(xpandDb.get(), contactsDb.get(), contactCode),
+  relatedContactForEdge: (subjectContactCode, relatedContactCode, roleType) =>
+    relatedContactForEdge(
+      xpandDb.get(),
+      subjectContactCode,
+      relatedContactCode,
+      roleType
+    ),
 })
 
 export { addRelation, removeRelation, makeRelationDependencies }

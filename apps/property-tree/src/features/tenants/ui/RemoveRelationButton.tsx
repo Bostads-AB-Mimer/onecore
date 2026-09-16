@@ -48,8 +48,9 @@ export const RemoveRelationButton = ({
           setOpen(false)
           toast({ title: `${roleLabel} borttagen`, description: relatedName })
         },
+        // Left open on error so a transient failure can be retried in place,
+        // the same as the add dialog does.
         onError: (error) => {
-          setOpen(false)
           toast({
             variant: 'destructive',
             title: 'Kunde inte ta bort',

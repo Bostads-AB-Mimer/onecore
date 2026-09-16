@@ -8,6 +8,8 @@ export {
   type RelationEdge,
 } from './repository'
 export {
+  GUARDIAN_ROLE_TYPES,
+  isGuardianRole,
   ROLE_TYPES,
   type RoleType,
   type DbContactRelationRow,

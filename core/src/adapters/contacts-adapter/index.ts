@@ -307,14 +307,10 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
           return { ok: true, data: response.data.content }
         }
 
-        if (response.status === 400) {
-          return {
-            ok: false,
-            err: 'invalid-request',
-            statusCode: 400,
-          }
-        }
-
+        // Recognise the code before folding on status: a named failure that
+        // arrives as a 400 keeps its code and detail rather than collapsing
+        // into the catch-all. Route-level 400s are not in the set, so those
+        // still fold, which is what the route contract says they should do.
         const reported = response.data?.error
         if (reported && KNOWN_ADD_RELATION_ERRORS.has(reported)) {
           return {
@@ -322,6 +318,14 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
             err: reported as AddRelationErrorCode,
             statusCode: response.status,
             detail: response.data?.detail,
+          }
+        }
+
+        if (response.status === 400) {
+          return {
+            ok: false,
+            err: 'invalid-request',
+            statusCode: 400,
           }
         }
 
@@ -360,14 +364,10 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
           return { ok: true, data: undefined }
         }
 
-        if (response.status === 400) {
-          return {
-            ok: false,
-            err: 'invalid-request',
-            statusCode: 400,
-          }
-        }
-
+        // Recognise the code before folding on status: a named failure that
+        // arrives as a 400 keeps its code and detail rather than collapsing
+        // into the catch-all. Route-level 400s are not in the set, so those
+        // still fold, which is what the route contract says they should do.
         const reported = response.data?.error
         if (reported && KNOWN_REMOVE_RELATION_ERRORS.has(reported)) {
           return {
@@ -375,6 +375,14 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
             err: reported as RemoveRelationErrorCode,
             statusCode: response.status,
             detail: response.data?.detail,
+          }
+        }
+
+        if (response.status === 400) {
+          return {
+            ok: false,
+            err: 'invalid-request',
+            statusCode: 400,
           }
         }
 

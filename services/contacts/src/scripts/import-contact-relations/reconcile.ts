@@ -1,6 +1,8 @@
 import {
   DbContactRelationRow,
+  isGuardianRole,
   RelationEdge,
+  ROLE_TYPES,
   RoleType,
 } from '@src/adapters/contact-relations'
 
@@ -34,8 +36,14 @@ export type ReconcilePlan = {
 /** The guardian a subject ends up with, from an existing row or this run. */
 type SurvivingGuardian = SkippedGuardian['existing']
 
-const isGuardianRole = (roleType: RoleType): boolean =>
-  roleType === 'god_man' || roleType === 'forvaltare'
+/**
+ * A total order over edges, so which guardian wins a contested subject is
+ * decided here rather than by the order rows came back in.
+ */
+const edgeOrder = (a: RelationEdge, b: RelationEdge): number =>
+  a.subjectContactCode.localeCompare(b.subjectContactCode) ||
+  ROLE_TYPES.indexOf(a.roleType) - ROLE_TYPES.indexOf(b.roleType) ||
+  a.relatedContactCode.localeCompare(b.relatedContactCode)
 
 const keyOf = (e: RelationEdge): string =>
   JSON.stringify([e.subjectContactCode, e.relatedContactCode, e.roleType])
@@ -139,8 +147,8 @@ export const reconcile = (
 
   const toInsert: RelationEdge[] = []
   const skippedGuardians: SkippedGuardian[] = []
-  for (const [key, edge] of desiredByKey) {
-    if (existingByKey.has(key)) continue
+  for (const edge of [...desiredByKey.values()].sort(edgeOrder)) {
+    if (existingByKey.has(keyOf(edge))) continue
 
     const isGuardian = isGuardianRole(edge.roleType)
     const blocking = isGuardian

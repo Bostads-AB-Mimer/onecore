@@ -99,6 +99,34 @@ describe('reconcile', () => {
     ])
   })
 
+  // Xpand can report both guardian roles for one subject (duplicate cmctc
+  // rows). Which one is kept must not depend on the order the rows arrived in,
+  // or a fresh import picks a different guardian than the last one did.
+  it('picks the same guardian whichever order the edges arrive in', () => {
+    const godManEdge = { ...godMan, relatedContactCode: 'P2' }
+    const forvaltareEdge = {
+      subjectContactCode: 'P1',
+      relatedContactCode: 'P4',
+      roleType: 'forvaltare' as const,
+    }
+
+    const forwards = reconcile(
+      [godManEdge, forvaltareEdge],
+      [],
+      new Set(),
+      IMPORT_ACTOR
+    )
+    const backwards = reconcile(
+      [forvaltareEdge, godManEdge],
+      [],
+      new Set(),
+      IMPORT_ACTOR
+    )
+
+    expect(forwards.toInsert).toHaveLength(1)
+    expect(backwards).toEqual(forwards)
+  })
+
   it('is a no-op when desired equals existing', () => {
     const plan = reconcile(
       [godMan, forvaltare],

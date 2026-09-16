@@ -75,6 +75,24 @@ describe('contactsAdapter.addRelation', () => {
     })
   })
 
+  // Nothing maps a named relation failure to 400 today, but the status maps
+  // are plain numbers, so one could be added. Recognise the code before
+  // folding the status, or it would silently lose its code and its detail.
+  it('keeps a recognised error code that arrives with a 400', async () => {
+    nock(base)
+      .post('/contacts/P000111/relations')
+      .reply(400, { error: 'self-relation', detail: 'P000111' })
+
+    expect(
+      await adapter.addRelation({ ...relation, createdBy: 'Anna' })
+    ).toEqual({
+      ok: false,
+      err: 'self-relation',
+      detail: 'P000111',
+      statusCode: 400,
+    })
+  })
+
   it('returns contacts-service-error with no statusCode on a transport failure', async () => {
     nock(base).post('/contacts/P000111/relations').replyWithError('ECONNRESET')
 
@@ -130,6 +148,21 @@ describe('contactsAdapter.removeRelation', () => {
     ).toEqual({
       ok: false,
       err: 'invalid-request',
+      statusCode: 400,
+    })
+  })
+
+  it('keeps a recognised error code that arrives with a 400', async () => {
+    nock(base)
+      .delete('/contacts/P000111/relations/god_man/P000222')
+      .query(true)
+      .reply(400, { error: 'relation-not-found' })
+
+    expect(
+      await adapter.removeRelation({ ...relation, deletedBy: 'Anna' })
+    ).toEqual({
+      ok: false,
+      err: 'relation-not-found',
       statusCode: 400,
     })
   })
