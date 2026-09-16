@@ -1,4 +1,7 @@
-import { CreateContactInput } from '@src/adapters/contact-writer'
+import {
+  ContactWriterParty,
+  CreateContactInput,
+} from '@src/adapters/contact-writer'
 import { XpandSoapConfig } from '@src/common/config'
 import {
   buildCreateApplicantEnvelope,
@@ -14,12 +17,26 @@ const config: XpandSoapConfig = {
   timeoutMs: 30000,
 }
 
-const input = (
-  overrides: Partial<CreateContactInput> = {}
-): CreateContactInput => ({
+type PersonParty = Extract<ContactWriterParty, { kind: 'person' }>
+
+const person = (overrides: Partial<PersonParty> = {}): ContactWriterParty => ({
+  kind: 'person',
   nationalId: '199007292387',
   firstName: 'Test',
   lastName: 'Testsson',
+  ...overrides,
+})
+
+const organisation: ContactWriterParty = {
+  kind: 'organisation',
+  organisationNumber: '5560160680',
+  name: 'Testbolag Ett AB',
+}
+
+const input = (
+  overrides: Partial<CreateContactInput> = {}
+): CreateContactInput => ({
+  party: person(),
   addresses: [
     {
       street: 'Storgatan 1',
@@ -183,7 +200,7 @@ describe('buildCreateApplicantEnvelope', () => {
     expect(
       buildCreateApplicantEnvelope(
         config,
-        input({ nationalId: '199007890016' })
+        input({ party: person({ nationalId: '199007890016' }) })
       )
     ).toContain('<data:BirthDate>1990-07-29T00:00:00</data:BirthDate>')
   })
@@ -292,13 +309,86 @@ describe('buildCreateApplicantEnvelope', () => {
   it('escapes free text so a name with an ampersand cannot break the envelope', () => {
     const xml = buildCreateApplicantEnvelope(
       config,
-      input({ lastName: 'Firma A & B <AB>' })
+      input({ party: person({ lastName: 'Firma A & B <AB>' }) })
     )
 
     expect(xml).toContain(
       '<data:LastName>Firma A &amp; B &lt;AB&gt;</data:LastName>'
     )
     expect(xml).not.toContain('& B')
+  })
+
+  describe('for an organisation', () => {
+    const xml = () =>
+      buildCreateApplicantEnvelope(config, input({ party: organisation }))
+
+    /**
+     * Same order guard as for a person, minus BirthDate: the serializer would
+     * reject an element out of place just the same, and an empty BirthDate
+     * would be read as an explicit blank rather than as absent.
+     */
+    it('keeps the contract order and omits BirthDate', () => {
+      expect(applicantFieldOrder(xml())).toEqual([
+        'data:Addresses',
+        'data:CivicNumber',
+        'data:ContactCategoryCode',
+        'data:ContactCode',
+        'data:FirstName',
+        'data:IsActive',
+        'data:IsNaturalPerson',
+        'data:IsPresystemLocked',
+        'data:LastName',
+        'data:PreferredContactMethod',
+        'data:Credentials',
+        'data:EmailAddresses',
+        'data:PhoneNumbers',
+      ])
+      expect(xml()).not.toContain('BirthDate')
+    })
+
+    it('sends the ten-digit organisation number as the civic number', () => {
+      expect(xml()).toContain('<data:CivicNumber>5560160680</data:CivicNumber>')
+    })
+
+    /**
+     * The operation only creates natural persons and discards any other
+     * category, so the envelope says P and the category is corrected in the
+     * database afterwards.
+     */
+    it('still declares a natural person in the P category', () => {
+      expect(xml()).toContain(
+        '<data:ContactCategoryCode>P</data:ContactCategoryCode>'
+      )
+      expect(xml()).toContain(
+        '<data:IsNaturalPerson>true</data:IsNaturalPerson>'
+      )
+    })
+
+    it('puts the name in both name fields', () => {
+      expect(xml()).toContain(
+        '<data:FirstName>Testbolag Ett AB</data:FirstName>'
+      )
+      expect(xml()).toContain('<data:LastName>Testbolag Ett AB</data:LastName>')
+    })
+
+    /**
+     * The name fields are cleared during conversion, so a long name is cut to
+     * the column widths rather than risking a rejection for a throwaway value.
+     */
+    it('cuts a long name to the name column widths', () => {
+      const name = 'Ett Väldigt Långt Företagsnamn Med Många Ord I Sig AB'
+      const long = buildCreateApplicantEnvelope(
+        config,
+        input({ party: { ...organisation, name } })
+      )
+
+      expect(long).toContain(
+        `<data:FirstName>${name.slice(0, 30)}</data:FirstName>`
+      )
+      expect(long).toContain(
+        `<data:LastName>${name.slice(0, 45)}</data:LastName>`
+      )
+    })
   })
 })
 

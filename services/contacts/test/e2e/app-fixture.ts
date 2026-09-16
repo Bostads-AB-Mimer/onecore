@@ -4,6 +4,7 @@ import makeApp from '@src/app'
 import config from '@src/common/config'
 import { makeAppContext } from '@src/context'
 import { ContactWriter } from '@src/adapters/contact-writer'
+import { ContactCategoryWriter } from '@src/adapters/contact-category-writer'
 import { Knex } from 'knex'
 import { insertMany } from '@src/adapters/contact-relations'
 import axios from 'axios'
@@ -111,6 +112,12 @@ export type FixtureOptions = {
    * write, so no test can reach a live Xpand by accident.
    */
   contactWriter?: ContactWriter
+  /**
+   * The ContactCategoryWriter to run the app with. Defaults to the real
+   * implementation: it only ever updates the local `contacts-xpand-test`
+   * database this fixture seeds, which `connect` guards against.
+   */
+  contactCategoryWriter?: ContactCategoryWriter
 }
 
 /**
@@ -125,6 +132,9 @@ export type FixtureOptions = {
 export const makeTestAppFixture = async (opts: FixtureOptions) => {
   const ctx = makeAppContext(config, {
     contactWriter: opts.contactWriter ?? refusingContactWriter,
+    ...(opts.contactCategoryWriter
+      ? { contactCategoryWriter: opts.contactCategoryWriter }
+      : {}),
   })
   const app = makeApp(ctx)
   let server: Server | undefined = undefined

@@ -8,7 +8,7 @@
     "/v1/contacts": {
       "post": {
         "summary": "Create a contact",
-        "description": "Creates a contact, then optionally records an application profile and enrols the customer in the requested waiting lists. NOT TRANSACTIONAL. The contact is created in Xpand and cannot be removed. Once it exists this endpoint always answers 201, reporting any later step that failed under `warnings` — those steps are idempotent and should be completed on the created contact rather than by creating it again.",
+        "description": "Creates a contact, then optionally records an application profile and enrols the customer in the requested waiting lists. The body is discriminated on `type`: an `individual` (personnummer, first and last name) may carry `applicationProfile` and `waitingLists`; an `organisation` (organisationsnummer, name, `category` F/I/K/L/Ö/S) gets a web account but neither profile nor queues — both are ignored if sent. NOT TRANSACTIONAL. The contact is created in Xpand and cannot be removed. Once it exists this endpoint always answers 201, reporting any later step that failed under `warnings` — those steps are idempotent and should be completed on the created contact rather than by creating it again. That includes an organisation whose category conversion failed: `contactCode` is then the person code (P…) and `content.conversion.status` is `failed`.",
         "tags": [
           "Contacts"
         ],
@@ -434,6 +434,26 @@
                           ],
                           "nullable": true
                         },
+                        "conversion": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "done",
+                                "not-applicable",
+                                "failed"
+                              ]
+                            },
+                            "error": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "status"
+                          ],
+                          "additionalProperties": false
+                        },
                         "applicationProfile": {
                           "type": "object",
                           "properties": {
@@ -490,6 +510,7 @@
                       "required": [
                         "contactCode",
                         "contact",
+                        "conversion",
                         "applicationProfile",
                         "waitingLists"
                       ],
@@ -4363,195 +4384,339 @@
   "components": {
     "schemas": {
       "CreateContactRequest": {
-        "type": "object",
-        "properties": {
-          "nationalId": {
-            "type": "string",
-            "minLength": 10
-          },
-          "firstName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 50
-          },
-          "lastName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 50
-          },
-          "addresses": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "careOf": {
-                  "type": "string"
-                },
-                "street": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "zipCode": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "city": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "country": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "street",
-                "zipCode",
-                "city"
-              ],
-              "additionalProperties": false
-            },
-            "minItems": 1
-          },
-          "emailAddresses": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "emailAddress": {
-                  "type": "string",
-                  "format": "email"
-                },
-                "type": {
-                  "type": "string",
-                  "enum": [
-                    "private",
-                    "work",
-                    "unspecified"
-                  ],
-                  "default": "private"
-                },
-                "isPrimary": {
-                  "type": "boolean",
-                  "default": true
-                }
-              },
-              "required": [
-                "emailAddress"
-              ],
-              "additionalProperties": false
-            },
-            "minItems": 1
-          },
-          "phoneNumbers": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "phoneNumber": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "type": {
-                  "type": "string",
-                  "enum": [
-                    "mobile",
-                    "home",
-                    "work"
-                  ],
-                  "default": "mobile"
-                },
-                "isPrimary": {
-                  "type": "boolean",
-                  "default": false
-                }
-              },
-              "required": [
-                "phoneNumber"
-              ],
-              "additionalProperties": false
-            },
-            "default": []
-          },
-          "applicationProfile": {
+        "anyOf": [
+          {
             "type": "object",
             "properties": {
-              "housingType": {
+              "addresses": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "careOf": {
+                      "type": "string"
+                    },
+                    "street": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "zipCode": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "city": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "country": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "street",
+                    "zipCode",
+                    "city"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              },
+              "emailAddresses": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "emailAddress": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "private",
+                        "work",
+                        "unspecified"
+                      ],
+                      "default": "private"
+                    },
+                    "isPrimary": {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  },
+                  "required": [
+                    "emailAddress"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              },
+              "phoneNumbers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "phoneNumber": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "mobile",
+                        "home",
+                        "work"
+                      ],
+                      "default": "mobile"
+                    },
+                    "isPrimary": {
+                      "type": "boolean",
+                      "default": false
+                    }
+                  },
+                  "required": [
+                    "phoneNumber"
+                  ],
+                  "additionalProperties": false
+                },
+                "default": []
+              },
+              "type": {
                 "type": "string",
                 "enum": [
-                  "LIVES_WITH_FAMILY",
-                  "LODGER",
-                  "RENTAL",
-                  "SUB_RENTAL",
-                  "OWNS_HOUSE",
-                  "OWNS_FLAT",
-                  "OWNS_ROW_HOUSE",
-                  "OTHER"
+                  "individual"
                 ]
               },
-              "landlord": {
+              "nationalId": {
                 "type": "string",
-                "nullable": true
+                "minLength": 10
               },
-              "numAdults": {
-                "type": "number"
-              },
-              "numChildren": {
-                "type": "number"
-              },
-              "housingTypeDescription": {
+              "firstName": {
                 "type": "string",
-                "nullable": true
+                "minLength": 1,
+                "maxLength": 50
               },
-              "housingReference": {
+              "lastName": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50
+              },
+              "applicationProfile": {
                 "type": "object",
                 "properties": {
-                  "email": {
+                  "housingType": {
+                    "type": "string",
+                    "enum": [
+                      "LIVES_WITH_FAMILY",
+                      "LODGER",
+                      "RENTAL",
+                      "SUB_RENTAL",
+                      "OWNS_HOUSE",
+                      "OWNS_FLAT",
+                      "OWNS_ROW_HOUSE",
+                      "OTHER"
+                    ]
+                  },
+                  "landlord": {
                     "type": "string",
                     "nullable": true
                   },
-                  "phone": {
+                  "numAdults": {
+                    "type": "number"
+                  },
+                  "numChildren": {
+                    "type": "number"
+                  },
+                  "housingTypeDescription": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "housingReference": {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "phone": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "email",
+                      "phone"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
-                  "email",
-                  "phone"
+                  "housingType",
+                  "landlord",
+                  "numAdults",
+                  "numChildren",
+                  "housingTypeDescription",
+                  "housingReference"
                 ],
                 "additionalProperties": false
+              },
+              "waitingLists": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "enum": [
+                    1,
+                    2,
+                    3
+                  ]
+                },
+                "default": []
               }
             },
             "required": [
-              "housingType",
-              "landlord",
-              "numAdults",
-              "numChildren",
-              "housingTypeDescription",
-              "housingReference"
+              "addresses",
+              "emailAddresses",
+              "type",
+              "nationalId",
+              "firstName",
+              "lastName"
             ],
             "additionalProperties": false
           },
-          "waitingLists": {
-            "type": "array",
-            "items": {
-              "type": "number",
-              "enum": [
-                1,
-                2,
-                3
-              ]
+          {
+            "type": "object",
+            "properties": {
+              "addresses": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "careOf": {
+                      "type": "string"
+                    },
+                    "street": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "zipCode": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "city": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "country": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "street",
+                    "zipCode",
+                    "city"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              },
+              "emailAddresses": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "emailAddress": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "private",
+                        "work",
+                        "unspecified"
+                      ],
+                      "default": "private"
+                    },
+                    "isPrimary": {
+                      "type": "boolean",
+                      "default": true
+                    }
+                  },
+                  "required": [
+                    "emailAddress"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              },
+              "phoneNumbers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "phoneNumber": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "mobile",
+                        "home",
+                        "work"
+                      ],
+                      "default": "mobile"
+                    },
+                    "isPrimary": {
+                      "type": "boolean",
+                      "default": false
+                    }
+                  },
+                  "required": [
+                    "phoneNumber"
+                  ],
+                  "additionalProperties": false
+                },
+                "default": []
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "organisation"
+                ]
+              },
+              "organisationNumber": {
+                "type": "string",
+                "minLength": 10
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "F",
+                  "I",
+                  "K",
+                  "L",
+                  "Ö",
+                  "S"
+                ],
+                "default": "F"
+              }
             },
-            "default": []
+            "required": [
+              "addresses",
+              "emailAddresses",
+              "type",
+              "organisationNumber",
+              "name"
+            ],
+            "additionalProperties": false
           }
-        },
-        "required": [
-          "nationalId",
-          "firstName",
-          "lastName",
-          "addresses",
-          "emailAddresses"
-        ],
-        "additionalProperties": false
+        ]
       },
       "ContactV1": {
         "anyOf": [

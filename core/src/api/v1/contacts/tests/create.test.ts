@@ -34,13 +34,27 @@ const apiRouter = makeOkapiRouter(koaRouter, {
 routes(apiRouter, { contactsService: { url: 'http://test' } } as Config)
 app.use(koaRouter.routes())
 
-const body = (overrides: Record<string, unknown> = {}) => ({
-  nationalId: '199007292387',
-  firstName: 'Test',
-  lastName: 'Testsson',
+const details = {
   addresses: [{ street: 'Storgatan 1', zipCode: '72212', city: 'Västerås' }],
   emailAddresses: [{ emailAddress: 'test@example.com' }],
   phoneNumbers: [],
+}
+
+const body = (overrides: Record<string, unknown> = {}) => ({
+  type: 'individual',
+  nationalId: '199007292387',
+  firstName: 'Test',
+  lastName: 'Testsson',
+  ...details,
+  ...overrides,
+})
+
+const organisationBody = (overrides: Record<string, unknown> = {}) => ({
+  type: 'organisation',
+  organisationNumber: '5560160680',
+  name: 'Testbolag Ett AB',
+  category: 'F',
+  ...details,
   ...overrides,
 })
 
@@ -57,7 +71,11 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockCreateContact.mockResolvedValue({
     ok: true,
-    data: { contactCode: 'P069077', contact: null },
+    data: {
+      contactCode: 'P069077',
+      contact: null,
+      conversion: { status: 'not-applicable' },
+    },
   })
   ;(
     leasingAdapter.createOrUpdateApplicationProfileByContactCode as jest.Mock
@@ -220,5 +238,174 @@ describe('POST /v1/contacts', () => {
     ])
     expect(res.body.warnings).toHaveLength(1)
     expect(res.body.warnings[0]).toContain('bostad')
+  })
+
+  it('does not send the orchestration fields to the contacts service', async () => {
+    await request(app.callback())
+      .post('/v1/contacts')
+      .send(body({ applicationProfile: profile, waitingLists: [2] }))
+
+    expect(mockCreateContact).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        applicationProfile: expect.anything(),
+        waitingLists: expect.anything(),
+      })
+    )
+  })
+})
+
+describe('POST /v1/contacts for an organisation', () => {
+  beforeEach(() => {
+    mockCreateContact.mockResolvedValue({
+      ok: true,
+      data: {
+        contactCode: 'F069077',
+        contact: null,
+        conversion: { status: 'done' },
+      },
+    })
+  })
+
+  it('creates the organisation and passes the category through', async () => {
+    const res = await request(app.callback())
+      .post('/v1/contacts')
+      .send(organisationBody({ category: 'K' }))
+
+    expect(res.status).toBe(201)
+    expect(mockCreateContact).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'organisation',
+        organisationNumber: '5560160680',
+        name: 'Testbolag Ett AB',
+        category: 'K',
+      })
+    )
+    expect(res.body.content.contactCode).toBe('F069077')
+    expect(res.body.content.conversion).toEqual({ status: 'done' })
+    expect(res.body.warnings).toBeUndefined()
+  })
+
+  it('defaults the category to F', async () => {
+    const { category: _omitted, ...withoutCategory } = organisationBody()
+
+    const res = await request(app.callback())
+      .post('/v1/contacts')
+      .send(withoutCategory)
+
+    expect(res.status).toBe(201)
+    expect(mockCreateContact).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'F' })
+    )
+  })
+
+  /**
+   * Queues and the application profile are for housing applicants. Sent for
+   * an organisation they are dropped rather than rejected, so the response
+   * reports both as not done and no leasing call is made.
+   */
+  it('never writes a profile or queues, even when they are sent', async () => {
+    const res = await request(app.callback())
+      .post('/v1/contacts')
+      .send(
+        organisationBody({ applicationProfile: profile, waitingLists: [2, 3] })
+      )
+
+    expect(res.status).toBe(201)
+    expect(
+      leasingAdapter.createOrUpdateApplicationProfileByContactCode
+    ).not.toHaveBeenCalled()
+    expect(leasingAdapter.addApplicantToWaitingList).not.toHaveBeenCalled()
+    expect(res.body.content.applicationProfile.status).toBe('skipped')
+    expect(res.body.content.waitingLists).toEqual([])
+    expect(mockCreateContact).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        applicationProfile: expect.anything(),
+        waitingLists: expect.anything(),
+      })
+    )
+  })
+
+  /**
+   * The contact exists once the create succeeds, so a failed conversion must
+   * stay a 201: the caseworker is told which person code to finish in Xpand
+   * instead of being invited to retry into the duplicate check.
+   */
+  it('still returns 201 with a warning when the conversion failed', async () => {
+    mockCreateContact.mockResolvedValue({
+      ok: true,
+      data: {
+        contactCode: 'P069077',
+        contact: null,
+        conversion: { status: 'failed', error: 'xpand-db-error' },
+      },
+    })
+
+    const res = await request(app.callback())
+      .post('/v1/contacts')
+      .send(organisationBody())
+
+    expect(res.status).toBe(201)
+    expect(res.body.content.contactCode).toBe('P069077')
+    expect(res.body.content.conversion).toEqual({
+      status: 'failed',
+      error: 'xpand-db-error',
+    })
+    expect(res.body.warnings).toHaveLength(1)
+    expect(res.body.warnings[0]).toContain('P069077')
+  })
+
+  /**
+   * Core and the contacts service deploy separately. Against a contacts
+   * service that predates `conversion`, the contact is still created, so the
+   * response must not turn into a 500 that invites a retry.
+   */
+  it('tolerates a contacts service that reports no conversion', async () => {
+    mockCreateContact.mockResolvedValue({
+      ok: true,
+      data: { contactCode: 'P069077', contact: null },
+    })
+
+    const res = await request(app.callback()).post('/v1/contacts').send(body())
+
+    expect(res.status).toBe(201)
+    expect(res.body.content.conversion).toEqual({ status: 'not-applicable' })
+    expect(res.body.warnings).toBeUndefined()
+  })
+
+  it('maps an invalid organisation number to 422', async () => {
+    mockCreateContact.mockResolvedValue({
+      ok: false,
+      err: 'invalid-organisation-number',
+      detail: 'Organisationsnumret är inte giltigt.',
+    })
+
+    const res = await request(app.callback())
+      .post('/v1/contacts')
+      .send(organisationBody({ organisationNumber: '5560160681' }))
+
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('invalid-organisation-number')
+  })
+
+  it('rejects an organisation without a name before touching anything', async () => {
+    const res = await request(app.callback())
+      .post('/v1/contacts')
+      .send(organisationBody({ name: '' }))
+
+    expect(res.status).toBe(400)
+    expect(res.body.detail).toContain('name')
+    expect(mockCreateContact).not.toHaveBeenCalled()
+  })
+
+  it('rejects a body without a type', async () => {
+    const { type: _omitted, ...withoutType } = body()
+
+    const res = await request(app.callback())
+      .post('/v1/contacts')
+      .send(withoutType)
+
+    expect(res.status).toBe(400)
+    expect(res.body.detail).toContain('type')
+    expect(mockCreateContact).not.toHaveBeenCalled()
   })
 })

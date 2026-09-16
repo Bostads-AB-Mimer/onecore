@@ -8,6 +8,7 @@ import {
 } from '@onecore/utilities'
 import { ContactsRepository } from '@src/adapters/contact-adapter'
 import { ContactWriter } from '@src/adapters/contact-writer'
+import { ContactCategoryWriter } from '@src/adapters/contact-category-writer'
 import { withParsedBody } from '@src/middlewares/parse-request-body'
 import { createContact, CreateContactError } from './create-contact'
 import {
@@ -42,6 +43,7 @@ const isTrue = (v: unknown): boolean => v === true || v === 'true'
 const CREATE_CONTACT_STATUS: Record<CreateContactError, number> = {
   'duplicate-contact': 409,
   'invalid-national-id': 422,
+  'invalid-organisation-number': 422,
   'xpand-rejected': 422,
   'xpand-fault': 502,
   'xpand-auth-failed': 502,
@@ -55,7 +57,12 @@ export const routes = (
   {
     contactsRepository,
     contactWriter,
-  }: { contactsRepository: ContactsRepository; contactWriter: ContactWriter }
+    contactCategoryWriter,
+  }: {
+    contactsRepository: ContactsRepository
+    contactWriter: ContactWriter
+    contactCategoryWriter: ContactCategoryWriter
+  }
 ) => {
   router.post(
     '/contacts',
@@ -63,12 +70,22 @@ export const routes = (
       summary: 'Create a contact',
       description:
         'Creates a contact in Xpand together with its applicant role and a web ' +
-        'account. Rejects with 409 when a contact with the same national ID ' +
+        'account. The body is discriminated on `type`: an `individual` is a ' +
+        'private person identified by personnummer; an `organisation` is a ' +
+        'company, municipality, region, state body or other legal person ' +
+        'identified by organisationsnummer and placed in the given `category`. ' +
+        'Rejects with 409 when a contact with the same identity number ' +
         'already exists. ' +
         'NOT REVERSIBLE HERE. Once 201 is returned the contact exists in Xpand ' +
         'and this API cannot remove it again; cleaning one up means manual work ' +
         'in Xpand. Callers must not retry a request that may have succeeded — a ' +
         'retry is rejected by the duplicate check. ' +
+        'An organisation is created as a natural person and then converted to ' +
+        'its category; `conversion` in the response says whether that second ' +
+        'step completed. When it did not, the response is still 201 with the ' +
+        'person code (P…) as `contactCode` and `conversion.status = failed` — ' +
+        'the conversion is idempotent and can be completed later, whereas a ' +
+        'retry of the whole request would be blocked as a duplicate. ' +
         'Housing queues and the application profile are not handled here; they ' +
         'are orchestrated by the caller.',
       tags: ['Contacts'],
@@ -89,7 +106,7 @@ export const routes = (
       const metadata = generateRouteMetadata(ctx)
 
       const result = await createContact(
-        { contactsRepository, contactWriter },
+        { contactsRepository, contactWriter, contactCategoryWriter },
         ctx.request.body
       )
 

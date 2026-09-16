@@ -3,7 +3,9 @@ import { Knex } from 'knex'
 import { Config } from './common/config'
 import { ContactsRepository, xpandContactsRepository } from './adapters'
 import { ContactWriter } from './adapters/contact-writer'
+import { ContactCategoryWriter } from './adapters/contact-category-writer'
 import { xpandSoapContactWriter } from './adapters/xpand/soap'
+import { xpandContactCategoryWriter } from './adapters/xpand'
 import { xpandDbClient } from './adapters/xpand/db'
 import { contactsDbClient } from './adapters/db'
 import Koa from 'koa'
@@ -45,6 +47,11 @@ export interface AppContext {
      * The ContactWriter implementation to use for creating contacts.
      */
     contactWriter: ContactWriter
+    /**
+     * The ContactCategoryWriter implementation that turns a freshly created
+     * contact into an organisation.
+     */
+    contactCategoryWriter: ContactCategoryWriter
   }
 }
 
@@ -98,6 +105,7 @@ export const makeAppContext = (
     modules: {
       contactsRepository: xpandContactsRepository(xpandDb, contactsDb),
       contactWriter: xpandSoapContactWriter(config.xpandSoap),
+      contactCategoryWriter: xpandContactCategoryWriter(xpandDb),
       ...overrides,
     },
   }

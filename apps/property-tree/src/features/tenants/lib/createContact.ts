@@ -1,20 +1,54 @@
 import { WaitingListType } from '@onecore/types'
 import { z } from 'zod'
 
-/**
- * The customer type split is Privatperson vs Företagskund, mirroring how the
- * business reads Xpand's P/F series. Only 'person' can be created today —
- * a company needs its contact category converted to F after creation, which
- * the write path does not do yet. The constant exists so the dialog can show
- * the company path as coming, not hide it.
- */
-export const CUSTOMER_TYPES = ['person', 'company'] as const
-export type CustomerType = (typeof CUSTOMER_TYPES)[number]
+import type { CreateContactRequestBody } from '@/services/api/core/tenantService'
 
-export const customerTypeLabels: Record<CustomerType, string> = {
-  person: 'Privatperson',
-  company: 'Företagskund',
+/**
+ * Xpand's contact categories for legal persons, as the API defines them. The
+ * letter is also the prefix of the contact code, which is how the business
+ * tells contact types apart. They behave identically in this form — only the
+ * label and the resulting prefix differ — so they share one set of fields.
+ */
+export type OrganisationCategory = NonNullable<
+  Extract<CreateContactRequestBody, { type: 'organisation' }>['category']
+>
+
+/** Everything the caseworker can pick under "Typ av kund". */
+export type ContactCategory = 'individual' | OrganisationCategory
+
+/**
+ * The runtime lists the dropdown renders, pinned to the API type: `satisfies`
+ * rejects a letter the API does not know, and `contactCategoryLabels` below
+ * fails to compile when the API knows one these lists lack.
+ */
+export const ORGANISATION_CATEGORIES = [
+  'F',
+  'I',
+  'K',
+  'L',
+  'Ö',
+  'S',
+] as const satisfies ReadonlyArray<OrganisationCategory>
+
+export const CONTACT_CATEGORIES = [
+  'individual',
+  ...ORGANISATION_CATEGORIES,
+] as const satisfies ReadonlyArray<ContactCategory>
+
+export const contactCategoryLabels: Record<ContactCategory, string> = {
+  individual: 'Privatperson',
+  F: 'Företag',
+  I: 'Intern',
+  K: 'Kommunal',
+  L: 'Landsting',
+  Ö: 'Övrig',
+  S: 'Statlig',
 }
+
+export const isOrganisationCategory = (
+  category: ContactCategory | undefined
+): category is OrganisationCategory =>
+  category !== undefined && category !== 'individual'
 
 export const HOUSING_TYPES = [
   'LIVES_WITH_FAMILY',
@@ -53,40 +87,55 @@ export const requiresHousingDescription = (
 ): boolean => housingType === 'OTHER'
 
 /**
- * Format check only. The server validates the checksum and is the authority —
- * this exists to catch typos before a round trip, not to duplicate that rule.
+ * Format checks only. The server validates the checksums and is the authority —
+ * these exist to catch typos before a round trip, not to duplicate that rule.
  */
 const NATIONAL_ID_PATTERN = /^(19|20)?\d{6}[-+]?\d{4}$/
+const ORGANISATION_NUMBER_PATTERN = /^(16)?\d{6}-?\d{4}$/
 
+const applicationProfileFieldsSchema = z.object({
+  numAdults: z.coerce
+    .number({ invalid_type_error: 'Ange antal vuxna' })
+    .int()
+    .min(1, 'Minst en vuxen'),
+  numChildren: z.coerce
+    .number({ invalid_type_error: 'Ange antal barn' })
+    .int()
+    .min(0),
+  housingType: z.enum(HOUSING_TYPES, {
+    required_error: 'Välj boendeform',
+  }),
+  housingTypeDescription: z.string().nullable().default(null),
+  landlord: z.string().nullable().default(null),
+  // Optional to mirror mina-sidor, where the reference is collected later in
+  // the application flow — a caseworker rarely has it at registration time.
+  housingReference: z.object({
+    phone: z.string().optional(),
+    email: z
+      .string()
+      .email('Ange en giltig e-postadress')
+      .optional()
+      .or(z.literal('')),
+  }),
+})
+
+/**
+ * Household data is an optional add-on, mirroring mina-sidor where the
+ * application profile is collected later in the application flow — not at
+ * registration. With `enabled` off the customer is created without a profile
+ * and it can be completed later from the customer card; the other fields are
+ * then neither validated nor sent, however the form happens to hold them.
+ */
 const applicationProfileSchema = z
-  .object({
-    numAdults: z.coerce
-      .number({ invalid_type_error: 'Ange antal vuxna' })
-      .int()
-      .min(1, 'Minst en vuxen'),
-    numChildren: z.coerce
-      .number({ invalid_type_error: 'Ange antal barn' })
-      .int()
-      .min(0),
-    housingType: z.enum(HOUSING_TYPES, {
-      required_error: 'Välj boendeform',
-    }),
-    housingTypeDescription: z.string().nullable().default(null),
-    landlord: z.string().nullable().default(null),
-    // Optional to mirror mina-sidor, where the reference is collected later in
-    // the application flow — a caseworker rarely has it at registration time.
-    housingReference: z.object({
-      phone: z.string().optional(),
-      email: z
-        .string()
-        .email('Ange en giltig e-postadress')
-        .optional()
-        .or(z.literal('')),
-    }),
-  })
+  .discriminatedUnion('enabled', [
+    applicationProfileFieldsSchema.extend({ enabled: z.literal(true) }),
+    z.object({ enabled: z.literal(false) }),
+  ])
   // Landlord and description are only meaningful for some housing types, and
   // for those they are required — mina-sidor blocks the same omission.
   .superRefine((profile, ctx) => {
+    if (!profile.enabled) return
+
     if (requiresLandlord(profile.housingType) && !profile.landlord?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -119,18 +168,14 @@ export const WAITING_LISTS: ReadonlyArray<{
   { type: WaitingListType.Storage, label: 'Förråd' },
 ]
 
-const baseSchema = z.object({
-  waitingLists: z.array(z.nativeEnum(WaitingListType)).default([]),
-  nationalId: z
-    .string()
-    .min(1, 'Ange personnummer')
-    .regex(NATIONAL_ID_PATTERN, 'Personnumret ser inte giltigt ut'),
-  firstName: z.string().min(1, 'Ange förnamn').max(50),
-  lastName: z.string().min(1, 'Ange efternamn').max(50),
+/** Contact details every kind of customer has. */
+const contactDetailsSchema = z.object({
   street: z.string().min(1, 'Ange gatuadress'),
   zipCode: z.string().min(1, 'Ange postnummer'),
   city: z.string().min(1, 'Ange ort'),
   careOf: z.string().optional(),
+  // Required for every kind: the web account provisioned alongside the
+  // customer needs an address to reach them on.
   emailAddress: z.string().email('Ange en giltig e-postadress'),
   // Required to mirror mina-sidor, where at least one phone number is
   // mandatory at registration. Trimmed before the length check: the request
@@ -140,21 +185,37 @@ const baseSchema = z.object({
 })
 
 /**
- * Household data is an optional add-on, mirroring mina-sidor where the
- * application profile is collected later in the application flow — not at
- * registration. Unchecked, the customer is created without a profile and it
- * can be completed later from the customer card.
+ * Discriminated on the category the caseworker picks. A private individual
+ * is identified by personnummer and may join queues and carry a household
+ * profile; every organisation category shares one arm — organisation number
+ * and name, nothing else — since queues and household data are for housing
+ * applicants only.
  */
-export const createContactFormSchema = z.discriminatedUnion(
-  'withApplicationProfile',
-  [
-    baseSchema.extend({
-      withApplicationProfile: z.literal(true),
-      applicationProfile: applicationProfileSchema,
-    }),
-    baseSchema.extend({ withApplicationProfile: z.literal(false) }),
-  ]
-)
+export const createContactFormSchema = z.discriminatedUnion('category', [
+  contactDetailsSchema.extend({
+    category: z.literal('individual'),
+    nationalId: z
+      .string()
+      .min(1, 'Ange personnummer')
+      .regex(NATIONAL_ID_PATTERN, 'Personnumret ser inte giltigt ut'),
+    firstName: z.string().min(1, 'Ange förnamn').max(50),
+    lastName: z.string().min(1, 'Ange efternamn').max(50),
+    waitingLists: z.array(z.nativeEnum(WaitingListType)).default([]),
+    applicationProfile: applicationProfileSchema,
+  }),
+  contactDetailsSchema.extend({
+    category: z.enum(ORGANISATION_CATEGORIES),
+    organisationNumber: z
+      .string()
+      .min(1, 'Ange organisationsnummer')
+      .regex(
+        ORGANISATION_NUMBER_PATTERN,
+        'Organisationsnumret ser inte giltigt ut'
+      ),
+    // Xpand stores the name in a single 100-character field.
+    name: z.string().min(1, 'Ange namn').max(100, 'Högst 100 tecken'),
+  }),
+])
 
 export type CreateContactFormValues = z.infer<typeof createContactFormSchema>
 /** What the form holds before parsing — defaults and coercions not yet applied. */
@@ -170,6 +231,7 @@ export type CreateContactFormInput = z.input<typeof createContactFormSchema>
 export const createContactErrorMessages: Record<string, string> = {
   'duplicate-contact': 'En kund med det här personnumret finns redan.',
   'invalid-national-id': 'Personnumret är inte giltigt.',
+  'invalid-organisation-number': 'Organisationsnumret är inte giltigt.',
   'invalid-request': 'Något i formuläret kunde inte tolkas.',
   'xpand-rejected': 'Xpand nekade registreringen.',
   // Our request was malformed — nothing a caseworker can act on, so the
@@ -189,6 +251,17 @@ export const createContactErrorMessages: Record<string, string> = {
     'Ett tekniskt fel uppstod. Kontrollera om kunden skapades innan du försöker igen.',
 }
 
+/** The duplicate message names the number the caseworker actually typed. */
+const DUPLICATE_ORGANISATION_MESSAGE =
+  'En kund med det här organisationsnumret finns redan.'
+
+/**
+ * A contact code: one letter and digits, e.g. `P069077` or `F069077`. Any
+ * letter is accepted, not only the categories that can be created here — the
+ * existing contact that blocks a create may carry a legacy prefix such as `O`.
+ */
+const CONTACT_CODE_PATTERN = /^[A-ZÖ]\d+$/
+
 /**
  * The existing customer's contact code, when the failure was a duplicate.
  *
@@ -201,14 +274,21 @@ export const duplicateContactCode = (
   code: string | undefined,
   detail: string | undefined
 ): string | undefined =>
-  code === 'duplicate-contact' && detail && /^[A-Z]\d+$/.test(detail.trim())
+  code === 'duplicate-contact' &&
+  detail &&
+  CONTACT_CODE_PATTERN.test(detail.trim())
     ? detail.trim()
     : undefined
 
 export const createContactErrorMessage = (
   code: string | undefined,
-  detail?: string
+  detail?: string,
+  party: 'individual' | 'organisation' = 'individual'
 ): string => {
+  if (code === 'duplicate-contact' && party === 'organisation') {
+    return DUPLICATE_ORGANISATION_MESSAGE
+  }
+
   const message =
     (code && createContactErrorMessages[code]) ??
     'Ett oväntat fel uppstod. Ingen kund har skapats.'
@@ -219,7 +299,13 @@ export const createContactErrorMessage = (
 
   // The service's own Swedish reason — "Kunden måste vara minst 16 år." says
   // far more than "Personnumret är inte giltigt." would.
-  if (code === 'invalid-national-id' && detail) return detail
+  if (
+    (code === 'invalid-national-id' ||
+      code === 'invalid-organisation-number') &&
+    detail
+  ) {
+    return detail
+  }
 
   return message
 }
@@ -231,16 +317,13 @@ export const createContactErrorMessage = (
  * strings — the API treats "not provided" differently from "provided empty".
  * Landlord and housing description are nulled when the chosen housing type
  * makes them meaningless, so stale input from a previous choice never leaks
- * into the request.
+ * into the request. An organisation sends neither queues nor a profile.
  */
 export const toCreateContactRequestBody = (values: CreateContactFormValues) => {
   const careOf = values.careOf?.trim()
   const phoneNumber = values.phoneNumber?.trim()
 
-  return {
-    nationalId: values.nationalId.trim(),
-    firstName: values.firstName.trim(),
-    lastName: values.lastName.trim(),
+  const details = {
     addresses: [
       {
         ...(careOf ? { careOf } : {}),
@@ -253,28 +336,44 @@ export const toCreateContactRequestBody = (values: CreateContactFormValues) => {
       { emailAddress: values.emailAddress.trim(), isPrimary: true },
     ],
     phoneNumbers: phoneNumber ? [{ phoneNumber, isPrimary: true }] : [],
+  }
+
+  if (values.category !== 'individual') {
+    return {
+      type: 'organisation' as const,
+      category: values.category,
+      organisationNumber: values.organisationNumber.trim(),
+      name: values.name.trim(),
+      ...details,
+    }
+  }
+
+  const profile = values.applicationProfile
+
+  return {
+    type: 'individual' as const,
+    nationalId: values.nationalId.trim(),
+    firstName: values.firstName.trim(),
+    lastName: values.lastName.trim(),
+    ...details,
     waitingLists: values.waitingLists,
-    ...(values.withApplicationProfile
+    ...(profile.enabled
       ? {
           applicationProfile: {
-            numAdults: values.applicationProfile.numAdults,
-            numChildren: values.applicationProfile.numChildren,
-            housingType: values.applicationProfile.housingType,
+            numAdults: profile.numAdults,
+            numChildren: profile.numChildren,
+            housingType: profile.housingType,
             housingTypeDescription: requiresHousingDescription(
-              values.applicationProfile.housingType
+              profile.housingType
             )
-              ? values.applicationProfile.housingTypeDescription?.trim() || null
+              ? profile.housingTypeDescription?.trim() || null
               : null,
-            landlord: requiresLandlord(values.applicationProfile.housingType)
-              ? values.applicationProfile.landlord?.trim() || null
+            landlord: requiresLandlord(profile.housingType)
+              ? profile.landlord?.trim() || null
               : null,
             housingReference: {
-              phone:
-                values.applicationProfile.housingReference.phone?.trim() ||
-                null,
-              email:
-                values.applicationProfile.housingReference.email?.trim() ||
-                null,
+              phone: profile.housingReference.phone?.trim() || null,
+              email: profile.housingReference.email?.trim() || null,
             },
           },
         }

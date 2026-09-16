@@ -67,11 +67,33 @@ export type ContactWriterCredentials = {
   password: string
 }
 
+/**
+ * Who the contact is: a natural person or an organisation.
+ *
+ * The upstream create operation only knows natural persons, so an organisation
+ * is created with its number in the identity field and its name in both name
+ * fields, and then converted to its proper contact category by the
+ * `ContactCategoryWriter`. The writer takes the distinction as data rather than
+ * as two operations so that the envelope stays a single, order-guarded builder.
+ */
+export type ContactWriterParty =
+  | {
+      kind: 'person'
+      /** Normalised to 12 digits, no separators. */
+      nationalId: string
+      firstName: string
+      lastName: string
+    }
+  | {
+      kind: 'organisation'
+      /** Normalised to 10 digits, no separators — the form Xpand stores. */
+      organisationNumber: string
+      /** The registered name, as it should read on the contact. */
+      name: string
+    }
+
 export type CreateContactInput = {
-  /** Normalised to 12 digits, no separators. */
-  nationalId: string
-  firstName: string
-  lastName: string
+  party: ContactWriterParty
   addresses: ContactWriterAddress[]
   emailAddresses: ContactWriterEmailAddress[]
   phoneNumbers: ContactWriterPhoneNumber[]
@@ -89,7 +111,9 @@ export type CreateContactInput = {
  * A single `createContact` covers every caseworker-facing contact type: they
  * are all created through the same upstream operation with the same fields.
  * What differs — housing queues, application profile — is orchestrated in core,
- * not here.
+ * not here. An organisation additionally has its category converted after
+ * creation; that is a separate port because it writes through a different
+ * backend.
  *
  * Household size is deliberately not part of the input. It is ONECore data and
  * lives in the leasing service's application profile; Xpand's legacy field for
