@@ -104,6 +104,21 @@ describe('buildParkingSpacePlaceholders', () => {
     expect(placeholders).not.toHaveProperty('offerURL')
     expect(placeholders).not.toHaveProperty('leaseId')
     expect(placeholders).not.toHaveProperty('firstName')
+    expect(placeholders).not.toHaveProperty('endDate')
+  })
+
+  it('formats endDate for lease-termination confirmation templates', () => {
+    const placeholders = buildParkingSpacePlaceholders({
+      firstName: 'Anna',
+      address: 'Storgatan 1',
+      leaseId: '307-002-11-0201/11',
+      endDate: '2026-10-31T00:00:00.000Z',
+      type: 'Bilplats',
+      objectId: '42',
+    })
+
+    expect(placeholders.endDate).toBe('2026-10-31')
+    expect(placeholders.leaseId).toBe('307-002-11-0201/11')
   })
 })
 
@@ -136,5 +151,26 @@ describe('renderTemplate', () => {
       { availableFrom: 'not-a-date' }
     )
     expect(rendered).toBeNull()
+  })
+
+  it('renders lease-termination confirmation placeholders including endDate', () => {
+    const rendered = renderTemplate(
+      {
+        subject: 'Bekräftelse på uppsägning',
+        html:
+          '<p>Hej {{firstName}}!</p><p>Sista dag: {{endDate}}</p>' +
+          '<p>Avtal: {{leaseId}}</p>',
+      },
+      {
+        firstName: 'Anna',
+        endDate: '2026-10-31T00:00:00.000Z',
+        leaseId: '307-002-11-0201/11',
+      }
+    )
+
+    expect(rendered).toEqual({
+      subject: 'Bekräftelse på uppsägning',
+      body: 'Hej Anna!\nSista dag: 2026-10-31\nAvtal: 307-002-11-0201/11',
+    })
   })
 })
