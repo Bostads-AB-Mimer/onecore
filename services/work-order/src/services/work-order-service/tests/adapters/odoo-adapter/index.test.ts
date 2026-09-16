@@ -28,6 +28,7 @@ import {
   createWorkOrder,
   getMaintenanceTeams,
   getWorkOrderById,
+  getWorkOrdersByContactCode,
 } from '../../../adapters/odoo-adapter'
 
 describe('odoo-adapter createWorkOrder', () => {
@@ -198,6 +199,25 @@ describe('odoo-adapter getWorkOrderById', () => {
     expect(result).toBeUndefined()
     // Should not query messages when there is no work order
     expect(odooMock.searchRead).toHaveBeenCalledTimes(1)
+  })
+
+  it('includes receipt_to_tenant in the message_type allowlist so Mina sidor sees handler/contractor acknowledgement receipts (MIM-1960)', async () => {
+    const odooWorkOrder = factory.odooWorkOrder.build({ id: 12345 })
+    const odooMessage = factory.odooWorkOrderMessage.build({ res_id: 12345 })
+
+    odooMock.searchRead
+      .mockResolvedValueOnce([odooWorkOrder]) // maintenance.request
+      .mockResolvedValueOnce([odooMessage]) // mail.message
+
+    await getWorkOrderById(12345)
+
+    // mail.message queried with the tenant-visible message_type allowlist
+    expect(odooMock.searchRead.mock.calls[1][0]).toBe('mail.message')
+    const messageDomain = odooMock.searchRead.mock.calls[1][1]
+    const messageTypeFilter = messageDomain.find(
+      (clause: unknown[]) => clause[0] === 'message_type'
+    )
+    expect(messageTypeFilter[2]).toContain('receipt_to_tenant')
   })
 })
 
@@ -384,5 +404,34 @@ describe('odoo-adapter createInspectionWorkOrders', () => {
 
     expect(result.ok).toBe(false)
     expect(odooMock.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('odoo-adapter message domain', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    odooMock.connect.mockResolvedValue(undefined)
+  })
+
+  // The Mina sidor feed only returns message types named in MESSAGE_DOMAIN, so a
+  // missing type is invisible to the tenant even though the message exists in
+  // Odoo. tenant_my_pages is the MIM-1957 "publish without SMS/e-post" type.
+  it('includes tenant_my_pages so Mina sidor-only messages reach the tenant', async () => {
+    odooMock.searchRead
+      .mockResolvedValueOnce([]) // maintenance.request
+      .mockResolvedValueOnce([]) // mail.message
+
+    await getWorkOrdersByContactCode('P123456')
+
+    const messageCall = odooMock.searchRead.mock.calls.find(
+      (call: unknown[]) => call[0] === 'mail.message'
+    )
+    expect(messageCall).toBeDefined()
+    const domain = messageCall![1] as unknown[][]
+    const messageTypeClause = domain.find(
+      (clause) => clause[0] === 'message_type'
+    )
+    expect(messageTypeClause).toBeDefined()
+    expect(messageTypeClause![2] as string[]).toContain('tenant_my_pages')
   })
 })

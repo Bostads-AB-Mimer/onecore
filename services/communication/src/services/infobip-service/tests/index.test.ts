@@ -324,6 +324,26 @@ describe('work order tenant message logging', () => {
     expect(res.status).toBe(200)
     expect(res.body.warnings).toEqual(['Communication log failed'])
   })
+
+  // MIM-1957: the communication log links every work-order dispatch to its
+  // Odoo errand, not just Mina sidor ones.
+  it('passes workOrderCode from the request into the dispatch row', async () => {
+    jest
+      .spyOn(smsAdapter, 'sendWorkOrderSms')
+      .mockResolvedValue(smsSendResult('mid-wo-code'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
+      phoneNumber: '0701234567',
+      text: 'Ditt ärende är uppdaterat',
+      contactCode: 'P123456',
+      workOrderCode: 'od-12345',
+    })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ workOrderCode: 'od-12345' })
+    )
+  })
 })
 
 describe('isMessageEmail', () => {

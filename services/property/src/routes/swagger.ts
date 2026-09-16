@@ -107,6 +107,10 @@ const schemas = {
     name: 'BlockReason',
     target: 'openApi3',
   }).definitions,
+  ...zodToJsonSchema(types.GetRentalIdsWithBlockResponseSchema, {
+    name: 'GetRentalIdsWithBlockResponse',
+    target: 'openApi3',
+  }).definitions,
   ...zodToJsonSchema(types.ComponentCategorySchema, {
     name: 'ComponentCategory',
     target: 'openApi3',

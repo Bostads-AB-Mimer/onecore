@@ -75,9 +75,12 @@ const MESSAGE_DOMAIN = (workOrderIds: number[]) => [
     'in',
     [
       'from_tenant',
+      'receipt_to_tenant', // Acknowledgement receipt when a handler/contractor confirms a tenant message (MIM-1960)
       'tenant_sms',
       'tenant_mail',
       'tenant_mail_and_sms',
+      // Published to Mina sidor only — no SMS/e-post notification (MIM-1957).
+      'tenant_my_pages',
       'failed_tenant_sms',
       'failed_tenant_mail',
       'failed_tenant_mail_and_sms',
