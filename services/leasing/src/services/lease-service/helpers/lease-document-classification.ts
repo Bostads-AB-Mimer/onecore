@@ -75,6 +75,13 @@ const NOT_THE_TERMINATION = [
   'atertagen',
 ]
 
+const NOT_A_TERMINATION_CONFIRMATION = [
+  'ändring',
+  'andring',
+  'återtagen',
+  'atertagen',
+]
+
 export const isOperativeUppsagning = (
   title: string | null | undefined
 ): boolean =>
@@ -85,11 +92,14 @@ export const isOperativeUppsagning = (
 
 export const isUppsagningsbekraftelse = (
   title: string | null | undefined
-): boolean =>
-  classifyDocument(title) === 'uppsagning' &&
-  ['bekräftelse', 'bekraftelse'].some((word) =>
-    (title ?? '').toLowerCase().includes(word)
+): boolean => {
+  const name = (title ?? '').toLowerCase()
+  return (
+    classifyDocument(title) === 'uppsagning' &&
+    ['bekräftelse', 'bekraftelse'].some((word) => name.includes(word)) &&
+    !NOT_A_TERMINATION_CONFIRMATION.some((word) => name.includes(word))
   )
+}
 
 export const inspectPdf = (
   content: Buffer

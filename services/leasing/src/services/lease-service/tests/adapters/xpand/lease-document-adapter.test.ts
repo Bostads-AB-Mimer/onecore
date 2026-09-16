@@ -1,6 +1,7 @@
 let dokopRows: Array<Record<string, unknown>> = []
 let dorevRows: Array<Record<string, unknown>> = []
 let dofilRows: Array<{ fildata: string | null }> = []
+let dofilWhere: jest.Mock
 
 const chainableSelect = (result: unknown) => {
   const builder = {
@@ -20,13 +21,10 @@ const chainableSelect = (result: unknown) => {
 jest.mock('../../../adapters/xpand/xpandDb', () => ({
   xpandDb: jest.fn((table: string) => {
     if (table === 'dofil') {
-      return {
-        where: jest.fn().mockReturnValue({
-          select: jest
-            .fn()
-            .mockImplementation(() => Promise.resolve(dofilRows)),
-        }),
-      }
+      dofilWhere = jest.fn().mockReturnValue({
+        select: jest.fn().mockImplementation(() => Promise.resolve(dofilRows)),
+      })
+      return { where: dofilWhere }
     }
     if (table === 'dorev') {
       return chainableSelect(dorevRows)
@@ -74,6 +72,22 @@ describe(getTerminationDocumentPdf, () => {
     })
   })
 
+  it('reads dofil rows with filtype 1 only', async () => {
+    dokopRows = [
+      {
+        keydorev: 'new',
+        title: 'Uppsägning av bostad',
+        filename: 'new.pdf',
+        createdAt: '2025-06-01T00:00:00.000Z',
+      },
+    ]
+    dofilRows = [{ fildata: pdfHex }]
+
+    await getTerminationDocumentPdf('123-456/01')
+
+    expect(dofilWhere).toHaveBeenCalledWith({ keydorev: 'new', filtype: 1 })
+  })
+
   it('falls back to bekräftelse when no operative uppsägning exists', async () => {
     dokopRows = [
       {
@@ -88,6 +102,22 @@ describe(getTerminationDocumentPdf, () => {
     const result = await getTerminationDocumentPdf('123-456/01')
 
     expect(result?.filename).toBe('Bekräftelse på uppsägning.pdf')
+  })
+
+  it('does not fall back to withdrawn termination confirmation', async () => {
+    dokopRows = [
+      {
+        keydorev: 'withdrawn',
+        title: 'Bekräftelse på återtagen uppsägning',
+        filename: null,
+        createdAt: '2025-01-01T00:00:00.000Z',
+      },
+    ]
+    dofilRows = [{ fildata: pdfHex }]
+
+    const result = await getTerminationDocumentPdf('123-456/01')
+
+    expect(result).toBeNull()
   })
 
   it('returns null when no uppsägning document is found', async () => {

@@ -73,7 +73,7 @@ const fetchDocumentContent = async (
   keydorev: string
 ): Promise<Buffer | null> => {
   const files = (await xpandDb('dofil')
-    .where({ keydorev })
+    .where({ keydorev, filtype: 1 })
     .select('fildata')) as Array<{ fildata: string | null }>
 
   for (const file of files) {
