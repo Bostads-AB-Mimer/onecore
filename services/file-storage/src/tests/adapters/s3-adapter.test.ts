@@ -1,315 +1,327 @@
 import { Readable } from 'stream'
-import { BucketItem, BucketItemStat } from 'minio'
-import * as minioAdapter from '../../adapters/minio-adapter'
+import {
+  CreateBucketCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+  NotFound,
+  PutObjectCommand,
+  S3Client,
+  S3ServiceException,
+} from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { mockClient } from 'aws-sdk-client-mock'
+import * as s3Adapter from '../../adapters/s3-adapter'
 
-// Mock the minio client
-jest.mock('minio', () => {
-  return {
-    Client: jest.fn().mockImplementation(() => ({
-      bucketExists: jest.fn(),
-      makeBucket: jest.fn(),
-      putObject: jest.fn(),
-      getObject: jest.fn(),
-      removeObject: jest.fn(),
-      statObject: jest.fn(),
-      presignedGetObject: jest.fn(),
-      listObjectsV2: jest.fn(),
-    })),
-  }
-})
+// Keep a developer's local .env from leaking into the config under test
+jest.mock('dotenv/config', () => ({}))
+jest.mock('@aws-sdk/s3-request-presigner')
 
-describe('minio-adapter', () => {
-  let mockMinioClient: any
+const BUCKET = 'onecore-documents'
+const s3Mock = mockClient(S3Client)
+const mockedGetSignedUrl = getSignedUrl as jest.MockedFunction<
+  typeof getSignedUrl
+>
 
+const notFoundError = () =>
+  new NotFound({ $metadata: { httpStatusCode: 404 }, message: 'NotFound' })
+
+const accessDeniedError = () =>
+  new S3ServiceException({
+    name: 'AccessDenied',
+    $fault: 'client',
+    $metadata: { httpStatusCode: 403 },
+    message: 'Access Denied',
+  })
+
+// Mimics the SDK's Node.js response body: a Readable with the SDK stream helpers attached
+const toSdkStream = (stream: Readable) =>
+  Object.assign(stream, {
+    transformToByteArray: async () => new Uint8Array(),
+    transformToString: async () => '',
+    transformToWebStream: () => {
+      throw new Error('Not used by the adapter')
+    },
+  })
+
+describe('s3-adapter', () => {
   beforeEach(() => {
-    // Get the mocked client instance
-    mockMinioClient = minioAdapter.minioClient
+    s3Mock.reset()
     jest.clearAllMocks()
   })
 
   describe('initializeBucket', () => {
-    it('should create bucket if it does not exist', async () => {
-      mockMinioClient.bucketExists.mockResolvedValue(false)
-      mockMinioClient.makeBucket.mockResolvedValue(undefined)
+    it('creates the bucket if it does not exist', async () => {
+      s3Mock.on(HeadBucketCommand).rejects(notFoundError())
+      s3Mock.on(CreateBucketCommand).resolves({})
 
-      await minioAdapter.initializeBucket()
+      await s3Adapter.initializeBucket()
 
-      expect(mockMinioClient.bucketExists).toHaveBeenCalledWith(
-        'onecore-documents'
-      )
-      expect(mockMinioClient.makeBucket).toHaveBeenCalledWith(
-        'onecore-documents',
-        'us-east-1'
+      expect(s3Mock.commandCalls(HeadBucketCommand)[0].args[0].input).toEqual({
+        Bucket: BUCKET,
+      })
+      expect(s3Mock.commandCalls(CreateBucketCommand)[0].args[0].input).toEqual(
+        { Bucket: BUCKET }
       )
     })
 
-    it('should not create bucket if it already exists', async () => {
-      mockMinioClient.bucketExists.mockResolvedValue(true)
+    it('does not create the bucket if it already exists', async () => {
+      s3Mock.on(HeadBucketCommand).resolves({})
 
-      await minioAdapter.initializeBucket()
+      await s3Adapter.initializeBucket()
 
-      expect(mockMinioClient.bucketExists).toHaveBeenCalledWith(
-        'onecore-documents'
-      )
-      expect(mockMinioClient.makeBucket).not.toHaveBeenCalled()
+      expect(s3Mock.commandCalls(CreateBucketCommand)).toHaveLength(0)
     })
 
-    it('should throw error if bucket initialization fails', async () => {
-      const error = new Error('Failed to create bucket')
-      mockMinioClient.bucketExists.mockRejectedValue(error)
+    it('throws if the bucket check fails for another reason', async () => {
+      s3Mock.on(HeadBucketCommand).rejects(accessDeniedError())
 
-      await expect(minioAdapter.initializeBucket()).rejects.toThrow(
-        'Failed to create bucket'
+      await expect(s3Adapter.initializeBucket()).rejects.toThrow(
+        'Access Denied'
       )
+      expect(s3Mock.commandCalls(CreateBucketCommand)).toHaveLength(0)
     })
   })
 
   describe('uploadFile', () => {
-    it('should upload file successfully', async () => {
-      const fileName = 'test-file.txt'
+    it('uploads the file with its content type', async () => {
       const fileBuffer = Buffer.from('test content')
-      const contentType = 'text/plain'
+      s3Mock.on(PutObjectCommand).resolves({})
 
-      mockMinioClient.putObject.mockResolvedValue(undefined)
-
-      const result = await minioAdapter.uploadFile(
-        fileName,
+      const result = await s3Adapter.uploadFile(
+        'test-file.txt',
         fileBuffer,
-        contentType
+        'text/plain'
       )
 
-      expect(result).toBe(fileName)
-      expect(mockMinioClient.putObject).toHaveBeenCalledWith(
-        'onecore-documents',
-        fileName,
-        fileBuffer,
-        fileBuffer.length,
-        { 'Content-Type': contentType }
-      )
+      expect(result).toBe('test-file.txt')
+      expect(s3Mock.commandCalls(PutObjectCommand)[0].args[0].input).toEqual({
+        Bucket: BUCKET,
+        Key: 'test-file.txt',
+        Body: fileBuffer,
+        ContentType: 'text/plain',
+      })
     })
 
-    it('should throw error if upload fails', async () => {
-      const error = new Error('Upload failed')
-      mockMinioClient.putObject.mockRejectedValue(error)
+    it('throws if upload fails', async () => {
+      s3Mock.on(PutObjectCommand).rejects(new Error('Upload failed'))
 
       await expect(
-        minioAdapter.uploadFile('test.txt', Buffer.from('test'), 'text/plain')
+        s3Adapter.uploadFile('test.txt', Buffer.from('test'), 'text/plain')
       ).rejects.toThrow('Upload failed')
     })
   })
 
   describe('getFile', () => {
-    it('should retrieve file as stream', async () => {
-      const fileName = 'test-file.txt'
-      const mockStream = new Readable()
-      mockMinioClient.getObject.mockResolvedValue(mockStream)
+    it('returns the object body as a stream', async () => {
+      const body = toSdkStream(Readable.from(['file content']))
+      s3Mock.on(GetObjectCommand).resolves({ Body: body })
 
-      const result = await minioAdapter.getFile(fileName)
+      const result = await s3Adapter.getFile('test-file.txt')
 
-      expect(result).toBe(mockStream)
-      expect(mockMinioClient.getObject).toHaveBeenCalledWith(
-        'onecore-documents',
-        fileName
+      expect(result).toBe(body)
+      expect(s3Mock.commandCalls(GetObjectCommand)[0].args[0].input).toEqual({
+        Bucket: BUCKET,
+        Key: 'test-file.txt',
+      })
+    })
+
+    it('throws if the body is not a readable stream', async () => {
+      s3Mock.on(GetObjectCommand).resolves({ Body: undefined })
+
+      await expect(s3Adapter.getFile('test-file.txt')).rejects.toThrow(
+        "Unexpected body type for file 'test-file.txt'"
       )
     })
 
-    it('should throw error if file retrieval fails', async () => {
-      const error = new Error('File not found')
-      mockMinioClient.getObject.mockRejectedValue(error)
+    it('throws if retrieval fails', async () => {
+      s3Mock.on(GetObjectCommand).rejects(new Error('File not found'))
 
-      await expect(minioAdapter.getFile('nonexistent.txt')).rejects.toThrow(
+      await expect(s3Adapter.getFile('nonexistent.txt')).rejects.toThrow(
         'File not found'
       )
     })
   })
 
   describe('getFileUrl', () => {
-    it('should generate presigned URL with default expiry', async () => {
-      const fileName = 'test-file.txt'
-      const mockUrl = 'https://minio.example.com/presigned-url'
-      mockMinioClient.presignedGetObject.mockResolvedValue(mockUrl)
+    it('generates a presigned URL with default expiry', async () => {
+      mockedGetSignedUrl.mockResolvedValue('https://s3.example.com/presigned')
 
-      const result = await minioAdapter.getFileUrl(fileName)
+      const result = await s3Adapter.getFileUrl('test-file.txt')
 
-      expect(result).toBe(mockUrl)
-      expect(mockMinioClient.presignedGetObject).toHaveBeenCalledWith(
-        'onecore-documents',
-        fileName,
-        3600
-      )
+      expect(result).toBe('https://s3.example.com/presigned')
+      const [client, command, options] = mockedGetSignedUrl.mock.calls[0]
+      expect(client).toBe(s3Adapter.s3Client)
+      expect(command).toBeInstanceOf(GetObjectCommand)
+      expect(command.input).toEqual({ Bucket: BUCKET, Key: 'test-file.txt' })
+      expect(options).toEqual({ expiresIn: 3600 })
     })
 
-    it('should generate presigned URL with custom expiry', async () => {
-      const fileName = 'test-file.txt'
-      const expirySeconds = 7200
-      const mockUrl = 'https://minio.example.com/presigned-url'
-      mockMinioClient.presignedGetObject.mockResolvedValue(mockUrl)
+    it('generates a presigned URL with custom expiry', async () => {
+      mockedGetSignedUrl.mockResolvedValue('https://s3.example.com/presigned')
 
-      const result = await minioAdapter.getFileUrl(fileName, expirySeconds)
+      await s3Adapter.getFileUrl('test-file.txt', 7200)
 
-      expect(result).toBe(mockUrl)
-      expect(mockMinioClient.presignedGetObject).toHaveBeenCalledWith(
-        'onecore-documents',
-        fileName,
-        expirySeconds
-      )
+      expect(mockedGetSignedUrl.mock.calls[0][2]).toEqual({ expiresIn: 7200 })
     })
 
-    it('should throw error if URL generation fails', async () => {
-      const error = new Error('URL generation failed')
-      mockMinioClient.presignedGetObject.mockRejectedValue(error)
+    it('throws if URL generation fails', async () => {
+      mockedGetSignedUrl.mockRejectedValue(new Error('URL generation failed'))
 
-      await expect(minioAdapter.getFileUrl('test.txt')).rejects.toThrow(
+      await expect(s3Adapter.getFileUrl('test.txt')).rejects.toThrow(
         'URL generation failed'
       )
     })
   })
 
   describe('deleteFile', () => {
-    it('should delete file successfully', async () => {
-      const fileName = 'test-file.txt'
-      mockMinioClient.removeObject.mockResolvedValue(undefined)
+    it('deletes the file', async () => {
+      s3Mock.on(DeleteObjectCommand).resolves({})
 
-      await minioAdapter.deleteFile(fileName)
+      await s3Adapter.deleteFile('test-file.txt')
 
-      expect(mockMinioClient.removeObject).toHaveBeenCalledWith(
-        'onecore-documents',
-        fileName
+      expect(s3Mock.commandCalls(DeleteObjectCommand)[0].args[0].input).toEqual(
+        { Bucket: BUCKET, Key: 'test-file.txt' }
       )
     })
 
-    it('should throw error if deletion fails', async () => {
-      const error = new Error('Deletion failed')
-      mockMinioClient.removeObject.mockRejectedValue(error)
+    it('throws if deletion fails', async () => {
+      s3Mock.on(DeleteObjectCommand).rejects(new Error('Deletion failed'))
 
-      await expect(minioAdapter.deleteFile('test.txt')).rejects.toThrow(
+      await expect(s3Adapter.deleteFile('test.txt')).rejects.toThrow(
         'Deletion failed'
       )
     })
   })
 
   describe('getFileMetadata', () => {
-    it('should retrieve file metadata successfully', async () => {
-      const fileName = 'test-file.txt'
-      const mockStat: BucketItemStat = {
+    it('maps the head response to the metadata contract', async () => {
+      const lastModified = new Date('2024-01-01T00:00:00Z')
+      s3Mock.on(HeadObjectCommand).resolves({
+        ContentLength: 1024,
+        ETag: '"abc123"',
+        LastModified: lastModified,
+        ContentType: 'application/pdf',
+        Metadata: { 'original-name': 'receipt.pdf' },
+      })
+
+      const result = await s3Adapter.getFileMetadata('test-file.pdf')
+
+      expect(result).toEqual({
+        name: 'test-file.pdf',
         size: 1024,
         etag: 'abc123',
-        lastModified: new Date(),
-        metaData: {},
-      }
-      mockMinioClient.statObject.mockResolvedValue(mockStat)
-
-      const result = await minioAdapter.getFileMetadata(fileName)
-
-      expect(result).toBe(mockStat)
-      expect(mockMinioClient.statObject).toHaveBeenCalledWith(
-        'onecore-documents',
-        fileName
-      )
+        lastModified,
+        metaData: {
+          'content-type': 'application/pdf',
+          'x-amz-meta-original-name': 'receipt.pdf',
+        },
+      })
+      expect(s3Mock.commandCalls(HeadObjectCommand)[0].args[0].input).toEqual({
+        Bucket: BUCKET,
+        Key: 'test-file.pdf',
+      })
     })
 
-    it('should throw error if metadata retrieval fails', async () => {
-      const error = new Error('Metadata retrieval failed')
-      mockMinioClient.statObject.mockRejectedValue(error)
+    it('throws if metadata retrieval fails', async () => {
+      s3Mock.on(HeadObjectCommand).rejects(new Error('Metadata failed'))
 
-      await expect(minioAdapter.getFileMetadata('test.txt')).rejects.toThrow(
-        'Metadata retrieval failed'
+      await expect(s3Adapter.getFileMetadata('test.txt')).rejects.toThrow(
+        'Metadata failed'
       )
     })
   })
 
   describe('fileExists', () => {
-    it('should return true if file exists', async () => {
-      const fileName = 'test-file.txt'
-      mockMinioClient.statObject.mockResolvedValue({})
+    it('returns true if the file exists', async () => {
+      s3Mock.on(HeadObjectCommand).resolves({})
 
-      const result = await minioAdapter.fileExists(fileName)
-
-      expect(result).toBe(true)
-      expect(mockMinioClient.statObject).toHaveBeenCalledWith(
-        'onecore-documents',
-        fileName
-      )
+      expect(await s3Adapter.fileExists('test-file.txt')).toBe(true)
     })
 
-    it('should return false if file does not exist', async () => {
-      const fileName = 'nonexistent.txt'
-      mockMinioClient.statObject.mockRejectedValue(new Error('Not found'))
+    it('returns false if the file does not exist', async () => {
+      s3Mock.on(HeadObjectCommand).rejects(notFoundError())
 
-      const result = await minioAdapter.fileExists(fileName)
+      expect(await s3Adapter.fileExists('nonexistent.txt')).toBe(false)
+    })
 
-      expect(result).toBe(false)
+    it('rethrows errors other than not found', async () => {
+      s3Mock.on(HeadObjectCommand).rejects(accessDeniedError())
+
+      await expect(s3Adapter.fileExists('test-file.txt')).rejects.toThrow(
+        'Access Denied'
+      )
     })
   })
 
   describe('listFiles', () => {
-    it('should list files with given prefix', async () => {
-      const prefix = 'documents/'
-      const mockFiles: BucketItem[] = [
+    it('lists files across all pages with unquoted etags', async () => {
+      const lastModified = new Date('2024-01-01T00:00:00Z')
+      s3Mock
+        .on(ListObjectsV2Command, { ContinuationToken: undefined })
+        .resolves({
+          Contents: [
+            {
+              Key: 'documents/file1.txt',
+              Size: 100,
+              ETag: '"abc123"',
+              LastModified: lastModified,
+            },
+          ],
+          IsTruncated: true,
+          NextContinuationToken: 'page-2',
+        })
+        .on(ListObjectsV2Command, { ContinuationToken: 'page-2' })
+        .resolves({
+          Contents: [
+            {
+              Key: 'documents/file2.txt',
+              Size: 200,
+              ETag: '"def456"',
+              LastModified: lastModified,
+            },
+          ],
+          IsTruncated: false,
+        })
+
+      const result = await s3Adapter.listFiles('documents/')
+
+      expect(result).toEqual([
         {
           name: 'documents/file1.txt',
           size: 100,
           etag: 'abc123',
-          lastModified: new Date(),
+          lastModified,
         },
         {
           name: 'documents/file2.txt',
           size: 200,
           etag: 'def456',
-          lastModified: new Date(),
+          lastModified,
         },
-      ]
-
-      const mockStream = new Readable({
-        objectMode: true,
-        read() {
-          mockFiles.forEach((file) => this.push(file))
-          this.push(null)
-        },
+      ])
+      const calls = s3Mock.commandCalls(ListObjectsV2Command)
+      expect(calls).toHaveLength(2)
+      expect(calls[0].args[0].input).toEqual({
+        Bucket: BUCKET,
+        Prefix: 'documents/',
+        ContinuationToken: undefined,
       })
-
-      mockMinioClient.listObjectsV2.mockReturnValue(mockStream)
-
-      const result = await minioAdapter.listFiles(prefix)
-
-      expect(result).toEqual(mockFiles)
-      expect(mockMinioClient.listObjectsV2).toHaveBeenCalledWith(
-        'onecore-documents',
-        prefix,
-        true
-      )
+      expect(calls[1].args[0].input.ContinuationToken).toBe('page-2')
     })
 
-    it('should return empty array if no files found', async () => {
-      const prefix = 'empty/'
-      const mockStream = new Readable({
-        objectMode: true,
-        read() {
-          this.push(null)
-        },
-      })
+    it('returns an empty array if no files are found', async () => {
+      s3Mock.on(ListObjectsV2Command).resolves({ IsTruncated: false })
 
-      mockMinioClient.listObjectsV2.mockReturnValue(mockStream)
-
-      const result = await minioAdapter.listFiles(prefix)
-
-      expect(result).toEqual([])
+      expect(await s3Adapter.listFiles('empty/')).toEqual([])
     })
 
-    it('should handle stream errors', async () => {
-      const prefix = 'error/'
-      const mockStream = new Readable({
-        objectMode: true,
-        read() {
-          this.emit('error', new Error('Stream error'))
-        },
-      })
+    it('throws if listing fails', async () => {
+      s3Mock.on(ListObjectsV2Command).rejects(new Error('List failed'))
 
-      mockMinioClient.listObjectsV2.mockReturnValue(mockStream)
-
-      await expect(minioAdapter.listFiles(prefix)).rejects.toThrow(
-        'Stream error'
-      )
+      await expect(s3Adapter.listFiles('error/')).rejects.toThrow('List failed')
     })
   })
 })

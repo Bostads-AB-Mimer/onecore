@@ -7,7 +7,7 @@ import {
   getFileMetadata,
   fileExists,
   listFiles,
-} from '../../adapters/minio-adapter'
+} from '../../adapters/s3-adapter'
 
 /**
  * @swagger
@@ -25,7 +25,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: List files with optional prefix
    *     tags:
    *       - File Storage
-   *     description: Retrieves a list of files from MinIO storage, optionally filtered by prefix.
+   *     description: Retrieves a list of files from object storage, optionally filtered by prefix.
    *     parameters:
    *       - in: query
    *         name: prefix
@@ -70,7 +70,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Upload a file
    *     tags:
    *       - File Storage
-   *     description: Uploads a file to MinIO storage.
+   *     description: Uploads a file to object storage.
    *     requestBody:
    *       required: true
    *       content:
@@ -147,7 +147,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Download a file
    *     tags:
    *       - File Storage
-   *     description: Downloads a file from MinIO storage as a stream.
+   *     description: Downloads a file from object storage as a stream.
    *     parameters:
    *       - in: path
    *         name: fileName
@@ -324,7 +324,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Delete a file
    *     tags:
    *       - File Storage
-   *     description: Deletes a file from MinIO storage.
+   *     description: Deletes a file from object storage.
    *     parameters:
    *       - in: path
    *         name: fileName
@@ -377,7 +377,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Check if file exists
    *     tags:
    *       - File Storage
-   *     description: Checks whether a file exists in MinIO storage.
+   *     description: Checks whether a file exists in object storage.
    *     parameters:
    *       - in: path
    *         name: fileName
