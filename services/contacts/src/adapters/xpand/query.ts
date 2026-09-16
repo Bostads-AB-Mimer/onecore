@@ -226,65 +226,26 @@ export const contactCodeForNationalId = async (
 }
 
 /**
- * `cmlog.keydbtbl` for rows whose `keycode` is a `cmctc.keycmctc`.
- *
- * Log rows written against other tables also start their memo with
- * "Kontakt …"; their keys belong to those tables and must not be joined
- * against contacts, however unlikely a collision is. Same convention as the
- * address lookups elsewhere in the platform, which pair `keycode` with the
- * table key `_RQA11RNMA`.
- */
-const CMLOG_CONTACT_TABLE_KEY = '_RXJ0UWYHC'
-
-export type DbContactChangeRow = {
-  logtime: Date
-  logmemo: string
-  /**
-   * The current code of the contact the log row points at, or null when the
-   * row's key does not resolve to a contact.
-   */
-  contactCode: string | null
-}
-
-/**
  * Retrieves cmlog rows for contact changes recorded since the given timestamp.
  *
  * Only rows whose logmemo starts with "Kontakt " are returned, as these
  * represent changes to contacts. If no timestamp is provided, returns all
  * matching rows.
  *
- * The contact is resolved through `keycode`, the log row's pointer to the
- * contact's primary key, rather than through the code written in `logmemo`.
- * The memo cannot be trusted: for every contact created through Xpand's SOAP
- * service the memo carries a code one below the one actually allocated
- * (verified in production, 5 612 of 5 719 registrations over 90 days), and a
- * contact converted from person to organisation no longer carries the code
- * it was logged under. The key is correct in both cases.
- *
  * @param db - The Knex database connection to use
  * @param since - The timestamp to query changes from, or null for all rows
- * @returns A promise that resolves to an array of change rows
+ * @returns A promise that resolves to an array of cmlog rows
  */
 export const cmlogContactChanges = (
   db: knex.Knex,
   since: Date | null
-): Promise<DbContactChangeRow[]> => {
+): Promise<Record<string, unknown>[]> => {
   const base = db
     .from('cmlog')
-    .leftJoin('cmctc', (join) =>
-      join
-        .on('cmctc.keycmctc', '=', 'cmlog.keycode')
-        .andOn('cmlog.keydbtbl', '=', db.raw('?', [CMLOG_CONTACT_TABLE_KEY]))
-    )
-    .select({
-      logtime: 'cmlog.logtime',
-      logmemo: 'cmlog.logmemo',
-      contactCode: 'cmctc.cmctckod',
-    })
-    .whereLike('cmlog.logmemo', 'Kontakt %')
-    .orderBy('cmlog.logtime', 'asc')
+    .whereLike('logmemo', 'Kontakt %')
+    .orderBy('logtime', 'asc')
 
-  return since ? base.andWhere('cmlog.logtime', '>', since) : base
+  return since ? base.andWhere('logtime', '>', since) : base
 }
 
 /**
