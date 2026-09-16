@@ -97,7 +97,7 @@ describe('parking spaces', () => {
     })
 
     it('should set vacantFrom based on blockEndDate from the parking space', async () => {
-      // Arrange - future block: starts tomorrow, ends next week → hasNoActiveBlock = true
+      // Arrange - future block: starts tomorrow, ends next week — has an end date, so included
       const tomorrow = new Date()
       tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
       tomorrow.setUTCHours(0, 0, 0, 0)
@@ -334,7 +334,7 @@ describe('parking spaces', () => {
     })
 
     it('should set vacantFrom based on blockEndDate from the parking space', async () => {
-      // Arrange - future block: starts tomorrow, ends next week → hasNoActiveBlock = true
+      // Arrange - future block: starts tomorrow, ends next week — has an end date, so included
       const tomorrow = new Date()
       tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
       tomorrow.setUTCHours(0, 0, 0, 0)
@@ -440,18 +440,70 @@ describe('parking spaces', () => {
       )
     })
 
-    it('should filter out parking spaces with an active block', async () => {
+    it('should include parking spaces with a bounded active block, with vacantFrom the day after it ends', async () => {
       // Arrange
       const today = new Date()
       const yesterday = new Date(today)
-      yesterday.setDate(yesterday.getDate() - 1)
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1)
       const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+      tomorrow.setUTCHours(0, 0, 0, 0)
+      const expectedVacantFrom = new Date(tomorrow)
+      expectedVacantFrom.setUTCDate(expectedVacantFrom.getUTCDate() + 1)
 
       const blockedParkingSpace = factory.rentalObject.build({
         rentalObjectCode: 'blocked-code',
         blockStartDate: yesterday,
         blockEndDate: tomorrow,
+      })
+      const vacantParkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'vacant-code',
+      })
+
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'blocked-code',
+            }),
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'vacant-code',
+            }),
+          ],
+        })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [blockedParkingSpace, vacantParkingSpace],
+        })
+
+      // Act
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+      const blocked = res.body.content.find(
+        (ps: any) => ps.rentalObjectCode === 'blocked-code'
+      )
+      expect(new Date(blocked.availabilityInfo.vacantFrom)).toEqual(
+        expectedVacantFrom
+      )
+    })
+
+    it('should filter out parking spaces with an indefinite (no end date) active block', async () => {
+      // Arrange
+      const today = new Date()
+      const yesterday = new Date(today)
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+
+      const blockedParkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'blocked-code',
+        blockStartDate: yesterday,
+        blockEndDate: undefined,
       })
       const vacantParkingSpace = factory.rentalObject.build({
         rentalObjectCode: 'vacant-code',

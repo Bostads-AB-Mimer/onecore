@@ -1,20 +1,25 @@
 import { Knex } from 'knex'
 import config from '@src/common/config'
+import { contactsDbClient } from '@src/adapters/db'
 import { xpandDbClient } from '@src/adapters/xpand/db'
 import { xpandContactCategoryWriter } from '@src/adapters/xpand/convert-contact'
 import { xpandContactsRepository } from '@src/adapters/xpand/repository'
 import { ContactCategory } from '@src/domain/contact'
-import { requireXpandTestDb } from '../../db-support'
+import { requireContactsTestDb, requireXpandTestDb } from '../../db-support'
 import { connect, prepareDataSet } from '../../e2e/app-fixture'
 import { FULL_TEST_DATA_SET } from '../../e2e/data-set'
 
 requireXpandTestDb()
+// The repository hydrates related contacts from the contacts database, so the
+// read-back assertions below need it too.
+requireContactsTestDb()
 
 const xpandResource = xpandDbClient(config.xpandDatabase)
+const contactsResource = contactsDbClient(config.contactsDatabase)
 let xpand: Knex
 
 const writer = xpandContactCategoryWriter(xpandResource)
-const repository = xpandContactsRepository(xpandResource)
+const repository = xpandContactsRepository(xpandResource, contactsResource)
 
 const rawRow = (contactCode: string) =>
   xpand('cmctc')
@@ -33,12 +38,12 @@ beforeAll(async () => {
     WHERE cmctckod = 'P000333'
   `)
   await pool.close()
-  await xpandResource.init()
+  await Promise.all([xpandResource.init(), contactsResource.init()])
   xpand = xpandResource.get()
 })
 
 afterAll(async () => {
-  await xpandResource.close()
+  await Promise.all([xpandResource.close(), contactsResource.close()])
 })
 
 describe('xpandContactCategoryWriter.convertToOrganisation', () => {

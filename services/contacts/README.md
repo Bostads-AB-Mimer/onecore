@@ -36,6 +36,10 @@ Koa Context and servce as the source for generating the openapi.json/swagger.jso
 
 This module defines a **ContactRepository** interface, of which one implementation exists - **xpand**.
 
+Related contacts (god man, förvaltare, annan fakturamottagare) are the exception: they are read from the
+service's own `contact_relation` table, populated from Xpand by `pnpm dev:script:import-contact-relations`.
+Only the names shown for a related contact still come from Xpand.
+
 The data quality of the production source is, for lack of better words, all over the place. 
 The bulk of the application deals with making the unstructured information searchable and presentable.
 For any meaningful testing, manual or automated, you will need a data set that is production-like. 
