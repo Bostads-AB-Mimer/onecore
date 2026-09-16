@@ -1,6 +1,7 @@
 let dokopRows: Array<Record<string, unknown>> = []
 let dorevRows: Array<Record<string, unknown>> = []
 let dofilRows: Array<{ fildata: string | null }> = []
+let dofilByKeydorev: Record<string, Array<{ fildata: string | null }>> = {}
 let dofilWhere: jest.Mock
 
 const chainableSelect = (result: unknown) => {
@@ -21,9 +22,15 @@ const chainableSelect = (result: unknown) => {
 jest.mock('../../../adapters/xpand/xpandDb', () => ({
   xpandDb: jest.fn((table: string) => {
     if (table === 'dofil') {
-      dofilWhere = jest.fn().mockReturnValue({
-        select: jest.fn().mockImplementation(() => Promise.resolve(dofilRows)),
-      })
+      dofilWhere = jest.fn().mockImplementation(
+        (criteria: { keydorev: string }) => ({
+          select: jest.fn().mockImplementation(() =>
+            Promise.resolve(
+              dofilByKeydorev[criteria.keydorev] ?? dofilRows
+            )
+          ),
+        })
+      )
       return { where: dofilWhere }
     }
     if (table === 'dorev') {
@@ -44,6 +51,7 @@ beforeEach(() => {
   dokopRows = []
   dorevRows = []
   dofilRows = []
+  dofilByKeydorev = {}
 })
 
 describe(getTerminationDocumentPdf, () => {
@@ -153,6 +161,34 @@ describe(getTerminationDocumentPdf, () => {
 })
 
 describe(getSignedContractPdf, () => {
+  it('returns older contract PDF when newer contract row has no file content', async () => {
+    dokopRows = [
+      {
+        keydorev: 'new-empty',
+        title: 'Hyreskontrakt för digital signering',
+        filename: 'new.pdf',
+        createdAt: '2025-06-01T00:00:00.000Z',
+      },
+      {
+        keydorev: 'old-pdf',
+        title: 'Hyreskontrakt för digital signering',
+        filename: 'old.pdf',
+        createdAt: '2024-01-01T00:00:00.000Z',
+      },
+    ]
+    dofilByKeydorev = {
+      'new-empty': [{ fildata: null }],
+      'old-pdf': [{ fildata: pdfHex }],
+    }
+
+    const result = await getSignedContractPdf('123-456/01')
+
+    expect(result).toEqual({
+      filename: 'old.pdf',
+      content: Buffer.from('pdf-bytes'),
+    })
+  })
+
   it('returns a contract-titled document from dokop', async () => {
     dokopRows = [
       {

@@ -125,7 +125,14 @@ export const getSignedContractPdf = async (
         if (content) contentByKeydorev.set(document.keydorev, content)
       }
 
-      const picked = pickContractDocument(leaseId, documents, contentByKeydorev)
+      const documentsWithContent = documents.filter((document) =>
+        contentByKeydorev.has(document.keydorev)
+      )
+      const picked = pickContractDocument(
+        leaseId,
+        documentsWithContent,
+        contentByKeydorev
+      )
       if (picked) {
         const content = contentByKeydorev.get(picked.keydorev)
         if (content) {

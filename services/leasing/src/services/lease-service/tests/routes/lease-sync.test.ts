@@ -47,6 +47,7 @@ const getTerminationDocumentPdf = jest.spyOn(
 
 beforeEach(() => {
   jest.clearAllMocks()
+  getLeaseByExternalId.mockResolvedValue({ ok: false, err: 'lease-not-found' })
 })
 
 describe('GET /leases/sync', () => {
