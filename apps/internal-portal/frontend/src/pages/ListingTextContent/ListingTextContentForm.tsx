@@ -38,6 +38,7 @@ import {
   fromApiBlocks,
   toApiBlocks,
   hasInvalidBlock,
+  expandInvalidBlocks,
 } from './utils/contentBlocks'
 import { roomCountFromProperty } from './utils/templates'
 import { listingTextTemplates } from './templates/listingTextTemplates'
@@ -138,6 +139,8 @@ const ListingTextContentForm = () => {
     }
 
     if (hasInvalidBlock(blocks)) {
+      // Minimized blocks would hide the errors, so expand the invalid ones.
+      setBlocks(expandInvalidBlocks(blocks))
       setShowValidationErrors(true)
       toast.error('Kontrollera att alla block har giltigt innehåll')
       return

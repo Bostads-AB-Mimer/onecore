@@ -35,19 +35,38 @@ export const toApiBlocks = (blocks: ContentBlock[]): ApiContentBlock[] =>
     }
   })
 
+// An empty URL is treated as valid here so the editor can flag "missing" and
+// "malformed" separately; isInvalidBlock checks for presence first.
+export const isValidUrl = (url: string): boolean => {
+  if (!url.trim()) return true
+  try {
+    new URL(url)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// A block that would fail validation on save: an empty text block, or a link
+// block missing its name or a valid URL.
+export const isInvalidBlock = (block: ContentBlock): boolean => {
+  if (block.type === 'link') {
+    // Link blocks need both name and valid URL
+    if (!block.name?.trim() || !block.url?.trim()) return true
+    return !isValidUrl(block.url)
+  }
+  // Text blocks need content
+  return !block.content?.trim()
+}
+
 export const hasInvalidBlock = (blocks: ContentBlock[]): boolean =>
-  blocks.some((block) => {
-    if (block.type === 'link') {
-      // Link blocks need both name and valid URL
-      if (!block.name?.trim() || !block.url?.trim()) return true
-      try {
-        new URL(block.url)
-        return false
-      } catch {
-        return true
-      }
-    } else {
-      // Text blocks need content
-      return !block.content?.trim()
-    }
-  })
+  blocks.some(isInvalidBlock)
+
+// Expands every invalid block so a failed save never leaves the offending
+// blocks hidden. Valid blocks keep their collapsed state.
+export const expandInvalidBlocks = (blocks: ContentBlock[]): ContentBlock[] =>
+  blocks.map((block) =>
+    block.collapsed && isInvalidBlock(block)
+      ? { ...block, collapsed: false }
+      : block
+  )
