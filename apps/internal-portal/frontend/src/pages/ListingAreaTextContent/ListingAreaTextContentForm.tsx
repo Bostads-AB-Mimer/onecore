@@ -48,6 +48,9 @@ const ListingAreaTextContentForm = () => {
   )
   const [blocks, setBlocks] = useState<ContentBlock[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  // Counts failed save attempts; per-block validation errors are shown while
+  // non-zero and invalid blocks are expanded on each increment.
+  const [validationAttempt, setValidationAttempt] = useState(0)
 
   const {
     data: marketAreas,
@@ -90,9 +93,12 @@ const ListingAreaTextContentForm = () => {
     }
 
     if (hasInvalidBlock(blocks)) {
+      setValidationAttempt((attempt) => attempt + 1)
       toast.error('Kontrollera att alla block har giltigt innehåll')
       return
     }
+
+    setValidationAttempt(0)
 
     try {
       const contentBlocks = toApiBlocks(blocks)
@@ -308,7 +314,11 @@ const ListingAreaTextContentForm = () => {
                 </Alert>
               )}
 
-              <ContentBlocksList blocks={blocks} onBlocksChange={setBlocks} />
+              <ContentBlocksList
+                blocks={blocks}
+                onBlocksChange={setBlocks}
+                validationAttempt={validationAttempt}
+              />
             </Stack>
           </Paper>
         </Grid>

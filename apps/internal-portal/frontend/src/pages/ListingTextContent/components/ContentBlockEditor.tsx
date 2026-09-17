@@ -16,7 +16,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { leasing } from '@onecore/types'
 import { z } from 'zod'
 
-import { isInvalidBlock } from '../utils/contentBlocks'
+import { isInvalidBlock, isValidUrl } from '../utils/contentBlocks'
 
 export type ContentBlockType = z.infer<typeof leasing.v1.ContentBlockTypeSchema>
 
@@ -68,16 +68,6 @@ const blockSummary = (block: ContentBlock): string => {
     return block.name?.trim() || block.url?.trim() || ''
   }
   return block.content?.trim().replace(/\s+/g, ' ') || ''
-}
-
-const isValidUrl = (url: string): boolean => {
-  if (!url.trim()) return true
-  try {
-    new URL(url)
-    return true
-  } catch {
-    return false
-  }
 }
 
 export const ContentBlockEditor = ({

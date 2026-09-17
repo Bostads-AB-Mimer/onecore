@@ -24,7 +24,7 @@ import { ApplyTemplateMode, TemplateDialog } from './TemplateDialog'
 import type { ListingTextTemplate } from '../templates/listingTextTemplates'
 import { createBlockId, isInvalidBlock } from '../utils/contentBlocks'
 import { buildBlocksFromTemplate } from '../utils/templates'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface ContentBlocksListProps {
   blocks: ContentBlock[]
@@ -33,8 +33,10 @@ interface ContentBlocksListProps {
   templates?: ListingTextTemplate[]
   // Room count derived from the rental object, when known.
   suggestedRoomCount?: number
-  // Highlights blocks that would fail validation (set after a save attempt).
-  showValidationErrors?: boolean
+  // Number of failed save attempts so far (0 = none). While non-zero, blocks
+  // that would fail validation are highlighted; every increment also expands
+  // the invalid blocks so a failed save never leaves them hidden.
+  validationAttempt?: number
 }
 
 export const ContentBlocksList = ({
@@ -42,7 +44,7 @@ export const ContentBlocksList = ({
   onBlocksChange,
   templates = [],
   suggestedRoomCount,
-  showValidationErrors = false,
+  validationAttempt = 0,
 }: ContentBlocksListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
@@ -52,21 +54,22 @@ export const ContentBlocksList = ({
   const allCollapsed =
     blocks.length > 0 && blocks.every((block) => collapsedIds.has(block.id))
 
-  // A failed save must not leave the offending blocks hidden, so invalid
-  // blocks are expanded at the moment validation errors are switched on.
-  // Reads `blocks` through a ref so only that transition triggers it.
-  const blocksRef = useRef(blocks)
-  blocksRef.current = blocks
+  const showValidationErrors = validationAttempt > 0
+
+  // Expand the invalid blocks on every failed save attempt (and only then, so
+  // the user can still minimize them afterwards). `blocks` is intentionally
+  // not a dependency: editing a block must not re-expand others.
   useEffect(() => {
-    if (!showValidationErrors) return
+    if (validationAttempt === 0) return
     setCollapsedIds((prev) => {
       const next = new Set(prev)
-      blocksRef.current.forEach((block) => {
+      blocks.forEach((block) => {
         if (isInvalidBlock(block)) next.delete(block.id)
       })
       return next.size === prev.size ? prev : next
     })
-  }, [showValidationErrors])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [validationAttempt])
 
   const handleToggleCollapsed = (id: string) => {
     setCollapsedIds((prev) => {

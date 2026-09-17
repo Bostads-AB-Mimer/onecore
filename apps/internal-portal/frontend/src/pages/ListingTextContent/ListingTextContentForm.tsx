@@ -60,8 +60,9 @@ const ListingTextContentForm = () => {
   )
   const [blocks, setBlocks] = useState<ContentBlock[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  // Per-block validation errors are only shown after a failed save attempt.
-  const [showValidationErrors, setShowValidationErrors] = useState(false)
+  // Counts failed save attempts; per-block validation errors are shown while
+  // non-zero and invalid blocks are expanded on each increment.
+  const [validationAttempt, setValidationAttempt] = useState(0)
 
   // Validate rental object code
   const validationQuery = useValidateRentalObject(objectCode)
@@ -138,12 +139,12 @@ const ListingTextContentForm = () => {
     }
 
     if (hasInvalidBlock(blocks)) {
-      setShowValidationErrors(true)
+      setValidationAttempt((attempt) => attempt + 1)
       toast.error('Kontrollera att alla block har giltigt innehåll')
       return
     }
 
-    setShowValidationErrors(false)
+    setValidationAttempt(0)
 
     try {
       const contentBlocks = toApiBlocks(blocks)
@@ -359,7 +360,7 @@ const ListingTextContentForm = () => {
                 onBlocksChange={setBlocks}
                 templates={listingTextTemplates}
                 suggestedRoomCount={suggestedRoomCount}
-                showValidationErrors={showValidationErrors}
+                validationAttempt={validationAttempt}
               />
 
               {marketArea && (
