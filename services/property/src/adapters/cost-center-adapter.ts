@@ -32,18 +32,10 @@ export type CostCenterMembership = {
   propertyCodes: string[]
 }
 
-/**
- * Cost-center membership: the entity with its KVV areas, each holding the
- * property SHARES it covers — whole properties via the link table, and for
- * split properties (building-level KVV-area exceptions) only its side.
- * Shares are operating-company filtered: a property sold after being linked
- * stays in our own table, so unfiltered links would show ghosts with their
- * tenants still attached.
- *
- * Uncached HERE so /cost-centers/:id/tree shows admin edits immediately; the
- * /property-tree path caches this per root for 15 min (grouping adapter).
- * The expensive below-property half has its own cache (subtree adapter).
- */
+/** The cost center with its areas' property shares (see property-shares),
+ * company-filtered so a property sold after linking shows no ghost. */
+// Uncached HERE so /cost-centers/:id/tree shows admin edits at once; the
+// /property-tree path caches it per root for 15 min (grouping adapter).
 export const fetchCostCenterMembership = async (
   id: string
 ): Promise<CostCenterMembership | null> => {
@@ -64,10 +56,7 @@ export const fetchCostCenterMembership = async (
     id: area.id,
     propertyCodes: area.propertyLinks.map((link) => link.propertyCode),
   }))
-  const exceptions = await getKvvAreaExceptions({
-    kvvAreaIds: linkedAreas.map((area) => area.id),
-    propertyCodes: linkedAreas.flatMap((area) => area.propertyCodes),
-  })
+  const exceptions = await getKvvAreaExceptions()
   const sharesByArea = resolvePropertyShares(linkedAreas, exceptions)
 
   const propertyCodes = await filterToOperatingCompanies(

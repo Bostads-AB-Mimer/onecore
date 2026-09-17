@@ -152,10 +152,7 @@ export const resolveKvvAreaPropertyShares = async (
       id: area.id,
       propertyCodes: area.propertyLinks.map((link) => link.propertyCode.trim()),
     }
-    const exceptions = await getKvvAreaExceptions({
-      kvvAreaIds: [linked.id],
-      propertyCodes: linked.propertyCodes,
-    })
+    const exceptions = await getKvvAreaExceptions()
     const shares =
       resolvePropertyShares([linked], exceptions).get(area.id) ?? []
     const operating = new Set(
@@ -189,20 +186,34 @@ export const resolveCostCenterPropertyShares = async (
   }
 }
 
-/**
- * The property shares the grouping-level scopes cover, plus whatever the
- * caller named directly (whole). babuf has no cost-centre or market-area
- * column, so those become property codes before any object query runs.
- * Unfiltered — every caller below ends in filterToOperatingCompanies.
- */
+/** The shares the grouping scopes cover plus directly named (whole) properties.
+ * Unfiltered — every caller below ends in filterToOperatingCompanies. */
 const groupingPropertyShares = async (
   params: RentalObjectScopeParams
 ): Promise<PropertyShare[]> => {
+  // One resolve per area: a whole area (null = every share) and any
+  // `<kvvAreaId>:<propertyCode>` shares of it come from the same result.
+  const codesByArea = new Map<string, Set<string> | null>()
+  for (const id of params.kvvAreaIds ?? []) codesByArea.set(id, null)
+  for (const value of params.propertyShares ?? []) {
+    const at = value.indexOf(':')
+    const areaId = value.slice(0, at)
+    const codes = codesByArea.get(areaId)
+    if (codes === null) continue
+    codesByArea.set(areaId, (codes ?? new Set()).add(value.slice(at + 1)))
+  }
+
   const resolved = await Promise.all([
     ...(params.costCenterIds ?? []).map((id) =>
       resolveCostCenterPropertyShares(id)
     ),
-    ...(params.kvvAreaIds ?? []).map((id) => resolveKvvAreaPropertyShares(id)),
+    ...Array.from(codesByArea).map(([areaId, codes]) =>
+      resolveKvvAreaPropertyShares(areaId).then((shares) =>
+        codes
+          ? (shares ?? []).filter((share) => codes.has(share.propertyCode))
+          : shares
+      )
+    ),
     ...(params.marketAreaCodes ?? []).map((code) =>
       resolveMarketAreaPropertyCodes(code).then((codes) =>
         codes.map((propertyCode): PropertyShare => ({ propertyCode }))
@@ -215,17 +226,8 @@ const groupingPropertyShares = async (
   ]
 }
 
-/**
- * Scope for the search, which keeps buildings, trapphus, parkeringsområden
- * and individual objects as scopes of their own — widening those to their
- * whole property would return objects nobody selected. Shares are merged as
- * a union: a property covered whole anywhere drops its partial forms.
- *
- * The company filter is redundant for a district or KVV-area scope, whose
- * resolvers already apply it, but it is the only guard on the property codes a
- * client sends directly. One cheap query on an already-narrowed set. Inbound
- * building codes need none — rentalObjectWhere cuts company 999 on every row.
- */
+/** Search scope: structure levels stay scopes of their own; shares union up,
+ * so a property covered whole anywhere drops its partial forms. */
 export const resolveSearchScope = async (
   params: RentalObjectScopeParams
 ): Promise<ResolvedScope> => {
@@ -246,6 +248,8 @@ export const resolveSearchScope = async (
     }
   }
 
+  // Only guard on client-sent codes; building codes need none, since
+  // rentalObjectWhere cuts company 999 on every row.
   const operating = new Set(
     await filterToOperatingCompanies([...whole, ...excludedByProperty.keys()])
   )
@@ -261,13 +265,8 @@ export const resolveSearchScope = async (
   }
 }
 
-/**
- * Every property a selection touches, at any level — what the details lookup
- * needs, since its cache is keyed per property. Ticking one trapphus therefore
- * costs its fastighet's details rather than its district's, and the values are
- * reused the moment the same fastighet appears in another selection. A split
- * property costs its whole fastighet either way.
- */
+/** Every property a selection touches: the details cache is keyed per property,
+ * so a trapphus or a share costs its whole fastighet, never its district. */
 export const resolveDetailsPropertyCodes = async (
   params: RentalObjectScopeParams
 ): Promise<string[]> => {

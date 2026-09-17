@@ -4,12 +4,8 @@ import type {
   PropertyTreeNode,
 } from '@src/types/property-tree'
 
-// Split properties (MIM-1997): a building can carry a KVV-area exception
-// moving it out of its property's area. Membership then hands out SHARES of a
-// property — the default area keeps everything but the excepted buildings
-// (markyta stock and building-less objects included), each exception area
-// gets exactly its buildings. Everything here is pure post-processing over
-// the shared per-property cache, so no query changes per side.
+// Split properties (MIM-1997): a building-level KVV-area exception hands each
+// area a SHARE of a property, split here from the shared per-property cache.
 
 /** Which buildings of a property one share covers. Absent = the whole property. */
 export type BuildingSide =
@@ -41,12 +37,8 @@ export const sideKeeps = (
 const isPartial = (side: BuildingSide | undefined): boolean =>
   !!side && ('include' in side || side.exclude.size > 0)
 
-/**
- * The shares each area holds, from its property links plus the exception rows
- * touching those areas or properties. A row pointing at the property's own
- * default area is a no-op. Inbound shares come after linked ones, sorted by
- * property code so the output is stable.
- */
+/** Each area's shares: its links (minus excepted buildings) then inbound
+ * shares by property code. A row pointing at the property's own area is a no-op. */
 export const resolvePropertyShares = (
   areas: LinkedArea[],
   exceptions: KvvAreaExceptionRow[]
@@ -113,12 +105,8 @@ const sumBuildings = (buildings: CostCenterTreeProperty['buildings']) =>
     }
   )
 
-/**
- * One share of a cached management-tree subtree. An include side is only its
- * buildings; an exclude side keeps the parkeringsområden and the property
- * totals minus the removed buildings (every object sits in at most one
- * building, so the counts are additive).
- */
+/** One share of a cached subtree: an include side is only its buildings, an
+ * exclude side keeps markytor and the totals minus the removed buildings. */
 export const splitPropertySubtree = (
   subtree: CostCenterTreeProperty,
   side: BuildingSide | undefined

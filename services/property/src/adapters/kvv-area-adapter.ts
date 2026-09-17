@@ -125,36 +125,21 @@ export const getKvvAreaByRentalId = async (
   }
 }
 
-/**
- * Split-property exception rows touching a set of areas or properties: rows
- * pointing INTO the areas (foreign properties contribute a share) and rows
- * moving parts of the properties elsewhere (their shares lose those parts).
- * v1 stores only building rows; the filter keeps later objectTypes from
- * silently mangling membership before the code learns them.
- */
-export const getKvvAreaExceptions = async (scope: {
-  kvvAreaIds: string[]
-  propertyCodes: string[]
-}): Promise<KvvAreaExceptionRow[]> => {
-  if (scope.kvvAreaIds.length === 0 && scope.propertyCodes.length === 0) {
-    return []
-  }
+/** All split-property exception rows — a handful by design, so no filter.
+ * Building rows only: later objectTypes must not mangle membership unseen. */
+export const getKvvAreaExceptions = async (): Promise<
+  KvvAreaExceptionRow[]
+> => {
   try {
     const rows = await prisma.onecoreKvvAreaException
       .findMany({
-        where: {
-          objectType: 'building',
-          OR: [
-            { kvvAreaId: { in: scope.kvvAreaIds } },
-            { propertyCode: { in: scope.propertyCodes } },
-          ],
-        },
+        where: { objectType: 'building' },
         select: { kvvAreaId: true, propertyCode: true, code: true },
       })
       .then(trimStrings)
     return rows
   } catch (err) {
-    logger.error({ err, scope }, 'kvv-area-adapter.getKvvAreaExceptions')
+    logger.error({ err }, 'kvv-area-adapter.getKvvAreaExceptions')
     throw err
   }
 }

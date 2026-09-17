@@ -55,6 +55,18 @@ export const RentalObjectScopeParamsSchema = z.object({
   kvvAreaIds: repeatable(z.string().uuid()),
   marketAreaCodes: repeatable(z.string().min(1)),
   propertyCodes: repeatable(z.string().min(1)),
+  // One KVV-area's share of a split property, as `<kvvAreaId>:<propertyCode>`:
+  // the property minus its excepted buildings, or just the buildings excepted
+  // into that area. A whole property is `propertyCodes`.
+  propertyShares: repeatable(
+    z
+      .string()
+      .regex(/^[^:]+:[^:]+$/)
+      // Refined here so a bad id is a 400, not a uniqueidentifier error (500).
+      .refine((v) => z.string().uuid().safeParse(v.split(':')[0]).success, {
+        message: 'propertyShares must be <kvvAreaId uuid>:<propertyCode>',
+      })
+  ),
   buildingCodes: repeatable(z.string().min(1)),
   staircaseCodes: repeatable(z.string().min(1)),
   parkingAreaCodes: repeatable(z.string().min(1)),
