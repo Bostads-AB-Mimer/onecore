@@ -42,9 +42,11 @@ export function selectionToScopes(
 ): RentalObjectScopes {
   const out: RentalObjectScopes = {}
   for (const node of nodes) {
-    const value = ID_LEVELS.has(node.level) ? node.id : node.value
+    // A split property's node is one group's share, not the whole fastighet.
+    const value =
+      node.share ?? (ID_LEVELS.has(node.level) ? node.id : node.value)
     if (!value) continue
-    const key = LEVEL_TO_SCOPE[node.level]
+    const key = node.share ? 'propertyShares' : LEVEL_TO_SCOPE[node.level]
     out[key] = [...(out[key] ?? []), value]
   }
   for (const values of Object.values(out)) values?.sort()

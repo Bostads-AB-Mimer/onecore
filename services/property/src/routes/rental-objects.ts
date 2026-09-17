@@ -121,6 +121,7 @@ export const routes = (router: KoaRouter) => {
    *       - { in: query, name: kvvAreaIds, schema: { type: array, items: { type: string, format: uuid } } }
    *       - { in: query, name: marketAreaCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: propertyCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: propertyShares, schema: { type: array, items: { type: string } }, description: 'One KVV-area''s share of a split property, as kvvAreaId:propertyCode' }
    *       - { in: query, name: buildingCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: staircaseCodes, schema: { type: array, items: { type: string } }, description: 'Composite buildingCode-staircaseCode' }
    *       - { in: query, name: parkingAreaCodes, schema: { type: array, items: { type: string } } }
@@ -196,6 +197,7 @@ export const routes = (router: KoaRouter) => {
    *       - { in: query, name: kvvAreaIds, schema: { type: array, items: { type: string, format: uuid } } }
    *       - { in: query, name: marketAreaCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: propertyCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: propertyShares, schema: { type: array, items: { type: string } }, description: 'One KVV-area''s share of a split property, as kvvAreaId:propertyCode' }
    *       - { in: query, name: buildingCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: staircaseCodes, schema: { type: array, items: { type: string } }, description: 'Composite buildingCode-staircaseCode' }
    *       - { in: query, name: parkingAreaCodes, schema: { type: array, items: { type: string } } }

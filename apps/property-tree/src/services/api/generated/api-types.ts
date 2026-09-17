@@ -2618,6 +2618,8 @@ export interface paths {
           kvvAreaIds?: string[]
           marketAreaCodes?: string[]
           propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
           buildingCodes?: string[]
           /** @description Composite buildingCode-staircaseCode */
           staircaseCodes?: string[]
@@ -2678,6 +2680,8 @@ export interface paths {
           kvvAreaIds?: string[]
           marketAreaCodes?: string[]
           propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
           buildingCodes?: string[]
           /** @description Composite buildingCode-staircaseCode */
           staircaseCodes?: string[]

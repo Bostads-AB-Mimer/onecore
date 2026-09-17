@@ -145,6 +145,14 @@ export const NodeRow = memo(function NodeRow({
               }
             >
               {row.node.label}
+              {row.node.share && (
+                <span
+                  className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground"
+                  title="Fastigheten är delad mellan flera områden; raden visar bara detta områdes del."
+                >
+                  delad
+                </span>
+              )}
             </button>
             <div className="truncate text-xs text-muted-foreground @xl:hidden">
               <CodeLink code={row.code} path={codePath} />
