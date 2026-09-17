@@ -38,6 +38,7 @@ export interface PropertyTreeNode {
   // Set on a split property's node: `<kvvAreaId>:<fstcode>`, the one group's
   // share of it. Scopes as propertyShares, never as the whole property.
   share?: string
+  shareOf?: string // the group's name, for chips: two shares carry one label
 }
 
 export type PropertyTreeSelection = ReadonlyMap<string, PropertyTreeNode>

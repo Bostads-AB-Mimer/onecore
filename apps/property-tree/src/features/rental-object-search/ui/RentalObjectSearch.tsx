@@ -18,7 +18,6 @@ import {
 import type { RentalObjectSummary } from '@/services/api/core/rentalObjectService'
 
 import { Button } from '@/shared/ui/Button'
-import { RemovableChip } from '@/shared/ui/filters'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -26,6 +25,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu'
+import { RemovableChip } from '@/shared/ui/filters'
 import { Pagination } from '@/shared/ui/Pagination'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 
@@ -210,6 +210,12 @@ export function RentalObjectSearch() {
                 {LEVEL_LABELS[node.level]}:
               </span>{' '}
               {node.label}
+              {node.shareOf && (
+                <span className="text-muted-foreground">
+                  {' '}
+                  (del: {node.shareOf})
+                </span>
+              )}
             </RemovableChip>
           ))}
           {filterChips.map((chip) => (

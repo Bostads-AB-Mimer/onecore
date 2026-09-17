@@ -294,13 +294,16 @@ function buildWalkTree(
   const propertyWalk = (
     p: PropertyTreeDataNode,
     ancestors: string[],
-    groupId?: string
+    group?: { id: string; name: string }
   ): WalkNode => {
     const designation = p.name ?? p.code
     // A split property appears once per group with different children, so
     // the share's key carries the group and its scope is the share itself.
-    const share = p.partial && groupId ? `${groupId}:${p.code}` : undefined
-    const propKey = nodeKey('property', share ? `${p.code}@${groupId}` : p.code)
+    const share = p.partial && group ? `${group.id}:${p.code}` : undefined
+    const propKey = nodeKey(
+      'property',
+      share ? `${p.code}@${group?.id}` : p.code
+    )
     const propNode: PropertyTreeNode = {
       key: propKey,
       level: 'property',
@@ -310,7 +313,7 @@ function buildWalkTree(
       label: designation,
       ancestors,
       id: p.code,
-      ...(share ? { share } : {}),
+      ...(share && group ? { share, shareOf: group.name } : {}),
     }
     // Object leaves key their tenant lookup on the property's designation.
     const propertyContext = { propertyDesignation: designation }
@@ -430,7 +433,10 @@ function buildWalkTree(
             searchText: [groupLabel(g), g.name, g.code],
             expandOnAll: true,
             children: g.properties.map((p) =>
-              propertyWalk(p, [rootKey, groupKey], g.id)
+              propertyWalk(p, [rootKey, groupKey], {
+                id: g.id,
+                name: g.name ?? g.code,
+              })
             ),
           }
         })
