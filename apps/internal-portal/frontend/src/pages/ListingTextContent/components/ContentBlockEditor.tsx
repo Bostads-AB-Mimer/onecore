@@ -32,6 +32,8 @@ export interface ContentBlock {
   // UI-only writing hint set by templates, shown as the field placeholder.
   // Never persisted (see toApiBlocks).
   placeholder?: string
+  // UI-only: the block is shown minimized in the editor. Never persisted.
+  collapsed?: boolean
 }
 
 interface ContentBlockEditorProps {

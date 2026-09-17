@@ -61,3 +61,12 @@ export const isInvalidBlock = (block: ContentBlock): boolean => {
 
 export const hasInvalidBlock = (blocks: ContentBlock[]): boolean =>
   blocks.some(isInvalidBlock)
+
+// Expands every invalid block so a failed save never leaves the offending
+// blocks hidden. Valid blocks keep their collapsed state.
+export const expandInvalidBlocks = (blocks: ContentBlock[]): ContentBlock[] =>
+  blocks.map((block) =>
+    block.collapsed && isInvalidBlock(block)
+      ? { ...block, collapsed: false }
+      : block
+  )

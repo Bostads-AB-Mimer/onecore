@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { hasInvalidBlock, isInvalidBlock } from './contentBlocks'
+import {
+  expandInvalidBlocks,
+  hasInvalidBlock,
+  isInvalidBlock,
+  toApiBlocks,
+} from './contentBlocks'
 
 describe('isInvalidBlock', () => {
   it('flags an empty text block', () => {
@@ -69,5 +74,37 @@ describe('hasInvalidBlock', () => {
         { id: '2', type: 'text', content: '' },
       ])
     ).toBe(true)
+  })
+})
+
+describe('expandInvalidBlocks', () => {
+  it('expands collapsed invalid blocks and leaves valid ones collapsed', () => {
+    const blocks = expandInvalidBlocks([
+      { id: '1', type: 'headline', content: 'Rubrik', collapsed: true },
+      { id: '2', type: 'text', content: '', collapsed: true },
+      { id: '3', type: 'link', name: '', url: '', collapsed: false },
+    ])
+
+    expect(blocks.map((block) => block.collapsed)).toEqual([true, false, false])
+  })
+})
+
+describe('toApiBlocks', () => {
+  it('strips the UI-only collapsed flag', () => {
+    expect(
+      toApiBlocks([
+        { id: '1', type: 'text', content: 'Hej', collapsed: true },
+        {
+          id: '2',
+          type: 'link',
+          name: 'A',
+          url: 'https://a.se',
+          collapsed: true,
+        },
+      ])
+    ).toEqual([
+      { type: 'text', content: 'Hej' },
+      { type: 'link', name: 'A', url: 'https://a.se' },
+    ])
   })
 })

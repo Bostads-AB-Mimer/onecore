@@ -14,17 +14,17 @@ const initialBlocks: ContentBlock[] = [
 // Stateful host so the list's onBlocksChange round-trips like in the forms.
 const Host = ({
   blocks: initial = initialBlocks,
-  validationAttempt = 0,
+  showValidationErrors = false,
 }: {
   blocks?: ContentBlock[]
-  validationAttempt?: number
+  showValidationErrors?: boolean
 }) => {
   const [blocks, setBlocks] = useState(initial)
   return (
     <ContentBlocksList
       blocks={blocks}
       onBlocksChange={setBlocks}
-      validationAttempt={validationAttempt}
+      showValidationErrors={showValidationErrors}
     />
   )
 }
@@ -82,30 +82,15 @@ describe('ContentBlocksList', () => {
     expect(collapseButtons()).toHaveLength(1)
   })
 
-  it('expands invalid blocks after a failed save attempt', async () => {
-    const { rerender } = render(<Host />)
+  it('renders blocks whose collapsed flag is set as minimized', () => {
+    render(
+      <Host
+        blocks={initialBlocks.map((block) => ({ ...block, collapsed: true }))}
+        showValidationErrors
+      />
+    )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Minimera alla' }))
     expect(expandButtons()).toHaveLength(3)
-
-    rerender(<Host validationAttempt={1} />)
-
-    // Only the empty third block is expanded; valid blocks stay minimized.
-    expect(expandButtons()).toHaveLength(2)
-    expect(collapseButtons()).toHaveLength(1)
-    expect(screen.getByText('Innehåll krävs')).toBeInTheDocument()
-  })
-
-  it('re-expands an invalid block on every failed save attempt', async () => {
-    const { rerender } = render(<Host validationAttempt={1} />)
-
-    // The user may minimize the flagged block again after the first attempt.
-    await userEvent.click(screen.getByRole('button', { name: 'Minimera alla' }))
-    expect(expandButtons()).toHaveLength(3)
-
-    rerender(<Host validationAttempt={2} />)
-
-    expect(expandButtons()).toHaveLength(2)
-    expect(collapseButtons()).toHaveLength(1)
+    expect(screen.getByText('Tomt block')).toBeInTheDocument()
   })
 })

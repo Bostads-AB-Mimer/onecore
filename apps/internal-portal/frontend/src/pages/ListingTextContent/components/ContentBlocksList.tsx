@@ -22,9 +22,9 @@ import { SortableItem } from './SortableItem'
 import { ContentBlock, ContentBlockEditor } from './ContentBlockEditor'
 import { ApplyTemplateMode, TemplateDialog } from './TemplateDialog'
 import type { ListingTextTemplate } from '../templates/listingTextTemplates'
-import { createBlockId, isInvalidBlock } from '../utils/contentBlocks'
+import { createBlockId } from '../utils/contentBlocks'
 import { buildBlocksFromTemplate } from '../utils/templates'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 interface ContentBlocksListProps {
   blocks: ContentBlock[]
@@ -33,10 +33,8 @@ interface ContentBlocksListProps {
   templates?: ListingTextTemplate[]
   // Room count derived from the rental object, when known.
   suggestedRoomCount?: number
-  // Number of failed save attempts so far (0 = none). While non-zero, blocks
-  // that would fail validation are highlighted; every increment also expands
-  // the invalid blocks so a failed save never leaves them hidden.
-  validationAttempt?: number
+  // Highlights blocks that would fail validation (set after a save attempt).
+  showValidationErrors?: boolean
 }
 
 export const ContentBlocksList = ({
@@ -44,48 +42,28 @@ export const ContentBlocksList = ({
   onBlocksChange,
   templates = [],
   suggestedRoomCount,
-  validationAttempt = 0,
+  showValidationErrors = false,
 }: ContentBlocksListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
-  // UI-only: which blocks are shown minimized. Never part of the block data.
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
   const hasTemplates = templates.length > 0
+  // Collapsed state lives on the blocks themselves (UI-only, see
+  // ContentBlock.collapsed), so the form can expand invalid blocks on a
+  // failed save without the list having to be told about it.
   const allCollapsed =
-    blocks.length > 0 && blocks.every((block) => collapsedIds.has(block.id))
-
-  const showValidationErrors = validationAttempt > 0
-
-  // Expand the invalid blocks on every failed save attempt (and only then, so
-  // the user can still minimize them afterwards). `blocks` is intentionally
-  // not a dependency: editing a block must not re-expand others.
-  useEffect(() => {
-    if (validationAttempt === 0) return
-    setCollapsedIds((prev) => {
-      const next = new Set(prev)
-      blocks.forEach((block) => {
-        if (isInvalidBlock(block)) next.delete(block.id)
-      })
-      return next.size === prev.size ? prev : next
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [validationAttempt])
+    blocks.length > 0 && blocks.every((block) => block.collapsed)
 
   const handleToggleCollapsed = (id: string) => {
-    setCollapsedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
+    onBlocksChange(
+      blocks.map((block) =>
+        block.id === id ? { ...block, collapsed: !block.collapsed } : block
+      )
+    )
   }
 
   const handleToggleAllCollapsed = () => {
-    setCollapsedIds(
-      allCollapsed ? new Set() : new Set(blocks.map((block) => block.id))
+    onBlocksChange(
+      blocks.map((block) => ({ ...block, collapsed: !allCollapsed }))
     )
   }
 
@@ -183,12 +161,6 @@ export const ContentBlocksList = ({
   const handleDeleteBlock = (id: string) => {
     const filteredBlocks = blocks.filter((block) => block.id !== id)
     onBlocksChange(filteredBlocks)
-    setCollapsedIds((prev) => {
-      if (!prev.has(id)) return prev
-      const next = new Set(prev)
-      next.delete(id)
-      return next
-    })
   }
 
   const activeBlock = blocks.find((block) => block.id === activeId)
@@ -287,7 +259,7 @@ export const ContentBlocksList = ({
                   onUpdate={handleUpdateBlock}
                   onDelete={handleDeleteBlock}
                   showEmptyError={showValidationErrors}
-                  collapsed={collapsedIds.has(block.id)}
+                  collapsed={block.collapsed}
                   onToggleCollapsed={handleToggleCollapsed}
                 />
               </SortableItem>
@@ -302,7 +274,7 @@ export const ContentBlocksList = ({
                 onUpdate={() => {}}
                 onDelete={() => {}}
                 isDragging
-                collapsed={collapsedIds.has(activeBlock.id)}
+                collapsed={activeBlock.collapsed}
                 onToggleCollapsed={() => {}}
               />
             ) : null}

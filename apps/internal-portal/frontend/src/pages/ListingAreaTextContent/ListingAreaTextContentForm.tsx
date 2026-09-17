@@ -27,6 +27,7 @@ import {
   fromApiBlocks,
   toApiBlocks,
   hasInvalidBlock,
+  expandInvalidBlocks,
 } from '../ListingTextContent/utils/contentBlocks'
 import { useMarketAreas } from './hooks/useMarketAreas'
 import {
@@ -48,9 +49,8 @@ const ListingAreaTextContentForm = () => {
   )
   const [blocks, setBlocks] = useState<ContentBlock[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  // Counts failed save attempts; per-block validation errors are shown while
-  // non-zero and invalid blocks are expanded on each increment.
-  const [validationAttempt, setValidationAttempt] = useState(0)
+  // Per-block validation errors are only shown after a failed save attempt.
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
 
   const {
     data: marketAreas,
@@ -93,12 +93,14 @@ const ListingAreaTextContentForm = () => {
     }
 
     if (hasInvalidBlock(blocks)) {
-      setValidationAttempt((attempt) => attempt + 1)
+      // Minimized blocks would hide the errors, so expand the invalid ones.
+      setBlocks(expandInvalidBlocks(blocks))
+      setShowValidationErrors(true)
       toast.error('Kontrollera att alla block har giltigt innehåll')
       return
     }
 
-    setValidationAttempt(0)
+    setShowValidationErrors(false)
 
     try {
       const contentBlocks = toApiBlocks(blocks)
@@ -317,7 +319,7 @@ const ListingAreaTextContentForm = () => {
               <ContentBlocksList
                 blocks={blocks}
                 onBlocksChange={setBlocks}
-                validationAttempt={validationAttempt}
+                showValidationErrors={showValidationErrors}
               />
             </Stack>
           </Paper>
