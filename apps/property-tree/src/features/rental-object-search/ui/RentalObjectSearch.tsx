@@ -219,6 +219,12 @@ export function RentalObjectSearch() {
                 {LEVEL_LABELS[node.level]}:
               </span>{' '}
               {node.label}
+              {node.shareOf && (
+                <span className="text-muted-foreground">
+                  {' '}
+                  (del: {node.shareOf})
+                </span>
+              )}
             </RemovableChip>
           ))}
           {filterChips.map((chip) => (
