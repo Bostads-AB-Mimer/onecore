@@ -166,39 +166,50 @@ export const getRentalSpecificRules = async (
   year: string
 ) => {
   const specificRules: RentalSpecificRules = {}
-  const specificRulesBuildingsQuery = db('repsk')
-    .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
-    .innerJoin('babuf', 'babyg.keycmobj', 'babuf.keyobjbyg')
-    .where('year', year)
-    .andWhereLike('keyrektk', 'INTAKT%')
-    .whereIn('hyresid', rentalIds)
-    .distinct()
 
-  const specificRulesBuildings = await specificRulesBuildingsQuery
+  // SQL Server tillåter max ~2100 parametrar per fråga, så hyresid-listan
+  // måste köras i bitar.
+  const chunkSize = 1000
+  const chunks: string[][] = []
+  for (let i = 0; i < rentalIds.length; i += chunkSize) {
+    chunks.push(rentalIds.slice(i, i + chunkSize))
+  }
 
-  specificRulesBuildings.forEach((row) => {
-    specificRules[row['hyresid'].toString().trimEnd()] = {
-      costCode: row['p2'].toString().trimEnd(),
-      property: row['p3'].toString().trimEnd(),
-    }
-  })
+  for (const chunk of chunks) {
+    const specificRulesBuildingsQuery = db('repsk')
+      .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
+      .innerJoin('babuf', 'babyg.keycmobj', 'babuf.keyobjbyg')
+      .where('year', year)
+      .andWhereLike('keyrektk', 'INTAKT%')
+      .whereIn('hyresid', chunk)
+      .distinct()
 
-  const specificRulesAreasQuery = db('repsk')
-    .innerJoin('bayta', 'bayta.keybayta', 'repsk.keycode')
-    .innerJoin('babuf', 'bayta.keycmobj', 'babuf.keyobjyta')
-    .where('year', year)
-    .andWhereLike('keyrektk', 'INTAKT%')
-    .whereIn('hyresid', rentalIds)
-    .distinct()
+    const specificRulesBuildings = await specificRulesBuildingsQuery
 
-  const specificRulesAreas = await specificRulesAreasQuery
+    specificRulesBuildings.forEach((row) => {
+      specificRules[row['hyresid'].toString().trimEnd()] = {
+        costCode: row['p2'].toString().trimEnd(),
+        property: row['p3'].toString().trimEnd(),
+      }
+    })
 
-  specificRulesAreas.forEach((row) => {
-    specificRules[row['hyresid'].toString().trimEnd()] = {
-      costCode: row['p2']?.toString().trimEnd(),
-      property: row['p3']?.toString().trimEnd(),
-    }
-  })
+    const specificRulesAreasQuery = db('repsk')
+      .innerJoin('bayta', 'bayta.keybayta', 'repsk.keycode')
+      .innerJoin('babuf', 'bayta.keycmobj', 'babuf.keyobjyta')
+      .where('year', year)
+      .andWhereLike('keyrektk', 'INTAKT%')
+      .whereIn('hyresid', chunk)
+      .distinct()
+
+    const specificRulesAreas = await specificRulesAreasQuery
+
+    specificRulesAreas.forEach((row) => {
+      specificRules[row['hyresid'].toString().trimEnd()] = {
+        costCode: row['p2']?.toString().trimEnd(),
+        property: row['p3']?.toString().trimEnd(),
+      }
+    })
+  }
 
   return specificRules
 }
