@@ -53,5 +53,6 @@ export function mapProperties(area: CostCenterTreeKvvArea): PropertyForAdmin[] {
     residenceCount: property.aggregates.residenceCount,
     parkingCount: property.aggregates.parkingCount,
     entranceCount: property.aggregates.entranceCount,
+    ...(property.partial ? { partial: true } : {}),
   }))
 }
