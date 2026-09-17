@@ -264,6 +264,11 @@ export const ListingPreview = ({
           border: '2px solid',
           borderColor: 'grey.300',
           minHeight: 300,
+          // The preview sits in a sticky column, so long content scrolls
+          // inside the panel. The offset leaves room for the sticky top gap,
+          // the heading above and the caption below.
+          maxHeight: 'calc(100vh - 120px)',
+          overflowY: 'auto',
         }}
       >
         {(rentalObjectCode || label) && (

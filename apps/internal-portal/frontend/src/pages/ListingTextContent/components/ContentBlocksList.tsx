@@ -1,6 +1,8 @@
 import { Box, Button, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import PostAddIcon from '@mui/icons-material/PostAdd'
+import UnfoldLessIcon from '@mui/icons-material/UnfoldLess'
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore'
 import {
   DndContext,
   closestCenter,
@@ -20,9 +22,9 @@ import { SortableItem } from './SortableItem'
 import { ContentBlock, ContentBlockEditor } from './ContentBlockEditor'
 import { ApplyTemplateMode, TemplateDialog } from './TemplateDialog'
 import type { ListingTextTemplate } from '../templates/listingTextTemplates'
-import { createBlockId } from '../utils/contentBlocks'
+import { createBlockId, isInvalidBlock } from '../utils/contentBlocks'
 import { buildBlocksFromTemplate } from '../utils/templates'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ContentBlocksListProps {
   blocks: ContentBlock[]
@@ -44,7 +46,45 @@ export const ContentBlocksList = ({
 }: ContentBlocksListProps) => {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false)
+  // UI-only: which blocks are shown minimized. Never part of the block data.
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
   const hasTemplates = templates.length > 0
+  const allCollapsed =
+    blocks.length > 0 && blocks.every((block) => collapsedIds.has(block.id))
+
+  // A failed save must not leave the offending blocks hidden, so invalid
+  // blocks are expanded at the moment validation errors are switched on.
+  // Reads `blocks` through a ref so only that transition triggers it.
+  const blocksRef = useRef(blocks)
+  blocksRef.current = blocks
+  useEffect(() => {
+    if (!showValidationErrors) return
+    setCollapsedIds((prev) => {
+      const next = new Set(prev)
+      blocksRef.current.forEach((block) => {
+        if (isInvalidBlock(block)) next.delete(block.id)
+      })
+      return next.size === prev.size ? prev : next
+    })
+  }, [showValidationErrors])
+
+  const handleToggleCollapsed = (id: string) => {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const handleToggleAllCollapsed = () => {
+    setCollapsedIds(
+      allCollapsed ? new Set() : new Set(blocks.map((block) => block.id))
+    )
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -140,6 +180,12 @@ export const ContentBlocksList = ({
   const handleDeleteBlock = (id: string) => {
     const filteredBlocks = blocks.filter((block) => block.id !== id)
     onBlocksChange(filteredBlocks)
+    setCollapsedIds((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
   }
 
   const activeBlock = blocks.find((block) => block.id === activeId)
@@ -183,7 +229,19 @@ export const ContentBlocksList = ({
         gap={1}
         marginBottom={2}
       >
-        <Typography variant="h6">Innehållsblock ({blocks.length})</Typography>
+        <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+          <Typography variant="h6">Innehållsblock ({blocks.length})</Typography>
+          {blocks.length > 1 && (
+            <Button
+              variant="text"
+              size="small"
+              startIcon={allCollapsed ? <UnfoldMoreIcon /> : <UnfoldLessIcon />}
+              onClick={handleToggleAllCollapsed}
+            >
+              {allCollapsed ? 'Expandera alla' : 'Minimera alla'}
+            </Button>
+          )}
+        </Box>
         {renderActions('Använd mall', 'Lägg till', 'contained')}
       </Box>
 
@@ -226,6 +284,8 @@ export const ContentBlocksList = ({
                   onUpdate={handleUpdateBlock}
                   onDelete={handleDeleteBlock}
                   showEmptyError={showValidationErrors}
+                  collapsed={collapsedIds.has(block.id)}
+                  onToggleCollapsed={handleToggleCollapsed}
                 />
               </SortableItem>
             ))}
@@ -239,6 +299,8 @@ export const ContentBlocksList = ({
                 onUpdate={() => {}}
                 onDelete={() => {}}
                 isDragging
+                collapsed={collapsedIds.has(activeBlock.id)}
+                onToggleCollapsed={() => {}}
               />
             ) : null}
           </DragOverlay>

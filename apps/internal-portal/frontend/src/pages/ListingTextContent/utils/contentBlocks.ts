@@ -35,19 +35,22 @@ export const toApiBlocks = (blocks: ContentBlock[]): ApiContentBlock[] =>
     }
   })
 
-export const hasInvalidBlock = (blocks: ContentBlock[]): boolean =>
-  blocks.some((block) => {
-    if (block.type === 'link') {
-      // Link blocks need both name and valid URL
-      if (!block.name?.trim() || !block.url?.trim()) return true
-      try {
-        new URL(block.url)
-        return false
-      } catch {
-        return true
-      }
-    } else {
-      // Text blocks need content
-      return !block.content?.trim()
+// A block that would fail validation on save: an empty text block, or a link
+// block missing its name or a valid URL.
+export const isInvalidBlock = (block: ContentBlock): boolean => {
+  if (block.type === 'link') {
+    // Link blocks need both name and valid URL
+    if (!block.name?.trim() || !block.url?.trim()) return true
+    try {
+      new URL(block.url)
+      return false
+    } catch {
+      return true
     }
-  })
+  }
+  // Text blocks need content
+  return !block.content?.trim()
+}
+
+export const hasInvalidBlock = (blocks: ContentBlock[]): boolean =>
+  blocks.some(isInvalidBlock)
