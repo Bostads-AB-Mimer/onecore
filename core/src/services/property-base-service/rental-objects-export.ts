@@ -145,7 +145,11 @@ export const routes = (router: KoaRouter) => {
               key: 'additionalInfo',
               width: 40,
             },
-            { header: 'Anläggnings ID', key: 'malarEnergiFacilityId', width: 16 },
+            {
+              header: 'Anläggnings ID',
+              key: 'malarEnergiFacilityId',
+              width: 16,
+            },
           ],
           rowMapper: (o) => ({
             rentalId: o.rentalId,
@@ -169,7 +173,10 @@ export const routes = (router: KoaRouter) => {
       setExcelDownloadHeaders(ctx, 'hyresobjekt')
       ctx.body = buffer
     } catch (err) {
-      logger.error({ err, query }, 'rental-objects-export: failed to build Excel')
+      logger.error(
+        { err, query },
+        'rental-objects-export: failed to build Excel'
+      )
       ctx.status = 500
       ctx.body = { reason: 'Internal server error', ...metadata }
     }
