@@ -1,0 +1,9 @@
+[
+  {
+    "id": "rn-2026-09-18-v372-1",
+    "date": "2026-09-18",
+    "title": "Markera flera hyreskontrakt med shift",
+    "description": "I listan över hyreskontrakt går det nu att hålla in shift och klicka i en kryssruta för att markera alla kontrakt mellan det senast klickade och det valda. Det gör det snabbare att välja många mottagare för SMS eller e-post.",
+    "category": "improvement"
+  }
+]
