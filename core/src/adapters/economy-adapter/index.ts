@@ -109,7 +109,6 @@ export async function submitMiscellaneousInvoice(
     SubmitMiscellaneousInvoiceErrorCodes
   >
 > {
-  // eslint-disable-next-line n/no-unsupported-features/node-builtins
   const formData = new FormData()
 
   if (attachment) {
@@ -117,7 +116,6 @@ export async function submitMiscellaneousInvoice(
 
     formData.append(
       'attachment',
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins
       new Blob([fileBuffer]),
       attachment.originalFilename
     )

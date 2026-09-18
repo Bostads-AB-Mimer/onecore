@@ -24,7 +24,7 @@
 # not match the lockfile.
 
 name: pnpm-setup
-description: Setup Node 20 and restore pnpm caches
+description: Setup Node (from .nvmrc) and restore pnpm caches
 inputs:
   run-generate-static:
     description: 'Whether to run pnpm generate:static'
@@ -40,7 +40,7 @@ runs:
 
     - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
       with:
-        node-version: 20
+        node-version-file: '.nvmrc'
         cache: pnpm
         cache-dependency-path: |
           **/pnpm-lock.yaml
@@ -53,13 +53,13 @@ runs:
         path: |
           ~/.local/share/pnpm/store
           libs/**/dist
-        key: ${{ runner.os }}-node-20-pnpm-${{ hashFiles(
+        key: ${{ runner.os }}-node-24-pnpm-${{ hashFiles(
           '**/pnpm-lock.yaml',
           'libs/**/src/**',
           '**/tsconfig*.json')
           }}
         restore-keys: |
-          ${{ runner.os }}-node-20-pnpm-
+          ${{ runner.os }}-node-24-pnpm-
 
     # Always run install, but use --frozen-lockfile for safety
     - name: Install dependencies
