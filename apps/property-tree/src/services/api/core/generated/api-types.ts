@@ -3767,6 +3767,49 @@ export interface paths {
       }
     }
   }
+  '/rental-objects/search/export': {
+    /**
+     * Export a rental-object search as Excel
+     * @description Every rental object the search would return, across all pages, as an
+     * .xlsx with the listing values (grundhyra, BRA, annan information,
+     * anläggnings-ID) filled in. Takes the search's scopes and filters;
+     * page and limit are ignored.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+          types?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+          subtypes?: string[]
+          q?: string
+        }
+      }
+      responses: {
+        /** @description Excel file */
+        200: {
+          content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/property-tree': {
     /**
      * Get the property tree for one grouping root

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Loader2, Plus } from 'lucide-react'
+import { Download, Loader2, Plus } from 'lucide-react'
 
 import type {
   PropertyTreeFilters,
@@ -18,7 +18,6 @@ import {
 import type { RentalObjectSummary } from '@/services/api/core/rentalObjectService'
 
 import { Button } from '@/shared/ui/Button'
-import { RemovableChip } from '@/shared/ui/filters'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -26,10 +25,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu'
+import { RemovableChip } from '@/shared/ui/filters'
 import { Pagination } from '@/shared/ui/Pagination'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 
 import { useRentalObjectDetails } from '../hooks/useRentalObjectDetails'
+import { useRentalObjectExport } from '../hooks/useRentalObjectExport'
 import {
   RENTAL_OBJECT_PAGE_SIZE,
   useRentalObjectSearch,
@@ -82,6 +83,14 @@ export function RentalObjectSearch() {
     [search.objects]
   )
   const details = useRentalObjectDetails(pageRentalIds)
+
+  const exportMutation = useRentalObjectExport()
+  const handleExport = () =>
+    exportMutation.mutate({
+      scopes,
+      types: appliedFilters.objectTypes,
+      subtypes: appliedFilters.subtypes,
+    })
 
   // Rows already on screen belong to the previous scope until this settles.
   const refreshing = search.isFetching && !search.isLoading
@@ -255,35 +264,50 @@ export function RentalObjectSearch() {
                 `${search.totalCount} hyresobjekt`
               )}
             </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  aria-label="Lägg till kolumner"
-                  title="Lägg till kolumner"
-                >
-                  <Plus className="h-4 w-4" />
-                  {extraColumns.size > 0 && ` ${extraColumns.size}`}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                  Valbara kolumner
-                </DropdownMenuLabel>
-                {OPTIONAL_COLUMNS.map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.key}
-                    checked={extraColumns.has(column.key)}
-                    // Keeps the menu open so several columns can be added.
-                    onSelect={(e) => e.preventDefault()}
-                    onCheckedChange={() => toggleExtraColumn(column.key)}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={
+                  exportMutation.isPending ||
+                  refreshing ||
+                  search.totalCount === 0
+                }
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {exportMutation.isPending ? 'Exporterar...' : 'Exportera Excel'}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label="Lägg till kolumner"
+                    title="Lägg till kolumner"
                   >
-                    <span className="truncate">{column.label}</span>
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <Plus className="h-4 w-4" />
+                    {extraColumns.size > 0 && ` ${extraColumns.size}`}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Valbara kolumner
+                  </DropdownMenuLabel>
+                  {OPTIONAL_COLUMNS.map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.key}
+                      checked={extraColumns.has(column.key)}
+                      // Keeps the menu open so several columns can be added.
+                      onSelect={(e) => e.preventDefault()}
+                      onCheckedChange={() => toggleExtraColumn(column.key)}
+                    >
+                      <span className="truncate">{column.label}</span>
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
           <div
             className={
