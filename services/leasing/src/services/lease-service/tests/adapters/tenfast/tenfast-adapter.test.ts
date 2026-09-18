@@ -7,100 +7,11 @@ import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
 import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
-import { mapToOnecoreLease } from '../../../helpers/tenfast'
 
 // Shared clock offset used to bust the module-level tag cache (TTL: 5 min) between tests.
 // Each test that needs a fresh tag fetch increments this by 1 hour before mocking Date.now.
 let tagTestClockOffset = 0
 const TAG_CACHE_BASE_TIME = new Date('2100-01-01').getTime()
-
-describe(tenfastAdapter.getLeaseTemplate, () => {
-  it('should return template when response is valid and status is 200', async () => {
-    // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    const mockResponse = {
-      status: 200,
-      data: mockTemplate,
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate('templateID')
-
-    // Assert
-    expect(result).toEqual({ ok: true, data: mockTemplate })
-  })
-
-  it('should return error "get-template-bad-request" when status is 400', async () => {
-    // Arrange
-    const mockResponse = {
-      status: 400,
-      data: { error: 'Bad request' },
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'get-template-bad-request',
-    })
-  })
-
-  it('should return error "could-not-get-template" when status is not 200 or 400', async () => {
-    // Arrange
-    const mockResponse = {
-      status: 500,
-      data: { error: 'Internal server error' },
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'could-not-get-template',
-    })
-  })
-
-  it('should return error "response-could-not-be-parsed" when schema parsing fails', async () => {
-    // Arrange
-    // Return a response with status 200 but invalid data for the schema
-    const invalidData = { notAValidTemplate: true }
-    const mockResponse = {
-      status: 200,
-      data: invalidData,
-    }
-    ;(request as jest.Mock).mockResolvedValue(mockResponse)
-
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'response-could-not-be-parsed',
-    })
-  })
-
-  it('should return error "unknown" when tenfastApiRequest throws an exception', async () => {
-    // Arrange
-    ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
-
-    // Act
-    const result = await tenfastAdapter.getLeaseTemplate('PARKING_SPACE')
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'unknown',
-    })
-  })
-})
 
 describe(tenfastAdapter.getRentalObject, () => {
   it('should return rental object when response is valid and status is 200', async () => {
@@ -281,6 +192,10 @@ describe(tenfastAdapter.getTenantByContactCode, () => {
 })
 
 describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
   const mockPagedResponse = (records: object[]) => ({
     status: 200,
     data: {
@@ -291,13 +206,37 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     },
   })
 
+  // Routes each request by URL rather than call order, so these tests don't
+  // depend on whether the module-level tags cache happens to be warm from an
+  // earlier test (which would change how many calls are made, and in what
+  // order).
+  const mockTenfastResponses = (opts: {
+    vacantOrSoonVacant?: object[]
+    givenNotice?: object[]
+    alreadyReLet?: object[]
+    tags?: object[]
+  }) => {
+    ;(request as jest.Mock).mockImplementation(({ url }: { url: string }) => {
+      if (url.includes('/hyresvard/tags')) {
+        return Promise.resolve({ status: 200, data: opts.tags ?? [] })
+      }
+      if (url.includes('filter[stage]=terminationScheduled')) {
+        return Promise.resolve(mockPagedResponse(opts.givenNotice ?? []))
+      }
+      if (url.includes('filter[stage]=upcoming')) {
+        return Promise.resolve(mockPagedResponse(opts.alreadyReLet ?? []))
+      }
+      return Promise.resolve(mockPagedResponse(opts.vacantOrSoonVacant ?? []))
+    })
+  }
+
   it('should return availability info for rental objects without upcoming leases', async () => {
     // Arrange
     const rentalObject = factory.tenfastRentalObject.build({
       externalId: 'R1001',
       avtal: [],
     })
-    ;(request as jest.Mock).mockResolvedValue(mockPagedResponse([rentalObject]))
+    mockTenfastResponses({ vacantOrSoonVacant: [rentalObject] })
 
     // Act
     const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
@@ -326,9 +265,12 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
       externalId: 'R1003',
       avtal: [],
     })
-    ;(request as jest.Mock).mockResolvedValue(
-      mockPagedResponse([rentalObjectWithUpcoming, rentalObjectWithoutUpcoming])
-    )
+    mockTenfastResponses({
+      vacantOrSoonVacant: [
+        rentalObjectWithUpcoming,
+        rentalObjectWithoutUpcoming,
+      ],
+    })
 
     // Act
     const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
@@ -340,6 +282,204 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     if (!result.ok) return
     expect(result.data).toHaveLength(1)
     expect(result.data![0].rentalObjectCode).toBe('R1003')
+  })
+
+  it('requests leases given notice (stage terminationScheduled) for the rental object type', async () => {
+    mockTenfastResponses({})
+
+    await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining(
+          '/avtal/search?hyresvard=test&filter[stage]=terminationScheduled&filter[hyresobjekt][typ]=parkering'
+        ),
+      })
+    )
+  })
+
+  it('includes rental objects whose current lease has been given notice, with vacantFrom the day after its end date', async () => {
+    // Arrange
+    const terminatingLease = factory.tenfastLease.build({
+      externalId: '110-707-00-0004/07',
+      startDate: new Date('2025-01-01'),
+      endDate: new Date('2026-10-31'),
+      stage: 'terminationScheduled',
+      cancellation: {
+        cancelled: false,
+        requested: true,
+        doneAutomatically: false,
+        receivedCancellationAt: new Date('2026-07-22'),
+        notifiedAt: null,
+        handledAt: new Date('2026-07-23'),
+        handledBy: null,
+        preferredMoveOutDate: new Date('2026-10-31'),
+        cancelledByType: null,
+      },
+      hyresobjekt: [
+        factory.tenfastRentalObject.build({
+          externalId: 'R2002',
+          avtal: undefined,
+        }),
+      ],
+    })
+    mockTenfastResponses({ givenNotice: [terminatingLease] })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(1)
+    expect(result.data![0].rentalObjectCode).toBe('R2002')
+    expect(result.data![0].vacantFrom).toEqual(
+      new Date('2026-11-01T00:00:00.000Z')
+    )
+  })
+
+  it('excludes a rental object given notice if it has already been re-let (an upcoming lease exists)', async () => {
+    // Arrange
+    const terminatingLease = factory.tenfastLease.build({
+      externalId: '110-707-00-0004/07',
+      stage: 'terminationScheduled',
+      cancellation: {
+        cancelled: false,
+        requested: true,
+        doneAutomatically: false,
+        receivedCancellationAt: new Date('2026-07-22'),
+        notifiedAt: null,
+        handledAt: new Date('2026-07-23'),
+        handledBy: null,
+        preferredMoveOutDate: new Date('2026-10-31'),
+        cancelledByType: null,
+      },
+      hyresobjekt: [
+        factory.tenfastRentalObject.build({
+          externalId: 'R2003',
+          avtal: undefined,
+        }),
+      ],
+    })
+    const upcomingLease = factory.tenfastLease.build({
+      externalId: '110-707-00-0004/08',
+      stage: 'upcoming',
+      hyresobjekt: [
+        factory.tenfastRentalObject.build({
+          externalId: 'R2003',
+          avtal: undefined,
+        }),
+      ],
+    })
+    mockTenfastResponses({
+      givenNotice: [terminatingLease],
+      alreadyReLet: [upcomingLease],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(0)
+  })
+
+  it('deduplicates a rental object returned by both the states query and the given-notice query', async () => {
+    // Arrange — same rentalObjectCode from both sources, in case Tenfast's
+    // own `soon-vacant` state can ever coexist with a terminationScheduled lease.
+    const rentalObject = factory.tenfastRentalObject.build({
+      externalId: 'R2004',
+      avtal: [],
+    })
+    const terminatingLease = factory.tenfastLease.build({
+      externalId: '110-707-00-0004/07',
+      stage: 'terminationScheduled',
+      cancellation: {
+        cancelled: false,
+        requested: true,
+        doneAutomatically: false,
+        receivedCancellationAt: new Date('2026-07-22'),
+        notifiedAt: null,
+        handledAt: new Date('2026-07-23'),
+        handledBy: null,
+        preferredMoveOutDate: new Date('2026-10-31'),
+        cancelledByType: null,
+      },
+      hyresobjekt: [
+        factory.tenfastRentalObject.build({
+          externalId: 'R2004',
+          avtal: undefined,
+        }),
+      ],
+    })
+    mockTenfastResponses({
+      vacantOrSoonVacant: [rentalObject],
+      givenNotice: [terminatingLease],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(1)
+    expect(result.data![0].rentalObjectCode).toBe('R2004')
+  })
+
+  it('returns a distinct error code when fetching terminating leases fails', async () => {
+    // Arrange
+    ;(request as jest.Mock).mockImplementation(({ url }: { url: string }) => {
+      if (url.includes('filter[stage]=terminationScheduled')) {
+        return Promise.resolve({ status: 500, data: { error: 'boom' } })
+      }
+      if (url.includes('/hyresvard/tags')) {
+        return Promise.resolve({ status: 200, data: [] })
+      }
+      return Promise.resolve(mockPagedResponse([]))
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.err).toBe('could-not-find-terminating-leases')
+  })
+
+  it('returns a distinct error code when fetching already-re-let leases fails', async () => {
+    // Arrange
+    ;(request as jest.Mock).mockImplementation(({ url }: { url: string }) => {
+      if (url.includes('filter[stage]=upcoming')) {
+        return Promise.resolve({ status: 500, data: { error: 'boom' } })
+      }
+      if (url.includes('/hyresvard/tags')) {
+        return Promise.resolve({ status: 200, data: [] })
+      }
+      return Promise.resolve(mockPagedResponse([]))
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.err).toBe('could-not-find-upcoming-leases')
   })
 
   describe('tag propagation', () => {
@@ -364,20 +504,10 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
         tags: ['tag-1'],
         avtal: [],
       })
-      ;(request as jest.Mock)
-        .mockResolvedValueOnce({
-          status: 200,
-          data: [{ _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
-        })
-        .mockResolvedValueOnce({
-          status: 200,
-          data: {
-            records: [rentalObject],
-            prev: null,
-            next: null,
-            totalCount: 1,
-          },
-        })
+      mockTenfastResponses({
+        vacantOrSoonVacant: [rentalObject],
+        tags: [{ _id: 'tag-1', code: 'UNGDOM', name: 'Ungdomslägenhet' }],
+      })
 
       const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
         tenfastAdapter.RentalObjectType.ParkingSpace
@@ -463,12 +593,6 @@ describe(tenfastAdapter.importContact, () => {
 describe(tenfastAdapter.createLease, () => {
   it('should return lease when all dependencies succeed and status is 200', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -502,17 +626,47 @@ describe(tenfastAdapter.createLease, () => {
     // Assert
     expect(result).toEqual({
       ok: true,
-      data: mapToOnecoreLease(mockLease),
+      data: mockLease.externalId,
     })
+  })
+
+  it('does not fail when hyresgaster/hyresobjekt in the response are unpopulated ObjectId strings', async () => {
+    // Arrange — only externalId is read from the response, so an unpopulated
+    // response (raw ObjectId strings, which would fail TenfastLeaseSchema's
+    // strict hyresgaster parse) must not matter here.
+    const mockTenant = factory.tenfastTenant.build()
+    jest
+      .spyOn(tenfastAdapter, 'getTenantByContactCode')
+      .mockResolvedValue({ ok: true, data: mockTenant })
+
+    const mockRentalObject = factory.tenfastRentalObject.build()
+    jest
+      .spyOn(tenfastAdapter, 'getRentalObject')
+      .mockResolvedValue({ ok: true, data: mockRentalObject })
+    ;(request as jest.Mock).mockResolvedValue({
+      status: 200,
+      data: {
+        externalId: '216-704-00-0022/02',
+        hyresgaster: ['tenant-object-id'],
+        hyresobjekt: ['rental-object-id'],
+      },
+    })
+
+    // Act
+    const contact = factory.contact.build()
+    const result = await tenfastAdapter.createLease(
+      contact,
+      'RENTAL_CODE',
+      new Date(),
+      true
+    )
+
+    // Assert
+    expect(result).toEqual({ ok: true, data: '216-704-00-0022/02' })
   })
 
   it('should set vat to 0.25 in lease request data when includeVAT is true', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseTemplate')
-      .mockResolvedValue({ ok: true, data: mockTemplate })
-
     const mockTenant = factory.tenfastTenant.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
@@ -541,11 +695,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should set vat to 0 in lease request data when includeVAT is false', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseTemplate')
-      .mockResolvedValue({ ok: true, data: mockTemplate })
-
     const mockTenant = factory.tenfastTenant.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
@@ -574,12 +723,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return lease when all dependencies succeed and status is 201', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -612,18 +755,12 @@ describe(tenfastAdapter.createLease, () => {
     // Assert
     expect(result).toEqual({
       ok: true,
-      data: mapToOnecoreLease(mockLease),
+      data: mockLease.externalId,
     })
   })
 
   it('should return error "could-not-parse-lease" when Tenfast\'s create-lease response fails schema validation', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -654,77 +791,8 @@ describe(tenfastAdapter.createLease, () => {
     })
   })
 
-  it('should return error "rental-object-has-no-template" when rental object has no lease template set', async () => {
-    // Arrange
-    const mockRentalObject = factory.tenfastRentalObject.build({
-      contractTemplate: undefined,
-    })
-    jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
-      ok: true,
-      data: mockRentalObject,
-    })
-
-    const contact = factory.contact.build()
-    const fromDate = new Date()
-
-    // Act
-    const result = await tenfastAdapter.createLease(
-      contact,
-      'RENTAL_CODE',
-      fromDate,
-      true
-    )
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'rental-object-has-no-template',
-    })
-  })
-
-  it('should return error "could-not-find-template" when getLeaseTemplate fails or returns no data', async () => {
-    // Arrange
-    const mockTenant = factory.tenfastTenant.build()
-    jest
-      .spyOn(tenfastAdapter, 'getTenantByContactCode')
-      .mockResolvedValue({ ok: true, data: mockTenant })
-
-    const mockRentalObject = factory.tenfastRentalObject.build()
-    jest
-      .spyOn(tenfastAdapter, 'getRentalObject')
-      .mockResolvedValue({ ok: true, data: mockRentalObject })
-
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: false,
-      err: 'could-not-get-template',
-    })
-
-    const contact = factory.contact.build()
-    const fromDate = new Date()
-
-    // Act
-    const result = await tenfastAdapter.createLease(
-      contact,
-      'RENTAL_CODE',
-      fromDate,
-      true
-    )
-
-    // Assert
-    expect(result).toEqual({
-      ok: false,
-      err: 'could-not-find-template',
-    })
-  })
-
   it('should return error "could-not-retrieve-tenant" when getOrCreateTenant fails or returns no data', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: false,
       err: 'could-not-retrieve-tenant',
@@ -750,12 +818,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "could-not-find-rental-object" when getRentalObject fails or returns no data', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -787,12 +849,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "rent-article-is-missing" when getRentalObject returns a rental object without rent article', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -827,12 +883,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "create-lease-bad-request" when leaseResponse status is 400', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -870,12 +920,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "lease-could-not-be-created" when leaseResponse status is not 200, 201, or 400', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -913,12 +957,6 @@ describe(tenfastAdapter.createLease, () => {
 
   it('should return error "lease-could-not-be-created" when tenfastApiRequest throws an exception', async () => {
     // Arrange
-    const mockTemplate = factory.tenfastTemplate.build()
-    jest.spyOn(tenfastAdapter, 'getLeaseTemplate').mockResolvedValue({
-      ok: true,
-      data: mockTemplate,
-    })
-
     const mockTenant = factory.tenfastTenant.build()
     jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
       ok: true,
@@ -957,6 +995,57 @@ describe(tenfastAdapter.importLease, () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    // Default: no existing lease, so the create path runs as before. Tests
+    // for the idempotency guard itself override this per-test.
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValue({ ok: false, err: 'not-found' })
+  })
+
+  // Restore the getLeaseByExternalId spy so it doesn't leak into the
+  // separate describe(tenfastAdapter.getLeaseByExternalId, ...) suite below,
+  // which needs the real implementation.
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('skips creating a lease and returns the existing one when externalId already exists', async () => {
+    const existingLease = factory.tenfastLease.build({
+      _id: 'existing-lease-id',
+    })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValue({ ok: true, data: existingLease })
+    const getTenantSpy = jest.spyOn(tenfastAdapter, 'getTenantByContactCode')
+    const getRentalObjectSpy = jest.spyOn(tenfastAdapter, 'getRentalObject')
+
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      'P12345',
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: true, data: { _id: 'existing-lease-id' } })
+    expect(request).not.toHaveBeenCalled()
+    expect(getTenantSpy).not.toHaveBeenCalled()
+    expect(getRentalObjectSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns "unknown" when checking for an existing lease fails', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValue({ ok: false, err: 'unknown' })
+
+    const result = await tenfastAdapter.importLease(
+      leaseId,
+      'P12345',
+      rentalObjectCode,
+      fromDate
+    )
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('sends externalId=leaseId and the expected sync payload to Tenfast', async () => {

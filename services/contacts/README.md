@@ -1,4 +1,3 @@
-
 # ONECore - Contacts Microservice
 
 Microservice providing the canonical source of contact and customer data in the ONECore platform.
@@ -8,7 +7,7 @@ Microservice providing the canonical source of contact and customer data in the 
 ## Service
 
 The service provides:
- 
+
 - **/contacts** - The contacts API. Search for or retrieve contact data by wildcard, canonical ID, phone number, etc
 - **/health** - Health and diagnostics endpoints
 - **/swagger** - Swagger UI
@@ -36,9 +35,13 @@ Koa Context and servce as the source for generating the openapi.json/swagger.jso
 
 This module defines a **ContactRepository** interface, of which one implementation exists - **xpand**.
 
-The data quality of the production source is, for lack of better words, all over the place. 
+Related contacts (god man, förvaltare, annan fakturamottagare) are the exception: they are read from the
+service's own `contact_relation` table, populated from Xpand by `pnpm dev:script:import-contact-relations`.
+Only the names shown for a related contact still come from Xpand.
+
+The data quality of the production source is, for lack of better words, all over the place.
 The bulk of the application deals with making the unstructured information searchable and presentable.
-For any meaningful testing, manual or automated, you will need a data set that is production-like. 
+For any meaningful testing, manual or automated, you will need a data set that is production-like.
 
 ### Build
 
@@ -48,6 +51,7 @@ from the legacy of **cjs**. The green-ness of the **esm** grass may have been ov
 ## Test setup
 
 There are two types of automated tests:
+
 - **Plain unit tests** that focus mainly on data transformation and inference.
 - **End-to-End tests** that apply their own data sets to the database, start an application on a random port and perform HTTP requests.
 
@@ -55,11 +59,114 @@ There are two types of automated tests:
 
 This script will clean out the local database and apply the full data set from `seed.sql`.
 
-This is useful for quickly adding data while testing in development mode, but running the test suite will 
+This is useful for quickly adding data while testing in development mode, but running the test suite will
 clean out, repopulate and trim the database.
 
 A number of end-to-end tests rely on a **known data set** so test failures are to be expected if you
 modify the set in `seed.sql` for manual testing.
+
+## Scripts
+
+#### import-contact-relations
+
+Imports the god man, förvaltare and annan fakturamottagare relations that live
+in Xpand into the `contact_relation` table in the contacts database. Xpand is
+only read. The script is idempotent and rerunnable: it converges the rows it
+owns (`created_by = 'xpand-import'`) on what Xpand currently says, so it can be
+run repeatedly to pick up the delta.
+
+Rows created by anyone else are never modified, and one active row survives per
+`(subject, related, role_type)` — an edge that already exists is not inserted
+again.
+
+A contact can have at most one active god man or förvaltare, so a guardian set
+outside the import — by a caseworker on the customer card — wins. If Xpand
+names a different guardian for that contact, the existing row is kept and the
+Xpand relation is reported as "Överhoppade" instead of being written.
+
+A guardian a caseworker _removes_ on the customer card is not protected in the
+same way. The import only looks at active rows, so once the caseworker's row is
+soft-deleted the contact has no active guardian and a later run re-adds the one
+Xpand names. The import is meant as a one-time migration: re-running it after
+go-live re-applies Xpand on top of caseworker removals.
+
+Always dry-run first. It prints both connection targets before it writes
+anything, which is the cheapest way to catch a half-edited environment:
+
+```bash
+pnpm dev:script:import-contact-relations --dry-run   # report only, writes nothing
+pnpm dev:script:import-contact-relations             # write
+```
+
+A holder whose leases disagree about the recipient cannot be represented at
+contact level. Those are left alone and written to
+`contact-relations-conflicts-<timestamp>.csv` in the working directory (also on
+a dry run, with a `dry-run-` marker) for manual handling. Previously imported
+recipients for such a holder are kept, not deleted, and reported as "Skyddade".
+
+If a run would soft-delete more than 20% of the rows it owns (and it owns at
+least 10), it aborts before opening the transaction and asks for `--force`.
+That case is far more often a wrong database than a real change in Xpand.
+
+##### Running against a cluster namespace
+
+The script runs locally against whatever the environment points at; it is not
+part of the service image and is not scheduled. Two connections are needed, and
+both are reached over tunnels you bring up yourself:
+
+```bash
+# contacts (write side) — the namespace database
+kubectl port-forward -n <namespace> svc/mssql 15433:1433
+
+# xpand (read side) — however you normally reach the Xpand database,
+# by convention on localhost:11434
+```
+
+Pick a local port that is free (`lsof -nP -iTCP:15433 | grep LISTEN`); a port
+already in use by something non-SQL produces a confusing "unexpected pre-login
+response" rather than a connection error.
+
+Credentials for the namespace database come from its own secret:
+
+```bash
+export CONTACTS_DATABASE__HOST=127.0.0.1
+export CONTACTS_DATABASE__PORT=15433
+export CONTACTS_DATABASE__DATABASE=contacts
+export CONTACTS_DATABASE__USER="$(kubectl get secret contacts-secrets -n <namespace> \
+  -o jsonpath='{.data.CONTACTS_DATABASE__USER}' | base64 -d)"
+export CONTACTS_DATABASE__PASSWORD="$(kubectl get secret contacts-secrets -n <namespace> \
+  -o jsonpath='{.data.CONTACTS_DATABASE__PASSWORD}' | base64 -d)"
+
+pnpm dev:script:import-contact-relations --dry-run
+```
+
+Exported variables are the reliable way to override: `dotenv` never overwrites
+an already-set `process.env` key, and this script loads dotenv twice (the
+`-r dotenv/config` preload and `dotenv.config()` in `src/common/config.ts`), so
+neither load can clobber what you set. In fish, use `set -x NAME value`.
+
+Use a throwaway shell. If those variables linger, a later `pnpm dev` in the
+same shell points the running service at that namespace.
+
+`DOTENV_CONFIG_PATH=.env.epic pnpm dev:script:...` works too, but `.env` is
+still loaded as a fallback, so the override file must define **all five**
+`CONTACTS_DATABASE__*` keys — miss one and it silently reverts to the local
+database.
+
+##### Verifying a run
+
+A second run immediately after the first should report `Nya rader: 0` and
+`Oförändrade` equal to the row count — that is the idempotency check.
+
+```sql
+SELECT role_type, COUNT(*) AS n
+FROM contact_relation
+WHERE deleted_at IS NULL
+GROUP BY role_type;
+```
+
+Avoid hand-editing rows the import owns: the next run reconciles against what
+Xpand says and will "correct" them back.
 
 ## License
 

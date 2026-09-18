@@ -9,8 +9,8 @@
  *
  */
 
-import { useRef, useState } from 'react'
-import { Filter, Search, Star, X } from 'lucide-react'
+import { useRef } from 'react'
+import { Search, X } from 'lucide-react'
 
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
@@ -33,8 +33,6 @@ export function GlobalSearchBar({
 
   const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [showFilters, setShowFilters] = useState(false)
-  const [showFavorites, setShowFavorites] = useState(false)
 
   const handleInputFocus = () => {
     console.log('input focused')

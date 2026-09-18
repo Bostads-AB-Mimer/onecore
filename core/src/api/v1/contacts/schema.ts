@@ -1,4 +1,15 @@
 import z from 'zod'
+import { WaitingListType } from '@onecore/types'
+import {
+  AddRelationErrorCodeSchema,
+  AddRelationRequestBodySchema,
+  CreateContactRequestBodySchema,
+  RelationRoleTypeSchema,
+  RemoveRelationErrorCodeSchema,
+  RemoveRelationRequestErrorCodeSchema,
+} from '@onecore/contacts/schema'
+
+import { UpdateApplicationProfileRequestParams } from '../../../services/lease-service/schemas/client/application-profile'
 
 export const PhoneNumberTypeSchema = z.enum([
   'work',
@@ -111,3 +122,122 @@ export const GetContactsListResponseBodySchema =
   ONECoreHateOASResponseBodySchema.extend({
     content: z.array(ContactSchema),
   })
+
+/* -------------------------------------------------------------------------
+ * Creating contacts
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Outcome of one step that runs after the contact itself has been created.
+ *
+ * These steps are not transactional with the create. Once the contact exists it
+ * cannot be removed, so a later failure is reported rather than rolled back.
+ */
+export const CreateContactStepStatusSchema = z.enum([
+  'created',
+  'skipped',
+  'failed',
+])
+
+/** Outcome of one requested waiting-list enrolment. */
+export const CreateContactWaitingListResultSchema = z.object({
+  waitingListType: z.nativeEnum(WaitingListType),
+  status: CreateContactStepStatusSchema,
+  error: z.string().optional(),
+})
+
+/**
+ * Request to create a contact together with the application profile a housing
+ * applicant needs.
+ *
+ * The contact fields are reused verbatim from the contacts service rather than
+ * redeclared, so the two contracts cannot drift apart.
+ */
+export const CreateContactRequestBodySchema_APIv1 =
+  CreateContactRequestBodySchema.extend({
+    /**
+     * Household and housing reference. Stored in ONECore's own application
+     * profile, not in Xpand. Omit for a customer who does not need one.
+     */
+    applicationProfile: UpdateApplicationProfileRequestParams.optional(),
+    /**
+     * Waiting lists to enrol the new customer in, mirroring the queue choice
+     * in the public registration flow. Queue time starts at enrolment, so
+     * omitting a queue the customer wanted costs them real seniority.
+     */
+    waitingLists: z.array(z.nativeEnum(WaitingListType)).default([]),
+  })
+
+export const CreateContactResponseBodySchema_APIv1 =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: z.object({
+      contactCode: z.string(),
+      contact: ContactSchema.nullable(),
+      applicationProfile: z.object({
+        status: CreateContactStepStatusSchema,
+        error: z.string().optional(),
+      }),
+      waitingLists: z.array(CreateContactWaitingListResultSchema),
+    }),
+    /**
+     * Present when the contact was created but a later step did not complete.
+     * Written for a caseworker to read, in Swedish.
+     */
+    warnings: z.array(z.string()).optional(),
+  })
+
+export const CreateContactErrorResponseBodySchema_APIv1 = z.object({
+  error: z.string(),
+  detail: z.string().optional(),
+})
+
+/* -------------------------------------------------------------------------
+ * Administering relations
+ *
+ * `createdBy`/`deletedBy` are never accepted from the client: core derives the
+ * acting user from the token, so attribution cannot be spoofed.
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Zod strips unknown keys, so a client-sent `createdBy` is silently ignored
+ * rather than rejected, even though the generated contract documents
+ * `additionalProperties: false`.
+ */
+export const AddRelationRequestBodySchema_APIv1 =
+  AddRelationRequestBodySchema.omit({ createdBy: true })
+
+/**
+ * Deliberately an alias, not a copy: a new role added in contacts widens this
+ * otherwise frozen v1 contract. The contract snapshot
+ * (test/api/contracts/v1/contacts.openapi.json) is the tripwire for that.
+ */
+export const RelationRoleTypeSchema_APIv1 = RelationRoleTypeSchema
+
+export const RelationsResponseBodySchema_APIv1 =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: z.object({ relations: z.array(RelatedContactSchema) }),
+  })
+
+/**
+ * The contacts service's own failure codes plus the two core adds on its own.
+ * Kept as an enum rather than a plain string so the generated client types
+ * constrain the caseworker-facing error-to-message map in the UI.
+ *
+ * `invalid-role-type` is emitted by core itself, before contacts is called.
+ * `missing-deleted-by` is listed for completeness only — core always sends
+ * `deletedBy`, so it cannot surface on this API.
+ */
+const RELATION_ERROR_CODES = [
+  ...AddRelationErrorCodeSchema.options,
+  ...RemoveRelationErrorCodeSchema.options,
+  ...RemoveRelationRequestErrorCodeSchema.options,
+  'invalid-request',
+  'contacts-service-error',
+] as const
+
+export const RelationErrorCodeSchema_APIv1 = z.enum(RELATION_ERROR_CODES)
+
+export const RelationErrorResponseBodySchema_APIv1 = z.object({
+  error: RelationErrorCodeSchema_APIv1,
+  detail: z.string().optional(),
+})

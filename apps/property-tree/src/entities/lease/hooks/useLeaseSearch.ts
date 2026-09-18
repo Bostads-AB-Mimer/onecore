@@ -34,9 +34,9 @@ export function useLeaseSearch(
   // Skip prefetch for batch-get filters (district, buildingManager) as they are too heavy
   const hasBatchGetFilters = Boolean(
     params.districtNames?.length ||
-      params.buildingManager?.length ||
-      params.buildingCodes?.length ||
-      params.areaCodes?.length
+    params.buildingManager?.length ||
+    params.buildingCodes?.length ||
+    params.areaCodes?.length
   )
 
   useEffect(() => {

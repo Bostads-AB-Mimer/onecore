@@ -3,11 +3,15 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { z } from 'zod'
 
 import {
-  findKvvAreaCodesByResponsibles,
+  listKvvAreas,
   updateKvvAreaResponsible,
 } from '../adapters/kvv-area-adapter'
 import { parseRequest } from '../middleware/parse-request'
-import { KvvAreaSchema, PatchKvvAreaResponsibleSchema } from '../types/kvv-area'
+import {
+  KvvAreaSchema,
+  KvvAreaWithCostCenterSchema,
+  PatchKvvAreaResponsibleSchema,
+} from '../types/kvv-area'
 
 const QuerySchema = z.object({
   responsibleUserId: z
@@ -33,12 +37,13 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /kvv-areas:
    *   get:
-   *     summary: List kvv-area codes filtered by responsible Keycloak users
+   *     summary: List kvv-areas (förvaltningsområden) with their cost center
    *     description: |
-   *       Returns the codes of kvv-areas (förvaltningsområden) whose
-   *       responsibleKeycloakUserId is one of the provided user ids. Repeat the
-   *       responsibleUserId query param for each user id. Returns an empty list
-   *       if the param is omitted.
+   *       Returns every kvv-area with its cost center (distrikt) and the
+   *       responsible kvartersvärd as a Keycloak user id. When one or more
+   *       `responsibleUserId` query params are given, only areas whose
+   *       responsible is one of those users are returned. Keycloak user details
+   *       are NOT expanded here — that composition happens in core.
    *     tags:
    *       - Kvv Areas
    *     parameters:
@@ -48,10 +53,10 @@ export const routes = (router: KoaRouter) => {
    *           type: array
    *           items:
    *             type: string
-   *         description: Keycloak user ids (repeatable)
+   *         description: Keycloak user ids (repeatable). Omit to list all areas.
    *     responses:
    *       200:
-   *         description: List of kvv-area codes
+   *         description: List of kvv-areas
    *         content:
    *           application/json:
    *             schema:
@@ -60,7 +65,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   type: array
    *                   items:
-   *                     $ref: '#/components/schemas/KvvAreaSummary'
+   *                     $ref: '#/components/schemas/KvvAreaWithCostCenter'
    *       400:
    *         description: Invalid query parameters
    *       500:
@@ -75,10 +80,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
     try {
-      const codes = await findKvvAreaCodesByResponsibles(
-        parsed.data.responsibleUserId ?? []
-      )
-      ctx.body = { content: codes.map((code) => ({ code })), ...metadata }
+      const areas = await listKvvAreas({
+        responsibleUserIds: parsed.data.responsibleUserId,
+      })
+      ctx.body = {
+        content: z.array(KvvAreaWithCostCenterSchema).parse(areas),
+        ...metadata,
+      }
     } catch (err) {
       logger.error({ err }, 'kvv-areas.get')
       ctx.status = 500

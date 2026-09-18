@@ -10,10 +10,10 @@ export { formatTenantAddress, formatTenantName } from './lib/formatting'
 // Classification utilities
 export { getTenantRoles, isOrganization } from './lib/classification'
 export {
-  RELATED_CONTACT_GROUP_LABELS,
-  RELATED_CONTACT_GROUP_ORDER,
   getContactRoleTitle,
   getIncomingRelationSummary,
+  RELATED_CONTACT_GROUP_LABELS,
+  RELATED_CONTACT_GROUP_ORDER,
 } from './lib/relations'
 
 // Hooks
@@ -22,4 +22,5 @@ export { useTenant } from './hooks/useTenant'
 export { useTenantComments } from './hooks/useTenantComments'
 export { useTenantCommunication } from './hooks/useTenantCommunication'
 export { useTenantInvoices } from './hooks/useTenantInvoices'
+export type { TenantSearchResult } from './hooks/useTenantSearch'
 export { useTenantSearch } from './hooks/useTenantSearch'

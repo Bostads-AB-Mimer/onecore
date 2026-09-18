@@ -1,5 +1,5 @@
 import {
-  DbResource,
+  type Resource,
   collectDbPoolMetrics,
   HealthCheckTarget,
   SystemHealth,
@@ -7,26 +7,25 @@ import {
   probeResource,
 } from '@onecore/utilities'
 
+import { Knex } from 'knex'
 import { OkapiRouter } from 'koa-okapi-router'
 import { AppInfrastructure } from '@src/context'
 
 const healthChecks: Map<string, SystemHealth> = new Map()
 
 export const routes = (router: OkapiRouter, infra: AppInfrastructure) => {
-  const { xpandDb } = infra
+  const { xpandDb, contactsDb } = infra
 
   /**
    * Round-up of DB connections used by this service
    */
-  const CONNECTIONS: DbResource[] = [xpandDb]
+  const CONNECTIONS: Resource<Knex>[] = [xpandDb, contactsDb]
 
-  const subsystems: HealthCheckTarget[] = [
-    {
-      probe: async (): Promise<SystemHealth> => {
-        return probeResource(xpandDb, healthChecks)
-      },
+  const subsystems: HealthCheckTarget[] = CONNECTIONS.map((resource) => ({
+    probe: async (): Promise<SystemHealth> => {
+      return probeResource(resource, healthChecks)
     },
-  ]
+  }))
 
   router.get('/health', {}, async (ctx) => {
     ctx.body = await pollSystemHealth('contacts', subsystems)

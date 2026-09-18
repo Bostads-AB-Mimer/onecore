@@ -160,17 +160,20 @@ export const getInvoicesForTenant = async (
   from?: Date
 ): Promise<AdapterResult<ParsedTenfastInvoice[], string>> => {
   try {
-    const result = await makeTenfastRequest(
-      `/v1/hyresvard/hyresgaster/${tenantId}/hyror?populate=avtal`,
-      {
-        params: {
-          // these have no effect currently
-          from: from ? dateToDateString(from) : undefined,
-          to: from ? dateToDateString(new Date()) : undefined,
-        },
-      }
-    )
+    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
+      params: {
+        hyresvard: companyId,
+        hyresgast: tenantId,
+        paginate: 'false',
+        from: from ? dateToDateString(from) : undefined,
+        to: from ? dateToDateString(new Date()) : undefined,
+      },
+    })
     if (result.status !== 200) {
+      logger.warn(
+        { tenantId, status: result.status, data: result.data },
+        'Failed to fetch Tenfast invoices for tenant'
+      )
       return { ok: false, err: result.statusText }
     }
 
@@ -187,7 +190,7 @@ export const getInvoicesForTenant = async (
     }
     return {
       ok: true,
-      data: parsedResponse.data
+      data: parsedResponse.data.records
         .filter(isVisibleTenfastInvoice)
         .map(transformToInvoice),
     }

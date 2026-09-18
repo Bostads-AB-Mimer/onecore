@@ -675,7 +675,7 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Economy service
    *     summary: Look up invoice channels for recipients
-   *     description: Returns the invoice delivery channel for each provided recipient.
+   *     description: Returns the invoice delivery channels for each provided recipient.
    *     requestBody:
    *       required: true
    *       content:

@@ -9,8 +9,8 @@ import {
 } from '@/shared/ui/Dialog'
 
 import type {
-  useInspectionWorkOrders,
   InspectionWorkOrderGroupStatus,
+  useInspectionWorkOrders,
 } from '../hooks/useInspectionWorkOrders'
 import type { InspectionWorkOrderGroup } from '../lib/buildInspectionWorkOrderGroups'
 

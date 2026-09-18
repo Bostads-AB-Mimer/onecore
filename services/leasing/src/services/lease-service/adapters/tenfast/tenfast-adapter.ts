@@ -1,6 +1,6 @@
 import { logger } from '@onecore/utilities'
 import { decodeTenfastQueryString } from './tenfast-helpers'
-import { Contact, Lease, RentalObjectAvailabilityInfo } from '@onecore/types'
+import { Contact, RentalObjectAvailabilityInfo } from '@onecore/types'
 import { isAxiosError } from 'axios'
 import z from 'zod'
 
@@ -8,8 +8,6 @@ import {
   TenfastTenant,
   TenfastRentalObject,
   TenfastRentalObjectByRentalObjectCodeResponseSchema,
-  TenfastLeaseTemplate,
-  TenfastLeaseTemplateSchema,
   TenfastTenantSchema,
   PreliminaryTerminationResponse,
   TenfastLease,
@@ -25,7 +23,6 @@ import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
 import { mapTenfastRentalObjectToAvailabilityInfo } from './tenfast-rental-object-helpers'
-import { mapToOnecoreLease } from '../../helpers/tenfast'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -97,9 +94,7 @@ export const createLease = async (
   includeVAT: boolean
 ): Promise<
   AdapterResult<
-    Lease,
-    | 'could-not-find-template'
-    | 'rental-object-has-no-template'
+    string,
     | 'could-not-retrieve-tenant'
     | 'could-not-create-tenant'
     | 'could-not-find-rental-object'
@@ -121,20 +116,11 @@ export const createLease = async (
     rentalObjectResponse.data.hyror.length === 0
   )
     return { ok: false, err: 'rent-article-is-missing' }
-  if (!rentalObjectResponse.data.contractTemplate)
-    return { ok: false, err: 'rental-object-has-no-template' }
-
-  const templateResponse = await getLeaseTemplate(
-    rentalObjectResponse.data.contractTemplate
-  )
-  if (!templateResponse.ok || !templateResponse.data)
-    return { ok: false, err: 'could-not-find-template' }
 
   try {
     const createLeaseRequestData = buildLeaseRequestData(
       tenantResult.data,
       rentalObjectResponse.data,
-      templateResponse.data,
       fromDate,
       includeVAT
     )
@@ -155,11 +141,15 @@ export const createLease = async (
         'lease-could-not-be-created'
       )
 
-    const parsedLease = TenfastLeaseSchema.safeParse(leaseResponse.data)
-    if (!parsedLease.success)
-      return handleTenfastError(parsedLease.error, 'could-not-parse-lease')
+    // Only the id is needed by callers (see leases.ts route docs: response
+    // is { LeaseId: string }) — no need to parse the full lease shape, which
+    // would require populate=hyresobjekt,hyresgaster on this POST to avoid
+    // failing TenfastLeaseSchema's strict hyresgaster parse.
+    const leaseId = leaseResponse.data?.externalId
+    if (typeof leaseId !== 'string' || !leaseId)
+      return handleTenfastError(leaseResponse.data, 'could-not-parse-lease')
 
-    return { ok: true, data: mapToOnecoreLease(parsedLease.data) }
+    return { ok: true, data: leaseId }
   } catch (err) {
     const responseData = isAxiosError(err) ? err.response?.data : undefined
     logger.error(
@@ -193,6 +183,28 @@ export const importLease = async (
     | 'unknown'
   >
 > => {
+  // Idempotency guard: a retry (e.g. after a network error on a previous
+  // attempt that Tenfast actually committed) must not import the same lease
+  // twice. Tenfast's import endpoint doesn't reject/upsert cleanly on a
+  // repeat externalId — it appends to hyror instead of replacing it, so a
+  // second call produces duplicate rent rows on the same avtal. Mirrors the
+  // same check already used by terminateLease/voidLease.
+  const existing = await getLeaseByExternalId(leaseId)
+  if (existing.ok) {
+    logger.info(
+      { leaseId },
+      'tenfast-adapter.importLease: lease already exists, skipping import'
+    )
+    return { ok: true, data: { _id: existing.data._id } }
+  }
+  if (existing.err !== 'not-found') {
+    logger.error(
+      { leaseId, err: existing.err },
+      'tenfast-adapter.importLease: failed to check for existing lease'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+
   try {
     logger.info(
       { leaseId, contactCode, rentalObjectCode },
@@ -310,11 +322,13 @@ export async function getAllLeases(): Promise<
   AdapterResult<TenfastLease[], 'unknown'>
 > {
   try {
-    const qs = decodeTenfastQueryString(new URLSearchParams({
-      populate: 'hyresobjekt,hyresgaster',
-      'filter[isArchived]': 'false',
-      limit: '500',
-    }))
+    const qs = decodeTenfastQueryString(
+      new URLSearchParams({
+        populate: 'hyresobjekt,hyresgaster',
+        'filter[isArchived]': 'false',
+        limit: '500',
+      })
+    )
     const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${qs}`
     const records = await fetchAllPages(
       (cursor) => (cursor ? `${baseUrl}&paginate=${cursor}` : baseUrl),
@@ -440,67 +454,186 @@ export const getAvailabilityForVacantRentalObjects = async (
     | 'could-not-find-rental-object'
     | 'could-not-parse-rental-object'
     | 'get-rental-object-bad-request'
+    | 'could-not-find-terminating-leases'
+    | 'could-not-find-upcoming-leases'
   >
 > => {
-  try {
-    const tagsById = await getTags()
-
-    let page = ''
-    let allRecords: any[] = []
-    let totalCount = 0
-    let first = true
-
-    do {
-      const rentalObjectResponse = await tenfastApi.request({
-        method: 'get',
-        // includeAvtal must be signed|open|all — Tenfast rejects the legacy `true`.
-        // `all` is required here: the upcoming-lease filter below has to see leases
-        // regardless of signature status, or an object with an unsigned upcoming
-        // lease would wrongly be listed as vacant.
-        url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt?hyresvard=${tenfastCompanyId}&states=vacant,soon-vacant&typ=${type}&includeAvtal=all&paginate=${page}`,
-      })
-      if (rentalObjectResponse.status === 400)
-        return handleTenfastError(
-          rentalObjectResponse.data.error,
-          'get-rental-object-bad-request'
-        )
-      else if (
-        rentalObjectResponse.status !== 200 &&
-        rentalObjectResponse.status !== 201
-      )
-        return handleTenfastError(
-          {
-            error: rentalObjectResponse.data.error,
-            status: rentalObjectResponse.status,
-          },
-          'could-not-find-rental-object'
-        )
-
-      const parsedRentalObjectResponse =
-        TenfastRentalObjectByRentalObjectCodeResponseSchema.safeParse(
-          rentalObjectResponse.data
-        )
-      if (!parsedRentalObjectResponse.success)
-        return handleTenfastError(
-          parsedRentalObjectResponse.error,
-          'could-not-parse-rental-object'
-        )
-
-      if (first) {
-        totalCount = parsedRentalObjectResponse.data.totalCount || 0
-        first = false
+  type VacantOrSoonVacantResult =
+    | { ok: true; records: any[] }
+    | {
+        ok: false
+        err:
+          | 'could-not-find-rental-object'
+          | 'could-not-parse-rental-object'
+          | 'get-rental-object-bad-request'
       }
-      allRecords = allRecords.concat(parsedRentalObjectResponse.data.records)
-      page = parsedRentalObjectResponse.data.next ?? ''
-    } while (allRecords.length < totalCount)
 
-    const recordsWithoutUpcomingLeases = allRecords.filter(
+  // This endpoint is slow (multiple seconds) for large portfolios: Tenfast
+  // caps every paginated endpoint at 100 records per page regardless of the
+  // `limit` requested (tried up to 1000), and pagination is cursor-based so
+  // pages must be fetched sequentially, not in parallel. With ~2000+ vacant/
+  // soon-vacant parking spaces, that's 20+ sequential round trips just for
+  // this loop. No workaround found on our side — raised with Tenfast to ask
+  // for a higher page size cap. The three fetches below at least run
+  // concurrently with each other rather than one after another.
+  const fetchVacantOrSoonVacant =
+    async (): Promise<VacantOrSoonVacantResult> => {
+      let page = ''
+      let allRecords: any[] = []
+      let totalCount = 0
+      let first = true
+
+      do {
+        const rentalObjectResponse = await tenfastApi.request({
+          method: 'get',
+          // includeAvtal must be signed|open|all — Tenfast rejects the legacy `true`.
+          // `all` is required here: the upcoming-lease filter below has to see leases
+          // regardless of signature status, or an object with an unsigned upcoming
+          // lease would wrongly be listed as vacant.
+          url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt?hyresvard=${tenfastCompanyId}&states=vacant,soon-vacant&typ=${type}&includeAvtal=all&paginate=${page}`,
+        })
+        if (rentalObjectResponse.status === 400)
+          return handleTenfastError(
+            rentalObjectResponse.data.error,
+            'get-rental-object-bad-request'
+          )
+        else if (
+          rentalObjectResponse.status !== 200 &&
+          rentalObjectResponse.status !== 201
+        )
+          return handleTenfastError(
+            {
+              error: rentalObjectResponse.data.error,
+              status: rentalObjectResponse.status,
+            },
+            'could-not-find-rental-object'
+          )
+
+        const parsedRentalObjectResponse =
+          TenfastRentalObjectByRentalObjectCodeResponseSchema.safeParse(
+            rentalObjectResponse.data
+          )
+        if (!parsedRentalObjectResponse.success)
+          return handleTenfastError(
+            parsedRentalObjectResponse.error,
+            'could-not-parse-rental-object'
+          )
+
+        if (first) {
+          totalCount = parsedRentalObjectResponse.data.totalCount || 0
+          first = false
+        }
+        allRecords = allRecords.concat(parsedRentalObjectResponse.data.records)
+        page = parsedRentalObjectResponse.data.next ?? ''
+      } while (allRecords.length < totalCount)
+
+      return { ok: true, records: allRecords }
+    }
+
+  type TerminatingLeasesResult =
+    | { ok: true; leases: TenfastLease[] }
+    | { ok: false; err: 'could-not-find-terminating-leases' }
+
+  // Rental objects whose current lease has been given notice (stage
+  // terminationScheduled) stay `occupied` in Tenfast until the lease
+  // actually ends, so the states query above never returns them. Query
+  // those leases directly instead of broadening the states filter to
+  // `occupied` — that would mean scanning every occupied rental object in
+  // the whole portfolio just to find the small number given notice.
+  const fetchTerminatingLeases = async (): Promise<TerminatingLeasesResult> => {
+    try {
+      const leases = await fetchAllPages(
+        (paginate) =>
+          `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=terminationScheduled&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt,hyresgaster&paginate=${paginate}`,
+        TenfastPaginatedLeaseResponseSchema
+      )
+      return { ok: true, leases }
+    } catch (err) {
+      return handleTenfastError(err, 'could-not-find-terminating-leases')
+    }
+  }
+
+  type UpcomingRentalObjectIdsResult =
+    | { ok: true; ids: Set<string> }
+    | { ok: false; err: 'could-not-find-upcoming-leases' }
+
+  // A terminationScheduled lease's own record has no visibility into other
+  // leases on the same rental object — if a new tenant has already signed an
+  // upcoming lease for it before the current tenant has left, that object is
+  // already re-let and must not be published as available. populate must
+  // include hyresgaster here too, for the same schema reason as above.
+  const fetchUpcomingRentalObjectIds =
+    async (): Promise<UpcomingRentalObjectIdsResult> => {
+      try {
+        const leases = await fetchAllPages(
+          (paginate) =>
+            `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=upcoming&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt,hyresgaster&paginate=${paginate}`,
+          TenfastPaginatedLeaseResponseSchema
+        )
+        return {
+          ok: true,
+          ids: new Set(
+            leases.flatMap((lease) =>
+              (lease.hyresobjekt ?? []).map((ro) => ro.externalId)
+            )
+          ),
+        }
+      } catch (err) {
+        return handleTenfastError(err, 'could-not-find-upcoming-leases')
+      }
+    }
+
+  try {
+    const [
+      tagsById,
+      vacantOrSoonVacantResult,
+      terminatingLeasesResult,
+      upcomingRentalObjectIdsResult,
+    ] = await Promise.all([
+      getTags(),
+      fetchVacantOrSoonVacant(),
+      fetchTerminatingLeases(),
+      fetchUpcomingRentalObjectIds(),
+    ])
+
+    if (!vacantOrSoonVacantResult.ok) return vacantOrSoonVacantResult
+    if (!terminatingLeasesResult.ok) return terminatingLeasesResult
+    if (!upcomingRentalObjectIdsResult.ok) return upcomingRentalObjectIdsResult
+
+    // Exclude records with an upcoming lease (someone's already moving in soon).
+    const availableRecords = vacantOrSoonVacantResult.records.filter(
       (record) => filterByStatus(record.avtal ?? [], ['upcoming']).length === 0
     )
 
+    const recordsFromTerminatingLeases = terminatingLeasesResult.leases.flatMap(
+      (lease) =>
+        (lease.hyresobjekt ?? [])
+          .filter(
+            (rentalObject) =>
+              !upcomingRentalObjectIdsResult.ids.has(rentalObject.externalId)
+          )
+          .map((rentalObject) => ({
+            ...rentalObject,
+            avtal: [lease],
+          }))
+    )
+
+    // Guard against the same rental object appearing in both sources (e.g. if
+    // Tenfast's own `soon-vacant` state can ever coexist with a
+    // terminationScheduled lease) — dedupe by code, keeping the first.
+    const seen = new Set<string>()
+    const combinedRecords = [
+      ...availableRecords,
+      ...recordsFromTerminatingLeases,
+    ].filter((record) => {
+      if (seen.has(record.externalId)) return false
+      seen.add(record.externalId)
+      return true
+    })
+
     return {
       ok: true,
-      data: recordsWithoutUpcomingLeases.map((record) =>
+      data: combinedRecords.map((record) =>
         mapTenfastRentalObjectToAvailabilityInfo(false, record, tagsById)
       ),
     }
@@ -629,51 +762,6 @@ export const getRentalObjectAvailabilityInfo = async (
   }
 }
 
-export const getLeaseTemplate = async (
-  templateId: string
-): Promise<
-  AdapterResult<
-    TenfastLeaseTemplate | undefined,
-    | 'could-not-get-template'
-    | 'get-template-bad-request'
-    | 'response-could-not-be-parsed'
-    | 'unknown'
-  >
-> => {
-  try {
-    const templateResponse = await tenfastApi.request({
-      method: 'get',
-      url: `${tenfastBaseUrl}/v1/hyresvard/avtalsmallar/${templateId}`,
-    })
-
-    if (templateResponse.status === 400)
-      return handleTenfastError(
-        templateResponse.data.error,
-        'get-template-bad-request'
-      )
-    else if (templateResponse.status !== 200)
-      return handleTenfastError(
-        {
-          error: templateResponse.data.error,
-          status: templateResponse.status,
-        },
-        'could-not-get-template'
-      )
-
-    const parsedTemplateResponse = TenfastLeaseTemplateSchema.safeParse(
-      templateResponse.data
-    )
-    if (!parsedTemplateResponse.success)
-      return handleTenfastError(
-        parsedTemplateResponse.error,
-        'response-could-not-be-parsed'
-      )
-    return { ok: true, data: parsedTemplateResponse.data ?? undefined }
-  } catch (err: any) {
-    return handleTenfastError(err, 'unknown')
-  }
-}
-
 export const getTenantByContactCode = async (
   contactCode: string
 ): Promise<
@@ -780,7 +868,6 @@ function handleTenfastError<E extends string>(errorObj: any, errorLiteral: E) {
 function buildLeaseRequestData(
   tenant: TenfastTenant,
   rentalObject: TenfastRentalObject,
-  template: TenfastLeaseTemplate,
   fromDate: Date,
   includeVAT: boolean
 ) {
@@ -805,8 +892,6 @@ function buildLeaseRequestData(
     betalningsOffset: '1d', //specifies the due date for the rent in relation to the start date of the rental period
     betalasForskott: true, //specifies whether the rent should be paid in advance or arrears
     vatEnabled: includeVAT,
-    originalTemplate: template._id,
-    template: template,
     method: 'simplesign',
   }
 }

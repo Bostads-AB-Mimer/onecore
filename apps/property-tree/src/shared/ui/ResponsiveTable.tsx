@@ -116,7 +116,10 @@ export function ResponsiveTable({
   }
 
   return (
-    <div className="rounded-md border overflow-x-auto">
+    // @container lets columns hide themselves based on the table's own width
+    // (e.g. 'hidden @4xl:table-cell' via column className). bg-white so the
+    // table reads as a surface even outside a Card.
+    <div className="@container rounded-md border bg-white overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>

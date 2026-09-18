@@ -61,3 +61,40 @@ export const UpdateListingTextContentRequestSchema =
   ListingTextContentSchema.pick({
     contentBlocks: true,
   }).partial()
+
+// Market-area text: one template per Xpand market area (babya), attached
+// read-only to every housing listing in that area after the object-specific
+// text. Keyed by the market area code (e.g. "VAL" for Vallby).
+export const ListingAreaTextContentSchema = z.object({
+  id: z.string().uuid(),
+  marketAreaCode: z.string(),
+  contentBlocks: z.array(ContentBlockSchema),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export const CreateListingAreaTextContentRequestSchema =
+  ListingAreaTextContentSchema.pick({
+    marketAreaCode: true,
+    contentBlocks: true,
+  })
+
+export const UpdateListingAreaTextContentRequestSchema =
+  ListingAreaTextContentSchema.pick({
+    contentBlocks: true,
+  }).partial()
+
+// Composed lookup for a rental object as returned by the internal-portal
+// backend: the object-specific text plus the market-area text of the
+// property it belongs to. `marketArea`/`areaContent` are only resolved for
+// housing; parking spaces and commercial spaces always get null.
+export const ListingTextContentLookupSchema = z.object({
+  content: ListingTextContentSchema.nullable(),
+  marketArea: z
+    .object({
+      code: z.string(),
+      name: z.string().nullable(),
+    })
+    .nullable(),
+  areaContent: ListingAreaTextContentSchema.nullable(),
+})

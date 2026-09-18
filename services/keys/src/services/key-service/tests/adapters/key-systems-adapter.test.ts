@@ -1,4 +1,5 @@
 import * as keySystemsAdapter from '../../adapters/key-systems-adapter'
+import * as keysAdapter from '../../adapters/keys-adapter'
 import * as factory from '../factories'
 import { withContext } from '../testUtils'
 
@@ -146,6 +147,72 @@ describe('key-systems-adapter', () => {
           .where({ id: system.id })
           .first()
         expect(systemFromDb.schemaFileId).toBe('file-123-456')
+      }))
+  })
+
+  describe('deactivateKeySystemAndDisposeKeys', () => {
+    it('deactivates the system and disposes only its non-disposed keys', () =>
+      withContext(async (ctx) => {
+        const system = await keySystemsAdapter.createKeySystem(
+          factory.keySystem.build({ systemCode: 'SYS-600' }),
+          ctx.db
+        )
+        const otherSystem = await keySystemsAdapter.createKeySystem(
+          factory.keySystem.build({ systemCode: 'SYS-601' }),
+          ctx.db
+        )
+
+        const activeKey1 = await keysAdapter.createKey(
+          factory.key.build({ keySystemId: system.id }),
+          ctx.db
+        )
+        const activeKey2 = await keysAdapter.createKey(
+          factory.key.build({ keySystemId: system.id }),
+          ctx.db
+        )
+        const alreadyDisposedKey = await keysAdapter.createKey(
+          factory.key.build({ keySystemId: system.id, disposed: true }),
+          ctx.db
+        )
+        const otherSystemKey = await keysAdapter.createKey(
+          factory.key.build({ keySystemId: otherSystem.id }),
+          ctx.db
+        )
+
+        const result =
+          await keySystemsAdapter.deactivateKeySystemAndDisposeKeys(
+            system.id,
+            ctx.db
+          )
+
+        expect(result).toBeDefined()
+        expect(result?.keySystem.isActive).toBe(false)
+        expect(result?.disposedKeys.map((k) => k.id).sort()).toEqual(
+          [activeKey1.id, activeKey2.id].sort()
+        )
+        expect(result?.disposedKeys.every((k) => k.disposed)).toBe(true)
+
+        // Already-disposed key is not part of the result (rollback safety)
+        expect(result?.disposedKeys.map((k) => k.id)).not.toContain(
+          alreadyDisposedKey.id
+        )
+
+        const untouched = await ctx
+          .db('keys')
+          .where({ id: otherSystemKey.id })
+          .first()
+        expect(untouched.disposed).toBe(false)
+      }))
+
+    it('returns undefined when the key system does not exist', () =>
+      withContext(async (ctx) => {
+        const result =
+          await keySystemsAdapter.deactivateKeySystemAndDisposeKeys(
+            '00000000-0000-0000-0000-000000000000',
+            ctx.db
+          )
+
+        expect(result).toBeUndefined()
       }))
   })
 

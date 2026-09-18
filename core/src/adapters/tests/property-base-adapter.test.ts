@@ -866,4 +866,142 @@ describe('@onecore/property-adapter', () => {
       })
     })
   })
+
+  describe('getKvvAreaByPropertyCode', () => {
+    const lookup = {
+      kvvArea: {
+        id: '11111111-1111-1111-1111-111111111111',
+        code: '61141',
+        name: 'Distrikt Väst: SKÄLBY',
+      },
+      costCenter: {
+        id: '33333333-3333-3333-3333-333333333333',
+        code: '61140',
+        name: 'Distrikt Väst',
+      },
+      responsibleKeycloakUserId: 'kc-user-1',
+    }
+
+    it('returns the lookup for a linked property', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/properties/01801/kvv-area`,
+          () => HttpResponse.json({ content: lookup }, { status: 200 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getKvvAreaByPropertyCode('01801')
+      expect(result).toEqual({ ok: true, data: lookup })
+    })
+
+    it('returns not-found when the property has no kvv-area link', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/properties/nolink/kvv-area`,
+          () =>
+            HttpResponse.json(
+              { reason: 'Property has no KVV-area' },
+              { status: 404 }
+            )
+        )
+      )
+
+      const result =
+        await propertyBaseAdapter.getKvvAreaByPropertyCode('nolink')
+      expect(result).toEqual({ ok: false, err: 'not-found' })
+    })
+
+    it('returns unknown when the request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/properties/01801/kvv-area`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getKvvAreaByPropertyCode('01801')
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+  })
+
+  describe('listKvvAreas', () => {
+    const area = {
+      id: '11111111-1111-1111-1111-111111111111',
+      code: '61141',
+      name: 'Distrikt Väst: SKÄLBY',
+      costCenter: {
+        id: '33333333-3333-3333-3333-333333333333',
+        code: '61140',
+        name: 'Distrikt Väst',
+      },
+      responsibleKeycloakUserId: 'kc-user-1',
+    }
+
+    it('returns every kvv-area when no filter is given', async () => {
+      let calledUrl = ''
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/kvv-areas`,
+          ({ request }) => {
+            calledUrl = request.url
+            return HttpResponse.json({ content: [area] }, { status: 200 })
+          }
+        )
+      )
+
+      const result = await propertyBaseAdapter.listKvvAreas()
+      expect(result).toEqual({ ok: true, data: [area] })
+      expect(calledUrl).not.toContain('responsibleUserId')
+    })
+
+    it('passes responsible user ids as repeated query params', async () => {
+      let calledUrl = ''
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/kvv-areas`,
+          ({ request }) => {
+            calledUrl = request.url
+            return HttpResponse.json({ content: [area] }, { status: 200 })
+          }
+        )
+      )
+
+      await propertyBaseAdapter.listKvvAreas({
+        responsibleUserIds: ['u1', 'u2'],
+      })
+      expect(calledUrl).toContain('responsibleUserId=u1')
+      expect(calledUrl).toContain('responsibleUserId=u2')
+    })
+
+    it('returns unknown when the request fails', async () => {
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/kvv-areas`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.listKvvAreas()
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns nothing for an empty responsible filter without calling the service', async () => {
+      // An empty array serialises to no query param, which the service reads as
+      // "no filter" — "restrict to nobody" must not fail open to "everything".
+      let called = false
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/kvv-areas`, () => {
+          called = true
+          return HttpResponse.json({ content: [area] }, { status: 200 })
+        })
+      )
+
+      const result = await propertyBaseAdapter.listKvvAreas({
+        responsibleUserIds: [],
+      })
+
+      expect(result).toEqual({ ok: true, data: [] })
+      expect(called).toBe(false)
+    })
+  })
 })

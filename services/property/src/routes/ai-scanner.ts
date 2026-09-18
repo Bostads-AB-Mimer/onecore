@@ -1,7 +1,6 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
 import { parseRequest } from '../middleware/parse-request'
-import { z } from 'zod'
 import {
   AnalyzeScannerImageRequestSchema,
   AIScannerAnalysisResultSchema,

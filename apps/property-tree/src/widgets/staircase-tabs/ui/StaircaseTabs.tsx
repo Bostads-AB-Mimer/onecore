@@ -2,11 +2,10 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowRight, FilePlus } from 'lucide-react'
 
-import { linkToOdooCreateMaintenanceRequestForContext } from '@/shared/lib/odooUtils'
-
 import { Building, ResidenceSummary, Staircase } from '@/services/types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
+import { linkToOdooCreateMaintenanceRequestForContext } from '@/shared/lib/odooUtils'
 import { numericCompare } from '@/shared/lib/sorting'
 import { paths } from '@/shared/routes'
 import { ContextType } from '@/shared/types/ui'

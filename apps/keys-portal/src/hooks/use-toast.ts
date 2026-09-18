@@ -20,10 +20,7 @@ function genId() {
 }
 
 type ActionType =
-  | 'ADD_TOAST'
-  | 'UPDATE_TOAST'
-  | 'DISMISS_TOAST'
-  | 'REMOVE_TOAST'
+  'ADD_TOAST' | 'UPDATE_TOAST' | 'DISMISS_TOAST' | 'REMOVE_TOAST'
 
 type Action =
   | {

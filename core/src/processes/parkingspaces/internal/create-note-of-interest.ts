@@ -33,6 +33,7 @@ import { sendNotificationToRole } from '../../../adapters/communication-adapter'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
 
 // PROCESS Part 1 - Create Note of Interest for Scored Parking Space
+// See DOCS_Create_Note_of_Interest_for_Scored_Parking_Space.md for the full flow.
 export const createNoteOfInterestForInternalParkingSpace = async (
   parkingSpaceId: string,
   contactCode: string,

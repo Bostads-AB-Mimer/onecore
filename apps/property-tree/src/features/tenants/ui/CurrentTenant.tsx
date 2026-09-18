@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { LeaseInfo } from '@/entities/lease'
-import { TenantLeaseCard, formatTenantName } from '@/entities/tenant'
+import { formatTenantName, TenantLeaseCard } from '@/entities/tenant'
 
 import { leaseService } from '@/services/api/core'
 import type { Lease } from '@/services/api/core/leaseService'

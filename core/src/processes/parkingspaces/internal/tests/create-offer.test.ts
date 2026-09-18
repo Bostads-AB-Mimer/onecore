@@ -106,7 +106,7 @@ describe('createOfferForInternalParkingSpace', () => {
     expect(result).toEqual({
       processStatus: ProcessStatus.failed,
       error: CreateOfferErrorCodes.NoApplicants,
-      httpStatus: 500,
+      httpStatus: 404,
       response: {
         message: 'No eligible applicant found, no offer created.',
         errorCode: CreateOfferErrorCodes.NoApplicants,
@@ -350,6 +350,86 @@ describe('createOfferForInternalParkingSpace', () => {
       data: null,
       httpStatus: 200,
     })
+  })
+
+  it('does not duplicate the winner or include disqualified applicants in selectedApplicants when an earlier applicant is disqualified', async () => {
+    const listing = factory.listing.build({ status: ListingStatus.Expired })
+    jest
+      .spyOn(leasingAdapter, 'getListingByListingId')
+      .mockResolvedValue(listing)
+
+    jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+      ok: true,
+      data: factory.vacantParkingSpace
+        .params({
+          rentalObjectCode: listing.rentalObjectCode,
+        })
+        .build(),
+    })
+
+    const applicants = [
+      factory.detailedApplicant
+        .params({ id: 1, contactCode: 'P1', priority: 1 })
+        .build(),
+      factory.detailedApplicant
+        .params({ id: 2, contactCode: 'P2', priority: 2 })
+        .build(),
+      factory.detailedApplicant
+        .params({ id: 3, contactCode: 'P3', priority: 3 })
+        .build(),
+    ]
+
+    jest
+      .spyOn(leasingAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({ ok: true, data: applicants })
+    jest
+      .spyOn(leasingAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+
+    // Applicant 1 fails validation and is disqualified. Applicant 2 passes
+    // and becomes the winner. Applicant 3 is never evaluated (the search
+    // stops at the first eligible applicant) and remains Active.
+    jest
+      .spyOn(leasingAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: { tag: 'no-housing-contract-in-the-area', data: {} },
+      })
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(leasingAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest.spyOn(leasingAdapter, 'updateApplicantStatus').mockResolvedValue(null)
+    jest
+      .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
+      .mockResolvedValueOnce({ ok: true, data: null })
+    jest
+      .spyOn(leasingAdapter, 'createOffer')
+      .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
+
+    await createOfferForInternalParkingSpace(123)
+
+    expect(leasingAdapter.createOffer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicantId: 2,
+        selectedApplicants: [
+          expect.objectContaining({
+            applicantId: 2,
+            status: ApplicantStatus.Offered,
+          }),
+          expect.objectContaining({
+            applicantId: 3,
+            status: ApplicantStatus.Active,
+          }),
+        ],
+      })
+    )
   })
 
   it('fails if retrieving contact information fails', async () => {

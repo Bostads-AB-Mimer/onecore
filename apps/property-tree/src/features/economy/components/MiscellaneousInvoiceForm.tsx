@@ -6,6 +6,7 @@ import {
   XledgerContact,
   XledgerProject,
 } from '@onecore/types'
+import { SubmitMiscellaneousInvoiceErrorCodes } from '@onecore/types'
 import { useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
@@ -16,8 +17,6 @@ import { useRentalProperties } from '@/entities/rental-property'
 import { useTenant } from '@/entities/tenant'
 import { TenantSearchResult } from '@/entities/tenant/hooks/useTenantSearch'
 import { useUser } from '@/entities/user'
-
-import { SubmitMiscellaneousInvoiceErrorCodes } from '@onecore/types'
 
 import { Lease as CoreLease } from '@/services/api/core'
 import { ApiError } from '@/services/api/core/baseApi'
@@ -92,13 +91,13 @@ export function MiscellaneousInvoiceForm() {
 
   const [reference, setReference] = useState<XledgerContact | null>(null)
 
+  const userEmail = userState.tag === 'success' ? userState.user.email : null
+
   useEffect(() => {
-    if (userState.tag === 'success' && contacts) {
-      setReference(
-        contacts.find((c) => c.email === userState.user.email) ?? null
-      )
+    if (userEmail && contacts) {
+      setReference(contacts.find((c) => c.email === userEmail) ?? null)
     }
-  }, [JSON.stringify(userState), contacts])
+  }, [userEmail, contacts])
 
   const [errors, setErrors] = useState<FormErrors>({})
 

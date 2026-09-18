@@ -6,7 +6,6 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import dayjs from 'dayjs'
 import {
   GetActiveOfferByListingIdErrorCodes,
   RouteErrorResponse,
@@ -22,7 +21,10 @@ import { ProcessStatus } from '../../common/types'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
-import { makeAdminApplicationProfileRequestParams } from './helpers/application-profile'
+import {
+  makeAdminApplicationProfileRequestParams,
+  makeClientApplicationProfileRequestParams,
+} from './helpers/application-profile'
 import { schemas } from './schemas'
 import { isAllowedNumResidents } from './services/is-allowed-num-residents'
 
@@ -31,6 +33,7 @@ import { routes as listings } from './listings'
 import { routes as commentsRoutes } from './comments'
 import { routes as rentalObjectsRoutes } from './rental-objects'
 import { routes as textContentRoutes } from './text-content'
+import { routes as areaTextContentRoutes } from './area-text-content'
 import { routes as leasesRoutes } from './leases'
 import { routes as keysExportRoutes } from './keys-export'
 
@@ -72,6 +75,7 @@ export const routes = (router: KoaRouter) => {
   commentsRoutes(router)
   rentalObjectsRoutes(router)
   textContentRoutes(router)
+  areaTextContentRoutes(router)
   keysExportRoutes(router)
 
   leasesRoutes(router)
@@ -1310,46 +1314,6 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /offers/{offerId}/expire:
-   *   get:
-   *     summary: Expire an offer
-   *     tags:
-   *       - Lease service
-   *     description: Expires an offer
-   *     parameters:
-   *       - in: path
-   *         name: offerId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the offer to expire
-   *     responses:
-   *       '202':
-   *         description: Offer expired successful.
-   *       '500':
-   *         description: Internal server error. Failed to expire the offer.
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/offers/:offerId/expire', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await internalParkingSpaceProcesses.expireOffer(
-      parseInt(ctx.params.offerId)
-    )
-
-    if (result.processStatus === ProcessStatus.successful) {
-      logger.info(result)
-      ctx.status = 202
-      ctx.body = { message: 'Offer expired successfully', ...metadata }
-      return
-    }
-
-    ctx.status = 500
-    ctx.body = { error: result.error, ...metadata }
-  })
-
-  /**
-   * @swagger
    * /applicants:
    *   get:
    *     summary: Get applicants by contact code
@@ -2009,37 +1973,6 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
-  type UpdateClientApplicationProfileRequestParams = z.infer<
-    typeof schemas.client.applicationProfile.UpdateApplicationProfileRequestParams
-  >
-
-  function makeClientApplicationProfileRequestParams(
-    body: UpdateClientApplicationProfileRequestParams,
-    existingProfile?: leasingAdapter.GetApplicationProfileResponseData
-  ): leasingAdapter.CreateOrUpdateApplicationProfileRequestParams {
-    return {
-      expiresAt: dayjs(new Date()).add(6, 'months').toDate(),
-      numChildren: body.numChildren,
-      numAdults: body.numAdults,
-      housingType: body.housingType,
-      landlord: body.landlord,
-      housingTypeDescription: body.housingTypeDescription,
-      lastUpdatedAt: new Date(),
-      housingReference: {
-        comment: existingProfile?.housingReference.comment ?? null,
-        email: body.housingReference.email,
-        phone: body.housingReference.phone,
-        reviewedAt: existingProfile?.housingReference.reviewedAt ?? null,
-        reviewedBy: existingProfile?.housingReference.reviewedBy ?? null,
-        reasonRejected:
-          existingProfile?.housingReference.reasonRejected ?? null,
-        reviewStatus:
-          existingProfile?.housingReference.reviewStatus ?? 'PENDING',
-        expiresAt: existingProfile?.housingReference.expiresAt ?? null,
-      },
-    }
-  }
-
   /**
    * @swagger
    * /contacts/{contactCode}/application-profile/client:
@@ -2337,7 +2270,10 @@ export const routes = (router: KoaRouter) => {
         triggeredBy
       )
       ctx.status = result.httpStatus
-      ctx.body = { content: result.response, ...metadata }
+      ctx.body =
+        result.processStatus === ProcessStatus.successful
+          ? { content: result.response, ...metadata }
+          : { error: result.error, content: result.response, ...metadata }
     } catch (error) {
       logger.error(error, 'Error')
       ctx.status = 500

@@ -63,7 +63,7 @@ async function seedKvvAreas(
 }> {
   const rows = await prisma.administrativeUnit.findMany({
     where: { district: { not: null }, deleteMark: 0 },
-    select: { code: true, administrativeUnitTypeId: true },
+    select: { code: true, name: true, administrativeUnitTypeId: true },
   })
 
   const codeToId = new Map<string, string>()
@@ -83,10 +83,15 @@ async function seedKvvAreas(
       continue
     }
 
+    // The kvv-area name is the Xpand caption (bafen.caption, mapped to `name`),
+    // e.g. "Distrikt Mitt: CENTRUM". Captions are not unique across areas —
+    // consumers must key on `code`.
+    const name = row.name?.trim() || null
+
     const record = await prisma.onecoreKvvArea.upsert({
       where: { code },
-      create: { code, costCenterId },
-      update: { costCenterId },
+      create: { code, costCenterId, name },
+      update: { costCenterId, name },
       select: { id: true, code: true },
     })
     codeToId.set(record.code, record.id)

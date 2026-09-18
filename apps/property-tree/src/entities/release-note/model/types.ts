@@ -1,9 +1,5 @@
 export type ReleaseNoteCategory =
-  | 'feature'
-  | 'fix'
-  | 'improvement'
-  | 'info'
-  | 'warning'
+  'feature' | 'fix' | 'improvement' | 'info' | 'warning'
 
 export interface ReleaseNote {
   id: string

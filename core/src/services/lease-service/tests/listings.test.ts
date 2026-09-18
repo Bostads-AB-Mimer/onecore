@@ -5,10 +5,12 @@ import bodyParser from 'koa-bodyparser'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
+import * as communicationAdapter from '../../../adapters/communication-adapter'
 
 import * as factory from '../../../../test/factories'
 import {
   ApplicantStatus,
+  CreateOfferErrorCodes,
   GetActiveOfferByListingIdErrorCodes,
   ListingStatus,
   UpdateListingStatusErrorCodes,
@@ -689,5 +691,86 @@ describe('PUT /listings/:listingId/status', () => {
       .send({ status: ListingStatus.Closed })
 
     expect(res.status).toBe(200)
+  })
+})
+
+describe('POST /listings/:listingId/offers', () => {
+  it('responds with 201 on success', async () => {
+    const listing = factory.listing.build({ status: ListingStatus.Expired })
+    jest
+      .spyOn(tenantLeaseAdapter, 'getListingByListingId')
+      .mockResolvedValue(listing)
+    jest.spyOn(tenantLeaseAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+      ok: true,
+      data: factory.vacantParkingSpace
+        .params({ rentalObjectCode: listing.rentalObjectCode })
+        .build(),
+    })
+    jest
+      .spyOn(tenantLeaseAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.detailedApplicant.buildList(1),
+      })
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+    jest
+      .spyOn(tenantLeaseAdapter, 'validatePropertyRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(tenantLeaseAdapter, 'validateResidentialAreaRentalRules')
+      .mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+    jest
+      .spyOn(tenantLeaseAdapter, 'createOffer')
+      .mockResolvedValueOnce({ ok: true, data: factory.offer.build() })
+    jest
+      .spyOn(communicationAdapter, 'sendParkingSpaceOfferEmail')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    const res = await request(app.callback()).post('/listings/1/offers')
+
+    expect(res.status).toBe(201)
+  })
+
+  it('responds with 404 when there is no eligible applicant, not 500', async () => {
+    const listing = factory.listing.build({ status: ListingStatus.Expired })
+    jest
+      .spyOn(tenantLeaseAdapter, 'getListingByListingId')
+      .mockResolvedValue(listing)
+    jest.spyOn(tenantLeaseAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+      ok: true,
+      data: factory.vacantParkingSpace
+        .params({ rentalObjectCode: listing.rentalObjectCode })
+        .build(),
+    })
+    jest
+      .spyOn(tenantLeaseAdapter, 'getDetailedApplicantsByListingId')
+      .mockResolvedValueOnce({ ok: true, data: [] })
+    jest
+      .spyOn(tenantLeaseAdapter, 'updateListingStatus')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    const res = await request(app.callback()).post('/listings/1/offers')
+
+    expect(res.status).toBe(404)
+    expect(res.body.error).toBe(CreateOfferErrorCodes.NoApplicants)
+  })
+
+  it('responds with 500 for an actual technical failure', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getListingByListingId')
+      .mockResolvedValue(undefined)
+
+    const res = await request(app.callback()).post('/listings/1/offers')
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe(CreateOfferErrorCodes.NoListing)
   })
 })

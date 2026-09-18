@@ -1,6 +1,8 @@
 import { GET } from './baseApi'
 import type { components } from './generated/api-types'
 
+export type RentalObjectSummary = components['schemas']['RentalObjectSummary']
+export type RentalObjectType = RentalObjectSummary['type']
 export type RentalObjectRentInfo = components['schemas']['RentalObjectRentInfo']
 
 async function getRentByRentalObjectCode(

@@ -12,6 +12,7 @@ import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import * as replyToOffer from '../../../processes/parkingspaces/internal/reply-to-offer'
+import * as externalParkingSpaceProcess from '../../../processes/parkingspaces/external'
 
 import * as factory from '../../../../test/factories'
 import { ProcessStatus } from '../../../common/types'
@@ -174,33 +175,6 @@ describe('lease-service', () => {
       const result = await request(app.callback()).post('/offers/123/deny')
 
       expect(result.status).toBe(404)
-      expect(result.body.error).toBe('no-offer')
-    })
-  })
-
-  describe('GET /offers/:offerId/expire', () => {
-    it('responds with successful processStatus', async () => {
-      jest.spyOn(replyToOffer, 'expireOffer').mockResolvedValueOnce({
-        processStatus: ProcessStatus.successful,
-        httpStatus: 202,
-        data: null,
-      })
-
-      const result = await request(app.callback()).get('/offers/123/expire')
-
-      expect(result.status).toBe(202)
-      expect(result.body.message).toBe('Offer expired successfully')
-    })
-    it('expire offer returns 500 on error', async () => {
-      jest.spyOn(replyToOffer, 'expireOffer').mockResolvedValue({
-        processStatus: ProcessStatus.failed,
-        httpStatus: 404,
-        error: ReplyToOfferErrorCodes.NoOffer,
-      })
-
-      const result = await request(app.callback()).get('/offers/123/expire')
-
-      expect(result.status).toBe(500)
       expect(result.body.error).toBe('no-offer')
     })
   })
@@ -900,5 +874,50 @@ describe('GET /contacts/:contactCode/:rentalObjectCode/verify-application', () =
     )
 
     expect(res.status).toBe(200)
+  })
+})
+
+describe('POST /parking-spaces/:parkingSpaceId/leases', () => {
+  it('responds with 200 and the content on success', async () => {
+    jest
+      .spyOn(externalParkingSpaceProcess, 'createLeaseForExternalParkingSpace')
+      .mockResolvedValueOnce({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 200,
+        data: { LeaseId: '123-456-789/01' },
+        response: { leaseId: '123-456-789/01', message: 'Lease created.' },
+      })
+
+    const res = await request(app.callback())
+      .post('/parking-spaces/123-456-789/leases')
+      .send({ contactCode: 'P12345', startDate: '2026-09-01' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({
+      leaseId: '123-456-789/01',
+      message: 'Lease created.',
+    })
+    expect(res.body.error).toBeUndefined()
+  })
+
+  it('surfaces the specific error code on failure, not just the generic response body', async () => {
+    jest
+      .spyOn(externalParkingSpaceProcess, 'createLeaseForExternalParkingSpace')
+      .mockResolvedValueOnce({
+        processStatus: ProcessStatus.failed,
+        httpStatus: 500,
+        error: 'fetch-invoices-failed',
+        response: { message: 'Could not fetch invoices for applicant.' },
+      })
+
+    const res = await request(app.callback())
+      .post('/parking-spaces/123-456-789/leases')
+      .send({ contactCode: 'P12345', startDate: '2026-09-01' })
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('fetch-invoices-failed')
+    expect(res.body.content).toEqual({
+      message: 'Could not fetch invoices for applicant.',
+    })
   })
 })

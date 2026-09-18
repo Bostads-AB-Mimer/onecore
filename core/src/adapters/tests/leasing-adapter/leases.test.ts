@@ -48,6 +48,76 @@ describe(leasingAdapter.getHomeInsuranceExport, () => {
   })
 })
 
+describe(leasingAdapter.createLease, () => {
+  const params = {
+    objectId: '705-022-99-0010',
+    contactId: 'P123456',
+    fromDate: '2026-08-31T00:00:00.000Z',
+    companyCode: '001',
+    includeVAT: true,
+  }
+
+  it('returns ok with the created lease id on 200', async () => {
+    nock(serviceUrl).post('/leases').reply(200, { content: 'lease-123' })
+
+    const result = await leasingAdapter.createLease(
+      params.objectId,
+      params.contactId,
+      params.fromDate,
+      params.companyCode,
+      params.includeVAT
+    )
+
+    expect(result).toEqual({ ok: true, data: 'lease-123' })
+  })
+
+  it('returns create-lease-failed when the rental object cannot have a lease', async () => {
+    nock(serviceUrl)
+      .post('/leases')
+      .reply(404, { error: 'Lease cannot be created on this rental object' })
+
+    const result = await leasingAdapter.createLease(
+      params.objectId,
+      params.contactId,
+      params.fromDate,
+      params.companyCode,
+      params.includeVAT
+    )
+
+    expect(result).toEqual({ ok: false, err: 'create-lease-failed' })
+  })
+
+  it('returns ok:false instead of throwing on a 500', async () => {
+    nock(serviceUrl)
+      .post('/leases')
+      .reply(500, { error: 'Internal server error' })
+
+    const result = await leasingAdapter.createLease(
+      params.objectId,
+      params.contactId,
+      params.fromDate,
+      params.companyCode,
+      params.includeVAT
+    )
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown error on network failure', async () => {
+    nock(serviceUrl).post('/leases').replyWithError('Network error')
+
+    const result = await leasingAdapter.createLease(
+      params.objectId,
+      params.contactId,
+      params.fromDate,
+      params.companyCode,
+      params.includeVAT
+    )
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
 describe(leasingAdapter.getLeasesByRentalObjectCode, () => {
   it('returns the leases on 200', async () => {
     nock(serviceUrl)

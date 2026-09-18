@@ -66,12 +66,11 @@ export const TenfastRentalObjectSchema = z.object({
   roomCount: z.number().nullish(),
   avtal: z
     .array(
-      z.lazy(
-        (): z.ZodTypeAny =>
-          TenfastLeaseSchema.partial().omit({
-            hyresgaster: true,
-            hyresobjekt: true,
-          })
+      z.lazy((): z.ZodTypeAny =>
+        TenfastLeaseSchema.partial().omit({
+          hyresgaster: true,
+          hyresobjekt: true,
+        })
       )
     )
     .optional(), // We omit tenants and rental objects to avoid circular reference, also we don't need them in the context of rental object
@@ -155,23 +154,6 @@ export const TenfastContractSchema = z.object({
 
 export type TenfastContract = z.infer<typeof TenfastContractSchema>
 
-export const TenfastLeaseTemplateSchema = z.object({
-  _id: z.string(),
-  hyresvardar: z.array(z.string()),
-  public: z.boolean(),
-  official: z.boolean(),
-  category: z.string(),
-  addons: z.array(z.any()),
-  name: z.string(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-  __v: z.number(),
-  type: z.string(),
-  id: z.string(),
-})
-
-export type TenfastLeaseTemplate = z.infer<typeof TenfastLeaseTemplateSchema>
-
 export interface PreliminaryTerminationResponse {
   message: string
 }
@@ -233,6 +215,7 @@ export const TenfastLeaseSchema = z.object({
   bankidSignatures: z.array(z.string()),
   cancellation: z.object({
     cancelled: z.boolean(),
+    requested: z.boolean().optional().nullable(), // Whether termination notice has been given (not withdrawn)
     doneAutomatically: z.boolean(),
     receivedCancellationAt: optionalDateField, // When TenFAST received the cancellation
     notifiedAt: optionalDateField, // When TenFAST notified the tenant about the cancellation

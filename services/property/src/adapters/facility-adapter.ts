@@ -3,6 +3,7 @@ import assert from 'node:assert'
 
 import { trimStrings } from '@src/utils/data-conversion'
 
+import { OPERATING_COMPANY_CODES } from './company-scope'
 import { prisma } from './db'
 
 export async function searchFacilities(q: string, searchFields: string[]) {
@@ -32,7 +33,7 @@ export async function searchFacilities(q: string, searchFields: string[]) {
         },
       },
       where: {
-        companyCode: '001',
+        companyCode: { in: [...OPERATING_COMPANY_CODES] },
         propertyObject: {
           objectTypeId: 'balok',
           facility: {

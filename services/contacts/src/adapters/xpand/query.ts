@@ -179,6 +179,53 @@ export const contactObjectKeysForEmailAddress = async (
 }
 
 /**
+ * Strips the separators Xpand allows inside `persorgnr` so a stored value can
+ * be compared against a digit-only identity number.
+ *
+ * Measured against the test database: of ~115 000 rows, most private
+ * individuals are stored as twelve unseparated digits, but ~7 000 rows hold ten
+ * digits, 77 carry a hyphen, and a handful of private individuals are stored in
+ * the ten-digit form. Comparing raw values would silently miss every one of
+ * those.
+ *
+ * SQL Server has no REGEXP_REPLACE in the versions we target, hence the nested
+ * REPLACE calls.
+ */
+const NORMALISED_NATIONAL_ID_SQL = `REPLACE(REPLACE(REPLACE(${NATIONAL_ID_NUMBER}, '-', ''), '+', ''), ' ', '')`
+
+/**
+ * Finds the contact code of an existing contact with the given national ID
+ * number, in either its ten- or twelve-digit form.
+ *
+ * This exists for the duplicate check performed before creating a contact.
+ * Creating a contact in Xpand cannot be undone, so a false negative here
+ * produces a permanent duplicate — which is why both sides of the comparison
+ * are normalised rather than trusting the stored format.
+ *
+ * Deliberately does not filter on `deletemark`: the rest of this service reads
+ * deleted contacts too, and for a duplicate check the conservative choice is to
+ * report a match rather than let a second contact be created.
+ *
+ * @param db - The Knex database connection to use
+ * @param forms - The ten- and twelve-digit forms to match against
+ * @returns The contact code of the first match, or null when there is none
+ */
+export const contactCodeForNationalId = async (
+  db: knex.Knex,
+  forms: { tenDigits: string; twelveDigits: string }
+): Promise<ContactCode | null> => {
+  const row = await db('cmctc')
+    .select({ contactCode: CONTACT_CODE })
+    .whereRaw(`${NORMALISED_NATIONAL_ID_SQL} IN (?, ?)`, [
+      forms.twelveDigits,
+      forms.tenDigits,
+    ])
+    .first()
+
+  return row?.contactCode ?? null
+}
+
+/**
  * Retrieves cmlog rows for contact changes recorded since the given timestamp.
  *
  * Only rows whose logmemo starts with "Kontakt " are returned, as these

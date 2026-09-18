@@ -69,6 +69,9 @@ export const routes = (router: KoaRouter) => {
    *       aggregate counts) and the Keycloak user IDs for lead, deputy and
    *       responsible. Keycloak user details are NOT expanded here — that
    *       composition happens in core.
+   *
+   *       Responses are cached in-memory for up to one hour, so structural
+   *       changes may take that long to appear.
    *     tags:
    *       - Cost Centers
    *     parameters:
@@ -103,6 +106,8 @@ export const routes = (router: KoaRouter) => {
       return
     }
     try {
+      // Membership is read fresh; the expensive property-and-below half is
+      // cached per property inside the adapter.
       const tree = await getCostCenterTreeById(parsed.data.id)
       if (!tree) {
         ctx.status = 404

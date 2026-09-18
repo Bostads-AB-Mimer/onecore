@@ -32,6 +32,8 @@ FROM node:23-slim AS runner
 
 WORKDIR /app
 COPY --from=builder /out ./
+COPY --from=builder /app/services/contacts/knexfile.cjs .
+COPY --from=builder /app/services/contacts/migrations ./migrations
 
 # Install pnpm using version from package.json
 RUN corepack enable && corepack prepare --activate

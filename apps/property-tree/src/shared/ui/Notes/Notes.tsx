@@ -8,12 +8,9 @@ import type { Note, NotesProps } from './types'
 
 export function Notes({
   entityType,
-  entityId,
-  title = 'Noteringar',
   placeholder = 'Skriv din notering här...',
   emptyMessage = 'Inga noteringar har lagts till ännu.',
   categories = [],
-  showCategory = false,
 }: NotesProps) {
   const {
     state,
@@ -24,7 +21,7 @@ export function Notes({
     startAddingNote,
     cancelAddingNote,
     updateNewNote,
-  } = useNotesState(entityType, entityId, categories)
+  } = useNotesState(entityType, categories)
 
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {

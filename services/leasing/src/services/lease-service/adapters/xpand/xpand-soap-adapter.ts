@@ -7,46 +7,86 @@ import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../types'
 import { WaitingListType } from '@onecore/types'
 
+/**
+ * The Xpand queue captions each waiting-list type maps to.
+ *
+ * These strings must match rows in Xpand's `bkkty` table exactly. Xpand does
+ * not create a queue it does not know — it answers `Success: false` with
+ * "Kötyp saknas", the same response it gives for a nonsense string.
+ *
+ * Housing spans four separate queues. An applicant registering on mimer.nu is
+ * placed in all four, so anyone registered through ONECore must land in the
+ * same set, or the two registration paths produce differently queued customers.
+ *
+ * Typed as a total Record so that adding a waiting-list type is a compile
+ * error here rather than a silent runtime fallthrough.
+ */
+const WAITING_LIST_CAPTIONS: Record<WaitingListType, ReadonlyArray<string>> = {
+  [WaitingListType.Housing]: ['Bostad', 'Nyproduktion', 'Kooperativ', 'Ungdom'],
+  [WaitingListType.ParkingSpace]: ['Bilplats (intern)', 'Bilplats (extern)'],
+  [WaitingListType.Storage]: ['Förråd (intern)', 'Förråd (extern)'],
+}
+
 const addApplicantToToWaitingList = async (
   contactCode: string,
   waitingListType: WaitingListType
 ): Promise<
   AdapterResult<
     undefined,
-    'already-in-waiting-list' | 'unknown' | 'waiting-list-type-not-implemented'
+    | 'unknown'
+    | 'waiting-list-type-not-implemented'
+    | 'waiting-list-type-not-found'
   >
 > => {
-  if (waitingListType == WaitingListType.ParkingSpace) {
-    const resultInternalParkingSpace = await addToWaitingList(
-      contactCode,
-      'Bilplats (intern)'
+  const captions = WAITING_LIST_CAPTIONS[waitingListType]
+
+  if (!captions) {
+    logger.error(
+      { waitingListType },
+      'addApplicantToToWaitingList: waiting list type not implemented'
     )
-    const resultExternalParkingSpace = await addToWaitingList(
-      contactCode,
-      'Bilplats (extern)'
-    )
-
-    if (resultInternalParkingSpace.ok && resultExternalParkingSpace.ok)
-      return { ok: true, data: undefined }
-    if (!resultInternalParkingSpace.ok) return resultInternalParkingSpace
-    if (!resultExternalParkingSpace.ok) return resultExternalParkingSpace
+    return { ok: false, err: 'waiting-list-type-not-implemented' }
   }
 
-  if (waitingListType == WaitingListType.Housing) {
-    const result = await addToWaitingList(contactCode, 'Bostad (intern)')
-    return result
+  // Sequential rather than concurrent: these are writes against the same
+  // contact, and Xpand's own registration flow issues them one at a time.
+  //
+  // 'already-in-waiting-list' is benign and must not abort: one type spans
+  // several captions, and a contact may already hold some of them. Stopping
+  // at the first would leave the remaining captions unattempted while the
+  // route still reports success. Skipping makes enrolment idempotent, which
+  // also removes the error from this function's result type.
+  for (const caption of captions) {
+    const result = await addToWaitingList(contactCode, caption)
+    if (!result.ok && result.err !== 'already-in-waiting-list') {
+      return { ok: false, err: result.err }
+    }
   }
 
-  if (waitingListType == WaitingListType.Storage) {
-    const result = await addToWaitingList(contactCode, 'Förråd (intern)')
-    return result
-  }
-
-  logger.error(
-    `Add to Waiting list type ${waitingListType} not implemented yet`
-  )
-  return { ok: false, err: 'waiting-list-type-not-implemented' }
+  return { ok: true, data: undefined }
 }
+
+/**
+ * Xpand's messages are free text and vary in wording and capitalisation for
+ * what is the same condition — the same state has been observed as both
+ * "Sökanden saknas" and "Sökande Saknas". Match loosely rather than on exact
+ * equality, or a message variant silently falls through to the unknown branch.
+ */
+const messageMatches = (message: unknown, pattern: RegExp): boolean =>
+  typeof message === 'string' && pattern.test(message.trim())
+
+/**
+ * Xpand's response when the caption does not match any row in `bkkty`.
+ * Indistinguishable from sending an entirely made-up string, so it means the
+ * caption is wrong — not that anything is wrong with the contact.
+ */
+const UNKNOWN_QUEUE_TYPE = /kötyp\s+saknas/i
+
+/** Xpand's response when the contact is already queued for that type. */
+const ALREADY_IN_QUEUE = /kötyp\s+finns\s+redan/i
+
+/** Xpand's response when removing a queue time the contact does not have. */
+const NOT_IN_QUEUE = /kötid\s+saknas/i
 
 const addToWaitingList = async (
   contactCode: string,
@@ -54,7 +94,10 @@ const addToWaitingList = async (
 ): Promise<
   AdapterResult<
     undefined,
-    'already-in-waiting-list' | 'unknown' | 'waiting-list-type-not-implemented'
+    | 'already-in-waiting-list'
+    | 'unknown'
+    | 'waiting-list-type-not-implemented'
+    | 'waiting-list-type-not-found'
   >
 > => {
   const headers = getHeaders()
@@ -91,11 +134,20 @@ const addToWaitingList = async (
 
     if (parsedResponse.Success) {
       return { ok: true, data: undefined }
-    } else if (parsedResponse['Message'] == 'Kötyp finns redan') {
+    } else if (messageMatches(parsedResponse['Message'], ALREADY_IN_QUEUE)) {
       logger.error(
         `Add to waiting list failed for ${waitingListTypeCaption}: ${parsedResponse['Message']}`
       )
       return { ok: false, err: 'already-in-waiting-list' }
+    } else if (messageMatches(parsedResponse['Message'], UNKNOWN_QUEUE_TYPE)) {
+      // A caption that does not exist in Xpand. This is a bug in our mapping,
+      // not a problem with the contact, and previously surfaced as 'unknown' —
+      // which is why a wrong housing caption went unnoticed.
+      logger.error(
+        { waitingListTypeCaption },
+        'addToWaitingList: unknown queue type in Xpand'
+      )
+      return { ok: false, err: 'waiting-list-type-not-found' }
     } else {
       logger.error(
         `Add to waiting list failed with unknown error for ${waitingListTypeCaption}: ${parsedResponse['Message']}`
@@ -118,44 +170,44 @@ const removeApplicantFromWaitingList = async (
 ): Promise<
   AdapterResult<
     undefined,
-    'not-in-waiting-list' | 'unknown' | 'waiting-list-type-not-implemented'
+    | 'unknown'
+    | 'waiting-list-type-not-implemented'
+    | 'waiting-list-type-not-found'
   >
 > => {
-  if (waitingListType == WaitingListType.ParkingSpace) {
-    const resultInternalParkingSpace = await removeFromWaitingList(
-      contactCode,
-      'Bilplats (intern)'
+  const captions = WAITING_LIST_CAPTIONS[waitingListType]
+
+  if (!captions) {
+    logger.error(
+      { waitingListType },
+      'removeApplicantFromWaitingList: waiting list type not implemented'
     )
-    const resultExternalParkingSpace = await removeFromWaitingList(
-      contactCode,
-      'Bilplats (extern)'
-    )
-
-    if (resultInternalParkingSpace.ok && resultExternalParkingSpace.ok)
-      return { ok: true, data: undefined }
-    if (!resultInternalParkingSpace.ok) return resultInternalParkingSpace
-    if (!resultExternalParkingSpace.ok) return resultExternalParkingSpace
+    return { ok: false, err: 'waiting-list-type-not-implemented' }
   }
 
-  if (waitingListType == WaitingListType.Housing) {
-    const result = await removeFromWaitingList(contactCode, 'Bostad (intern)')
-    return result
+  // Mirrors the add loop: 'not-in-waiting-list' is benign and must not abort.
+  // One type spans several captions and a contact rarely holds all of them, so
+  // stopping at the first would leave the remaining captions still queued while
+  // the caller reports the removal as done. That is how a reset could leave a
+  // contact's queue time intact after they had already won an offer.
+  for (const caption of captions) {
+    const result = await removeFromWaitingList(contactCode, caption)
+    if (!result.ok && result.err !== 'not-in-waiting-list') {
+      return { ok: false, err: result.err }
+    }
   }
 
-  if (waitingListType == WaitingListType.Storage) {
-    const result = await removeFromWaitingList(contactCode, 'Förråd (intern)')
-    return result
-  }
-
-  logger.error(
-    `Remove from Waiting list type ${waitingListType} not implemented yet`
-  )
-  return { ok: false, err: 'waiting-list-type-not-implemented' }
+  return { ok: true, data: undefined }
 }
 const removeFromWaitingList = async (
   contactCode: string,
   waitingListTypeCaption: string
-): Promise<AdapterResult<undefined, 'not-in-waiting-list' | 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    undefined,
+    'not-in-waiting-list' | 'unknown' | 'waiting-list-type-not-found'
+  >
+> => {
   const headers = getHeaders()
 
   const xml = `
@@ -189,11 +241,17 @@ const removeFromWaitingList = async (
     const parsedResponse = parser.parse(body)['Envelope']['Body']['ResultBase']
 
     if (parsedResponse.Success) return { ok: true, data: undefined }
-    else if (parsedResponse['Message'] == 'Kötid saknas') {
+    else if (messageMatches(parsedResponse['Message'], NOT_IN_QUEUE)) {
       logger.error(
         `Remove from waiting list failed for ${waitingListTypeCaption}: ${parsedResponse['Message']}`
       )
       return { ok: false, err: 'not-in-waiting-list' }
+    } else if (messageMatches(parsedResponse['Message'], UNKNOWN_QUEUE_TYPE)) {
+      logger.error(
+        { waitingListTypeCaption },
+        'removeFromWaitingList: unknown queue type in Xpand'
+      )
+      return { ok: false, err: 'waiting-list-type-not-found' }
     } else {
       logger.error(
         `Remove from waiting list failed with unkown error ${waitingListTypeCaption}: ${parsedResponse['Message']}`

@@ -1,12 +1,5 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/shared/ui/Dialog'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { roomService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
@@ -14,6 +7,13 @@ import { inspectionService } from '@/services/api/core/inspectionService'
 import type { Room } from '@/services/types'
 
 import { useToast } from '@/shared/hooks/useToast'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/Dialog'
 
 import { useTenantInfo } from '../hooks/useTenantInfo'
 import { InspectionFormDialog } from './InspectionFormDialog'

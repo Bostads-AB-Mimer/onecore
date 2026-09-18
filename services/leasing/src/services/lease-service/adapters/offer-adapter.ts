@@ -522,42 +522,29 @@ export async function getActiveOfferByListingId(
   }
 }
 
-export const handleExpiredOffers = async (): Promise<
-  AdapterResult<number[] | null, 'unknown'>
+export const getActiveOffersPastResponseDeadline = async (
+  dbConnection = db
+): Promise<
+  AdapterResult<
+    Array<{ id: number; listingId: number; applicantId: number }>,
+    'unknown'
+  >
 > => {
   try {
-    const dbOffers = await db
-      .select(
-        'offer.Id',
-        'offer.SentAt',
-        'offer.ExpiresAt',
-        'offer.AnsweredAt',
-        'offer.Status',
-        'offer.ListingId',
-        'offer.ApplicantId',
-        'offer.CreatedAt'
-      )
+    const dbOffers = await dbConnection
+      .select('offer.Id', 'offer.ListingId', 'offer.ApplicantId')
       .from('offer')
       .where('offer.AnsweredAt', null)
       .andWhere('offer.ExpiresAt', '<', new Date())
       .andWhere('offer.Status', OfferStatus.Active)
 
-    for (const dbOffer of dbOffers) {
-      logger.info(null, 'Handling offer ' + dbOffer.Id)
-      await db('offer')
-        .update({ Status: OfferStatus.Expired, AnsweredAt: new Date() })
-        .where('offer.Id', dbOffer.Id)
-
-      await db('offer_applicant')
-        .update({
-          ApplicantStatus: ApplicantStatus.OfferExpired,
-        })
-        .where('offer_applicant.applicantId', dbOffer.ApplicantId)
-    }
-
     return {
       ok: true,
-      data: dbOffers.map((dbOffer) => dbOffer.ListingId),
+      data: dbOffers.map((dbOffer) => ({
+        id: dbOffer.Id,
+        listingId: dbOffer.ListingId,
+        applicantId: dbOffer.ApplicantId,
+      })),
     }
   } catch (error) {
     logger.error(error, 'Error getting expired offers')

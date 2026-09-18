@@ -1,0 +1,271 @@
+// Presentational row atoms for the picker table. No state, no data fetching.
+
+import type { CSSProperties, ReactNode, Ref } from 'react'
+import { memo } from 'react'
+import { Link } from 'react-router-dom'
+import { ChevronDown, ChevronRight } from 'lucide-react'
+
+import { getPropertyObjectPath, paths } from '@/shared/routes'
+import { Checkbox } from '@/shared/ui/Checkbox'
+import { TableCell, TableRow } from '@/shared/ui/Table'
+
+import type { OccupantTenant } from '../hooks/useOccupantData'
+import { LEVEL_LABELS, RENTAL_OBJECT_TYPE_LABELS } from '../model/labels'
+import type { CheckState, PropertyTreeNode } from '../model/selection'
+import type { NodeRowSpec, RentalObject } from '../model/treeRows'
+import { LEVEL_ICONS, OBJECT_TYPE_ICONS } from './icons'
+
+export const COLUMN_COUNT = 4
+
+/** Radix Checkbox value for a tri-state CheckState. */
+const checkboxChecked = (state: CheckState): boolean | 'indeterminate' =>
+  state === 'indeterminate' ? 'indeterminate' : state === 'checked'
+
+function Indent({ depth, children }: { depth: number; children?: ReactNode }) {
+  // Tighter per-level indent when the panel is narrow.
+  return (
+    <div
+      className="flex items-center gap-2 pl-[calc(var(--indent-depth)*12px)] @xl:pl-[calc(var(--indent-depth)*20px)]"
+      style={{ '--indent-depth': depth } as CSSProperties}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** A row's code, linking to the entity's detail page where one exists. A new
+ * tab, so a picker selection in progress survives the visit. */
+function CodeLink({ code, path }: { code: string; path: string | null }) {
+  if (!path) return <>{code}</>
+  return (
+    <Link
+      to={path}
+      target="_blank"
+      rel="noopener"
+      onClick={(e) => e.stopPropagation()}
+      className="text-primary hover:underline"
+    >
+      {code}
+    </Link>
+  )
+}
+
+function ExpandChevron({
+  expanded,
+  onToggle,
+}: {
+  expanded: boolean
+  onToggle?: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggle?.()
+      }}
+      className="p-0.5 text-muted-foreground hover:text-foreground"
+      aria-label={expanded ? 'Fäll ihop' : 'Expandera'}
+      aria-expanded={expanded}
+    >
+      {expanded ? (
+        <ChevronDown className="h-4 w-4" />
+      ) : (
+        <ChevronRight className="h-4 w-4" />
+      )}
+    </button>
+  )
+}
+
+/** Selectable tree node (district / kvv-area / property / building).
+ * `excluded` (object-type filter): greyed, forced unchecked, unselectable —
+ * but still expandable so its objects remain browsable. Memoised (callbacks
+ * take the node) so a click re-renders only rows whose state changed. */
+export const NodeRow = memo(function NodeRow({
+  row,
+  checkState,
+  onCheck,
+  onToggleExpand,
+  excluded = false,
+  count,
+}: {
+  row: NodeRowSpec
+  checkState: CheckState
+  onCheck: (node: PropertyTreeNode) => void
+  onToggleExpand: (key: string, expanded: boolean) => void
+  excluded?: boolean
+  /** Object count for the currently active object types. */
+  count?: number
+}) {
+  const LevelIcon = LEVEL_ICONS[row.node.level]
+  const displayState: CheckState = excluded ? 'unchecked' : checkState
+  const toggleExpand = () => onToggleExpand(row.node.key, row.expanded)
+  // Where an id exists it's the linking code (a property's is its fstcode;
+  // `value` holds the beteckning); levels without one link by `value`.
+  const codePath = getPropertyObjectPath(
+    row.node.level,
+    row.node.id ?? row.node.value
+  )
+  // Row click expands; checkbox and name select (and stop propagation).
+  return (
+    <TableRow
+      onClick={toggleExpand}
+      className="cursor-pointer transition-colors hover:bg-muted"
+    >
+      <TableCell className="py-2">
+        <Indent depth={row.depth}>
+          <ExpandChevron expanded={row.expanded} onToggle={toggleExpand} />
+          <Checkbox
+            checked={checkboxChecked(displayState)}
+            disabled={excluded}
+            onCheckedChange={excluded ? undefined : () => onCheck(row.node)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Välj ${row.node.label}`}
+          />
+          <LevelIcon
+            className={
+              excluded
+                ? 'h-4 w-4 shrink-0 text-muted-foreground opacity-50'
+                : 'h-4 w-4 shrink-0 text-muted-foreground'
+            }
+          />
+          <div className="min-w-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (!excluded) onCheck(row.node)
+              }}
+              className={
+                excluded
+                  ? 'block cursor-default truncate text-left font-medium text-muted-foreground opacity-60'
+                  : row.depth === 0
+                    ? 'block truncate text-left font-semibold hover:text-primary hover:underline'
+                    : 'block truncate text-left font-medium hover:text-primary hover:underline'
+              }
+            >
+              {row.node.label}
+            </button>
+            <div className="truncate text-xs text-muted-foreground @xl:hidden">
+              <CodeLink code={row.code} path={codePath} />
+            </div>
+          </div>
+        </Indent>
+      </TableCell>
+      <TableCell className="hidden py-2 text-muted-foreground @3xl:table-cell">
+        {row.typeLabel ?? LEVEL_LABELS[row.node.level]}
+      </TableCell>
+      <TableCell className="hidden py-2 text-muted-foreground @xl:table-cell">
+        <CodeLink code={row.code} path={codePath} />
+      </TableCell>
+      <TableCell className="hidden py-2 text-right tabular-nums text-muted-foreground @4xl:table-cell">
+        {count ?? ''}
+      </TableCell>
+    </TableRow>
+  )
+})
+
+/** Leaf: one rental object shown as its current tenants (like the
+ * Hyreskontrakt page) — contact-code link + name per tenant, or Vakant.
+ * The checkbox mirrors the parent's selection; toggling it requires
+ * `selectable` (enabled by the send flow, not the filter picker). */
+export function ObjectRow({
+  depth,
+  object,
+  tenants,
+  checkState,
+  selectable = false,
+  requiresTenants = true,
+  onCheck,
+  excluded = false,
+  rowRef,
+}: {
+  depth: number
+  object: RentalObject
+  /** undefined while the tenant lookup is still loading. */
+  tenants: OccupantTenant[] | undefined
+  checkState: CheckState
+  selectable?: boolean
+  /** Recipient semantics: a vacant object reaches nobody, so it shows no
+   * inherited tick. Off where objects are picked for their own sake. */
+  requiresTenants?: boolean
+  onCheck?: () => void
+  /** Object-type filter: greyed and never ticked. */
+  excluded?: boolean
+  /** For the parent's in-view observer (deferred tenant fetch). */
+  rowRef?: Ref<HTMLTableRowElement>
+}) {
+  const TypeIcon = OBJECT_TYPE_ICONS[object.type]
+  const reachable =
+    !requiresTenants || (tenants !== undefined && tenants.length > 0)
+  const displayState: CheckState =
+    reachable && !excluded ? checkState : 'unchecked'
+  const codePath = getPropertyObjectPath(object.type, object.code)
+  return (
+    <TableRow ref={rowRef} className={excluded ? 'opacity-60' : undefined}>
+      <TableCell className="py-1.5">
+        <Indent depth={depth}>
+          <span className="w-5 shrink-0" />
+          <Checkbox
+            checked={checkboxChecked(displayState)}
+            disabled={!selectable || excluded}
+            onCheckedChange={selectable && !excluded ? onCheck : undefined}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Välj ${object.code}`}
+          />
+          <TypeIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0">
+            {tenants === undefined ? (
+              <span className="text-xs text-muted-foreground">Laddar...</span>
+            ) : tenants.length === 0 ? (
+              <span className="text-muted-foreground">Vakant</span>
+            ) : (
+              <div className="space-y-0.5">
+                {tenants.map((tenant) => (
+                  <div
+                    key={tenant.contactCode || tenant.name}
+                    className="truncate"
+                  >
+                    {tenant.contactCode && (
+                      <>
+                        <Link
+                          to={paths.tenant(tenant.contactCode)}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {tenant.contactCode}
+                        </Link>{' '}
+                      </>
+                    )}
+                    {tenant.name}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="truncate text-xs text-muted-foreground @xl:hidden">
+              <CodeLink code={object.code} path={codePath} />
+            </div>
+          </div>
+        </Indent>
+      </TableCell>
+      <TableCell className="hidden py-1.5 text-muted-foreground @3xl:table-cell">
+        {object.subtypeName ?? RENTAL_OBJECT_TYPE_LABELS[object.type]}
+      </TableCell>
+      <TableCell className="hidden py-1.5 text-muted-foreground @xl:table-cell">
+        <CodeLink code={object.code} path={codePath} />
+      </TableCell>
+      <TableCell className="hidden py-1.5 @4xl:table-cell" />
+    </TableRow>
+  )
+}
+
+export function InfoRow({ depth, label }: { depth: number; label: string }) {
+  return (
+    <TableRow>
+      <TableCell colSpan={COLUMN_COUNT} className="py-1.5">
+        <Indent depth={depth}>
+          <span className="text-xs text-muted-foreground">{label}</span>
+        </Indent>
+      </TableCell>
+    </TableRow>
+  )
+}

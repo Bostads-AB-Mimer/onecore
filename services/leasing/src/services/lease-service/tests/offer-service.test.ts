@@ -471,3 +471,105 @@ describe('denyOffer', () => {
       )
     }))
 })
+
+describe('handleExpiredOffers', () => {
+  it("expires the applicant, the offer, and only that offer round's offer_applicant snapshot row", () =>
+    withContext(async (ctx) => {
+      const listing = await listingAdapter.createListing(
+        factory.listing.build({ status: ListingStatus.Expired }),
+        ctx.db
+      )
+      assert(listing.ok)
+
+      // The winning applicant of an earlier, already-resolved offer round
+      // on the same listing.
+      const earlierWinner = await listingAdapter.createApplication(
+        factory.applicant.build({ listingId: listing.data.id }),
+        ctx.db
+      )
+      // A candidate who was in the running (but not the winner) in that
+      // earlier round, and is now the winner of the round that expires.
+      const applicant = await listingAdapter.createApplication(
+        factory.applicant.build({ listingId: listing.data.id }),
+        ctx.db
+      )
+
+      // Round 1: already resolved (declined), `applicant` was a candidate
+      // here but never Offered on this round.
+      const earlierRoundOffer = await offerAdapter.create(ctx.db, {
+        status: OfferStatus.Declined,
+        listingId: listing.data.id,
+        applicantId: earlierWinner.id,
+        selectedApplicants: [
+          factory.offerApplicant.build({
+            applicantId: earlierWinner.id,
+            status: ApplicantStatus.OfferDeclined,
+          }),
+          factory.offerApplicant.build({
+            applicantId: applicant.id,
+            status: ApplicantStatus.Active,
+          }),
+        ],
+        expiresAt: new Date(),
+        sentAt: new Date(),
+      })
+      assert(earlierRoundOffer.ok)
+
+      // Round 2: `applicant` is the winner here, and this offer has expired.
+      const expiredOffer = await offerAdapter.create(ctx.db, {
+        status: OfferStatus.Active,
+        listingId: listing.data.id,
+        applicantId: applicant.id,
+        selectedApplicants: [
+          factory.offerApplicant.build({
+            applicantId: applicant.id,
+            status: ApplicantStatus.Offered,
+          }),
+        ],
+        expiresAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        sentAt: new Date(),
+      })
+      assert(expiredOffer.ok)
+
+      const res = await service.handleExpiredOffers(ctx.db)
+
+      expect(res).toEqual({ ok: true, data: [listing.data.id] })
+
+      const updatedApplicant = await listingAdapter.getApplicantById(
+        applicant.id,
+        ctx.db
+      )
+      expect(updatedApplicant?.status).toBe(ApplicantStatus.OfferExpired)
+
+      const updatedExpiredOffer = await offerAdapter.getOfferByOfferId(
+        expiredOffer.data.id,
+        ctx.db
+      )
+      assert(updatedExpiredOffer.ok)
+      expect(updatedExpiredOffer.data.status).toBe(OfferStatus.Expired)
+
+      const offerApplicantRows = await ctx
+        .db('offer_applicant')
+        .select('offerId', 'applicantId', 'applicantStatus')
+      const expiredOfferApplicant = offerApplicantRows.find(
+        (row) =>
+          row.offerId === expiredOffer.data.id &&
+          row.applicantId === applicant.id
+      )
+      const earlierRoundCandidateRow = offerApplicantRows.find(
+        (row) =>
+          row.offerId === earlierRoundOffer.data.id &&
+          row.applicantId === applicant.id
+      )
+
+      expect(expiredOfferApplicant.applicantStatus).toBe(
+        ApplicantStatus.OfferExpired
+      )
+      // The bug: without offerId/listingId scoping, this row - the same
+      // applicant's candidate row on the unrelated, already-resolved
+      // round 1 offer - would also be flipped to OfferExpired.
+      expect(earlierRoundCandidateRow.applicantStatus).toBe(
+        ApplicantStatus.Active
+      )
+    }))
+})

@@ -1,8 +1,9 @@
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
+import compress from 'koa-compress'
 import cors from '@koa/cors'
-import { logger, loggerMiddlewares } from '@onecore/utilities'
+import { etagMiddleware, logger, loggerMiddlewares } from '@onecore/utilities'
 import { koaSwagger } from 'koa2-swagger-ui'
 import { makeOkapiRouter } from 'koa-okapi-router'
 import config from './common/config'
@@ -16,6 +17,7 @@ import { requireAuth, requireRole } from './middlewares/keycloak-auth'
 import { routes as apiRoutes } from './api/index'
 import { routes as swaggerRoutes } from './services/swagger'
 import { extractToken } from './middlewares/extract-token'
+import { requiredRolesFor } from './middlewares/route-roles'
 
 const app = new Koa()
 
@@ -27,6 +29,15 @@ app.use(
     credentials: true,
   })
 )
+
+// Proxied property payloads are hundreds of KB of repetitive JSON. Brotli off:
+// node's default quality 11 blocks the event loop for 100+ ms at this size.
+app.use(compress({ threshold: 1024, br: false }))
+
+// After compress in the chain, so the hash covers the uncompressed body while
+// compression still applies on the way out. Core hashes what IT serves —
+// composed bodies included — so upstream ETags need no forwarding.
+app.use(etagMiddleware())
 
 app.use(
   koaSwagger({
@@ -65,38 +76,11 @@ app.use(extractToken)
 // Authentication — verifies the extracted token
 app.use(requireAuth)
 
-// Role-based authorization
-app.use(async (ctx, next) => {
-  if (ctx.path.startsWith('/scan-receipt')) {
-    return requireRole('scanner-upload')(ctx, next)
-  }
-
-  // All routes under /leases/for-csc require csc:get or api-access
-  if (ctx.path.startsWith('/leases/for-csc') && ctx.method === 'GET') {
-    return requireRole(['csc:get', 'api-access'])(ctx, next)
-  }
-
-  // All routes under invoices/notify-batch require invoice-notify:post or api-access
-  if (ctx.path.startsWith('/invoices/notify-batch') && ctx.method === 'POST') {
-    return requireRole(['invoice-notify:post', 'api-access'])(ctx, next)
-  }
-
-  // Infobip email delivery-report webhook — authenticated via a Keycloak
-  // service account (client_credentials) holding the infobip-webhook role.
-  if (ctx.path.startsWith('/webhooks/infobip')) {
-    return requireRole('infobip-webhook')(ctx, next)
-  }
-
-  if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {
-    return requireRole(['api-access', 'contacts:read'])(ctx, next)
-  }
-
-  if (ctx.path.startsWith('/invoice-channels')) {
-    return requireRole(['invoice-channels:read', 'api-access'])(ctx, next)
-  }
-
-  return requireRole('api-access')(ctx, next)
-})
+// Role-based authorization. Path/method → roles lives in route-roles.ts so
+// it can be unit-tested.
+app.use(async (ctx, next) =>
+  requireRole(requiredRolesFor(ctx.path, ctx.method))(ctx, next)
+)
 
 // Requires 'keys-admin' in addition to 'api-access' for key deletion (single and bulk).
 // Kept as a separate middleware so api-access is always checked first.

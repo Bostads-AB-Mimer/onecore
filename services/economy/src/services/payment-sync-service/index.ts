@@ -81,7 +81,8 @@ export function routes(router: KoaRouter) {
     try {
       const result = await recordPaymentForInvoice({
         ocr: invoiceId,
-        amount,
+        // Xledger payments are negative AR credits; convert to positive for Tenfast.
+        amount: Math.abs(amount),
         dateTime: new Date(dateTime),
         method,
       })

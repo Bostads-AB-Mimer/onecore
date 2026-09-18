@@ -174,3 +174,109 @@ describe('PATCH /kvv-areas/:id/responsible', () => {
     })
   })
 })
+
+const COST_CENTER_ID = '33333333-3333-3333-3333-333333333333'
+
+const areaFromService = (code: string, responsible: string | null) => ({
+  id: AREA_ID,
+  code,
+  name: `Område ${code}`,
+  costCenter: { id: COST_CENTER_ID, code: '61140', name: 'Distrikt Väst' },
+  responsibleKeycloakUserId: responsible,
+})
+
+describe('GET /kvv-areas', () => {
+  it('returns every kvv-area with cost center and hydrated responsible', async () => {
+    jest.spyOn(keycloakAdapter, 'getUsersByRole').mockResolvedValueOnce({
+      ok: true,
+      data: [{ id: TARGET_USER_ID, username: 'target.user' }],
+    })
+    const spy = jest
+      .spyOn(propertyBaseAdapter, 'listKvvAreas')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [
+          areaFromService('61141', TARGET_USER_ID),
+          areaFromService('61142', null),
+        ],
+      })
+
+    const app = appWithUser([])
+    const res = await request(app.callback()).get('/kvv-areas')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([
+      {
+        id: AREA_ID,
+        code: '61141',
+        name: 'Område 61141',
+        costCenter: {
+          id: COST_CENTER_ID,
+          code: '61140',
+          name: 'Distrikt Väst',
+        },
+        responsible: { id: TARGET_USER_ID, username: 'target.user' },
+      },
+      {
+        id: AREA_ID,
+        code: '61142',
+        name: 'Område 61142',
+        costCenter: {
+          id: COST_CENTER_ID,
+          code: '61140',
+          name: 'Distrikt Väst',
+        },
+        responsible: null,
+      },
+    ])
+    expect(spy).toHaveBeenCalledWith({ responsibleUserIds: undefined })
+  })
+
+  it('forwards responsibleUserId filters to the adapter', async () => {
+    jest.spyOn(keycloakAdapter, 'getUsersByRole').mockResolvedValueOnce({
+      ok: true,
+      data: [],
+    })
+    const spy = jest
+      .spyOn(propertyBaseAdapter, 'listKvvAreas')
+      .mockResolvedValueOnce({ ok: true, data: [] })
+
+    const app = appWithUser([])
+    const res = await request(app.callback()).get(
+      '/kvv-areas?responsibleUserId=u1&responsibleUserId=u2'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([])
+    expect(spy).toHaveBeenCalledWith({ responsibleUserIds: ['u1', 'u2'] })
+  })
+
+  it('returns responsible null for every area when Keycloak is unreachable', async () => {
+    jest.spyOn(keycloakAdapter, 'getUsersByRole').mockResolvedValueOnce({
+      ok: false,
+      err: 'keycloak_unreachable',
+      statusCode: 502,
+    })
+    jest.spyOn(propertyBaseAdapter, 'listKvvAreas').mockResolvedValueOnce({
+      ok: true,
+      data: [areaFromService('61141', TARGET_USER_ID)],
+    })
+
+    const app = appWithUser([])
+    const res = await request(app.callback()).get('/kvv-areas')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content[0].responsible).toBeNull()
+  })
+
+  it('returns 500 when the property service fails', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'listKvvAreas')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const app = appWithUser([])
+    const res = await request(app.callback()).get('/kvv-areas')
+
+    expect(res.status).toBe(500)
+  })
+})

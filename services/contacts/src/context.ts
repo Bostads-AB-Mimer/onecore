@@ -2,7 +2,14 @@ import { loggerMiddlewares, type Resource } from '@onecore/utilities'
 import { Knex } from 'knex'
 import { Config } from './common/config'
 import { ContactsRepository, xpandContactsRepository } from './adapters'
+import { ContactWriter } from './adapters/contact-writer'
+import { xpandSoapContactWriter } from './adapters/xpand/soap'
 import { xpandDbClient } from './adapters/xpand/db'
+import { contactsDbClient } from './adapters/db'
+import {
+  makeRelationDependencies,
+  RelationDependencies,
+} from './services/contacts-service/relations'
 import Koa from 'koa'
 
 /**
@@ -22,6 +29,10 @@ export interface AppContext {
      */
     xpandDb: Resource<Knex>
     /**
+     * Knex database connection for the contacts service's own database
+     */
+    contactsDb: Resource<Knex>
+    /**
      * Configurable Koa middlewares.
      */
     middlewares: Koa.Middleware[]
@@ -34,6 +45,15 @@ export interface AppContext {
      * The ContactsRepository implementation to use.
      */
     contactsRepository: ContactsRepository
+    /**
+     * The ContactWriter implementation to use for creating contacts.
+     */
+    contactWriter: ContactWriter
+    /**
+     * Everything the relation write rules need (contacts DB, Xpand existence
+     * and name lookups), resolved per request.
+     */
+    relationDependencies: RelationDependencies
   }
 }
 
@@ -49,9 +69,18 @@ export type AppModules = AppContext['modules']
 
 /**
  * Construct an ApplicationContext from a Config instance.
+ *
+ * `overrides` replaces individual modules after they are constructed. It exists
+ * for tests, which inject a fake ContactWriter so no test run can reach a live
+ * Xpand environment — contact creation cannot be undone, so that guarantee is
+ * worth an explicit seam rather than relying on configuration being unset.
  */
-export const makeAppContext = (config: Config): AppContext => {
+export const makeAppContext = (
+  config: Config,
+  overrides: Partial<AppModules> = {}
+): AppContext => {
   const xpandDb = xpandDbClient(config.xpandDatabase)
+  const contactsDb = contactsDbClient(config.contactsDatabase)
 
   /**
    * Attach logger middlewares if logging is enabled.
@@ -72,10 +101,14 @@ export const makeAppContext = (config: Config): AppContext => {
     config: config,
     infrastructure: {
       xpandDb,
+      contactsDb,
       middlewares: middlewares,
     },
     modules: {
-      contactsRepository: xpandContactsRepository(xpandDb),
+      contactsRepository: xpandContactsRepository(xpandDb, contactsDb),
+      contactWriter: xpandSoapContactWriter(config.xpandSoap),
+      relationDependencies: makeRelationDependencies(xpandDb, contactsDb),
+      ...overrides,
     },
   }
 }

@@ -541,13 +541,14 @@ describe('POST /leases', () => {
       .mockResolvedValueOnce({ ok: true, data: contact })
     jest
       .spyOn(tenfastAdapter, 'createLease')
-      .mockResolvedValueOnce({ ok: true, data: factory.lease.build() })
+      .mockResolvedValueOnce({ ok: true, data: '216-704-00-0022/02' })
 
     const res = await request(app.callback())
       .post('/leases')
       .send(validRequestBody)
 
     expect(res.status).toBe(200)
+    expect(res.body.content).toBe('216-704-00-0022/02')
   })
 
   it('returns 404 when contact is not found', async () => {
@@ -598,7 +599,7 @@ describe('POST /leases', () => {
       .mockResolvedValueOnce({ ok: true, data: contact })
     const createLeaseSpy = jest
       .spyOn(tenfastAdapter, 'createLease')
-      .mockResolvedValueOnce({ ok: true, data: factory.lease.build() })
+      .mockResolvedValueOnce({ ok: true, data: '216-704-00-0022/02' })
 
     await request(app.callback()).post('/leases').send(validRequestBody)
 

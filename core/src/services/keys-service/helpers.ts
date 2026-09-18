@@ -24,6 +24,8 @@ export async function createLogEntry(
         eventType: params.eventType,
         objectType: params.objectType,
         objectId: params.objectId,
+        // Preserve the audit content — for bulk ops this is the rollback record
+        description: params.description,
       },
       'Failed to create log entry'
     )

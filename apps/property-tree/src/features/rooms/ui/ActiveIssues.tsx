@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { AlertCircle, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 import { Issue } from '@/services/types'
 
