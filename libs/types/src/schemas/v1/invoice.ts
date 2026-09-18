@@ -91,3 +91,23 @@ export const RentInvoiceRowSchema = z.object({
   printGroup: z.string().nullable(),
   comment: z.string().optional(),
 })
+
+export const MiscellaneousInvoiceBaseItemSchema = z.object({
+  text: z.string(),
+  amount: z.number(),
+  quantity: z.number(),
+  unitPrice: z.number(),
+  costCentre: z.string().nullable(),
+})
+
+export const MiscellaneousInvoiceSchema = z.object({
+  invoiceId: z.string(),
+  invoiceDate: z.coerce.date(),
+  leaseId: z.string().nullable(),
+  amount: z.number(),
+  reference: z.string(),
+  ourReference: z.string().optional(),
+  description: z.string().optional(),
+  invoiceBaseItems: z.array(MiscellaneousInvoiceBaseItemSchema).optional(),
+  invoiceFileUrl: z.string().optional(),
+})

@@ -5,6 +5,8 @@ import {
   InvoicePaymentEvent,
   InvoiceRow,
   InvoiceTransactionType,
+  MiscellaneousInvoice,
+  MiscellaneousInvoiceBaseItem,
 } from '@onecore/types'
 
 export const InvoiceFactory = Factory.define<Invoice>(() => {
@@ -52,6 +54,29 @@ export const InvoiceRowFactory = Factory.define<InvoiceRow>(() => ({
   printGroup: '1234567890',
   printGroupLabel: '1234567890',
 }))
+
+export const MiscellaneousInvoiceBaseItemFactory =
+  Factory.define<MiscellaneousInvoiceBaseItem>(() => ({
+    text: 'Skadedjursbekämpning',
+    amount: 500,
+    quantity: 1,
+    unitPrice: 500,
+    costCentre: '12345',
+  }))
+
+export const MiscellaneousInvoiceFactory = Factory.define<MiscellaneousInvoice>(
+  () => ({
+    invoiceId: '552303315030452',
+    invoiceDate: new Date('2023-02-15T00:00:00.000Z'),
+    leaseId: '705-025-03-0205/01',
+    amount: 500,
+    reference: 'P123456',
+    ourReference: 'Jane Doe',
+    description: 'Skadedjursbekämpning',
+    invoiceBaseItems: [MiscellaneousInvoiceBaseItemFactory.build()],
+    invoiceFileUrl: 'https://xledger.example.com/files/12345',
+  })
+)
 
 export const InvoicePaymentEventFactory = Factory.define<InvoicePaymentEvent>(
   ({ sequence }) => ({
