@@ -265,6 +265,11 @@ export function RentalObjectSearch() {
               )}
             </span>
             <div className="flex items-center gap-2">
+              {exportMutation.isError && (
+                <span className="text-sm text-destructive">
+                  Exporten misslyckades
+                </span>
+              )}
               <Button
                 variant="outline"
                 size="sm"
