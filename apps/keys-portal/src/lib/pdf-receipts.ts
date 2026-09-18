@@ -326,7 +326,7 @@ const renderCardRow = (doc: jsPDF, c: Card, y: number): void => {
   doc.text(c.name || '-', MARGIN_X, y)
   doc.text(firstCode?.format || '-', 50, y)
   doc.text(firstCode?.number || '-', 100, y)
-  doc.text('Droppe', 145, y)
+  doc.text('Tagg', 145, y)
   doc.text(c.disabled ? 'Inaktiv' : 'Aktiv', 175, y)
 }
 
@@ -452,12 +452,12 @@ const renderItemsTableSection = (
   doc.setFontSize(FONT_SIZE.BODY)
   if (hasKeys && hasCards) {
     doc.text(
-      `Totalt: ${keys.length} nycklar, ${cards.length} droppar`,
+      `Totalt: ${keys.length} nycklar, ${cards.length} taggar`,
       MARGIN_X,
       cy
     )
   } else if (hasCards) {
-    doc.text(`Totalt antal droppar: ${cards.length}`, MARGIN_X, cy)
+    doc.text(`Totalt antal taggar: ${cards.length}`, MARGIN_X, cy)
   } else {
     doc.text(`Totalt antal nycklar: ${keys.length}`, MARGIN_X, cy)
   }
@@ -476,7 +476,7 @@ const renderItemsTable = (
   scopeByKeyId?: Record<string, string>
 ): number => {
   const hasCards = cards && cards.length > 0
-  const headerText = hasCards ? 'NYCKLAR OCH DROPPAR' : 'NYCKLAR'
+  const headerText = hasCards ? 'NYCKLAR OCH TAGGAR' : 'NYCKLAR'
   return renderItemsTableSection(
     doc,
     keys,
@@ -523,8 +523,8 @@ const renderReturnItemsTable = (
   if (hasCards) {
     returnedHeader =
       hasMissing || hasRemaining || hasDisposed
-        ? 'INLÄMNADE NYCKLAR OCH DROPPAR'
-        : 'NYCKLAR OCH DROPPAR'
+        ? 'INLÄMNADE NYCKLAR OCH TAGGAR'
+        : 'NYCKLAR OCH TAGGAR'
   } else if (hasMissing || hasRemaining || hasDisposed) {
     returnedHeader = 'INLÄMNADE NYCKLAR'
   }
@@ -544,7 +544,7 @@ const renderReturnItemsTable = (
   if (hasMissing) {
     y += 4
     const missingHeader = hasCards
-      ? 'SAKNADE NYCKLAR OCH DROPPAR'
+      ? 'SAKNADE NYCKLAR OCH TAGGAR'
       : 'SAKNADE NYCKLAR'
     y = renderItemsTableSection(
       doc,
@@ -561,7 +561,7 @@ const renderReturnItemsTable = (
   if (hasRemaining) {
     y += 4
     const remainingHeader = hasRemainingCards
-      ? 'NYCKLAR OCH DROPPAR KVAR PÅ LÅN'
+      ? 'NYCKLAR OCH TAGGAR KVAR PÅ LÅN'
       : 'NYCKLAR KVAR PÅ LÅN'
     y = renderItemsTableSection(
       doc,
@@ -711,7 +711,7 @@ const addLoanConfirmation = (
   doc.setFontSize(FONT_SIZE.BODY)
 
   const confirmText =
-    'Jag bekräftar att jag har mottagit ovanstående nycklar och att jag är ansvarig för dem enligt hyresavtalet. Nycklar ska återlämnas enligt hyresavtalets villkor. Vid förlust eller skada debiteras kostnad för byte av lås.'
+    'Jag bekräftar att jag har mottagit ovanstående nycklar och att jag är ansvarig för dem enligt hyresavtalet. Kvittensen omfattar samtliga nycklar och taggar som jag har kvitterat ut från Bostads AB Mimer för det aktuella hyresobjektet, både tidigare uthämtade och idag mottagna. Nycklar ska återlämnas enligt hyresavtalets villkor. Vid förlust eller skada debiteras kostnad för byte av lås.'
 
   const lines = doc.splitTextToSize(confirmText, PAGE_W - 2 * MARGIN_X)
   lines.forEach((line: string) => {
@@ -780,13 +780,11 @@ const addReturnConfirmation = (
   ]
   if (hasMissingItems) {
     paragraphs.push(
-      'Observera att vissa nycklar eller droppar saknas (se lista ovan).'
+      'Observera att vissa nycklar eller taggar saknas (se lista ovan).'
     )
   }
   if (hasRemainingItems) {
-    paragraphs.push(
-      'Övriga nycklar och droppar är kvar på lån (se lista ovan).'
-    )
+    paragraphs.push('Övriga nycklar och taggar är kvar på lån (se lista ovan).')
   }
 
   paragraphs.forEach((paragraph, i) => {
@@ -816,7 +814,7 @@ const addComment = (doc: jsPDF, y: number, comment?: string): number => {
     y = MARGIN_TOP_CONTINUATION
   }
 
-  // Section header - Bison Bold blue (same style as NYCKLAR, DROPPAR)
+  // Section header - Bison Bold blue (same style as NYCKLAR, TAGGAR)
   doc.setFont(FONT_BISON, 'bold')
   doc.setFontSize(FONT_SIZE.SECTION_HEADER)
   doc.setTextColor(BLUE.r, BLUE.g, BLUE.b)
