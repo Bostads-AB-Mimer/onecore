@@ -11,6 +11,7 @@ import { cachedKeyed, cachedPromise } from '@src/utils/promise-cache'
 import {
   resolvePropertyShares,
   splitPropertyTreeNode,
+  type KvvAreaExceptionRow,
   type PropertyShare,
 } from '@src/utils/property-shares'
 
@@ -139,7 +140,9 @@ export const resolveCompanyPropertyCodes = async (
 /** Property shares of one KVV-area — the level below a district. Split
  * properties contribute only this area's side (see property-shares). */
 export const resolveKvvAreaPropertyShares = async (
-  kvvAreaId: string
+  kvvAreaId: string,
+  // Pass when resolving several areas at once, to load the table only once.
+  exceptions?: KvvAreaExceptionRow[]
 ): Promise<PropertyShare[] | null> => {
   try {
     const area = await prisma.onecoreKvvArea.findUnique({
@@ -152,9 +155,11 @@ export const resolveKvvAreaPropertyShares = async (
       id: area.id,
       propertyCodes: area.propertyLinks.map((link) => link.propertyCode.trim()),
     }
-    const exceptions = await getKvvAreaExceptions()
     const shares =
-      resolvePropertyShares([linked], exceptions).get(area.id) ?? []
+      resolvePropertyShares(
+        [linked],
+        exceptions ?? (await getKvvAreaExceptions())
+      ).get(area.id) ?? []
     const operating = new Set(
       await filterToOperatingCompanies(shares.map((s) => s.propertyCode))
     )
@@ -203,12 +208,15 @@ const groupingPropertyShares = async (
     codesByArea.set(areaId, (codes ?? new Set()).add(value.slice(at + 1)))
   }
 
+  const exceptions =
+    codesByArea.size > 0 ? await getKvvAreaExceptions() : undefined
+
   const resolved = await Promise.all([
     ...(params.costCenterIds ?? []).map((id) =>
       resolveCostCenterPropertyShares(id)
     ),
     ...Array.from(codesByArea).map(([areaId, codes]) =>
-      resolveKvvAreaPropertyShares(areaId).then((shares) =>
+      resolveKvvAreaPropertyShares(areaId, exceptions).then((shares) =>
         codes
           ? (shares ?? []).filter((share) => codes.has(share.propertyCode))
           : shares
