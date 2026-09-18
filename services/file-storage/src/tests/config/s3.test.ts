@@ -53,6 +53,18 @@ describe('createS3Config', () => {
     expect(config.bucketName).toBe('legacy-bucket')
   })
 
+  it('falls back to MINIO__* when the S3__* value is set but empty', () => {
+    const config = createS3Config({
+      S3__BUCKET_NAME: '',
+      MINIO__BUCKET_NAME: 'legacy-bucket',
+      S3__ENDPOINT: '',
+      MINIO__ENDPOINT: 'minio.example.com',
+    })
+
+    expect(config.bucketName).toBe('legacy-bucket')
+    expect(config.endpoint).toBe('minio.example.com')
+  })
+
   it('uses defaults when nothing is set', () => {
     expect(createS3Config({})).toEqual({
       endpoint: 'localhost',
