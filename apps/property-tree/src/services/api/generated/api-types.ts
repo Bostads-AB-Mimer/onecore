@@ -1721,6 +1721,43 @@ export interface paths {
       }
     }
   }
+  '/rental-objects/{rentalId}/kvv-area': {
+    /**
+     * Get the KVV-area (förvaltningsområde) and cost center of a rental object
+     * @description Object-level KVV-area lookup for split properties: if the object's
+     * building carries a row in `onecore_kvv_area_exception`, that area
+     * wins; otherwise the property's `onecore_property_kvv_area` link
+     * applies. For objects in unsplit properties this answers the same as
+     * the property-level lookup. Returns 404 for an unknown rental id or
+     * when nothing resolves.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object id (Xpand `hyresid`). */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description The object's KVV-area, cost center and responsible. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /** @description Unknown rental id, or no KVV-area resolves for it. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/parking-spaces/search': {
     /**
      * Search parking spaces
@@ -2570,7 +2607,9 @@ export interface paths {
      * are paginated.
      *
      * Cost centres and marknadsområden are resolved to property codes
-     * first, since the structure table carries neither.
+     * first, since the structure table carries neither. A split property
+     * (building-level KVV-area exception) resolves to only the side the
+     * scope covers.
      */
     get: {
       parameters: {
@@ -2579,6 +2618,8 @@ export interface paths {
           kvvAreaIds?: string[]
           marketAreaCodes?: string[]
           propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
           buildingCodes?: string[]
           /** @description Composite buildingCode-staircaseCode */
           staircaseCodes?: string[]
@@ -2639,6 +2680,8 @@ export interface paths {
           kvvAreaIds?: string[]
           marketAreaCodes?: string[]
           propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
           buildingCodes?: string[]
           /** @description Composite buildingCode-staircaseCode */
           staircaseCodes?: string[]
@@ -4489,6 +4532,7 @@ export interface components {
             facilityCount: number
             otherCount: number
           }
+          partial?: boolean
         }[]
       }[]
     }
@@ -4600,6 +4644,7 @@ export interface components {
               }[]
             }[]
           }[]
+          partial?: boolean
         }[]
       }[]
     }

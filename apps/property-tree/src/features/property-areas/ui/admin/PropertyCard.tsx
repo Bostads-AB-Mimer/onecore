@@ -34,9 +34,12 @@ export function PropertyCard({
     (property.parkingCount ?? 0) > 0 ||
     (property.entranceCount ?? 0) > 0
 
+  // Exceptions are managed in SQL; a share dragged as a whole property would
+  // relink all of it and leave the exception dangling.
+  const canDrag = draggable && !property.partial
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: property.id,
-    disabled: !draggable || dragDisabled || isOverlay,
+    disabled: !canDrag || dragDisabled || isOverlay,
     data: {
       type: 'property',
       propertyCode: property.propertyCode,
@@ -66,7 +69,7 @@ export function PropertyCard({
         isOverlay && 'shadow-lg cursor-grabbing'
       )}
     >
-      {draggable && (
+      {draggable && canDrag && (
         <button
           {...(isOverlay ? {} : attributes)}
           {...(isOverlay ? {} : listeners)}
@@ -77,9 +80,29 @@ export function PropertyCard({
           <GripVertical className="h-4 w-4" />
         </button>
       )}
+      {draggable && !canDrag && (
+        // Same slot as the grip so split cards line up with the others.
+        <button
+          type="button"
+          disabled
+          className="text-gray-400 cursor-not-allowed flex-shrink-0 mt-0.5"
+          aria-label="Delad fastighet kan inte flyttas här"
+          title="Delad fastighet kan inte flyttas här"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      )}
       <div className="min-w-0 flex-1">
         <div className="font-medium text-sm break-words">
           {property.propertyName}
+          {property.partial && (
+            <span
+              className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground"
+              title="Fastigheten är delad mellan flera områden. Kortet visar bara detta områdes del och kan inte flyttas här."
+            >
+              delad
+            </span>
+          )}
         </div>
         <AddressList addresses={property.addresses} />
         <BuildingTypeBadge type={property.buildingType} className="mt-1" />

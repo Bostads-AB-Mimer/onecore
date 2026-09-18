@@ -2,6 +2,7 @@ import { logger } from '@onecore/utilities'
 import { Prisma, type OnecoreKvvArea } from '@prisma/client'
 
 import { trimStrings } from '@src/utils/data-conversion'
+import type { KvvAreaExceptionRow } from '@src/utils/property-shares'
 import type {
   KvvAreaWithCostCenter,
   PropertyKvvAreaLink,
@@ -54,6 +55,91 @@ export const getKvvAreaByPropertyCode = async (
       { err, propertyCode },
       'kvv-area-adapter.getKvvAreaByPropertyCode'
     )
+    throw err
+  }
+}
+
+/**
+ * Object-level lookup for split properties: the object's building may carry a
+ * KVV-area exception (onecore_kvv_area_exception) overriding its property's
+ * link — resolution is building exception first, property default second.
+ *
+ * Like the property lookup above, deliberately NOT filtered by
+ * OPERATING_COMPANY_CODES: errands on sold stock must still resolve.
+ */
+export const getKvvAreaByRentalId = async (
+  rentalId: string
+): Promise<PropertyKvvAreaLookup | null> => {
+  const id = rentalId.trim()
+  try {
+    // babuf holds one row per structure element and rooms inherit their
+    // parent's hyresid; the cmobj type filter picks the object row itself.
+    const rows = await prisma.$queryRaw<
+      { propertyCode: string | null; buildingCode: string | null }[]
+    >`
+      SELECT TOP 1
+        LTRIM(RTRIM(b.fstcode)) AS propertyCode,
+        LTRIM(RTRIM(b.bygcode)) AS buildingCode
+      FROM dbo.babuf b
+      INNER JOIN dbo.cmobj o ON o.keycmobj = b.keycmobj
+      WHERE b.deletemark = 0
+        AND b.hyresid = ${id}
+        AND o.keycmobt IN ('balgh', 'babps', 'balok', 'bahyr')
+    `
+
+    const row = rows[0]
+    if (!row?.propertyCode) return null
+
+    if (row.buildingCode) {
+      const exception = await prisma.onecoreKvvAreaException
+        .findUnique({
+          where: {
+            objectType_code: { objectType: 'building', code: row.buildingCode },
+          },
+          include: { kvvArea: { include: { costCenter: true } } },
+        })
+        .then(trimStrings)
+
+      if (exception) {
+        return {
+          kvvArea: {
+            id: exception.kvvArea.id,
+            code: exception.kvvArea.code,
+            name: exception.kvvArea.name ?? null,
+          },
+          costCenter: {
+            id: exception.kvvArea.costCenter.id,
+            code: exception.kvvArea.costCenter.code,
+            name: exception.kvvArea.costCenter.name,
+          },
+          responsibleKeycloakUserId:
+            exception.kvvArea.responsibleKeycloakUserId ?? null,
+        }
+      }
+    }
+
+    return getKvvAreaByPropertyCode(row.propertyCode)
+  } catch (err) {
+    logger.error({ err, rentalId }, 'kvv-area-adapter.getKvvAreaByRentalId')
+    throw err
+  }
+}
+
+/** All split-property exception rows — a handful by design, so no filter.
+ * Building rows only: later objectTypes must not mangle membership unseen. */
+export const getKvvAreaExceptions = async (): Promise<
+  KvvAreaExceptionRow[]
+> => {
+  try {
+    const rows = await prisma.onecoreKvvAreaException
+      .findMany({
+        where: { objectType: 'building' },
+        select: { kvvAreaId: true, propertyCode: true, code: true },
+      })
+      .then(trimStrings)
+    return rows
+  } catch (err) {
+    logger.error({ err }, 'kvv-area-adapter.getKvvAreaExceptions')
     throw err
   }
 }
