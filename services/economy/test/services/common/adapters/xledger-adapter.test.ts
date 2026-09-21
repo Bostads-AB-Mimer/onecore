@@ -463,7 +463,8 @@ describe(adapter.getMiscellaneousInvoices, () => {
                   ourRef: { name: 'Jane Doe' },
                   subledger: { code: 'P123456' },
                   invoiceAmount: 500,
-                  headerInfo: '705-025-03-0205/01: Skadedjursbekämpning',
+                  headerInfo:
+                    '705-025-03-0205/01: Skadedjursbekämpning: Råttor',
                   invoiceFile: { url: 'https://xledger.example.com/files/1' },
                   invoiceBaseItems: {
                     edges: [
@@ -508,7 +509,7 @@ describe(adapter.getMiscellaneousInvoices, () => {
             invoiceDate: new Date('2023-02-15T00:00:00.000Z'),
             reference: 'P123456',
             ourReference: 'Jane Doe',
-            description: '705-025-03-0205/01: Skadedjursbekämpning',
+            description: '705-025-03-0205/01: Skadedjursbekämpning: Råttor',
             invoiceFileUrl: 'https://xledger.example.com/files/1',
           },
         ],

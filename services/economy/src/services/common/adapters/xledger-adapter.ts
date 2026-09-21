@@ -1085,7 +1085,7 @@ export const getMiscellaneousInvoices = async ({
 
 const transformToMiscellaneousInvoice = (node: any): MiscellaneousInvoice => {
   let leaseId: string | null = null
-  const headerInfoLeaseIdRegex = /^(.+): .+$/
+  const headerInfoLeaseIdRegex = /^([^:]+): .+$/
   const match = headerInfoLeaseIdRegex.exec(node.headerInfo)
   if (match?.[1]) {
     leaseId = match[1]
