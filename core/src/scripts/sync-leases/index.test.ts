@@ -526,7 +526,7 @@ describe('syncLeases', () => {
     const queue = await readQueue(queueFile)
     expect(queue).toHaveLength(1)
     expect(queue[0].lastError).toMatch(
-      `Failed to sync other invoice recipient ${otherInvoiceRecipient.contactCode}`
+      `Failed to sync other invoice recipient ${otherInvoiceRecipient.contactCode} for lease ${lease.leaseId}: sync-failed`
     )
     expect(sendEmailSpy).toHaveBeenCalledTimes(1)
   })
