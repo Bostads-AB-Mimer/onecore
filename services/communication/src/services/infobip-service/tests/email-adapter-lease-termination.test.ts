@@ -31,9 +31,7 @@ const email = {
   address: 'Testgatan 1',
   leaseId: '307-002-11-0201/11',
   endDate: new Date('2026-10-31'),
-  objectId: '123-456',
   rentalType: 'Bilplats' as const,
-  parkingSpaceId: '123-456-789',
 }
 
 describe('sendLeaseTerminationConfirmation', () => {
@@ -44,7 +42,7 @@ describe('sendLeaseTerminationConfirmation', () => {
     global.fetch = fetchMock
   })
 
-  it('posts to Infobip v4 with formatted placeholders and parking image', async () => {
+  it('posts to Infobip v4 with formatted placeholders', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ messages: [{ messageId: 'mid-term' }] }),
@@ -69,35 +67,13 @@ describe('sendLeaseTerminationConfirmation', () => {
     const placeholders = JSON.parse(
       body.messages[0].destinations[0].to[0].placeholders
     )
-    expect(placeholders).toMatchObject({
+    expect(placeholders).toEqual({
       firstName: 'Anna',
       address: 'Testgatan 1',
       leaseId: '307-002-11-0201/11',
       endDate: '2026-10-31',
-      objectId: '123-456',
       type: 'Bilplats',
-      parkingSpaceId: '123-456-789',
     })
-    expect(placeholders.parkingSpaceImage).toContain('123-456')
-  })
-
-  it('omits parking placeholders when parkingSpaceId is absent', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ messages: [{ messageId: 'mid-term' }] }),
-    })
-
-    const { parkingSpaceId: _parkingSpaceId, ...withoutParking } = email
-    await sendLeaseTerminationConfirmation(withoutParking)
-
-    const body = JSON.parse(
-      (fetchMock.mock.calls[0][1] as { body: string }).body
-    )
-    const placeholders = JSON.parse(
-      body.messages[0].destinations[0].to[0].placeholders
-    )
-    expect(placeholders).not.toHaveProperty('parkingSpaceId')
-    expect(placeholders).not.toHaveProperty('parkingSpaceImage')
   })
 
   it('throws when Infobip responds with an error status', async () => {

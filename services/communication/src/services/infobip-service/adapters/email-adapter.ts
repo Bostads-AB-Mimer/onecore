@@ -483,12 +483,7 @@ export const sendLeaseTerminationConfirmation = async (
       address: email.address,
       leaseId: email.leaseId,
       endDate: dateFormatter.format(new Date(email.endDate)),
-      objectId: email.objectId,
       type: email.rentalType,
-      ...(email.parkingSpaceId && {
-        parkingSpaceId: email.parkingSpaceId,
-        parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
-      }),
     })
 
     const response = await sendEmailV4([

@@ -868,9 +868,7 @@ describe('/sendLeaseTerminationConfirmation', () => {
     address: 'Testgatan 1',
     leaseId: '307-002-11-0201/11',
     endDate: '2026-10-31',
-    objectId: '123-456',
     rentalType: 'Bilplats' as const,
-    parkingSpaceId: '123-456-789',
   }
 
   beforeEach(() => {
@@ -957,20 +955,6 @@ describe('/sendLeaseTerminationConfirmation', () => {
     expect(res.status).toBe(204)
     expect(logOutboundDispatchMock).toHaveBeenCalledWith(
       expect.objectContaining({ triggeredByUser: 'Tenfast' })
-    )
-  })
-
-  it('returns 204 without parkingSpaceId when it is omitted', async () => {
-    const { parkingSpaceId: _parkingSpaceId, ...withoutParking } =
-      terminationBody
-
-    const res = await request(app.callback())
-      .post('/sendLeaseTerminationConfirmation')
-      .send(withoutParking)
-
-    expect(res.status).toBe(204)
-    expect(sendSpy).toHaveBeenCalledWith(
-      expect.not.objectContaining({ parkingSpaceId: expect.anything() })
     )
   })
 

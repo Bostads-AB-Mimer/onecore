@@ -114,7 +114,6 @@ describe('buildParkingSpacePlaceholders', () => {
       leaseId: '307-002-11-0201/11',
       endDate: '2026-10-31T00:00:00.000Z',
       type: 'Bilplats',
-      objectId: '42',
     })
 
     expect(placeholders.endDate).toBe('2026-10-31')

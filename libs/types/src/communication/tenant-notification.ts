@@ -52,9 +52,7 @@ export const LeaseTerminationConfirmationNotificationSchema = z.object({
     .string()
     .date()
     .transform((value) => new Date(`${value}T00:00:00.000Z`)),
-  objectId: z.string().min(1),
   rentalType: LeaseTerminationRentalTypeSchema,
-  parkingSpaceId: z.string().min(1).optional(),
   correlationId: z.string().min(1).optional(),
 })
 
