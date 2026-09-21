@@ -1,5 +1,6 @@
 import knex from 'knex'
 import { ContactCode } from '@src/domain'
+import { currentInvoiceAddress } from './address-sql'
 import { DbContactRow } from './db-model'
 
 export type ContactIncludeOptions = {
@@ -74,7 +75,9 @@ export const contactsByCodesQuery = async (
 
   if (options.includeAddress) {
     query = query.leftJoin('cmadr', (join) => {
-      join.on('cmadr.keycode', 'cmctc.keycmobj').andOnNull('cmadr.tdate')
+      join
+        .on('cmadr.keycode', 'cmctc.keycmobj')
+        .andOn(currentInvoiceAddress(db))
     })
     columns.push(...ADDRESS_COLUMNS)
   }

@@ -3,6 +3,7 @@ import { Pagination } from '@src/adapters'
 import { ContactCode, NationalIdNumber } from '@src/domain'
 import { ContactTypeFilter, ObjectKey } from '@src/domain/contact'
 
+import { currentInvoiceAddress } from './address-sql'
 import { DbContactRow } from './db-model'
 
 const CONTACT_CODE = 'cmctc.cmctckod'
@@ -358,7 +359,8 @@ export const contactsQuery = () => {
       .from('cmadr')
       .join('cmctc', 'cmadr.keycode', 'cmctc.keycmobj')
       .modify(baseFilters)
-      .whereNull('cmadr.tdate')
+      // Search only the rows the contact is returned with.
+      .andWhere(currentInvoiceAddress(db))
       .andWhere((b) =>
         b
           .whereRaw(...wildcard('cmadr.adress1', wc))
@@ -578,7 +580,9 @@ export const contactsQuery = () => {
         .from('page')
         .join('cmctc', 'cmctc.keycmobj', 'page.keycmobj')
         .leftJoin('cmadr', (join) => {
-          join.on('cmadr.keycode', 'cmctc.keycmobj').andOnNull('cmadr.tdate')
+          join
+            .on('cmadr.keycode', 'cmctc.keycmobj')
+            .andOn(currentInvoiceAddress(db))
         })
         .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
         .leftJoin('cmtel', 'cmtel.keycmobj', 'cmctc.keycmobj')
