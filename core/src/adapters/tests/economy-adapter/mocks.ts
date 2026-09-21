@@ -87,7 +87,6 @@ export const mockedMiscellaneousInvoices: MiscellaneousInvoice[] = [
   {
     invoiceId: '552303315030452',
     invoiceDate: new Date('2023-02-15T00:00:00.000Z'),
-    leaseId: '123-456-789/01',
     amount: 500,
     reference: 'P123456',
     ourReference: 'Jane Doe',

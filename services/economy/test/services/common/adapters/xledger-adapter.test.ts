@@ -495,7 +495,6 @@ describe(adapter.getMiscellaneousInvoices, () => {
         content: [
           {
             invoiceId: '552303315030452',
-            leaseId: '705-025-03-0205/01',
             amount: 500,
             invoiceBaseItems: [
               {

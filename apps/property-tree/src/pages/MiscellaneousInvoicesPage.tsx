@@ -25,11 +25,6 @@ const columns = [
     hideOnMobile: true,
   },
   {
-    key: 'leaseId',
-    label: 'Hyresobjekt',
-    render: (invoice: MiscellaneousInvoice) => invoice.leaseId || '-',
-  },
-  {
     key: 'reference',
     label: 'Referens',
     render: (invoice: MiscellaneousInvoice) => invoice.reference,
