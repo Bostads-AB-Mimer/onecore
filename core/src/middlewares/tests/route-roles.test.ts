@@ -5,9 +5,9 @@ describe('requiredRolesFor', () => {
     expect(requiredRolesFor('/v1/contacts', 'POST')).toEqual(['contacts:write'])
   })
 
-  // Relations are reversible and roll back on a failed propagation, so they
-  // sit with the other caseworker writes rather than behind the Xpand-write
-  // role. Pinned in both directions so neither drifts into the other.
+  // Relations are reversible, so they sit with the other caseworker writes
+  // rather than behind the Xpand-write role. Pinned in both directions so
+  // neither policy drifts into the other.
   it('does not gate relation writes on contacts:write', () => {
     expect(requiredRolesFor('/v1/contacts/P1/relations', 'POST')).toEqual([
       'api-access',
