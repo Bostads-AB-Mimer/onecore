@@ -3,6 +3,8 @@ import { RelationEdge } from '@src/adapters/contact-relations'
 /**
  * `contact_relation` rows seeded before every e2e run, mirroring the guardian
  * / ANNANFM fixtures in `.jest/sql/seed.sql`. Names come from the Xpand seed.
+ * Active edges are unique since migration 202609101000, so no edge is
+ * repeated here; the read path's dedupe is defensive only.
  */
 export const RELATION_FIXTURES: RelationEdge[] = [
   {
@@ -25,13 +27,6 @@ export const RELATION_FIXTURES: RelationEdge[] = [
     relatedContactCode: 'P000777',
     roleType: 'forvaltare',
   },
-  {
-    subjectContactCode: 'P900001',
-    relatedContactCode: 'P900010',
-    roleType: 'annan_fakturamottagare',
-  },
-  // Stored twice on purpose: there is no unique index on active edges yet,
-  // and the read path must collapse duplicates.
   {
     subjectContactCode: 'P900001',
     relatedContactCode: 'P900010',

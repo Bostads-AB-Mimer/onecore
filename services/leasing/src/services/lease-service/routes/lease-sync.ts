@@ -6,7 +6,10 @@ import {
 } from '@onecore/utilities'
 import { getLeaseChanges } from '../adapters/xpand/cmlog-lease-adapter'
 import { getLeases } from '../adapters/xpand/tenant-lease-adapter'
-import { getSignedContractPdf } from '../adapters/xpand/lease-document-adapter'
+import {
+  getSignedContractPdf,
+  getTerminationDocumentPdf,
+} from '../adapters/xpand/lease-document-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { z } from 'zod'
@@ -193,6 +196,72 @@ export const routes = (router: KoaRouter) => {
           }
 
           logger.info({ leaseId }, 'Lease terminated in Tenfast')
+
+          // Best-effort attach the uppsägning PDF from xpand. Also runs when
+          // terminate returns skipped (already terminated) so a failed prior
+          // upload can be repaired on retry. A missing PDF or failed upload is
+          // logged but does not fail the terminate.
+          const tenfastLease =
+            await tenfastAdapter.getLeaseByExternalId(leaseId)
+          if (!tenfastLease.ok) {
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            return
+          }
+
+          const tenfastLeaseId = tenfastLease.data._id
+          const hasFile =
+            await tenfastAdapter.hasTerminationFile(tenfastLeaseId)
+          if (!hasFile.ok) {
+            logger.warn(
+              { leaseId, error: hasFile.err },
+              'Could not check Tenfast termination file status, skipping upload'
+            )
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            return
+          }
+          if (hasFile.data) {
+            logger.info(
+              { leaseId },
+              'Tenfast lease already has a termination file, skipping upload'
+            )
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            return
+          }
+
+          const pdf = await getTerminationDocumentPdf(leaseId)
+          if (!pdf) {
+            logger.warn(
+              { leaseId },
+              'Tenfast lease terminated but no uppsägning PDF found in xpand'
+            )
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            return
+          }
+
+          const uploadResult = await tenfastAdapter.uploadTerminationFile(
+            tenfastLeaseId,
+            pdf.content,
+            pdf.filename
+          )
+          if (!uploadResult.ok) {
+            logger.warn(
+              { leaseId, error: uploadResult.err },
+              'Tenfast lease terminated but uppsägning PDF upload failed'
+            )
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            return
+          }
+
+          logger.info(
+            { leaseId, filename: pdf.filename },
+            'Attached uppsägning PDF to Tenfast lease'
+          )
+
           ctx.status = 200
           ctx.body = makeSuccessResponseBody(result.data, metadata)
           return

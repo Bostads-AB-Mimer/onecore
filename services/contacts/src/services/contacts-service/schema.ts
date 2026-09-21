@@ -230,3 +230,51 @@ export const CreateContactErrorResponseBodySchema = z.object({
    */
   detail: z.string().optional(),
 })
+
+/* -------------------------------------------------------------------------
+ * Administering relations
+ *
+ * Roles are stored as the contact_relation role types. god_man/forvaltare are
+ * exclusive: a contact has at most one active guardian in total.
+ * ---------------------------------------------------------------------- */
+
+export const RelationRoleTypeSchema = z.enum([
+  'god_man',
+  'forvaltare',
+  'annan_fakturamottagare',
+])
+
+// The acting user, bounded by contact_relation.created_by/deleted_by NVARCHAR(100).
+export const RelationActorSchema = z.string().trim().min(1).max(100)
+
+export const AddRelationRequestBodySchema = z.object({
+  relatedContactCode: z.string().trim().min(1),
+  roleType: RelationRoleTypeSchema,
+  createdBy: RelationActorSchema,
+})
+
+export const AddRelationErrorCodeSchema = z.enum([
+  'subject-not-found',
+  'related-not-found',
+  'self-relation',
+  'guardian-exists',
+  'duplicate-relation',
+])
+
+export const RemoveRelationErrorCodeSchema = z.enum(['relation-not-found'])
+
+/** Rejections the DELETE route itself produces before calling the service. */
+export const RemoveRelationRequestErrorCodeSchema = z.enum([
+  'invalid-role-type',
+  'missing-deleted-by',
+])
+
+export const RelationErrorResponseBodySchema = z.object({
+  error: z.union([
+    AddRelationErrorCodeSchema,
+    RemoveRelationErrorCodeSchema,
+    RemoveRelationRequestErrorCodeSchema,
+  ]),
+  /** For `guardian-exists`: the existing guardian's contact code, when known. */
+  detail: z.string().optional(),
+})
