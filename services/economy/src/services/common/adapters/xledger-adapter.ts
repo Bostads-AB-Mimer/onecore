@@ -1098,7 +1098,7 @@ const transformToMiscellaneousInvoice = (node: any): MiscellaneousInvoice => {
     invoiceBaseItems: node.invoiceBaseItems?.edges?.map((e: any) =>
       transformToMiscellaneousInvoiceBaseItem(e.node)
     ),
-    invoiceDate: node.invoiceDate,
+    invoiceDate: new Date(node.invoiceDate),
     reference: node.subledger.code,
     ourReference: node.ourRef?.name,
     description: node.headerInfo,

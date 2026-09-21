@@ -505,7 +505,7 @@ describe(adapter.getMiscellaneousInvoices, () => {
                 costCentre: '12345',
               },
             ],
-            invoiceDate: '2023-02-15T00:00:00.000Z',
+            invoiceDate: new Date('2023-02-15T00:00:00.000Z'),
             reference: 'P123456',
             ourReference: 'Jane Doe',
             description: '705-025-03-0205/01: Skadedjursbekämpning',
