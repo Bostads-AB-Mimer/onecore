@@ -15,7 +15,6 @@ export * as inspection from './inspection'
 export * as property from './property'
 export * as communication from './communication'
 export {
-  TenantNotificationType,
   TenantNotificationRole,
   LeaseTerminationConfirmationRequestSchema,
   LeaseTerminationConfirmationEmailSchema,

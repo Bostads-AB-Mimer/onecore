@@ -861,7 +861,6 @@ describe('/sendLeaseTerminationConfirmation', () => {
   let sendSpy: jest.SpyInstance
 
   const terminationBody = {
-    type: 'lease-termination-confirmation' as const,
     to: 'tenant@example.com',
     contactCode: 'P123456',
     firstName: 'Anna',

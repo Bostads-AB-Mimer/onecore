@@ -24,7 +24,6 @@ jest.mock('../../../common/config', () => ({
 import { sendLeaseTerminationConfirmation } from '../adapters/email-adapter'
 
 const email = {
-  type: 'lease-termination-confirmation' as const,
   to: 'tenant@example.com',
   contactCode: 'P123456',
   firstName: 'Anna',

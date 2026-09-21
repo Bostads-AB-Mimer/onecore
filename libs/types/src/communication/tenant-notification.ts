@@ -9,13 +9,6 @@ import { z } from 'zod'
  * - Callers supply structured facts only; OneCore owns templates and delivery
  */
 
-export const TenantNotificationType = {
-  LeaseTerminationConfirmation: 'lease-termination-confirmation',
-} as const
-
-export type TenantNotificationType =
-  (typeof TenantNotificationType)[keyof typeof TenantNotificationType]
-
 /** Keycloak role for POST /v1/tenant-notifications/lease-termination-confirmation. */
 export const TenantNotificationRole = {
   LeaseTermination: 'tenant-notifications:lease-termination',
@@ -32,7 +25,7 @@ export type LeaseTerminationRentalType = z.infer<
   typeof LeaseTerminationRentalTypeSchema
 >
 
-/** Public Core API request body — type is implied by the URL. */
+/** Public Core API request body — notification kind is implied by the URL. */
 export const LeaseTerminationConfirmationRequestSchema = z.object({
   to: z.string().email(),
   contactCode: z.string().min(1),
@@ -51,10 +44,9 @@ export type LeaseTerminationConfirmationRequest = z.infer<
   typeof LeaseTerminationConfirmationRequestSchema
 >
 
-/** Internal communication payload — adds message type and server-set audit attribution. */
+/** Communication service payload — adds server-set audit attribution. */
 export const LeaseTerminationConfirmationEmailSchema =
   LeaseTerminationConfirmationRequestSchema.extend({
-    type: z.literal(TenantNotificationType.LeaseTerminationConfirmation),
     triggeredByUser: z.string().min(1).optional(),
   })
 

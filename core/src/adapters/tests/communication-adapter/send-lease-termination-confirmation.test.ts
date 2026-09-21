@@ -11,7 +11,6 @@ import config from '../../../common/config'
 import { sendLeaseTerminationConfirmationEmail } from '../../communication-adapter'
 
 const email = {
-  type: 'lease-termination-confirmation' as const,
   to: 'tenant@example.com',
   contactCode: 'P123456',
   firstName: 'Anna',
@@ -31,10 +30,10 @@ describe('sendLeaseTerminationConfirmationEmail', () => {
     nock(config.communicationService.url)
       .post('/sendLeaseTerminationConfirmation', (body) => {
         expect(body).toMatchObject({
-          type: 'lease-termination-confirmation',
           contactCode: 'P123456',
           leaseId: '307-002-11-0201/11',
           endDate: '2026-10-31',
+          rentalType: 'Bilplats',
         })
         return true
       })

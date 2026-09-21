@@ -90,8 +90,8 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
       communicationAdapter.sendLeaseTerminationConfirmationEmail
     ).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: 'lease-termination-confirmation',
         leaseId: '307-002-11-0201/11',
+        rentalType: 'Bilplats',
       })
     )
   })
