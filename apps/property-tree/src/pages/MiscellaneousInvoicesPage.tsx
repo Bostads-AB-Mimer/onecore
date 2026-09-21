@@ -26,7 +26,7 @@ const columns = [
   },
   {
     key: 'reference',
-    label: 'Referens',
+    label: 'Kund',
     render: (invoice: MiscellaneousInvoice) => invoice.reference,
     hideOnMobile: true,
   },
