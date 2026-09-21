@@ -59,6 +59,11 @@ sequenceDiagram
 
     Economy ->> SFTP: Anslut (lösenord + värdnyckel-<br/>verifiering mot SHA256-fingerprint)
 
+    break when anslutning misslyckas
+        Economy ->> Infobip: Mejla felsammanfattning
+        Economy-->CronJob: throw, scriptet avslutas med felkod
+    end
+
     loop För varje fil
         Economy ->> Tenfast: POST /outbound-exports/{id}/download
         Tenfast -->> Economy: Filinnehåll (binärt)
