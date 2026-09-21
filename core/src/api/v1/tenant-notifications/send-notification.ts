@@ -1,6 +1,4 @@
-import {
-  LeaseTerminationConfirmationEmail,
-} from '@onecore/types'
+import { LeaseTerminationConfirmationEmail } from '@onecore/types'
 
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import {

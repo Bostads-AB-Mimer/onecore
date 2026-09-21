@@ -3,10 +3,7 @@
  *
  * requireRole is ANY-of, so a list means "one of these".
  */
-export const requiredRolesFor = (
-  rawPath: string,
-  method: string
-): string[] => {
+export const requiredRolesFor = (rawPath: string, method: string): string[] => {
   // @koa/router matches paths case-insensitively, so compare in lower case —
   // otherwise POST /V1/contacts reaches the handler but is gated as api-access.
   const path = rawPath.toLowerCase()
