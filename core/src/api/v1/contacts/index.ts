@@ -530,9 +530,11 @@ export const routes = (router: OkapiRouter, config: Config) => {
       'unknown'
     ).slice(0, 100)
 
-  // Gated on contacts:write by requiredRolesFor (core/src/middlewares/
-  // route-roles.ts) for POST and DELETE under /v1/contacts. Not visible in
-  // this route definition — do not add api-access there.
+  // Deliberately NOT gated on contacts:write. That role fences the one write
+  // ONECore cannot undo — creating a contact in Xpand. A relation lives in the
+  // contacts DB and its removal is a soft delete that keeps history, so it
+  // sits behind ordinary api-access like the lease and invoice writes. See
+  // requiredRolesFor in core/src/middlewares/route-roles.ts.
   router.post(
     '/v1/contacts/:contactCode/relations',
     {
@@ -602,7 +604,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
     }
   )
 
-  // Gated on contacts:write by requiredRolesFor — see the POST above.
+  // Not gated on contacts:write either — see the POST above.
   router.delete(
     '/v1/contacts/:contactCode/relations/:roleType/:relatedContactCode',
     {
