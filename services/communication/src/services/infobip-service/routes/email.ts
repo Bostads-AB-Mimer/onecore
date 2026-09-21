@@ -423,7 +423,7 @@ export const routes = (router: KoaRouter) => {
           subject: rendered?.subject || LEASE_TERMINATION_CONFIRMATION_SUBJECT,
           body:
             rendered?.body ||
-            `${LEASE_TERMINATION_CONFIRMATION_SUBJECT} av ${body.rentalType} ${body.address}, avtal ${body.leaseId}.`,
+            `${LEASE_TERMINATION_CONFIRMATION_SUBJECT} av ${body.rentalType}, avtal ${body.leaseId}.`,
           sendResult: result.data,
         })
         ctx.status = 204

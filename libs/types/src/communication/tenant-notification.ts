@@ -30,7 +30,6 @@ export const LeaseTerminationConfirmationRequestSchema = z.object({
   to: z.string().email(),
   contactCode: z.string().min(1),
   firstName: z.string().min(1),
-  address: z.string().min(1),
   leaseId: z.string().min(1),
   endDate: z
     .string()

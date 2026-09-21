@@ -14,7 +14,6 @@ const email = {
   to: 'tenant@example.com',
   contactCode: 'P123456',
   firstName: 'Anna',
-  address: 'Testgatan 1',
   leaseId: '307-002-11-0201/11',
   endDate: new Date('2026-10-31'),
   rentalType: 'Bilplats' as const,

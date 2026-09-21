@@ -480,7 +480,6 @@ export const sendLeaseTerminationConfirmation = async (
   try {
     const placeholders = JSON.stringify({
       firstName: email.firstName,
-      address: email.address,
       leaseId: email.leaseId,
       endDate: dateFormatter.format(new Date(email.endDate)),
       type: email.rentalType,
