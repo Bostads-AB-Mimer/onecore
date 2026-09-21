@@ -219,13 +219,19 @@ export const RelationsResponseBodySchema_APIv1 =
   })
 
 /**
- * The contacts service's own failure codes plus the two core adds on its own.
- * Kept as an enum rather than a plain string so the generated client types
- * constrain the caseworker-facing error-to-message map in the UI.
+ * The contacts service's own failure codes plus the four core adds on its
+ * own. Kept as an enum rather than a plain string so the generated client
+ * types constrain the caseworker-facing error-to-message map in the UI.
  *
  * `invalid-role-type` is emitted by core itself, before contacts is called.
  * `missing-deleted-by` is listed for completeness only — core always sends
  * `deletedBy`, so it cannot surface on this API.
+ * `propagation-failed` means the relation was not saved: a downstream system
+ * (Tenfast, or Xledger for `annan_fakturamottagare`) could not be updated. If
+ * the write had already landed, it was rolled back before answering.
+ * `rollback-failed` is its opposite: the change IS saved but never reached
+ * Tenfast, and undoing it failed too. It has been flagged for manual repair —
+ * retrying can only answer `duplicate-relation`/`relation-not-found`.
  */
 const RELATION_ERROR_CODES = [
   ...AddRelationErrorCodeSchema.options,
@@ -233,6 +239,8 @@ const RELATION_ERROR_CODES = [
   ...RemoveRelationRequestErrorCodeSchema.options,
   'invalid-request',
   'contacts-service-error',
+  'propagation-failed',
+  'rollback-failed',
 ] as const
 
 export const RelationErrorCodeSchema_APIv1 = z.enum(RELATION_ERROR_CODES)

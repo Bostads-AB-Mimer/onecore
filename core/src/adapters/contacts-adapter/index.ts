@@ -67,10 +67,18 @@ export type RelationRef = {
   roleType: RelationRoleType
 }
 
+/**
+ * Bound on every contacts call: without one a black-holed connection hangs
+ * until the OS gives up, and a caseworker waiting on a relation write never
+ * reaches the 502 or the compensating write a failure should trigger.
+ */
+const REQUEST_TIMEOUT_MS = 30_000
+
 export const makeContactsAdapter = (contactsServiceUrl: string) => {
   const axios = loggedAxios.create({
     baseURL: contactsServiceUrl,
     validateStatus: () => true,
+    timeout: REQUEST_TIMEOUT_MS,
   })
 
   const listResponse = (
@@ -207,6 +215,9 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       const params = since ? { since: since.toISOString() } : {}
       const response = await axios<SyncContactsResponseBody>(`/contacts/sync`, {
         params,
+        // The one exception: a batch job with no user waiting, whose first
+        // run legitimately takes longer than the bound.
+        timeout: 0,
       })
 
       if (response.status === 200) {

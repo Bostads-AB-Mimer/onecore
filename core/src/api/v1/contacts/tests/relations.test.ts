@@ -21,7 +21,8 @@ import { requireRole } from '../../../../middlewares/keycloak-auth'
 import { requiredRolesFor } from '../../../../middlewares/route-roles'
 import { routes } from '../index'
 import config from '../../../../common/config'
-import * as contactsAdapterModule from '../../../../adapters/contacts-adapter'
+import { ProcessStatus } from '../../../../common/types'
+import * as contactsProcesses from '../../../../processes/contacts'
 
 type TestUser = {
   name?: string
@@ -72,17 +73,6 @@ const NO_ROLES: TestUser = {
 }
 let mockUser: TestUser = WRITER
 
-const adapter = {
-  addRelation: jest.fn(),
-  removeRelation: jest.fn(),
-}
-
-// makeContactsAdapter is called inside routes(), so the spy must be in place
-// before the router is built.
-jest
-  .spyOn(contactsAdapterModule, 'makeContactsAdapter')
-  .mockReturnValue(adapter as never)
-
 const app = new Koa()
 app.use(bodyParser())
 app.use((ctx, next) => {
@@ -100,13 +90,15 @@ app.use(router.routes())
 
 beforeEach(() => {
   mockUser = WRITER
-  adapter.addRelation.mockReset()
-  adapter.removeRelation.mockReset()
+})
+
+afterEach(() => {
+  jest.restoreAllMocks()
 })
 
 const relation = {
   contactCode: 'P2',
-  role: 'trustee',
+  role: 'trustee' as const,
   fullName: 'X Y',
   firstName: 'X',
   lastName: 'Y',
@@ -114,10 +106,13 @@ const relation = {
 
 describe('POST /v1/contacts/:contactCode/relations', () => {
   it('forwards the body with the user name as createdBy and returns 201', async () => {
-    adapter.addRelation.mockResolvedValue({
-      ok: true,
-      data: { relations: [relation] },
-    })
+    const addSpy = jest
+      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+        data: { relations: [relation] },
+        httpStatus: 201,
+      })
 
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
@@ -125,7 +120,7 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
 
     expect(res.status).toBe(201)
     expect(res.body.content.relations).toEqual([relation])
-    expect(adapter.addRelation).toHaveBeenCalledWith({
+    expect(addSpy).toHaveBeenCalledWith({
       contactCode: 'P1',
       relatedContactCode: 'P2',
       roleType: 'god_man',
@@ -134,7 +129,13 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
   })
 
   it('ignores a client-supplied createdBy', async () => {
-    adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
+    const addSpy = jest
+      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+        data: { relations: [] },
+        httpStatus: 201,
+      })
 
     await request(app.callback()).post('/v1/contacts/P1/relations').send({
       relatedContactCode: 'P2',
@@ -142,18 +143,20 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
       createdBy: 'spoof',
     })
 
-    expect(adapter.addRelation).toHaveBeenCalledWith(
+    expect(addSpy).toHaveBeenCalledWith(
       expect.objectContaining({ createdBy: 'Anna Andersson' })
     )
   })
 
-  it('passes the contacts status and error through', async () => {
-    adapter.addRelation.mockResolvedValue({
-      ok: false,
-      err: 'guardian-exists',
-      detail: 'P9',
-      statusCode: 409,
-    })
+  it('passes the process status, error and detail through', async () => {
+    jest
+      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.failed,
+        error: 'guardian-exists',
+        httpStatus: 409,
+        response: { detail: 'P9' },
+      })
 
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
@@ -163,130 +166,133 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
     expect(res.body).toMatchObject({ error: 'guardian-exists', detail: 'P9' })
   })
 
-  it('is 502 when the adapter reports a transport failure without a status', async () => {
-    adapter.addRelation.mockResolvedValue({
-      ok: false,
-      err: 'contacts-service-error',
-    })
+  // The process, not the route, decides when propagation to Tenfast/Xledger
+  // has failed. The route's job is only to forward what it returns.
+  it('answers 502 when propagation fails', async () => {
+    jest
+      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.failed,
+        error: 'propagation-failed',
+        httpStatus: 502,
+        response: { detail: 'tenfast' },
+      })
 
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
       .send({ relatedContactCode: 'P2', roleType: 'god_man' })
 
     expect(res.status).toBe(502)
-    expect(res.body.error).toBe('contacts-service-error')
-  })
-
-  it('does not forward an upstream 500, but answers 502', async () => {
-    adapter.addRelation.mockResolvedValue({
-      ok: false,
-      err: 'contacts-service-error',
-      statusCode: 500,
-    })
-
-    const res = await request(app.callback())
-      .post('/v1/contacts/P1/relations')
-      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
-
-    expect(res.status).toBe(502)
-    expect(res.body.error).toBe('contacts-service-error')
-  })
-
-  // A 404 from contacts is only a client answer when it names a relation rule.
-  // An unrouted 404 — core deployed ahead of contacts — is an outage, and
-  // forwarding it would report a service fault as a client error.
-  it('answers 502 for an unrecognised failure that arrives with a 404', async () => {
-    adapter.addRelation.mockResolvedValue({
-      ok: false,
-      err: 'contacts-service-error',
-      statusCode: 404,
-    })
-
-    const res = await request(app.callback())
-      .post('/v1/contacts/P1/relations')
-      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
-
-    expect(res.status).toBe(502)
-    expect(res.body.error).toBe('contacts-service-error')
+    expect(res.body.error).toBe('propagation-failed')
   })
 
   it('falls back to preferred_username when the name is only whitespace', async () => {
     mockUser = WRITER_WITH_BLANK_NAME
-    adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
+    const addSpy = jest
+      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+        data: { relations: [] },
+        httpStatus: 201,
+      })
 
     await request(app.callback())
       .post('/v1/contacts/P1/relations')
       .send({ relatedContactCode: 'P2', roleType: 'god_man' })
 
-    expect(adapter.addRelation).toHaveBeenCalledWith(
+    expect(addSpy).toHaveBeenCalledWith(
       expect.objectContaining({ createdBy: 'cecilia' })
     )
   })
 
   it('falls back to preferred_username when the token has no name', async () => {
     mockUser = WRITER_WITHOUT_NAME
-    adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
+    const addSpy = jest
+      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+        data: { relations: [] },
+        httpStatus: 201,
+      })
 
     await request(app.callback())
       .post('/v1/contacts/P1/relations')
       .send({ relatedContactCode: 'P2', roleType: 'god_man' })
 
-    expect(adapter.addRelation).toHaveBeenCalledWith(
+    expect(addSpy).toHaveBeenCalledWith(
       expect.objectContaining({ createdBy: 'cecilia' })
     )
   })
 
   it('falls back to preferred_username when the name is empty', async () => {
     mockUser = WRITER_WITH_EMPTY_NAME
-    adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
+    const addSpy = jest
+      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+        data: { relations: [] },
+        httpStatus: 201,
+      })
 
     await request(app.callback())
       .post('/v1/contacts/P1/relations')
       .send({ relatedContactCode: 'P2', roleType: 'god_man' })
 
-    expect(adapter.addRelation).toHaveBeenCalledWith(
+    expect(addSpy).toHaveBeenCalledWith(
       expect.objectContaining({ createdBy: 'cecilia' })
     )
   })
 
   it('truncates a long display name to 100 characters', async () => {
     mockUser = WRITER_WITH_LONG_NAME
-    adapter.addRelation.mockResolvedValue({ ok: true, data: { relations: [] } })
+    const addSpy = jest
+      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+        data: { relations: [] },
+        httpStatus: 201,
+      })
 
     await request(app.callback())
       .post('/v1/contacts/P1/relations')
       .send({ relatedContactCode: 'P2', roleType: 'god_man' })
 
-    const { createdBy } = adapter.addRelation.mock.calls[0][0]
+    const { createdBy } = addSpy.mock.calls[0][0]
     expect(createdBy).toHaveLength(100)
     expect(createdBy).toBe(WRITER_WITH_LONG_NAME.name?.slice(0, 100))
   })
 
-  it('rejects an invalid body with 400 before calling contacts', async () => {
+  it('rejects an invalid body with 400 before calling the process', async () => {
+    const addSpy = jest.spyOn(contactsProcesses, 'addRelationWithPropagation')
+
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
       .send({ relatedContactCode: 'P2', roleType: 'nyttjare' })
 
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('invalid-request')
-    expect(adapter.addRelation).not.toHaveBeenCalled()
+    expect(addSpy).not.toHaveBeenCalled()
   })
 
   // contacts:write fences creating a contact, which writes to Xpand and
-  // cannot be undone. A relation is reversible, so plain api-access is enough.
+  // cannot be undone. A relation is reversible and rolls back on a failed
+  // propagation, so plain api-access is enough.
   it('allows api-access without contacts:write', async () => {
     mockUser = READER
-    adapter.addRelation.mockResolvedValue({
-      ok: true,
-      data: { relations: [relation] },
-    })
+    const addSpy = jest
+      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+        data: { relations: [relation] },
+        httpStatus: 201,
+      })
 
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
       .send({ relatedContactCode: 'P2', roleType: 'god_man' })
 
     expect(res.status).toBe(201)
-    expect(adapter.addRelation).toHaveBeenCalledWith({
+    expect(addSpy).toHaveBeenCalledWith({
       contactCode: 'P1',
       relatedContactCode: 'P2',
       roleType: 'god_man',
@@ -296,24 +302,31 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
 
   it('is still 403 for a token with no roles at all', async () => {
     mockUser = NO_ROLES
+    const addSpy = jest.spyOn(contactsProcesses, 'addRelationWithPropagation')
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
       .send({ relatedContactCode: 'P2', roleType: 'god_man' })
     expect(res.status).toBe(403)
-    expect(adapter.addRelation).not.toHaveBeenCalled()
+    expect(addSpy).not.toHaveBeenCalled()
   })
 })
 
 describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCode', () => {
   it('forwards with the user name as deletedBy and returns 204', async () => {
-    adapter.removeRelation.mockResolvedValue({ ok: true, data: undefined })
+    const removeSpy = jest
+      .spyOn(contactsProcesses, 'removeRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+        data: undefined,
+        httpStatus: 204,
+      })
 
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/god_man/P2'
     )
 
     expect(res.status).toBe(204)
-    expect(adapter.removeRelation).toHaveBeenCalledWith({
+    expect(removeSpy).toHaveBeenCalledWith({
       contactCode: 'P1',
       relatedContactCode: 'P2',
       roleType: 'god_man',
@@ -322,11 +335,13 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
   })
 
   it('passes relation-not-found through as 404', async () => {
-    adapter.removeRelation.mockResolvedValue({
-      ok: false,
-      err: 'relation-not-found',
-      statusCode: 404,
-    })
+    jest
+      .spyOn(contactsProcesses, 'removeRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.failed,
+        error: 'relation-not-found',
+        httpStatus: 404,
+      })
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/god_man/P2'
     )
@@ -334,69 +349,58 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
     expect(res.body).toMatchObject({ error: 'relation-not-found' })
   })
 
-  it('is 502 when the adapter reports a transport failure without a status', async () => {
-    adapter.removeRelation.mockResolvedValue({
-      ok: false,
-      err: 'contacts-service-error',
-    })
+  // The process, not the route, decides when propagation to Tenfast has
+  // failed. The route's job is only to forward what it returns.
+  it('answers 502 when propagation fails', async () => {
+    jest
+      .spyOn(contactsProcesses, 'removeRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.failed,
+        error: 'propagation-failed',
+        httpStatus: 502,
+        response: { detail: 'tenfast' },
+      })
 
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/god_man/P2'
     )
 
     expect(res.status).toBe(502)
-    expect(res.body.error).toBe('contacts-service-error')
-  })
-
-  it('does not forward an upstream 500, but answers 502', async () => {
-    adapter.removeRelation.mockResolvedValue({
-      ok: false,
-      err: 'contacts-service-error',
-      statusCode: 500,
-    })
-
-    const res = await request(app.callback()).delete(
-      '/v1/contacts/P1/relations/god_man/P2'
-    )
-
-    expect(res.status).toBe(502)
-    expect(res.body.error).toBe('contacts-service-error')
-  })
-
-  it('answers 502 for an unrecognised failure that arrives with a 404', async () => {
-    adapter.removeRelation.mockResolvedValue({
-      ok: false,
-      err: 'contacts-service-error',
-      statusCode: 404,
-    })
-
-    const res = await request(app.callback()).delete(
-      '/v1/contacts/P1/relations/god_man/P2'
-    )
-
-    expect(res.status).toBe(502)
-    expect(res.body.error).toBe('contacts-service-error')
+    expect(res.body.error).toBe('propagation-failed')
+    // Forwarding `detail` on DELETE is the one behavioural change this route
+    // made — pin it so deleting the spread doesn't silently regress.
+    expect(res.body.detail).toBe('tenfast')
   })
 
   it('rejects an unknown role type with 400', async () => {
+    const removeSpy = jest.spyOn(
+      contactsProcesses,
+      'removeRelationWithPropagation'
+    )
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/nyttjare/P2'
     )
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('invalid-role-type')
-    expect(adapter.removeRelation).not.toHaveBeenCalled()
+    expect(removeSpy).not.toHaveBeenCalled()
   })
 
   it('allows api-access without contacts:write', async () => {
     mockUser = READER
-    adapter.removeRelation.mockResolvedValue({ ok: true, data: undefined })
+    const removeSpy = jest
+      .spyOn(contactsProcesses, 'removeRelationWithPropagation')
+      .mockResolvedValue({
+        processStatus: ProcessStatus.successful,
+        data: undefined,
+        httpStatus: 204,
+      })
 
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/god_man/P2'
     )
 
     expect(res.status).toBe(204)
-    expect(adapter.removeRelation).toHaveBeenCalledWith({
+    expect(removeSpy).toHaveBeenCalledWith({
       contactCode: 'P1',
       relatedContactCode: 'P2',
       roleType: 'god_man',
@@ -406,10 +410,14 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
 
   it('is still 403 for a token with no roles at all', async () => {
     mockUser = NO_ROLES
+    const removeSpy = jest.spyOn(
+      contactsProcesses,
+      'removeRelationWithPropagation'
+    )
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/god_man/P2'
     )
     expect(res.status).toBe(403)
-    expect(adapter.removeRelation).not.toHaveBeenCalled()
+    expect(removeSpy).not.toHaveBeenCalled()
   })
 })

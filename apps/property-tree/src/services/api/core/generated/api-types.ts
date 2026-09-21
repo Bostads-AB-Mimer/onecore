@@ -11376,7 +11376,7 @@ export interface paths {
   '/v1/contacts/{contactCode}/relations': {
     /**
      * Add a related contact (god man, förvaltare, annan fakturamottagare)
-     * @description Adds a relation from the contact to another contact. A contact has at most one god man or förvaltare (409 guardian-exists, detail = the existing guardian's contact code). The acting user is recorded from the token. Returns the contact's relations after the change.
+     * @description Adds a relation from the contact to another contact. A contact has at most one god man or förvaltare (409 guardian-exists, detail = the existing guardian's contact code). The acting user is recorded from the token. Returns the contact's relations after the change. 502 propagation-failed means the relation was not saved because Tenfast or Xledger could not be updated; detail is `economy` or `tenfast` — an internal stage name for diagnostics only, never to be shown to a caseworker verbatim. 502 rollback-failed is the opposite and must not be retried: the relation was saved, Tenfast was not told, and undoing the write failed too — it is flagged for manual repair.
      */
     post: {
       parameters: {
@@ -11431,6 +11431,8 @@ export interface paths {
                 | 'missing-deleted-by'
                 | 'invalid-request'
                 | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
               detail?: string
             }
           }
@@ -11451,6 +11453,8 @@ export interface paths {
                 | 'missing-deleted-by'
                 | 'invalid-request'
                 | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
               detail?: string
             }
           }
@@ -11471,6 +11475,8 @@ export interface paths {
                 | 'missing-deleted-by'
                 | 'invalid-request'
                 | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
               detail?: string
             }
           }
@@ -11491,6 +11497,8 @@ export interface paths {
                 | 'missing-deleted-by'
                 | 'invalid-request'
                 | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
               detail?: string
             }
           }
@@ -11511,6 +11519,8 @@ export interface paths {
                 | 'missing-deleted-by'
                 | 'invalid-request'
                 | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
               detail?: string
             }
           }
@@ -11521,7 +11531,7 @@ export interface paths {
   '/v1/contacts/{contactCode}/relations/{roleType}/{relatedContactCode}': {
     /**
      * Remove a related contact
-     * @description Ends the relation from the contact to the related contact in the given role. History is kept in the contacts service. The acting user is recorded from the token.
+     * @description Ends the relation from the contact to the related contact in the given role. History is kept in the contacts service. The acting user is recorded from the token. 502 propagation-failed means the relation could not be removed because Tenfast could not be updated; detail is always `tenfast` here (there is no economy stage on removal) — an internal stage name for diagnostics only, never to be shown to a caseworker verbatim. 502 rollback-failed is the opposite and must not be retried: the relation was removed, Tenfast was not told, and putting it back failed too — it is flagged for manual repair.
      */
     delete: {
       parameters: {
@@ -11557,6 +11567,8 @@ export interface paths {
                 | 'missing-deleted-by'
                 | 'invalid-request'
                 | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
               detail?: string
             }
           }
@@ -11577,6 +11589,8 @@ export interface paths {
                 | 'missing-deleted-by'
                 | 'invalid-request'
                 | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
               detail?: string
             }
           }
@@ -11597,6 +11611,8 @@ export interface paths {
                 | 'missing-deleted-by'
                 | 'invalid-request'
                 | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
               detail?: string
             }
           }

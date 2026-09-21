@@ -778,12 +778,20 @@ const exportLeasesToExcel = async (
   }
 }
 
+/**
+ * Relation writes wait on this push synchronously, so an unbounded call would
+ * hold the caseworker's request open instead of failing into the rollback.
+ */
+const SYNC_CONTACT_TIMEOUT_MS = 30_000
+
 const syncContactToLeasing = async (
   contactCode: string
 ): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> => {
   try {
     const response = await axios.post(
-      `${tenantsLeasesServiceUrl}/contacts/${contactCode}/sync`
+      `${tenantsLeasesServiceUrl}/contacts/${contactCode}/sync`,
+      undefined,
+      { timeout: SYNC_CONTACT_TIMEOUT_MS }
     )
 
     if (response.status === 200 || response.status === 201) {
