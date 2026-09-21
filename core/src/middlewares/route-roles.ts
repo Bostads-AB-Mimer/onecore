@@ -20,6 +20,15 @@ export const requiredRolesFor = (rawPath: string, method: string): string[] => {
     return ['invoice-notify:post', 'api-access']
   }
 
+  if (
+    path.startsWith(
+      '/v1/tenant-notifications/lease-termination-confirmation'
+    ) &&
+    method === 'POST'
+  ) {
+    return ['tenant-notifications:lease-termination', 'api-access']
+  }
+
   // Infobip email delivery-report webhook — authenticated via a Keycloak
   // service account (client_credentials) holding the infobip-webhook role.
   if (path.startsWith('/webhooks/infobip')) return ['infobip-webhook']
