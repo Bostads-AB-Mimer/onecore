@@ -63,6 +63,13 @@ const READER: TestUser = {
   preferred_username: 'bo',
   realm_access: { roles: ['api-access'] },
 }
+// Relations need api-access even though they no longer need contacts:write,
+// so a token carrying neither must still be refused.
+const NO_ROLES: TestUser = {
+  name: 'Noll Rollsson',
+  preferred_username: 'noll',
+  realm_access: { roles: [] },
+}
 let mockUser: TestUser = WRITER
 
 const adapter = {
@@ -265,8 +272,30 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
     expect(adapter.addRelation).not.toHaveBeenCalled()
   })
 
-  it('is 403 without contacts:write', async () => {
+  // contacts:write fences creating a contact, which writes to Xpand and
+  // cannot be undone. A relation is reversible, so plain api-access is enough.
+  it('allows api-access without contacts:write', async () => {
     mockUser = READER
+    adapter.addRelation.mockResolvedValue({
+      ok: true,
+      data: { relations: [relation] },
+    })
+
+    const res = await request(app.callback())
+      .post('/v1/contacts/P1/relations')
+      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
+
+    expect(res.status).toBe(201)
+    expect(adapter.addRelation).toHaveBeenCalledWith({
+      contactCode: 'P1',
+      relatedContactCode: 'P2',
+      roleType: 'god_man',
+      createdBy: 'Bo Reader',
+    })
+  })
+
+  it('is still 403 for a token with no roles at all', async () => {
+    mockUser = NO_ROLES
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
       .send({ relatedContactCode: 'P2', roleType: 'god_man' })
@@ -358,11 +387,29 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
     expect(adapter.removeRelation).not.toHaveBeenCalled()
   })
 
-  it('is 403 without contacts:write', async () => {
+  it('allows api-access without contacts:write', async () => {
     mockUser = READER
+    adapter.removeRelation.mockResolvedValue({ ok: true, data: undefined })
+
+    const res = await request(app.callback()).delete(
+      '/v1/contacts/P1/relations/god_man/P2'
+    )
+
+    expect(res.status).toBe(204)
+    expect(adapter.removeRelation).toHaveBeenCalledWith({
+      contactCode: 'P1',
+      relatedContactCode: 'P2',
+      roleType: 'god_man',
+      deletedBy: 'Bo Reader',
+    })
+  })
+
+  it('is still 403 for a token with no roles at all', async () => {
+    mockUser = NO_ROLES
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/god_man/P2'
     )
     expect(res.status).toBe(403)
+    expect(adapter.removeRelation).not.toHaveBeenCalled()
   })
 })

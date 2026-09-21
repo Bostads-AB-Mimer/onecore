@@ -6,7 +6,6 @@ import {
   RELATED_CONTACT_GROUP_ORDER,
   useRelatedContacts,
 } from '@/entities/tenant'
-import { CONTACTS_WRITE_ROLE, RequireRole } from '@/entities/user'
 
 import type { RelatedContact } from '@/services/types'
 
@@ -48,16 +47,14 @@ export function TenantRelatedContactsTabContent({
       error={error as Error | null}
       errorMessage="Kunde inte ladda relaterade kontakter"
     >
-      <RequireRole roles={[CONTACTS_WRITE_ROLE]}>
-        {availableRoles.length > 0 && (
-          <div className="flex justify-end mb-4">
-            <AddRelationDialog
-              contactCode={contactCode}
-              availableRoles={availableRoles}
-            />
-          </div>
-        )}
-      </RequireRole>
+      {availableRoles.length > 0 && (
+        <div className="flex justify-end mb-4">
+          <AddRelationDialog
+            contactCode={contactCode}
+            availableRoles={availableRoles}
+          />
+        </div>
+      )}
       {groups.length === 0 ? (
         <p className="text-muted-foreground text-center py-4 text-sm">
           Inga relaterade kontakter
@@ -93,15 +90,13 @@ export function TenantRelatedContactsTabContent({
                         </div>
                       </div>
                       {removable && (
-                        <RequireRole roles={[CONTACTS_WRITE_ROLE]}>
-                          <RemoveRelationButton
-                            contactCode={contactCode}
-                            relatedContactCode={contact.contactCode}
-                            relatedName={formatTenantName(contact)}
-                            roleType={roleType}
-                            roleLabel={group.label}
-                          />
-                        </RequireRole>
+                        <RemoveRelationButton
+                          contactCode={contactCode}
+                          relatedContactCode={contact.contactCode}
+                          relatedName={formatTenantName(contact)}
+                          roleType={roleType}
+                          roleLabel={group.label}
+                        />
                       )}
                     </div>
                   ))}
