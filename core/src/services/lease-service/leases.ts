@@ -146,13 +146,13 @@ export const routes = (router: KoaRouter) => {
 
       //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
       const parsedContent = await Promise.all(
-        leaseSearchResult.content.map(async (lease: Lease) => {
+        leaseSearchResult.content.map(async (lease) => {
           const rentalObjectCode =
             lease.leaseId.split('/')[0] != ''
               ? lease.leaseId.split('/')[0]
               : lease.leaseId.substring(0, lease.leaseId.lastIndexOf('-'))
 
-          if (!lease.tenantContactIds || lease.tenantContactIds.length === 0) {
+          if (!lease.contacts || lease.contacts.length === 0) {
             logger.error(
               'No tenant on contract Id ' +
                 lease.leaseId +
@@ -161,10 +161,10 @@ export const routes = (router: KoaRouter) => {
             return null
           }
 
+          const primaryContactCode = lease.contacts[0].contactCode //TODO: Vilken contact ska väljas när det finns flera?
+
           const [contactResult, rentalPropertyResult] = await Promise.all([
-            leasingAdapter.getContactByContactCode(
-              lease.tenantContactIds[0] //TODO: Vilken contact ska väljas när det finns flera?
-            ),
+            leasingAdapter.getContactByContactCode(primaryContactCode),
             propertyManagementAdapter.getRentalPropertyInfoFromXpand(
               rentalObjectCode
             ),
@@ -175,7 +175,7 @@ export const routes = (router: KoaRouter) => {
               {
                 status: contactResult.statusCode,
                 error: contactResult.err,
-                contactCode: lease.tenantContactIds[0],
+                contactCode: primaryContactCode,
               },
               'Failed to fetch contact data'
             )
@@ -184,7 +184,7 @@ export const routes = (router: KoaRouter) => {
           if (!contactResult.data) {
             logger.warn(
               {
-                contactCode: lease.tenantContactIds[0],
+                contactCode: primaryContactCode,
               },
               'No contact data found'
             )
@@ -237,10 +237,10 @@ export const routes = (router: KoaRouter) => {
           const mappedLease: z.input<typeof CustomerScoreCardInfoSchema> = {
             //lease info
             division_1038: lease.leaseId,
-            division_1037: lease.contractDate?.toString(),
-            contract_start_date: lease.leaseStartDate?.toString() ?? '',
-            contract_end_date: lease.leaseEndDate?.toString(),
-            contract_type: lease.type,
+            division_1037: undefined,
+            contract_start_date: lease.startDate?.toString() ?? '',
+            contract_end_date: undefined,
+            contract_type: lease.leaseType,
             object_street_1: rentalObjectData.address?.street ?? '',
             object_zip: rentalObjectData.address?.postalCode ?? '',
             object_city: rentalObjectData.address?.city ?? '',
@@ -515,7 +515,7 @@ export const routes = (router: KoaRouter) => {
         ),
       ]
 
-      let enrichedContent = result.content
+      let enrichedContent: leasing.v1.LeaseSearchResult[] = result.content
       if (contactCodes.length > 0) {
         const contactsResult = await contactsAdapter.getByContactCodeBatch(
           contactCodes,

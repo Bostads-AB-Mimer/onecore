@@ -215,7 +215,7 @@ export const getBuildingManagers = async (): Promise<
 
 export const searchLeases = async (
   queryParams: leasing.v1.LeaseSearchQueryParamsInput
-): Promise<PaginatedResponse<Lease>> => {
+): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
   const params = new URLSearchParams()
 
   Object.entries(queryParams).forEach(([key, value]) => {
