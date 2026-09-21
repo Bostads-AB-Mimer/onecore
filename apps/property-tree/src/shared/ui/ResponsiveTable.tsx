@@ -72,11 +72,6 @@ export function ResponsiveTable({
     })
   }
 
-  const hasExpandableContent = (item: any) => {
-    if (!expandableContent) return false
-    return expandableContent(item) !== null
-  }
-
   const handleSort = (sortKey: string) => {
     if (!onSort) return
 
@@ -123,7 +118,7 @@ export function ResponsiveTable({
         {data.map((item) => {
           const itemKey = keyExtractor(item)
           const isExpanded = expandedRows.has(itemKey)
-          const canExpand = hasExpandableContent(item)
+          const content = expandableContent?.(item) ?? null
 
           return (
             <Card key={itemKey} className="overflow-hidden">
@@ -142,7 +137,7 @@ export function ResponsiveTable({
                   </div>
                 ))}
 
-                {canExpand && (
+                {content !== null && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -163,9 +158,9 @@ export function ResponsiveTable({
                   </Button>
                 )}
 
-                {isExpanded && canExpand && (
+                {isExpanded && content !== null && (
                   <div className="pt-3 border-t bg-muted/30 -mx-4 px-4 pb-1 -mb-3 rounded-b-lg">
-                    {expandableContent!(item)}
+                    {content}
                   </div>
                 )}
               </CardContent>
@@ -223,14 +218,14 @@ export function ResponsiveTable({
           {data.map((item) => {
             const itemKey = keyExtractor(item)
             const isExpanded = expandedRows.has(itemKey)
-            const canExpand = hasExpandableContent(item)
+            const content = expandableContent?.(item) ?? null
 
             return (
               <Fragment key={itemKey}>
                 <TableRow className="min-h-[44px]">
                   {expandableContent && (
                     <TableCell className="py-3">
-                      {canExpand && (
+                      {content && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -255,10 +250,10 @@ export function ResponsiveTable({
                     </TableCell>
                   ))}
                 </TableRow>
-                {isExpanded && canExpand && (
+                {isExpanded && content && (
                   <TableRow className="bg-muted/30 hover:bg-muted/30">
                     <TableCell colSpan={columns.length + 1} className="py-4">
-                      {expandableContent!(item)}
+                      {content}
                     </TableCell>
                   </TableRow>
                 )}
