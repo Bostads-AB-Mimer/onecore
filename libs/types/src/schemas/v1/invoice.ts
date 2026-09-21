@@ -103,7 +103,6 @@ export const MiscellaneousInvoiceBaseItemSchema = z.object({
 export const MiscellaneousInvoiceSchema = z.object({
   invoiceId: z.string(),
   invoiceDate: z.coerce.date(),
-  leaseId: z.string().nullable(),
   amount: z.number(),
   reference: z.string(),
   ourReference: z.string().optional(),
