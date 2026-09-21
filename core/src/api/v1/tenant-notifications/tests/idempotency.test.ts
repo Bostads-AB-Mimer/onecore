@@ -5,7 +5,7 @@ import {
 
 describe('hashNotificationPayload', () => {
   const base = {
-    type: 'lease-termination-confirmation' as const,
+    type: 'lease-termination-confirmation' as const, // server-set on send
     to: 'tenant@example.com',
     contactCode: 'P123456',
     firstName: 'Anna',

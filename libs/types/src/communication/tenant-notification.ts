@@ -4,8 +4,7 @@ import { z } from 'zod'
  * Tenant notifications that OneCore sends on behalf of an integration
  * (e.g. Tenfast) after a business event.
  *
- * Public API: `POST /v1/tenant-notifications`
- * - Discriminated on `type` — one URL, per-type Keycloak roles (or `api-access`)
+ * Public API: `POST /v1/tenant-notifications/lease-termination-confirmation`
  * - Requires `Idempotency-Key` header for safe retries
  * - Callers supply structured facts only; OneCore owns templates and delivery
  */
@@ -17,18 +16,10 @@ export const TenantNotificationType = {
 export type TenantNotificationType =
   (typeof TenantNotificationType)[keyof typeof TenantNotificationType]
 
-/** Keycloak role required to send each notification type via POST /v1/tenant-notifications. */
+/** Keycloak role for POST /v1/tenant-notifications/lease-termination-confirmation. */
 export const TenantNotificationRole = {
   LeaseTermination: 'tenant-notifications:lease-termination',
 } as const
-
-export const requiredRoleByNotificationType: Record<
-  TenantNotificationType,
-  string
-> = {
-  [TenantNotificationType.LeaseTerminationConfirmation]:
-    TenantNotificationRole.LeaseTermination,
-}
 
 /** `dispatch.messageType` written when a lease-termination confirmation is sent. */
 export const LeaseTerminationConfirmationMessageType =
@@ -41,8 +32,8 @@ export type LeaseTerminationRentalType = z.infer<
   typeof LeaseTerminationRentalTypeSchema
 >
 
-export const LeaseTerminationConfirmationNotificationSchema = z.object({
-  type: z.literal(TenantNotificationType.LeaseTerminationConfirmation),
+/** Public Core API request body — type is implied by the URL. */
+export const LeaseTerminationConfirmationRequestSchema = z.object({
   to: z.string().email(),
   contactCode: z.string().min(1),
   firstName: z.string().min(1),
@@ -56,29 +47,17 @@ export const LeaseTerminationConfirmationNotificationSchema = z.object({
   correlationId: z.string().min(1).optional(),
 })
 
-export const TenantNotificationSchema = z.discriminatedUnion('type', [
-  LeaseTerminationConfirmationNotificationSchema,
-])
-
-export type LeaseTerminationConfirmationNotification = z.infer<
-  typeof LeaseTerminationConfirmationNotificationSchema
+export type LeaseTerminationConfirmationRequest = z.infer<
+  typeof LeaseTerminationConfirmationRequestSchema
 >
-export type TenantNotification = z.infer<typeof TenantNotificationSchema>
 
-/** Internal communication payload — adds server-set audit attribution. */
+/** Internal communication payload — adds message type and server-set audit attribution. */
 export const LeaseTerminationConfirmationEmailSchema =
-  LeaseTerminationConfirmationNotificationSchema.extend({
+  LeaseTerminationConfirmationRequestSchema.extend({
+    type: z.literal(TenantNotificationType.LeaseTerminationConfirmation),
     triggeredByUser: z.string().min(1).optional(),
   })
 
 export type LeaseTerminationConfirmationEmail = z.infer<
   typeof LeaseTerminationConfirmationEmailSchema
->
-
-export const TenantNotificationEmailSchema = z.discriminatedUnion('type', [
-  LeaseTerminationConfirmationEmailSchema,
-])
-
-export type TenantNotificationEmail = z.infer<
-  typeof TenantNotificationEmailSchema
 >

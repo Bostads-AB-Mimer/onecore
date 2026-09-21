@@ -1,9 +1,5 @@
-import { ParameterizedContext } from 'koa'
 import {
-  requiredRoleByNotificationType,
-  TenantNotification,
-  TenantNotificationEmail,
-  TenantNotificationType,
+  LeaseTerminationConfirmationEmail,
 } from '@onecore/types'
 
 import * as communicationAdapter from '../../../adapters/communication-adapter'
@@ -13,46 +9,18 @@ import {
   tenantNotificationIdempotencyStore,
 } from './idempotency'
 
-const API_ACCESS_ROLE = 'api-access'
-
-/** Matches other integration routes: use-case role OR api-access. */
-const canSendNotificationType = (
-  ctx: ParameterizedContext,
-  type: TenantNotification['type']
-) => {
-  const userRoles = ctx.state.user?.realm_access?.roles ?? []
-  return (
-    userRoles.includes(API_ACCESS_ROLE) ||
-    userRoles.includes(requiredRoleByNotificationType[type])
-  )
-}
-
-const sendByType = (notification: TenantNotificationEmail) => {
-  switch (notification.type) {
-    case TenantNotificationType.LeaseTerminationConfirmation:
-      return communicationAdapter.sendLeaseTerminationConfirmationEmail(
-        notification
-      )
-  }
-}
-
-export type SendTenantNotificationResult =
+export type SendLeaseTerminationConfirmationResult =
   | { ok: true; duplicate: boolean }
   | {
       ok: false
-      error: 'insufficient-permissions' | 'idempotency-conflict' | 'send-failed'
+      error: 'idempotency-conflict' | 'send-failed'
     }
 
-export const sendTenantNotification = async (
-  ctx: ParameterizedContext,
-  notification: TenantNotificationEmail,
+export const sendLeaseTerminationConfirmation = async (
+  notification: LeaseTerminationConfirmationEmail,
   idempotencyKey: string,
   store: IdempotencyStore = tenantNotificationIdempotencyStore
-): Promise<SendTenantNotificationResult> => {
-  if (!canSendNotificationType(ctx, notification.type)) {
-    return { ok: false, error: 'insufficient-permissions' }
-  }
-
+): Promise<SendLeaseTerminationConfirmationResult> => {
   const payloadHash = hashNotificationPayload(notification)
   const claim = store.claim(idempotencyKey, payloadHash)
 
@@ -64,7 +32,10 @@ export const sendTenantNotification = async (
     return { ok: true, duplicate: true }
   }
 
-  const result = await sendByType(notification)
+  const result =
+    await communicationAdapter.sendLeaseTerminationConfirmationEmail(
+      notification
+    )
 
   if (!result.ok) {
     store.release(idempotencyKey, payloadHash)

@@ -24,9 +24,14 @@ describe('requiredRolesFor', () => {
     ])
   })
 
-  it('skips realm-role gating for tenant notifications — handler checks type role', () => {
-    expect(requiredRolesFor('/v1/tenant-notifications', 'POST')).toBeNull()
-    expect(requiredRolesFor('/v1/tenant-notifications', 'GET')).toEqual([
+  it('gates lease termination confirmation on its role or api-access', () => {
+    expect(
+      requiredRolesFor(
+        '/v1/tenant-notifications/lease-termination-confirmation',
+        'POST'
+      )
+    ).toEqual(['tenant-notifications:lease-termination', 'api-access'])
+    expect(requiredRolesFor('/v1/tenant-notifications', 'POST')).toEqual([
       'api-access',
     ])
   })
@@ -65,6 +70,12 @@ describe('requiredRolesFor', () => {
     expect(requiredRolesFor('/Scan-Receipt/x', 'POST')).toEqual([
       'scanner-upload',
     ])
+    expect(
+      requiredRolesFor(
+        '/V1/Tenant-Notifications/Lease-Termination-Confirmation',
+        'POST'
+      )
+    ).toEqual(['tenant-notifications:lease-termination', 'api-access'])
   })
 
   it('pins the method conjunctions on the special cases', () => {

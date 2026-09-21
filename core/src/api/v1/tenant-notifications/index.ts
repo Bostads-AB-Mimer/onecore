@@ -4,40 +4,44 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
-import { TenantNotificationEmail } from '@onecore/types'
+import {
+  LeaseTerminationConfirmationEmail,
+  TenantNotificationType,
+} from '@onecore/types'
 
 import { Config } from '@/common/config'
-import { sendTenantNotification } from './send-notification'
+import { sendLeaseTerminationConfirmation } from './send-notification'
 import {
-  SendTenantNotificationErrorResponseBodySchema_APIv1,
-  SendTenantNotificationRequestBodySchema,
-  SendTenantNotificationResponseBodySchema_APIv1,
+  SendLeaseTerminationConfirmationErrorResponseBodySchema_APIv1,
+  SendLeaseTerminationConfirmationRequestBodySchema,
+  SendLeaseTerminationConfirmationResponseBodySchema_APIv1,
 } from './schema'
 
 const IDEMPOTENCY_HEADER = 'idempotency-key'
+const LEASE_TERMINATION_CONFIRMATION_PATH =
+  '/v1/tenant-notifications/lease-termination-confirmation'
 
 export const routes = (router: OkapiRouter, _config: Config) => {
   router.post(
-    '/v1/tenant-notifications',
+    LEASE_TERMINATION_CONFIRMATION_PATH,
     {
-      summary: 'Send a tenant notification',
+      summary: 'Send a lease termination confirmation email',
       description:
-        'Triggers a templated tenant notification on behalf of an integration ' +
-        '(e.g. Tenfast) after a business event. Requires `Idempotency-Key` for ' +
-        'safe retries. OneCore owns delivery and the communication log. Requires ' +
-        'the type-specific Keycloak role or `api-access` — see ' +
-        '`requiredRoleByNotificationType` in @onecore/types.',
+        'Triggers a lease termination confirmation email on behalf of an ' +
+        'integration (e.g. Tenfast) after a parking lease is terminated. ' +
+        'Requires `Idempotency-Key` for safe retries. OneCore owns delivery ' +
+        'and the communication log. Requires `tenant-notifications:lease-termination` ' +
+        'or `api-access`.',
       tags: ['Tenant notifications'],
       body: {
-        name: 'SendTenantNotificationRequest',
-        schema: SendTenantNotificationRequestBodySchema,
+        name: 'SendLeaseTerminationConfirmationRequest',
+        schema: SendLeaseTerminationConfirmationRequestBodySchema,
       },
       response: {
-        200: SendTenantNotificationResponseBodySchema_APIv1,
-        400: SendTenantNotificationErrorResponseBodySchema_APIv1,
-        403: SendTenantNotificationErrorResponseBodySchema_APIv1,
-        409: SendTenantNotificationErrorResponseBodySchema_APIv1,
-        502: SendTenantNotificationErrorResponseBodySchema_APIv1,
+        200: SendLeaseTerminationConfirmationResponseBodySchema_APIv1,
+        400: SendLeaseTerminationConfirmationErrorResponseBodySchema_APIv1,
+        409: SendLeaseTerminationConfirmationErrorResponseBodySchema_APIv1,
+        502: SendLeaseTerminationConfirmationErrorResponseBodySchema_APIv1,
       },
     },
     async (ctx) => {
@@ -54,9 +58,10 @@ export const routes = (router: OkapiRouter, _config: Config) => {
         return
       }
 
-      const parsed = SendTenantNotificationRequestBodySchema.safeParse(
-        ctx.request.body
-      )
+      const parsed =
+        SendLeaseTerminationConfirmationRequestBodySchema.safeParse(
+          ctx.request.body
+        )
 
       if (!parsed.success) {
         ctx.status = 400
@@ -70,24 +75,20 @@ export const routes = (router: OkapiRouter, _config: Config) => {
         return
       }
 
-      const notification: TenantNotificationEmail = {
+      const notification: LeaseTerminationConfirmationEmail = {
         ...parsed.data,
+        type: TenantNotificationType.LeaseTerminationConfirmation,
         triggeredByUser:
           ctx.state.user?.name ?? ctx.state.user?.preferred_username,
       }
 
-      const result = await sendTenantNotification(
-        ctx,
+      const result = await sendLeaseTerminationConfirmation(
         notification,
         idempotencyKey
       )
 
       if (!result.ok) {
         switch (result.error) {
-          case 'insufficient-permissions':
-            ctx.status = 403
-            ctx.body = { error: 'insufficient-permissions', ...metadata }
-            return
           case 'idempotency-conflict':
             ctx.status = 409
             ctx.body = {
@@ -100,16 +101,19 @@ export const routes = (router: OkapiRouter, _config: Config) => {
           case 'send-failed':
             logger.error(
               {
-                type: notification.type,
                 to: notification.to,
                 correlationId: notification.correlationId,
                 idempotencyKey,
               },
-              'Failed to send tenant notification'
+              'Failed to send lease termination confirmation'
             )
             ctx.status = 502
             ctx.body = { error: 'send-failed', ...metadata }
             return
+          default: {
+            const _exhaustive: never = result.error
+            throw new Error(`Unhandled send error: ${_exhaustive}`)
+          }
         }
       }
 

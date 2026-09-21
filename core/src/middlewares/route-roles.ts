@@ -2,12 +2,11 @@
  * Which Keycloak realm roles a request needs, by path and method.
  *
  * requireRole is ANY-of, so a list means "one of these".
- * Returns null when auth alone is enough — the route handler checks roles.
  */
 export const requiredRolesFor = (
   rawPath: string,
   method: string
-): string[] | null => {
+): string[] => {
   // @koa/router matches paths case-insensitively, so compare in lower case —
   // otherwise POST /V1/contacts reaches the handler but is gated as api-access.
   const path = rawPath.toLowerCase()
@@ -24,10 +23,13 @@ export const requiredRolesFor = (
     return ['invoice-notify:post', 'api-access']
   }
 
-  // Tenant notifications: auth only here; the handler checks the type-specific
-  // role OR api-access once the body is parsed (see requiredRoleByNotificationType).
-  if (path.startsWith('/v1/tenant-notifications') && method === 'POST') {
-    return null
+  if (
+    path.startsWith(
+      '/v1/tenant-notifications/lease-termination-confirmation'
+    ) &&
+    method === 'POST'
+  ) {
+    return ['tenant-notifications:lease-termination', 'api-access']
   }
 
   // Infobip email delivery-report webhook — authenticated via a Keycloak

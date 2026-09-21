@@ -78,11 +78,9 @@ app.use(requireAuth)
 
 // Role-based authorization. Path/method → roles lives in route-roles.ts so
 // it can be unit-tested.
-app.use(async (ctx, next) => {
-  const roles = requiredRolesFor(ctx.path, ctx.method)
-  if (roles === null) return next()
-  return requireRole(roles)(ctx, next)
-})
+app.use(async (ctx, next) =>
+  requireRole(requiredRolesFor(ctx.path, ctx.method))(ctx, next)
+)
 
 // Requires 'keys-admin' in addition to 'api-access' for key deletion (single and bulk).
 // Kept as a separate middleware so api-access is always checked first.

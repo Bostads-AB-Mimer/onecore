@@ -5,6 +5,8 @@ import bodyParser from 'koa-body'
 import { makeOkapiRouter } from 'koa-okapi-router'
 import { TenantNotificationRole } from '@onecore/types'
 
+import { requireRole } from '../../../../middlewares/keycloak-auth'
+import { requiredRolesFor } from '../../../../middlewares/route-roles'
 import { routes } from '../index'
 import { tenantNotificationIdempotencyStore } from '../idempotency'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
@@ -14,6 +16,8 @@ jest.mock('../../../../adapters/communication-adapter')
 
 const LEASE_TERMINATION_ROLE = TenantNotificationRole.LeaseTermination
 const IDEMPOTENCY_KEY = 'tenfast-evt-123'
+const LEASE_TERMINATION_PATH =
+  '/v1/tenant-notifications/lease-termination-confirmation'
 
 type TestUser = {
   name: string
@@ -35,6 +39,9 @@ app.use((ctx, next) => {
   ctx.state.user = mockUser
   return next()
 })
+app.use((ctx, next) =>
+  requireRole(requiredRolesFor(ctx.path, ctx.method))(ctx, next)
+)
 const koaRouter = new KoaRouter()
 const apiRouter = makeOkapiRouter(koaRouter, {
   openapi: { info: { title: 'test' } },
@@ -43,7 +50,6 @@ routes(apiRouter, {} as Config)
 app.use(koaRouter.routes())
 
 const body = (overrides: Record<string, unknown> = {}) => ({
-  type: 'lease-termination-confirmation',
   to: 'tenant@example.com',
   contactCode: 'P123456',
   firstName: 'Anna',
@@ -59,7 +65,7 @@ const postNotification = (
   idempotencyKey = IDEMPOTENCY_KEY
 ) =>
   request(app.callback())
-    .post('/v1/tenant-notifications')
+    .post(LEASE_TERMINATION_PATH)
     .set('Idempotency-Key', idempotencyKey)
     .send(payload)
 
@@ -71,7 +77,7 @@ beforeEach(() => {
     .mockResolvedValue({ ok: true, data: null })
 })
 
-describe('POST /v1/tenant-notifications', () => {
+describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
   it('sends a lease termination notification and returns sent: true', async () => {
     const res = await postNotification()
 
@@ -80,11 +86,19 @@ describe('POST /v1/tenant-notifications', () => {
     expect(
       communicationAdapter.sendLeaseTerminationConfirmationEmail
     ).toHaveBeenCalledTimes(1)
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'lease-termination-confirmation',
+        leaseId: '307-002-11-0201/11',
+      })
+    )
   })
 
   it('returns 400 when Idempotency-Key is missing', async () => {
     const res = await request(app.callback())
-      .post('/v1/tenant-notifications')
+      .post(LEASE_TERMINATION_PATH)
       .send(body())
 
     expect(res.status).toBe(400)
@@ -118,7 +132,7 @@ describe('POST /v1/tenant-notifications', () => {
     const res = await postNotification()
 
     expect(res.status).toBe(403)
-    expect(res.body.error).toBe('insufficient-permissions')
+    expect(res.body.message).toBe('Insufficient permissions')
     expect(
       communicationAdapter.sendLeaseTerminationConfirmationEmail
     ).not.toHaveBeenCalled()
@@ -146,8 +160,8 @@ describe('POST /v1/tenant-notifications', () => {
     ).toHaveBeenCalledTimes(1)
   })
 
-  it('returns 400 for an unknown notification type', async () => {
-    const res = await postNotification(body({ type: 'not-a-real-type' }))
+  it('returns 400 for invalid request fields', async () => {
+    const res = await postNotification(body({ endDate: 'not-a-date' }))
 
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('invalid-request')

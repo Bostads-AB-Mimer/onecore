@@ -16,19 +16,14 @@ export * as property from './property'
 export * as communication from './communication'
 export {
   TenantNotificationType,
-  TenantNotificationSchema,
   TenantNotificationRole,
-  requiredRoleByNotificationType,
-  LeaseTerminationConfirmationNotificationSchema,
+  LeaseTerminationConfirmationRequestSchema,
   LeaseTerminationConfirmationEmailSchema,
-  TenantNotificationEmailSchema,
   LeaseTerminationConfirmationMessageType,
   LeaseTerminationRentalTypeSchema,
   type LeaseTerminationRentalType,
-  type TenantNotification,
-  type LeaseTerminationConfirmationNotification,
+  type LeaseTerminationConfirmationRequest,
   type LeaseTerminationConfirmationEmail,
-  type TenantNotificationEmail,
 } from './communication/tenant-notification'
 export * from './room'
 
