@@ -262,7 +262,7 @@ const transformToRentalProperty = (
   return {
     rentalPropertyId: tenfastRentalProperty.externalId,
     apartmentNumber: tenfastRentalProperty.skvNummer ?? 0, // ?
-    size: tenfastRentalProperty.kvm,
+    size: tenfastRentalProperty.kvm ?? 0,
     type: tenfastRentalProperty.typ,
     rentalPropertyType: tenfastRentalProperty.typ, // ?
     address: {

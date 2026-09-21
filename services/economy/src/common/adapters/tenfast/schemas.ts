@@ -44,7 +44,7 @@ export const TenfastRentalPropertySchema = z.object({
   stad: z.string(),
   stadsdel: z.string(),
   typ: z.string(),
-  kvm: z.number(),
+  kvm: z.number().nullable(),
   roomCount: z.number().nullable(),
   bostadType: z.string().nullable(),
   parkeringType: z.string().nullable(),
