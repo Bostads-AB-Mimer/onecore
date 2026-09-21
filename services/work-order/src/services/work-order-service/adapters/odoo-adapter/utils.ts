@@ -92,6 +92,27 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
   }
 }
 
+// MIM-2040 — what a tenant is shown when an unlabelled outbound message turns
+// up. It is the same default Odoo's own write path and backfill take: an author
+// we cannot place is Mimer, never a named person and never a supplier.
+const TENANT_AUTHOR_FALLBACK = 'Mimer'
+
+// The sender Mina sidor prints beside a message. Odoo decides it when the
+// message is written and stores it on the message itself — whether the author
+// was one of us or an external contractor, and which resource group they
+// answered for, is knowable there and nowhere else, so it is carried across
+// rather than derived here.
+const messageAuthor = (message: OdooWorkOrderMessage): string => {
+  // The tenant wrote this one. Odoo leaves the stored sender empty on
+  // from_tenant, and Mina sidor labels the tenant's own messages "Du".
+  if (message.message_type === 'from_tenant') {
+    return last(message.author_id[1].split(', ')) ?? '' // author name is in format "YourCompany, Mitchell Admin"
+  }
+  // Everything else is outbound. Falling back to author_id here would put a
+  // handläggare's name in front of a tenant, which is the bug this fixes.
+  return message.onecore_tenant_author_name || TENANT_AUTHOR_FALLBACK
+}
+
 export const transformMessages = (
   messages: OdooWorkOrderMessage[] = []
 ): WorkOrderMessage[] =>
@@ -99,6 +120,6 @@ export const transformMessages = (
     id: message.id,
     body: striptags(message.body, ['br']).replaceAll('<br>', '\n'),
     messageType: message.message_type,
-    author: last(message.author_id[1].split(', ')) ?? '', // author name is in format "YourCompany, Mitchell Admin"
+    author: messageAuthor(message),
     createDate: new Date(message.create_date + ' UTC'), // Create new date as UTC (odoo db stores dates without time zone)
   }))
