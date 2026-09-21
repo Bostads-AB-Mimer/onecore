@@ -12,7 +12,7 @@ Processens beslutslogik: vilka kontroller som styr om flödet går vidare, och v
 flowchart LR
 A[Start] --> B(Hämta Hyresgästens<br/>Kontrakt från OneCore)
 B --> Bo{Kontraktet Hittat<br/>Bland Hyresgästens Avtal?}
-Bo --> |No| O[End: Avvisas]
+Bo --> |No| O[End]
 Bo --> |Yes| C{Objektstyp?}
 C --> |Lokaler/Okänd| O
 C --> |Bostad/Förråd| X[Skickas till Xpand istället<br/>— se processöversikten]

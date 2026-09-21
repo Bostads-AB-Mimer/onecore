@@ -78,7 +78,7 @@ sequenceDiagram
             end
         end
 
-        SyncScript ->> SyncScript: Spara checkpoint-tidsstämpel<br/>(endast efter lyckad rad)
+        SyncScript ->> SyncScript: Spara checkpoint-tidsstämpel<br/>(oavsett utfall för raden — se not i systerdokumentet<br/>om uppsägning för detaljer)
     end
 
 ```

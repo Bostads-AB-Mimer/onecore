@@ -81,7 +81,7 @@ sequenceDiagram
             end
         end
 
-        SyncScript ->> SyncScript: Spara checkpoint-tidsstämpel<br/>(endast efter lyckad rad)
+        SyncScript ->> SyncScript: Spara checkpoint-tidsstämpel<br/>(oavsett utfall för raden)
     end
 
 ```
@@ -90,5 +90,5 @@ sequenceDiagram
 
 - **Bilplatser (Garagekontrakt) synkas aldrig här.** `cmlog`-adaptern klassificerar Garagekontrakt-rader precis som Bostads-/Lokalkontrakt, men filtret `isResidenceOrStorage` i `sync-leases` släpper bara igenom lägenhet eller lokal+förråd. En bilplats som sägs upp direkt i Xpand loggas som "not in scope" och synkas aldrig till Tenfast via det här flödet.
 - **Idempotent.** Om avtalet redan är avslutat i Tenfast (Tenfast svarar med felmeddelandet "Avtalet kan inte sägas upp") räknas raden ändå som lyckad — bra för omkörningar, men jämför med [Synka Makulering](./DOCS_Void_Lease_via_Xpand_Sync.md), som saknar motsvarande skydd.
-- **Checkpoint sparas per rad, efter lyckad synk.** Kraschar scriptet mitt i en körning synkas redan behandlade rader inte om, medan resterande rader (och den trasiga) fångas upp nästa körning eller ligger kvar i återförsökskön.
+- **Checkpoint sparas per rad, oavsett utfall — inte bara vid lyckad synk.** `saveLastTimestamp` körs utanför try/catch:en, så en misslyckad rad flyttar checkpointen förbi sig precis som en lyckad. Återförsök sker istället via en separat JSONL-kö som dräneras i början av nästa körning, innan nya cmlog-rader hämtas — inte genom att flytta tillbaka checkpointen. Kraschar scriptet mitt i en körning börjar nästa körning alltså om från checkpointen, inte om från den senast lyckade raden.
 - En preliminär xpand-uppsägning (fältet "Preliminärt uppsagt") triggar **inte** det här flödet — bara när "Uppsagt datum" faktiskt sätts.
