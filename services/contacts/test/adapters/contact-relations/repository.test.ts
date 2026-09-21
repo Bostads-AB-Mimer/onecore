@@ -37,6 +37,8 @@ beforeEach(async () => {
 })
 
 describe('contact-relations repository', () => {
+  // Fixtures respect the unique indexes from migration 202609101000: one
+  // active guardian per subject, no duplicate active edges.
   it('insertMany writes one row per edge with the given creator', () =>
     withContext(async ({ db }) => {
       await insertMany(
@@ -239,7 +241,7 @@ describe('contact-relations repository', () => {
           {
             subjectContactCode: 'P1',
             relatedContactCode: 'P6',
-            roleType: 'forvaltare',
+            roleType: 'annan_fakturamottagare',
           },
           {
             subjectContactCode: 'P7',
@@ -391,7 +393,7 @@ describe('contact-relations repository', () => {
           {
             subjectContactCode: 'P1',
             relatedContactCode: 'P3',
-            roleType: 'forvaltare',
+            roleType: 'annan_fakturamottagare',
           },
           {
             subjectContactCode: 'P4',
@@ -413,25 +415,17 @@ describe('contact-relations repository', () => {
         )
       ).toEqual(['P4'])
       expect(
-        await activeRelationsInRole(
-          db,
-          'P1',
-          'annan_fakturamottagare',
-          'subject'
-        )
+        await activeRelationsInRole(db, 'P1', 'forvaltare', 'subject')
       ).toEqual([])
     }))
 
   it('activeRelationsInRole trims the requested code, skips blanks and ignores soft-deleted rows', () =>
     withContext(async ({ db }) => {
+      // Inserted and soft-deleted before P1->P2 so P1 never carries two
+      // active guardians at once.
       await insertMany(
         db,
         [
-          {
-            subjectContactCode: 'P1',
-            relatedContactCode: 'P2',
-            roleType: 'god_man',
-          },
           {
             subjectContactCode: 'P1',
             relatedContactCode: 'P3',
@@ -440,10 +434,20 @@ describe('contact-relations repository', () => {
         ],
         ACTOR
       )
-      const [gone] = (await listActive(db)).filter(
-        (r) => r.related_contact_code === 'P3'
-      )
+      const [gone] = await listActive(db)
       await softDeleteByIds(db, [gone.id], ACTOR)
+
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P1',
+            relatedContactCode: 'P2',
+            roleType: 'god_man',
+          },
+        ],
+        ACTOR
+      )
 
       expect(
         (await activeRelationsInRole(db, ' P1 ', 'god_man', 'subject')).map(

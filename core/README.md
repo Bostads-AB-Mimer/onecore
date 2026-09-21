@@ -14,6 +14,7 @@ For example, see the parking space processes:
 - [Non-scored parking spaces — create lease](./src/processes/parkingspaces/external/DOCS_Create_Lease_for_None_Scored_Parking_Space.md)
 - [Home insurance — overview](./src/processes/homeinsurance/DOCS_Overview.md)
 - [Lease termination — overview](./src/processes/leasetermination/DOCS_Overview.md)
+- [Invoice distribution — overview](./src/processes/invoicedistribution/DOCS_Overview.md)
 
 ### Swagger
 

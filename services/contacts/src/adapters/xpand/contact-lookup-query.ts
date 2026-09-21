@@ -16,20 +16,31 @@ const NAME_COLUMNS = [
 ]
 
 /**
+ * The contact code as Xpand spells it, or null when there is no such contact.
+ * Anything that persists a code must store this form: `contactNamesByCodes`
+ * keys on what Xpand returned, so a row written in the caller's casing is
+ * dropped from every kundkort while still counting towards the unique indexes.
+ */
+export const canonicalContactCode = async (
+  db: Knex,
+  contactCode: ContactCode
+): Promise<string | null> => {
+  const trimmed = contactCode.trim()
+  if (trimmed.length === 0) return null
+
+  const row: { contactCode: string } | undefined = await db('cmctc')
+    .whereRaw('TRIM(cmctckod) = ?', [trimmed])
+    .first('cmctckod as contactCode')
+  return row ? row.contactCode.trim() : null
+}
+
+/**
  * Whether a contact with the given code exists in Xpand.
  */
 export const contactExists = async (
   db: Knex,
   contactCode: ContactCode
-): Promise<boolean> => {
-  const trimmed = contactCode.trim()
-  if (trimmed.length === 0) return false
-
-  const row = await db('cmctc')
-    .whereRaw('TRIM(cmctckod) = ?', [trimmed])
-    .first('keycmctc')
-  return row !== undefined
-}
+): Promise<boolean> => (await canonicalContactCode(db, contactCode)) !== null
 
 /**
  * Display names for a set of contact codes, redacted for protected

@@ -2,12 +2,14 @@ import { Knex } from 'knex'
 import config from '@src/common/config'
 import { xpandDbClient } from '@src/adapters/xpand/db'
 import { contactsDbClient } from '@src/adapters/db'
+import * as repository from '@src/adapters/contact-relations/repository'
 import {
   insertMany,
   listActive,
   RelationEdge,
   softDeleteByIds,
 } from '@src/adapters/contact-relations'
+import { DbContactRelationRowFactory } from '../factories/contact-relation-row'
 import {
   relatedContactsFor,
   relatedContactsForMany,
@@ -164,6 +166,33 @@ describe('relatedContactsForMany', () => {
     withContext(async ({ db }) => {
       expect((await relatedContactsForMany(xpand, db, [])).size).toBe(0)
     }))
+
+  // The unique index stops two identical active rows being seeded, so the
+  // in-memory dedup can only be reached with the repository stubbed. It is a
+  // backstop for legacy rows and for the index being bypassed, and without
+  // this a refactor could drop it and no test would notice.
+  it('lists a repeated (contact, role) pair once', async () => {
+    const duplicate = {
+      subject_contact_code: 'P000555',
+      related_contact_code: 'P000444',
+      role_type: 'forvaltare' as const,
+    }
+    const spy = jest
+      .spyOn(repository, 'activeRelationsForMany')
+      .mockResolvedValue([
+        DbContactRelationRowFactory.build({ id: 'a', ...duplicate }),
+        DbContactRelationRowFactory.build({ id: 'b', ...duplicate }),
+      ])
+
+    try {
+      const result = await relatedContactsForMany(xpand, {} as Knex, [
+        'P000555',
+      ])
+      expect(result.get('P000555')).toHaveLength(1)
+    } finally {
+      spy.mockRestore()
+    }
+  })
 })
 
 describe('relatedContactsFor', () => {
@@ -199,24 +228,6 @@ describe('relatedContactsFor', () => {
         ['P000555', 'administratorFor'],
         ['P000666', 'trusteeFor'],
       ])
-    }))
-
-  it('returns one entry when the same edge is stored as two active rows', () =>
-    withContext(async ({ db }) => {
-      await seed(db)
-      await insertMany(
-        db,
-        [
-          {
-            subjectContactCode: 'P000555',
-            relatedContactCode: 'P000444',
-            roleType: 'forvaltare',
-          },
-        ],
-        'test'
-      )
-
-      expect(await relatedContactsFor(xpand, db, 'P000555')).toHaveLength(1)
     }))
 
   it('tolerates stored codes with trailing whitespace', () =>

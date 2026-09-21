@@ -65,7 +65,9 @@ const hydrate = async (
   let dropped = 0
   // Keyed rather than scanned: one role of a high-degree contact can hold
   // thousands of edges, and re-scanning the accumulated list per edge would
-  // put back the quadratic cost that filtering in SQL removes.
+  // put back the quadratic cost that filtering in SQL removes. Duplicate
+  // active edges are prevented by the unique index since migration
+  // 202609101000, so this dedupe is a backstop.
   const seen = new Set<string>()
   for (const { owner, other, role } of distinct) {
     const name = names.get(other)
@@ -171,4 +173,28 @@ const relatedContactsInRole = async (
   return (await hydrate(xpandDb, edges)).get(owner) ?? []
 }
 
-export { relatedContactsFor, relatedContactsForMany, relatedContactsInRole }
+/**
+ * The RelatedContact the subject would gain from one edge, hydrated the same
+ * way the list is. Lets a writer compose its answer before the row exists,
+ * so nothing has to be read back while the write is still open.
+ * Null when the counterpart is no longer in Xpand.
+ */
+const relatedContactForEdge = async (
+  xpandDb: Knex,
+  subjectContactCode: ContactCode,
+  relatedContactCode: ContactCode,
+  roleType: RoleType
+): Promise<RelatedContact | null> => {
+  const owner = subjectContactCode.trim()
+  const hydrated = await hydrate(xpandDb, [
+    { owner, other: relatedContactCode.trim(), role: ROLES[roleType].subject },
+  ])
+  return hydrated.get(owner)?.[0] ?? null
+}
+
+export {
+  relatedContactForEdge,
+  relatedContactsFor,
+  relatedContactsForMany,
+  relatedContactsInRole,
+}
