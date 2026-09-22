@@ -1,5 +1,4 @@
 import { Invoice, PaymentStatus } from '@onecore/types'
-import { format } from 'date-fns'
 import { z } from 'zod'
 
 import type { DeferralError } from '@/services/api/core/economyService'
@@ -40,7 +39,7 @@ export type InvoiceDeferralSummaryLine = {
 
 const formatDeferralDate = (date: Date | string): string => {
   const dateObj = typeof date === 'string' ? new Date(date) : date
-  return format(dateObj, 'yyyy-MM-dd')
+  return dateObj.toISOString().slice(0, 10)
 }
 
 export function getInvoiceDeferralTooltip(
