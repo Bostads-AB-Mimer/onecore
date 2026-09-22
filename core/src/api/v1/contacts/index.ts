@@ -23,10 +23,7 @@ import {
 import { paginatedResponseSchema, WaitingListType } from '@onecore/types'
 
 import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
-import {
-  addRelationWithPropagation,
-  removeRelationWithPropagation,
-} from '../../../processes/contacts'
+import { addRelation, removeRelation } from '../../../processes/contacts'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import { makeClientApplicationProfileRequestParams } from '../../../services/lease-service/helpers/application-profile'
 import { transformContact, transformContacts } from './transform'
@@ -569,7 +566,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
         return
       }
 
-      const result = await addRelationWithPropagation({
+      const result = await addRelation({
         contactCode: ctx.params.contactCode,
         relatedContactCode: parsed.data.relatedContactCode,
         roleType: parsed.data.roleType,
@@ -643,7 +640,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
         return
       }
 
-      const result = await removeRelationWithPropagation({
+      const result = await removeRelation({
         contactCode: ctx.params.contactCode,
         relatedContactCode: ctx.params.relatedContactCode,
         roleType: roleType.data,

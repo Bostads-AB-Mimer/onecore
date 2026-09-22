@@ -107,7 +107,7 @@ const relation = {
 describe('POST /v1/contacts/:contactCode/relations', () => {
   it('forwards the body with the user name as createdBy and returns 201', async () => {
     const addSpy = jest
-      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .spyOn(contactsProcesses, 'addRelation')
       .mockResolvedValue({
         processStatus: ProcessStatus.successful,
         data: { relations: [relation] },
@@ -130,7 +130,7 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
 
   it('ignores a client-supplied createdBy', async () => {
     const addSpy = jest
-      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .spyOn(contactsProcesses, 'addRelation')
       .mockResolvedValue({
         processStatus: ProcessStatus.successful,
         data: { relations: [] },
@@ -149,14 +149,12 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
   })
 
   it('passes the process status, error and detail through', async () => {
-    jest
-      .spyOn(contactsProcesses, 'addRelationWithPropagation')
-      .mockResolvedValue({
-        processStatus: ProcessStatus.failed,
-        error: 'guardian-exists',
-        httpStatus: 409,
-        response: { detail: 'P9' },
-      })
+    jest.spyOn(contactsProcesses, 'addRelation').mockResolvedValue({
+      processStatus: ProcessStatus.failed,
+      error: 'guardian-exists',
+      httpStatus: 409,
+      response: { detail: 'P9' },
+    })
 
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
@@ -169,14 +167,12 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
   // The process, not the route, decides when propagation to Tenfast/Xledger
   // has failed. The route's job is only to forward what it returns.
   it('answers 502 when propagation fails', async () => {
-    jest
-      .spyOn(contactsProcesses, 'addRelationWithPropagation')
-      .mockResolvedValue({
-        processStatus: ProcessStatus.failed,
-        error: 'propagation-failed',
-        httpStatus: 502,
-        response: { detail: 'tenfast' },
-      })
+    jest.spyOn(contactsProcesses, 'addRelation').mockResolvedValue({
+      processStatus: ProcessStatus.failed,
+      error: 'propagation-failed',
+      httpStatus: 502,
+      response: { detail: 'tenfast' },
+    })
 
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
@@ -189,7 +185,7 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
   it('falls back to preferred_username when the name is only whitespace', async () => {
     mockUser = WRITER_WITH_BLANK_NAME
     const addSpy = jest
-      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .spyOn(contactsProcesses, 'addRelation')
       .mockResolvedValue({
         processStatus: ProcessStatus.successful,
         data: { relations: [] },
@@ -208,7 +204,7 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
   it('falls back to preferred_username when the token has no name', async () => {
     mockUser = WRITER_WITHOUT_NAME
     const addSpy = jest
-      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .spyOn(contactsProcesses, 'addRelation')
       .mockResolvedValue({
         processStatus: ProcessStatus.successful,
         data: { relations: [] },
@@ -227,7 +223,7 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
   it('falls back to preferred_username when the name is empty', async () => {
     mockUser = WRITER_WITH_EMPTY_NAME
     const addSpy = jest
-      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .spyOn(contactsProcesses, 'addRelation')
       .mockResolvedValue({
         processStatus: ProcessStatus.successful,
         data: { relations: [] },
@@ -246,7 +242,7 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
   it('truncates a long display name to 100 characters', async () => {
     mockUser = WRITER_WITH_LONG_NAME
     const addSpy = jest
-      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .spyOn(contactsProcesses, 'addRelation')
       .mockResolvedValue({
         processStatus: ProcessStatus.successful,
         data: { relations: [] },
@@ -263,7 +259,7 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
   })
 
   it('rejects an invalid body with 400 before calling the process', async () => {
-    const addSpy = jest.spyOn(contactsProcesses, 'addRelationWithPropagation')
+    const addSpy = jest.spyOn(contactsProcesses, 'addRelation')
 
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
@@ -280,7 +276,7 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
   it('allows api-access without contacts:write', async () => {
     mockUser = READER
     const addSpy = jest
-      .spyOn(contactsProcesses, 'addRelationWithPropagation')
+      .spyOn(contactsProcesses, 'addRelation')
       .mockResolvedValue({
         processStatus: ProcessStatus.successful,
         data: { relations: [relation] },
@@ -302,7 +298,7 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
 
   it('is still 403 for a token with no roles at all', async () => {
     mockUser = NO_ROLES
-    const addSpy = jest.spyOn(contactsProcesses, 'addRelationWithPropagation')
+    const addSpy = jest.spyOn(contactsProcesses, 'addRelation')
     const res = await request(app.callback())
       .post('/v1/contacts/P1/relations')
       .send({ relatedContactCode: 'P2', roleType: 'god_man' })
@@ -314,7 +310,7 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
 describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCode', () => {
   it('forwards with the user name as deletedBy and returns 204', async () => {
     const removeSpy = jest
-      .spyOn(contactsProcesses, 'removeRelationWithPropagation')
+      .spyOn(contactsProcesses, 'removeRelation')
       .mockResolvedValue({
         processStatus: ProcessStatus.successful,
         data: undefined,
@@ -335,13 +331,11 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
   })
 
   it('passes relation-not-found through as 404', async () => {
-    jest
-      .spyOn(contactsProcesses, 'removeRelationWithPropagation')
-      .mockResolvedValue({
-        processStatus: ProcessStatus.failed,
-        error: 'relation-not-found',
-        httpStatus: 404,
-      })
+    jest.spyOn(contactsProcesses, 'removeRelation').mockResolvedValue({
+      processStatus: ProcessStatus.failed,
+      error: 'relation-not-found',
+      httpStatus: 404,
+    })
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/god_man/P2'
     )
@@ -352,14 +346,12 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
   // The process, not the route, decides when propagation to Tenfast has
   // failed. The route's job is only to forward what it returns.
   it('answers 502 when propagation fails', async () => {
-    jest
-      .spyOn(contactsProcesses, 'removeRelationWithPropagation')
-      .mockResolvedValue({
-        processStatus: ProcessStatus.failed,
-        error: 'propagation-failed',
-        httpStatus: 502,
-        response: { detail: 'tenfast' },
-      })
+    jest.spyOn(contactsProcesses, 'removeRelation').mockResolvedValue({
+      processStatus: ProcessStatus.failed,
+      error: 'propagation-failed',
+      httpStatus: 502,
+      response: { detail: 'tenfast' },
+    })
 
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/god_man/P2'
@@ -373,10 +365,7 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
   })
 
   it('rejects an unknown role type with 400', async () => {
-    const removeSpy = jest.spyOn(
-      contactsProcesses,
-      'removeRelationWithPropagation'
-    )
+    const removeSpy = jest.spyOn(contactsProcesses, 'removeRelation')
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/nyttjare/P2'
     )
@@ -388,7 +377,7 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
   it('allows api-access without contacts:write', async () => {
     mockUser = READER
     const removeSpy = jest
-      .spyOn(contactsProcesses, 'removeRelationWithPropagation')
+      .spyOn(contactsProcesses, 'removeRelation')
       .mockResolvedValue({
         processStatus: ProcessStatus.successful,
         data: undefined,
@@ -410,10 +399,7 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
 
   it('is still 403 for a token with no roles at all', async () => {
     mockUser = NO_ROLES
-    const removeSpy = jest.spyOn(
-      contactsProcesses,
-      'removeRelationWithPropagation'
-    )
+    const removeSpy = jest.spyOn(contactsProcesses, 'removeRelation')
     const res = await request(app.callback()).delete(
       '/v1/contacts/P1/relations/god_man/P2'
     )

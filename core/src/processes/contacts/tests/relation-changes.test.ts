@@ -6,9 +6,9 @@ import * as communicationAdapter from '../../../adapters/communication-adapter'
 import * as syncInvoiceRecipient from '../sync-invoice-recipient'
 import {
   addRelationStatus,
-  addRelationWithPropagation,
+  addRelation,
   removeRelationStatus,
-  removeRelationWithPropagation,
+  removeRelation,
 } from '../relation-changes'
 import * as factory from '../../../../test/factories'
 import { logger } from '@onecore/utilities'
@@ -94,7 +94,7 @@ afterEach(() => {
   jest.restoreAllMocks()
 })
 
-describe('addRelationWithPropagation', () => {
+describe('addRelation', () => {
   it('upserts the recipient, writes the relation, then resyncs Tenfast', async () => {
     const economySpy = jest
       .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
@@ -106,7 +106,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(leasingAdapter, 'syncContactToLeasing')
       .mockResolvedValue({ ok: true, data: { skipped: false } })
 
-    const result = await addRelationWithPropagation(RECIPIENT)
+    const result = await addRelation(RECIPIENT)
 
     expect(result.processStatus).toBe(ProcessStatus.successful)
     expect(result.httpStatus).toBe(201)
@@ -130,7 +130,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(leasingAdapter, 'syncContactToLeasing')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await addRelationWithPropagation(RECIPIENT)
+    const result = await addRelation(RECIPIENT)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -150,7 +150,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(contactsAdapter, 'addRelation')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await addRelationWithPropagation(RECIPIENT)
+    const result = await addRelation(RECIPIENT)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -178,7 +178,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await addRelationWithPropagation(RECIPIENT)
+    const result = await addRelation(RECIPIENT)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -214,7 +214,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockResolvedValue({ ok: true, data: null } as any)
 
-    const result = await addRelationWithPropagation(RECIPIENT)
+    const result = await addRelation(RECIPIENT)
 
     // Not propagation-failed: that code means the relation was not saved and
     // the UI says retry. Here it IS saved, and a retry can only answer
@@ -256,7 +256,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockResolvedValue({ ok: true, data: null } as any)
 
-    const result = await addRelationWithPropagation(RECIPIENT)
+    const result = await addRelation(RECIPIENT)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -297,7 +297,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await addRelationWithPropagation(RECIPIENT)
+    const result = await addRelation(RECIPIENT)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -327,7 +327,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await addRelationWithPropagation(RECIPIENT)
+    const result = await addRelation(RECIPIENT)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -349,7 +349,7 @@ describe('addRelationWithPropagation', () => {
       statusCode: 404,
     })
 
-    await addRelationWithPropagation(RECIPIENT)
+    await addRelation(RECIPIENT)
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.objectContaining({ relatedContactCode: 'P222' }),
@@ -370,7 +370,7 @@ describe('addRelationWithPropagation', () => {
       statusCode: 409,
     })
 
-    await addRelationWithPropagation(RECIPIENT)
+    await addRelation(RECIPIENT)
 
     expect(warnSpy).not.toHaveBeenCalledWith(
       expect.anything(),
@@ -389,7 +389,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(leasingAdapter, 'syncContactToLeasing')
       .mockResolvedValue({ ok: true, data: { skipped: false } })
 
-    const result = await addRelationWithPropagation(GUARDIAN)
+    const result = await addRelation(GUARDIAN)
 
     expect(result.processStatus).toBe(ProcessStatus.successful)
     expect(economySpy).not.toHaveBeenCalled()
@@ -409,7 +409,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(contactsAdapter, 'removeRelation')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await addRelationWithPropagation(RECIPIENT)
+    const result = await addRelation(RECIPIENT)
 
     expect(result.processStatus).toBe(ProcessStatus.successful)
     expect(removeSpy).not.toHaveBeenCalled()
@@ -432,7 +432,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(contactsAdapter, 'removeRelation')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await addRelationWithPropagation(GUARDIAN)
+    const result = await addRelation(GUARDIAN)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -461,7 +461,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await addRelationWithPropagation(RECIPIENT)
+    const result = await addRelation(RECIPIENT)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -489,7 +489,7 @@ describe('addRelationWithPropagation', () => {
         .spyOn(leasingAdapter, 'syncContactToLeasing')
         .mockRejectedValue(NOT_CALLED)
 
-      const result = await addRelationWithPropagation(RECIPIENT)
+      const result = await addRelation(RECIPIENT)
 
       expect(result).toMatchObject({
         processStatus: ProcessStatus.failed,
@@ -519,7 +519,7 @@ describe('addRelationWithPropagation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockRejectedValue(NOT_CALLED)
 
-      await addRelationWithPropagation(RECIPIENT)
+      await addRelation(RECIPIENT)
 
       expect(mailSpy).not.toHaveBeenCalled()
     })
@@ -541,7 +541,7 @@ describe('addRelationWithPropagation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockRejectedValue(NOT_CALLED)
 
-      const result = await addRelationWithPropagation(RECIPIENT)
+      const result = await addRelation(RECIPIENT)
 
       expect(result).toMatchObject({
         processStatus: ProcessStatus.failed,
@@ -565,7 +565,7 @@ describe('addRelationWithPropagation', () => {
         .spyOn(contactsAdapter, 'removeRelation')
         .mockResolvedValue({ ok: true, data: undefined })
 
-      await addRelationWithPropagation(RECIPIENT)
+      await addRelation(RECIPIENT)
 
       // The reverse edge is the same relation seen from the other end, not
       // the one being written — compensation still applies.
@@ -589,7 +589,7 @@ describe('addRelationWithPropagation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockResolvedValue({ ok: true, data: null } as any)
 
-      await addRelationWithPropagation(RECIPIENT)
+      await addRelation(RECIPIENT)
 
       // A blind remove could delete a pre-existing relation.
       expect(removeSpy).not.toHaveBeenCalled()
@@ -613,7 +613,7 @@ describe('addRelationWithPropagation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockResolvedValue({ ok: true, data: null } as any)
 
-      const result = await addRelationWithPropagation(RECIPIENT)
+      const result = await addRelation(RECIPIENT)
 
       expect(result).toMatchObject({
         processStatus: ProcessStatus.failed,
@@ -657,7 +657,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockRejectedValue(NOT_CALLED)
 
-    await addRelationWithPropagation(RECIPIENT)
+    await addRelation(RECIPIENT)
 
     expect(mailSpy).not.toHaveBeenCalled()
   })
@@ -677,7 +677,7 @@ describe('addRelationWithPropagation', () => {
       .spyOn(contactsAdapter, 'removeRelation')
       .mockResolvedValue({ ok: true, data: undefined })
 
-    await addRelationWithPropagation({ ...RECIPIENT, createdBy: longCreatedBy })
+    await addRelation({ ...RECIPIENT, createdBy: longCreatedBy })
 
     const deletedBy = removeSpy.mock.calls[0][0].deletedBy
     expect(deletedBy.length).toBeLessThanOrEqual(100)
@@ -687,7 +687,7 @@ describe('addRelationWithPropagation', () => {
   })
 })
 
-describe('removeRelationWithPropagation', () => {
+describe('removeRelation', () => {
   it('removes the relation and resyncs Tenfast, without touching Xledger', async () => {
     const removeSpy = jest
       .spyOn(contactsAdapter, 'removeRelation')
@@ -699,7 +699,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await removeRelationWithPropagation(REMOVAL)
+    const result = await removeRelation(REMOVAL)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.successful,
@@ -726,7 +726,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await removeRelationWithPropagation(REMOVAL)
+    const result = await removeRelation(REMOVAL)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -760,7 +760,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockResolvedValue({ ok: true, data: null } as any)
 
-    const result = await removeRelationWithPropagation(REMOVAL)
+    const result = await removeRelation(REMOVAL)
 
     // The removal stands in the database, so a retry can only answer
     // relation-not-found — the caseworker must not be told to try again.
@@ -800,7 +800,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockResolvedValue({ ok: true, data: null } as any)
 
-    const result = await removeRelationWithPropagation(REMOVAL)
+    const result = await removeRelation(REMOVAL)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -839,7 +839,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await removeRelationWithPropagation(REMOVAL)
+    const result = await removeRelation(REMOVAL)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -864,7 +864,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await removeRelationWithPropagation(REMOVAL)
+    const result = await removeRelation(REMOVAL)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -884,7 +884,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(contactsAdapter, 'addRelation')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await removeRelationWithPropagation(REMOVAL)
+    const result = await removeRelation(REMOVAL)
 
     expect(result.processStatus).toBe(ProcessStatus.successful)
     expect(addSpy).not.toHaveBeenCalled()
@@ -904,7 +904,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(contactsAdapter, 'addRelation')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await removeRelationWithPropagation(REMOVAL)
+    const result = await removeRelation(REMOVAL)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -929,7 +929,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockRejectedValue(NOT_CALLED)
 
-    const result = await removeRelationWithPropagation(REMOVAL)
+    const result = await removeRelation(REMOVAL)
 
     expect(result).toMatchObject({
       processStatus: ProcessStatus.failed,
@@ -956,7 +956,7 @@ describe('removeRelationWithPropagation', () => {
         .spyOn(leasingAdapter, 'syncContactToLeasing')
         .mockRejectedValue(NOT_CALLED)
 
-      const result = await removeRelationWithPropagation(REMOVAL)
+      const result = await removeRelation(REMOVAL)
 
       expect(result).toMatchObject({
         processStatus: ProcessStatus.failed,
@@ -986,7 +986,7 @@ describe('removeRelationWithPropagation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockRejectedValue(NOT_CALLED)
 
-      const result = await removeRelationWithPropagation(REMOVAL)
+      const result = await removeRelation(REMOVAL)
 
       expect(result).toMatchObject({
         processStatus: ProcessStatus.failed,
@@ -1010,7 +1010,7 @@ describe('removeRelationWithPropagation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockResolvedValue({ ok: true, data: null } as any)
 
-      await removeRelationWithPropagation(REMOVAL)
+      await removeRelation(REMOVAL)
 
       expect(addSpy).not.toHaveBeenCalled()
       expect(mailSpy).toHaveBeenCalledTimes(1)
@@ -1031,7 +1031,7 @@ describe('removeRelationWithPropagation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockRejectedValue(NOT_CALLED)
 
-      await removeRelationWithPropagation(REMOVAL)
+      await removeRelation(REMOVAL)
 
       expect(mailSpy).not.toHaveBeenCalled()
     })
@@ -1048,7 +1048,7 @@ describe('removeRelationWithPropagation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockResolvedValue({ ok: true, data: null } as any)
 
-      const result = await removeRelationWithPropagation(REMOVAL)
+      const result = await removeRelation(REMOVAL)
 
       expect(result).toMatchObject({
         processStatus: ProcessStatus.failed,
@@ -1102,7 +1102,7 @@ describe('removeRelationWithPropagation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockResolvedValue({ ok: true, data: null } as any)
 
-      const result = await removeRelationWithPropagation(GUARDIAN_REMOVAL)
+      const result = await removeRelation(GUARDIAN_REMOVAL)
 
       expect(result).toMatchObject({
         processStatus: ProcessStatus.failed,
@@ -1131,7 +1131,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(communicationAdapter, 'sendEmail')
       .mockRejectedValue(NOT_CALLED)
 
-    await removeRelationWithPropagation(REMOVAL)
+    await removeRelation(REMOVAL)
 
     expect(mailSpy).not.toHaveBeenCalled()
   })
@@ -1148,7 +1148,7 @@ describe('removeRelationWithPropagation', () => {
       .spyOn(contactsAdapter, 'addRelation')
       .mockResolvedValue({ ok: true, data: RELATIONS })
 
-    await removeRelationWithPropagation({
+    await removeRelation({
       ...REMOVAL,
       deletedBy: longDeletedBy,
     })

@@ -22,17 +22,13 @@ type Relations = GetRelatedContactsResponseBody['content']
 // No Odoo step: nothing in the work-order service consumes relations.
 
 /**
- * Everything a relation write can answer with. Two are this process's own:
- * `propagation-failed` (a downstream system could not be told, so the change
- * was undone) and `rollback-failed` (undoing it failed too, so the change
- * stands unpropagated). They stay separate because they call for opposite
- * things from the caseworker: retry the first, never the second.
+ * What this process can fail with that the write itself cannot: the relation
+ * was acceptable, but a downstream system could not be told. They stay two
+ * codes because they call for opposite things from the caseworker — retry
+ * `propagation-failed` (the change was undone), never `rollback-failed`
+ * (undoing it failed too, so the change stands).
  */
-export type RelationChangeError =
-  | AddRelationError
-  | RemoveRelationError
-  | 'propagation-failed'
-  | 'rollback-failed'
+type PropagationError = 'propagation-failed' | 'rollback-failed'
 
 /**
  * Relation-write statuses pass through so the caller can tell apart cases that
@@ -66,10 +62,12 @@ export const removeRelationStatus = (
  * declared response codes then fails to compile instead of silently violating
  * the contract.
  */
-type AddRelationFailure = ProcessError<RelationChangeError> & {
+type AddRelationFailure = ProcessError<AddRelationError | PropagationError> & {
   httpStatus: ReturnType<typeof addRelationStatus>
 }
-type RemoveRelationFailure = ProcessError<RelationChangeError> & {
+type RemoveRelationFailure = ProcessError<
+  RemoveRelationError | PropagationError
+> & {
   httpStatus: ReturnType<typeof removeRelationStatus>
 }
 
@@ -78,14 +76,14 @@ type RemoveRelationResult = ProcessSuccess<void> | RemoveRelationFailure
 
 const propagationFailed = (
   detail: 'economy' | 'tenfast'
-): ProcessError<RelationChangeError> & { httpStatus: 502 } => ({
+): ProcessError<'propagation-failed'> & { httpStatus: 502 } => ({
   processStatus: ProcessStatus.failed,
   error: 'propagation-failed',
   httpStatus: 502,
   response: { detail },
 })
 
-const rollbackFailed = (): ProcessError<RelationChangeError> & {
+const rollbackFailed = (): ProcessError<'rollback-failed'> & {
   httpStatus: 502
 } => ({
   processStatus: ProcessStatus.failed,
@@ -346,7 +344,7 @@ const notifyResyncUnconfirmed = (params: {
  * failure there leaves nothing to undo. The Tenfast resync has to run last:
  * Tenfast pulls our contact, so an earlier trigger would read the old state.
  */
-export const addRelationWithPropagation = async (
+export const addRelation = async (
   params: RelationRef & { createdBy: string }
 ): Promise<AddRelationResult> => {
   switch (params.roleType) {
@@ -519,7 +517,7 @@ export const addRelationWithPropagation = async (
  * No Xledger step: customers are never deleted, and the recipient may still
  * be invoiced under another lease or relation.
  */
-export const removeRelationWithPropagation = async (
+export const removeRelation = async (
   params: RelationRef & { deletedBy: string }
 ): Promise<RemoveRelationResult> => {
   const presenceBefore = await readRelationPresence(params)
