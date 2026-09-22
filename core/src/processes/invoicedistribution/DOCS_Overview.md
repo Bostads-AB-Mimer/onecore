@@ -13,7 +13,7 @@ Strålfors-integrationen består av två delar som **inte** anropar varandra och
 
 | Process                                                               | Vad den gör                                                                                            | Triggas av                                                                                                                          |
 | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| [Hämta Aviseringskanal](./DOCS_Invoice_Channel_Lookup.md)             | Slår upp om en hyresgäst/organisation kan nås digitalt (Kivra, e-faktura) eller får pappersfaktura     | Handläggare öppnar kundkortets betalningsflik i property-tree                                                                       |
+| [Hämta Aviseringskanal](./DOCS_Invoice_Channel_Lookup.md)             | Slår upp om en hyresgäst/organisation kan nås digitalt (Kivra, e-faktura) eller får pappersfaktura     | Handläggare öppnar kundkortets betalningsflik i property-tree, eller Tenfast vid fakturagenerering (för fakturaavgift)              |
 | [Överför Filer till Strålfors](./DOCS_Transfer_Files_to_Stralfors.md) | Hämtar nya fakturafiler från Tenfast och laddar upp dem till Strålfors via SFTP för tryck/distribution | CronJob `transfer-stralfors-files` (`mimer-onecore-operations`), vardagar 06:00 UTC — **pausad (`suspend: true`) tills aktivering** |
 
 ## Att känna till
