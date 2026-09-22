@@ -105,15 +105,15 @@ const FORWARD_ROLE_FOR_ROLE_TYPE: Record<RelationRoleType, RelatedContactRole> =
   }
 
 /**
- * Which roles receive the invoice, and so need to exist as an Xledger
- * customer. A god man is not an invoice recipient unless they are separately
+ * Which roles are synced to Xledger as a customer. Only the invoice recipient
+ * is — a god man does not receive the invoice unless they are separately
  * registered as fakturamottagare.
  *
  * A Record over the role union rather than a check against the one role that
- * needs it: a role added upstream fails to compile here until someone answers
+ * syncs: a role added upstream fails to compile here until someone answers
  * this question for it, instead of silently defaulting to "no customer".
  */
-const NEEDS_XLEDGER_CUSTOMER: Record<RelationRoleType, boolean> = {
+const SYNC_TO_XLEDGER: Record<RelationRoleType, boolean> = {
   god_man: false,
   forvaltare: false,
   annan_fakturamottagare: true,
@@ -364,7 +364,7 @@ const notifyResyncUnconfirmed = (params: {
 const upsertXledgerCustomer = async (
   params: RelationRef & { createdBy: string }
 ): Promise<AddRelationFailure | null> => {
-  if (!NEEDS_XLEDGER_CUSTOMER[params.roleType]) return null
+  if (!SYNC_TO_XLEDGER[params.roleType]) return null
 
   const economy = await syncInvoiceRecipientToEconomy(
     contactsAdapter,
