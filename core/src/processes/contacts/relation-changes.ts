@@ -338,6 +338,61 @@ const notifyResyncUnconfirmed = (params: {
 }
 
 /**
+ * Creates the Xledger customer an annan fakturamottagare needs, and returns
+ * the failure to answer with if that did not work.
+ *
+ * The ONLY role-dependent step in either direction: an Xledger customer is an
+ * invoice recipient, and no invoice ever goes to a god man or förvaltare
+ * unless they are separately registered as fakturamottagare. The Tenfast
+ * resync further down is not role-dependent — every relation triggers it.
+ */
+const upsertXledgerCustomer = async (
+  params: RelationRef & { createdBy: string }
+): Promise<AddRelationFailure | null> => {
+  switch (params.roleType) {
+    case 'god_man':
+    case 'forvaltare':
+      return null
+    case 'annan_fakturamottagare': {
+      const economy = await syncInvoiceRecipientToEconomy(
+        contactsAdapter,
+        params.relatedContactCode
+      )
+      if (economy.ok) return null
+
+      // Answer the way the relation write would have, or the caseworker
+      // gets an outage error for their own typo.
+      if (economy.err === 'contact-not-found') {
+        return {
+          processStatus: ProcessStatus.failed,
+          error: 'related-not-found',
+          httpStatus: 404,
+        }
+      }
+
+      logger.error(
+        {
+          contactCode: params.contactCode,
+          relatedContactCode: params.relatedContactCode,
+          roleType: params.roleType,
+          actor: params.createdBy,
+          stage: 'economy',
+          err: economy.err,
+        },
+        'relationChanges.propagationFailed'
+      )
+      return propagationFailed('economy')
+    }
+    default: {
+      // Exhaustiveness check: a new role fails to compile rather than
+      // silently skipping the Xledger step.
+      const unhandled: never = params.roleType
+      throw new Error(`Unhandled relation role type: ${unhandled}`)
+    }
+  }
+}
+
+/**
  * Adds a relation and propagates it, undoing the write if propagation fails.
  *
  * Xledger runs first because an unused customer record is harmless, so a
@@ -347,47 +402,8 @@ const notifyResyncUnconfirmed = (params: {
 export const addRelation = async (
   params: RelationRef & { createdBy: string }
 ): Promise<AddRelationResult> => {
-  switch (params.roleType) {
-    case 'annan_fakturamottagare': {
-      const economy = await syncInvoiceRecipientToEconomy(
-        contactsAdapter,
-        params.relatedContactCode
-      )
-      if (!economy.ok) {
-        // Answer the way the relation write would have, or the caseworker
-        // gets an outage error for their own typo.
-        if (economy.err === 'contact-not-found') {
-          return {
-            processStatus: ProcessStatus.failed,
-            error: 'related-not-found',
-            httpStatus: 404,
-          }
-        }
-        logger.error(
-          {
-            contactCode: params.contactCode,
-            relatedContactCode: params.relatedContactCode,
-            roleType: params.roleType,
-            actor: params.createdBy,
-            stage: 'economy',
-            err: economy.err,
-          },
-          'relationChanges.propagationFailed'
-        )
-        return propagationFailed('economy')
-      }
-      break
-    }
-    case 'god_man':
-    case 'forvaltare':
-      break
-    default: {
-      // Exhaustiveness check: a new role fails to compile rather than
-      // silently skipping the Xledger step.
-      const unhandled: never = params.roleType
-      throw new Error(`Unhandled relation role type: ${unhandled}`)
-    }
-  }
+  const economyFailure = await upsertXledgerCustomer(params)
+  if (economyFailure) return economyFailure
 
   const presenceBefore = await readRelationPresence(params)
 
