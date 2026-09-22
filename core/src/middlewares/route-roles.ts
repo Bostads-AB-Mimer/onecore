@@ -20,17 +20,31 @@ export const requiredRolesFor = (rawPath: string, method: string): string[] => {
     return ['invoice-notify:post', 'api-access']
   }
 
+  if (
+    path.startsWith(
+      '/v1/tenant-notifications/lease-termination-confirmation'
+    ) &&
+    method === 'POST'
+  ) {
+    return ['tenant-notifications:lease-termination', 'api-access']
+  }
+
   // Infobip email delivery-report webhook — authenticated via a Keycloak
   // service account (client_credentials) holding the infobip-webhook role.
   if (path.startsWith('/webhooks/infobip')) return ['infobip-webhook']
 
-  // Creating a contact writes to the system of record and cannot be undone;
-  // changing relations mutates the contacts DB. Both are gated separately
-  // from reading, on contacts:write alone: requireRole is ANY-of, so
-  // listing api-access alongside it would open the writes to every
-  // api-access holder.
+  // Creating a contact writes to Xpand, the system of record, and ONECore
+  // cannot remove it again — so it is gated separately from reading, on
+  // contacts:write alone: requireRole is ANY-of, so listing api-access
+  // alongside it would open the write to every api-access holder.
+  //
+  // Relations are deliberately NOT gated on it. They mutate the contacts DB,
+  // and removal is a soft delete that keeps history, so they are no more
+  // consequential than the lease and invoice writes that already sit behind
+  // plain api-access, and they fall through to it below.
   if (
     path.startsWith('/v1/contacts') &&
+    !path.includes('/relations') &&
     (method === 'POST' || method === 'DELETE')
   ) {
     return ['contacts:write']

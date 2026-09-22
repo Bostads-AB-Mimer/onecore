@@ -1,20 +1,38 @@
 import { requiredRolesFor } from '../route-roles'
 
 describe('requiredRolesFor', () => {
-  it('gates contact writes on contacts:write alone', () => {
+  it('gates creating a contact on contacts:write alone', () => {
     expect(requiredRolesFor('/v1/contacts', 'POST')).toEqual(['contacts:write'])
+  })
+
+  // Relations are reversible, so they sit with the other caseworker writes
+  // rather than behind the Xpand-write role. Pinned in both directions so
+  // neither policy drifts into the other.
+  it('does not gate relation writes on contacts:write', () => {
     expect(requiredRolesFor('/v1/contacts/P1/relations', 'POST')).toEqual([
-      'contacts:write',
+      'api-access',
     ])
     expect(
       requiredRolesFor('/v1/contacts/P1/relations/god_man/P2', 'DELETE')
-    ).toEqual(['contacts:write'])
+    ).toEqual(['api-access'])
   })
 
   it('lets api-access or contacts:read read contacts', () => {
     expect(requiredRolesFor('/v1/contacts/P1', 'GET')).toEqual([
       'api-access',
       'contacts:read',
+    ])
+  })
+
+  it('gates lease termination confirmation on its role or api-access', () => {
+    expect(
+      requiredRolesFor(
+        '/v1/tenant-notifications/lease-termination-confirmation',
+        'POST'
+      )
+    ).toEqual(['tenant-notifications:lease-termination', 'api-access'])
+    expect(requiredRolesFor('/v1/tenant-notifications', 'POST')).toEqual([
+      'api-access',
     ])
   })
 
@@ -47,11 +65,17 @@ describe('requiredRolesFor', () => {
   it('is case-insensitive like the router', () => {
     expect(requiredRolesFor('/V1/Contacts', 'POST')).toEqual(['contacts:write'])
     expect(
-      requiredRolesFor('/V1/contacts/P1/relations/god_man/P2', 'DELETE')
-    ).toEqual(['contacts:write'])
+      requiredRolesFor('/V1/contacts/P1/Relations/god_man/P2', 'DELETE')
+    ).toEqual(['api-access'])
     expect(requiredRolesFor('/Scan-Receipt/x', 'POST')).toEqual([
       'scanner-upload',
     ])
+    expect(
+      requiredRolesFor(
+        '/V1/Tenant-Notifications/Lease-Termination-Confirmation',
+        'POST'
+      )
+    ).toEqual(['tenant-notifications:lease-termination', 'api-access'])
   })
 
   it('pins the method conjunctions on the special cases', () => {
