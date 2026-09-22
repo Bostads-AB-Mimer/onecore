@@ -432,7 +432,12 @@ describe('tenfast-lease-search-adapter', () => {
       ])
 
       const result = await tenfastLeaseSearchAdapter.searchLeases(
-        { startDateFrom: '2024-01-01', startDateTo: '2024-12-31', page: 1, limit: 20 },
+        {
+          startDateFrom: '2024-01-01',
+          startDateTo: '2024-12-31',
+          page: 1,
+          limit: 20,
+        },
         mockCtx
       )
 
@@ -453,7 +458,12 @@ describe('tenfast-lease-search-adapter', () => {
       ])
 
       const result = await tenfastLeaseSearchAdapter.searchLeases(
-        { endDateFrom: '2026-07-27', endDateTo: '2026-11-30', page: 1, limit: 20 },
+        {
+          endDateFrom: '2026-07-27',
+          endDateTo: '2026-11-30',
+          page: 1,
+          limit: 20,
+        },
         mockCtx
       )
 
@@ -468,7 +478,12 @@ describe('tenfast-lease-search-adapter', () => {
       ])
 
       const result = await tenfastLeaseSearchAdapter.searchLeases(
-        { endDateFrom: '2026-08-01', endDateTo: '2026-10-01', page: 1, limit: 20 },
+        {
+          endDateFrom: '2026-08-01',
+          endDateTo: '2026-10-01',
+          page: 1,
+          limit: 20,
+        },
         mockCtx
       )
 
@@ -509,7 +524,9 @@ describe('tenfast-lease-search-adapter', () => {
 
     // Xpand-based filters
     it('filters by districtNames using rental object codes from Xpand', async () => {
-      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce(['ROC-500'])
+      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([
+        'ROC-500',
+      ])
       mockedGetAll.mockReturnValue([
         makeLeaseResult('lease-dist-1', { rentalObjectCode: 'ROC-500' }),
         makeLeaseResult('lease-other', { rentalObjectCode: 'ROC-999' }),
@@ -563,7 +580,9 @@ describe('tenfast-lease-search-adapter', () => {
     })
 
     it('filters by kvvAreaCodes using rental object codes from Xpand', async () => {
-      mockedGetRentalObjectCodesByKvvAreaCodes.mockResolvedValueOnce(['ROC-700'])
+      mockedGetRentalObjectCodesByKvvAreaCodes.mockResolvedValueOnce([
+        'ROC-700',
+      ])
       mockedGetAll.mockReturnValue([
         makeLeaseResult('lease-kvv-1', { rentalObjectCode: 'ROC-700' }),
         makeLeaseResult('lease-other', { rentalObjectCode: 'ROC-999' }),
@@ -594,7 +613,9 @@ describe('tenfast-lease-search-adapter', () => {
     })
 
     it('filters by buildingCodes using rental object codes from Xpand', async () => {
-      mockedGetRentalObjectCodesByBuildingCodes.mockResolvedValueOnce(['ROC-100'])
+      mockedGetRentalObjectCodesByBuildingCodes.mockResolvedValueOnce([
+        'ROC-100',
+      ])
       mockedGetAll.mockReturnValue([
         makeLeaseResult('lease-bc-1', { rentalObjectCode: 'ROC-100' }),
         makeLeaseResult('lease-other', { rentalObjectCode: 'ROC-999' }),

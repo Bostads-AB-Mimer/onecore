@@ -25,7 +25,9 @@ describe('decodeTenfastQueryString', () => {
     // Simulate manually constructed string with lowercase encoding
     const raw = 'filter%5bstage%5d=active%2cupcoming'
     const fakeQs = { toString: () => raw } as URLSearchParams
-    expect(decodeTenfastQueryString(fakeQs)).toBe('filter[stage]=active,upcoming')
+    expect(decodeTenfastQueryString(fakeQs)).toBe(
+      'filter[stage]=active,upcoming'
+    )
   })
 
   it('returns an empty string for empty URLSearchParams', () => {
