@@ -1,8 +1,15 @@
-import { ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
+import { Fragment, ReactNode, useState } from 'react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { cn } from '@/shared/lib/utils'
+import { Button } from '@/shared/ui/Button'
 import { Card, CardContent } from '@/shared/ui/Card'
 import {
   Table,
@@ -35,6 +42,8 @@ interface ResponsiveTableProps {
   sortOrder?: 'asc' | 'desc'
   /** Called when a sortable column header is clicked */
   onSort?: (sortKey: string, sortOrder: 'asc' | 'desc' | undefined) => void
+  /** When set, rows can be expanded to show extra content. Return null for a row with nothing to show. */
+  expandableContent?: (item: any) => ReactNode | null
 }
 
 export function ResponsiveTable({
@@ -46,8 +55,22 @@ export function ResponsiveTable({
   sortBy,
   sortOrder,
   onSort,
+  expandableContent,
 }: ResponsiveTableProps) {
   const isMobile = useIsMobile()
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+
+  const toggleExpanded = (key: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }
 
   const handleSort = (sortKey: string) => {
     if (!onSort) return
@@ -92,25 +115,58 @@ export function ResponsiveTable({
 
     return (
       <div className="space-y-3">
-        {data.map((item) => (
-          <Card key={keyExtractor(item)} className="overflow-hidden">
-            <CardContent className="p-4 space-y-3 min-h-[44px]">
-              {visibleColumns.map((column) => (
-                <div
-                  key={column.key}
-                  className="flex justify-between items-center min-h-[44px]"
-                >
-                  <span className="text-sm font-medium text-muted-foreground min-w-0 flex-1">
-                    {column.label}:
-                  </span>
-                  <div className="text-sm text-right ml-2 flex items-center min-h-[44px]">
-                    {column.render(item)}
+        {data.map((item) => {
+          const itemKey = keyExtractor(item)
+          const isExpanded = expandedRows.has(itemKey)
+          const content = expandableContent?.(item) ?? null
+
+          return (
+            <Card key={itemKey} className="overflow-hidden">
+              <CardContent className="p-4 space-y-3 min-h-[44px]">
+                {visibleColumns.map((column) => (
+                  <div
+                    key={column.key}
+                    className="flex justify-between items-center min-h-[44px]"
+                  >
+                    <span className="text-sm font-medium text-muted-foreground min-w-0 flex-1">
+                      {column.label}:
+                    </span>
+                    <div className="text-sm text-right ml-2 flex items-center min-h-[44px]">
+                      {column.render(item)}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        ))}
+                ))}
+
+                {content !== null && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center"
+                    onClick={() => toggleExpanded(itemKey)}
+                  >
+                    {isExpanded ? (
+                      <>
+                        <ChevronDown className="h-4 w-4 mr-1" />
+                        Dölj detaljer
+                      </>
+                    ) : (
+                      <>
+                        <ChevronRight className="h-4 w-4 mr-1" />
+                        Visa detaljer
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {isExpanded && content !== null && (
+                  <div className="pt-3 border-t bg-muted/30 -mx-4 px-4 pb-1 -mb-3 rounded-b-lg">
+                    {content}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     )
   }
@@ -123,6 +179,7 @@ export function ResponsiveTable({
       <Table>
         <TableHeader>
           <TableRow>
+            {expandableContent && <TableHead className="w-[40px]" />}
             {columns.map((column) => {
               const isSortable = !!column.sortKey && !!onSort
               const isActive = sortBy === column.sortKey
@@ -158,18 +215,51 @@ export function ResponsiveTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((item) => (
-            <TableRow key={keyExtractor(item)} className="min-h-[44px]">
-              {columns.map((column) => (
-                <TableCell
-                  key={column.key}
-                  className={cn(column.className, 'py-3')}
-                >
-                  {column.render(item)}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
+          {data.map((item) => {
+            const itemKey = keyExtractor(item)
+            const isExpanded = expandedRows.has(itemKey)
+            const content = expandableContent?.(item) ?? null
+
+            return (
+              <Fragment key={itemKey}>
+                <TableRow className="min-h-[44px]">
+                  {expandableContent && (
+                    <TableCell className="py-3">
+                      {content && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => toggleExpanded(itemKey)}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </TableCell>
+                  )}
+                  {columns.map((column) => (
+                    <TableCell
+                      key={column.key}
+                      className={cn(column.className, 'py-3')}
+                    >
+                      {column.render(item)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                {isExpanded && content && (
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableCell colSpan={columns.length + 1} className="py-4">
+                      {content}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
+            )
+          })}
         </TableBody>
       </Table>
     </div>

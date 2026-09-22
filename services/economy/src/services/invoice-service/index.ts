@@ -17,6 +17,7 @@ import {
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
+  getMiscellaneousInvoices,
   submitMiscellaneousInvoice,
 } from '../common/adapters/xledger-adapter'
 import {
@@ -247,7 +248,48 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/invoices/miscellaneous', async (ctx) => {
+  router.get('(.*)/miscellaneous-invoices', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams = economy.GetMiscellaneousInvoicesQueryParams.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    try {
+      const result = await getMiscellaneousInvoices({
+        from: queryParams.data?.from,
+        to: queryParams.data?.to,
+        after: queryParams.data?.after,
+        pageSize: queryParams.data?.pageSize,
+      })
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          message: result.err,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(
+        { content: result.data.content, pageInfo: result.data.pageInfo },
+        metadata
+      )
+    } catch (error: any) {
+      logger.error({ err: error }, 'Error getting miscellaneous invoices')
+      ctx.status = 500
+      ctx.body = {
+        message: error.message,
+      }
+    }
+  })
+
+  router.post('(.*)/miscellaneous-invoices', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
@@ -286,7 +328,7 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(result.data, metadata)
     } catch (error) {
-      logger.error({ err: error }, 'POST /invoices/miscellaneous')
+      logger.error({ err: error }, 'POST /miscellaneous-invoices')
       ctx.status = 500
       ctx.body = {
         type: SubmitMiscellaneousInvoiceErrorCodes.Unknown,
