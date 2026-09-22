@@ -46,6 +46,7 @@ sequenceDiagram
 
     Economy ->> Tenfast: GET /v1/hyresvard/outbound-exports<br/>?status=NEW (paginerat)
     Tenfast -->> Economy: Filer (obs: alla providers,<br/>ingen filtrering på fältet provider)
+    note over Economy: Tenfasts eget API-kontrakt listar minst två<br/>provider-värden: "stralfors" och "bankgiro"<br/>(bankgirofiler, orelaterat till fakturadistribution)
 
     break when listningen misslyckas
         Economy ->> Infobip: Mejla felsammanfattning
@@ -95,7 +96,7 @@ sequenceDiagram
 
 ## Att känna till
 
-- **Ingen filtrering på `provider`.** Scriptet litar på att Tenfasts `NEW`-kö bara innehåller filer avsedda för Strålfors — det läser inte fältet `provider`/`type` på exportposten. Om Tenfast någon gång börjar kö:a andra exporttyper i samma kö skulle de tystas laddas upp till Strålfors SFTP utan att scriptet upptäcker det.
+- **Ingen filtrering på `provider` — verifierat, inte bara teoretiskt.** Scriptet litar på att Tenfasts `NEW`-kö bara innehåller filer avsedda för Strålfors — det läser inte fältet `provider`/`type` på exportposten. Tenfasts egen API-spec för `GET /outbound-exports` listar redan idag `provider: "stralfors" | "bankgiro"` (samt `type: "stralfors_invoice" | "autogiro"`, `format: "xml" | "iagag"`) — `bankgiro` är alltså inte en hypotetisk framtida distributör utan ett existerande värde i kontraktet, för filer helt orelaterade till fakturadistribution (autogiro-medgivanden). Om en sådan fil någonsin hamnar i `NEW`-kön skulle scriptet ladda upp den till Strålfors SFTP utan att upptäcka det.
 - **Per-fil-isolering.** Ett fel på en fil (nedladdning, uppladdning eller markering) stoppar inte resten av batchen — det loggas, mejlas och scriptet fortsätter med nästa fil.
 - **SFTP-värdverifiering är valfri men rekommenderad.** Om `STRALFORS_EXPORT__SFTP__HOST_FINGERPRINT` inte är satt loggas en varning och all värdverifiering hoppas över (`hostVerifier` returnerar alltid `true`).
 - **Filformat:** enligt testfabriken (`TenfastOutboundExportFactory`) är exempeldata `type: 'stralfors_invoice'`, `format: 'xml'` — dvs XML-filer med fakturadata från Tenfast.
