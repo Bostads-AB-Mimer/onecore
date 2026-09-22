@@ -14,7 +14,7 @@ export type ContactLookup = {
 }
 
 /**
- * Upserts a contact as an Xledger customer, creating it when missing.
+ * Upserts a contact as an economy-service customer, creating it when missing.
  *
  * An annan fakturamottagare usually holds no lease, so nothing has ever
  * created them as a customer — `create: true` is what brings them into

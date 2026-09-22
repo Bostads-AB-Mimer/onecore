@@ -14,6 +14,7 @@ import {
   type RemoveRelationError,
 } from '../../adapters/contacts-adapter'
 import { syncContactToLeasing } from '../../adapters/leasing-adapter'
+import { AdapterResult } from '../../adapters/types'
 import { sendEmail } from '../../adapters/communication-adapter'
 import { syncInvoiceRecipientToEconomy } from './sync-invoice-recipient'
 
@@ -105,7 +106,7 @@ const FORWARD_ROLE_FOR_ROLE_TYPE: Record<RelationRoleType, RelatedContactRole> =
   }
 
 /**
- * Which roles are synced to Xledger as a customer. Only the invoice recipient
+ * Which roles are synced to the economy service as a customer. Only the invoice recipient
  * is — a god man does not receive the invoice unless they are separately
  * registered as fakturamottagare.
  *
@@ -113,7 +114,7 @@ const FORWARD_ROLE_FOR_ROLE_TYPE: Record<RelationRoleType, RelatedContactRole> =
  * syncs: a role added upstream fails to compile here until someone answers
  * this question for it, instead of silently defaulting to "no customer".
  */
-const SYNC_TO_XLEDGER: Record<RelationRoleType, boolean> = {
+const SYNC_TO_ECONOMY: Record<RelationRoleType, boolean> = {
   god_man: false,
   forvaltare: false,
   annan_fakturamottagare: true,
@@ -161,11 +162,11 @@ const readRelationPresence = async (
 }
 
 /**
- * The Xledger customer is upserted before the relation is written, so a write
+ * The economy-service customer is upserted before the relation is written, so a write
  * that never lands leaves one behind. Customers are never deleted, so this
  * log is the only record that one exists without a purpose.
  */
-const logOrphanedXledgerCustomer = (
+const logOrphanedEconomyCustomer = (
   params: RelationRef,
   reason: string
 ): void => {
@@ -177,7 +178,7 @@ const logOrphanedXledgerCustomer = (
       relatedContactCode: params.relatedContactCode,
       reason,
     },
-    'relationChanges.xledgerCustomerOrphaned'
+    'relationChanges.economyCustomerOrphaned'
   )
 }
 
@@ -233,7 +234,7 @@ const alarmRollbackFailed = async (params: {
   relation: RelationRef
   actor: string
   /** Only the add path upserts a customer, so only it can strand one. */
-  xledgerCustomerTouched: boolean
+  economyCustomerTouched: boolean
   outcome:
     | {
         kind: 'rollback-failed'
@@ -259,7 +260,7 @@ const alarmRollbackFailed = async (params: {
 
   const { done, undone, unknownOutcome, compensation, staleRisk } =
     relationActionWords(params.action)
-  const { relation, actor, outcome, xledgerCustomerTouched } = params
+  const { relation, actor, outcome, economyCustomerTouched } = params
   const propagationHeader = (propagationError: string): string =>
     `Relationen ${relation.roleType} mellan ${relation.contactCode} och ${relation.relatedContactCode} ${done} av ${actor} men kunde inte propageras till Tenfast (${propagationError}).`
 
@@ -295,11 +296,11 @@ const alarmRollbackFailed = async (params: {
 
   if (
     relation.roleType === 'annan_fakturamottagare' &&
-    xledgerCustomerTouched
+    economyCustomerTouched
   ) {
     body.push(
       '',
-      `Obs: en kund kan ha skapats i Xledger för ${relation.relatedContactCode} och står nu utan syfte.`
+      `Obs: en kund kan ha skapats i ekonomisystemet för ${relation.relatedContactCode} och står nu utan syfte.`
     )
   }
 
@@ -330,7 +331,7 @@ const notifyResyncUnconfirmed = (params: {
   action: 'add' | 'remove'
   relation: RelationRef
   actor: string
-  xledgerCustomerTouched: boolean
+  economyCustomerTouched: boolean
   propagationError: string
   propagationWasAmbiguous: boolean
   resyncError: string
@@ -353,48 +354,61 @@ const notifyResyncUnconfirmed = (params: {
 }
 
 /**
+ * Creates the related contact as a customer in the economy service, for the
+ * roles that need one there. Reports success for the roles that do not.
+ *
+ * The only role-dependent step in either direction — the Tenfast resync runs
+ * for every relation.
+ */
+const syncRelatedContactToEconomy = async (
+  params: RelationRef & { createdBy: string }
+): Promise<AdapterResult<null, 'contact-not-found' | 'sync-failed'>> => {
+  if (!SYNC_TO_ECONOMY[params.roleType]) return { ok: true, data: null }
+
+  const economy = await syncInvoiceRecipientToEconomy(
+    contactsAdapter,
+    params.relatedContactCode
+  )
+
+  if (!economy.ok) {
+    logger.error(
+      {
+        contactCode: params.contactCode,
+        relatedContactCode: params.relatedContactCode,
+        roleType: params.roleType,
+        actor: params.createdBy,
+        stage: 'economy',
+        err: economy.err,
+      },
+      'relationChanges.propagationFailed'
+    )
+  }
+
+  return economy
+}
+
+/**
  * Adds a relation and propagates it, undoing the write if propagation fails.
  *
- * Xledger runs first because an unused customer record is harmless, so a
+ * The economy sync runs first because an unused customer record is harmless, so a
  * failure there leaves nothing to undo. The Tenfast resync has to run last:
  * Tenfast pulls our contact, so an earlier trigger would read the old state.
  */
 export const addRelation = async (
   params: RelationRef & { createdBy: string }
 ): Promise<AddRelationResult> => {
-  // The only role-dependent step in either direction — the Tenfast resync
-  // below runs for every relation.
-  if (SYNC_TO_XLEDGER[params.roleType]) {
-    const economy = await syncInvoiceRecipientToEconomy(
-      contactsAdapter,
-      params.relatedContactCode
-    )
-
-    if (!economy.ok) {
-      // The recipient is looked up before the relation is written, so answer
-      // a bad contact code the way the relation write would have — otherwise
-      // the caseworker gets an outage error for their own typo.
-      if (economy.err === 'contact-not-found') {
-        return {
+  const economy = await syncRelatedContactToEconomy(params)
+  if (!economy.ok) {
+    // The recipient is looked up before the relation is written, so answer a
+    // bad contact code the way the relation write would have — otherwise the
+    // caseworker gets an outage error for their own typo.
+    return economy.err === 'contact-not-found'
+      ? {
           processStatus: ProcessStatus.failed,
           error: 'related-not-found',
           httpStatus: 404,
         }
-      }
-
-      logger.error(
-        {
-          contactCode: params.contactCode,
-          relatedContactCode: params.relatedContactCode,
-          roleType: params.roleType,
-          actor: params.createdBy,
-          stage: 'economy',
-          err: economy.err,
-        },
-        'relationChanges.propagationFailed'
-      )
-      return propagationFailed('economy')
-    }
+      : propagationFailed('economy')
   }
 
   const presenceBefore = await readRelationPresence(params)
@@ -421,7 +435,7 @@ export const addRelation = async (
             action: 'add',
             relation: params,
             actor: params.createdBy,
-            xledgerCustomerTouched:
+            economyCustomerTouched:
               params.roleType === 'annan_fakturamottagare',
             outcome: {
               kind: 'write-outcome-unknown',
@@ -434,7 +448,7 @@ export const addRelation = async (
           action: 'add',
           relation: params,
           actor: params.createdBy,
-          xledgerCustomerTouched: params.roleType === 'annan_fakturamottagare',
+          economyCustomerTouched: params.roleType === 'annan_fakturamottagare',
           outcome: { kind: 'write-outcome-unknown' },
         })
       }
@@ -442,7 +456,7 @@ export const addRelation = async (
 
     // Not when the relation was already there: that customer is in use.
     if (presenceBefore !== 'present') {
-      logOrphanedXledgerCustomer(params, added.err)
+      logOrphanedEconomyCustomer(params, added.err)
     }
 
     return {
@@ -481,7 +495,7 @@ export const addRelation = async (
         action: 'add',
         relation: params,
         actor: params.createdBy,
-        xledgerCustomerTouched: params.roleType === 'annan_fakturamottagare',
+        economyCustomerTouched: params.roleType === 'annan_fakturamottagare',
         outcome: {
           kind: 'rollback-failed',
           propagationError: synced.err,
@@ -491,7 +505,7 @@ export const addRelation = async (
       return rollbackFailed()
     }
 
-    logOrphanedXledgerCustomer(params, 'propagation-failed')
+    logOrphanedEconomyCustomer(params, 'propagation-failed')
 
     // Tenfast pulls our contact, so if the original push landed before we
     // lost the response it may already hold the relation we just removed.
@@ -501,7 +515,7 @@ export const addRelation = async (
         action: 'add',
         relation: params,
         actor: params.createdBy,
-        xledgerCustomerTouched: params.roleType === 'annan_fakturamottagare',
+        economyCustomerTouched: params.roleType === 'annan_fakturamottagare',
         propagationError: synced.err,
         propagationWasAmbiguous: synced.err === 'unknown',
         resyncError: resynced.err,
@@ -522,7 +536,7 @@ export const addRelation = async (
  * Removes a relation and propagates it, putting the relation back if
  * propagation fails.
  *
- * No Xledger step: customers are never deleted, and the recipient may still
+ * No economy step: customers are never deleted, and the recipient may still
  * be invoiced under another lease or relation.
  */
 export const removeRelation = async (
@@ -551,7 +565,7 @@ export const removeRelation = async (
             action: 'remove',
             relation: params,
             actor: params.deletedBy,
-            xledgerCustomerTouched: false,
+            economyCustomerTouched: false,
             outcome: {
               kind: 'write-outcome-unknown',
               rollbackError: compensated.err,
@@ -563,7 +577,7 @@ export const removeRelation = async (
           action: 'remove',
           relation: params,
           actor: params.deletedBy,
-          xledgerCustomerTouched: false,
+          economyCustomerTouched: false,
           outcome: { kind: 'write-outcome-unknown' },
         })
       }
@@ -605,7 +619,7 @@ export const removeRelation = async (
         action: 'remove',
         relation: params,
         actor: params.deletedBy,
-        xledgerCustomerTouched: false,
+        economyCustomerTouched: false,
         outcome: {
           kind: 'rollback-failed',
           propagationError: synced.err,
@@ -622,7 +636,7 @@ export const removeRelation = async (
         action: 'remove',
         relation: params,
         actor: params.deletedBy,
-        xledgerCustomerTouched: false,
+        economyCustomerTouched: false,
         propagationError: synced.err,
         propagationWasAmbiguous: synced.err === 'unknown',
         resyncError: resynced.err,

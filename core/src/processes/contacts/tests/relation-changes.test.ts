@@ -119,7 +119,7 @@ describe('addRelation', () => {
     expect(syncSpy).toHaveBeenCalledWith('P111')
   })
 
-  it('writes nothing when the Xledger upsert fails', async () => {
+  it('writes nothing when the economy-service upsert fails', async () => {
     jest
       .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
       .mockResolvedValue({ ok: false, err: 'sync-failed' })
@@ -234,7 +234,9 @@ describe('addRelation', () => {
     expect(mailSpy.mock.calls[0][0].body).toContain(
       'Kontaktdatabasen har därmed en ändring som Tenfast aldrig fått veta om'
     )
-    expect(mailSpy.mock.calls[0][0].body.toLowerCase()).toContain('xledger')
+    expect(mailSpy.mock.calls[0][0].body.toLowerCase()).toContain(
+      'ekonomisystemet'
+    )
   })
 
   it('mails the alarm when the confirming resync after a successful rollback also fails', async () => {
@@ -336,7 +338,7 @@ describe('addRelation', () => {
     expect(mailSpy).not.toHaveBeenCalled()
   })
 
-  it('logs the Xledger customer left behind when the relation is not saved', async () => {
+  it('logs the economy customer left behind when the relation is not saved', async () => {
     // The upsert runs before the write and no alarm fires on this path, so
     // the log is the only record that a customer was left behind.
     const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {})
@@ -353,11 +355,11 @@ describe('addRelation', () => {
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.objectContaining({ relatedContactCode: 'P222' }),
-      'relationChanges.xledgerCustomerOrphaned'
+      'relationChanges.economyCustomerOrphaned'
     )
   })
 
-  it('does not flag an orphaned Xledger customer when the relation already existed', async () => {
+  it('does not flag an orphaned economy customer when the relation already existed', async () => {
     // That customer exists because of the relation — it is in use.
     mockPresence([RECIPIENT_RELATION])
     const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {})
@@ -374,11 +376,11 @@ describe('addRelation', () => {
 
     expect(warnSpy).not.toHaveBeenCalledWith(
       expect.anything(),
-      'relationChanges.xledgerCustomerOrphaned'
+      'relationChanges.economyCustomerOrphaned'
     )
   })
 
-  it('does not touch Xledger for a guardian role', async () => {
+  it('does not touch the economy service for a guardian role', async () => {
     const economySpy = jest
       .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
       .mockRejectedValue(NOT_CALLED)
@@ -688,7 +690,7 @@ describe('addRelation', () => {
 })
 
 describe('removeRelation', () => {
-  it('removes the relation and resyncs Tenfast, without touching Xledger', async () => {
+  it('removes the relation and resyncs Tenfast, without touching the economy service', async () => {
     const removeSpy = jest
       .spyOn(contactsAdapter, 'removeRelation')
       .mockResolvedValue({ ok: true, data: undefined })
@@ -779,9 +781,11 @@ describe('removeRelation', () => {
     expect(mailSpy.mock.calls[0][0].body).toContain(
       'Kontaktdatabasen har därmed en ändring som Tenfast aldrig fått veta om'
     )
-    // The remove path never touches Xledger, so — unlike the add path's
+    // The remove path never touches the economy service, so — unlike the add path's
     // equivalent alarm — no orphaned-customer footnote.
-    expect(mailSpy.mock.calls[0][0].body.toLowerCase()).not.toContain('xledger')
+    expect(mailSpy.mock.calls[0][0].body.toLowerCase()).not.toContain(
+      'ekonomisystemet'
+    )
   })
 
   it('mails the alarm when the confirming resync after a successful re-add also fails', async () => {
