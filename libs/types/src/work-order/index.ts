@@ -100,7 +100,7 @@ interface OdooWorkOrderMessage {
   body: string
   message_type: string
   author_id: [number, string]
-  // MIM-2040 — the sender the tenant is shown, decided and stored by Odoo.
+  // The sender the tenant is shown, decided and stored by Odoo.
   // `false` is Odoo's empty Char.
   onecore_tenant_author_name: string | false
   create_date: string

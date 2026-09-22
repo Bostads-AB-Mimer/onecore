@@ -435,7 +435,7 @@ describe('odoo-adapter message domain', () => {
     expect(messageTypeClause![2] as string[]).toContain('tenant_my_pages')
   })
 
-  // MIM-2040: Odoo stores the sender the tenant is shown on the message itself.
+  // Odoo stores the sender the tenant is shown on the message itself.
   // Leave it out of the read and every outbound message falls back to "Mimer",
   // silently losing the supplier's resource group.
   it('reads the tenant-facing sender Odoo stores on the message', async () => {

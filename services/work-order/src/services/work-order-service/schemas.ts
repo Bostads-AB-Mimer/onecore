@@ -64,7 +64,7 @@ export const OdooWorkOrderMessageSchema = z.object({
   body: z.string(),
   message_type: z.string(),
   author_id: z.tuple([z.number(), z.string()]),
-  // MIM-2040 — the sender the tenant is shown, decided and stored by Odoo.
+  // The sender the tenant is shown, decided and stored by Odoo.
   // `false` is Odoo's empty Char: the tenant's own messages carry no sender,
   // and so does anything written before the addon started setting it.
   onecore_tenant_author_name: z.union([z.string(), z.literal(false)]),

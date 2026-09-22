@@ -92,9 +92,9 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
   }
 }
 
-// MIM-2040 — what a tenant is shown when an unlabelled outbound message turns
-// up. It is the same default Odoo's own write path and backfill take: an author
-// we cannot place is Mimer, never a named person and never a supplier.
+// What a tenant is shown when an unlabelled outbound message turns up. It is
+// the same default Odoo's own write path and backfill take: an author we
+// cannot place is Mimer, never a named person and never a supplier.
 const TENANT_AUTHOR_FALLBACK = 'Mimer'
 
 // The sender Mina sidor prints beside a message. Odoo decides it when the

@@ -63,9 +63,9 @@ describe('odoo-adapter utils', () => {
       expect(result[0].author).toBe('Kund')
     })
 
-    // MIM-2040: a tenant on Mina sidor is answered by an organisation, never by
-    // a named handläggare. Odoo works out the label when the message is written
-    // and stores it on the message; this adapter only carries it across.
+    // A tenant on Mina sidor is answered by an organisation, never by a named
+    // handläggare. Odoo works out the label when the message is written and
+    // stores it on the message; this adapter only carries it across.
     it('should use the sender Odoo captured for the tenant, not the author name', () => {
       const result = transformMessages([
         factory.odooWorkOrderMessage.build({
