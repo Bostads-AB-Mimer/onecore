@@ -14,7 +14,6 @@ import {
   type RemoveRelationError,
 } from '../../adapters/contacts-adapter'
 import { syncContactToLeasing } from '../../adapters/leasing-adapter'
-import { AdapterResult } from '../../adapters/types'
 import { sendEmail } from '../../adapters/communication-adapter'
 import { syncInvoiceRecipientToEconomy } from './sync-invoice-recipient'
 
@@ -354,20 +353,6 @@ const notifyResyncUnconfirmed = (params: {
 }
 
 /**
- * Creates the Xledger customer an annan fakturamottagare needs, and reports
- * success for the roles that have none.
- *
- * The ONLY role-dependent step in either direction. The Tenfast resync
- * further down is not — every relation triggers it.
- */
-const syncXledgerCustomer = async (
-  params: RelationRef
-): Promise<AdapterResult<null, 'contact-not-found' | 'sync-failed'>> =>
-  SYNC_TO_XLEDGER[params.roleType]
-    ? syncInvoiceRecipientToEconomy(contactsAdapter, params.relatedContactCode)
-    : { ok: true, data: null }
-
-/**
  * Adds a relation and propagates it, undoing the write if propagation fails.
  *
  * Xledger runs first because an unused customer record is harmless, so a
@@ -377,31 +362,39 @@ const syncXledgerCustomer = async (
 export const addRelation = async (
   params: RelationRef & { createdBy: string }
 ): Promise<AddRelationResult> => {
-  const economy = await syncXledgerCustomer(params)
-  if (!economy.ok) {
-    // The recipient is looked up before the relation is written, so answer a
-    // bad contact code the way the relation write would have — otherwise the
-    // caseworker gets an outage error for their own typo.
-    if (economy.err === 'contact-not-found') {
-      return {
-        processStatus: ProcessStatus.failed,
-        error: 'related-not-found',
-        httpStatus: 404,
-      }
-    }
-
-    logger.error(
-      {
-        contactCode: params.contactCode,
-        relatedContactCode: params.relatedContactCode,
-        roleType: params.roleType,
-        actor: params.createdBy,
-        stage: 'economy',
-        err: economy.err,
-      },
-      'relationChanges.propagationFailed'
+  // The only role-dependent step in either direction — the Tenfast resync
+  // below runs for every relation.
+  if (SYNC_TO_XLEDGER[params.roleType]) {
+    const economy = await syncInvoiceRecipientToEconomy(
+      contactsAdapter,
+      params.relatedContactCode
     )
-    return propagationFailed('economy')
+
+    if (!economy.ok) {
+      // The recipient is looked up before the relation is written, so answer
+      // a bad contact code the way the relation write would have — otherwise
+      // the caseworker gets an outage error for their own typo.
+      if (economy.err === 'contact-not-found') {
+        return {
+          processStatus: ProcessStatus.failed,
+          error: 'related-not-found',
+          httpStatus: 404,
+        }
+      }
+
+      logger.error(
+        {
+          contactCode: params.contactCode,
+          relatedContactCode: params.relatedContactCode,
+          roleType: params.roleType,
+          actor: params.createdBy,
+          stage: 'economy',
+          err: economy.err,
+        },
+        'relationChanges.propagationFailed'
+      )
+      return propagationFailed('economy')
+    }
   }
 
   const presenceBefore = await readRelationPresence(params)
