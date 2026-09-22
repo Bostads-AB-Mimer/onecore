@@ -14,6 +14,7 @@ import {
   type RemoveRelationError,
 } from '../../adapters/contacts-adapter'
 import { syncContactToLeasing } from '../../adapters/leasing-adapter'
+import { AdapterResult } from '../../adapters/types'
 import { sendEmail } from '../../adapters/communication-adapter'
 import { syncInvoiceRecipientToEconomy } from './sync-invoice-recipient'
 
@@ -353,48 +354,18 @@ const notifyResyncUnconfirmed = (params: {
 }
 
 /**
- * Creates the Xledger customer an annan fakturamottagare needs, and returns
- * the failure to answer with if that did not work.
+ * Creates the Xledger customer an annan fakturamottagare needs, and reports
+ * success for the roles that have none.
  *
- * The ONLY role-dependent step in either direction: an Xledger customer is an
- * invoice recipient, and no invoice ever goes to a god man or förvaltare
- * unless they are separately registered as fakturamottagare. The Tenfast
- * resync further down is not role-dependent — every relation triggers it.
+ * The ONLY role-dependent step in either direction. The Tenfast resync
+ * further down is not — every relation triggers it.
  */
-const upsertXledgerCustomer = async (
-  params: RelationRef & { createdBy: string }
-): Promise<AddRelationFailure | null> => {
-  if (!SYNC_TO_XLEDGER[params.roleType]) return null
-
-  const economy = await syncInvoiceRecipientToEconomy(
-    contactsAdapter,
-    params.relatedContactCode
-  )
-  if (economy.ok) return null
-
-  // Answer the way the relation write would have, or the caseworker gets an
-  // outage error for their own typo.
-  if (economy.err === 'contact-not-found') {
-    return {
-      processStatus: ProcessStatus.failed,
-      error: 'related-not-found',
-      httpStatus: 404,
-    }
-  }
-
-  logger.error(
-    {
-      contactCode: params.contactCode,
-      relatedContactCode: params.relatedContactCode,
-      roleType: params.roleType,
-      actor: params.createdBy,
-      stage: 'economy',
-      err: economy.err,
-    },
-    'relationChanges.propagationFailed'
-  )
-  return propagationFailed('economy')
-}
+const syncXledgerCustomer = async (
+  params: RelationRef
+): Promise<AdapterResult<null, 'contact-not-found' | 'sync-failed'>> =>
+  SYNC_TO_XLEDGER[params.roleType]
+    ? syncInvoiceRecipientToEconomy(contactsAdapter, params.relatedContactCode)
+    : { ok: true, data: null }
 
 /**
  * Adds a relation and propagates it, undoing the write if propagation fails.
@@ -406,8 +377,32 @@ const upsertXledgerCustomer = async (
 export const addRelation = async (
   params: RelationRef & { createdBy: string }
 ): Promise<AddRelationResult> => {
-  const economyFailure = await upsertXledgerCustomer(params)
-  if (economyFailure) return economyFailure
+  const economy = await syncXledgerCustomer(params)
+  if (!economy.ok) {
+    // The recipient is looked up before the relation is written, so answer a
+    // bad contact code the way the relation write would have — otherwise the
+    // caseworker gets an outage error for their own typo.
+    if (economy.err === 'contact-not-found') {
+      return {
+        processStatus: ProcessStatus.failed,
+        error: 'related-not-found',
+        httpStatus: 404,
+      }
+    }
+
+    logger.error(
+      {
+        contactCode: params.contactCode,
+        relatedContactCode: params.relatedContactCode,
+        roleType: params.roleType,
+        actor: params.createdBy,
+        stage: 'economy',
+        err: economy.err,
+      },
+      'relationChanges.propagationFailed'
+    )
+    return propagationFailed('economy')
+  }
 
   const presenceBefore = await readRelationPresence(params)
 
