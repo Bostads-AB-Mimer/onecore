@@ -57,6 +57,10 @@ const isNotFound = (err: unknown): boolean =>
     err.name === 'NoSuchKey' ||
     err.$metadata.httpStatusCode === 404)
 
+const isBucketAlreadyExists = (err: unknown): boolean =>
+  err instanceof S3ServiceException &&
+  (err.name === 'BucketAlreadyOwnedByYou' || err.name === 'BucketAlreadyExists')
+
 /**
  * Ensure the bucket exists, create if it doesn't
  */
@@ -67,8 +71,17 @@ export const initializeBucket = async (): Promise<void> => {
       logger.info({ bucket: BUCKET_NAME }, 'S3 bucket already exists')
     } catch (err) {
       if (!isNotFound(err)) throw err
-      await s3Client.send(new CreateBucketCommand({ Bucket: BUCKET_NAME }))
-      logger.info({ bucket: BUCKET_NAME }, 'S3 bucket created')
+      try {
+        await s3Client.send(new CreateBucketCommand({ Bucket: BUCKET_NAME }))
+        logger.info({ bucket: BUCKET_NAME }, 'S3 bucket created')
+      } catch (createErr) {
+        // Another replica won the race to create the bucket; that is a success for us
+        if (!isBucketAlreadyExists(createErr)) throw createErr
+        logger.info(
+          { bucket: BUCKET_NAME },
+          'S3 bucket created by another replica'
+        )
+      }
     }
   } catch (err) {
     logger.error({ err, bucket: BUCKET_NAME }, 's3Adapter.initializeBucket')

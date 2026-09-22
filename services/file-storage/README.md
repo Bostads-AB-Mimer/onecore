@@ -131,6 +131,12 @@ Before running the service, ensure SeaweedFS is running. From the project root:
 $ docker compose up -d seaweedfs
 ```
 
+If you still have the old `onecore-minio` container from before the SeaweedFS switch, it holds port 9000 and SeaweedFS will fail to start with `port is already allocated`. Remove it first:
+
+```sh
+$ docker compose down --remove-orphans
+```
+
 The S3 API is available at `http://localhost:9000`. Credentials are defined in `docker/seaweedfs/s3.json`. The `onecore-documents` bucket is created by the service on startup.
 
 #### Start the service

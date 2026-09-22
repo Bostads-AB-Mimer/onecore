@@ -1,6 +1,51 @@
+import { logger } from '@onecore/utilities'
 import { createS3Config } from '../../config/s3'
 
 describe('createS3Config', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it.each(['https://s3.example.com', 'http://localhost', 'HTTPS://x.y'])(
+    'rejects a URL in S3__ENDPOINT (%s)',
+    (endpoint) => {
+      expect(() => createS3Config({ S3__ENDPOINT: endpoint })).toThrow(
+        'S3__ENDPOINT must be a hostname, not a URL'
+      )
+    }
+  )
+
+  it('rejects a URL in the legacy MINIO__ENDPOINT too', () => {
+    expect(() =>
+      createS3Config({ MINIO__ENDPOINT: 'https://minio.example.com' })
+    ).toThrow('must be a hostname')
+  })
+
+  it('warns when S3__* and MINIO__* variables are mixed', () => {
+    createS3Config({
+      S3__ENDPOINT: 's3.example.com',
+      S3__PORT: '443',
+      MINIO__ACCESS_KEY: 'legacy-access',
+      MINIO__SECRET_KEY: 'legacy-secret',
+    })
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      {
+        fromS3: ['S3__ENDPOINT', 'S3__PORT'],
+        fromLegacy: ['MINIO__ACCESS_KEY', 'MINIO__SECRET_KEY'],
+      },
+      expect.stringContaining('mixes S3__* and legacy MINIO__*')
+    )
+  })
+
+  it('does not warn when only one prefix is used', () => {
+    createS3Config({ S3__ENDPOINT: 's3.example.com', S3__PORT: '443' })
+    createS3Config({ MINIO__ENDPOINT: 'minio.example.com' })
+    createS3Config({})
+
+    expect(logger.warn).not.toHaveBeenCalled()
+  })
+
   it('reads S3__* variables', () => {
     expect(
       createS3Config({

@@ -83,6 +83,32 @@ describe('s3-adapter', () => {
       )
       expect(s3Mock.commandCalls(CreateBucketCommand)).toHaveLength(0)
     })
+
+    it.each(['BucketAlreadyOwnedByYou', 'BucketAlreadyExists'])(
+      'succeeds if another replica created the bucket first (%s)',
+      async (name) => {
+        s3Mock.on(HeadBucketCommand).rejects(notFoundError())
+        s3Mock.on(CreateBucketCommand).rejects(
+          new S3ServiceException({
+            name,
+            $fault: 'client',
+            $metadata: { httpStatusCode: 409 },
+            message: name,
+          })
+        )
+
+        await expect(s3Adapter.initializeBucket()).resolves.toBeUndefined()
+      }
+    )
+
+    it('throws if bucket creation fails for another reason', async () => {
+      s3Mock.on(HeadBucketCommand).rejects(notFoundError())
+      s3Mock.on(CreateBucketCommand).rejects(accessDeniedError())
+
+      await expect(s3Adapter.initializeBucket()).rejects.toThrow(
+        'Access Denied'
+      )
+    })
   })
 
   describe('uploadFile', () => {
