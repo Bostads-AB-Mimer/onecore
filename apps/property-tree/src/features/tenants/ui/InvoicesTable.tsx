@@ -105,7 +105,9 @@ export const InvoicesTable = (props: Props) => {
         <TooltipTrigger asChild>
           <span className="cursor-help">{badge}</span>
         </TooltipTrigger>
-        <TooltipContent>{tooltip}</TooltipContent>
+        <TooltipContent className="whitespace-pre-line">
+          {tooltip}
+        </TooltipContent>
       </Tooltip>
     )
   }

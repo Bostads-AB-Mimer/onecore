@@ -45,11 +45,9 @@ const formatDeferralDate = (date: Date | string): string => {
 export function getInvoiceDeferralTooltip(
   deferral: NonNullable<Invoice['deferral']>
 ): string {
-  if (deferral.madeBy) {
-    return `Beviljat av ${deferral.madeBy}`
-  }
-
-  return 'Anstånd beviljat'
+  return getInvoiceDeferralSummaryLines(deferral)
+    .map((line) => `${line.label}: ${line.value}`)
+    .join('\n')
 }
 
 export function getInvoiceDeferralSummaryLines(
