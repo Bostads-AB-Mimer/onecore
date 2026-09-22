@@ -105,6 +105,21 @@ const FORWARD_ROLE_FOR_ROLE_TYPE: Record<RelationRoleType, RelatedContactRole> =
   }
 
 /**
+ * Which roles receive the invoice, and so need to exist as an Xledger
+ * customer. A god man is not an invoice recipient unless they are separately
+ * registered as fakturamottagare.
+ *
+ * A Record over the role union rather than a check against the one role that
+ * needs it: a role added upstream fails to compile here until someone answers
+ * this question for it, instead of silently defaulting to "no customer".
+ */
+const NEEDS_XLEDGER_CUSTOMER: Record<RelationRoleType, boolean> = {
+  god_man: false,
+  forvaltare: false,
+  annan_fakturamottagare: true,
+}
+
+/**
  * Whether the relation exists, read *before* the write. Afterwards a lost
  * response is indistinguishable from a rejected one, and only the prior state
  * says which — compensating on the wrong guess is data loss.
@@ -349,47 +364,36 @@ const notifyResyncUnconfirmed = (params: {
 const upsertXledgerCustomer = async (
   params: RelationRef & { createdBy: string }
 ): Promise<AddRelationFailure | null> => {
-  switch (params.roleType) {
-    case 'god_man':
-    case 'forvaltare':
-      return null
-    case 'annan_fakturamottagare': {
-      const economy = await syncInvoiceRecipientToEconomy(
-        contactsAdapter,
-        params.relatedContactCode
-      )
-      if (economy.ok) return null
+  if (!NEEDS_XLEDGER_CUSTOMER[params.roleType]) return null
 
-      // Answer the way the relation write would have, or the caseworker
-      // gets an outage error for their own typo.
-      if (economy.err === 'contact-not-found') {
-        return {
-          processStatus: ProcessStatus.failed,
-          error: 'related-not-found',
-          httpStatus: 404,
-        }
-      }
+  const economy = await syncInvoiceRecipientToEconomy(
+    contactsAdapter,
+    params.relatedContactCode
+  )
+  if (economy.ok) return null
 
-      logger.error(
-        {
-          contactCode: params.contactCode,
-          relatedContactCode: params.relatedContactCode,
-          roleType: params.roleType,
-          actor: params.createdBy,
-          stage: 'economy',
-          err: economy.err,
-        },
-        'relationChanges.propagationFailed'
-      )
-      return propagationFailed('economy')
-    }
-    default: {
-      // Exhaustiveness check: a new role fails to compile rather than
-      // silently skipping the Xledger step.
-      const unhandled: never = params.roleType
-      throw new Error(`Unhandled relation role type: ${unhandled}`)
+  // Answer the way the relation write would have, or the caseworker gets an
+  // outage error for their own typo.
+  if (economy.err === 'contact-not-found') {
+    return {
+      processStatus: ProcessStatus.failed,
+      error: 'related-not-found',
+      httpStatus: 404,
     }
   }
+
+  logger.error(
+    {
+      contactCode: params.contactCode,
+      relatedContactCode: params.relatedContactCode,
+      roleType: params.roleType,
+      actor: params.createdBy,
+      stage: 'economy',
+      err: economy.err,
+    },
+    'relationChanges.propagationFailed'
+  )
+  return propagationFailed('economy')
 }
 
 /**
