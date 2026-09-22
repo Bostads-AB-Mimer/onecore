@@ -93,6 +93,7 @@ const MESSAGE_FIELDS: string[] = [
   'body',
   'message_type',
   'author_id',
+  'onecore_tenant_author_name',
   'create_date',
 ]
 
