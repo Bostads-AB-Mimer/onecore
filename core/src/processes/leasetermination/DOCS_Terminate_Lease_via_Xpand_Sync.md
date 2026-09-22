@@ -18,14 +18,21 @@ C --> |Yes| D{LastDebitDate<br/>Finns i Xpand?}
 D --> |No| E[Fel: Köas för<br/>Återförsök + Mejl]
 D --> |Yes| F{Avtal Hittat<br/>i Tenfast?}
 F --> |No| G[Räknas som Lyckat —<br/>Inget att Avsluta]
-F --> |Yes| H{Redan Avslutat<br/>i Tenfast?}
-H --> |Yes| G
-H --> |Nej, Lyckades| I[Avtal Avslutat i Tenfast]
-H --> |Nej, Annat Fel| E
+F --> |Yes| H{Uppsägning i Tenfast?}
+H --> |Oväntat Fel| E
+H --> |Redan Avslutat<br/>eller Lyckades| J{Uppsägnings-PDF Redan<br/>Bifogad, eller Kontroll<br/>Misslyckas?}
+J --> |Ja| I[Avtal Avslutat i Tenfast]
+J --> |Nej| K{PDF Hittas<br/>i Xpand?}
+K --> |Nej| I
+K --> |Ja| L(Ladda Upp PDF<br/>till Tenfast)
+L --> Lo{Lyckades?}
+Lo --> |Nej| I
+Lo --> |Ja| M[Avtal Avslutat,<br/>PDF Bifogad]
 P --> O
 E --> O
 G --> O
 I --> O
+M --> O
 ```
 
 ## Sekvensdiagram
@@ -68,16 +75,40 @@ sequenceDiagram
             Leasing-->>SyncScript: 200 { action: "skipped" }
         else Avtal Hittat
             Leasing ->> Tenfast: POST /avtal/{id}/terminate<br/>(endDate, reason: "Synced from xpand",<br/>notifyHg: false, handled: true)
-            alt Redan Avslutat ("Avtalet kan inte sägas upp")
-                Tenfast-->>Leasing: 400
-                Leasing-->>SyncScript: 200 { action: "skipped" }
-            else Lyckades
-                Tenfast-->>Leasing: 200
-                Leasing-->>SyncScript: 200 { action: "terminated" }
-            else Oväntat Fel
+            alt Oväntat Fel
                 Tenfast-->>Leasing: 4xx/5xx
                 Leasing-->>SyncScript: 500
                 SyncScript ->> SyncScript: Köas för återförsök,<br/>felmejl skickas
+            else Redan Avslutat ("Avtalet kan inte<br/>sägas upp") eller Lyckades
+                Tenfast-->>Leasing: 400 eller 200
+
+                note over Leasing: Bästa-försök: bifoga uppsägnings-PDF från<br/>Xpand. Körs även när avtalet redan var<br/>avslutat, så en tidigare misslyckad<br/>uppladdning kan repareras vid omkörning.<br/>Varje steg nedan misslyckas tyst (loggas,<br/>men avslutar inte hela raden).
+
+                Leasing ->> Tenfast: Slå upp Avtal Igen (by externalId)
+
+                break when Uppslag Misslyckas
+                    Leasing-->>SyncScript: 200 (utan PDF-bifogning)
+                end
+
+                Leasing ->> Tenfast: Har Avtalet Redan en<br/>Uppsägnings-PDF? (hasTerminationFile)
+
+                break when Kontrollen Misslyckas,<br/>eller PDF Redan Finns
+                    Leasing-->>SyncScript: 200 (utan PDF-bifogning)
+                end
+
+                Leasing ->> Xpand: Hämta Uppsägnings-PDF<br/>(dokop, samma klassificering som AVTAL-112)
+
+                break when Ingen PDF Hittas i Xpand
+                    Leasing-->>SyncScript: 200 (utan PDF-bifogning)
+                end
+
+                Leasing ->> Tenfast: POST /avtal/{id}/upload-termination-file
+
+                alt Uppladdning Misslyckas
+                    Leasing-->>SyncScript: 200 (utan PDF-bifogning)
+                else Uppladdning Lyckas
+                    Leasing-->>SyncScript: 200 { action: "terminated" eller "skipped" }
+                end
             end
         end
 
@@ -92,3 +123,4 @@ sequenceDiagram
 - **Idempotent.** Om avtalet redan är avslutat i Tenfast (Tenfast svarar med felmeddelandet "Avtalet kan inte sägas upp") räknas raden ändå som lyckad — bra för omkörningar, men jämför med [Synka Makulering](./DOCS_Void_Lease_via_Xpand_Sync.md), som saknar motsvarande skydd.
 - **Checkpoint sparas per rad, oavsett utfall — inte bara vid lyckad synk.** `saveLastTimestamp` körs utanför try/catch:en, så en misslyckad rad flyttar checkpointen förbi sig precis som en lyckad. Återförsök sker istället via en separat JSONL-kö som dräneras i början av nästa körning, innan nya cmlog-rader hämtas — inte genom att flytta tillbaka checkpointen. Kraschar scriptet mitt i en körning börjar nästa körning alltså om från checkpointen, inte om från den senast lyckade raden.
 - En preliminär xpand-uppsägning (fältet "Preliminärt uppsagt") triggar **inte** det här flödet — bara när "Uppsagt datum" faktiskt sätts.
+- **Bästa-försök-bifogning av uppsägnings-PDF (AVTAL-214).** Efter en lyckad (eller redan-avslutad) uppsägning i Tenfast försöker Leasing separat bifoga den operativa uppsägningshandlingen från Xpand via `upload-termination-file` — samma dokument-klassificeringslogik som används i [sync-lease-documents](https://github.com/Bostads-AB-Mimer/onecore/pull/743) (AVTAL-112). Det här är ett eget, tyst best-effort-steg: hittas ingen PDF, finns redan en, eller misslyckas uppladdningen, påverkar det inte huruvida raden räknas som lyckad — bara att PDF:en saknas i Tenfast tills en senare körning lyckas bifoga den.
