@@ -96,7 +96,7 @@ sequenceDiagram
                     Leasing-->>SyncScript: 200 (utan PDF-bifogning)
                 end
 
-                Leasing ->> Xpand: Hämta Uppsägnings-PDF<br/>(dokop, samma klassificering som AVTAL-112)
+                Leasing ->> Xpand: Hämta Uppsägnings-PDF (dokop)
 
                 break when Ingen PDF Hittas i Xpand
                     Leasing-->>SyncScript: 200 (utan PDF-bifogning)
@@ -123,4 +123,4 @@ sequenceDiagram
 - **Idempotent.** Om avtalet redan är avslutat i Tenfast (Tenfast svarar med felmeddelandet "Avtalet kan inte sägas upp") räknas raden ändå som lyckad — bra för omkörningar, men jämför med [Synka Makulering](./DOCS_Void_Lease_via_Xpand_Sync.md), som saknar motsvarande skydd.
 - **Checkpoint sparas per rad, oavsett utfall — inte bara vid lyckad synk.** `saveLastTimestamp` körs utanför try/catch:en, så en misslyckad rad flyttar checkpointen förbi sig precis som en lyckad. Återförsök sker istället via en separat JSONL-kö som dräneras i början av nästa körning, innan nya cmlog-rader hämtas — inte genom att flytta tillbaka checkpointen. Kraschar scriptet mitt i en körning börjar nästa körning alltså om från checkpointen, inte om från den senast lyckade raden.
 - En preliminär xpand-uppsägning (fältet "Preliminärt uppsagt") triggar **inte** det här flödet — bara när "Uppsagt datum" faktiskt sätts.
-- **Bästa-försök-bifogning av uppsägnings-PDF (AVTAL-214).** Efter en lyckad (eller redan-avslutad) uppsägning i Tenfast försöker Leasing separat bifoga den operativa uppsägningshandlingen från Xpand via `upload-termination-file` — samma dokument-klassificeringslogik som används i [sync-lease-documents](https://github.com/Bostads-AB-Mimer/onecore/pull/743) (AVTAL-112). Det här är ett eget, tyst best-effort-steg: hittas ingen PDF, finns redan en, eller misslyckas uppladdningen, påverkar det inte huruvida raden räknas som lyckad — bara att PDF:en saknas i Tenfast tills en senare körning lyckas bifoga den.
+- **Bästa-försök-bifogning av uppsägnings-PDF.** Efter en lyckad (eller redan-avslutad) uppsägning i Tenfast försöker Leasing separat bifoga den operativa uppsägningshandlingen från Xpand via `upload-termination-file`. Det här är ett eget, tyst best-effort-steg: hittas ingen PDF, finns redan en, eller misslyckas uppladdningen, påverkar det inte huruvida raden räknas som lyckad — bara att PDF:en saknas i Tenfast tills en senare körning lyckas bifoga den.
