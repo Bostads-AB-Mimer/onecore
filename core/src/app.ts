@@ -106,6 +106,18 @@ app.use(async (ctx, next) => {
   return next()
 })
 
+// Requires 'guides-admin' in addition to 'api-access' for writing guides.
+// Reading guides needs only api-access.
+app.use(async (ctx, next) => {
+  if (
+    ['POST', 'PUT', 'DELETE'].includes(ctx.method) &&
+    /^\/guides(\/|$)/.test(ctx.path)
+  ) {
+    return requireRole('guides-admin')(ctx, next)
+  }
+  return next()
+})
+
 app.use(api.routes())
 
 const apiRouter = makeOkapiRouter(new KoaRouter(), {

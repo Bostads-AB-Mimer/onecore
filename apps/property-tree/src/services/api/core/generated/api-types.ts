@@ -10338,6 +10338,343 @@ export interface paths {
       }
     }
   }
+  '/guides/{id}/steps/{stepId}/images': {
+    /**
+     * Upload an image to a guide step
+     * @description Requires the guides-admin role. Accepts PNG, JPEG or WEBP up to 5 MB as base64, stores the file under guide/{guideId}/ and appends the image last on the step.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string
+          stepId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['GuideImageUploadRequest']
+        }
+      }
+      responses: {
+        /** @description The stored image with a presigned url */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideStepImageWithUrl']
+            }
+          }
+        }
+        /** @description Invalid file type or size */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Guide or step not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/{id}/images/{imageId}': {
+    /**
+     * Delete a guide step image
+     * @description Requires the guides-admin role. Removes the image row and the stored file.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+          imageId: string
+        }
+      }
+      responses: {
+        /** @description Image deleted */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                deleted?: boolean
+              }
+            }
+          }
+        }
+        /** @description Image not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides': {
+    /**
+     * List guides
+     * @description Published guides ordered by category and title. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
+     */
+    get: {
+      parameters: {
+        query?: {
+          includeDrafts?: boolean
+        }
+      }
+      responses: {
+        /** @description Guide summaries */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideSummary'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Create a guide
+     * @description Requires the guides-admin role. Images are added afterwards through the image upload endpoint.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateGuideRequest']
+        }
+      }
+      responses: {
+        /** @description The created guide */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideWithUrls']
+            }
+          }
+        }
+        /** @description Validation failed */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Slug already taken */
+        409: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/categories': {
+    /** List guide categories */
+    get: {
+      responses: {
+        /** @description Categories ordered by name */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideCategory'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/by-slug/{slug}': {
+    /**
+     * Get a guide by slug
+     * @description Resolves old slugs through the slug history; redirectedFrom is set when that happens. A draft is returned in full to guides-admin users and as an UnpublishedGuide notice to everyone else.
+     */
+    get: {
+      parameters: {
+        path: {
+          slug: string
+        }
+      }
+      responses: {
+        /** @description The guide with presigned image urls, or an unpublished notice */
+        200: {
+          content: {
+            'application/json': {
+              content?:
+                | components['schemas']['GuideWithUrls']
+                | components['schemas']['UnpublishedGuide']
+            }
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/{id}': {
+    /**
+     * Get a guide by id
+     * @description Used by the editor. Drafts are only returned to guides-admin users.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The guide with presigned image urls */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideWithUrls']
+            }
+          }
+        }
+        /** @description Draft requested without the guides-admin role */
+        403: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Update a guide
+     * @description Requires the guides-admin role. Replaces metadata and steps; steps missing from the payload are deleted together with their images, and the files are removed from storage.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateGuideRequest']
+        }
+      }
+      responses: {
+        /** @description The updated guide */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideWithUrls']
+            }
+          }
+        }
+        /** @description Validation failed */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Slug already taken */
+        409: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Delete a guide
+     * @description Requires the guides-admin role. Removes the guide, its steps, image rows and image files.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Guide deleted */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                deleted?: boolean
+              }
+            }
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
   '/v1/contacts': {
     /**
      * List and filter(search) for contact information
@@ -14985,6 +15322,198 @@ export interface components {
         /** Format: date-time */
         createdAt: string
       }[]
+    }
+    GuideCategory: {
+      /** Format: uuid */
+      id: string
+      name: string
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    GuideSummary: {
+      /** Format: uuid */
+      id: string
+      slug: string
+      title: string
+      description: string
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      category: {
+        /** Format: uuid */
+        id: string
+        name: string
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }
+      stepCount: number
+      createdBy: string
+      updatedBy: string
+      /** Format: date-time */
+      publishedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    GuideStepImageWithUrl: {
+      /** Format: uuid */
+      id: string
+      /** Format: uuid */
+      stepId: string
+      sortOrder: number
+      storageKey: string
+      filename: string
+      contentType: string
+      altText: string
+      caption: string | null
+      /** Format: date-time */
+      createdAt: string
+      url: string
+    }
+    GuideWithUrls: {
+      /** Format: uuid */
+      id: string
+      slug: string
+      title: string
+      description: string
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      category: {
+        /** Format: uuid */
+        id: string
+        name: string
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }
+      stepCount: number
+      createdBy: string
+      updatedBy: string
+      /** Format: date-time */
+      publishedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      steps: {
+        /** Format: uuid */
+        id: string
+        /** Format: uuid */
+        guideId: string
+        sortOrder: number
+        title: string
+        body: string
+        /** @enum {string|null} */
+        calloutType: 'tip' | 'note' | 'warning' | null
+        calloutText: string | null
+        images: {
+          /** Format: uuid */
+          id: string
+          /** Format: uuid */
+          stepId: string
+          sortOrder: number
+          storageKey: string
+          filename: string
+          contentType: string
+          altText: string
+          caption: string | null
+          /** Format: date-time */
+          createdAt: string
+          url: string
+        }[]
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+      redirectedFrom?: string
+    }
+    UnpublishedGuide: {
+      slug: string
+      title: string
+      /** @enum {boolean} */
+      unpublished: true
+    }
+    CreateGuideRequest: {
+      title: string
+      /** @default */
+      description?: string
+      slug: string
+      category:
+        | {
+            /** Format: uuid */
+            id: string
+          }
+        | {
+            name: string
+          }
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      steps: {
+        /** Format: uuid */
+        id: string
+        title: string
+        body: string
+        /** @enum {string|null} */
+        calloutType?: 'tip' | 'note' | 'warning' | null
+        calloutText?: string | null
+        /** @default [] */
+        images?: {
+          /** Format: uuid */
+          id: string
+          sortOrder: number
+          altText: string
+          caption: string | null
+        }[]
+      }[]
+    }
+    UpdateGuideRequest: {
+      title: string
+      /** @default */
+      description?: string
+      slug: string
+      category:
+        | {
+            /** Format: uuid */
+            id: string
+          }
+        | {
+            name: string
+          }
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      steps: {
+        /** Format: uuid */
+        id: string
+        title: string
+        body: string
+        /** @enum {string|null} */
+        calloutType?: 'tip' | 'note' | 'warning' | null
+        calloutText?: string | null
+        /** @default [] */
+        images?: {
+          /** Format: uuid */
+          id: string
+          sortOrder: number
+          altText: string
+          caption: string | null
+        }[]
+      }[]
+    }
+    GuideImageUploadRequest: {
+      /** @description Target file name/path */
+      fileName: string
+      /** @description Base64 encoded file content */
+      fileData: string
+      /** @description MIME type of the file */
+      contentType: string
+      altText?: string
+      caption?: string | null
     }
     KeycloakUser: {
       id: string

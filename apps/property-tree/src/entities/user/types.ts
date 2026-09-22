@@ -5,5 +5,7 @@ export type User = {
   // Xpand signature (e.g. "YY2333") from the Keycloak employeeId token claim.
   // Absent until the token mapper is configured for the realm (MIM-1851).
   employeeId?: string
-  roles: string[]
+  // Keycloak realm roles, as core forwards them from the token in
+  // GET /auth/profile (core/src/middlewares/keycloak-auth.ts).
+  realm_access?: { roles?: string[] }
 }

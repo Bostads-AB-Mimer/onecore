@@ -14,6 +14,7 @@ export * as economy from './economy'
 export * as inspection from './inspection'
 export * as property from './property'
 export * as communication from './communication'
+export * as guides from './guides'
 export * from './room'
 
 export * as schemas from './schemas'

@@ -6,6 +6,7 @@ import {
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
 import {
+  BookOpen,
   ChevronRight,
   ClipboardList,
   Contact,
@@ -169,6 +170,12 @@ function SidebarNavigationContent() {
           to={routes.components}
           icon={Settings}
           label="Administrera Komponenter"
+        />
+        <SidebarNavLink
+          to={routes.guides}
+          icon={BookOpen}
+          label="Guider"
+          matchPrefix
         />
         {/* Temporarily hidden from the nav while the feature is finalized.
             The route still works, so the page is reachable via /forvaltningsomraden. */}

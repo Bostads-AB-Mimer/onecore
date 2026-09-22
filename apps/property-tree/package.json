@@ -19,6 +19,8 @@
     "prettier": "prettier --check ./src",
     "start": "vite",
     "start:server": "node --import tsx src/server/api.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -26,6 +28,8 @@
     "@deck.gl/layers": "^9.3.11",
     "@deck.gl/react": "^9.3.11",
     "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@headlessui/react": "^1.7.19",
     "@onecore/types": "workspace:*",
     "@radix-ui/react-accordion": "^1.2.20",
@@ -48,12 +52,16 @@
     "@radix-ui/react-tooltip": "^1.2.16",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tanstack/react-query": "^5.102.8",
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/react": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
     "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
     "deck.gl": "^9.3.11",
+    "dompurify": "^3.4.15",
     "dotenv": "^16.6.1",
     "framer-motion": "^11.18.2",
     "http-proxy-middleware": "^3.0.7",
@@ -70,6 +78,7 @@
     "tailwind-merge": "^2.6.1",
     "ts-pattern": "^5.9.0",
     "vite": "^6.4.3",
+    "yet-another-react-lightbox": "^3.32.2",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -85,6 +94,7 @@
     "eslint-plugin-boundaries": "^5.4.0",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unicorn": "^56.0.1",
+    "jsdom": "20.0.3",
     "openapi-fetch": "^0.13.8",
     "openapi-typescript": "^6.7.6",
     "postcss": "^8.5.27",
@@ -92,6 +102,7 @@
     "tailwindcss": "^3.4.19",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3",
+    "vitest": "^5.0.1",
     "wait-on": "^8.0.5"
   }
 }

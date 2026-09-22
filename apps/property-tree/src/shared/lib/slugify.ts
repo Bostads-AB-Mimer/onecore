@@ -1,0 +1,30 @@
+// Swedish letters map to their base letter rather than being dropped, so
+// "Uppsägning" becomes "uppsagning" instead of "uppsgning".
+const SWEDISH_REPLACEMENTS: Record<string, string> = {
+  å: 'a',
+  ä: 'a',
+  ö: 'o',
+  é: 'e',
+  ü: 'u',
+}
+
+/**
+ * Turn free text into a URL slug: lowercase ascii letters, digits and single
+ * hyphens, matching SlugSchema in @onecore/types.
+ */
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[åäöéü]/g, (char) => SWEDISH_REPLACEMENTS[char] ?? char)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 200)
+    .replace(/-+$/g, '')
+}
+
+export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+export const isValidSlug = (slug: string) =>
+  slug.length > 0 && slug.length <= 200 && SLUG_PATTERN.test(slug)
