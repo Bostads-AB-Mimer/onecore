@@ -809,6 +809,7 @@ export const listNewOutboundExports = async (): Promise<
           params: {
             hyresvard: companyId,
             status: 'NEW',
+            provider: 'stralfors',
             ...(next ? { paginate: next } : {}),
           },
         }
