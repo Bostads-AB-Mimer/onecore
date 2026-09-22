@@ -355,7 +355,9 @@ export const InvoicesTable = (props: Props) => {
             {invoice.expectedLoss && <div>Befarad kundförlust</div>}
           </div>
         )}
-        {invoice.deferral && <InvoiceDeferralInfo deferral={invoice.deferral} />}
+        {invoice.deferral && (
+          <InvoiceDeferralInfo deferral={invoice.deferral} />
+        )}
         {invoice.credit && (
           <div className="mb-3 text-sm bg-background/50 rounded p-2">
             <span className="font-medium">Krediterar faktura:</span>{' '}

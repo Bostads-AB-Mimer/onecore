@@ -16,10 +16,7 @@ import {
   SubmitMiscellaneousInvoiceErrorCodes,
 } from '@onecore/types'
 
-const parsedXledger = (
-  invoice: Invoice,
-  defermentEndDate?: Date
-) => ({
+const parsedXledger = (invoice: Invoice, defermentEndDate?: Date) => ({
   invoice,
   ...(defermentEndDate ? { defermentEndDate } : {}),
 })
