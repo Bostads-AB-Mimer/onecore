@@ -32,6 +32,14 @@ type Relations = GetRelatedContactsResponseBody['content']
 type PropagationError = 'propagation-failed' | 'rollback-failed'
 
 /**
+ * The contacts write got no response, so nobody knows whether it landed. Not
+ * compensated: the service may still be working, and an undo sent now can
+ * arrive before the original commits — the original then lands anyway. Nothing
+ * is propagated either, so a human is alarmed to check the relation.
+ */
+type UnknownOutcomeError = 'outcome-unknown'
+
+/**
  * Relation-write statuses pass through so the caller can tell apart cases that
  * share a code. `contacts-service-error` is the adapter's unnamed-failure
  * catch-all, so it is 502 whatever status carried it: forwarding the 404 of an
@@ -63,11 +71,13 @@ export const removeRelationStatus = (
  * declared response codes then fails to compile instead of silently violating
  * the contract.
  */
-type AddRelationFailure = ProcessError<AddRelationError | PropagationError> & {
+type AddRelationFailure = ProcessError<
+  AddRelationError | PropagationError | UnknownOutcomeError
+> & {
   httpStatus: ReturnType<typeof addRelationStatus>
 }
 type RemoveRelationFailure = ProcessError<
-  RemoveRelationError | PropagationError
+  RemoveRelationError | PropagationError | UnknownOutcomeError
 > & {
   httpStatus: ReturnType<typeof removeRelationStatus>
 }
@@ -91,6 +101,14 @@ const rollbackFailed = (): ProcessError<'rollback-failed'> & {
   error: 'rollback-failed',
   httpStatus: 502,
   response: { detail: 'tenfast' },
+})
+
+const outcomeUnknown = (): ProcessError<'outcome-unknown'> & {
+  httpStatus: 502
+} => ({
+  processStatus: ProcessStatus.failed,
+  error: 'outcome-unknown',
+  httpStatus: 502,
 })
 
 /**
@@ -123,7 +141,7 @@ const SYNC_TO_ECONOMY: Record<RelationRoleType, boolean> = {
 /**
  * Whether the relation exists, read *before* the write. Afterwards a lost
  * response is indistinguishable from a rejected one, and only the prior state
- * says which — compensating on the wrong guess is data loss.
+ * says whether the write can have changed anything.
  *
  * Not a lock: another caseworker can still change the relation between this
  * read and the write. Closing that window would need a conditional write API
@@ -221,7 +239,6 @@ const relationActionWords = (
   done: string
   undone: string
   unknownOutcome: string
-  compensation: string
   staleRisk: string
 } =>
   action === 'add'
@@ -229,14 +246,12 @@ const relationActionWords = (
         done: 'lades till',
         undone: 'togs bort igen',
         unknownOutcome: 'skapades',
-        compensation: 'ta bort den',
         staleRisk: 'Tenfast kan fortfarande visa den nya relationen.',
       }
     : {
         done: 'togs bort',
         undone: 'lades till igen',
         unknownOutcome: 'togs bort',
-        compensation: 'lägga tillbaka den',
         staleRisk: 'Tenfast kan fortfarande sakna relationen.',
       }
 
@@ -265,8 +280,7 @@ const alarmRollbackFailed = async (params: {
         propagationError: string
         resyncError: string
       }
-    /** No `rollbackError` when no compensating write was attempted at all. */
-    | { kind: 'write-outcome-unknown'; rollbackError?: string }
+    | { kind: 'write-outcome-unknown' }
 }): Promise<void> => {
   logger.error(params, 'relationChanges.rollbackFailed')
 
@@ -277,8 +291,9 @@ const alarmRollbackFailed = async (params: {
     return
   }
 
-  const { done, undone, unknownOutcome, compensation, staleRisk } =
-    relationActionWords(params.action)
+  const { done, undone, unknownOutcome, staleRisk } = relationActionWords(
+    params.action
+  )
   const { relation, actor, outcome, economyCustomerTouched } = params
   const propagationHeader = (propagationError: string): string =>
     `Relationen ${relation.roleType} mellan ${relation.contactCode} och ${relation.relatedContactCode} ${done} av ${actor} men kunde inte propageras till Tenfast (${propagationError}).`
@@ -304,9 +319,7 @@ const alarmRollbackFailed = async (params: {
     case 'write-outcome-unknown':
       body = [
         `Skrivningen av relationen ${relation.roleType} mellan ${relation.contactCode} och ${relation.relatedContactCode} (${done} av ${actor}) fick inget svar från kontakttjänsten, så det är okänt om relationen ${unknownOutcome}.`,
-        outcome.rollbackError
-          ? `Ett försök att ${compensation} gjordes som säkerhetsåtgärd men misslyckades: ${outcome.rollbackError}.`
-          : 'Relationens tidigare tillstånd kunde inte läsas, så ingen automatisk återställning gjordes.',
+        'Ingen automatisk återställning gjordes, eftersom den kunde ha hunnit före den ursprungliga skrivningen.',
         '',
         'Relationen måste kontrolleras manuellt.',
       ]
@@ -405,34 +418,8 @@ export const addRelation = async (
     ) {
       // No status code means the response was lost, not that the write was
       // rejected. With the relation already present the service can only
-      // have refused it as a duplicate, so there is nothing to undo and
-      // removing it would delete a relation nobody asked to lose.
-      //
-      // Any answer to the compensating remove alarms, `relation-not-found`
-      // included: a lost response usually means core stopped waiting while
-      // the service was still working, so the remove can arrive before the
-      // original insert commits and the relation still lands afterwards.
-      if (presenceBefore === 'absent') {
-        const compensated = await contactsAdapter.removeRelation({
-          contactCode: params.contactCode,
-          relatedContactCode: params.relatedContactCode,
-          roleType: params.roleType,
-          deletedBy: rollbackActor(params.createdBy),
-        })
-        if (!compensated.ok) {
-          void alarmRollbackFailed({
-            action: 'add',
-            relation: params,
-            actor: params.createdBy,
-            economyCustomerTouched:
-              params.roleType === 'annan_fakturamottagare',
-            outcome: {
-              kind: 'write-outcome-unknown',
-              rollbackError: compensated.err,
-            },
-          })
-        }
-      } else if (presenceBefore === 'unknown') {
+      // have refused it as a duplicate, so nothing changed.
+      if (presenceBefore !== 'present') {
         void alarmRollbackFailed({
           action: 'add',
           relation: params,
@@ -440,6 +427,8 @@ export const addRelation = async (
           economyCustomerTouched: params.roleType === 'annan_fakturamottagare',
           outcome: { kind: 'write-outcome-unknown' },
         })
+        logOrphanedEconomyCustomer(params, 'outcome-unknown')
+        return outcomeUnknown()
       }
     }
 
@@ -547,31 +536,8 @@ export const removeRelation = async (
       removed.statusCode === undefined
     ) {
       // See the add direction. With no relation there to begin with, the
-      // lost response can only have been a `relation-not-found`: adding one
-      // back would conjure a relation nobody ever asked for.
-      //
-      // `duplicate-relation` from the compensating add alarms for the same
-      // reason as `relation-not-found` does in the add direction.
-      if (presenceBefore === 'present') {
-        const compensated = await contactsAdapter.addRelation({
-          contactCode: params.contactCode,
-          relatedContactCode: params.relatedContactCode,
-          roleType: params.roleType,
-          createdBy: rollbackActor(params.deletedBy),
-        })
-        if (!compensated.ok) {
-          void alarmRollbackFailed({
-            action: 'remove',
-            relation: params,
-            actor: params.deletedBy,
-            economyCustomerTouched: false,
-            outcome: {
-              kind: 'write-outcome-unknown',
-              rollbackError: compensated.err,
-            },
-          })
-        }
-      } else if (presenceBefore === 'unknown') {
+      // lost response can only have been a `relation-not-found`.
+      if (presenceBefore !== 'absent') {
         void alarmRollbackFailed({
           action: 'remove',
           relation: params,
@@ -579,6 +545,7 @@ export const removeRelation = async (
           economyCustomerTouched: false,
           outcome: { kind: 'write-outcome-unknown' },
         })
+        return outcomeUnknown()
       }
     }
 

@@ -524,7 +524,9 @@ export const routes = (router: OkapiRouter, config: Config) => {
         'shown to a caseworker verbatim. 502 rollback-failed is the opposite ' +
         'and must not be retried: the relation was saved, Tenfast was not ' +
         'told, and undoing the write failed too — it is flagged for manual ' +
-        'repair.',
+        'repair. 502 outcome-unknown means the contacts service never ' +
+        'answered, so whether the relation was saved is unknown; it is ' +
+        'flagged for manual checking and must not be retried blindly.',
       tags: ['Contacts'],
       params: {
         contactCode: {
@@ -604,7 +606,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
         'internal stage name for diagnostics only, never to be shown to a ' +
         'caseworker verbatim. 502 rollback-failed is the opposite and must ' +
         'not be retried: the relation was removed, Tenfast was not told, and ' +
-        'putting it back failed too — it is flagged for manual repair.',
+        'putting it back failed too — it is flagged for manual repair. ' +
+        '502 outcome-unknown means the contacts service never answered, so ' +
+        'whether the relation was removed is unknown; it is flagged for ' +
+        'manual checking and must not be retried blindly.',
       tags: ['Contacts'],
       params: {
         contactCode: {

@@ -82,6 +82,14 @@ const REQUEST_TIMEOUT_MS = 30_000
  */
 const CREATE_CONTACT_TIMEOUT_MS = 120_000
 
+/**
+ * A relation write is several Xpand and contacts DB queries in sequence, each
+ * bounded at 15s by the mssql driver's default. Giving up while the service is
+ * still working turns a write that lands into an unknown outcome, so this
+ * waits out the service's own worst case.
+ */
+const RELATION_WRITE_TIMEOUT_MS = 60_000
+
 export const makeContactsAdapter = (contactsServiceUrl: string) => {
   const axios = loggedAxios.create({
     baseURL: contactsServiceUrl,
@@ -320,7 +328,13 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       try {
         const response = await axios.post<
           GetRelatedContactsResponseBody & RelationErrorResponseBody
-        >(`/contacts/${encodeURIComponent(params.contactCode)}/relations`, body)
+        >(
+          `/contacts/${encodeURIComponent(params.contactCode)}/relations`,
+          body,
+          {
+            timeout: RELATION_WRITE_TIMEOUT_MS,
+          }
+        )
 
         if (response.status === 201) {
           return { ok: true, data: response.data.content }
@@ -376,7 +390,10 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
           `/contacts/${encodeURIComponent(params.contactCode)}/relations/` +
             `${encodeURIComponent(params.roleType)}/` +
             `${encodeURIComponent(params.relatedContactCode)}`,
-          { params: { deletedBy: params.deletedBy } }
+          {
+            params: { deletedBy: params.deletedBy },
+            timeout: RELATION_WRITE_TIMEOUT_MS,
+          }
         )
 
         if (response.status === 204) {

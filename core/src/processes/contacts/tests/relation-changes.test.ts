@@ -49,13 +49,6 @@ const REMOVAL = {
   deletedBy: 'Anna Handläggare',
 }
 
-const GUARDIAN_REMOVAL = {
-  contactCode: 'P111',
-  relatedContactCode: 'P333',
-  roleType: 'god_man' as const,
-  deletedBy: 'Anna Handläggare',
-}
-
 const RECIPIENT_RELATION: RelatedContact = {
   contactCode: 'P222',
   role: 'otherInvoiceRecipient',

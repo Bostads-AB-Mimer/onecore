@@ -232,6 +232,9 @@ export const RelationsResponseBodySchema_APIv1 =
  * `rollback-failed` is its opposite: the change IS saved but never reached
  * Tenfast, and undoing it failed too. It has been flagged for manual repair —
  * retrying can only answer `duplicate-relation`/`relation-not-found`.
+ * `outcome-unknown` means the contacts service never answered, so whether the
+ * change was saved is unknown. Nothing was undone or propagated; it has been
+ * flagged for manual checking and must not be retried blindly.
  */
 const RELATION_ERROR_CODES = [
   ...AddRelationErrorCodeSchema.options,
@@ -241,6 +244,7 @@ const RELATION_ERROR_CODES = [
   'contacts-service-error',
   'propagation-failed',
   'rollback-failed',
+  'outcome-unknown',
 ] as const
 
 export const RelationErrorCodeSchema_APIv1 = z.enum(RELATION_ERROR_CODES)
