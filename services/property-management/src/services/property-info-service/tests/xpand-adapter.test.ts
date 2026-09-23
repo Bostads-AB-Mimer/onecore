@@ -120,6 +120,69 @@ describe('transformFromDbRentalPropertyInfo', () => {
     })
   })
 
+  describe('apartment without building metadata', () => {
+    it('maps empty strings on property when building enrichment is missing', () => {
+      const row = [
+        {
+          ...baseRow[0],
+          building_code: null,
+          building: null,
+          building_construction_year: null,
+          building_renovation_year: null,
+          building_assessment_year: null,
+          building_type_code: null,
+          building_type_caption: null,
+        },
+      ]
+
+      const result = transformFromDbRentalPropertyInfo(row)
+
+      expect(result.type).toBe('Lägenhet')
+      expect(result.property).toMatchObject({
+        buildingCode: '',
+        building: '',
+      })
+      expect(result.building.buildingCode).toBeNull()
+    })
+  })
+
+  describe('commercial space without building metadata', () => {
+    it('maps empty strings on property when building enrichment is missing', () => {
+      const row = [
+        {
+          ...baseRow[0],
+          keycmobt: 'balok',
+          commercial_space_code: '0101',
+          commercial_space_type: 'Butik',
+          apartment_code: null,
+          apartment_number: null,
+          apartment_type_code: null,
+          apartment_type: null,
+          floor: null,
+          has_elevator: null,
+          wash_space: null,
+          apartment_area: null,
+          building_code: null,
+          building: null,
+          building_construction_year: null,
+          building_renovation_year: null,
+          building_assessment_year: null,
+          building_type_code: null,
+          building_type_caption: null,
+        },
+      ]
+
+      const result = transformFromDbRentalPropertyInfo(row)
+
+      expect(result.type).toBe('Lokal')
+      expect(result.property).toMatchObject({
+        buildingCode: '',
+        building: '',
+      })
+      expect(result.building.buildingCode).toBeNull()
+    })
+  })
+
   describe('parking space without building', () => {
     it('maps parking space when building enrichment is missing', () => {
       const row = [
