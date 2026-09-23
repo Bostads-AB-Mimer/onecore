@@ -74,6 +74,14 @@ export type RelationRef = {
  */
 const REQUEST_TIMEOUT_MS = 30_000
 
+/**
+ * A create cannot be undone, so giving up early reports a failure for a
+ * contact that exists and invites a duplicate on retry. The service's own
+ * Xpand SOAP timeout is 30s with database work around it, so this stays
+ * clearly above that while still bounding a black-holed connection.
+ */
+const CREATE_CONTACT_TIMEOUT_MS = 120_000
+
 export const makeContactsAdapter = (contactsServiceUrl: string) => {
   const axios = loggedAxios.create({
     baseURL: contactsServiceUrl,
@@ -252,7 +260,7 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       try {
         const response = await axios.post<
           CreateContactResponseBody & CreateContactErrorResponseBody
-        >('/contacts', body)
+        >('/contacts', body, { timeout: CREATE_CONTACT_TIMEOUT_MS })
 
         if (response.status === 201) {
           return { ok: true, data: response.data.content }

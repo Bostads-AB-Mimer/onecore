@@ -131,6 +131,14 @@ const SYNC_TO_ECONOMY: Record<RelationRoleType, boolean> = {
  */
 type RelationPresence = 'present' | 'absent' | 'unknown'
 
+/**
+ * The service answers with Xpand's spelling of a code but accepts other
+ * casing and padding on input, so an exact match would read a live relation
+ * as absent.
+ */
+const sameContactCode = (a: string, b: string): boolean =>
+  a.trim().toUpperCase() === b.trim().toUpperCase()
+
 const readRelationPresence = async (
   params: RelationRef
 ): Promise<RelationPresence> => {
@@ -159,12 +167,14 @@ const readRelationPresence = async (
   // The batch endpoint omits contact codes it does not know, so a missing
   // contact means there is no relation to speak of.
   const relations =
-    result.data.find((c) => c.contactCode === params.contactCode)
+    result.data.find((c) => sameContactCode(c.contactCode, params.contactCode))
       ?.relatedContacts ?? []
 
   const role = FORWARD_ROLE_FOR_ROLE_TYPE[params.roleType]
   return relations.some(
-    (r) => r.role === role && r.contactCode === params.relatedContactCode
+    (r) =>
+      r.role === role &&
+      sameContactCode(r.contactCode, params.relatedContactCode)
   )
     ? 'present'
     : 'absent'
@@ -397,6 +407,11 @@ export const addRelation = async (
       // rejected. With the relation already present the service can only
       // have refused it as a duplicate, so there is nothing to undo and
       // removing it would delete a relation nobody asked to lose.
+      //
+      // Any answer to the compensating remove alarms, `relation-not-found`
+      // included: a lost response usually means core stopped waiting while
+      // the service was still working, so the remove can arrive before the
+      // original insert commits and the relation still lands afterwards.
       if (presenceBefore === 'absent') {
         const compensated = await contactsAdapter.removeRelation({
           contactCode: params.contactCode,
@@ -404,7 +419,7 @@ export const addRelation = async (
           roleType: params.roleType,
           deletedBy: rollbackActor(params.createdBy),
         })
-        if (!compensated.ok && compensated.err !== 'relation-not-found') {
+        if (!compensated.ok) {
           void alarmRollbackFailed({
             action: 'add',
             relation: params,
@@ -534,6 +549,9 @@ export const removeRelation = async (
       // See the add direction. With no relation there to begin with, the
       // lost response can only have been a `relation-not-found`: adding one
       // back would conjure a relation nobody ever asked for.
+      //
+      // `duplicate-relation` from the compensating add alarms for the same
+      // reason as `relation-not-found` does in the add direction.
       if (presenceBefore === 'present') {
         const compensated = await contactsAdapter.addRelation({
           contactCode: params.contactCode,
@@ -541,7 +559,7 @@ export const removeRelation = async (
           roleType: params.roleType,
           createdBy: rollbackActor(params.deletedBy),
         })
-        if (!compensated.ok && compensated.err !== 'duplicate-relation') {
+        if (!compensated.ok) {
           void alarmRollbackFailed({
             action: 'remove',
             relation: params,
