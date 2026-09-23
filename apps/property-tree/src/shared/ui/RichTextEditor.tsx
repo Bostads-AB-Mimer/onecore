@@ -85,7 +85,11 @@ export function RichTextEditor({
   }, [editor, value])
 
   useEffect(() => {
-    if (editor && editor.isEditable === disabled) editor.setEditable(!disabled)
+    // tiptap emits an update on setEditable by default, which would report
+    // the unchanged content as an edit after every save.
+    if (editor && editor.isEditable === disabled) {
+      editor.setEditable(!disabled, false)
+    }
   }, [editor, disabled])
 
   if (!editor) return null

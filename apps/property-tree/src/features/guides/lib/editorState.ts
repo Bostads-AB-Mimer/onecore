@@ -233,10 +233,15 @@ export function editorReducer(
       return { ...state, dirty: true, steps }
     }
     case 'update-step':
-      return updateStep(state, action.stepId, (step) => ({
-        ...step,
-        ...action.patch,
-      }))
+      return updateStep(state, action.stepId, (step) => {
+        // Editors can report their current value without a real edit (e.g.
+        // tiptap on focus or editable toggles); that must not mark the guide
+        // dirty.
+        const changed = (Object.keys(action.patch) as (keyof StepPatch)[]).some(
+          (key) => action.patch[key] !== step[key]
+        )
+        return changed ? { ...step, ...action.patch } : step
+      })
     case 'add-image':
       return updateStep(
         recordUpdatedAt(state, action.guideUpdatedAt),

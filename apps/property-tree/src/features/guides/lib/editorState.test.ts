@@ -325,6 +325,18 @@ describe('toRequest', () => {
     expect(toRequest(state, 'draft').steps[0].calloutText).toBeNull()
   })
 
+  it('does not mark the guide dirty when a patch changes nothing', () => {
+    const state = fromGuide(guide)
+    const step = state.steps[0]
+    const next = editorReducer(state, {
+      type: 'update-step',
+      stepId: step.id,
+      patch: { body: step.body, title: step.title },
+    })
+    expect(next).toBe(state)
+    expect(next.dirty).toBe(false)
+  })
+
   it('drops blank callout text even when a callout type is set', () => {
     let state = fromGuide(guide)
     state = editorReducer(state, {
