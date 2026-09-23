@@ -818,6 +818,51 @@ describe('leases routes', () => {
       })
     })
 
+    it('maps null enrichment fields to empty strings for CSC export', async () => {
+      const lease = validLease()
+      const contact = validContact()
+      const rentalProperty = factory.rentalPropertyInfo.build({
+        id: '705-001-01-0101',
+        districtCode: null,
+        district: null,
+        marketAreaCode: null,
+        marketArea: null,
+        building: {
+          buildingCode: null,
+          building: null,
+          buildingTypeCode: null,
+          buildingTypeCaption: null,
+        },
+        address: {
+          street: 'Stentorpsgatan 9 A',
+          number: '',
+          postalCode: '72216',
+          city: 'Västerås',
+        },
+      })
+
+      jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([lease]))
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValue({ ok: true, data: contact })
+      jest
+        .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+        .mockResolvedValue({ status: 200, data: rentalProperty })
+
+      const res = await request(app.callback()).get('/leases/for-csc')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0]).toMatchObject({
+        division_1011: '',
+        division_1048: '',
+        division_1242: '',
+        real_estate_type: '',
+      })
+    })
+
     it('response _meta count reflects number of leases after filtering', async () => {
       const lease1 = factory.lease.build({
         leaseId: '705-001-01-0101/1',

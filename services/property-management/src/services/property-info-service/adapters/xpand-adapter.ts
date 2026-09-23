@@ -59,8 +59,8 @@ export const transformFromDbRentalPropertyInfo = (
           area: row.apartment_area,
           estateCode: row.estate_code,
           estate: row.estate,
-          buildingCode: row.building_code,
-          building: row.building,
+          buildingCode: row.building_code ?? '',
+          building: row.building ?? '',
         }
         break
       }
@@ -76,8 +76,8 @@ export const transformFromDbRentalPropertyInfo = (
           entrance: row.entrance,
           estateCode: row.estate_code,
           estate: row.estate,
-          buildingCode: row.building_code,
-          building: row.building,
+          buildingCode: row.building_code ?? '',
+          building: row.building ?? '',
         }
         break
       }

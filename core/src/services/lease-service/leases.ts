@@ -255,15 +255,16 @@ export const routes = (router: KoaRouter) => {
             postal_city: tenant.address?.city ?? '',
             //rental object info
             object_ref_nr: rentalObjectData.id,
-            division_1011: rentalObjectData.districtCode,
+            division_1011: rentalObjectData.districtCode ?? '',
             object_real_estate: rentalObjectData.property.estate,
             object_real_estate_year_construction:
               rentalObjectData.building.constructionYear ?? undefined,
             object_real_estate_year_reconstruction:
               rentalObjectData.building.renovationYear ?? undefined,
-            real_estate_type: rentalObjectData.building.buildingTypeCaption,
-            division_1048: rentalObjectData.district,
-            division_1242: rentalObjectData.marketArea,
+            real_estate_type:
+              rentalObjectData.building.buildingTypeCaption ?? '',
+            division_1048: rentalObjectData.district ?? '',
+            division_1242: rentalObjectData.marketArea ?? '',
             division_1140: rentalObjectData.property.rentalTypeCode,
             object_type: rentalObjectData.type,
           }
