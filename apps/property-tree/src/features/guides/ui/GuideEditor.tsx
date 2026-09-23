@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useBlocker, useNavigate } from 'react-router-dom'
 import { Eye, Plus, Save, Trash2, Upload } from 'lucide-react'
 
-import { type GuideWithUrls } from '@/entities/guide'
+import { type GuideWithUrls, useGuideCategories } from '@/entities/guide'
 
 import { useToast } from '@/shared/hooks/useToast'
 import { paths, routes } from '@/shared/routes'
@@ -38,6 +38,8 @@ import {
   toRequest,
   validate,
 } from '../lib/editorState'
+import { saveErrorMessage } from '../lib/errorMessages'
+import { blocksImplicitSubmit } from '../lib/implicitSubmit'
 import { CategoryPicker } from './CategoryPicker'
 import { DeleteGuideDialog } from './DeleteGuideDialog'
 import { GuideView } from './GuideView'
@@ -48,19 +50,8 @@ interface GuideEditorProps {
   authorName: string
 }
 
-const saveErrorMessage = (error: unknown): string => {
-  const code =
-    typeof error === 'object' && error !== null && 'error' in error
-      ? String((error as { error: unknown }).error)
-      : ''
-  if (code === 'slug-taken') {
-    return 'Sluggen används redan av en annan guide. Välj en annan.'
-  }
-  if (code === 'Validation failed') {
-    return 'Något i guiden är ogiltigt. Kontrollera fälten och försök igen.'
-  }
-  return 'Guiden kunde inte sparas. Försök igen.'
-}
+/** Shown on the save buttons while images are still uploading. */
+const PENDING_UPLOADS_HINT = 'Vänta tills bilder laddats upp'
 
 export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   const navigate = useNavigate()
@@ -68,6 +59,27 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   const [state, dispatch] = useGuideEditorState(initialGuide)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  // Uploads persist immediately but are only in state once they finish, so
+  // saving mid-upload would drop the image from the guide. Steps report their
+  // own count, which also lets a removed step take its uploads with it.
+  const [pendingUploadsByStep, setPendingUploadsByStep] = useState<
+    Record<string, number>
+  >({})
+  const { data: categories } = useGuideCategories()
+
+  const handlePendingChange = useCallback((stepId: string, count: number) => {
+    setPendingUploadsByStep((current) => {
+      if ((current[stepId] ?? 0) === count) return current
+      const next = { ...current }
+      if (count === 0) delete next[stepId]
+      else next[stepId] = count
+      return next
+    })
+  }, [])
+  const pendingUploads = Object.values(pendingUploadsByStep).reduce(
+    (total, count) => total + count,
+    0
+  )
 
   const createGuide = useCreateGuide()
   const updateGuide = useUpdateGuide()
@@ -79,6 +91,8 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   // lets that one navigation through even though the closure still sees the
   // pre-dispatch state.
   const allowNextNavigation = useRef(false)
+  // Set while the blocker dialog's "Lämna sidan" closes the dialog.
+  const proceedingNavigation = useRef(false)
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {
     if (allowNextNavigation.current) {
       allowNextNavigation.current = false
@@ -96,6 +110,8 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   }, [state.dirty])
 
   const save = async (status: GuideStatus) => {
+    if (isSaving || pendingUploads > 0) return
+
     const problems = validate(state, status)
     if (problems.length > 0) {
       toast({
@@ -161,6 +177,8 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   }
 
   const isPublished = state.status === 'published' && !state.dirty
+  const isUploading = pendingUploads > 0
+  const saveDisabled = isSaving || isUploading
 
   return (
     <form
@@ -168,162 +186,197 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
         event.preventDefault()
         save(state.status)
       }}
-      className="space-y-8"
+      onKeyDown={(event) => {
+        // Saving is always an explicit button press here, never an implicit
+        // submit from Enter in a single-line field.
+        if (
+          blocksImplicitSubmit(
+            event.key,
+            event.target,
+            event.nativeEvent.isComposing
+          )
+        ) {
+          event.preventDefault()
+        }
+      }}
     >
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 p-3">
-        <span className="text-sm text-muted-foreground" aria-live="polite">
-          {state.dirty
-            ? 'Osparade ändringar'
-            : state.guideId
-              ? isPublished
-                ? 'Publicerad'
-                : 'Sparad som utkast'
-              : 'Ny guide'}
-        </span>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPreviewOpen(true)}
-          >
-            <Eye className="mr-2 h-4 w-4" />
-            Förhandsgranska
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isSaving}
-            onClick={() => save('draft')}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {state.status === 'published' && state.guideId
-              ? 'Avpublicera och spara'
-              : 'Spara utkast'}
-          </Button>
-          <Button
-            type="button"
-            disabled={isSaving}
-            onClick={() => save('published')}
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            {state.status === 'published' ? 'Spara och publicera' : 'Publicera'}
-          </Button>
+      {/* min-w-0 neutralises the fieldset's default min-inline-size:
+          min-content, which would otherwise stop its content from shrinking. */}
+      <fieldset className="space-y-8 min-w-0" disabled={isSaving}>
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 p-3">
+          <span className="text-sm text-muted-foreground" aria-live="polite">
+            {state.dirty
+              ? 'Osparade ändringar'
+              : state.guideId
+                ? isPublished
+                  ? 'Publicerad'
+                  : 'Sparad som utkast'
+                : 'Ny guide'}
+          </span>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPreviewOpen(true)}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              Förhandsgranska
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saveDisabled}
+              title={isUploading ? PENDING_UPLOADS_HINT : undefined}
+              onClick={() => save('draft')}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {state.status === 'published' && state.guideId
+                ? 'Avpublicera och spara'
+                : 'Spara utkast'}
+            </Button>
+            <Button
+              type="button"
+              disabled={saveDisabled}
+              title={isUploading ? PENDING_UPLOADS_HINT : undefined}
+              onClick={() => save('published')}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              {state.status === 'published'
+                ? 'Spara och publicera'
+                : 'Publicera'}
+            </Button>
+          </div>
+          {isUploading && (
+            <p
+              className="w-full text-sm text-muted-foreground"
+              aria-live="polite"
+            >
+              {PENDING_UPLOADS_HINT}
+            </p>
+          )}
         </div>
-      </div>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="guide-title">Titel</Label>
-          <Input
-            id="guide-title"
-            value={state.title}
-            onChange={(event) =>
-              dispatch({ type: 'set-title', title: event.target.value })
-            }
-            placeholder="T.ex. Registrera uppsägning i Tenfast"
-            maxLength={200}
-            required
-          />
-        </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="guide-description">Beskrivning</Label>
-          <Textarea
-            id="guide-description"
-            value={state.description}
-            onChange={(event) =>
-              dispatch({
-                type: 'set-description',
-                description: event.target.value,
-              })
-            }
-            placeholder="En eller två meningar om vad guiden hjälper till med"
-            rows={2}
-            maxLength={1000}
-          />
-        </div>
-        <CategoryPicker
-          value={state.category}
-          onChange={(category) => dispatch({ type: 'set-category', category })}
-        />
-        <div className="space-y-2">
-          <Label htmlFor="guide-slug">Länkadress</Label>
-          <div className="flex items-center gap-1 text-sm">
-            <span className="shrink-0 text-muted-foreground">/guider/</span>
+        <section className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="guide-title">Titel</Label>
             <Input
-              id="guide-slug"
-              value={state.slug}
+              id="guide-title"
+              value={state.title}
               onChange={(event) =>
-                dispatch({ type: 'set-slug', slug: event.target.value })
+                dispatch({ type: 'set-title', title: event.target.value })
               }
+              placeholder="T.ex. Registrera uppsägning i Tenfast"
               maxLength={200}
-              pattern="[a-z0-9]+(-[a-z0-9]+)*"
-              aria-describedby="guide-slug-help"
+              required
             />
           </div>
-          <p id="guide-slug-help" className="text-xs text-muted-foreground">
-            {state.savedSlug && state.slug !== state.savedSlug
-              ? 'Gamla länkar fortsätter fungera och skickas vidare hit.'
-              : 'Följer titeln tills du ändrar den själv.'}
-          </p>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Steg</h2>
-        {state.steps.length === 0 ? (
-          <p className="mb-3 text-sm text-muted-foreground">
-            Guiden har inga steg än.
-          </p>
-        ) : (
-          <SortableList
-            items={state.steps}
-            getId={(step) => step.id}
-            onMove={(from, to) => dispatch({ type: 'move-step', from, to })}
-            renderItem={(step, index, handle) => (
-              <StepEditor
-                guideId={state.guideId}
-                step={step}
-                index={index}
-                total={state.steps.length}
-                handle={handle}
-                dispatch={dispatch}
-              />
-            )}
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="guide-description">Beskrivning</Label>
+            <Textarea
+              id="guide-description"
+              value={state.description}
+              onChange={(event) =>
+                dispatch({
+                  type: 'set-description',
+                  description: event.target.value,
+                })
+              }
+              placeholder="En eller två meningar om vad guiden hjälper till med"
+              rows={2}
+              maxLength={1000}
+            />
+          </div>
+          <CategoryPicker
+            value={state.category}
+            onChange={(category) =>
+              dispatch({ type: 'set-category', category })
+            }
           />
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-3"
-          onClick={() =>
-            dispatch({ type: 'add-step', id: crypto.randomUUID() })
-          }
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Lägg till steg
-        </Button>
-      </section>
+          <div className="space-y-2">
+            <Label htmlFor="guide-slug">Länkadress</Label>
+            <div className="flex items-center gap-1 text-sm">
+              <span className="shrink-0 text-muted-foreground">/guider/</span>
+              <Input
+                id="guide-slug"
+                value={state.slug}
+                onChange={(event) =>
+                  dispatch({ type: 'set-slug', slug: event.target.value })
+                }
+                maxLength={200}
+                pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                aria-describedby="guide-slug-help"
+              />
+            </div>
+            <p id="guide-slug-help" className="text-xs text-muted-foreground">
+              {state.savedSlug && state.slug !== state.savedSlug
+                ? 'Gamla länkar fortsätter fungera och skickas vidare hit.'
+                : 'Följer titeln tills du ändrar den själv.'}
+            </p>
+          </div>
+        </section>
 
-      {state.guideId && (
-        <section className="border-t pt-6">
+        <section>
+          <h2 className="mb-3 text-lg font-semibold">Steg</h2>
+          {state.steps.length === 0 ? (
+            <p className="mb-3 text-sm text-muted-foreground">
+              Guiden har inga steg än.
+            </p>
+          ) : (
+            <SortableList
+              items={state.steps}
+              getId={(step) => step.id}
+              onMove={(from, to) => dispatch({ type: 'move-step', from, to })}
+              renderItem={(step, index, handle) => (
+                <StepEditor
+                  guideId={state.guideId}
+                  step={step}
+                  index={index}
+                  total={state.steps.length}
+                  handle={handle}
+                  dispatch={dispatch}
+                  onPendingChange={handlePendingChange}
+                  disabled={isSaving}
+                />
+              )}
+            />
+          )}
           <Button
             type="button"
             variant="outline"
-            className="text-destructive"
-            onClick={() => setDeleteOpen(true)}
+            className="mt-3"
+            onClick={() =>
+              dispatch({ type: 'add-step', id: crypto.randomUUID() })
+            }
           >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Ta bort guiden
+            <Plus className="mr-2 h-4 w-4" />
+            Lägg till steg
           </Button>
         </section>
-      )}
+
+        {state.guideId && (
+          <section className="border-t pt-6">
+            <Button
+              type="button"
+              variant="outline"
+              className="text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Ta bort guiden
+            </Button>
+          </section>
+        )}
+      </fieldset>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Förhandsgranskning</DialogTitle>
           </DialogHeader>
-          <GuideView guide={toPreview(state, authorName)} variant="page" />
+          <GuideView
+            guide={toPreview(state, authorName, categories)}
+            variant="page"
+          />
         </DialogContent>
       </Dialog>
 
@@ -335,7 +388,20 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
         onConfirm={remove}
       />
 
-      <AlertDialog open={blocker.state === 'blocked'}>
+      <AlertDialog
+        open={blocker.state === 'blocked'}
+        onOpenChange={(open) => {
+          // Escape and outside clicks close the dialog without hitting a
+          // button, so the blocker has to be released here too. Radix also
+          // closes on "Lämna sidan", where the blocker is already proceeding.
+          if (open) return
+          if (proceedingNavigation.current) {
+            proceedingNavigation.current = false
+            return
+          }
+          blocker.reset?.()
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Lämna utan att spara?</AlertDialogTitle>
@@ -344,10 +410,13 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => blocker.reset?.()}>
-              Stanna kvar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => blocker.proceed?.()}>
+            <AlertDialogCancel>Stanna kvar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                proceedingNavigation.current = true
+                blocker.proceed?.()
+              }}
+            >
               Lämna sidan
             </AlertDialogAction>
           </AlertDialogFooter>

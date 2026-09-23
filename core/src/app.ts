@@ -14,6 +14,7 @@ import { routes as healthRoutes } from './services/health-service'
 import { routes as infobipSmsWebhookRoutes } from './services/communication-service/infobip-sms-webhook'
 
 import { requireAuth, requireRole } from './middlewares/keycloak-auth'
+import { GUIDES_ADMIN_ROLE } from './services/guides-service/helpers'
 import { routes as apiRoutes } from './api/index'
 import { routes as swaggerRoutes } from './services/swagger'
 import { extractToken } from './middlewares/extract-token'
@@ -94,12 +95,15 @@ app.use(async (ctx, next) => {
   return requireRole('api-access')(ctx, next)
 })
 
+// @koa/router matches paths case-insensitively, so these gates compare against
+// a lower-cased path — otherwise /GUIDES would route but skip the role check.
 // Requires 'keys-admin' in addition to 'api-access' for key deletion (single and bulk).
 // Kept as a separate middleware so api-access is always checked first.
 app.use(async (ctx, next) => {
+  const path = ctx.path.toLowerCase()
   if (
-    (ctx.method === 'DELETE' && /^\/keys\/[^/]+$/.test(ctx.path)) ||
-    (ctx.method === 'POST' && ctx.path === '/keys/bulk-delete')
+    (ctx.method === 'DELETE' && /^\/keys\/[^/]+$/.test(path)) ||
+    (ctx.method === 'POST' && path === '/keys/bulk-delete')
   ) {
     return requireRole('keys-admin')(ctx, next)
   }
@@ -111,9 +115,9 @@ app.use(async (ctx, next) => {
 app.use(async (ctx, next) => {
   if (
     ['POST', 'PUT', 'DELETE'].includes(ctx.method) &&
-    /^\/guides(\/|$)/.test(ctx.path)
+    /^\/guides(\/|$)/.test(ctx.path.toLowerCase())
   ) {
-    return requireRole('guides-admin')(ctx, next)
+    return requireRole(GUIDES_ADMIN_ROLE)(ctx, next)
   }
   return next()
 })

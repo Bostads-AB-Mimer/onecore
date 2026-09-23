@@ -1,4 +1,4 @@
-import { isValidSlug, slugify } from './slugify'
+import { isReservedSlug, isValidSlug, slugify } from './slugify'
 
 describe('slugify', () => {
   it('lowercases and hyphenates words', () => {
@@ -37,5 +37,17 @@ describe('isValidSlug', () => {
     expect(isValidSlug('Bad Slug')).toBe(false)
     expect(isValidSlug('double--hyphen')).toBe(false)
     expect(isValidSlug('')).toBe(false)
+  })
+
+  it('rejects reserved slugs that collide with static routes', () => {
+    expect(isValidSlug('ny')).toBe(false)
+    expect(isValidSlug('ny-guide')).toBe(true)
+  })
+})
+
+describe('isReservedSlug', () => {
+  it('flags the editor route slug', () => {
+    expect(isReservedSlug('ny')).toBe(true)
+    expect(isReservedSlug('nyheter')).toBe(false)
   })
 })

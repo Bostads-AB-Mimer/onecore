@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { Knex } from 'knex'
 
 import {
   findOrCreateCategory,
@@ -14,7 +15,13 @@ import {
   updateGuide,
 } from '../adapters/guides-adapter'
 import { createStepImage, deleteStepImage } from '../adapters/images-adapter'
-import { CategoryNotFoundError, SlugTakenError } from '../errors'
+import { GuideCategoryRow } from '../adapters/rows'
+import {
+  CategoryNotFoundError,
+  ImageNotInStepError,
+  SlugTakenError,
+  StepBelongsToOtherGuideError,
+} from '../errors'
 import * as factory from './factories'
 import { withContext } from './testUtils'
 
@@ -35,6 +42,28 @@ const imageInput = (overrides: Partial<{ storageKey: string }> = {}) => ({
   caption: null,
 })
 
+const uniqueViolation = () =>
+  Object.assign(new Error('Violation of UNIQUE KEY constraint'), {
+    number: 2627,
+  })
+
+/**
+ * A stand-in for knex that reproduces the category race: the lookup by name
+ * misses, and the insert then hits the unique index because a concurrent save
+ * created the row in between. The race cannot be staged against the real
+ * database because the test transaction holds the lock on the new row.
+ */
+const racingCategoryDb = (existing: GuideCategoryRow, insertError: Error) => {
+  const lookups: (GuideCategoryRow | undefined)[] = [undefined, existing]
+  const table = () => ({
+    where: () => ({ first: async () => lookups.shift() }),
+    insert: async () => {
+      throw insertError
+    },
+  })
+  return { db: table as unknown as Knex, lookups }
+}
+
 describe('categories-adapter', () => {
   it('creates a category by name and reuses it on the next write', () =>
     withContext(async ({ db }) => {
@@ -53,6 +82,37 @@ describe('categories-adapter', () => {
         findOrCreateCategory({ id: randomUUID() }, db)
       ).rejects.toBeInstanceOf(CategoryNotFoundError)
     }))
+
+  it('reuses the row when the insert races with another save', async () => {
+    const existing: GuideCategoryRow = {
+      id: randomUUID(),
+      name: 'Tenfast',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    const { db, lookups } = racingCategoryDb(existing, uniqueViolation())
+
+    const result = await findOrCreateCategory({ name: existing.name }, db)
+
+    expect(result.id).toBe(existing.id)
+    // Both the initial miss and the retry lookup were consumed.
+    expect(lookups).toHaveLength(0)
+  })
+
+  it('rethrows an insert error that is not a unique violation', async () => {
+    const existing: GuideCategoryRow = {
+      id: randomUUID(),
+      name: 'Tenfast',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    const failure = new Error('connection lost')
+    const { db } = racingCategoryDb(existing, failure)
+
+    await expect(
+      findOrCreateCategory({ name: existing.name }, db)
+    ).rejects.toBe(failure)
+  })
 })
 
 describe('guides-adapter', () => {
@@ -206,6 +266,102 @@ describe('guides-adapter', () => {
       expect(result!.removedStorageKeys).toEqual([drop.storageKey])
     }))
 
+  it('refuses an image sent on another step and keeps it untouched', () =>
+    withContext(async ({ db }) => {
+      const [a, b] = factory.step.buildList(2)
+      const created = await createGuide(
+        factory.guideWrite.build({ steps: [a, b] }),
+        db
+      )
+      const image = (await createStepImage(created.id, a.id, imageInput(), db))!
+
+      const moved = factory.guideWrite.build({
+        slug: created.slug,
+        category: { id: created.category.id },
+        steps: [
+          { ...a, images: [] },
+          {
+            ...b,
+            images: [
+              { id: image.id, sortOrder: 0, altText: 'Alt', caption: null },
+            ],
+          },
+        ],
+      })
+
+      await expect(updateGuide(created.id, moved, db)).rejects.toBeInstanceOf(
+        ImageNotInStepError
+      )
+
+      // The image must survive: the storage key was never reported as
+      // removed, so core would not have deleted the file either.
+      const after = await getGuideById(created.id, db)
+      expect(after!.steps[0].images.map((i) => i.id)).toEqual([image.id])
+      expect(after!.steps[1].images).toEqual([])
+    }))
+
+  it('refuses an unknown image id instead of ignoring it', () =>
+    withContext(async ({ db }) => {
+      const step = factory.step.build()
+      const created = await createGuide(
+        factory.guideWrite.build({ steps: [step] }),
+        db
+      )
+
+      await expect(
+        updateGuide(
+          created.id,
+          factory.guideWrite.build({
+            slug: created.slug,
+            category: { id: created.category.id },
+            steps: [
+              {
+                ...step,
+                images: [
+                  {
+                    id: randomUUID(),
+                    sortOrder: 0,
+                    altText: 'Alt',
+                    caption: null,
+                  },
+                ],
+              },
+            ],
+          }),
+          db
+        )
+      ).rejects.toBeInstanceOf(ImageNotInStepError)
+    }))
+
+  it('refuses a step id that belongs to another guide', () =>
+    withContext(async ({ db }) => {
+      const other = await createGuide(factory.guideWrite.build(), db)
+      const mine = await createGuide(factory.guideWrite.build(), db)
+      const stolen = factory.step.build({ id: other.steps[0].id })
+
+      await expect(
+        updateGuide(
+          mine.id,
+          factory.guideWrite.build({
+            slug: mine.slug,
+            category: { id: mine.category.id },
+            steps: [stolen],
+          }),
+          db
+        )
+      ).rejects.toBeInstanceOf(StepBelongsToOtherGuideError)
+
+      await expect(
+        createGuide(factory.guideWrite.build({ steps: [stolen] }), db)
+      ).rejects.toBeInstanceOf(StepBelongsToOtherGuideError)
+
+      // The other guide still owns its step.
+      const untouched = await getGuideById(other.id, db)
+      expect(untouched!.steps.map((s) => s.id)).toEqual(
+        other.steps.map((s) => s.id)
+      )
+    }))
+
   it('records slug history so the old slug still resolves', () =>
     withContext(async ({ db }) => {
       const created = await createGuide(factory.guideWrite.build(), db)
@@ -247,6 +403,34 @@ describe('guides-adapter', () => {
       expect(back!.guide.slug).toBe(oldSlug)
       const viaNew = await getGuideBySlug(newSlug, db)
       expect(viaNew?.redirectedFrom).toBe(newSlug)
+    }))
+
+  it('refuses a slug another guide holds in its history', () =>
+    withContext(async ({ db }) => {
+      const first = await createGuide(factory.guideWrite.build(), db)
+      const oldSlug = first.slug
+      await updateGuide(
+        first.id,
+        factory.guideWrite.build({
+          slug: `${oldSlug}-v2`,
+          category: { id: first.category.id },
+          steps: first.steps.map((s) => ({ ...s, images: [] })),
+        }),
+        db
+      )
+
+      const second = await createGuide(factory.guideWrite.build(), db)
+      await expect(
+        updateGuide(
+          second.id,
+          factory.guideWrite.build({
+            slug: oldSlug,
+            category: { id: second.category.id },
+            steps: second.steps.map((s) => ({ ...s, images: [] })),
+          }),
+          db
+        )
+      ).rejects.toBeInstanceOf(SlugTakenError)
     }))
 
   it('sets publishedAt on first publish and clears it when unpublished', () =>
@@ -307,6 +491,32 @@ describe('guides-adapter', () => {
         [imageA.storageKey, imageB.storageKey].sort()
       )
       expect(await getGuideById(created.id, db)).toBeNull()
+    }))
+
+  it('deletes the slug history along with the guide', () =>
+    withContext(async ({ db }) => {
+      const created = await createGuide(factory.guideWrite.build(), db)
+      const oldSlug = created.slug
+      await updateGuide(
+        created.id,
+        factory.guideWrite.build({
+          slug: `${oldSlug}-v2`,
+          category: { id: created.category.id },
+          steps: created.steps.map((s) => ({ ...s, images: [] })),
+        }),
+        db
+      )
+      expect(
+        await db('guide_slug_history').where('guideId', created.id)
+      ).toHaveLength(1)
+
+      await deleteGuide(created.id, db)
+
+      expect(
+        await db('guide_slug_history').where('guideId', created.id)
+      ).toHaveLength(0)
+      // The freed slug can be used by a new guide.
+      expect(await isSlugTaken(oldSlug, null, db)).toBe(false)
     }))
 })
 

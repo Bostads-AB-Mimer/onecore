@@ -30,6 +30,35 @@ describe('sanitizeGuideHtml', () => {
     )
   })
 
+  // One case per known bypass, so a future allowlist change cannot quietly
+  // let one of them back in.
+  it.each([
+    [
+      'data: urls',
+      '<a href="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">D</a>',
+    ],
+    ['mixed-case javascript:', '<a href="JaVaScRiPt:alert(1)">D</a>'],
+    ['an entity-encoded colon', '<a href="javascript&#58;alert(1)">D</a>'],
+    [
+      'an entity-encoded first letter',
+      '<a href="&#106;avascript:alert(1)">D</a>',
+    ],
+    ['protocol-relative urls', '<a href="//evil.example.com">D</a>'],
+    ['backslash-relative urls', '<a href="\\\\evil.example.com">D</a>'],
+  ])('drops the href of %s', (_name, html) => {
+    expect(sanitizeGuideHtml(html)).toBe('<a rel="noopener noreferrer">D</a>')
+  })
+
+  it.each([
+    ['svg with an event handler', '<svg onload="alert(1)"><p>after</p></svg>'],
+    [
+      'iframe srcdoc',
+      '<iframe srcdoc="<script>alert(1)</script>"></iframe><p>after</p>',
+    ],
+  ])('strips %s', (_name, html) => {
+    expect(sanitizeGuideHtml(html)).toBe('<p>after</p>')
+  })
+
   it('keeps relative links to other ONECore pages', () => {
     const html = '<a href="/hyresgaster/P123">Kund</a>'
     expect(sanitizeGuideHtml(html)).toBe(

@@ -17,7 +17,12 @@ import {
   updateGuide,
 } from './adapters/guides-adapter'
 import { createStepImage, deleteStepImage } from './adapters/images-adapter'
-import { CategoryNotFoundError, SlugTakenError } from './errors'
+import {
+  CategoryNotFoundError,
+  ImageNotInStepError,
+  SlugTakenError,
+  StepBelongsToOtherGuideError,
+} from './errors'
 import { sanitizeGuideWrite } from './sanitize'
 
 const ErrorResponseSchema = z.object({
@@ -32,9 +37,13 @@ const ErrorResponseSchema = z.object({
     .optional(),
 })
 
+// Single definition of the uuid shape, shared by the swagger-doc parameters
+// and the runtime param schemas so the two cannot drift apart.
+const UuidSchema = z.string().uuid()
+
 const uuidParam = (description: string) => ({
   description,
-  schema: z.string().uuid(),
+  schema: UuidSchema,
 })
 
 // The okapi router only types and documents the schemas; it does not
@@ -46,6 +55,15 @@ class RequestValidationError extends Error {
   }
 }
 
+// A path parameter that does not match its schema cannot name an existing
+// resource, so it is answered with 404 rather than 400.
+class ParamValidationError extends Error {
+  constructor() {
+    super('Path parameter validation failed')
+    this.name = 'ParamValidationError'
+  }
+}
+
 const parse = <S extends ZodTypeAny>(schema: S, value: unknown): z.infer<S> => {
   try {
     return schema.parse(value)
@@ -54,6 +72,29 @@ const parse = <S extends ZodTypeAny>(schema: S, value: unknown): z.infer<S> => {
     throw error
   }
 }
+
+const parseParams = <S extends ZodTypeAny>(
+  schema: S,
+  value: unknown
+): z.infer<S> => {
+  try {
+    return schema.parse(value)
+  } catch (error) {
+    if (error instanceof ZodError) throw new ParamValidationError()
+    throw error
+  }
+}
+
+const GuideParamsSchema = z.object({ id: UuidSchema })
+const SlugParamsSchema = z.object({ slug: guides.SlugSchema })
+const StepImageParamsSchema = z.object({
+  id: UuidSchema,
+  stepId: UuidSchema,
+})
+const ImageParamsSchema = z.object({
+  id: UuidSchema,
+  imageId: UuidSchema,
+})
 
 type ErrorContext = {
   status: number
@@ -77,6 +118,11 @@ const respondWithError = (
     }
     return
   }
+  if (error instanceof ParamValidationError) {
+    ctx.status = 404
+    ctx.body = { error: 'not-found' }
+    return
+  }
   if (error instanceof SlugTakenError) {
     ctx.status = 409
     ctx.body = { error: 'slug-taken' }
@@ -87,11 +133,20 @@ const respondWithError = (
     ctx.body = { error: 'category-not-found' }
     return
   }
+  if (error instanceof ImageNotInStepError) {
+    ctx.status = 400
+    ctx.body = { error: 'image-not-in-step' }
+    return
+  }
+  if (error instanceof StepBelongsToOtherGuideError) {
+    ctx.status = 400
+    ctx.body = { error: 'step-belongs-to-other-guide' }
+    return
+  }
   logger.error({ err: error }, logMessage)
   ctx.status = 500
-  ctx.body = {
-    error: error instanceof Error ? error.message : 'unknown error',
-  }
+  // Never expose the underlying error (SQL text, connection details).
+  ctx.body = { error: 'internal-server-error' }
 }
 
 export const routes = (router: OkapiRouter) => {
@@ -156,7 +211,10 @@ export const routes = (router: OkapiRouter) => {
         'returned; the caller decides who may see them.',
       tags: ['Guides'],
       params: {
-        slug: { description: 'Current or previous slug', schema: z.string() },
+        slug: {
+          description: 'Current or previous slug',
+          schema: guides.SlugSchema,
+        },
       },
       response: {
         200: guides.GuideSchema,
@@ -166,7 +224,8 @@ export const routes = (router: OkapiRouter) => {
     },
     async (ctx) => {
       try {
-        const guide = await getGuideBySlug(ctx.params.slug, db)
+        const params = parseParams(SlugParamsSchema, ctx.params)
+        const guide = await getGuideBySlug(params.slug, db)
         if (!guide) {
           ctx.status = 404
           ctx.body = { error: 'Guide not found' }
@@ -194,7 +253,8 @@ export const routes = (router: OkapiRouter) => {
     },
     async (ctx) => {
       try {
-        const guide = await getGuideById(ctx.params.id, db)
+        const params = parseParams(GuideParamsSchema, ctx.params)
+        const guide = await getGuideById(params.id, db)
         if (!guide) {
           ctx.status = 404
           ctx.body = { error: 'Guide not found' }
@@ -215,7 +275,10 @@ export const routes = (router: OkapiRouter) => {
       description:
         'Creates a guide with its steps. Step bodies are sanitized to the ' +
         'allowed HTML subset. Images are added afterwards via the image ' +
-        'endpoint, so any image metadata in the payload is ignored.',
+        'endpoint, so any image metadata in the payload is ignored. ' +
+        'Errors: 409 slug-taken, 400 category-not-found, 400 ' +
+        'step-belongs-to-other-guide when a step id is already used by ' +
+        'another guide.',
       tags: ['Guides'],
       body: guides.ServiceGuideWriteSchema,
       response: {
@@ -245,7 +308,12 @@ export const routes = (router: OkapiRouter) => {
       description:
         'Replaces metadata and steps. Steps are upserted by id and steps ' +
         'missing from the payload are deleted with their images. Returns ' +
-        'the storage keys of removed images so the caller can delete files.',
+        'the storage keys of removed images so the caller can delete files. ' +
+        'Errors: 409 slug-taken, 400 category-not-found, 400 ' +
+        'step-belongs-to-other-guide when a step id is owned by another ' +
+        'guide, and 400 image-not-in-step when an image id is unknown or ' +
+        'sent on a step it does not belong to (images cannot be moved ' +
+        'between steps by a save).',
       tags: ['Guides'],
       params: { id: uuidParam('Guide id') },
       body: guides.ServiceGuideWriteSchema,
@@ -259,10 +327,11 @@ export const routes = (router: OkapiRouter) => {
     },
     async (ctx) => {
       try {
+        const params = parseParams(GuideParamsSchema, ctx.params)
         const input = sanitizeGuideWrite(
           parse(guides.ServiceGuideWriteSchema, ctx.request.body)
         )
-        const result = await updateGuide(ctx.params.id, input, db)
+        const result = await updateGuide(params.id, input, db)
         if (!result) {
           ctx.status = 404
           ctx.body = { error: 'Guide not found' }
@@ -293,7 +362,8 @@ export const routes = (router: OkapiRouter) => {
     },
     async (ctx) => {
       try {
-        const result = await deleteGuide(ctx.params.id, db)
+        const params = parseParams(GuideParamsSchema, ctx.params)
+        const result = await deleteGuide(params.id, db)
         if (!result) {
           ctx.status = 404
           ctx.body = { error: 'Guide not found' }
@@ -329,16 +399,12 @@ export const routes = (router: OkapiRouter) => {
     },
     async (ctx) => {
       try {
+        const params = parseParams(StepImageParamsSchema, ctx.params)
         const input = parse(
           guides.CreateStepImageRequestSchema,
           ctx.request.body
         )
-        const image = await createStepImage(
-          ctx.params.id,
-          ctx.params.stepId,
-          input,
-          db
-        )
+        const image = await createStepImage(params.id, params.stepId, input, db)
         if (!image) {
           ctx.status = 404
           ctx.body = { error: 'Step not found' }
@@ -369,11 +435,8 @@ export const routes = (router: OkapiRouter) => {
     },
     async (ctx) => {
       try {
-        const result = await deleteStepImage(
-          ctx.params.id,
-          ctx.params.imageId,
-          db
-        )
+        const params = parseParams(ImageParamsSchema, ctx.params)
+        const result = await deleteStepImage(params.id, params.imageId, db)
         if (!result) {
           ctx.status = 404
           ctx.body = { error: 'Image not found' }

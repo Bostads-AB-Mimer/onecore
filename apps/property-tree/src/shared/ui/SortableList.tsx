@@ -1,9 +1,12 @@
 import {
+  type Announcements,
   closestCenter,
   DndContext,
   type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
+  type ScreenReaderInstructions,
+  type UniqueIdentifier,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -17,6 +20,12 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 
 import { cn } from '@/shared/lib/utils'
+
+const screenReaderInstructions: ScreenReaderInstructions = {
+  draggable:
+    'Tryck mellanslag för att plocka upp objektet. Flytta med piltangenterna, ' +
+    'tryck mellanslag igen för att släppa och Escape för att avbryta.',
+}
 
 export interface SortableHandleProps {
   /** Spread onto the element that should start a drag. */
@@ -55,6 +64,22 @@ export function SortableList<T>({
   )
   const ids = items.map(getId)
 
+  const position = (id: UniqueIdentifier) => ids.indexOf(String(id)) + 1
+  const announcements: Announcements = {
+    onDragStart: ({ active }) =>
+      `Plockade upp objekt ${position(active.id)} av ${ids.length}.`,
+    onDragOver: ({ over }) =>
+      over
+        ? `Objektet är nu på plats ${position(over.id)} av ${ids.length}.`
+        : 'Objektet är utanför listan.',
+    onDragEnd: ({ over }) =>
+      over
+        ? `Objektet släpptes på plats ${position(over.id)} av ${ids.length}.`
+        : 'Objektet släpptes utanför listan och flyttades inte.',
+    onDragCancel: ({ active }) =>
+      `Flytten avbröts. Objektet är kvar på plats ${position(active.id)}.`,
+  }
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -66,6 +91,7 @@ export function SortableList<T>({
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
+      accessibility={{ announcements, screenReaderInstructions }}
     >
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         <ol className={cn('space-y-3', className)}>

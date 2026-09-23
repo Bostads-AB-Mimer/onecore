@@ -27,7 +27,7 @@ export function GuideEditorPage() {
   const { slug } = useParams<{ slug?: string }>()
   const canEdit = useHasRole(GUIDES_ADMIN_ROLE)
   const userState = useUser()
-  const { data, isLoading, isError } = useGuide(slug)
+  const { data, isLoading } = useGuide(slug)
 
   const authorName = userState.tag === 'success' ? userState.user.name : 'Okänd'
   const isNew = slug === undefined
@@ -56,7 +56,9 @@ export function GuideEditorPage() {
     if (isLoading) {
       return <Skeleton className="h-64" />
     }
-    if (isError || !data || isUnpublishedGuide(data)) {
+    // A failed background refetch keeps the editor mounted on the data we
+    // already have; only a guide we never loaded is "not found".
+    if (!data || isUnpublishedGuide(data)) {
       return (
         <EmptyState
           icon={BookX}

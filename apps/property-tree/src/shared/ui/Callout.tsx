@@ -1,11 +1,10 @@
+import type { guides } from '@onecore/types'
 import { AlertTriangle, Info, Lightbulb, type LucideIcon } from 'lucide-react'
 
 import { cn } from '@/shared/lib/utils'
 
-export type CalloutType = 'tip' | 'note' | 'warning'
-
 const CALLOUT_STYLES: Record<
-  CalloutType,
+  guides.CalloutType,
   { label: string; icon: LucideIcon; className: string }
 > = {
   tip: {
@@ -26,7 +25,7 @@ const CALLOUT_STYLES: Record<
 }
 
 interface CalloutProps {
-  type: CalloutType
+  type: guides.CalloutType
   children: React.ReactNode
   className?: string
 }

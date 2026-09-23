@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import { ImagePlus } from 'lucide-react'
 
 import { cn } from '@/shared/lib/utils'
@@ -11,6 +11,8 @@ interface ImageDropzoneProps {
   disabled?: boolean
   /** Explains a disabled dropzone, e.g. "Spara guiden först". */
   disabledReason?: string
+  /** Extra line under the size limit, e.g. when uploads take effect. */
+  hint?: string
   multiple?: boolean
   className?: string
 }
@@ -26,11 +28,11 @@ export function ImageDropzone({
   maxSizeLabel,
   disabled = false,
   disabledReason,
+  hint,
   multiple = true,
   className,
 }: ImageDropzoneProps) {
   const inputId = useId()
-  const inputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -88,10 +90,10 @@ export function ImageDropzone({
             <span className="text-xs">
               PNG, JPG eller WEBP, max {maxSizeLabel}
             </span>
+            {hint && <span className="text-xs">{hint}</span>}
           </>
         )}
         <input
-          ref={inputRef}
           id={inputId}
           type="file"
           accept={acceptedTypes.join(',')}

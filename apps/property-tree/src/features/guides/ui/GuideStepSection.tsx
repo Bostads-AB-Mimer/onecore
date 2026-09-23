@@ -83,10 +83,12 @@ export function GuideStepSection({
           {images.map((image, index) => (
             <li key={image.id}>
               <figure>
+                {/* The container reserves height so a lazily loaded image
+                    cannot shift the page after a hash link scrolled here. */}
                 <button
                   type="button"
                   onClick={() => setLightboxIndex(index)}
-                  className="block w-full overflow-hidden rounded-md border bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="block min-h-[12rem] w-full overflow-hidden rounded-md border bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label={`Förstora bild: ${image.altText || image.filename}`}
                 >
                   <img

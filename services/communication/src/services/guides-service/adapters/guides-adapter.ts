@@ -3,8 +3,14 @@ import { Knex } from 'knex'
 import { guides } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
-import { SlugTakenError } from '../errors'
+import {
+  ImageNotInStepError,
+  isGuideDomainError,
+  SlugTakenError,
+  StepBelongsToOtherGuideError,
+} from '../errors'
 import { findOrCreateCategory } from './categories-adapter'
+import { isUniqueViolationOn } from './db-errors'
 import {
   GuideCategoryRow,
   GuideRow,
@@ -161,6 +167,87 @@ const stepValues = (step: guides.StepInput, sortOrder: number, now: Date) => ({
   updatedAt: now,
 })
 
+// Unique indexes created by the guide migration that guard slug uniqueness.
+const SLUG_UNIQUE_INDEXES = ['uq_guide_slug', 'uq_guide_slug_history_slug']
+
+/**
+ * Two saves can both pass the isSlugTaken check before either writes, so the
+ * unique index is the real guard. Translate its violation into the same
+ * domain error instead of letting it surface as a 500.
+ */
+async function guardSlugConflict(
+  slug: string,
+  write: () => Promise<unknown>
+): Promise<void> {
+  try {
+    await write()
+  } catch (err) {
+    // Only the slug indexes mean the slug is taken; any other unique
+    // violation is a different bug and must keep its own error.
+    if (isUniqueViolationOn(err, SLUG_UNIQUE_INDEXES))
+      throw new SlugTakenError(slug)
+    throw err
+  }
+}
+
+/**
+ * Step ids come from the client, so a save can name a step that is already
+ * owned by another guide. Inserting it would break on the primary key and
+ * updating it would move another guide's step, so reject it up front.
+ * `guideId` is the guide being written, or null when it does not exist yet.
+ */
+async function assertStepsAreNotOwnedByAnotherGuide(
+  steps: guides.StepInput[],
+  guideId: string | null,
+  trx: Knex
+): Promise<void> {
+  if (steps.length === 0) return
+
+  const foreign = await trx<GuideStepRow>('guide_step')
+    .whereIn(
+      'id',
+      steps.map((step) => step.id)
+    )
+    .modify((qb) => {
+      if (guideId) qb.whereNot('guideId', guideId)
+    })
+    .first()
+
+  if (foreign) throw new StepBelongsToOtherGuideError(normalizeId(foreign.id))
+}
+
+/**
+ * Check every referenced image before anything is mutated. Steps are handled
+ * in order, so an image moved from one step to another would otherwise be
+ * deleted as missing from its old step and then be unknown on its new one —
+ * silently dropping the image and its file.
+ */
+async function assertImagesBelongToTheirSteps(
+  guideId: string,
+  steps: guides.StepInput[],
+  trx: Knex
+): Promise<void> {
+  if (steps.every((step) => step.images.length === 0)) return
+
+  const rows = await trx<GuideStepImageRow>('guide_step_image as i')
+    .join('guide_step as s', 's.id', 'i.stepId')
+    .where('s.guideId', guideId)
+    .select('i.id', 'i.stepId')
+
+  const stepIdByImageId = new Map(
+    rows.map((row) => [normalizeId(row.id), normalizeId(row.stepId)])
+  )
+
+  for (const step of steps) {
+    for (const image of step.images) {
+      const imageId = normalizeId(image.id)
+      if (stepIdByImageId.get(imageId) !== normalizeId(step.id)) {
+        throw new ImageNotInStepError(imageId, normalizeId(step.id))
+      }
+    }
+  }
+}
+
 export async function createGuide(
   input: guides.ServiceGuideWrite,
   db: Knex
@@ -170,22 +257,25 @@ export async function createGuide(
       if (await isSlugTaken(input.slug, null, trx)) {
         throw new SlugTakenError(input.slug)
       }
+      await assertStepsAreNotOwnedByAnotherGuide(input.steps, null, trx)
 
       const category = await findOrCreateCategory(input.category, trx)
       const id = randomUUID()
       const now = new Date()
 
-      await trx('guide').insert({
-        id,
-        slug: input.slug,
-        title: input.title,
-        description: input.description,
-        categoryId: category.id,
-        status: input.status,
-        publishedAt: input.status === 'published' ? now : null,
-        createdBy: input.author,
-        updatedBy: input.author,
-      })
+      await guardSlugConflict(input.slug, () =>
+        trx('guide').insert({
+          id,
+          slug: input.slug,
+          title: input.title,
+          description: input.description,
+          categoryId: category.id,
+          status: input.status,
+          publishedAt: input.status === 'published' ? now : null,
+          createdBy: input.author,
+          updatedBy: input.author,
+        })
+      )
 
       // Images cannot exist yet: they are uploaded against a saved step.
       for (const [index, step] of input.steps.entries()) {
@@ -201,7 +291,7 @@ export async function createGuide(
       return created
     })
   } catch (err) {
-    if (!(err instanceof SlugTakenError)) {
+    if (!isGuideDomainError(err)) {
       logger.error({ err }, 'guidesAdapter.createGuide')
     }
     throw err
@@ -233,6 +323,11 @@ export async function updateGuide(
       const removedStorageKeys: string[] = []
       const now = new Date()
 
+      // Everything is validated before the first mutation so a rejected save
+      // cannot leave the guide half-written.
+      await assertStepsAreNotOwnedByAnotherGuide(input.steps, id, trx)
+      await assertImagesBelongToTheirSteps(id, input.steps, trx)
+
       if (input.slug !== existing.slug) {
         if (await isSlugTaken(input.slug, id, trx)) {
           throw new SlugTakenError(input.slug)
@@ -242,27 +337,33 @@ export async function updateGuide(
         await trx('guide_slug_history')
           .where({ guideId: id, slug: input.slug })
           .delete()
-        await trx('guide_slug_history').insert({
-          guideId: id,
-          slug: existing.slug,
-        })
+        await guardSlugConflict(input.slug, () =>
+          trx('guide_slug_history').insert({
+            guideId: id,
+            slug: existing.slug,
+          })
+        )
       }
 
       const category = await findOrCreateCategory(input.category, trx)
 
-      await trx('guide')
-        .where('id', id)
-        .update({
-          slug: input.slug,
-          title: input.title,
-          description: input.description,
-          categoryId: category.id,
-          status: input.status,
-          publishedAt:
-            input.status === 'published' ? (existing.publishedAt ?? now) : null,
-          updatedBy: input.author,
-          updatedAt: now,
-        })
+      await guardSlugConflict(input.slug, () =>
+        trx('guide')
+          .where('id', id)
+          .update({
+            slug: input.slug,
+            title: input.title,
+            description: input.description,
+            categoryId: category.id,
+            status: input.status,
+            publishedAt:
+              input.status === 'published'
+                ? (existing.publishedAt ?? now)
+                : null,
+            updatedBy: input.author,
+            updatedAt: now,
+          })
+      )
 
       const existingSteps = await trx<GuideStepRow>('guide_step').where(
         'guideId',
@@ -303,9 +404,6 @@ export async function updateGuide(
         const existingImages = await trx<GuideStepImageRow>(
           'guide_step_image'
         ).where('stepId', step.id)
-        const existingImageIds = new Set(
-          existingImages.map((image) => normalizeId(image.id))
-        )
         const inputImageIds = new Set(
           step.images.map((image) => normalizeId(image.id))
         )
@@ -328,15 +426,8 @@ export async function updateGuide(
         const orderedImages = [...step.images].sort(
           (a, b) => a.sortOrder - b.sortOrder
         )
+        // Every id was verified to exist on this step before any mutation.
         for (const [imageIndex, image] of orderedImages.entries()) {
-          if (!existingImageIds.has(normalizeId(image.id))) {
-            // Images are created by the upload endpoint, never by a save.
-            logger.warn(
-              { guideId: id, stepId: step.id, imageId: image.id },
-              'guidesAdapter.updateGuide: ignoring unknown image id'
-            )
-            continue
-          }
           await trx('guide_step_image').where('id', image.id).update({
             sortOrder: imageIndex,
             altText: image.altText,
@@ -350,7 +441,7 @@ export async function updateGuide(
       return { guide, removedStorageKeys }
     })
   } catch (err) {
-    if (!(err instanceof SlugTakenError)) {
+    if (!isGuideDomainError(err)) {
       logger.error({ err }, 'guidesAdapter.updateGuide')
     }
     throw err

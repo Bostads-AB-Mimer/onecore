@@ -1,13 +1,17 @@
+import type { guides } from '@onecore/types'
+
 import type {
   CreateGuideRequest,
+  GuideCategory,
   GuideStepImageWithUrl,
   GuideWithUrls,
 } from '@/entities/guide'
 
 import { moveItem } from '@/shared/lib/reorder'
-import { isValidSlug, slugify } from '@/shared/lib/slugify'
+import { isReservedSlug, isValidSlug, slugify } from '@/shared/lib/slugify'
 
-export type CalloutType = 'tip' | 'note' | 'warning'
+/** Re-exported from the shared schema so the editor and the API cannot drift. */
+export type CalloutType = guides.CalloutType
 export type GuideStatus = 'draft' | 'published'
 
 export interface EditorImage {
@@ -57,7 +61,6 @@ export type EditorAction =
   | { type: 'set-description'; description: string }
   | { type: 'set-slug'; slug: string }
   | { type: 'set-category'; category: EditorCategory | null }
-  | { type: 'set-status'; status: GuideStatus }
   | { type: 'add-step'; id: string }
   | { type: 'remove-step'; stepId: string }
   | { type: 'move-step'; from: number; to: number }
@@ -124,15 +127,41 @@ export const newStep = (id: string): EditorStep => ({
   saved: false,
 })
 
+/**
+ * Apply `update` to one step. Unknown steps leave the state untouched so a
+ * stale action (e.g. an upload finishing after the step was removed) never
+ * marks the guide dirty.
+ */
 const updateStep = (
   state: EditorState,
   stepId: string,
   update: (step: EditorStep) => EditorStep
-): EditorState => ({
-  ...state,
-  dirty: true,
-  steps: state.steps.map((step) => (step.id === stepId ? update(step) : step)),
-})
+): EditorState => {
+  const step = state.steps.find((candidate) => candidate.id === stepId)
+  if (!step) return state
+  const updated = update(step)
+  if (updated === step) return state
+  return {
+    ...state,
+    dirty: true,
+    steps: state.steps.map((candidate) =>
+      candidate.id === stepId ? updated : candidate
+    ),
+  }
+}
+
+/** Same guard as updateStep, for actions that target one image in a step. */
+const updateImage = (
+  state: EditorState,
+  stepId: string,
+  imageId: string,
+  update: (images: EditorImage[]) => EditorImage[]
+): EditorState =>
+  updateStep(state, stepId, (step) =>
+    step.images.some((image) => image.id === imageId)
+      ? { ...step, images: update(step.images) }
+      : step
+  )
 
 export function editorReducer(
   state: EditorState,
@@ -155,8 +184,6 @@ export function editorReducer(
       return { ...state, dirty: true, slug: action.slug, slugTouched: true }
     case 'set-category':
       return { ...state, dirty: true, category: action.category }
-    case 'set-status':
-      return { ...state, dirty: true, status: action.status }
     case 'add-step':
       return {
         ...state,
@@ -169,12 +196,11 @@ export function editorReducer(
         dirty: true,
         steps: state.steps.filter((step) => step.id !== action.stepId),
       }
-    case 'move-step':
-      return {
-        ...state,
-        dirty: true,
-        steps: moveItem(state.steps, action.from, action.to),
-      }
+    case 'move-step': {
+      const steps = moveItem(state.steps, action.from, action.to)
+      if (steps === state.steps) return state
+      return { ...state, dirty: true, steps }
+    }
     case 'update-step':
       return updateStep(state, action.stepId, (step) => ({
         ...step,
@@ -186,22 +212,20 @@ export function editorReducer(
         images: [...step.images, fromImage(action.image)],
       }))
     case 'remove-image':
-      return updateStep(state, action.stepId, (step) => ({
-        ...step,
-        images: step.images.filter((image) => image.id !== action.imageId),
-      }))
+      return updateImage(state, action.stepId, action.imageId, (images) =>
+        images.filter((image) => image.id !== action.imageId)
+      )
     case 'move-image':
-      return updateStep(state, action.stepId, (step) => ({
-        ...step,
-        images: moveItem(step.images, action.from, action.to),
-      }))
+      return updateStep(state, action.stepId, (step) => {
+        const images = moveItem(step.images, action.from, action.to)
+        return images === step.images ? step : { ...step, images }
+      })
     case 'update-image':
-      return updateStep(state, action.stepId, (step) => ({
-        ...step,
-        images: step.images.map((image) =>
+      return updateImage(state, action.stepId, action.imageId, (images) =>
+        images.map((image) =>
           image.id === action.imageId ? { ...image, ...action.patch } : image
-        ),
-      }))
+        )
+      )
   }
 }
 
@@ -212,7 +236,9 @@ export function editorReducer(
 export function validate(state: EditorState, status: GuideStatus): string[] {
   const problems: string[] = []
   if (state.title.trim().length === 0) problems.push('Titel krävs.')
-  if (!isValidSlug(state.slug)) {
+  if (isReservedSlug(state.slug)) {
+    problems.push('Adressen är reserverad')
+  } else if (!isValidSlug(state.slug)) {
     problems.push(
       'Slug får bara innehålla små bokstäver a–z, siffror och bindestreck.'
     )
@@ -278,11 +304,23 @@ export function toRequest(
   }
 }
 
-/** A GuideWithUrls built from unsaved state, for the preview dialog. */
-export function toPreview(state: EditorState, author: string): GuideWithUrls {
+/**
+ * A GuideWithUrls built from unsaved state, for the preview dialog. The
+ * category list resolves the name of an already existing category, which the
+ * state only holds by id.
+ */
+export function toPreview(
+  state: EditorState,
+  author: string,
+  categories: readonly GuideCategory[] = []
+): GuideWithUrls {
   const now = new Date().toISOString()
-  const categoryName =
-    state.category && 'name' in state.category ? state.category.name : ''
+  const category = state.category
+  const categoryName = !category
+    ? ''
+    : 'name' in category
+      ? category.name
+      : (categories.find((item) => item.id === category.id)?.name ?? '')
   return {
     id: state.guideId ?? 'preview',
     slug: state.slug || 'preview',

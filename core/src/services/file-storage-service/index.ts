@@ -7,6 +7,13 @@ import { registerSchema } from '../../utils/openapi'
 import { fileStorageSchemas } from '@onecore/types'
 
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
+import { GUIDE_STORAGE_PREFIX } from '../guides-service/helpers'
+
+// Guide images are created and removed through /guides, which also keeps the
+// metadata rows in the communication service in sync. Reaching them through the
+// generic file routes would orphan those rows, so they are refused here.
+const isGuideKey = (key: string) => key.startsWith(GUIDE_STORAGE_PREFIX)
+const GUIDE_KEY_REFUSAL = { error: 'guide-files-managed-via-guides-api' }
 
 /**
  * @swagger
@@ -73,6 +80,8 @@ export const routes = (router: KoaRouter) => {
    *                   $ref: '#/components/schemas/ListFilesResponse'
    *       400:
    *         description: Invalid query parameters
+   *       403:
+   *         description: Guide image prefix — use the /guides routes. Guide images are also omitted from every other listing.
    *       500:
    *         description: Server error
    *     security:
@@ -95,6 +104,12 @@ export const routes = (router: KoaRouter) => {
     }
 
     const { prefix } = queryResult.data
+    if (prefix && isGuideKey(prefix)) {
+      ctx.status = 403
+      ctx.body = GUIDE_KEY_REFUSAL
+      return
+    }
+
     const result = await fileStorageAdapter.listFiles(prefix)
 
     if (!result.ok) {
@@ -103,8 +118,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    // A prefix that does not start with guide/ can still match guide images
+    // (no prefix at all, or a partial one such as "g"), so they are filtered
+    // out of every listing.
+    const files = result.data.filter((file) => !isGuideKey(file.name))
+
     ctx.status = 200
-    ctx.body = makeSuccessResponseBody({ files: result.data }, metadata)
+    ctx.body = makeSuccessResponseBody({ files }, metadata)
   })
 
   /**
@@ -304,6 +324,8 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       204:
    *         description: File deleted successfully
+   *       403:
+   *         description: Guide image — use the /guides routes
    *       404:
    *         description: File not found
    *       500:
@@ -313,6 +335,12 @@ export const routes = (router: KoaRouter) => {
    */
   router.delete('(.*)/files/:fileName', async (ctx) => {
     const { fileName } = ctx.params
+
+    if (isGuideKey(fileName)) {
+      ctx.status = 403
+      ctx.body = GUIDE_KEY_REFUSAL
+      return
+    }
 
     const result = await fileStorageAdapter.deleteFile(fileName)
 

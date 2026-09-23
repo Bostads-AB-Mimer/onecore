@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { BookX } from 'lucide-react'
 
 import { GuideView, UnpublishedGuideNotice } from '@/features/guides'
 
-import { useGuide } from '@/entities/guide'
+import { guideQueryKeys, useGuide } from '@/entities/guide'
 import { GUIDES_ADMIN_ROLE, useHasRole } from '@/entities/user'
 
 import { isUnpublishedGuide } from '@/services/api/core'
@@ -27,6 +28,7 @@ export function GuidePage() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const location = useLocation()
+  const queryClient = useQueryClient()
   const canEdit = useHasRole(GUIDES_ADMIN_ROLE)
   const { data, isLoading, isError } = useGuide(slug)
 
@@ -34,8 +36,20 @@ export function GuidePage() {
   // links stay canonical.
   useEffect(() => {
     if (!data || isUnpublishedGuide(data) || !data.redirectedFrom) return
+    // Seed the cache under the canonical slug so the redirect does not
+    // trigger a second fetch, and drop the marker so it cannot loop.
+    queryClient.setQueryData(guideQueryKeys.bySlug(data.slug), {
+      ...data,
+      redirectedFrom: undefined,
+    })
     navigate(`${paths.guide(data.slug)}${location.hash}`, { replace: true })
-  }, [data, location.hash, navigate])
+  }, [data, location.hash, navigate, queryClient])
+
+  // Route handles cover static titles; a guide's title is only known here.
+  useEffect(() => {
+    if (!data) return
+    document.title = `${data.title} | ONECore`
+  }, [data])
 
   const title = data?.title ?? 'Guide'
 

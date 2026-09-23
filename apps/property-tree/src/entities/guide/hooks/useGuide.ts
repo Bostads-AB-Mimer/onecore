@@ -15,7 +15,6 @@ export function useGuide(slug: string | undefined) {
     queryFn: () => guideService.getGuideBySlug(slug ?? ''),
     enabled: Boolean(slug),
     staleTime: GUIDE_STALE_TIME_MS,
-    refetchOnWindowFocus: true,
   })
 }
 

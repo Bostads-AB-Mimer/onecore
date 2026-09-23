@@ -16,6 +16,13 @@ export const GUIDE_HTML_ALLOWED_TAGS = [
   'br',
 ]
 
+// Browsers normalise backslashes to forward slashes, so a href starting with
+// a backslash navigates like the protocol-relative "//evil.com" that
+// allowProtocolRelative rejects. sanitize-html does not recognise it as one,
+// so such hrefs are dropped below. Leading whitespace is ignored by browsers
+// too, hence the trim.
+const isBackslashHref = (href: string) => href.trimStart().startsWith('\\')
+
 const options: sanitizeHtml.IOptions = {
   allowedTags: GUIDE_HTML_ALLOWED_TAGS,
   allowedAttributes: { a: ['href', 'target', 'rel'] },
@@ -23,13 +30,16 @@ const options: sanitizeHtml.IOptions = {
   // Relative links to other ONECore pages are allowed.
   allowProtocolRelative: false,
   transformTags: {
-    a: (tagName, attribs) => ({
-      tagName,
-      attribs: {
+    a: (tagName, attribs) => {
+      const transformed: sanitizeHtml.Attributes = {
         ...attribs,
         rel: 'noopener noreferrer',
-      },
-    }),
+      }
+      if (transformed.href && isBackslashHref(transformed.href)) {
+        delete transformed.href
+      }
+      return { tagName, attribs: transformed }
+    },
   },
 }
 

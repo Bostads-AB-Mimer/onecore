@@ -2,7 +2,15 @@ import { guides } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 import { AdapterResult } from '../types'
-import { client, CommonErr, fail, mapFetchError, ok } from './helpers'
+import {
+  client,
+  CommonErr,
+  fail,
+  mapFetchError,
+  ok,
+  ProxiedAdapterResult,
+  upstreamError,
+} from './helpers'
 
 // Responses are parsed through the shared zod schemas so date strings become
 // Date objects and the adapter's return types match @onecore/types.
@@ -76,12 +84,13 @@ export const getGuideById = async (
 
 export const createGuide = async (
   body: guides.ServiceGuideWrite
-): Promise<AdapterResult<guides.Guide, CommonErr>> => {
+): Promise<ProxiedAdapterResult<guides.Guide, CommonErr>> => {
   try {
     const { data, error, response } = await client().POST('/guides', {
       body,
     })
-    if (error || !response.ok) return fail(mapFetchError(response))
+    if (error || !response.ok)
+      return fail(mapFetchError(response), upstreamError(error))
     return ok(guides.GuideSchema.parse(data))
   } catch (err) {
     logger.error({ err }, 'communication-adapter: POST /guides failed')
@@ -92,13 +101,14 @@ export const createGuide = async (
 export const updateGuide = async (
   id: string,
   body: guides.ServiceGuideWrite
-): Promise<AdapterResult<guides.UpdateGuideResponse, CommonErr>> => {
+): Promise<ProxiedAdapterResult<guides.UpdateGuideResponse, CommonErr>> => {
   try {
     const { data, error, response } = await client().PUT('/guides/{id}', {
       params: { path: { id } },
       body,
     })
-    if (error || !response.ok) return fail(mapFetchError(response))
+    if (error || !response.ok)
+      return fail(mapFetchError(response), upstreamError(error))
     return ok(guides.UpdateGuideResponseSchema.parse(data))
   } catch (err) {
     logger.error({ err, id }, 'communication-adapter: PUT /guides/{id} failed')
@@ -128,13 +138,14 @@ export const createStepImage = async (
   guideId: string,
   stepId: string,
   body: guides.CreateStepImageRequest
-): Promise<AdapterResult<guides.GuideStepImage, CommonErr>> => {
+): Promise<ProxiedAdapterResult<guides.GuideStepImage, CommonErr>> => {
   try {
     const { data, error, response } = await client().POST(
       '/guides/{id}/steps/{stepId}/images',
       { params: { path: { id: guideId, stepId } }, body }
     )
-    if (error || !response.ok) return fail(mapFetchError(response))
+    if (error || !response.ok)
+      return fail(mapFetchError(response), upstreamError(error))
     return ok(guides.GuideStepImageSchema.parse(data))
   } catch (err) {
     logger.error(

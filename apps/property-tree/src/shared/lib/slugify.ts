@@ -1,3 +1,5 @@
+import { guides } from '@onecore/types'
+
 // Swedish letters map to their base letter rather than being dropped, so
 // "Uppsägning" becomes "uppsagning" instead of "uppsgning".
 const SWEDISH_REPLACEMENTS: Record<string, string> = {
@@ -26,5 +28,11 @@ export function slugify(text: string): string {
 
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
+export const isReservedSlug = (slug: string) =>
+  (guides.RESERVED_SLUGS as readonly string[]).includes(slug)
+
 export const isValidSlug = (slug: string) =>
-  slug.length > 0 && slug.length <= 200 && SLUG_PATTERN.test(slug)
+  slug.length > 0 &&
+  slug.length <= 200 &&
+  SLUG_PATTERN.test(slug) &&
+  !isReservedSlug(slug)

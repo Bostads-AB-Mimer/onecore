@@ -9,7 +9,12 @@ import { guides } from '@onecore/types'
 import * as categoriesAdapter from '../adapters/categories-adapter'
 import * as guidesAdapter from '../adapters/guides-adapter'
 import * as imagesAdapter from '../adapters/images-adapter'
-import { SlugTakenError } from '../errors'
+import {
+  CategoryNotFoundError,
+  ImageNotInStepError,
+  SlugTakenError,
+  StepBelongsToOtherGuideError,
+} from '../errors'
 import { routes } from '../index'
 import * as factory from './factories'
 
@@ -91,6 +96,25 @@ describe('GET /guides', () => {
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('Validation failed')
   })
+
+  it('rejects a repeated includeDrafts parameter', async () => {
+    const res = await request(app.callback()).get(
+      '/guides?includeDrafts=true&includeDrafts=false'
+    )
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Validation failed')
+  })
+
+  it('hides the underlying error on an unexpected failure', async () => {
+    jest
+      .spyOn(guidesAdapter, 'listGuides')
+      .mockRejectedValue(new Error('SELECT * FROM guide -- connection lost'))
+
+    const res = await request(app.callback()).get('/guides')
+
+    expect(res.status).toBe(500)
+    expect(res.body).toEqual({ error: 'internal-server-error' })
+  })
 })
 
 describe('GET /guides/categories', () => {
@@ -125,6 +149,43 @@ describe('GET /guides/by-slug/:slug', () => {
 
     expect(res.status).toBe(404)
   })
+
+  it('returns 404 without hitting the database on a malformed slug', async () => {
+    const spy = jest.spyOn(guidesAdapter, 'getGuideBySlug')
+
+    const res = await request(app.callback()).get('/guides/by-slug/Not_A_Slug')
+
+    expect(res.status).toBe(404)
+    expect(res.body).toEqual({ error: 'not-found' })
+    expect(spy).not.toHaveBeenCalled()
+  })
+})
+
+// An id that cannot name a row is answered as a missing resource, and the
+// adapter is never called with it.
+describe('path parameter validation', () => {
+  it.each([
+    ['get', '/guides/not-a-uuid'],
+    ['put', '/guides/not-a-uuid'],
+    ['delete', '/guides/not-a-uuid'],
+    ['post', `/guides/${randomUUID()}/steps/not-a-uuid/images`],
+    ['post', '/guides/not-a-uuid/steps/not-a-uuid/images'],
+    ['delete', `/guides/${randomUUID()}/images/not-a-uuid`],
+  ] as const)('answers 404 for %s %s', async (method, path) => {
+    const spies = [
+      jest.spyOn(guidesAdapter, 'getGuideById'),
+      jest.spyOn(guidesAdapter, 'updateGuide'),
+      jest.spyOn(guidesAdapter, 'deleteGuide'),
+      jest.spyOn(imagesAdapter, 'createStepImage'),
+      jest.spyOn(imagesAdapter, 'deleteStepImage'),
+    ]
+
+    const res = await request(app.callback())[method](path).send({})
+
+    expect(res.status).toBe(404)
+    expect(res.body).toEqual({ error: 'not-found' })
+    spies.forEach((spy) => expect(spy).not.toHaveBeenCalled())
+  })
 })
 
 describe('POST /guides', () => {
@@ -158,6 +219,72 @@ describe('POST /guides', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.issues[0].path).toEqual(['steps'])
+  })
+
+  it('returns 400 when the same step id appears twice', async () => {
+    const step = factory.step.build()
+    const res = await request(app.callback())
+      .post('/guides')
+      .send(factory.guideWrite.build({ steps: [step, { ...step }] }))
+
+    expect(res.status).toBe(400)
+    expect(res.body.issues).toContainEqual({
+      path: ['steps', 1, 'id'],
+      message: 'Step ids must be unique',
+    })
+  })
+
+  it('returns 400 when the same image id appears twice', async () => {
+    const image = {
+      id: randomUUID(),
+      sortOrder: 0,
+      altText: 'Alt',
+      caption: null,
+    }
+    const res = await request(app.callback())
+      .post('/guides')
+      .send(
+        factory.guideWrite.build({
+          steps: [
+            factory.step.build({ images: [image] }),
+            factory.step.build({ images: [image] }),
+          ],
+        })
+      )
+
+    expect(res.status).toBe(400)
+    expect(res.body.issues).toContainEqual({
+      path: ['steps', 1, 'images', 0, 'id'],
+      message: 'Image ids must be unique',
+    })
+  })
+
+  it('returns 400 when publishing an image without alt text', async () => {
+    const res = await request(app.callback())
+      .post('/guides')
+      .send(
+        factory.guideWrite.build({
+          status: 'published',
+          steps: [
+            factory.step.build({
+              images: [
+                {
+                  id: randomUUID(),
+                  sortOrder: 0,
+                  altText: '   ',
+                  caption: null,
+                },
+              ],
+            }),
+          ],
+        })
+      )
+
+    expect(res.status).toBe(400)
+    expect(res.body.issues).toContainEqual({
+      path: ['steps', 0, 'images', 0, 'altText'],
+      message: 'Alt text is required for published guides',
+    })
   })
 
   it('returns 409 when the slug is taken', async () => {
@@ -198,6 +325,30 @@ describe('PUT /guides/:id', () => {
 
     expect(res.status).toBe(404)
   })
+
+  it.each([
+    [409, 'slug-taken', new SlugTakenError('taken')],
+    [400, 'category-not-found', new CategoryNotFoundError(randomUUID())],
+    [
+      400,
+      'image-not-in-step',
+      new ImageNotInStepError(randomUUID(), randomUUID()),
+    ],
+    [
+      400,
+      'step-belongs-to-other-guide',
+      new StepBelongsToOtherGuideError(randomUUID()),
+    ],
+  ])('maps an adapter rejection to %s %s', async (status, error, rejection) => {
+    jest.spyOn(guidesAdapter, 'updateGuide').mockRejectedValue(rejection)
+
+    const res = await request(app.callback())
+      .put(`/guides/${guide.id}`)
+      .send(factory.guideWrite.build())
+
+    expect(res.status).toBe(status)
+    expect(res.body).toEqual({ error })
+  })
 })
 
 describe('DELETE /guides/:id', () => {
@@ -210,6 +361,14 @@ describe('DELETE /guides/:id', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.storageKeys).toEqual(['a', 'b'])
+  })
+
+  it('returns 404 for an unknown guide', async () => {
+    jest.spyOn(guidesAdapter, 'deleteGuide').mockResolvedValue(null)
+
+    const res = await request(app.callback()).delete(`/guides/${randomUUID()}`)
+
+    expect(res.status).toBe(404)
   })
 })
 

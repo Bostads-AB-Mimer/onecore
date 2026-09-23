@@ -8,6 +8,11 @@ export const CALLOUT_TYPE = ['tip', 'note', 'warning'] as const
 export const GuideStatusSchema = z.enum(GUIDE_STATUS)
 export const CalloutTypeSchema = z.enum(CALLOUT_TYPE)
 
+// Slugs that would collide with a static route under /guider, e.g. the
+// editor at /guider/ny. Kept here so the service, core and the frontend all
+// reject the same values.
+export const RESERVED_SLUGS = ['ny'] as const
+
 // URL-safe identifier: lowercase ascii letters, digits and single hyphens.
 export const SlugSchema = z
   .string()
@@ -16,6 +21,10 @@ export const SlugSchema = z
   .regex(
     /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
     'Slug may only contain lowercase letters, digits and single hyphens'
+  )
+  .refine(
+    (slug) => !(RESERVED_SLUGS as readonly string[]).includes(slug),
+    'reserved-slug'
   )
 
 // ---------------------------------------------------------------------------
@@ -118,7 +127,9 @@ export const StepImageInputSchema = z.object({
 export const StepInputSchema = z.object({
   id: z.string().uuid(),
   title: z.string().min(1).max(200),
-  body: z.string(),
+  // Sanitized HTML. Capped so a single step cannot be used to push an
+  // unbounded payload into the NVARCHAR(MAX) column.
+  body: z.string().max(50_000),
   calloutType: CalloutTypeSchema.nullable().optional(),
   calloutText: z.string().max(2000).nullable().optional(),
   images: z.array(StepImageInputSchema).default([]),
@@ -168,14 +179,51 @@ export const publishRules = (input: GuideInputBase, ctx: z.RefinementCtx) => {
   })
 }
 
-export const GuideInputSchema = GuideInputBaseSchema.superRefine(publishRules)
+/**
+ * Step and image ids are primary keys supplied by the client, so a duplicate
+ * inside one payload would either collide on insert or silently overwrite the
+ * first occurrence. Reject it up front instead.
+ */
+export const uniqueIdRules = (input: GuideInputBase, ctx: z.RefinementCtx) => {
+  const seenStepIds = new Set<string>()
+  const seenImageIds = new Set<string>()
+
+  input.steps.forEach((step, stepIndex) => {
+    const stepId = step.id.toLowerCase()
+    if (seenStepIds.has(stepId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['steps', stepIndex, 'id'],
+        message: 'Step ids must be unique',
+      })
+    }
+    seenStepIds.add(stepId)
+
+    step.images.forEach((image, imageIndex) => {
+      const imageId = image.id.toLowerCase()
+      if (seenImageIds.has(imageId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['steps', stepIndex, 'images', imageIndex, 'id'],
+          message: 'Image ids must be unique',
+        })
+      }
+      seenImageIds.add(imageId)
+    })
+  })
+}
+
+export const GuideInputSchema =
+  GuideInputBaseSchema.superRefine(publishRules).superRefine(uniqueIdRules)
 export const CreateGuideRequestSchema = GuideInputSchema
 export const UpdateGuideRequestSchema = GuideInputSchema
 
 // Service-level write payload: core adds the acting user's name.
 export const ServiceGuideWriteSchema = GuideInputBaseSchema.extend({
   author: z.string().min(1).max(200),
-}).superRefine(publishRules)
+})
+  .superRefine(publishRules)
+  .superRefine(uniqueIdRules)
 
 export const ListGuidesQuerySchema = z.object({
   // Query strings arrive as text, so accept both booleans and 'true'/'false'.

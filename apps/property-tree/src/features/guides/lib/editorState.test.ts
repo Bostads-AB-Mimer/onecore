@@ -1,9 +1,14 @@
-import type { GuideStepImageWithUrl, GuideWithUrls } from '@/entities/guide'
+import type {
+  GuideCategory,
+  GuideStepImageWithUrl,
+  GuideWithUrls,
+} from '@/entities/guide'
 
 import {
   editorReducer,
   emptyState,
   fromGuide,
+  toPreview,
   toRequest,
   validate,
 } from './editorState'
@@ -113,6 +118,62 @@ describe('editorReducer', () => {
     })
     expect(state.steps[0].images).toHaveLength(1)
   })
+
+  it('clears dirty and marks every step saved after a save', () => {
+    let state = editorReducer(emptyState(), {
+      type: 'set-title',
+      title: 'Min guide',
+    })
+    state = editorReducer(state, { type: 'add-step', id: 'new-step' })
+    expect(state.dirty).toBe(true)
+    expect(state.steps[0].saved).toBe(false)
+
+    state = editorReducer(state, { type: 'saved', guide })
+    expect(state.dirty).toBe(false)
+    expect(state.steps.every((step) => step.saved)).toBe(true)
+  })
+
+  it('ignores a move-step outside the list', () => {
+    const state = fromGuide(guide)
+    expect(editorReducer(state, { type: 'move-step', from: 0, to: 3 })).toBe(
+      state
+    )
+    expect(editorReducer(state, { type: 'move-step', from: -1, to: 0 })).toBe(
+      state
+    )
+  })
+
+  it('ignores image actions on an unknown step or image', () => {
+    const state = fromGuide(guide)
+    const unchanged = [
+      editorReducer(state, {
+        type: 'add-image',
+        stepId: 'nope',
+        image: { ...image, id: 'img-2' },
+      }),
+      editorReducer(state, {
+        type: 'update-image',
+        stepId: 's1',
+        imageId: 'nope',
+        patch: { altText: 'x' },
+      }),
+      editorReducer(state, {
+        type: 'remove-image',
+        stepId: 's1',
+        imageId: 'nope',
+      }),
+      editorReducer(state, {
+        type: 'move-image',
+        stepId: 's1',
+        from: 0,
+        to: 5,
+      }),
+    ]
+    unchanged.forEach((next) => {
+      expect(next).toBe(state)
+      expect(next.dirty).toBe(false)
+    })
+  })
 })
 
 describe('validate', () => {
@@ -129,6 +190,14 @@ describe('validate', () => {
     ])
   })
 
+  it('rejects a slug that collides with the /guider/ny route', () => {
+    const state = editorReducer(fromGuide(guide), {
+      type: 'set-slug',
+      slug: 'ny',
+    })
+    expect(validate(state, 'draft')).toEqual(['Adressen är reserverad'])
+  })
+
   it('requires steps and alt texts only when publishing', () => {
     const state = fromGuide(guide)
     expect(validate(state, 'draft')).toEqual([])
@@ -137,6 +206,13 @@ describe('validate', () => {
     ])
     expect(validate({ ...state, steps: [] }, 'published')).toEqual([
       'En publicerad guide behöver minst ett steg.',
+    ])
+  })
+
+  it('requires a name for a new category', () => {
+    const state = { ...fromGuide(guide), category: { name: '  ' } }
+    expect(validate(state, 'draft')).toEqual([
+      'Ange ett namn på den nya kategorin.',
     ])
   })
 })
@@ -168,5 +244,49 @@ describe('toRequest', () => {
       patch: { calloutType: null },
     })
     expect(toRequest(state, 'draft').steps[0].calloutText).toBeNull()
+  })
+
+  it('drops blank callout text even when a callout type is set', () => {
+    let state = fromGuide(guide)
+    state = editorReducer(state, {
+      type: 'update-step',
+      stepId: 's1',
+      patch: { calloutText: '   ' },
+    })
+    const step = toRequest(state, 'draft').steps[0]
+    expect(step.calloutType).toBe('tip')
+    expect(step.calloutText).toBeNull()
+  })
+})
+
+describe('toPreview', () => {
+  const categories: GuideCategory[] = [
+    { id: 'c1', name: 'Tenfast', createdAt: '', updatedAt: '' },
+  ]
+
+  it('resolves the name of an existing category', () => {
+    const preview = toPreview(fromGuide(guide), 'Anna', categories)
+    expect(preview.category).toMatchObject({ id: 'c1', name: 'Tenfast' })
+  })
+
+  it('uses the typed name for a new category and leaves it empty when unknown', () => {
+    const state = fromGuide(guide)
+    expect(
+      toPreview({ ...state, category: { name: 'Nytt' } }, 'Anna', categories)
+        .category.name
+    ).toBe('Nytt')
+    expect(toPreview(state, 'Anna', []).category.name).toBe('')
+  })
+
+  it('falls back to placeholder titles for empty fields', () => {
+    let state = editorReducer(emptyState(), { type: 'add-step', id: 'a' })
+    state = editorReducer(state, { type: 'add-step', id: 'b' })
+    const preview = toPreview(state, 'Anna')
+    expect(preview.title).toBe('Namnlös guide')
+    expect(preview.slug).toBe('preview')
+    expect(preview.steps.map((step) => step.title)).toEqual([
+      'Steg 1',
+      'Steg 2',
+    ])
   })
 })

@@ -47,6 +47,10 @@ interface StepEditorProps {
   total: number
   handle: SortableHandleProps
   dispatch: React.Dispatch<EditorAction>
+  /** Reports how many uploads the step currently has in flight. */
+  onPendingChange: (stepId: string, count: number) => void
+  /** True while the guide is being saved; the form is read-only then. */
+  disabled: boolean
 }
 
 export function StepEditor({
@@ -56,6 +60,8 @@ export function StepEditor({
   total,
   handle,
   dispatch,
+  onPendingChange,
+  disabled,
 }: StepEditorProps) {
   const [confirmRemove, setConfirmRemove] = useState(false)
   const stepNumber = index + 1
@@ -131,12 +137,18 @@ export function StepEditor({
             id={bodyId}
             value={step.body}
             onChange={(body) => update({ body })}
+            disabled={disabled}
           />
         </div>
 
         <div className="space-y-2">
           <Label>Bilder</Label>
-          <StepImageEditor guideId={guideId} step={step} dispatch={dispatch} />
+          <StepImageEditor
+            guideId={guideId}
+            step={step}
+            dispatch={dispatch}
+            onPendingChange={onPendingChange}
+          />
         </div>
 
         <div className="grid gap-2 sm:grid-cols-[180px_1fr]">
@@ -188,9 +200,7 @@ export function StepEditor({
           <AlertDialogHeader>
             <AlertDialogTitle>Ta bort steg {stepNumber}?</AlertDialogTitle>
             <AlertDialogDescription>
-              {step.images.length > 0
-                ? `Steget och dess ${step.images.length} bild(er) tas bort när guiden sparas.`
-                : 'Steget tas bort när guiden sparas.'}
+              Steget tas bort när guiden sparas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

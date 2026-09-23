@@ -30,10 +30,34 @@ export function mapFetchError(response: { status: number }): CommonErr {
   return 'unknown'
 }
 
+/**
+ * Error body the communication service returns for 4xx/5xx responses: a stable
+ * kebab-case code plus zod issues when the request failed validation.
+ */
+export type UpstreamError = {
+  error: string
+  issues?: { path: (string | number)[]; message: string }[]
+}
+
+/** Adapter result that also carries the upstream error body, so core can proxy it. */
+export type ProxiedAdapterResult<T, E> =
+  { ok: true; data: T } | { ok: false; err: E; upstream?: UpstreamError }
+
 export function ok<T>(data: T): AdapterResult<T, never> {
   return { ok: true, data }
 }
 
-export function fail<E extends CommonErr>(err: E): AdapterResult<never, E> {
-  return { ok: false, err }
+export function fail<E extends CommonErr>(
+  err: E,
+  upstream?: UpstreamError
+): { ok: false; err: E; upstream?: UpstreamError } {
+  return { ok: false, err, upstream }
+}
+
+/** Narrow openapi-fetch's error value to the service's error body, if it is one. */
+export function upstreamError(error: unknown): UpstreamError | undefined {
+  if (typeof error !== 'object' || error === null) return undefined
+  const body = error as Partial<UpstreamError>
+  if (typeof body.error !== 'string') return undefined
+  return { error: body.error, issues: body.issues }
 }

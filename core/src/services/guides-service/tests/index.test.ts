@@ -119,6 +119,18 @@ describe('GET /guides', () => {
 
     expect(spy).toHaveBeenCalledWith({ includeDrafts: false })
   })
+
+  it('rejects an includeDrafts value that is not true or false', async () => {
+    const spy = jest.spyOn(communicationAdapter.guides, 'listGuides')
+
+    const res = await request(app.callback())
+      .get('/guides?includeDrafts=1')
+      .set(asAdmin)
+
+    expect(res.status).toBe(400)
+    expect(res.body.issues[0].path).toEqual(['includeDrafts'])
+    expect(spy).not.toHaveBeenCalled()
+  })
 })
 
 describe('GET /guides/by-slug/:slug', () => {
@@ -160,6 +172,38 @@ describe('GET /guides/by-slug/:slug', () => {
     expect(admin.body.content.steps).toHaveLength(1)
   })
 
+  it('keeps redirectedFrom when an old slug resolved', async () => {
+    jest
+      .spyOn(communicationAdapter.guides, 'getGuideBySlug')
+      .mockResolvedValue({
+        ok: true,
+        data: { ...guide, redirectedFrom: 'gammal-slug' },
+      })
+
+    const res = await request(app.callback())
+      .get('/guides/by-slug/gammal-slug')
+      .set(asReader)
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.redirectedFrom).toBe('gammal-slug')
+  })
+
+  it('returns an empty url when the file is missing in storage', async () => {
+    jest
+      .spyOn(communicationAdapter.guides, 'getGuideBySlug')
+      .mockResolvedValue({ ok: true, data: guide })
+    jest
+      .spyOn(fileStorageAdapter, 'getFileUrl')
+      .mockResolvedValue({ ok: false, err: 'not_found' })
+
+    const res = await request(app.callback())
+      .get('/guides/by-slug/registrera-uppsagning')
+      .set(asReader)
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.steps[0].images[0].url).toBe('')
+  })
+
   it('returns 404 when the guide does not exist', async () => {
     jest
       .spyOn(communicationAdapter.guides, 'getGuideBySlug')
@@ -170,6 +214,36 @@ describe('GET /guides/by-slug/:slug', () => {
       .set(asReader)
 
     expect(res.status).toBe(404)
+  })
+})
+
+describe('GET /guides/:id', () => {
+  it('hides a draft from readers but returns it to admins', async () => {
+    jest
+      .spyOn(communicationAdapter.guides, 'getGuideById')
+      .mockResolvedValue({ ok: true, data: { ...guide, status: 'draft' } })
+
+    const reader = await request(app.callback())
+      .get(`/guides/${guide.id}`)
+      .set(asReader)
+    expect(reader.status).toBe(403)
+
+    const admin = await request(app.callback())
+      .get(`/guides/${guide.id}`)
+      .set(asAdmin)
+    expect(admin.status).toBe(200)
+    expect(admin.body.content.steps).toHaveLength(1)
+  })
+
+  it('returns 404 for an id that is not a uuid, without calling communication', async () => {
+    const spy = jest.spyOn(communicationAdapter.guides, 'getGuideById')
+
+    const res = await request(app.callback())
+      .get('/guides/not-a-uuid')
+      .set(asAdmin)
+
+    expect(res.status).toBe(404)
+    expect(spy).not.toHaveBeenCalled()
   })
 })
 
@@ -196,6 +270,22 @@ describe('POST /guides', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.issues[0].path).toEqual(['slug'])
+  })
+
+  it('proxies the reason for a bad request from communication', async () => {
+    jest.spyOn(communicationAdapter.guides, 'createGuide').mockResolvedValue({
+      ok: false,
+      err: 'bad-request',
+      upstream: { error: 'category-not-found' },
+    })
+
+    const res = await request(app.callback())
+      .post('/guides')
+      .set(asAdmin)
+      .send(writeBody())
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('category-not-found')
   })
 
   it('maps a slug conflict to 409', async () => {
@@ -231,6 +321,101 @@ describe('PUT /guides/:id', () => {
     expect(res.status).toBe(200)
     expect(deleteSpy).toHaveBeenCalledWith('guide/g/old.png')
   })
+
+  it('maps a missing guide to 404', async () => {
+    jest
+      .spyOn(communicationAdapter.guides, 'updateGuide')
+      .mockResolvedValue({ ok: false, err: 'not-found' })
+
+    const res = await request(app.callback())
+      .put(`/guides/${guide.id}`)
+      .set(asAdmin)
+      .send(writeBody())
+
+    expect(res.status).toBe(404)
+  })
+
+  it('maps a slug conflict to 409', async () => {
+    jest
+      .spyOn(communicationAdapter.guides, 'updateGuide')
+      .mockResolvedValue({ ok: false, err: 'conflict' })
+
+    const res = await request(app.callback())
+      .put(`/guides/${guide.id}`)
+      .set(asAdmin)
+      .send(writeBody())
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toBe('slug-taken')
+  })
+
+  it('proxies the error code and issues from a bad request', async () => {
+    jest.spyOn(communicationAdapter.guides, 'updateGuide').mockResolvedValue({
+      ok: false,
+      err: 'bad-request',
+      upstream: {
+        error: 'image-not-in-step',
+        issues: [{ path: ['steps', 0], message: 'Unknown image' }],
+      },
+    })
+
+    const res = await request(app.callback())
+      .put(`/guides/${guide.id}`)
+      .set(asAdmin)
+      .send(writeBody())
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('image-not-in-step')
+    expect(res.body.issues).toEqual([
+      { path: ['steps', 0], message: 'Unknown image' },
+    ])
+  })
+
+  it('returns 404 for an id that is not a uuid, without calling communication', async () => {
+    const spy = jest.spyOn(communicationAdapter.guides, 'updateGuide')
+
+    const res = await request(app.callback())
+      .put('/guides/not-a-uuid')
+      .set(asAdmin)
+      .send(writeBody())
+
+    expect(res.status).toBe(404)
+    expect(spy).not.toHaveBeenCalled()
+  })
+})
+
+describe('DELETE /guides/:id', () => {
+  it('deletes the image files of the removed guide', async () => {
+    jest.spyOn(communicationAdapter.guides, 'deleteGuide').mockResolvedValue({
+      ok: true,
+      data: { storageKeys: ['guide/g/1.png', 'guide/g/2.png'] },
+    })
+    const deleteSpy = jest
+      .spyOn(fileStorageAdapter, 'deleteFile')
+      .mockResolvedValue({ ok: true, data: undefined })
+
+    const res = await request(app.callback())
+      .delete(`/guides/${guide.id}`)
+      .set(asAdmin)
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({ deleted: true })
+    expect(deleteSpy.mock.calls.map(([key]) => key)).toEqual([
+      'guide/g/1.png',
+      'guide/g/2.png',
+    ])
+  })
+
+  it('returns 404 for an id that is not a uuid, without calling communication', async () => {
+    const spy = jest.spyOn(communicationAdapter.guides, 'deleteGuide')
+
+    const res = await request(app.callback())
+      .delete('/guides/not-a-uuid')
+      .set(asAdmin)
+
+    expect(res.status).toBe(404)
+    expect(spy).not.toHaveBeenCalled()
+  })
 })
 
 describe('POST /guides/:id/steps/:stepId/images', () => {
@@ -240,7 +425,12 @@ describe('POST /guides/:id/steps/:stepId/images', () => {
       .set(asAdmin)
       .send(body)
 
-  const png = Buffer.from('fake-png').toString('base64')
+  // Minimal file whose leading bytes identify it as a PNG.
+  const pngBuffer = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.from('payload'),
+  ])
+  const png = pngBuffer.toString('base64')
 
   it('rejects unsupported content types', async () => {
     const res = await upload({
@@ -252,15 +442,94 @@ describe('POST /guides/:id/steps/:stepId/images', () => {
     expect(res.body.error).toBe('invalid-file-type')
   })
 
-  it('rejects files over 5 MB', async () => {
-    const big = Buffer.alloc(5 * 1024 * 1024 + 1).toString('base64')
+  it('rejects an oversized payload without decoding it', async () => {
+    const uploadSpy = jest.spyOn(fileStorageAdapter, 'uploadFile')
+    const big = 'A'.repeat(Math.ceil((5 * 1024 * 1024 * 4) / 3) + 5)
+
     const res = await upload({
       fileName: 'x.png',
       fileData: big,
       contentType: 'image/png',
     })
+
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('invalid-file-size')
+    expect(uploadSpy).not.toHaveBeenCalled()
+  })
+
+  it('rejects base64 with a data: prefix or invalid characters', async () => {
+    const withPrefix = await upload({
+      fileName: 'x.png',
+      fileData: `data:image/png;base64,${png}`,
+      contentType: 'image/png',
+    })
+    expect(withPrefix.status).toBe(400)
+    expect(withPrefix.body.error).toBe('invalid-file-data')
+
+    const withWhitespace = await upload({
+      fileName: 'x.png',
+      fileData: `${png.slice(0, 4)} ${png.slice(4)}`,
+      contentType: 'image/png',
+    })
+    expect(withWhitespace.status).toBe(400)
+    expect(withWhitespace.body.error).toBe('invalid-file-data')
+  })
+
+  it('rejects a file whose magic bytes do not match the content type', async () => {
+    const uploadSpy = jest.spyOn(fileStorageAdapter, 'uploadFile')
+
+    const res = await upload({
+      fileName: 'x.png',
+      fileData: Buffer.from('<html>not an image</html>').toString('base64'),
+      contentType: 'image/png',
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('invalid-file-type')
+    expect(uploadSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 and records nothing when the storage upload fails', async () => {
+    jest
+      .spyOn(fileStorageAdapter, 'uploadFile')
+      .mockResolvedValue({ ok: false, err: 'unknown' })
+    const createSpy = jest.spyOn(communicationAdapter.guides, 'createStepImage')
+
+    const res = await upload({
+      fileName: 'x.png',
+      fileData: png,
+      contentType: 'image/png',
+    })
+
+    expect(res.status).toBe(500)
+    expect(createSpy).not.toHaveBeenCalled()
+  })
+
+  it('maps a bad_request from storage to 400', async () => {
+    jest
+      .spyOn(fileStorageAdapter, 'uploadFile')
+      .mockResolvedValue({ ok: false, err: 'bad_request' })
+
+    const res = await upload({
+      fileName: 'x.png',
+      fileData: png,
+      contentType: 'image/png',
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('invalid-file-data')
+  })
+
+  it('returns 404 for a step id that is not a uuid, without calling communication', async () => {
+    const createSpy = jest.spyOn(communicationAdapter.guides, 'createStepImage')
+
+    const res = await request(app.callback())
+      .post(`/guides/${guide.id}/steps/not-a-uuid/images`)
+      .set(asAdmin)
+      .send({ fileName: 'x.png', fileData: png, contentType: 'image/png' })
+
+    expect(res.status).toBe(404)
+    expect(createSpy).not.toHaveBeenCalled()
   })
 
   it('uploads under guide/{id}/ and records the metadata', async () => {
@@ -288,6 +557,33 @@ describe('POST /guides/:id/steps/:stepId/images', () => {
       altText: 'Dialog',
     })
     expect(res.body.content.url).toBe('https://minio/x')
+  })
+
+  it('proxies a bad-request from communication as 400 with its error body', async () => {
+    jest
+      .spyOn(fileStorageAdapter, 'uploadFile')
+      .mockResolvedValue({ ok: true, data: { fileName: 'k', message: '' } })
+    jest
+      .spyOn(communicationAdapter.guides, 'createStepImage')
+      .mockResolvedValue({
+        ok: false,
+        err: 'bad-request',
+        upstream: { error: 'image-not-in-step' },
+      })
+    const deleteSpy = jest
+      .spyOn(fileStorageAdapter, 'deleteFile')
+      .mockResolvedValue({ ok: true, data: undefined })
+
+    const res = await upload({
+      fileName: 'x.png',
+      fileData: png,
+      contentType: 'image/png',
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('image-not-in-step')
+    // The file is still compensated away when the metadata write is rejected.
+    expect(deleteSpy).toHaveBeenCalledTimes(1)
   })
 
   it('deletes the uploaded file when the metadata write fails', async () => {

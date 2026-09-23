@@ -8,7 +8,7 @@ import {
 } from '@/features/guides'
 
 import { useGuide } from '@/entities/guide'
-import { GUIDES_ADMIN_ROLE, useHasRole } from '@/entities/user'
+import { GUIDES_ADMIN_ROLE, useHasRole, useUser } from '@/entities/user'
 
 import { isUnpublishedGuide } from '@/services/api/core'
 
@@ -31,6 +31,8 @@ import { Skeleton } from '@/shared/ui/Skeleton'
  */
 export function GuideSheet() {
   const { isOpen, slug, openGuide, openOverview, close } = useGuideSheet()
+  const canEdit = useHasRole(GUIDES_ADMIN_ROLE)
+  const userState = useUser()
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && close()}>
@@ -39,7 +41,12 @@ export function GuideSheet() {
         className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-xl"
       >
         {slug ? (
-          <GuideSheetGuide slug={slug} onBack={openOverview} onClose={close} />
+          <GuideSheetGuide
+            slug={slug}
+            canEdit={canEdit}
+            onBack={openOverview}
+            onClose={close}
+          />
         ) : (
           <>
             <SheetHeader className="border-b p-4 text-left">
@@ -49,11 +56,17 @@ export function GuideSheet() {
               </SheetDescription>
             </SheetHeader>
             <div className="p-4">
-              <GuidesOverview
-                includeDrafts={false}
-                variant="sheet"
-                onSelectGuide={(guide) => openGuide(guide.slug)}
-              />
+              {/* Wait for the role to be known, otherwise the list is fetched
+                  once without drafts and again with them. */}
+              {userState.tag === 'loading' ? (
+                <Skeleton className="h-64" />
+              ) : (
+                <GuidesOverview
+                  includeDrafts={canEdit}
+                  variant="sheet"
+                  onSelectGuide={(guide) => openGuide(guide.slug)}
+                />
+              )}
               <Button asChild variant="link" className="mt-4 px-0">
                 <Link to={routes.guides} onClick={close}>
                   Öppna alla guider som sida
@@ -70,12 +83,17 @@ export function GuideSheet() {
 
 interface GuideSheetGuideProps {
   slug: string
+  canEdit: boolean
   onBack: () => void
   onClose: () => void
 }
 
-function GuideSheetGuide({ slug, onBack, onClose }: GuideSheetGuideProps) {
-  const canEdit = useHasRole(GUIDES_ADMIN_ROLE)
+function GuideSheetGuide({
+  slug,
+  canEdit,
+  onBack,
+  onClose,
+}: GuideSheetGuideProps) {
   const { data, isLoading, isError } = useGuide(slug)
 
   return (
@@ -109,7 +127,7 @@ function GuideSheetGuide({ slug, onBack, onClose }: GuideSheetGuideProps) {
         ) : isError || !data ? (
           <EmptyState icon={BookX} title="Guiden hittades inte" />
         ) : isUnpublishedGuide(data) ? (
-          <UnpublishedGuideNotice title={data.title} />
+          <UnpublishedGuideNotice title={data.title} onNavigate={onClose} />
         ) : (
           <GuideView guide={data} variant="sheet" canEdit={canEdit} />
         )}

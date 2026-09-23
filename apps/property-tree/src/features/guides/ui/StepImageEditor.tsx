@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react'
 
 import { useToast } from '@/shared/hooks/useToast'
@@ -12,8 +12,10 @@ import {
   GUIDE_IMAGE_MAX_DISPLAY,
   GUIDE_IMAGE_TYPES,
 } from '../constants'
+import { useDeleteStepImage } from '../hooks/useDeleteStepImage'
 import { useUploadStepImage } from '../hooks/useUploadStepImage'
 import type { EditorAction, EditorStep } from '../lib/editorState'
+import { uploadErrorMessage } from '../lib/errorMessages'
 
 interface PendingUpload {
   key: string
@@ -25,18 +27,29 @@ interface StepImageEditorProps {
   guideId: string | null
   step: EditorStep
   dispatch: React.Dispatch<EditorAction>
+  /** Reports how many uploads this step currently has in flight. */
+  onPendingChange: (stepId: string, count: number) => void
 }
 
 export function StepImageEditor({
   guideId,
   step,
   dispatch,
+  onPendingChange,
 }: StepImageEditorProps) {
   const { toast } = useToast()
   const upload = useUploadStepImage()
+  const deleteImage = useDeleteStepImage()
   const [pending, setPending] = useState<PendingUpload[]>([])
 
   const canUpload = guideId !== null && step.saved
+
+  // Keep the editor's total in sync, including the reset to zero when this
+  // step unmounts while an upload is still running.
+  useEffect(() => {
+    onPendingChange(step.id, pending.length)
+    return () => onPendingChange(step.id, 0)
+  }, [onPendingChange, step.id, pending.length])
 
   const setProgress = (key: string, progress: number) =>
     setPending((current) =>
@@ -61,10 +74,10 @@ export function StepImageEditor({
         {
           onSuccess: (image) =>
             dispatch({ type: 'add-image', stepId: step.id, image }),
-          onError: () =>
+          onError: (error) =>
             toast({
               title: 'Uppladdningen misslyckades',
-              description: `${file.name} kunde inte laddas upp. Försök igen.`,
+              description: uploadErrorMessage(error, file.name),
               variant: 'destructive',
             }),
           onSettled: () =>
@@ -72,6 +85,20 @@ export function StepImageEditor({
         }
       )
     })
+  }
+
+  const removeImage = async (imageId: string) => {
+    if (!guideId) return
+    try {
+      await deleteImage.mutateAsync({ guideId, imageId })
+      dispatch({ type: 'remove-image', stepId: step.id, imageId })
+    } catch {
+      toast({
+        title: 'Bilden kunde inte tas bort',
+        description: 'Försök igen om en stund.',
+        variant: 'destructive',
+      })
+    }
   }
 
   return (
@@ -157,13 +184,8 @@ export function StepImageEditor({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 text-destructive"
-                  onClick={() =>
-                    dispatch({
-                      type: 'remove-image',
-                      stepId: step.id,
-                      imageId: image.id,
-                    })
-                  }
+                  disabled={deleteImage.isPending}
+                  onClick={() => removeImage(image.id)}
                   aria-label="Ta bort bilden"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -174,14 +196,16 @@ export function StepImageEditor({
         </ul>
       )}
 
-      {pending.map((item) => (
-        <div key={item.key} className="space-y-1">
-          <p className="text-xs text-muted-foreground">
-            Laddar upp {item.name}...
-          </p>
-          <Progress value={Math.round(item.progress * 100)} />
-        </div>
-      ))}
+      <div className="space-y-3" aria-live="polite">
+        {pending.map((item) => (
+          <div key={item.key} className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              Laddar upp {item.name}...
+            </p>
+            <Progress value={Math.round(item.progress * 100)} />
+          </div>
+        ))}
+      </div>
 
       <ImageDropzone
         onFiles={handleFiles}
@@ -190,6 +214,7 @@ export function StepImageEditor({
         maxSizeLabel={GUIDE_IMAGE_MAX_DISPLAY}
         disabled={!canUpload}
         disabledReason="Spara guiden först för att kunna ladda upp bilder till steget."
+        hint="Bilder sparas direkt när de laddas upp."
       />
     </div>
   )

@@ -3,6 +3,7 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Bold, Link2, List, ListOrdered } from 'lucide-react'
 
+import { useToast } from '@/shared/hooks/useToast'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 
@@ -11,6 +12,8 @@ interface RichTextEditorProps {
   value: string
   onChange: (html: string) => void
   placeholder?: string
+  /** Makes the content read-only, e.g. while the form is saving. */
+  disabled?: boolean
   className?: string
 }
 
@@ -26,8 +29,10 @@ export function RichTextEditor({
   value,
   onChange,
   placeholder,
+  disabled = false,
   className,
 }: RichTextEditorProps) {
+  const { toast } = useToast()
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -38,10 +43,19 @@ export function RichTextEditor({
         strike: false,
         underline: false,
         horizontalRule: false,
-        link: { openOnClick: false, autolink: true },
+        // No target by default; setLink only adds _blank for absolute
+        // http(s) links so internal links stay in the same tab.
+        link: {
+          openOnClick: false,
+          autolink: true,
+          HTMLAttributes: { rel: 'noopener noreferrer' },
+        },
       }),
     ],
     content: value,
+    // The contenteditable surface ignores a disabled <fieldset>, so the
+    // editable flag is what keeps edits out during a save.
+    editable: !disabled,
     // Render synchronously so tests and SSR-less mounts get the editor at once.
     immediatelyRender: true,
     shouldRerenderOnTransaction: true,
@@ -70,17 +84,36 @@ export function RichTextEditor({
     }
   }, [editor, value])
 
+  useEffect(() => {
+    if (editor && editor.isEditable === disabled) editor.setEditable(!disabled)
+  }, [editor, disabled])
+
   if (!editor) return null
 
   const setLink = () => {
     const previous = editor.getAttributes('link').href as string | undefined
     const url = window.prompt('Länkadress (https://... eller /sida)', previous)
     if (url === null) return
-    if (url.trim() === '') {
+    const href = url.trim()
+    if (href === '') {
       editor.chain().focus().unsetLink().run()
       return
     }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+    // Tiptap rejects schemes outside its allowlist and returns false.
+    const isExternal = /^https?:\/\//i.test(href)
+    const applied = editor
+      .chain()
+      .focus()
+      .extendMarkRange('link')
+      .setLink({ href, target: isExternal ? '_blank' : null })
+      .run()
+    if (!applied) {
+      toast({
+        title: 'Ogiltig länk',
+        description: 'Använd en adress som börjar med https:// eller /.',
+        variant: 'destructive',
+      })
+    }
   }
 
   const toolbarButton = (
@@ -94,6 +127,7 @@ export function RichTextEditor({
       variant={active ? 'secondary' : 'ghost'}
       size="icon"
       className="h-8 w-8"
+      disabled={disabled}
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
@@ -107,6 +141,7 @@ export function RichTextEditor({
     <div
       className={cn(
         'rounded-md border border-input bg-background ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+        disabled && 'cursor-not-allowed opacity-70',
         className
       )}
     >

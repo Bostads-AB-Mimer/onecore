@@ -1,19 +1,28 @@
 import KoaRouter from '@koa/router'
 import { guides } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { ZodError } from 'zod'
+import { z, ZodError } from 'zod'
 
 import { guides as guidesAdapter } from '../../adapters/communication-adapter'
 import {
   actingUserName,
   deleteStorageFiles,
   isGuidesAdmin,
+  isUuidParam,
+  upstreamErrorBody,
   withImageUrls,
 } from './helpers'
 
 const validationErrorBody = (error: ZodError) => ({
   error: 'Validation failed',
   issues: error.issues.map(({ path, message }) => ({ path, message })),
+})
+
+const ListGuidesQuerySchema = z.object({
+  includeDrafts: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
 })
 
 export const routes = (router: KoaRouter) => {
@@ -27,8 +36,10 @@ export const routes = (router: KoaRouter) => {
    *     parameters:
    *       - in: query
    *         name: includeDrafts
+   *         description: Pass the string 'true' to include drafts; ignored without the guides-admin role.
    *         schema:
-   *           type: boolean
+   *           type: string
+   *           enum: ['true', 'false']
    *     responses:
    *       200:
    *         description: Guide summaries
@@ -41,6 +52,12 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/GuideSummary'
+   *       400:
+   *         description: Invalid query parameters
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
    *       500:
    *         description: Internal server error
    *         content:
@@ -52,8 +69,15 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/guides', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const includeDrafts =
-      ctx.query.includeDrafts === 'true' && isGuidesAdmin(ctx)
+
+    const query = ListGuidesQuerySchema.safeParse(ctx.query)
+    if (!query.success) {
+      ctx.status = 400
+      ctx.body = { ...validationErrorBody(query.error), ...metadata }
+      return
+    }
+
+    const includeDrafts = query.data.includeDrafts && isGuidesAdmin(ctx)
 
     const result = await guidesAdapter.listGuides({ includeDrafts })
     if (!result.ok) {
@@ -231,6 +255,12 @@ export const routes = (router: KoaRouter) => {
   router.get('/guides/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    if (!isUuidParam(ctx.params.id)) {
+      ctx.status = 404
+      ctx.body = { reason: 'Guide not found', ...metadata }
+      return
+    }
+
     const result = await guidesAdapter.getGuideById(ctx.params.id)
     if (!result.ok) {
       if (result.err === 'not-found' || result.err === 'bad-request') {
@@ -278,11 +308,27 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/GuideWithUrls'
    *       400:
-   *         description: Validation failed
+   *         description: Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation.
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 issues:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       path:
+   *                         type: array
+   *                         items:
+   *                           oneOf:
+   *                             - type: string
+   *                             - type: number
+   *                       message:
+   *                         type: string
    *       409:
    *         description: Slug already taken
    *         content:
@@ -320,7 +366,7 @@ export const routes = (router: KoaRouter) => {
       }
       if (result.err === 'bad-request') {
         ctx.status = 400
-        ctx.body = { error: 'Validation failed', ...metadata }
+        ctx.body = { ...upstreamErrorBody(result.upstream), ...metadata }
         return
       }
       logger.error({ err: result.err, metadata }, 'Error creating guide')
@@ -364,11 +410,27 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/GuideWithUrls'
    *       400:
-   *         description: Validation failed
+   *         description: Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation.
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                 issues:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       path:
+   *                         type: array
+   *                         items:
+   *                           oneOf:
+   *                             - type: string
+   *                             - type: number
+   *                       message:
+   *                         type: string
    *       404:
    *         description: Guide not found
    *         content:
@@ -392,6 +454,12 @@ export const routes = (router: KoaRouter) => {
    */
   router.put('/guides/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    if (!isUuidParam(ctx.params.id)) {
+      ctx.status = 404
+      ctx.body = { reason: 'Guide not found', ...metadata }
+      return
+    }
 
     const parsed = guides.UpdateGuideRequestSchema.safeParse(ctx.request.body)
     if (!parsed.success) {
@@ -417,7 +485,7 @@ export const routes = (router: KoaRouter) => {
       }
       if (result.err === 'bad-request') {
         ctx.status = 400
-        ctx.body = { error: 'Validation failed', ...metadata }
+        ctx.body = { ...upstreamErrorBody(result.upstream), ...metadata }
         return
       }
       logger.error({ err: result.err, metadata }, 'Error updating guide')
@@ -476,6 +544,12 @@ export const routes = (router: KoaRouter) => {
    */
   router.delete('/guides/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    if (!isUuidParam(ctx.params.id)) {
+      ctx.status = 404
+      ctx.body = { reason: 'Guide not found', ...metadata }
+      return
+    }
 
     const result = await guidesAdapter.deleteGuide(ctx.params.id)
     if (!result.ok) {

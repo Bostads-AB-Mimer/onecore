@@ -47,15 +47,30 @@ export function GuideCard({ guide, onSelect, className }: GuideCardProps) {
     </Card>
   )
 
+  // Stays an anchor even when overridden, so the card remains a real link
+  // (middle-click, open in new tab) and keeps valid markup around the card.
   if (onSelect) {
     return (
-      <button
-        type="button"
-        onClick={() => onSelect(guide)}
-        className="block w-full text-left rounded-lg"
+      <a
+        href={paths.guide(guide.slug)}
+        onClick={(event) => {
+          // Let the browser handle modifier- and non-primary-button clicks so
+          // the card can still be opened in a new tab or window.
+          if (
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.button !== 0
+          ) {
+            return
+          }
+          event.preventDefault()
+          onSelect(guide)
+        }}
+        className="block rounded-lg"
       >
         {content}
-      </button>
+      </a>
     )
   }
 

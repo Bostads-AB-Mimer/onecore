@@ -7,10 +7,15 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 
 interface UnpublishedGuideNoticeProps {
   title: string
+  /** Run when the reader follows the link out, e.g. to close a sheet. */
+  onNavigate?: () => void
 }
 
 /** Shown to readers who follow a link to a guide that is still a draft. */
-export function UnpublishedGuideNotice({ title }: UnpublishedGuideNoticeProps) {
+export function UnpublishedGuideNotice({
+  title,
+  onNavigate,
+}: UnpublishedGuideNoticeProps) {
   return (
     <EmptyState
       icon={EyeOff}
@@ -18,7 +23,9 @@ export function UnpublishedGuideNotice({ title }: UnpublishedGuideNoticeProps) {
       description={`"${title}" är fortfarande ett utkast. Be den som skickade länken att publicera guiden.`}
       action={
         <Button asChild variant="outline">
-          <Link to={routes.guides}>Till alla guider</Link>
+          <Link to={routes.guides} onClick={onNavigate}>
+            Till alla guider
+          </Link>
         </Button>
       }
     />

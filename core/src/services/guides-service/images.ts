@@ -5,7 +5,15 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 
 import { guides as guidesAdapter } from '../../adapters/communication-adapter'
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
-import { deleteStorageFiles, withImageUrl } from './helpers'
+import {
+  deleteStorageFiles,
+  GUIDE_STORAGE_PREFIX,
+  isPlainBase64,
+  isUuidParam,
+  matchesImageMagicBytes,
+  upstreamErrorBody,
+  withImageUrl,
+} from './helpers'
 
 // Nothing downstream validates uploads, so limits are enforced here.
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -14,6 +22,10 @@ export const ALLOWED_IMAGE_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/webp': 'webp',
 }
+
+// Base64 grows by 4/3, rounded up to a 4-character group plus padding. Anything
+// longer is rejected before Buffer.from so an oversized payload is never decoded.
+const MAX_BASE64_LENGTH = Math.ceil((MAX_IMAGE_BYTES * 4) / 3) + 4
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -53,7 +65,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/GuideStepImageWithUrl'
    *       400:
-   *         description: Invalid file type or size
+   *         description: "Rejected upload: invalid-file-type (unsupported content type or magic bytes that do not match it), invalid-file-size, invalid-file-data (not plain base64), or the error code proxied from the communication service (e.g. image-not-in-step)"
    *         content:
    *           application/json:
    *             schema:
@@ -76,6 +88,12 @@ export const routes = (router: KoaRouter) => {
   router.post('/guides/:id/steps/:stepId/images', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
+    if (!isUuidParam(ctx.params.id) || !isUuidParam(ctx.params.stepId)) {
+      ctx.status = 404
+      ctx.body = { reason: 'Guide or step not found', ...metadata }
+      return
+    }
+
     const parsed = guides.GuideImageUploadRequestSchema.safeParse(
       ctx.request.body
     )
@@ -93,6 +111,18 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    if (fileData.length > MAX_BASE64_LENGTH) {
+      ctx.status = 400
+      ctx.body = { error: 'invalid-file-size', ...metadata }
+      return
+    }
+
+    if (!isPlainBase64(fileData)) {
+      ctx.status = 400
+      ctx.body = { error: 'invalid-file-data', ...metadata }
+      return
+    }
+
     const buffer = Buffer.from(fileData, 'base64')
     if (buffer.length === 0 || buffer.length > MAX_IMAGE_BYTES) {
       ctx.status = 400
@@ -100,7 +130,13 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const storageKey = `guide/${ctx.params.id}/${randomUUID()}.${extension}`
+    if (!matchesImageMagicBytes(buffer, contentType)) {
+      ctx.status = 400
+      ctx.body = { error: 'invalid-file-type', ...metadata }
+      return
+    }
+
+    const storageKey = `${GUIDE_STORAGE_PREFIX}${ctx.params.id}/${randomUUID()}.${extension}`
 
     const uploadResult = await fileStorageAdapter.uploadFile(
       storageKey,
@@ -108,6 +144,11 @@ export const routes = (router: KoaRouter) => {
       contentType
     )
     if (!uploadResult.ok) {
+      if (uploadResult.err === 'bad_request') {
+        ctx.status = 400
+        ctx.body = { error: 'invalid-file-data', ...metadata }
+        return
+      }
       logger.error(
         { err: uploadResult.err, metadata },
         'Error uploading guide image to storage'
@@ -135,6 +176,11 @@ export const routes = (router: KoaRouter) => {
       if (imageResult.err === 'not-found') {
         ctx.status = 404
         ctx.body = { reason: 'Guide or step not found', ...metadata }
+        return
+      }
+      if (imageResult.err === 'bad-request') {
+        ctx.status = 400
+        ctx.body = { ...upstreamErrorBody(imageResult.upstream), ...metadata }
         return
       }
       logger.error(
@@ -200,6 +246,12 @@ export const routes = (router: KoaRouter) => {
    */
   router.delete('/guides/:id/images/:imageId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    if (!isUuidParam(ctx.params.id) || !isUuidParam(ctx.params.imageId)) {
+      ctx.status = 404
+      ctx.body = { reason: 'Image not found', ...metadata }
+      return
+    }
 
     const result = await guidesAdapter.deleteStepImage(
       ctx.params.id,

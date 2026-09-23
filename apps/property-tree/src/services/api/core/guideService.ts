@@ -20,6 +20,24 @@ export const isUnpublishedGuide = (
   guide: GuideBySlugResponse
 ): guide is UnpublishedGuide => 'unpublished' in guide && guide.unpublished
 
+/**
+ * Normalize an axios rejection to the same `{ error }` body the openapi-fetch
+ * calls throw, so callers read the rejection code the same way everywhere.
+ * Rejections without such a body keep their original message in `detail` so it
+ * is still available for logging instead of being swallowed.
+ */
+const toApiError = (error: unknown): { error: string; detail?: string } => {
+  if (axios.isAxiosError(error)) {
+    const data: unknown = error.response?.data
+    if (typeof data === 'object' && data !== null && 'error' in data) {
+      return { error: String((data as { error: unknown }).error) }
+    }
+  }
+  const detail =
+    error instanceof Error ? error.message : String(error ?? 'Unknown error')
+  return { error: 'upload-failed', detail }
+}
+
 export const guideService = {
   async getGuides(params: { includeDrafts: boolean }): Promise<GuideSummary[]> {
     const response = await GET('/guides', {
@@ -97,18 +115,22 @@ export const guideService = {
     body: GuideImageUploadRequest,
     onProgress?: (fraction: number) => void
   ): Promise<GuideStepImageWithUrl> {
-    const response = await axios.post<{ content: GuideStepImageWithUrl }>(
-      `${coreApiBaseUrl}/guides/${encodeURIComponent(guideId)}/steps/${encodeURIComponent(stepId)}/images`,
-      body,
-      {
-        withCredentials: true,
-        onUploadProgress: (event) => {
-          if (onProgress && event.total) {
-            onProgress(event.loaded / event.total)
-          }
-        },
-      }
-    )
-    return response.data.content
+    try {
+      const response = await axios.post<{ content: GuideStepImageWithUrl }>(
+        `${coreApiBaseUrl}/guides/${encodeURIComponent(guideId)}/steps/${encodeURIComponent(stepId)}/images`,
+        body,
+        {
+          withCredentials: true,
+          onUploadProgress: (event) => {
+            if (onProgress && event.total) {
+              onProgress(event.loaded / event.total)
+            }
+          },
+        }
+      )
+      return response.data.content
+    } catch (error) {
+      throw toApiError(error)
+    }
   },
 }

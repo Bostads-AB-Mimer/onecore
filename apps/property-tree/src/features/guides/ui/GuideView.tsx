@@ -4,7 +4,7 @@ import { Link2, Pencil } from 'lucide-react'
 
 import { GuideStatusBadge, type GuideWithUrls } from '@/entities/guide'
 
-import { useCopyToClipboard } from '@/shared/hooks/useCopyToClipboard'
+import { useClipboardCopy, useToast } from '@/shared/hooks'
 import { formatDate } from '@/shared/lib/fileUtils'
 import { cn } from '@/shared/lib/utils'
 import { paths } from '@/shared/routes'
@@ -31,7 +31,16 @@ export function GuideView({
   canEdit = false,
 }: GuideViewProps) {
   const location = useLocation()
-  const copy = useCopyToClipboard()
+  const { toast } = useToast()
+  const { copyToClipboard } = useClipboardCopy({
+    onSuccess: () => toast({ title: 'Länk kopierad' }),
+    onError: () =>
+      toast({
+        title: 'Kunde inte kopiera',
+        description: 'Markera och kopiera länken manuellt.',
+        variant: 'destructive',
+      }),
+  })
   const [highlightedStep, setHighlightedStep] = useState<number | null>(null)
 
   // A link to a specific step scrolls there and flashes the step so the
@@ -68,7 +77,7 @@ export function GuideView({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => copy(guideLink(guide.slug))}
+                onClick={() => copyToClipboard(guideLink(guide.slug))}
               >
                 <Link2 className="mr-2 h-4 w-4" />
                 Kopiera länk
@@ -104,7 +113,8 @@ export function GuideView({
               highlighted={highlightedStep === index + 1}
               onCopyLink={
                 isPage
-                  ? (stepNumber) => copy(guideLink(guide.slug, stepNumber))
+                  ? (stepNumber) =>
+                      copyToClipboard(guideLink(guide.slug, stepNumber))
                   : undefined
               }
             />

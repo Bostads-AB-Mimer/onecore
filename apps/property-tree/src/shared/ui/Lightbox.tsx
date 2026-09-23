@@ -1,6 +1,8 @@
 import 'yet-another-react-lightbox/styles.css'
+import 'yet-another-react-lightbox/plugins/captions.css'
 
 import YetAnotherLightbox from 'yet-another-react-lightbox'
+import Captions from 'yet-another-react-lightbox/plugins/captions'
 
 export interface LightboxSlide {
   src: string
@@ -22,10 +24,11 @@ export function Lightbox({ open, index, slides, onClose }: LightboxProps) {
       open={open}
       index={index}
       close={onClose}
+      plugins={[Captions]}
       slides={slides.map((slide) => ({
         src: slide.src,
         alt: slide.alt,
-        title: slide.description ?? undefined,
+        description: slide.description ?? undefined,
       }))}
       controller={{ closeOnBackdropClick: true }}
       // A single image needs no prev/next buttons.
