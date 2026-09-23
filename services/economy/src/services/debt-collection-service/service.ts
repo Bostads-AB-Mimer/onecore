@@ -489,25 +489,40 @@ const createInvoiceFromRentInvoiceWithRentalProperties = (
   rows: InvoiceRow[],
   amountPaid: number
 ): DebtCollectionInvoice => {
-  const removePaidRows = (rows: InvoiceRow[], paid: number): InvoiceRow[] => {
+  /*
+    If the invoice is partially paid, we need to subtract the paid amount from the invoice row amounts.
+    If an invoice row is fully paid this way, it is removed.
+    Invoice rows for "Hyra bostad" (residence) should be paid first, and rows for "Mimers hemförsäkring" (home insurance) last.
+    Other invoice rows can be in any order.
+  */
+  const removePaidAmountFromInvoiceRows = (
+    rows: InvoiceRow[],
+    paid: number
+  ): InvoiceRow[] => {
     if (paid === 0 || rows.length === 0) {
       return rows
     }
 
+    /*
+      Put "Hyra bostad"-rows first and "Mimers hemförsäkring"-rows last.
+    */
     const sorted = rows.sort((a, b) => {
-      if (a.invoiceRowText === 'Hemförsäkring') {
+      const aInvoiceRowLowerCase = a.invoiceRowText?.toLowerCase()
+      const bInvoiceRowLowerCase = b.invoiceRowText?.toLowerCase()
+
+      if (aInvoiceRowLowerCase === 'mimers hemförsäkring') {
         return 1
       }
 
-      if (b.invoiceRowText === 'Hemförsäkring') {
+      if (bInvoiceRowLowerCase === 'mimers hemförsäkring') {
         return -1
       }
 
-      if (a.invoiceRowText === 'Hyra bostad') {
+      if (aInvoiceRowLowerCase === 'hyra bostad') {
         return -1
       }
 
-      if (b.invoiceRowText === 'Hyra bostad') {
+      if (bInvoiceRowLowerCase === 'hyra bostad') {
         return 1
       }
 
@@ -539,7 +554,7 @@ const createInvoiceFromRentInvoiceWithRentalProperties = (
     return remainingRows
   }
 
-  const unpaidRows = removePaidRows(rows, amountPaid)
+  const unpaidRows = removePaidAmountFromInvoiceRows(rows, amountPaid)
 
   return {
     invoiceNumber: invoice.invoiceNumber,
