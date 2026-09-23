@@ -1055,10 +1055,14 @@ export const deferInvoice = async (params: {
 
 export const getPublicInvoiceByOcr = async (
   ocr: string
-): Promise<AdapterResult<Invoice, string>> => {
+): Promise<AdapterResult<Invoice | null, string>> => {
   const tenfastResult = await getInvoiceByOcr(ocr)
   if (!tenfastResult.ok) {
     return tenfastResult
+  }
+
+  if (tenfastResult.data === null) {
+    return { ok: true, data: null }
   }
 
   const xledgerResult = await getInvoiceByInvoiceNumber(

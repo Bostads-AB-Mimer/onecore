@@ -392,6 +392,7 @@ const fetchTenfastInvoiceByOcr = async (
       `/v1/hyresvard/extras/hyror/${encodeURIComponent(ocr)}`,
       {
         params: { hyresvard: companyId, populate: 'avtal' },
+        validateStatus: (status) => [200, 404].includes(status),
       }
     )
 
@@ -426,11 +427,11 @@ const fetchTenfastInvoiceByOcr = async (
 
 export const getInvoiceByOcr = async (
   ocr: string
-): Promise<AdapterResult<ParsedTenfastInvoice, string>> => {
+): Promise<AdapterResult<ParsedTenfastInvoice | null, string>> => {
   const result = await fetchTenfastInvoiceByOcr(ocr)
   if (!result.ok) {
     if (result.err === 'not-found') {
-      return { ok: false, err: `Invoice with ocr ${ocr} not found` }
+      return { ok: true, data: null }
     }
     if (result.err === 'schema-error') {
       return { ok: false, err: 'schema-error' }
@@ -440,8 +441,8 @@ export const getInvoiceByOcr = async (
 
   if (!isVisibleTenfastInvoice(result.data)) {
     return {
-      ok: false,
-      err: `Invoice with ocr ${ocr} not found`,
+      ok: true,
+      data: null,
     }
   }
 

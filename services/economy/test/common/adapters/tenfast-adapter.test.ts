@@ -374,7 +374,7 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoiceByOcr(ocr)
 
       assert(result.ok)
-      expect(result.data.invoice).toMatchObject({
+      expect(result.data?.invoice).toMatchObject({
         amount: 1000,
         paidAmount: 500,
         remainingAmount: 500,
@@ -389,7 +389,7 @@ describe('Tenfast Adapter', () => {
       )
     })
 
-    it('should return error when no invoice is found', async () => {
+    it('should return null when no invoice is found', async () => {
       mockAxios.request.mockResolvedValue({
         status: 404,
         data: {},
@@ -398,8 +398,8 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoiceByOcr('NONEXISTENT')
 
       expect(result).toEqual({
-        ok: false,
-        err: 'Invoice with ocr NONEXISTENT not found',
+        ok: true,
+        data: null,
       })
     })
 
