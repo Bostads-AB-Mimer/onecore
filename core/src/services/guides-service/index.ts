@@ -23,6 +23,14 @@ export const routes = (router: KoaRouter) => {
     'GuideImageUploadRequest',
     guides.GuideImageUploadRequestSchema
   )
+  registerSchema(
+    'GuideImageUploadResponse',
+    guides.GuideImageUploadResponseSchema
+  )
+  registerSchema(
+    'GuideImageDeleteResponse',
+    guides.GuideImageDeleteResponseSchema
+  )
 
   guideRoutes(router)
   imageRoutes(router)

@@ -13,6 +13,9 @@ export function saveErrorMessage(error: unknown): string {
   if (code === 'slug-taken') {
     return 'Sluggen används redan av en annan guide. Välj en annan.'
   }
+  if (code === 'guide-modified') {
+    return 'Guiden har ändrats av någon annan sedan du öppnade den. Ladda om sidan för att se de senaste ändringarna.'
+  }
   if (code === 'category-not-found') {
     return 'Kategorin finns inte längre. Välj en annan kategori.'
   }
@@ -42,6 +45,8 @@ function uploadReason(code: string): string {
       return `filen är för stor. Max ${GUIDE_IMAGE_MAX_DISPLAY}.`
     case 'invalid-file-data':
       return 'filen kunde inte läsas. Försök med en annan bild.'
+    case 'alt-text-required':
+      return 'guiden är publicerad, så bilden behöver en alt-text.'
     default:
       return 'kunde inte laddas upp. Försök igen.'
   }

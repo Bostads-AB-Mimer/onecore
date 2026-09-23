@@ -89,6 +89,11 @@ const writeBody = (): guides.CreateGuideRequest => ({
   steps: [{ id: randomUUID(), title: 'Steg 1', body: '<p>x</p>', images: [] }],
 })
 
+const updateBody = (): guides.UpdateGuideRequest => ({
+  ...writeBody(),
+  expectedUpdatedAt: now.toISOString(),
+})
+
 beforeEach(() => {
   jest.restoreAllMocks()
   jest.spyOn(fileStorageAdapter, 'getFileUrl').mockResolvedValue({
@@ -316,7 +321,7 @@ describe('PUT /guides/:id', () => {
     const res = await request(app.callback())
       .put(`/guides/${guide.id}`)
       .set(asAdmin)
-      .send(writeBody())
+      .send(updateBody())
 
     expect(res.status).toBe(200)
     expect(deleteSpy).toHaveBeenCalledWith('guide/g/old.png')
@@ -330,12 +335,31 @@ describe('PUT /guides/:id', () => {
     const res = await request(app.callback())
       .put(`/guides/${guide.id}`)
       .set(asAdmin)
-      .send(writeBody())
+      .send(updateBody())
 
     expect(res.status).toBe(404)
   })
 
-  it('maps a slug conflict to 409', async () => {
+  it.each(['slug-taken', 'guide-modified'])(
+    'proxies the %s conflict code as 409',
+    async (code) => {
+      jest.spyOn(communicationAdapter.guides, 'updateGuide').mockResolvedValue({
+        ok: false,
+        err: 'conflict',
+        upstream: { error: code },
+      })
+
+      const res = await request(app.callback())
+        .put(`/guides/${guide.id}`)
+        .set(asAdmin)
+        .send(updateBody())
+
+      expect(res.status).toBe(409)
+      expect(res.body.error).toBe(code)
+    }
+  )
+
+  it('falls back to a generic conflict code without an upstream body', async () => {
     jest
       .spyOn(communicationAdapter.guides, 'updateGuide')
       .mockResolvedValue({ ok: false, err: 'conflict' })
@@ -343,10 +367,46 @@ describe('PUT /guides/:id', () => {
     const res = await request(app.callback())
       .put(`/guides/${guide.id}`)
       .set(asAdmin)
-      .send(writeBody())
+      .send(updateBody())
 
     expect(res.status).toBe(409)
-    expect(res.body.error).toBe('slug-taken')
+    expect(res.body.error).toBe('conflict')
+  })
+
+  it('passes expectedUpdatedAt and the acting user on to communication', async () => {
+    const spy = jest
+      .spyOn(communicationAdapter.guides, 'updateGuide')
+      .mockResolvedValue({
+        ok: true,
+        data: { guide, removedStorageKeys: [] },
+      })
+    const body = updateBody()
+
+    await request(app.callback())
+      .put(`/guides/${guide.id}`)
+      .set(asAdmin)
+      .send(body)
+
+    expect(spy).toHaveBeenCalledWith(
+      guide.id,
+      expect.objectContaining({
+        expectedUpdatedAt: body.expectedUpdatedAt,
+        author: 'Anna',
+      })
+    )
+  })
+
+  it('rejects a save without expectedUpdatedAt before calling communication', async () => {
+    const spy = jest.spyOn(communicationAdapter.guides, 'updateGuide')
+
+    const res = await request(app.callback())
+      .put(`/guides/${guide.id}`)
+      .set(asAdmin)
+      .send(writeBody())
+
+    expect(res.status).toBe(400)
+    expect(res.body.issues[0].path).toEqual(['expectedUpdatedAt'])
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('proxies the error code and issues from a bad request', async () => {
@@ -362,7 +422,7 @@ describe('PUT /guides/:id', () => {
     const res = await request(app.callback())
       .put(`/guides/${guide.id}`)
       .set(asAdmin)
-      .send(writeBody())
+      .send(updateBody())
 
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('image-not-in-step')
@@ -377,7 +437,7 @@ describe('PUT /guides/:id', () => {
     const res = await request(app.callback())
       .put('/guides/not-a-uuid')
       .set(asAdmin)
-      .send(writeBody())
+      .send(updateBody())
 
     expect(res.status).toBe(404)
     expect(spy).not.toHaveBeenCalled()
@@ -538,7 +598,10 @@ describe('POST /guides/:id/steps/:stepId/images', () => {
       .mockResolvedValue({ ok: true, data: { fileName: 'k', message: '' } })
     const createSpy = jest
       .spyOn(communicationAdapter.guides, 'createStepImage')
-      .mockResolvedValue({ ok: true, data: guide.steps[0].images[0] })
+      .mockResolvedValue({
+        ok: true,
+        data: { image: guide.steps[0].images[0], guideUpdatedAt: now },
+      })
 
     const res = await upload({
       fileName: 'screenshot.png',
@@ -556,7 +619,8 @@ describe('POST /guides/:id/steps/:stepId/images', () => {
       contentType: 'image/png',
       altText: 'Dialog',
     })
-    expect(res.body.content.url).toBe('https://minio/x')
+    expect(res.body.content.image.url).toBe('https://minio/x')
+    expect(res.body.content.guideUpdatedAt).toBe(now.toISOString())
   })
 
   it('proxies a bad-request from communication as 400 with its error body', async () => {
@@ -586,6 +650,33 @@ describe('POST /guides/:id/steps/:stepId/images', () => {
     expect(deleteSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('proxies alt-text-required for a published guide and removes the stored file', async () => {
+    const uploadSpy = jest
+      .spyOn(fileStorageAdapter, 'uploadFile')
+      .mockResolvedValue({ ok: true, data: { fileName: 'k', message: '' } })
+    jest
+      .spyOn(communicationAdapter.guides, 'createStepImage')
+      .mockResolvedValue({
+        ok: false,
+        err: 'bad-request',
+        upstream: { error: 'alt-text-required' },
+      })
+    const deleteSpy = jest
+      .spyOn(fileStorageAdapter, 'deleteFile')
+      .mockResolvedValue({ ok: true, data: undefined })
+
+    const res = await upload({
+      fileName: 'x.png',
+      fileData: png,
+      contentType: 'image/png',
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('alt-text-required')
+    expect(deleteSpy).toHaveBeenCalledTimes(1)
+    expect(deleteSpy.mock.calls[0][0]).toBe(uploadSpy.mock.calls[0][0])
+  })
+
   it('deletes the uploaded file when the metadata write fails', async () => {
     jest
       .spyOn(fileStorageAdapter, 'uploadFile')
@@ -613,7 +704,10 @@ describe('DELETE /guides/:id/images/:imageId', () => {
   it('removes the row and then the file', async () => {
     jest
       .spyOn(communicationAdapter.guides, 'deleteStepImage')
-      .mockResolvedValue({ ok: true, data: { storageKey: 'guide/g/1.png' } })
+      .mockResolvedValue({
+        ok: true,
+        data: { storageKey: 'guide/g/1.png', guideUpdatedAt: now },
+      })
     const deleteSpy = jest
       .spyOn(fileStorageAdapter, 'deleteFile')
       .mockResolvedValue({ ok: true, data: undefined })
@@ -624,5 +718,9 @@ describe('DELETE /guides/:id/images/:imageId', () => {
 
     expect(res.status).toBe(200)
     expect(deleteSpy).toHaveBeenCalledWith('guide/g/1.png')
+    expect(res.body.content).toEqual({
+      deleted: true,
+      guideUpdatedAt: now.toISOString(),
+    })
   })
 })

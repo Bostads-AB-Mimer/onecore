@@ -8,8 +8,11 @@ import { UpstreamError } from '../../adapters/communication-adapter/helpers'
 
 // The communication service answers with a stable kebab-case error code (and
 // zod issues for validation failures); proxy it instead of a generic message.
-export const upstreamErrorBody = (upstream: UpstreamError | undefined) => ({
-  error: upstream?.error ?? 'bad-request',
+export const upstreamErrorBody = (
+  upstream: UpstreamError | undefined,
+  fallback = 'bad-request'
+) => ({
+  error: upstream?.error ?? fallback,
   ...(upstream?.issues ? { issues: upstream.issues } : {}),
 })
 

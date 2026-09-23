@@ -126,7 +126,7 @@ export const StepImageInputSchema = z.object({
 // before and after it has been saved, and so that PUT can upsert by id.
 export const StepInputSchema = z.object({
   id: z.string().uuid(),
-  title: z.string().min(1).max(200),
+  title: z.string().trim().min(1).max(200),
   // Sanitized HTML. Capped so a single step cannot be used to push an
   // unbounded payload into the NVARCHAR(MAX) column.
   body: z.string().max(50_000),
@@ -138,11 +138,11 @@ export const StepInputSchema = z.object({
 // Pick an existing category by id, or create one by name.
 export const CategoryInputSchema = z.union([
   z.object({ id: z.string().uuid() }),
-  z.object({ name: z.string().min(1).max(100) }),
+  z.object({ name: z.string().trim().min(1).max(100) }),
 ])
 
 export const GuideInputBaseSchema = z.object({
-  title: z.string().min(1).max(200),
+  title: z.string().trim().min(1).max(200),
   description: z.string().max(1000).default(''),
   slug: SlugSchema,
   category: CategoryInputSchema,
@@ -213,14 +213,35 @@ export const uniqueIdRules = (input: GuideInputBase, ctx: z.RefinementCtx) => {
   })
 }
 
+// Optimistic concurrency token for updates: the guide's updatedAt as the
+// client last saw it (ISO 8601, UTC). The service rejects the save with 409
+// guide-modified when the stored value differs, so a save from stale editor
+// state cannot delete images that were uploaded after it was loaded. Kept as
+// a string so it passes through core unchanged and keeps its milliseconds.
+const ExpectedUpdatedAtSchema = z.string().datetime()
+
+const AuthorSchema = z.string().trim().min(1).max(200)
+
 export const GuideInputSchema =
   GuideInputBaseSchema.superRefine(publishRules).superRefine(uniqueIdRules)
 export const CreateGuideRequestSchema = GuideInputSchema
-export const UpdateGuideRequestSchema = GuideInputSchema
+export const UpdateGuideRequestSchema = GuideInputBaseSchema.extend({
+  expectedUpdatedAt: ExpectedUpdatedAtSchema,
+})
+  .superRefine(publishRules)
+  .superRefine(uniqueIdRules)
 
-// Service-level write payload: core adds the acting user's name.
+// Service-level create payload: core adds the acting user's name.
 export const ServiceGuideWriteSchema = GuideInputBaseSchema.extend({
-  author: z.string().min(1).max(200),
+  author: AuthorSchema,
+})
+  .superRefine(publishRules)
+  .superRefine(uniqueIdRules)
+
+// Service-level update payload: the create payload plus the concurrency token.
+export const ServiceGuideUpdateSchema = GuideInputBaseSchema.extend({
+  author: AuthorSchema,
+  expectedUpdatedAt: ExpectedUpdatedAtSchema,
 })
   .superRefine(publishRules)
   .superRefine(uniqueIdRules)
@@ -261,6 +282,27 @@ export const DeleteGuideResponseSchema = z.object({
   storageKeys: z.array(z.string()),
 })
 
+// Image uploads and deletes change the guide, so they bump its updatedAt.
+// The new value is returned so the editor that made the change can keep
+// saving without tripping its own concurrency check.
+export const CreateStepImageResponseSchema = z.object({
+  image: GuideStepImageSchema,
+  guideUpdatedAt: z.coerce.date(),
+})
+
+// core -> frontend: the uploaded image with its presigned URL.
+export const GuideImageUploadResponseSchema = z.object({
+  image: GuideStepImageWithUrlSchema,
+  guideUpdatedAt: z.coerce.date(),
+})
+
 export const DeleteStepImageResponseSchema = z.object({
   storageKey: z.string(),
+  guideUpdatedAt: z.coerce.date(),
+})
+
+// core -> frontend after an image was deleted.
+export const GuideImageDeleteResponseSchema = z.object({
+  deleted: z.literal(true),
+  guideUpdatedAt: z.coerce.date(),
 })

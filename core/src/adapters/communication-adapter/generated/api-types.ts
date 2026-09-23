@@ -294,7 +294,7 @@ export interface paths {
     }
     /**
      * Create a guide
-     * @description Creates a guide with its steps. Step bodies are sanitized to the allowed HTML subset. Images are added afterwards via the image endpoint, so any image metadata in the payload is ignored.
+     * @description Creates a guide with its steps. Step bodies are sanitized to the allowed HTML subset. Images are added afterwards via the image endpoint, so any image metadata in the payload is ignored. Errors: 409 slug-taken, 400 category-not-found, 400 step-belongs-to-other-guide when a step id is already used by another guide.
      */
     post: {
       /** @description Request Body */
@@ -676,7 +676,7 @@ export interface paths {
     }
     /**
      * Update a guide
-     * @description Replaces metadata and steps. Steps are upserted by id and steps missing from the payload are deleted with their images. Returns the storage keys of removed images so the caller can delete files.
+     * @description Replaces metadata and steps. Steps are upserted by id and steps missing from the payload are deleted with their images. Returns the storage keys of removed images so the caller can delete files. expectedUpdatedAt must equal the stored updatedAt (millisecond precision); image uploads and deletes also move it forward. Errors: 409 guide-modified when expectedUpdatedAt is stale (the guide changed since the caller loaded it), 409 slug-taken, 400 category-not-found, 400 step-belongs-to-other-guide when a step id is owned by another guide, and 400 image-not-in-step when an image id is unknown or sent on a step it does not belong to (images cannot be moved between steps by a save).
      */
     put: {
       parameters: {
@@ -721,6 +721,8 @@ export interface paths {
               }[]
             }[]
             author: string
+            /** Format: date-time */
+            expectedUpdatedAt: string
           }
         }
       }
@@ -891,7 +893,7 @@ export interface paths {
   '/guides/{id}/steps/{stepId}/images': {
     /**
      * Record an uploaded image on a step
-     * @description Stores image metadata after the caller has uploaded the bytes to file-storage. The image is appended last on the step.
+     * @description Stores image metadata after the caller has uploaded the bytes to file-storage. The image is appended last on the step. Bumps the guide's updatedAt and returns the new value as guideUpdatedAt. Errors: 400 alt-text-required when the guide is published and altText is missing or blank.
      */
     post: {
       parameters: {
@@ -921,18 +923,22 @@ export interface paths {
         200: {
           content: {
             'application/json': {
-              /** Format: uuid */
-              id: string
-              /** Format: uuid */
-              stepId: string
-              sortOrder: number
-              storageKey: string
-              filename: string
-              contentType: string
-              altText: string
-              caption: string | null
+              image: {
+                /** Format: uuid */
+                id: string
+                /** Format: uuid */
+                stepId: string
+                sortOrder: number
+                storageKey: string
+                filename: string
+                contentType: string
+                altText: string
+                caption: string | null
+                /** Format: date-time */
+                createdAt: string
+              }
               /** Format: date-time */
-              createdAt: string
+              guideUpdatedAt: string
             }
           }
         }
@@ -976,7 +982,10 @@ export interface paths {
     }
   }
   '/guides/{id}/images/{imageId}': {
-    /** Delete a step image */
+    /**
+     * Delete a step image
+     * @description Removes the image row, bumps the guide's updatedAt and returns the storage key and the new updatedAt as guideUpdatedAt.
+     */
     delete: {
       parameters: {
         path: {
@@ -992,6 +1001,8 @@ export interface paths {
           content: {
             'application/json': {
               storageKey: string
+              /** Format: date-time */
+              guideUpdatedAt: string
             }
           }
         }

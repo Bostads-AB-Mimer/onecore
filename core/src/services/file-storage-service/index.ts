@@ -12,7 +12,12 @@ import { GUIDE_STORAGE_PREFIX } from '../guides-service/helpers'
 // Guide images are created and removed through /guides, which also keeps the
 // metadata rows in the communication service in sync. Reaching them through the
 // generic file routes would orphan those rows, so they are refused here.
-const isGuideKey = (key: string) => key.startsWith(GUIDE_STORAGE_PREFIX)
+// MinIO resolves any number of leading slashes to the same object ("//guide/x"
+// overwrites "guide/x"), so they are stripped before comparing. "./" and ".."
+// segments are rejected by MinIO, and backslashes are stored as literal key
+// characters, so neither can reach the guide prefix.
+const isGuideKey = (key: string) =>
+  key.replace(/^\/+/, '').startsWith(GUIDE_STORAGE_PREFIX)
 const GUIDE_KEY_REFUSAL = { error: 'guide-files-managed-via-guides-api' }
 
 /**
@@ -152,6 +157,8 @@ export const routes = (router: KoaRouter) => {
    *                   $ref: '#/components/schemas/FileUploadResponse'
    *       400:
    *         description: Invalid request
+   *       403:
+   *         description: Guide image key — use the /guides routes
    *       500:
    *         description: Server error
    *     security:
@@ -174,6 +181,12 @@ export const routes = (router: KoaRouter) => {
     }
 
     const { fileName, fileData, contentType } = bodyResult.data
+    if (isGuideKey(fileName)) {
+      ctx.status = 403
+      ctx.body = GUIDE_KEY_REFUSAL
+      return
+    }
+
     const fileBuffer = Buffer.from(fileData, 'base64')
     const result = await fileStorageAdapter.uploadFile(
       fileName,

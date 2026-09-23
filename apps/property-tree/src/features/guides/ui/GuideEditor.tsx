@@ -36,6 +36,7 @@ import {
   type GuideStatus,
   toPreview,
   toRequest,
+  toUpdateRequest,
   validate,
 } from '../lib/editorState'
 import { saveErrorMessage } from '../lib/errorMessages'
@@ -125,10 +126,9 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
       return
     }
 
-    const body = toRequest(state, status)
     try {
       if (state.guideId === null) {
-        const created = await createGuide.mutateAsync(body)
+        const created = await createGuide.mutateAsync(toRequest(state, status))
         dispatch({ type: 'saved', guide: created })
         toast({ title: 'Guiden är sparad' })
         // Images can be uploaded once the guide has an id; continue editing.
@@ -139,7 +139,7 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
 
       const updated = await updateGuide.mutateAsync({
         id: state.guideId,
-        body,
+        body: toUpdateRequest(state, status),
       })
       dispatch({ type: 'saved', guide: updated })
       toast({
@@ -329,6 +329,9 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
               renderItem={(step, index, handle) => (
                 <StepEditor
                   guideId={state.guideId}
+                  // status only changes on load and save, so it is the
+                  // status stored on the server, which decides the upload rule.
+                  guidePublished={state.status === 'published'}
                   step={step}
                   index={index}
                   total={state.steps.length}

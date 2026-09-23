@@ -4,6 +4,7 @@ import { guides } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 import {
+  GuideModifiedError,
   ImageNotInStepError,
   isGuideDomainError,
   SlugTakenError,
@@ -11,6 +12,12 @@ import {
 } from '../errors'
 import { findOrCreateCategory } from './categories-adapter'
 import { isUniqueViolationOn } from './db-errors'
+import {
+  asDateTime2,
+  isSameUpdatedAt,
+  lockGuide,
+  nextUpdatedAt,
+} from './guide-version'
 import {
   GuideCategoryRow,
   GuideRow,
@@ -274,6 +281,9 @@ export async function createGuide(
           publishedAt: input.status === 'published' ? now : null,
           createdBy: input.author,
           updatedBy: input.author,
+          // Written explicitly (instead of the column default) so the stored
+          // concurrency token is exactly the millisecond clients read back.
+          updatedAt: asDateTime2(trx, now),
         })
       )
 
@@ -309,16 +319,26 @@ export type UpdateGuideResult = {
  * with their images. Image rows are only ever updated or removed here (they
  * are created by the upload endpoint). Storage keys of removed images are
  * returned so the caller can delete the files.
+ *
+ * The save is rejected with GuideModifiedError when `expectedUpdatedAt` does
+ * not match the stored updatedAt: a payload built from stale state would
+ * otherwise delete images uploaded after that state was loaded.
  */
 export async function updateGuide(
   id: string,
-  input: guides.ServiceGuideWrite,
+  input: guides.ServiceGuideUpdate,
   db: Knex
 ): Promise<UpdateGuideResult | null> {
   try {
     return await db.transaction(async (trx) => {
-      const existing = await trx<GuideRow>('guide').where('id', id).first()
+      // Locked so a concurrent upload cannot land between the version check
+      // and the image deletes below.
+      const existing = await lockGuide(id, trx)
       if (!existing) return null
+
+      if (!isSameUpdatedAt(existing.updatedAt, input.expectedUpdatedAt)) {
+        throw new GuideModifiedError(id)
+      }
 
       const removedStorageKeys: string[] = []
       const now = new Date()
@@ -361,7 +381,7 @@ export async function updateGuide(
                 ? (existing.publishedAt ?? now)
                 : null,
             updatedBy: input.author,
-            updatedAt: now,
+            updatedAt: asDateTime2(trx, nextUpdatedAt(existing.updatedAt, now)),
           })
       )
 

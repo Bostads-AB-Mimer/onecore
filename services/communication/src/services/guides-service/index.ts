@@ -18,7 +18,9 @@ import {
 } from './adapters/guides-adapter'
 import { createStepImage, deleteStepImage } from './adapters/images-adapter'
 import {
+  AltTextRequiredError,
   CategoryNotFoundError,
+  GuideModifiedError,
   ImageNotInStepError,
   SlugTakenError,
   StepBelongsToOtherGuideError,
@@ -128,6 +130,11 @@ const respondWithError = (
     ctx.body = { error: 'slug-taken' }
     return
   }
+  if (error instanceof GuideModifiedError) {
+    ctx.status = 409
+    ctx.body = { error: 'guide-modified' }
+    return
+  }
   if (error instanceof CategoryNotFoundError) {
     ctx.status = 400
     ctx.body = { error: 'category-not-found' }
@@ -136,6 +143,11 @@ const respondWithError = (
   if (error instanceof ImageNotInStepError) {
     ctx.status = 400
     ctx.body = { error: 'image-not-in-step' }
+    return
+  }
+  if (error instanceof AltTextRequiredError) {
+    ctx.status = 400
+    ctx.body = { error: 'alt-text-required' }
     return
   }
   if (error instanceof StepBelongsToOtherGuideError) {
@@ -309,14 +321,18 @@ export const routes = (router: OkapiRouter) => {
         'Replaces metadata and steps. Steps are upserted by id and steps ' +
         'missing from the payload are deleted with their images. Returns ' +
         'the storage keys of removed images so the caller can delete files. ' +
-        'Errors: 409 slug-taken, 400 category-not-found, 400 ' +
+        'expectedUpdatedAt must equal the stored updatedAt (millisecond ' +
+        'precision); image uploads and deletes also move it forward. ' +
+        'Errors: 409 guide-modified when expectedUpdatedAt is stale (the ' +
+        'guide changed since the caller loaded it), 409 slug-taken, 400 ' +
+        'category-not-found, 400 ' +
         'step-belongs-to-other-guide when a step id is owned by another ' +
         'guide, and 400 image-not-in-step when an image id is unknown or ' +
         'sent on a step it does not belong to (images cannot be moved ' +
         'between steps by a save).',
       tags: ['Guides'],
       params: { id: uuidParam('Guide id') },
-      body: guides.ServiceGuideWriteSchema,
+      body: guides.ServiceGuideUpdateSchema,
       response: {
         200: guides.UpdateGuideResponseSchema,
         400: ErrorResponseSchema,
@@ -329,7 +345,7 @@ export const routes = (router: OkapiRouter) => {
       try {
         const params = parseParams(GuideParamsSchema, ctx.params)
         const input = sanitizeGuideWrite(
-          parse(guides.ServiceGuideWriteSchema, ctx.request.body)
+          parse(guides.ServiceGuideUpdateSchema, ctx.request.body)
         )
         const result = await updateGuide(params.id, input, db)
         if (!result) {
@@ -383,7 +399,10 @@ export const routes = (router: OkapiRouter) => {
       summary: 'Record an uploaded image on a step',
       description:
         'Stores image metadata after the caller has uploaded the bytes to ' +
-        'file-storage. The image is appended last on the step.',
+        'file-storage. The image is appended last on the step. Bumps the ' +
+        "guide's updatedAt and returns the new value as guideUpdatedAt. " +
+        'Errors: 400 alt-text-required when the guide is published and ' +
+        'altText is missing or blank.',
       tags: ['Guides'],
       params: {
         id: uuidParam('Guide id'),
@@ -391,7 +410,7 @@ export const routes = (router: OkapiRouter) => {
       },
       body: guides.CreateStepImageRequestSchema,
       response: {
-        200: guides.GuideStepImageSchema,
+        200: guides.CreateStepImageResponseSchema,
         400: ErrorResponseSchema,
         404: ErrorResponseSchema,
         500: ErrorResponseSchema,
@@ -404,14 +423,19 @@ export const routes = (router: OkapiRouter) => {
           guides.CreateStepImageRequestSchema,
           ctx.request.body
         )
-        const image = await createStepImage(params.id, params.stepId, input, db)
-        if (!image) {
+        const result = await createStepImage(
+          params.id,
+          params.stepId,
+          input,
+          db
+        )
+        if (!result) {
           ctx.status = 404
           ctx.body = { error: 'Step not found' }
           return
         }
         ctx.status = 200
-        ctx.body = image
+        ctx.body = result
       } catch (error) {
         respondWithError(ctx, error, 'failed to create guide step image')
       }
@@ -422,6 +446,9 @@ export const routes = (router: OkapiRouter) => {
     '/guides/:id/images/:imageId',
     {
       summary: 'Delete a step image',
+      description:
+        "Removes the image row, bumps the guide's updatedAt and returns the " +
+        'storage key and the new updatedAt as guideUpdatedAt.',
       tags: ['Guides'],
       params: {
         id: uuidParam('Guide id'),

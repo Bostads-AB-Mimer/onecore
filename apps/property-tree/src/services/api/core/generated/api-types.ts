@@ -7500,6 +7500,10 @@ export interface paths {
         400: {
           content: never
         }
+        /** @description Guide image prefix — use the /guides routes. Guide images are also omitted from every other listing. */
+        403: {
+          content: never
+        }
         /** @description Server error */
         500: {
           content: never
@@ -7526,6 +7530,10 @@ export interface paths {
         }
         /** @description Invalid request */
         400: {
+          content: never
+        }
+        /** @description Guide image key — use the /guides routes */
+        403: {
           content: never
         }
         /** @description Server error */
@@ -7613,6 +7621,10 @@ export interface paths {
       responses: {
         /** @description File deleted successfully */
         204: {
+          content: never
+        }
+        /** @description Guide image — use the /guides routes */
+        403: {
           content: never
         }
         /** @description File not found */
@@ -10341,7 +10353,7 @@ export interface paths {
   '/guides/{id}/steps/{stepId}/images': {
     /**
      * Upload an image to a guide step
-     * @description Requires the guides-admin role. Accepts PNG, JPEG or WEBP up to 5 MB as base64, stores the file under guide/{guideId}/ and appends the image last on the step.
+     * @description Requires the guides-admin role. Accepts PNG, JPEG or WEBP up to 5 MB as base64, stores the file under guide/{guideId}/ and appends the image last on the step. A published guide only accepts images with a non-blank altText, since the image is visible to readers at once. The upload bumps the guide's updatedAt; the new value is returned as guideUpdatedAt and must be sent as expectedUpdatedAt on the next save.
      */
     post: {
       parameters: {
@@ -10356,15 +10368,15 @@ export interface paths {
         }
       }
       responses: {
-        /** @description The stored image with a presigned url */
+        /** @description The stored image with a presigned url, and the guide's new updatedAt */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['GuideStepImageWithUrl']
+              content?: components['schemas']['GuideImageUploadResponse']
             }
           }
         }
-        /** @description Invalid file type or size */
+        /** @description Rejected upload: invalid-file-type (unsupported content type or magic bytes that do not match it), invalid-file-size, invalid-file-data (not plain base64), or the error code proxied from the communication service (alt-text-required when the guide is published and altText is missing or blank) */
         400: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -10388,7 +10400,7 @@ export interface paths {
   '/guides/{id}/images/{imageId}': {
     /**
      * Delete a guide step image
-     * @description Requires the guides-admin role. Removes the image row and the stored file.
+     * @description Requires the guides-admin role. Removes the image row and the stored file. The delete bumps the guide's updatedAt; the new value is returned as guideUpdatedAt and must be sent as expectedUpdatedAt on the next save.
      */
     delete: {
       parameters: {
@@ -10398,13 +10410,11 @@ export interface paths {
         }
       }
       responses: {
-        /** @description Image deleted */
+        /** @description Image deleted, with the guide's new updatedAt */
         200: {
           content: {
             'application/json': {
-              content?: {
-                deleted?: boolean
-              }
+              content?: components['schemas']['GuideImageDeleteResponse']
             }
           }
         }
@@ -10431,7 +10441,8 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          includeDrafts?: boolean
+          /** @description Pass the string 'true' to include drafts; ignored without the guides-admin role. */
+          includeDrafts?: 'true' | 'false'
         }
       }
       responses: {
@@ -10441,6 +10452,12 @@ export interface paths {
             'application/json': {
               content?: components['schemas']['GuideSummary'][]
             }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
           }
         }
         /** @description Internal server error */
@@ -10470,10 +10487,16 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
-            'application/json': components['schemas']['ErrorResponse']
+            'application/json': {
+              error?: string
+              issues?: {
+                path?: (string | number)[]
+                message?: string
+              }[]
+            }
           }
         }
         /** @description Slug already taken */
@@ -10591,7 +10614,7 @@ export interface paths {
     }
     /**
      * Update a guide
-     * @description Requires the guides-admin role. Replaces metadata and steps; steps missing from the payload are deleted together with their images, and the files are removed from storage.
+     * @description Requires the guides-admin role. Replaces metadata and steps; steps missing from the payload are deleted together with their images, and the files are removed from storage. expectedUpdatedAt must be the guide's updatedAt as last read by the client (from the guide, a previous save, or an image upload/delete response); a stale value is rejected with 409 guide-modified so a save from outdated state cannot delete newer images.
      */
     put: {
       parameters: {
@@ -10613,10 +10636,16 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
-            'application/json': components['schemas']['ErrorResponse']
+            'application/json': {
+              error?: string
+              issues?: {
+                path?: (string | number)[]
+                message?: string
+              }[]
+            }
           }
         }
         /** @description Guide not found */
@@ -10625,7 +10654,7 @@ export interface paths {
             'application/json': components['schemas']['NotFoundResponse']
           }
         }
-        /** @description Slug already taken */
+        /** @description Conflict proxied from the communication service: slug-taken, or guide-modified when expectedUpdatedAt is stale (the guide was saved or its images changed since the client loaded it) */
         409: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -15504,6 +15533,8 @@ export interface components {
           caption: string | null
         }[]
       }[]
+      /** Format: date-time */
+      expectedUpdatedAt: string
     }
     GuideImageUploadRequest: {
       /** @description Target file name/path */
@@ -15514,6 +15545,31 @@ export interface components {
       contentType: string
       altText?: string
       caption?: string | null
+    }
+    GuideImageUploadResponse: {
+      image: {
+        /** Format: uuid */
+        id: string
+        /** Format: uuid */
+        stepId: string
+        sortOrder: number
+        storageKey: string
+        filename: string
+        contentType: string
+        altText: string
+        caption: string | null
+        /** Format: date-time */
+        createdAt: string
+        url: string
+      }
+      /** Format: date-time */
+      guideUpdatedAt: string
+    }
+    GuideImageDeleteResponse: {
+      /** @enum {boolean} */
+      deleted: true
+      /** Format: date-time */
+      guideUpdatedAt: string
     }
     KeycloakUser: {
       id: string

@@ -5,6 +5,7 @@ import type {
   GuideCategory,
   GuideStepImageWithUrl,
   GuideWithUrls,
+  UpdateGuideRequest,
 } from '@/entities/guide'
 
 import { moveItem } from '@/shared/lib/reorder'
@@ -43,6 +44,12 @@ export interface EditorState {
   guideId: string | null
   /** Slug as stored on the server, to detect renames after a save. */
   savedSlug: string | null
+  /**
+   * The guide's updatedAt as last reported by the server (load, save, image
+   * upload or delete). Sent back as expectedUpdatedAt so the server can
+   * reject a save made from state that another tab has since changed.
+   */
+  updatedAt: string | null
   title: string
   description: string
   slug: string
@@ -65,8 +72,18 @@ export type EditorAction =
   | { type: 'remove-step'; stepId: string }
   | { type: 'move-step'; from: number; to: number }
   | { type: 'update-step'; stepId: string; patch: StepPatch }
-  | { type: 'add-image'; stepId: string; image: GuideStepImageWithUrl }
-  | { type: 'remove-image'; stepId: string; imageId: string }
+  | {
+      type: 'add-image'
+      stepId: string
+      image: GuideStepImageWithUrl
+      guideUpdatedAt: string
+    }
+  | {
+      type: 'remove-image'
+      stepId: string
+      imageId: string
+      guideUpdatedAt: string
+    }
   | { type: 'move-image'; stepId: string; from: number; to: number }
   | {
       type: 'update-image'
@@ -86,6 +103,7 @@ const fromImage = (image: GuideStepImageWithUrl): EditorImage => ({
 export const fromGuide = (guide: GuideWithUrls): EditorState => ({
   guideId: guide.id,
   savedSlug: guide.slug,
+  updatedAt: guide.updatedAt,
   title: guide.title,
   description: guide.description,
   slug: guide.slug,
@@ -107,6 +125,7 @@ export const fromGuide = (guide: GuideWithUrls): EditorState => ({
 export const emptyState = (): EditorState => ({
   guideId: null,
   savedSlug: null,
+  updatedAt: null,
   title: '',
   description: '',
   slug: '',
@@ -163,6 +182,18 @@ const updateImage = (
       : step
   )
 
+/**
+ * Record the guide's updatedAt reported by an image upload or delete. The
+ * later value wins, so responses arriving out of order (e.g. two parallel
+ * uploads) never move it backwards. It is recorded even when the image action
+ * itself is ignored: the server-side change happened regardless.
+ */
+const recordUpdatedAt = (state: EditorState, updatedAt: string): EditorState =>
+  state.updatedAt !== null &&
+  Date.parse(state.updatedAt) >= Date.parse(updatedAt)
+    ? state
+    : { ...state, updatedAt }
+
 export function editorReducer(
   state: EditorState,
   action: EditorAction
@@ -207,13 +238,20 @@ export function editorReducer(
         ...action.patch,
       }))
     case 'add-image':
-      return updateStep(state, action.stepId, (step) => ({
-        ...step,
-        images: [...step.images, fromImage(action.image)],
-      }))
+      return updateStep(
+        recordUpdatedAt(state, action.guideUpdatedAt),
+        action.stepId,
+        (step) => ({
+          ...step,
+          images: [...step.images, fromImage(action.image)],
+        })
+      )
     case 'remove-image':
-      return updateImage(state, action.stepId, action.imageId, (images) =>
-        images.filter((image) => image.id !== action.imageId)
+      return updateImage(
+        recordUpdatedAt(state, action.guideUpdatedAt),
+        action.stepId,
+        action.imageId,
+        (images) => images.filter((image) => image.id !== action.imageId)
       )
     case 'move-image':
       return updateStep(state, action.stepId, (step) => {
@@ -228,6 +266,13 @@ export function editorReducer(
       )
   }
 }
+
+/**
+ * True when an image has usable alt text. Required on every image of a
+ * published guide, both when saving and when uploading to one.
+ */
+export const hasAltText = (altText: string): boolean =>
+  altText.trim().length > 0
 
 /**
  * Problems that block a save. Publishing has stricter rules, mirrored from
@@ -262,7 +307,7 @@ export function validate(state: EditorState, status: GuideStatus): string[] {
     }
     state.steps.forEach((step, index) => {
       step.images.forEach((image, imageIndex) => {
-        if (image.altText.trim().length === 0) {
+        if (!hasAltText(image.altText)) {
           problems.push(
             `Bild ${imageIndex + 1} i steg ${index + 1} saknar alt-text.`
           )
@@ -302,6 +347,15 @@ export function toRequest(
       })),
     })),
   }
+}
+
+/** Request body for PUT: the save plus the version it was based on. */
+export function toUpdateRequest(
+  state: EditorState,
+  status: GuideStatus
+): UpdateGuideRequest {
+  if (!state.updatedAt) throw new Error('Only a saved guide can be updated')
+  return { ...toRequest(state, status), expectedUpdatedAt: state.updatedAt }
 }
 
 /**

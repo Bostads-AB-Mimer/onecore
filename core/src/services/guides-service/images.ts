@@ -33,7 +33,7 @@ export const routes = (router: KoaRouter) => {
    * /guides/{id}/steps/{stepId}/images:
    *   post:
    *     summary: Upload an image to a guide step
-   *     description: Requires the guides-admin role. Accepts PNG, JPEG or WEBP up to 5 MB as base64, stores the file under guide/{guideId}/ and appends the image last on the step.
+   *     description: Requires the guides-admin role. Accepts PNG, JPEG or WEBP up to 5 MB as base64, stores the file under guide/{guideId}/ and appends the image last on the step. A published guide only accepts images with a non-blank altText, since the image is visible to readers at once. The upload bumps the guide's updatedAt; the new value is returned as guideUpdatedAt and must be sent as expectedUpdatedAt on the next save.
    *     tags: [Guides]
    *     parameters:
    *       - in: path
@@ -56,16 +56,16 @@ export const routes = (router: KoaRouter) => {
    *             $ref: '#/components/schemas/GuideImageUploadRequest'
    *     responses:
    *       200:
-   *         description: The stored image with a presigned url
+   *         description: The stored image with a presigned url, and the guide's new updatedAt
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/GuideStepImageWithUrl'
+   *                   $ref: '#/components/schemas/GuideImageUploadResponse'
    *       400:
-   *         description: "Rejected upload: invalid-file-type (unsupported content type or magic bytes that do not match it), invalid-file-size, invalid-file-data (not plain base64), or the error code proxied from the communication service (e.g. image-not-in-step)"
+   *         description: "Rejected upload: invalid-file-type (unsupported content type or magic bytes that do not match it), invalid-file-size, invalid-file-data (not plain base64), or the error code proxied from the communication service (alt-text-required when the guide is published and altText is missing or blank)"
    *         content:
    *           application/json:
    *             schema:
@@ -192,8 +192,12 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const content: guides.GuideImageUploadResponse = {
+      image: await withImageUrl(imageResult.data.image),
+      guideUpdatedAt: imageResult.data.guideUpdatedAt,
+    }
     ctx.status = 200
-    ctx.body = { content: await withImageUrl(imageResult.data), ...metadata }
+    ctx.body = { content, ...metadata }
   })
 
   /**
@@ -201,7 +205,7 @@ export const routes = (router: KoaRouter) => {
    * /guides/{id}/images/{imageId}:
    *   delete:
    *     summary: Delete a guide step image
-   *     description: Requires the guides-admin role. Removes the image row and the stored file.
+   *     description: Requires the guides-admin role. Removes the image row and the stored file. The delete bumps the guide's updatedAt; the new value is returned as guideUpdatedAt and must be sent as expectedUpdatedAt on the next save.
    *     tags: [Guides]
    *     parameters:
    *       - in: path
@@ -218,17 +222,14 @@ export const routes = (router: KoaRouter) => {
    *           format: uuid
    *     responses:
    *       200:
-   *         description: Image deleted
+   *         description: Image deleted, with the guide's new updatedAt
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
    *                 content:
-   *                   type: object
-   *                   properties:
-   *                     deleted:
-   *                       type: boolean
+   *                   $ref: '#/components/schemas/GuideImageDeleteResponse'
    *       404:
    *         description: Image not found
    *         content:
@@ -271,7 +272,11 @@ export const routes = (router: KoaRouter) => {
 
     await deleteStorageFiles([result.data.storageKey])
 
+    const content: guides.GuideImageDeleteResponse = {
+      deleted: true,
+      guideUpdatedAt: result.data.guideUpdatedAt,
+    }
     ctx.status = 200
-    ctx.body = { content: { deleted: true }, ...metadata }
+    ctx.body = { content, ...metadata }
   })
 }

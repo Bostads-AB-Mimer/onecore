@@ -42,6 +42,8 @@ const NO_CALLOUT = 'none'
 
 interface StepEditorProps {
   guideId: string | null
+  /** True when the guide is published on the server; uploads need alt text. */
+  guidePublished: boolean
   step: EditorStep
   index: number
   total: number
@@ -55,6 +57,7 @@ interface StepEditorProps {
 
 export function StepEditor({
   guideId,
+  guidePublished,
   step,
   index,
   total,
@@ -145,6 +148,7 @@ export function StepEditor({
           <Label>Bilder</Label>
           <StepImageEditor
             guideId={guideId}
+            requireAltText={guidePublished}
             step={step}
             dispatch={dispatch}
             onPendingChange={onPendingChange}

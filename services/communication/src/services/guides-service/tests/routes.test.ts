@@ -10,7 +10,9 @@ import * as categoriesAdapter from '../adapters/categories-adapter'
 import * as guidesAdapter from '../adapters/guides-adapter'
 import * as imagesAdapter from '../adapters/images-adapter'
 import {
+  AltTextRequiredError,
   CategoryNotFoundError,
+  GuideModifiedError,
   ImageNotInStepError,
   SlugTakenError,
   StepBelongsToOtherGuideError,
@@ -72,6 +74,12 @@ const guide: guides.Guide = {
 }
 
 afterEach(() => jest.restoreAllMocks())
+
+// PUT payload: a guide write plus the concurrency token.
+const updateBody = () => ({
+  ...factory.guideWrite.build(),
+  expectedUpdatedAt: now.toISOString(),
+})
 
 describe('GET /guides', () => {
   it('passes includeDrafts through as a boolean', async () => {
@@ -212,6 +220,45 @@ describe('POST /guides', () => {
     expect(res.body.issues.length).toBeGreaterThan(0)
   })
 
+  it.each([
+    ['category name', { category: { name: '   ' } }, ['category']],
+    ['title', { title: '   ' }, ['title']],
+  ])(
+    'returns 400 when the %s is only whitespace',
+    async (_field, override, path) => {
+      const spy = jest.spyOn(guidesAdapter, 'createGuide')
+
+      const res = await request(app.callback())
+        .post('/guides')
+        .send(factory.guideWrite.build(override))
+
+      expect(res.status).toBe(400)
+      expect(res.body.issues).toContainEqual(
+        expect.objectContaining({ path: expect.arrayContaining(path) })
+      )
+      expect(spy).not.toHaveBeenCalled()
+    }
+  )
+
+  it('trims the category name, title and step titles before creating', async () => {
+    const spy = jest
+      .spyOn(guidesAdapter, 'createGuide')
+      .mockResolvedValue(guide)
+    const input = factory.guideWrite.build({
+      title: '  Registrera uppsägning  ',
+      category: { name: '  Tenfast  ' },
+      steps: [factory.step.build({ title: '  Step  ' })],
+    })
+
+    const res = await request(app.callback()).post('/guides').send(input)
+
+    expect(res.status).toBe(200)
+    const saved = spy.mock.calls[0][0]
+    expect(saved.category).toEqual({ name: 'Tenfast' })
+    expect(saved.title).toBe('Registrera uppsägning')
+    expect(saved.steps[0].title).toBe('Step')
+  })
+
   it('returns 400 when publishing without steps', async () => {
     const res = await request(app.callback())
       .post('/guides')
@@ -310,24 +357,57 @@ describe('PUT /guides/:id', () => {
 
     const res = await request(app.callback())
       .put(`/guides/${guide.id}`)
-      .send(factory.guideWrite.build())
+      .send(updateBody())
 
     expect(res.status).toBe(200)
     expect(res.body.removedStorageKeys).toEqual(['guide/x/1.png'])
   })
+
+  it('passes expectedUpdatedAt through to the adapter', async () => {
+    const spy = jest
+      .spyOn(guidesAdapter, 'updateGuide')
+      .mockResolvedValue({ guide, removedStorageKeys: [] })
+    const body = updateBody()
+
+    await request(app.callback()).put(`/guides/${guide.id}`).send(body)
+
+    expect(spy).toHaveBeenCalledWith(
+      guide.id,
+      expect.objectContaining({ expectedUpdatedAt: body.expectedUpdatedAt }),
+      expect.anything()
+    )
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['not a datetime', 'yesterday'],
+  ])(
+    'returns 400 when expectedUpdatedAt is %s',
+    async (_label, expectedUpdatedAt) => {
+      const spy = jest.spyOn(guidesAdapter, 'updateGuide')
+
+      const res = await request(app.callback())
+        .put(`/guides/${guide.id}`)
+        .send({ ...factory.guideWrite.build(), expectedUpdatedAt })
+
+      expect(res.status).toBe(400)
+      expect(spy).not.toHaveBeenCalled()
+    }
+  )
 
   it('returns 404 for an unknown guide', async () => {
     jest.spyOn(guidesAdapter, 'updateGuide').mockResolvedValue(null)
 
     const res = await request(app.callback())
       .put(`/guides/${randomUUID()}`)
-      .send(factory.guideWrite.build())
+      .send(updateBody())
 
     expect(res.status).toBe(404)
   })
 
   it.each([
     [409, 'slug-taken', new SlugTakenError('taken')],
+    [409, 'guide-modified', new GuideModifiedError(randomUUID())],
     [400, 'category-not-found', new CategoryNotFoundError(randomUUID())],
     [
       400,
@@ -344,7 +424,7 @@ describe('PUT /guides/:id', () => {
 
     const res = await request(app.callback())
       .put(`/guides/${guide.id}`)
-      .send(factory.guideWrite.build())
+      .send(updateBody())
 
     expect(res.status).toBe(status)
     expect(res.body).toEqual({ error })
@@ -385,7 +465,9 @@ describe('step images', () => {
       caption: null,
       createdAt: now,
     }
-    jest.spyOn(imagesAdapter, 'createStepImage').mockResolvedValue(image)
+    jest
+      .spyOn(imagesAdapter, 'createStepImage')
+      .mockResolvedValue({ image, guideUpdatedAt: now })
 
     const res = await request(app.callback())
       .post(`/guides/${guide.id}/steps/${guide.steps[0].id}/images`)
@@ -397,7 +479,26 @@ describe('step images', () => {
       })
 
     expect(res.status).toBe(200)
-    expect(res.body.storageKey).toBe('guide/x/1.png')
+    expect(res.body.image.storageKey).toBe('guide/x/1.png')
+    expect(res.body.guideUpdatedAt).toBe(now.toISOString())
+  })
+
+  it('maps a missing alt text on a published guide to 400 alt-text-required', async () => {
+    jest
+      .spyOn(imagesAdapter, 'createStepImage')
+      .mockRejectedValue(new AltTextRequiredError(guide.id))
+
+    const res = await request(app.callback())
+      .post(`/guides/${guide.id}/steps/${guide.steps[0].id}/images`)
+      .send({
+        id: randomUUID(),
+        storageKey: 'guide/x/1.png',
+        filename: '1.png',
+        contentType: 'image/png',
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body).toEqual({ error: 'alt-text-required' })
   })
 
   it('returns 404 when the step is not on the guide', async () => {
@@ -418,7 +519,7 @@ describe('step images', () => {
   it('deletes an image and returns its storage key', async () => {
     jest
       .spyOn(imagesAdapter, 'deleteStepImage')
-      .mockResolvedValue({ storageKey: 'guide/x/1.png' })
+      .mockResolvedValue({ storageKey: 'guide/x/1.png', guideUpdatedAt: now })
 
     const res = await request(app.callback()).delete(
       `/guides/${guide.id}/images/${randomUUID()}`
@@ -426,5 +527,6 @@ describe('step images', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.storageKey).toBe('guide/x/1.png')
+    expect(res.body.guideUpdatedAt).toBe(now.toISOString())
   })
 })

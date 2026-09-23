@@ -100,7 +100,7 @@ export const createGuide = async (
 
 export const updateGuide = async (
   id: string,
-  body: guides.ServiceGuideWrite
+  body: guides.ServiceGuideUpdate
 ): Promise<ProxiedAdapterResult<guides.UpdateGuideResponse, CommonErr>> => {
   try {
     const { data, error, response } = await client().PUT('/guides/{id}', {
@@ -138,7 +138,7 @@ export const createStepImage = async (
   guideId: string,
   stepId: string,
   body: guides.CreateStepImageRequest
-): Promise<ProxiedAdapterResult<guides.GuideStepImage, CommonErr>> => {
+): Promise<ProxiedAdapterResult<guides.CreateStepImageResponse, CommonErr>> => {
   try {
     const { data, error, response } = await client().POST(
       '/guides/{id}/steps/{stepId}/images',
@@ -146,7 +146,7 @@ export const createStepImage = async (
     )
     if (error || !response.ok)
       return fail(mapFetchError(response), upstreamError(error))
-    return ok(guides.GuideStepImageSchema.parse(data))
+    return ok(guides.CreateStepImageResponseSchema.parse(data))
   } catch (err) {
     logger.error(
       { err, guideId, stepId },

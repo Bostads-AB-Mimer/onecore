@@ -14,6 +14,10 @@ describe('saveErrorMessage', () => {
       'En bild hör inte till det steg den skickades med. Ladda om guiden och försök igen.',
     ],
     [
+      'guide-modified',
+      'Guiden har ändrats av någon annan sedan du öppnade den. Ladda om sidan för att se de senaste ändringarna.',
+    ],
+    [
       'category-not-found',
       'Kategorin finns inte längre. Välj en annan kategori.',
     ],
@@ -42,6 +46,9 @@ describe('uploadErrorMessage', () => {
     )
     expect(uploadErrorMessage({ error: 'invalid-file-data' }, 'a.png')).toBe(
       'a.png: filen kunde inte läsas. Försök med en annan bild.'
+    )
+    expect(uploadErrorMessage({ error: 'alt-text-required' }, 'a.png')).toBe(
+      'a.png: guiden är publicerad, så bilden behöver en alt-text.'
     )
   })
 

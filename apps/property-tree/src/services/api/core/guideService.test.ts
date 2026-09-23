@@ -26,13 +26,21 @@ describe('guideService.uploadStepImage', () => {
     vi.restoreAllMocks()
   })
 
-  it('returns the uploaded image', async () => {
+  it('returns the uploaded image and the guide updatedAt', async () => {
     vi.spyOn(axios, 'post').mockResolvedValue({
-      data: { content: { id: 'img-1' } },
+      data: {
+        content: {
+          image: { id: 'img-1' },
+          guideUpdatedAt: '2026-09-23T10:00:00.000Z',
+        },
+      },
     })
     await expect(
       guideService.uploadStepImage('g1', 's1', body)
-    ).resolves.toMatchObject({ id: 'img-1' })
+    ).resolves.toMatchObject({
+      image: { id: 'img-1' },
+      guideUpdatedAt: '2026-09-23T10:00:00.000Z',
+    })
   })
 
   it('rejects with the { error } body core returned', async () => {

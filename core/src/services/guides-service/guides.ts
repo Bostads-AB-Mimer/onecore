@@ -384,7 +384,7 @@ export const routes = (router: KoaRouter) => {
    * /guides/{id}:
    *   put:
    *     summary: Update a guide
-   *     description: Requires the guides-admin role. Replaces metadata and steps; steps missing from the payload are deleted together with their images, and the files are removed from storage.
+   *     description: Requires the guides-admin role. Replaces metadata and steps; steps missing from the payload are deleted together with their images, and the files are removed from storage. expectedUpdatedAt must be the guide's updatedAt as last read by the client (from the guide, a previous save, or an image upload/delete response); a stale value is rejected with 409 guide-modified so a save from outdated state cannot delete newer images.
    *     tags: [Guides]
    *     parameters:
    *       - in: path
@@ -438,7 +438,7 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               $ref: '#/components/schemas/NotFoundResponse'
    *       409:
-   *         description: Slug already taken
+   *         description: "Conflict proxied from the communication service: slug-taken, or guide-modified when expectedUpdatedAt is stale (the guide was saved or its images changed since the client loaded it)"
    *         content:
    *           application/json:
    *             schema:
@@ -479,8 +479,12 @@ export const routes = (router: KoaRouter) => {
         return
       }
       if (result.err === 'conflict') {
+        // Either slug-taken or guide-modified; pass the service's code on.
         ctx.status = 409
-        ctx.body = { error: 'slug-taken', ...metadata }
+        ctx.body = {
+          ...upstreamErrorBody(result.upstream, 'conflict'),
+          ...metadata,
+        }
         return
       }
       if (result.err === 'bad-request') {

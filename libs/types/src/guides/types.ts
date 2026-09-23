@@ -5,10 +5,13 @@ import {
   CategoryInputSchema,
   CreateGuideRequestSchema,
   CreateStepImageRequestSchema,
+  CreateStepImageResponseSchema,
   DeleteGuideResponseSchema,
   DeleteStepImageResponseSchema,
   GuideCategorySchema,
+  GuideImageDeleteResponseSchema,
   GuideImageUploadRequestSchema,
+  GuideImageUploadResponseSchema,
   GuideSchema,
   GuideStatusSchema,
   GuideStepImageSchema,
@@ -18,6 +21,7 @@ import {
   GuideSummarySchema,
   GuideWithUrlsSchema,
   ListGuidesQuerySchema,
+  ServiceGuideUpdateSchema,
   ServiceGuideWriteSchema,
   StepImageInputSchema,
   StepInputSchema,
@@ -45,6 +49,7 @@ export type CategoryInput = z.infer<typeof CategoryInputSchema>
 export type CreateGuideRequest = z.infer<typeof CreateGuideRequestSchema>
 export type UpdateGuideRequest = z.infer<typeof UpdateGuideRequestSchema>
 export type ServiceGuideWrite = z.infer<typeof ServiceGuideWriteSchema>
+export type ServiceGuideUpdate = z.infer<typeof ServiceGuideUpdateSchema>
 export type ListGuidesQuery = z.infer<typeof ListGuidesQuerySchema>
 export type CreateStepImageRequest = z.infer<
   typeof CreateStepImageRequestSchema
@@ -56,4 +61,13 @@ export type UpdateGuideResponse = z.infer<typeof UpdateGuideResponseSchema>
 export type DeleteGuideResponse = z.infer<typeof DeleteGuideResponseSchema>
 export type DeleteStepImageResponse = z.infer<
   typeof DeleteStepImageResponseSchema
+>
+export type CreateStepImageResponse = z.infer<
+  typeof CreateStepImageResponseSchema
+>
+export type GuideImageUploadResponse = z.infer<
+  typeof GuideImageUploadResponseSchema
+>
+export type GuideImageDeleteResponse = z.infer<
+  typeof GuideImageDeleteResponseSchema
 >

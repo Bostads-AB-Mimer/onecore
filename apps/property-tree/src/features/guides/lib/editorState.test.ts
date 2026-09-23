@@ -8,10 +8,17 @@ import {
   editorReducer,
   emptyState,
   fromGuide,
+  hasAltText,
   toPreview,
   toRequest,
+  toUpdateRequest,
   validate,
 } from './editorState'
+
+// The guide's updatedAt as loaded, and later values reported by the server.
+const loadedAt = '2026-09-23T10:00:00.000Z'
+const afterUpload = '2026-09-23T10:00:05.000Z'
+const afterSecondUpload = '2026-09-23T10:00:07.000Z'
 
 const image: GuideStepImageWithUrl = {
   id: 'img-1',
@@ -38,7 +45,7 @@ const guide: GuideWithUrls = {
   updatedBy: 'Anna',
   publishedAt: null,
   createdAt: '',
-  updatedAt: '',
+  updatedAt: loadedAt,
   steps: [
     {
       id: 's1',
@@ -95,6 +102,7 @@ describe('editorReducer', () => {
       type: 'add-image',
       stepId: 's1',
       image: { ...image, id: 'img-2' },
+      guideUpdatedAt: afterUpload,
     })
     state = editorReducer(state, {
       type: 'move-image',
@@ -115,8 +123,69 @@ describe('editorReducer', () => {
       type: 'remove-image',
       stepId: 's1',
       imageId: 'img-1',
+      guideUpdatedAt: afterSecondUpload,
     })
     expect(state.steps[0].images).toHaveLength(1)
+    expect(state.updatedAt).toBe(afterSecondUpload)
+  })
+
+  it('tracks the guide updatedAt from load, image changes and saves', () => {
+    let state = fromGuide(guide)
+    expect(state.updatedAt).toBe(loadedAt)
+    expect(emptyState().updatedAt).toBeNull()
+
+    state = editorReducer(state, {
+      type: 'add-image',
+      stepId: 's1',
+      image: { ...image, id: 'img-2' },
+      guideUpdatedAt: afterUpload,
+    })
+    expect(state.updatedAt).toBe(afterUpload)
+
+    state = editorReducer(state, {
+      type: 'saved',
+      guide: { ...guide, updatedAt: afterSecondUpload },
+    })
+    expect(state.updatedAt).toBe(afterSecondUpload)
+  })
+
+  it('never moves updatedAt backwards when uploads finish out of order', () => {
+    let state = fromGuide(guide)
+    state = editorReducer(state, {
+      type: 'add-image',
+      stepId: 's1',
+      image: { ...image, id: 'img-late' },
+      guideUpdatedAt: afterSecondUpload,
+    })
+    state = editorReducer(state, {
+      type: 'add-image',
+      stepId: 's1',
+      image: { ...image, id: 'img-early' },
+      guideUpdatedAt: afterUpload,
+    })
+    expect(state.updatedAt).toBe(afterSecondUpload)
+    expect(state.steps[0].images.map((i) => i.id)).toEqual([
+      'img-1',
+      'img-late',
+      'img-early',
+    ])
+  })
+
+  it('records updatedAt from an upload that finished after its step was removed', () => {
+    let state = fromGuide(guide)
+    state = editorReducer(state, { type: 'remove-step', stepId: 's1' })
+
+    const next = editorReducer(state, {
+      type: 'add-image',
+      stepId: 's1',
+      image: { ...image, id: 'img-2' },
+      guideUpdatedAt: afterUpload,
+    })
+
+    // The server-side upload happened, so its version must be kept even
+    // though the image is not added to the (removed) step.
+    expect(next.updatedAt).toBe(afterUpload)
+    expect(next.steps).toEqual([])
   })
 
   it('clears dirty and marks every step saved after a save', () => {
@@ -150,6 +219,7 @@ describe('editorReducer', () => {
         type: 'add-image',
         stepId: 'nope',
         image: { ...image, id: 'img-2' },
+        guideUpdatedAt: loadedAt,
       }),
       editorReducer(state, {
         type: 'update-image',
@@ -161,6 +231,7 @@ describe('editorReducer', () => {
         type: 'remove-image',
         stepId: 's1',
         imageId: 'nope',
+        guideUpdatedAt: loadedAt,
       }),
       editorReducer(state, {
         type: 'move-image',
@@ -173,6 +244,14 @@ describe('editorReducer', () => {
       expect(next).toBe(state)
       expect(next.dirty).toBe(false)
     })
+  })
+})
+
+describe('hasAltText', () => {
+  it('requires at least one non-whitespace character', () => {
+    expect(hasAltText('Inloggningsrutan')).toBe(true)
+    expect(hasAltText('')).toBe(false)
+    expect(hasAltText('   ')).toBe(false)
   })
 })
 
@@ -256,6 +335,30 @@ describe('toRequest', () => {
     const step = toRequest(state, 'draft').steps[0]
     expect(step.calloutType).toBe('tip')
     expect(step.calloutText).toBeNull()
+  })
+})
+
+describe('toUpdateRequest', () => {
+  it('sends the tracked updatedAt as expectedUpdatedAt', () => {
+    let state = fromGuide(guide)
+    state = editorReducer(state, {
+      type: 'add-image',
+      stepId: 's1',
+      image: { ...image, id: 'img-2' },
+      guideUpdatedAt: afterUpload,
+    })
+
+    const request = toUpdateRequest(state, 'draft')
+
+    expect(request.expectedUpdatedAt).toBe(afterUpload)
+    expect(request.steps[0].images?.map((i) => i.id)).toEqual([
+      'img-1',
+      'img-2',
+    ])
+  })
+
+  it('refuses a guide that has never been saved', () => {
+    expect(() => toUpdateRequest(emptyState(), 'draft')).toThrow()
   })
 })
 

@@ -44,6 +44,72 @@ describe('guide files are not reachable through /files', () => {
     expect(deleteSpy).not.toHaveBeenCalled()
   })
 
+  it('refuses to delete a guide image addressed with leading slashes', async () => {
+    const deleteSpy = jest.spyOn(fileStorageAdapter, 'deleteFile')
+
+    const res = await request(app.callback()).delete(
+      `/files/${encodeURIComponent('//guide/abc/1.png')}`
+    )
+
+    expect(res.status).toBe(403)
+    expect(deleteSpy).not.toHaveBeenCalled()
+  })
+
+  it('refuses to upload to a guide image key', async () => {
+    const uploadSpy = jest.spyOn(fileStorageAdapter, 'uploadFile')
+
+    const res = await request(app.callback())
+      .post('/files/upload')
+      .send({
+        fileName: 'guide/abc/1.png',
+        fileData: Buffer.from('x').toString('base64'),
+        contentType: 'image/png',
+      })
+
+    expect(res.status).toBe(403)
+    expect(res.body.error).toBe('guide-files-managed-via-guides-api')
+    expect(uploadSpy).not.toHaveBeenCalled()
+  })
+
+  it('refuses to upload to a guide image key with a leading slash', async () => {
+    const uploadSpy = jest.spyOn(fileStorageAdapter, 'uploadFile')
+
+    const res = await request(app.callback())
+      .post('/files/upload')
+      .send({
+        fileName: '/guide/abc/1.png',
+        fileData: Buffer.from('x').toString('base64'),
+        contentType: 'image/png',
+      })
+
+    expect(res.status).toBe(403)
+    expect(uploadSpy).not.toHaveBeenCalled()
+  })
+
+  it('still uploads files under other keys', async () => {
+    const uploadSpy = jest
+      .spyOn(fileStorageAdapter, 'uploadFile')
+      .mockResolvedValue({
+        ok: true,
+        data: { fileName: 'inspection/1.pdf', message: 'uploaded' },
+      })
+
+    const res = await request(app.callback())
+      .post('/files/upload')
+      .send({
+        fileName: 'inspection/1.pdf',
+        fileData: Buffer.from('x').toString('base64'),
+        contentType: 'application/pdf',
+      })
+
+    expect(res.status).toBe(200)
+    expect(uploadSpy).toHaveBeenCalledWith(
+      'inspection/1.pdf',
+      Buffer.from('x'),
+      'application/pdf'
+    )
+  })
+
   it('refuses to list files under the guide prefix', async () => {
     const listSpy = jest.spyOn(fileStorageAdapter, 'listFiles')
 

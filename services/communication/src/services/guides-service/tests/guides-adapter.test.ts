@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { Knex } from 'knex'
+import { guides } from '@onecore/types'
 
 import {
   findOrCreateCategory,
@@ -17,7 +18,9 @@ import {
 import { createStepImage, deleteStepImage } from '../adapters/images-adapter'
 import { GuideCategoryRow } from '../adapters/rows'
 import {
+  AltTextRequiredError,
   CategoryNotFoundError,
+  GuideModifiedError,
   ImageNotInStepError,
   SlugTakenError,
   StepBelongsToOtherGuideError,
@@ -33,14 +36,32 @@ jest.mock('@onecore/utilities', () => ({
   },
 }))
 
-const imageInput = (overrides: Partial<{ storageKey: string }> = {}) => ({
+const imageInput = (
+  overrides: Partial<{ storageKey: string; altText: string | undefined }> = {}
+): guides.CreateStepImageRequest => ({
   id: randomUUID(),
   storageKey: overrides.storageKey ?? `guide/test/${randomUUID()}.png`,
   filename: 'screenshot.png',
   contentType: 'image/png',
-  altText: 'A screenshot',
+  altText: 'altText' in overrides ? overrides.altText : 'A screenshot',
   caption: null,
 })
+
+/** The guide's current concurrency token, as a client would echo it back. */
+const currentVersion = async (id: string, db: Knex) =>
+  ((await getGuideById(id, db))?.updatedAt ?? new Date()).toISOString()
+
+/** updateGuide with the current token, for tests about other behaviour. */
+const updateCurrent = async (
+  id: string,
+  input: guides.ServiceGuideWrite,
+  db: Knex
+) =>
+  updateGuide(
+    id,
+    { ...input, expectedUpdatedAt: await currentVersion(id, db) },
+    db
+  )
 
 const uniqueViolation = () =>
   Object.assign(new Error('Violation of UNIQUE KEY constraint'), {
@@ -195,7 +216,7 @@ describe('guides-adapter', () => {
       expect(orphanImage).not.toBeNull()
 
       const newStep = factory.step.build()
-      const result = await updateGuide(
+      const result = await updateCurrent(
         created.id,
         factory.guideWrite.build({
           slug: created.slug,
@@ -211,7 +232,7 @@ describe('guides-adapter', () => {
       expect(guide.steps.map((s) => s.sortOrder)).toEqual([0, 1, 2])
       expect(guide.steps[1].title).toBe('Renamed')
       // Step b was removed, so its image file must be cleaned up by core.
-      expect(removedStorageKeys).toEqual([orphanImage!.storageKey])
+      expect(removedStorageKeys).toEqual([orphanImage!.image.storageKey])
     }))
 
   it('keeps referenced images, updates their metadata and removes the rest', () =>
@@ -226,16 +247,16 @@ describe('guides-adapter', () => {
         step.id,
         imageInput(),
         db
-      ))!
+      ))!.image
       const drop = (await createStepImage(
         created.id,
         step.id,
         imageInput(),
         db
-      ))!
+      ))!.image
       expect([keep.sortOrder, drop.sortOrder]).toEqual([0, 1])
 
-      const result = await updateGuide(
+      const result = await updateCurrent(
         created.id,
         factory.guideWrite.build({
           slug: created.slug,
@@ -274,6 +295,7 @@ describe('guides-adapter', () => {
         db
       )
       const image = (await createStepImage(created.id, a.id, imageInput(), db))!
+        .image
 
       const moved = factory.guideWrite.build({
         slug: created.slug,
@@ -289,7 +311,7 @@ describe('guides-adapter', () => {
         ],
       })
 
-      await expect(updateGuide(created.id, moved, db)).rejects.toBeInstanceOf(
+      await expect(updateCurrent(created.id, moved, db)).rejects.toBeInstanceOf(
         ImageNotInStepError
       )
 
@@ -309,7 +331,7 @@ describe('guides-adapter', () => {
       )
 
       await expect(
-        updateGuide(
+        updateCurrent(
           created.id,
           factory.guideWrite.build({
             slug: created.slug,
@@ -340,7 +362,7 @@ describe('guides-adapter', () => {
       const stolen = factory.step.build({ id: other.steps[0].id })
 
       await expect(
-        updateGuide(
+        updateCurrent(
           mine.id,
           factory.guideWrite.build({
             slug: mine.slug,
@@ -368,7 +390,7 @@ describe('guides-adapter', () => {
       const oldSlug = created.slug
       const newSlug = `${oldSlug}-v2`
 
-      const result = await updateGuide(
+      const result = await updateCurrent(
         created.id,
         factory.guideWrite.build({
           slug: newSlug,
@@ -391,7 +413,7 @@ describe('guides-adapter', () => {
       ).rejects.toBeInstanceOf(SlugTakenError)
 
       // Taking the old slug back drops the history row.
-      const back = await updateGuide(
+      const back = await updateCurrent(
         created.id,
         factory.guideWrite.build({
           slug: oldSlug,
@@ -409,7 +431,7 @@ describe('guides-adapter', () => {
     withContext(async ({ db }) => {
       const first = await createGuide(factory.guideWrite.build(), db)
       const oldSlug = first.slug
-      await updateGuide(
+      await updateCurrent(
         first.id,
         factory.guideWrite.build({
           slug: `${oldSlug}-v2`,
@@ -421,7 +443,7 @@ describe('guides-adapter', () => {
 
       const second = await createGuide(factory.guideWrite.build(), db)
       await expect(
-        updateGuide(
+        updateCurrent(
           second.id,
           factory.guideWrite.build({
             slug: oldSlug,
@@ -442,14 +464,14 @@ describe('guides-adapter', () => {
         steps: created.steps.map((s) => ({ ...s, images: [] })),
       }
 
-      const published = await updateGuide(
+      const published = await updateCurrent(
         created.id,
         factory.guideWrite.build({ ...base, status: 'published' }),
         db
       )
       expect(published!.guide.publishedAt).toBeInstanceOf(Date)
 
-      const unpublished = await updateGuide(
+      const unpublished = await updateCurrent(
         created.id,
         factory.guideWrite.build({ ...base, status: 'draft' }),
         db
@@ -460,7 +482,7 @@ describe('guides-adapter', () => {
   it('returns null when updating or deleting an unknown guide', () =>
     withContext(async ({ db }) => {
       expect(
-        await updateGuide(randomUUID(), factory.guideWrite.build(), db)
+        await updateCurrent(randomUUID(), factory.guideWrite.build(), db)
       ).toBeNull()
       expect(await deleteGuide(randomUUID(), db)).toBeNull()
     }))
@@ -477,13 +499,13 @@ describe('guides-adapter', () => {
         a.id,
         imageInput(),
         db
-      ))!
+      ))!.image
       const imageB = (await createStepImage(
         created.id,
         b.id,
         imageInput(),
         db
-      ))!
+      ))!.image
 
       const result = await deleteGuide(created.id, db)
 
@@ -497,7 +519,7 @@ describe('guides-adapter', () => {
     withContext(async ({ db }) => {
       const created = await createGuide(factory.guideWrite.build(), db)
       const oldSlug = created.slug
-      await updateGuide(
+      await updateCurrent(
         created.id,
         factory.guideWrite.build({
           slug: `${oldSlug}-v2`,
@@ -520,6 +542,170 @@ describe('guides-adapter', () => {
     }))
 })
 
+describe('guide version (optimistic concurrency)', () => {
+  const sameGuide = (
+    guide: guides.Guide,
+    steps: guides.StepInput[] = guide.steps.map((s) => ({ ...s, images: [] }))
+  ) =>
+    factory.guideWrite.build({
+      slug: guide.slug,
+      category: { id: guide.category.id },
+      steps,
+    })
+
+  it('accepts the current updatedAt and returns a newer one that round-trips', () =>
+    withContext(async ({ db }) => {
+      const created = await createGuide(factory.guideWrite.build(), db)
+
+      const first = await updateGuide(
+        created.id,
+        {
+          ...sameGuide(created),
+          expectedUpdatedAt: created.updatedAt.toISOString(),
+        },
+        db
+      )
+      expect(first!.guide.updatedAt.getTime()).toBeGreaterThan(
+        created.updatedAt.getTime()
+      )
+
+      // The returned value is exactly what is stored, so the editor can send
+      // it back as is on its next save.
+      const second = await updateGuide(
+        created.id,
+        {
+          ...sameGuide(created),
+          title: 'Second save',
+          expectedUpdatedAt: first!.guide.updatedAt.toISOString(),
+        },
+        db
+      )
+      expect(second!.guide.title).toBe('Second save')
+    }))
+
+  it('rejects a stale expectedUpdatedAt and leaves the guide untouched', () =>
+    withContext(async ({ db }) => {
+      const created = await createGuide(factory.guideWrite.build(), db)
+      const loadedAt = created.updatedAt.toISOString()
+
+      await updateGuide(
+        created.id,
+        { ...sameGuide(created), title: 'Tab A', expectedUpdatedAt: loadedAt },
+        db
+      )
+
+      await expect(
+        updateGuide(
+          created.id,
+          {
+            ...sameGuide(created),
+            title: 'Tab B',
+            expectedUpdatedAt: loadedAt,
+          },
+          db
+        )
+      ).rejects.toBeInstanceOf(GuideModifiedError)
+
+      expect((await getGuideById(created.id, db))!.title).toBe('Tab A')
+    }))
+
+  it('rejects a save from state loaded before an image upload and keeps the image', () =>
+    withContext(async ({ db }) => {
+      const step = factory.step.build()
+      const created = await createGuide(
+        factory.guideWrite.build({ steps: [step] }),
+        db
+      )
+      const staleVersion = created.updatedAt.toISOString()
+
+      // Another tab uploads an image: the guide's updatedAt moves forward.
+      const upload = (await createStepImage(
+        created.id,
+        step.id,
+        imageInput(),
+        db
+      ))!
+      expect(upload.guideUpdatedAt.getTime()).toBeGreaterThan(
+        created.updatedAt.getTime()
+      )
+      expect((await getGuideById(created.id, db))!.updatedAt).toEqual(
+        upload.guideUpdatedAt
+      )
+
+      // The stale tab does not know the image and would delete it.
+      await expect(
+        updateGuide(
+          created.id,
+          { ...sameGuide(created), expectedUpdatedAt: staleVersion },
+          db
+        )
+      ).rejects.toBeInstanceOf(GuideModifiedError)
+      const afterStale = await getGuideById(created.id, db)
+      expect(afterStale!.steps[0].images.map((i) => i.id)).toEqual([
+        upload.image.id,
+      ])
+
+      // The tab that uploaded the image saves with the value the upload
+      // returned.
+      const saved = await updateGuide(
+        created.id,
+        {
+          ...sameGuide(created, [
+            {
+              ...step,
+              images: [
+                {
+                  id: upload.image.id,
+                  sortOrder: 0,
+                  altText: 'Alt',
+                  caption: null,
+                },
+              ],
+            },
+          ]),
+          expectedUpdatedAt: upload.guideUpdatedAt.toISOString(),
+        },
+        db
+      )
+      expect(saved!.removedStorageKeys).toEqual([])
+      expect(saved!.guide.steps[0].images[0].altText).toBe('Alt')
+    }))
+
+  it('bumps updatedAt when an image is deleted', () =>
+    withContext(async ({ db }) => {
+      const created = await createGuide(factory.guideWrite.build(), db)
+      const upload = (await createStepImage(
+        created.id,
+        created.steps[0].id,
+        imageInput(),
+        db
+      ))!
+
+      const deleted = await deleteStepImage(created.id, upload.image.id, db)
+
+      expect(deleted!.guideUpdatedAt.getTime()).toBeGreaterThan(
+        upload.guideUpdatedAt.getTime()
+      )
+      await expect(
+        updateGuide(
+          created.id,
+          {
+            ...sameGuide(created),
+            expectedUpdatedAt: upload.guideUpdatedAt.toISOString(),
+          },
+          db
+        )
+      ).rejects.toBeInstanceOf(GuideModifiedError)
+    }))
+
+  it('returns null for an image upload on an unknown guide', () =>
+    withContext(async ({ db }) => {
+      expect(
+        await createStepImage(randomUUID(), randomUUID(), imageInput(), db)
+      ).toBeNull()
+    }))
+})
+
 describe('images-adapter', () => {
   it('refuses an image on a step that belongs to another guide', () =>
     withContext(async ({ db }) => {
@@ -535,6 +721,70 @@ describe('images-adapter', () => {
       expect(result).toBeNull()
     }))
 
+  it.each([
+    ['missing', undefined],
+    ['empty', ''],
+    ['blank', '   '],
+  ])(
+    'rejects an image with %s alt text on a published guide',
+    (_label, altText) =>
+      withContext(async ({ db }) => {
+        const created = await createGuide(
+          factory.guideWrite.build({ status: 'published' }),
+          db
+        )
+        const before = created.updatedAt.getTime()
+
+        await expect(
+          createStepImage(
+            created.id,
+            created.steps[0].id,
+            imageInput({ altText }),
+            db
+          )
+        ).rejects.toBeInstanceOf(AltTextRequiredError)
+
+        // Nothing was written: no image row and no version bump.
+        const stored = await getGuideById(created.id, db)
+        expect(stored?.steps[0].images).toEqual([])
+        expect(stored?.updatedAt.getTime()).toBe(before)
+      })
+  )
+
+  it('accepts an image with alt text on a published guide', () =>
+    withContext(async ({ db }) => {
+      const created = await createGuide(
+        factory.guideWrite.build({ status: 'published' }),
+        db
+      )
+
+      const result = await createStepImage(
+        created.id,
+        created.steps[0].id,
+        imageInput({ altText: 'The login form' }),
+        db
+      )
+
+      expect(result?.image.altText).toBe('The login form')
+    }))
+
+  it('accepts an image without alt text on a draft guide', () =>
+    withContext(async ({ db }) => {
+      const created = await createGuide(
+        factory.guideWrite.build({ status: 'draft' }),
+        db
+      )
+
+      const result = await createStepImage(
+        created.id,
+        created.steps[0].id,
+        imageInput({ altText: undefined }),
+        db
+      )
+
+      expect(result?.image.altText).toBe('')
+    }))
+
   it('deletes an image and returns its storage key', () =>
     withContext(async ({ db }) => {
       const created = await createGuide(factory.guideWrite.build(), db)
@@ -543,10 +793,11 @@ describe('images-adapter', () => {
         created.steps[0].id,
         imageInput(),
         db
-      ))!
+      ))!.image
 
       expect(await deleteStepImage(created.id, image.id, db)).toEqual({
         storageKey: image.storageKey,
+        guideUpdatedAt: expect.any(Date),
       })
       expect(await deleteStepImage(created.id, image.id, db)).toBeNull()
     }))

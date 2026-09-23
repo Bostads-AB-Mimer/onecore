@@ -39,6 +39,30 @@ export class CategoryNotFoundError extends Error {
 }
 
 /**
+ * Thrown when a save was based on an older version of the guide than the one
+ * stored, e.g. another tab saved or uploaded an image in between. Accepting it
+ * would delete images the stale payload does not know about.
+ */
+export class GuideModifiedError extends Error {
+  constructor(public readonly guideId: string) {
+    super(`Guide "${guideId}" was modified since it was loaded`)
+    this.name = 'GuideModifiedError'
+  }
+}
+
+/**
+ * Thrown when an image without alt text is uploaded to a published guide.
+ * publishRules only runs on saves, so without this check an upload would put
+ * an image without alt text in front of readers.
+ */
+export class AltTextRequiredError extends Error {
+  constructor(public readonly guideId: string) {
+    super(`Guide "${guideId}" is published; uploaded images need alt text`)
+    this.name = 'AltTextRequiredError'
+  }
+}
+
+/**
  * True for the errors above: rejected requests the caller can act on, mapped
  * to a 4xx response. They are not logged as adapter errors.
  */
@@ -46,4 +70,6 @@ export const isGuideDomainError = (err: unknown): boolean =>
   err instanceof SlugTakenError ||
   err instanceof CategoryNotFoundError ||
   err instanceof ImageNotInStepError ||
-  err instanceof StepBelongsToOtherGuideError
+  err instanceof StepBelongsToOtherGuideError ||
+  err instanceof GuideModifiedError ||
+  err instanceof AltTextRequiredError

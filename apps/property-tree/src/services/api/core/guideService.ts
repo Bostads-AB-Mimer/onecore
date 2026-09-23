@@ -14,6 +14,10 @@ export type CreateGuideRequest = components['schemas']['CreateGuideRequest']
 export type UpdateGuideRequest = components['schemas']['UpdateGuideRequest']
 export type GuideImageUploadRequest =
   components['schemas']['GuideImageUploadRequest']
+export type GuideImageUploadResponse =
+  components['schemas']['GuideImageUploadResponse']
+export type GuideImageDeleteResponse =
+  components['schemas']['GuideImageDeleteResponse']
 export type GuideBySlugResponse = GuideWithUrls | UnpublishedGuide
 
 export const isUnpublishedGuide = (
@@ -41,7 +45,9 @@ const toApiError = (error: unknown): { error: string; detail?: string } => {
 export const guideService = {
   async getGuides(params: { includeDrafts: boolean }): Promise<GuideSummary[]> {
     const response = await GET('/guides', {
-      params: { query: { includeDrafts: params.includeDrafts } },
+      params: {
+        query: { includeDrafts: params.includeDrafts ? 'true' : 'false' },
+      },
     })
     if (response.error) throw response.error
     if (!response.data?.content) throw new Error('No data returned from API')
@@ -100,11 +106,16 @@ export const guideService = {
     if (response.error) throw response.error
   },
 
-  async deleteStepImage(guideId: string, imageId: string): Promise<void> {
+  async deleteStepImage(
+    guideId: string,
+    imageId: string
+  ): Promise<GuideImageDeleteResponse> {
     const response = await DELETE('/guides/{id}/images/{imageId}', {
       params: { path: { id: guideId, imageId } },
     })
     if (response.error) throw response.error
+    if (!response.data?.content) throw new Error('No data returned from API')
+    return response.data.content
   },
 
   // openapi-fetch cannot report upload progress, so this one call goes
@@ -114,9 +125,9 @@ export const guideService = {
     stepId: string,
     body: GuideImageUploadRequest,
     onProgress?: (fraction: number) => void
-  ): Promise<GuideStepImageWithUrl> {
+  ): Promise<GuideImageUploadResponse> {
     try {
-      const response = await axios.post<{ content: GuideStepImageWithUrl }>(
+      const response = await axios.post<{ content: GuideImageUploadResponse }>(
         `${coreApiBaseUrl}/guides/${encodeURIComponent(guideId)}/steps/${encodeURIComponent(stepId)}/images`,
         body,
         {

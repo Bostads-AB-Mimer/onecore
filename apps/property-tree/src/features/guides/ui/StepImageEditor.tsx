@@ -16,6 +16,7 @@ import { useDeleteStepImage } from '../hooks/useDeleteStepImage'
 import { useUploadStepImage } from '../hooks/useUploadStepImage'
 import type { EditorAction, EditorStep } from '../lib/editorState'
 import { uploadErrorMessage } from '../lib/errorMessages'
+import { ImageAltTextDialog, type ImageWithAltText } from './ImageAltTextDialog'
 
 interface PendingUpload {
   key: string
@@ -25,6 +26,11 @@ interface PendingUpload {
 
 interface StepImageEditorProps {
   guideId: string | null
+  /**
+   * True when the guide is published: an upload is visible to readers at
+   * once, so alt text is collected before the upload instead of after it.
+   */
+  requireAltText: boolean
   step: EditorStep
   dispatch: React.Dispatch<EditorAction>
   /** Reports how many uploads this step currently has in flight. */
@@ -33,6 +39,7 @@ interface StepImageEditorProps {
 
 export function StepImageEditor({
   guideId,
+  requireAltText,
   step,
   dispatch,
   onPendingChange,
@@ -41,6 +48,7 @@ export function StepImageEditor({
   const upload = useUploadStepImage()
   const deleteImage = useDeleteStepImage()
   const [pending, setPending] = useState<PendingUpload[]>([])
+  const [awaitingAltText, setAwaitingAltText] = useState<File[]>([])
 
   const canUpload = guideId !== null && step.saved
 
@@ -57,8 +65,16 @@ export function StepImageEditor({
     )
 
   const handleFiles = (files: File[]) => {
+    if (requireAltText) {
+      setAwaitingAltText(files)
+      return
+    }
+    uploadImages(files.map((file) => ({ file, altText: '' })))
+  }
+
+  const uploadImages = (images: ImageWithAltText[]) => {
     if (!guideId) return
-    files.forEach((file) => {
+    images.forEach(({ file, altText }) => {
       const key = `${file.name}-${Date.now()}-${Math.random()}`
       setPending((current) => [
         ...current,
@@ -69,11 +85,17 @@ export function StepImageEditor({
           guideId,
           stepId: step.id,
           file,
+          altText: altText || undefined,
           onProgress: (fraction) => setProgress(key, fraction),
         },
         {
-          onSuccess: (image) =>
-            dispatch({ type: 'add-image', stepId: step.id, image }),
+          onSuccess: ({ image, guideUpdatedAt }) =>
+            dispatch({
+              type: 'add-image',
+              stepId: step.id,
+              image,
+              guideUpdatedAt,
+            }),
           onError: (error) =>
             toast({
               title: 'Uppladdningen misslyckades',
@@ -90,8 +112,16 @@ export function StepImageEditor({
   const removeImage = async (imageId: string) => {
     if (!guideId) return
     try {
-      await deleteImage.mutateAsync({ guideId, imageId })
-      dispatch({ type: 'remove-image', stepId: step.id, imageId })
+      const { guideUpdatedAt } = await deleteImage.mutateAsync({
+        guideId,
+        imageId,
+      })
+      dispatch({
+        type: 'remove-image',
+        stepId: step.id,
+        imageId,
+        guideUpdatedAt,
+      })
     } catch {
       toast({
         title: 'Bilden kunde inte tas bort',
@@ -214,7 +244,20 @@ export function StepImageEditor({
         maxSizeLabel={GUIDE_IMAGE_MAX_DISPLAY}
         disabled={!canUpload}
         disabledReason="Spara guiden först för att kunna ladda upp bilder till steget."
-        hint="Bilder sparas direkt när de laddas upp."
+        hint={
+          requireAltText
+            ? 'Bilder sparas och visas direkt när de laddas upp, så varje bild behöver en alt-text först.'
+            : 'Bilder sparas direkt när de laddas upp.'
+        }
+      />
+
+      <ImageAltTextDialog
+        files={awaitingAltText}
+        onConfirm={(images) => {
+          setAwaitingAltText([])
+          uploadImages(images)
+        }}
+        onCancel={() => setAwaitingAltText([])}
       />
     </div>
   )
