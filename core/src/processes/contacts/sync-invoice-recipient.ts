@@ -1,6 +1,7 @@
 import { logger } from '@onecore/utilities'
 import type { Contact } from '@onecore/contacts/domain'
 import { syncContactToEconomy } from '../../adapters/economy-adapter'
+import { toSyncPayload } from '../../scripts/sync-contacts/payload'
 import { AdapterResult } from '../../adapters/types'
 
 /**
@@ -55,31 +56,17 @@ export const syncInvoiceRecipientToEconomy = async (
     }
   }
 
-  const contact = contactResult.data
-  // Same derivation (fullName-by-type, primary-else-first email,
-  // addresses[0] -> street/zip/city) also lives in `toSyncPayload` in
-  // `core/src/scripts/sync-contacts/payload.ts` — keep both in sync.
-  const fullName =
-    contact.type === 'individual'
-      ? contact.personal.fullName
-      : contact.organisation.name
-  const emailAddress = (
-    contact.communication.emailAddresses.find((e) => e.isPrimary) ??
-    contact.communication.emailAddresses[0]
-  )?.emailAddress
-  // Since AVTAL-289 a contact carries only its fakturaadress, so the first
+  // Shared with sync-contacts rather than re-derived: fullName-by-type,
+  // primary-else-first email and addresses[0] are one business rule, and
+  // since AVTAL-289 a contact carries only its fakturaadress, so the first
   // address is the one an invoice should go to.
-  const address = contact.addresses[0]
+  const { fullName, street, zipCode, city, emailAddress } = toSyncPayload(
+    contactResult.data
+  )
 
   const syncResult = await syncContactToEconomy(
-    contact.contactCode,
-    {
-      fullName,
-      street: address?.street,
-      zipCode: address?.zipCode,
-      city: address?.city,
-      emailAddress,
-    },
+    contactCode,
+    { fullName, street, zipCode, city, emailAddress },
     { create: true }
   )
 

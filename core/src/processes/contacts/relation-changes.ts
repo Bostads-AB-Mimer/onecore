@@ -134,10 +134,19 @@ type RelationPresence = 'present' | 'absent' | 'unknown'
 const readRelationPresence = async (
   params: RelationRef
 ): Promise<RelationPresence> => {
-  const result = await contactsAdapter.getByContactCodeBatch(
-    [params.contactCode],
-    { includeRelations: true }
-  )
+  // The contacts adapter does not catch request exceptions on reads, so a
+  // network failure or the adapter's own timeout rejects rather than
+  // returning a result. Letting it escape would answer the caseworker with an
+  // unstructured 500 and skip the write entirely.
+  const result = await contactsAdapter
+    .getByContactCodeBatch([params.contactCode], { includeRelations: true })
+    .catch((err): AdapterResult<never, 'unknown'> => {
+      logger.warn(
+        { contactCode: params.contactCode, err },
+        'relationChanges.presenceReadThrew'
+      )
+      return { ok: false, err: 'unknown' }
+    })
 
   if (!result.ok) {
     logger.warn(
@@ -319,41 +328,6 @@ const alarmRollbackFailed = async (params: {
 }
 
 /**
- * Reports a confirming resync that failed after a successful compensating
- * write, alarming only when Tenfast can actually be out of step.
- *
- * Tenfast pulls our contact, so it can only hold the reverted change if the
- * original push reached it. `sync-failed` means leasing answered and the push
- * did not go through, so there is nothing to repair — and that is the branch
- * every edit takes during an outage, which would bury the genuine alarms.
- */
-const notifyResyncUnconfirmed = (params: {
-  action: 'add' | 'remove'
-  relation: RelationRef
-  actor: string
-  economyCustomerTouched: boolean
-  propagationError: string
-  propagationWasAmbiguous: boolean
-  resyncError: string
-}): void => {
-  const { propagationWasAmbiguous, propagationError, resyncError, ...rest } =
-    params
-
-  if (!propagationWasAmbiguous) {
-    logger.warn(
-      { ...rest, propagationError, resyncError },
-      'relationChanges.rollbackResyncFailed'
-    )
-    return
-  }
-
-  void alarmRollbackFailed({
-    ...rest,
-    outcome: { kind: 'resync-unconfirmed', propagationError, resyncError },
-  })
-}
-
-/**
  * Creates the related contact as a customer in the economy service, for the
  * roles that need one there. Reports success for the roles that do not.
  *
@@ -509,16 +483,23 @@ export const addRelation = async (
 
     // Tenfast pulls our contact, so if the original push landed before we
     // lost the response it may already hold the relation we just removed.
+    //
+    // Alarms on any failure here, not just a lost response: leasing answers
+    // 500 both when Tenfast rejected the push and when Tenfast's own response
+    // was lost, so `sync-failed` does not mean Tenfast is untouched. Telling
+    // those apart needs a distinct error code out of leasing's sync route.
     const resynced = await syncContactToLeasing(params.contactCode)
     if (!resynced.ok) {
-      notifyResyncUnconfirmed({
+      void alarmRollbackFailed({
         action: 'add',
         relation: params,
         actor: params.createdBy,
         economyCustomerTouched: params.roleType === 'annan_fakturamottagare',
-        propagationError: synced.err,
-        propagationWasAmbiguous: synced.err === 'unknown',
-        resyncError: resynced.err,
+        outcome: {
+          kind: 'resync-unconfirmed',
+          propagationError: synced.err,
+          resyncError: resynced.err,
+        },
       })
     }
 
@@ -632,14 +613,16 @@ export const removeRelation = async (
     // See the add direction: Tenfast may already have re-read the removal.
     const resynced = await syncContactToLeasing(params.contactCode)
     if (!resynced.ok) {
-      notifyResyncUnconfirmed({
+      void alarmRollbackFailed({
         action: 'remove',
         relation: params,
         actor: params.deletedBy,
         economyCustomerTouched: false,
-        propagationError: synced.err,
-        propagationWasAmbiguous: synced.err === 'unknown',
-        resyncError: resynced.err,
+        outcome: {
+          kind: 'resync-unconfirmed',
+          propagationError: synced.err,
+          resyncError: resynced.err,
+        },
       })
     }
 

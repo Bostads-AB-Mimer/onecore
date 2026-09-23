@@ -246,8 +246,6 @@ describe('addRelation', () => {
     jest
       .spyOn(contactsAdapter, 'addRelation')
       .mockResolvedValue({ ok: true, data: RELATIONS })
-    // `unknown` = no response, so Tenfast may have re-read the relation
-    // before we lost it — the only case that leaves real doubt.
     jest
       .spyOn(leasingAdapter, 'syncContactToLeasing')
       .mockResolvedValue({ ok: false, err: 'unknown' })
@@ -309,10 +307,11 @@ describe('addRelation', () => {
     expect(mailSpy).not.toHaveBeenCalled()
   })
 
-  it('does not alarm when the confirming resync fails after a cleanly rejected push', async () => {
-    // `sync-failed` means leasing answered, so Tenfast never re-read the
-    // relation and already agrees with the rolled-back database. Every edit
-    // during an outage takes this branch.
+  it('alarms when the confirming resync fails after a cleanly rejected push too', async () => {
+    // `sync-failed` is not proof Tenfast is untouched: leasing answers 500
+    // both when Tenfast rejected the push and when Tenfast's own response was
+    // lost, so this branch can still leave Tenfast holding the reverted
+    // change. Staying quiet here would hide a real mismatch.
     jest
       .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
       .mockResolvedValue({ ok: true, data: null })
@@ -327,7 +326,7 @@ describe('addRelation', () => {
       .mockResolvedValue({ ok: true, data: undefined })
     const mailSpy = jest
       .spyOn(communicationAdapter, 'sendEmail')
-      .mockRejectedValue(NOT_CALLED)
+      .mockResolvedValue({ ok: true, data: null } as any)
 
     const result = await addRelation(RECIPIENT)
 
@@ -335,7 +334,7 @@ describe('addRelation', () => {
       processStatus: ProcessStatus.failed,
       error: 'propagation-failed',
     })
-    expect(mailSpy).not.toHaveBeenCalled()
+    expect(mailSpy).toHaveBeenCalledTimes(1)
   })
 
   it('logs the economy customer left behind when the relation is not saved', async () => {
@@ -792,8 +791,6 @@ describe('removeRelation', () => {
     jest
       .spyOn(contactsAdapter, 'removeRelation')
       .mockResolvedValue({ ok: true, data: undefined })
-    // See the add-direction equivalent: only a push with no response at all
-    // can have reached Tenfast before we lost it.
     jest
       .spyOn(leasingAdapter, 'syncContactToLeasing')
       .mockResolvedValue({ ok: false, err: 'unknown' })
@@ -853,7 +850,9 @@ describe('removeRelation', () => {
     expect(mailSpy).not.toHaveBeenCalled()
   })
 
-  it('does not alarm when the confirming resync fails after a cleanly rejected push', async () => {
+  it('alarms when the confirming resync fails after a cleanly rejected push too', async () => {
+    // See the add-direction equivalent: a 500 out of leasing does not prove
+    // Tenfast never saw the removal.
     mockPresence([RECIPIENT_RELATION])
     jest
       .spyOn(contactsAdapter, 'removeRelation')
@@ -866,7 +865,7 @@ describe('removeRelation', () => {
       .mockResolvedValue({ ok: true, data: RELATIONS })
     const mailSpy = jest
       .spyOn(communicationAdapter, 'sendEmail')
-      .mockRejectedValue(NOT_CALLED)
+      .mockResolvedValue({ ok: true, data: null } as any)
 
     const result = await removeRelation(REMOVAL)
 
@@ -874,7 +873,7 @@ describe('removeRelation', () => {
       processStatus: ProcessStatus.failed,
       error: 'propagation-failed',
     })
-    expect(mailSpy).not.toHaveBeenCalled()
+    expect(mailSpy).toHaveBeenCalledTimes(1)
   })
 
   it('treats a skipped Tenfast resync as success', async () => {
