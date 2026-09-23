@@ -161,7 +161,9 @@ const getTenfastInvoices = async (ocrs: string[]): Promise<Invoice[]> => {
       throw new Error(invoiceResult.err)
     }
 
-    invoices.push(invoiceResult.data.invoice)
+    if (invoiceResult.data !== null) {
+      invoices.push(invoiceResult.data.invoice)
+    }
   }
 
   return invoices
