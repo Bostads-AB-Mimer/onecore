@@ -7,6 +7,9 @@ export { TenantPersonalInfo } from './ui/TenantPersonalInfo'
 // Formatting utilities
 export { formatTenantAddress, formatTenantName } from './lib/formatting'
 
+// Lease contact utilities
+export { getLeaseContactTitle, sortLeaseContacts } from './lib/leaseContacts'
+
 // Classification utilities
 export { getTenantRoles, isOrganization } from './lib/classification'
 export {

@@ -8,6 +8,8 @@ import type { Lease } from '@/services/api/core/leaseService'
 import { paths } from '@/shared/routes'
 import { Button } from '@/shared/ui/Button'
 
+import { getLeaseContactTitle } from '../lib/leaseContacts'
+
 type LeaseTenant = NonNullable<Lease['tenants']>[number]
 
 type TenantLeaseCardProps = {
@@ -30,7 +32,7 @@ export function TenantLeaseCard({
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <Users className="h-5 w-5 mr-2 text-slate-500" />
-          <h4 className="font-medium">Kontraktsinnehavare</h4>
+          <h4 className="font-medium">{getLeaseContactTitle(tenant)}</h4>
         </div>
         <Button variant="outline" asChild className="shrink-0">
           <Link to={paths.tenant(tenant.contactCode)} rel="noopener noreferrer">
