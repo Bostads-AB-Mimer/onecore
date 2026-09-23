@@ -119,4 +119,58 @@ describe('transformFromDbRentalPropertyInfo', () => {
       expect(result.address?.street2).toBeNull()
     })
   })
+
+  describe('parking space without building', () => {
+    it('maps parking space when building enrichment is missing', () => {
+      const row = [
+        {
+          keycmobt: 'babps',
+          rental_property_id: '211-741-00-0015',
+          address: 'GÅSMYREGATAN 10',
+          entrance: null,
+          estate_code: '04305',
+          estate: 'GERHARD 8',
+          building_code: null,
+          building: null,
+          rental_type_code: 'STD',
+          rental_type: 'Standard hyresobjektstyp',
+          commercial_space_code: null,
+          commercial_space_type: null,
+          parking_space_code: '0015',
+          apartment_code: null,
+          apartment_number: null,
+          apartment_type_code: null,
+          apartment_type: null,
+          floor: null,
+          has_elevator: null,
+          wash_space: null,
+          apartment_area: null,
+          districtCode: '61147',
+          district: 'Distrikt Väster',
+          marketAreaCode: null,
+          marketArea: null,
+          building_construction_year: null,
+          building_renovation_year: null,
+          building_assessment_year: null,
+          building_type_code: null,
+          building_type_caption: null,
+          street: null,
+          street2: null,
+          postal_code: null,
+          city: null,
+        },
+      ]
+
+      const result = transformFromDbRentalPropertyInfo(row)
+
+      expect(result.type).toBe('Bilplats')
+      expect(result.id).toBe('211-741-00-0015')
+      expect(result.property).toMatchObject({
+        code: '0015',
+        address: 'GÅSMYREGATAN 10',
+      })
+      expect(result.building.buildingCode).toBeNull()
+      expect(result.marketAreaCode).toBeNull()
+    })
+  })
 })
