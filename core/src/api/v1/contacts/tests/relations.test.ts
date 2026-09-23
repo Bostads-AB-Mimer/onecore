@@ -182,6 +182,21 @@ describe('POST /v1/contacts/:contactCode/relations', () => {
     expect(res.body.error).toBe('propagation-failed')
   })
 
+  it('answers 502 outcome-unknown when the write may or may not have landed', async () => {
+    jest.spyOn(contactsProcesses, 'addRelation').mockResolvedValue({
+      processStatus: ProcessStatus.failed,
+      error: 'outcome-unknown',
+      httpStatus: 502,
+    })
+
+    const res = await request(app.callback())
+      .post('/v1/contacts/P1/relations')
+      .send({ relatedContactCode: 'P2', roleType: 'god_man' })
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('outcome-unknown')
+  })
+
   it('falls back to preferred_username when the name is only whitespace', async () => {
     mockUser = WRITER_WITH_BLANK_NAME
     const addSpy = jest
@@ -362,6 +377,21 @@ describe('DELETE /v1/contacts/:contactCode/relations/:roleType/:relatedContactCo
     // Forwarding `detail` on DELETE is the one behavioural change this route
     // made — pin it so deleting the spread doesn't silently regress.
     expect(res.body.detail).toBe('tenfast')
+  })
+
+  it('answers 502 outcome-unknown when the removal may or may not have landed', async () => {
+    jest.spyOn(contactsProcesses, 'removeRelation').mockResolvedValue({
+      processStatus: ProcessStatus.failed,
+      error: 'outcome-unknown',
+      httpStatus: 502,
+    })
+
+    const res = await request(app.callback()).delete(
+      '/v1/contacts/P1/relations/god_man/P2'
+    )
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('outcome-unknown')
   })
 
   it('rejects an unknown role type with 400', async () => {

@@ -476,7 +476,11 @@ describe('addRelation', () => {
   })
 
   describe('when addRelation reports an unknown outcome (contacts-service-error with no statusCode)', () => {
-    it('compensates with a best-effort removeRelation call', async () => {
+    // A lost response usually means core stopped waiting while the service
+    // was still working. A compensating remove sent now can land before the
+    // insert commits and the relation still lands afterwards, so the process
+    // never compensates here: it alarms and says the outcome is unknown.
+    it('answers outcome-unknown and alarms, without compensating or resyncing', async () => {
       jest
         .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
         .mockResolvedValue({ ok: true, data: null })
@@ -485,123 +489,52 @@ describe('addRelation', () => {
         .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
       const removeSpy = jest
         .spyOn(contactsAdapter, 'removeRelation')
-        .mockResolvedValue({ ok: true, data: undefined })
+        .mockRejectedValue(NOT_CALLED)
       const syncSpy = jest
         .spyOn(leasingAdapter, 'syncContactToLeasing')
         .mockRejectedValue(NOT_CALLED)
+      const mailSpy = jest
+        .spyOn(communicationAdapter, 'sendEmail')
+        .mockResolvedValue({ ok: true, data: null } as any)
 
       const result = await addRelation(RECIPIENT)
 
       expect(result).toMatchObject({
         processStatus: ProcessStatus.failed,
-        error: 'contacts-service-error',
+        error: 'outcome-unknown',
         httpStatus: 502,
       })
-      expect(removeSpy).toHaveBeenCalledWith({
-        contactCode: 'P111',
-        relatedContactCode: 'P222',
-        roleType: 'annan_fakturamottagare',
-        deletedBy: 'Anna Handläggare (rollback)',
-      })
+      expect(removeSpy).not.toHaveBeenCalled()
       expect(syncSpy).not.toHaveBeenCalled()
+      expect(mailSpy).toHaveBeenCalledTimes(1)
     })
 
-    it('alarms when the compensating remove reports relation-not-found, since the original write may still commit', async () => {
-      // A lost response usually means core stopped waiting while the service
-      // was still working, so the remove can land before the insert does.
+    it('words the alarm for an add whose outcome is unknown', async () => {
       jest
         .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
         .mockResolvedValue({ ok: true, data: null })
       jest
         .spyOn(contactsAdapter, 'addRelation')
         .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
-      jest
-        .spyOn(contactsAdapter, 'removeRelation')
-        .mockResolvedValue({ ok: false, err: 'relation-not-found' })
       const mailSpy = jest
         .spyOn(communicationAdapter, 'sendEmail')
         .mockResolvedValue({ ok: true, data: null } as any)
 
       await addRelation(RECIPIENT)
 
-      expect(mailSpy).toHaveBeenCalledTimes(1)
-      expect(mailSpy.mock.calls[0][0].body).toContain(
-        'okänt om relationen skapades'
-      )
+      const body = mailSpy.mock.calls[0][0].body
+      expect(body).toContain('P111')
+      expect(body).toContain('P222')
+      expect(body).toContain('Anna Handläggare')
+      expect(body).toContain('okänt om relationen skapades')
+      expect(body).toContain('Ingen automatisk återställning gjordes')
+      // Tenfast was never contacted on this path.
+      expect(body).not.toContain('Tenfast')
+      // The remove direction's phrasing would say the opposite.
+      expect(body).not.toContain('okänt om relationen togs bort')
     })
 
-    it('matches the prior relation regardless of contact-code casing and padding', async () => {
-      // The service answers with Xpand's spelling of a code but accepts
-      // other casing and padding on input.
-      mockPresence([RECIPIENT_RELATION])
-      jest
-        .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
-        .mockResolvedValue({ ok: true, data: null })
-      jest
-        .spyOn(contactsAdapter, 'addRelation')
-        .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
-      const removeSpy = jest
-        .spyOn(contactsAdapter, 'removeRelation')
-        .mockRejectedValue(NOT_CALLED)
-
-      await addRelation({
-        ...RECIPIENT,
-        contactCode: ' p111 ',
-        relatedContactCode: 'p222 ',
-      })
-
-      expect(removeSpy).not.toHaveBeenCalled()
-    })
-
-    it('does not compensate when the relation already existed before the write', async () => {
-      // With the relation already there the add can only have been refused
-      // as a duplicate, so removing here would destroy a live relation.
-      mockPresence([RECIPIENT_RELATION])
-      jest
-        .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
-        .mockResolvedValue({ ok: true, data: null })
-      jest
-        .spyOn(contactsAdapter, 'addRelation')
-        .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
-      const removeSpy = jest
-        .spyOn(contactsAdapter, 'removeRelation')
-        .mockRejectedValue(NOT_CALLED)
-      const mailSpy = jest
-        .spyOn(communicationAdapter, 'sendEmail')
-        .mockRejectedValue(NOT_CALLED)
-
-      const result = await addRelation(RECIPIENT)
-
-      expect(result).toMatchObject({
-        processStatus: ProcessStatus.failed,
-        error: 'contacts-service-error',
-      })
-      expect(removeSpy).not.toHaveBeenCalled()
-      expect(mailSpy).not.toHaveBeenCalled()
-    })
-
-    it('reads presence per role, so the same contact in another role does not count', async () => {
-      mockPresence([
-        { ...RECIPIENT_RELATION, role: 'otherInvoiceRecipientFor' },
-      ])
-      jest
-        .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
-        .mockResolvedValue({ ok: true, data: null })
-      jest
-        .spyOn(contactsAdapter, 'addRelation')
-        .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
-      const removeSpy = jest
-        .spyOn(contactsAdapter, 'removeRelation')
-        .mockResolvedValue({ ok: true, data: undefined })
-
-      await addRelation(RECIPIENT)
-
-      // The reverse edge is the same relation seen from the other end, not
-      // the one being written — compensation still applies.
-      expect(removeSpy).toHaveBeenCalledTimes(1)
-    })
-
-    it('alarms without compensating when the prior state could not be read', async () => {
+    it('alarms the same way when the prior state could not be read', async () => {
       jest
         .spyOn(contactsAdapter, 'getByContactCodeBatch')
         .mockResolvedValue({ ok: false, err: 'unknown' })
@@ -618,29 +551,29 @@ describe('addRelation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockResolvedValue({ ok: true, data: null } as any)
 
-      await addRelation(RECIPIENT)
+      const result = await addRelation(RECIPIENT)
 
-      // A blind remove could delete a pre-existing relation.
+      expect(result).toMatchObject({ error: 'outcome-unknown' })
       expect(removeSpy).not.toHaveBeenCalled()
       expect(mailSpy).toHaveBeenCalledTimes(1)
-      expect(mailSpy.mock.calls[0][0].body).toContain(
-        'ingen automatisk återställning'
-      )
     })
 
-    it('alarms when the compensating remove itself fails', async () => {
+    it('answers contacts-service-error without alarming when the relation already existed before the write', async () => {
+      // With the relation already there the add can only have been refused
+      // as a duplicate, so nothing changed.
+      mockPresence([RECIPIENT_RELATION])
       jest
         .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
         .mockResolvedValue({ ok: true, data: null })
       jest
         .spyOn(contactsAdapter, 'addRelation')
         .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
-      jest
+      const removeSpy = jest
         .spyOn(contactsAdapter, 'removeRelation')
-        .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
+        .mockRejectedValue(NOT_CALLED)
       const mailSpy = jest
         .spyOn(communicationAdapter, 'sendEmail')
-        .mockResolvedValue({ ok: true, data: null } as any)
+        .mockRejectedValue(NOT_CALLED)
 
       const result = await addRelation(RECIPIENT)
 
@@ -649,22 +582,54 @@ describe('addRelation', () => {
         error: 'contacts-service-error',
         httpStatus: 502,
       })
-      expect(mailSpy).toHaveBeenCalledTimes(1)
-      expect(mailSpy.mock.calls[0][0].body).toContain('P111')
-      expect(mailSpy.mock.calls[0][0].body).toContain('P222')
-      expect(mailSpy.mock.calls[0][0].body).toContain('Anna Handläggare')
-      // Write-outcome-unknown wording, and it must not claim Tenfast was
-      // contacted — it never was on this path.
-      expect(mailSpy.mock.calls[0][0].body).toContain(
-        'okänt om relationen skapades'
-      )
-      expect(mailSpy.mock.calls[0][0].body).toContain('ta bort den')
-      expect(mailSpy.mock.calls[0][0].body).not.toContain('Tenfast')
-      // The remove direction's phrasing would say the opposite of both.
-      expect(mailSpy.mock.calls[0][0].body).not.toContain('lägga tillbaka den')
-      expect(mailSpy.mock.calls[0][0].body).not.toContain(
-        'okänt om relationen togs bort'
-      )
+      expect(removeSpy).not.toHaveBeenCalled()
+      expect(mailSpy).not.toHaveBeenCalled()
+    })
+
+    it('matches the prior relation regardless of contact-code casing and padding', async () => {
+      // The service answers with Xpand's spelling of a code but accepts
+      // other casing and padding on input.
+      mockPresence([RECIPIENT_RELATION])
+      jest
+        .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
+        .mockResolvedValue({ ok: true, data: null })
+      jest
+        .spyOn(contactsAdapter, 'addRelation')
+        .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
+      const mailSpy = jest
+        .spyOn(communicationAdapter, 'sendEmail')
+        .mockRejectedValue(NOT_CALLED)
+
+      const result = await addRelation({
+        ...RECIPIENT,
+        contactCode: ' p111 ',
+        relatedContactCode: 'p222 ',
+      })
+
+      // Read as present, so nothing can have changed.
+      expect(result).toMatchObject({ error: 'contacts-service-error' })
+      expect(mailSpy).not.toHaveBeenCalled()
+    })
+
+    it('reads presence per role, so the same contact in another role does not count', async () => {
+      mockPresence([
+        { ...RECIPIENT_RELATION, role: 'otherInvoiceRecipientFor' },
+      ])
+      jest
+        .spyOn(syncInvoiceRecipient, 'syncInvoiceRecipientToEconomy')
+        .mockResolvedValue({ ok: true, data: null })
+      jest
+        .spyOn(contactsAdapter, 'addRelation')
+        .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
+      jest
+        .spyOn(communicationAdapter, 'sendEmail')
+        .mockResolvedValue({ ok: true, data: null } as any)
+
+      const result = await addRelation(RECIPIENT)
+
+      // The reverse edge is the same relation seen from the other end, not
+      // the one being written — the outcome is still unknown.
+      expect(result).toMatchObject({ error: 'outcome-unknown' })
     })
   })
 
@@ -975,59 +940,57 @@ describe('removeRelation', () => {
   })
 
   describe('when removeRelation reports an unknown outcome (contacts-service-error with no statusCode)', () => {
-    it('compensates with a best-effort addRelation call', async () => {
+    // See the add direction: a compensating add can land before the original
+    // remove commits, so the process alarms instead of compensating.
+    it('answers outcome-unknown and alarms, without compensating or resyncing', async () => {
       mockPresence([RECIPIENT_RELATION])
       jest
         .spyOn(contactsAdapter, 'removeRelation')
         .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
       const addSpy = jest
         .spyOn(contactsAdapter, 'addRelation')
-        .mockResolvedValue({ ok: true, data: RELATIONS })
+        .mockRejectedValue(NOT_CALLED)
       const syncSpy = jest
         .spyOn(leasingAdapter, 'syncContactToLeasing')
         .mockRejectedValue(NOT_CALLED)
+      const mailSpy = jest
+        .spyOn(communicationAdapter, 'sendEmail')
+        .mockResolvedValue({ ok: true, data: null } as any)
 
       const result = await removeRelation(REMOVAL)
 
       expect(result).toMatchObject({
         processStatus: ProcessStatus.failed,
-        error: 'contacts-service-error',
+        error: 'outcome-unknown',
         httpStatus: 502,
       })
-      expect(addSpy).toHaveBeenCalledWith({
-        contactCode: 'P111',
-        relatedContactCode: 'P222',
-        roleType: 'annan_fakturamottagare',
-        createdBy: 'Anna Handläggare (rollback)',
-      })
+      expect(addSpy).not.toHaveBeenCalled()
       expect(syncSpy).not.toHaveBeenCalled()
+      expect(mailSpy).toHaveBeenCalledTimes(1)
     })
 
-    it('does not compensate when the relation did not exist before the write', async () => {
-      // Nothing was there to delete, so the lost response can only have
-      // carried a relation-not-found. Adding here would conjure a relation
-      // nobody ever asked for.
+    it('words the alarm for a removal whose outcome is unknown', async () => {
+      mockPresence([RECIPIENT_RELATION])
       jest
         .spyOn(contactsAdapter, 'removeRelation')
         .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
-      const addSpy = jest
-        .spyOn(contactsAdapter, 'addRelation')
-        .mockRejectedValue(NOT_CALLED)
       const mailSpy = jest
         .spyOn(communicationAdapter, 'sendEmail')
-        .mockRejectedValue(NOT_CALLED)
+        .mockResolvedValue({ ok: true, data: null } as any)
 
-      const result = await removeRelation(REMOVAL)
+      await removeRelation(REMOVAL)
 
-      expect(result).toMatchObject({
-        processStatus: ProcessStatus.failed,
-        error: 'contacts-service-error',
-      })
-      expect(addSpy).not.toHaveBeenCalled()
-      expect(mailSpy).not.toHaveBeenCalled()
+      const body = mailSpy.mock.calls[0][0].body
+      expect(body).toContain('P111')
+      expect(body).toContain('P222')
+      expect(body).toContain('Anna Handläggare')
+      expect(body).toContain('okänt om relationen togs bort')
+      expect(body).toContain('Ingen automatisk återställning gjordes')
+      expect(body).not.toContain('Tenfast')
+      expect(body).not.toContain('okänt om relationen skapades')
     })
 
-    it('alarms without compensating when the prior state could not be read', async () => {
+    it('alarms the same way when the prior state could not be read', async () => {
       jest
         .spyOn(contactsAdapter, 'getByContactCodeBatch')
         .mockResolvedValue({ ok: false, err: 'unknown' })
@@ -1041,65 +1004,25 @@ describe('removeRelation', () => {
         .spyOn(communicationAdapter, 'sendEmail')
         .mockResolvedValue({ ok: true, data: null } as any)
 
-      await removeRelation(REMOVAL)
+      const result = await removeRelation(REMOVAL)
 
+      expect(result).toMatchObject({ error: 'outcome-unknown' })
       expect(addSpy).not.toHaveBeenCalled()
       expect(mailSpy).toHaveBeenCalledTimes(1)
-      expect(mailSpy.mock.calls[0][0].body).toContain(
-        'ingen automatisk återställning'
-      )
     })
 
-    it('alarms when the compensating add reports duplicate-relation, since the original remove may still commit', async () => {
-      mockPresence([RECIPIENT_RELATION])
-      jest
-        .spyOn(contactsAdapter, 'removeRelation')
-        .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
-      jest
-        .spyOn(contactsAdapter, 'addRelation')
-        .mockResolvedValue({ ok: false, err: 'duplicate-relation' })
-      const mailSpy = jest
-        .spyOn(communicationAdapter, 'sendEmail')
-        .mockResolvedValue({ ok: true, data: null } as any)
-
-      await removeRelation(REMOVAL)
-
-      expect(mailSpy).toHaveBeenCalledTimes(1)
-      expect(mailSpy.mock.calls[0][0].body).toContain(
-        'okänt om relationen togs bort'
-      )
-    })
-
-    it('matches the prior relation regardless of contact-code casing and padding', async () => {
-      mockPresence([RECIPIENT_RELATION])
+    it('answers contacts-service-error without alarming when the relation did not exist before the write', async () => {
+      // Nothing was there to delete, so the lost response can only have
+      // carried a relation-not-found.
       jest
         .spyOn(contactsAdapter, 'removeRelation')
         .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
       const addSpy = jest
         .spyOn(contactsAdapter, 'addRelation')
-        .mockResolvedValue({ ok: true, data: RELATIONS })
-
-      await removeRelation({
-        ...REMOVAL,
-        contactCode: 'p111',
-        relatedContactCode: ' P222',
-      })
-
-      // Read as present, so the lost remove is compensated.
-      expect(addSpy).toHaveBeenCalledTimes(1)
-    })
-
-    it('alarms when the compensating add itself fails', async () => {
-      mockPresence([RECIPIENT_RELATION])
-      jest
-        .spyOn(contactsAdapter, 'removeRelation')
-        .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
-      jest
-        .spyOn(contactsAdapter, 'addRelation')
-        .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
+        .mockRejectedValue(NOT_CALLED)
       const mailSpy = jest
         .spyOn(communicationAdapter, 'sendEmail')
-        .mockResolvedValue({ ok: true, data: null } as any)
+        .mockRejectedValue(NOT_CALLED)
 
       const result = await removeRelation(REMOVAL)
 
@@ -1108,63 +1031,27 @@ describe('removeRelation', () => {
         error: 'contacts-service-error',
         httpStatus: 502,
       })
-      expect(mailSpy).toHaveBeenCalledTimes(1)
-      expect(mailSpy.mock.calls[0][0].body).toContain('P111')
-      expect(mailSpy.mock.calls[0][0].body).toContain('P222')
-      expect(mailSpy.mock.calls[0][0].body).toContain('Anna Handläggare')
-      // Unique to the write-outcome-unknown branch — distinguishes it from
-      // the rollback-failed and resync-unconfirmed wordings, and must not
-      // claim Tenfast was ever contacted (it never was on this path).
-      // Remove-direction specific: the write whose outcome is unknown was a
-      // removal, and the compensating write puts the relation back — a
-      // copy-paste from the add suite would say the opposite of both.
-      expect(mailSpy.mock.calls[0][0].body).toContain(
-        'okänt om relationen togs bort'
-      )
-      expect(mailSpy.mock.calls[0][0].body).toContain('lägga tillbaka den')
-      expect(mailSpy.mock.calls[0][0].body).not.toContain('Tenfast')
-      expect(mailSpy.mock.calls[0][0].body).not.toContain(
-        'okänt om relationen skapades'
-      )
-      expect(mailSpy.mock.calls[0][0].body).not.toContain('ta bort den')
+      expect(addSpy).not.toHaveBeenCalled()
+      expect(mailSpy).not.toHaveBeenCalled()
     })
 
-    it('alarms and carries guardian-exists when the compensating add finds the slot already claimed', async () => {
-      // Our delete landed, then another caseworker claimed the guardian slot
-      // with a different contact. The compensation correctly fails, and wrong
-      // prose here would send an engineer to delete that new relation.
-      mockPresence([
-        {
-          contactCode: 'P333',
-          role: 'trustee',
-          fullName: 'Gustav God Man',
-          firstName: 'Gustav',
-          lastName: 'God Man',
-        },
-      ])
+    it('matches the prior relation regardless of contact-code casing and padding', async () => {
+      mockPresence([RECIPIENT_RELATION])
       jest
         .spyOn(contactsAdapter, 'removeRelation')
         .mockResolvedValue({ ok: false, err: 'contacts-service-error' })
-      jest.spyOn(contactsAdapter, 'addRelation').mockResolvedValue({
-        ok: false,
-        err: 'guardian-exists',
-        statusCode: 409,
-        detail: 'P444',
-      })
-      const mailSpy = jest
+      jest
         .spyOn(communicationAdapter, 'sendEmail')
         .mockResolvedValue({ ok: true, data: null } as any)
 
-      const result = await removeRelation(GUARDIAN_REMOVAL)
-
-      expect(result).toMatchObject({
-        processStatus: ProcessStatus.failed,
-        error: 'contacts-service-error',
-        httpStatus: 502,
+      const result = await removeRelation({
+        ...REMOVAL,
+        contactCode: 'p111',
+        relatedContactCode: ' P222',
       })
-      expect(mailSpy).toHaveBeenCalledTimes(1)
-      expect(mailSpy.mock.calls[0][0].body).toContain('guardian-exists')
-      expect(mailSpy.mock.calls[0][0].body).toContain('lägga tillbaka den')
+
+      // Read as present, so the removal may have landed.
+      expect(result).toMatchObject({ error: 'outcome-unknown' })
     })
   })
 
