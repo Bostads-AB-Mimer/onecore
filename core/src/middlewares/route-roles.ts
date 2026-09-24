@@ -39,9 +39,10 @@ export const requiredRolesFor = (rawPath: string, method: string): string[] => {
   // alongside it would open the write to every api-access holder.
   //
   // Relations are deliberately NOT gated on it. They mutate the contacts DB,
-  // and removal is a soft delete that keeps history, so they are no more
-  // consequential than the lease and invoice writes that already sit behind
-  // plain api-access, and they fall through to it below.
+  // removal is a soft delete that keeps history, and a failed propagation
+  // rolls the whole change back — so they are no more consequential than the
+  // lease and invoice writes that already sit behind plain api-access, and
+  // they fall through to it below.
   if (
     path.startsWith('/v1/contacts') &&
     !path.includes('/relations') &&

@@ -22,16 +22,14 @@ import {
 } from '@onecore/utilities'
 import { paginatedResponseSchema, WaitingListType } from '@onecore/types'
 
-import {
-  makeContactsAdapter,
-  type AddRelationError,
-  type RemoveRelationError,
-} from '../../../adapters/contacts-adapter'
+import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
+import { addRelation, removeRelation } from '../../../processes/contacts'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import { makeClientApplicationProfileRequestParams } from '../../../services/lease-service/helpers/application-profile'
 import { transformContact, transformContacts } from './transform'
 import { Config } from '@/common/config'
 import { AdapterResult } from '@/adapters/types'
+import { ProcessStatus } from '@/common/types'
 import type { Contact } from '@onecore/contacts/domain'
 import { ParameterizedContext } from 'koa'
 
@@ -55,32 +53,6 @@ const CREATE_CONTACT_STATUS: Record<string, CreateContactFailureStatus> = {
   'write-backend-not-configured': 503,
   'contacts-service-error': 502,
 }
-
-/**
- * Relation-write statuses pass through so the caller can tell apart cases that
- * share a code. `contacts-service-error` is the adapter's unnamed-failure
- * catch-all, so it is 502 whatever status carried it: forwarding the 404 of an
- * unrouted path would report an outage as a client error.
- */
-const addRelationStatus = (
-  err: AddRelationError,
-  statusCode?: number
-): 400 | 404 | 409 | 422 | 502 =>
-  err !== 'contacts-service-error' &&
-  (statusCode === 400 ||
-    statusCode === 404 ||
-    statusCode === 409 ||
-    statusCode === 422)
-    ? statusCode
-    : 502
-
-const removeRelationStatus = (
-  err: RemoveRelationError,
-  statusCode?: number
-): 400 | 404 | 502 =>
-  err !== 'contacts-service-error' && (statusCode === 400 || statusCode === 404)
-    ? statusCode
-    : 502
 
 /** Swedish queue names for caseworker-facing warnings. */
 const WAITING_LIST_LABELS: Record<WaitingListType, string> = {
@@ -532,9 +504,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
 
   // Deliberately NOT gated on contacts:write. That role fences the one write
   // ONECore cannot undo — creating a contact in Xpand. A relation lives in the
-  // contacts DB and its removal is a soft delete that keeps history, so it
-  // sits behind ordinary api-access like the lease and invoice writes. See
-  // requiredRolesFor in core/src/middlewares/route-roles.ts.
+  // contacts DB, its removal is a soft delete that keeps history, and a failed
+  // propagation rolls the whole change back, so it sits behind ordinary
+  // api-access like the lease and invoice writes. See requiredRolesFor in
+  // core/src/middlewares/route-roles.ts.
   router.post(
     '/v1/contacts/:contactCode/relations',
     {
@@ -544,7 +517,16 @@ export const routes = (router: OkapiRouter, config: Config) => {
         'Adds a relation from the contact to another contact. A contact has at ' +
         'most one god man or förvaltare (409 guardian-exists, detail = the ' +
         "existing guardian's contact code). The acting user is recorded from " +
-        "the token. Returns the contact's relations after the change.",
+        "the token. Returns the contact's relations after the change. " +
+        '502 propagation-failed means the relation was not saved because ' +
+        'Tenfast or Xledger could not be updated; detail is `economy` or ' +
+        '`tenfast` — an internal stage name for diagnostics only, never to be ' +
+        'shown to a caseworker verbatim. 502 rollback-failed is the opposite ' +
+        'and must not be retried: the relation was saved, Tenfast was not ' +
+        'told, and undoing the write failed too — it is flagged for manual ' +
+        'repair. 502 outcome-unknown means the contacts service never ' +
+        'answered, so whether the relation was saved is unknown; it is ' +
+        'flagged for manual checking and must not be retried blindly.',
       tags: ['Contacts'],
       params: {
         contactCode: {
@@ -586,16 +568,22 @@ export const routes = (router: OkapiRouter, config: Config) => {
         return
       }
 
-      const result = await contactsAdapter.addRelation({
+      const result = await addRelation({
         contactCode: ctx.params.contactCode,
         relatedContactCode: parsed.data.relatedContactCode,
         roleType: parsed.data.roleType,
         createdBy: actingUser(ctx),
       })
 
-      if (!result.ok) {
-        ctx.status = addRelationStatus(result.err, result.statusCode)
-        ctx.body = { error: result.err, detail: result.detail, ...metadata }
+      if (result.processStatus === ProcessStatus.failed) {
+        ctx.status = result.httpStatus
+        ctx.body = {
+          error: result.error,
+          ...(result.response?.detail
+            ? { detail: result.response.detail }
+            : {}),
+          ...metadata,
+        }
         return
       }
 
@@ -612,7 +600,16 @@ export const routes = (router: OkapiRouter, config: Config) => {
       description:
         'Ends the relation from the contact to the related contact in the given ' +
         'role. History is kept in the contacts service. The acting user is ' +
-        'recorded from the token.',
+        'recorded from the token. 502 propagation-failed means the relation ' +
+        'could not be removed because Tenfast could not be updated; detail is ' +
+        'always `tenfast` here (there is no economy stage on removal) — an ' +
+        'internal stage name for diagnostics only, never to be shown to a ' +
+        'caseworker verbatim. 502 rollback-failed is the opposite and must ' +
+        'not be retried: the relation was removed, Tenfast was not told, and ' +
+        'putting it back failed too — it is flagged for manual repair. ' +
+        '502 outcome-unknown means the contacts service never answered, so ' +
+        'whether the relation was removed is unknown; it is flagged for ' +
+        'manual checking and must not be retried blindly.',
       tags: ['Contacts'],
       params: {
         contactCode: {
@@ -648,16 +645,22 @@ export const routes = (router: OkapiRouter, config: Config) => {
         return
       }
 
-      const result = await contactsAdapter.removeRelation({
+      const result = await removeRelation({
         contactCode: ctx.params.contactCode,
         relatedContactCode: ctx.params.relatedContactCode,
         roleType: roleType.data,
         deletedBy: actingUser(ctx),
       })
 
-      if (!result.ok) {
-        ctx.status = removeRelationStatus(result.err, result.statusCode)
-        ctx.body = { error: result.err, ...metadata }
+      if (result.processStatus === ProcessStatus.failed) {
+        ctx.status = result.httpStatus
+        ctx.body = {
+          error: result.error,
+          ...(result.response?.detail
+            ? { detail: result.response.detail }
+            : {}),
+          ...metadata,
+        }
         return
       }
 

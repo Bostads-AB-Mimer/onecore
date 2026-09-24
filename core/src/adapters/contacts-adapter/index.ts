@@ -67,10 +67,34 @@ export type RelationRef = {
   roleType: RelationRoleType
 }
 
+/**
+ * Bound on every contacts call: without one a black-holed connection hangs
+ * until the OS gives up, and a caseworker waiting on a relation write never
+ * reaches the 502 or the compensating write a failure should trigger.
+ */
+const REQUEST_TIMEOUT_MS = 30_000
+
+/**
+ * A create cannot be undone, so giving up early reports a failure for a
+ * contact that exists and invites a duplicate on retry. The service's own
+ * Xpand SOAP timeout is 30s with database work around it, so this stays
+ * clearly above that while still bounding a black-holed connection.
+ */
+const CREATE_CONTACT_TIMEOUT_MS = 120_000
+
+/**
+ * A relation write is several Xpand and contacts DB queries in sequence, each
+ * bounded at 15s by the mssql driver's default. Giving up while the service is
+ * still working turns a write that lands into an unknown outcome, so this
+ * waits out the service's own worst case.
+ */
+const RELATION_WRITE_TIMEOUT_MS = 60_000
+
 export const makeContactsAdapter = (contactsServiceUrl: string) => {
   const axios = loggedAxios.create({
     baseURL: contactsServiceUrl,
     validateStatus: () => true,
+    timeout: REQUEST_TIMEOUT_MS,
   })
 
   const listResponse = (
@@ -207,6 +231,9 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       const params = since ? { since: since.toISOString() } : {}
       const response = await axios<SyncContactsResponseBody>(`/contacts/sync`, {
         params,
+        // The one exception: a batch job with no user waiting, whose first
+        // run legitimately takes longer than the bound.
+        timeout: 0,
       })
 
       if (response.status === 200) {
@@ -241,7 +268,7 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       try {
         const response = await axios.post<
           CreateContactResponseBody & CreateContactErrorResponseBody
-        >('/contacts', body)
+        >('/contacts', body, { timeout: CREATE_CONTACT_TIMEOUT_MS })
 
         if (response.status === 201) {
           return { ok: true, data: response.data.content }
@@ -301,7 +328,13 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       try {
         const response = await axios.post<
           GetRelatedContactsResponseBody & RelationErrorResponseBody
-        >(`/contacts/${encodeURIComponent(params.contactCode)}/relations`, body)
+        >(
+          `/contacts/${encodeURIComponent(params.contactCode)}/relations`,
+          body,
+          {
+            timeout: RELATION_WRITE_TIMEOUT_MS,
+          }
+        )
 
         if (response.status === 201) {
           return { ok: true, data: response.data.content }
@@ -357,7 +390,10 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
           `/contacts/${encodeURIComponent(params.contactCode)}/relations/` +
             `${encodeURIComponent(params.roleType)}/` +
             `${encodeURIComponent(params.relatedContactCode)}`,
-          { params: { deletedBy: params.deletedBy } }
+          {
+            params: { deletedBy: params.deletedBy },
+            timeout: RELATION_WRITE_TIMEOUT_MS,
+          }
         )
 
         if (response.status === 204) {

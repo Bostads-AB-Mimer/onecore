@@ -60,6 +60,16 @@ export const relationErrorMessage = (
       return 'Den valda kontakten hittades inte.'
     case 'relation-not-found':
       return 'Relationen är redan borttagen.'
+    case 'propagation-failed':
+      return 'Ändringen kunde inte genomföras eftersom ett externt system inte kunde uppdateras. Försök igen.'
+    // The opposite of propagation-failed: the change stands. Retrying could
+    // only answer "Relationen finns redan", so this one says don't.
+    case 'rollback-failed':
+      return 'Ändringen sparades men kunde inte skickas vidare till ett externt system, och gick inte att ångra automatiskt. Försök inte igen — ärendet har skickats för manuell kontroll.'
+    // Retrying blind could undo a change that did land, so the caseworker
+    // checks the list (refetched on settle) instead.
+    case 'outcome-unknown':
+      return 'Det gick inte att bekräfta om ändringen sparades. Kontrollera listan innan du försöker igen — ärendet har skickats för manuell kontroll.'
     // Bugs or upstream failures: nothing the caseworker can act on. Every such
     // code is listed, so `default` only catches an unset or future code.
     case 'invalid-request':
