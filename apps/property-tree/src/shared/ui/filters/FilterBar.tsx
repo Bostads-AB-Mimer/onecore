@@ -15,6 +15,8 @@ interface FilterBarProps {
   hasActiveFilters?: boolean
   /** Called when "Rensa alla filter" is clicked */
   onClearFilters?: () => void
+  /** Optional hint text shown below search input, overrides the default min-chars hint */
+  hint?: string
   /** Filter dropdown components */
   children: ReactNode
 }
@@ -25,6 +27,7 @@ export function FilterBar({
   searchPlaceholder = 'Sök...',
   hasActiveFilters = false,
   onClearFilters,
+  hint,
   children,
 }: FilterBarProps) {
   return (
@@ -41,9 +44,11 @@ export function FilterBar({
             />
           </div>
           <p className="text-xs text-muted-foreground mt-1.5 ml-1 h-4">
-            {searchValue && searchValue.length > 0 && searchValue.length < 3
-              ? 'Skriv minst 3 tecken för att söka'
-              : '\u00A0'}
+            {hint
+              ? hint
+              : searchValue && searchValue.length > 0 && searchValue.length < 3
+                ? 'Skriv minst 3 tecken för att söka'
+                : ' '}
           </p>
         </div>
       )}

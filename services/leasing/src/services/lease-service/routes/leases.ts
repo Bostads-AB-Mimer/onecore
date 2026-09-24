@@ -6,6 +6,7 @@ import {
   getLeases,
   getContacts,
   getContactByContactCode,
+  getEmailAndPhoneByContactCodes,
 } from '../adapters/xpand/tenant-lease-adapter'
 import {
   searchLeases,
@@ -23,6 +24,7 @@ import {
 
 import { LeaseStatusLabel } from '@onecore/types'
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
+import * as leaseCache from '../../../common/lease-cache'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import config from '../../../common/config'
@@ -389,12 +391,36 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    if (leaseCache.getAll().length === 0) {
+      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+        headers: { 'Retry-After': '30' },
+      })
+    }
+
     try {
-      // Fetch all matching leases using cursor-based pagination (O(n) API calls)
-      const allLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
-        queryParams.data,
-        ctx
+      const rawLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+        queryParams.data
       )
+
+      // TODO(AVTAL-270): Route through contacts-service instead of querying Xpand directly
+      // Enrich contacts with email/phone from Xpand (Tenfast only has names)
+      const contactCodes = [
+        ...new Set(
+          rawLeases
+            .flatMap((l) => l.contacts?.map((c) => c.contactCode) ?? [])
+            .map((c) => c.trim())
+            .filter((c) => c.length > 0)
+        ),
+      ]
+      const contactInfoMap = await getEmailAndPhoneByContactCodes(contactCodes)
+      const allLeases = rawLeases.map((l) => ({
+        ...l,
+        contacts: l.contacts?.map((c) => ({
+          ...c,
+          email: contactInfoMap.get(c.contactCode.trim())?.email ?? null,
+          phone: contactInfoMap.get(c.contactCode.trim())?.phone ?? null,
+        })),
+      }))
 
       // Create Excel from the complete dataset
       const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({
@@ -444,6 +470,8 @@ export const routes = (router: KoaRouter) => {
       setExcelDownloadHeaders(ctx, 'hyreskontrakt')
       ctx.body = buffer
     } catch (error: unknown) {
+      // Re-throw Koa HTTP errors (e.g. 503 when cache is not ready)
+      if (error && typeof error === 'object' && 'status' in error) throw error
       logger.error({ error, metadata }, 'Error exporting leases to Excel')
       ctx.status = 500
       ctx.body = {
@@ -628,6 +656,13 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = result
     } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error) {
+        const httpError = error as { status: number; message: string }
+        ctx.status = httpError.status
+        ctx.body = { error: httpError.message, ...metadata }
+        return
+      }
+
       ctx.status = 500
 
       if (error instanceof Error) {

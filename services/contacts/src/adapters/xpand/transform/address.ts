@@ -181,5 +181,7 @@ export const parseCareOf = (input: string) => {
 export const toAddresses = (
   addresses: DbAddress[],
   protectedIdentity: boolean
-): ContactAddress[] =>
-  addresses.map(extractAddress).filter((a) => a !== undefined)
+): ContactAddress[] => {
+  if (protectedIdentity) return []
+  return addresses.map(extractAddress).filter((a) => a !== undefined)
+}

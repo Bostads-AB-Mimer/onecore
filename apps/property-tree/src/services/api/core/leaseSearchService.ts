@@ -1,4 +1,4 @@
-import { GET } from './baseApi'
+import { ApiError, GET } from './baseApi'
 import type { components } from './generated/api-types'
 
 export type LeaseSearchResult = components['schemas']['LeaseSearchResult']
@@ -43,6 +43,7 @@ export type LeaseSearchQueryParams = {
     | 'address'
     | 'objectType'
     | 'rentalObjectCode'
+    | 'tenantName'
   sortOrder?: 'asc' | 'desc'
 }
 
@@ -58,7 +59,7 @@ async function search(
   page = 1,
   limit = 50
 ): Promise<PaginatedResponse<LeaseSearchResult>> {
-  const { data, error } = await GET('/leases/search', {
+  const { data, error, response } = await GET('/leases/search', {
     params: {
       query: {
         ...params,
@@ -68,7 +69,8 @@ async function search(
     },
   })
 
-  if (error) throw error
+  if (error)
+    throw new ApiError((response as Response).status, 'lease search failed')
 
   return {
     content: data.content ?? [],
@@ -119,7 +121,9 @@ async function exportLeasesToExcel(
 
   if (error) throw error
 
-  return data
+  // openapi-typescript types binary responses as `string`, but parseAs:'blob'
+  // makes openapi-fetch return an actual Blob at runtime.
+  return data as unknown as Blob
 }
 
 async function getContactsByCodes(codes: string[]): Promise<ContactInfo[]> {
@@ -135,9 +139,9 @@ async function getContactsByCodes(codes: string[]): Promise<ContactInfo[]> {
 
   return (data.content ?? []).map((c) => ({
     contactCode: c.contactCode,
-    name: 'personal' in c ? c.personal.fullName : c.organisation.name,
-    email: c.communication.emailAddresses[0]?.emailAddress ?? null,
-    phone: c.communication.phoneNumbers[0]?.phoneNumber ?? null,
+    name: c.type === 'individual' ? c.personal.fullName : c.organisation.name,
+    email: c.communication?.emailAddresses[0]?.emailAddress ?? null,
+    phone: c.communication?.phoneNumbers[0]?.phoneNumber ?? null,
   }))
 }
 

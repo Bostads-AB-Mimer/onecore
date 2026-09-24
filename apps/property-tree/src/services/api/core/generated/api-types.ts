@@ -1260,6 +1260,7 @@ export interface paths {
             | 'address'
             | 'objectType'
             | 'rentalObjectCode'
+            | 'tenantName'
           /** @description Sort direction */
           sortOrder?: 'asc' | 'desc'
         }
@@ -1430,6 +1431,7 @@ export interface paths {
             | 'address'
             | 'objectType'
             | 'rentalObjectCode'
+            | 'tenantName'
           /** @description Sort direction */
           sortOrder?: 'asc' | 'desc'
         }
@@ -1692,6 +1694,7 @@ export interface paths {
             | 'address'
             | 'objectType'
             | 'rentalObjectCode'
+            | 'tenantName'
           /** @description Sort direction */
           sortOrder?: 'asc' | 'desc'
         }
