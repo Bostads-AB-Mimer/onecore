@@ -6,15 +6,18 @@ import {
   DispatchAttachmentSchema,
   DispatchSchema,
   DispatchWithRecipientsSchema,
+  LogCallParamsSchema,
   LogOutboundParamsSchema,
   LogOutboundRecipientSchema,
   MessageRecipientSchema,
   RecipientStatusSchema,
+  TemplateChannelSchema,
   TemplateSchema,
 } from './schema'
 
 export type Direction = z.infer<typeof DirectionSchema>
 export type Channel = z.infer<typeof ChannelSchema>
+export type TemplateChannel = z.infer<typeof TemplateChannelSchema>
 export type RecipientStatus = z.infer<typeof RecipientStatusSchema>
 
 export type Dispatch = z.infer<typeof DispatchSchema>
@@ -24,6 +27,7 @@ export type Template = z.infer<typeof TemplateSchema>
 
 export type LogOutboundRecipient = z.infer<typeof LogOutboundRecipientSchema>
 export type LogOutboundParams = z.infer<typeof LogOutboundParamsSchema>
+export type LogCallParams = z.infer<typeof LogCallParamsSchema>
 
 export type DispatchWithRecipients = z.infer<
   typeof DispatchWithRecipientsSchema
