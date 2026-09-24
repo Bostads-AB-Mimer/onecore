@@ -84,7 +84,12 @@ export const routes = (router: KoaRouter) => {
     const result = await getPublicInvoiceByOcr(ctx.params.ocr)
 
     if (!result.ok) {
-      ctx.status = result.err.includes('not found') ? 404 : 500
+      ctx.status = 500
+      return
+    }
+
+    if (result.data === null) {
+      ctx.status = 404
       return
     }
 
