@@ -48,6 +48,9 @@ export interface PropertyForAdmin {
   residenceCount?: number
   parkingCount?: number
   entranceCount?: number
+  // A split property (building-level KVV-area exception): this card is only
+  // this area's share, so it must not be dragged as a whole property.
+  partial?: boolean
 }
 
 // A pending drag-and-drop move of a property between KVV areas, kept locally

@@ -1334,6 +1334,31 @@ export async function getKvvAreaByPropertyCode(
   }
 }
 
+/** Location-level variant for split properties: the property service resolves
+ * a building-level KVV-area exception before the property default. */
+export async function resolveKvvArea(
+  query: property.ResolveKvvAreaQuery
+): Promise<AdapterResult<PropertyKvvAreaLookup, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/kvv-areas/resolve', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.resolveKvvArea')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 type UpdateKvvAreaResponsibleResponse = components['schemas']['KvvArea']
 
 export async function updateKvvAreaResponsible(

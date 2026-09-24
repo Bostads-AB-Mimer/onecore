@@ -3668,6 +3668,8 @@ export interface paths {
           kvvAreaIds?: string[]
           marketAreaCodes?: string[]
           propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
           buildingCodes?: string[]
           staircaseCodes?: string[]
           parkingAreaCodes?: string[]
@@ -3717,6 +3719,8 @@ export interface paths {
           kvvAreaIds?: string[]
           marketAreaCodes?: string[]
           propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
           buildingCodes?: string[]
           staircaseCodes?: string[]
           parkingAreaCodes?: string[]
@@ -3858,11 +3862,16 @@ export interface paths {
   '/properties/{propertyCode}/kvv-area': {
     /**
      * Get the KVV-area (förvaltningsområde) and district of a property
+     * @deprecated
      * @description Reverse lookup from a property code to the KVV-area it belongs to,
      * the cost center (distrikt) of that area and the responsible
      * kvartersvärd (hydrated from Keycloak; `null` if unset or if Keycloak
      * is unreachable). Used by Odoo to stamp maintenance requests with
      * their district. 404 when the property has no KVV-area link.
+     *
+     * **Deprecated.** Answers the property default only and ignores
+     * building-level exceptions on split properties. Use
+     * `GET /kvv-areas/resolve` instead. Kept until Odoo has moved over.
      */
     get: {
       parameters: {
@@ -3928,6 +3937,59 @@ export interface paths {
           content: never
         }
         /** @description Property or KVV-area not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/kvv-areas/resolve': {
+    /**
+     * Resolve the KVV-area (förvaltningsområde) and district of a location
+     * @description Location-level lookup for split properties: if the location's
+     * building carries a KVV-area exception, that area wins over the
+     * property's link. Give exactly one of `rentalId` (lägenhet, bilplats,
+     * lokal), `buildingCode` (facilities and building-level errands) or
+     * `propertyCode` (markyta objects and property-level errands). Send
+     * the most specific key you have; the keys are not combined since they
+     * may disagree. The responsible kvartersvärd is hydrated from Keycloak
+     * (`null` if unset or unreachable). This is the per-errand lookup Odoo
+     * should use; `GET /properties/{code}/kvv-area` answers the property
+     * default only.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Rental object id. */
+          rentalId?: string
+          /** @description Building code. */
+          buildingCode?: string
+          /** @description Property code. */
+          propertyCode?: string
+        }
+      }
+      responses: {
+        /** @description KVV-area, cost center and responsible for the location */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /** @description Not exactly one of rentalId, buildingCode or propertyCode was given */
+        400: {
+          content: never
+        }
+        /**
+         * @description Unknown location or no KVV-area resolves. The body carries
+         * `code: KVV_AREA_NOT_FOUND` so callers can tell this apart from
+         * a routing 404.
+         */
         404: {
           content: never
         }
@@ -12319,6 +12381,7 @@ export interface components {
         facilityCount: number
         otherCount: number
       }
+      partial?: boolean
     }
     CostCenterTreeKvvArea: {
       /** Format: uuid */
@@ -12370,6 +12433,7 @@ export interface components {
           facilityCount: number
           otherCount: number
         }
+        partial?: boolean
       }[]
     }
     CostCenterTree: {
@@ -12432,6 +12496,7 @@ export interface components {
             facilityCount: number
             otherCount: number
           }
+          partial?: boolean
         }[]
       }[]
     }
@@ -12621,6 +12686,7 @@ export interface components {
             }[]
           }[]
         }[]
+        partial?: boolean
       }[]
     }
     PropertyTree: {
@@ -12705,6 +12771,7 @@ export interface components {
               }[]
             }[]
           }[]
+          partial?: boolean
         }[]
       }[]
     }

@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 import {
   listKvvAreas,
+  resolveKvvArea,
   updateKvvAreaResponsible,
 } from '../adapters/kvv-area-adapter'
 import { parseRequest } from '../middleware/parse-request'
@@ -11,6 +12,8 @@ import {
   KvvAreaSchema,
   KvvAreaWithCostCenterSchema,
   PatchKvvAreaResponsibleSchema,
+  PropertyKvvAreaLookupSchema,
+  ResolveKvvAreaQuerySchema,
 } from '../types/kvv-area'
 
 const QuerySchema = z.object({
@@ -92,6 +95,102 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       const errorMessage = err instanceof Error ? err.message : 'unknown error'
       ctx.body = { reason: errorMessage, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /kvv-areas/resolve:
+   *   get:
+   *     summary: Resolve the KVV-area (förvaltningsområde) and cost center of a location
+   *     description: |
+   *       Location-level lookup that honours split properties: if the
+   *       location's building carries a row in `onecore_kvv_area_exception`,
+   *       that area wins; otherwise the property's `onecore_property_kvv_area`
+   *       link applies. The location is given as exactly one of `rentalId`
+   *       (lägenhet, bilplats, lokal), `buildingCode` (facilities and
+   *       building-level errands) or `propertyCode` (markyta objects and
+   *       property-level errands). Rental ids and building codes are resolved
+   *       to their property via Xpand. Send the most specific key you have;
+   *       the keys are not combined since they may disagree. Returns 404 when
+   *       the location is unknown or nothing resolves.
+   *     tags:
+   *       - Kvv Areas
+   *     parameters:
+   *       - in: query
+   *         name: rentalId
+   *         schema:
+   *           type: string
+   *         description: Rental object id (Xpand `hyresid`).
+   *       - in: query
+   *         name: buildingCode
+   *         schema:
+   *           type: string
+   *         description: Building code (Xpand `bygcode`).
+   *       - in: query
+   *         name: propertyCode
+   *         schema:
+   *           type: string
+   *         description: Property code (Xpand `Property.code`).
+   *     responses:
+   *       200:
+   *         description: The location's KVV-area, cost center and responsible.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/PropertyKvvAreaLookup'
+   *       400:
+   *         description: Not exactly one of rentalId, buildingCode or propertyCode was given.
+   *       404:
+   *         description: Unknown location, or no KVV-area resolves for it.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('(.*)/kvv-areas/resolve', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'rentalId',
+      'propertyCode',
+      'buildingCode',
+    ])
+    const parsed = ResolveKvvAreaQuerySchema.safeParse(ctx.query)
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Invalid query parameters',
+        data: formatZodIssues(parsed.error),
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const lookup = await resolveKvvArea(parsed.data)
+
+      if (!lookup) {
+        ctx.status = 404
+        ctx.body = {
+          reason: 'Location has no KVV-area',
+          code: 'KVV_AREA_NOT_FOUND',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.body = {
+        content: PropertyKvvAreaLookupSchema.parse(lookup),
+        ...metadata,
+      }
+    } catch (err) {
+      logger.error({ err, query: parsed.data }, 'kvv-areas.resolve')
+      ctx.status = 500
+      ctx.body = {
+        reason: 'Internal server error',
+        code: 'KVV_AREA_LOOKUP_FAILED',
+        ...metadata,
+      }
     }
   })
 

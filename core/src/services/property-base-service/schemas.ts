@@ -1235,6 +1235,8 @@ export const PropertyKvvAreaLookupSchema = z.object({
 
 export type PropertyKvvAreaLookup = z.infer<typeof PropertyKvvAreaLookupSchema>
 
+export const { ResolveKvvAreaQuerySchema } = property
+
 export const PutPropertyKvvAreaBodySchema = z.object({
   kvvAreaId: z.string().uuid(),
 })

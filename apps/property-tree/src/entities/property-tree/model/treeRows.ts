@@ -293,10 +293,17 @@ function buildWalkTree(
 
   const propertyWalk = (
     p: PropertyTreeDataNode,
-    ancestors: string[]
+    ancestors: string[],
+    group?: { id: string; name: string }
   ): WalkNode => {
     const designation = p.name ?? p.code
-    const propKey = nodeKey('property', p.code)
+    // A split property appears once per group with different children, so
+    // the share's key carries the group and its scope is the share itself.
+    const share = p.partial && group ? `${group.id}:${p.code}` : undefined
+    const propKey = nodeKey(
+      'property',
+      share ? `${p.code}@${group?.id}` : p.code
+    )
     const propNode: PropertyTreeNode = {
       key: propKey,
       level: 'property',
@@ -306,6 +313,7 @@ function buildWalkTree(
       label: designation,
       ancestors,
       id: p.code,
+      ...(share && group ? { share, shareOf: group.name } : {}),
     }
     // Object leaves key their tenant lookup on the property's designation.
     const propertyContext = { propertyDesignation: designation }
@@ -425,12 +433,16 @@ function buildWalkTree(
             searchText: [groupLabel(g), g.name, g.code],
             expandOnAll: true,
             children: g.properties.map((p) =>
-              propertyWalk(p, [rootKey, groupKey])
+              propertyWalk(p, [rootKey, groupKey], {
+                id: g.id,
+                name: g.name ?? g.code,
+              })
             ),
           }
         })
       : // No intermediate level: the synthetic group isn't a row, so its
-        // properties hang straight off the root.
+        // properties hang straight off the root. No group id on purpose —
+        // `partial` only exists on the cost-center grouping, which has groups.
         groups.flatMap((g) =>
           g.properties.map((p) => propertyWalk(p, [rootKey]))
         ),
