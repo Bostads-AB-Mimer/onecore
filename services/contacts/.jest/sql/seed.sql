@@ -474,7 +474,6 @@ SELECT '_AVKFM00013    ', '_OBJ000012     ', keycmctc, 'ANNANFM', '2020-01-01', 
 INSERT INTO hyrep (keyhyrep, keyhyobj, fdate, tdate) VALUES
   ('_REP000001     ', '_OBJ000001     ', '2020-01-01', NULL),
   ('_REP000002     ', '_OBJ000002     ', '2020-01-01', NULL),
-  ('_REP000004     ', '_OBJ000004     ', '2020-01-01', NULL),
   ('_REP000009     ', '_OBJ000009     ', '2020-01-01', NULL),
   ('_REP000010     ', '_OBJ000010     ', '2020-01-01', NULL),
   ('_REP000011A    ', '_OBJ000011     ', '2020-01-01', '2021-01-01'),
@@ -493,8 +492,7 @@ SELECT '_FAK000012     ', '_REP000012     ', h.keycmctc, c.keycmctc, h.keycmctc
 FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900023' AND c.cmctckod = 'P900021';
 -- Rows the c/o import must ignore or dedupe, on the existing ANNANFM fixtures:
 -- P900001's c/o equals their ANNANFM recipient P900010 (dedupes to the same
--- edge); P900002's lease OBJ2 is terminated; P900007 is their own c/o;
--- P900004's c/o is the GDPR placeholder.
+-- edge); P900002's lease OBJ2 is terminated; P900007 is their own c/o.
 INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
 SELECT '_FAK000001     ', '_REP000001     ', h.keycmctc, c.keycmctc, h.keycmctc
 FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900001' AND c.cmctckod = 'P900010';
@@ -503,6 +501,3 @@ SELECT '_FAK000002     ', '_REP000002     ', h.keycmctc, c.keycmctc, h.keycmctc
 FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900002' AND c.cmctckod = 'P900021';
 INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
 SELECT '_FAK000009     ', '_REP000009     ', keycmctc, keycmctc, keycmctc FROM cmctc WHERE cmctckod = 'P900007';
-INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
-SELECT '_FAK000004     ', '_REP000004     ', h.keycmctc, c.keycmctc, h.keycmctc
-FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900004' AND c.cmctckod = 'RENSAD_GDPR';

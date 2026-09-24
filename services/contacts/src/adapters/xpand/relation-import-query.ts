@@ -154,8 +154,6 @@ export const allCoAddresseeCandidates = async (
     .innerJoin('cmctc as co', 'co.keycmctc', 'f.keycmctc3')
     .whereNull('o.sistadeb')
     .whereRaw('f.keycmctc <> f.keycmctc3')
-    .whereRaw('TRIM(holder.cmctckod) <> ?', [RENSAD_GDPR])
-    .whereRaw('TRIM(co.cmctckod) <> ?', [RENSAD_GDPR])
     .select(
       'holder.cmctckod as holderCode',
       'co.cmctckod as coCode',

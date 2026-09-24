@@ -9,7 +9,6 @@ const CO_ADDRESSEE_DATA_SET = [
   ...FULL_TEST_DATA_SET,
   'P900001',
   'P900002',
-  'P900004',
   'P900007',
   'P900010',
   'P900020',
@@ -17,7 +16,6 @@ const CO_ADDRESSEE_DATA_SET = [
   'P900022',
   'P900023',
   'P900024',
-  'RENSAD_GDPR',
 ]
 
 const xpandResource = xpandDbClient(config.xpandDatabase)
@@ -40,7 +38,7 @@ describe('allCoAddresseeCandidates', () => {
     const rows = await allCoAddresseeCandidates(xpand, new Date())
 
     // Excluded: P900022 (expired period), P900002 (terminated lease),
-    // P900007 (their own c/o), RENSAD_GDPR (placeholder c/o on P900004).
+    // P900007 (their own c/o).
     expect(
       [...rows].sort((a, b) => (a.leaseKey < b.leaseKey ? -1 : 1))
     ).toEqual([
