@@ -10,8 +10,8 @@ jest.mock('../../adapters/db', () => ({
 import { prisma } from '../../adapters/db'
 import {
   getKvvAreaByPropertyCode,
-  getKvvAreaByRentalId,
   listKvvAreas,
+  resolveKvvArea,
 } from '../../adapters/kvv-area-adapter'
 
 type MockedPrisma = {
@@ -153,7 +153,7 @@ describe('kvv-area-adapter.getKvvAreaByPropertyCode', () => {
   })
 })
 
-describe('kvv-area-adapter.getKvvAreaByRentalId', () => {
+describe('kvv-area-adapter.resolveKvvArea', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -199,7 +199,7 @@ describe('kvv-area-adapter.getKvvAreaByRentalId', () => {
       exceptionRow()
     )
 
-    const result = await getKvvAreaByRentalId('307-048-01-0201')
+    const result = await resolveKvvArea({ rentalId: '307-048-01-0201' })
 
     expect(result).toEqual({
       kvvArea: {
@@ -229,7 +229,7 @@ describe('kvv-area-adapter.getKvvAreaByRentalId', () => {
       propertyLinkRow()
     )
 
-    const result = await getKvvAreaByRentalId('307-046-01-0101')
+    const result = await resolveKvvArea({ rentalId: '307-046-01-0101' })
 
     expect(result).toEqual({
       kvvArea: {
@@ -250,7 +250,7 @@ describe('kvv-area-adapter.getKvvAreaByRentalId', () => {
       propertyLinkRow()
     )
 
-    const result = await getKvvAreaByRentalId('SÄLEN')
+    const result = await resolveKvvArea({ rentalId: 'SÄLEN' })
 
     expect(result).not.toBeNull()
     expect(mockPrisma.onecoreKvvAreaException.findUnique).not.toHaveBeenCalled()
@@ -259,7 +259,7 @@ describe('kvv-area-adapter.getKvvAreaByRentalId', () => {
   it('returns null for an unknown rental id', async () => {
     mockPrisma.$queryRaw.mockResolvedValue([])
 
-    await expect(getKvvAreaByRentalId('nope')).resolves.toBeNull()
+    await expect(resolveKvvArea({ rentalId: 'nope' })).resolves.toBeNull()
 
     expect(mockPrisma.onecoreKvvAreaException.findUnique).not.toHaveBeenCalled()
     expect(mockPrisma.onecorePropertyKvvArea.findUnique).not.toHaveBeenCalled()
@@ -272,15 +272,64 @@ describe('kvv-area-adapter.getKvvAreaByRentalId', () => {
     mockPrisma.onecoreKvvAreaException.findUnique.mockResolvedValue(null)
     mockPrisma.onecorePropertyKvvArea.findUnique.mockResolvedValue(null)
 
-    await expect(getKvvAreaByRentalId('307-046-01-0101')).resolves.toBeNull()
+    await expect(
+      resolveKvvArea({ rentalId: '307-046-01-0101' })
+    ).resolves.toBeNull()
   })
 
   it('trims the rental id before querying', async () => {
     mockPrisma.$queryRaw.mockResolvedValue([])
 
-    await getKvvAreaByRentalId('  307-048-01-0201  ')
+    await resolveKvvArea({ rentalId: '  307-048-01-0201  ' })
 
     expect(mockPrisma.$queryRaw.mock.calls[0]).toContain('307-048-01-0201')
+  })
+
+  it('resolves a building code via its exception', async () => {
+    mockPrisma.$queryRaw.mockResolvedValue([{ propertyCode: '06601' }])
+    mockPrisma.onecoreKvvAreaException.findUnique.mockResolvedValue(
+      exceptionRow()
+    )
+
+    const result = await resolveKvvArea({ buildingCode: '307-048' })
+
+    expect(result?.kvvArea.id).toBe(STUDENT_AREA_ID)
+    expect(mockPrisma.$queryRaw.mock.calls[0]).toContain('307-048')
+    expect(mockPrisma.onecorePropertyKvvArea.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('resolves an unexcepted building code to its property default', async () => {
+    mockPrisma.$queryRaw.mockResolvedValue([{ propertyCode: '06601' }])
+    mockPrisma.onecoreKvvAreaException.findUnique.mockResolvedValue(null)
+    mockPrisma.onecorePropertyKvvArea.findUnique.mockResolvedValue(
+      propertyLinkRow()
+    )
+
+    const result = await resolveKvvArea({ buildingCode: '307-046' })
+
+    expect(result?.kvvArea.id).toBe(KVV_AREA_ID)
+    expect(mockPrisma.onecorePropertyKvvArea.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { propertyCode: '06601' } })
+    )
+  })
+
+  it('returns null for an unknown building code', async () => {
+    mockPrisma.$queryRaw.mockResolvedValue([])
+
+    await expect(resolveKvvArea({ buildingCode: 'nope' })).resolves.toBeNull()
+    expect(mockPrisma.onecoreKvvAreaException.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('resolves a property code to the property default without touching Xpand', async () => {
+    mockPrisma.onecorePropertyKvvArea.findUnique.mockResolvedValue(
+      propertyLinkRow()
+    )
+
+    const result = await resolveKvvArea({ propertyCode: '06601' })
+
+    expect(result?.kvvArea.id).toBe(KVV_AREA_ID)
+    expect(mockPrisma.$queryRaw).not.toHaveBeenCalled()
+    expect(mockPrisma.onecoreKvvAreaException.findUnique).not.toHaveBeenCalled()
   })
 })
 

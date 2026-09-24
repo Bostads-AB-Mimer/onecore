@@ -7,6 +7,7 @@ import type {
   KvvAreaWithCostCenter,
   PropertyKvvAreaLink,
   PropertyKvvAreaLookup,
+  ResolveKvvAreaQuery,
 } from '../types/kvv-area'
 
 import { prisma } from './db'
@@ -59,68 +60,113 @@ export const getKvvAreaByPropertyCode = async (
   }
 }
 
+const getKvvAreaByBuildingException = async (
+  buildingCode: string
+): Promise<PropertyKvvAreaLookup | null> => {
+  const exception = await prisma.onecoreKvvAreaException
+    .findUnique({
+      where: {
+        objectType_code: { objectType: 'building', code: buildingCode },
+      },
+      include: { kvvArea: { include: { costCenter: true } } },
+    })
+    .then(trimStrings)
+
+  if (!exception) return null
+
+  return {
+    kvvArea: {
+      id: exception.kvvArea.id,
+      code: exception.kvvArea.code,
+      name: exception.kvvArea.name ?? null,
+    },
+    costCenter: {
+      id: exception.kvvArea.costCenter.id,
+      code: exception.kvvArea.costCenter.code,
+      name: exception.kvvArea.costCenter.name,
+    },
+    responsibleKeycloakUserId:
+      exception.kvvArea.responsibleKeycloakUserId ?? null,
+  }
+}
+
+type Location = { propertyCode: string; buildingCode: string | null }
+
+// babuf holds one row per structure element and rooms inherit their parent's
+// hyresid; the cmobj type filter picks the object row itself.
+const getLocationByRentalId = async (
+  rentalId: string
+): Promise<Location | null> => {
+  const rows = await prisma.$queryRaw<
+    { propertyCode: string | null; buildingCode: string | null }[]
+  >`
+    SELECT TOP 1
+      LTRIM(RTRIM(b.fstcode)) AS propertyCode,
+      LTRIM(RTRIM(b.bygcode)) AS buildingCode
+    FROM dbo.babuf b
+    INNER JOIN dbo.cmobj o ON o.keycmobj = b.keycmobj
+    WHERE b.deletemark = 0
+      AND b.hyresid = ${rentalId}
+      AND o.keycmobt IN ('balgh', 'babps', 'balok', 'bahyr')
+  `
+  const row = rows[0]
+  if (!row?.propertyCode) return null
+  return { propertyCode: row.propertyCode, buildingCode: row.buildingCode }
+}
+
+const getLocationByBuildingCode = async (
+  buildingCode: string
+): Promise<Location | null> => {
+  const rows = await prisma.$queryRaw<{ propertyCode: string | null }[]>`
+    SELECT TOP 1 LTRIM(RTRIM(b.fstcode)) AS propertyCode
+    FROM dbo.babuf b
+    WHERE b.deletemark = 0
+      AND b.bygcode = ${buildingCode}
+      AND b.fstcode IS NOT NULL
+  `
+  const row = rows[0]
+  if (!row?.propertyCode) return null
+  return { propertyCode: row.propertyCode, buildingCode }
+}
+
+// A rental id or building code is resolved to its property via Xpand; a
+// property code (markyta objects, property-level errands) needs no lookup.
+const toLocation = async (
+  query: ResolveKvvAreaQuery
+): Promise<Location | null> => {
+  if ('rentalId' in query) return getLocationByRentalId(query.rentalId.trim())
+  if ('buildingCode' in query) {
+    return getLocationByBuildingCode(query.buildingCode.trim())
+  }
+  return { propertyCode: query.propertyCode.trim(), buildingCode: null }
+}
+
 /**
- * Object-level lookup for split properties: the object's building may carry a
- * KVV-area exception (onecore_kvv_area_exception) overriding its property's
- * link — resolution is building exception first, property default second.
+ * Location-level lookup for split properties: a building may carry a KVV-area
+ * exception (onecore_kvv_area_exception) overriding its property's link —
+ * resolution is building exception first, property default second.
+ * Callers send exactly one key, the most specific they have.
  *
  * Like the property lookup above, deliberately NOT filtered by
  * OPERATING_COMPANY_CODES: errands on sold stock must still resolve.
  */
-export const getKvvAreaByRentalId = async (
-  rentalId: string
+export const resolveKvvArea = async (
+  query: ResolveKvvAreaQuery
 ): Promise<PropertyKvvAreaLookup | null> => {
-  const id = rentalId.trim()
   try {
-    // babuf holds one row per structure element and rooms inherit their
-    // parent's hyresid; the cmobj type filter picks the object row itself.
-    const rows = await prisma.$queryRaw<
-      { propertyCode: string | null; buildingCode: string | null }[]
-    >`
-      SELECT TOP 1
-        LTRIM(RTRIM(b.fstcode)) AS propertyCode,
-        LTRIM(RTRIM(b.bygcode)) AS buildingCode
-      FROM dbo.babuf b
-      INNER JOIN dbo.cmobj o ON o.keycmobj = b.keycmobj
-      WHERE b.deletemark = 0
-        AND b.hyresid = ${id}
-        AND o.keycmobt IN ('balgh', 'babps', 'balok', 'bahyr')
-    `
+    const location = await toLocation(query)
+    if (!location) return null
 
-    const row = rows[0]
-    if (!row?.propertyCode) return null
-
-    if (row.buildingCode) {
-      const exception = await prisma.onecoreKvvAreaException
-        .findUnique({
-          where: {
-            objectType_code: { objectType: 'building', code: row.buildingCode },
-          },
-          include: { kvvArea: { include: { costCenter: true } } },
-        })
-        .then(trimStrings)
-
-      if (exception) {
-        return {
-          kvvArea: {
-            id: exception.kvvArea.id,
-            code: exception.kvvArea.code,
-            name: exception.kvvArea.name ?? null,
-          },
-          costCenter: {
-            id: exception.kvvArea.costCenter.id,
-            code: exception.kvvArea.costCenter.code,
-            name: exception.kvvArea.costCenter.name,
-          },
-          responsibleKeycloakUserId:
-            exception.kvvArea.responsibleKeycloakUserId ?? null,
-        }
-      }
+    if (location.buildingCode) {
+      const exception = await getKvvAreaByBuildingException(
+        location.buildingCode
+      )
+      if (exception) return exception
     }
 
-    return getKvvAreaByPropertyCode(row.propertyCode)
+    return getKvvAreaByPropertyCode(location.propertyCode)
   } catch (err) {
-    logger.error({ err, rentalId }, 'kvv-area-adapter.getKvvAreaByRentalId')
+    logger.error({ err, query }, 'kvv-area-adapter.resolveKvvArea')
     throw err
   }
 }

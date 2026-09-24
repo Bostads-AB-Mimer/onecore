@@ -1334,18 +1334,15 @@ export async function getKvvAreaByPropertyCode(
   }
 }
 
-/** Object-level variant for split properties: the property service resolves
+/** Location-level variant for split properties: the property service resolves
  * a building-level KVV-area exception before the property default. */
-export async function getKvvAreaByRentalId(
-  rentalId: string
+export async function resolveKvvArea(
+  query: property.ResolveKvvAreaQuery
 ): Promise<AdapterResult<PropertyKvvAreaLookup, 'not-found' | 'unknown'>> {
   try {
-    const fetchResponse = await client().GET(
-      '/rental-objects/{rentalId}/kvv-area',
-      {
-        params: { path: { rentalId } },
-      }
-    )
+    const fetchResponse = await client().GET('/kvv-areas/resolve', {
+      params: { query },
+    })
 
     if (fetchResponse.data?.content) {
       return { ok: true, data: fetchResponse.data.content }
@@ -1357,7 +1354,7 @@ export async function getKvvAreaByRentalId(
 
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error({ err }, 'property-base-adapter.getKvvAreaByRentalId')
+    logger.error({ err }, 'property-base-adapter.resolveKvvArea')
     return { ok: false, err: 'unknown' }
   }
 }
