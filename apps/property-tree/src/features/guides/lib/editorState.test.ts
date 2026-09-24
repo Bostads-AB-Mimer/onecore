@@ -9,10 +9,14 @@ import {
   emptyState,
   fromGuide,
   hasAltText,
+  isDirty,
+  pendingImagesByStep,
+  pendingImageUrls,
   toPreview,
   toRequest,
   toUpdateRequest,
   validate,
+  withUploadedImages,
 } from './editorState'
 
 // The guide's updatedAt as loaded, and later values reported by the server.
@@ -403,5 +407,294 @@ describe('toPreview', () => {
       'Steg 1',
       'Steg 2',
     ])
+  })
+})
+
+describe('pending images', () => {
+  const file = (name: string) => new File(['x'], name, { type: 'image/png' })
+
+  // The loaded guide plus a new, unsaved step with two queued images.
+  const withPending = () => {
+    let state = editorReducer(fromGuide(guide), { type: 'add-step', id: 's2' })
+    state = editorReducer(state, {
+      type: 'update-step',
+      stepId: 's2',
+      patch: { title: 'Steg två' },
+    })
+    return editorReducer(
+      { ...state, dirty: false },
+      {
+        type: 'add-pending-images',
+        stepId: 's2',
+        images: [
+          { id: 'p1', file: file('a.png'), url: 'blob:a' },
+          { id: 'p2', file: file('b.png'), url: 'blob:b' },
+        ],
+      }
+    )
+  }
+
+  const uploaded = (id: string, stepId: string): GuideStepImageWithUrl => ({
+    ...image,
+    id,
+    stepId,
+    altText: 'Alt',
+  })
+
+  // What the server returns after saving withPending(): s2 exists, no images.
+  const savedGuide: GuideWithUrls = {
+    ...guide,
+    updatedAt: afterUpload,
+    steps: [
+      ...guide.steps,
+      { ...guide.steps[0], id: 's2', title: 'Steg två', images: [] },
+    ],
+  }
+
+  it('queues dropped files as pending images and marks the state dirty', () => {
+    const state = withPending()
+    expect(state.dirty).toBe(true)
+    expect(isDirty(state)).toBe(true)
+    expect(state.steps[1].images).toMatchObject([
+      {
+        kind: 'pending',
+        id: 'p1',
+        url: 'blob:a',
+        filename: 'a.png',
+        altText: '',
+        caption: '',
+        error: null,
+      },
+      { kind: 'pending', id: 'p2', filename: 'b.png' },
+    ])
+  })
+
+  it('ignores an empty drop', () => {
+    const state = fromGuide(guide)
+    expect(
+      editorReducer(state, {
+        type: 'add-pending-images',
+        stepId: 's1',
+        images: [],
+      })
+    ).toBe(state)
+  })
+
+  it('edits and reorders pending images and marks the state dirty', () => {
+    let state = editorReducer(
+      { ...withPending(), dirty: false },
+      {
+        type: 'update-image',
+        stepId: 's2',
+        imageId: 'p2',
+        patch: { altText: 'Knappen', caption: 'Klicka här' },
+      }
+    )
+    expect(state.dirty).toBe(true)
+
+    state = editorReducer(
+      { ...state, dirty: false },
+      { type: 'move-image', stepId: 's2', from: 1, to: 0 }
+    )
+    expect(state.dirty).toBe(true)
+    expect(state.steps[1].images.map((i) => i.id)).toEqual(['p2', 'p1'])
+    expect(state.steps[1].images[0]).toMatchObject({
+      altText: 'Knappen',
+      caption: 'Klicka här',
+    })
+  })
+
+  it('removes a pending image locally and marks the state dirty', () => {
+    const state = editorReducer(
+      { ...withPending(), dirty: false },
+      { type: 'remove-pending-image', stepId: 's2', imageId: 'p1' }
+    )
+    expect(state.dirty).toBe(true)
+    expect(state.steps[1].images.map((i) => i.id)).toEqual(['p2'])
+  })
+
+  it('never removes an uploaded image through remove-pending-image', () => {
+    const state = fromGuide(guide)
+    expect(
+      editorReducer(state, {
+        type: 'remove-pending-image',
+        stepId: 's1',
+        imageId: 'img-1',
+      })
+    ).toBe(state)
+  })
+
+  it('drops pending images with their step', () => {
+    const state = editorReducer(withPending(), {
+      type: 'remove-step',
+      stepId: 's2',
+    })
+    expect(pendingImagesByStep(state)).toEqual([])
+    expect(pendingImageUrls(state)).toEqual([])
+  })
+
+  it('lists pending images per step and their preview URLs', () => {
+    const state = withPending()
+    expect(
+      pendingImagesByStep(state).map(({ stepId, images }) => ({
+        stepId,
+        ids: images.map((i) => i.id),
+      }))
+    ).toEqual([{ stepId: 's2', ids: ['p1', 'p2'] }])
+    expect(pendingImageUrls(state)).toEqual(['blob:a', 'blob:b'])
+  })
+
+  it('leaves pending images out of the save request', () => {
+    const request = toRequest(withPending(), 'draft')
+    expect(request.steps.map((step) => step.images)).toEqual([
+      [{ id: 'img-1', sortOrder: 0, altText: '', caption: null }],
+      [],
+    ])
+  })
+
+  it('requires alt text on pending images when publishing', () => {
+    let state = editorReducer(withPending(), {
+      type: 'update-image',
+      stepId: 's1',
+      imageId: 'img-1',
+      patch: { altText: 'Dialogen' },
+    })
+    state = editorReducer(state, {
+      type: 'update-image',
+      stepId: 's2',
+      imageId: 'p1',
+      patch: { altText: 'Knappen' },
+    })
+    expect(validate(state, 'draft')).toEqual([])
+    expect(validate(state, 'published')).toEqual([
+      'Bild 2 i steg 2 saknar alt-text.',
+    ])
+  })
+
+  it('keeps pending images through a save, still counting as unsaved', () => {
+    const state = editorReducer(withPending(), {
+      type: 'saved',
+      guide: {
+        ...savedGuide,
+        steps: [
+          savedGuide.steps[0],
+          { ...savedGuide.steps[1], images: [uploaded('img-9', 's2')] },
+        ],
+      },
+    })
+    expect(state.dirty).toBe(false)
+    expect(isDirty(state)).toBe(true)
+    expect(state.updatedAt).toBe(afterUpload)
+    expect(state.steps.every((step) => step.saved)).toBe(true)
+    // Pending images go after the step's images from the server.
+    expect(state.steps[1].images.map((i) => [i.kind, i.id])).toEqual([
+      ['uploaded', 'img-9'],
+      ['pending', 'p1'],
+      ['pending', 'p2'],
+    ])
+  })
+
+  it('drops pending images of a step the saved guide no longer has', () => {
+    const state = editorReducer(withPending(), { type: 'saved', guide })
+    expect(pendingImagesByStep(state)).toEqual([])
+    expect(isDirty(state)).toBe(false)
+  })
+
+  it('replaces a pending image in place with the uploaded one', () => {
+    let state = editorReducer(withPending(), {
+      type: 'saved',
+      guide: savedGuide,
+    })
+    state = editorReducer(state, {
+      type: 'pending-image-uploaded',
+      stepId: 's2',
+      pendingId: 'p1',
+      image: uploaded('img-a', 's2'),
+      guideUpdatedAt: afterSecondUpload,
+    })
+    expect(state.steps[1].images.map((i) => [i.kind, i.id])).toEqual([
+      ['uploaded', 'img-a'],
+      ['pending', 'p2'],
+    ])
+    expect(state.updatedAt).toBe(afterSecondUpload)
+    // Unsaved while p2 is pending, but the upload itself is not an edit.
+    expect(state.dirty).toBe(false)
+    expect(isDirty(state)).toBe(true)
+
+    state = editorReducer(state, {
+      type: 'pending-image-uploaded',
+      stepId: 's2',
+      pendingId: 'p2',
+      image: uploaded('img-b', 's2'),
+      guideUpdatedAt: afterSecondUpload,
+    })
+    expect(isDirty(state)).toBe(false)
+    expect(toUpdateRequest(state, 'draft').steps[1].images).toEqual([
+      { id: 'img-a', sortOrder: 0, altText: 'Alt', caption: null },
+      { id: 'img-b', sortOrder: 1, altText: 'Alt', caption: null },
+    ])
+  })
+
+  it('records updatedAt from an upload whose pending image is gone', () => {
+    const state = editorReducer(fromGuide(guide), {
+      type: 'pending-image-uploaded',
+      stepId: 's1',
+      pendingId: 'nope',
+      image: uploaded('img-a', 's1'),
+      guideUpdatedAt: afterUpload,
+    })
+    expect(state.updatedAt).toBe(afterUpload)
+    expect(state.steps[0].images.map((i) => i.id)).toEqual(['img-1'])
+  })
+
+  it('marks a failed upload on the pending image and keeps it unsaved', () => {
+    let state = editorReducer(withPending(), {
+      type: 'saved',
+      guide: savedGuide,
+    })
+    state = editorReducer(state, {
+      type: 'pending-image-failed',
+      stepId: 's2',
+      pendingId: 'p1',
+      error: 'a.png: kunde inte laddas upp.',
+    })
+    expect(state.steps[1].images[0]).toMatchObject({
+      kind: 'pending',
+      id: 'p1',
+      error: 'a.png: kunde inte laddas upp.',
+    })
+    expect(isDirty(state)).toBe(true)
+  })
+})
+
+describe('withUploadedImages', () => {
+  it('appends uploads to their steps and keeps the latest updatedAt', () => {
+    const result = withUploadedImages(guide, [
+      {
+        stepId: 's1',
+        image: { ...image, id: 'img-late' },
+        guideUpdatedAt: afterSecondUpload,
+      },
+      {
+        stepId: 's1',
+        image: { ...image, id: 'img-early' },
+        guideUpdatedAt: afterUpload,
+      },
+      {
+        stepId: 'unknown',
+        image: { ...image, id: 'img-x' },
+        guideUpdatedAt: afterUpload,
+      },
+    ])
+    expect(result.updatedAt).toBe(afterSecondUpload)
+    expect(result.steps[0].images.map((i) => i.id)).toEqual([
+      'img-1',
+      'img-late',
+      'img-early',
+    ])
+  })
+
+  it('returns the guide unchanged without uploads', () => {
+    expect(withUploadedImages(guide, [])).toBe(guide)
   })
 })

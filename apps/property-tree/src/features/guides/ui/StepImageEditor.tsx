@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react'
 
 import { useToast } from '@/shared/hooks/useToast'
+import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { ImageDropzone } from '@/shared/ui/ImageDropzone'
 import { Input } from '@/shared/ui/Input'
@@ -14,7 +15,7 @@ import {
 } from '../constants'
 import { useDeleteStepImage } from '../hooks/useDeleteStepImage'
 import { useUploadStepImage } from '../hooks/useUploadStepImage'
-import type { EditorAction, EditorStep } from '../lib/editorState'
+import type { EditorAction, EditorImage, EditorStep } from '../lib/editorState'
 import { uploadErrorMessage } from '../lib/errorMessages'
 import { ImageAltTextDialog, type ImageWithAltText } from './ImageAltTextDialog'
 
@@ -35,6 +36,11 @@ interface StepImageEditorProps {
   dispatch: React.Dispatch<EditorAction>
   /** Reports how many uploads this step currently has in flight. */
   onPendingChange: (stepId: string, count: number) => void
+  /**
+   * True while the guide is being saved. A drop is not a form control the
+   * fieldset can disable, and a file queued mid-save would miss the uploads.
+   */
+  disabled: boolean
 }
 
 export function StepImageEditor({
@@ -43,6 +49,7 @@ export function StepImageEditor({
   step,
   dispatch,
   onPendingChange,
+  disabled,
 }: StepImageEditorProps) {
   const { toast } = useToast()
   const upload = useUploadStepImage()
@@ -50,7 +57,9 @@ export function StepImageEditor({
   const [pending, setPending] = useState<PendingUpload[]>([])
   const [awaitingAltText, setAwaitingAltText] = useState<File[]>([])
 
-  const canUpload = guideId !== null && step.saved
+  // The upload endpoint needs the guide and the step to exist on the server.
+  // Until they do, dropped images are queued and uploaded after the save.
+  const uploadsImmediately = guideId !== null && step.saved
 
   // Keep the editor's total in sync, including the reset to zero when this
   // step unmounts while an upload is still running.
@@ -65,6 +74,20 @@ export function StepImageEditor({
     )
 
   const handleFiles = (files: File[]) => {
+    if (!uploadsImmediately) {
+      // Alt text for queued images is edited inline; nothing is visible to
+      // readers until the save, whose validation requires it when publishing.
+      dispatch({
+        type: 'add-pending-images',
+        stepId: step.id,
+        images: files.map((file) => ({
+          id: crypto.randomUUID(),
+          file,
+          url: URL.createObjectURL(file),
+        })),
+      })
+      return
+    }
     if (requireAltText) {
       setAwaitingAltText(files)
       return
@@ -109,7 +132,16 @@ export function StepImageEditor({
     })
   }
 
-  const removeImage = async (imageId: string) => {
+  const removeImage = async (image: EditorImage) => {
+    if (image.kind === 'pending') {
+      dispatch({
+        type: 'remove-pending-image',
+        stepId: step.id,
+        imageId: image.id,
+      })
+      return
+    }
+    const imageId = image.id
     if (!guideId) return
     try {
       const { guideUpdatedAt } = await deleteImage.mutateAsync({
@@ -143,6 +175,18 @@ export function StepImageEditor({
                 className="h-20 w-28 shrink-0 rounded object-cover bg-muted"
               />
               <div className="flex min-w-0 flex-1 flex-col gap-2">
+                {image.kind === 'pending' && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="px-2 py-0.5">
+                      Laddas upp när guiden sparas
+                    </Badge>
+                    {image.error && (
+                      <span className="text-xs text-destructive" role="alert">
+                        {image.error}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <Input
                   value={image.altText}
                   onChange={(event) =>
@@ -214,8 +258,8 @@ export function StepImageEditor({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 text-destructive"
-                  disabled={deleteImage.isPending}
-                  onClick={() => removeImage(image.id)}
+                  disabled={image.kind === 'uploaded' && deleteImage.isPending}
+                  onClick={() => removeImage(image)}
                   aria-label="Ta bort bilden"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -242,12 +286,13 @@ export function StepImageEditor({
         acceptedTypes={GUIDE_IMAGE_TYPES}
         maxBytes={GUIDE_IMAGE_MAX_BYTES}
         maxSizeLabel={GUIDE_IMAGE_MAX_DISPLAY}
-        disabled={!canUpload}
-        disabledReason="Spara guiden först för att kunna ladda upp bilder till steget."
+        disabled={disabled}
         hint={
-          requireAltText
-            ? 'Bilder sparas och visas direkt när de laddas upp, så varje bild behöver en alt-text först.'
-            : 'Bilder sparas direkt när de laddas upp.'
+          !uploadsImmediately
+            ? 'Bilderna laddas upp när du sparar guiden.'
+            : requireAltText
+              ? 'Bilder sparas och visas direkt när de laddas upp, så varje bild behöver en alt-text först.'
+              : 'Bilder sparas direkt när de laddas upp.'
         }
       />
 

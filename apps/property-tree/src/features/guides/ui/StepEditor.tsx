@@ -152,6 +152,7 @@ export function StepEditor({
             step={step}
             dispatch={dispatch}
             onPendingChange={onPendingChange}
+            disabled={disabled}
           />
         </div>
 

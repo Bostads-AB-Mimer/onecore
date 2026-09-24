@@ -15,12 +15,51 @@ import { isReservedSlug, isValidSlug, slugify } from '@/shared/lib/slugify'
 export type CalloutType = guides.CalloutType
 export type GuideStatus = 'draft' | 'published'
 
-export interface EditorImage {
+interface EditorImageFields {
   id: string
   url: string
   filename: string
   altText: string
   caption: string
+}
+
+/** An image stored on the server. */
+export interface UploadedEditorImage extends EditorImageFields {
+  kind: 'uploaded'
+}
+
+/**
+ * An image dropped on a step that does not exist on the server yet (an
+ * unsaved step, or any step of a new guide). It is uploaded after the next
+ * save. `id` is a local id and `url` an object URL preview of `file`.
+ */
+export interface PendingEditorImage extends EditorImageFields {
+  kind: 'pending'
+  file: File
+  /** Why the last upload attempt failed, or null if none has failed. */
+  error: string | null
+}
+
+export type EditorImage = UploadedEditorImage | PendingEditorImage
+
+/** A file to queue on a step, with its local id and object URL preview. */
+export interface NewPendingImage {
+  id: string
+  file: File
+  url: string
+}
+
+/** The pending images of one step, in the step's image order. */
+export interface PendingStepImages {
+  stepId: string
+  images: PendingEditorImage[]
+}
+
+/** An image uploaded to a step after a save, as reported by the server. */
+export interface UploadedStepImage {
+  stepId: string
+  image: GuideStepImageWithUrl
+  guideUpdatedAt: string
 }
 
 export interface EditorStep {
@@ -30,7 +69,10 @@ export interface EditorStep {
   calloutType: CalloutType | null
   calloutText: string
   images: EditorImage[]
-  /** False for steps added since the last save; they cannot take images yet. */
+  /**
+   * False for steps added since the last save. Images dropped on them are
+   * queued as pending and uploaded after the next save.
+   */
   saved: boolean
 }
 
@@ -58,6 +100,10 @@ export interface EditorState {
   category: EditorCategory | null
   status: GuideStatus
   steps: EditorStep[]
+  /**
+   * True after an edit since the last save. Pending images are unsaved too
+   * but outlive a save until they are uploaded; isDirty() covers both.
+   */
   dirty: boolean
 }
 
@@ -91,8 +137,24 @@ export type EditorAction =
       imageId: string
       patch: Partial<Pick<EditorImage, 'altText' | 'caption'>>
     }
+  | { type: 'add-pending-images'; stepId: string; images: NewPendingImage[] }
+  | { type: 'remove-pending-image'; stepId: string; imageId: string }
+  | {
+      type: 'pending-image-uploaded'
+      stepId: string
+      pendingId: string
+      image: GuideStepImageWithUrl
+      guideUpdatedAt: string
+    }
+  | {
+      type: 'pending-image-failed'
+      stepId: string
+      pendingId: string
+      error: string
+    }
 
-const fromImage = (image: GuideStepImageWithUrl): EditorImage => ({
+const fromImage = (image: GuideStepImageWithUrl): UploadedEditorImage => ({
+  kind: 'uploaded',
   id: image.id,
   url: image.url,
   filename: image.filename,
@@ -183,6 +245,62 @@ const updateImage = (
   )
 
 /**
+ * Replace one pending image in place without touching `dirty`: uploading it
+ * after a save is not an edit of its own. Unknown steps or images (e.g.
+ * removed meanwhile) leave the state untouched.
+ */
+const replacePendingImage = (
+  state: EditorState,
+  stepId: string,
+  pendingId: string,
+  replace: (image: PendingEditorImage) => EditorImage
+): EditorState => {
+  const step = state.steps.find((candidate) => candidate.id === stepId)
+  const pending = step?.images.find(
+    (image): image is PendingEditorImage =>
+      image.kind === 'pending' && image.id === pendingId
+  )
+  if (!step || !pending) return state
+  const replaced = replace(pending)
+  return {
+    ...state,
+    steps: state.steps.map((candidate) =>
+      candidate === step
+        ? {
+            ...step,
+            images: step.images.map((image) =>
+              image === pending ? replaced : image
+            ),
+          }
+        : candidate
+    ),
+  }
+}
+
+/**
+ * State rebuilt from a saved guide that keeps the pending images of
+ * `previous`, appended last on their step, since they are only uploaded after
+ * the save.
+ */
+const savedWithPendingImages = (
+  previous: EditorState,
+  guide: GuideWithUrls
+): EditorState => {
+  const next = fromGuide(guide)
+  const pendingByStep = new Map(
+    pendingImagesByStep(previous).map(({ stepId, images }) => [stepId, images])
+  )
+  if (pendingByStep.size === 0) return next
+  return {
+    ...next,
+    steps: next.steps.map((step) => {
+      const pending = pendingByStep.get(step.id)
+      return pending ? { ...step, images: [...step.images, ...pending] } : step
+    }),
+  }
+}
+
+/**
  * Record the guide's updatedAt reported by an image upload or delete. The
  * later value wins, so responses arriving out of order (e.g. two parallel
  * uploads) never move it backwards. It is recorded even when the image action
@@ -200,8 +318,9 @@ export function editorReducer(
 ): EditorState {
   switch (action.type) {
     case 'load':
-    case 'saved':
       return fromGuide(action.guide)
+    case 'saved':
+      return savedWithPendingImages(state, action.guide)
     case 'set-title':
       return {
         ...state,
@@ -269,6 +388,100 @@ export function editorReducer(
           image.id === action.imageId ? { ...image, ...action.patch } : image
         )
       )
+    case 'add-pending-images':
+      if (action.images.length === 0) return state
+      return updateStep(state, action.stepId, (step) => ({
+        ...step,
+        images: [
+          ...step.images,
+          ...action.images.map(({ id, file, url }): PendingEditorImage => ({
+            kind: 'pending',
+            id,
+            url,
+            filename: file.name,
+            altText: '',
+            caption: '',
+            file,
+            error: null,
+          })),
+        ],
+      }))
+    case 'remove-pending-image':
+      return updateStep(state, action.stepId, (step) =>
+        step.images.some(
+          (image) => image.kind === 'pending' && image.id === action.imageId
+        )
+          ? {
+              ...step,
+              images: step.images.filter(
+                (image) => image.id !== action.imageId
+              ),
+            }
+          : step
+      )
+    case 'pending-image-uploaded':
+      return replacePendingImage(
+        recordUpdatedAt(state, action.guideUpdatedAt),
+        action.stepId,
+        action.pendingId,
+        () => fromImage(action.image)
+      )
+    case 'pending-image-failed':
+      return replacePendingImage(
+        state,
+        action.stepId,
+        action.pendingId,
+        (pending) => ({ ...pending, error: action.error })
+      )
+  }
+}
+
+/** Pending images per step, only for steps that have any. */
+export function pendingImagesByStep(state: EditorState): PendingStepImages[] {
+  return state.steps.flatMap((step) => {
+    const images = step.images.filter(
+      (image): image is PendingEditorImage => image.kind === 'pending'
+    )
+    return images.length > 0 ? [{ stepId: step.id, images }] : []
+  })
+}
+
+/** Object URLs of all pending image previews, to revoke when they go away. */
+export const pendingImageUrls = (state: EditorState): string[] =>
+  pendingImagesByStep(state).flatMap(({ images }) =>
+    images.map((image) => image.url)
+  )
+
+/** True when there is anything a save would persist, pending images included. */
+export const isDirty = (state: EditorState): boolean =>
+  state.dirty || pendingImagesByStep(state).length > 0
+
+/**
+ * The saved guide with the images uploaded after the save appended to their
+ * steps, and its updatedAt moved to the latest upload. Uploads for unknown
+ * steps are ignored.
+ */
+export function withUploadedImages(
+  guide: GuideWithUrls,
+  uploads: readonly UploadedStepImage[]
+): GuideWithUrls {
+  if (uploads.length === 0) return guide
+  const updatedAt = uploads.reduce(
+    (latest, { guideUpdatedAt }) =>
+      Date.parse(guideUpdatedAt) > Date.parse(latest) ? guideUpdatedAt : latest,
+    guide.updatedAt
+  )
+  return {
+    ...guide,
+    updatedAt,
+    steps: guide.steps.map((step) => {
+      const images = uploads
+        .filter((upload) => upload.stepId === step.id)
+        .map((upload) => upload.image)
+      return images.length > 0
+        ? { ...step, images: [...step.images, ...images] }
+        : step
+    }),
   }
 }
 
@@ -344,12 +557,16 @@ export function toRequest(
       body: step.body,
       calloutType: step.calloutType,
       calloutText: step.calloutType ? step.calloutText.trim() || null : null,
-      images: step.images.map((image, index) => ({
-        id: image.id,
-        sortOrder: index,
-        altText: image.altText.trim(),
-        caption: image.caption.trim() || null,
-      })),
+      // Pending images are unknown to the server until they are uploaded
+      // after the save; sending them would be rejected as image-not-in-step.
+      images: step.images
+        .filter((image) => image.kind === 'uploaded')
+        .map((image, index) => ({
+          id: image.id,
+          sortOrder: index,
+          altText: image.altText.trim(),
+          caption: image.caption.trim() || null,
+        })),
     })),
   }
 }

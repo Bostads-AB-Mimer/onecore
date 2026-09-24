@@ -31,9 +31,14 @@ import { Textarea } from '@/shared/ui/Textarea'
 import { useCreateGuide } from '../hooks/useCreateGuide'
 import { useDeleteGuide } from '../hooks/useDeleteGuide'
 import { useGuideEditorState } from '../hooks/useGuideEditorState'
+import { useRevokeObjectUrls } from '../hooks/useRevokeObjectUrls'
 import { useUpdateGuide } from '../hooks/useUpdateGuide'
+import { useUploadPendingImages } from '../hooks/useUploadPendingImages'
 import {
   type GuideStatus,
+  isDirty,
+  pendingImagesByStep,
+  pendingImageUrls,
   toPreview,
   toRequest,
   toUpdateRequest,
@@ -85,7 +90,13 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   const createGuide = useCreateGuide()
   const updateGuide = useUpdateGuide()
   const deleteGuide = useDeleteGuide()
-  const isSaving = createGuide.isPending || updateGuide.isPending
+  const { uploadPendingImages, isUploading: isUploadingPending } =
+    useUploadPendingImages(dispatch)
+  // Uploading the images queued on unsaved steps is part of saving.
+  const isSaving =
+    createGuide.isPending || updateGuide.isPending || isUploadingPending
+  const dirty = isDirty(state)
+  useRevokeObjectUrls(pendingImageUrls(state))
 
   // Block in-app navigation and tab close while there are unsaved changes.
   // Programmatic redirects after a save or delete set the ref so the blocker
@@ -99,16 +110,16 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
       allowNextNavigation.current = false
       return false
     }
-    return state.dirty && currentLocation.pathname !== nextLocation.pathname
+    return dirty && currentLocation.pathname !== nextLocation.pathname
   })
   useEffect(() => {
-    if (!state.dirty) return
+    if (!dirty) return
     const handler = (event: BeforeUnloadEvent) => {
       event.preventDefault()
     }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [state.dirty])
+  }, [dirty])
 
   const save = async (status: GuideStatus) => {
     if (isSaving || pendingUploads > 0) return
@@ -126,36 +137,59 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
       return
     }
 
-    try {
-      if (state.guideId === null) {
-        const created = await createGuide.mutateAsync(toRequest(state, status))
-        dispatch({ type: 'saved', guide: created })
-        toast({ title: 'Guiden är sparad' })
-        // Images can be uploaded once the guide has an id; continue editing.
-        allowNextNavigation.current = true
-        navigate(paths.guideEdit(created.slug), { replace: true })
-        return
-      }
+    // Taken from the same state as the request, so every queued image belongs
+    // to a step the save creates.
+    const pendingImages = pendingImagesByStep(state)
+    const isCreate = state.guideId === null
 
-      const updated = await updateGuide.mutateAsync({
-        id: state.guideId,
-        body: toUpdateRequest(state, status),
-      })
-      dispatch({ type: 'saved', guide: updated })
-      toast({
-        title:
-          status === 'published' ? 'Guiden är publicerad' : 'Guiden är sparad',
-      })
-      if (updated.slug !== state.savedSlug) {
-        allowNextNavigation.current = true
-        navigate(paths.guideEdit(updated.slug), { replace: true })
-      }
+    let saved: GuideWithUrls
+    try {
+      saved =
+        state.guideId === null
+          ? await createGuide.mutateAsync(toRequest(state, status))
+          : await updateGuide.mutateAsync({
+              id: state.guideId,
+              body: toUpdateRequest(state, status),
+            })
     } catch (error) {
       toast({
         title: 'Det gick inte att spara',
         description: saveErrorMessage(error),
         variant: 'destructive',
       })
+      return
+    }
+
+    // 'saved' keeps the queued images, which are then replaced one by one
+    // as their uploads finish (or marked as failed).
+    dispatch({ type: 'saved', guide: saved })
+    const { failed } = await uploadPendingImages(saved, pendingImages)
+
+    if (failed > 0) {
+      toast({
+        title: 'Bilder kunde inte laddas upp',
+        description: `Guiden sparades men ${failed} ${failed === 1 ? 'bild' : 'bilder'} kunde inte laddas upp. Försök spara igen.`,
+        variant: 'destructive',
+      })
+    } else {
+      toast({
+        title:
+          !isCreate && status === 'published'
+            ? 'Guiden är publicerad'
+            : 'Guiden är sparad',
+      })
+    }
+
+    // The editor for a new guide is replaced by one on the edit route, which
+    // starts from the query cache (updated with the uploaded images). Images
+    // that failed to upload would be lost there, so it stays until they are
+    // all uploaded. An existing guide keeps its editor when the slug changes.
+    const leaveNewGuideRoute = initialGuide === undefined && failed === 0
+    const slugChanged =
+      initialGuide !== undefined && saved.slug !== state.savedSlug
+    if (leaveNewGuideRoute || slugChanged) {
+      allowNextNavigation.current = true
+      navigate(paths.guideEdit(saved.slug), { replace: true })
     }
   }
 
@@ -176,8 +210,8 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
     }
   }
 
-  const isPublished = state.status === 'published' && !state.dirty
-  const isUploading = pendingUploads > 0
+  const isPublished = state.status === 'published' && !dirty
+  const isUploading = pendingUploads > 0 || isUploadingPending
   const saveDisabled = isSaving || isUploading
 
   return (
@@ -205,7 +239,7 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
       <fieldset className="space-y-8 min-w-0" disabled={isSaving}>
         <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 p-3">
           <span className="text-sm text-muted-foreground" aria-live="polite">
-            {state.dirty
+            {dirty
               ? 'Osparade ändringar'
               : state.guideId
                 ? isPublished

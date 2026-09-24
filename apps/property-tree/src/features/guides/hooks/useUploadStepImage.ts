@@ -10,6 +10,7 @@ interface UploadStepImageVariables {
   file: File
   /** Required by the server when the guide is published. */
   altText?: string
+  caption?: string | null
   onProgress?: (fraction: number) => void
 }
 
@@ -21,13 +22,20 @@ export function useUploadStepImage() {
       stepId,
       file,
       altText,
+      caption,
       onProgress,
     }: UploadStepImageVariables) => {
       const fileData = await fileToBase64(file)
       return guideService.uploadStepImage(
         guideId,
         stepId,
-        { fileName: file.name, fileData, contentType: file.type, altText },
+        {
+          fileName: file.name,
+          fileData,
+          contentType: file.type,
+          altText,
+          caption,
+        },
         onProgress
       )
     },
