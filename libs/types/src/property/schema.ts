@@ -92,6 +92,16 @@ export const PropertyKvvAreaLookupSchema = z.object({
   responsibleKeycloakUserId: z.string().nullable(), // core expands to a user
 })
 
+const resolveKey = z.string().trim().min(1)
+
+// GET /kvv-areas/resolve: exactly one key. The keys may disagree, so callers
+// send the most specific one they have; the service resolves the rest.
+export const ResolveKvvAreaQuerySchema = z.union([
+  z.object({ rentalId: resolveKey }).strict(),
+  z.object({ buildingCode: resolveKey }).strict(),
+  z.object({ propertyCode: resolveKey }).strict(),
+])
+
 // One KVV-area as listed by GET /kvv-areas, with its cost center (distrikt).
 export const KvvAreaWithCostCenterSchema = KvvAreaRefSchema.extend({
   costCenter: CostCenterRefSchema,

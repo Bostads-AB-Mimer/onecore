@@ -15,7 +15,6 @@ import {
 } from '../adapters/property-adapter'
 import {
   getKvvAreaByPropertyCode,
-  getKvvAreaByRentalId,
   upsertPropertyKvvArea,
 } from '../adapters/kvv-area-adapter'
 import {
@@ -277,6 +276,11 @@ export const routes = (router: KoaRouter) => {
    *       `onecore_property_kvv_area`, the cost center (distrikt) that area
    *       belongs to, and the responsible kvartersvärd (as a Keycloak user id).
    *       Returns 404 when the property has no KVV-area link.
+   *
+   *       **Deprecated.** Answers the property default only and ignores
+   *       building-level exceptions on split properties. Use
+   *       `GET /kvv-areas/resolve` instead. Kept until Odoo has moved over.
+   *     deprecated: true
    *     tags:
    *       - Properties
    *     parameters:
@@ -301,6 +305,8 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
+  // Deprecated: property default only, blind to split-property exceptions.
+  // Remove once Odoo calls GET /kvv-areas/resolve (its only caller).
   router.get('(.*)/properties/:code/kvv-area', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const propertyCode = ctx.params.code
@@ -324,74 +330,6 @@ export const routes = (router: KoaRouter) => {
       }
     } catch (err) {
       logger.error({ err, propertyCode }, 'properties.getKvvAreaByPropertyCode')
-      ctx.status = 500
-      ctx.body = {
-        reason: 'Internal server error',
-        code: 'KVV_AREA_LOOKUP_FAILED',
-        ...metadata,
-      }
-    }
-  })
-
-  /**
-   * @swagger
-   * /rental-objects/{rentalId}/kvv-area:
-   *   get:
-   *     summary: Get the KVV-area (förvaltningsområde) and cost center of a rental object
-   *     description: |
-   *       Object-level KVV-area lookup for split properties: if the object's
-   *       building carries a row in `onecore_kvv_area_exception`, that area
-   *       wins; otherwise the property's `onecore_property_kvv_area` link
-   *       applies. For objects in unsplit properties this answers the same as
-   *       the property-level lookup. Returns 404 for an unknown rental id or
-   *       when nothing resolves.
-   *     tags:
-   *       - Rental objects
-   *     parameters:
-   *       - in: path
-   *         name: rentalId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The rental object id (Xpand `hyresid`).
-   *     responses:
-   *       200:
-   *         description: The object's KVV-area, cost center and responsible.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   $ref: '#/components/schemas/PropertyKvvAreaLookup'
-   *       404:
-   *         description: Unknown rental id, or no KVV-area resolves for it.
-   *       500:
-   *         description: Internal server error.
-   */
-  router.get('(.*)/rental-objects/:rentalId/kvv-area', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const rentalId = ctx.params.rentalId
-
-    try {
-      const lookup = await getKvvAreaByRentalId(rentalId)
-
-      if (!lookup) {
-        ctx.status = 404
-        ctx.body = {
-          reason: 'Rental object has no KVV-area',
-          code: 'RENTAL_OBJECT_KVV_AREA_NOT_FOUND',
-          ...metadata,
-        }
-        return
-      }
-
-      ctx.body = {
-        content: PropertyKvvAreaLookupSchema.parse(lookup),
-        ...metadata,
-      }
-    } catch (err) {
-      logger.error({ err, rentalId }, 'properties.getKvvAreaByRentalId')
       ctx.status = 500
       ctx.body = {
         reason: 'Internal server error',

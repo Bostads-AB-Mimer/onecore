@@ -1638,10 +1638,15 @@ export interface paths {
   '/properties/{code}/kvv-area': {
     /**
      * Get the KVV-area (förvaltningsområde) and cost center of a property
+     * @deprecated
      * @description Reverse lookup from a property code to the KVV-area it is linked to in
      * `onecore_property_kvv_area`, the cost center (distrikt) that area
      * belongs to, and the responsible kvartersvärd (as a Keycloak user id).
      * Returns 404 when the property has no KVV-area link.
+     *
+     * **Deprecated.** Answers the property default only and ignores
+     * building-level exceptions on split properties. Use
+     * `GET /kvv-areas/resolve` instead. Kept until Odoo has moved over.
      */
     get: {
       parameters: {
@@ -1711,43 +1716,6 @@ export interface paths {
           content: never
         }
         /** @description Property or KVV-area not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/rental-objects/{rentalId}/kvv-area': {
-    /**
-     * Get the KVV-area (förvaltningsområde) and cost center of a rental object
-     * @description Object-level KVV-area lookup for split properties: if the object's
-     * building carries a row in `onecore_kvv_area_exception`, that area
-     * wins; otherwise the property's `onecore_property_kvv_area` link
-     * applies. For objects in unsplit properties this answers the same as
-     * the property-level lookup. Returns 404 for an unknown rental id or
-     * when nothing resolves.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The rental object id (Xpand `hyresid`). */
-          rentalId: string
-        }
-      }
-      responses: {
-        /** @description The object's KVV-area, cost center and responsible. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['PropertyKvvAreaLookup']
-            }
-          }
-        }
-        /** @description Unknown rental id, or no KVV-area resolves for it. */
         404: {
           content: never
         }
@@ -2483,6 +2451,55 @@ export interface paths {
           content: never
         }
         /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/kvv-areas/resolve': {
+    /**
+     * Resolve the KVV-area (förvaltningsområde) and cost center of a location
+     * @description Location-level lookup that honours split properties: if the
+     * location's building carries a row in `onecore_kvv_area_exception`,
+     * that area wins; otherwise the property's `onecore_property_kvv_area`
+     * link applies. The location is given as exactly one of `rentalId`
+     * (lägenhet, bilplats, lokal), `buildingCode` (facilities and
+     * building-level errands) or `propertyCode` (markyta objects and
+     * property-level errands). Rental ids and building codes are resolved
+     * to their property via Xpand. Send the most specific key you have;
+     * the keys are not combined since they may disagree. Returns 404 when
+     * the location is unknown or nothing resolves.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Rental object id (Xpand `hyresid`). */
+          rentalId?: string
+          /** @description Building code (Xpand `bygcode`). */
+          buildingCode?: string
+          /** @description Property code (Xpand `Property.code`). */
+          propertyCode?: string
+        }
+      }
+      responses: {
+        /** @description The location's KVV-area, cost center and responsible. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /** @description Not exactly one of rentalId, buildingCode or propertyCode was given. */
+        400: {
+          content: never
+        }
+        /** @description Unknown location, or no KVV-area resolves for it. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
         500: {
           content: never
         }

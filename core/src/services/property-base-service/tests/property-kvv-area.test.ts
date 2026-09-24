@@ -335,10 +335,10 @@ describe('GET /properties/:propertyCode/kvv-area', () => {
   })
 })
 
-describe('GET /rental-objects/:rentalId/kvv-area', () => {
+describe('GET /kvv-areas/resolve', () => {
   const RENTAL_ID = '307-048-01-0201'
 
-  it('returns the object-level resolution with the responsible hydrated', async () => {
+  it('resolves by rental id with the responsible hydrated', async () => {
     jest.spyOn(keycloakAdapter, 'getUserById').mockResolvedValueOnce({
       ok: true,
       data: {
@@ -351,12 +351,12 @@ describe('GET /rental-objects/:rentalId/kvv-area', () => {
       },
     })
     const spy = jest
-      .spyOn(propertyBaseAdapter, 'getKvvAreaByRentalId')
+      .spyOn(propertyBaseAdapter, 'resolveKvvArea')
       .mockResolvedValueOnce({ ok: true, data: lookupFromService() })
 
     const app = appWithUserRoles([])
     const res = await request(app.callback()).get(
-      `/rental-objects/${RENTAL_ID}/kvv-area`
+      `/kvv-areas/resolve?rentalId=${RENTAL_ID}`
     )
 
     expect(res.status).toBe(200)
@@ -365,31 +365,64 @@ describe('GET /rental-objects/:rentalId/kvv-area', () => {
       id: RESPONSIBLE_ID,
       username: 'rodrigo.garcia',
     })
-    expect(spy).toHaveBeenCalledWith(RENTAL_ID)
+    expect(spy).toHaveBeenCalledWith({ rentalId: RENTAL_ID })
+  })
+
+  it('forwards a building code', async () => {
+    jest.spyOn(keycloakAdapter, 'getUserById').mockResolvedValueOnce({
+      ok: false,
+      err: 'keycloak_unreachable',
+      statusCode: 502,
+    })
+    const spy = jest
+      .spyOn(propertyBaseAdapter, 'resolveKvvArea')
+      .mockResolvedValueOnce({ ok: true, data: lookupFromService() })
+
+    const app = appWithUserRoles([])
+    const res = await request(app.callback()).get(
+      '/kvv-areas/resolve?buildingCode=307-048'
+    )
+
+    expect(res.status).toBe(200)
+    expect(spy).toHaveBeenCalledWith({ buildingCode: '307-048' })
+  })
+
+  it('returns 400 when no key or more than one key is given', async () => {
+    const spy = jest.spyOn(propertyBaseAdapter, 'resolveKvvArea')
+    const app = appWithUserRoles([])
+
+    const none = await request(app.callback()).get('/kvv-areas/resolve')
+    const two = await request(app.callback()).get(
+      '/kvv-areas/resolve?propertyCode=06601&buildingCode=307-048'
+    )
+
+    expect(none.status).toBe(400)
+    expect(two.status).toBe(400)
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('returns 404 with a discriminator code when nothing resolves', async () => {
     jest
-      .spyOn(propertyBaseAdapter, 'getKvvAreaByRentalId')
+      .spyOn(propertyBaseAdapter, 'resolveKvvArea')
       .mockResolvedValueOnce({ ok: false, err: 'not-found' })
 
     const app = appWithUserRoles([])
     const res = await request(app.callback()).get(
-      `/rental-objects/${RENTAL_ID}/kvv-area`
+      `/kvv-areas/resolve?rentalId=${RENTAL_ID}`
     )
 
     expect(res.status).toBe(404)
-    expect(res.body.code).toBe('RENTAL_OBJECT_KVV_AREA_NOT_FOUND')
+    expect(res.body.code).toBe('KVV_AREA_NOT_FOUND')
   })
 
   it('returns 500 on unknown adapter error', async () => {
     jest
-      .spyOn(propertyBaseAdapter, 'getKvvAreaByRentalId')
+      .spyOn(propertyBaseAdapter, 'resolveKvvArea')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const app = appWithUserRoles([])
     const res = await request(app.callback()).get(
-      `/rental-objects/${RENTAL_ID}/kvv-area`
+      `/kvv-areas/resolve?rentalId=${RENTAL_ID}`
     )
 
     expect(res.status).toBe(500)

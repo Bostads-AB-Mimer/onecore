@@ -11,6 +11,7 @@ import {
   KvvAreaWithCostCenterSchema,
   MarketAreaSchema,
   PropertyKvvAreaLookupSchema,
+  ResolveKvvAreaQuerySchema,
   UpdateMalarEnergiFacilityIdRequestSchema,
   UpdateMalarEnergiFacilityIdResponseSchema,
 } from './schema'
@@ -19,6 +20,7 @@ export type MarketArea = z.infer<typeof MarketAreaSchema>
 export type KvvAreaRef = z.infer<typeof KvvAreaRefSchema>
 export type CostCenterRef = z.infer<typeof CostCenterRefSchema>
 export type PropertyKvvAreaLookup = z.infer<typeof PropertyKvvAreaLookupSchema>
+export type ResolveKvvAreaQuery = z.infer<typeof ResolveKvvAreaQuerySchema>
 export type KvvAreaWithCostCenter = z.infer<typeof KvvAreaWithCostCenterSchema>
 
 export type UpdateMalarEnergiFacilityIdRequest = z.infer<
