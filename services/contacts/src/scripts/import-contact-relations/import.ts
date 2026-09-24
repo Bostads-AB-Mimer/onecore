@@ -8,6 +8,7 @@ import {
   ROLE_TYPES,
 } from '@src/adapters/contact-relations'
 import {
+  allCoAddresseeCandidates,
   allGuardianEdges,
   allInvoiceRecipientCandidates,
 } from '@src/adapters/xpand/relation-import-query'
@@ -44,8 +45,8 @@ const countByRole = (edges: RelationEdge[]): Record<RoleType, number> => {
 }
 
 /**
- * Reads today's relations from Xpand, collapses fakturamottagare to contact
- * level, and makes the import-owned rows in `contact_relation` mirror the
+ * Reads today's relations from Xpand, collapses fakturamottagare (ANNANFM
+ * rows and c/o addressees) to contact level, and makes the import-owned rows in `contact_relation` mirror the
  * result. Idempotent: rerunning against unchanged data writes nothing. All
  * writes happen in one transaction; `dryRun` skips them entirely.
  *
@@ -74,11 +75,17 @@ export const runImport = async ({
   dryRun?: boolean
   force?: boolean
 }): Promise<ImportReport> => {
-  const [guardians, candidates] = await Promise.all([
+  const [guardians, annanfmCandidates, coCandidates] = await Promise.all([
     allGuardianEdges(xpandDb),
     allInvoiceRecipientCandidates(xpandDb, now),
+    allCoAddresseeCandidates(xpandDb, now),
   ])
-  const { edges: recipients, conflicts } = collapseInvoiceRecipients(candidates)
+  // ANNANFM and c/o rows collapse together: the same contact from both
+  // sources is one edge, different contacts are a conflict.
+  const { edges: recipients, conflicts } = collapseInvoiceRecipients([
+    ...annanfmCandidates,
+    ...coCandidates,
+  ])
   const desired = [...guardians, ...recipients]
 
   const existing = await listActive(contactsDb)
