@@ -4,11 +4,11 @@ import BuildingView from '@/pages/BuildingPage'
 import { CompanyPage } from '@/pages/CompanyPage'
 import ComponentLibraryPage from '@/pages/ComponentLibraryPage'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { EconomyPage } from '@/pages/EconomyPage'
+import { FacilityPage } from '@/pages/FacilityPage'
 import { GuideEditorPage } from '@/pages/GuideEditorPage'
 import { GuidePage } from '@/pages/GuidePage'
 import { GuidesPage } from '@/pages/GuidesPage'
-import { EconomyPage } from '@/pages/EconomyPage'
-import { FacilityPage } from '@/pages/FacilityPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
@@ -160,7 +160,8 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
           {
             path: routes.guide,
             element: <GuidePage />,
-            handle: { title: 'Guide' },
+            // The title is the guide's own, which only GuidePage knows.
+            handle: { ownsDocumentTitle: true },
           },
           {
             path: routes.guideEdit,

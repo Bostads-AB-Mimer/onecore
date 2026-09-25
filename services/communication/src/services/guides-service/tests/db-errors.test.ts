@@ -29,7 +29,7 @@ describe('isUniqueViolation', () => {
 })
 
 describe('isUniqueViolationOn', () => {
-  const SLUG_INDEXES = ['uq_guide_slug', 'uq_guide_slug_history_slug']
+  const SLUG_INDEXES = ['uq_guide_slug']
 
   const duplicateKey = (indexName: string) =>
     Object.assign(
@@ -48,8 +48,8 @@ describe('isUniqueViolationOn', () => {
   it.each([
     ['a 2601 duplicate key on the slug index', duplicateKey('uq_guide_slug')],
     [
-      'a 2627 constraint violation on the slug history index',
-      uniqueConstraint('uq_guide_slug_history_slug'),
+      'a 2627 constraint violation on the slug index',
+      uniqueConstraint('uq_guide_slug'),
     ],
     [
       'a wrapped error that only names the index on the inner error',
@@ -69,6 +69,10 @@ describe('isUniqueViolationOn', () => {
     // A unique violation on an unrelated index must not be mapped to a slug
     // conflict; the caller rethrows it unchanged.
     ['a unique violation on another index', duplicateKey('uq_guide_category')],
+    [
+      'a unique violation on an index whose name starts with the slug index',
+      duplicateKey('uq_guide_slug_other'),
+    ],
     [
       'a unique violation whose message names no index',
       Object.assign(new Error('Violation of UNIQUE KEY constraint'), {

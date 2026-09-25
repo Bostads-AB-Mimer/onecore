@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest'
+
 import { isReservedSlug, isValidSlug, slugify } from './slugify'
 
 describe('slugify', () => {
@@ -9,6 +11,10 @@ describe('slugify', () => {
 
   it('maps Swedish letters to their base letters', () => {
     expect(slugify('Åtgärd för Öresund')).toBe('atgard-for-oresund')
+  })
+
+  it('strips accents from other letters', () => {
+    expect(slugify('Crème brûlée på Ñandú')).toBe('creme-brulee-pa-nandu')
   })
 
   it('collapses punctuation and whitespace into single hyphens', () => {

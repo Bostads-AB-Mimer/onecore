@@ -4,8 +4,8 @@ const UNIQUE_VIOLATION_NUMBERS = [2601, 2627]
 
 /**
  * True when the error comes from a unique index or constraint. Used to turn
- * the race between "is this slug free?" and the actual insert into a proper
- * domain error instead of a 500.
+ * a write that collides with an existing slug into a proper domain error
+ * instead of a 500.
  */
 export const isUniqueViolation = (err: unknown): boolean => {
   const errorNumber = (candidate: unknown): number | undefined => {

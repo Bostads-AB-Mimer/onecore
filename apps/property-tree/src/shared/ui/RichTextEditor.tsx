@@ -4,11 +4,17 @@ import StarterKit from '@tiptap/starter-kit'
 import { Bold, Link2, List, ListOrdered } from 'lucide-react'
 
 import { useToast } from '@/shared/hooks/useToast'
+import { isAllowedGuideHref } from '@/shared/lib/sanitizeHtml'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 
 interface RichTextEditorProps {
   id?: string
+  /**
+   * Id of the visible label. A <label htmlFor> does not associate with the
+   * contenteditable surface, so the label is referenced from it instead.
+   */
+  ariaLabelledBy?: string
   value: string
   onChange: (html: string) => void
   placeholder?: string
@@ -26,6 +32,7 @@ const contentClassName =
  */
 export function RichTextEditor({
   id,
+  ariaLabelledBy,
   value,
   onChange,
   placeholder,
@@ -63,6 +70,7 @@ export function RichTextEditor({
       attributes: {
         class: contentClassName,
         ...(id ? { id } : {}),
+        ...(ariaLabelledBy ? { 'aria-labelledby': ariaLabelledBy } : {}),
         ...(placeholder ? { 'aria-placeholder': placeholder } : {}),
       },
     },
@@ -103,14 +111,18 @@ export function RichTextEditor({
       editor.chain().focus().unsetLink().run()
       return
     }
-    // Tiptap rejects schemes outside its allowlist and returns false.
     const isExternal = /^https?:\/\//i.test(href)
-    const applied = editor
-      .chain()
-      .focus()
-      .extendMarkRange('link')
-      .setLink({ href, target: isExternal ? '_blank' : null })
-      .run()
+    // A href the sanitizers would strip is refused here rather than saved as
+    // link text without a link. Tiptap also returns false for schemes outside
+    // its own allowlist.
+    const applied =
+      isAllowedGuideHref(href) &&
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange('link')
+        .setLink({ href, target: isExternal ? '_blank' : null })
+        .run()
     if (!applied) {
       toast({
         title: 'Ogiltig länk',

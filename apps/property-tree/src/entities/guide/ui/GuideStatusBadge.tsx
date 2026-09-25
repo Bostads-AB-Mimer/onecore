@@ -1,7 +1,9 @@
+import type { guides } from '@onecore/types'
+
 import { Badge } from '@/shared/ui/Badge'
 
 interface GuideStatusBadgeProps {
-  status: 'draft' | 'published'
+  status: guides.GuideStatus
 }
 
 export function GuideStatusBadge({ status }: GuideStatusBadgeProps) {

@@ -177,22 +177,6 @@ describe('GET /guides/by-slug/:slug', () => {
     expect(admin.body.content.steps).toHaveLength(1)
   })
 
-  it('keeps redirectedFrom when an old slug resolved', async () => {
-    jest
-      .spyOn(communicationAdapter.guides, 'getGuideBySlug')
-      .mockResolvedValue({
-        ok: true,
-        data: { ...guide, redirectedFrom: 'gammal-slug' },
-      })
-
-    const res = await request(app.callback())
-      .get('/guides/by-slug/gammal-slug')
-      .set(asReader)
-
-    expect(res.status).toBe(200)
-    expect(res.body.content.redirectedFrom).toBe('gammal-slug')
-  })
-
   it('returns an empty url when the file is missing in storage', async () => {
     jest
       .spyOn(communicationAdapter.guides, 'getGuideBySlug')
@@ -216,6 +200,18 @@ describe('GET /guides/by-slug/:slug', () => {
 
     const res = await request(app.callback())
       .get('/guides/by-slug/nope')
+      .set(asReader)
+
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 404 when communication rejects a malformed slug', async () => {
+    jest
+      .spyOn(communicationAdapter.guides, 'getGuideBySlug')
+      .mockResolvedValue({ ok: false, err: 'bad-request' })
+
+    const res = await request(app.callback())
+      .get(`/guides/by-slug/${encodeURIComponent('Uppsägning')}`)
       .set(asReader)
 
     expect(res.status).toBe(404)
@@ -500,6 +496,37 @@ describe('POST /guides/:id/steps/:stepId/images', () => {
     })
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('invalid-file-type')
+  })
+
+  it.each(['constructor', '__proto__', 'toString'])(
+    'rejects the Object.prototype key %s as a content type without uploading',
+    async (contentType) => {
+      const uploadSpy = jest.spyOn(fileStorageAdapter, 'uploadFile')
+
+      const res = await upload({
+        fileName: 'x.png',
+        fileData: png,
+        contentType,
+      })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('invalid-file-type')
+      expect(uploadSpy).not.toHaveBeenCalled()
+    }
+  )
+
+  it('rejects a file name longer than 255 characters without uploading', async () => {
+    const uploadSpy = jest.spyOn(fileStorageAdapter, 'uploadFile')
+
+    const res = await upload({
+      fileName: `${'a'.repeat(252)}.png`,
+      fileData: png,
+      contentType: 'image/png',
+    })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Validation failed')
+    expect(uploadSpy).not.toHaveBeenCalled()
   })
 
   it('rejects an oversized payload without decoding it', async () => {

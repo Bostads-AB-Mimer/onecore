@@ -14,7 +14,7 @@ import { routes as healthRoutes } from './services/health-service'
 import { routes as infobipSmsWebhookRoutes } from './services/communication-service/infobip-sms-webhook'
 
 import { requireAuth, requireRole } from './middlewares/keycloak-auth'
-import { GUIDES_ADMIN_ROLE } from './services/guides-service/helpers'
+import { GUIDES_ADMIN_ROLE } from './services/guides-service/constants'
 import { routes as apiRoutes } from './api/index'
 import { routes as swaggerRoutes } from './services/swagger'
 import { extractToken } from './middlewares/extract-token'

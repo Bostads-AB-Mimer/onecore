@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest'
+
 import { resolveActiveId } from './useActiveHeading'
 
 const ids = ['step-1', 'step-2', 'step-3']

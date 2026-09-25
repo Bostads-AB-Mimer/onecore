@@ -7,21 +7,24 @@ import { guides as guidesAdapter } from '../../adapters/communication-adapter'
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
 import {
   deleteStorageFiles,
-  GUIDE_STORAGE_PREFIX,
   isPlainBase64,
   isUuidParam,
   matchesImageMagicBytes,
   upstreamErrorBody,
   withImageUrl,
 } from './helpers'
+import { GUIDE_STORAGE_PREFIX } from './constants'
 
 // Nothing downstream validates uploads, so limits are enforced here.
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
-export const ALLOWED_IMAGE_TYPES: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-}
+// File extension for each accepted content type. Keyed by the validated enum,
+// so the lookup below is total and never reaches Object.prototype.
+export const ALLOWED_IMAGE_TYPES: Record<guides.GuideImageContentType, string> =
+  {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp',
+  }
 
 // Base64 grows by 4/3, rounded up to a 4-character group plus padding. Anything
 // longer is rejected before Buffer.from so an oversized payload is never decoded.
@@ -98,18 +101,21 @@ export const routes = (router: KoaRouter) => {
       ctx.request.body
     )
     if (!parsed.success) {
+      // An unsupported content type keeps its own code so the client can tell
+      // the user which formats are accepted.
+      const invalidContentType = parsed.error.issues.some(
+        (issue) => issue.path[0] === 'contentType'
+      )
       ctx.status = 400
-      ctx.body = { error: 'Validation failed', ...metadata }
+      ctx.body = {
+        error: invalidContentType ? 'invalid-file-type' : 'Validation failed',
+        ...metadata,
+      }
       return
     }
 
     const { fileName, fileData, contentType, altText, caption } = parsed.data
     const extension = ALLOWED_IMAGE_TYPES[contentType]
-    if (!extension) {
-      ctx.status = 400
-      ctx.body = { error: 'invalid-file-type', ...metadata }
-      return
-    }
 
     if (fileData.length > MAX_BASE64_LENGTH) {
       ctx.status = 400

@@ -7569,6 +7569,10 @@ export interface paths {
         400: {
           content: never
         }
+        /** @description Guide image — use the /guides routes */
+        403: {
+          content: never
+        }
         /** @description File not found */
         404: {
           content: never
@@ -7597,6 +7601,10 @@ export interface paths {
               content?: components['schemas']['FileMetadata']
             }
           }
+        }
+        /** @description Guide image — use the /guides routes */
+        403: {
+          content: never
         }
         /** @description File not found */
         404: {
@@ -7655,6 +7663,10 @@ export interface paths {
               content?: components['schemas']['FileExistsResponse']
             }
           }
+        }
+        /** @description Guide image — use the /guides routes */
+        403: {
+          content: never
         }
         /** @description Server error */
         500: {
@@ -10538,7 +10550,7 @@ export interface paths {
   '/guides/by-slug/{slug}': {
     /**
      * Get a guide by slug
-     * @description Resolves old slugs through the slug history; redirectedFrom is set when that happens. A draft is returned in full to guides-admin users and as an UnpublishedGuide notice to everyone else.
+     * @description Resolves the current slug only; a slug a guide had before a rename, or a malformed slug, gives 404. A draft is returned in full to guides-admin users and as an UnpublishedGuide notice to everyone else.
      */
     get: {
       parameters: {
@@ -15460,7 +15472,6 @@ export interface components {
         /** Format: date-time */
         updatedAt: string
       }[]
-      redirectedFrom?: string
     }
     UnpublishedGuide: {
       slug: string
@@ -15537,12 +15548,15 @@ export interface components {
       expectedUpdatedAt: string
     }
     GuideImageUploadRequest: {
-      /** @description Target file name/path */
+      /** @description Original file name, kept as image metadata */
       fileName: string
       /** @description Base64 encoded file content */
       fileData: string
-      /** @description MIME type of the file */
-      contentType: string
+      /**
+       * @description MIME type of the image
+       * @enum {string}
+       */
+      contentType: 'image/png' | 'image/jpeg' | 'image/webp'
       altText?: string
       caption?: string | null
     }

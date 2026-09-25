@@ -1,13 +1,9 @@
 import { OkapiRouter } from 'koa-okapi-router'
 import { guides } from '@onecore/types'
-import { logger } from '@onecore/utilities'
 import { z, ZodError, ZodTypeAny } from 'zod'
 
 import { db } from '../../common/db'
-import {
-  findOrCreateCategory,
-  listCategories,
-} from './adapters/categories-adapter'
+import { listCategories } from './adapters/categories-adapter'
 import {
   createGuide,
   deleteGuide,
@@ -66,6 +62,10 @@ class ParamValidationError extends Error {
   }
 }
 
+// Bodies are parsed here instead of with the parseRequestBody middleware:
+// OkapiRouter routes take exactly one middleware (no chaining), and
+// parseRequestBody answers 400 with { status, data } while core relays this
+// service's { error: 'Validation failed', issues } body to its callers.
 const parse = <S extends ZodTypeAny>(schema: S, value: unknown): z.infer<S> => {
   try {
     return schema.parse(value)
@@ -103,12 +103,11 @@ type ErrorContext = {
   body: unknown
 }
 
-// Shared error mapping so every route answers the same way.
-const respondWithError = (
-  ctx: ErrorContext,
-  error: unknown,
-  logMessage: string
-) => {
+// Shared error mapping so every route answers the same way. Unexpected errors
+// are not logged here: they come from the adapters, which already log them
+// with their own context (services/CLAUDE.md), so logging again would record
+// every 500 twice.
+const respondWithError = (ctx: ErrorContext, error: unknown) => {
   if (error instanceof RequestValidationError) {
     ctx.status = 400
     ctx.body = {
@@ -155,7 +154,6 @@ const respondWithError = (
     ctx.body = { error: 'step-belongs-to-other-guide' }
     return
   }
-  logger.error({ err: error }, logMessage)
   ctx.status = 500
   // Never expose the underlying error (SQL text, connection details).
   ctx.body = { error: 'internal-server-error' }
@@ -188,7 +186,7 @@ export const routes = (router: OkapiRouter) => {
         ctx.status = 200
         ctx.body = await listGuides(query, db)
       } catch (error) {
-        respondWithError(ctx, error, 'failed to list guides')
+        respondWithError(ctx, error)
       }
     }
   )
@@ -208,7 +206,7 @@ export const routes = (router: OkapiRouter) => {
         ctx.status = 200
         ctx.body = await listCategories(db)
       } catch (error) {
-        respondWithError(ctx, error, 'failed to list guide categories')
+        respondWithError(ctx, error)
       }
     }
   )
@@ -218,13 +216,12 @@ export const routes = (router: OkapiRouter) => {
     {
       summary: 'Get a guide by slug',
       description:
-        'Resolves the current slug first and then guide_slug_history. A ' +
-        'guide found through history carries redirectedFrom. Drafts are ' +
-        'returned; the caller decides who may see them.',
+        'Resolves the current slug only; a slug a guide had before a rename ' +
+        'gives 404. Drafts are returned; the caller decides who may see them.',
       tags: ['Guides'],
       params: {
         slug: {
-          description: 'Current or previous slug',
+          description: 'Current slug',
           schema: guides.SlugSchema,
         },
       },
@@ -246,7 +243,7 @@ export const routes = (router: OkapiRouter) => {
         ctx.status = 200
         ctx.body = guide
       } catch (error) {
-        respondWithError(ctx, error, 'failed to get guide by slug')
+        respondWithError(ctx, error)
       }
     }
   )
@@ -275,7 +272,7 @@ export const routes = (router: OkapiRouter) => {
         ctx.status = 200
         ctx.body = guide
       } catch (error) {
-        respondWithError(ctx, error, 'failed to get guide')
+        respondWithError(ctx, error)
       }
     }
   )
@@ -308,7 +305,7 @@ export const routes = (router: OkapiRouter) => {
         ctx.status = 200
         ctx.body = await createGuide(input, db)
       } catch (error) {
-        respondWithError(ctx, error, 'failed to create guide')
+        respondWithError(ctx, error)
       }
     }
   )
@@ -356,7 +353,7 @@ export const routes = (router: OkapiRouter) => {
         ctx.status = 200
         ctx.body = result
       } catch (error) {
-        respondWithError(ctx, error, 'failed to update guide')
+        respondWithError(ctx, error)
       }
     }
   )
@@ -388,7 +385,7 @@ export const routes = (router: OkapiRouter) => {
         ctx.status = 200
         ctx.body = result
       } catch (error) {
-        respondWithError(ctx, error, 'failed to delete guide')
+        respondWithError(ctx, error)
       }
     }
   )
@@ -437,7 +434,7 @@ export const routes = (router: OkapiRouter) => {
         ctx.status = 200
         ctx.body = result
       } catch (error) {
-        respondWithError(ctx, error, 'failed to create guide step image')
+        respondWithError(ctx, error)
       }
     }
   )
@@ -472,11 +469,8 @@ export const routes = (router: OkapiRouter) => {
         ctx.status = 200
         ctx.body = result
       } catch (error) {
-        respondWithError(ctx, error, 'failed to delete guide step image')
+        respondWithError(ctx, error)
       }
     }
   )
 }
-
-// Exposed for tests that exercise category resolution without HTTP.
-export { findOrCreateCategory }

@@ -19,7 +19,7 @@ export const listGuides = async (query: {
   includeDrafts: boolean
 }): Promise<AdapterResult<guides.GuideSummary[], CommonErr>> => {
   try {
-    const { data, error, response } = await client().GET('/guides', {
+    const { data, error, response } = await client.GET('/guides', {
       params: {
         query: { includeDrafts: query.includeDrafts ? 'true' : 'false' },
       },
@@ -36,7 +36,7 @@ export const listCategories = async (): Promise<
   AdapterResult<guides.GuideCategory[], CommonErr>
 > => {
   try {
-    const { data, error, response } = await client().GET('/guides/categories')
+    const { data, error, response } = await client.GET('/guides/categories')
     if (error || !response.ok) return fail(mapFetchError(response))
     return ok(guides.GuideCategorySchema.array().parse(data))
   } catch (err) {
@@ -52,7 +52,7 @@ export const getGuideBySlug = async (
   slug: string
 ): Promise<AdapterResult<guides.Guide, CommonErr>> => {
   try {
-    const { data, error, response } = await client().GET(
+    const { data, error, response } = await client.GET(
       '/guides/by-slug/{slug}',
       { params: { path: { slug } } }
     )
@@ -71,7 +71,7 @@ export const getGuideById = async (
   id: string
 ): Promise<AdapterResult<guides.Guide, CommonErr>> => {
   try {
-    const { data, error, response } = await client().GET('/guides/{id}', {
+    const { data, error, response } = await client.GET('/guides/{id}', {
       params: { path: { id } },
     })
     if (error || !response.ok) return fail(mapFetchError(response))
@@ -86,7 +86,7 @@ export const createGuide = async (
   body: guides.ServiceGuideWrite
 ): Promise<ProxiedAdapterResult<guides.Guide, CommonErr>> => {
   try {
-    const { data, error, response } = await client().POST('/guides', {
+    const { data, error, response } = await client.POST('/guides', {
       body,
     })
     if (error || !response.ok)
@@ -103,7 +103,7 @@ export const updateGuide = async (
   body: guides.ServiceGuideUpdate
 ): Promise<ProxiedAdapterResult<guides.UpdateGuideResponse, CommonErr>> => {
   try {
-    const { data, error, response } = await client().PUT('/guides/{id}', {
+    const { data, error, response } = await client.PUT('/guides/{id}', {
       params: { path: { id } },
       body,
     })
@@ -120,7 +120,7 @@ export const deleteGuide = async (
   id: string
 ): Promise<AdapterResult<guides.DeleteGuideResponse, CommonErr>> => {
   try {
-    const { data, error, response } = await client().DELETE('/guides/{id}', {
+    const { data, error, response } = await client.DELETE('/guides/{id}', {
       params: { path: { id } },
     })
     if (error || !response.ok) return fail(mapFetchError(response))
@@ -140,7 +140,7 @@ export const createStepImage = async (
   body: guides.CreateStepImageRequest
 ): Promise<ProxiedAdapterResult<guides.CreateStepImageResponse, CommonErr>> => {
   try {
-    const { data, error, response } = await client().POST(
+    const { data, error, response } = await client.POST(
       '/guides/{id}/steps/{stepId}/images',
       { params: { path: { id: guideId, stepId } }, body }
     )
@@ -161,7 +161,7 @@ export const deleteStepImage = async (
   imageId: string
 ): Promise<AdapterResult<guides.DeleteStepImageResponse, CommonErr>> => {
   try {
-    const { data, error, response } = await client().DELETE(
+    const { data, error, response } = await client.DELETE(
       '/guides/{id}/images/{imageId}',
       { params: { path: { id: guideId, imageId } } }
     )

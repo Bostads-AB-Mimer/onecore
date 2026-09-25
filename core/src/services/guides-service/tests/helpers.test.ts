@@ -27,12 +27,11 @@ describe('matchesImageMagicBytes', () => {
     expect(matchesImageMagicBytes(riffWave, 'image/webp')).toBe(false)
   })
 
-  it('rejects arbitrary content and unknown content types', () => {
+  it('rejects arbitrary content', () => {
     expect(matchesImageMagicBytes(Buffer.from('<html>'), 'image/png')).toBe(
       false
     )
     expect(matchesImageMagicBytes(Buffer.alloc(0), 'image/png')).toBe(false)
-    expect(matchesImageMagicBytes(png, 'image/gif')).toBe(false)
   })
 })
 

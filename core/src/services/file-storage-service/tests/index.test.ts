@@ -161,4 +161,66 @@ describe('guide files are not reachable through /files', () => {
       'gallery/1.png',
     ])
   })
+
+  it.each([
+    ['url', 'getFileUrl'],
+    ['metadata', 'getFileMetadata'],
+    ['exists', 'fileExists'],
+  ] as const)(
+    'refuses GET /files/:fileName/%s for a guide image',
+    async (route, adapterFn) => {
+      const spy = jest.spyOn(fileStorageAdapter, adapterFn)
+
+      const res = await request(app.callback()).get(
+        `/files/${encodeURIComponent('guide/abc/1.png')}/${route}`
+      )
+
+      expect(res.status).toBe(403)
+      expect(res.body.error).toBe('guide-files-managed-via-guides-api')
+      expect(spy).not.toHaveBeenCalled()
+    }
+  )
+
+  it('still returns a presigned url for other keys', async () => {
+    const spy = jest.spyOn(fileStorageAdapter, 'getFileUrl').mockResolvedValue({
+      ok: true,
+      data: { url: 'https://storage/inspection/1.pdf', expiresIn: 3600 },
+    })
+
+    const res = await request(app.callback()).get(
+      `/files/${encodeURIComponent('inspection/1.pdf')}/url`
+    )
+
+    expect(res.status).toBe(200)
+    expect(spy).toHaveBeenCalledWith('inspection/1.pdf', 3600)
+  })
+
+  it.each(['\\guide/abc/1.png', 'guide\\abc\\1.png', './guide/abc/1.png'])(
+    'refuses to upload to the guide key spelled %s',
+    async (fileName) => {
+      const uploadSpy = jest.spyOn(fileStorageAdapter, 'uploadFile')
+
+      const res = await request(app.callback())
+        .post('/files/upload')
+        .send({
+          fileName,
+          fileData: Buffer.from('x').toString('base64'),
+          contentType: 'image/png',
+        })
+
+      expect(res.status).toBe(403)
+      expect(uploadSpy).not.toHaveBeenCalled()
+    }
+  )
+
+  it('refuses to delete a guide image addressed with a backslash', async () => {
+    const deleteSpy = jest.spyOn(fileStorageAdapter, 'deleteFile')
+
+    const res = await request(app.callback()).delete(
+      `/files/${encodeURIComponent('\\guide/abc/1.png')}`
+    )
+
+    expect(res.status).toBe(403)
+    expect(deleteSpy).not.toHaveBeenCalled()
+  })
 })

@@ -13,7 +13,7 @@ import { isReservedSlug, isValidSlug, slugify } from '@/shared/lib/slugify'
 
 /** Re-exported from the shared schema so the editor and the API cannot drift. */
 export type CalloutType = guides.CalloutType
-export type GuideStatus = 'draft' | 'published'
+export type GuideStatus = guides.GuideStatus
 
 interface EditorImageFields {
   id: string

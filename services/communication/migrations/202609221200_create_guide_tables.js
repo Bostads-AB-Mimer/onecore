@@ -1,8 +1,8 @@
 /**
  * Step-by-step user guides ("Guider"). A guide belongs to a category and
  * holds ordered steps; each step holds ordered images whose bytes live in
- * file-storage (MinIO) under `storageKey`. Old slugs are kept in
- * guide_slug_history so links keep working after a rename.
+ * file-storage under `storageKey`. Slugs are not kept after a
+ * rename, so links to an old slug stop working.
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
@@ -39,18 +39,6 @@ exports.up = function (knex) {
       CREATE UNIQUE INDEX uq_guide_slug ON guide(slug);
       CREATE INDEX idx_guide_categoryId ON guide(categoryId);
       CREATE INDEX idx_guide_status ON guide(status);
-
-      CREATE TABLE guide_slug_history (
-        id UNIQUEIDENTIFIER NOT NULL PRIMARY KEY DEFAULT NEWID(),
-        guideId UNIQUEIDENTIFIER NOT NULL,
-        slug NVARCHAR(200) NOT NULL,
-        createdAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-        CONSTRAINT fk_guide_slug_history_guide
-          FOREIGN KEY (guideId) REFERENCES guide(id) ON DELETE CASCADE
-      );
-
-      CREATE UNIQUE INDEX uq_guide_slug_history_slug ON guide_slug_history(slug);
-      CREATE INDEX idx_guide_slug_history_guideId ON guide_slug_history(guideId);
 
       -- Step ids are supplied by the client so a save can upsert by id.
       -- sortOrder is normalised to 0..n-1 by the adapter on every write.
@@ -101,7 +89,6 @@ exports.down = function (knex) {
     await trx.raw(`
       DROP TABLE IF EXISTS guide_step_image;
       DROP TABLE IF EXISTS guide_step;
-      DROP TABLE IF EXISTS guide_slug_history;
       DROP TABLE IF EXISTS guide;
       DROP TABLE IF EXISTS guide_category;
     `)

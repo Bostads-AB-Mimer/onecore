@@ -28,13 +28,9 @@ import {
 } from '@/shared/ui/SortableList'
 import { Textarea } from '@/shared/ui/Textarea'
 
-import { CALLOUT_OPTIONS } from '../constants'
-import type {
-  CalloutType,
-  EditorAction,
-  EditorStep,
-  StepPatch,
-} from '../lib/editorState'
+import { CALLOUT_OPTIONS, isCalloutType } from '../constants'
+import type { StepImageRequests } from '../hooks/useStepImageRequests'
+import type { EditorAction, EditorStep, StepPatch } from '../lib/editorState'
 import { StepImageEditor } from './StepImageEditor'
 
 // Sentinel for "no callout" since Select values must be non-empty strings.
@@ -49,8 +45,7 @@ interface StepEditorProps {
   total: number
   handle: SortableHandleProps
   dispatch: React.Dispatch<EditorAction>
-  /** Reports how many uploads the step currently has in flight. */
-  onPendingChange: (stepId: string, count: number) => void
+  imageRequests: StepImageRequests
   /** True while the guide is being saved; the form is read-only then. */
   disabled: boolean
 }
@@ -63,13 +58,14 @@ export function StepEditor({
   total,
   handle,
   dispatch,
-  onPendingChange,
+  imageRequests,
   disabled,
 }: StepEditorProps) {
   const [confirmRemove, setConfirmRemove] = useState(false)
   const stepNumber = index + 1
   const titleId = `step-${step.id}-title`
   const bodyId = `step-${step.id}-body`
+  const bodyLabelId = `${bodyId}-label`
 
   const update = (patch: StepPatch) =>
     dispatch({ type: 'update-step', stepId: step.id, patch })
@@ -135,9 +131,10 @@ export function StepEditor({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor={bodyId}>Beskrivning</Label>
+          <Label id={bodyLabelId}>Beskrivning</Label>
           <RichTextEditor
             id={bodyId}
+            ariaLabelledBy={bodyLabelId}
             value={step.body}
             onChange={(body) => update({ body })}
             disabled={disabled}
@@ -151,7 +148,7 @@ export function StepEditor({
             requireAltText={guidePublished}
             step={step}
             dispatch={dispatch}
-            onPendingChange={onPendingChange}
+            imageRequests={imageRequests}
             disabled={disabled}
           />
         </div>
@@ -162,10 +159,7 @@ export function StepEditor({
             <Select
               value={step.calloutType ?? NO_CALLOUT}
               onValueChange={(value) =>
-                update({
-                  calloutType:
-                    value === NO_CALLOUT ? null : (value as CalloutType),
-                })
+                update({ calloutType: isCalloutType(value) ? value : null })
               }
             >
               <SelectTrigger id={`step-${step.id}-callout`}>

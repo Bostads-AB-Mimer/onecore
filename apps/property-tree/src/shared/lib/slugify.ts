@@ -15,15 +15,18 @@ const SWEDISH_REPLACEMENTS: Record<string, string> = {
  * hyphens, matching SlugSchema in @onecore/types.
  */
 export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[åäöéü]/g, (char) => SWEDISH_REPLACEMENTS[char] ?? char)
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 200)
-    .replace(/-+$/g, '')
+  return (
+    text
+      .toLowerCase()
+      .replace(/[åäöéü]/g, (char) => SWEDISH_REPLACEMENTS[char] ?? char)
+      .normalize('NFD')
+      // Combining diacritical marks left over by the NFD normalisation above.
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 200)
+      .replace(/-+$/g, '')
+  )
 }
 
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/

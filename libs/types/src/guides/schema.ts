@@ -92,9 +92,6 @@ export const GuideSummarySchema = z.object({
 
 export const GuideSchema = GuideSummarySchema.extend({
   steps: z.array(GuideStepSchema),
-  // Set when the guide was resolved through guide_slug_history, i.e. the
-  // caller used an old slug. Holds the slug that was requested.
-  redirectedFrom: z.string().optional(),
 })
 
 export const GuideWithUrlsSchema = GuideSchema.extend({
@@ -256,18 +253,40 @@ export const ListGuidesQuerySchema = z.object({
     .default(false),
 })
 
+// Image formats a guide step accepts. Core checks the upload's magic bytes
+// against the declared type, so every entry needs a matching signature there.
+export const GUIDE_IMAGE_CONTENT_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+] as const
+
+export const GuideImageContentTypeSchema = z.enum(GUIDE_IMAGE_CONTENT_TYPES)
+
+// Matches the NVARCHAR(255) filename column in the communication database.
+const GUIDE_IMAGE_FILENAME_MAX_LENGTH = 255
+
 // core -> communication after the bytes have been stored in file-storage.
 export const CreateStepImageRequestSchema = z.object({
   id: z.string().uuid(),
   storageKey: z.string().min(1).max(500),
-  filename: z.string().min(1).max(255),
-  contentType: z.string().min(1).max(100),
+  filename: z.string().min(1).max(GUIDE_IMAGE_FILENAME_MAX_LENGTH),
+  contentType: GuideImageContentTypeSchema,
   altText: z.string().max(500).optional(),
   caption: z.string().max(500).nullable().optional(),
 })
 
 // frontend -> core: base64 upload plus optional metadata.
+// fileName gets the same cap as the stored filename so an overlong name is
+// rejected before anything is written to file-storage. contentType is an enum
+// so core can index its per-type maps without a prototype lookup.
 export const GuideImageUploadRequestSchema = FileUploadRequestSchema.extend({
+  fileName: z
+    .string()
+    .min(1)
+    .max(GUIDE_IMAGE_FILENAME_MAX_LENGTH)
+    .describe('Original file name, kept as image metadata'),
+  contentType: GuideImageContentTypeSchema.describe('MIME type of the image'),
   altText: z.string().max(500).optional(),
   caption: z.string().max(500).nullable().optional(),
 })

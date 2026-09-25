@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useBlocker, useNavigate } from 'react-router-dom'
 import { Eye, Plus, Save, Trash2, Upload } from 'lucide-react'
 
@@ -32,6 +32,7 @@ import { useCreateGuide } from '../hooks/useCreateGuide'
 import { useDeleteGuide } from '../hooks/useDeleteGuide'
 import { useGuideEditorState } from '../hooks/useGuideEditorState'
 import { useRevokeObjectUrls } from '../hooks/useRevokeObjectUrls'
+import { useStepImageRequests } from '../hooks/useStepImageRequests'
 import { useUpdateGuide } from '../hooks/useUpdateGuide'
 import { useUploadPendingImages } from '../hooks/useUploadPendingImages'
 import {
@@ -56,8 +57,8 @@ interface GuideEditorProps {
   authorName: string
 }
 
-/** Shown on the save buttons while images are still uploading. */
-const PENDING_UPLOADS_HINT = 'Vänta tills bilder laddats upp'
+/** Shown on the save buttons while images are uploading or being deleted. */
+const PENDING_IMAGES_HINT = 'Vänta tills bildändringarna har sparats'
 
 export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   const navigate = useNavigate()
@@ -65,27 +66,12 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   const [state, dispatch] = useGuideEditorState(initialGuide)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  // Uploads persist immediately but are only in state once they finish, so
-  // saving mid-upload would drop the image from the guide. Steps report their
-  // own count, which also lets a removed step take its uploads with it.
-  const [pendingUploadsByStep, setPendingUploadsByStep] = useState<
-    Record<string, number>
-  >({})
   const { data: categories } = useGuideCategories()
-
-  const handlePendingChange = useCallback((stepId: string, count: number) => {
-    setPendingUploadsByStep((current) => {
-      if ((current[stepId] ?? 0) === count) return current
-      const next = { ...current }
-      if (count === 0) delete next[stepId]
-      else next[stepId] = count
-      return next
-    })
-  }, [])
-  const pendingUploads = Object.values(pendingUploadsByStep).reduce(
-    (total, count) => total + count,
-    0
-  )
+  // Image uploads and deletes persist immediately and move the guide's
+  // updatedAt, but only reach state once they finish. Saving meanwhile would
+  // drop an uploaded image, or race the request into a 409.
+  const { requests: imageRequests, inFlight: imageRequestsInFlight } =
+    useStepImageRequests(dispatch)
 
   const createGuide = useCreateGuide()
   const updateGuide = useUpdateGuide()
@@ -122,7 +108,7 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   }, [dirty])
 
   const save = async (status: GuideStatus) => {
-    if (isSaving || pendingUploads > 0) return
+    if (isSaving || imageRequestsInFlight > 0) return
 
     const problems = validate(state, status)
     if (problems.length > 0) {
@@ -211,7 +197,7 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   }
 
   const isPublished = state.status === 'published' && !dirty
-  const isUploading = pendingUploads > 0 || isUploadingPending
+  const isUploading = imageRequestsInFlight > 0 || isUploadingPending
   const saveDisabled = isSaving || isUploading
 
   return (
@@ -260,7 +246,7 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
               type="button"
               variant="outline"
               disabled={saveDisabled}
-              title={isUploading ? PENDING_UPLOADS_HINT : undefined}
+              title={isUploading ? PENDING_IMAGES_HINT : undefined}
               onClick={() => save('draft')}
             >
               <Save className="mr-2 h-4 w-4" />
@@ -271,7 +257,7 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
             <Button
               type="button"
               disabled={saveDisabled}
-              title={isUploading ? PENDING_UPLOADS_HINT : undefined}
+              title={isUploading ? PENDING_IMAGES_HINT : undefined}
               onClick={() => save('published')}
             >
               <Upload className="mr-2 h-4 w-4" />
@@ -285,7 +271,7 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
               className="w-full text-sm text-muted-foreground"
               aria-live="polite"
             >
-              {PENDING_UPLOADS_HINT}
+              {PENDING_IMAGES_HINT}
             </p>
           )}
         </div>
@@ -343,7 +329,7 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
             </div>
             <p id="guide-slug-help" className="text-xs text-muted-foreground">
               {state.savedSlug && state.slug !== state.savedSlug
-                ? 'Gamla länkar fortsätter fungera och skickas vidare hit.'
+                ? 'Gamla länkar till guiden slutar fungera när adressen ändras.'
                 : 'Följer titeln tills du ändrar den själv.'}
             </p>
           </div>
@@ -371,7 +357,7 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
                   total={state.steps.length}
                   handle={handle}
                   dispatch={dispatch}
-                  onPendingChange={handlePendingChange}
+                  imageRequests={imageRequests}
                   disabled={isSaving}
                 />
               )}

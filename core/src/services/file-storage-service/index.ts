@@ -1,3 +1,4 @@
+import path from 'path'
 import KoaRouter from '@koa/router'
 import {
   generateRouteMetadata,
@@ -7,18 +8,48 @@ import { registerSchema } from '../../utils/openapi'
 import { fileStorageSchemas } from '@onecore/types'
 
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
-import { GUIDE_STORAGE_PREFIX } from '../guides-service/helpers'
+import { GUIDE_STORAGE_PREFIX } from '../guides-service/constants'
 
-// Guide images are created and removed through /guides, which also keeps the
-// metadata rows in the communication service in sync. Reaching them through the
-// generic file routes would orphan those rows, so they are refused here.
-// MinIO resolves any number of leading slashes to the same object ("//guide/x"
-// overwrites "guide/x"), so they are stripped before comparing. "./" and ".."
-// segments are rejected by MinIO, and backslashes are stored as literal key
-// characters, so neither can reach the guide prefix.
-const isGuideKey = (key: string) =>
-  key.replace(/^\/+/, '').startsWith(GUIDE_STORAGE_PREFIX)
+// Guide images are created, read and removed through /guides, which keeps the
+// metadata rows in the communication service in sync and hides draft images
+// from readers. Reaching them through the generic file routes would orphan
+// those rows or hand out URLs for draft images, so every /files route refuses
+// them.
+//
+// Storage backends map several spellings onto the same object key: SeaweedFS
+// turns backslashes into slashes and collapses leading slashes, and "./" or
+// ".." segments may be resolved as well. The key is normalized the same way
+// before the prefix check so the guard does not depend on the backend.
+export const isGuideKey = (key: string) =>
+  path.posix
+    .normalize(key.replace(/\\/g, '/'))
+    .replace(/^\/+/, '')
+    .startsWith(GUIDE_STORAGE_PREFIX)
 const GUIDE_KEY_REFUSAL = { error: 'guide-files-managed-via-guides-api' }
+
+const asStrings = (value: unknown): string[] =>
+  (Array.isArray(value) ? value : [value]).filter(
+    (item): item is string => typeof item === 'string'
+  )
+
+// Runs before every /files handler and checks each place a key can arrive:
+// the :fileName path param, the list prefix and the upload body.
+const refuseGuideKeys: KoaRouter.Middleware = async (ctx, next) => {
+  const body: unknown = ctx.request.body
+  const keys = [
+    ...asStrings(ctx.params.fileName),
+    ...asStrings(ctx.query.prefix),
+    ...(typeof body === 'object' && body !== null && 'fileName' in body
+      ? asStrings(body.fileName)
+      : []),
+  ]
+  if (keys.some(isGuideKey)) {
+    ctx.status = 403
+    ctx.body = GUIDE_KEY_REFUSAL
+    return
+  }
+  await next()
+}
 
 /**
  * @swagger
@@ -92,7 +123,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files', async (ctx) => {
+  router.get('(.*)/files', refuseGuideKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     // Validate query parameters
@@ -109,11 +140,6 @@ export const routes = (router: KoaRouter) => {
     }
 
     const { prefix } = queryResult.data
-    if (prefix && isGuideKey(prefix)) {
-      ctx.status = 403
-      ctx.body = GUIDE_KEY_REFUSAL
-      return
-    }
 
     const result = await fileStorageAdapter.listFiles(prefix)
 
@@ -164,7 +190,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/files/upload', async (ctx) => {
+  router.post('(.*)/files/upload', refuseGuideKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     // Validate request body
@@ -181,11 +207,6 @@ export const routes = (router: KoaRouter) => {
     }
 
     const { fileName, fileData, contentType } = bodyResult.data
-    if (isGuideKey(fileName)) {
-      ctx.status = 403
-      ctx.body = GUIDE_KEY_REFUSAL
-      return
-    }
 
     const fileBuffer = Buffer.from(fileData, 'base64')
     const result = await fileStorageAdapter.uploadFile(
@@ -236,6 +257,8 @@ export const routes = (router: KoaRouter) => {
    *                   $ref: '#/components/schemas/FileUrlResponse'
    *       400:
    *         description: Invalid query parameters
+   *       403:
+   *         description: Guide image — use the /guides routes
    *       404:
    *         description: File not found
    *       500:
@@ -243,7 +266,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files/:fileName/url', async (ctx) => {
+  router.get('(.*)/files/:fileName/url', refuseGuideKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName } = ctx.params
 
@@ -297,6 +320,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/FileMetadata'
+   *       403:
+   *         description: Guide image — use the /guides routes
    *       404:
    *         description: File not found
    *       500:
@@ -304,7 +329,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files/:fileName/metadata', async (ctx) => {
+  router.get('(.*)/files/:fileName/metadata', refuseGuideKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName } = ctx.params
 
@@ -346,14 +371,8 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/files/:fileName', async (ctx) => {
+  router.delete('(.*)/files/:fileName', refuseGuideKeys, async (ctx) => {
     const { fileName } = ctx.params
-
-    if (isGuideKey(fileName)) {
-      ctx.status = 403
-      ctx.body = GUIDE_KEY_REFUSAL
-      return
-    }
 
     const result = await fileStorageAdapter.deleteFile(fileName)
 
@@ -390,12 +409,14 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/FileExistsResponse'
+   *       403:
+   *         description: Guide image — use the /guides routes
    *       500:
    *         description: Server error
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files/:fileName/exists', async (ctx) => {
+  router.get('(.*)/files/:fileName/exists', refuseGuideKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName } = ctx.params
 

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import axios, { AxiosError, AxiosHeaders } from 'axios'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { guideService } from './guideService'
+import { type GuideImageUploadRequest, guideService } from './guideService'
 
-const body = {
+const body: GuideImageUploadRequest = {
   fileName: 'a.png',
   fileData: 'AAAA',
   contentType: 'image/png',

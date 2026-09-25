@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
 import { UpstreamError } from '../../adapters/communication-adapter/helpers'
+import { GUIDES_ADMIN_ROLE } from './constants'
 
 // The communication service answers with a stable kebab-case error code (and
 // zod issues for validation failures); proxy it instead of a generic message.
@@ -16,23 +17,17 @@ export const upstreamErrorBody = (
   ...(upstream?.issues ? { issues: upstream.issues } : {}),
 })
 
-/** Keycloak realm role that allows creating, editing and deleting guides. */
-export const GUIDES_ADMIN_ROLE = 'guides-admin'
-
 /** Presigned image URLs live long enough for a guide left open all day. */
 export const IMAGE_URL_EXPIRY_SECONDS = 24 * 60 * 60
-
-/**
- * Storage key prefix owned by the guides API. Files under it are created and
- * removed through /guides only, never through the generic /files routes.
- */
-export const GUIDE_STORAGE_PREFIX = 'guide/'
 
 /**
  * Leading bytes that identify each image format we accept. Checked against the
  * declared content type so a caller cannot store e.g. an HTML file as a PNG.
  */
-const IMAGE_MAGIC_BYTES: Record<string, (buffer: Buffer) => boolean> = {
+const IMAGE_MAGIC_BYTES: Record<
+  guides.GuideImageContentType,
+  (buffer: Buffer) => boolean
+> = {
   // \x89PNG\r\n\x1a\n
   'image/png': (buffer) =>
     buffer
@@ -47,11 +42,14 @@ const IMAGE_MAGIC_BYTES: Record<string, (buffer: Buffer) => boolean> = {
     buffer.subarray(8, 12).toString('ascii') === 'WEBP',
 }
 
-/** True when the file's magic bytes match the declared content type. */
+/**
+ * True when the file's magic bytes match the declared content type. The type is
+ * the validated enum, so the lookup always hits one of the checks above.
+ */
 export const matchesImageMagicBytes = (
   buffer: Buffer,
-  contentType: string
-): boolean => IMAGE_MAGIC_BYTES[contentType]?.(buffer) ?? false
+  contentType: guides.GuideImageContentType
+): boolean => IMAGE_MAGIC_BYTES[contentType](buffer)
 
 /** Base64 without whitespace, line breaks or a data: URL prefix. */
 const BASE64_PATTERN = /^[A-Za-z0-9+/]+=*$/
@@ -96,7 +94,14 @@ const withUrl = async (
   return { ...image, url: result.data.url }
 }
 
-/** Attach a presigned download URL to every image in a guide. */
+/**
+ * Attach a presigned download URL to every image in a guide.
+ *
+ * Cost: one file-storage request per image, on every guide read and every save
+ * response. Fine at current guide sizes; if it becomes a bottleneck, either
+ * presign in core with the S3 SDK (no network round trip, signing is local) or
+ * add a batch presign endpoint to file-storage.
+ */
 export const withImageUrls = async (
   guide: guides.Guide
 ): Promise<guides.GuideWithUrls> => ({

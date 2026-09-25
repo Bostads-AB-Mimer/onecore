@@ -10,7 +10,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["node", "react", "react-dom", "vitest/globals"],
+    "types": ["node", "react", "react-dom"],
     "allowJs": true,
     "esModuleInterop": true
   },

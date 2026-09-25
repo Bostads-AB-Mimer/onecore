@@ -1,4 +1,11 @@
-/** Return a copy of the list with the item at `from` moved to `to`. */
+import { arrayMove } from '@dnd-kit/sortable'
+
+/**
+ * dnd-kit's arrayMove, except that a no-op or out-of-range move returns the
+ * same list instead of a copy. The guide editor's reducer relies on that
+ * identity to tell a real reorder from one that changes nothing (e.g. a drag
+ * dropped where it started), which must not mark the guide as unsaved.
+ */
 export function moveItem<T>(list: T[], from: number, to: number): T[] {
   if (
     from === to ||
@@ -9,8 +16,5 @@ export function moveItem<T>(list: T[], from: number, to: number): T[] {
   ) {
     return list
   }
-  const next = [...list]
-  const [item] = next.splice(from, 1)
-  next.splice(to, 0, item)
-  return next
+  return arrayMove(list, from, to)
 }

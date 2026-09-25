@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
-import { sanitizeGuideHtml } from './sanitizeHtml'
+import { describe, expect, it } from 'vitest'
+
+import { isAllowedGuideHref, sanitizeGuideHtml } from './sanitizeHtml'
 
 describe('sanitizeGuideHtml', () => {
   it('keeps the allowed formatting tags', () => {
@@ -44,6 +46,7 @@ describe('sanitizeGuideHtml', () => {
       'http://example.com',
       'mailto:a@example.com',
       '/guider/min-guide',
+      '/',
       '#steg-1',
       '?q=1',
     ]
@@ -56,6 +59,13 @@ describe('sanitizeGuideHtml', () => {
     const blocked = [
       // Protocol-relative: it looks relative but leaves the site.
       '//evil.example',
+      // Browsers normalise the backslash, so these leave the site too.
+      '\\\\evil.example',
+      '/\\evil.example',
+      // Bare relative paths resolve against whichever page renders the guide.
+      'lagenheter/123',
+      './lagenheter',
+      '../lagenheter',
       'data:text/html;base64,PHA+',
       'vbscript:msgbox(1)',
       'tel:0700000000',
@@ -64,5 +74,17 @@ describe('sanitizeGuideHtml', () => {
     blocked.forEach((href) => {
       expect(sanitizeGuideHtml(`<a href="${href}">x</a>`)).toBe('<a>x</a>')
     })
+  })
+})
+
+describe('isAllowedGuideHref', () => {
+  it('matches what the sanitizer keeps', () => {
+    expect(isAllowedGuideHref('https://example.com')).toBe(true)
+    expect(isAllowedGuideHref('  /lagenheter/123')).toBe(true)
+    expect(isAllowedGuideHref('#steg-1')).toBe(true)
+    expect(isAllowedGuideHref('lagenheter/123')).toBe(false)
+    expect(isAllowedGuideHref('//evil.example')).toBe(false)
+    expect(isAllowedGuideHref('/\\evil.example')).toBe(false)
+    expect(isAllowedGuideHref('javascript:alert(1)')).toBe(false)
   })
 })

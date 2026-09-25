@@ -396,7 +396,6 @@ export interface paths {
                 /** Format: date-time */
                 updatedAt: string
               }[]
-              redirectedFrom?: string
             }
           }
         }
@@ -475,12 +474,12 @@ export interface paths {
   '/guides/by-slug/{slug}': {
     /**
      * Get a guide by slug
-     * @description Resolves the current slug first and then guide_slug_history. A guide found through history carries redirectedFrom. Drafts are returned; the caller decides who may see them.
+     * @description Resolves the current slug only; a slug a guide had before a rename gives 404. Drafts are returned; the caller decides who may see them.
      */
     get: {
       parameters: {
         path: {
-          /** @description Current or previous slug */
+          /** @description Current slug */
           slug: string
         }
       }
@@ -544,7 +543,6 @@ export interface paths {
                 /** Format: date-time */
                 updatedAt: string
               }[]
-              redirectedFrom?: string
             }
           }
         }
@@ -644,7 +642,6 @@ export interface paths {
                 /** Format: date-time */
                 updatedAt: string
               }[]
-              redirectedFrom?: string
             }
           }
         }
@@ -787,7 +784,6 @@ export interface paths {
                   /** Format: date-time */
                   updatedAt: string
                 }[]
-                redirectedFrom?: string
               }
               removedStorageKeys: string[]
             }
@@ -912,7 +908,8 @@ export interface paths {
             id: string
             storageKey: string
             filename: string
-            contentType: string
+            /** @enum {string} */
+            contentType: 'image/png' | 'image/jpeg' | 'image/webp'
             altText?: string
             caption?: string | null
           }

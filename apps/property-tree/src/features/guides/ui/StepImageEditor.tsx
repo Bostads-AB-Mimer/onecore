@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react'
 
-import { useToast } from '@/shared/hooks/useToast'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { ImageDropzone } from '@/shared/ui/ImageDropzone'
@@ -13,10 +12,8 @@ import {
   GUIDE_IMAGE_MAX_DISPLAY,
   GUIDE_IMAGE_TYPES,
 } from '../constants'
-import { useDeleteStepImage } from '../hooks/useDeleteStepImage'
-import { useUploadStepImage } from '../hooks/useUploadStepImage'
+import type { StepImageRequests } from '../hooks/useStepImageRequests'
 import type { EditorAction, EditorImage, EditorStep } from '../lib/editorState'
-import { uploadErrorMessage } from '../lib/errorMessages'
 import { ImageAltTextDialog, type ImageWithAltText } from './ImageAltTextDialog'
 
 interface PendingUpload {
@@ -34,8 +31,11 @@ interface StepImageEditorProps {
   requireAltText: boolean
   step: EditorStep
   dispatch: React.Dispatch<EditorAction>
-  /** Reports how many uploads this step currently has in flight. */
-  onPendingChange: (stepId: string, count: number) => void
+  /**
+   * Immediate uploads and deletes. The editor owns them so they keep blocking
+   * the save, and still reach its state, if this step is removed meanwhile.
+   */
+  imageRequests: StepImageRequests
   /**
    * True while the guide is being saved. A drop is not a form control the
    * fieldset can disable, and a file queued mid-save would miss the uploads.
@@ -48,30 +48,42 @@ export function StepImageEditor({
   requireAltText,
   step,
   dispatch,
-  onPendingChange,
+  imageRequests,
   disabled,
 }: StepImageEditorProps) {
-  const { toast } = useToast()
-  const upload = useUploadStepImage()
-  const deleteImage = useDeleteStepImage()
   const [pending, setPending] = useState<PendingUpload[]>([])
+  const [deletingIds, setDeletingIds] = useState<ReadonlySet<string>>(
+    () => new Set()
+  )
   const [awaitingAltText, setAwaitingAltText] = useState<File[]>([])
+  // The requests outlive this step; its own progress state does not.
+  const mounted = useRef(true)
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   // The upload endpoint needs the guide and the step to exist on the server.
   // Until they do, dropped images are queued and uploaded after the save.
   const uploadsImmediately = guideId !== null && step.saved
 
-  // Keep the editor's total in sync, including the reset to zero when this
-  // step unmounts while an upload is still running.
-  useEffect(() => {
-    onPendingChange(step.id, pending.length)
-    return () => onPendingChange(step.id, 0)
-  }, [onPendingChange, step.id, pending.length])
-
-  const setProgress = (key: string, progress: number) =>
+  const setProgress = (key: string, progress: number) => {
+    if (!mounted.current) return
     setPending((current) =>
       current.map((item) => (item.key === key ? { ...item, progress } : item))
     )
+  }
+
+  const setDeleting = (imageId: string, deleting: boolean) =>
+    setDeletingIds((current) => {
+      const next = new Set(current)
+      if (deleting) next.add(imageId)
+      else next.delete(imageId)
+      return next
+    })
 
   const handleFiles = (files: File[]) => {
     if (!uploadsImmediately) {
@@ -97,38 +109,22 @@ export function StepImageEditor({
 
   const uploadImages = (images: ImageWithAltText[]) => {
     if (!guideId) return
-    images.forEach(({ file, altText }) => {
+    images.forEach(async ({ file, altText }) => {
       const key = `${file.name}-${Date.now()}-${Math.random()}`
       setPending((current) => [
         ...current,
         { key, name: file.name, progress: 0 },
       ])
-      upload.mutate(
-        {
-          guideId,
-          stepId: step.id,
-          file,
-          altText: altText || undefined,
-          onProgress: (fraction) => setProgress(key, fraction),
-        },
-        {
-          onSuccess: ({ image, guideUpdatedAt }) =>
-            dispatch({
-              type: 'add-image',
-              stepId: step.id,
-              image,
-              guideUpdatedAt,
-            }),
-          onError: (error) =>
-            toast({
-              title: 'Uppladdningen misslyckades',
-              description: uploadErrorMessage(error, file.name),
-              variant: 'destructive',
-            }),
-          onSettled: () =>
-            setPending((current) => current.filter((item) => item.key !== key)),
-        }
-      )
+      await imageRequests.upload({
+        guideId,
+        stepId: step.id,
+        file,
+        altText,
+        onProgress: (fraction) => setProgress(key, fraction),
+      })
+      if (mounted.current) {
+        setPending((current) => current.filter((item) => item.key !== key))
+      }
     })
   }
 
@@ -141,26 +137,14 @@ export function StepImageEditor({
       })
       return
     }
-    const imageId = image.id
     if (!guideId) return
-    try {
-      const { guideUpdatedAt } = await deleteImage.mutateAsync({
-        guideId,
-        imageId,
-      })
-      dispatch({
-        type: 'remove-image',
-        stepId: step.id,
-        imageId,
-        guideUpdatedAt,
-      })
-    } catch {
-      toast({
-        title: 'Bilden kunde inte tas bort',
-        description: 'Försök igen om en stund.',
-        variant: 'destructive',
-      })
-    }
+    setDeleting(image.id, true)
+    await imageRequests.remove({
+      guideId,
+      stepId: step.id,
+      imageId: image.id,
+    })
+    if (mounted.current) setDeleting(image.id, false)
   }
 
   return (
@@ -258,7 +242,7 @@ export function StepImageEditor({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 text-destructive"
-                  disabled={image.kind === 'uploaded' && deleteImage.isPending}
+                  disabled={deletingIds.has(image.id)}
                   onClick={() => removeImage(image)}
                   aria-label="Ta bort bilden"
                 >

@@ -16,18 +16,28 @@ export const GUIDE_HTML_ALLOWED_TAGS = [
   'br',
 ]
 
-// Browsers normalise backslashes to forward slashes, so a href starting with
-// a backslash navigates like the protocol-relative "//evil.com" that
-// allowProtocolRelative rejects. sanitize-html does not recognise it as one,
-// so such hrefs are dropped below. Leading whitespace is ignored by browsers
-// too, hence the trim.
-const isBackslashHref = (href: string) => href.trimStart().startsWith('\\')
+// Link targets a guide may contain: http(s), mailto, same-page fragments or
+// queries, and root-relative paths to other ONECore pages. Keep in sync with
+// GUIDE_HTML_ALLOWED_URI_REGEXP in apps/property-tree
+// (src/shared/lib/sanitizeHtml.ts).
+// - Bare relative paths ("lagenheter/123") are refused: they resolve against
+//   whichever page renders the guide rather than the app root.
+// - Browsers normalise backslashes to forward slashes, so "\\evil.com" and
+//   "/\evil.com" navigate like the protocol-relative "//evil.com". Hence a
+//   leading "/" must not be followed by either slash.
+// Case-insensitive so "HTTPS://" passes too.
+const GUIDE_HREF_PATTERN = /^(?:https?:|mailto:|[#?]|\/(?![/\\]))/i
+
+// Browsers ignore leading whitespace in a href, hence the trim.
+export const isAllowedGuideHref = (href: string): boolean =>
+  GUIDE_HREF_PATTERN.test(href.trimStart())
 
 const options: sanitizeHtml.IOptions = {
   allowedTags: GUIDE_HTML_ALLOWED_TAGS,
   allowedAttributes: { a: ['href', 'target', 'rel'] },
+  // Defence in depth: the transform below already drops every href that
+  // does not match GUIDE_HREF_PATTERN.
   allowedSchemes: ['http', 'https', 'mailto'],
-  // Relative links to other ONECore pages are allowed.
   allowProtocolRelative: false,
   transformTags: {
     a: (tagName, attribs) => {
@@ -35,7 +45,10 @@ const options: sanitizeHtml.IOptions = {
         ...attribs,
         rel: 'noopener noreferrer',
       }
-      if (transformed.href && isBackslashHref(transformed.href)) {
+      if (
+        transformed.href !== undefined &&
+        !isAllowedGuideHref(transformed.href)
+      ) {
         delete transformed.href
       }
       return { tagName, attribs: transformed }

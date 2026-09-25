@@ -33,7 +33,10 @@ export function GuideStepSection({
 
   return (
     <section
-      id={stepAnchorId(stepNumber)}
+      // Only the page variant is linked to (hash links, table of contents).
+      // The sheet can be open on top of a guide page, where the same ids
+      // would otherwise appear twice.
+      id={variant === 'page' ? stepAnchorId(stepNumber) : undefined}
       data-step-anchor
       className={cn(
         'scroll-mt-20 rounded-lg border bg-card p-4 transition-colors duration-1000 sm:p-5',

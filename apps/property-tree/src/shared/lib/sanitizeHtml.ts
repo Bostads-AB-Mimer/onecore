@@ -16,13 +16,22 @@ export const GUIDE_HTML_ALLOWED_TAGS = [
 
 export const GUIDE_HTML_ALLOWED_ATTRIBUTES = ['href', 'target', 'rel']
 
-// Same schemes the backend allows (http, https, mailto) plus relative links
-// to other ONECore pages; everything else, javascript: and data: included,
-// loses the href. The `/(?!/)` rules out protocol-relative URLs such as
-// //evil.example, which would otherwise pass as a relative link.
-// Case-insensitive so "HTTPS://" survives too.
+// Link targets a guide may contain: http(s), mailto, same-page fragments or
+// queries, and root-relative paths to other ONECore pages. Everything else,
+// javascript:, data: and bare relative paths ("lagenheter/123") included,
+// loses the href. Keep in sync with GUIDE_HREF_PATTERN in sanitize.ts in
+// services/communication. The `/(?![/\\])` rules out protocol-relative URLs
+// such as //evil.example, and /\evil.example, which browsers normalise to
+// the same. Case-insensitive so "HTTPS://" survives too.
 export const GUIDE_HTML_ALLOWED_URI_REGEXP =
-  /^(?:https?:|mailto:|[#?]|\/(?!\/))/i
+  /^(?:https?:|mailto:|[#?]|\/(?![/\\]))/i
+
+/**
+ * True for a href the sanitizers keep. Leading whitespace is ignored, as by
+ * browsers and both sanitizers.
+ */
+export const isAllowedGuideHref = (href: string): boolean =>
+  GUIDE_HTML_ALLOWED_URI_REGEXP.test(href.trimStart())
 
 export function sanitizeGuideHtml(html: string): string {
   return DOMPurify.sanitize(html, {

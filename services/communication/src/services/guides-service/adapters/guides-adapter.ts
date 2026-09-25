@@ -10,7 +10,7 @@ import {
   SlugTakenError,
   StepBelongsToOtherGuideError,
 } from '../errors'
-import { findOrCreateCategory } from './categories-adapter'
+import { resolveCategory } from './categories-adapter'
 import { isUniqueViolationOn } from './db-errors'
 import {
   asDateTime2,
@@ -77,90 +77,57 @@ export async function listGuides(
   }
 }
 
+/**
+ * Load a guide with its category, steps and images. Not logged here: it runs
+ * inside the adapters below, which log a failure once at their own level.
+ */
+async function readGuide(id: string, db: Knex): Promise<guides.Guide | null> {
+  const guide = await db<GuideRow>('guide').where('id', id).first()
+  if (!guide) return null
+
+  const category = await db<GuideCategoryRow>('guide_category')
+    .where('id', guide.categoryId)
+    .first()
+  if (!category) throw new Error(`Guide ${id} has no category`)
+
+  const steps = await db<GuideStepRow>('guide_step')
+    .where('guideId', id)
+    .orderBy('sortOrder', 'asc')
+
+  const images =
+    steps.length === 0
+      ? []
+      : await db<GuideStepImageRow>('guide_step_image')
+          .whereIn(
+            'stepId',
+            steps.map((step) => step.id)
+          )
+          .orderBy('sortOrder', 'asc')
+
+  return mapGuide(guide, category, steps, images)
+}
+
 export async function getGuideById(
   id: string,
   db: Knex
 ): Promise<guides.Guide | null> {
   try {
-    const guide = await db<GuideRow>('guide').where('id', id).first()
-    if (!guide) return null
-
-    const category = await db<GuideCategoryRow>('guide_category')
-      .where('id', guide.categoryId)
-      .first()
-    if (!category) throw new Error(`Guide ${id} has no category`)
-
-    const steps = await db<GuideStepRow>('guide_step')
-      .where('guideId', id)
-      .orderBy('sortOrder', 'asc')
-
-    const images =
-      steps.length === 0
-        ? []
-        : await db<GuideStepImageRow>('guide_step_image')
-            .whereIn(
-              'stepId',
-              steps.map((step) => step.id)
-            )
-            .orderBy('sortOrder', 'asc')
-
-    return mapGuide(guide, category, steps, images)
+    return await readGuide(id, db)
   } catch (err) {
     logger.error({ err }, 'guidesAdapter.getGuideById')
     throw err
   }
 }
 
-/**
- * Look a guide up by its current slug, falling back to guide_slug_history so
- * links created before a rename keep working. A guide found through history
- * carries `redirectedFrom` so the caller can replace the URL.
- */
 export async function getGuideBySlug(
   slug: string,
   db: Knex
 ): Promise<guides.Guide | null> {
   try {
-    const direct = await db<GuideRow>('guide').where('slug', slug).first()
-    if (direct) return getGuideById(direct.id, db)
-
-    const historic = await db<{ guideId: string }>('guide_slug_history')
-      .where('slug', slug)
-      .first()
-    if (!historic) return null
-
-    const guide = await getGuideById(historic.guideId, db)
-    return guide ? { ...guide, redirectedFrom: slug } : null
+    const guide = await db<GuideRow>('guide').where('slug', slug).first()
+    return guide ? await readGuide(guide.id, db) : null
   } catch (err) {
     logger.error({ err }, 'guidesAdapter.getGuideBySlug')
-    throw err
-  }
-}
-
-/** True when another guide owns the slug now or owned it in the past. */
-export async function isSlugTaken(
-  slug: string,
-  excludeGuideId: string | null,
-  db: Knex
-): Promise<boolean> {
-  try {
-    const current = await db<GuideRow>('guide')
-      .where('slug', slug)
-      .modify((qb) => {
-        if (excludeGuideId) qb.whereNot('id', excludeGuideId)
-      })
-      .first()
-    if (current) return true
-
-    const historic = await db('guide_slug_history')
-      .where('slug', slug)
-      .modify((qb) => {
-        if (excludeGuideId) qb.whereNot('guideId', excludeGuideId)
-      })
-      .first()
-    return historic !== undefined
-  } catch (err) {
-    logger.error({ err }, 'guidesAdapter.isSlugTaken')
     throw err
   }
 }
@@ -174,12 +141,12 @@ const stepValues = (step: guides.StepInput, sortOrder: number, now: Date) => ({
   updatedAt: now,
 })
 
-// Unique indexes created by the guide migration that guard slug uniqueness.
-const SLUG_UNIQUE_INDEXES = ['uq_guide_slug', 'uq_guide_slug_history_slug']
+// Unique index on guide(slug) created by the guide migration.
+const SLUG_UNIQUE_INDEX = 'uq_guide_slug'
 
 /**
- * Two saves can both pass the isSlugTaken check before either writes, so the
- * unique index is the real guard. Translate its violation into the same
+ * Slug uniqueness is enforced by the uq_guide_slug index alone, so a taken
+ * slug is detected when the write fails. Translate that violation into the
  * domain error instead of letting it surface as a 500.
  */
 async function guardSlugConflict(
@@ -189,9 +156,9 @@ async function guardSlugConflict(
   try {
     await write()
   } catch (err) {
-    // Only the slug indexes mean the slug is taken; any other unique
+    // Only the slug index means the slug is taken; any other unique
     // violation is a different bug and must keep its own error.
-    if (isUniqueViolationOn(err, SLUG_UNIQUE_INDEXES))
+    if (isUniqueViolationOn(err, [SLUG_UNIQUE_INDEX]))
       throw new SlugTakenError(slug)
     throw err
   }
@@ -261,12 +228,9 @@ export async function createGuide(
 ): Promise<guides.Guide> {
   try {
     return await db.transaction(async (trx) => {
-      if (await isSlugTaken(input.slug, null, trx)) {
-        throw new SlugTakenError(input.slug)
-      }
       await assertStepsAreNotOwnedByAnotherGuide(input.steps, null, trx)
 
-      const category = await findOrCreateCategory(input.category, trx)
+      const category = await resolveCategory(input.category, trx)
       const id = randomUUID()
       const now = new Date()
 
@@ -296,7 +260,7 @@ export async function createGuide(
         })
       }
 
-      const created = await getGuideById(id, trx)
+      const created = await readGuide(id, trx)
       if (!created) throw new Error('Guide insert did not persist')
       return created
     })
@@ -348,24 +312,7 @@ export async function updateGuide(
       await assertStepsAreNotOwnedByAnotherGuide(input.steps, id, trx)
       await assertImagesBelongToTheirSteps(id, input.steps, trx)
 
-      if (input.slug !== existing.slug) {
-        if (await isSlugTaken(input.slug, id, trx)) {
-          throw new SlugTakenError(input.slug)
-        }
-        // A guide may take back one of its own old slugs; the row for that
-        // slug must go so the unique index accepts it as the current slug.
-        await trx('guide_slug_history')
-          .where({ guideId: id, slug: input.slug })
-          .delete()
-        await guardSlugConflict(input.slug, () =>
-          trx('guide_slug_history').insert({
-            guideId: id,
-            slug: existing.slug,
-          })
-        )
-      }
-
-      const category = await findOrCreateCategory(input.category, trx)
+      const category = await resolveCategory(input.category, trx)
 
       await guardSlugConflict(input.slug, () =>
         trx('guide')
@@ -456,7 +403,7 @@ export async function updateGuide(
         }
       }
 
-      const guide = await getGuideById(id, trx)
+      const guide = await readGuide(id, trx)
       if (!guide) throw new Error('Guide vanished during update')
       return { guide, removedStorageKeys }
     })
@@ -475,7 +422,11 @@ export async function deleteGuide(
 ): Promise<{ storageKeys: string[] } | null> {
   try {
     return await db.transaction(async (trx) => {
-      const existing = await trx<GuideRow>('guide').where('id', id).first()
+      // Locked so an upload running concurrently either commits first (its
+      // image is then read below and its key returned) or waits and finds
+      // the guide gone. Without the lock the delete could read the images,
+      // then cascade away a row committed in between, orphaning its file.
+      const existing = await lockGuide(id, trx)
       if (!existing) return null
 
       const images = await trx<GuideStepImageRow>('guide_step_image as i')

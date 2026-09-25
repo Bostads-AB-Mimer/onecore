@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest'
+
 import { guideLink, stepAnchorId, stepNumberFromHash } from './stepAnchor'
 
 describe('step anchors', () => {

@@ -141,7 +141,7 @@ export const routes = (router: KoaRouter) => {
    * /guides/by-slug/{slug}:
    *   get:
    *     summary: Get a guide by slug
-   *     description: Resolves old slugs through the slug history; redirectedFrom is set when that happens. A draft is returned in full to guides-admin users and as an UnpublishedGuide notice to everyone else.
+   *     description: Resolves the current slug only; a slug a guide had before a rename, or a malformed slug, gives 404. A draft is returned in full to guides-admin users and as an UnpublishedGuide notice to everyone else.
    *     tags: [Guides]
    *     parameters:
    *       - in: path
@@ -181,7 +181,9 @@ export const routes = (router: KoaRouter) => {
 
     const result = await guidesAdapter.getGuideBySlug(ctx.params.slug)
     if (!result.ok) {
-      if (result.err === 'not-found') {
+      // Communication rejects a malformed slug with 400; like an unknown slug
+      // it names no guide, so report it the same way.
+      if (result.err === 'not-found' || result.err === 'bad-request') {
         ctx.status = 404
         ctx.body = { reason: 'Guide not found', ...metadata }
         return

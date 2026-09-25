@@ -9,6 +9,7 @@ import {
   DeleteGuideResponseSchema,
   DeleteStepImageResponseSchema,
   GuideCategorySchema,
+  GuideImageContentTypeSchema,
   GuideImageDeleteResponseSchema,
   GuideImageUploadRequestSchema,
   GuideImageUploadResponseSchema,
@@ -32,6 +33,7 @@ import {
 
 export type GuideStatus = z.infer<typeof GuideStatusSchema>
 export type CalloutType = z.infer<typeof CalloutTypeSchema>
+export type GuideImageContentType = z.infer<typeof GuideImageContentTypeSchema>
 
 export type GuideCategory = z.infer<typeof GuideCategorySchema>
 export type GuideStepImage = z.infer<typeof GuideStepImageSchema>

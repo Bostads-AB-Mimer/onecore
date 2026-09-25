@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { BookOpen, Search, SearchX } from 'lucide-react'
 
 import {
@@ -31,6 +31,8 @@ export function GuidesOverview({
   actions,
 }: GuidesOverviewProps) {
   const [search, setSearch] = useState('')
+  // The guides page and the guide sheet can list guides at the same time.
+  const idPrefix = useId()
   const { data, isLoading, isError } = useGuides(includeDrafts)
 
   const groups = useMemo(
@@ -88,9 +90,12 @@ export function GuidesOverview({
       ) : (
         <div className="space-y-8">
           {groups.map((group) => (
-            <section key={group.id} aria-labelledby={`category-${group.id}`}>
+            <section
+              key={group.id}
+              aria-labelledby={`${idPrefix}-category-${group.id}`}
+            >
               <h2
-                id={`category-${group.id}`}
+                id={`${idPrefix}-category-${group.id}`}
                 className="mb-3 text-lg font-semibold"
               >
                 {group.name}

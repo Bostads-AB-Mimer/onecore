@@ -1,4 +1,4 @@
-/** Thrown when a slug is already used by another guide or its history. */
+/** Thrown when a slug is already used by another guide. */
 export class SlugTakenError extends Error {
   constructor(public readonly slug: string) {
     super(`Slug "${slug}" is already taken`)

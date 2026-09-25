@@ -5,12 +5,12 @@ import { AdapterResult } from '../types'
 import { paths } from './generated/api-types'
 
 // Typed client for the communication service's OpenAPI routes (the okapi
-// router). Legacy routes in index.ts still use axios.
-export const client = () =>
-  createClient<paths>({
-    baseUrl: Config.communicationService.url,
-    headers: { 'Content-Type': 'application/json' },
-  })
+// router). Legacy routes in index.ts still use axios. Created once: the client
+// holds no per-request state, so there is no reason to rebuild it per call.
+export const client = createClient<paths>({
+  baseUrl: Config.communicationService.url,
+  headers: { 'Content-Type': 'application/json' },
+})
 
 export type CommonErr =
   | 'bad-request'
