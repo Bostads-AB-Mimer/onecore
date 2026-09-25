@@ -30,6 +30,10 @@ export const routes = {
   inspections: '/besiktningar',
   economy: '/economy',
   components: '/komponenter',
+  guides: '/guider',
+  guideNew: '/guider/ny',
+  guide: '/guider/:slug',
+  guideEdit: '/guider/:slug/redigera',
   callback: '/callback',
 } as const
 
@@ -61,6 +65,8 @@ export const paths = {
   company: (organizationNumber: string) =>
     generatePath(routes.company, { organizationNumber }),
   tenant: (contactCode: string) => generatePath(routes.tenant, { contactCode }),
+  guide: (slug: string) => generatePath(routes.guide, { slug }),
+  guideEdit: (slug: string) => generatePath(routes.guideEdit, { slug }),
   economy: (params?: { contactCode?: string }) => {
     if (!params?.contactCode) {
       return routes.economy

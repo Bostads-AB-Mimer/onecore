@@ -6,6 +6,9 @@ import ComponentLibraryPage from '@/pages/ComponentLibraryPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { EconomyPage } from '@/pages/EconomyPage'
 import { FacilityPage } from '@/pages/FacilityPage'
+import { GuideEditorPage } from '@/pages/GuideEditorPage'
+import { GuidePage } from '@/pages/GuidePage'
+import { GuidesPage } from '@/pages/GuidesPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
@@ -143,6 +146,27 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: routes.inspections,
             element: <InspectionsView />,
             handle: { title: 'Besiktningar' },
+          },
+          {
+            path: routes.guides,
+            element: <GuidesPage />,
+            handle: { title: 'Guider' },
+          },
+          {
+            path: routes.guideNew,
+            element: <GuideEditorPage />,
+            handle: { title: 'Ny guide' },
+          },
+          {
+            path: routes.guide,
+            element: <GuidePage />,
+            // The title is the guide's own, which only GuidePage knows.
+            handle: { ownsDocumentTitle: true },
+          },
+          {
+            path: routes.guideEdit,
+            element: <GuideEditorPage />,
+            handle: { title: 'Redigera guide' },
           },
         ],
       },
