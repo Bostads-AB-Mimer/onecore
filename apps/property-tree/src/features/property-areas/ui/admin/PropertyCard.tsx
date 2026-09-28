@@ -2,6 +2,8 @@ import React from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { Car, DoorOpen, GripVertical, Home } from 'lucide-react'
 
+import { SHARE_LABELS } from '@/entities/property-tree'
+
 import { cn } from '@/shared/lib/utils'
 
 import { PropertyForAdmin } from '../../types/adminTypes'
@@ -36,7 +38,7 @@ export function PropertyCard({
 
   // Exceptions are managed in SQL; a share dragged as a whole property would
   // relink all of it and leave the exception dangling.
-  const canDrag = draggable && !property.partial
+  const canDrag = draggable && !property.share
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: property.id,
     disabled: !canDrag || dragDisabled || isOverlay,
@@ -95,12 +97,12 @@ export function PropertyCard({
       <div className="min-w-0 flex-1">
         <div className="font-medium text-sm break-words">
           {property.propertyName}
-          {property.partial && (
+          {property.share && (
             <span
               className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground"
-              title="Fastigheten är delad mellan flera områden. Kortet visar bara detta områdes del och kan inte flyttas här."
+              title={`${SHARE_LABELS[property.share].title} Kan inte flyttas här.`}
             >
-              delad
+              {SHARE_LABELS[property.share].badge}
             </span>
           )}
         </div>

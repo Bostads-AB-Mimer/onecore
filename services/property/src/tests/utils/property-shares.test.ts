@@ -118,13 +118,13 @@ describe('splitPropertyTreeNode', () => {
 
   it('keeps only the included buildings on the include side', () => {
     const out = splitPropertyTreeNode(node, { include: new Set(['307-048']) })
-    expect(out.partial).toBe(true)
+    expect(out.share).toBe('exception')
     expect(out.children?.map((c) => c.code)).toEqual(['307-048'])
   })
 
   it('keeps parking areas and loose objects on the exclude side', () => {
     const out = splitPropertyTreeNode(node, { exclude: new Set(['307-048']) })
-    expect(out.partial).toBe(true)
+    expect(out.share).toBe('default')
     expect(out.children?.map((c) => c.code)).toEqual([
       '307-046',
       '307-700-00',

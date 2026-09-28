@@ -1,3 +1,5 @@
+import type { property } from '@onecore/types'
+
 import type { CostCenterTreeProperty } from '@src/types/cost-center'
 import type {
   PropertyTreeChildNode,
@@ -34,8 +36,12 @@ export const sideKeeps = (
     : buildingCode === null || !side.exclude.has(buildingCode)
 }
 
-const isPartial = (side: BuildingSide | undefined): boolean =>
+const isPartial = (side: BuildingSide | undefined): side is BuildingSide =>
   !!side && ('include' in side || side.exclude.size > 0)
+
+// Only for a side that isPartial: callers return the whole node before this.
+const shareKind = (side: BuildingSide): property.PropertyShareKind =>
+  'include' in side ? 'exception' : 'default'
 
 /** Each area's shares: its links (minus excepted buildings) then inbound
  * shares by property code. A row pointing at the property's own area is a no-op. */
@@ -136,7 +142,7 @@ export const splitPropertySubtree = (
     buildings: kept,
     parkingAreas: side && 'include' in side ? [] : subtree.parkingAreas,
     aggregates,
-    partial: true,
+    share: shareKind(side),
   }
 }
 
@@ -156,6 +162,6 @@ export const splitPropertyTreeNode = (
   return {
     ...node,
     children: (node.children ?? []).filter(keeps),
-    partial: true,
+    share: shareKind(side),
   }
 }

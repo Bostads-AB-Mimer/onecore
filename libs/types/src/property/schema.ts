@@ -209,12 +209,16 @@ const propertyTreeDepth2 = () =>
     children: z.array(propertyTreeDepth1()).optional(),
   })
 
+// A split property appears once per area: `default` is the linked area's side
+// (incl. markytor, so property-level errands), `exception` an excepted building.
+// Absent on an unsplit property.
+export const PropertyShareKindSchema = z.enum(['default', 'exception'])
+
 export const PropertyTreeNodeSchema = z.object({
   ...propertyTreeNodeFields(),
   children: z.array(propertyTreeDepth2()).optional(),
-  // true only on a split property: the node carries just this group's share
-  // of it (its KVV-area exceptions' buildings, or everything else).
-  partial: z.boolean().optional(),
+  // Split property nodes under the cost-center grouping only.
+  share: PropertyShareKindSchema.optional(),
 })
 
 export type PropertyTreeNode = z.infer<typeof PropertyTreeNodeSchema>
@@ -300,8 +304,7 @@ export const CostCenterTreePropertySchema = z.object({
   buildings: z.array(CostCenterTreeBuildingSchema),
   parkingAreas: z.array(CostCenterTreeParkingAreaSchema),
   aggregates: CostCenterTreeAggregatesSchema,
-  // true only on a split property — see PropertyTreeNodeSchema.partial.
-  partial: z.boolean().optional(),
+  share: PropertyShareKindSchema.optional(),
 })
 
 export type CostCenterTreeProperty = z.infer<
