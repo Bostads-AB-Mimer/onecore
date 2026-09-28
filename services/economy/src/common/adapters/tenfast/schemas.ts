@@ -44,7 +44,7 @@ export const TenfastRentalPropertySchema = z.object({
   stad: z.string(),
   stadsdel: z.string(),
   typ: z.string(),
-  kvm: z.number(),
+  kvm: z.number().nullable(),
   roomCount: z.number().nullable(),
   bostadType: z.string().nullable(),
   parkeringType: z.string().nullable(),
@@ -105,7 +105,7 @@ export const TenfastLeaseSchema = z.object({
   hyresobjekt: z.array(TenfastRentalPropertySchema).min(1),
   reference: z.number(),
   invitationsToRegister: z.array(z.any()),
-  canDelete: z.boolean(),
+  canDelete: z.boolean().optional(),
   depositState: z.array(z.any()),
 })
 export const TenfastInvoiceStateSchema = z.enum([
@@ -183,7 +183,7 @@ export const TenfastInvoiceSchema = z.object({
       externalId: z.string(),
       reference: z.number(),
       stage: z.string(),
-      canDelete: z.boolean(),
+      canDelete: z.boolean().optional(),
       canVoid: z.boolean(),
       id: z.string(),
     })
