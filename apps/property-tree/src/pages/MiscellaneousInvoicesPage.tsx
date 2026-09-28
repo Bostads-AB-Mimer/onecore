@@ -124,17 +124,19 @@ export function MiscellaneousInvoicesPage() {
           <CardTitle>Alla ströfakturor</CardTitle>
         </CardHeader>
         <CardContent>
-          <FilterBar>
-            <DateRangeFilterDropdown
-              startDate={fromDate}
-              endDate={toDate}
-              onDateChange={(start, end) => {
-                setFromDate(start)
-                setToDate(end)
-              }}
-              placeholder="Filtrera på fakturadatum..."
-            />
-          </FilterBar>
+          <div className="mb-6">
+            <FilterBar>
+              <DateRangeFilterDropdown
+                startDate={fromDate}
+                endDate={toDate}
+                onDateChange={(start, end) => {
+                  setFromDate(start)
+                  setToDate(end)
+                }}
+                placeholder="Filtrera på fakturadatum..."
+              />
+            </FilterBar>
+          </div>
 
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">
