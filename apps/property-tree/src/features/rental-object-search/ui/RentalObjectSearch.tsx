@@ -11,6 +11,7 @@ import {
   LEVEL_LABELS,
   PropertyTreePicker,
   RENTAL_OBJECT_TYPE_LABELS,
+  SHARE_LABELS,
   useRentalObjectSubtypes,
   useTreeSelectionState,
 } from '@/entities/property-tree'
@@ -219,10 +220,10 @@ export function RentalObjectSearch() {
                 {LEVEL_LABELS[node.level]}:
               </span>{' '}
               {node.label}
-              {node.shareOf && (
+              {node.share && (
                 <span className="text-muted-foreground">
                   {' '}
-                  (del: {node.shareOf})
+                  ({SHARE_LABELS[node.share.kind].badge})
                 </span>
               )}
             </RemovableChip>

@@ -157,14 +157,17 @@ describe('GET /cost-centers/:id/tree', () => {
     })
   })
 
-  it('keeps the partial flag on split properties through the parse', async () => {
+  it('keeps the share kind on split properties through the parse', async () => {
     const splitTree = {
       ...baseTree,
       kvvAreas: [
         {
           ...baseTree.kvvAreas[0],
           properties: [
-            { ...baseTree.kvvAreas[0].properties[0], partial: true },
+            {
+              ...baseTree.kvvAreas[0].properties[0],
+              share: 'default' as const,
+            },
           ],
         },
       ],
@@ -181,7 +184,7 @@ describe('GET /cost-centers/:id/tree', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.content.kvvAreas[0].properties[0].partial).toBe(true)
+    expect(res.body.content.kvvAreas[0].properties[0].share).toBe('default')
   })
 
   it('returns the tree with null users when keycloak fails', async () => {

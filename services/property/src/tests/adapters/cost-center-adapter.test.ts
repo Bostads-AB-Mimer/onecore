@@ -124,7 +124,7 @@ beforeEach(() => {
 })
 
 describe('cost-center-adapter.getCostCenterTreeById with exceptions', () => {
-  it('prunes an excepted building from the default area and marks the property partial', async () => {
+  it('prunes an excepted building from the default area and marks the property as the default share', async () => {
     mockPrisma.onecoreCostCenter.findUnique.mockResolvedValue(norrCostCenter())
     mockPrisma.onecoreKvvAreaException.findMany.mockResolvedValue([
       studentException(),
@@ -134,7 +134,7 @@ describe('cost-center-adapter.getCostCenterTreeById with exceptions', () => {
 
     const property = tree?.kvvAreas[0].properties[0]
     expect(property?.code).toBe('06601')
-    expect(property?.partial).toBe(true)
+    expect(property?.share).toBe('default')
     expect(property?.buildings.map((b) => b.buildingCode)).toEqual(['307-046'])
     expect(property?.parkingAreas).toHaveLength(1)
     expect(property?.aggregates).toEqual({
@@ -159,7 +159,7 @@ describe('cost-center-adapter.getCostCenterTreeById with exceptions', () => {
 
     const property = tree?.kvvAreas[0].properties[0]
     expect(tree?.kvvAreas[0].properties).toHaveLength(1)
-    expect(property?.partial).toBe(true)
+    expect(property?.share).toBe('exception')
     expect(property?.designation).toBe('ALLMOGEKULTUREN 7')
     expect(property?.buildings.map((b) => b.buildingCode)).toEqual(['307-048'])
     expect(property?.parkingAreas).toEqual([])
@@ -179,7 +179,7 @@ describe('cost-center-adapter.getCostCenterTreeById with exceptions', () => {
     const tree = await getCostCenterTreeById(CC_NORR)
 
     const property = tree?.kvvAreas[0].properties[0]
-    expect(property?.partial).toBeUndefined()
+    expect(property?.share).toBeUndefined()
     expect(property?.buildings).toHaveLength(2)
     expect(property?.aggregates.residenceCount).toBe(96)
   })
@@ -194,7 +194,7 @@ describe('cost-center-adapter.getCostCenterTreeById with exceptions', () => {
 
     const properties = tree?.kvvAreas[0].properties
     expect(properties).toHaveLength(1)
-    expect(properties?.[0].partial).toBeUndefined()
+    expect(properties?.[0].share).toBeUndefined()
     expect(properties?.[0].buildings).toHaveLength(2)
   })
 

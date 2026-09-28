@@ -10,7 +10,11 @@ import { Checkbox } from '@/shared/ui/Checkbox'
 import { TableCell, TableRow } from '@/shared/ui/Table'
 
 import type { OccupantTenant } from '../hooks/useOccupantData'
-import { LEVEL_LABELS, RENTAL_OBJECT_TYPE_LABELS } from '../model/labels'
+import {
+  LEVEL_LABELS,
+  RENTAL_OBJECT_TYPE_LABELS,
+  SHARE_LABELS,
+} from '../model/labels'
 import type { CheckState, PropertyTreeNode } from '../model/selection'
 import type { NodeRowSpec, RentalObject } from '../model/treeRows'
 import { LEVEL_ICONS, OBJECT_TYPE_ICONS } from './icons'
@@ -148,9 +152,9 @@ export const NodeRow = memo(function NodeRow({
               {row.node.share && (
                 <span
                   className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground"
-                  title="Fastigheten är delad mellan flera områden; raden visar bara detta områdes del."
+                  title={SHARE_LABELS[row.node.share.kind].title}
                 >
-                  delad
+                  {SHARE_LABELS[row.node.share.kind].badge}
                 </span>
               )}
             </button>

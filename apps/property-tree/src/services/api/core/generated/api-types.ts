@@ -12961,7 +12961,8 @@ export interface components {
         facilityCount: number
         otherCount: number
       }
-      partial?: boolean
+      /** @enum {string} */
+      share?: 'default' | 'exception'
     }
     CostCenterTreeKvvArea: {
       /** Format: uuid */
@@ -13013,7 +13014,8 @@ export interface components {
           facilityCount: number
           otherCount: number
         }
-        partial?: boolean
+        /** @enum {string} */
+        share?: 'default' | 'exception'
       }[]
     }
     CostCenterTree: {
@@ -13076,7 +13078,8 @@ export interface components {
             facilityCount: number
             otherCount: number
           }
-          partial?: boolean
+          /** @enum {string} */
+          share?: 'default' | 'exception'
         }[]
       }[]
     }
@@ -13266,7 +13269,8 @@ export interface components {
             }[]
           }[]
         }[]
-        partial?: boolean
+        /** @enum {string} */
+        share?: 'default' | 'exception'
       }[]
     }
     PropertyTree: {
@@ -13351,7 +13355,8 @@ export interface components {
               }[]
             }[]
           }[]
-          partial?: boolean
+          /** @enum {string} */
+          share?: 'default' | 'exception'
         }[]
       }[]
     }

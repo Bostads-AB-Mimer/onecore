@@ -4593,7 +4593,8 @@ export interface components {
             facilityCount: number
             otherCount: number
           }
-          partial?: boolean
+          /** @enum {string} */
+          share?: 'default' | 'exception'
         }[]
       }[]
     }
@@ -4705,7 +4706,8 @@ export interface components {
               }[]
             }[]
           }[]
-          partial?: boolean
+          /** @enum {string} */
+          share?: 'default' | 'exception'
         }[]
       }[]
     }

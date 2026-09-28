@@ -44,7 +44,7 @@ export function selectionToScopes(
   for (const node of nodes) {
     // A split property's node is one group's share, not the whole fastighet.
     const value =
-      node.share ?? (ID_LEVELS.has(node.level) ? node.id : node.value)
+      node.share?.key ?? (ID_LEVELS.has(node.level) ? node.id : node.value)
     if (!value) continue
     const key = node.share ? 'propertyShares' : LEVEL_TO_SCOPE[node.level]
     out[key] = [...(out[key] ?? []), value]
