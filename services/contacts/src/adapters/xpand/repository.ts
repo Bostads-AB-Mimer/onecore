@@ -150,8 +150,16 @@ export const xpandContactsRepository = (
     ) => {
       if (contactCodes.length === 0) return []
 
-      const rows = await contactsByCodesQuery(db.get(), contactCodes, options)
-      const contacts = transformDbContactRows(rows)
+      // MSSQL caps WHERE IN at 2100 parameters — chunk to stay well under
+      const CHUNK_SIZE = 1000
+      const allRows: DbContactRow[] = []
+      for (let i = 0; i < contactCodes.length; i += CHUNK_SIZE) {
+        const chunk = contactCodes.slice(i, i + CHUNK_SIZE)
+        const rows = await contactsByCodesQuery(db.get(), chunk, options)
+        allRows.push(...rows)
+      }
+
+      const contacts = transformDbContactRows(allRows)
 
       return options?.includeRelations
         ? withRelatedContacts(contacts)

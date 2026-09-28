@@ -1,3 +1,34 @@
+jest.mock('@onecore/utilities', () => {
+  const actual = jest.requireActual('@onecore/utilities')
+  return {
+    ...actual,
+    // createExcelExport lazy-loads exceljs via a dynamic import, which
+    // requires --experimental-vm-modules under Jest's CJS transform.
+    // Route tests only need to assert on status/params, not real xlsx bytes.
+    // Configured per-test since beforeEach(jest.resetAllMocks) clears this.
+    createExcelExport: jest.fn(),
+    logger: {
+      info: () => {
+        return
+      },
+      error: () => {
+        return
+      },
+      warn: () => {
+        return
+      },
+      debug: () => {
+        return
+      },
+    },
+    generateRouteMetadata: jest.fn(),
+    makeSuccessResponseBody: <T>(content: T, metadata: object) => ({
+      content,
+      ...metadata,
+    }),
+  }
+})
+
 import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
@@ -17,6 +48,7 @@ import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import * as factory from '../../../../test/factories'
 import { Lease as LeaseSchema } from '../schemas/lease'
+import * as utilities from '@onecore/utilities'
 import { PaginatedResponse } from '@onecore/utilities'
 
 const buildPaginatedResponse = <T>(
@@ -544,6 +576,9 @@ describe('leases routes', () => {
 
   describe('GET /leases/export', () => {
     it('resolves buildingManager to kvvAreaCodes before calling leasing', async () => {
+      ;(utilities.createExcelExport as jest.Mock).mockResolvedValue(
+        Buffer.from('excel')
+      )
       const lookupSpy = jest
         .spyOn(propertyBaseAdapter, 'listKvvAreas')
         .mockResolvedValue({
@@ -551,14 +586,10 @@ describe('leases routes', () => {
           data: [factory.kvvAreaWithCostCenter.build({ code: 'KVV21' })],
         })
       const exportSpy = jest
-        .spyOn(tenantLeaseAdapter, 'exportLeasesToExcel')
+        .spyOn(tenantLeaseAdapter, 'getLeasesForExport')
         .mockResolvedValue({
           ok: true,
-          data: {
-            data: Buffer.from('excel'),
-            contentType: 'application/octet-stream',
-            contentDisposition: 'attachment; filename="test.xlsx"',
-          },
+          data: [buildLeaseSearchResult({ contacts: [] })],
         })
 
       const res = await request(app.callback()).get(

@@ -3,6 +3,10 @@ import {
   generateRouteMetadata,
   logger,
   makeSuccessResponseBody,
+  createExcelExport,
+  joinField,
+  formatDateForExcel,
+  setExcelDownloadHeaders,
 } from '@onecore/utilities'
 import {
   Contact,
@@ -10,6 +14,7 @@ import {
   leasing,
   schemas,
   LeaseStatus,
+  LeaseStatusLabel,
   CustomerScoreCardInfoSchema,
 } from '@onecore/types'
 import z from 'zod'
@@ -1099,7 +1104,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await leasingAdapter.exportLeasesToExcel(resolved.query)
+      const result = await leasingAdapter.getLeasesForExport(resolved.query)
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Lease export failed')
@@ -1108,10 +1113,96 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      ctx.set('Content-Type', result.data.contentType)
-      ctx.set('Content-Disposition', result.data.contentDisposition)
+      const rawLeases = result.data
+
+      const contactCodes = [
+        ...new Set(
+          rawLeases.flatMap(
+            (lease) => lease.contacts?.map((c) => c.contactCode) ?? []
+          )
+        ),
+      ]
+
+      let enrichedLeases = rawLeases
+      if (contactCodes.length > 0) {
+        const contactsResult = await contactsAdapter.getByContactCodeBatch(
+          contactCodes,
+          { includePhone: true, includeEmail: true }
+        )
+        if (contactsResult.ok) {
+          const contactMap = new Map(
+            contactsResult.data.map((c) => [
+              c.contactCode,
+              {
+                email:
+                  c.communication.emailAddresses.find((e) => e.isPrimary)
+                    ?.emailAddress ??
+                  c.communication.emailAddresses[0]?.emailAddress ??
+                  null,
+                phone:
+                  c.communication.phoneNumbers.find((p) => p.isPrimary)
+                    ?.phoneNumber ??
+                  c.communication.phoneNumbers[0]?.phoneNumber ??
+                  null,
+              },
+            ])
+          )
+          enrichedLeases = rawLeases.map((lease) => ({
+            ...lease,
+            contacts: lease.contacts?.map((c) => ({
+              ...c,
+              ...contactMap.get(c.contactCode),
+            })),
+          }))
+        }
+      }
+
+      const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({
+        sheetName: 'Hyreskontrakt',
+        columns: [
+          { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
+          { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
+          { header: 'Hyresgäst', key: 'tenantName', width: 30 },
+          { header: 'Kundnummer', key: 'contactCode', width: 18 },
+          { header: 'E-post', key: 'email', width: 30 },
+          { header: 'Telefon', key: 'phone', width: 15 },
+          { header: 'Objekttyp', key: 'objectType', width: 12 },
+          { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
+          { header: 'Adress', key: 'address', width: 35 },
+          { header: 'Fastighet', key: 'property', width: 20 },
+          { header: 'Distrikt', key: 'district', width: 15 },
+          { header: 'Startdatum', key: 'startDate', width: 12 },
+          { header: 'Slutdatum', key: 'endDate', width: 12 },
+          { header: 'Status', key: 'status', width: 15 },
+        ],
+        data: enrichedLeases,
+        rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
+          leaseId: lease.leaseId,
+          rentalObjectCode: lease.rentalObjectCode || '',
+          tenantName: joinField(lease.contacts, (c) =>
+            c.contactType === 'subletTenant' ? `${c.name} (andrahand)` : c.name
+          ),
+          contactCode: joinField(lease.contacts, (c) =>
+            c.contactType === 'subletTenant'
+              ? `${c.contactCode} (andrahand)`
+              : c.contactCode
+          ),
+          email: joinField(lease.contacts, (c) => c.email),
+          phone: joinField(lease.contacts, (c) => c.phone),
+          objectType: lease.parkingSpaceType || lease.objectTypeCode,
+          leaseType: lease.leaseType,
+          address: lease.address || '',
+          property: lease.property || '',
+          district: lease.districtName || '',
+          startDate: formatDateForExcel(lease.startDate),
+          endDate: formatDateForExcel(lease.lastDebitDate),
+          status: LeaseStatusLabel[lease.status] ?? String(lease.status),
+        }),
+      })
+
+      setExcelDownloadHeaders(ctx, 'hyreskontrakt')
       ctx.status = 200
-      ctx.body = result.data.data
+      ctx.body = buffer
     } catch (error) {
       logger.error({ error, metadata }, 'Error exporting leases to Excel')
       ctx.status = 500
