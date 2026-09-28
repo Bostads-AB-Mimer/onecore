@@ -20,6 +20,8 @@ import {
   InvoiceSchema,
   XledgerContactSchema,
   RentInvoiceRowSchema,
+  MiscellaneousInvoiceSchema,
+  MiscellaneousInvoiceBaseItemSchema,
 } from './schemas/v1'
 import {
   MiscellaneousInvoicePayload,
@@ -391,6 +393,10 @@ type Comment = z.infer<typeof CommentSchema>
 type CommentThread = z.infer<typeof CommentThreadSchema>
 type Invoice = z.infer<typeof InvoiceSchema>
 type InvoiceRow = z.infer<typeof InvoiceRowSchema>
+type MiscellaneousInvoice = z.infer<typeof MiscellaneousInvoiceSchema>
+type MiscellaneousInvoiceBaseItem = z.infer<
+  typeof MiscellaneousInvoiceBaseItemSchema
+>
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
 type RentInvoiceRow = z.infer<typeof RentInvoiceRowSchema>
 type XledgerContact = z.infer<typeof XledgerContactSchema>
@@ -412,6 +418,8 @@ export type {
   Invoices,
   Invoice,
   InvoiceRow,
+  MiscellaneousInvoice,
+  MiscellaneousInvoiceBaseItem,
   InvoicePaymentEvent,
   RentInvoiceRow,
   XledgerContact,

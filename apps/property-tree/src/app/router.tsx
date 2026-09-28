@@ -9,6 +9,7 @@ import { FacilityPage } from '@/pages/FacilityPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
+import { MiscellaneousInvoicesPage } from '@/pages/MiscellaneousInvoicesPage'
 import { ParkingSpacePage } from '@/pages/ParkingSpacePage'
 import { PropertyAreasPage } from '@/pages/PropertyAreasPage'
 import { PropertyPage } from '@/pages/PropertyPage'
@@ -138,6 +139,11 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: 'economy',
             element: <EconomyPage />,
             handle: { title: 'Ekonomi' },
+          },
+          {
+            path: routes.miscellaneousInvoices,
+            element: <MiscellaneousInvoicesPage />,
+            handle: { title: 'Ströfakturor' },
           },
           {
             path: routes.inspections,
