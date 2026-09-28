@@ -53,7 +53,6 @@
     "koa-bodyparser": "^4.4.1",
     "koa-pino-logger": "^4.0.0",
     "koa2-swagger-ui": "^5.12.0",
-    "minio": "^8.0.7",
     "mssql": "^11.0.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.7.284",

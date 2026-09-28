@@ -760,26 +760,58 @@ type UpdateListingTextContentRequest = z.infer<
   typeof leasing.v1.UpdateListingTextContentRequestSchema
 >
 
+// Error codes for the listing text content and listing area text content
+// functions:
+//   'bad-request'    core rejected the request body (400)
+//   'not-found'      no text content for the rental object / market area (404)
+//   'conflict'       text content already exists for the rental object /
+//                    market area (409)
+//   'request-failed' core answered with an unexpected status, or the request
+//                    itself failed (5xx, network error)
+type TextContentError =
+  'bad-request' | 'not-found' | 'conflict' | 'request-failed'
+
+const toTextContentError = (
+  err: unknown,
+  context: string
+): { ok: false; err: TextContentError; statusCode: number } => {
+  const status = err instanceof AxiosError ? err.response?.status : undefined
+  switch (status) {
+    case HttpStatusCode.BadRequest:
+      return { ok: false, err: 'bad-request', statusCode: 400 }
+    case HttpStatusCode.NotFound:
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    case HttpStatusCode.Conflict:
+      return { ok: false, err: 'conflict', statusCode: 409 }
+    default:
+      // Only unexpected failures are logged. 400/404/409 are expected
+      // outcomes (404 in particular is the normal state for an object
+      // without text content) and would drown real errors.
+      logger.error({ err }, context)
+      return { ok: false, err: 'request-failed', statusCode: 500 }
+  }
+}
+
 const getListingTextContentByRentalObjectCode = async (
   rentalObjectCode: string
-): Promise<AdapterResult<ListingTextContent, 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<ListingTextContent, TextContentError>> => {
   try {
     const response = await getFromCore<{ content: ListingTextContent }>({
       method: 'get',
-      url: `${coreBaseUrl}/listing-text-content/${rentalObjectCode}`,
+      url: `${coreBaseUrl}/listing-text-content/${encodeURIComponent(rentalObjectCode)}`,
     })
     return { ok: true, data: response.data.content }
   } catch (err) {
-    if (err instanceof AxiosError && err.response?.status === 404) {
-      return { ok: false, err: 'not-found', statusCode: 404 }
-    }
-    return { ok: false, err: 'unknown', statusCode: 500 }
+    return toTextContentError(
+      err,
+      'core-adapter.getListingTextContentByRentalObjectCode'
+    )
   }
 }
 
 const createListingTextContent = async (
   data: CreateListingTextContentRequest
-): Promise<AdapterResult<ListingTextContent, 'conflict' | 'unknown'>> => {
+): Promise<AdapterResult<ListingTextContent, TextContentError>> => {
   try {
     const response = await getFromCore<{ content: ListingTextContent }>({
       method: 'post',
@@ -788,46 +820,37 @@ const createListingTextContent = async (
     })
     return { ok: true, data: response.data.content }
   } catch (err) {
-    if (err instanceof AxiosError && err.response?.status === 409) {
-      return { ok: false, err: 'conflict', statusCode: 409 }
-    }
-    return { ok: false, err: 'unknown', statusCode: 500 }
+    return toTextContentError(err, 'core-adapter.createListingTextContent')
   }
 }
 
 const updateListingTextContent = async (
   rentalObjectCode: string,
   data: UpdateListingTextContentRequest
-): Promise<AdapterResult<ListingTextContent, 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<ListingTextContent, TextContentError>> => {
   try {
     const response = await getFromCore<{ content: ListingTextContent }>({
       method: 'put',
-      url: `${coreBaseUrl}/listing-text-content/${rentalObjectCode}`,
+      url: `${coreBaseUrl}/listing-text-content/${encodeURIComponent(rentalObjectCode)}`,
       data,
     })
     return { ok: true, data: response.data.content }
   } catch (err) {
-    if (err instanceof AxiosError && err.response?.status === 404) {
-      return { ok: false, err: 'not-found', statusCode: 404 }
-    }
-    return { ok: false, err: 'unknown', statusCode: 500 }
+    return toTextContentError(err, 'core-adapter.updateListingTextContent')
   }
 }
 
 const deleteListingTextContent = async (
   rentalObjectCode: string
-): Promise<AdapterResult<null, 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<null, TextContentError>> => {
   try {
     await getFromCore({
       method: 'delete',
-      url: `${coreBaseUrl}/listing-text-content/${rentalObjectCode}`,
+      url: `${coreBaseUrl}/listing-text-content/${encodeURIComponent(rentalObjectCode)}`,
     })
     return { ok: true, data: null }
   } catch (err) {
-    if (err instanceof AxiosError && err.response?.status === 404) {
-      return { ok: false, err: 'not-found', statusCode: 404 }
-    }
-    return { ok: false, err: 'unknown', statusCode: 500 }
+    return toTextContentError(err, 'core-adapter.deleteListingTextContent')
   }
 }
 
@@ -859,7 +882,7 @@ type UpdateListingAreaTextContentRequest = z.infer<
 >
 
 const listListingAreaTextContent = async (): Promise<
-  AdapterResult<ListingAreaTextContent[], 'unknown'>
+  AdapterResult<ListingAreaTextContent[], TextContentError>
 > => {
   try {
     const response = await getFromCore<{ content: ListingAreaTextContent[] }>({
@@ -867,14 +890,14 @@ const listListingAreaTextContent = async (): Promise<
       url: `${coreBaseUrl}/listing-area-text-content`,
     })
     return { ok: true, data: response.data.content }
-  } catch {
-    return { ok: false, err: 'unknown', statusCode: 500 }
+  } catch (err) {
+    return toTextContentError(err, 'core-adapter.listListingAreaTextContent')
   }
 }
 
 const getListingAreaTextContentByMarketAreaCode = async (
   marketAreaCode: string
-): Promise<AdapterResult<ListingAreaTextContent, 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<ListingAreaTextContent, TextContentError>> => {
   try {
     const response = await getFromCore<{ content: ListingAreaTextContent }>({
       method: 'get',
@@ -882,16 +905,16 @@ const getListingAreaTextContentByMarketAreaCode = async (
     })
     return { ok: true, data: response.data.content }
   } catch (err) {
-    if (err instanceof AxiosError && err.response?.status === 404) {
-      return { ok: false, err: 'not-found', statusCode: 404 }
-    }
-    return { ok: false, err: 'unknown', statusCode: 500 }
+    return toTextContentError(
+      err,
+      'core-adapter.getListingAreaTextContentByMarketAreaCode'
+    )
   }
 }
 
 const createListingAreaTextContent = async (
   data: CreateListingAreaTextContentRequest
-): Promise<AdapterResult<ListingAreaTextContent, 'conflict' | 'unknown'>> => {
+): Promise<AdapterResult<ListingAreaTextContent, TextContentError>> => {
   try {
     const response = await getFromCore<{ content: ListingAreaTextContent }>({
       method: 'post',
@@ -900,17 +923,14 @@ const createListingAreaTextContent = async (
     })
     return { ok: true, data: response.data.content }
   } catch (err) {
-    if (err instanceof AxiosError && err.response?.status === 409) {
-      return { ok: false, err: 'conflict', statusCode: 409 }
-    }
-    return { ok: false, err: 'unknown', statusCode: 500 }
+    return toTextContentError(err, 'core-adapter.createListingAreaTextContent')
   }
 }
 
 const updateListingAreaTextContent = async (
   marketAreaCode: string,
   data: UpdateListingAreaTextContentRequest
-): Promise<AdapterResult<ListingAreaTextContent, 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<ListingAreaTextContent, TextContentError>> => {
   try {
     const response = await getFromCore<{ content: ListingAreaTextContent }>({
       method: 'put',
@@ -919,16 +939,13 @@ const updateListingAreaTextContent = async (
     })
     return { ok: true, data: response.data.content }
   } catch (err) {
-    if (err instanceof AxiosError && err.response?.status === 404) {
-      return { ok: false, err: 'not-found', statusCode: 404 }
-    }
-    return { ok: false, err: 'unknown', statusCode: 500 }
+    return toTextContentError(err, 'core-adapter.updateListingAreaTextContent')
   }
 }
 
 const deleteListingAreaTextContent = async (
   marketAreaCode: string
-): Promise<AdapterResult<null, 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<null, TextContentError>> => {
   try {
     await getFromCore({
       method: 'delete',
@@ -936,10 +953,7 @@ const deleteListingAreaTextContent = async (
     })
     return { ok: true, data: null }
   } catch (err) {
-    if (err instanceof AxiosError && err.response?.status === 404) {
-      return { ok: false, err: 'not-found', statusCode: 404 }
-    }
-    return { ok: false, err: 'unknown', statusCode: 500 }
+    return toTextContentError(err, 'core-adapter.deleteListingAreaTextContent')
   }
 }
 

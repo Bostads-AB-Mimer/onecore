@@ -2,6 +2,11 @@ import type { Lease, Tenant } from '@/services/types'
 
 import { GET } from './core/base-api'
 
+/** The rental object part of a lease id ("807-032-99-0001/01" → "807-032-99-0001"). */
+export function rentalObjectFromLeaseId(leaseId: string): string {
+  return leaseId.split('/')[0].trim()
+}
+
 function isMaculated(lease: Lease): boolean {
   const n = (lease.leaseNumber ?? '').trim()
   // Check if lease number contains 'M' or 'm' (e.g., "01M", "02M2", "07M")

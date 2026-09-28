@@ -4,7 +4,7 @@
  * This service handles the complex multi-step transaction when a signature is completed:
  * 1. Update signature status
  * 2. Download signed PDF from SimpleSign
- * 3. Upload to MinIO
+ * 3. Upload to file storage
  * 4. Update receipt with fileId
  * 5. Supersede other pending signatures for same resource
  *
@@ -16,7 +16,6 @@ import * as signaturesAdapter from './adapters/signatures-adapter'
 import * as receiptsAdapter from './adapters/receipts-adapter'
 // TODO: Uncomment when webhook flow is implemented
 // import * as simpleSignApi from './adapters/simplesign-adapter'
-// import { uploadFile } from './adapters/minio' - Replace with file-storage service call
 import { logger } from '@onecore/utilities'
 
 export interface ProcessWebhookParams {
@@ -34,7 +33,7 @@ export type Result<T, E = string> =
  * This function coordinates multiple operations in a transaction:
  * - Updates signature status
  * - Downloads signed PDF if status is 'signed'
- * - Uploads PDF to MinIO
+ * - Uploads PDF to file storage
  * - Updates receipt with fileId
  * - Supersedes other pending signatures
  *

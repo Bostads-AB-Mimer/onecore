@@ -7,7 +7,10 @@
  * maintenance; `receiptData` assembles these facts into the PDF-layer input.
  */
 import { fetchContactByContactCode } from '../api/contactService'
-import { fetchLeasesByRentalPropertyId } from '../api/leaseSearchService'
+import {
+  fetchLeasesByRentalPropertyId,
+  rentalObjectFromLeaseId,
+} from '../api/leaseSearchService'
 import { rentalObjectSearchService } from '../api/rentalObjectSearchService'
 import type {
   Card,
@@ -181,6 +184,25 @@ export function pickAutoContract(
     address: chosen.address,
     leaseDisplayId:
       chosen.matches.length === 1 ? chosen.matches[0].leaseId : undefined,
+  }
+}
+
+/**
+ * Contract for a receipt whose loan carries no rental object (card-only loans) and the
+ * operator typed an Avtals-ID. The object is only trusted when its address resolves.
+ */
+export async function resolveManualContract(
+  leaseDisplayId: string
+): Promise<ResolvedContract> {
+  const manualLease = leaseDisplayId.trim()
+  const rentalPropertyId = manualLease && rentalObjectFromLeaseId(manualLease)
+  const address = rentalPropertyId
+    ? await resolveObjectAddress(rentalPropertyId)
+    : null
+  return {
+    rentalPropertyId: address ? rentalPropertyId : undefined,
+    address,
+    leaseDisplayId: manualLease || undefined,
   }
 }
 

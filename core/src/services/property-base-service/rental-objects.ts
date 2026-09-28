@@ -49,7 +49,7 @@ const GetRentalObjectDetailsQuerySchema = z
   .object(RentalObjectScopeShape)
   .refine(hasAnyScope, { message: 'Provide at least one scope.' })
 
-const SearchRentalObjectsQuerySchema = z
+export const SearchRentalObjectsQuerySchema = z
   .object({
     ...RentalObjectScopeShape,
     types: z

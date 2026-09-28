@@ -17,6 +17,7 @@ import { routes as marketAreaRoutes } from './market-areas'
 import { routes as propertyKvvAreaRoutes } from './property-kvv-area'
 import { routes as propertyTreeRoutes } from './property-tree'
 import { routes as rentalObjectRoutes } from './rental-objects'
+import { routes as rentalObjectExportRoutes } from './rental-objects-export'
 
 /**
  * @swagger
@@ -175,6 +176,7 @@ export const routes = (router: KoaRouter) => {
   marketAreaRoutes(router)
   propertyKvvAreaRoutes(router)
   rentalObjectRoutes(router)
+  rentalObjectExportRoutes(router)
   propertyTreeRoutes(router)
 
   /**

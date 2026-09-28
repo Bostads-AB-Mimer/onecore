@@ -108,6 +108,7 @@ const LeasesPage = () => {
     allResultsSelected,
     selectedCount,
     toggleSelection,
+    selectRange,
     toggleSelectAll,
     clearSelection,
     isSelected,
@@ -157,7 +158,15 @@ const LeasesPage = () => {
       <Checkbox
         checked={isSelected(lease.leaseId)}
         onCheckedChange={() => toggleSelection(lease.leaseId)}
-        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        onClick={(e: React.MouseEvent) => {
+          e.stopPropagation()
+          if (e.shiftKey) {
+            // Radix skips its own toggle (and onCheckedChange) when the click
+            // is default-prevented, so shift-click only runs the range select.
+            e.preventDefault()
+            selectRange(lease.leaseId)
+          }
+        }}
         aria-label={`Välj ${lease.leaseId}`}
       />
     ),

@@ -13,7 +13,13 @@ import {
 import SaveIcon from '@mui/icons-material/Save'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DeleteIcon from '@mui/icons-material/Delete'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { AxiosError } from 'axios'
 
@@ -32,13 +38,22 @@ import {
   fromApiBlocks,
   toApiBlocks,
   hasInvalidBlock,
+  expandInvalidBlocks,
 } from './utils/contentBlocks'
+import { roomCountFromProperty } from './utils/templates'
+import { listingTextTemplates } from './templates/listingTextTemplates'
+import { getReturnTo } from '../../utils/navigationState'
 
 const ListingTextContentForm = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { rentalObjectCode } = useParams<{ rentalObjectCode: string }>()
   const [searchParams] = useSearchParams()
   const codeFromQuery = searchParams.get('code')
+
+  // Where "Tillbaka" leads: the view the user opened the editor from (passed
+  // as router state by e.g. ListingTextContentIconLink), else the search page.
+  const returnTo = getReturnTo(location.state, '/annonsinnehall')
 
   const isEditMode = !!rentalObjectCode
   const [objectCode, setObjectCode] = useState<string>(
@@ -46,6 +61,8 @@ const ListingTextContentForm = () => {
   )
   const [blocks, setBlocks] = useState<ContentBlock[]>([])
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  // Per-block validation errors are only shown after a failed save attempt.
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
 
   // Validate rental object code
   const validationQuery = useValidateRentalObject(objectCode)
@@ -55,9 +72,25 @@ const ListingTextContentForm = () => {
   const validatedCode = validationQuery.validatedCode?.trim()
   const lookupCode = isEditMode
     ? rentalObjectCode
-    : validationQuery.data === true && validatedCode
+    : validationQuery.data != null && validatedCode
       ? validatedCode
       : undefined
+
+  // Suggests how many room sections a template should start with.
+  const suggestedRoomCount = roomCountFromProperty(
+    validationQuery.data?.property
+  )
+
+  // In create mode the object number must be confirmed to exist before
+  // saving; a failed lookup (not just a 404) also blocks the save.
+  const objectNotFound = !isEditMode && validationQuery.data === null
+  const objectLookupFailed = !isEditMode && validationQuery.isError
+  // The lookup answers for the debounced code, so a code that is still being
+  // debounced or fetched is not verified yet even though neither flag above
+  // is set.
+  const objectVerified =
+    isEditMode ||
+    (validationQuery.data != null && validatedCode === objectCode.trim())
   const {
     data: existingData,
     isLoading: isLoadingExisting,
@@ -85,9 +118,18 @@ const ListingTextContentForm = () => {
       return
     }
 
-    // Check if rental object code is valid
-    if (!isEditMode && validationQuery.data === false) {
+    if (objectNotFound) {
       toast.error('Objektsnumret finns inte i systemet')
+      return
+    }
+
+    if (objectLookupFailed) {
+      toast.error('Objektsnumret kunde inte verifieras, försök igen')
+      return
+    }
+
+    if (!objectVerified) {
+      toast.error('Objektsnumret verifieras fortfarande, försök igen strax')
       return
     }
 
@@ -97,9 +139,14 @@ const ListingTextContentForm = () => {
     }
 
     if (hasInvalidBlock(blocks)) {
+      // Minimized blocks would hide the errors, so expand the invalid ones.
+      setBlocks(expandInvalidBlocks(blocks))
+      setShowValidationErrors(true)
       toast.error('Kontrollera att alla block har giltigt innehåll')
       return
     }
+
+    setShowValidationErrors(false)
 
     try {
       const contentBlocks = toApiBlocks(blocks)
@@ -116,7 +163,11 @@ const ListingTextContentForm = () => {
           contentBlocks,
         })
         toast.success('Annonsinnehåll skapat!')
-        navigate(`/annonsinnehall/${objectCode}/redigera`, { replace: true })
+        // Forward the origin so "Tillbaka" still works after the redirect.
+        navigate(`/annonsinnehall/${objectCode}/redigera`, {
+          replace: true,
+          state: location.state,
+        })
       }
     } catch (error) {
       if (error instanceof AxiosError) {
@@ -139,7 +190,7 @@ const ListingTextContentForm = () => {
     try {
       await deleteMutation.mutateAsync({ rentalObjectCode })
       toast.success('Annonsinnehåll raderat')
-      navigate('/annonsinnehall')
+      navigate(returnTo)
     } catch (error) {
       toast.error('Ett fel inträffade vid radering')
     }
@@ -168,7 +219,7 @@ const ListingTextContentForm = () => {
         <Typography color="error" gutterBottom>
           Kunde inte ladda annonsinnehåll
         </Typography>
-        <Button variant="contained" onClick={() => navigate('/annonsinnehall')}>
+        <Button variant="contained" onClick={() => navigate(returnTo)}>
           Tillbaka
         </Button>
       </Box>
@@ -197,7 +248,7 @@ const ListingTextContentForm = () => {
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}
-            onClick={() => navigate('/annonsinnehall')}
+            onClick={() => navigate(returnTo)}
           >
             Tillbaka
           </Button>
@@ -267,9 +318,8 @@ const ListingTextContentForm = () => {
                   placeholder="Ange objektsnummer..."
                   disabled={isEditMode}
                   error={
-                    !isEditMode &&
                     objectCode.trim().length > 0 &&
-                    validationQuery.data === false
+                    (objectNotFound || objectLookupFailed)
                   }
                   helperText={
                     isEditMode
@@ -278,11 +328,13 @@ const ListingTextContentForm = () => {
                         ? 'Ange ett objektsnummer'
                         : validationQuery.isLoading
                           ? 'Verifierar objektsnummer...'
-                          : validationQuery.data === false
+                          : objectNotFound
                             ? 'Objektsnumret hittas inte'
-                            : validationQuery.data === true
-                              ? 'Objektsnumret är giltigt'
-                              : 'Ange ett objektsnummer'
+                            : objectLookupFailed
+                              ? 'Objektsnumret kunde inte verifieras'
+                              : validationQuery.data != null
+                                ? 'Objektsnumret är giltigt'
+                                : 'Ange ett objektsnummer'
                   }
                 />
               </Box>
@@ -294,6 +346,7 @@ const ListingTextContentForm = () => {
                     <Button
                       component={Link}
                       to={`/annonsinnehall/${objectCode.trim()}/redigera`}
+                      state={location.state}
                       size="small"
                     >
                       Öppna befintligt
@@ -304,7 +357,13 @@ const ListingTextContentForm = () => {
                 </Alert>
               )}
 
-              <ContentBlocksList blocks={blocks} onBlocksChange={setBlocks} />
+              <ContentBlocksList
+                blocks={blocks}
+                onBlocksChange={setBlocks}
+                templates={listingTextTemplates}
+                suggestedRoomCount={suggestedRoomCount}
+                showValidationErrors={showValidationErrors}
+              />
 
               {marketArea && (
                 <Paper variant="outlined" sx={{ padding: 2 }}>

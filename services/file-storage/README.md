@@ -1,16 +1,16 @@
 # ONECore - File Storage Service
 
-Microservice for managing file storage in ONECore using MinIO as the storage backend.
+Microservice for managing file storage in ONECore using S3-compatible object storage (SeaweedFS) as the storage backend.
 
 ## Overview
 
-The File Storage Service provides a REST API for managing files in a MinIO object storage system. It supports uploading, downloading, listing, and deleting files, as well as generating presigned URLs and retrieving file metadata.
+The File Storage Service provides a REST API for managing files in an S3-compatible object storage system. It supports uploading, downloading, listing, and deleting files, as well as generating presigned URLs and retrieving file metadata.
 
 ### Technology Stack
 
 - **Runtime**: Node.js with TypeScript
 - **Framework**: Koa
-- **Storage Backend**: MinIO (S3-compatible object storage)
+- **Storage Backend**: S3-compatible object storage via `@aws-sdk/client-s3` (SeaweedFS locally and in the clusters)
 - **API Documentation**: Swagger (OpenAPI 3.0)
 
 ### Swagger
@@ -64,7 +64,7 @@ This application requires the following to be installed on your system:
 - **nvm**
 - **pnpm**
 - **Node.js**
-- **Docker** (for running MinIO)
+- **Docker** (for running SeaweedFS)
 
 ### Install Instructions
 
@@ -88,14 +88,16 @@ Configure the following environment variables in your `.env` file:
 ELASTICSEARCH_LOGGING_HOST=http://localhost:9208
 APPLICATION_NAME=file-storage
 
-# MinIO Configuration
-MINIO__ENDPOINT=localhost
-MINIO__PORT=9000
-MINIO__USE_SSL=false
-MINIO__ACCESS_KEY=minio
-MINIO__SECRET_KEY=minio123
-MINIO__BUCKET_NAME=onecore-documents
+# S3-compatible object storage (SeaweedFS locally, see root docker-compose.yaml)
+S3__ENDPOINT=localhost
+S3__PORT=9000
+S3__USE_SSL=false
+S3__ACCESS_KEY=minio
+S3__SECRET_KEY=minio123
+S3__BUCKET_NAME=onecore-documents
 ```
+
+The legacy `MINIO__*` names are still read as a fallback when the matching `S3__*` variable is unset. The fallback will be removed in DEV-117, so use `S3__*` for new configuration.
 
 #### Install runtime
 
@@ -121,15 +123,21 @@ $ pnpm install
 
 ### Running in Development Mode
 
-#### Start MinIO
+#### Start SeaweedFS
 
-Before running the service, ensure MinIO is running. If using Docker Compose from the project root:
+Before running the service, ensure SeaweedFS is running. From the project root:
 
 ```sh
-$ docker-compose up -d minio
+$ docker compose up -d seaweedfs
 ```
 
-MinIO will be available at `http://localhost:9000` (API) and `http://localhost:9001` (Console).
+If you still have the old `onecore-minio` container from before the SeaweedFS switch, it holds port 9000 and SeaweedFS will fail to start with `port is already allocated`. Remove it first:
+
+```sh
+$ docker compose down --remove-orphans
+```
+
+The S3 API is available at `http://localhost:9000`. Credentials are defined in `docker/seaweedfs/s3.json`. The `onecore-documents` bucket is created by the service on startup.
 
 #### Start the service
 

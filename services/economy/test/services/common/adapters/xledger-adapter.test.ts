@@ -4,9 +4,117 @@ import * as adapter from '@src/services/common/adapters/xledger-adapter'
 import config from '@src/common/config'
 import { schemas } from '@onecore/types'
 
-afterEach(nock.cleanAll)
+afterEach(() => {
+  nock.abortPendingRequests()
+  nock.cleanAll()
+})
 
 const { origin, pathname } = new URL(config.xledger.url)
+
+const rateLimitBody = {
+  errors: [
+    { code: 'BAD_REQUEST.BURST_RATE_LIMIT_REACHED', message: 'Rate limited' },
+  ],
+}
+const matchIdBody = {
+  data: { arTransactions: { edges: [{ node: { matchId: 1 } }] } },
+}
+
+describe('makeXledgerRequest rate limiting', () => {
+  const defaultPolicy = { ...adapter.xledgerRequestPolicy }
+
+  beforeEach(() => {
+    adapter.setXledgerRequestPolicy({ baseDelayMs: 1, maxDelayMs: 5 })
+  })
+
+  afterEach(() => {
+    adapter.setXledgerRequestPolicy(defaultPolicy)
+  })
+
+  it('retries after a burst rate limit and succeeds', async () => {
+    nock(origin).post(pathname).reply(200, rateLimitBody)
+    nock(origin).post(pathname).reply(200, rateLimitBody)
+    nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+    expect(nock.isDone()).toBe(true)
+  })
+
+  it('gives up after maxAttempts instead of retrying forever', async () => {
+    adapter.setXledgerRequestPolicy({ maxAttempts: 3 })
+    const scope = nock(origin).post(pathname).times(3).reply(200, rateLimitBody)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).rejects.toThrow(
+      /rate limit.*3 attempts/i
+    )
+    expect(scope.isDone()).toBe(true)
+    expect(extra.isDone()).toBe(false)
+  })
+
+  it('waits with exponential backoff and jitter between attempts', () => {
+    adapter.setXledgerRequestPolicy({ baseDelayMs: 1000, maxDelayMs: 10_000 })
+
+    expect(adapter.retryDelayMs(1, () => 0)).toBe(500)
+    expect(adapter.retryDelayMs(2, () => 0)).toBe(1000)
+    expect(adapter.retryDelayMs(3, () => 0)).toBe(2000)
+    expect(adapter.retryDelayMs(1, () => 0.5)).toBe(1000)
+    expect(adapter.retryDelayMs(1, () => 0.999)).toBeLessThan(1500)
+    expect(adapter.retryDelayMs(10, () => 0.999)).toBeLessThan(15_000)
+    expect(adapter.retryDelayMs(10, () => 0.5)).toBe(10_000)
+  })
+
+  it('releases its slot while sleeping between retries', async () => {
+    adapter.setXledgerRequestPolicy({
+      maxConcurrency: 1,
+      baseDelayMs: 100,
+      maxDelayMs: 100,
+    })
+    nock(origin).post(pathname).reply(200, rateLimitBody)
+    nock(origin).post(pathname).times(2).reply(200, matchIdBody)
+
+    const rateLimited = adapter.getInvoiceMatchId('1')
+    const started = Date.now()
+    const normal = adapter.getInvoiceMatchId('2')
+
+    await expect(normal).resolves.toEqual(1)
+    expect(Date.now() - started).toBeLessThan(50)
+    await expect(rateLimited).resolves.toEqual(1)
+  })
+
+  it('never has more than maxConcurrency requests in flight', async () => {
+    adapter.setXledgerRequestPolicy({ maxConcurrency: 2 })
+    let inFlight = 0
+    let peak = 0
+
+    nock(origin)
+      .post(pathname)
+      .times(6)
+      .reply(async () => {
+        inFlight++
+        peak = Math.max(peak, inFlight)
+        await new Promise((r) => setTimeout(r, 10))
+        inFlight--
+        return [200, matchIdBody]
+      })
+
+    await Promise.all(
+      Array.from({ length: 6 }, () => adapter.getInvoiceMatchId('1'))
+    )
+
+    expect(peak).toBe(2)
+  })
+
+  it('times out and does not retry a slow request', async () => {
+    adapter.setXledgerRequestPolicy({ timeoutMs: 20 })
+    const slow = nock(origin).post(pathname).delay(200).reply(200, matchIdBody)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).rejects.toThrow(/timeout/i)
+    expect(slow.isDone()).toBe(true)
+    expect(extra.isDone()).toBe(false)
+  })
+})
 
 describe(adapter.getInvoicesByContactCode, () => {
   it('returns null when customer does not exist', async () => {

@@ -5,6 +5,7 @@ import { logger } from '@onecore/utilities'
 import { RequestError } from 'tedious'
 
 import { db } from './db'
+import { chunkArray } from './utils'
 
 type ListingTextContent = z.infer<typeof leasing.v1.ListingTextContentSchema>
 type CreateListingTextContentRequest = z.infer<
@@ -57,6 +58,59 @@ const getByRentalObjectCode = async (
   }
 
   return transformFromDbListingTextContent(result)
+}
+
+// Keeps each whereIn under SQL Server's ~2100 parameter limit.
+const WHERE_IN_BATCH_SIZE = 2000
+
+// SQL Server compares RentalObjectCode under the column collation, which is
+// case-insensitive and ignores trailing blanks. Matching the stored codes
+// back to the requested ones needs the same rules, so that a code stored
+// with a trailing space is flagged here exactly as the EXISTS in the
+// listing queries flags it.
+const normalizeRentalObjectCode = (rentalObjectCode: string) =>
+  rentalObjectCode.trimEnd().toUpperCase()
+
+// Which of the given rental object codes have listing text content. Used to
+// flag rental objects that live outside the leasing DB (Xpand parking
+// spaces) with hasListingTextContent. Returns the matching codes as they
+// were passed in, so callers can compare them exactly.
+const getRentalObjectCodesWithTextContent = async (
+  rentalObjectCodes: string[],
+  dbConnection = db
+): Promise<AdapterResult<string[], 'database-error'>> => {
+  if (rentalObjectCodes.length === 0) {
+    return { ok: true, data: [] }
+  }
+
+  try {
+    const storedCodes = new Set<string>()
+    for (const batch of chunkArray(rentalObjectCodes, WHERE_IN_BATCH_SIZE)) {
+      const rows = await dbConnection
+        .from('listing_text_content')
+        .select<Array<Pick<DbListingTextContent, 'RentalObjectCode'>>>(
+          'RentalObjectCode'
+        )
+        .whereIn('RentalObjectCode', batch)
+
+      for (const row of rows) {
+        storedCodes.add(normalizeRentalObjectCode(row.RentalObjectCode))
+      }
+    }
+
+    return {
+      ok: true,
+      data: rentalObjectCodes.filter((rentalObjectCode) =>
+        storedCodes.has(normalizeRentalObjectCode(rentalObjectCode))
+      ),
+    }
+  } catch (err) {
+    logger.error(
+      { err },
+      'listingTextContentAdapter.getRentalObjectCodesWithTextContent'
+    )
+    return { ok: false, err: 'database-error' }
+  }
 }
 
 const create = async (
@@ -197,4 +251,10 @@ const remove = async (
   }
 }
 
-export default { getByRentalObjectCode, create, update, remove }
+export default {
+  getByRentalObjectCode,
+  getRentalObjectCodesWithTextContent,
+  create,
+  update,
+  remove,
+}

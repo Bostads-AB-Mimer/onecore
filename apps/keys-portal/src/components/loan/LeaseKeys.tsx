@@ -100,7 +100,7 @@ export function LeaseKeys({
       <div className="space-y-4">
         {isEmpty ? (
           <div className="text-sm text-muted-foreground">
-            Inga nycklar eller droppar hittades för detta hyresobjekt.
+            Inga nycklar eller taggar hittades för detta hyresobjekt.
           </div>
         ) : (
           <>

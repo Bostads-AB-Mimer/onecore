@@ -61,23 +61,81 @@ const getCallerFromError = (error: Error) => {
 const stringifyGraphQlQuery = (query: XledgerGraphQlQuery) =>
   `Query: ${query.query}${query.variables ? `\nVariables: ${JSON.stringify(query.variables, null, 2)}` : ''}`
 
+// Bounds retry storms. Capped attempts, jittered backoff, a request timeout and a concurrency cap.
+export const xledgerRequestPolicy = { ...config.xledger.requestPolicy }
+
+// Test-only override; production values come from config.
+export const setXledgerRequestPolicy = (
+  policy: Partial<typeof xledgerRequestPolicy>
+) => Object.assign(xledgerRequestPolicy, policy)
+
+// Exponential backoff capped at maxDelayMs, then scaled by a random factor
+// in [0.5, 1.5) so the effective ceiling is 1.5 * maxDelayMs.
+export const retryDelayMs = (attempt: number, random = Math.random) => {
+  const { baseDelayMs, maxDelayMs } = xledgerRequestPolicy
+  const exponential = Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1))
+  return Math.round(exponential * (0.5 + random()))
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+let inFlight = 0
+const waiting: Array<() => void> = []
+
+const acquireSlot = async () => {
+  if (inFlight < xledgerRequestPolicy.maxConcurrency) {
+    inFlight++
+    return
+  }
+  await new Promise<void>((resolve) => waiting.push(resolve))
+}
+
+// Hands the slot straight to the next waiter so inFlight never overshoots.
+const releaseSlot = () => {
+  const next = waiting.shift()
+  if (next) next()
+  else inFlight--
+}
+
 const makeXledgerRequest = async (
   query: XledgerGraphQlQuery,
   attachment?: any // TODO formidable file PersistentFileStorage
 ): Promise<any> => {
-  function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms))
-  }
+  const { maxAttempts } = xledgerRequestPolicy
 
-  const result = await makeXledgerHttpRequest(query, attachment)
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    await acquireSlot()
+    let result: XledgerResponse
+    try {
+      result = await makeXledgerHttpRequest(query, attachment)
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.code === 'ECONNABORTED') {
+        logger.warn(
+          { attempt, timeoutMs: xledgerRequestPolicy.timeoutMs, inFlight },
+          `Xledger request timed out\n${stringifyGraphQlQuery(query)}`
+        )
+      }
+      throw err
+    } finally {
+      releaseSlot()
+    }
 
-  if (result.status === 'ok') {
-    return result.data
-  } else if (result.status === 'retry') {
-    logger.warn('Rate limit exceeded, waiting and retrying')
-    await sleep(3000)
-    return await makeXledgerRequest(query, attachment)
-  } else {
+    if (result.status === 'ok') {
+      return result.data
+    }
+
+    if (result.status === 'retry') {
+      const isLast = attempt === maxAttempts
+      logger.warn(
+        { attempt, maxAttempts, inFlight, queueLength: waiting.length },
+        isLast
+          ? 'Xledger rate limit exceeded, giving up'
+          : 'Xledger rate limit exceeded, waiting and retrying'
+      )
+      if (!isLast) await sleep(retryDelayMs(attempt))
+      continue
+    }
+
     const error = new Error(
       result.data.map((error: any) => error.message).join('\n')
     )
@@ -87,6 +145,8 @@ const makeXledgerRequest = async (
     )
     throw error
   }
+
+  throw new Error(`Xledger rate limit exceeded after ${maxAttempts} attempts`)
 }
 
 const makeXledgerHttpRequest = async (
@@ -112,11 +172,13 @@ const makeXledgerHttpRequest = async (
       headers: {
         ...XledgerAuthHeader,
       },
+      timeout: xledgerRequestPolicy.timeoutMs,
     })
   } else {
     result = await axios(`${config.xledger.url}`, {
       data: query,
       ...axiosOptions,
+      timeout: xledgerRequestPolicy.timeoutMs,
     })
   }
 
