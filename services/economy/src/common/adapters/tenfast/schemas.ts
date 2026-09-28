@@ -138,7 +138,8 @@ export function isVisibleTenfastInvoice(invoice: {
 
 export const TenfastGracePeriodSchema = z.object({
   endDate: z.string(),
-  reason: z.string(),
+  // Tenfast can return a grace period without a reason
+  reason: z.string().optional(),
   madeBy: z.string(),
   madeByEmail: z.string(),
 })
@@ -159,7 +160,8 @@ export const TenfastInvoiceSchema = z.object({
   amountPaid: z.number(),
   acceptDiff: z.boolean(),
   aviseringsTyp: z.string(),
-  expectedInvoiceDate: z.string(),
+  // Tenfast no longer returns this for some invoices (e.g. credited ones)
+  expectedInvoiceDate: z.string().optional(),
   due: z.string(),
   sentAutomatically: z.boolean(),
   partiell: z.boolean(),

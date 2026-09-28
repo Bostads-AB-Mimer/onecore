@@ -706,7 +706,7 @@ const toTenfastDeferralSource = (
   }
 
   return {
-    reason: gracePeriod.reason,
+    reason: gracePeriod.reason ?? '',
     madeBy: gracePeriod.madeByEmail,
   }
 }
@@ -726,7 +726,9 @@ const transformToInvoice = (
       toDate: new Date(tenfastInvoice.interval.to),
       invoiceDate: tenfastInvoice.activatedAt
         ? new Date(tenfastInvoice.activatedAt)
-        : new Date(tenfastInvoice.expectedInvoiceDate),
+        : // expectedInvoiceDate is no longer returned for some invoices
+          // (e.g. credited ones), fall back to the due date.
+          new Date(tenfastInvoice.expectedInvoiceDate ?? tenfastInvoice.due),
       expirationDate: new Date(tenfastInvoice.due),
       paidAmount: tenfastInvoice.amountPaid,
       remainingAmount,

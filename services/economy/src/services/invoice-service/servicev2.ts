@@ -106,7 +106,7 @@ export const exportRentalInvoicesAccounting = async (
 }> => {
   try {
     const errors: { invoiceNumber: string; error: string }[] = []
-    const CHUNK_SIZE = 100 // 100
+    const CHUNK_SIZE = 1000 // 100
     const invoices: InvoiceWithAccounting[] = []
     const skippedInvoices: InvoiceWithAccounting[] = []
 
