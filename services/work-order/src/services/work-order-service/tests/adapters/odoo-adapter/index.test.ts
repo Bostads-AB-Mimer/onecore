@@ -451,4 +451,43 @@ describe('odoo-adapter message domain', () => {
     expect(messageCall).toBeDefined()
     expect(messageCall![2] as string[]).toContain('onecore_tenant_author_name')
   })
+
+  // Both halves of a close request belong in the tenant's thread: their own
+  // request echoed back, and the handler's reason when it is declined.
+  it('includes both close-request message types in the Mina sidor allowlist', async () => {
+    odooMock.searchRead
+      .mockResolvedValueOnce([]) // maintenance.request
+      .mockResolvedValueOnce([]) // mail.message
+
+    await getWorkOrdersByContactCode('P123456')
+
+    const messageCall = odooMock.searchRead.mock.calls.find(
+      (call: unknown[]) => call[0] === 'mail.message'
+    )
+    expect(messageCall).toBeDefined()
+    const domain = messageCall![1] as unknown[][]
+    const messageTypeClause = domain.find(
+      (clause) => clause[0] === 'message_type'
+    )
+    expect(messageTypeClause![2] as string[]).toEqual(
+      expect.arrayContaining([
+        'close_request_from_tenant',
+        'close_request_declined',
+      ])
+    )
+  })
+
+  it('reads close_request_pending from maintenance.request', async () => {
+    odooMock.searchRead
+      .mockResolvedValueOnce([]) // maintenance.request
+      .mockResolvedValueOnce([]) // mail.message
+
+    await getWorkOrdersByContactCode('P123456')
+
+    const workOrderCall = odooMock.searchRead.mock.calls.find(
+      (call: unknown[]) => call[0] === 'maintenance.request'
+    )
+    expect(workOrderCall).toBeDefined()
+    expect(workOrderCall![2] as string[]).toContain('close_request_pending')
+  })
 })

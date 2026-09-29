@@ -65,6 +65,7 @@ const WORK_ORDER_FIELDS: string[] = [
   'master_key',
   'maintenance_unit_code',
   'maintenance_unit_caption',
+  'close_request_pending',
 ]
 
 const MESSAGE_DOMAIN = (workOrderIds: number[]) => [
@@ -75,6 +76,11 @@ const MESSAGE_DOMAIN = (workOrderIds: number[]) => [
     'in',
     [
       'from_tenant',
+      // The tenant's close request echoed back into their thread, and the
+      // handler's reason when it is declined. Neither is tenant_-prefixed, so
+      // Odoo sends no SMS/e-post for them.
+      'close_request_from_tenant',
+      'close_request_declined',
       'receipt_to_tenant', // Acknowledgement receipt when a handler/contractor confirms a tenant message (MIM-1960)
       'tenant_sms',
       'tenant_mail',
