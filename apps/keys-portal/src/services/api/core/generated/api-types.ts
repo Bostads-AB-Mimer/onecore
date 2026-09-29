@@ -15526,6 +15526,97 @@ export interface components {
         createdAt: string
       }[]
     }
+    ReleaseNote: {
+      /** Format: uuid */
+      id: string
+      /** @enum {string} */
+      app:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title: string
+      description: string
+      /** @enum {string} */
+      category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned: boolean
+      /** Format: date-time */
+      publishedAt: string | null
+      createdBy: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateReleaseNote: {
+      /** @enum {string} */
+      app:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title: string
+      description: string
+      /** @enum {string} */
+      category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned?: boolean
+      /** Format: date-time */
+      publishedAt?: string | null
+    }
+    UpdateReleaseNote: {
+      /** @enum {string} */
+      app?:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title?: string
+      description?: string
+      /** @enum {string} */
+      category?: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned?: boolean
+      /** Format: date-time */
+      publishedAt?: string | null
+    }
+    ReleaseNoteCapabilities: {
+      canManage: boolean
+    }
     GuideCategory: {
       /** Format: uuid */
       id: string
@@ -15557,35 +15648,6 @@ export interface components {
       updatedBy: string
       /** Format: date-time */
       publishedAt: string | null
-    ReleaseNote: {
-      /** Format: uuid */
-      id: string
-      /** @enum {string} */
-      app:
-        | 'general'
-        | 'property-tree'
-        | 'keys-portal'
-        | 'internal-portal'
-        | 'mina-sidor'
-        | 'sok-ledigt'
-        | 'odoo'
-        | 'core'
-        | 'leasing'
-        | 'property'
-        | 'work-order'
-        | 'keys'
-        | 'communication'
-        | 'contacts'
-        | 'inspection'
-        | 'economy'
-      title: string
-      description: string
-      /** @enum {string} */
-      category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
-      pinned: boolean
-      /** Format: date-time */
-      publishedAt: string | null
-      createdBy: string
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
@@ -15775,62 +15837,6 @@ export interface components {
       deleted: true
       /** Format: date-time */
       guideUpdatedAt: string
-    CreateReleaseNote: {
-      /** @enum {string} */
-      app:
-        | 'general'
-        | 'property-tree'
-        | 'keys-portal'
-        | 'internal-portal'
-        | 'mina-sidor'
-        | 'sok-ledigt'
-        | 'odoo'
-        | 'core'
-        | 'leasing'
-        | 'property'
-        | 'work-order'
-        | 'keys'
-        | 'communication'
-        | 'contacts'
-        | 'inspection'
-        | 'economy'
-      title: string
-      description: string
-      /** @enum {string} */
-      category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
-      pinned?: boolean
-      /** Format: date-time */
-      publishedAt?: string | null
-    }
-    UpdateReleaseNote: {
-      /** @enum {string} */
-      app?:
-        | 'general'
-        | 'property-tree'
-        | 'keys-portal'
-        | 'internal-portal'
-        | 'mina-sidor'
-        | 'sok-ledigt'
-        | 'odoo'
-        | 'core'
-        | 'leasing'
-        | 'property'
-        | 'work-order'
-        | 'keys'
-        | 'communication'
-        | 'contacts'
-        | 'inspection'
-        | 'economy'
-      title?: string
-      description?: string
-      /** @enum {string} */
-      category?: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
-      pinned?: boolean
-      /** Format: date-time */
-      publishedAt?: string | null
-    }
-    ReleaseNoteCapabilities: {
-      canManage: boolean
     }
     KeycloakUser: {
       id: string
