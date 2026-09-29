@@ -1,5 +1,9 @@
 import { LeaseInfo } from '@/entities/lease'
-import { formatTenantName, TenantLeaseCard } from '@/entities/tenant'
+import {
+  formatTenantName,
+  sortLeaseContacts,
+  TenantLeaseCard,
+} from '@/entities/tenant'
 
 import { Lease } from '@/services/api/core/leaseService'
 import { tenantService } from '@/services/api/core/tenantService'
@@ -49,7 +53,7 @@ export function TenantsTabContent({
         <>
           <LeaseInfo lease={lease} />
           <div className="space-y-6">
-            {lease.tenants?.map((tenant, i) => (
+            {sortLeaseContacts(lease.tenants ?? []).map((tenant, i) => (
               <>
                 {i > 0 && <Separator />}
                 <TenantLeaseCard

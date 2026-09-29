@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { LeaseInfo } from '@/entities/lease'
-import { formatTenantName, TenantLeaseCard } from '@/entities/tenant'
+import {
+  formatTenantName,
+  sortLeaseContacts,
+  TenantLeaseCard,
+} from '@/entities/tenant'
 
 import { leaseService } from '@/services/api/core'
 import type { Lease } from '@/services/api/core/leaseService'
@@ -75,7 +79,7 @@ export function CurrentTenant({
       <div className="pt-6 space-y-6">
         <LeaseInfo lease={lease} />
         <div className="space-y-6">
-          {lease.tenants?.map((tenant, i) => (
+          {sortLeaseContacts(lease.tenants ?? []).map((tenant, i) => (
             <div key={tenant.contactCode}>
               {i > 0 && <Separator />}
               <TenantLeaseCard
