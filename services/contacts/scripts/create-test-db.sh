@@ -1,6 +1,6 @@
 #!/bin/sh
 
-docker compose -f ../../docker-compose.yaml up -d
+docker compose -f ../../docker-compose.yaml up -d sql
 
 # Check for presence of sqlcmd in container
 if ! docker exec onecore-sql test -x /opt/mssql-tools/bin/sqlcmd; then
