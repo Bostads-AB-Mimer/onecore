@@ -577,3 +577,39 @@ export const closeWorkOrder = async (
     return { ok: false, err: errorMessage }
   }
 }
+
+export const requestCloseWorkOrder = async (
+  workOrderId: string,
+  reason?: string
+): Promise<AdapterResult<null, 'conflict' | 'unknown'>> => {
+  try {
+    const fetchResponse = await client().POST(
+      '/workOrders/{workOrderId}/close-request',
+      {
+        params: { path: { workOrderId } },
+        // An undefined reason is dropped by JSON serialisation, so the service
+        // receives {} and Odoo gets no reason.
+        body: { reason },
+      }
+    )
+
+    if (fetchResponse.response.ok) {
+      return { ok: true, data: null }
+    }
+
+    // Odoo refused: a request is already pending, or the work order is closed
+    // or hidden from Mina sidor. The tenant is told so. It is not a failure.
+    if (fetchResponse.response.status === 409) {
+      return { ok: false, err: 'conflict' }
+    }
+
+    logger.error(
+      { status: fetchResponse.response.status, error: fetchResponse.error },
+      'work-order-adapter.requestCloseWorkOrder'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.requestCloseWorkOrder')
+    return { ok: false, err: 'unknown' }
+  }
+}

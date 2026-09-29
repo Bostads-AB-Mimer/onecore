@@ -345,6 +345,83 @@ describe('work-order-adapter', () => {
     })
   })
 
+  describe(workOrderAdapter.requestCloseWorkOrder, () => {
+    it('sends an empty body when no reason is given', async () => {
+      let received: unknown
+      mockServer.use(
+        http.post(
+          `${config.workOrderService.url}/workOrders/1/close-request`,
+          async ({ request }) => {
+            received = await request.json()
+            return HttpResponse.json(
+              { message: 'Close requested for work order with ID 1' },
+              { status: 200 }
+            )
+          }
+        )
+      )
+
+      const result = await workOrderAdapter.requestCloseWorkOrder('1')
+
+      expect(result).toEqual({ ok: true, data: null })
+      expect(received).toEqual({})
+    })
+
+    it('forwards the reason in the body', async () => {
+      let received: unknown
+      mockServer.use(
+        http.post(
+          `${config.workOrderService.url}/workOrders/1/close-request`,
+          async ({ request }) => {
+            received = await request.json()
+            return HttpResponse.json(
+              { message: 'Close requested for work order with ID 1' },
+              { status: 200 }
+            )
+          }
+        )
+      )
+
+      const result = await workOrderAdapter.requestCloseWorkOrder(
+        '1',
+        'Felet har försvunnit'
+      )
+
+      expect(result.ok).toBe(true)
+      expect(received).toEqual({ reason: 'Felet har försvunnit' })
+    })
+
+    it('returns conflict when the service answers 409', async () => {
+      mockServer.use(
+        http.post(
+          `${config.workOrderService.url}/workOrders/1/close-request`,
+          () =>
+            HttpResponse.json(
+              { error: 'close-request-conflict', reason: 'already_pending' },
+              { status: 409 }
+            )
+        )
+      )
+
+      const result = await workOrderAdapter.requestCloseWorkOrder('1')
+
+      expect(result).toEqual({ ok: false, err: 'conflict' })
+    })
+
+    it('returns unknown when the service fails', async () => {
+      mockServer.use(
+        http.post(
+          `${config.workOrderService.url}/workOrders/1/close-request`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await workOrderAdapter.requestCloseWorkOrder('1')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+  })
+
   describe(workOrderAdapter.getWorkOrdersByPropertyId, () => {
     const propertyId = '123'
     const workOrderMock = factory.externalOdooWorkOrder.buildList(2)
