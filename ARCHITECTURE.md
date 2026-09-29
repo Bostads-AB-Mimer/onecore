@@ -2,7 +2,7 @@
 
 Den här sidan beskriver hur ONECores applikationer, tjänster och externa integrationer hänger ihop. Syftet är dubbelt: ge en övergripande bild av lösningen, och fungera som stöd vid felsökning — om något är trasigt, använd diagrammet och tabellerna nedan för att hitta rätt tjänst och rätt externa system snabbare.
 
-Det här dokumentet beskriver **applikations- och integrationsarkitekturen** (vad pratar med vad, och varför). Klusteruppsättning, DNS och nätverkstopologi beskrivs istället i respektive drift-repo — se länkar under [Drift och nätverk](#drift-och-nätverk) längst ner, för att undvika att samma information underhålls på två ställen.
+Det här dokumentet beskriver **applikations- och integrationsarkitekturen** (vad pratar med vad, och varför). Klusteruppsättning, DNS och nätverkstopologi beskrivs istället i respektive drift-repo — se länkar under [Drift och nätverk](#drift-och-nätverk) längst ner, för att undvika att samma information underhålls på två ställen. Se [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) för hur man kontrollerar status och spårar ett specifikt fel vid en incident.
 
 > Ersätter en äldre, ej versionshanterad arkitekturskiss som saknade Tenfast, Economy, Contacts, Keys, Work Order och Inspection helt. Den här versionen är härledd direkt ur koden (`core/src/adapters/`, varje tjänsts `adapters/`-mappar) och korsverifierad mot integrationslistan som delats med förvaltningsforum, 2026-09-29.
 

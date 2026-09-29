@@ -34,6 +34,11 @@ Apart from the core orchestration service, packages belong to one of three categ
     └── economy/
 ```
 
+### Documentation
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — system architecture overview: apps, services, external integrations
+- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — how to check service status and trace an issue during an incident
+
 ### Getting started
 
 #### Requirements
