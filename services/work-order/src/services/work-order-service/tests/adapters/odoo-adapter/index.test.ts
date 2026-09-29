@@ -3,6 +3,7 @@ import * as factory from '../../factories'
 const odooMock = {
   connect: jest.fn(),
   create: jest.fn(),
+  execute_kw: jest.fn(),
   search: jest.fn(),
   searchRead: jest.fn(),
   update: jest.fn(),
@@ -24,11 +25,13 @@ jest.mock('@onecore/utilities', () => ({
 }))
 
 import {
+  CloseRequestConflictError,
   createInspectionWorkOrders,
   createWorkOrder,
   getMaintenanceTeams,
   getWorkOrderById,
   getWorkOrdersByContactCode,
+  requestCloseWorkOrder,
 } from '../../../adapters/odoo-adapter'
 
 describe('odoo-adapter createWorkOrder', () => {
@@ -489,5 +492,104 @@ describe('odoo-adapter message domain', () => {
     )
     expect(workOrderCall).toBeDefined()
     expect(workOrderCall![2] as string[]).toContain('close_request_pending')
+  })
+})
+
+describe('odoo-adapter requestCloseWorkOrder', () => {
+  // What the xmlrpc client rejects with when Odoo answers with a fault. On
+  // /xmlrpc/2, Odoo sends a UserError as fault code 2 with str(e) as faultString.
+  const xmlRpcFault = (faultString: string) =>
+    Object.assign(new Error(`XML-RPC fault: ${faultString}`), {
+      faultCode: 2,
+      faultString,
+    })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    odooMock.connect.mockResolvedValue(undefined)
+    odooMock.execute_kw.mockResolvedValue(true)
+  })
+
+  it('asks Odoo without a reason when the tenant gave none', async () => {
+    await requestCloseWorkOrder(13)
+
+    expect(odooMock.execute_kw).toHaveBeenCalledWith(
+      'maintenance.request',
+      'request_close_from_tenant',
+      [[13], {}]
+    )
+  })
+
+  it('passes the tenant reason as a keyword argument', async () => {
+    await requestCloseWorkOrder(13, 'Tvättmaskinen fungerar igen')
+
+    expect(odooMock.execute_kw).toHaveBeenCalledWith(
+      'maintenance.request',
+      'request_close_from_tenant',
+      [[13], { reason: 'Tvättmaskinen fungerar igen' }]
+    )
+  })
+
+  it('does not send an empty reason', async () => {
+    await requestCloseWorkOrder(13, '')
+
+    expect(odooMock.execute_kw).toHaveBeenCalledWith(
+      'maintenance.request',
+      'request_close_from_tenant',
+      [[13], {}]
+    )
+  })
+
+  it.each(['already_pending', 'closed', 'hidden'] as const)(
+    'throws CloseRequestConflictError when Odoo refuses with %s',
+    async (reason) => {
+      odooMock.execute_kw.mockRejectedValue(
+        xmlRpcFault(`close_request_conflict:${reason}`)
+      )
+
+      await expect(requestCloseWorkOrder(13)).rejects.toThrow(
+        CloseRequestConflictError
+      )
+      await expect(requestCloseWorkOrder(13)).rejects.toMatchObject({
+        reason,
+      })
+    }
+  )
+
+  // Only the prefix and the reason code are the contract with Odoo. Whatever
+  // text follows them is for people and may change.
+  it('recognises the refusal when Odoo appends human-readable text', async () => {
+    odooMock.execute_kw.mockRejectedValue(
+      xmlRpcFault('close_request_conflict:closed Ärendet är redan avslutat.')
+    )
+
+    await expect(requestCloseWorkOrder(13)).rejects.toMatchObject({
+      name: 'CloseRequestConflictError',
+      reason: 'closed',
+    })
+  })
+
+  it('rethrows any other Odoo fault unchanged', async () => {
+    const fault = xmlRpcFault(
+      'Traceback (most recent call last):\npsycopg2.errors.SerializationFailure'
+    )
+    odooMock.execute_kw.mockRejectedValue(fault)
+
+    await expect(requestCloseWorkOrder(13)).rejects.toBe(fault)
+  })
+
+  it('rethrows a conflict prefix with a reason it does not know', async () => {
+    const fault = xmlRpcFault('close_request_conflict:archived')
+    odooMock.execute_kw.mockRejectedValue(fault)
+
+    await expect(requestCloseWorkOrder(13)).rejects.toBe(fault)
+  })
+
+  it('rethrows when Odoo cannot be reached', async () => {
+    const connectionError = new Error('connect ECONNREFUSED 127.0.0.1:8069')
+    odooMock.connect.mockRejectedValue(connectionError)
+
+    await expect(requestCloseWorkOrder(13)).rejects.toBe(connectionError)
+    expect(odooMock.execute_kw).not.toHaveBeenCalled()
   })
 })

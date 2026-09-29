@@ -792,6 +792,77 @@ export const closeWorkOrder = async (workOrderId: number): Promise<boolean> => {
   }
 }
 
+// Odoo refuses a tenant's close request with a UserError whose message is this
+// prefix followed by a reason code (onecore_maintenance_extension,
+// request_close_from_tenant). The prefix and the code are the contract. Any
+// text after them is for people. An unknown code is not treated as a
+// conflict: it means the two sides have drifted, and should surface as a
+// failure rather than a quiet 409.
+const CLOSE_REQUEST_CONFLICT_PATTERN = /close_request_conflict:(\w+)/
+
+const CloseRequestConflictReasonSchema = z.enum([
+  'already_pending', // a request is already waiting for a decision
+  'closed', // the work order has reached Avslutad
+  'hidden', // the work order is hidden from Mina sidor
+])
+
+export type CloseRequestConflictReason = z.infer<
+  typeof CloseRequestConflictReasonSchema
+>
+
+export class CloseRequestConflictError extends Error {
+  readonly reason: CloseRequestConflictReason
+
+  constructor(reason: CloseRequestConflictReason) {
+    super(`Close request refused by Odoo: ${reason}`)
+    this.name = 'CloseRequestConflictError'
+    this.reason = reason
+  }
+}
+
+const parseCloseRequestConflict = (
+  err: unknown
+): CloseRequestConflictReason | undefined => {
+  if (!(err instanceof Error)) return undefined
+  const match = err.message.match(CLOSE_REQUEST_CONFLICT_PATTERN)
+  const parsed = CloseRequestConflictReasonSchema.safeParse(match?.[1])
+  return parsed.success ? parsed.data : undefined
+}
+
+/**
+ * Records, on the tenant's behalf, that they want the work order closed. It
+ * does not close anything: Odoo posts a close_request_from_tenant message and
+ * flags the request, and whoever handles the case accepts or declines it.
+ * Throws CloseRequestConflictError when Odoo refuses (already pending, closed
+ * or hidden). Any other failure is rethrown unchanged.
+ */
+export const requestCloseWorkOrder = async (
+  workOrderId: number,
+  reason?: string
+): Promise<void> => {
+  try {
+    await odoo.connect()
+
+    // execute_kw params are [args, kwargs]. The reason goes as a keyword so
+    // an omitted one falls back to Odoo's reason=None default.
+    await odoo.execute_kw('maintenance.request', 'request_close_from_tenant', [
+      [workOrderId],
+      reason ? { reason } : {},
+    ])
+  } catch (err) {
+    const conflictReason = parseCloseRequestConflict(err)
+    if (conflictReason) {
+      logger.info(
+        { workOrderId, reason: conflictReason },
+        'odoo-adapter.requestCloseWorkOrder: refused by Odoo'
+      )
+      throw new CloseRequestConflictError(conflictReason)
+    }
+    logger.error({ err }, 'odoo-adapter.requestCloseWorkOrder')
+    throw err
+  }
+}
+
 export const addMessageToWorkOrder = async (
   workOrderId: number,
   message: string
