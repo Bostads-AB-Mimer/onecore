@@ -26,6 +26,7 @@ import { AdapterResult } from '../types'
 export * from './log-reads'
 export * from './delivery-reports'
 export * as guides from './guides'
+export * from './release-notes'
 
 export const sendNotificationToContact = async (
   recipientContact: Contact,

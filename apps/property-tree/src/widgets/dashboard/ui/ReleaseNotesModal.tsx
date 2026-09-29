@@ -1,11 +1,10 @@
-import { useEffect, useMemo } from 'react'
-import { Newspaper } from 'lucide-react'
+import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { Newspaper, Settings } from 'lucide-react'
 
-import {
-  RELEASE_NOTES,
-  sortReleaseNotesByPinned,
-} from '@/entities/release-note'
+import { useReleaseNotes } from '@/entities/release-note'
 
+import { routes } from '@/shared/routes'
 import {
   Dialog,
   DialogContent,
@@ -30,7 +29,8 @@ export function ReleaseNotesModal({
   onOpenChange,
   scrollToNoteId,
 }: ReleaseNotesModalProps) {
-  const sortedNotes = useMemo(() => sortReleaseNotesByPinned(RELEASE_NOTES), [])
+  const { data, isLoading, isError } = useReleaseNotes()
+  const notes = data?.notes ?? []
 
   useEffect(() => {
     if (open && scrollToNoteId) {
@@ -54,10 +54,32 @@ export function ReleaseNotesModal({
           <DialogTitle className="flex items-center gap-2">
             <Newspaper className="h-5 w-5 text-primary" />
             Nyheter och uppdateringar
+            {data?.canManage && (
+              <Link
+                to={routes.releaseNotesAdmin}
+                onClick={() => onOpenChange(false)}
+                title="Hantera nyheter"
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="sr-only">Hantera nyheter</span>
+              </Link>
+            )}
           </DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto space-y-6 pr-2 -mr-2">
-          {sortedNotes.map((note) => (
+          {isLoading && (
+            <p className="text-sm text-muted-foreground">Laddar...</p>
+          )}
+          {isError && (
+            <p className="text-sm text-muted-foreground">
+              Kunde inte hämta nyheter.
+            </p>
+          )}
+          {!isLoading && !isError && notes.length === 0 && (
+            <p className="text-sm text-muted-foreground">Inga nyheter ännu.</p>
+          )}
+          {notes.map((note) => (
             <ReleaseNoteItem key={note.id} note={note} id={note.id} />
           ))}
         </div>

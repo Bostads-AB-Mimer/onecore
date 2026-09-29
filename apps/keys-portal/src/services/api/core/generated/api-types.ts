@@ -197,6 +197,168 @@ export interface paths {
     }
   }
   openapi: {}
+  '/release-notes': {
+    /**
+     * List release notes
+     * @description Pinned notes first, then newest. Open to every authenticated user.
+     * `includeDrafts` is honoured only for callers holding the
+     * `release-notes:write` realm role; it is ignored otherwise.
+     * `capabilities.canManage` tells the client whether to show admin UI.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Only notes concerning this app */
+          app?:
+            | 'general'
+            | 'property-tree'
+            | 'keys-portal'
+            | 'internal-portal'
+            | 'mina-sidor'
+            | 'sok-ledigt'
+            | 'odoo'
+            | 'core'
+            | 'leasing'
+            | 'property'
+            | 'work-order'
+            | 'keys'
+            | 'communication'
+            | 'contacts'
+            | 'inspection'
+            | 'economy'
+          /** @description Include drafts and scheduled notes (requires release-notes:write) */
+          includeDrafts?: boolean
+        }
+      }
+      responses: {
+        /** @description List of release notes */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['ReleaseNote'][]
+              capabilities: components['schemas']['ReleaseNoteCapabilities']
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create a release note
+     * @description Requires the `release-notes:write` realm role. Omit `publishedAt`
+     * (or pass null) to save a draft. `createdBy` is taken from the token.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateReleaseNote']
+        }
+      }
+      responses: {
+        /** @description The created release note */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ReleaseNote']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Caller lacks the `release-notes:write` role */
+        403: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/release-notes/{id}': {
+    /**
+     * Update a release note
+     * @description Requires the `release-notes:write` realm role. Only the supplied
+     * fields change. Pass `publishedAt: null` to unpublish.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateReleaseNote']
+        }
+      }
+      responses: {
+        /** @description The updated release note */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ReleaseNote']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Caller lacks the `release-notes:write` role */
+        403: {
+          content: never
+        }
+        /** @description Release note not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Delete a release note
+     * @description Requires the `release-notes:write` realm role.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Release note deleted */
+        204: {
+          content: never
+        }
+        /** @description Caller lacks the `release-notes:write` role */
+        403: {
+          content: never
+        }
+        /** @description Release note not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   security: {}
   '/sendBulkSms': {
     /**
@@ -15395,6 +15557,35 @@ export interface components {
       updatedBy: string
       /** Format: date-time */
       publishedAt: string | null
+    ReleaseNote: {
+      /** Format: uuid */
+      id: string
+      /** @enum {string} */
+      app:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title: string
+      description: string
+      /** @enum {string} */
+      category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned: boolean
+      /** Format: date-time */
+      publishedAt: string | null
+      createdBy: string
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
@@ -15584,6 +15775,62 @@ export interface components {
       deleted: true
       /** Format: date-time */
       guideUpdatedAt: string
+    CreateReleaseNote: {
+      /** @enum {string} */
+      app:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title: string
+      description: string
+      /** @enum {string} */
+      category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned?: boolean
+      /** Format: date-time */
+      publishedAt?: string | null
+    }
+    UpdateReleaseNote: {
+      /** @enum {string} */
+      app?:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title?: string
+      description?: string
+      /** @enum {string} */
+      category?: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned?: boolean
+      /** Format: date-time */
+      publishedAt?: string | null
+    }
+    ReleaseNoteCapabilities: {
+      canManage: boolean
     }
     KeycloakUser: {
       id: string

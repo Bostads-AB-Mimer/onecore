@@ -5,6 +5,7 @@ import { BulkSms, BulkEmail, communication } from '@onecore/types'
 
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { registerSchema } from '../../utils/openapi'
+import { routes as releaseNoteRoutes } from './release-notes'
 
 const BulkSmsResult = z.object({
   successful: z.array(z.string()).describe('Phone numbers that received SMS'),
@@ -46,6 +47,8 @@ export const routes = (router: KoaRouter) => {
     'DispatchWithRecipients',
     communication.DispatchWithRecipientsSchema
   )
+
+  releaseNoteRoutes(router)
 
   /**
    * @swagger

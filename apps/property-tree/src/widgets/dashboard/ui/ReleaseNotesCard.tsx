@@ -8,10 +8,7 @@ import {
   Newspaper,
 } from 'lucide-react'
 
-import {
-  RELEASE_NOTES,
-  sortReleaseNotesByPinned,
-} from '@/entities/release-note'
+import { useReleaseNotes } from '@/entities/release-note'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
@@ -32,7 +29,8 @@ export function ReleaseNotesCard() {
     setIsModalOpen(true)
   }
 
-  const sortedNotes = useMemo(() => sortReleaseNotesByPinned(RELEASE_NOTES), [])
+  const { data } = useReleaseNotes()
+  const sortedNotes = useMemo(() => data?.notes ?? [], [data])
 
   const totalPages = Math.ceil(sortedNotes.length / ITEMS_PER_PAGE)
   const startIndex = page * ITEMS_PER_PAGE

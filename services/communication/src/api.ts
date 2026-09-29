@@ -6,6 +6,7 @@ import { routes as healthRoutes } from './services/health-service'
 import { routes as linearRoutes } from './services/linear-service'
 import { routes as communicationLogRoutes } from './services/communication-log-service'
 import { routes as guidesRoutes } from './services/guides-service'
+import { routes as releaseNoteRoutes } from './services/release-note-service'
 
 // TODO: Migrate the legacy services (infobip, linear, health) to OkapiRouter
 // so they appear in the OpenAPI spec and we can drop the dual-router setup.
@@ -23,5 +24,6 @@ const okapi = makeOkapiRouter(new KoaRouter(), {
 })
 communicationLogRoutes(okapi)
 guidesRoutes(okapi)
+releaseNoteRoutes(okapi)
 
 export default { legacy: legacyRouter, okapi }
