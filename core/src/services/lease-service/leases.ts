@@ -1117,9 +1117,10 @@ export const routes = (router: KoaRouter) => {
 
       const contactCodes = [
         ...new Set(
-          rawLeases.flatMap(
-            (lease) => lease.contacts?.map((c) => c.contactCode) ?? []
-          )
+          rawLeases
+            .flatMap((lease) => lease.contacts?.map((c) => c.contactCode) ?? [])
+            .map((code) => code.trim())
+            .filter((code) => code.length > 0)
         ),
       ]
 
@@ -1132,7 +1133,7 @@ export const routes = (router: KoaRouter) => {
         if (contactsResult.ok) {
           const contactMap = new Map(
             contactsResult.data.map((c) => [
-              c.contactCode,
+              c.contactCode.trim(),
               {
                 email:
                   c.communication.emailAddresses.find((e) => e.isPrimary)
@@ -1151,7 +1152,7 @@ export const routes = (router: KoaRouter) => {
             ...lease,
             contacts: lease.contacts?.map((c) => ({
               ...c,
-              ...contactMap.get(c.contactCode),
+              ...contactMap.get(c.contactCode.trim()),
             })),
           }))
         }
