@@ -327,6 +327,7 @@ export const routes = (router: KoaRouter) => {
               registered: new Date(v.Registered),
               rentalObjectCode: v.RentalObjectCode,
               status: v.Status,
+              closeRequestPending: v.CloseRequestPending,
               dueDate: v.DueDate ? new Date(v.DueDate) : null,
               hiddenFromMyPages: v.HiddenFromMyPages,
               workOrderRows: v.WorkOrderRows.map((row) => ({
@@ -435,6 +436,7 @@ export const routes = (router: KoaRouter) => {
                 registered: new Date(v.Registered),
                 rentalObjectCode: v.RentalObjectCode,
                 status: v.Status,
+                closeRequestPending: v.CloseRequestPending,
                 url: v.Url,
                 workOrderRows: v.WorkOrderRows.map((row) => ({
                   description: row.Description,
@@ -537,6 +539,7 @@ export const routes = (router: KoaRouter) => {
               registered: new Date(v.Registered),
               rentalObjectCode: v.RentalObjectCode,
               status: v.Status,
+              closeRequestPending: v.CloseRequestPending,
               url: v.Url,
               workOrderRows: v.WorkOrderRows.map((row) => ({
                 description: row.Description,
@@ -638,6 +641,7 @@ export const routes = (router: KoaRouter) => {
               registered: new Date(v.Registered),
               rentalObjectCode: v.RentalObjectCode,
               status: v.Status,
+              closeRequestPending: v.CloseRequestPending,
               url: v.Url,
               workOrderRows: v.WorkOrderRows.map((row) => ({
                 description: row.Description,
@@ -742,6 +746,7 @@ export const routes = (router: KoaRouter) => {
                 registered: new Date(v.Registered),
                 rentalObjectCode: v.RentalObjectCode,
                 status: v.Status,
+                closeRequestPending: v.CloseRequestPending,
                 url: v.Url,
                 workOrderRows: v.WorkOrderRows.map((row) => ({
                   description: row.Description,
@@ -1431,6 +1436,7 @@ export const routes = (router: KoaRouter) => {
             registered: new Date(v.Registered),
             rentalObjectCode: v.RentalObjectCode,
             status: v.Status,
+            closeRequestPending: v.CloseRequestPending,
             url: v.Url,
             workOrderRows: v.WorkOrderRows.map((row) => ({
               description: row.Description,
@@ -2054,6 +2060,117 @@ export const routes = (router: KoaRouter) => {
         message: `Failed to update work order with ID ${workOrderId}`,
         ...metadata,
       }
+    }
+  })
+
+  /**
+   * @swagger
+   * /work-orders/{workOrderId}/close-request:
+   *   post:
+   *     summary: Request, on the tenant's behalf, that a work order be closed
+   *     tags:
+   *       - Work Order Service
+   *     description: |
+   *       Asks for the Odoo work order to be closed. The handler of the case
+   *       decides in Odoo; nothing is closed here. Used by Mina sidor via the
+   *       .NET API. Staff close with /work-orders/{workOrderId}/close.
+   *     parameters:
+   *       - in: path
+   *         name: workOrderId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The Odoo id of the work order.
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               reason:
+   *                 type: string
+   *                 description: Optional reason from the tenant, shown to the handler.
+   *     responses:
+   *       '200':
+   *         description: Close request recorded.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Close requested for work order with ID {workOrderId}
+   *       '400':
+   *         description: The request body is malformed.
+   *       '409':
+   *         description: Refused. A request is already pending, or the work order is closed or hidden from Mina sidor.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: close-request-conflict
+   *       '500':
+   *         description: Internal server error. The work-order service or Odoo failed.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Failed to request close of work order with ID {workOrderId}
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/work-orders/:workOrderId/close-request', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { workOrderId } = ctx.params
+
+    // An empty POST has no body at all. That is a request without a reason.
+    const body = schemas.CloseWorkOrderRequestSchema.safeParse(
+      ctx.request.body ?? {}
+    )
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: body.error.issues.map(({ message, path }) => ({
+          message,
+          path,
+        })),
+        ...metadata,
+      }
+      return
+    }
+
+    const result = await workOrderAdapter.requestCloseWorkOrder(
+      workOrderId,
+      body.data.reason
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        message: `Close requested for work order with ID ${workOrderId}`,
+        ...metadata,
+      }
+      return
+    }
+
+    if (result.err === 'conflict') {
+      ctx.status = 409
+      ctx.body = { error: 'close-request-conflict', ...metadata }
+      return
+    }
+
+    ctx.status = 500
+    ctx.body = {
+      message: `Failed to request close of work order with ID ${workOrderId}`,
+      ...metadata,
     }
   })
 

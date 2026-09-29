@@ -160,6 +160,25 @@ describe('work-order-service index', () => {
       expect(res.body.content.workOrders).toHaveLength(1)
       expect(getWorkOrdersByContactCodeSpy).toHaveBeenCalledWith('P174958')
     })
+
+    // Mina sidor disables the close button on this flag, via the .NET API.
+    it('should expose a pending close request as closeRequestPending', async () => {
+      jest
+        .spyOn(workOrderAdapter, 'getWorkOrdersByContactCode')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            factory.externalOdooWorkOrder.build({ CloseRequestPending: true }),
+          ],
+        })
+
+      const res = await request(app.callback()).get(
+        '/work-orders/by-contact-code/P174958'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.workOrders[0].closeRequestPending).toBe(true)
+    })
     it('should return 500 if error', async () => {
       const getWorkOrdersByContactCodeSpy = jest
         .spyOn(workOrderAdapter, 'getWorkOrdersByContactCode')
@@ -675,6 +694,77 @@ describe('work-order-service index', () => {
       expect(res.status).toBe(200)
       expect(res.body.message).toBeDefined()
       expect(closeWorkOrderSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('POST /work-orders/:workOrderId/close-request', () => {
+    it('forwards a close request without a reason', async () => {
+      const requestCloseSpy = jest
+        .spyOn(workOrderAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue({ ok: true, data: null })
+
+      const res = await request(app.callback()).post(
+        '/work-orders/13/close-request'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.message).toBeDefined()
+      expect(requestCloseSpy).toHaveBeenLastCalledWith('13', undefined)
+    })
+
+    it('forwards the reason the tenant gave', async () => {
+      const requestCloseSpy = jest
+        .spyOn(workOrderAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue({ ok: true, data: null })
+
+      const res = await request(app.callback())
+        .post('/work-orders/13/close-request')
+        .send({ reason: 'Felet har försvunnit' })
+
+      expect(res.status).toBe(200)
+      expect(requestCloseSpy).toHaveBeenLastCalledWith(
+        '13',
+        'Felet har försvunnit'
+      )
+    })
+
+    it('returns 409 when a close request is refused', async () => {
+      jest
+        .spyOn(workOrderAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue({ ok: false, err: 'conflict' })
+
+      const res = await request(app.callback()).post(
+        '/work-orders/13/close-request'
+      )
+
+      expect(res.status).toBe(409)
+      expect(res.body.error).toBe('close-request-conflict')
+    })
+
+    it('returns 500 when the work-order service fails', async () => {
+      jest
+        .spyOn(workOrderAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).post(
+        '/work-orders/13/close-request'
+      )
+
+      expect(res.status).toBe(500)
+    })
+
+    it('returns 400 and does not call the service when the reason is not a string', async () => {
+      const requestCloseSpy = jest
+        .spyOn(workOrderAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue({ ok: true, data: null })
+      requestCloseSpy.mockClear()
+
+      const res = await request(app.callback())
+        .post('/work-orders/13/close-request')
+        .send({ reason: 42 })
+
+      expect(res.status).toBe(400)
+      expect(requestCloseSpy).not.toHaveBeenCalled()
     })
   })
 
