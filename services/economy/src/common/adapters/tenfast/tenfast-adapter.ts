@@ -502,8 +502,8 @@ const transformToInvoice = (
       invoiceDate: tenfastInvoice.activatedAt
         ? new Date(tenfastInvoice.activatedAt)
         : // expectedInvoiceDate is no longer returned for some invoices
-        // (e.g. credited ones), fall back to the due date.
-        new Date(tenfastInvoice.expectedInvoiceDate ?? tenfastInvoice.due),
+          // (e.g. credited ones), fall back to the due date.
+          new Date(tenfastInvoice.expectedInvoiceDate ?? tenfastInvoice.due),
       expirationDate: new Date(tenfastInvoice.due),
       paidAmount: tenfastInvoice.amountPaid,
       remainingAmount,
