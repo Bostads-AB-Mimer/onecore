@@ -17,8 +17,6 @@ exports.up = function (knex) {
         createdAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
         updatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()
       );
-
-      CREATE INDEX idx_release_note_published ON release_note(publishedAt DESC);
     `)
   })
 }

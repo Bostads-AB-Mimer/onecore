@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import {
+  type CreateReleaseNote,
   RELEASE_NOTE_APP_GROUPS,
   RELEASE_NOTE_APP_LABELS,
   RELEASE_NOTE_CATEGORIES,
@@ -98,36 +99,11 @@ export function ReleaseNoteFormDialog({
   onOpenChange,
   note,
 }: ReleaseNoteFormDialogProps) {
-  const [form, setForm] = useState<FormState>(() => initialState(note))
-
   const createMutation = useCreateReleaseNote()
   const updateMutation = useUpdateReleaseNote()
   const isSaving = createMutation.isPending || updateMutation.isPending
 
-  useEffect(() => {
-    if (open) setForm(initialState(note))
-  }, [open, note])
-
-  const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
-    setForm((prev) => ({ ...prev, [key]: value }))
-
-  const isValid =
-    form.title.trim().length > 0 &&
-    form.description.trim().length > 0 &&
-    (!form.published || form.publishDate.length > 0)
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!isValid || isSaving) return
-
-    const body = {
-      app: form.app,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      category: form.category,
-      pinned: form.pinned,
-      publishedAt: resolvePublishedAt(form, note),
-    }
+  const handleSubmit = (body: CreateReleaseNote) => {
     const onSuccess = () => onOpenChange(false)
 
     if (note) {
@@ -149,136 +125,180 @@ export function ReleaseNoteFormDialog({
           <DialogTitle>{note ? 'Redigera nyhet' : 'Ny nyhet'}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="release-note-title">Rubrik</Label>
-            <Input
-              id="release-note-title"
-              value={form.title}
-              maxLength={255}
-              onChange={(e) => set('title', e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="release-note-description">Beskrivning</Label>
-            <Textarea
-              id="release-note-description"
-              value={form.description}
-              rows={6}
-              onChange={(e) => set('description', e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Kategori</Label>
-              <Select
-                value={form.category}
-                onValueChange={(value) =>
-                  set('category', value as ReleaseNoteCategory)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RELEASE_NOTE_CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {RELEASE_NOTE_CATEGORY_LABELS[category]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Gäller</Label>
-              <Select
-                value={form.app}
-                onValueChange={(value) => set('app', value as ReleaseNoteApp)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RELEASE_NOTE_APP_GROUPS.map((group) => (
-                    <SelectGroup key={group.label}>
-                      <SelectLabel>{group.label}</SelectLabel>
-                      {group.apps.map((app) => (
-                        <SelectItem key={app} value={app}>
-                          {RELEASE_NOTE_APP_LABELS[app]}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="release-note-pinned"
-              checked={form.pinned}
-              onCheckedChange={(checked) => set('pinned', checked === true)}
-            />
-            <Label htmlFor="release-note-pinned">Fäst överst i listan</Label>
-          </div>
-
-          <div className="rounded-md border p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="release-note-published"
-                checked={form.published}
-                onCheckedChange={(checked) =>
-                  set('published', checked === true)
-                }
-              />
-              <Label htmlFor="release-note-published">Publicera</Label>
-            </div>
-            {form.published ? (
-              <div className="space-y-2">
-                <Label htmlFor="release-note-publish-date">
-                  Publiceringsdatum
-                </Label>
-                <Input
-                  id="release-note-publish-date"
-                  type="date"
-                  className="w-fit"
-                  value={form.publishDate}
-                  onChange={(e) => set('publishDate', e.target.value)}
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Ett framtida datum schemalägger nyheten. Den visas först när
-                  datumet har passerat.
-                </p>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Nyheten sparas som utkast och visas inte för användare.
-              </p>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSaving}
-            >
-              Avbryt
-            </Button>
-            <Button type="submit" disabled={!isValid || isSaving}>
-              {isSaving ? 'Sparar...' : 'Spara'}
-            </Button>
-          </DialogFooter>
-        </form>
+        {/* Unmounted while closed, so the form state is fresh on each open. */}
+        <ReleaseNoteForm
+          note={note}
+          isSaving={isSaving}
+          onSubmit={handleSubmit}
+          onCancel={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
+  )
+}
+
+interface ReleaseNoteFormProps {
+  note: ReleaseNote | null
+  isSaving: boolean
+  onSubmit: (body: CreateReleaseNote) => void
+  onCancel: () => void
+}
+
+function ReleaseNoteForm({
+  note,
+  isSaving,
+  onSubmit,
+  onCancel,
+}: ReleaseNoteFormProps) {
+  const [form, setForm] = useState<FormState>(() => initialState(note))
+
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }))
+
+  const isValid =
+    form.title.trim().length > 0 &&
+    form.description.trim().length > 0 &&
+    (!form.published || form.publishDate.length > 0)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!isValid || isSaving) return
+
+    onSubmit({
+      app: form.app,
+      title: form.title.trim(),
+      description: form.description.trim(),
+      category: form.category,
+      pinned: form.pinned,
+      publishedAt: resolvePublishedAt(form, note),
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="release-note-title">Rubrik</Label>
+        <Input
+          id="release-note-title"
+          value={form.title}
+          maxLength={255}
+          onChange={(e) => set('title', e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="release-note-description">Beskrivning</Label>
+        <Textarea
+          id="release-note-description"
+          value={form.description}
+          rows={6}
+          onChange={(e) => set('description', e.target.value)}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Kategori</Label>
+          <Select
+            value={form.category}
+            onValueChange={(value) =>
+              set('category', value as ReleaseNoteCategory)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {RELEASE_NOTE_CATEGORIES.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {RELEASE_NOTE_CATEGORY_LABELS[category]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Gäller</Label>
+          <Select
+            value={form.app}
+            onValueChange={(value) => set('app', value as ReleaseNoteApp)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {RELEASE_NOTE_APP_GROUPS.map((group) => (
+                <SelectGroup key={group.label}>
+                  <SelectLabel>{group.label}</SelectLabel>
+                  {group.apps.map((app) => (
+                    <SelectItem key={app} value={app}>
+                      {RELEASE_NOTE_APP_LABELS[app]}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="release-note-pinned"
+          checked={form.pinned}
+          onCheckedChange={(checked) => set('pinned', checked === true)}
+        />
+        <Label htmlFor="release-note-pinned">Fäst överst i listan</Label>
+      </div>
+
+      <div className="rounded-md border p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="release-note-published"
+            checked={form.published}
+            onCheckedChange={(checked) => set('published', checked === true)}
+          />
+          <Label htmlFor="release-note-published">Publicera</Label>
+        </div>
+        {form.published ? (
+          <div className="space-y-2">
+            <Label htmlFor="release-note-publish-date">Publiceringsdatum</Label>
+            <Input
+              id="release-note-publish-date"
+              type="date"
+              className="w-fit"
+              value={form.publishDate}
+              onChange={(e) => set('publishDate', e.target.value)}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              Ett framtida datum schemalägger nyheten. Den visas först när
+              datumet har passerat.
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Nyheten sparas som utkast och visas inte för användare.
+          </p>
+        )}
+      </div>
+
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSaving}
+        >
+          Avbryt
+        </Button>
+        <Button type="submit" disabled={!isValid || isSaving}>
+          {isSaving ? 'Sparar...' : 'Spara'}
+        </Button>
+      </DialogFooter>
+    </form>
   )
 }

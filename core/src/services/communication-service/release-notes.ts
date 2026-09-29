@@ -13,6 +13,8 @@ const ListQuerySchema = z.object({
   includeDrafts: z.enum(['true', 'false']).optional(),
 })
 
+const CREATED_BY_MAX_LENGTH = 100
+
 const ReleaseNoteCapabilitiesSchema = z.object({
   canManage: z.boolean(),
 })
@@ -169,7 +171,8 @@ export const routes = (router: KoaRouter) => {
 
       const result = await releaseNotesAdapter.createReleaseNote({
         ...parsed.data,
-        createdBy,
+        // The createdBy column is NVARCHAR(100).
+        createdBy: createdBy.slice(0, CREATED_BY_MAX_LENGTH),
       })
 
       if (!result.ok) {

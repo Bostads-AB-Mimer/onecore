@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ChevronDown,
@@ -30,7 +30,7 @@ export function ReleaseNotesCard() {
   }
 
   const { data } = useReleaseNotes()
-  const sortedNotes = useMemo(() => data?.notes ?? [], [data])
+  const sortedNotes = data?.notes ?? []
 
   const totalPages = Math.ceil(sortedNotes.length / ITEMS_PER_PAGE)
   const startIndex = page * ITEMS_PER_PAGE

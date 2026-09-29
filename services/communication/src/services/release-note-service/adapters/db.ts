@@ -1,6 +1,6 @@
 import { communication } from '@onecore/types'
 
-import { db } from '../../communication-log-service/adapters/db'
+import { db } from '../../../common/db'
 
 type ReleaseNote = communication.ReleaseNote
 type ReleaseNoteApp = communication.ReleaseNoteApp

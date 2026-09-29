@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
+import { Skeleton } from '@/shared/ui/Skeleton'
 
 import { ReleaseNoteItem } from './ReleaseNoteItem'
 import { SupportMessage } from './SupportMessage'
@@ -18,18 +19,44 @@ import { SupportMessage } from './SupportMessage'
 /** Delay in ms to wait for modal render before scrolling */
 const SCROLL_DELAY_MS = 100
 
+const SKELETON_ROWS = 5
+
 interface ReleaseNotesModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   scrollToNoteId?: string
+  /** Start fetching before the modal opens, e.g. when its trigger is hovered */
+  preload?: boolean
+}
+
+// Mirrors the ReleaseNoteItem layout so content does not jump when it loads.
+function ReleaseNoteSkeleton() {
+  return (
+    <div className="flex items-start gap-4">
+      <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
+      <div className="flex-1 space-y-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-6 w-24 rounded-full" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+      </div>
+    </div>
+  )
 }
 
 export function ReleaseNotesModal({
   open,
   onOpenChange,
   scrollToNoteId,
+  preload = false,
 }: ReleaseNotesModalProps) {
-  const { data, isLoading, isError } = useReleaseNotes()
+  // The modal is always mounted in the header, so fetch only when needed.
+  const { data, isPending, isError } = useReleaseNotes({
+    enabled: open || preload,
+  })
   const notes = data?.notes ?? []
 
   useEffect(() => {
@@ -49,7 +76,8 @@ export function ReleaseNotesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+      {/* Fixed height: the modal keeps its size while the notes load. */}
+      <DialogContent className="max-w-2xl h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Newspaper className="h-5 w-5 text-primary" />
@@ -68,20 +96,21 @@ export function ReleaseNotesModal({
           </DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto space-y-6 pr-2 -mr-2">
-          {isLoading && (
-            <p className="text-sm text-muted-foreground">Laddar...</p>
-          )}
-          {isError && (
+          {isError ? (
             <p className="text-sm text-muted-foreground">
               Kunde inte hämta nyheter.
             </p>
-          )}
-          {!isLoading && !isError && notes.length === 0 && (
+          ) : isPending ? (
+            Array.from({ length: SKELETON_ROWS }, (_, index) => (
+              <ReleaseNoteSkeleton key={index} />
+            ))
+          ) : notes.length === 0 ? (
             <p className="text-sm text-muted-foreground">Inga nyheter ännu.</p>
+          ) : (
+            notes.map((note) => (
+              <ReleaseNoteItem key={note.id} note={note} id={note.id} />
+            ))
           )}
-          {notes.map((note) => (
-            <ReleaseNoteItem key={note.id} note={note} id={note.id} />
-          ))}
         </div>
         <div className="pt-4 border-t text-center">
           <SupportMessage />

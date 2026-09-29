@@ -32,6 +32,8 @@ export function AppHeader({ onMenuClick, hideMobileSearch }: AppHeaderProps) {
   const { open: openFeedback } = useFeedbackModal()
   const { openOverview: openGuides } = useGuideSheet()
   const [isReleaseNotesOpen, setIsReleaseNotesOpen] = useState(false)
+  // Set on hover/focus of the Nyheter button so the modal opens with content.
+  const [preloadReleaseNotes, setPreloadReleaseNotes] = useState(false)
 
   const { logout } = useAuth()
   const userState = useUser()
@@ -105,6 +107,8 @@ export function AppHeader({ onMenuClick, hideMobileSearch }: AppHeaderProps) {
           <Button
             variant="ghost"
             onClick={() => setIsReleaseNotesOpen(true)}
+            onMouseEnter={() => setPreloadReleaseNotes(true)}
+            onFocus={() => setPreloadReleaseNotes(true)}
             className="min-h-[44px] gap-1.5 hidden sm:flex"
             title="Nyheter"
           >
@@ -115,6 +119,8 @@ export function AppHeader({ onMenuClick, hideMobileSearch }: AppHeaderProps) {
             variant="ghost"
             size="icon"
             onClick={() => setIsReleaseNotesOpen(true)}
+            onMouseEnter={() => setPreloadReleaseNotes(true)}
+            onFocus={() => setPreloadReleaseNotes(true)}
             className="min-h-[44px] min-w-[44px] sm:hidden"
             title="Nyheter"
           >
@@ -190,6 +196,7 @@ export function AppHeader({ onMenuClick, hideMobileSearch }: AppHeaderProps) {
       <ReleaseNotesModal
         open={isReleaseNotesOpen}
         onOpenChange={setIsReleaseNotesOpen}
+        preload={preloadReleaseNotes}
       />
     </nav>
   )
