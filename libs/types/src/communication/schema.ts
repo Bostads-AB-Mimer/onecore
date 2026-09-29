@@ -103,3 +103,79 @@ export const CustomerMessageSchema = z.object({
   dispatch: DispatchSchema,
   recipient: MessageRecipientSchema,
 })
+
+export const RELEASE_NOTE_CATEGORY = [
+  'feature',
+  'fix',
+  'improvement',
+  'info',
+  'warning',
+] as const
+
+// Which part of ONECore a note concerns. A label, not a visibility filter.
+export const RELEASE_NOTE_APP = [
+  'general',
+  'property-tree',
+  'keys-portal',
+  'internal-portal',
+  'mina-sidor',
+  'sok-ledigt',
+  'odoo',
+  'core',
+  'leasing',
+  'property',
+  'work-order',
+  'keys',
+  'communication',
+  'contacts',
+  'inspection',
+  'economy',
+] as const
+
+export const ReleaseNoteCategorySchema = z.enum(RELEASE_NOTE_CATEGORY)
+export const ReleaseNoteAppSchema = z.enum(RELEASE_NOTE_APP)
+
+// publishedAt null = draft, hidden from readers without release-notes:write.
+export const ReleaseNoteSchema = z.object({
+  id: z.string().uuid(),
+  app: ReleaseNoteAppSchema,
+  title: z.string(),
+  description: z.string(),
+  category: ReleaseNoteCategorySchema,
+  pinned: z.boolean(),
+  publishedAt: z.coerce.date().nullable(),
+  createdBy: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+// Standalone objects (no omit/extend): swagger dedup depends on key order.
+export const CreateReleaseNoteSchema = z.object({
+  app: ReleaseNoteAppSchema,
+  title: z.string().trim().min(1).max(255),
+  description: z.string().trim().min(1),
+  category: ReleaseNoteCategorySchema,
+  pinned: z.boolean().optional(),
+  publishedAt: z.coerce.date().nullable().optional(),
+})
+
+export const UpdateReleaseNoteSchema = z.object({
+  app: ReleaseNoteAppSchema.optional(),
+  title: z.string().trim().min(1).max(255).optional(),
+  description: z.string().trim().min(1).optional(),
+  category: ReleaseNoteCategorySchema.optional(),
+  pinned: z.boolean().optional(),
+  publishedAt: z.coerce.date().nullable().optional(),
+})
+
+// Service-level create input: core stamps createdBy from the verified token.
+// Null when the token carries no name, like dispatch.triggeredByUser.
+export const CreateReleaseNoteParamsSchema = z.object({
+  app: ReleaseNoteAppSchema,
+  title: z.string().trim().min(1).max(255),
+  description: z.string().trim().min(1),
+  category: ReleaseNoteCategorySchema,
+  pinned: z.boolean().optional(),
+  publishedAt: z.coerce.date().nullable().optional(),
+  createdBy: z.string().min(1).max(255).nullable().optional(),
+})

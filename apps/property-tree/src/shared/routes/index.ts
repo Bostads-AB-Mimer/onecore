@@ -35,6 +35,7 @@ export const routes = {
   guideNew: '/guider/ny',
   guide: '/guider/:slug',
   guideEdit: '/guider/:slug/redigera',
+  releaseNotesAdmin: '/nyheter/admin',
   callback: '/callback',
 } as const
 

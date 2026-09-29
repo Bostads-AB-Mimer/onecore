@@ -1,11 +1,7 @@
-export type ReleaseNoteCategory =
-  'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+import type { components } from '@/services/api/core/generated/api-types'
 
-export interface ReleaseNote {
-  id: string
-  date: string // ISO date string, e.g., '2026-02-03'
-  title: string
-  description: string
-  category: ReleaseNoteCategory
-  pinned?: boolean // Pinned items always appear at the top
-}
+export type ReleaseNote = components['schemas']['ReleaseNote']
+export type ReleaseNoteCategory = ReleaseNote['category']
+export type ReleaseNoteApp = ReleaseNote['app']
+export type CreateReleaseNote = components['schemas']['CreateReleaseNote']
+export type UpdateReleaseNote = components['schemas']['UpdateReleaseNote']

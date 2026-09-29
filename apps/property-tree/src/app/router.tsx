@@ -16,6 +16,7 @@ import { MiscellaneousInvoicesPage } from '@/pages/MiscellaneousInvoicesPage'
 import { ParkingSpacePage } from '@/pages/ParkingSpacePage'
 import { PropertyAreasPage } from '@/pages/PropertyAreasPage'
 import { PropertyPage } from '@/pages/PropertyPage'
+import { ReleaseNotesAdminPage } from '@/pages/ReleaseNotesAdminPage'
 import { RentalBlocksPage } from '@/pages/RentalBlocksPage'
 import { ResidencePage } from '@/pages/ResidencePage'
 import { RoomPage } from '@/pages/RoomPage'
@@ -147,6 +148,11 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: routes.miscellaneousInvoices,
             element: <MiscellaneousInvoicesPage />,
             handle: { title: 'Ströfakturor' },
+          },
+          {
+            path: routes.releaseNotesAdmin,
+            element: <ReleaseNotesAdminPage />,
+            handle: { title: 'Hantera nyheter' },
           },
           {
             path: routes.inspections,
