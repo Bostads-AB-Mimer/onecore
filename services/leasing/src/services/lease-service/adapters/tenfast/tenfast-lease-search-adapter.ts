@@ -453,10 +453,12 @@ export const searchLeases = async (
   const STALE_SYNC_TIMEOUT_MS = 10_000
 
   if (leaseCache.getAll().length === 0) {
-    // Initial sync in progress or failed — no data to serve yet
-    ctx.throw(503, 'Lease cache is warming up — retry shortly', {
-      headers: { 'Retry-After': '30' },
-    })
+    const ready = await leaseCache.ensureReady(STALE_SYNC_TIMEOUT_MS)
+    if (!ready) {
+      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+        headers: { 'Retry-After': '30' },
+      })
+    }
   }
 
   // Cache has data — if stale, await a delta sync before responding.

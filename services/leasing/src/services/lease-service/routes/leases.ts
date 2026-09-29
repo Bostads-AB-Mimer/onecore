@@ -392,9 +392,12 @@ export const routes = (router: KoaRouter) => {
     }
 
     if (leaseCache.getAll().length === 0) {
-      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
-        headers: { 'Retry-After': '30' },
-      })
+      const ready = await leaseCache.ensureReady(10_000)
+      if (!ready) {
+        ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+          headers: { 'Retry-After': '30' },
+        })
+      }
     }
 
     try {

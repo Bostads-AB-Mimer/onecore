@@ -5,6 +5,7 @@ type CacheStatus = 'uninitialized' | 'syncing' | 'ready' | 'error'
 
 const DELTA_BUFFER_MS = 30_000
 const FULL_RESYNC_INTERVAL_MS = 24 * 60 * 60 * 1000
+const INITIAL_SYNC_RETRY_COOLDOWN_MS = 30_000
 
 type FetchFn = () => Promise<leasing.v1.LeaseSearchResult[]>
 type DeltaFetchFn = (since: Date) => Promise<leasing.v1.LeaseSearchResult[]>
@@ -16,6 +17,7 @@ const state: {
   fullFetchFn: FetchFn | null
   deltaFetchFn: DeltaFetchFn | null
   ongoingSync: Promise<void> | null
+  lastInitialSyncAttemptAt: Date | null
 } = {
   leases: [],
   lastSyncedAt: null,
@@ -23,6 +25,7 @@ const state: {
   fullFetchFn: null,
   deltaFetchFn: null,
   ongoingSync: null,
+  lastInitialSyncAttemptAt: null,
 }
 
 export function isReady(): boolean {
@@ -99,6 +102,36 @@ export async function refreshIfStale(
       'lease-cache: stale refresh timed out or failed, using existing data'
     )
   }
+}
+
+export async function ensureReady(timeoutMs: number): Promise<boolean> {
+  if (state.leases.length > 0) return true
+  if (!state.fullFetchFn || !state.deltaFetchFn) return false
+
+  const alreadyRetrying = state.ongoingSync !== null
+  const cooldownActive =
+    !!state.lastInitialSyncAttemptAt &&
+    Date.now() - state.lastInitialSyncAttemptAt.getTime() <
+      INITIAL_SYNC_RETRY_COOLDOWN_MS
+
+  if (!alreadyRetrying) {
+    if (cooldownActive) return false
+    state.lastInitialSyncAttemptAt = new Date()
+    logger.info('lease-cache: no data available, retrying initial sync')
+  }
+
+  try {
+    await Promise.race([
+      sync(state.fullFetchFn, state.deltaFetchFn),
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('ensureReady timed out')), timeoutMs)
+      ),
+    ])
+  } catch (err) {
+    logger.warn({ err }, 'lease-cache: retry sync timed out or failed')
+  }
+
+  return state.leases.length > 0
 }
 
 async function sync(

@@ -7,6 +7,7 @@ import * as leaseCache from '../../../../../common/lease-cache'
 jest.mock('../../../../../common/lease-cache', () => ({
   getAll: jest.fn(),
   refreshIfStale: jest.fn().mockResolvedValue(undefined),
+  ensureReady: jest.fn().mockResolvedValue(false),
 }))
 
 jest.mock('../../../adapters/xpand/lease-search-adapter', () => ({
