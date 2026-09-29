@@ -7,10 +7,11 @@ import {
 } from '@src/adapters/contact-relations'
 
 /**
- * An Xpand guardian edge the import left unwritten because the subject
- * already has an active guardian row the import may not remove.
+ * An Xpand edge the import left unwritten because the subject already has an
+ * active row in the same slot (guardian, or fakturamottagare) that the import
+ * may not remove.
  */
-export type SkippedGuardian = {
+export type SkippedEdge = {
   subjectContactCode: string
   desired: RelationEdge
   existing: {
@@ -30,11 +31,18 @@ export type ReconcilePlan = {
   /** Rows kept only because their holder is a conflict this run. */
   protectedCount: number
   /** Xpand guardian edges not written because the subject already has an active guardian the import may not remove (typically set by a caseworker). */
-  skippedGuardians: SkippedGuardian[]
+  skippedGuardians: SkippedEdge[]
+  /** The same for annan_fakturamottagare edges. */
+  skippedRecipients: SkippedEdge[]
 }
 
-/** The guardian a subject ends up with, from an existing row or this run. */
-type SurvivingGuardian = SkippedGuardian['existing']
+type Slot = 'guardian' | 'recipient'
+
+const slotOf = (roleType: RoleType): Slot =>
+  isGuardianRole(roleType) ? 'guardian' : 'recipient'
+
+/** The row holding a subject's slot, from an existing row or this run. */
+type SlotHolder = SkippedEdge['existing']
 
 /**
  * A total order over edges, so which guardian wins a contested subject is
@@ -70,9 +78,10 @@ const oldestFirst = (a: DbContactRelationRow, b: DbContactRelationRow) =>
  *   edge are deleted (oldest kept), and an import-owned row that merely
  *   duplicates someone else's row is dropped in favour of theirs — a backstop
  *   for rows written before the unique index (migration 202609101000).
- * - Only one active guardian per subject, so a guardian edge is skipped (and
- *   reported in `skippedGuardians`) when a row this run does not delete already
- *   holds the slot — a caseworker's, or an earlier edge in this same run.
+ * - Only one active guardian and one active fakturamottagare per subject, so
+ *   an edge is skipped (and reported in `skippedGuardians` or
+ *   `skippedRecipients`) when a row this run does not delete already holds
+ *   that slot — a caseworker's, or an earlier edge in this same run.
  * - `conflictHolders` are holders whose fakturamottagare could not be
  *   collapsed. Their import-owned annan_fakturamottagare rows are left as-is
  *   so a rerun cannot silently remove a previously imported recipient because
@@ -124,19 +133,21 @@ export const reconcile = (
     toDelete.push(...owned.map((r) => r.id))
   }
 
-  // The guardian each subject still has once this run's deletes are applied.
+  // The row holding each subject's slot once this run's deletes are applied.
+  const slotKey = (subject: string, roleType: RoleType) =>
+    JSON.stringify([subject, slotOf(roleType)])
   const deletedIds = new Set(toDelete)
-  const keptGuardians = new Map<string, DbContactRelationRow>()
+  const keptSlots = new Map<string, DbContactRelationRow>()
   for (const r of existing) {
-    if (!isGuardianRole(r.role_type) || deletedIds.has(r.id)) continue
-    const subject = r.subject_contact_code.trim()
-    const current = keptGuardians.get(subject)
-    if (!current || oldestFirst(r, current) < 0) keptGuardians.set(subject, r)
+    if (deletedIds.has(r.id)) continue
+    const key = slotKey(r.subject_contact_code.trim(), r.role_type)
+    const current = keptSlots.get(key)
+    if (!current || oldestFirst(r, current) < 0) keptSlots.set(key, r)
   }
 
-  const survivingGuardians = new Map<string, SurvivingGuardian>(
-    [...keptGuardians].map(([subject, r]) => [
-      subject,
+  const slotHolders = new Map<string, SlotHolder>(
+    [...keptSlots].map(([key, r]) => [
+      key,
       {
         relatedContactCode: r.related_contact_code.trim(),
         roleType: r.role_type,
@@ -146,16 +157,14 @@ export const reconcile = (
   )
 
   const toInsert: RelationEdge[] = []
-  const skippedGuardians: SkippedGuardian[] = []
+  const skipped: Record<Slot, SkippedEdge[]> = { guardian: [], recipient: [] }
   for (const edge of [...desiredByKey.values()].sort(edgeOrder)) {
     if (existingByKey.has(keyOf(edge))) continue
 
-    const isGuardian = isGuardianRole(edge.roleType)
-    const blocking = isGuardian
-      ? survivingGuardians.get(edge.subjectContactCode)
-      : undefined
+    const key = slotKey(edge.subjectContactCode, edge.roleType)
+    const blocking = slotHolders.get(key)
     if (blocking) {
-      skippedGuardians.push({
+      skipped[slotOf(edge.roleType)].push({
         subjectContactCode: edge.subjectContactCode,
         desired: edge,
         existing: blocking,
@@ -164,15 +173,13 @@ export const reconcile = (
     }
 
     toInsert.push(edge)
-    // This edge now holds the subject's single guardian slot, so a later
-    // guardian edge for the same subject is skipped rather than colliding.
-    if (isGuardian) {
-      survivingGuardians.set(edge.subjectContactCode, {
-        relatedContactCode: edge.relatedContactCode,
-        roleType: edge.roleType,
-        createdBy: ownedBy,
-      })
-    }
+    // This edge now holds the subject's slot, so a later edge for the same
+    // slot is skipped rather than colliding.
+    slotHolders.set(key, {
+      relatedContactCode: edge.relatedContactCode,
+      roleType: edge.roleType,
+      createdBy: ownedBy,
+    })
   }
 
   return {
@@ -180,6 +187,7 @@ export const reconcile = (
     toDelete,
     unchangedCount,
     protectedCount,
-    skippedGuardians,
+    skippedGuardians: skipped.guardian,
+    skippedRecipients: skipped.recipient,
   }
 }

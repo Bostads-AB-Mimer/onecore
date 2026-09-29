@@ -467,7 +467,7 @@ SELECT '_AVKTEN0010    ', '_OBJ000010     ', keycmctc, 'INNEHAVARE', '2020-01-01
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKTEN0011    ', '_OBJ000011     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900020';
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
-SELECT '_AVKTEN0012    ', '_OBJ000012     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900023';
+SELECT '_AVKTEN0012    ', '_OBJ000012     ', keycmctc, 'INNEHAVARE', '2018-01-01', NULL FROM cmctc WHERE cmctckod = 'P900023';
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKFM00013    ', '_OBJ000012     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900024';
 
