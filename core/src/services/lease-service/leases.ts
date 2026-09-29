@@ -1155,6 +1155,11 @@ export const routes = (router: KoaRouter) => {
               ...contactMap.get(c.contactCode.trim()),
             })),
           }))
+        } else {
+          logger.error(
+            { err: contactsResult.err, metadata },
+            'Lease export: contact enrichment failed, exporting leases without contact info'
+          )
         }
       }
 
