@@ -16,6 +16,9 @@ const CO_ADDRESSEE_DATA_SET = [
   'P900022',
   'P900023',
   'P900024',
+  'P900025',
+  'P900026',
+  'P900027',
 ]
 
 const xpandResource = xpandDbClient(config.xpandDatabase)
@@ -38,7 +41,8 @@ describe('allCoAddresseeCandidates', () => {
     const rows = await allCoAddresseeCandidates(xpand, new Date())
 
     // Excluded: P900022 (expired period), P900002 (terminated lease),
-    // P900007 (their own c/o).
+    // P900007 (their own c/o), P900025 (no longer the holder), P900026
+    // (invoice goes to a third party).
     expect(
       [...rows].sort((a, b) => (a.leaseKey < b.leaseKey ? -1 : 1))
     ).toEqual([
@@ -61,6 +65,18 @@ describe('allCoAddresseeCandidates', () => {
         leaseId: '100-001-01-0012/01',
       },
     ])
+  })
+
+  it('skips an invoice row whose contact no longer holds the lease', async () => {
+    const rows = await allCoAddresseeCandidates(xpand, new Date())
+
+    expect(rows.map((r) => r.holderContactCode)).not.toContain('P900025')
+  })
+
+  it('skips a c/o when the invoice goes to a third-party payer', async () => {
+    const rows = await allCoAddresseeCandidates(xpand, new Date())
+
+    expect(rows.map((r) => r.holderContactCode)).not.toContain('P900026')
   })
 
   it('treats a NULL period start as unbounded and excludes periods not yet started', async () => {

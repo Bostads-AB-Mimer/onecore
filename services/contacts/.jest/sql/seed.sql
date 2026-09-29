@@ -501,3 +501,26 @@ SELECT '_FAK000002     ', '_REP000002     ', h.keycmctc, c.keycmctc, h.keycmctc
 FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900002' AND c.cmctckod = 'P900021';
 INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
 SELECT '_FAK000009     ', '_REP000009     ', keycmctc, keycmctc, keycmctc FROM cmctc WHERE cmctckod = 'P900007';
+-- Invoice rows whose c/o is not the holder's to import:
+--   P900025 once held OBJ10 (INNEHAVARE ended) but still has an invoice row
+--           there with c/o P900021.
+--   P900026 holds OBJ13, but the invoice goes to third party P900027
+--           (keycmctc4), so the c/o P900021 is on P900027's address.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_OIRC900025    ', '_OIRO900025    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900025', 'Former Holder', 1053, 'OIR9000025'),
+  ('_OIRC900026    ', '_OIRO900026    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900026', 'Holder ThirdPartyPayer', 1053, 'OIR9000026'),
+  ('_OIRC900027    ', '_OIRO900027    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900027', 'Payer ThirdParty', 1053, 'OIR9000027');
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000013     ', '100-001-01-0013/01', NULL);
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0013    ', '_OBJ000010     ', keycmctc, 'INNEHAVARE', '2018-01-01', '2019-12-31' FROM cmctc WHERE cmctckod = 'P900025';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0014    ', '_OBJ000013     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900026';
+INSERT INTO hyrep (keyhyrep, keyhyobj, fdate, tdate) VALUES
+  ('_REP000013     ', '_OBJ000013     ', '2020-01-01', NULL);
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000010B    ', '_REP000010     ', h.keycmctc, c.keycmctc, h.keycmctc
+FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900025' AND c.cmctckod = 'P900021';
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000013     ', '_REP000013     ', h.keycmctc, c.keycmctc, p.keycmctc
+FROM cmctc h, cmctc c, cmctc p WHERE h.cmctckod = 'P900026' AND c.cmctckod = 'P900021' AND p.cmctckod = 'P900027';

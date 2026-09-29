@@ -89,4 +89,35 @@ describe('runImport with c/o addressees', () => {
       (await activeRecipientPairs()).map(([subject]) => subject)
     ).not.toContain('P900023')
   })
+
+  it('keeps a fakturamottagare another actor set and reports the c/o as skipped', async () => {
+    await contacts('contact_relation').insert({
+      subject_contact_code: 'P900020',
+      related_contact_code: 'P900010',
+      role_type: 'annan_fakturamottagare',
+      created_by: 'manual-admin',
+    })
+
+    const report = await runImport({ xpandDb: xpand, contactsDb: contacts })
+
+    expect(report.skippedRecipients).toEqual([
+      {
+        subjectContactCode: 'P900020',
+        desired: {
+          subjectContactCode: 'P900020',
+          relatedContactCode: 'P900021',
+          roleType: 'annan_fakturamottagare',
+        },
+        existing: {
+          relatedContactCode: 'P900010',
+          roleType: 'annan_fakturamottagare',
+          createdBy: 'manual-admin',
+        },
+      },
+    ])
+    expect(await activeRecipientPairs()).toEqual([
+      ['P900001', 'P900010'],
+      ['P900020', 'P900010'],
+    ])
+  })
 })
