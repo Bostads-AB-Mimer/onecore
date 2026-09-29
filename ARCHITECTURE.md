@@ -172,13 +172,3 @@ Klusteruppsättning, miljömodell, CoreDNS och nätverkstopologi hör hemma i re
 
 - `mimer-onecore-operations/README.md` — arkitekturöversikt (infra-verktyg, appplattformar, miljömodell)
 - `mimer-onecore-operations-production/README.md` — CoreDNS-förklaring, runbook för ny applikation, per-tjänst secrets
-
-## Kvarstående öppen punkt
-
-- Excel-listan från förvaltningsforum har fler kolumner (t.ex. Adress/portar) än de som stämts av här — komplettera vid behov, men innehållet som är relevant för det här dokumentet är redan avstämt.
-
-De tidigare öppna punkterna (Work Order → Xpand, Core:s `sftp-adapter.ts`, Contech OS) är nu verifierade direkt i koden:
-
-- **Work Order → Xpand** är en direkt DB-läsning av historiska, förmigrerade ärenden (`getWorkOrdersByContactCode` m.fl.) — nya ärenden hanteras i Odoo.
-- **Core:s `sftp-adapter.ts`** används bara av `home-insurance-export`-scriptet, dvs. den avvecklade Länsförsäkringar-exporten.
-- **Contech OS** är **inte en live integration** — adaptern (`contech-os-adapter.ts`) returnerar enbart hårdkodad mockdata, ingen verklig anropskod. Borttagen ur diagrammet för att undvika att IT felsöker mot ett system som aldrig faktiskt anropas.

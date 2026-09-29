@@ -29,7 +29,9 @@ Varje tjänst exponerar `GET /health` — men de kollar riktig konnektivitet mot
 
 ## Loggar
 
-Alla tjänster loggar strukturerad JSON via Pino, och skickar loggarna direkt till **Elasticsearch** (index `onecore-logging`), visas via **Kibana**. Lokalt (docker-compose) körs detta mot `localhost:9200`. I drift går det mot en annan Elasticsearch-instans, men var och hur man loggar in dit är **inte dokumenterat i wikin idag** — wiki-sidan "Instruktion för loggar i Azure" rör Mimer.nu:s loggar, inte ONECore. Det här är alltså en riktig lucka, inte bara en länk som saknas.
+Alla tjänster loggar strukturerad JSON via Pino, och skickar loggarna direkt till **Elasticsearch** (index `onecore-logging`), visas via **Kibana**. Lokalt (docker-compose) körs detta mot `localhost:9200`.
+
+**I produktion** ligger Elasticsearch/Kibana i produktionsklustret — URL och åtkomst är dokumenterat i `mimer-onecore-operations-production` (privat repo, avsiktligt inte upprepat här). Notera att detta är skilt från wiki-sidan "Instruktion för loggar i Azure", som rör Mimer.nu:s loggar, inte ONECore — blanda inte ihop de två.
 
 **Att spåra ett specifikt fel:** varje inkommande request får ett `correlationId` (från headern `x-correlation-id`, eller genereras om den saknas) som följer med i **varje** loggrad genom hela anropskedjan, även tvärs över tjänster. Sök på `correlationId` i Kibana för att se hela kedjan av vad som hände för ett specifikt anrop, inte bara en enskild tjänsts del av det.
 
@@ -37,6 +39,6 @@ Varje loggrad är dessutom taggad med `application.name` (vilken tjänst) och `a
 
 ## Öppna punkter
 
-- **Ingen dokumentation hittad för hur man kommer åt ONECores egen Elasticsearch/Kibana-instans i drift** (var den körs, hur man loggar in). "Instruktion för loggar i Azure" i wikin är till för Mimer.nu, inte ONECore — förväxla inte de två. Den här luckan bör fyllas, antingen här eller i något av drift-reporna.
+- Hur man begär åtkomst till produktions-Kibana hör hemma i wikin eller ett drift-repo (accessprocess, inte kod) — inte här.
 - Ta ställning till om Core:s hälso-aggregering bör utökas till att även täcka Economy, Inspection och File Storage, och om Keys bör få ett eget `/health`.
 - Kända felbilder ("om X går ner, symptom är Y, kolla Z") och eskalering/ägarskap per extern leverantör saknas ännu — det kräver teamets operativa kunskap, inte något som går att härleda ur koden.
