@@ -29,7 +29,7 @@ Varje tjänst exponerar `GET /health` — men de kollar riktig konnektivitet mot
 
 ## Loggar
 
-Alla tjänster loggar strukturerad JSON via Pino, och skickar loggarna direkt till **Elasticsearch** (index `onecore-logging`), visas via **Kibana**. Lokalt (docker-compose) körs detta mot `localhost:9200`.
+Alla tjänster loggar strukturerad JSON via Pino, och skickar loggarna direkt till **Elasticsearch** (index `onecore-logging`), visas via **Kibana**. Lokalt (docker-compose) är Elasticsearch mappat till `localhost:9208` på värdmaskinen (containern själv kör på 9200, men det porten är bara nåbar mellan containrar på `onecore`-nätverket — t.ex. är det vad Kibana använder internt).
 
 **I produktion** ligger Elasticsearch/Kibana i produktionsklustret — URL och åtkomst är dokumenterat i `mimer-onecore-operations-production` (privat repo, avsiktligt inte upprepat här). Notera att detta är skilt från wiki-sidan "Instruktion för loggar i Azure", som rör Mimer.nu:s loggar, inte ONECore — blanda inte ihop de två.
 
