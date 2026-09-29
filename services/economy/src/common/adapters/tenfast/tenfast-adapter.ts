@@ -501,16 +501,19 @@ const transformToInvoice = (
       toDate: new Date(tenfastInvoice.interval.to),
       invoiceDate: tenfastInvoice.activatedAt
         ? new Date(tenfastInvoice.activatedAt)
-        : new Date(tenfastInvoice.expectedInvoiceDate),
+        : // expectedInvoiceDate is no longer returned for some invoices
+        // (e.g. credited ones), fall back to the due date.
+        new Date(tenfastInvoice.expectedInvoiceDate ?? tenfastInvoice.due),
       expirationDate: new Date(tenfastInvoice.due),
       paidAmount: tenfastInvoice.amountPaid,
       remainingAmount,
-      invoiceId: tenfastInvoice.ocrNumber,
+      // ocrNumber is no longer returned for some invoices (e.g. credited ones)
+      invoiceId: tenfastInvoice.ocrNumber ?? '',
       leaseIds: tenfastInvoice.avtal.map((a) => a.externalId),
       paymentStatus:
         remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
       type: 'Regular',
-      reference: tenfastInvoice.ocrNumber,
+      reference: tenfastInvoice.ocrNumber ?? '',
       source: 'next', // ??
       invoiceRows: tenfastInvoice.hyror.map(transformToInvoiceRow),
       transactionType: InvoiceTransactionType.Rent,

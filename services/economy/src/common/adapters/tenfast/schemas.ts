@@ -136,7 +136,7 @@ export function isVisibleTenfastInvoice(invoice: {
 
 export const TenfastGracePeriodSchema = z.object({
   endDate: z.string(),
-  reason: z.string(),
+  reason: z.string().optional(),
   madeBy: z.string(),
   madeByEmail: z.string(),
 })
@@ -196,7 +196,7 @@ export const TenfastInvoiceSchema = z.object({
   amountPaid: z.number(),
   acceptDiff: z.boolean(),
   aviseringsTyp: z.string(),
-  expectedInvoiceDate: z.string(),
+  expectedInvoiceDate: z.string().optional(),
   due: z.string(),
   sentAutomatically: z.boolean(),
   partiell: z.boolean(),
@@ -208,7 +208,8 @@ export const TenfastInvoiceSchema = z.object({
   reference: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  ocrNumber: z.string(),
+  // no longer returned for some invoices (e.g. credited/not yet activated)
+  ocrNumber: z.string().optional(),
   late: z.boolean(),
   state: TenfastInvoiceStateSchema,
   gracePeriod: TenfastGracePeriodSchema.nullish(),
