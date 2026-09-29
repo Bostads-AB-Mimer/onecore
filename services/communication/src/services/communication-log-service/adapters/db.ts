@@ -1,22 +1,10 @@
-import knex from 'knex'
 import { communication } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
-import Config from '../../../common/config'
+import { db } from '../../../common/db'
 
-export const createDbClient = () =>
-  knex({
-    client: 'mssql',
-    connection: Config.communicationDatabase,
-    pool: {
-      min: 0,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      destroyTimeoutMillis: 5000,
-    },
-  })
-
-export const db = createDbClient()
+// Re-exported so existing imports (and test mocks) of this module keep working.
+export { createDbClient, db } from '../../../common/db'
 
 type LogOutboundParams = communication.LogOutboundParams
 type Dispatch = communication.Dispatch

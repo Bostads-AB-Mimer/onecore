@@ -1,17 +1,26 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Menu, Search, Lightbulb, Newspaper, User, LogOut } from 'lucide-react'
+import {
+  CircleHelp,
+  Lightbulb,
+  LogOut,
+  Menu,
+  Newspaper,
+  Search,
+  User,
+} from 'lucide-react'
+
+import { ReleaseNotesModal } from '@/widgets/dashboard'
 
 import { useAuth } from '@/features/auth'
 import { GlobalSearchBar, useCommandPalette } from '@/features/search'
 
-import { ReleaseNotesModal } from '@/widgets/dashboard'
-
 import { useUser } from '@/entities/user'
 
 import onecoreLogo from '@/shared/assets/logos/full/onecore_logo_black.svg'
-import { Button } from '@/shared/ui/Button'
 import { useFeedbackModal } from '@/shared/hooks/useFeedbackModal'
+import { useGuideSheet } from '@/shared/hooks/useGuideSheet'
+import { Button } from '@/shared/ui/Button'
 
 interface AppHeaderProps {
   onMenuClick: () => void
@@ -21,6 +30,7 @@ interface AppHeaderProps {
 export function AppHeader({ onMenuClick, hideMobileSearch }: AppHeaderProps) {
   const { open: openSearch } = useCommandPalette()
   const { open: openFeedback } = useFeedbackModal()
+  const { openOverview: openGuides } = useGuideSheet()
   const [isReleaseNotesOpen, setIsReleaseNotesOpen] = useState(false)
 
   const { logout } = useAuth()
@@ -110,6 +120,25 @@ export function AppHeader({ onMenuClick, hideMobileSearch }: AppHeaderProps) {
           >
             <Newspaper className="h-5 w-5" />
             <span className="sr-only">Nyheter</span>
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={openGuides}
+            className="min-h-[44px] gap-1.5 hidden sm:flex"
+            title="Guider och hjälp"
+          >
+            <CircleHelp className="h-5 w-5" />
+            <span>Hjälp</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={openGuides}
+            className="min-h-[44px] min-w-[44px] sm:hidden"
+            title="Guider och hjälp"
+          >
+            <CircleHelp className="h-5 w-5" />
+            <span className="sr-only">Hjälp</span>
           </Button>
           <Button
             variant="ghost"
