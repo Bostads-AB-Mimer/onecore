@@ -4,6 +4,7 @@ import { generateRouteMetadata } from '@onecore/utilities'
 import { BulkSms, BulkEmail, communication } from '@onecore/types'
 
 import * as communicationAdapter from '../../adapters/communication-adapter'
+import { getActingUserName } from '../../utils/acting-user'
 import { registerSchema } from '../../utils/openapi'
 import { routes as releaseNoteRoutes } from './release-notes'
 
@@ -117,8 +118,7 @@ export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendBulkSms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = ctx.request.body as BulkSms
-    const triggeredByUser =
-      ctx.state.user?.name ?? ctx.state.user?.preferred_username
+    const triggeredByUser = getActingUserName(ctx)
 
     const result = await communicationAdapter.sendBulkSms({
       ...body,
@@ -213,8 +213,7 @@ export const routes = (router: KoaRouter) => {
   router.post('(.*)/sendBulkEmail', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = ctx.request.body as BulkEmail
-    const triggeredByUser =
-      ctx.state.user?.name ?? ctx.state.user?.preferred_username
+    const triggeredByUser = getActingUserName(ctx)
 
     const result = await communicationAdapter.sendBulkEmail({
       ...body,

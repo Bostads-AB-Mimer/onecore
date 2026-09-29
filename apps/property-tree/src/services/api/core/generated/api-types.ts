@@ -15585,7 +15585,7 @@ export interface components {
       pinned: boolean
       /** Format: date-time */
       publishedAt: string | null
-      createdBy: string
+      createdBy: string | null
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */

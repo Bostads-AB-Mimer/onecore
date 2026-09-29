@@ -52,7 +52,7 @@ export async function createReleaseNote(
       category: params.category,
       pinned: params.pinned ?? false,
       publishedAt: params.publishedAt ?? null,
-      createdBy: params.createdBy,
+      createdBy: params.createdBy ?? null,
     })
     .returning<ReleaseNote[]>('*')
 

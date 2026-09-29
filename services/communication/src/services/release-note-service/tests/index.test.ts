@@ -102,15 +102,16 @@ describe('POST /release-notes', () => {
     expect(createMock).toHaveBeenCalledWith(body)
   })
 
-  it('returns 400 when createdBy is missing', async () => {
+  it('accepts a note without createdBy', async () => {
+    createMock.mockResolvedValue({ ...note, createdBy: null })
     const { createdBy: _createdBy, ...withoutCreatedBy } = body
 
     const res = await request(app.callback())
       .post('/release-notes')
       .send(withoutCreatedBy)
 
-    expect(res.status).toBe(400)
-    expect(createMock).not.toHaveBeenCalled()
+    expect(res.status).toBe(201)
+    expect(createMock).toHaveBeenCalledWith(withoutCreatedBy)
   })
 
   it('returns 400 for an unknown category', async () => {

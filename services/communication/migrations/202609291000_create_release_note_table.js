@@ -13,7 +13,7 @@ exports.up = function (knex) {
         category NVARCHAR(20) NOT NULL,
         pinned BIT NOT NULL DEFAULT 0,
         publishedAt DATETIME2 NULL,
-        createdBy NVARCHAR(100) NOT NULL,
+        createdBy NVARCHAR(255) NULL,
         createdAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
         updatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE()
       );

@@ -144,7 +144,7 @@ export const ReleaseNoteSchema = z.object({
   category: ReleaseNoteCategorySchema,
   pinned: z.boolean(),
   publishedAt: z.coerce.date().nullable(),
-  createdBy: z.string(),
+  createdBy: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
@@ -169,6 +169,7 @@ export const UpdateReleaseNoteSchema = z.object({
 })
 
 // Service-level create input: core stamps createdBy from the verified token.
+// Null when the token carries no name, like dispatch.triggeredByUser.
 export const CreateReleaseNoteParamsSchema = z.object({
   app: ReleaseNoteAppSchema,
   title: z.string().trim().min(1).max(255),
@@ -176,5 +177,5 @@ export const CreateReleaseNoteParamsSchema = z.object({
   category: ReleaseNoteCategorySchema,
   pinned: z.boolean().optional(),
   publishedAt: z.coerce.date().nullable().optional(),
-  createdBy: z.string().min(1),
+  createdBy: z.string().min(1).max(255).nullable().optional(),
 })

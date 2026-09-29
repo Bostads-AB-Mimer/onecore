@@ -5,6 +5,7 @@ import { communication } from '@onecore/types'
 
 import * as releaseNotesAdapter from '../../adapters/communication-adapter/release-notes'
 import { requireRole } from '../../middlewares/keycloak-auth'
+import { getActingUserName } from '../../utils/acting-user'
 import { registerSchema } from '../../utils/openapi'
 import { RELEASE_NOTES_WRITE_ROLE } from './constants'
 
@@ -12,8 +13,6 @@ const ListQuerySchema = z.object({
   app: communication.ReleaseNoteAppSchema.optional(),
   includeDrafts: z.enum(['true', 'false']).optional(),
 })
-
-const CREATED_BY_MAX_LENGTH = 100
 
 const ReleaseNoteCapabilitiesSchema = z.object({
   canManage: z.boolean(),
@@ -164,15 +163,9 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const createdBy: string =
-        ctx.state.user?.name ??
-        ctx.state.user?.preferred_username ??
-        ctx.state.user?.id
-
       const result = await releaseNotesAdapter.createReleaseNote({
         ...parsed.data,
-        // The createdBy column is NVARCHAR(100).
-        createdBy: createdBy.slice(0, CREATED_BY_MAX_LENGTH),
+        createdBy: getActingUserName(ctx) ?? null,
       })
 
       if (!result.ok) {

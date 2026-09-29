@@ -166,7 +166,7 @@ export function ReleaseNotesAdminPage() {
                           ? formatReleaseNoteDate(note.publishedAt)
                           : '—'}
                       </TableCell>
-                      <TableCell>{note.createdBy}</TableCell>
+                      <TableCell>{note.createdBy ?? '—'}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         <Button
                           variant="ghost"
