@@ -13,9 +13,6 @@
   },
   "author": "",
   "packageManager": "pnpm@10.28.1",
-  "engines": {
-    "node": ">=20"
-  },
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc && tsc-alias",

@@ -3,9 +3,6 @@
   "version": "1.5.0",
   "type": "module",
   "private": true,
-  "engines": {
-    "node": ">=20"
-  },
   "scripts": {
     "build": "vite build",
     "dev": "wait-on http://localhost:5050/swagger && wait-on http://localhost:5010/swagger && pnpm run generate-api-types && pnpm run generate-api-types:core && vite",
