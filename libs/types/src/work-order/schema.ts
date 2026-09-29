@@ -38,3 +38,10 @@ export const CreateInspectionWorkOrderResultSchema = z.object({
 export const CreateInspectionWorkOrdersResponseSchema = z.object({
   results: z.array(CreateInspectionWorkOrderResultSchema),
 })
+
+// Tenant → Odoo, via core and the work-order service: asks the handler to
+// close a work order. Odoo decides. The reason is optional free text shown to
+// the handler in the chatter.
+export const CloseWorkOrderRequestSchema = z.object({
+  reason: z.string().optional(),
+})

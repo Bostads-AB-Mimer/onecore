@@ -201,6 +201,7 @@ export {
   CreateInspectionWorkOrderGroupSchema,
   CreateInspectionWorkOrderResultSchema,
   CreateInspectionWorkOrdersResponseSchema,
+  CloseWorkOrderRequestSchema,
 } from '@onecore/types'
 
 export const CreateInspectionWorkOrdersBodySchema = z.object({
@@ -242,4 +243,5 @@ export type {
   MaintenanceTeam,
   CreateInspectionWorkOrderGroup,
   CreateInspectionWorkOrderResult,
+  CloseWorkOrderRequest,
 } from '@onecore/types'
