@@ -62,5 +62,61 @@ describe('odoo-adapter utils', () => {
       expect(result[0].messageType).toBe('from_tenant')
       expect(result[0].author).toBe('Kund')
     })
+
+    // A tenant on Mina sidor is answered by an organisation, never by a named
+    // handläggare. Odoo works out the label when the message is written and
+    // stores it on the message; this adapter only carries it across.
+    it('should use the sender Odoo captured for the tenant, not the author name', () => {
+      const result = transformMessages([
+        factory.odooWorkOrderMessage.build({
+          message_type: 'tenant_mail',
+          author_id: [7, 'Bostads AB Mimer, Sebastian Handläggare'],
+          onecore_tenant_author_name: 'Mimer',
+        }),
+      ])
+
+      expect(result[0].author).toBe('Mimer')
+    })
+
+    it('should keep an external contractor sender whole', () => {
+      const result = transformMessages([
+        factory.odooWorkOrderMessage.build({
+          message_type: 'tenant_my_pages',
+          author_id: [9, 'Bostads AB Mimer, Erik Entreprenör'],
+          onecore_tenant_author_name: 'Mimers Leverantör - VVS Service AB',
+        }),
+      ])
+
+      expect(result[0].author).toBe('Mimers Leverantör - VVS Service AB')
+    })
+
+    // Odoo leaves the field empty on from_tenant — the tenant wrote it, and
+    // Mina sidor labels their own messages "Du" regardless of what we send.
+    it('should keep naming the author on a message the tenant wrote', () => {
+      const result = transformMessages([
+        factory.odooWorkOrderMessage.build({
+          message_type: 'from_tenant',
+          author_id: [3, 'Bostads AB Mimer, Anna Hyresgäst'],
+          onecore_tenant_author_name: false,
+        }),
+      ])
+
+      expect(result[0].author).toBe('Anna Hyresgäst')
+    })
+
+    // Belt and braces for a message written before the Odoo upgrade that the
+    // backfill missed: falling back to author_id here would put a handläggare's
+    // name in front of a tenant, which is the whole bug.
+    it('should fall back to Mimer on an outbound message Odoo left unlabelled', () => {
+      const result = transformMessages([
+        factory.odooWorkOrderMessage.build({
+          message_type: 'failed_tenant_sms',
+          author_id: [7, 'Bostads AB Mimer, Sebastian Handläggare'],
+          onecore_tenant_author_name: false,
+        }),
+      ])
+
+      expect(result[0].author).toBe('Mimer')
+    })
   })
 })

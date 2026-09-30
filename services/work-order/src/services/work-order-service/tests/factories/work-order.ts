@@ -75,6 +75,7 @@ export const OdooWorkOrderMessageFactory = Factory.define<OdooWorkOrderMessage>(
     body: 'Hej, här är ett meddelande från kunden',
     message_type: 'from_tenant',
     author_id: [1, 'Kund'],
+    onecore_tenant_author_name: false, // Odoo leaves this empty on from_tenant
     create_date: new Date().toDateString(),
   })
 )
