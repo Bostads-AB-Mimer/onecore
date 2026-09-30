@@ -50,7 +50,7 @@ const fetchAllPages = async <
   buildUrl: (paginate: string | null) => string,
   schema: S
 ): Promise<z.output<S>['records']> => {
-  const MAX_PAGES = 300
+  const MAX_PAGES = 1000
 
   let next: string | null = null
   let totalCount = Infinity
@@ -326,7 +326,6 @@ export async function getAllLeases(): Promise<
       new URLSearchParams({
         populate: 'hyresobjekt,hyresgaster',
         'filter[isArchived]': 'false',
-        limit: '500',
       })
     )
     const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${qs}`
@@ -348,7 +347,6 @@ export async function getLeasesUpdatedSince(
     const params = new URLSearchParams({
       populate: 'hyresobjekt,hyresgaster',
       updatedAtSince: since.toISOString(),
-      limit: '500',
     })
     const records = await fetchAllPages(
       (cursor) =>
