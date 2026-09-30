@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import axios from 'axios'
 import {
   generateRouteMetadata,
   logger,
@@ -552,7 +553,7 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { ...result, content: enrichedContent }
     } catch (error: unknown) {
-      if ((error as any)?.response?.status === 503) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
         ctx.status = 503
         ctx.body = { error: 'Lease service is warming up', ...metadata }
         return
