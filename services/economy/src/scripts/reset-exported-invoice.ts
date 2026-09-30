@@ -24,7 +24,7 @@ const resetExportedInvoicesScript = async () => {
 
   if (!csvFilePath) {
     console.error(
-      'Usage: pnpm dev:script:reset-exported-invoice <csv-file> [tenfast-company-id]'
+      'Usage: pnpm dev:script:reset-exported-invoice <csv-file> [tenfast-company-id-uuid]'
     )
     process.exitCode = 1
     return
@@ -35,10 +35,10 @@ const resetExportedInvoicesScript = async () => {
   if (!companyId) {
     console.error(
       'No Tenfast company id (hyresvard) configured. Pass it as the second argument.\n' +
-        'Known companies from config:\n' +
-        config.companies
-          .map((company) => `  ${company.name}: ${company.tenfastId}`)
-          .join('\n')
+      'Known companies from config:\n' +
+      config.companies
+        .map((company) => `  ${company.name}: ${company.tenfastId}`)
+        .join('\n')
     )
     process.exitCode = 1
     return

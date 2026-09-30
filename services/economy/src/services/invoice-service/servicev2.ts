@@ -687,6 +687,7 @@ const convertToLedgerRows = (
       voucherDate: dateString(invoice.invoiceDate) ?? '',
       voucherNumber,
       invoiceDate: dateString(invoice.invoiceDate),
+      invoiceDueDate: dateString(invoice.expirationDate),
       invoiceNumber: invoice.invoiceId,
       recipientContactCode: invoice.recipientContactCode,
       counterPartCode: invoice.counterPartCode,

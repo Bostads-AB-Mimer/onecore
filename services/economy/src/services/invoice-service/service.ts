@@ -954,6 +954,9 @@ export const getInvoicesByContactCode = async (
             fromDate: tenfastInvoice.invoice.fromDate,
             toDate: tenfastInvoice.invoice.toDate,
           }),
+        ...(tenfastInvoice && {
+          invoiceRows: tenfastInvoice.invoice.invoiceRows,
+        }),
       }
 
       return withInvoiceDeferral(invoice, {
