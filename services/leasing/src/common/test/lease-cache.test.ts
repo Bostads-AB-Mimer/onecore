@@ -1,4 +1,5 @@
 import { leasing, LeaseType, LeaseStatus } from '@onecore/types'
+import type { DeltaSyncResult } from '../lease-cache'
 
 // Flushes the microtask queue — works with fake timers since Promise.resolve()
 // uses microtasks, not macrotasks.
@@ -217,7 +218,9 @@ describe('lease-cache', () => {
   describe('delta sync — data already in cache', () => {
     it('calls deltaFetchFn on subsequent syncs with lastSyncedAt minus 30s buffer', async () => {
       const fullFetchFn = jest.fn().mockResolvedValue([makeLease('lease-1')])
-      const deltaFetchFn = jest.fn().mockResolvedValue([])
+      const deltaFetchFn = jest
+        .fn()
+        .mockResolvedValue({ changed: [], removedLeaseIds: [] })
 
       cache.startLeaseCache(fullFetchFn, deltaFetchFn)
       await flushPromises() // full sync
@@ -238,7 +241,9 @@ describe('lease-cache', () => {
       const other = makeLease('lease-2')
 
       const fullFetchFn = jest.fn().mockResolvedValue([original, other])
-      const deltaFetchFn = jest.fn().mockResolvedValue([updated])
+      const deltaFetchFn = jest
+        .fn()
+        .mockResolvedValue({ changed: [updated], removedLeaseIds: [] })
 
       cache.startLeaseCache(fullFetchFn, deltaFetchFn)
       await flushPromises()
@@ -256,7 +261,10 @@ describe('lease-cache', () => {
 
     it('appends new leases from delta to existing cache', async () => {
       const fullFetchFn = jest.fn().mockResolvedValue([makeLease('lease-1')])
-      const deltaFetchFn = jest.fn().mockResolvedValue([makeLease('lease-2')])
+      const deltaFetchFn = jest.fn().mockResolvedValue({
+        changed: [makeLease('lease-2')],
+        removedLeaseIds: [],
+      })
 
       cache.startLeaseCache(fullFetchFn, deltaFetchFn)
       await flushPromises()
@@ -266,6 +274,24 @@ describe('lease-cache', () => {
       await flushPromises()
 
       expect(cache.getAll()).toHaveLength(2)
+    })
+
+    it('removes leases returned in removedLeaseIds from the cache', async () => {
+      const lease1 = makeLease('lease-1')
+      const lease2 = makeLease('lease-2')
+      const fullFetchFn = jest.fn().mockResolvedValue([lease1, lease2])
+      const deltaFetchFn = jest
+        .fn()
+        .mockResolvedValue({ changed: [], removedLeaseIds: ['lease-1'] })
+
+      cache.startLeaseCache(fullFetchFn, deltaFetchFn)
+      await flushPromises()
+      expect(cache.getAll()).toHaveLength(2)
+
+      await cache.refreshIfStale(0, 10_000)
+      await flushPromises()
+
+      expect(cache.getAll()).toEqual([lease2])
     })
 
     it('keeps existing data and stays ready if deltaFetchFn throws', async () => {
@@ -287,12 +313,10 @@ describe('lease-cache', () => {
   describe('concurrent sync guard', () => {
     it('shares ongoing sync promise — concurrent refreshIfStale calls only trigger one delta sync', async () => {
       const lease1 = makeLease('lease-1')
-      let resolveDeltaFetch!: (v: leasing.v1.LeaseSearchResult[]) => void
-      const pendingDelta = new Promise<leasing.v1.LeaseSearchResult[]>(
-        (resolve) => {
-          resolveDeltaFetch = resolve
-        }
-      )
+      let resolveDeltaFetch!: (v: DeltaSyncResult) => void
+      const pendingDelta = new Promise<DeltaSyncResult>((resolve) => {
+        resolveDeltaFetch = resolve
+      })
 
       const fullFetchFn = jest.fn().mockResolvedValue([lease1])
       const deltaFetchFn = jest.fn().mockReturnValue(pendingDelta)
@@ -303,7 +327,7 @@ describe('lease-cache', () => {
       const p1 = cache.refreshIfStale(0, 10_000)
       const p2 = cache.refreshIfStale(0, 10_000)
 
-      resolveDeltaFetch([])
+      resolveDeltaFetch({ changed: [], removedLeaseIds: [] })
       await Promise.all([p1, p2])
       await flushPromises()
 
@@ -321,7 +345,9 @@ describe('lease-cache', () => {
         .fn()
         .mockResolvedValueOnce([lease1])
         .mockResolvedValueOnce([lease1, lease2])
-      const deltaFetchFn = jest.fn().mockResolvedValue([])
+      const deltaFetchFn = jest
+        .fn()
+        .mockResolvedValue({ changed: [], removedLeaseIds: [] })
 
       cache.startLeaseCache(fullFetchFn, deltaFetchFn)
       await flushPromises()
@@ -343,7 +369,9 @@ describe('lease-cache', () => {
         .fn()
         .mockResolvedValueOnce([lease1])
         .mockRejectedValueOnce(new Error('network failure'))
-      const deltaFetchFn = jest.fn().mockResolvedValue([])
+      const deltaFetchFn = jest
+        .fn()
+        .mockResolvedValue({ changed: [], removedLeaseIds: [] })
 
       cache.startLeaseCache(fullFetchFn, deltaFetchFn)
       await flushPromises()
@@ -367,7 +395,9 @@ describe('lease-cache', () => {
         .fn()
         .mockReturnValueOnce(pendingInitial)
         .mockResolvedValueOnce([makeLease('lease-2')])
-      const deltaFetchFn = jest.fn().mockResolvedValue([])
+      const deltaFetchFn = jest
+        .fn()
+        .mockResolvedValue({ changed: [], removedLeaseIds: [] })
 
       cache.startLeaseCache(fullFetchFn, deltaFetchFn)
       // Initial sync is pending — do not flush yet

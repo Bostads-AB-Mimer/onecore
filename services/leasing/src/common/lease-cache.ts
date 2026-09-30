@@ -8,7 +8,11 @@ const FULL_RESYNC_INTERVAL_MS = 24 * 60 * 60 * 1000
 const INITIAL_SYNC_RETRY_COOLDOWN_MS = 30_000
 
 type FetchFn = () => Promise<leasing.v1.LeaseSearchResult[]>
-type DeltaFetchFn = (since: Date) => Promise<leasing.v1.LeaseSearchResult[]>
+export type DeltaSyncResult = {
+  changed: leasing.v1.LeaseSearchResult[]
+  removedLeaseIds: string[]
+}
+type DeltaFetchFn = (since: Date) => Promise<DeltaSyncResult>
 
 const state: {
   leases: leasing.v1.LeaseSearchResult[]
@@ -163,16 +167,23 @@ async function doSync(
     if (!forceFull && hasData && lastSync) {
       const syncStartedAt = new Date()
       const since = new Date(lastSync.getTime() - DELTA_BUFFER_MS)
-      const changed = await deltaFetchFn(since)
+      const { changed, removedLeaseIds } = await deltaFetchFn(since)
       const idMap = new Map(state.leases.map((l) => [l.leaseId, l]))
       for (const lease of changed) {
         idMap.set(lease.leaseId, lease)
+      }
+      for (const leaseId of removedLeaseIds) {
+        idMap.delete(leaseId)
       }
       state.leases = Array.from(idMap.values())
       state.lastSyncedAt = syncStartedAt
       state.status = 'ready'
       logger.info(
-        { changed: changed.length, total: state.leases.length },
+        {
+          changed: changed.length,
+          removed: removedLeaseIds.length,
+          total: state.leases.length,
+        },
         'lease-cache: delta sync complete'
       )
     } else {

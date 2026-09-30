@@ -9,6 +9,7 @@ import {
 import { TenfastLease } from './schemas'
 import * as tenfastAdapter from './tenfast-adapter'
 import * as leaseCache from '../../../../common/lease-cache'
+import type { DeltaSyncResult } from '../../../../common/lease-cache'
 import {
   mapTenfastTypToLeaseType,
   calculateLeaseStatus,
@@ -180,14 +181,24 @@ export async function fetchAllLeasesForCache(): Promise<
  */
 export async function fetchLeasesUpdatedSinceForCache(
   since: Date
-): Promise<leasing.v1.LeaseSearchResult[]> {
+): Promise<DeltaSyncResult> {
   const result = await tenfastAdapter.getLeasesUpdatedSince(since)
   if (!result.ok) {
     throw new Error(
       `fetchLeasesUpdatedSinceForCache: failed to fetch delta leases — ${result.err}`
     )
   }
-  return result.data.map((l) => mapTenfastLeaseToSearchResult(l))
+
+  // The list endpoint (unlike search) can't filter isArchived, so a lease
+  // that got archived since the last sync comes back here rather than
+  // being excluded like it would be from a full sync — remove it instead.
+  const archived = result.data.filter((l) => l.stage === 'archived')
+  const rest = result.data.filter((l) => l.stage !== 'archived')
+
+  return {
+    changed: rest.map((l) => mapTenfastLeaseToSearchResult(l)),
+    removedLeaseIds: archived.map((l) => l.externalId),
+  }
 }
 
 const applySorting = (

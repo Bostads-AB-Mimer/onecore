@@ -2,7 +2,9 @@ import { leasing, LeaseType, LeaseStatus } from '@onecore/types'
 
 import * as tenfastLeaseSearchAdapter from '../../../adapters/tenfast/tenfast-lease-search-adapter'
 import * as xpandLeaseSearchAdapter from '../../../adapters/xpand/lease-search-adapter'
+import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import * as leaseCache from '../../../../../common/lease-cache'
+import * as factory from '../../factories'
 
 jest.mock('../../../../../common/lease-cache', () => ({
   getAll: jest.fn(),
@@ -728,6 +730,45 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result._meta.totalRecords).toBe(5)
       expect(result._meta.page).toBe(2)
       expect(result._meta.limit).toBe(2)
+    })
+  })
+
+  describe('fetchLeasesUpdatedSinceForCache', () => {
+    it('puts archived leases in removedLeaseIds instead of changed', async () => {
+      const active = factory.tenfastLease.build({
+        externalId: 'lease-active',
+        stage: 'active',
+      })
+      const archived = factory.tenfastLease.build({
+        externalId: 'lease-archived',
+        stage: 'archived',
+      })
+
+      jest.spyOn(tenfastAdapter, 'getLeasesUpdatedSince').mockResolvedValue({
+        ok: true,
+        data: [active, archived],
+      })
+
+      const result =
+        await tenfastLeaseSearchAdapter.fetchLeasesUpdatedSinceForCache(
+          new Date('2024-01-01')
+        )
+
+      expect(result.changed.map((l) => l.leaseId)).toEqual(['lease-active'])
+      expect(result.removedLeaseIds).toEqual(['lease-archived'])
+    })
+
+    it('throws when the adapter call fails', async () => {
+      jest.spyOn(tenfastAdapter, 'getLeasesUpdatedSince').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
+
+      await expect(
+        tenfastLeaseSearchAdapter.fetchLeasesUpdatedSinceForCache(
+          new Date('2024-01-01')
+        )
+      ).rejects.toThrow('fetchLeasesUpdatedSinceForCache')
     })
   })
 })
