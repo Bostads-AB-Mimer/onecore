@@ -44,6 +44,7 @@ export const leaseColumns = [
     key: 'contacts',
     label: 'Hyresgäst',
     className: 'px-2',
+    sortKey: 'tenantName',
     render: (lease: LeaseSearchResult) => {
       if (!lease.contacts || lease.contacts.length === 0) {
         return <span className="text-muted-foreground">-</span>

@@ -9,6 +9,7 @@ import {
   probe,
 } from '@onecore/utilities'
 import config from '../../common/config'
+import { getCacheInfo } from '../../common/lease-cache'
 import { healthCheck as xpandSoapApiHealthCheck } from '../lease-service/adapters/xpand/xpand-soap-adapter'
 import { healthCheck as creditSafeHealthCheck } from '../creditsafe/adapters/creditsafe-adapter'
 import { db as leasingDb } from '../lease-service/adapters/db'
@@ -193,5 +194,19 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/health/db', async (ctx) => {
     ctx.body = collectDbPoolMetrics(CONNECTIONS)
+  })
+
+  /**
+   * @openapi
+   * /health/cache:
+   *   get:
+   *     summary: Lease cache status
+   *     tags: [Health]
+   *     responses:
+   *       '200':
+   *         description: Current lease cache status and metadata.
+   */
+  router.get('(.*)/health/cache', async (ctx) => {
+    ctx.body = getCacheInfo()
   })
 }

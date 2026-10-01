@@ -63,7 +63,7 @@ describe('/contacts/:contactCode', () => {
           emailAddresses: [],
           phoneNumbers: [
             {
-              phoneNumber: '199574  84',
+              phoneNumber: 'redacted',
               isPrimary: false,
               type: 'unspecified',
             },
