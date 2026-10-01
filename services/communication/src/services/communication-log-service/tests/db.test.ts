@@ -6,13 +6,13 @@ const batchInsertMock = jest.fn().mockResolvedValue(undefined)
 const trx = jest.fn(() => ({ insert: insertMock }))
 Object.assign(trx, { batchInsert: batchInsertMock })
 
-jest.mock('knex', () => {
-  const client = jest.fn()
-  Object.assign(client, {
-    transaction: (fn: (t: unknown) => unknown) => fn(trx),
-  })
-  return jest.fn(() => client)
-})
+// Mock the shared client module, not knex: jest.setupFilesAfterEnv imports
+// common/db before this file runs, so a knex mock would arrive too late and
+// the real client would write to the test database.
+jest.mock('../../../common/db', () => ({
+  db: { transaction: (fn: (t: unknown) => unknown) => fn(trx) },
+  createDbClient: jest.fn(),
+}))
 
 jest.mock('@onecore/utilities', () => ({
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
