@@ -95,6 +95,16 @@ describe('GET /rental-objects', () => {
 })
 
 describe('GET /rental-objects/search', () => {
+  const emptyScope = {
+    propertyCodes: [],
+    partialProperties: [],
+    buildingCodes: [],
+  }
+  const resolvedScope = {
+    propertyCodes: ['04101', '04102'],
+    partialProperties: [],
+    buildingCodes: [],
+  }
   const mockSearch = (rows = [summary], totalCount = rows.length) =>
     jest
       .spyOn(rentalObjectAdapter, 'searchRentalObjects')
@@ -131,8 +141,8 @@ describe('GET /rental-objects/search', () => {
 
   it('accepts exactly 200 rental ids', async () => {
     jest
-      .spyOn(groupingAdapter, 'resolveSearchPropertyCodes')
-      .mockResolvedValueOnce([])
+      .spyOn(groupingAdapter, 'resolveSearchScope')
+      .mockResolvedValueOnce(emptyScope)
     mockSearch([])
 
     const res = await request(app.callback())
@@ -144,8 +154,8 @@ describe('GET /rental-objects/search', () => {
 
   it('resolves grouping scopes to property codes before searching', async () => {
     const resolve = jest
-      .spyOn(groupingAdapter, 'resolveSearchPropertyCodes')
-      .mockResolvedValueOnce(['04101', '04102'])
+      .spyOn(groupingAdapter, 'resolveSearchScope')
+      .mockResolvedValueOnce(resolvedScope)
     const search = mockSearch([summary], 137)
 
     const res = await request(app.callback())
@@ -163,13 +173,13 @@ describe('GET /rental-objects/search', () => {
     )
     // The resolved codes ride alongside the raw params, not instead of them:
     // buildings and trapphus stay scopes of their own.
-    expect(search).toHaveBeenCalledWith(expect.anything(), ['04101', '04102'])
+    expect(search).toHaveBeenCalledWith(expect.anything(), resolvedScope)
   })
 
   it('defaults to the first page of 50', async () => {
     jest
-      .spyOn(groupingAdapter, 'resolveSearchPropertyCodes')
-      .mockResolvedValueOnce([])
+      .spyOn(groupingAdapter, 'resolveSearchScope')
+      .mockResolvedValueOnce(emptyScope)
     const search = mockSearch()
 
     await request(app.callback())
@@ -200,8 +210,8 @@ describe('GET /rental-objects/search', () => {
 
   it('forwards the type, subtype and free-text filters', async () => {
     jest
-      .spyOn(groupingAdapter, 'resolveSearchPropertyCodes')
-      .mockResolvedValueOnce([])
+      .spyOn(groupingAdapter, 'resolveSearchScope')
+      .mockResolvedValueOnce(emptyScope)
     const search = mockSearch()
 
     await request(app.callback())
@@ -225,7 +235,7 @@ describe('GET /rental-objects/search', () => {
 
   it('returns 500 when scope resolution throws', async () => {
     jest
-      .spyOn(groupingAdapter, 'resolveSearchPropertyCodes')
+      .spyOn(groupingAdapter, 'resolveSearchScope')
       .mockRejectedValueOnce(new Error('boom'))
 
     const res = await request(app.callback())

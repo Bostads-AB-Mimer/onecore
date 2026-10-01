@@ -8,9 +8,11 @@ export const {
   CostCenterRefSchema,
   KvvAreaWithCostCenterSchema,
   PropertyKvvAreaLookupSchema,
+  ResolveKvvAreaQuerySchema,
 } = property
 export type KvvAreaWithCostCenter = property.KvvAreaWithCostCenter
 export type PropertyKvvAreaLookup = property.PropertyKvvAreaLookup
+export type ResolveKvvAreaQuery = property.ResolveKvvAreaQuery
 
 export const PutPropertyKvvAreaBodySchema = z.object({
   kvvAreaId: z.string().uuid(),

@@ -10,7 +10,11 @@ import { Checkbox } from '@/shared/ui/Checkbox'
 import { TableCell, TableRow } from '@/shared/ui/Table'
 
 import type { OccupantTenant } from '../hooks/useOccupantData'
-import { LEVEL_LABELS, RENTAL_OBJECT_TYPE_LABELS } from '../model/labels'
+import {
+  LEVEL_LABELS,
+  RENTAL_OBJECT_TYPE_LABELS,
+  SHARE_LABELS,
+} from '../model/labels'
 import type { CheckState, PropertyTreeNode } from '../model/selection'
 import type { NodeRowSpec, RentalObject } from '../model/treeRows'
 import { LEVEL_ICONS, OBJECT_TYPE_ICONS } from './icons'
@@ -145,6 +149,14 @@ export const NodeRow = memo(function NodeRow({
               }
             >
               {row.node.label}
+              {row.node.share && (
+                <span
+                  className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground"
+                  title={SHARE_LABELS[row.node.share.kind].title}
+                >
+                  {SHARE_LABELS[row.node.share.kind].badge}
+                </span>
+              )}
             </button>
             <div className="truncate text-xs text-muted-foreground @xl:hidden">
               <CodeLink code={row.code} path={codePath} />
