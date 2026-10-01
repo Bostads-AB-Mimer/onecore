@@ -11923,7 +11923,11 @@ export interface components {
       /** Format: date-time */
       startDate: string | null
       /** Format: date-time */
+      endDate: string | null
+      /** Format: date-time */
       lastDebitDate: string | null
+      /** Format: date-time */
+      signedAt: string | null
       /** @enum {number} */
       status: 0 | 1 | 2 | 3 | 4 | 5 | 6
       rentalObjectCode: string | null

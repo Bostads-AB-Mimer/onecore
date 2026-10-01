@@ -66,7 +66,9 @@ function mapTenfastLeaseToSearchResult(
     property: ro?.fastighet?.fastighetsbeteckning ?? null,
     districtName: ro?.stadsdel ?? ro?.fastighet?.stadsdel ?? null,
     startDate: lease.startDate ?? null,
+    endDate: lease.endDate ?? null,
     lastDebitDate: lease.endDate ?? null,
+    signedAt: lease.signedAt ?? null,
     status: calculateLeaseStatus(lease),
   }
 }

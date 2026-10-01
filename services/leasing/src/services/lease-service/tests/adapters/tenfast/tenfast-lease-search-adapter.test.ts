@@ -76,7 +76,9 @@ const makeLeaseResult = (
   property: null,
   districtName: null,
   startDate: new Date('2024-01-01'),
+  endDate: null,
   lastDebitDate: null,
+  signedAt: null,
   status: LeaseStatus.Current,
   ...overrides,
 })

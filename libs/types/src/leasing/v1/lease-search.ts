@@ -148,7 +148,9 @@ export const LeaseSearchResultSchema = z.object({
   postalCode: z.string().nullable(),
   city: z.string().nullable(),
   startDate: z.date().nullable(),
+  endDate: z.date().nullable(),
   lastDebitDate: z.date().nullable(),
+  signedAt: z.date().nullable(),
   status: z.nativeEnum(LeaseStatus),
 
   // Rental object code (objektnummer) - always included

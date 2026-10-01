@@ -238,9 +238,9 @@ export const routes = (router: KoaRouter) => {
           const mappedLease: z.input<typeof CustomerScoreCardInfoSchema> = {
             //lease info
             division_1038: lease.leaseId,
-            division_1037: undefined,
+            division_1037: lease.signedAt?.toString(),
             contract_start_date: lease.startDate?.toString() ?? '',
-            contract_end_date: undefined,
+            contract_end_date: lease.endDate?.toString(),
             contract_type: lease.leaseType,
             object_street_1: rentalObjectData.address?.street ?? '',
             object_zip: rentalObjectData.address?.postalCode ?? '',

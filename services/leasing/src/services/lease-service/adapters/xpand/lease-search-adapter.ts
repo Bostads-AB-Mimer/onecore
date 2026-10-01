@@ -619,7 +619,9 @@ export const transformRow = (
     postalCode: trimmedRow.postalCode || null,
     city: trimmedRow.city || null,
     startDate: trimmedRow.startDate || null,
+    endDate: null,
     lastDebitDate: trimmedRow.lastDebitDate || null,
+    signedAt: null,
     rentalObjectCode: trimmedRow.rentalObjectCode || null,
     status,
   }
