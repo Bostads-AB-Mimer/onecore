@@ -132,6 +132,14 @@
     "imageName": "onecore-internal-portal-backend"
   },
   {
+    "name": "leasing-portal-backend",
+    "label": "ONECore Leasing Portal Backend",
+    "package": "@onecore/leasing-portal-backend",
+    "path": "apps/leasing-portal/backend",
+    "docker": true,
+    "imageName": "onecore-leasing-portal-backend"
+  },
+  {
     "name": "property-tree",
     "label": "ONECore Property Tree Application",
     "package": "@onecore/property-tree",

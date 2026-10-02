@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "pnpm -r build",
-    "build:apps": "pnpm run build:internal-portal && pnpm run build:property-tree",
+    "build:apps": "pnpm run build:internal-portal && pnpm run build:property-tree && pnpm run build:leasing-portal-backend",
     "build:communication": "pnpm run --filter @onecore/communication build ",
     "build:contacts": "pnpm run --filter @onecore/contacts build",
     "build:core": "pnpm run --filter @onecore/core build ",
@@ -20,6 +20,7 @@
     "build:internal-portal-backend": "pnpm run --filter @onecore/internal-portal-backend  build ",
     "build:keys": "turbo run --filter @onecore/keys build",
     "build:leasing": "pnpm run --filter @onecore/leasing build ",
+    "build:leasing-portal-backend": "pnpm run --filter @onecore/leasing-portal-backend build",
     "build:libs": "pnpm run build:types && pnpm run build:utilities && pnpm run build:dax-client",
     "build:dax-client": "pnpm run --filter dax-client build",
     "build:property": "pnpm run --filter @onecore/property build ",

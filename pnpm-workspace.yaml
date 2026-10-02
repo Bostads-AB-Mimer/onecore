@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - apps/internal-portal/*
+  - apps/leasing-portal/*
   - core
   - libs/*
   - services/*
