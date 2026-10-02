@@ -1691,6 +1691,7 @@ export const routes = (router: KoaRouter) => {
    *             properties:
    *               reason:
    *                 type: string
+   *                 maxLength: 1000
    *                 description: Optional reason from the tenant, shown to the handler.
    *                 example: The washing machine works again.
    *     responses:
@@ -1708,7 +1709,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: object
    *                   description: Route metadata
    *       '400':
-   *         description: The request body is malformed.
+   *         description: The request body is malformed, or the reason is longer than 1000 characters.
    *         content:
    *           application/json:
    *             schema:

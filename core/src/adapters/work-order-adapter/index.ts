@@ -578,10 +578,17 @@ export const closeWorkOrder = async (
   }
 }
 
+export type CloseRequestConflictReason = NonNullable<
+  paths['/workOrders/{workOrderId}/close-request']['post']['responses'][409]['content']['application/json']['reason']
+>
+
 export const requestCloseWorkOrder = async (
   workOrderId: string,
   reason?: string
-): Promise<AdapterResult<null, 'conflict' | 'unknown'>> => {
+): Promise<
+  | AdapterResult<null, 'unknown'>
+  | { ok: false; err: 'conflict'; reason?: CloseRequestConflictReason }
+> => {
   try {
     const fetchResponse = await client().POST(
       '/workOrders/{workOrderId}/close-request',
@@ -599,8 +606,11 @@ export const requestCloseWorkOrder = async (
 
     // Odoo refused: a request is already pending, or the work order is closed
     // or hidden from Mina sidor. The tenant is told so. It is not a failure.
+    // The reason is passed on so the caller can tell the three apart.
     if (fetchResponse.response.status === 409) {
-      return { ok: false, err: 'conflict' }
+      const conflict = fetchResponse.error as
+        { reason?: CloseRequestConflictReason } | undefined
+      return { ok: false, err: 'conflict', reason: conflict?.reason }
     }
 
     logger.error(

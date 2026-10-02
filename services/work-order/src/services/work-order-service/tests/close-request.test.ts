@@ -118,6 +118,24 @@ describe('POST /workOrders/:workOrderId/close-request against Odoo', () => {
     expect(odooMock.execute_kw).not.toHaveBeenCalled()
   })
 
+  it('accepts a reason of exactly 1000 characters', async () => {
+    const res = await request(app.callback())
+      .post('/api/workOrders/13/close-request')
+      .send({ reason: 'a'.repeat(1000) })
+
+    expect(res.status).toBe(200)
+    expect(odooMock.execute_kw).toHaveBeenCalled()
+  })
+
+  it('answers 400 and does not call Odoo when the reason is longer than 1000 characters', async () => {
+    const res = await request(app.callback())
+      .post('/api/workOrders/13/close-request')
+      .send({ reason: 'a'.repeat(1001) })
+
+    expect(res.status).toBe(400)
+    expect(odooMock.execute_kw).not.toHaveBeenCalled()
+  })
+
   it('answers 400 and does not call Odoo when the reason is not a string', async () => {
     const res = await request(app.callback())
       .post('/api/workOrders/13/close-request')

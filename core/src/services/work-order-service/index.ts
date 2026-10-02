@@ -2090,6 +2090,7 @@ export const routes = (router: KoaRouter) => {
    *             properties:
    *               reason:
    *                 type: string
+   *                 maxLength: 1000
    *                 description: Optional reason from the tenant, shown to the handler.
    *     responses:
    *       '200':
@@ -2103,7 +2104,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: Close requested for work order with ID {workOrderId}
    *       '400':
-   *         description: The request body is malformed.
+   *         description: The request body is malformed, or the reason is longer than 1000 characters.
    *       '409':
    *         description: Refused. A request is already pending, or the work order is closed or hidden from Mina sidor.
    *         content:
@@ -2114,6 +2115,10 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   example: close-request-conflict
+   *                 reason:
+   *                   type: string
+   *                   enum: [already_pending, closed, hidden]
+   *                   description: Why Odoo refused, so the caller can tell the tenant.
    *       '500':
    *         description: Internal server error. The work-order service or Odoo failed.
    *         content:
@@ -2163,7 +2168,11 @@ export const routes = (router: KoaRouter) => {
 
     if (result.err === 'conflict') {
       ctx.status = 409
-      ctx.body = { error: 'close-request-conflict', ...metadata }
+      ctx.body = {
+        error: 'close-request-conflict',
+        reason: result.reason,
+        ...metadata,
+      }
       return
     }
 

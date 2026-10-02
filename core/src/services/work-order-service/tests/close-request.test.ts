@@ -49,7 +49,30 @@ describe('POST /work-orders/:workOrderId/close-request against the work-order se
     )
 
     expect(res.status).toBe(409)
-    expect(res.body.error).toBe('close-request-conflict')
+    expect(res.body).toMatchObject({
+      error: 'close-request-conflict',
+      reason: 'already_pending',
+    })
+  })
+
+  it('answers 400 and does not call the service when the reason is longer than 1000 characters', async () => {
+    let called = false
+    mockServer.use(
+      http.post(
+        `${config.workOrderService.url}/workOrders/13/close-request`,
+        () => {
+          called = true
+          return HttpResponse.json({}, { status: 200 })
+        }
+      )
+    )
+
+    const res = await request(app.callback())
+      .post('/work-orders/13/close-request')
+      .send({ reason: 'a'.repeat(1001) })
+
+    expect(res.status).toBe(400)
+    expect(called).toBe(false)
   })
 
   it('answers 500 when the service fails for any other reason', async () => {

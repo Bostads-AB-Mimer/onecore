@@ -41,7 +41,10 @@ export const CreateInspectionWorkOrdersResponseSchema = z.object({
 
 // Tenant → Odoo, via core and the work-order service: asks the handler to
 // close a work order. Odoo decides. The reason is optional free text shown to
-// the handler in the chatter.
+// the handler in the chatter. The bound is enforced here, in the shared schema,
+// so core and the work-order service both answer 400 before Odoo is called.
+export const CLOSE_WORK_ORDER_REASON_MAX_LENGTH = 1000
+
 export const CloseWorkOrderRequestSchema = z.object({
-  reason: z.string().optional(),
+  reason: z.string().max(CLOSE_WORK_ORDER_REASON_MAX_LENGTH).optional(),
 })

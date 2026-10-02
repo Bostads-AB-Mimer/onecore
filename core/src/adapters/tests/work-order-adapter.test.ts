@@ -391,22 +391,25 @@ describe('work-order-adapter', () => {
       expect(received).toEqual({ reason: 'Felet har försvunnit' })
     })
 
-    it('returns conflict when the service answers 409', async () => {
-      mockServer.use(
-        http.post(
-          `${config.workOrderService.url}/workOrders/1/close-request`,
-          () =>
-            HttpResponse.json(
-              { error: 'close-request-conflict', reason: 'already_pending' },
-              { status: 409 }
-            )
+    it.each(['already_pending', 'closed', 'hidden'] as const)(
+      'returns conflict with the reason when the service answers 409 (%s)',
+      async (reason) => {
+        mockServer.use(
+          http.post(
+            `${config.workOrderService.url}/workOrders/1/close-request`,
+            () =>
+              HttpResponse.json(
+                { error: 'close-request-conflict', reason },
+                { status: 409 }
+              )
+          )
         )
-      )
 
-      const result = await workOrderAdapter.requestCloseWorkOrder('1')
+        const result = await workOrderAdapter.requestCloseWorkOrder('1')
 
-      expect(result).toEqual({ ok: false, err: 'conflict' })
-    })
+        expect(result).toEqual({ ok: false, err: 'conflict', reason })
+      }
+    )
 
     it('returns unknown when the service fails', async () => {
       mockServer.use(
