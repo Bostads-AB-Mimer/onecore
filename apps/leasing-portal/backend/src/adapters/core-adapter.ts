@@ -1,5 +1,13 @@
-import axios, { Method } from 'axios'
-import { logger, probe, SystemHealth } from '@onecore/utilities'
+import { Method } from 'axios'
+import {
+  loggedAxios as axios,
+  logger,
+  probe,
+  SystemHealth,
+} from '@onecore/utilities'
+
+const REQUEST_TIMEOUT_MS = 30_000
+const HEALTH_TIMEOUT_MS = 5_000
 
 export interface CoreRequest {
   method: Method
@@ -30,6 +38,7 @@ export const makeCoreClient = (config: { url: string }): CoreClient => {
           params: req.params,
           data: req.data,
           headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: REQUEST_TIMEOUT_MS,
           validateStatus: () => true,
         })
 
@@ -46,7 +55,9 @@ export const makeCoreClient = (config: { url: string }): CoreClient => {
 
     health: () =>
       probe('core', healthChecks, 1, async () => {
-        const result = await axios.get(`${config.url}/health`)
+        const result = await axios.get(`${config.url}/health`, {
+          timeout: HEALTH_TIMEOUT_MS,
+        })
         return result.data
       }),
   }

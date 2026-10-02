@@ -33,6 +33,7 @@ export const makeApp = (appContext: AppContext) => {
 
   const api = makeApi(appContext)
   app.use(api.routes())
+  app.use(api.allowedMethods())
 
   // Everything lives under the prefix: only that path is routed to us in the cluster.
   // Paths in the spec stay prefix-free; `servers` carries the prefix instead.

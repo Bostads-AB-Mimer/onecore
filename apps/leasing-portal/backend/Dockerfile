@@ -22,7 +22,6 @@ RUN pnpm install
 RUN pnpm build:libs
 RUN pnpm install
 RUN pnpm run --filter @onecore/leasing-portal-backend build
-RUN pnpm install --only=prod
 RUN pnpm deploy --filter @onecore/leasing-portal-backend --prod /out
 
 # ==========================
