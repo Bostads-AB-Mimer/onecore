@@ -1,6 +1,5 @@
 import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
-import { projectRoot } from './dirname'
 
 dotenv.config()
 
@@ -17,7 +16,8 @@ export interface Config {
 }
 
 const config = configPackage({
-  file: `${projectRoot()}/config.json`,
+  // Optional overrides file; dev, tests and the container all run from the package root.
+  file: `${process.cwd()}/config.json`,
   defaults: {
     port: 7002,
     applicationName: 'leasing-portal-backend',
