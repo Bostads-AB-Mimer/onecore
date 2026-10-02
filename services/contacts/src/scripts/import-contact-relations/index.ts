@@ -1,9 +1,9 @@
 /**
  * import-contact-relations
  *
- * Rerunnable import of god man, förvaltare and annan fakturamottagare
- * relations from Xpand into the contacts database. Run locally; Xpand is only
- * read.
+ * Rerunnable import of god man, förvaltare and annan fakturamottagare (ANNANFM
+ * rows and c/o addressees) relations from Xpand into the contacts database.
+ * Run locally; Xpand is only read.
  *
  * Setup: point services/contacts/.env at the databases you intend to use —
  *   XPAND_DATABASE__*      the Xpand database to read from

@@ -16,6 +16,7 @@ const report = (overrides: Partial<ImportReport> = {}): ImportReport => ({
   protected: 0,
   conflicts: [],
   skippedGuardians: [],
+  skippedRecipients: [],
   ...overrides,
 })
 
@@ -98,6 +99,33 @@ describe('formatReport', () => {
     expect(text).toContain('Överhoppade:           1')
     expect(text).toContain(
       '  P1: Xpand säger god man P2 — behåller förvaltare P3 (satt av manual-admin)'
+    )
+  })
+
+  it('counts and lists fakturamottagare kept because someone else set them', () => {
+    const text = formatReport(
+      report({
+        skippedRecipients: [
+          {
+            subjectContactCode: 'P5',
+            desired: {
+              subjectContactCode: 'P5',
+              relatedContactCode: 'P6',
+              roleType: 'annan_fakturamottagare',
+            },
+            existing: {
+              relatedContactCode: 'P9',
+              roleType: 'annan_fakturamottagare',
+              createdBy: 'manual-admin',
+            },
+          },
+        ],
+      })
+    )
+
+    expect(text).toContain('Överhoppade:           1')
+    expect(text).toContain(
+      '  P5: Xpand säger annan fakturamottagare P6 — behåller annan fakturamottagare P9 (satt av manual-admin)'
     )
   })
 })

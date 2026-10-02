@@ -52,8 +52,8 @@ export const formatReport = (report: ImportReport): string =>
         (r) => `    ${r.contactCode}  (avtal ${r.leaseIds.join(', ')})`
       ),
     ]),
-    `Överhoppade:           ${report.skippedGuardians.length}`,
-    ...report.skippedGuardians.map(
+    `Överhoppade:           ${report.skippedGuardians.length + report.skippedRecipients.length}`,
+    ...[...report.skippedGuardians, ...report.skippedRecipients].map(
       (s) =>
         `  ${s.subjectContactCode}: Xpand säger ${ROLE_LABELS[s.desired.roleType]} ${s.desired.relatedContactCode}` +
         ` — behåller ${ROLE_LABELS[s.existing.roleType]} ${s.existing.relatedContactCode} (satt av ${s.existing.createdBy})`
