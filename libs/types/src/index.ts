@@ -35,4 +35,5 @@ export {
 } from './schemas/v1/contact-sync'
 export { LeaseChangeSchema, type LeaseChange } from './schemas/v1/lease-sync'
 export { paginatedResponseSchema } from './schemas/pagination'
+export { KeycloakUserSchema, type KeycloakUser } from './schemas/keycloak-user'
 export * as fileStorageSchemas from './schemas/file-storage'
