@@ -1,11 +1,11 @@
 import { useState } from 'react'
+import { useToast } from '@onecore/ui'
 import { useQuery } from '@tanstack/react-query'
 
 import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
 import type { Room } from '@/services/types'
 
-import { useToast } from '@/shared/hooks/useToast'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 
 import {

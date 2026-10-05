@@ -1,8 +1,7 @@
+import { toast } from '@onecore/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { componentService } from '@/services/api/core/componentService'
-
-import { toast } from '@/shared/hooks/useToast'
 
 export const useAddSurfaceComponent = (propertyObjectId: string) => {
   const queryClient = useQueryClient()

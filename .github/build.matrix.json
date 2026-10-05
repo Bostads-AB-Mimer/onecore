@@ -140,6 +140,13 @@
     "imageName": "onecore-leasing-portal-backend"
   },
   {
+    "name": "ui",
+    "label": "ONECore UI Library",
+    "package": "@onecore/ui",
+    "path": "libs/ui",
+    "docker": false
+  },
+  {
     "name": "property-tree",
     "label": "ONECore Property Tree Application",
     "package": "@onecore/property-tree",

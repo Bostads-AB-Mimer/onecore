@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.react.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "types": ["vitest/globals"]
+  },
+  "include": ["src", "test", "vitest.config.ts", "tsup.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}

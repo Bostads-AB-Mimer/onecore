@@ -1,4 +1,5 @@
 import { Outlet } from 'react-router-dom'
+import { Toaster } from '@onecore/ui'
 
 import { SidebarNavigation } from '@/widgets/sidebar'
 
@@ -7,7 +8,6 @@ import { CommandPalette } from '@/features/search'
 import { FeedbackModalProvider } from '@/shared/hooks/useFeedbackModal'
 import { SidebarToggleButton } from '@/shared/ui/layout'
 import { SidebarInset, SidebarProvider, useSidebar } from '@/shared/ui/Sidebar'
-import { Toaster } from '@/shared/ui/Toaster'
 
 import { FeedbackModal } from '@/components/feedback/FeedbackModal'
 

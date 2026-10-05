@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useToast } from '@onecore/ui'
 import { useMutation } from '@tanstack/react-query'
 import {
   AlertTriangle,
@@ -11,7 +12,6 @@ import {
 
 import { type IMDProcessError, imdService } from '@/services/api/core'
 
-import { useToast } from '@/shared/hooks/useToast'
 import { cn } from '@/shared/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'

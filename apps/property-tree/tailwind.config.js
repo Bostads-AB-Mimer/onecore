@@ -1,8 +1,15 @@
 import containerQueries from '@tailwindcss/container-queries'
 
 /** @type {import('tailwindcss').Config} */
+// TODO: replace the inline theme with `presets: [onecorePreset]` from @onecore/ui once the
+// component migration lands; until then this must stay identical to the preset.
 export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+    // Workspace packages rendered inside property-tree
+    './node_modules/@onecore/ui/dist/*.js',
+  ],
   darkMode: ['class', 'class'],
   theme: {
     extend: {
