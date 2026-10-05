@@ -1,9 +1,8 @@
+import { toast } from '@onecore/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { kvvAreaService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
-
-import { toast } from '@/shared/hooks/useToast'
 
 type CostCenterTree = components['schemas']['CostCenterTree']
 type KeycloakUser = components['schemas']['KeycloakUser']

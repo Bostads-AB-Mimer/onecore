@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useToast } from '@onecore/ui'
 import { useQuery } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 
@@ -8,7 +9,6 @@ import { inspectionService, roomService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 import type { ResidenceDetails } from '@/services/types'
 
-import { useToast } from '@/shared/hooks/useToast'
 import { Button } from '@/shared/ui/Button'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'

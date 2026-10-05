@@ -33,3 +33,9 @@ shared/
 - **No API calls.** Data fetching belongs in `services/` or higher layers.
 - **Keep it reusable.** Every export should be usable by any layer above.
 - Barrel exports (`index.ts`) are **not** required for `shared/` — direct imports like `@/shared/ui/Button` are allowed.
+
+## Shared UI lib
+
+The primitives in `shared/ui` (Button, Dialog, Table, ...) are duplicated in
+`@onecore/ui`. Toast has already moved; the rest is pending migration, after
+which imports switch to `@onecore/ui` and the local copies go away.

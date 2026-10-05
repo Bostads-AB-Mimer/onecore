@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useToast } from '@onecore/ui'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { roomService } from '@/services/api/core'
@@ -6,7 +7,6 @@ import type { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
 import type { Room } from '@/services/types'
 
-import { useToast } from '@/shared/hooks/useToast'
 import {
   Dialog,
   DialogContent,

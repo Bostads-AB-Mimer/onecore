@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react'
+import { useToast } from '@onecore/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-
-import { useToast } from './useToast'
 
 // A fully-resolved email recipient. Having one is the proof we can send: every
 // field is required, so there is no path to the API without a contactCode and

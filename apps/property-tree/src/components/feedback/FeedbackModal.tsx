@@ -1,11 +1,11 @@
 import * as React from 'react'
+import { useToast } from '@onecore/ui'
 import { Loader2, Upload, X } from 'lucide-react'
 
 import { useCreateFeedback } from '@/entities/tenant/hooks/useCreateFeedback'
 import { useUser } from '@/entities/user'
 
 import { useFeedbackModal } from '@/shared/hooks/useFeedbackModal'
-import { useToast } from '@/shared/hooks/useToast'
 import { Button } from '@/shared/ui/Button'
 import {
   Dialog,

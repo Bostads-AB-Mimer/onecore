@@ -1,9 +1,9 @@
+import { useToast } from '@onecore/ui'
 import { Download, FileText, Trash2, Upload } from 'lucide-react'
 
 import { formatFileSize, useDocuments } from '@/entities/document'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
-import { useToast } from '@/shared/hooks/useToast'
 import { ContextType } from '@/shared/types/ui'
 import { Button } from '@/shared/ui/Button'
 import { Card } from '@/shared/ui/Card'

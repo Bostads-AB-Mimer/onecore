@@ -1,11 +1,11 @@
 import { useState } from 'react'
+import { useToast } from '@onecore/ui'
 import { PlusCircle } from 'lucide-react'
 
 import { type TenantSearchResult, useTenantSearch } from '@/entities/tenant'
 
 import type { RelationRoleType } from '@/services/api/core/tenantService'
 
-import { useToast } from '@/shared/hooks/useToast'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import {

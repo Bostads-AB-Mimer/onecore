@@ -1,9 +1,9 @@
 import { useState } from 'react'
+import { useToast } from '@onecore/ui'
 import { Trash2 } from 'lucide-react'
 
 import type { RelationRoleType } from '@/services/api/core/tenantService'
 
-import { useToast } from '@/shared/hooks/useToast'
 import {
   AlertDialog,
   AlertDialogAction,

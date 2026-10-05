@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { useForm, type DefaultValues } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { type DefaultValues, useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useToast } from '@onecore/ui'
 import { PlusCircle } from 'lucide-react'
 
-import { useToast } from '@/shared/hooks/useToast'
 import { paths } from '@/shared/routes'
 import { Button } from '@/shared/ui/Button'
+import { Checkbox } from '@/shared/ui/Checkbox'
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/shared/ui/Form'
-import { Checkbox } from '@/shared/ui/Checkbox'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
 import {
@@ -40,16 +40,16 @@ import { Separator } from '@/shared/ui/Separator'
 import { useCreateContact } from '../hooks/useCreateContact'
 import {
   createContactErrorMessage,
+  type CreateContactFormInput,
   createContactFormSchema,
-  duplicateContactCode,
+  type CreateContactFormValues,
   customerTypeLabels,
+  duplicateContactCode,
   HOUSING_TYPES,
   housingTypeLabels,
   requiresHousingDescription,
   requiresLandlord,
   WAITING_LISTS,
-  type CreateContactFormInput,
-  type CreateContactFormValues,
 } from '../lib/createContact'
 
 export const CreateContactDialog = () => {

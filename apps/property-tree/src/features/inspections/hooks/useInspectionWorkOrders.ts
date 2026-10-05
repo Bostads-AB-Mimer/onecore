@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
+import { useToast } from '@onecore/ui'
 import { useMutation } from '@tanstack/react-query'
 
 import { workOrderService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 import type { Room } from '@/services/types'
-
-import { useToast } from '@/shared/hooks/useToast'
 
 import {
   buildInspectionWorkOrderGroups,

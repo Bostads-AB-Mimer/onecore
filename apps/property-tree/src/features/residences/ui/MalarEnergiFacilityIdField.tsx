@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
+import { useToast } from '@onecore/ui'
 import { Check, Pencil, X } from 'lucide-react'
 
 import { useClickOutside } from '@/shared/hooks/useClickOutside'
-import { useToast } from '@/shared/hooks/useToast'
 import { Button } from '@/shared/ui/Button'
 import { CopyableField } from '@/shared/ui/CopyableField'
 import { Input } from '@/shared/ui/Input'

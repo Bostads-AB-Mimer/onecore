@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
+import { useToast } from '@onecore/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { Building2, Car, DoorOpen, Home } from 'lucide-react'
 
@@ -36,7 +37,6 @@ import {
 import type { components } from '@/services/api/core/generated/api-types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
-import { useToast } from '@/shared/hooks/useToast'
 import { formatUserName } from '@/shared/lib/formatters'
 import { Card, CardContent } from '@/shared/ui/Card'
 import { ViewLayout } from '@/shared/ui/layout'

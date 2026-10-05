@@ -1,9 +1,9 @@
+import { toast } from '@onecore/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError } from '@/services/api/core/baseApi'
 import { inspectionService } from '@/services/api/core/inspectionService'
 
-import { toast } from '@/shared/hooks/useToast'
 import {
   AlertDialog,
   AlertDialogAction,

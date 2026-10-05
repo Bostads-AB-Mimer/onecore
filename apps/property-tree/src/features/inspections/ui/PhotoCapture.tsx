@@ -1,7 +1,7 @@
 import { useRef } from 'react'
+import { useToast } from '@onecore/ui'
 import { Camera, Loader2 } from 'lucide-react'
 
-import { useToast } from '@/shared/hooks/useToast'
 import { Button } from '@/shared/ui/Button'
 
 import {

@@ -7,6 +7,7 @@ import {
   XledgerProject,
 } from '@onecore/types'
 import { SubmitMiscellaneousInvoiceErrorCodes } from '@onecore/types'
+import { useToast } from '@onecore/ui'
 import { useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
@@ -22,7 +23,6 @@ import { Lease as CoreLease } from '@/services/api/core'
 import { ApiError } from '@/services/api/core/baseApi'
 import { economyService } from '@/services/api/core/economyService'
 
-import { useToast } from '@/shared/hooks/useToast'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import { Calendar } from '@/shared/ui/Calendar'

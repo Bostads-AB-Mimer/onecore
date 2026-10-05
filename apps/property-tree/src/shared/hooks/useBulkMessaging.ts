@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useToast } from '@onecore/ui'
 
-import { useToast } from '@/shared/hooks/useToast'
 import type { EmailRecipient } from '@/shared/ui/EmailModal'
 import type { SmsRecipient } from '@/shared/ui/SmsModal'
 
