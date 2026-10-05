@@ -8051,7 +8051,7 @@ export interface paths {
     }
     /**
      * Delete a receipt
-     * @description Delete a receipt by ID (and associated file from MinIO)
+     * @description Delete a receipt by ID (and associated file from file storage)
      */
     delete: {
       parameters: {
