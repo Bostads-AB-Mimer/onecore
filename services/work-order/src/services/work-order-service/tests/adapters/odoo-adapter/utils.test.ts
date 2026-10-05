@@ -38,6 +38,25 @@ describe('odoo-adapter utils', () => {
       expect(result.Description).toContain('Kund nås enklast mellan')
       expect(result.Description).toContain('på telefonnummer')
     })
+
+    // Mina sidor disables "Jag vill avsluta ärendet" while this is true, so a
+    // tenant cannot pile up requests the handler has not answered yet.
+    it('should expose a pending close request', () => {
+      const result = transformWorkOrder(
+        factory.odooWorkOrder.build({ close_request_pending: true })
+      )
+
+      expect(result.CloseRequestPending).toBe(true)
+    })
+
+    it('should treat a missing close_request_pending as no pending request', () => {
+      const odooWorkOrder = factory.odooWorkOrder.build()
+      delete odooWorkOrder.close_request_pending
+
+      const result = transformWorkOrder(odooWorkOrder)
+
+      expect(result.CloseRequestPending).toBe(false)
+    })
   })
 
   describe('transformMessages', () => {
@@ -113,6 +132,48 @@ describe('odoo-adapter utils', () => {
           message_type: 'failed_tenant_sms',
           author_id: [7, 'Bostads AB Mimer, Sebastian Handläggare'],
           onecore_tenant_author_name: false,
+        }),
+      ])
+
+      expect(result[0].author).toBe('Mimer')
+    })
+
+    // The integration writes the close request on the tenant's behalf, so it
+    // is the tenant's message, not an outbound one. It must take the same path
+    // as from_tenant. Otherwise it is labelled "Mimer" and shown as our reply.
+    it('should author a close request as the tenant', () => {
+      const result = transformMessages([
+        factory.odooWorkOrderMessage.build({
+          message_type: 'close_request_from_tenant',
+          author_id: [3, 'Bostads AB Mimer, Anna Hyresgäst'],
+          onecore_tenant_author_name: false,
+        }),
+      ])
+
+      expect(result[0].author).toBe('Anna Hyresgäst')
+      expect(result[0].messageType).toBe('close_request_from_tenant')
+    })
+
+    it('should ignore a stored sender on a close request', () => {
+      const result = transformMessages([
+        factory.odooWorkOrderMessage.build({
+          message_type: 'close_request_from_tenant',
+          author_id: [3, 'Bostads AB Mimer, Anna Hyresgäst'],
+          onecore_tenant_author_name: 'Mimer',
+        }),
+      ])
+
+      expect(result[0].author).toBe('Anna Hyresgäst')
+    })
+
+    // A declined request is the handler answering the tenant: outbound, so
+    // it carries the sender Odoo stored, like any other reply.
+    it('should use the stored sender on a declined close request', () => {
+      const result = transformMessages([
+        factory.odooWorkOrderMessage.build({
+          message_type: 'close_request_declined',
+          author_id: [7, 'Bostads AB Mimer, Sebastian Handläggare'],
+          onecore_tenant_author_name: 'Mimer',
         }),
       ])
 

@@ -28,6 +28,7 @@ export const OdooWorkOrderFactory = Factory.define<
   ],
   Messages: [],
   UseMasterKey: false,
+  CloseRequestPending: false,
 }))
 
 export const XpandWorkOrderFactory = Factory.define<

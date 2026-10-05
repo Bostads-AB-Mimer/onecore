@@ -81,6 +81,7 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
     RentalObjectCode: odooWorkOrder.rental_property_id[1],
     Status: odooWorkOrder.stage_id[1],
     HiddenFromMyPages: odooWorkOrder.hidden_from_my_pages || false,
+    CloseRequestPending: odooWorkOrder.close_request_pending || false,
     UseMasterKey: odooWorkOrder.master_key || false,
     WorkOrderRows: [
       {
@@ -97,15 +98,21 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
 // cannot place is Mimer, never a named person and never a supplier.
 const TENANT_AUTHOR_FALLBACK = 'Mimer'
 
+// Message types the tenant is the author of: what they wrote themselves, and
+// the close request the integration writes on their behalf. Odoo stores no
+// tenant-facing sender on these, and Mina sidor labels them "Du".
+const TENANT_AUTHORED_MESSAGE_TYPES = [
+  'from_tenant',
+  'close_request_from_tenant',
+]
+
 // The sender Mina sidor prints beside a message. Odoo decides it when the
 // message is written and stores it on the message itself — whether the author
 // was one of us or an external contractor, and which resource group they
 // answered for, is knowable there and nowhere else, so it is carried across
 // rather than derived here.
 const messageAuthor = (message: OdooWorkOrderMessage): string => {
-  // The tenant wrote this one. Odoo leaves the stored sender empty on
-  // from_tenant, and Mina sidor labels the tenant's own messages "Du".
-  if (message.message_type === 'from_tenant') {
+  if (TENANT_AUTHORED_MESSAGE_TYPES.includes(message.message_type)) {
     return last(message.author_id[1].split(', ')) ?? '' // author name is in format "YourCompany, Mitchell Admin"
   }
   // Everything else is outbound. Falling back to author_id here would put a

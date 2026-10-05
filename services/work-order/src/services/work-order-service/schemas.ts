@@ -26,6 +26,8 @@ export const WorkOrderSchema = z.object({
   Status: z.string(),
   UseMasterKey: z.boolean(),
   HiddenFromMyPages: z.boolean().optional(),
+  // True while the tenant's request to close the case awaits a decision in Odoo.
+  CloseRequestPending: z.boolean(),
   WorkOrderRows: z.array(
     z.object({
       Description: z.string().nullable(),
@@ -49,6 +51,7 @@ export const OdooWorkOrderSchema = z.object({
   call_between: z.string(),
   hidden_from_my_pages: z.boolean().optional(),
   master_key: z.boolean().optional(),
+  close_request_pending: z.boolean().optional(),
   space_code: z.string(),
   equipment_code: z.string(),
   rental_property_id: z.string(),
@@ -76,6 +79,7 @@ export const XpandWorkOrderDetailsSchema = WorkOrderSchema.omit({
   ExternalResource: true,
   UseMasterKey: true,
   HiddenFromMyPages: true,
+  CloseRequestPending: true, // Xpand work orders cannot carry a close request
   Messages: true,
   Url: true,
 }).extend({
@@ -197,6 +201,7 @@ export {
   CreateInspectionWorkOrderGroupSchema,
   CreateInspectionWorkOrderResultSchema,
   CreateInspectionWorkOrdersResponseSchema,
+  CloseWorkOrderRequestSchema,
 } from '@onecore/types'
 
 export const CreateInspectionWorkOrdersBodySchema = z.object({
@@ -238,4 +243,5 @@ export type {
   MaintenanceTeam,
   CreateInspectionWorkOrderGroup,
   CreateInspectionWorkOrderResult,
+  CloseWorkOrderRequest,
 } from '@onecore/types'
