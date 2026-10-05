@@ -798,8 +798,14 @@ export const routes = (router: KoaRouter) => {
               )
             }
 
+            // Prefer Xpand over the applicant row so protected identity is
+            // respected, same as the tenant branch. Fall back only if no contact.
             applicants.push({
               ...applicant,
+              name: contact.data ? contact.data.fullName : applicant.name,
+              nationalRegistrationNumber: contact.data
+                ? contact.data.nationalRegistrationNumber
+                : applicant.nationalRegistrationNumber,
               queuePoints:
                 contact.data?.parkingSpaceWaitingList?.queuePoints ?? 0,
               address: contact.data?.address,

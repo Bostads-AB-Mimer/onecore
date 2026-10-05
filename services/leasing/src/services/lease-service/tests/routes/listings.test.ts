@@ -88,7 +88,9 @@ describe('GET /listing/:listingId/applicants/details', () => {
     const tenantApplicant = factory.applicant.build({ listingId })
     const formerTenantApplicant = factory.applicant.build({
       listingId,
-      contactCode: 'P030170',
+      contactCode: 'P126159',
+      name: 'Gammalt Namn',
+      nationalRegistrationNumber: '190001010000',
     })
 
     const listing = factory.listing.build({
@@ -108,7 +110,9 @@ describe('GET /listing/:listingId/applicants/details', () => {
       .mockResolvedValueOnce({
         ok: true,
         data: factory.contact.build({
-          contactCode: 'P030170',
+          contactCode: 'P126159',
+          fullName: 'Tolvansson, Tolvan',
+          nationalRegistrationNumber: '191212121212',
           address: {
             street: 'Gatan 1',
             number: '',
@@ -133,13 +137,15 @@ describe('GET /listing/:listingId/applicants/details', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(getContactSpy).toHaveBeenCalledWith('P030170', false)
+    expect(getContactSpy).toHaveBeenCalledWith('P126159', false)
     expect(res.body.content).toHaveLength(2)
 
     const formerTenant = res.body.content.find(
-      (a: { contactCode: string }) => a.contactCode === 'P030170'
+      (a: { contactCode: string }) => a.contactCode === 'P126159'
     )
     expect(formerTenant).toMatchObject({
+      name: 'Tolvansson, Tolvan',
+      nationalRegistrationNumber: '191212121212',
       queuePoints: 42,
       address: expect.objectContaining({ street: 'Gatan 1' }),
       parkingSpaceContracts: [],
@@ -159,10 +165,9 @@ describe('GET /listing/:listingId/applicants/details', () => {
     jest
       .spyOn(getTenantService, 'getTenant')
       .mockResolvedValueOnce({ ok: false, err: 'get-contact' })
-    const getContactSpy = jest.spyOn(
-      tenantLeaseAdapter,
-      'getContactByContactCode'
-    )
+    const getContactSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValue({ ok: true, data: factory.contact.build() })
 
     const res = await request(app.callback()).get(
       '/listing/1337/applicants/details'
