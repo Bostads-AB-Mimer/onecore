@@ -16,15 +16,12 @@ RUN corepack enable && corepack prepare --activate
 # Copy relevant packages
 COPY libs ./libs
 COPY apps/leasing-portal/frontend ./apps/leasing-portal/frontend
-COPY apps/property-tree ./apps/property-tree
 
 RUN pnpm install
-# Build workspace dependencies (types, ui, leasing-portal-frontend) the same way CI does
-RUN pnpm run --filter @onecore/property-tree... --filter !@onecore/property-tree build
+# Build workspace dependencies (ui, types) the same way CI does
+RUN pnpm run --filter @onecore/leasing-portal-frontend... --filter !@onecore/leasing-portal-frontend build
 RUN pnpm install
-RUN pnpm run --filter @onecore/property-tree build
-RUN pnpm install --only=prod
-RUN pnpm deploy --filter @onecore/property-tree --prod /out
+RUN pnpm run --filter @onecore/leasing-portal-frontend build
 
 # ==========================
 # Run stage
@@ -36,9 +33,9 @@ RUN apk add --no-cache nodejs
 WORKDIR /app
 
 # Copy nginx configuration
-COPY --from=builder /app/apps/property-tree/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/apps/property-tree/script ./script
-COPY --from=builder /out/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/leasing-portal/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/apps/leasing-portal/frontend/script ./script
+COPY --from=builder /app/apps/leasing-portal/frontend/dist/app /usr/share/nginx/html
 
 # Actual run config
 EXPOSE 80

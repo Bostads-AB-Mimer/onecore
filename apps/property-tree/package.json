@@ -28,6 +28,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@headlessui/react": "^1.7.19",
     "@hookform/resolvers": "^5.4.0",
+    "@onecore/leasing-portal-frontend": "workspace:*",
     "@onecore/types": "workspace:*",
     "@onecore/ui": "workspace:*",
     "@radix-ui/react-accordion": "^1.2.20",

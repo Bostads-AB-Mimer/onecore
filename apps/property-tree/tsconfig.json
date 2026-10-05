@@ -1,14 +1,19 @@
 {
   "extends": "../../tsconfig.react.base.json",
   "compilerOptions": {
+    // Not referenced by other projects. Off so the leasing source mapped below may live outside src.
+    "composite": false,
     "target": "ES2020",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "rootDir": "src",
     "allowImportingTsExtensions": true,
     "noPropertyAccessFromIndexSignature": false,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      // Same source vite serves in dev, so the IDE and typecheck never lag behind dist.
+      "@onecore/leasing-portal-frontend": [
+        "../leasing-portal/frontend/src/index.ts"
+      ]
     },
     "types": ["node", "react", "react-dom"],
     "allowJs": true,

@@ -140,6 +140,14 @@
     "imageName": "onecore-leasing-portal-backend"
   },
   {
+    "name": "leasing-portal-frontend",
+    "label": "ONECore Leasing Portal Application",
+    "package": "@onecore/leasing-portal-frontend",
+    "path": "apps/leasing-portal/frontend",
+    "docker": true,
+    "imageName": "onecore-leasing-portal-frontend"
+  },
+  {
     "name": "ui",
     "label": "ONECore UI Library",
     "package": "@onecore/ui",

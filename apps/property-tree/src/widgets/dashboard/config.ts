@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 
 import { resolve } from '@/shared/lib/env'
+import { isLeasingPortalEnabled } from '@/shared/lib/leasingPortal'
 import { routes } from '@/shared/routes'
 
 import type { DashboardCard } from './types'
@@ -55,8 +56,11 @@ export const dashboardCards: DashboardCard[] = [
     title: 'Uthyrning',
     icon: Home,
     description: 'Hantera uthyrning av lägenheter',
-    path: resolve('VITE_INTERNAL_PORTAL', ''),
-    isExternal: true,
+    // The leasing portal replaces the internal portal link once its BFF is configured.
+    path: isLeasingPortalEnabled
+      ? routes.leasing
+      : resolve('VITE_INTERNAL_PORTAL', ''),
+    isExternal: !isLeasingPortalEnabled,
     isDisabled: false,
   },
   {

@@ -1,4 +1,5 @@
 import { createBrowserRouter, type RouterProviderProps } from 'react-router-dom'
+import { leasingRoutes } from '@onecore/leasing-portal-frontend'
 
 import BuildingView from '@/pages/BuildingPage'
 import { CompanyPage } from '@/pages/CompanyPage'
@@ -9,6 +10,7 @@ import { FacilityPage } from '@/pages/FacilityPage'
 import { ImdPage } from '@/pages/ImdPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
+import { LeasingPortalPage } from '@/pages/LeasingPortalPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
 import { ParkingSpacePage } from '@/pages/ParkingSpacePage'
 import { PropertyAreasPage } from '@/pages/PropertyAreasPage'
@@ -149,6 +151,12 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: routes.inspections,
             element: <InspectionsView />,
             handle: { title: 'Besiktningar' },
+          },
+          {
+            path: routes.leasing,
+            element: <LeasingPortalPage />,
+            handle: { title: 'Uthyrning' },
+            children: leasingRoutes,
           },
         ],
       },
