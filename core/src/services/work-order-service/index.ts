@@ -5,6 +5,7 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import * as workOrderAdapter from '../../adapters/work-order-adapter'
 import * as communicationAdapter from '../../adapters/communication-adapter'
+import { logOutboundDispatch } from '../../adapters/communication-adapter/log-writes'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
 
@@ -326,6 +327,7 @@ export const routes = (router: KoaRouter) => {
               registered: new Date(v.Registered),
               rentalObjectCode: v.RentalObjectCode,
               status: v.Status,
+              closeRequestPending: v.CloseRequestPending,
               dueDate: v.DueDate ? new Date(v.DueDate) : null,
               hiddenFromMyPages: v.HiddenFromMyPages,
               workOrderRows: v.WorkOrderRows.map((row) => ({
@@ -434,6 +436,7 @@ export const routes = (router: KoaRouter) => {
                 registered: new Date(v.Registered),
                 rentalObjectCode: v.RentalObjectCode,
                 status: v.Status,
+                closeRequestPending: v.CloseRequestPending,
                 url: v.Url,
                 workOrderRows: v.WorkOrderRows.map((row) => ({
                   description: row.Description,
@@ -536,6 +539,7 @@ export const routes = (router: KoaRouter) => {
               registered: new Date(v.Registered),
               rentalObjectCode: v.RentalObjectCode,
               status: v.Status,
+              closeRequestPending: v.CloseRequestPending,
               url: v.Url,
               workOrderRows: v.WorkOrderRows.map((row) => ({
                 description: row.Description,
@@ -637,6 +641,7 @@ export const routes = (router: KoaRouter) => {
               registered: new Date(v.Registered),
               rentalObjectCode: v.RentalObjectCode,
               status: v.Status,
+              closeRequestPending: v.CloseRequestPending,
               url: v.Url,
               workOrderRows: v.WorkOrderRows.map((row) => ({
                 description: row.Description,
@@ -741,6 +746,7 @@ export const routes = (router: KoaRouter) => {
                 registered: new Date(v.Registered),
                 rentalObjectCode: v.RentalObjectCode,
                 status: v.Status,
+                closeRequestPending: v.CloseRequestPending,
                 url: v.Url,
                 workOrderRows: v.WorkOrderRows.map((row) => ({
                   description: row.Description,
@@ -1430,6 +1436,7 @@ export const routes = (router: KoaRouter) => {
             registered: new Date(v.Registered),
             rentalObjectCode: v.RentalObjectCode,
             status: v.Status,
+            closeRequestPending: v.CloseRequestPending,
             url: v.Url,
             workOrderRows: v.WorkOrderRows.map((row) => ({
               description: row.Description,
@@ -2058,6 +2065,126 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /work-orders/{workOrderId}/close-request:
+   *   post:
+   *     summary: Request, on the tenant's behalf, that a work order be closed
+   *     tags:
+   *       - Work Order Service
+   *     description: |
+   *       Asks for the Odoo work order to be closed. The handler of the case
+   *       decides in Odoo; nothing is closed here. Used by Mina sidor via the
+   *       .NET API. Staff close with /work-orders/{workOrderId}/close.
+   *     parameters:
+   *       - in: path
+   *         name: workOrderId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The Odoo id of the work order.
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               reason:
+   *                 type: string
+   *                 maxLength: 1000
+   *                 description: Optional reason from the tenant, shown to the handler.
+   *     responses:
+   *       '200':
+   *         description: Close request recorded.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Close requested for work order with ID {workOrderId}
+   *       '400':
+   *         description: The request body is malformed, or the reason is longer than 1000 characters.
+   *       '409':
+   *         description: Refused. A request is already pending, or the work order is closed or hidden from Mina sidor.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: close-request-conflict
+   *                 reason:
+   *                   type: string
+   *                   enum: [already_pending, closed, hidden]
+   *                   description: Why Odoo refused, so the caller can tell the tenant.
+   *       '500':
+   *         description: Internal server error. The work-order service or Odoo failed.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Failed to request close of work order with ID {workOrderId}
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/work-orders/:workOrderId/close-request', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { workOrderId } = ctx.params
+
+    // An empty POST has no body at all. That is a request without a reason.
+    const body = schemas.CloseWorkOrderRequestSchema.safeParse(
+      ctx.request.body ?? {}
+    )
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: body.error.issues.map(({ message, path }) => ({
+          message,
+          path,
+        })),
+        ...metadata,
+      }
+      return
+    }
+
+    const result = await workOrderAdapter.requestCloseWorkOrder(
+      workOrderId,
+      body.data.reason
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        message: `Close requested for work order with ID ${workOrderId}`,
+        ...metadata,
+      }
+      return
+    }
+
+    if (result.err === 'conflict') {
+      ctx.status = 409
+      ctx.body = {
+        error: 'close-request-conflict',
+        reason: result.reason,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 500
+    ctx.body = {
+      message: `Failed to request close of work order with ID ${workOrderId}`,
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
    * /work-orders/send-sms:
    *   post:
    *     summary: Send SMS for a work order
@@ -2077,6 +2204,9 @@ export const routes = (router: KoaRouter) => {
    *               text:
    *                 type: string
    *                 description: The message to be sent via SMS.
+   *               workOrderCode:
+   *                 type: string
+   *                 description: od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand.
    *     responses:
    *       '200':
    *         description: Successfully sent the SMS.
@@ -2119,6 +2249,7 @@ export const routes = (router: KoaRouter) => {
       externalContractorName,
       contactCode,
       triggeredByUser,
+      workOrderCode,
     } = ctx.request.body
 
     if (!phoneNumber || !text) {
@@ -2137,6 +2268,7 @@ export const routes = (router: KoaRouter) => {
         externalContractorName,
         contactCode,
         triggeredByUser,
+        workOrderCode,
       })
 
       if (result.ok) {
@@ -2190,6 +2322,9 @@ export const routes = (router: KoaRouter) => {
    *               text:
    *                 type: string
    *                 description: The message to be sent in the email.
+   *               workOrderCode:
+   *                 type: string
+   *                 description: od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand.
    *     responses:
    *       '200':
    *         description: Successfully sent the email.
@@ -2233,6 +2368,7 @@ export const routes = (router: KoaRouter) => {
       externalContractorName,
       contactCode,
       triggeredByUser,
+      workOrderCode,
     } = ctx.request.body
 
     if (to === undefined || subject === undefined || text === undefined) {
@@ -2252,6 +2388,7 @@ export const routes = (router: KoaRouter) => {
       externalContractorName,
       contactCode,
       triggeredByUser,
+      workOrderCode,
     })
 
     if (result.ok) {
@@ -2271,6 +2408,108 @@ export const routes = (router: KoaRouter) => {
         message: `Failed to send email to ${to}, status: ${result.statusCode}`,
         ...metadata,
       }
+    }
+  })
+
+  // Sender label on the dispatch row. Mirrors the SMS sender constant in the
+  // communication service — a Mina sidor message has no real from-address.
+  const MY_PAGES_FROM_ADDRESS = 'Mimer'
+  // The column is NOT NULL and there is no address to publish to; the real
+  // recipient is carried by contactCode.
+  const MY_PAGES_TO_ADDRESS = 'Mina sidor'
+
+  /**
+   * @swagger
+   * /work-orders/log-my-pages-message:
+   *   post:
+   *     summary: Log a message published to a tenant's Mina sidor
+   *     tags:
+   *       - Work Order Service
+   *     description: >
+   *       Records a work-order message that was published to Mina sidor without
+   *       an SMS or email notification. Nothing is sent — the message is
+   *       already visible to the tenant by existing in Odoo; this only writes
+   *       the communication log entry. Called by Odoo.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [workOrderCode, contactCode, text]
+   *             properties:
+   *               workOrderCode:
+   *                 type: string
+   *                 description: od-<odoo id> of the errand, e.g. od-12345.
+   *               contactCode:
+   *                 type: string
+   *                 description: The tenant the message was published to.
+   *               text:
+   *                 type: string
+   *                 description: The message body.
+   *               triggeredByUser:
+   *                 type: string
+   *                 description: The Odoo user who published the message.
+   *     responses:
+   *       '200':
+   *         description: Log entry written.
+   *       '400':
+   *         description: Bad request. Missing or invalid parameters.
+   *       '500':
+   *         description: Failed to write the log entry.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('/work-orders/log-my-pages-message', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { workOrderCode, contactCode, text, triggeredByUser } =
+      ctx.request.body
+
+    if (!workOrderCode || !contactCode || !text) {
+      ctx.status = 400
+      ctx.body = {
+        reason: 'Bad request: workOrderCode, contactCode and text are required',
+        ...metadata,
+      }
+      return
+    }
+
+    const result = await logOutboundDispatch({
+      channel: 'my-pages',
+      fromAddress: MY_PAGES_FROM_ADDRESS,
+      body: text,
+      messageType: 'work_order_tenant_my_pages',
+      provider: 'odoo',
+      triggeredByUser,
+      workOrderCode,
+      recipients: [
+        {
+          contactCode,
+          toAddress: MY_PAGES_TO_ADDRESS,
+          // Terminal on write: a Mina sidor publication has no delivery
+          // webhook that could later move it to 'delivered'.
+          status: 'sent',
+        },
+      ],
+    })
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = {
+        message: `Logged Mina sidor message for ${workOrderCode}`,
+        ...metadata,
+      }
+      return
+    }
+
+    logger.error(
+      { error: result.err, workOrderCode },
+      'Failed to log Mina sidor message'
+    )
+    ctx.status = result.statusCode ?? 500
+    ctx.body = {
+      message: `Failed to log Mina sidor message for ${workOrderCode}`,
+      ...metadata,
     }
   })
 }

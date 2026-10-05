@@ -821,6 +821,81 @@ export interface paths {
       }
     }
   }
+  '/workOrders/{workOrderId}/close-request': {
+    /**
+     * Request, on the tenant's behalf, that a work order be closed
+     * @description Records that the tenant wants the work order closed. Nothing is closed
+     * here: Odoo posts a close_request_from_tenant message and flags the
+     * request, and whoever handles the case accepts or declines it. Staff
+     * who close a work order themselves use /workOrders/{workOrderId}/close.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The Odoo id of the work order. */
+          workOrderId: string
+        }
+      }
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @description Optional reason from the tenant, shown to the handler.
+             * @example The washing machine works again.
+             */
+            reason?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Close request recorded in Odoo. */
+        200: {
+          content: {
+            'application/json': {
+              /** @example Close requested for work order with ID {workOrderId} */
+              message?: string
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description The request body is malformed. */
+        400: {
+          content: {
+            'application/json': {
+              error?: Record<string, never>[]
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Odoo refused the request. One is already pending, the work order is closed, or it is hidden from Mina sidor. */
+        409: {
+          content: {
+            'application/json': {
+              /** @example close-request-conflict */
+              error?: string
+              /** @enum {string} */
+              reason?: 'already_pending' | 'closed' | 'hidden'
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Internal server error. Odoo could not be reached or failed. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>
@@ -846,6 +921,7 @@ export interface components {
       Status: string
       UseMasterKey: boolean
       HiddenFromMyPages?: boolean
+      CloseRequestPending: boolean
       WorkOrderRows: {
         Description: string | null
         LocationCode: string | null

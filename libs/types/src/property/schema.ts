@@ -92,6 +92,16 @@ export const PropertyKvvAreaLookupSchema = z.object({
   responsibleKeycloakUserId: z.string().nullable(), // core expands to a user
 })
 
+const resolveKey = z.string().trim().min(1)
+
+// GET /kvv-areas/resolve: exactly one key. The keys may disagree, so callers
+// send the most specific one they have; the service resolves the rest.
+export const ResolveKvvAreaQuerySchema = z.union([
+  z.object({ rentalId: resolveKey }).strict(),
+  z.object({ buildingCode: resolveKey }).strict(),
+  z.object({ propertyCode: resolveKey }).strict(),
+])
+
 // One KVV-area as listed by GET /kvv-areas, with its cost center (distrikt).
 export const KvvAreaWithCostCenterSchema = KvvAreaRefSchema.extend({
   costCenter: CostCenterRefSchema,
@@ -199,9 +209,16 @@ const propertyTreeDepth2 = () =>
     children: z.array(propertyTreeDepth1()).optional(),
   })
 
+// A split property appears once per area: `default` is the linked area's side
+// (incl. markytor, so property-level errands), `exception` an excepted building.
+// Absent on an unsplit property.
+export const PropertyShareKindSchema = z.enum(['default', 'exception'])
+
 export const PropertyTreeNodeSchema = z.object({
   ...propertyTreeNodeFields(),
   children: z.array(propertyTreeDepth2()).optional(),
+  // Split property nodes under the cost-center grouping only.
+  share: PropertyShareKindSchema.optional(),
 })
 
 export type PropertyTreeNode = z.infer<typeof PropertyTreeNodeSchema>
@@ -287,6 +304,7 @@ export const CostCenterTreePropertySchema = z.object({
   buildings: z.array(CostCenterTreeBuildingSchema),
   parkingAreas: z.array(CostCenterTreeParkingAreaSchema),
   aggregates: CostCenterTreeAggregatesSchema,
+  share: PropertyShareKindSchema.optional(),
 })
 
 export type CostCenterTreeProperty = z.infer<

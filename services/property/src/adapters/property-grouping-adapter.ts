@@ -2,9 +2,18 @@ import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
 import type { PropertyGrouping, PropertyTree } from '@src/types/property-tree'
-import type { RentalObjectScopeParams } from '@src/types/rental-object'
+import type {
+  RentalObjectScopeParams,
+  ResolvedScope,
+} from '@src/types/rental-object'
 
 import { cachedKeyed, cachedPromise } from '@src/utils/promise-cache'
+import {
+  resolvePropertyShares,
+  splitPropertyTreeNode,
+  type KvvAreaExceptionRow,
+  type PropertyShare,
+} from '@src/utils/property-shares'
 
 import {
   filterToOperatingCompanies,
@@ -13,6 +22,7 @@ import {
 } from './company-scope'
 import { fetchCostCenterMembership } from './cost-center-adapter'
 import { prisma } from './db'
+import { getKvvAreaExceptions } from './kvv-area-adapter'
 import { buildPropertyTreeNodes } from './property-subtree-adapter'
 import { resolveStructurePropertyCodes } from './rental-object-adapter'
 
@@ -127,10 +137,13 @@ export const resolveCompanyPropertyCodes = async (
   }
 }
 
-/** Property codes of one KVV-area — the level below a district. */
-export const resolveKvvAreaPropertyCodes = async (
-  kvvAreaId: string
-): Promise<string[] | null> => {
+/** Property shares of one KVV-area — the level below a district. Split
+ * properties contribute only this area's side (see property-shares). */
+export const resolveKvvAreaPropertyShares = async (
+  kvvAreaId: string,
+  // Pass when resolving several areas at once, to load the table only once.
+  exceptions?: KvvAreaExceptionRow[]
+): Promise<PropertyShare[] | null> => {
   try {
     const area = await prisma.onecoreKvvArea.findUnique({
       where: { id: kvvAreaId },
@@ -138,85 +151,141 @@ export const resolveKvvAreaPropertyCodes = async (
     })
     if (!area) return null
 
-    return filterToOperatingCompanies(
-      area.propertyLinks.map((link) => link.propertyCode.trim())
+    const linked = {
+      id: area.id,
+      propertyCodes: area.propertyLinks.map((link) => link.propertyCode.trim()),
+    }
+    const shares =
+      resolvePropertyShares(
+        [linked],
+        exceptions ?? (await getKvvAreaExceptions())
+      ).get(area.id) ?? []
+    const operating = new Set(
+      await filterToOperatingCompanies(shares.map((s) => s.propertyCode))
     )
+    return shares.filter((share) => operating.has(share.propertyCode))
   } catch (err) {
     logger.error(
       { err, kvvAreaId },
-      'property-grouping-adapter.resolveKvvAreaPropertyCodes'
+      'property-grouping-adapter.resolveKvvAreaPropertyShares'
     )
     throw err
   }
 }
 
-/** Property codes of one cost center, via our own KVV-area links. */
-export const resolveCostCenterPropertyCodes = async (
+/** Property shares of one cost center, via our own KVV-area links. */
+export const resolveCostCenterPropertyShares = async (
   costCenterId: string
-): Promise<string[] | null> => {
+): Promise<PropertyShare[] | null> => {
   try {
     const membership = await fetchCostCenterMembership(costCenterId)
-    return membership ? membership.propertyCodes : null
+    return membership
+      ? membership.areas.flatMap((area) => area.properties)
+      : null
   } catch (err) {
     logger.error(
       { err, costCenterId },
-      'property-grouping-adapter.resolveCostCenterPropertyCodes'
+      'property-grouping-adapter.resolveCostCenterPropertyShares'
     )
     throw err
   }
 }
 
-/**
- * The property codes the grouping-level scopes cover, plus whatever the caller
- * named directly. babuf has no cost-centre or market-area column, so those
- * become property codes before any object query runs. Unfiltered — every
- * caller below ends in filterToOperatingCompanies.
- */
-const groupingPropertyCodes = async (
+/** The shares the grouping scopes cover plus directly named (whole) properties.
+ * Unfiltered — every caller below ends in filterToOperatingCompanies. */
+const groupingPropertyShares = async (
   params: RentalObjectScopeParams
-): Promise<string[]> => {
+): Promise<PropertyShare[]> => {
+  // One resolve per area: a whole area (null = every share) and any
+  // `<kvvAreaId>:<propertyCode>` shares of it come from the same result.
+  const codesByArea = new Map<string, Set<string> | null>()
+  for (const id of params.kvvAreaIds ?? []) codesByArea.set(id, null)
+  for (const value of params.propertyShares ?? []) {
+    const at = value.indexOf(':')
+    const areaId = value.slice(0, at)
+    const codes = codesByArea.get(areaId)
+    if (codes === null) continue
+    codesByArea.set(areaId, (codes ?? new Set()).add(value.slice(at + 1)))
+  }
+
+  const exceptions =
+    codesByArea.size > 0 ? await getKvvAreaExceptions() : undefined
+
   const resolved = await Promise.all([
     ...(params.costCenterIds ?? []).map((id) =>
-      resolveCostCenterPropertyCodes(id)
+      resolveCostCenterPropertyShares(id)
     ),
-    ...(params.kvvAreaIds ?? []).map((id) => resolveKvvAreaPropertyCodes(id)),
+    ...Array.from(codesByArea).map(([areaId, codes]) =>
+      resolveKvvAreaPropertyShares(areaId, exceptions).then((shares) =>
+        codes
+          ? (shares ?? []).filter((share) => codes.has(share.propertyCode))
+          : shares
+      )
+    ),
     ...(params.marketAreaCodes ?? []).map((code) =>
-      resolveMarketAreaPropertyCodes(code)
+      resolveMarketAreaPropertyCodes(code).then((codes) =>
+        codes.map((propertyCode): PropertyShare => ({ propertyCode }))
+      )
     ),
   ])
-  return [...(params.propertyCodes ?? []), ...resolved.flat()].filter(
-    (code): code is string => !!code
-  )
+  return [
+    ...(params.propertyCodes ?? []).map((propertyCode) => ({ propertyCode })),
+    ...resolved.flat().filter((share): share is PropertyShare => !!share),
+  ]
 }
 
-/**
- * Property codes for the search, which keeps buildings, trapphus,
- * parkeringsområden and individual objects as scopes of their own — widening
- * those to their whole property would return objects nobody selected.
- *
- * The company filter is redundant for a district or KVV-area scope, whose
- * resolvers already apply it, but it is the only guard on the property codes a
- * client sends directly. One cheap query on an already-narrowed set.
- */
-export const resolveSearchPropertyCodes = async (
+/** Search scope: structure levels stay scopes of their own; shares union up,
+ * so a property covered whole anywhere drops its partial forms. */
+export const resolveSearchScope = async (
   params: RentalObjectScopeParams
-): Promise<string[]> =>
-  filterToOperatingCompanies(await groupingPropertyCodes(params))
+): Promise<ResolvedScope> => {
+  const shares = await groupingPropertyShares(params)
 
-/**
- * Every property a selection touches, at any level — what the details lookup
- * needs, since its cache is keyed per property. Ticking one trapphus therefore
- * costs its fastighet's details rather than its district's, and the values are
- * reused the moment the same fastighet appears in another selection.
- */
+  const whole = new Set<string>()
+  const excludedByProperty = new Map<string, Set<string>>()
+  const buildingCodes = new Set<string>()
+  for (const share of shares) {
+    const side = share.buildings
+    if (!side) whole.add(share.propertyCode)
+    else if ('include' in side)
+      side.include.forEach((b) => buildingCodes.add(b))
+    else {
+      const excluded = excludedByProperty.get(share.propertyCode) ?? new Set()
+      side.exclude.forEach((b) => excluded.add(b))
+      excludedByProperty.set(share.propertyCode, excluded)
+    }
+  }
+
+  // Only guard on client-sent codes; building codes need none, since
+  // rentalObjectWhere cuts company 999 on every row.
+  const operating = new Set(
+    await filterToOperatingCompanies([...whole, ...excludedByProperty.keys()])
+  )
+  return {
+    propertyCodes: [...whole].filter((code) => operating.has(code)),
+    partialProperties: [...excludedByProperty]
+      .filter(([code]) => operating.has(code) && !whole.has(code))
+      .map(([propertyCode, excluded]) => ({
+        propertyCode,
+        excludedBuildingCodes: [...excluded],
+      })),
+    buildingCodes: [...buildingCodes],
+  }
+}
+
+/** Every property a selection touches: the details cache is keyed per property,
+ * so a trapphus or a share costs its whole fastighet, never its district. */
 export const resolveDetailsPropertyCodes = async (
   params: RentalObjectScopeParams
 ): Promise<string[]> => {
   const [fromGrouping, fromStructure] = await Promise.all([
-    groupingPropertyCodes(params),
+    groupingPropertyShares(params),
     resolveStructurePropertyCodes(params),
   ])
-  return filterToOperatingCompanies([...fromGrouping, ...fromStructure])
+  return filterToOperatingCompanies([
+    ...fromGrouping.map((share) => share.propertyCode),
+    ...fromStructure,
+  ])
 }
 
 // Shorter than the subtree cache's hour: membership is what an admin edit
@@ -261,22 +330,22 @@ export const getPropertyTree = async (
     const membership = await costCenterMembershipCache.get(rootId)
     if (!membership) return null
 
-    const { costCenter, propertyCodes } = membership
-    const subtrees = await buildPropertyTreeNodes(propertyCodes, includeObjects)
+    const { costCenter, areas, propertyCodes } = membership
+    const nodes = await buildPropertyTreeNodes(propertyCodes, includeObjects)
 
     return {
       grouping,
       id: costCenter.id,
       code: costCenter.code,
       name: costCenter.name,
-      groups: costCenter.kvvAreas.map((area) => ({
+      groups: areas.map((area) => ({
         id: area.id,
         code: area.code,
-        name: area.name ?? null,
-        responsibleKeycloakUserId: area.responsibleKeycloakUserId ?? null,
-        properties: area.propertyLinks.flatMap((link) => {
-          const subtree = subtrees.get(link.propertyCode)
-          return subtree ? [subtree] : []
+        name: area.name,
+        responsibleKeycloakUserId: area.responsibleKeycloakUserId,
+        properties: area.properties.flatMap((share) => {
+          const node = nodes.get(share.propertyCode)
+          return node ? [splitPropertyTreeNode(node, share.buildings)] : []
         }),
       })),
     }

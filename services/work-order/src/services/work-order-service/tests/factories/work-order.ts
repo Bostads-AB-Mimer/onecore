@@ -44,6 +44,7 @@ export const WorkOrderFactory = Factory.define<WorkOrder>(({ sequence }) => ({
   ],
   Url: `https://example.com/work-order/${sequence}`,
   HiddenFromMyPages: false,
+  CloseRequestPending: false,
 }))
 
 export const OdooWorkOrderFactory = Factory.define<OdooWorkOrder>(
@@ -64,6 +65,7 @@ export const OdooWorkOrderFactory = Factory.define<OdooWorkOrder>(
     due_date: new Date().toDateString(),
     stage_id: [1, 'Ny Begäran'],
     hidden_from_my_pages: false,
+    close_request_pending: false,
     name: '',
   })
 )
@@ -75,6 +77,7 @@ export const OdooWorkOrderMessageFactory = Factory.define<OdooWorkOrderMessage>(
     body: 'Hej, här är ett meddelande från kunden',
     message_type: 'from_tenant',
     author_id: [1, 'Kund'],
+    onecore_tenant_author_name: false, // Odoo leaves this empty on from_tenant
     create_date: new Date().toDateString(),
   })
 )
