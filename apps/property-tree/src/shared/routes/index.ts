@@ -31,6 +31,7 @@ export const routes = {
   imd: '/imd',
   economy: '/economy',
   components: '/komponenter',
+  leasing: '/uthyrning',
   callback: '/callback',
 } as const
 

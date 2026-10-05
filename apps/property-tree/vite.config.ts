@@ -29,6 +29,16 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        // Dev: load the leasing pages from source so they hot-reload here.
+        // Builds use the package's dist/lib like any other dependency.
+        ...(mode === 'development'
+          ? {
+              '@onecore/leasing-portal-frontend': path.resolve(
+                __dirname,
+                '../leasing-portal/frontend/src/index.ts'
+              ),
+            }
+          : {}),
       },
     },
   }

@@ -18,6 +18,7 @@ import {
   ShieldX,
 } from 'lucide-react'
 
+import { isLeasingPortalEnabled } from '@/shared/lib/leasingPortal'
 import { routes } from '@/shared/routes'
 import { SidebarNavLink } from '@/shared/ui/layout'
 import {
@@ -156,6 +157,9 @@ function SidebarNavigationContent() {
           icon={FileText}
           label="Hyreskontrakt"
         />
+        {isLeasingPortalEnabled && (
+          <SidebarNavLink to={routes.leasing} icon={Home} label="Uthyrning" />
+        )}
         <SidebarNavLink
           to={routes.inspections}
           icon={ClipboardList}
