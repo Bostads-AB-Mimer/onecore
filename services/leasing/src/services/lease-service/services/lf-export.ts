@@ -43,6 +43,8 @@ export const mapLeasesToLfExportRows = (
           nationalIdNumber: tenant.idbeteckning,
           fullName: `${tenant.name.last} ${tenant.name.first}`,
           address: tenant.postadress,
+          postalCode: tenant.postnummer,
+          city: tenant.stad,
           phoneNumber: tenant.phone,
           email: tenant.invoiceEmail ?? null,
         },

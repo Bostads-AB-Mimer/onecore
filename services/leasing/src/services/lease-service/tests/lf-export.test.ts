@@ -176,6 +176,8 @@ describe(mapLeasesToLfExportRows, () => {
         idbeteckning: '199001011234',
         name: { first: 'Anna', last: 'Svensson' },
         postadress: 'Storgatan 1',
+        postnummer: '12345',
+        stad: 'Stockholm',
         phone: '0701234567',
         invoiceEmail: null,
       })
@@ -202,6 +204,8 @@ describe(mapLeasesToLfExportRows, () => {
         nationalIdNumber: '199001011234',
         fullName: 'Svensson Anna',
         address: 'Storgatan 1',
+        postalCode: '12345',
+        city: 'Stockholm',
         phoneNumber: '0701234567',
         email: null,
         rentalObjectCode: 'RO-001',
