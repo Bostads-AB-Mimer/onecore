@@ -216,7 +216,7 @@ export const convertHomeInsuranceToXlsx = async (
     'Personnummer',
     'Namn',
     'Adress',
-    'Posrnr',
+    'Postnr',
     'Ort',
     'Antal Rum',
     'Kvadratmeter',
