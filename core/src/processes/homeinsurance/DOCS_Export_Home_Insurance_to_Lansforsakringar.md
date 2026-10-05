@@ -46,7 +46,7 @@ sequenceDiagram
         Core-->CronJob: throw, script exits non-zero
     end
 
-    Core ->> Core: Build Excel File<br/>("Hemförsäkring" sheet, 16 columns)
+    Core ->> Core: Build Excel File<br/>("Hemförsäkring" sheet, 18 columns)
 
     alt LOCAL_OUTPUT is set
         Core ->> Core: Write File to Local Disk
