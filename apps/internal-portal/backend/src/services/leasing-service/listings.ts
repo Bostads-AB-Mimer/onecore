@@ -255,7 +255,11 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { content: response, ...metadata }
     } catch (err) {
-      console.log(err)
+      // Don't log the raw axios error: its config carries the Authorization header.
+      logger.error(
+        { listingId: ctx.params.listingId, err: (err as Error).message },
+        'Error getting listing with applicants'
+      )
       ctx.status = 500
       ctx.body = { error: 'Internal Server Error', ...metadata }
     }
