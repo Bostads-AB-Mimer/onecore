@@ -69,15 +69,16 @@ export async function refreshIfStale(
 
   const start = Date.now()
 
+  let timeoutHandle: ReturnType<typeof setTimeout>
   try {
     await Promise.race([
       sync(state.fullFetchFn, state.deltaFetchFn),
-      new Promise<void>((_, reject) =>
-        setTimeout(
+      new Promise<void>((_, reject) => {
+        timeoutHandle = setTimeout(
           () => reject(new Error('refreshIfStale timed out')),
           timeoutMs
         )
-      ),
+      }),
     ])
     logger.info(
       { durationMs: Date.now() - start },
@@ -88,6 +89,8 @@ export async function refreshIfStale(
       { err, durationMs: Date.now() - start },
       'lease-cache: stale refresh timed out or failed, using existing data'
     )
+  } finally {
+    clearTimeout(timeoutHandle!)
   }
 }
 
@@ -107,15 +110,21 @@ export async function ensureReady(timeoutMs: number): Promise<boolean> {
     logger.info('lease-cache: no data available, retrying initial sync')
   }
 
+  let timeoutHandle: ReturnType<typeof setTimeout>
   try {
     await Promise.race([
       sync(state.fullFetchFn, state.deltaFetchFn),
-      new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error('ensureReady timed out')), timeoutMs)
-      ),
+      new Promise<void>((_, reject) => {
+        timeoutHandle = setTimeout(
+          () => reject(new Error('ensureReady timed out')),
+          timeoutMs
+        )
+      }),
     ])
   } catch (err) {
     logger.warn({ err }, 'lease-cache: retry sync timed out or failed')
+  } finally {
+    clearTimeout(timeoutHandle!)
   }
 
   return state.leases.length > 0
