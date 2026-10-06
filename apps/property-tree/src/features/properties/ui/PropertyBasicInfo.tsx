@@ -1,3 +1,5 @@
+import { KvvResponsibleField } from '@/features/properties/ui/KvvResponsibleField'
+
 import type { PropertyDetail } from '@/shared/types/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 interface PropertyBasicInfoProps {
@@ -41,6 +43,8 @@ export const PropertyBasicInfo = ({
               {propertyDetail?.district?.caption || '-'}
             </p>
           </div>
+
+          <KvvResponsibleField propertyCode={propertyDetail.code} />
 
           <div>
             <p className="text-sm text-muted-foreground">Församling</p>

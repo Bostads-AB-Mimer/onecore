@@ -1,5 +1,7 @@
 import { Building, Property } from '@/services/types'
 
+import { KvvResponsibleField } from '@/features/properties'
+
 import { CollapsibleInfoCard } from '@/shared/ui/CollapsibleInfoCard'
 
 import { getQuantityValue } from '../lib/quantity'
@@ -61,6 +63,8 @@ export const BuildingBasicInfo = ({
           {property?.designation || 'Okänd fastighet'}
         </p>
       </div>
+
+      <KvvResponsibleField propertyCode={property?.code} />
 
       {address && (
         <div>
