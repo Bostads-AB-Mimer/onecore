@@ -11585,6 +11585,7 @@ export interface components {
       dueDate: ('null' | null) | string
       rentalObjectCode: string
       status: string
+      maintenanceTeam?: string | null
       hiddenFromMyPages?: boolean
       workOrderRows: {
         description: string | null

@@ -23,6 +23,7 @@ export const CoreWorkOrderSchema = z.object({
   dueDate: z.union([z.null(), z.coerce.date()]),
   rentalObjectCode: z.string(),
   status: z.string(),
+  maintenanceTeam: z.string().nullable().optional(),
   hiddenFromMyPages: z.boolean().optional(),
   workOrderRows: z.array(
     z.object({

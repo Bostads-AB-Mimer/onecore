@@ -25,6 +25,7 @@ export const WorkOrderSchema = z.object({
   RentalObjectCode: z.string(),
   Status: z.string(),
   UseMasterKey: z.boolean(),
+  MaintenanceTeam: z.string().nullable().optional(),
   HiddenFromMyPages: z.boolean().optional(),
   WorkOrderRows: z.array(
     z.object({
@@ -56,6 +57,9 @@ export const OdooWorkOrderSchema = z.object({
   due_date: z.coerce.string().nullable(),
   write_date: z.coerce.string(),
   stage_id: z.tuple([z.number(), z.string()]),
+  maintenance_team_id: z
+    .union([z.tuple([z.number(), z.string()]), z.literal(false)])
+    .nullish(),
 })
 
 export const OdooWorkOrderMessageSchema = z.object({
