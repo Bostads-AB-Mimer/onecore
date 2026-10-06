@@ -42,7 +42,7 @@ export const GuideStepImageSchema = z.object({
   id: z.string().uuid(),
   stepId: z.string().uuid(),
   sortOrder: z.number().int().nonnegative(),
-  // Object key in file-storage (MinIO). Bytes never pass through the
+  // Object key in file-storage (S3). Bytes never pass through the
   // communication service.
   storageKey: z.string(),
   filename: z.string(),
