@@ -334,7 +334,7 @@ export async function getAllLeases(): Promise<
       TenfastPaginatedLeaseResponseSchema
     )
     return { ok: true, data: records }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return handleTenfastError(err, 'unknown')
   }
 }
@@ -356,7 +356,7 @@ export async function getLeasesUpdatedSince(
       TenfastPaginatedLeaseResponseSchema
     )
     return { ok: true, data: records }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return handleTenfastError(err, 'unknown')
   }
 }
@@ -858,7 +858,10 @@ async function getOrImportContact(
   return { ok: true, data: importResult.data }
 }
 
-function handleTenfastError<E extends string>(errorObj: any, errorLiteral: E) {
+function handleTenfastError<E extends string>(
+  errorObj: unknown,
+  errorLiteral: E
+) {
   logger.error({ err: JSON.stringify(errorObj) }, errorLiteral)
   return { ok: false, err: errorLiteral } as const
 }

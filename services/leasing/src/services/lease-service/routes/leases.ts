@@ -38,6 +38,21 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
  *     description: Endpoints related to lease operations
  */
 
+type KoaHttpErrorLike = {
+  status: number
+  message: string
+  headers?: Record<string, string>
+}
+
+function isKoaHttpError(error: unknown): error is KoaHttpErrorLike {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    typeof (error as { status: unknown }).status === 'number'
+  )
+}
+
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
@@ -391,16 +406,16 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    if (leaseCache.getAll().length === 0) {
-      const ready = await leaseCache.ensureReady(10_000)
-      if (!ready) {
-        ctx.throw(503, 'Lease cache is warming up — retry shortly', {
-          headers: { 'Retry-After': '30' },
-        })
-      }
-    }
-
     try {
+      if (leaseCache.getAll().length === 0) {
+        const ready = await leaseCache.ensureReady(10_000)
+        if (!ready) {
+          ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+            headers: { 'Retry-After': '30' },
+          })
+        }
+      }
+
       const rawLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
         queryParams.data
       )
@@ -473,8 +488,16 @@ export const routes = (router: KoaRouter) => {
       setExcelDownloadHeaders(ctx, 'hyreskontrakt')
       ctx.body = buffer
     } catch (error: unknown) {
-      // Re-throw Koa HTTP errors (e.g. 503 when cache is not ready)
-      if (error && typeof error === 'object' && 'status' in error) throw error
+      // Koa HTTP errors (e.g. 503 when cache is not ready) — set status/body/
+      // headers by hand rather than re-throwing, since a re-thrown error
+      // reaches the app-level errorHandler middleware which overwrites the
+      // status to 500 regardless of what the error itself carries.
+      if (isKoaHttpError(error)) {
+        if (error.headers) ctx.set(error.headers)
+        ctx.status = error.status
+        ctx.body = { error: error.message, ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error exporting leases to Excel')
       ctx.status = 500
       ctx.body = {
@@ -659,10 +682,10 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = result
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'status' in error) {
-        const httpError = error as { status: number; message: string }
-        ctx.status = httpError.status
-        ctx.body = { error: httpError.message, ...metadata }
+      if (isKoaHttpError(error)) {
+        if (error.headers) ctx.set(error.headers)
+        ctx.status = error.status
+        ctx.body = { error: error.message, ...metadata }
         return
       }
 
