@@ -39,7 +39,7 @@ sequenceDiagram
     Core ->> Leasing: Get LF Export
     Leasing ->> Tenfast: Get Leases with Home Insurance Row<br/>(states: active, upcoming,<br/>preTermination, terminationScheduled)
     Tenfast -->> Leasing: Leases (paginated)
-    note over Leasing: annualRent in the export row is populated<br/>directly from the insurance row's amount —<br/>the same value the sign/cancel endpoints call<br/>monthlyAmount. Worth confirming with the<br/>business whether that's a deliberate relabel.
+    note over Leasing: Adress, Postnr and Ort come from the<br/>lease's hyresobjekt (not the tenant invoice address).<br/>annualRent is populated from the insurance row amount.
     Leasing -->> Core: Export Rows
 
     break when fetching from Leasing fails
