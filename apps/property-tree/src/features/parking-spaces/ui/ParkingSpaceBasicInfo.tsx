@@ -2,6 +2,8 @@ import { Loader2 } from 'lucide-react'
 
 import { components } from '@/services/api/core/generated/api-types'
 
+import { KvvResponsibleField } from '@/features/properties'
+
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
@@ -54,6 +56,7 @@ export const ParkingSpaceBasicInfo = ({
               <p className="text-sm text-muted-foreground">Objektsnummer</p>
               <p className="font-medium">{parkingSpace.rentalId}</p>
             </div>
+            <KvvResponsibleField propertyCode={parkingSpace.propertyCode} />
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               <p className="font-medium">

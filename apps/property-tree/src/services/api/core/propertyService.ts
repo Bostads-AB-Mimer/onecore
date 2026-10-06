@@ -11,6 +11,8 @@ interface PropertySearchResult {
 }
 
 export type PropertyKvvAreaLink = components['schemas']['PropertyKvvAreaLink']
+export type PropertyKvvAreaLookup =
+  components['schemas']['PropertyKvvAreaLookup']
 
 export const propertyService = {
   // Get all properties
@@ -37,6 +39,19 @@ export const propertyService = {
     })
     if (error) throw error
     return (data?.content || []) as PropertySearchResult[]
+  },
+
+  /** Returns null when the property is not linked to a KVV-area (404). */
+  async getKvvArea(
+    propertyCode: string
+  ): Promise<PropertyKvvAreaLookup | null> {
+    const { data, error, response } = await GET(
+      '/properties/{propertyCode}/kvv-area',
+      { params: { path: { propertyCode } } }
+    )
+    if (response.status === 404) return null
+    if (error) throw error
+    return data?.content ?? null
   },
 
   async updateKvvArea(

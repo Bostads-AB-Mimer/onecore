@@ -2,6 +2,8 @@ import { Loader2 } from 'lucide-react'
 
 import { components } from '@/services/api/core/generated/api-types'
 
+import { KvvResponsibleField } from '@/features/properties'
+
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
@@ -46,6 +48,7 @@ export const FacilityBasicInfo = ({
                 {facility.rentalInformation?.rentalId || '-'}
               </p>
             </div>
+            <KvvResponsibleField propertyCode={facility.property.code} />
             <div>
               <p className="text-sm text-muted-foreground">Typ</p>
               <p className="font-medium">{facility.type.name || '-'}</p>

@@ -12,6 +12,8 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/Tooltip'
 
+import { KvvResponsibleField } from '@/features/properties'
+
 import { ApartmentTemperature } from './ApartmentTemperature'
 import { MalarEnergiFacilityIdField } from './MalarEnergiFacilityIdField'
 
@@ -148,6 +150,7 @@ export const ResidenceBasicInfo = ({
                 : '-'}
             </p>
           </div>
+          <KvvResponsibleField propertyCode={residence.property?.code} />
           <div>
             <p className="text-sm text-muted-foreground">Byggnad</p>
             <p className="font-medium">{residence.building?.code ?? '-'}</p>
