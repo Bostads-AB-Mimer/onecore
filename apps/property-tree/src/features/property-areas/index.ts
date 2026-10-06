@@ -1,6 +1,7 @@
 // UI
 export { AddressList } from './ui/AddressList'
 export { BuildingTypeBadge } from './ui/BuildingTypeBadge'
+export { KvvResponsibleField } from './ui/KvvResponsibleField'
 
 // Admin UI
 export { PendingChangesPanel } from './ui/admin/PendingChangesPanel'
@@ -14,6 +15,7 @@ export { StewardColumn } from './ui/admin/StewardColumn'
 export { useCanEditPropertyAreas } from './hooks/useCanEditPropertyAreas'
 export { useCostCenters } from './hooks/useCostCenters'
 export { useCostCenterTree } from './hooks/useCostCenterTree'
+export { useKvvAreaResolve } from './hooks/useKvvAreaResolve'
 export { usePropertyManagers } from './hooks/usePropertyManagers'
 export { useUpdateKvvAreaResponsible } from './hooks/useUpdateKvvAreaResponsible'
 export { useUpdatePropertyKvvArea } from './hooks/useUpdatePropertyKvvArea'
