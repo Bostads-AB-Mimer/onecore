@@ -136,3 +136,99 @@ describe('Component hierarchy', () => {
     )
   })
 })
+
+describe('Rollout tolerance', () => {
+  it('reads a category from a property pod that predates the type field', async () => {
+    const { type: _type, ...category } = factory.componentCategory.build()
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentCategories')
+      .mockResolvedValueOnce({ ok: true, data: [category as never] })
+
+    const res = await request(app.callback()).get('/component-categories')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content[0].type).toBe('EQUIPMENT')
+  })
+
+  it('reads a type from a property pod that predates the code field', async () => {
+    const { code: _code, ...type } = factory.componentType.build()
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentTypes')
+      .mockResolvedValueOnce({ ok: true, data: [type as never] })
+
+    const res = await request(app.callback()).get('/component-types')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content[0].code).toBeNull()
+  })
+})
+
+describe('Component type code rules', () => {
+  const typeId = '00000000-0000-0000-0001-000000000001'
+  const categoryId = '00000000-0000-0000-0000-000000000001'
+
+  it('returns 400 when property rejects the code for the category', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponentType')
+      .mockResolvedValueOnce({ ok: false, err: 'bad_request' })
+
+    const res = await request(app.callback())
+      .post('/component-types')
+      .send({ typeName: 'Diskmaskin', categoryId, code: 'WALL' })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 409 when another type already has the code', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponentType')
+      .mockResolvedValueOnce({ ok: false, err: 'conflict' })
+
+    const res = await request(app.callback())
+      .post('/component-types')
+      .send({ typeName: 'Innervägg', categoryId, code: 'WALL' })
+
+    expect(res.status).toBe(409)
+  })
+
+  it('returns 409 when an update collides on the code', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponentType')
+      .mockResolvedValueOnce({ ok: false, err: 'conflict' })
+
+    const res = await request(app.callback())
+      .put(`/component-types/${typeId}`)
+      .send({ code: 'WALL' })
+
+    expect(res.status).toBe(409)
+  })
+
+  it('forwards null to clear a code', async () => {
+    const type = { ...factory.componentType.build(), id: typeId, code: null }
+    const update = jest
+      .spyOn(propertyBaseAdapter, 'updateComponentType')
+      .mockResolvedValueOnce({ ok: true, data: type })
+
+    const res = await request(app.callback())
+      .put(`/component-types/${typeId}`)
+      .send({ code: null })
+
+    expect(res.status).toBe(200)
+    expect(update).toHaveBeenCalledWith(
+      typeId,
+      expect.objectContaining({ code: null })
+    )
+  })
+
+  it('returns 409 when a category with coded types leaves SURFACE', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponentCategory')
+      .mockResolvedValueOnce({ ok: false, err: 'conflict' })
+
+    const res = await request(app.callback())
+      .put(`/component-categories/${categoryId}`)
+      .send({ type: 'EQUIPMENT' })
+
+    expect(res.status).toBe(409)
+  })
+})

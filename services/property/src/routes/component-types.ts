@@ -9,12 +9,32 @@ import {
   UpdateComponentTypeSchema,
 } from '../types/component'
 import {
+  type ComponentTypeCodeProblem,
   getComponentTypes,
   getComponentTypeById,
   createComponentType,
   updateComponentType,
   deleteComponentType,
+  findComponentTypeCodeProblem,
 } from '../adapters/component-adapter'
+
+const codeProblemResponse: Record<
+  ComponentTypeCodeProblem,
+  { status: number; error: string }
+> = {
+  category_not_found: {
+    status: 400,
+    error: 'Invalid categoryId: category does not exist',
+  },
+  category_not_surface: {
+    status: 400,
+    error: 'A surface code requires a category of type SURFACE',
+  },
+  code_taken: {
+    status: 409,
+    error: 'Another component type already has this code',
+  },
+}
 
 /**
  * @swagger
@@ -176,6 +196,10 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentType'
+   *       400:
+   *         description: Invalid categoryId, or a surface code on a category that is not of type SURFACE
+   *       409:
+   *         description: Another component type already has this code
    */
   router.post(
     '(.*)/component-types',
@@ -185,6 +209,16 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
+        const problem = await findComponentTypeCodeProblem({
+          code: data.code,
+          categoryId: data.categoryId,
+        })
+        if (problem) {
+          ctx.status = codeProblemResponse[problem].status
+          ctx.body = { error: codeProblemResponse[problem].error, ...metadata }
+          return
+        }
+
         const type = await createComponentType(data)
 
         ctx.status = 201
@@ -244,6 +278,12 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentType'
+   *       400:
+   *         description: Invalid categoryId, or a surface code on a category that is not of type SURFACE
+   *       404:
+   *         description: Component type not found
+   *       409:
+   *         description: Another component type already has this code
    */
   router.put(
     '(.*)/component-types/:id',
@@ -268,6 +308,22 @@ export const routes = (router: KoaRouter) => {
           ctx.status = 404
           ctx.body = { error: 'Component type not found', ...metadata }
           return
+        }
+
+        if (data.code !== undefined || data.categoryId !== undefined) {
+          const problem = await findComponentTypeCodeProblem({
+            code: data.code === undefined ? existing.code : data.code,
+            categoryId: data.categoryId ?? existing.categoryId,
+            excludeTypeId: id,
+          })
+          if (problem) {
+            ctx.status = codeProblemResponse[problem].status
+            ctx.body = {
+              error: codeProblemResponse[problem].error,
+              ...metadata,
+            }
+            return
+          }
         }
 
         const type = await updateComponentType(id, data)

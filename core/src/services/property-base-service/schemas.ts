@@ -643,7 +643,7 @@ export const ComponentCategorySchema = z.object({
   id: z.string().uuid(),
   categoryName: z.string(),
   description: z.string(),
-  type: property.ComponentCategoryTypeSchema,
+  type: property.ComponentCategoryTypeSchema.default('EQUIPMENT'),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -654,7 +654,7 @@ export const ComponentTypeSchema = z.object({
   typeName: z.string(),
   categoryId: z.string().uuid(),
   description: z.string().nullable(),
-  code: property.ComponentTypeCodeSchema.nullable(),
+  code: property.ComponentTypeCodeSchema.nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
   category: ComponentCategorySchema.optional(),

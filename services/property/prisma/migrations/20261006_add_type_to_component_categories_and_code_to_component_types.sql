@@ -1,16 +1,24 @@
 -- Migration: add `type` to component_categories and `code` to component_types.
 -- See MIM-2103. Run manually against each environment.
--- Safe to re-run: every change is guarded by IF NOT EXISTS on sys.columns / sys.check_constraints.
--- The UPDATEs run through sp_executesql because they reference columns added in the same batch.
+-- Safe to re-run: schema changes are guarded by IF NOT EXISTS, and the one-time
+-- seed of category types only runs in the batch that adds the `type` column.
+-- The seed and the index run through sp_executesql because they reference
+-- columns added in the same batch.
+-- The unique index is created after the seed, so if two SURFACE categories
+-- both hold a type named Vägg/Golv/Tak the whole migration rolls back and the
+-- duplicate must be resolved by hand before re-running.
 
 BEGIN TRANSACTION;
 
 BEGIN TRY
 
+  DECLARE @typeAdded BIT = 0;
+
   IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.component_categories') AND name = 'type')
   BEGIN
     ALTER TABLE dbo.component_categories
       ADD [type] NVARCHAR(20) NOT NULL CONSTRAINT DF_component_categories_type DEFAULT 'EQUIPMENT';
+    SET @typeAdded = 1;
   END
 
   IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_component_categories_type')
@@ -32,11 +40,16 @@ BEGIN TRY
   END
 
   -- One-time seed from the names the code used to compare against.
-  EXEC sp_executesql N'
-    UPDATE dbo.component_categories
-    SET [type] = ''SURFACE''
-    WHERE categoryName = N''Ytskikt'';
+  IF @typeAdded = 1
+  BEGIN
+    EXEC sp_executesql N'
+      UPDATE dbo.component_categories
+      SET [type] = ''SURFACE''
+      WHERE categoryName = N''Ytskikt'';
+    ';
+  END
 
+  EXEC sp_executesql N'
     UPDATE t
     SET t.code = CASE t.typeName
       WHEN N''Vägg'' THEN ''WALL''
@@ -50,6 +63,15 @@ BEGIN TRY
       AND t.code IS NULL;
   ';
 
+  IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.component_types') AND name = 'UX_component_types_code')
+  BEGIN
+    EXEC sp_executesql N'
+      CREATE UNIQUE NONCLUSTERED INDEX UX_component_types_code
+        ON dbo.component_types (code)
+        WHERE code IS NOT NULL;
+    ';
+  END
+
   COMMIT TRANSACTION;
 END TRY
 BEGIN CATCH
@@ -58,6 +80,7 @@ BEGIN CATCH
 END CATCH;
 
 -- Rollback (run by hand if the migration must be undone):
+--   DROP INDEX UX_component_types_code ON dbo.component_types;
 --   ALTER TABLE dbo.component_types DROP CONSTRAINT CK_component_types_code;
 --   ALTER TABLE dbo.component_types DROP COLUMN code;
 --   ALTER TABLE dbo.component_categories DROP CONSTRAINT CK_component_categories_type;

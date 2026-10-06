@@ -53,8 +53,6 @@ export const findMissingSurfaces = (
     (code) => !components.some((c) => getSurfaceCode(c) === code)
   )
 
-// The library holds ~2,500 surface models across ~24 subtypes, so the picker
-// shows one item per subtype and installs a representative model for it.
 const pickRepresentativeModel = (models: ComponentModel[]): ComponentModel => {
   const subTypeName = models[0]?.subtype?.subTypeName ?? ''
   return (

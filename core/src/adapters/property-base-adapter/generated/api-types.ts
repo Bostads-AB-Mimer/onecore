@@ -109,6 +109,10 @@ export interface paths {
         404: {
           content: never
         }
+        /** @description Category has component types with a surface code */
+        409: {
+          content: never
+        }
       }
     }
     /**
@@ -183,6 +187,14 @@ export interface paths {
             }
           }
         }
+        /** @description Invalid categoryId, or a surface code on a category that is not of type SURFACE */
+        400: {
+          content: never
+        }
+        /** @description Another component type already has this code */
+        409: {
+          content: never
+        }
       }
     }
   }
@@ -235,6 +247,18 @@ export interface paths {
               content?: components['schemas']['ComponentType']
             }
           }
+        }
+        /** @description Invalid categoryId, or a surface code on a category that is not of type SURFACE */
+        400: {
+          content: never
+        }
+        /** @description Component type not found */
+        404: {
+          content: never
+        }
+        /** @description Another component type already has this code */
+        409: {
+          content: never
         }
       }
     }
