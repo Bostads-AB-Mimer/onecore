@@ -54,6 +54,8 @@ export const TenfastRentalObjectSchema = z.object({
   hyror: z.array(TenfastInvoiceRowSchema).optional(),
   contractTemplate: z.string().optional().nullable(),
   postadress: z.string().nullish(),
+  postnummer: z.string().nullish(),
+  stad: z.string().nullish(),
   stadsdel: z.string().nullish(),
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
   subType: z.string().optional(),
