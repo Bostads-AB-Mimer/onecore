@@ -28,6 +28,10 @@ const mockedGetAll = leaseCache.getAll as jest.MockedFunction<
   typeof leaseCache.getAll
 >
 
+const mockedRefreshIfStale = leaseCache.refreshIfStale as jest.MockedFunction<
+  typeof leaseCache.refreshIfStale
+>
+
 const mockedGetRentalObjectCodesByBuildingManager =
   xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingManager as jest.MockedFunction<
     typeof xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingManager
@@ -732,6 +736,35 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result._meta.totalRecords).toBe(5)
       expect(result._meta.page).toBe(2)
       expect(result._meta.limit).toBe(2)
+    })
+  })
+
+  describe('fetchAllLeasesForExport', () => {
+    beforeEach(() => {
+      mockedGetAll.mockReturnValue([makeLeaseResult('default-lease')])
+    })
+
+    it('refreshes a stale cache before reading it, same as searchLeases', async () => {
+      await tenfastLeaseSearchAdapter.fetchAllLeasesForExport({
+        page: 1,
+        limit: 500,
+      })
+
+      expect(mockedRefreshIfStale).toHaveBeenCalledWith(60_000, 10_000)
+    })
+
+    it('returns leases filtered and sorted from the cache', async () => {
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('lease-1'),
+        makeLeaseResult('lease-2'),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport({
+        page: 1,
+        limit: 500,
+      })
+
+      expect(result).toHaveLength(2)
     })
   })
 

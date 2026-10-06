@@ -22,6 +22,9 @@ import {
   getRentalObjectCodesByDistrictNames,
 } from '../xpand/lease-search-adapter'
 
+const STALE_THRESHOLD_MS = 60_000
+const STALE_SYNC_TIMEOUT_MS = 10_000
+
 /** Map Tenfast typ to Swedish label (matching Xpand's objectTypeCode output) */
 const TENFAST_TYP_TO_LABEL: Record<string, string> = {
   bostad: 'Bostad',
@@ -101,6 +104,8 @@ const STATUS_PARAM_TO_LEASE_STATUS: Record<string, LeaseStatus> = {
 export async function fetchAllLeasesForExport(
   params: leasing.v1.LeaseSearchQueryParams
 ): Promise<leasing.v1.LeaseSearchResult[]> {
+  await leaseCache.refreshIfStale(STALE_THRESHOLD_MS, STALE_SYNC_TIMEOUT_MS)
+
   const needsXpandCodes =
     (params.buildingManager && params.buildingManager.length > 0) ||
     (params.buildingCodes && params.buildingCodes.length > 0) ||
@@ -462,8 +467,6 @@ export const searchLeases = async (
   ctx: Context
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
   const requestStart = Date.now()
-  const STALE_THRESHOLD_MS = 60_000
-  const STALE_SYNC_TIMEOUT_MS = 10_000
 
   if (leaseCache.getAll().length === 0) {
     const ready = await leaseCache.ensureReady(STALE_SYNC_TIMEOUT_MS)
