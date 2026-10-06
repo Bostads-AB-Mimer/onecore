@@ -27,7 +27,10 @@ Use this dependency map as a starting point:
 | `libs/types`     | All services, core, all apps                                     |
 | `libs/utilities` | All services, core, all apps                                     |
 | `services/*`     | `core` (via adapters), sometimes `apps/*` (via generated types)  |
-| `core`           | `apps/property-tree`, `apps/keys-portal`, `apps/internal-portal` |
+| `core`           | `apps/property-tree`, `apps/keys-portal`, `apps/internal-portal`, `apps/leasing-portal/backend` |
+| `libs/ui`        | `apps/property-tree`, `apps/leasing-portal/frontend`             |
+| `apps/leasing-portal/backend` | `apps/leasing-portal/frontend` (via generated types) |
+| `apps/leasing-portal/frontend` | `apps/property-tree` (mounts its pages under `/uthyrning`) |
 
 ### 2. Trace dependencies
 

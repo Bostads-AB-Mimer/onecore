@@ -21,7 +21,8 @@ export const injectEnv = (html, env) =>
       env[vbl] !== undefined
         ? html.replace(
             new RegExp(`(${vbl}\\s*:\\s*')([^']*)(')`),
-            `$1${env[vbl]}$3`
+            // Function replacer: a value containing `$` must stay literal, not a pattern
+            (_match, before, _old, after) => `${before}${env[vbl]}${after}`
           )
         : html,
     html

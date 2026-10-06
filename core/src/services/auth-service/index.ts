@@ -303,6 +303,8 @@ export const routes = (router: KoaRouter) => {
    *       '401':
    *         description: Invalid or expired refresh token
    */
+  // leasing-portal's BFF forwards the cookie token as a bearer, so its client calls this on a 401
+  // and retries once. If lifetime or refresh behaviour changes, check apps/leasing-portal/frontend/src/api/client.ts.
   router.post('(.*)/auth/refresh', async (ctx) => {
     try {
       const refreshToken = ctx.cookies.get('refresh_token')

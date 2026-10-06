@@ -10,7 +10,7 @@ export interface FakeCore extends CoreClient {
 }
 
 export const makeFakeCore = (): FakeCore => {
-  let next: CoreResult = { ok: true, status: 200, data: {} }
+  let next: CoreResult = { ok: true, statusCode: 200, data: {} }
   const calls: FakeCore['calls'] = []
 
   return {

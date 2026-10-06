@@ -18,6 +18,8 @@ export function useAuth() {
     authUrl.searchParams.append('response_type', 'code')
     authUrl.searchParams.append('scope', 'openid profile email')
 
+    // TODO: `state` only carries the return path; generate a nonce and verify it in
+    // AuthCallback for CSRF protection. Same gap in property-tree and keys-portal.
     if (currentClientPath) {
       authUrl.searchParams.append('state', currentClientPath)
     }
