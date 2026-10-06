@@ -11,6 +11,8 @@ interface PropertySearchResult {
 }
 
 export type PropertyKvvAreaLink = components['schemas']['PropertyKvvAreaLink']
+export type KvvAreaLocation =
+  { rentalId: string } | { buildingCode: string } | { propertyCode: string }
 export type PropertyKvvAreaLookup =
   components['schemas']['PropertyKvvAreaLookup']
 
@@ -41,14 +43,16 @@ export const propertyService = {
     return (data?.content || []) as PropertySearchResult[]
   },
 
-  /** Returns null when the property is not linked to a KVV-area (404). */
-  async getKvvArea(
-    propertyCode: string
+  /**
+   * Resolves the KVV-area of a location, honouring building-level exceptions on
+   * split properties. Returns null when no KVV-area resolves (404).
+   */
+  async resolveKvvArea(
+    location: KvvAreaLocation
   ): Promise<PropertyKvvAreaLookup | null> {
-    const { data, error, response } = await GET(
-      '/properties/{propertyCode}/kvv-area',
-      { params: { path: { propertyCode } } }
-    )
+    const { data, error, response } = await GET('/kvv-areas/resolve', {
+      params: { query: location },
+    })
     if (response.status === 404) return null
     if (error) throw error
     return data?.content ?? null

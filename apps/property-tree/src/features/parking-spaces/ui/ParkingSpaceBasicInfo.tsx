@@ -56,7 +56,9 @@ export const ParkingSpaceBasicInfo = ({
               <p className="text-sm text-muted-foreground">Objektsnummer</p>
               <p className="font-medium">{parkingSpace.rentalId}</p>
             </div>
-            <KvvResponsibleField propertyCode={parkingSpace.propertyCode} />
+            <KvvResponsibleField
+              location={{ rentalId: parkingSpace.rentalId }}
+            />
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               <p className="font-medium">

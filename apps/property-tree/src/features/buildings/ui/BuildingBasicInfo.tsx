@@ -64,7 +64,7 @@ export const BuildingBasicInfo = ({
         </p>
       </div>
 
-      <KvvResponsibleField propertyCode={property?.code} />
+      <KvvResponsibleField location={{ buildingCode: building.code }} />
 
       {address && (
         <div>

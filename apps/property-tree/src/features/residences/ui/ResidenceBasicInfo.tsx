@@ -150,7 +150,13 @@ export const ResidenceBasicInfo = ({
                 : '-'}
             </p>
           </div>
-          <KvvResponsibleField propertyCode={residence.property?.code} />
+          <KvvResponsibleField
+            location={
+              residence.propertyObject.rentalId
+                ? { rentalId: residence.propertyObject.rentalId }
+                : undefined
+            }
+          />
           <div>
             <p className="text-sm text-muted-foreground">Byggnad</p>
             <p className="font-medium">{residence.building?.code ?? '-'}</p>

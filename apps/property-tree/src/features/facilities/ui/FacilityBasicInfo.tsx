@@ -48,7 +48,13 @@ export const FacilityBasicInfo = ({
                 {facility.rentalInformation?.rentalId || '-'}
               </p>
             </div>
-            <KvvResponsibleField propertyCode={facility.property.code} />
+            <KvvResponsibleField
+              location={
+                facility.rentalInformation?.rentalId
+                  ? { rentalId: facility.rentalInformation.rentalId }
+                  : undefined
+              }
+            />
             <div>
               <p className="text-sm text-muted-foreground">Typ</p>
               <p className="font-medium">{facility.type.name || '-'}</p>

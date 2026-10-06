@@ -1,6 +1,9 @@
 // UI
 export { PropertiesTable } from './ui/PropertiesTable'
-export { KvvResponsibleField } from './ui/KvvResponsibleField'
+export {
+  KvvResponsibleField,
+  PropertyKvvResponsibleField,
+} from './ui/KvvResponsibleField'
 export { PropertyBasicInfo } from './ui/PropertyBasicInfo'
 export { PropertyBuildingCard } from './ui/PropertyBuildingCard'
 export { PropertyFilteredResults } from './ui/PropertyFilteredResults'
@@ -14,7 +17,7 @@ export { PropertyBuildingsTabContent } from './ui/PropertyBuildingsTabContent'
 export { PropertyStatisticsTabContent } from './ui/PropertyStatisticsTabContent'
 
 // Hooks
-export { useKvvAreaByProperty } from './hooks/useKvvAreaByProperty'
+export { useKvvArea, usePropertyKvvAreas } from './hooks/useKvvAreas'
 export { useProperties } from './hooks/useProperties'
 export { useProperty } from './hooks/useProperty'
 export { usePropertyDetails } from './hooks/usePropertyDetails'
