@@ -175,14 +175,17 @@ describe(mapLeasesToLfExportRows, () => {
       const tenant = factory.tenfastTenant.build({
         idbeteckning: '199001011234',
         name: { first: 'Anna', last: 'Svensson' },
-        postadress: 'Storgatan 1',
-        postnummer: '12345',
-        stad: 'Stockholm',
+        postadress: 'Tenant invoice street 99',
+        postnummer: '11111',
+        stad: 'Göteborg',
         phone: '0701234567',
         invoiceEmail: null,
       })
       const rentalObject = factory.tenfastRentalObject.build({
         externalId: 'RO-001',
+        postadress: 'Ibbarbo 6',
+        postnummer: '73113',
+        stad: 'KOLSVA',
         roomCount: 3,
         kvm: 75,
       })
@@ -203,9 +206,9 @@ describe(mapLeasesToLfExportRows, () => {
         leaseId: 'LEASE-001',
         nationalIdNumber: '199001011234',
         fullName: 'Svensson Anna',
-        address: 'Storgatan 1',
-        postalCode: '12345',
-        city: 'Stockholm',
+        address: 'Ibbarbo 6',
+        postalCode: '73113',
+        city: 'KOLSVA',
         phoneNumber: '0701234567',
         email: null,
         rentalObjectCode: 'RO-001',
