@@ -32,7 +32,6 @@ const makeLease = (
 describe('lease-cache', () => {
   // jest.resetModules() gives each test a fresh module with clean state.
   // Use require() rather than dynamic import() — ts-jest runs in CommonJS mode.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let cache: typeof import('../lease-cache')
 
   beforeEach(() => {

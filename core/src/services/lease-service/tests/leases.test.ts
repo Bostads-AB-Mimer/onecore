@@ -15,6 +15,7 @@ import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
+import { contactsAdapter } from '../../../adapters/contacts-adapter'
 import * as factory from '../../../../test/factories'
 import { Lease as LeaseSchema } from '../schemas/lease'
 import { PaginatedResponse } from '@onecore/utilities'
@@ -541,6 +542,43 @@ describe('leases routes', () => {
 
       expect(res.status).toBe(500)
       expect(searchSpy).not.toHaveBeenCalled()
+    })
+
+    it('resolves a personnummer in q to a contact code before calling leasing', async () => {
+      jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
+        ok: true,
+        data: factory.contactsServiceContact.build({ contactCode: 'P158770' }),
+      })
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      const res = await request(app.callback()).get(
+        '/leases/search?q=198001011234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'P158770' })
+      )
+    })
+
+    it('leaves q untouched when it does not match a contact', async () => {
+      jest
+        .spyOn(contactsAdapter, 'getByNationalId')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      const res = await request(app.callback()).get(
+        '/leases/search?q=198001011234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: '198001011234' })
+      )
     })
   })
 

@@ -26,6 +26,7 @@ import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
+import { resolvePersonnummerInQuery } from '../../adapters/contacts-adapter/lease-query'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
 import { registerSchema } from '../../utils/openapi'
@@ -495,17 +496,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      let searchQuery = resolved.query
-      const rawQ = Array.isArray(searchQuery.q)
-        ? (searchQuery.q[0] ?? '')
-        : (searchQuery.q ?? '')
-      if (/^(\d{10}|\d{6}-\d{4}|\d{12}|\d{8}-\d{4})$/.test(rawQ)) {
-        const contactResult = await contactsAdapter.getByNationalId(rawQ)
-        if (contactResult.ok) {
-          searchQuery = { ...searchQuery, q: contactResult.data.contactCode }
-        }
-      }
-
+      const searchQuery = await resolvePersonnummerInQuery(resolved.query)
       const result = await leasingAdapter.searchLeases(searchQuery)
 
       const contactCodes = [
