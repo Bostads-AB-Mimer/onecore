@@ -1,5 +1,7 @@
 import { Bug, TriangleAlert } from 'lucide-react'
 
+import { KvvResponsibleField } from '@/features/property-areas'
+
 import { components } from '@/services/api/core/generated/api-types'
 
 import { Badge } from '@/shared/ui/Badge'
@@ -204,6 +206,11 @@ export const ResidenceBasicInfo = ({
                 {building.construction.renovationYear}
               </p>
             </div>
+          )}
+          {residence.propertyObject.rentalId && (
+            <KvvResponsibleField
+              location={{ rentalId: residence.propertyObject.rentalId }}
+            />
           )}
           <div>
             <p className="text-sm text-muted-foreground">Status</p>
