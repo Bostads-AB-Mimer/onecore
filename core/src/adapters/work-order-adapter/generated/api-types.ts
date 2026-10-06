@@ -845,6 +845,7 @@ export interface components {
       RentalObjectCode: string
       Status: string
       UseMasterKey: boolean
+      MaintenanceTeam?: string | null
       HiddenFromMyPages?: boolean
       WorkOrderRows: {
         Description: string | null

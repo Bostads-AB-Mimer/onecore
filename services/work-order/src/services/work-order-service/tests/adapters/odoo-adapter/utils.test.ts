@@ -38,6 +38,20 @@ describe('odoo-adapter utils', () => {
       expect(result.Description).toContain('Kund nås enklast mellan')
       expect(result.Description).toContain('på telefonnummer')
     })
+
+    it('should map maintenance team to resursgrupp name', () => {
+      const withTeam = transformWorkOrder({
+        ...odooWorkOrderMock,
+        maintenance_team_id: [3, 'Kundcenter'],
+      })
+      expect(withTeam.MaintenanceTeam).toBe('Kundcenter')
+
+      const withoutTeam = transformWorkOrder({
+        ...odooWorkOrderMock,
+        maintenance_team_id: false,
+      })
+      expect(withoutTeam.MaintenanceTeam).toBeNull()
+    })
   })
 
   describe('transformMessages', () => {
