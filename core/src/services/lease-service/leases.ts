@@ -1114,6 +1114,11 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = result.data.data
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error exporting leases to Excel')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }

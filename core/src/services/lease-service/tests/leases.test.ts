@@ -576,6 +576,20 @@ describe('leases routes', () => {
         expect.not.objectContaining({ buildingManager: expect.anything() })
       )
     })
+
+    it('returns 503 when the lease cache is warming up', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'exportLeasesToExcel').mockRejectedValue(
+        Object.assign(new Error('Service Unavailable'), {
+          isAxiosError: true,
+          response: { status: 503 },
+        })
+      )
+
+      const res = await request(app.callback()).get('/leases/export')
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('Lease service is warming up')
+    })
   })
 
   describe('GET /leases/for-csc', () => {
