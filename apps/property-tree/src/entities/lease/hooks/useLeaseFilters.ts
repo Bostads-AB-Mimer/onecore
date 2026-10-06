@@ -195,6 +195,8 @@ export function useLeaseFilters() {
     isLoading,
     isFetching,
     error,
+    failureCount,
+    failureReason,
     exportToExcel,
   } = useLeaseSearch(searchParams, filters.page, PAGE_SIZE)
 
@@ -292,6 +294,8 @@ export function useLeaseFilters() {
     isLoading,
     isFetching,
     error,
+    failureCount,
+    failureReason,
     exportToExcel,
 
     // Search params (for bulk messaging fetchAllContacts)

@@ -70,6 +70,8 @@ export function useLeaseSearch(
     isLoading: leaseSearchQuery.isLoading,
     isFetching: leaseSearchQuery.isFetching,
     error: leaseSearchQuery.error,
+    failureCount: leaseSearchQuery.failureCount,
+    failureReason: leaseSearchQuery.failureReason,
     exportToExcel,
   }
 }

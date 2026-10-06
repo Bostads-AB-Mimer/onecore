@@ -327,14 +327,21 @@ const LeasesPage = () => {
             </FilterBar>
           </div>
 
-          {filters.isLoading ? (
+          {filters.failureCount > 0 &&
+          filters.failureReason instanceof ApiError &&
+          filters.failureReason.status === 503 &&
+          !filters.error ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Systemet startar upp, försöker igen automatiskt...
+            </div>
+          ) : filters.isLoading ? (
             <div className="text-center py-8 text-muted-foreground">
               Laddar hyreskontrakt...
             </div>
           ) : filters.error ? (
             <div className="text-center py-8 text-destructive">
               {filters.error instanceof ApiError && filters.error.status === 503
-                ? 'Systemet startar upp, försöker igen automatiskt...'
+                ? 'Systemet tar längre tid än väntat att starta — försök igen om en stund'
                 : 'Ett fel uppstod vid hämtning av hyreskontrakt'}
             </div>
           ) : filters.isFetching && filters.leases.length === 0 ? (
