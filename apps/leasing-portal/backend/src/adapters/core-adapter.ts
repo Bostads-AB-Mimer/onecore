@@ -17,8 +17,8 @@ export interface CoreRequest {
 }
 
 export type CoreResult =
-  | { ok: true; status: number; data: unknown }
-  | { ok: false; status: number; error: unknown }
+  | { ok: true; statusCode: number; data: unknown }
+  | { ok: false; statusCode: number; err: unknown }
 
 export interface CoreClient {
   /** Calls core as the user by forwarding their access token as a bearer. */
@@ -43,13 +43,13 @@ export const makeCoreClient = (config: { url: string }): CoreClient => {
         })
 
         if (response.status >= 200 && response.status < 300) {
-          return { ok: true, status: response.status, data: response.data }
+          return { ok: true, statusCode: response.status, data: response.data }
         }
 
-        return { ok: false, status: response.status, error: response.data }
+        return { ok: false, statusCode: response.status, err: response.data }
       } catch (err) {
         logger.error(err, `Core request failed: ${req.method} ${req.path}`)
-        return { ok: false, status: 502, error: 'core-unavailable' }
+        return { ok: false, statusCode: 502, err: 'core-unavailable' }
       }
     },
 

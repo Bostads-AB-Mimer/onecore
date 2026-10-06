@@ -37,6 +37,7 @@ export function useUser(): UserState {
       }
 
       // 5xx usually means core or Keycloak is unavailable; send to login rather than show an error.
+      // TODO: show a "service down" state instead of redirecting (same behaviour as property-tree).
       if (res.status === 401 || res.status >= 500) throw 'unauthenticated'
       if (!res.ok) throw 'unknown'
 

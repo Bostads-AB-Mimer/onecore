@@ -24,7 +24,7 @@ describe('GET /leasing-portal/auth/profile', () => {
 
   it('forwards the auth_token cookie to core as a bearer and returns the profile', async () => {
     const { app, coreClient } = makeTestApp()
-    coreClient.respondWith({ ok: true, status: 200, data: profile })
+    coreClient.respondWith({ ok: true, statusCode: 200, data: profile })
 
     const res = await request(app.callback())
       .get('/leasing-portal/auth/profile')
@@ -42,7 +42,7 @@ describe('GET /leasing-portal/auth/profile', () => {
 
   it('accepts a bearer header when no cookie is present', async () => {
     const { app, coreClient } = makeTestApp()
-    coreClient.respondWith({ ok: true, status: 200, data: profile })
+    coreClient.respondWith({ ok: true, statusCode: 200, data: profile })
 
     const res = await request(app.callback())
       .get('/leasing-portal/auth/profile')
@@ -56,8 +56,8 @@ describe('GET /leasing-portal/auth/profile', () => {
     const { app, coreClient } = makeTestApp()
     coreClient.respondWith({
       ok: false,
-      status: 401,
-      error: { message: 'Token expired' },
+      statusCode: 401,
+      err: { message: 'Token expired' },
     })
 
     const res = await request(app.callback())
@@ -72,8 +72,8 @@ describe('GET /leasing-portal/auth/profile', () => {
     const { app, coreClient } = makeTestApp()
     coreClient.respondWith({
       ok: false,
-      status: 403,
-      error: { message: 'Forbidden', requiredRoles: ['leasing'] },
+      statusCode: 403,
+      err: { message: 'Forbidden', requiredRoles: ['leasing'] },
     })
 
     const res = await request(app.callback())
@@ -89,7 +89,7 @@ describe('GET /leasing-portal/auth/profile', () => {
 
   it('maps core 5xx and network failure to 502', async () => {
     const { app, coreClient } = makeTestApp()
-    coreClient.respondWith({ ok: false, status: 503, error: 'down' })
+    coreClient.respondWith({ ok: false, statusCode: 503, err: 'down' })
 
     const res = await request(app.callback())
       .get('/leasing-portal/auth/profile')
@@ -101,7 +101,7 @@ describe('GET /leasing-portal/auth/profile', () => {
 
   it('returns 502 when core answers with an unexpected shape', async () => {
     const { app, coreClient } = makeTestApp()
-    coreClient.respondWith({ ok: true, status: 200, data: { nope: true } })
+    coreClient.respondWith({ ok: true, statusCode: 200, data: { nope: true } })
 
     const res = await request(app.callback())
       .get('/leasing-portal/auth/profile')

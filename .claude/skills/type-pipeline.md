@@ -34,6 +34,7 @@ Before editing any type to fix a mismatch, check whether the generated types are
 | property-tree (core) | `pnpm generate-api-types:core` | port 5010 |
 | keys-portal (keys) | `pnpm generate-api-types` | port 5092 |
 | keys-portal (core) | `pnpm generate-api-types:core` | port 5010 |
+| leasing-portal/frontend (leasing BFF) | `pnpm generate-api-types` | port 7002 |
 
 Run these from the relevant package directory. After regeneration, check if the type error is resolved before pursuing any other fix.
 
@@ -109,6 +110,15 @@ Internal-portal has a Backend-For-Frontend (BFF) layer. This is established arch
 - **BFF frontend** (`apps/internal-portal/frontend/`): React app that calls the BFF via untyped Axios. Uses `@onecore/types` for domain types.
 - Changes to shared types go in `libs/types`. No type generation pipeline is involved here.
 
+### apps/leasing-portal — Typed BFF
+
+The leasing portal also has a BFF, but a typed one. Treat it like a small service in the pipeline:
+
+- **BFF backend** (`apps/leasing-portal/backend/`): Koa with `koa-okapi-router`. Routes declare Zod schemas, which generate its OpenAPI document at `/leasing-portal/openapi.json`. It talks only to core, forwarding the user's token as a bearer, and validates core responses with Zod (e.g. `KeycloakUserSchema` from `@onecore/types`).
+- **BFF frontend** (`apps/leasing-portal/frontend/`): `openapi-fetch` over `src/api/generated/api-types.ts`, generated from the BFF's OpenAPI document. Spec paths are prefix-free; the client's base URL carries the `/leasing-portal` prefix.
+- The frontend is also a library: property-tree imports its route array and mounts it under `/uthyrning`. Those pages call the BFF, never core or a microservice directly.
+- A missing or wrong type here traces: generated file <- BFF route schema <- (if it is a core shape) `@onecore/types`.
+
 ## Tracing a Type Change Upstream
 
 When you need to change an API contract (request/response shape), work upstream through the pipeline:
@@ -150,12 +160,14 @@ This table tracks which services have which parts of the pipeline. **Update this
 | property-tree | Yes (Core + property service) | openapi-fetch | Generated + @onecore/types |
 | keys-portal | Yes (Core + keys service) | openapi-fetch | Generated + @onecore/types |
 | internal-portal | No | Axios (untyped) | @onecore/types only |
+| leasing-portal/frontend | Yes (leasing BFF) | openapi-fetch | Generated + @onecore/types |
 
 ### Service Ports
 
 | Service | Port | Swagger URL |
 |---|---|---|
 | Core | 5010 | http://localhost:5010/swagger |
+| Leasing portal BFF | 7002 | http://localhost:7002/leasing-portal/swagger |
 | Property | 5050 | http://localhost:5050/swagger |
 | Work Order | 5070 | http://localhost:5070/swagger |
 | Inspection | 5090 | http://localhost:5090/swagger |
