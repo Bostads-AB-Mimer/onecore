@@ -76,6 +76,7 @@ export const XpandWorkOrderDetailsSchema = WorkOrderSchema.omit({
   ExternalResource: true,
   UseMasterKey: true,
   HiddenFromMyPages: true,
+  MaintenanceTeam: true,
   Messages: true,
   Url: true,
 }).extend({
