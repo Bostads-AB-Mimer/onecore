@@ -1,3 +1,5 @@
+import { KvvResponsibleField } from '@/features/property-areas'
+
 import { Building, Staircase } from '@/services/types'
 
 import { toTitleCase } from '@/shared/lib/textUtils'
@@ -62,6 +64,8 @@ export const StaircaseBasicInfo = ({
           {staircase.features?.accessibleByElevator ? 'Ja' : 'Nej'}
         </p>
       </div>
+
+      <KvvResponsibleField location={{ buildingCode: building.code }} />
     </div>
   )
 
