@@ -38,6 +38,17 @@ export const entityDialogConfig: Record<
         required: true,
         placeholder: 'Beskriv kategorin',
       },
+      {
+        name: 'type',
+        label: 'Sort',
+        type: 'select',
+        required: true,
+        defaultValue: 'EQUIPMENT',
+        options: [
+          { value: 'EQUIPMENT', label: 'Utrustning' },
+          { value: 'SURFACE', label: 'Ytskikt' },
+        ],
+      },
     ],
   },
   type: {
@@ -57,6 +68,19 @@ export const entityDialogConfig: Record<
         type: 'text',
         required: false,
         placeholder: 'Valfri beskrivning',
+      },
+      {
+        name: 'code',
+        label: 'Ytskiktskod',
+        type: 'select',
+        required: false,
+        defaultValue: '',
+        options: [
+          { value: '', label: 'Ingen' },
+          { value: 'WALL', label: 'Vägg' },
+          { value: 'FLOOR', label: 'Golv' },
+          { value: 'CEILING', label: 'Tak' },
+        ],
       },
     ],
   },

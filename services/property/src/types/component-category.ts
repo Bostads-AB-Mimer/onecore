@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { property } from '@onecore/types'
 
 // ==================== COMPONENT CATEGORIES ====================
 
@@ -13,6 +14,7 @@ export const ComponentCategorySchema = z.object({
   id: z.string().uuid(),
   categoryName: z.string(),
   description: z.string(),
+  type: property.ComponentCategoryTypeSchema,
   createdAt: z
     .union([z.string(), z.date()])
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
@@ -25,12 +27,14 @@ export const ComponentCategorySchema = z.object({
 export const CreateComponentCategorySchema = z.object({
   categoryName: z.string().trim().min(1, 'Category name is required'),
   description: z.string().trim().min(1, 'Description is required'),
+  type: property.ComponentCategoryTypeSchema.optional().default('EQUIPMENT'),
 })
 
 // Update schema
 export const UpdateComponentCategorySchema = z.object({
   categoryName: z.string().trim().min(1).optional(),
   description: z.string().trim().min(1).optional(),
+  type: property.ComponentCategoryTypeSchema.optional(),
 })
 
 export type ComponentCategory = z.infer<typeof ComponentCategorySchema>

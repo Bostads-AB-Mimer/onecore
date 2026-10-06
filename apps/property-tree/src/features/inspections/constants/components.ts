@@ -1,14 +1,12 @@
 import { property } from '@onecore/types'
 
-import type { components as apiTypes } from '@/services/api/core/generated/api-types'
+export const SURFACE_CODES = property.ComponentTypeCodeSchema.options
+export type SurfaceCode = property.ComponentTypeCode
 
-type FetchedComponent = apiTypes['schemas']['Component']
-
-export const SURFACE_TYPES = property.SURFACE_TYPES
-export type SurfaceType = property.SurfaceType
-
-// Returns the upstream Type name (e.g. 'Vägg', 'Golv', 'Tak') for a fetched
-// component instance. Used by the inspection picker to detect missing surfaces.
-export function getTypeName(c: FetchedComponent): string | undefined {
-  return c.model?.subtype?.componentType?.typeName
+// Shown for a surface type that has no models in the library yet. Otherwise
+// the menu uses the type's own name.
+export const SURFACE_LABELS: Record<SurfaceCode, string> = {
+  WALL: 'Vägg',
+  FLOOR: 'Golv',
+  CEILING: 'Tak',
 }

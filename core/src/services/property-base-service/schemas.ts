@@ -643,6 +643,7 @@ export const ComponentCategorySchema = z.object({
   id: z.string().uuid(),
   categoryName: z.string(),
   description: z.string(),
+  type: property.ComponentCategoryTypeSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -653,6 +654,7 @@ export const ComponentTypeSchema = z.object({
   typeName: z.string(),
   categoryId: z.string().uuid(),
   description: z.string().nullable(),
+  code: property.ComponentTypeCodeSchema.nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   category: ComponentCategorySchema.optional(),
@@ -829,23 +831,27 @@ export const ComponentInstallationsQueryParamsSchema = z.object({
 export const CreateComponentCategorySchema = z.object({
   categoryName: z.string().trim().min(1, 'Category name is required'),
   description: z.string().trim().min(1, 'Description is required'),
+  type: property.ComponentCategoryTypeSchema.optional(),
 })
 
 export const UpdateComponentCategorySchema = z.object({
   categoryName: z.string().trim().min(1).optional(),
   description: z.string().trim().min(1).optional(),
+  type: property.ComponentCategoryTypeSchema.optional(),
 })
 
 export const CreateComponentTypeSchema = z.object({
   typeName: z.string().trim().min(1, 'Type name is required'),
   categoryId: z.string().uuid(),
   description: z.string().trim().optional(),
+  code: property.ComponentTypeCodeSchema.nullable().optional(),
 })
 
 export const UpdateComponentTypeSchema = z.object({
   typeName: z.string().trim().min(1).optional(),
   categoryId: z.string().uuid().optional(),
   description: z.string().trim().min(1).optional(),
+  code: property.ComponentTypeCodeSchema.nullable().optional(),
 })
 
 export const CreateComponentSubtypeSchema = z.object({

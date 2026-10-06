@@ -9,22 +9,22 @@ import { Card, CardContent } from '@/shared/ui/Card'
 import { Separator } from '@/shared/ui/Separator'
 import { Skeleton } from '@/shared/ui/Skeleton'
 
-import {
-  type CostResponsibility,
-  SURFACE_TYPES,
-  getTypeName,
-} from '../constants'
+import type { CostResponsibility } from '../constants'
 import { useRoomComponents } from '../hooks/useRoomComponents'
 import {
   deriveRoomIsHandled,
   emptyInspectionComponent,
   getFetchedComponentLabel,
 } from '../lib/inspectionComponent'
+import {
+  findMissingSurfaces,
+  getSurfaceCode,
+  toActionComponentType,
+} from '../lib/surfaces'
 import { AddSurfaceComponentMenu } from './AddSurfaceComponentMenu'
 import { ComponentDetailSheet } from './ComponentDetailSheet'
 import { ComponentInspectionCard } from './ComponentInspectionCard'
 import { DetailComponentsSection } from './DetailComponentsSection'
-import type { ComponentType } from '../constants/actions'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
 type InspectionComponent = NonNullable<InspectionRoom['components']>[number]
@@ -108,10 +108,7 @@ export function RoomInspectionEditor({
   } = useRoomComponents(room.propertyObjectId)
 
   const missingSurfaces = useMemo(
-    () =>
-      SURFACE_TYPES.filter(
-        (t) => !(fetchedComponents ?? []).some((c) => getTypeName(c) === t)
-      ),
+    () => findMissingSurfaces(fetchedComponents ?? []),
     [fetchedComponents]
   )
 
@@ -129,16 +126,6 @@ export function RoomInspectionEditor({
   ): InspectionComponent =>
     componentsByIdMemo.get(componentId) ??
     emptyInspectionComponent(componentId, label)
-
-  const getActionComponentType = (
-    typeName: string | undefined
-  ): ComponentType => {
-    if (!typeName) return 'details'
-    if (typeName === 'Vägg') return 'walls'
-    if (typeName === 'Golv') return 'floor'
-    if (typeName === 'Tak') return 'ceiling'
-    return 'details'
-  }
 
   const derivedIsHandled = useMemo(() => {
     if (isLoading || isError) return inspectionData.isHandled
@@ -204,7 +191,7 @@ export function RoomInspectionEditor({
                 note={state.note}
                 photoCount={state.photos.length}
                 actions={state.action}
-                componentType={getActionComponentType(getTypeName(component))}
+                componentType={toActionComponentType(getSurfaceCode(component))}
                 costResponsibility={state.costResponsibility ?? null}
                 onConditionChange={(value) =>
                   onFetchedComponentConditionUpdate(componentId, label, value)
@@ -272,7 +259,7 @@ export function RoomInspectionEditor({
               note={state.note}
               photos={state.photos}
               actions={state.action}
-              componentType={getActionComponentType(getTypeName(component))}
+              componentType={toActionComponentType(getSurfaceCode(component))}
               onNoteChange={(note) =>
                 onFetchedComponentNoteUpdate(componentId, label, note)
               }

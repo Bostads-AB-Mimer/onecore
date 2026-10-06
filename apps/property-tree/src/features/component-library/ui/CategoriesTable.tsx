@@ -30,6 +30,15 @@ export const CategoriesTable = ({
         <span className="text-muted-foreground">{item.description || '-'}</span>
       ),
     },
+    {
+      key: 'type',
+      label: 'Sort',
+      render: (item) => (
+        <span className="text-muted-foreground">
+          {item.type === 'SURFACE' ? 'Ytskikt' : 'Utrustning'}
+        </span>
+      ),
+    },
   ]
 
   return (

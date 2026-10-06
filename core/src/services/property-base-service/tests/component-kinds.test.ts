@@ -17,7 +17,10 @@ beforeEach(jest.resetAllMocks)
 
 describe('Component category type', () => {
   it('returns the category type', async () => {
-    const category = { ...factory.componentCategory.build(), type: 'SURFACE' }
+    const category = {
+      ...factory.componentCategory.build(),
+      type: 'SURFACE' as const,
+    }
     jest
       .spyOn(propertyBaseAdapter, 'getComponentCategories')
       .mockResolvedValueOnce({ ok: true, data: [category] })
@@ -29,7 +32,10 @@ describe('Component category type', () => {
   })
 
   it('forwards the type when creating a category', async () => {
-    const category = { ...factory.componentCategory.build(), type: 'SURFACE' }
+    const category = {
+      ...factory.componentCategory.build(),
+      type: 'SURFACE' as const,
+    }
     const create = jest
       .spyOn(propertyBaseAdapter, 'createComponentCategory')
       .mockResolvedValueOnce({ ok: true, data: category })
@@ -44,7 +50,7 @@ describe('Component category type', () => {
 
     expect(res.status).toBe(200)
     expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'SURFACE' })
+      expect.objectContaining({ type: 'SURFACE' as const })
     )
   })
 
@@ -63,7 +69,7 @@ describe('Component category type', () => {
 
 describe('Component type code', () => {
   it('returns the type code', async () => {
-    const type = { ...factory.componentType.build(), code: 'WALL' }
+    const type = { ...factory.componentType.build(), code: 'WALL' as const }
     jest
       .spyOn(propertyBaseAdapter, 'getComponentTypes')
       .mockResolvedValueOnce({ ok: true, data: [type] })
@@ -75,7 +81,7 @@ describe('Component type code', () => {
   })
 
   it('forwards the code when creating a type', async () => {
-    const type = { ...factory.componentType.build(), code: 'FLOOR' }
+    const type = { ...factory.componentType.build(), code: 'FLOOR' as const }
     const create = jest
       .spyOn(propertyBaseAdapter, 'createComponentType')
       .mockResolvedValueOnce({ ok: true, data: type })
@@ -88,7 +94,7 @@ describe('Component type code', () => {
 
     expect(res.status).toBe(200)
     expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ code: 'FLOOR' })
+      expect.objectContaining({ code: 'FLOOR' as const })
     )
   })
 
@@ -105,10 +111,13 @@ describe('Component type code', () => {
 
 describe('Component hierarchy', () => {
   it('carries category type and type code through to a component', async () => {
-    const category = { ...factory.componentCategory.build(), type: 'SURFACE' }
+    const category = {
+      ...factory.componentCategory.build(),
+      type: 'SURFACE' as const,
+    }
     const componentType = {
       ...factory.componentType.build(),
-      code: 'WALL',
+      code: 'WALL' as const,
       category,
     }
     const subtype = { ...factory.componentSubtype.build(), componentType }
@@ -118,9 +127,7 @@ describe('Component hierarchy', () => {
       .spyOn(propertyBaseAdapter, 'getComponentById')
       .mockResolvedValueOnce({ ok: true, data: component })
 
-    const res = await request(app.callback()).get(
-      `/components/${component.id}`
-    )
+    const res = await request(app.callback()).get(`/components/${component.id}`)
 
     expect(res.status).toBe(200)
     expect(res.body.content.model.subtype.componentType.code).toBe('WALL')

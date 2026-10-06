@@ -12280,6 +12280,8 @@ export interface components {
             /** Format: uuid */
             categoryId: string
             description: string | null
+            /** @enum {string|null} */
+            code: 'WALL' | 'FLOOR' | 'CEILING' | null
             createdAt: string
             updatedAt: string
             category?: {
@@ -12287,6 +12289,8 @@ export interface components {
               id: string
               categoryName: string
               description: string
+              /** @enum {string} */
+              type: 'EQUIPMENT' | 'SURFACE'
               createdAt: string
               updatedAt: string
             }
@@ -12331,6 +12335,8 @@ export interface components {
       id: string
       categoryName: string
       description: string
+      /** @enum {string} */
+      type: 'EQUIPMENT' | 'SURFACE'
       createdAt: string
       updatedAt: string
     }
@@ -12341,6 +12347,8 @@ export interface components {
       /** Format: uuid */
       categoryId: string
       description: string | null
+      /** @enum {string|null} */
+      code: 'WALL' | 'FLOOR' | 'CEILING' | null
       createdAt: string
       updatedAt: string
       category?: {
@@ -12348,6 +12356,8 @@ export interface components {
         id: string
         categoryName: string
         description: string
+        /** @enum {string} */
+        type: 'EQUIPMENT' | 'SURFACE'
         createdAt: string
         updatedAt: string
       }
@@ -12374,6 +12384,8 @@ export interface components {
         /** Format: uuid */
         categoryId: string
         description: string | null
+        /** @enum {string|null} */
+        code: 'WALL' | 'FLOOR' | 'CEILING' | null
         createdAt: string
         updatedAt: string
         category?: {
@@ -12381,6 +12393,8 @@ export interface components {
           id: string
           categoryName: string
           description: string
+          /** @enum {string} */
+          type: 'EQUIPMENT' | 'SURFACE'
           createdAt: string
           updatedAt: string
         }
@@ -12424,6 +12438,8 @@ export interface components {
           /** Format: uuid */
           categoryId: string
           description: string | null
+          /** @enum {string|null} */
+          code: 'WALL' | 'FLOOR' | 'CEILING' | null
           createdAt: string
           updatedAt: string
           category?: {
@@ -12431,6 +12447,8 @@ export interface components {
             id: string
             categoryName: string
             description: string
+            /** @enum {string} */
+            type: 'EQUIPMENT' | 'SURFACE'
             createdAt: string
             updatedAt: string
           }
@@ -12511,6 +12529,8 @@ export interface components {
               /** Format: uuid */
               categoryId: string
               description: string | null
+              /** @enum {string|null} */
+              code: 'WALL' | 'FLOOR' | 'CEILING' | null
               createdAt: string
               updatedAt: string
               category?: {
@@ -12518,6 +12538,8 @@ export interface components {
                 id: string
                 categoryName: string
                 description: string
+                /** @enum {string} */
+                type: 'EQUIPMENT' | 'SURFACE'
                 createdAt: string
                 updatedAt: string
               }
@@ -12560,22 +12582,30 @@ export interface components {
     CreateComponentCategoryRequest: {
       categoryName: string
       description: string
+      /** @enum {string} */
+      type?: 'EQUIPMENT' | 'SURFACE'
     }
     UpdateComponentCategoryRequest: {
       categoryName?: string
       description?: string
+      /** @enum {string} */
+      type?: 'EQUIPMENT' | 'SURFACE'
     }
     CreateComponentTypeRequest: {
       typeName: string
       /** Format: uuid */
       categoryId: string
       description?: string
+      /** @enum {string|null} */
+      code?: 'WALL' | 'FLOOR' | 'CEILING' | null
     }
     UpdateComponentTypeRequest: {
       typeName?: string
       /** Format: uuid */
       categoryId?: string
       description?: string
+      /** @enum {string|null} */
+      code?: 'WALL' | 'FLOOR' | 'CEILING' | null
     }
     CreateComponentSubtypeRequest: {
       subTypeName: string
