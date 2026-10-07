@@ -229,6 +229,7 @@ describe('Component Instances API', () => {
   describe('POST /components', () => {
     it('should create component and persist data correctly (default status ACTIVE)', async () => {
       assert(existingModelId, 'Setup failed: no existing model found')
+      assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const newComponent = factory.component.build({
         subtypeId: existingSubtypeId,
@@ -285,6 +286,7 @@ describe('Component Instances API', () => {
 
     it('should reject negative warrantyMonths', async () => {
       assert(existingModelId, 'Setup failed: no existing model found')
+      assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const invalidComponent = {
         modelId: existingModelId,
@@ -301,6 +303,7 @@ describe('Component Instances API', () => {
 
     it('should reject negative priceAtPurchase', async () => {
       assert(existingModelId, 'Setup failed: no existing model found')
+      assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const invalidComponent = {
         modelId: existingModelId,
@@ -317,6 +320,7 @@ describe('Component Instances API', () => {
 
     it('should reject negative quantity', async () => {
       assert(existingModelId, 'Setup failed: no existing model found')
+      assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const invalidComponent = {
         modelId: existingModelId,
@@ -333,6 +337,7 @@ describe('Component Instances API', () => {
 
     it('should accept all valid condition enum values', async () => {
       assert(existingModelId, 'Setup failed: no existing model found')
+      assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const conditions = ['NEW', 'GOOD', 'FAIR', 'POOR', 'DAMAGED']
 
@@ -361,6 +366,7 @@ describe('Component Instances API', () => {
 
     it('should reject invalid condition enum value', async () => {
       assert(existingModelId, 'Setup failed: no existing model found')
+      assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const invalidComponent = {
         modelId: existingModelId,
@@ -397,6 +403,7 @@ describe('Component Instances API', () => {
   describe('GET /components - Combined Filters', () => {
     it('should filter by both modelId and status', async () => {
       assert(existingModelId, 'Setup failed: no existing model found')
+      assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const response = await request(app.callback())
         .get('/components')
@@ -433,6 +440,7 @@ describe('Component Instances API', () => {
   describe('PUT /components/:id', () => {
     it('should update component status and persist changes', async () => {
       assert(existingModelId, 'Setup failed: no existing model found')
+      assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       // Create a component to update
       const newComponent = factory.component.build({
@@ -500,6 +508,7 @@ describe('Component Instances API', () => {
   describe('DELETE /components/:id', () => {
     it('should cascade delete to installations (deleting component removes its installations)', async () => {
       assert(existingModelId, 'Setup failed: no existing model found')
+      assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       // Create a new component
       const newComponent = factory.component.build({
