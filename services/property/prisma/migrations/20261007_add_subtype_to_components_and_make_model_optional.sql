@@ -39,23 +39,12 @@ BEGIN TRY
     EXEC sp_executesql N'CREATE NONCLUSTERED INDEX idx_components_subtype ON dbo.components (subtypeId);';
   END
 
-  -- 2. modelId nullable. ALTER COLUMN is blocked by the FK and the index, so drop, alter, recreate.
+  -- 2. modelId nullable
   IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.components') AND name = 'modelId' AND is_nullable = 0)
-  BEGIN
-    IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_components_model')
-      ALTER TABLE dbo.components DROP CONSTRAINT FK_components_model;
-    IF EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.components') AND name = 'idx_components_model')
-      DROP INDEX idx_components_model ON dbo.components;
-
     ALTER TABLE dbo.components ALTER COLUMN modelId UNIQUEIDENTIFIER NULL;
 
-    ALTER TABLE dbo.components
-      ADD CONSTRAINT FK_components_model FOREIGN KEY (modelId) REFERENCES dbo.component_models(id);
-    CREATE NONCLUSTERED INDEX idx_components_model ON dbo.components (modelId);
-  END
-
   -- 3. ncsCode NVARCHAR(15). max_length is bytes, so 15 chars = 30.
-  IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.components') AND name = 'ncsCode' AND max_length <> 30)
+  IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.components') AND name = 'ncsCode' AND max_length < 30)
   BEGIN
     ALTER TABLE dbo.components ALTER COLUMN ncsCode NVARCHAR(15) NULL;
   END
@@ -94,11 +83,7 @@ END CATCH;
 --   ALTER TABLE dbo.components ALTER COLUMN priceAtPurchase MONEY NOT NULL;
 --   ALTER TABLE dbo.components ALTER COLUMN warrantyMonths INT NOT NULL;
 --   ALTER TABLE dbo.components ALTER COLUMN ncsCode NVARCHAR(10) NULL;
---   ALTER TABLE dbo.components DROP CONSTRAINT FK_components_model;
---   DROP INDEX idx_components_model ON dbo.components;
 --   ALTER TABLE dbo.components ALTER COLUMN modelId UNIQUEIDENTIFIER NOT NULL;
---   ALTER TABLE dbo.components ADD CONSTRAINT FK_components_model FOREIGN KEY (modelId) REFERENCES dbo.component_models(id);
---   CREATE NONCLUSTERED INDEX idx_components_model ON dbo.components (modelId);
 --   DROP INDEX idx_components_subtype ON dbo.components;
 --   ALTER TABLE dbo.components DROP CONSTRAINT FK_components_subtype;
 --   ALTER TABLE dbo.components DROP COLUMN subtypeId;
