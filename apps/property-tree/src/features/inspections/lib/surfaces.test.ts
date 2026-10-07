@@ -155,6 +155,21 @@ describe('groupSurfaceSubtypes', () => {
 
     expect(groups.get('FLOOR')?.typeName).toBe('Golv')
   })
+
+  it('skips a subtype without a name', () => {
+    const groups = groupSurfaceSubtypes([
+      model({
+        id: 'm1',
+        modelName: 'X',
+        subtypeId: 's1',
+        subtypeName: '',
+        code: 'WALL',
+        typeName: 'Vägg',
+      }),
+    ])
+
+    expect(groups.size).toBe(0)
+  })
 })
 
 describe('surfaceLabel', () => {

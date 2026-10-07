@@ -24,4 +24,13 @@ describe('getFetchedComponentLabel', () => {
     expect(getFetchedComponentLabel(withModel)).toBe('ESF5555')
     expect(getFetchedComponentLabel(bare)).toBe('c1')
   })
+
+  it('prefers the subtype name over the model name', () => {
+    const c = {
+      id: 'c1',
+      subtype: { subTypeName: 'Diskmaskin 60 cm' },
+      model: { modelName: 'ESF5555' },
+    } as unknown as FetchedComponent
+    expect(getFetchedComponentLabel(c)).toBe('Diskmaskin 60 cm')
+  })
 })

@@ -48,7 +48,7 @@ export function AddSurfaceComponentMenu({
 
           return (
             <DropdownMenuSub key={code}>
-              <DropdownMenuSubTrigger>
+              <DropdownMenuSubTrigger disabled={subtypes.length === 0}>
                 {surfaceLabel(code, groups)}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
