@@ -19,7 +19,11 @@ import {
   componentsQueryParamsSchema,
 } from '../types/component'
 import { prisma } from '../adapters/db'
-import { findComponentModelProblem } from '../adapters/component-instance-adapter'
+import {
+  findComponentModelProblem,
+  getComponentById,
+  getComponentsByRoomId,
+} from '../adapters/component-instance-adapter'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
@@ -435,5 +439,51 @@ describe('POST and PUT /components', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.error).not.toMatch(/FK_/)
+  })
+})
+
+const subtypeInclude = {
+  subtype: {
+    include: { componentType: { include: { category: true } } },
+  },
+}
+
+describe('component reads include the subtype directly', () => {
+  const findMany = prisma.components.findMany as jest.Mock
+  const findUnique = prisma.components.findUnique as jest.Mock
+
+  beforeEach(() => {
+    findMany.mockReset()
+    findUnique.mockReset()
+  })
+
+  it('getComponentsByRoomId includes subtype -> type -> category and the model', async () => {
+    findMany.mockResolvedValueOnce([])
+
+    await getComponentsByRoomId('ROOM-1')
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          ...subtypeInclude,
+          model: true,
+        }),
+      })
+    )
+  })
+
+  it('getComponentById includes subtype -> type -> category and the model', async () => {
+    findUnique.mockResolvedValueOnce(null)
+
+    await getComponentById('00000000-0000-0000-0004-000000000001')
+
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          ...subtypeInclude,
+          model: true,
+        }),
+      })
+    )
   })
 })

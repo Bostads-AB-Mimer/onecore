@@ -27,6 +27,14 @@ const propertyObjectWithStructuresSelect = {
   },
 } as const
 
+// Hierarchy comes from the component's own subtype; the model is optional and flat.
+const componentHierarchyInclude = {
+  subtype: {
+    include: { componentType: { include: { category: true } } },
+  },
+  model: true,
+} as const
+
 // ==================== COMPONENTS (INSTANCES) ====================
 
 export const getComponents = async (
@@ -61,19 +69,7 @@ export const getComponents = async (
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        model: {
-          include: {
-            subtype: {
-              include: {
-                componentType: {
-                  include: {
-                    category: true,
-                  },
-                },
-              },
-            },
-          },
-        },
+        ...componentHierarchyInclude,
         componentInstallations: {
           where: {
             deinstallationDate: null, // Only active installations
@@ -107,11 +103,7 @@ export const getComponentById = async (id: string) => {
   const component = await prisma.components.findUnique({
     where: { id },
     include: {
-      model: {
-        include: {
-          subtype: true,
-        },
-      },
+      ...componentHierarchyInclude,
       componentInstallations: {
         include: {
           propertyObject: {
@@ -219,19 +211,7 @@ export const getComponentsByRoomId = async (roomId: string) => {
       },
     },
     include: {
-      model: {
-        include: {
-          subtype: {
-            include: {
-              componentType: {
-                include: {
-                  category: true,
-                },
-              },
-            },
-          },
-        },
-      },
+      ...componentHierarchyInclude,
       componentInstallations: {
         where: {
           spaceId: roomId,
