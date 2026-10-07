@@ -108,6 +108,47 @@ describe('deriveStatus', () => {
   it('UNKNOWN when DAX could not be asked about the cards', () => {
     const r = deriveStatus({ ...base, loans: [], cardsUnresolved: true })
     expect(r.status).toBe('UNKNOWN')
+    // Even with no keys: there may be tags we could not see
+    expect(
+      deriveStatus({ ...base, keys: [], loans: [], cardsUnresolved: true })
+        .status
+    ).toBe('UNKNOWN')
+  })
+
+  it('loan-derived red statuses win over UNKNOWN', () => {
+    const notReturned = deriveStatus({
+      ...base,
+      cardsUnresolved: true,
+      loans: [
+        loan({ contact: 'P1', pickedUpAt: d('2024-01-02'), keysArray: [K1] }),
+      ],
+    })
+    expect(notReturned.status).toBe('NOT_RETURNED')
+
+    const other = deriveStatus({
+      ...base,
+      cardsUnresolved: true,
+      loans: [
+        loan({ contact: 'P1', returnedAt: d('2026-10-15'), keysArray: [K1] }),
+        loan({
+          loanType: 'MAINTENANCE',
+          contact: 'Firma AB',
+          pickedUpAt: d('2026-10-16'),
+          keysArray: [K1],
+        }),
+      ],
+    })
+    expect(other.status).toBe('LOANED_TO_OTHER')
+
+    // With the outgoing loan returned, the card-dependent states are unknown
+    const returned = deriveStatus({
+      ...base,
+      cardsUnresolved: true,
+      loans: [
+        loan({ contact: 'P1', returnedAt: d('2026-10-15'), keysArray: [K1] }),
+      ],
+    })
+    expect(returned.status).toBe('UNKNOWN')
   })
 
   it('NO_KEYS when the object has no keys or cards', () => {
@@ -511,6 +552,45 @@ describe('GET /keys/move-in-out', () => {
     expect(searched.body.content[0].rentalObjectCode).toBe('OBJ-C')
 
     // Three requests, one lease search pair: the object list is cached
+    expect(searchSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('shares one lease search between concurrent requests for the same filter', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const searchSpy = jest
+      .spyOn(leasingAdapter, 'searchLeases')
+      .mockImplementation(async (q) => {
+        await gate
+        return q.endDateFrom
+          ? paginated([
+              searchResult('L1', 'OBJ-1', 'P1', '2024-01-01', '2026-10-15'),
+            ])
+          : paginated([])
+      })
+    jest
+      .spyOn(keysAdapter.KeysApi, 'getBatchByRentalObject')
+      .mockResolvedValue({ ok: true, data: {} })
+    jest
+      .spyOn(keysAdapter.KeyLoansApi, 'getBatchByRentalObject')
+      .mockResolvedValue({
+        ok: true,
+        data: { loans: {}, cards: {}, cardsUnresolved: [] },
+      })
+
+    const base = '/keys/move-in-out?endDateFrom=2026-10-01&endDateTo=2026-11-01'
+    // Second request (page 2) arrives while the first is still searching
+    const first = request(app.callback()).get(base)
+    const second = request(app.callback()).get(`${base}&page=2`)
+    await new Promise((r) => setTimeout(r, 20))
+    release()
+    const [a, b] = await Promise.all([first, second])
+
+    expect(a.status).toBe(200)
+    expect(b.status).toBe(200)
+    expect(a.body._meta.totalRecords).toBe(1)
+    expect(b.body._meta.totalRecords).toBe(1)
+    // One ending + one starting search, not two of each
     expect(searchSpy).toHaveBeenCalledTimes(2)
   })
 

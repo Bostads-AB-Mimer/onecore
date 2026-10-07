@@ -172,15 +172,17 @@ export function deriveStatus(input: {
     incomingLoanPickedUpAt,
   }
 
+  // Loan-derived red statuses come from our own DB, so they hold even when
+  // DAX did not answer; UNKNOWN only replaces the states that need the cards.
   let status: MoveInOutStatus
-  if (input.cardsUnresolved) {
-    status = 'UNKNOWN'
-  } else if (itemIds.size === 0) {
+  if (itemIds.size === 0 && !input.cardsUnresolved) {
     status = 'NO_KEYS'
   } else if (outgoingAllReturned === false) {
     status = 'NOT_RETURNED'
   } else if (otherOpenLoans.length > 0) {
     status = 'LOANED_TO_OTHER'
+  } else if (input.cardsUnresolved) {
+    status = 'UNKNOWN'
   } else if (openIncoming.length > 0) {
     const covered = new Set<string>()
     for (const loan of openIncoming) {

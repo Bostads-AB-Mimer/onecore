@@ -240,8 +240,13 @@ type ObjectCacheEntry = {
   leaseSearch: { ending: LeaseSearchStats; starting: LeaseSearchStats }
 }
 
-// Lease-derived object list per filter; pages 2..n and re-sorts skip the search
-const objectCache = new Map<string, ObjectCacheEntry>()
+// Lease-derived object list per filter; pages 2..n and re-sorts skip the search.
+// The in-flight promise is cached too, so concurrent requests for the same
+// filter (page 2 during a cold load, two users) share one search.
+const objectCache = new Map<
+  string,
+  { at: number; entry: Promise<ObjectCacheEntry> }
+>()
 
 function cacheKey(query: Query): string {
   return [
@@ -252,11 +257,24 @@ function cacheKey(query: Query): string {
   ].join('|')
 }
 
-async function resolveObjects(query: Query): Promise<ObjectCacheEntry> {
+function resolveObjects(query: Query): Promise<ObjectCacheEntry> {
   const key = cacheKey(query)
   const cached = objectCache.get(key)
-  if (cached && Date.now() - cached.at < OBJECT_CACHE_TTL_MS) return cached
+  if (cached && Date.now() - cached.at < OBJECT_CACHE_TTL_MS)
+    return cached.entry
 
+  for (const [k, v] of objectCache) {
+    if (Date.now() - v.at >= OBJECT_CACHE_TTL_MS) objectCache.delete(k)
+  }
+  const entry = searchObjects(query).catch((err) => {
+    objectCache.delete(key) // a failed search must not be served for 2 minutes
+    throw err
+  })
+  objectCache.set(key, { at: Date.now(), entry })
+  return entry
+}
+
+async function searchObjects(query: Query): Promise<ObjectCacheEntry> {
   const t0 = Date.now()
   // Both searches always run so the neighbour of a row is found in bulk:
   // leases ending up to 3 months before the range, starting up to 3 months after.
@@ -293,18 +311,13 @@ async function resolveObjects(query: Query): Promise<ObjectCacheEntry> {
     })
   )
 
-  const entry = {
+  return {
     at: Date.now(),
     objects,
     leaseSearchMs: Date.now() - t0,
     leasesFound: ending.length + starting.length,
     leaseSearch: { ending: endingSearch.stats, starting: startingSearch.stats },
   }
-  for (const [k, v] of objectCache) {
-    if (Date.now() - v.at >= OBJECT_CACHE_TTL_MS) objectCache.delete(k)
-  }
-  objectCache.set(key, entry)
-  return entry
 }
 
 /** Test helper */
