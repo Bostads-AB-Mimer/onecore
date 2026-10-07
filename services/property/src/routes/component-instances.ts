@@ -10,6 +10,7 @@ import {
   UpdateComponentSchema,
 } from '../types/component'
 import {
+  type ComponentModelProblem,
   getComponents,
   getComponentById,
   createComponent,
@@ -17,7 +18,16 @@ import {
   deleteComponent,
   updateComponentInspectionState,
   getComponentsByRoomId,
+  findComponentModelProblem,
 } from '../adapters/component-adapter'
+
+const modelProblemResponse: Record<ComponentModelProblem, string> = {
+  subtype_not_found: 'Invalid subtypeId: component subtype does not exist',
+  model_not_found: 'Invalid modelId: component model does not exist',
+  model_subtype_mismatch:
+    'The model belongs to another subtype than the component',
+  surface_has_model: 'A component in a SURFACE category cannot have a model',
+}
 
 /**
  * @swagger
@@ -40,6 +50,12 @@ export const routes = (router: KoaRouter) => {
    *         name: modelId
    *         schema:
    *           type: string
+   *       - in: query
+   *         name: subtypeId
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Filter by subtype
    *       - in: query
    *         name: status
    *         schema:
@@ -88,13 +104,13 @@ export const routes = (router: KoaRouter) => {
     '(.*)/components',
     parseRequest({ query: componentsQueryParamsSchema }),
     async (ctx) => {
-      const { modelId, status, serialNumber, page, limit } =
+      const { modelId, subtypeId, status, serialNumber, page, limit } =
         ctx.request.parsedQuery
       const metadata = generateRouteMetadata(ctx)
 
       try {
         const result = await getComponents(
-          { modelId, status, serialNumber },
+          { modelId, subtypeId, status, serialNumber },
           page,
           limit
         )
@@ -176,7 +192,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   post:
    *     summary: Create a new component instance
-   *     description: Registers a new physical unit. Requires modelId and serialNumber.
+   *     description: Registers a new physical unit. Requires subtypeId. modelId is optional and must belong to the same subtype; components in a SURFACE category take no model.
    *     tags: [Component Instances]
    *     requestBody:
    *       required: true
@@ -194,6 +210,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Component'
+   *       400:
+   *         description: Unknown subtypeId or modelId, model under another subtype, or a model on a SURFACE component
    */
   router.post(
     '(.*)/components',
@@ -203,6 +221,16 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
+        const problem = await findComponentModelProblem({
+          subtypeId: data.subtypeId,
+          modelId: data.modelId,
+        })
+        if (problem) {
+          ctx.status = 400
+          ctx.body = { error: modelProblemResponse[problem], ...metadata }
+          return
+        }
+
         const component = await createComponent(data)
 
         ctx.status = 201
@@ -213,20 +241,6 @@ export const routes = (router: KoaRouter) => {
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
-        // Check for foreign key constraint violation (Prisma P2003)
-        const isPrismaFKError =
-          err &&
-          typeof err === 'object' &&
-          'code' in err &&
-          (err as { code: string }).code === 'P2003'
-        if (isPrismaFKError) {
-          ctx.status = 400
-          ctx.body = {
-            error: 'Invalid modelId: component model does not exist',
-            ...metadata,
-          }
-          return
-        }
         ctx.status = 500
         ctx.body = { error: errorMessage, ...metadata }
       }
@@ -263,6 +277,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Component'
+   *       400:
+   *         description: Unknown subtypeId or modelId, model under another subtype, or a model on a SURFACE component
    */
   router.put(
     '(.*)/components/:id',
@@ -287,6 +303,19 @@ export const routes = (router: KoaRouter) => {
           ctx.status = 404
           ctx.body = { error: 'Component not found', ...metadata }
           return
+        }
+
+        if (data.subtypeId !== undefined || data.modelId !== undefined) {
+          const problem = await findComponentModelProblem({
+            subtypeId: data.subtypeId ?? existing.subtypeId,
+            modelId:
+              data.modelId === undefined ? existing.modelId : data.modelId,
+          })
+          if (problem) {
+            ctx.status = 400
+            ctx.body = { error: modelProblemResponse[problem], ...metadata }
+            return
+          }
         }
 
         const component = await updateComponent(id, data)

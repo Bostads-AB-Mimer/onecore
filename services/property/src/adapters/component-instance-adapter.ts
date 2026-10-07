@@ -32,6 +32,7 @@ const propertyObjectWithStructuresSelect = {
 export const getComponents = async (
   filters: {
     modelId?: string
+    subtypeId?: string
     status?: string
     serialNumber?: string
   },
@@ -42,6 +43,7 @@ export const getComponents = async (
 
   const where: any = {}
   if (filters.modelId) where.modelId = filters.modelId
+  if (filters.subtypeId) where.subtypeId = filters.subtypeId
   if (filters.status) where.status = filters.status
 
   // Only apply search with minimum 2 characters (consistent with model search)

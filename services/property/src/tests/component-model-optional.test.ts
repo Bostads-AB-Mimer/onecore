@@ -20,6 +20,11 @@ import {
 } from '../types/component'
 import { prisma } from '../adapters/db'
 import { findComponentModelProblem } from '../adapters/component-instance-adapter'
+import Koa from 'koa'
+import KoaRouter from '@koa/router'
+import bodyParser from 'koa-body'
+import request from 'supertest'
+import { routes as componentRoutes } from '../routes/component-instances'
 
 const timestamps = {
   createdAt: '2026-10-07T00:00:00.000Z',
@@ -251,5 +256,147 @@ describe('findComponentModelProblem', () => {
     await expect(
       findComponentModelProblem({ subtypeId, modelId: undefined })
     ).resolves.toBeNull()
+    expect(findModel).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST and PUT /components', () => {
+  const componentId = '00000000-0000-0000-0004-000000000001'
+  const app = new Koa()
+  const router = new KoaRouter()
+  componentRoutes(router)
+  app.use(bodyParser())
+  app.use(router.routes())
+
+  const findSubtype = prisma.componentSubtypes.findUnique as jest.Mock
+  const findModel = prisma.componentModels.findUnique as jest.Mock
+  const findComponent = prisma.components.findUnique as jest.Mock
+  const createComponent = prisma.components.create as jest.Mock
+  const updateComponent = prisma.components.update as jest.Mock
+
+  const surfaceSubtype = {
+    id: subtypeId,
+    componentType: { category: { type: 'SURFACE' } },
+  }
+  const equipmentSubtype = {
+    id: subtypeId,
+    componentType: { category: { type: 'EQUIPMENT' } },
+  }
+  const storedWall = {
+    id: componentId,
+    subtypeId,
+    modelId: null,
+    serialNumber: null,
+    warrantyStartDate: null,
+    warrantyMonths: null,
+    priceAtPurchase: null,
+    depreciationPriceAtPurchase: null,
+    economicLifespan: null,
+    quantity: 14.5,
+    ncsCode: 'S 0502-Y',
+    status: 'ACTIVE',
+    condition: null,
+    lastInspectionDate: null,
+    ...timestamps,
+  }
+
+  beforeEach(() => {
+    findSubtype.mockReset()
+    findModel.mockReset()
+    findComponent.mockReset()
+    createComponent.mockReset()
+    updateComponent.mockReset()
+  })
+
+  it('creates a surface component with no model and null numerics', async () => {
+    findSubtype.mockResolvedValueOnce(surfaceSubtype)
+    createComponent.mockResolvedValueOnce(storedWall)
+
+    const res = await request(app.callback())
+      .post('/components')
+      .send({ subtypeId, quantity: 14.5, ncsCode: 'S 0502-Y' })
+
+    expect(res.status).toBe(201)
+    expect(res.body.content).toMatchObject({
+      subtypeId,
+      modelId: null,
+      warrantyMonths: null,
+    })
+    expect(createComponent).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ subtypeId }) })
+    )
+  })
+
+  it('returns 400 for a model on a surface', async () => {
+    findSubtype.mockResolvedValueOnce(surfaceSubtype)
+
+    const res = await request(app.callback())
+      .post('/components')
+      .send({ subtypeId, modelId })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/SURFACE/)
+    expect(createComponent).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when the model belongs to another subtype', async () => {
+    findSubtype.mockResolvedValueOnce(equipmentSubtype)
+    findModel.mockResolvedValueOnce({
+      id: modelId,
+      componentSubtypeId: '00000000-0000-0000-0002-000000000099',
+    })
+
+    const res = await request(app.callback())
+      .post('/components')
+      .send({ subtypeId, modelId })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/subtype/)
+  })
+
+  it('returns 400 when subtypeId is missing', async () => {
+    const res = await request(app.callback())
+      .post('/components')
+      .send({ modelId })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('re-checks on update when modelId changes', async () => {
+    findComponent.mockResolvedValueOnce(storedWall)
+    findSubtype.mockResolvedValueOnce(surfaceSubtype)
+
+    const res = await request(app.callback())
+      .put(`/components/${componentId}`)
+      .send({ modelId })
+
+    expect(res.status).toBe(400)
+    expect(updateComponent).not.toHaveBeenCalled()
+  })
+
+  it('does not re-check on update when only the condition changes', async () => {
+    findComponent.mockResolvedValueOnce(storedWall)
+    updateComponent.mockResolvedValueOnce({ ...storedWall, condition: 'GOOD' })
+
+    const res = await request(app.callback())
+      .put(`/components/${componentId}`)
+      .send({ condition: 'GOOD' })
+
+    expect(res.status).toBe(200)
+    expect(findSubtype).not.toHaveBeenCalled()
+  })
+
+  it('clears a model with null on update', async () => {
+    findComponent.mockResolvedValueOnce({ ...storedWall, modelId })
+    findSubtype.mockResolvedValueOnce(equipmentSubtype)
+    updateComponent.mockResolvedValueOnce(storedWall)
+
+    const res = await request(app.callback())
+      .put(`/components/${componentId}`)
+      .send({ modelId: null })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.modelId).toBeNull()
+    expect(findModel).not.toHaveBeenCalled()
   })
 })
