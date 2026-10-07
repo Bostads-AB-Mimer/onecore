@@ -96,6 +96,7 @@ export const findModelByExactName = async (
       },
       ...(subtypeId ? { componentSubtypeId: subtypeId } : {}),
     },
+    orderBy: { createdAt: 'asc' },
     include: {
       subtype: {
         include: {

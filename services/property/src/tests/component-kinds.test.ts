@@ -1,6 +1,6 @@
 jest.mock('../adapters/db', () => ({
   prisma: {
-    componentModels: { findMany: jest.fn(), findFirst: jest.fn() },
+    componentModels: { findMany: jest.fn() },
     componentCategories: { findUnique: jest.fn(), update: jest.fn() },
     componentTypes: {
       findUnique: jest.fn(),
@@ -8,7 +8,6 @@ jest.mock('../adapters/db', () => ({
       create: jest.fn(),
       update: jest.fn(),
     },
-    componentSubtypes: { findUnique: jest.fn() },
   },
 }))
 
@@ -18,14 +17,9 @@ import bodyParser from 'koa-body'
 import request from 'supertest'
 
 import { prisma } from '../adapters/db'
-import {
-  getSurfaceModels,
-  findModelByExactName,
-} from '../adapters/component-model-adapter'
-import { getComponentSubtypeById } from '../adapters/component-subtype-adapter'
+import { getSurfaceModels } from '../adapters/component-model-adapter'
 import { findComponentTypeCodeProblem } from '../adapters/component-type-adapter'
 import { routes as categoryRoutes } from '../routes/component-categories'
-import { routes as modelRoutes } from '../routes/component-models'
 import { routes as typeRoutes } from '../routes/component-types'
 import {
   ComponentCategorySchema,
@@ -366,75 +360,5 @@ describe('POST and PUT /component-types', () => {
       .send({ code: 'WALL' })
 
     expect(res.status).toBe(409)
-  })
-})
-
-describe('findModelByExactName', () => {
-  beforeEach(() => {
-    ;(prisma.componentModels.findFirst as jest.Mock).mockReset()
-  })
-
-  it('scopes the lookup to the subtype when one is given', async () => {
-    ;(prisma.componentModels.findFirst as jest.Mock).mockResolvedValueOnce(null)
-
-    await findModelByExactName('Electrolux ESF5555', 'sub-1')
-
-    expect(prisma.componentModels.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          modelName: { equals: 'Electrolux ESF5555' },
-          componentSubtypeId: 'sub-1',
-        }),
-      })
-    )
-  })
-
-  it('matches on name alone when no subtype is given', async () => {
-    ;(prisma.componentModels.findFirst as jest.Mock).mockResolvedValueOnce(null)
-
-    await findModelByExactName('Electrolux ESF5555')
-
-    const [{ where }] = (prisma.componentModels.findFirst as jest.Mock).mock
-      .calls[0]
-    expect(where).not.toHaveProperty('componentSubtypeId')
-  })
-})
-
-describe('getComponentSubtypeById', () => {
-  it('includes the type and its category so callers can read category.type', async () => {
-    ;(prisma.componentSubtypes.findUnique as jest.Mock).mockResolvedValueOnce(
-      null
-    )
-
-    await getComponentSubtypeById('sub-1')
-
-    expect(prisma.componentSubtypes.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({
-        include: expect.objectContaining({
-          componentType: { include: { category: true } },
-        }),
-      })
-    )
-  })
-})
-
-describe('GET /component-models/by-name/:modelName', () => {
-  const app = new Koa()
-  const router = new KoaRouter()
-  modelRoutes(router)
-  app.use(bodyParser())
-  app.use(router.routes())
-
-  beforeEach(() => {
-    ;(prisma.componentModels.findFirst as jest.Mock).mockReset()
-  })
-
-  it('rejects a malformed subtypeId with 400 before looking up the model', async () => {
-    const res = await request(app.callback()).get(
-      '/component-models/by-name/Foo?subtypeId=nope'
-    )
-
-    expect(res.status).toBe(400)
-    expect(prisma.componentModels.findFirst).not.toHaveBeenCalled()
   })
 })

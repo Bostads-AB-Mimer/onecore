@@ -8,7 +8,7 @@ jest.mock('../adapters/db', () => ({
       count: jest.fn(),
     },
     componentSubtypes: { findUnique: jest.fn() },
-    componentModels: { findUnique: jest.fn() },
+    componentModels: { findUnique: jest.fn(), findFirst: jest.fn() },
     componentInstallations: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -33,11 +33,14 @@ import {
   getComponentInstallationById,
   getComponentInstallations,
 } from '../adapters/component-installation-adapter'
+import { findModelByExactName } from '../adapters/component-model-adapter'
+import { getComponentSubtypeById } from '../adapters/component-subtype-adapter'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
 import request from 'supertest'
 import { routes as componentRoutes } from '../routes/component-instances'
+import { routes as modelRoutes } from '../routes/component-models'
 
 const timestamps = {
   createdAt: '2026-10-07T00:00:00.000Z',
@@ -529,6 +532,104 @@ describe('installation reads include the component subtype directly', () => {
     expect(findUnique).toHaveBeenCalledWith(
       expect.objectContaining({
         include: { component: { include: { subtype: true, model: true } } },
+      })
+    )
+  })
+})
+
+describe('findModelByExactName', () => {
+  beforeEach(() => {
+    ;(prisma.componentModels.findFirst as jest.Mock).mockReset()
+  })
+
+  it('scopes the lookup to the subtype when one is given', async () => {
+    ;(prisma.componentModels.findFirst as jest.Mock).mockResolvedValueOnce(null)
+
+    await findModelByExactName('Electrolux ESF5555', 'sub-1')
+
+    expect(prisma.componentModels.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          modelName: { equals: 'Electrolux ESF5555' },
+          componentSubtypeId: 'sub-1',
+        }),
+      })
+    )
+  })
+
+  it('matches on name alone when no subtype is given', async () => {
+    ;(prisma.componentModels.findFirst as jest.Mock).mockResolvedValueOnce(null)
+
+    await findModelByExactName('Electrolux ESF5555')
+
+    const [{ where }] = (prisma.componentModels.findFirst as jest.Mock).mock
+      .calls[0]
+    expect(where).not.toHaveProperty('componentSubtypeId')
+  })
+})
+
+describe('getComponentSubtypeById', () => {
+  it('includes the type and its category so callers can read category.type', async () => {
+    ;(prisma.componentSubtypes.findUnique as jest.Mock).mockResolvedValueOnce(
+      null
+    )
+
+    await getComponentSubtypeById('sub-1')
+
+    expect(prisma.componentSubtypes.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          componentType: { include: { category: true } },
+        }),
+      })
+    )
+  })
+})
+
+describe('GET /component-models/by-name/:modelName', () => {
+  const app = new Koa()
+  const router = new KoaRouter()
+  modelRoutes(router)
+  app.use(bodyParser())
+  app.use(router.routes())
+
+  beforeEach(() => {
+    ;(prisma.componentModels.findFirst as jest.Mock).mockReset()
+  })
+
+  it('rejects a malformed subtypeId with 400 before looking up the model', async () => {
+    const res = await request(app.callback()).get(
+      '/component-models/by-name/Foo?subtypeId=nope'
+    )
+
+    expect(res.status).toBe(400)
+    expect(prisma.componentModels.findFirst).not.toHaveBeenCalled()
+  })
+
+  it('passes a valid subtypeId through to the lookup', async () => {
+    ;(prisma.componentModels.findFirst as jest.Mock).mockResolvedValueOnce({
+      id: modelId,
+      modelName: 'Foo',
+      componentSubtypeId: subtypeId,
+      currentPrice: 0,
+      currentInstallPrice: 0,
+      warrantyMonths: 0,
+      manufacturer: 'Unknown',
+      technicalSpecification: null,
+      installationInstructions: null,
+      dimensions: null,
+      coclassCode: null,
+      ...timestamps,
+    })
+
+    const res = await request(app.callback()).get(
+      `/component-models/by-name/Foo?subtypeId=${subtypeId}`
+    )
+
+    expect(res.status).toBe(200)
+    expect(prisma.componentModels.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ componentSubtypeId: subtypeId }),
       })
     )
   })
