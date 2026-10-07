@@ -11,5 +11,8 @@ export { useComponentEntityMutation } from './hooks/useComponentEntityMutation'
 export { useComponentImages } from './hooks/useComponentImages'
 export { useComponents } from './hooks/useComponents'
 
+// Lib
+export { formatComponentLabel } from './lib/componentLabel'
+
 // Types
 export type { ComponentModelWithHierarchy } from './ui/ModelSelector'

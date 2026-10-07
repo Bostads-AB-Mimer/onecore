@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Trash2, Unplug } from 'lucide-react'
 
+import { formatComponentLabel } from '@/entities/component'
+
 import { componentLibraryService } from '@/services/api/core/componentLibraryService'
 import { componentService } from '@/services/api/core/componentService'
 import type { Component } from '@/services/types'
@@ -138,12 +140,7 @@ export const ManageComponentsDialog = ({
                         >
                           <div className="flex-1">
                             <p className="font-medium">
-                              {component.subtype?.componentType?.category
-                                ?.categoryName || ''}{' '}
-                              - {component.subtype?.subTypeName}
-                              {component.model
-                                ? ` (${component.model.manufacturer} ${component.model.modelName})`
-                                : ''}
+                              {formatComponentLabel(component)}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               SN: {component.serialNumber}

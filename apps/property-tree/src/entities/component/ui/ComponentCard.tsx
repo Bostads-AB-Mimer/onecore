@@ -162,12 +162,16 @@ export const ComponentCard = ({
                       {component.subtype?.subTypeName || '-'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tillverkare:</span>
-                    <span className="font-medium">
-                      {component.model?.manufacturer || '-'}
-                    </span>
-                  </div>
+                  {component.model && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Tillverkare:
+                      </span>
+                      <span className="font-medium">
+                        {component.model.manufacturer || '-'}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Serienummer:</span>
                     <div className="flex items-center gap-2">

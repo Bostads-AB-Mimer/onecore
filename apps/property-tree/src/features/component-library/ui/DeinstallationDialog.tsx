@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { AlertCircle } from 'lucide-react'
 
+import { formatComponentLabel } from '@/entities/component'
+
 import type { Component } from '@/services/types'
 
 import { Button } from '@/shared/ui/Button'
@@ -90,13 +92,7 @@ export const DeinstallationDialog = ({
           <div className="space-y-2 p-3 bg-muted/50 rounded-md">
             <div>
               <p className="text-sm text-muted-foreground">Komponent</p>
-              <p className="font-medium">
-                {component.subtype?.componentType?.category?.categoryName || ''}{' '}
-                - {component.subtype?.subTypeName}
-                {component.model
-                  ? ` (${component.model.manufacturer} ${component.model.modelName})`
-                  : ''}
-              </p>
+              <p className="font-medium">{formatComponentLabel(component)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Serienummer</p>
