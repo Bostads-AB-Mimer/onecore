@@ -3,8 +3,14 @@
 -- Schema only: existing rows keep type = 'EQUIPMENT' and code = NULL, and are
 -- set from the admin UI afterwards.
 -- Safe to re-run: every change is guarded by IF NOT EXISTS.
--- The index runs through sp_executesql because it references a column added
--- in the same batch.
+-- The CHECK constraints and the index run through sp_executesql because they
+-- reference columns added in the same batch, which SQL Server otherwise
+-- rejects at compile time. The filtered index needs QUOTED_IDENTIFIER ON,
+-- which sqlcmd turns off by default, so it is set here.
+-- Verified to run twice on fresh tables with sqlcmd.
+
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
 
 BEGIN TRANSACTION;
 
@@ -18,8 +24,10 @@ BEGIN TRY
 
   IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_component_categories_type')
   BEGIN
-    ALTER TABLE dbo.component_categories
-      ADD CONSTRAINT CK_component_categories_type CHECK ([type] IN ('EQUIPMENT', 'SURFACE'));
+    EXEC sp_executesql N'
+      ALTER TABLE dbo.component_categories
+        ADD CONSTRAINT CK_component_categories_type CHECK ([type] IN (''EQUIPMENT'', ''SURFACE''));
+    ';
   END
 
   IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.component_types') AND name = 'code')
@@ -30,8 +38,10 @@ BEGIN TRY
 
   IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_component_types_code')
   BEGIN
-    ALTER TABLE dbo.component_types
-      ADD CONSTRAINT CK_component_types_code CHECK (code IS NULL OR code IN ('WALL', 'FLOOR', 'CEILING'));
+    EXEC sp_executesql N'
+      ALTER TABLE dbo.component_types
+        ADD CONSTRAINT CK_component_types_code CHECK (code IS NULL OR code IN (''WALL'', ''FLOOR'', ''CEILING''));
+    ';
   END
 
   IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID('dbo.component_types') AND name = 'UX_component_types_code')

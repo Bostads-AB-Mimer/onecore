@@ -18,6 +18,11 @@ import {
   findComponentTypeCodeProblem,
 } from '../adapters/component-adapter'
 
+const prismaErrorCode = (err: unknown): string | undefined =>
+  err && typeof err === 'object' && 'code' in err
+    ? (err as { code?: string }).code
+    : undefined
+
 const codeProblemResponse: Record<
   ComponentTypeCodeProblem,
   { status: number; error: string }
@@ -34,6 +39,30 @@ const codeProblemResponse: Record<
     status: 409,
     error: 'Another component type already has this code',
   },
+}
+
+// P2002: unique index on code (a concurrent write won the race after the
+// pre-check). P2003: categoryId does not reference a category.
+const respondToPrismaError = (
+  ctx: { status: number; body: unknown },
+  err: unknown,
+  metadata: ReturnType<typeof generateRouteMetadata>
+): boolean => {
+  switch (prismaErrorCode(err)) {
+    case 'P2002':
+      ctx.status = codeProblemResponse.code_taken.status
+      ctx.body = { error: codeProblemResponse.code_taken.error, ...metadata }
+      return true
+    case 'P2003':
+      ctx.status = codeProblemResponse.category_not_found.status
+      ctx.body = {
+        error: codeProblemResponse.category_not_found.error,
+        ...metadata,
+      }
+      return true
+    default:
+      return false
+  }
 }
 
 /**
@@ -227,23 +256,10 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
+        if (respondToPrismaError(ctx, err, metadata)) return
+        ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
-        // Check for foreign key constraint violation (Prisma P2003)
-        const isPrismaFKError =
-          err &&
-          typeof err === 'object' &&
-          'code' in err &&
-          (err as { code: string }).code === 'P2003'
-        if (isPrismaFKError) {
-          ctx.status = 400
-          ctx.body = {
-            error: 'Invalid categoryId: category does not exist',
-            ...metadata,
-          }
-          return
-        }
-        ctx.status = 500
         ctx.body = { error: errorMessage, ...metadata }
       }
     }
@@ -333,6 +349,7 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
+        if (respondToPrismaError(ctx, err, metadata)) return
         ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
