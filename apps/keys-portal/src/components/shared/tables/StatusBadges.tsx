@@ -1,7 +1,12 @@
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
-import type { KeyLoan, KeyDetails, CardDetails } from '@/services/types'
+import type {
+  KeyLoan,
+  KeyDetails,
+  CardDetails,
+  MoveInOutStatus,
+} from '@/services/types'
 import {
   KeyTypeLabels,
   KeyEventTypeLabels,
@@ -417,4 +422,44 @@ export function KeySystemTypeBadge({ type }: KeySystemTypeBadgeProps) {
   const label = KeySystemTypeLabels[type] || type
   const variant = getKeySystemTypeVariant(type)
   return <Badge variant={variant}>{label}</Badge>
+}
+
+// ============================================
+// Move-in / move-out Status Badge
+// ============================================
+
+export const MoveInOutStatusLabels: Record<MoveInOutStatus, string> = {
+  UNKNOWN: 'Okänt',
+  NOT_RETURNED: 'Ej återlämnat',
+  LOANED_TO_OTHER: 'Utlånat till annan',
+  CREATED: 'Lån skapat',
+  HANDED_OUT: 'Utlämnat',
+  RETURNED_VACANT: 'Återlämnat, vakant',
+  NO_KEYS: 'Inga nycklar',
+  NO_LOANS: 'Inget lån',
+  PARTIAL: 'Delvis utlämnat',
+}
+
+const moveInOutVariant: Record<
+  MoveInOutStatus,
+  'destructive' | 'warning' | 'success' | 'secondary' | 'outline'
+> = {
+  UNKNOWN: 'warning',
+  NOT_RETURNED: 'destructive',
+  LOANED_TO_OTHER: 'destructive',
+  CREATED: 'warning',
+  HANDED_OUT: 'success',
+  RETURNED_VACANT: 'success',
+  NO_KEYS: 'outline',
+  NO_LOANS: 'outline',
+  PARTIAL: 'secondary',
+}
+
+/** Badge for the derived key status of a move-in/move-out row */
+export function MoveInOutStatusBadge({ status }: { status: MoveInOutStatus }) {
+  return (
+    <Badge variant={moveInOutVariant[status]} className="whitespace-nowrap">
+      {MoveInOutStatusLabels[status]}
+    </Badge>
+  )
 }

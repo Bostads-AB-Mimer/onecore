@@ -5,6 +5,10 @@ import { db } from '../adapters/db'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import * as keyNotesAdapter from '../adapters/key-notes-adapter'
+import {
+  MAX_BATCH_RENTAL_OBJECT_CODES,
+  parseRentalObjectCodes,
+} from '../../../utils/rental-object-codes'
 
 const {
   KeyNoteSchema,
@@ -54,6 +58,67 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: An error occurred while fetching key notes.
    */
+  /**
+   * @swagger
+   * /key-notes/batch/by-rental-object:
+   *   get:
+   *     summary: Get key notes for many rental objects in one call
+   *     description: Returns a map keyed by rentalObjectCode; every requested code is present. Max 200 codes.
+   *     tags: [KeyNotes]
+   *     parameters:
+   *       - in: query
+   *         name: rentalObjectCodes
+   *         required: true
+   *         style: form
+   *         explode: true
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *     responses:
+   *       200:
+   *         description: Key notes grouped by rental object code.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   additionalProperties:
+   *                     type: array
+   *                     items:
+   *                       $ref: '#/components/schemas/KeyNote'
+   *       400:
+   *         description: Missing or too many rental object codes.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('/key-notes/batch/by-rental-object', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['rentalObjectCodes'])
+    try {
+      const codes = parseRentalObjectCodes(ctx)
+      if (codes.length === 0 || codes.length > MAX_BATCH_RENTAL_OBJECT_CODES) {
+        ctx.status = 400
+        ctx.body = {
+          reason: `rentalObjectCodes must contain 1-${MAX_BATCH_RENTAL_OBJECT_CODES} codes`,
+          ...metadata,
+        }
+        return
+      }
+      const content = await keyNotesAdapter.getKeyNotesByRentalObjects(
+        codes,
+        db
+      )
+      ctx.status = 200
+      ctx.body = { content, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error fetching key notes batch by rental object')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
   router.get('/key-notes/by-rental-object/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {

@@ -290,3 +290,8 @@ export interface ReceiptData {
   remainingLoanKeys?: KeyDetails[]
   remainingLoanCards?: Card[]
 }
+
+// Move-in / move-out overview
+export type MoveInOutRow = components['schemas']['MoveInOutRow']
+export type MoveInOutStatus = MoveInOutRow['status']
+export type MoveInOutTenant = NonNullable<MoveInOutRow['outgoing']>
