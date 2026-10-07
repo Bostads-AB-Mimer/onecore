@@ -35,17 +35,17 @@ const CLEARED = 'none'
 const iso = (d: Date) => format(d, 'yyyy-MM-dd')
 
 /**
- * A month "owns" its move-outs; move-ins are shifted one day so a
- * back-to-back handover (Oct 31 -> Nov 1) lands in October, not in both.
+ * A month "owns" its move-ins; move-outs are shifted one day back so a
+ * back-to-back handover (Sept 30 -> Oct 1) lands in October, not in both.
  */
 function monthRanges(month: Date) {
   const first = startOfMonth(month)
   const last = endOfMonth(month)
   return {
-    endFrom: iso(first),
-    endTo: iso(last),
-    startFrom: iso(addDays(first, 1)),
-    startTo: iso(addDays(last, 1)),
+    endFrom: iso(addDays(first, -1)),
+    endTo: iso(addDays(last, -1)),
+    startFrom: iso(first),
+    startTo: iso(last),
   }
 }
 
@@ -77,8 +77,8 @@ export default function MoveInOut() {
   const hasEnd = mode !== 'in' && Boolean(endFrom && endTo)
   const hasStart = mode !== 'out' && Boolean(startFrom && startTo)
 
-  // The switcher label follows the move-out range; custom ranges show as such
-  const monthAnchor = endFrom || startFrom
+  // The switcher label follows the move-in range; custom ranges show as such
+  const monthAnchor = startFrom || endTo
   const shownMonth = monthAnchor ? parseISO(monthAnchor) : new Date()
   const isWholeMonth =
     JSON.stringify(monthRanges(shownMonth)) ===
