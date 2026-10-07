@@ -799,7 +799,29 @@ describe('Components API', () => {
         undefined,
         1,
         20,
+        undefined,
         undefined
+      )
+    })
+
+    it('filters by subtypeId', async () => {
+      const components = factory.component.buildList(2)
+      const getSpy = jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: true, data: components })
+
+      const res = await request(app.callback()).get(
+        '/components?subtypeId=00000000-0000-0000-0002-000000000001'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getSpy).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        1,
+        20,
+        undefined,
+        '00000000-0000-0000-0002-000000000001'
       )
     })
 
@@ -812,7 +834,14 @@ describe('Components API', () => {
       const res = await request(app.callback()).get('/components?status=ACTIVE')
 
       expect(res.status).toBe(200)
-      expect(getSpy).toHaveBeenCalledWith(undefined, 'ACTIVE', 1, 20, undefined)
+      expect(getSpy).toHaveBeenCalledWith(
+        undefined,
+        'ACTIVE',
+        1,
+        20,
+        undefined,
+        undefined
+      )
     })
 
     it('response matches schema', async () => {

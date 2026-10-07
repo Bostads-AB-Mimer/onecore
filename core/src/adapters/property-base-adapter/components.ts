@@ -606,11 +606,14 @@ async function getComponents(
   status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED',
   page?: number,
   limit?: number,
-  serialNumber?: string
+  serialNumber?: string,
+  subtypeId?: string
 ): Promise<AdapterResult<GetComponentsResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/components', {
-      params: { query: { modelId, status, page, limit, serialNumber } },
+      params: {
+        query: { modelId, subtypeId, status, page, limit, serialNumber },
+      },
     })
 
     if (response.data?.content) {

@@ -1662,7 +1662,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   get:
    *     summary: Get all components
-   *     description: Physical units with serial numbers and status. Filter by modelId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+   *     description: Physical units with serial numbers and status. Filter by modelId, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
    *     tags:
    *       - Property-base/Components
    *     parameters:
@@ -1670,6 +1670,13 @@ export const routes = (router: KoaRouter) => {
    *         name: modelId
    *         schema:
    *           type: string
+   *       - in: query
+   *         name: subtypeId
+   *         required: false
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Filter by subtype
    *       - in: query
    *         name: status
    *         schema:
@@ -1731,7 +1738,8 @@ export const routes = (router: KoaRouter) => {
         params.data.status,
         params.data.page,
         params.data.limit,
-        params.data.serialNumber
+        params.data.serialNumber,
+        params.data.subtypeId
       )
 
       if (!result.ok) {
