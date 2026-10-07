@@ -1,22 +1,13 @@
 import { Component, ComponentModel } from '../../types'
 import { GET, POST, PUT } from './baseApi'
+import type { components } from './generated/api-types'
 
-type ComponentInput = {
-  subtypeId: string
-  modelId?: string | null
-  serialNumber?: string | null
-  warrantyStartDate?: string
-  warrantyMonths?: number | null
-  priceAtPurchase?: number | null
-  depreciationPriceAtPurchase?: number | null
-  economicLifespan?: number | null
-  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
-  condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
-  quantity?: number
-  ncsCode?: string | null
-}
+type ComponentInput = Omit<
+  components['schemas']['CreateComponentRequest'],
+  'files'
+>
 
-const toComponentBody = (input: ComponentInput) => ({
+export const toComponentBody = (input: ComponentInput) => ({
   subtypeId: input.subtypeId,
   modelId: input.modelId ?? null,
   serialNumber: input.serialNumber ?? undefined,
