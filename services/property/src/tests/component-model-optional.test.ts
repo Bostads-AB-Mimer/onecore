@@ -320,11 +320,12 @@ describe('POST and PUT /components', () => {
     expect(res.body.content).toMatchObject({
       subtypeId,
       modelId: null,
-      warrantyMonths: null,
     })
     expect(createComponent).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ subtypeId }) })
     )
+    const [{ data }] = createComponent.mock.calls[0]
+    expect(data).not.toHaveProperty('warrantyMonths')
   })
 
   it('returns 400 for a model on a surface', async () => {
@@ -360,6 +361,7 @@ describe('POST and PUT /components', () => {
       .send({ modelId })
 
     expect(res.status).toBe(400)
+    expect(findSubtype).not.toHaveBeenCalled()
   })
 
   it('re-checks on update when modelId changes', async () => {
@@ -398,5 +400,40 @@ describe('POST and PUT /components', () => {
     expect(res.status).toBe(200)
     expect(res.body.content.modelId).toBeNull()
     expect(findModel).not.toHaveBeenCalled()
+  })
+
+  it('rejects moving a component with a model to another subtype', async () => {
+    const otherSubtypeId = '00000000-0000-0000-0002-000000000002'
+    findComponent.mockResolvedValueOnce({ ...storedWall, modelId })
+    findSubtype.mockResolvedValueOnce({
+      id: otherSubtypeId,
+      componentType: { category: { type: 'EQUIPMENT' } },
+    })
+    findModel.mockResolvedValueOnce({
+      id: modelId,
+      componentSubtypeId: subtypeId,
+    })
+
+    const res = await request(app.callback())
+      .put(`/components/${componentId}`)
+      .send({ subtypeId: otherSubtypeId })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/subtype/)
+    expect(updateComponent).not.toHaveBeenCalled()
+  })
+
+  it('maps a foreign key failure on write to 400', async () => {
+    findSubtype.mockResolvedValueOnce(equipmentSubtype)
+    createComponent.mockRejectedValueOnce(
+      Object.assign(new Error('FK_components_subtype'), { code: 'P2003' })
+    )
+
+    const res = await request(app.callback())
+      .post('/components')
+      .send({ subtypeId })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).not.toMatch(/FK_/)
   })
 })

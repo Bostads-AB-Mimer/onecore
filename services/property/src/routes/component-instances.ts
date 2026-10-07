@@ -29,6 +29,11 @@ const modelProblemResponse: Record<ComponentModelProblem, string> = {
   surface_has_model: 'A component in a SURFACE category cannot have a model',
 }
 
+const prismaErrorCode = (err: unknown): string | undefined =>
+  err && typeof err === 'object' && 'code' in err
+    ? (err as { code?: string }).code
+    : undefined
+
 /**
  * @swagger
  * tags:
@@ -43,7 +48,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   get:
    *     summary: Get all component instances
-   *     description: Physical units with serial numbers and status. Filter by modelId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+   *     description: Physical units with serial numbers and status. Filter by modelId, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
    *     tags: [Component Instances]
    *     parameters:
    *       - in: query
@@ -106,7 +111,14 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const { modelId, subtypeId, status, serialNumber, page, limit } =
         ctx.request.parsedQuery
-      const metadata = generateRouteMetadata(ctx)
+      const metadata = generateRouteMetadata(ctx, [
+        'modelId',
+        'subtypeId',
+        'status',
+        'serialNumber',
+        'page',
+        'limit',
+      ])
 
       try {
         const result = await getComponents(
@@ -239,6 +251,15 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
+        if (prismaErrorCode(err) === 'P2003') {
+          ctx.status = 400
+          ctx.body = {
+            error:
+              'Invalid subtypeId or modelId: referenced row does not exist',
+            ...metadata,
+          }
+          return
+        }
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
         ctx.status = 500
@@ -279,6 +300,8 @@ export const routes = (router: KoaRouter) => {
    *                   $ref: '#/components/schemas/Component'
    *       400:
    *         description: Unknown subtypeId or modelId, model under another subtype, or a model on a SURFACE component
+   *       404:
+   *         description: Component not found
    */
   router.put(
     '(.*)/components/:id',
@@ -325,6 +348,15 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
+        if (prismaErrorCode(err) === 'P2003') {
+          ctx.status = 400
+          ctx.body = {
+            error:
+              'Invalid subtypeId or modelId: referenced row does not exist',
+            ...metadata,
+          }
+          return
+        }
         ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
