@@ -12259,6 +12259,50 @@ export interface components {
         name: string | null
       }
     }
+    ComponentSubtype: {
+      /** Format: uuid */
+      id: string
+      subTypeName: string
+      /** Format: uuid */
+      typeId: string
+      xpandCode: string | null
+      depreciationPrice: number
+      technicalLifespan: number
+      economicLifespan: number
+      replacementIntervalMonths: number
+      /** @enum {string} */
+      quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
+      createdAt: string
+      updatedAt: string
+      componentType?: {
+        /** Format: uuid */
+        id: string
+        typeName: string
+        /** Format: uuid */
+        categoryId: string
+        description: string | null
+        /**
+         * @default null
+         * @enum {string|null}
+         */
+        code?: 'WALL' | 'FLOOR' | 'CEILING' | null
+        createdAt: string
+        updatedAt: string
+        category?: {
+          /** Format: uuid */
+          id: string
+          categoryName: string
+          description: string
+          /**
+           * @default EQUIPMENT
+           * @enum {string}
+           */
+          type?: 'EQUIPMENT' | 'SURFACE'
+          createdAt: string
+          updatedAt: string
+        }
+      }
+    }
     Component: {
       /** Format: uuid */
       id: string
@@ -12283,50 +12327,7 @@ export interface components {
       economicLifespan: number | null
       createdAt: string
       updatedAt: string
-      subtype?: {
-        /** Format: uuid */
-        id: string
-        subTypeName: string
-        /** Format: uuid */
-        typeId: string
-        xpandCode: string | null
-        depreciationPrice: number
-        technicalLifespan: number
-        economicLifespan: number
-        replacementIntervalMonths: number
-        /** @enum {string} */
-        quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
-        createdAt: string
-        updatedAt: string
-        componentType?: {
-          /** Format: uuid */
-          id: string
-          typeName: string
-          /** Format: uuid */
-          categoryId: string
-          description: string | null
-          /**
-           * @default null
-           * @enum {string|null}
-           */
-          code?: 'WALL' | 'FLOOR' | 'CEILING' | null
-          createdAt: string
-          updatedAt: string
-          category?: {
-            /** Format: uuid */
-            id: string
-            categoryName: string
-            description: string
-            /**
-             * @default EQUIPMENT
-             * @enum {string}
-             */
-            type?: 'EQUIPMENT' | 'SURFACE'
-            createdAt: string
-            updatedAt: string
-          }
-        }
-      }
+      subtype?: components['schemas']['ComponentSubtype']
       model?: {
         /** Format: uuid */
         id: string
@@ -12343,7 +12344,7 @@ export interface components {
         coclassCode: string | null
         createdAt: string
         updatedAt: string
-        subtype?: components['schemas']['Component']['subtype']
+        subtype?: components['schemas']['ComponentSubtype']
       } | null
       componentInstallations?: {
         /** Format: uuid */
@@ -12419,50 +12420,6 @@ export interface components {
         updatedAt: string
       }
     }
-    ComponentSubtype: {
-      /** Format: uuid */
-      id: string
-      subTypeName: string
-      /** Format: uuid */
-      typeId: string
-      xpandCode: string | null
-      depreciationPrice: number
-      technicalLifespan: number
-      economicLifespan: number
-      replacementIntervalMonths: number
-      /** @enum {string} */
-      quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
-      createdAt: string
-      updatedAt: string
-      componentType?: {
-        /** Format: uuid */
-        id: string
-        typeName: string
-        /** Format: uuid */
-        categoryId: string
-        description: string | null
-        /**
-         * @default null
-         * @enum {string|null}
-         */
-        code?: 'WALL' | 'FLOOR' | 'CEILING' | null
-        createdAt: string
-        updatedAt: string
-        category?: {
-          /** Format: uuid */
-          id: string
-          categoryName: string
-          description: string
-          /**
-           * @default EQUIPMENT
-           * @enum {string}
-           */
-          type?: 'EQUIPMENT' | 'SURFACE'
-          createdAt: string
-          updatedAt: string
-        }
-      }
-    }
     ComponentModel: {
       /** Format: uuid */
       id: string
@@ -12479,50 +12436,7 @@ export interface components {
       coclassCode: string | null
       createdAt: string
       updatedAt: string
-      subtype?: {
-        /** Format: uuid */
-        id: string
-        subTypeName: string
-        /** Format: uuid */
-        typeId: string
-        xpandCode: string | null
-        depreciationPrice: number
-        technicalLifespan: number
-        economicLifespan: number
-        replacementIntervalMonths: number
-        /** @enum {string} */
-        quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
-        createdAt: string
-        updatedAt: string
-        componentType?: {
-          /** Format: uuid */
-          id: string
-          typeName: string
-          /** Format: uuid */
-          categoryId: string
-          description: string | null
-          /**
-           * @default null
-           * @enum {string|null}
-           */
-          code?: 'WALL' | 'FLOOR' | 'CEILING' | null
-          createdAt: string
-          updatedAt: string
-          category?: {
-            /** Format: uuid */
-            id: string
-            categoryName: string
-            description: string
-            /**
-             * @default EQUIPMENT
-             * @enum {string}
-             */
-            type?: 'EQUIPMENT' | 'SURFACE'
-            createdAt: string
-            updatedAt: string
-          }
-        }
-      }
+      subtype?: components['schemas']['ComponentSubtype']
     }
     ComponentInstallation: {
       /** Format: uuid */
@@ -12562,50 +12476,7 @@ export interface components {
         economicLifespan: number | null
         createdAt: string
         updatedAt: string
-        subtype?: {
-          /** Format: uuid */
-          id: string
-          subTypeName: string
-          /** Format: uuid */
-          typeId: string
-          xpandCode: string | null
-          depreciationPrice: number
-          technicalLifespan: number
-          economicLifespan: number
-          replacementIntervalMonths: number
-          /** @enum {string} */
-          quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
-          createdAt: string
-          updatedAt: string
-          componentType?: {
-            /** Format: uuid */
-            id: string
-            typeName: string
-            /** Format: uuid */
-            categoryId: string
-            description: string | null
-            /**
-             * @default null
-             * @enum {string|null}
-             */
-            code?: 'WALL' | 'FLOOR' | 'CEILING' | null
-            createdAt: string
-            updatedAt: string
-            category?: {
-              /** Format: uuid */
-              id: string
-              categoryName: string
-              description: string
-              /**
-               * @default EQUIPMENT
-               * @enum {string}
-               */
-              type?: 'EQUIPMENT' | 'SURFACE'
-              createdAt: string
-              updatedAt: string
-            }
-          }
-        }
+        subtype?: components['schemas']['ComponentSubtype']
         model?: {
           /** Format: uuid */
           id: string
@@ -12622,7 +12493,7 @@ export interface components {
           coclassCode: string | null
           createdAt: string
           updatedAt: string
-          subtype?: components['schemas']['ComponentInstallation']['component']['subtype']
+          subtype?: components['schemas']['ComponentSubtype']
         } | null
         componentInstallations?: {
           /** Format: uuid */
