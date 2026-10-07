@@ -30,13 +30,11 @@ import { resolvePersonnummerInQuery } from '../../adapters/contacts-adapter/leas
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
 import { registerSchema } from '../../utils/openapi'
-import { makeContactsAdapter } from '../../adapters/contacts-adapter'
-import config from '../../common/config'
+import { contactsAdapter } from '../../adapters/contacts-adapter'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 
 export const routes = (router: KoaRouter) => {
-  const contactsAdapter = makeContactsAdapter(config.contactsService.url)
   // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
   /**
    * @swagger
@@ -299,6 +297,11 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error getting leases for CSC report')
       ctx.status = 500
       ctx.body = {
@@ -533,10 +536,14 @@ export const routes = (router: KoaRouter) => {
           )
           enrichedContent = result.content.map((lease) => ({
             ...lease,
-            contacts: lease.contacts?.map((c) => ({
-              ...c,
-              ...contactMap.get(c.contactCode),
-            })),
+            contacts: lease.contacts?.map((c) => {
+              const contactInfo = contactMap.get(c.contactCode)
+              return {
+                ...c,
+                email: contactInfo?.email ?? c.email,
+                phone: contactInfo?.phone ?? c.phone,
+              }
+            }),
           }))
         }
       }

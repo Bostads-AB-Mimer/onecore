@@ -433,11 +433,14 @@ export const routes = (router: KoaRouter) => {
       const contactInfoMap = await getEmailAndPhoneByContactCodes(contactCodes)
       const allLeases = rawLeases.map((l) => ({
         ...l,
-        contacts: l.contacts?.map((c) => ({
-          ...c,
-          email: contactInfoMap.get(c.contactCode.trim())?.email ?? null,
-          phone: contactInfoMap.get(c.contactCode.trim())?.phone ?? null,
-        })),
+        contacts: l.contacts?.map((c) => {
+          const info = contactInfoMap.get(c.contactCode.trim())
+          return {
+            ...c,
+            email: info?.email ?? c.email,
+            phone: info?.phone ?? c.phone,
+          }
+        }),
       }))
 
       // Create Excel from the complete dataset

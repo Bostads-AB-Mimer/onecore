@@ -544,6 +544,34 @@ describe('leases routes', () => {
       expect(searchSpy).not.toHaveBeenCalled()
     })
 
+    it('keeps existing contact email/phone when contacts-service has no info for them', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue(
+        buildPaginatedResponse([
+          buildLeaseSearchResult({
+            contacts: [
+              {
+                contactCode: 'P158770',
+                name: 'Andra Handen',
+                email: 'fran-tenfast@example.com',
+                phone: '0701112233',
+              },
+            ],
+          }),
+        ])
+      )
+      jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({ ok: true, data: [] })
+
+      const res = await request(app.callback()).get('/leases/search')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].contacts[0].email).toBe(
+        'fran-tenfast@example.com'
+      )
+      expect(res.body.content[0].contacts[0].phone).toBe('0701112233')
+    })
+
     it('resolves a personnummer in q to a contact code before calling leasing', async () => {
       jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
         ok: true,
@@ -675,6 +703,20 @@ describe('leases routes', () => {
       const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(500)
+    })
+
+    it('returns 503 when the lease cache is warming up', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockRejectedValue(
+        Object.assign(new Error('Service Unavailable'), {
+          isAxiosError: true,
+          response: { status: 503 },
+        })
+      )
+
+      const res = await request(app.callback()).get('/leases/for-csc')
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('Lease service is warming up')
     })
 
     it('calls searchLeases with objectType bostad and status Current', async () => {
