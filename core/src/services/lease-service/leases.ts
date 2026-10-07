@@ -1063,7 +1063,8 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await leasingAdapter.getLeasesForExport(resolved.query)
+      const exportQuery = await resolvePersonnummerInQuery(resolved.query)
+      const result = await leasingAdapter.getLeasesForExport(exportQuery)
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Lease export failed')

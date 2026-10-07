@@ -687,6 +687,28 @@ describe('leases routes', () => {
       expect(res.status).toBe(503)
       expect(res.body.error).toBe('Lease service is warming up')
     })
+
+    it('resolves a personnummer in q to a contact code before calling leasing', async () => {
+      ;(utilities.createExcelExport as jest.Mock).mockResolvedValue(
+        Buffer.from('excel')
+      )
+      jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
+        ok: true,
+        data: factory.contactsServiceContact.build({ contactCode: 'P158770' }),
+      })
+      const exportSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesForExport')
+        .mockResolvedValue({ ok: true, data: [] })
+
+      const res = await request(app.callback()).get(
+        '/leases/export?q=198001011234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(exportSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'P158770' })
+      )
+    })
   })
 
   describe('GET /leases/for-csc', () => {
