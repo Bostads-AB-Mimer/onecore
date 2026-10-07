@@ -26,7 +26,7 @@ export interface InstallationFormData {
   economicLifespan: number | null
   status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
   condition: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
-  quantity: number
+  quantity: number | null
   ncsCode: string
   installationDate: string | null
   installationCost: number
@@ -44,7 +44,7 @@ const getInitialFormData = (): InstallationFormData => ({
   economicLifespan: null,
   status: 'ACTIVE',
   condition: null,
-  quantity: 1,
+  quantity: null,
   ncsCode: '',
   installationDate: new Date().toISOString().split('T')[0],
   installationCost: 0,
@@ -118,7 +118,7 @@ export const ComponentInstallationForm = ({
     e.preventDefault()
 
     if (installationMode === 'new' && !formData.subtypeId) {
-      setErrors({ modelId: 'Välj en modell' })
+      setErrors((prev) => ({ ...prev, modelId: 'Välj en modell' }))
       return
     }
 
@@ -135,8 +135,8 @@ export const ComponentInstallationForm = ({
           economicLifespan: formData.economicLifespan,
           status: formData.status,
           condition: formData.condition,
-          quantity: formData.quantity,
-          ncsCode: formData.ncsCode || null,
+          quantity: formData.quantity ?? 1,
+          ncsCode: formData.ncsCode.trim() || null,
           installationDate: formData.installationDate,
           installationCost: formData.installationCost,
           orderNumber: formData.orderNumber || undefined,
@@ -292,7 +292,7 @@ export const ComponentInstallationForm = ({
               <Input
                 id="quantity-existing"
                 type="number"
-                value={formData.quantity}
+                value={formData.quantity ?? ''}
                 disabled
                 className="bg-muted"
               />
@@ -460,23 +460,23 @@ export const ComponentInstallationForm = ({
               </select>
             </div>
 
-            {isSurface && (
-              <div>
-                <Label htmlFor="ncsCode">NCS-kod</Label>
-                <Input
-                  id="ncsCode"
-                  value={formData.ncsCode}
-                  maxLength={15}
-                  onChange={(e) => handleChange('ncsCode', e.target.value)}
-                  placeholder="S 0502-Y"
-                />
-                {errors.ncsCode && (
-                  <p className="text-sm text-destructive mt-1">
-                    {errors.ncsCode}
-                  </p>
-                )}
-              </div>
-            )}
+            <div>
+              <Label htmlFor="ncsCode">
+                {isSurface ? 'NCS-kod' : 'NCS-kod (valfritt)'}
+              </Label>
+              <Input
+                id="ncsCode"
+                value={formData.ncsCode}
+                maxLength={15}
+                onChange={(e) => handleChange('ncsCode', e.target.value)}
+                placeholder="S 0502-Y"
+              />
+              {errors.ncsCode && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.ncsCode}
+                </p>
+              )}
+            </div>
 
             <div>
               <Label htmlFor="quantity">
@@ -486,10 +486,13 @@ export const ComponentInstallationForm = ({
                 id="quantity"
                 type="number"
                 min="0"
-                step={quantityIsArea ? '0.1' : '1'}
-                value={formData.quantity}
+                step={quantityIsArea ? 'any' : '1'}
+                value={formData.quantity ?? ''}
                 onChange={(e) =>
-                  handleChange('quantity', parseFloat(e.target.value) || 1)
+                  handleChange(
+                    'quantity',
+                    e.target.value === '' ? null : parseFloat(e.target.value)
+                  )
                 }
               />
               {errors.quantity && (
