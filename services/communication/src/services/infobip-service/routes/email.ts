@@ -11,6 +11,9 @@ import {
   BulkEmail,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
+  EMAIL_ATTACHMENT_ALLOWED_CONTENT_TYPES,
+  EMAIL_ATTACHMENT_MAX_COUNT,
+  EMAIL_ATTACHMENT_MAX_TOTAL_BYTES,
 } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import z from 'zod'
@@ -38,6 +41,7 @@ import {
 } from '../adapters/infobip-template-ids'
 import {
   sendEmailInfobipSdk,
+  sendEmailWithAttachments,
   sendInspectionProtocolEmail,
 } from '../adapters/infobip-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
@@ -533,6 +537,31 @@ export const routes = (router: KoaRouter) => {
       .optional(),
     subject: z.string().min(1),
     text: z.string().min(1),
+    attachments: z
+      .array(
+        z.object({
+          filename: z.string().min(1),
+          // Not z.string().base64(): its regex overflows the stack on
+          // multi-megabyte input. This one is linear.
+          content: z
+            .string()
+            .regex(/^[A-Za-z0-9+/]*={0,2}$/, 'Content must be base64')
+            .refine((c) => c.length % 4 === 0, 'Content must be base64'),
+          contentType: z.enum(EMAIL_ATTACHMENT_ALLOWED_CONTENT_TYPES),
+        })
+      )
+      .max(EMAIL_ATTACHMENT_MAX_COUNT)
+      .refine(
+        (attachments) =>
+          attachments.reduce(
+            (total, a) => total + Buffer.byteLength(a.content, 'base64'),
+            0
+          ) <= EMAIL_ATTACHMENT_MAX_TOTAL_BYTES,
+        {
+          message: `Attachments exceed ${EMAIL_ATTACHMENT_MAX_TOTAL_BYTES} bytes in total`,
+        }
+      )
+      .optional(),
     logMeta: z
       .object({
         triggeredByUser: z.string().optional(),
@@ -592,17 +621,59 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const sendResult = await sendBulkEmail({
-          emails: validRecipients.map((r) => r.emailAddress),
-          subject: body.subject,
-          text: body.text,
-        })
+        const warnings: string[] = []
+        let sentRecipients: Array<{
+          contactCode?: string
+          emailAddress: string
+          messageId?: string
+        }>
+
+        if (body.attachments?.length) {
+          // Attachments go out one recipient at a time, so a single rejected
+          // address must not fail the request for everyone already sent to.
+          const results = await sendEmailWithAttachments({
+            emails: validRecipients.map((r) => r.emailAddress),
+            subject: body.subject,
+            text: body.text,
+            attachments: body.attachments,
+          })
+
+          sentRecipients = []
+          results.forEach((result, i) => {
+            if (result.error) {
+              invalidEmails.push(result.emailAddress)
+            } else {
+              sentRecipients.push({
+                ...validRecipients[i],
+                messageId: result.messageId,
+              })
+            }
+          })
+
+          if (sentRecipients.length === 0) {
+            throw new Error('Failed to send email with attachments')
+          }
+          if (sentRecipients.length < validRecipients.length) {
+            warnings.push(
+              `Sending failed for ${validRecipients.length - sentRecipients.length} recipient(s)`
+            )
+          }
+        } else {
+          const sendResult = await sendBulkEmail({
+            emails: validRecipients.map((r) => r.emailAddress),
+            subject: body.subject,
+            text: body.text,
+          })
+          sentRecipients = validRecipients.map((r, i) => ({
+            ...r,
+            messageId: sendResult.data.messages?.[i]?.messageId,
+          }))
+        }
 
         // Strict but non-blocking: the email already went out, so a logging
         // failure must not fail the request (that would falsely report the send
         // as failed). Instead we log loudly for monitoring and surface a
         // non-blocking warning to the caller via `warnings`.
-        const warnings: string[] = []
         try {
           await logOutboundDispatch({
             channel: 'email',
@@ -617,10 +688,10 @@ export const routes = (router: KoaRouter) => {
             // TODO: log-before-send. Today we log after Infobip's 200 ACK, so an API
             // rejection leaves no audit row. Flip to: insert pending → call Infobip
             // → update to failed if rejected. Webhook still handles delivered/failed.
-            recipients: validRecipients.map((r, i) => ({
+            recipients: sentRecipients.map((r) => ({
               contactCode: r.contactCode,
               toAddress: r.emailAddress,
-              externalMessageId: sendResult.data.messages?.[i]?.messageId,
+              externalMessageId: r.messageId,
               status: 'pending',
             })),
           })
@@ -634,7 +705,7 @@ export const routes = (router: KoaRouter) => {
           )
         }
 
-        const successful = validRecipients.map((r) => r.emailAddress)
+        const successful = sentRecipients.map((r) => r.emailAddress)
         ctx.status = 200
         ctx.body = {
           content: {

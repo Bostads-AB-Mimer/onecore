@@ -422,6 +422,14 @@ export interface paths {
             }[]
             subject: string
             text: string
+            /** @description Files to attach. Max 10 files and 10 MB in total (decoded). Allowed types are PDF, JPEG, PNG, GIF, plain text, CSV, Word and Excel. */
+            attachments?: {
+              filename: string
+              /** @description Base64-encoded file content */
+              content: string
+              /** @example application/pdf */
+              contentType: string
+            }[]
             logMeta?: {
               audienceCriteria?: {
                 [key: string]: unknown

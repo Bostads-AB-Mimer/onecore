@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import type { EmailAttachment } from '@onecore/types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { useToast } from './useToast'
@@ -16,7 +17,8 @@ interface UseSingleEmailOptions {
   sendEmail: (
     recipients: { contactCode: string; emailAddress: string }[],
     subject: string,
-    text: string
+    text: string,
+    attachments?: EmailAttachment[]
   ) => Promise<{
     content: { totalSent: number; totalInvalid: number }
     warnings?: string[]
@@ -36,10 +38,12 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
       recipient,
       subject,
       body,
+      attachments,
     }: {
       recipient: SingleEmailRecipient
       subject: string
       body: string
+      attachments?: EmailAttachment[]
     }) =>
       sendEmail(
         [
@@ -49,7 +53,8 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
           },
         ],
         subject,
-        body
+        body,
+        attachments
       ),
     onSuccess: (result) => {
       // Refresh any open tenant communication log so the new message appears.
@@ -89,10 +94,15 @@ export function useSingleEmail({ sendEmail }: UseSingleEmailOptions) {
   const closeEmail = useCallback(() => setRecipient(null), [])
 
   const handleSendEmail = useCallback(
-    async (subject: string, body: string) => {
+    async (subject: string, body: string, attachments?: EmailAttachment[]) => {
       if (!recipient) return
       try {
-        await sendMutation.mutateAsync({ recipient, subject, body })
+        await sendMutation.mutateAsync({
+          recipient,
+          subject,
+          body,
+          attachments,
+        })
       } catch {
         // Surfaced via onError; swallow so the modal doesn't see a rejection.
       }
