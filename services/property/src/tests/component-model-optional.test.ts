@@ -18,6 +18,8 @@ import {
   UpdateComponentSchema,
   componentsQueryParamsSchema,
 } from '../types/component'
+import { prisma } from '../adapters/db'
+import { findComponentModelProblem } from '../adapters/component-instance-adapter'
 
 const timestamps = {
   createdAt: '2026-10-07T00:00:00.000Z',
@@ -163,5 +165,91 @@ describe('componentsQueryParamsSchema', () => {
     const params = componentsQueryParamsSchema.parse({ subtypeId })
 
     expect(params.subtypeId).toBe(subtypeId)
+  })
+})
+
+describe('findComponentModelProblem', () => {
+  const findSubtype = prisma.componentSubtypes.findUnique as jest.Mock
+  const findModel = prisma.componentModels.findUnique as jest.Mock
+
+  const surfaceSubtype = {
+    id: subtypeId,
+    componentType: { category: { type: 'SURFACE' } },
+  }
+  const equipmentSubtype = {
+    id: subtypeId,
+    componentType: { category: { type: 'EQUIPMENT' } },
+  }
+
+  beforeEach(() => {
+    findSubtype.mockReset()
+    findModel.mockReset()
+  })
+
+  it('rejects an unknown subtype', async () => {
+    findSubtype.mockResolvedValueOnce(null)
+
+    await expect(
+      findComponentModelProblem({ subtypeId, modelId: null })
+    ).resolves.toBe('subtype_not_found')
+  })
+
+  it('accepts a surface without a model', async () => {
+    findSubtype.mockResolvedValueOnce(surfaceSubtype)
+
+    await expect(
+      findComponentModelProblem({ subtypeId, modelId: null })
+    ).resolves.toBeNull()
+    expect(findModel).not.toHaveBeenCalled()
+  })
+
+  it('rejects a model on a surface', async () => {
+    findSubtype.mockResolvedValueOnce(surfaceSubtype)
+
+    await expect(
+      findComponentModelProblem({ subtypeId, modelId })
+    ).resolves.toBe('surface_has_model')
+    expect(findModel).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unknown model', async () => {
+    findSubtype.mockResolvedValueOnce(equipmentSubtype)
+    findModel.mockResolvedValueOnce(null)
+
+    await expect(
+      findComponentModelProblem({ subtypeId, modelId })
+    ).resolves.toBe('model_not_found')
+  })
+
+  it('rejects a model that belongs to another subtype', async () => {
+    findSubtype.mockResolvedValueOnce(equipmentSubtype)
+    findModel.mockResolvedValueOnce({
+      id: modelId,
+      componentSubtypeId: '00000000-0000-0000-0002-000000000099',
+    })
+
+    await expect(
+      findComponentModelProblem({ subtypeId, modelId })
+    ).resolves.toBe('model_subtype_mismatch')
+  })
+
+  it('accepts an appliance whose model matches the subtype', async () => {
+    findSubtype.mockResolvedValueOnce(equipmentSubtype)
+    findModel.mockResolvedValueOnce({
+      id: modelId,
+      componentSubtypeId: subtypeId,
+    })
+
+    await expect(
+      findComponentModelProblem({ subtypeId, modelId })
+    ).resolves.toBeNull()
+  })
+
+  it('accepts an appliance without a model', async () => {
+    findSubtype.mockResolvedValueOnce(equipmentSubtype)
+
+    await expect(
+      findComponentModelProblem({ subtypeId, modelId: undefined })
+    ).resolves.toBeNull()
   })
 })

@@ -1,4 +1,5 @@
 import { logger } from '@onecore/utilities'
+import { property } from '@onecore/types'
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 import type { CreateComponent, UpdateComponent } from '../types/component'
@@ -143,6 +144,42 @@ export const deleteComponent = async (id: string) => {
   await prisma.components.delete({
     where: { id },
   })
+}
+
+export type ComponentModelProblem =
+  | 'subtype_not_found'
+  | 'model_not_found'
+  | 'model_subtype_mismatch'
+  | 'surface_has_model'
+
+export const findComponentModelProblem = async (params: {
+  subtypeId: string
+  modelId: string | null | undefined
+}): Promise<ComponentModelProblem | null> => {
+  const subtype = await prisma.componentSubtypes.findUnique({
+    where: { id: params.subtypeId },
+    select: {
+      id: true,
+      componentType: { select: { category: { select: { type: true } } } },
+    },
+  })
+  if (!subtype) return 'subtype_not_found'
+  if (!params.modelId) return null
+
+  const isSurface =
+    subtype.componentType.category.type ===
+    property.ComponentCategoryTypeSchema.enum.SURFACE
+  if (isSurface) return 'surface_has_model'
+
+  const model = await prisma.componentModels.findUnique({
+    where: { id: params.modelId },
+    select: { id: true, componentSubtypeId: true },
+  })
+  if (!model) return 'model_not_found'
+  if (model.componentSubtypeId !== params.subtypeId) {
+    return 'model_subtype_mismatch'
+  }
+  return null
 }
 
 export const updateComponentInspectionState = async (
