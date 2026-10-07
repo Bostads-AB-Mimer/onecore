@@ -27,7 +27,6 @@ const propertyObjectWithStructuresSelect = {
   },
 } as const
 
-// Hierarchy comes from the component's own subtype; the model is optional and flat.
 const componentHierarchyInclude = {
   subtype: {
     include: { componentType: { include: { category: true } } },

@@ -9,6 +9,11 @@ jest.mock('../adapters/db', () => ({
     },
     componentSubtypes: { findUnique: jest.fn() },
     componentModels: { findUnique: jest.fn() },
+    componentInstallations: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      count: jest.fn(),
+    },
   },
 }))
 
@@ -24,6 +29,10 @@ import {
   getComponentById,
   getComponentsByRoomId,
 } from '../adapters/component-instance-adapter'
+import {
+  getComponentInstallationById,
+  getComponentInstallations,
+} from '../adapters/component-installation-adapter'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
@@ -483,6 +492,43 @@ describe('component reads include the subtype directly', () => {
           ...subtypeInclude,
           model: true,
         }),
+      })
+    )
+  })
+})
+
+describe('installation reads include the component subtype directly', () => {
+  const findMany = prisma.componentInstallations.findMany as jest.Mock
+  const findUnique = prisma.componentInstallations.findUnique as jest.Mock
+  const count = prisma.componentInstallations.count as jest.Mock
+
+  beforeEach(() => {
+    findMany.mockReset()
+    findUnique.mockReset()
+    count.mockReset()
+  })
+
+  it('getComponentInstallations includes the component with subtype and model', async () => {
+    findMany.mockResolvedValueOnce([])
+    count.mockResolvedValueOnce(0)
+
+    await getComponentInstallations({})
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: { component: { include: { subtype: true, model: true } } },
+      })
+    )
+  })
+
+  it('getComponentInstallationById includes the component with subtype and model', async () => {
+    findUnique.mockResolvedValueOnce(null)
+
+    await getComponentInstallationById('00000000-0000-0000-0005-000000000001')
+
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: { component: { include: { subtype: true, model: true } } },
       })
     )
   })
