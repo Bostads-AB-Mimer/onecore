@@ -70,7 +70,7 @@ export const calculateComponentLifespanProgress = (
 ): { age: number; percentage: number; remaining: number } | null => {
   const installation = component.componentInstallations?.[0]
   const age = calculateComponentAge(installation?.installationDate)
-  const technicalLife = component.model?.subtype?.technicalLifespan
+  const technicalLife = component.subtype?.technicalLifespan
 
   if (age === null || !technicalLife) return null
 

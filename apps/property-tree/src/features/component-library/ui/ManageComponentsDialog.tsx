@@ -138,10 +138,12 @@ export const ManageComponentsDialog = ({
                         >
                           <div className="flex-1">
                             <p className="font-medium">
-                              {component.model?.subtype?.componentType?.category
+                              {component.subtype?.componentType?.category
                                 ?.categoryName || ''}{' '}
-                              - {component.model?.manufacturer}{' '}
-                              {component.model?.modelName}
+                              - {component.subtype?.subTypeName}
+                              {component.model
+                                ? ` (${component.model.manufacturer} ${component.model.modelName})`
+                                : ''}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               SN: {component.serialNumber}
