@@ -298,13 +298,11 @@ describe('POST and PUT /component-types', () => {
       Object.assign(new Error('Unique constraint failed'), { code: 'P2002' })
     )
 
-    const res = await request(app.callback())
-      .post('/component-types')
-      .send({
-        typeName: 'Innervägg',
-        categoryId: surfaceCategoryId,
-        code: 'WALL',
-      })
+    const res = await request(app.callback()).post('/component-types').send({
+      typeName: 'Innervägg',
+      categoryId: surfaceCategoryId,
+      code: 'WALL',
+    })
 
     expect(res.status).toBe(409)
   })
