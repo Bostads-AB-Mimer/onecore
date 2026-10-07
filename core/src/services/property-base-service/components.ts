@@ -2946,12 +2946,13 @@ export const routes = (router: KoaRouter) => {
    *       - Property-base/Components
    *     description: |
    *       Unified process to add a component. This handles:
-   *       1. Finding or creating a component model (by exact modelName match)
+   *       1. Resolving the component model
    *       2. Creating a component instance
    *       3. Creating a component installation
    *
-   *       If the model doesn't exist, it will be created. In this case, the model fields
-   *       (manufacturer, currentPrice, currentInstallPrice, modelWarrantyMonths) are required.
+   *       For appliances the model is found by exact name within the subtype, or created
+   *       when the model fields are given. Surfaces (subtypes in a SURFACE category) take
+   *       no model; omit modelName.
    *
    *       Categories, types, and subtypes must be created manually beforehand.
    *     requestBody:
@@ -2969,7 +2970,7 @@ export const routes = (router: KoaRouter) => {
    *             properties:
    *               modelName:
    *                 type: string
-   *                 description: Model name (used to find existing model or create new one)
+   *                 description: Model name. Omit for surfaces.
    *               componentSubtypeId:
    *                 type: string
    *                 format: uuid
@@ -3052,6 +3053,7 @@ export const routes = (router: KoaRouter) => {
    *                       type: boolean
    *                     model:
    *                       type: object
+   *                       nullable: true
    *                       properties:
    *                         id:
    *                           type: string
@@ -3066,6 +3068,7 @@ export const routes = (router: KoaRouter) => {
    *                           type: string
    *                         serialNumber:
    *                           type: string
+   *                           nullable: true
    *                         status:
    *                           type: string
    *                     installation:

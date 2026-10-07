@@ -176,3 +176,322 @@ describe('Components without a model', () => {
     expect(res.body.content.subtype.id).toBe(wall.subtype.id)
   })
 })
+
+describe('POST /processes/add-component', () => {
+  const surfaceSubtype = () => ({
+    ...factory.componentSubtype.build(),
+    componentType: {
+      ...factory.componentType.build(),
+      category: {
+        ...factory.componentCategory.build(),
+        type: 'SURFACE' as const,
+      },
+    },
+  })
+  const equipmentSubtype = () => ({
+    ...factory.componentSubtype.build(),
+    componentType: {
+      ...factory.componentType.build(),
+      category: {
+        ...factory.componentCategory.build(),
+        type: 'EQUIPMENT' as const,
+      },
+    },
+  })
+  const baseRequest = {
+    componentSubtypeId: subtypeId,
+    spaceId: 'ROOM-1',
+    spaceType: 'PropertyObject',
+    installationDate: '2026-10-07',
+    installationCost: 0,
+  }
+
+  it('creates a surface component without a model when no model name is given', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({ ok: true, data: surfaceSubtype() })
+    const find = jest.spyOn(propertyBaseAdapter, 'findModelByExactName')
+    const createComponent = jest
+      .spyOn(propertyBaseAdapter, 'createComponent')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          ...factory.component.build(),
+          modelId: null,
+          serialNumber: null,
+        },
+      })
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponentInstallation')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.componentInstallation.build(),
+      })
+
+    const res = await request(app.callback())
+      .post('/processes/add-component')
+      .send({ ...baseRequest, quantity: 14.5, ncsCode: 'S 0502-Y' })
+
+    expect(res.status).toBe(201)
+    expect(res.body.content.modelCreated).toBe(false)
+    expect(res.body.content.model).toBeNull()
+    expect(find).not.toHaveBeenCalled()
+    expect(createComponent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subtypeId: baseRequest.componentSubtypeId,
+        modelId: null,
+        serialNumber: null,
+        warrantyMonths: null,
+        priceAtPurchase: null,
+        depreciationPriceAtPurchase: null,
+        economicLifespan: null,
+        quantity: 14.5,
+        ncsCode: 'S 0502-Y',
+      })
+    )
+  })
+
+  it('rejects a model name on a surface subtype', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({ ok: true, data: surfaceSubtype() })
+
+    const res = await request(app.callback())
+      .post('/processes/add-component')
+      .send({ ...baseRequest, modelName: 'VIT' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('surface-has-model')
+  })
+
+  it('looks a model up within the subtype', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({ ok: true, data: equipmentSubtype() })
+    const find = jest
+      .spyOn(propertyBaseAdapter, 'findModelByExactName')
+      .mockResolvedValueOnce({ ok: true, data: factory.componentModel.build() })
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponent')
+      .mockResolvedValueOnce({ ok: true, data: factory.component.build() })
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponentInstallation')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.componentInstallation.build(),
+      })
+
+    const res = await request(app.callback())
+      .post('/processes/add-component')
+      .send({
+        ...baseRequest,
+        modelName: 'Electrolux ESF5555',
+        serialNumber: '4711',
+      })
+
+    expect(res.status).toBe(201)
+    expect(find).toHaveBeenCalledWith(
+      'Electrolux ESF5555',
+      baseRequest.componentSubtypeId
+    )
+  })
+
+  it('maps a property 400 on the component write to 400', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({ ok: true, data: equipmentSubtype() })
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponent')
+      .mockResolvedValueOnce({ ok: false, err: 'bad_request' })
+
+    const res = await request(app.callback())
+      .post('/processes/add-component')
+      .send(baseRequest)
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('component-rejected')
+  })
+
+  it('creates the model under the subtype when the name is new', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({ ok: true, data: equipmentSubtype() })
+    jest
+      .spyOn(propertyBaseAdapter, 'findModelByExactName')
+      .mockResolvedValueOnce({ ok: false, err: 'not_found' })
+    const created = factory.componentModel.build()
+    const createModel = jest
+      .spyOn(propertyBaseAdapter, 'createComponentModel')
+      .mockResolvedValueOnce({ ok: true, data: created })
+    const createComponent = jest
+      .spyOn(propertyBaseAdapter, 'createComponent')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { ...factory.component.build(), modelId: created.id },
+      })
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponentInstallation')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.componentInstallation.build(),
+      })
+
+    const res = await request(app.callback())
+      .post('/processes/add-component')
+      .send({
+        ...baseRequest,
+        modelName: 'Ny modell',
+        manufacturer: 'Electrolux',
+        currentPrice: 1000,
+        currentInstallPrice: 100,
+        modelWarrantyMonths: 24,
+      })
+
+    expect(res.status).toBe(201)
+    expect(res.body.content.modelCreated).toBe(true)
+    expect(createModel).toHaveBeenCalledWith(
+      expect.objectContaining({
+        componentSubtypeId: baseRequest.componentSubtypeId,
+      })
+    )
+    expect(createComponent).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: created.id })
+    )
+  })
+
+  it('reports the created model when property then rejects the component', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({ ok: true, data: equipmentSubtype() })
+    jest
+      .spyOn(propertyBaseAdapter, 'findModelByExactName')
+      .mockResolvedValueOnce({ ok: false, err: 'not_found' })
+    const created = factory.componentModel.build()
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponentModel')
+      .mockResolvedValueOnce({ ok: true, data: created })
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponent')
+      .mockResolvedValueOnce({ ok: false, err: 'bad_request' })
+
+    const res = await request(app.callback())
+      .post('/processes/add-component')
+      .send({
+        ...baseRequest,
+        modelName: 'Ny modell',
+        manufacturer: 'Electrolux',
+        currentPrice: 1000,
+        currentInstallPrice: 100,
+        modelWarrantyMonths: 24,
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('component-rejected')
+    expect(res.body.modelCreated).toBe(true)
+    expect(res.body.modelId).toBe(created.id)
+  })
+
+  it('returns 500 when the model lookup fails', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({ ok: true, data: equipmentSubtype() })
+    jest
+      .spyOn(propertyBaseAdapter, 'findModelByExactName')
+      .mockResolvedValueOnce({ ok: false, err: 'upstream_error' })
+
+    const res = await request(app.callback())
+      .post('/processes/add-component')
+      .send({ ...baseRequest, modelName: 'Electrolux ESF5555' })
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('internal-error')
+  })
+
+  it('creates an appliance without a model when no name is given', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({ ok: true, data: equipmentSubtype() })
+    const find = jest.spyOn(propertyBaseAdapter, 'findModelByExactName')
+    const createComponent = jest
+      .spyOn(propertyBaseAdapter, 'createComponent')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { ...factory.component.build(), modelId: null },
+      })
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponentInstallation')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.componentInstallation.build(),
+      })
+
+    const res = await request(app.callback())
+      .post('/processes/add-component')
+      .send({ ...baseRequest, serialNumber: '4711' })
+
+    expect(res.status).toBe(201)
+    expect(find).not.toHaveBeenCalled()
+    expect(createComponent).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: null, serialNumber: '4711' })
+    )
+  })
+
+  it('returns 500 when the subtype cannot be loaded', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({ ok: false, err: 'upstream_error' })
+
+    const res = await request(app.callback())
+      .post('/processes/add-component')
+      .send(baseRequest)
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('internal-error')
+  })
+
+  it('returns 500 when the subtype has no category', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { ...factory.componentSubtype.build(), componentType: undefined },
+      })
+
+    const res = await request(app.callback())
+      .post('/processes/add-component')
+      .send(baseRequest)
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('internal-error')
+  })
+
+  it('stores an empty serial number as null', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypeById')
+      .mockResolvedValueOnce({ ok: true, data: equipmentSubtype() })
+    const createComponent = jest
+      .spyOn(propertyBaseAdapter, 'createComponent')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          ...factory.component.build(),
+          modelId: null,
+          serialNumber: null,
+        },
+      })
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponentInstallation')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.componentInstallation.build(),
+      })
+
+    await request(app.callback())
+      .post('/processes/add-component')
+      .send({ ...baseRequest, serialNumber: '' })
+
+    expect(createComponent).toHaveBeenCalledWith(
+      expect.objectContaining({ serialNumber: null })
+    )
+  })
+})

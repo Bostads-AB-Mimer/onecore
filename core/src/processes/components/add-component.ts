@@ -98,19 +98,46 @@ export const addComponent = async (
     )
 
     if (!subtypeResult.ok) {
+      if (subtypeResult.err === 'not_found') {
+        return {
+          processStatus: ProcessStatus.failed,
+          error: AddComponentErrorCodes.SubtypeNotFound,
+          httpStatus: 400,
+          response: {
+            message: `Component subtype ${request.componentSubtypeId} not found. Categories, types, and subtypes must be created manually.`,
+          },
+        }
+      }
+      logger.error(
+        { err: subtypeResult.err, subtypeId: request.componentSubtypeId },
+        'Failed to load component subtype'
+      )
       return {
         processStatus: ProcessStatus.failed,
-        error: AddComponentErrorCodes.SubtypeNotFound,
-        httpStatus: 400,
+        error: AddComponentErrorCodes.InternalError,
+        httpStatus: 500,
         response: {
-          message: `Component subtype ${request.componentSubtypeId} not found. Categories, types, and subtypes must be created manually.`,
+          message: `Could not load subtype ${request.componentSubtypeId}.`,
         },
       }
     }
 
     // Step 2: Resolve the model. Surfaces never have one; appliances may.
-    const categoryType =
-      subtypeResult.data.componentType?.category?.type ?? 'EQUIPMENT'
+    const categoryType = subtypeResult.data.componentType?.category?.type
+    if (!categoryType) {
+      logger.error(
+        { subtypeId: request.componentSubtypeId },
+        'Component subtype came back without its category'
+      )
+      return {
+        processStatus: ProcessStatus.failed,
+        error: AddComponentErrorCodes.InternalError,
+        httpStatus: 500,
+        response: {
+          message: `Could not determine the category of subtype ${request.componentSubtypeId}.`,
+        },
+      }
+    }
     const isSurface = categoryType === 'SURFACE'
 
     let modelId: string | null = null
@@ -249,6 +276,10 @@ export const addComponent = async (
 
     if (!createComponentResult.ok) {
       if (createComponentResult.err === 'bad_request') {
+        logger.warn(
+          { modelId, modelCreated, subtypeId: request.componentSubtypeId },
+          'Property rejected the component'
+        )
         return {
           processStatus: ProcessStatus.failed,
           error: AddComponentErrorCodes.ComponentRejected,

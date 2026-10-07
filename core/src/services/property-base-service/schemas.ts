@@ -1110,7 +1110,12 @@ export const AddComponentRequestSchema = z.object({
   coclassCode: z.string().trim().optional(),
 
   // Component instance info
-  serialNumber: z.string().trim().nullable().optional(),
+  serialNumber: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .transform((v) => v || null),
   specifications: z.string().trim().optional(),
   additionalInformation: z.string().trim().optional(),
   warrantyStartDate: z.string().optional(),
