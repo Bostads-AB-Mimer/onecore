@@ -2961,13 +2961,7 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             required:
-   *               - modelName
    *               - componentSubtypeId
-   *               - serialNumber
-   *               - componentWarrantyMonths
-   *               - priceAtPurchase
-   *               - depreciationPriceAtPurchase
-   *               - economicLifespan
    *               - spaceId
    *               - spaceType
    *               - installationDate
@@ -3084,7 +3078,7 @@ export const routes = (router: KoaRouter) => {
    *                         installationDate:
    *                           type: string
    *       400:
-   *         description: Validation error or missing required model fields
+   *         description: Subtype not found, model on a surface subtype, missing model fields, or component rejected by the property service
    *       500:
    *         description: Internal server error
    *     security:

@@ -20,8 +20,7 @@ type CreateInstallationRequest =
 //
 // Steps:
 // 1. Validate that the component subtype exists
-// 2. Find existing model by exact modelName match
-//    - If not found, validate model fields and create new model
+// 2. Resolve the model: none for surfaces; for appliances find by exact name within the subtype, else create
 // 3. Create component instance
 // 4. Create component installation
 //
@@ -36,7 +35,7 @@ type CreateInstallationRequest =
 
 export interface AddComponentRequest {
   // Model lookup/creation
-  modelName: CreateModelRequest['modelName']
+  modelName?: CreateModelRequest['modelName']
   componentSubtypeId: CreateModelRequest['componentSubtypeId']
 
   // Model fields - REQUIRED if model doesn't exist, ignored if model exists
@@ -49,14 +48,14 @@ export interface AddComponentRequest {
   coclassCode?: CreateModelRequest['coclassCode']
 
   // Component instance info
-  serialNumber: NonNullable<CreateComponentRequestType['serialNumber']>
+  serialNumber?: string | null
   specifications?: CreateComponentRequestType['specifications']
   additionalInformation?: CreateComponentRequestType['additionalInformation']
   warrantyStartDate?: CreateComponentRequestType['warrantyStartDate']
-  componentWarrantyMonths: CreateComponentRequestType['warrantyMonths']
-  priceAtPurchase: CreateComponentRequestType['priceAtPurchase']
-  depreciationPriceAtPurchase: CreateComponentRequestType['depreciationPriceAtPurchase']
-  economicLifespan: CreateComponentRequestType['economicLifespan']
+  componentWarrantyMonths?: number | null
+  priceAtPurchase?: number | null
+  depreciationPriceAtPurchase?: number | null
+  economicLifespan?: number | null
   quantity?: CreateComponentRequestType['quantity']
   ncsCode?: CreateComponentRequestType['ncsCode']
   status?: CreateComponentRequestType['status']
@@ -76,10 +75,10 @@ export interface AddComponentResponse {
     id: string
     modelName: string
     manufacturer: string
-  }
+  } | null
   component: {
     id: string
-    serialNumber: string
+    serialNumber: string | null
     status: string
   }
   installation: {
@@ -109,101 +108,118 @@ export const addComponent = async (
       }
     }
 
-    // Step 2: Find existing model by exact name match
-    let modelId: string
+    // Step 2: Resolve the model. Surfaces never have one; appliances may.
+    const categoryType =
+      subtypeResult.data.componentType?.category?.type ?? 'EQUIPMENT'
+    const isSurface = categoryType === 'SURFACE'
+
+    let modelId: string | null = null
     let modelCreated = false
-    let modelData: { id: string; modelName: string; manufacturer: string }
+    let modelData: AddComponentResponse['model'] = null
 
-    const existingModelResult = await propertyBaseAdapter.findModelByExactName(
-      request.modelName
-    )
-
-    if (existingModelResult.ok) {
-      // Model exists, use it
-      modelId = existingModelResult.data.id
-      modelData = {
-        id: existingModelResult.data.id,
-        modelName: existingModelResult.data.modelName,
-        manufacturer: existingModelResult.data.manufacturer,
+    if (isSurface && request.modelName) {
+      return {
+        processStatus: ProcessStatus.failed,
+        error: AddComponentErrorCodes.SurfaceHasModel,
+        httpStatus: 400,
+        response: {
+          message: `Subtype ${request.componentSubtypeId} is a surface and takes no model.`,
+        },
       }
-      logger.info(
-        { modelId, modelName: request.modelName },
-        'Found existing model by name'
-      )
-    } else if (existingModelResult.err === 'not_found') {
-      // Model doesn't exist, validate required fields and create it
-      const missingFields: string[] = []
-      if (!request.manufacturer) missingFields.push('manufacturer')
-      if (request.currentPrice === undefined) missingFields.push('currentPrice')
-      if (request.currentInstallPrice === undefined)
-        missingFields.push('currentInstallPrice')
-      if (request.modelWarrantyMonths === undefined)
-        missingFields.push('modelWarrantyMonths')
+    }
 
-      if (missingFields.length > 0) {
-        return {
-          processStatus: ProcessStatus.failed,
-          error: AddComponentErrorCodes.MissingModelFields,
-          httpStatus: 400,
-          response: {
-            message: `Model "${request.modelName}" does not exist. The following fields are required to create it: ${missingFields.join(', ')}`,
-            missingFields,
-          },
+    if (!isSurface && request.modelName) {
+      const existingModelResult =
+        await propertyBaseAdapter.findModelByExactName(
+          request.modelName,
+          request.componentSubtypeId
+        )
+
+      if (existingModelResult.ok) {
+        modelId = existingModelResult.data.id
+        modelData = {
+          id: existingModelResult.data.id,
+          modelName: existingModelResult.data.modelName,
+          manufacturer: existingModelResult.data.manufacturer,
         }
-      }
+        logger.info(
+          { modelId, modelName: request.modelName },
+          'Found existing model by name'
+        )
+      } else if (existingModelResult.err === 'not_found') {
+        const missingFields: string[] = []
+        if (!request.manufacturer) missingFields.push('manufacturer')
+        if (request.currentPrice === undefined)
+          missingFields.push('currentPrice')
+        if (request.currentInstallPrice === undefined)
+          missingFields.push('currentInstallPrice')
+        if (request.modelWarrantyMonths === undefined)
+          missingFields.push('modelWarrantyMonths')
 
-      // Create the model
-      const createModelResult = await propertyBaseAdapter.createComponentModel({
-        modelName: request.modelName,
-        componentSubtypeId: request.componentSubtypeId,
-        manufacturer: request.manufacturer!,
-        currentPrice: request.currentPrice!,
-        currentInstallPrice: request.currentInstallPrice!,
-        warrantyMonths: request.modelWarrantyMonths!,
-        technicalSpecification: request.technicalSpecification,
-        dimensions: request.dimensions,
-        coclassCode: request.coclassCode,
-      })
+        if (missingFields.length > 0) {
+          return {
+            processStatus: ProcessStatus.failed,
+            error: AddComponentErrorCodes.MissingModelFields,
+            httpStatus: 400,
+            response: {
+              message: `Model "${request.modelName}" does not exist. The following fields are required to create it: ${missingFields.join(', ')}`,
+              missingFields,
+            },
+          }
+        }
 
-      if (!createModelResult.ok) {
+        const createModelResult =
+          await propertyBaseAdapter.createComponentModel({
+            modelName: request.modelName,
+            componentSubtypeId: request.componentSubtypeId,
+            manufacturer: request.manufacturer!,
+            currentPrice: request.currentPrice!,
+            currentInstallPrice: request.currentInstallPrice!,
+            warrantyMonths: request.modelWarrantyMonths!,
+            technicalSpecification: request.technicalSpecification,
+            dimensions: request.dimensions,
+            coclassCode: request.coclassCode,
+          })
+
+        if (!createModelResult.ok) {
+          logger.error(
+            { modelName: request.modelName, err: createModelResult.err },
+            'Failed to create component model'
+          )
+          return {
+            processStatus: ProcessStatus.failed,
+            error: AddComponentErrorCodes.ModelCreationFailed,
+            httpStatus: 500,
+            response: {
+              message: `Failed to create component model "${request.modelName}".`,
+            },
+          }
+        }
+
+        modelId = createModelResult.data.id
+        modelCreated = true
+        modelData = {
+          id: createModelResult.data.id,
+          modelName: createModelResult.data.modelName,
+          manufacturer: createModelResult.data.manufacturer,
+        }
+        logger.info(
+          { modelId, modelName: request.modelName },
+          'Created new component model'
+        )
+      } else {
         logger.error(
-          { modelName: request.modelName, err: createModelResult.err },
-          'Failed to create component model'
+          { modelName: request.modelName, err: existingModelResult.err },
+          'Error finding component model'
         )
         return {
           processStatus: ProcessStatus.failed,
-          error: AddComponentErrorCodes.ModelCreationFailed,
+          error: AddComponentErrorCodes.InternalError,
           httpStatus: 500,
           response: {
-            message: `Failed to create component model "${request.modelName}".`,
+            message: `Error looking up component model "${request.modelName}".`,
           },
         }
-      }
-
-      modelId = createModelResult.data.id
-      modelCreated = true
-      modelData = {
-        id: createModelResult.data.id,
-        modelName: createModelResult.data.modelName,
-        manufacturer: createModelResult.data.manufacturer,
-      }
-      logger.info(
-        { modelId, modelName: request.modelName },
-        'Created new component model'
-      )
-    } else {
-      // Unexpected error finding model
-      logger.error(
-        { modelName: request.modelName, err: existingModelResult.err },
-        'Error finding component model'
-      )
-      return {
-        processStatus: ProcessStatus.failed,
-        error: AddComponentErrorCodes.InternalError,
-        httpStatus: 500,
-        response: {
-          message: `Error looking up component model "${request.modelName}".`,
-        },
       }
     }
 
@@ -215,15 +231,16 @@ export const addComponent = async (
       : undefined
 
     const createComponentResult = await propertyBaseAdapter.createComponent({
+      subtypeId: request.componentSubtypeId,
       modelId,
-      serialNumber: request.serialNumber,
+      serialNumber: request.serialNumber ?? null,
       specifications: request.specifications,
       additionalInformation: request.additionalInformation,
       warrantyStartDate: warrantyStartDateISO,
-      warrantyMonths: request.componentWarrantyMonths,
-      priceAtPurchase: request.priceAtPurchase,
-      depreciationPriceAtPurchase: request.depreciationPriceAtPurchase,
-      economicLifespan: request.economicLifespan,
+      warrantyMonths: request.componentWarrantyMonths ?? null,
+      priceAtPurchase: request.priceAtPurchase ?? null,
+      depreciationPriceAtPurchase: request.depreciationPriceAtPurchase ?? null,
+      economicLifespan: request.economicLifespan ?? null,
       quantity: request.quantity ?? 1,
       ncsCode: request.ncsCode,
       status: request.status ?? 'ACTIVE',
@@ -231,17 +248,29 @@ export const addComponent = async (
     })
 
     if (!createComponentResult.ok) {
+      if (createComponentResult.err === 'bad_request') {
+        return {
+          processStatus: ProcessStatus.failed,
+          error: AddComponentErrorCodes.ComponentRejected,
+          httpStatus: 400,
+          response: {
+            message:
+              'The component was rejected: unknown subtype or model, model under another subtype, or a model on a surface.',
+            modelCreated,
+            modelId,
+          },
+        }
+      }
       logger.error(
         { modelId, serialNumber: request.serialNumber },
         'Failed to create component instance'
       )
-      // Note: We don't delete the model here - it's reusable
       return {
         processStatus: ProcessStatus.failed,
         error: AddComponentErrorCodes.ComponentCreationFailed,
         httpStatus: 500,
         response: {
-          message: `Failed to create component instance with serial number "${request.serialNumber}".`,
+          message: 'Failed to create component instance.',
           modelCreated,
           modelId,
         },
@@ -306,7 +335,7 @@ export const addComponent = async (
         model: modelData,
         component: {
           id: componentId,
-          serialNumber: createComponentResult.data.serialNumber ?? '',
+          serialNumber: createComponentResult.data.serialNumber,
           status: createComponentResult.data.status,
         },
         installation: {
@@ -318,7 +347,9 @@ export const addComponent = async (
       response: {
         message: modelCreated
           ? 'Component added successfully with new model.'
-          : 'Component added successfully using existing model.',
+          : modelId
+            ? 'Component added successfully using existing model.'
+            : 'Component added successfully without a model.',
       },
     }
   } catch (error: any) {

@@ -480,7 +480,8 @@ async function getComponentModelById(
  * Used by the add-component process to check if a model already exists.
  */
 async function findModelByExactName(
-  modelName: string
+  modelName: string,
+  subtypeId?: string
 ): Promise<
   AdapterResult<GetComponentModelResponse, 'upstream_error' | 'not_found'>
 > {
@@ -488,7 +489,7 @@ async function findModelByExactName(
     const response = await client().GET(
       '/component-models/by-name/{modelName}',
       {
-        params: { path: { modelName } },
+        params: { path: { modelName }, query: { subtypeId } },
       }
     )
 

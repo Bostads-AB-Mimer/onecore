@@ -1097,7 +1097,7 @@ export type DocumentWithUrl = z.infer<typeof DocumentWithUrlSchema>
 
 export const AddComponentRequestSchema = z.object({
   // Model info (find or create)
-  modelName: z.string().trim().min(1, 'Model name is required'),
+  modelName: z.string().trim().min(1).optional(),
   componentSubtypeId: z.string().uuid(),
 
   // Model fields - REQUIRED if model doesn't exist, ignored if model exists
@@ -1110,14 +1110,14 @@ export const AddComponentRequestSchema = z.object({
   coclassCode: z.string().trim().optional(),
 
   // Component instance info
-  serialNumber: z.string().trim().min(1, 'Serial number is required'),
+  serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
   additionalInformation: z.string().trim().optional(),
   warrantyStartDate: z.string().optional(),
-  componentWarrantyMonths: z.number().int().min(0),
-  priceAtPurchase: z.number().min(0),
-  depreciationPriceAtPurchase: z.number().min(0),
-  economicLifespan: z.number().min(0),
+  componentWarrantyMonths: z.number().int().min(0).nullable().optional(),
+  priceAtPurchase: z.number().min(0).nullable().optional(),
+  depreciationPriceAtPurchase: z.number().min(0).nullable().optional(),
+  economicLifespan: z.number().min(0).nullable().optional(),
   quantity: z.number().min(0).optional().default(1),
   ncsCode: z.string().trim().optional(),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
@@ -1133,14 +1133,16 @@ export const AddComponentRequestSchema = z.object({
 
 export const AddComponentResponseSchema = z.object({
   modelCreated: z.boolean(),
-  model: z.object({
-    id: z.string().uuid(),
-    modelName: z.string(),
-    manufacturer: z.string(),
-  }),
+  model: z
+    .object({
+      id: z.string().uuid(),
+      modelName: z.string(),
+      manufacturer: z.string(),
+    })
+    .nullable(),
   component: z.object({
     id: z.string().uuid(),
-    serialNumber: z.string(),
+    serialNumber: z.string().nullable(),
     status: z.string(),
   }),
   installation: z.object({
