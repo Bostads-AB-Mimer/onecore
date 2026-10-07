@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import axios from 'axios'
 import {
   generateRouteMetadata,
   logger,
@@ -30,16 +31,15 @@ import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
+import { resolvePersonnummerInQuery } from '../../adapters/contacts-adapter/lease-query'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
 import { registerSchema } from '../../utils/openapi'
-import { makeContactsAdapter } from '../../adapters/contacts-adapter'
-import config from '../../common/config'
+import { contactsAdapter } from '../../adapters/contacts-adapter'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 
 export const routes = (router: KoaRouter) => {
-  const contactsAdapter = makeContactsAdapter(config.contactsService.url)
   // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
   /**
    * @swagger
@@ -242,9 +242,9 @@ export const routes = (router: KoaRouter) => {
           const mappedLease: z.input<typeof CustomerScoreCardInfoSchema> = {
             //lease info
             division_1038: lease.leaseId,
-            division_1037: undefined,
+            division_1037: lease.signedAt?.toString(),
             contract_start_date: lease.startDate?.toString() ?? '',
-            contract_end_date: undefined,
+            contract_end_date: lease.endDate?.toString(),
             contract_type: lease.leaseType,
             object_street_1: rentalObjectData.address?.street ?? '',
             object_zip: rentalObjectData.address?.postalCode ?? '',
@@ -302,6 +302,11 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error getting leases for CSC report')
       ctx.status = 500
       ctx.body = {
@@ -499,17 +504,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      let searchQuery = resolved.query
-      const rawQ = Array.isArray(searchQuery.q)
-        ? (searchQuery.q[0] ?? '')
-        : (searchQuery.q ?? '')
-      if (/^(\d{10}|\d{6}-\d{4}|\d{12}|\d{8}-\d{4})$/.test(rawQ)) {
-        const contactResult = await contactsAdapter.getByNationalId(rawQ)
-        if (contactResult.ok) {
-          searchQuery = { ...searchQuery, q: contactResult.data.contactCode }
-        }
-      }
-
+      const searchQuery = await resolvePersonnummerInQuery(resolved.query)
       const result = await leasingAdapter.searchLeases(searchQuery)
 
       const contactCodes = [
@@ -546,10 +541,14 @@ export const routes = (router: KoaRouter) => {
           )
           enrichedContent = result.content.map((lease) => ({
             ...lease,
-            contacts: lease.contacts?.map((c) => ({
-              ...c,
-              ...contactMap.get(c.contactCode),
-            })),
+            contacts: lease.contacts?.map((c) => {
+              const contactInfo = contactMap.get(c.contactCode)
+              return {
+                ...c,
+                email: contactInfo?.email ?? c.email,
+                phone: contactInfo?.phone ?? c.phone,
+              }
+            }),
           }))
         }
       }
@@ -557,7 +556,7 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { ...result, content: enrichedContent }
     } catch (error: unknown) {
-      if ((error as any)?.response?.status === 503) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
         ctx.status = 503
         ctx.body = { error: 'Lease service is warming up', ...metadata }
         return
@@ -1210,6 +1209,11 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = buffer
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error exporting leases to Excel')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }

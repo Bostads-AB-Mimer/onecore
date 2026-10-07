@@ -126,29 +126,9 @@ async function exportLeasesToExcel(
   return data as unknown as Blob
 }
 
-async function getContactsByCodes(codes: string[]): Promise<ContactInfo[]> {
-  if (codes.length === 0) return []
-
-  const { data, error } = await GET('/v1/contacts/by-codes', {
-    params: {
-      query: { codes: codes.join(',') },
-    },
-  })
-
-  if (error) return []
-
-  return (data.content ?? []).map((c) => ({
-    contactCode: c.contactCode,
-    name: c.type === 'individual' ? c.personal.fullName : c.organisation.name,
-    email: c.communication?.emailAddresses[0]?.emailAddress ?? null,
-    phone: c.communication?.phoneNumbers[0]?.phoneNumber ?? null,
-  }))
-}
-
 export const leaseSearchService = {
   search,
   getParkingSpaceTypes,
-  getContactsByCodes,
   getContactsByFilters,
   exportLeasesToExcel,
 }

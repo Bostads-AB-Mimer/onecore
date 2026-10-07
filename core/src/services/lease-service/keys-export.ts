@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import axios from 'axios'
 import {
   createExcelFromPaginated,
   formatDateForExcel,
@@ -243,6 +244,11 @@ export const routes = (router: KoaRouter) => {
       setExcelDownloadHeaders(ctx, `nycklar-${filenameSuffix}`)
       ctx.body = buffer
     } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error(
         { err, property, buildingCode },
         'leases-keys-export: failed to build Excel'

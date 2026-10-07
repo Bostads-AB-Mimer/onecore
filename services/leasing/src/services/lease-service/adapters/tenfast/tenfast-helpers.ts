@@ -1,4 +1,5 @@
-// Tenfast requires literal brackets/commas — URLSearchParams percent-encodes them.
+// Cosmetic: makes outgoing request URLs readable in logs. Tenfast accepts
+// both the encoded and literal form.
 export const decodeTenfastQueryString = (qs: URLSearchParams): string =>
   qs
     .toString()

@@ -197,7 +197,7 @@ export const routes = (router: KoaRouter) => {
   })
 
   /**
-   * @openapi
+   * @swagger
    * /health/cache:
    *   get:
    *     summary: Lease cache status

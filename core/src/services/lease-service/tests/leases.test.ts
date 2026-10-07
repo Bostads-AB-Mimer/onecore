@@ -46,6 +46,7 @@ import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
+import { contactsAdapter } from '../../../adapters/contacts-adapter'
 import * as factory from '../../../../test/factories'
 import { Lease as LeaseSchema } from '../schemas/lease'
 import * as utilities from '@onecore/utilities'
@@ -77,7 +78,9 @@ const buildLeaseSearchResult = (
   postalCode: '72216',
   city: 'Västerås',
   startDate: new Date('2024-01-01'),
+  endDate: null,
   lastDebitDate: null,
+  signedAt: null,
   status: LeaseStatus.Current,
   rentalObjectCode: '705-001-01-0101',
   ...overrides,
@@ -572,6 +575,71 @@ describe('leases routes', () => {
       expect(res.status).toBe(500)
       expect(searchSpy).not.toHaveBeenCalled()
     })
+
+    it('keeps existing contact email/phone when contacts-service has no info for them', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue(
+        buildPaginatedResponse([
+          buildLeaseSearchResult({
+            contacts: [
+              {
+                contactCode: 'P158770',
+                name: 'Andra Handen',
+                email: 'fran-tenfast@example.com',
+                phone: '0701112233',
+              },
+            ],
+          }),
+        ])
+      )
+      jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({ ok: true, data: [] })
+
+      const res = await request(app.callback()).get('/leases/search')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].contacts[0].email).toBe(
+        'fran-tenfast@example.com'
+      )
+      expect(res.body.content[0].contacts[0].phone).toBe('0701112233')
+    })
+
+    it('resolves a personnummer in q to a contact code before calling leasing', async () => {
+      jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
+        ok: true,
+        data: factory.contactsServiceContact.build({ contactCode: 'P158770' }),
+      })
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      const res = await request(app.callback()).get(
+        '/leases/search?q=198001011234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'P158770' })
+      )
+    })
+
+    it('leaves q untouched when it does not match a contact', async () => {
+      jest
+        .spyOn(contactsAdapter, 'getByNationalId')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      const res = await request(app.callback()).get(
+        '/leases/search?q=198001011234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: '198001011234' })
+      )
+    })
   })
 
   describe('GET /leases/export', () => {
@@ -604,6 +672,20 @@ describe('leases routes', () => {
       expect(exportSpy).toHaveBeenCalledWith(
         expect.not.objectContaining({ buildingManager: expect.anything() })
       )
+    })
+
+    it('returns 503 when the lease cache is warming up', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'exportLeasesToExcel').mockRejectedValue(
+        Object.assign(new Error('Service Unavailable'), {
+          isAxiosError: true,
+          response: { status: 503 },
+        })
+      )
+
+      const res = await request(app.callback()).get('/leases/export')
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('Lease service is warming up')
     })
   })
 
@@ -652,6 +734,20 @@ describe('leases routes', () => {
       const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(500)
+    })
+
+    it('returns 503 when the lease cache is warming up', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockRejectedValue(
+        Object.assign(new Error('Service Unavailable'), {
+          isAxiosError: true,
+          response: { status: 503 },
+        })
+      )
+
+      const res = await request(app.callback()).get('/leases/for-csc')
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('Lease service is warming up')
     })
 
     it('calls searchLeases with objectType bostad and status Current', async () => {

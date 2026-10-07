@@ -9,6 +9,7 @@ import {
 import { TenfastLease } from './schemas'
 import * as tenfastAdapter from './tenfast-adapter'
 import * as leaseCache from '../../../../common/lease-cache'
+import type { DeltaSyncResult } from '../../../../common/lease-cache'
 import {
   mapTenfastTypToLeaseType,
   calculateLeaseStatus,
@@ -20,6 +21,9 @@ import {
   getRentalObjectCodesByAreaCodes,
   getRentalObjectCodesByDistrictNames,
 } from '../xpand/lease-search-adapter'
+
+const STALE_THRESHOLD_MS = 60_000
+const STALE_SYNC_TIMEOUT_MS = 10_000
 
 /** Map Tenfast typ to Swedish label (matching Xpand's objectTypeCode output) */
 const TENFAST_TYP_TO_LABEL: Record<string, string> = {
@@ -65,7 +69,9 @@ function mapTenfastLeaseToSearchResult(
     property: ro?.fastighet?.fastighetsbeteckning ?? null,
     districtName: ro?.stadsdel ?? ro?.fastighet?.stadsdel ?? null,
     startDate: lease.startDate ?? null,
+    endDate: lease.endDate ?? null,
     lastDebitDate: lease.endDate ?? null,
+    signedAt: lease.signedAt ?? null,
     status: calculateLeaseStatus(lease),
   }
 }
@@ -95,9 +101,15 @@ const STATUS_PARAM_TO_LEASE_STATUS: Record<string, LeaseStatus> = {
   notsent: LeaseStatus.NotSent,
 }
 
-export async function fetchAllLeasesForExport(
+/**
+ * Resolves Xpand-bridged filters (buildingManager, buildingCodes, areaCodes,
+ * districtNames, kvvAreaCodes) to the set of matching rental object codes.
+ * Returns null when none of those filters are present, meaning the cache
+ * search shouldn't be restricted by rental object code at all.
+ */
+async function resolveXpandRentalObjectCodes(
   params: leasing.v1.LeaseSearchQueryParams
-): Promise<leasing.v1.LeaseSearchResult[]> {
+): Promise<Set<string> | null> {
   const needsXpandCodes =
     (params.buildingManager && params.buildingManager.length > 0) ||
     (params.buildingCodes && params.buildingCodes.length > 0) ||
@@ -105,47 +117,52 @@ export async function fetchAllLeasesForExport(
     (params.districtNames && params.districtNames.length > 0) ||
     (params.kvvAreaCodes && params.kvvAreaCodes.length > 0)
 
-  let rentalObjectCodes: Set<string> | undefined
+  if (!needsXpandCodes) return null
 
-  if (needsXpandCodes) {
-    const codeSetPromises: Promise<string[]>[] = []
+  const codeSetPromises: Promise<string[]>[] = []
 
-    if (params.buildingManager?.length)
-      codeSetPromises.push(
-        getRentalObjectCodesByBuildingManager(params.buildingManager)
-      )
-    if (params.buildingCodes?.length)
-      codeSetPromises.push(
-        getRentalObjectCodesByBuildingCodes(params.buildingCodes)
-      )
-    if (params.areaCodes?.length)
-      codeSetPromises.push(getRentalObjectCodesByAreaCodes(params.areaCodes))
-    if (params.districtNames?.length)
-      codeSetPromises.push(
-        getRentalObjectCodesByDistrictNames(params.districtNames)
-      )
-    if (params.kvvAreaCodes?.length)
-      codeSetPromises.push(
-        getRentalObjectCodesByKvvAreaCodes(params.kvvAreaCodes)
-      )
+  if (params.buildingManager?.length)
+    codeSetPromises.push(
+      getRentalObjectCodesByBuildingManager(params.buildingManager)
+    )
+  if (params.buildingCodes?.length)
+    codeSetPromises.push(
+      getRentalObjectCodesByBuildingCodes(params.buildingCodes)
+    )
+  if (params.areaCodes?.length)
+    codeSetPromises.push(getRentalObjectCodesByAreaCodes(params.areaCodes))
+  if (params.districtNames?.length)
+    codeSetPromises.push(
+      getRentalObjectCodesByDistrictNames(params.districtNames)
+    )
+  if (params.kvvAreaCodes?.length)
+    codeSetPromises.push(
+      getRentalObjectCodesByKvvAreaCodes(params.kvvAreaCodes)
+    )
 
-    const codeSets = await Promise.all(codeSetPromises)
+  const codeSets = await Promise.all(codeSetPromises)
 
-    let codes = codeSets[0]
-    for (let i = 1; i < codeSets.length; i++) {
-      const set = new Set(codeSets[i])
-      codes = codes.filter((c) => set.has(c))
-    }
-
-    if (codes.length === 0) return []
-
-    rentalObjectCodes = new Set(codes)
+  let codes = codeSets[0]
+  for (let i = 1; i < codeSets.length; i++) {
+    const set = new Set(codeSets[i])
+    codes = codes.filter((c) => set.has(c))
   }
+
+  return new Set(codes)
+}
+
+export async function fetchAllLeasesForExport(
+  params: leasing.v1.LeaseSearchQueryParams
+): Promise<leasing.v1.LeaseSearchResult[]> {
+  await leaseCache.refreshIfStale(STALE_THRESHOLD_MS, STALE_SYNC_TIMEOUT_MS)
+
+  const rentalObjectCodes = await resolveXpandRentalObjectCodes(params)
+  if (rentalObjectCodes && rentalObjectCodes.size === 0) return []
 
   const filtered = applyCacheFilters(
     leaseCache.getAll(),
     params,
-    rentalObjectCodes
+    rentalObjectCodes ?? undefined
   )
   const sorted = applySorting(filtered, params)
 
@@ -180,14 +197,24 @@ export async function fetchAllLeasesForCache(): Promise<
  */
 export async function fetchLeasesUpdatedSinceForCache(
   since: Date
-): Promise<leasing.v1.LeaseSearchResult[]> {
+): Promise<DeltaSyncResult> {
   const result = await tenfastAdapter.getLeasesUpdatedSince(since)
   if (!result.ok) {
     throw new Error(
       `fetchLeasesUpdatedSinceForCache: failed to fetch delta leases — ${result.err}`
     )
   }
-  return result.data.map((l) => mapTenfastLeaseToSearchResult(l))
+
+  // The list endpoint (unlike search) can't filter isArchived, so a lease
+  // that got archived since the last sync comes back here rather than
+  // being excluded like it would be from a full sync — remove it instead.
+  const archived = result.data.filter((l) => l.stage === 'archived')
+  const rest = result.data.filter((l) => l.stage !== 'archived')
+
+  return {
+    changed: rest.map((l) => mapTenfastLeaseToSearchResult(l)),
+    removedLeaseIds: archived.map((l) => l.externalId),
+  }
 }
 
 const applySorting = (
@@ -355,69 +382,27 @@ async function searchLeasesFromCache(
   const page = Math.max(1, params.page ?? 1)
   const limit = Math.max(1, params.limit ?? 20)
 
-  // Xpand-bridged filters: resolve to rental object codes
-  const needsXpandCodes =
-    (params.buildingManager && params.buildingManager.length > 0) ||
-    (params.buildingCodes && params.buildingCodes.length > 0) ||
-    (params.areaCodes && params.areaCodes.length > 0) ||
-    (params.districtNames && params.districtNames.length > 0) ||
-    (params.kvvAreaCodes && params.kvvAreaCodes.length > 0)
+  const xpandStart = Date.now()
+  const rentalObjectCodes = await resolveXpandRentalObjectCodes(params)
+  const xpandMs = Date.now() - xpandStart
 
-  let rentalObjectCodes: Set<string> | undefined
-  let xpandMs = 0
-
-  if (needsXpandCodes) {
-    const codeSetPromises: Promise<string[]>[] = []
-
-    if (params.buildingManager?.length)
-      codeSetPromises.push(
-        getRentalObjectCodesByBuildingManager(params.buildingManager)
-      )
-    if (params.buildingCodes?.length)
-      codeSetPromises.push(
-        getRentalObjectCodesByBuildingCodes(params.buildingCodes)
-      )
-    if (params.areaCodes?.length)
-      codeSetPromises.push(getRentalObjectCodesByAreaCodes(params.areaCodes))
-    if (params.districtNames?.length)
-      codeSetPromises.push(
-        getRentalObjectCodesByDistrictNames(params.districtNames)
-      )
-    if (params.kvvAreaCodes?.length)
-      codeSetPromises.push(
-        getRentalObjectCodesByKvvAreaCodes(params.kvvAreaCodes)
-      )
-
-    const xpandStart = Date.now()
-    const codeSets = await Promise.all(codeSetPromises)
-    xpandMs = Date.now() - xpandStart
-
-    let codes = codeSets[0]
-    for (let i = 1; i < codeSets.length; i++) {
-      const set = new Set(codeSets[i])
-      codes = codes.filter((c) => set.has(c))
+  if (rentalObjectCodes && rentalObjectCodes.size === 0) {
+    logger.info(
+      { xpandMs },
+      'lease-cache: xpand filter returned no codes, skipping cache search'
+    )
+    return {
+      content: [],
+      _meta: { totalRecords: 0, page, limit, count: 0 },
+      _links: [],
     }
-
-    if (codes.length === 0) {
-      logger.info(
-        { xpandMs },
-        'lease-cache: xpand filter returned no codes, skipping cache search'
-      )
-      return {
-        content: [],
-        _meta: { totalRecords: 0, page, limit, count: 0 },
-        _links: [],
-      }
-    }
-
-    rentalObjectCodes = new Set(codes)
   }
 
   const filterStart = Date.now()
   const filtered = applyCacheFilters(
     leaseCache.getAll(),
     params,
-    rentalObjectCodes
+    rentalObjectCodes ?? undefined
   )
   const sorted = applySorting(filtered, params)
   const filterMs = Date.now() - filterStart
@@ -449,14 +434,14 @@ export const searchLeases = async (
   ctx: Context
 ): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
   const requestStart = Date.now()
-  const STALE_THRESHOLD_MS = 60_000
-  const STALE_SYNC_TIMEOUT_MS = 10_000
 
   if (leaseCache.getAll().length === 0) {
-    // Initial sync in progress or failed — no data to serve yet
-    ctx.throw(503, 'Lease cache is warming up — retry shortly', {
-      headers: { 'Retry-After': '30' },
-    })
+    const ready = await leaseCache.ensureReady(STALE_SYNC_TIMEOUT_MS)
+    if (!ready) {
+      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+        headers: { 'Retry-After': '30' },
+      })
+    }
   }
 
   // Cache has data — if stale, await a delta sync before responding.

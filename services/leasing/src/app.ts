@@ -4,11 +4,6 @@ import cors from '@koa/cors'
 
 import api from './api'
 import { errorHandler, logger, loggerMiddlewares } from '@onecore/utilities'
-import { startLeaseCache } from './common/lease-cache'
-import {
-  fetchAllLeasesForCache,
-  fetchLeasesUpdatedSinceForCache,
-} from './services/lease-service/adapters/tenfast/tenfast-lease-search-adapter'
 
 const app = new Koa()
 
@@ -38,7 +33,5 @@ app.use(loggerMiddlewares.pre)
 app.use(loggerMiddlewares.post)
 
 app.use(api.routes())
-
-startLeaseCache(fetchAllLeasesForCache, fetchLeasesUpdatedSinceForCache)
 
 export default app

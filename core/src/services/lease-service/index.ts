@@ -40,6 +40,7 @@ import { routes as keysExportRoutes } from './keys-export'
 import { registerSchema } from '../../utils/openapi'
 import { Contact, Lease, RentalObjectRentInfo } from './schemas/lease'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
+import { resolvePersonnummerInQuery } from '../../adapters/contacts-adapter/lease-query'
 
 /**
  * @swagger
@@ -284,7 +285,8 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await leasingAdapter.getContactsByFilters(resolved.query)
+    const contactsQuery = await resolvePersonnummerInQuery(resolved.query)
+    const result = await leasingAdapter.getContactsByFilters(contactsQuery)
 
     if (!result.ok) {
       ctx.status = 500

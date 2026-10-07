@@ -5,9 +5,14 @@ type CacheStatus = 'uninitialized' | 'syncing' | 'ready' | 'error'
 
 const DELTA_BUFFER_MS = 30_000
 const FULL_RESYNC_INTERVAL_MS = 24 * 60 * 60 * 1000
+const INITIAL_SYNC_RETRY_COOLDOWN_MS = 30_000
 
 type FetchFn = () => Promise<leasing.v1.LeaseSearchResult[]>
-type DeltaFetchFn = (since: Date) => Promise<leasing.v1.LeaseSearchResult[]>
+export type DeltaSyncResult = {
+  changed: leasing.v1.LeaseSearchResult[]
+  removedLeaseIds: string[]
+}
+type DeltaFetchFn = (since: Date) => Promise<DeltaSyncResult>
 
 const state: {
   leases: leasing.v1.LeaseSearchResult[]
@@ -16,6 +21,7 @@ const state: {
   fullFetchFn: FetchFn | null
   deltaFetchFn: DeltaFetchFn | null
   ongoingSync: Promise<void> | null
+  lastInitialSyncAttemptAt: Date | null
 } = {
   leases: [],
   lastSyncedAt: null,
@@ -23,27 +29,11 @@ const state: {
   fullFetchFn: null,
   deltaFetchFn: null,
   ongoingSync: null,
+  lastInitialSyncAttemptAt: null,
 }
 
 export function isReady(): boolean {
   return state.status === 'ready'
-}
-
-// Resolves true when cache becomes ready, false if it errors or times out.
-export function whenReady(timeoutMs: number): Promise<boolean> {
-  if (state.status === 'ready') return Promise.resolve(true)
-  return new Promise((resolve) => {
-    const interval = setInterval(() => {
-      if (state.status === 'ready' || state.status === 'error') {
-        clearInterval(interval)
-        resolve(state.status === 'ready')
-      }
-    }, 200)
-    setTimeout(() => {
-      clearInterval(interval)
-      resolve(false)
-    }, timeoutMs)
-  })
 }
 
 export function getAll(): leasing.v1.LeaseSearchResult[] {
@@ -79,15 +69,16 @@ export async function refreshIfStale(
 
   const start = Date.now()
 
+  let timeoutHandle: ReturnType<typeof setTimeout>
   try {
     await Promise.race([
       sync(state.fullFetchFn, state.deltaFetchFn),
-      new Promise<void>((_, reject) =>
-        setTimeout(
+      new Promise<void>((_, reject) => {
+        timeoutHandle = setTimeout(
           () => reject(new Error('refreshIfStale timed out')),
           timeoutMs
         )
-      ),
+      }),
     ])
     logger.info(
       { durationMs: Date.now() - start },
@@ -98,7 +89,45 @@ export async function refreshIfStale(
       { err, durationMs: Date.now() - start },
       'lease-cache: stale refresh timed out or failed, using existing data'
     )
+  } finally {
+    clearTimeout(timeoutHandle!)
   }
+}
+
+export async function ensureReady(timeoutMs: number): Promise<boolean> {
+  if (state.leases.length > 0) return true
+  if (!state.fullFetchFn || !state.deltaFetchFn) return false
+
+  const alreadyRetrying = state.ongoingSync !== null
+  const cooldownActive =
+    !!state.lastInitialSyncAttemptAt &&
+    Date.now() - state.lastInitialSyncAttemptAt.getTime() <
+      INITIAL_SYNC_RETRY_COOLDOWN_MS
+
+  if (!alreadyRetrying) {
+    if (cooldownActive) return false
+    state.lastInitialSyncAttemptAt = new Date()
+    logger.info('lease-cache: no data available, retrying initial sync')
+  }
+
+  let timeoutHandle: ReturnType<typeof setTimeout>
+  try {
+    await Promise.race([
+      sync(state.fullFetchFn, state.deltaFetchFn),
+      new Promise<void>((_, reject) => {
+        timeoutHandle = setTimeout(
+          () => reject(new Error('ensureReady timed out')),
+          timeoutMs
+        )
+      }),
+    ])
+  } catch (err) {
+    logger.warn({ err }, 'lease-cache: retry sync timed out or failed')
+  } finally {
+    clearTimeout(timeoutHandle!)
+  }
+
+  return state.leases.length > 0
 }
 
 async function sync(
@@ -130,16 +159,23 @@ async function doSync(
     if (!forceFull && hasData && lastSync) {
       const syncStartedAt = new Date()
       const since = new Date(lastSync.getTime() - DELTA_BUFFER_MS)
-      const changed = await deltaFetchFn(since)
+      const { changed, removedLeaseIds } = await deltaFetchFn(since)
       const idMap = new Map(state.leases.map((l) => [l.leaseId, l]))
       for (const lease of changed) {
         idMap.set(lease.leaseId, lease)
+      }
+      for (const leaseId of removedLeaseIds) {
+        idMap.delete(leaseId)
       }
       state.leases = Array.from(idMap.values())
       state.lastSyncedAt = syncStartedAt
       state.status = 'ready'
       logger.info(
-        { changed: changed.length, total: state.leases.length },
+        {
+          changed: changed.length,
+          removed: removedLeaseIds.length,
+          total: state.leases.length,
+        },
         'lease-cache: delta sync complete'
       )
     } else {

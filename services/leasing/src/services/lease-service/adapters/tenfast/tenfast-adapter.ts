@@ -50,7 +50,7 @@ const fetchAllPages = async <
   buildUrl: (paginate: string | null) => string,
   schema: S
 ): Promise<z.output<S>['records']> => {
-  const MAX_PAGES = 300
+  const MAX_PAGES = 1000
 
   let next: string | null = null
   let totalCount = Infinity
@@ -326,7 +326,6 @@ export async function getAllLeases(): Promise<
       new URLSearchParams({
         populate: 'hyresobjekt,hyresgaster',
         'filter[isArchived]': 'false',
-        limit: '500',
       })
     )
     const baseUrl = `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&${qs}`
@@ -335,7 +334,7 @@ export async function getAllLeases(): Promise<
       TenfastPaginatedLeaseResponseSchema
     )
     return { ok: true, data: records }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return handleTenfastError(err, 'unknown')
   }
 }
@@ -348,7 +347,6 @@ export async function getLeasesUpdatedSince(
     const params = new URLSearchParams({
       populate: 'hyresobjekt,hyresgaster',
       updatedAtSince: since.toISOString(),
-      limit: '500',
     })
     const records = await fetchAllPages(
       (cursor) =>
@@ -358,7 +356,7 @@ export async function getLeasesUpdatedSince(
       TenfastPaginatedLeaseResponseSchema
     )
     return { ok: true, data: records }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return handleTenfastError(err, 'unknown')
   }
 }
@@ -860,7 +858,10 @@ async function getOrImportContact(
   return { ok: true, data: importResult.data }
 }
 
-function handleTenfastError<E extends string>(errorObj: any, errorLiteral: E) {
+function handleTenfastError<E extends string>(
+  errorObj: unknown,
+  errorLiteral: E
+) {
   logger.error({ err: JSON.stringify(errorObj) }, errorLiteral)
   return { ok: false, err: errorLiteral } as const
 }
