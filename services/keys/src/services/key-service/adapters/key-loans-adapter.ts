@@ -15,6 +15,10 @@ type Receipt = keys.Receipt
 const TABLE = 'key_loans'
 const KEYS_TABLE = 'keys'
 
+// Bind a list as one JSON string: MSSQL caps queries at 2100 parameters
+const IN_JSON = (column: string) =>
+  `${column} IN (SELECT value FROM OPENJSON(?))`
+
 /**
  * Database adapter functions for key loans.
  * These functions wrap database calls to make them easier to test.
@@ -771,14 +775,16 @@ export async function getKeyLoansByRentalObjects(
           .from('key_loan_keys as klk')
           .join('keys as k', 'k.id', 'klk.keyId')
           .whereRaw('klk.keyLoanId = kl.id')
-          .whereIn('k.rentalObjectCode', rentalObjectCodes)
+          .whereRaw(IN_JSON('k.rentalObjectCode'), [
+            JSON.stringify(rentalObjectCodes),
+          ])
       })
       if (allCardIds.length > 0) {
         this.orWhereExists(function () {
           this.select(dbConnection.raw('1'))
             .from('key_loan_cards as klc')
             .whereRaw('klc.keyLoanId = kl.id')
-            .whereIn('klc.cardId', allCardIds)
+            .whereRaw(IN_JSON('klc.cardId'), [JSON.stringify(allCardIds)])
         })
       }
     })
@@ -788,9 +794,10 @@ export async function getKeyLoansByRentalObjects(
 
   const loanIds = loans.map((l) => l.id)
 
+  const loanIdsJson = JSON.stringify(loanIds)
   const keyRows = await dbConnection('key_loan_keys')
     .join('keys', 'keys.id', 'key_loan_keys.keyId')
-    .whereIn('key_loan_keys.keyLoanId', loanIds)
+    .whereRaw(IN_JSON('key_loan_keys.keyLoanId'), [loanIdsJson])
     .select('key_loan_keys.keyLoanId', 'keys.*')
 
   const keysByLoan = new Map<string, Key[]>()
@@ -800,7 +807,7 @@ export async function getKeyLoansByRentalObjects(
   }
 
   const cardRows = await dbConnection('key_loan_cards')
-    .whereIn('keyLoanId', loanIds)
+    .whereRaw(IN_JSON('keyLoanId'), [loanIdsJson])
     .select('keyLoanId', 'cardId')
 
   const cardIdsByLoan = new Map<string, string[]>()

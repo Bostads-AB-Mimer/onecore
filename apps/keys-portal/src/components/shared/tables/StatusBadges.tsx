@@ -429,6 +429,7 @@ export function KeySystemTypeBadge({ type }: KeySystemTypeBadgeProps) {
 // ============================================
 
 export const MoveInOutStatusLabels: Record<MoveInOutStatus, string> = {
+  UNKNOWN: 'Okänt',
   NOT_RETURNED: 'Ej återlämnat',
   LOANED_TO_OTHER: 'Utlånat till annan',
   CREATED: 'Lån skapat',
@@ -443,6 +444,7 @@ const moveInOutVariant: Record<
   MoveInOutStatus,
   'destructive' | 'warning' | 'success' | 'secondary' | 'outline'
 > = {
+  UNKNOWN: 'warning',
   NOT_RETURNED: 'destructive',
   LOANED_TO_OTHER: 'destructive',
   CREATED: 'warning',

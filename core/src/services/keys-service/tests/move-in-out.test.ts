@@ -86,21 +86,26 @@ describe('pickOutgoingIncoming', () => {
     expect(r.incoming?.leaseId).toBe('L2')
   })
 
-  it('returns no incoming when the object becomes vacant', () => {
-    const r = pickOutgoingIncoming([L0, OUT], new Set(['L1']), new Set())
-    expect(r.outgoing?.leaseId).toBe('L1')
+  it('ignores a lease cancelled before move-in when picking the neighbour', () => {
+    const cancelled = tenant('L8', ['P8'], '2026-11-01', '2026-10-20')
+    const r = pickOutgoingIncoming([OUT, cancelled], new Set(['L1']), new Set())
     expect(r.incoming).toBeNull()
   })
 
-  it('drops maculated leases', () => {
-    const mac = tenant('L3/02M', ['P9'], '2026-10-20', null)
-    const r = pickOutgoingIncoming([OUT, mac], new Set(['L1']), new Set())
+  it('returns no incoming when the object becomes vacant', () => {
+    const r = pickOutgoingIncoming([L0, OUT], new Set(['L1']), new Set())
+    expect(r.outgoing?.leaseId).toBe('L1')
     expect(r.incoming).toBeNull()
   })
 })
 
 describe('deriveStatus', () => {
   const base = { outgoing: OUT, incoming: IN, keys: [K1, K2], cards: [] }
+
+  it('UNKNOWN when DAX could not be asked about the cards', () => {
+    const r = deriveStatus({ ...base, loans: [], cardsUnresolved: true })
+    expect(r.status).toBe('UNKNOWN')
+  })
 
   it('NO_KEYS when the object has no keys or cards', () => {
     const r = deriveStatus({ ...base, keys: [], cards: [], loans: [] })
@@ -181,6 +186,24 @@ describe('deriveStatus', () => {
     })
     expect(r.status).toBe('HANDED_OUT')
     expect(r.incomingLoanPickedUpAt).toEqual(d('2026-10-17'))
+  })
+
+  it('with two incoming loans the least positive one decides', () => {
+    const r = deriveStatus({
+      ...base,
+      loans: [
+        loan({
+          contact: 'P2',
+          createdAt: d('2026-10-16'),
+          pickedUpAt: d('2026-10-17'),
+          keysArray: [K1],
+        }),
+        loan({ contact: 'P2', createdAt: d('2026-10-20'), keysArray: [K2] }),
+      ],
+    })
+    expect(r.status).toBe('CREATED')
+    expect(r.incomingLoanCreatedAt).toEqual(d('2026-10-16'))
+    expect(r.incomingLoanPickedUpAt).toBeNull()
   })
 
   it('PARTIAL when the incoming loan does not cover all keys and cards', () => {
@@ -298,7 +321,6 @@ describe('GET /keys/move-in-out', () => {
         q.endDateFrom
           ? paginated([
               searchResult('L1', 'OBJ-1', 'P1', '2024-01-01', '2026-10-15'),
-              searchResult('L9/01M', 'OBJ-9', 'P9', '2024-01-01', '2026-10-20'),
             ])
           : paginated([searchResult('L2', 'OBJ-1', 'P2', '2026-10-16', null)])
       )
@@ -328,6 +350,7 @@ describe('GET /keys/move-in-out', () => {
             ],
           },
           cards: { 'OBJ-1': [] },
+          cardsUnresolved: [],
         },
       })
 
@@ -375,7 +398,10 @@ describe('GET /keys/move-in-out', () => {
       .mockResolvedValue({ ok: true, data: {} })
     jest
       .spyOn(keysAdapter.KeyLoansApi, 'getBatchByRentalObject')
-      .mockResolvedValue({ ok: true, data: { loans: {}, cards: {} } })
+      .mockResolvedValue({
+        ok: true,
+        data: { loans: {}, cards: {}, cardsUnresolved: [] },
+      })
 
     const res = await request(app.callback()).get(
       '/keys/move-in-out?endDateFrom=2026-10-01&endDateTo=2026-11-01&startDateFrom=2026-10-01&startDateTo=2026-11-01'
@@ -387,6 +413,7 @@ describe('GET /keys/move-in-out', () => {
       expect.objectContaining({
         endDateFrom: '2026-04-01',
         endDateTo: '2026-11-01',
+        sortBy: 'leaseId',
       })
     )
     expect(searchSpy).toHaveBeenCalledWith(
@@ -433,7 +460,10 @@ describe('GET /keys/move-in-out', () => {
       .mockResolvedValue({ ok: true, data: {} })
     const loansSpy = jest
       .spyOn(keysAdapter.KeyLoansApi, 'getBatchByRentalObject')
-      .mockResolvedValue({ ok: true, data: { loans: {}, cards: {} } })
+      .mockResolvedValue({
+        ok: true,
+        data: { loans: {}, cards: {}, cardsUnresolved: [] },
+      })
 
     const base = '/keys/move-in-out?endDateFrom=2026-10-01&endDateTo=2026-11-01'
     const page1 = await request(app.callback()).get(`${base}&limit=2`)
@@ -479,7 +509,10 @@ describe('GET /keys/move-in-out', () => {
       .mockResolvedValue({ ok: false, err: 'unknown' })
     jest
       .spyOn(keysAdapter.KeyLoansApi, 'getBatchByRentalObject')
-      .mockResolvedValue({ ok: true, data: { loans: {}, cards: {} } })
+      .mockResolvedValue({
+        ok: true,
+        data: { loans: {}, cards: {}, cardsUnresolved: [] },
+      })
 
     const res = await request(app.callback()).get(
       '/keys/move-in-out?endDateFrom=2026-10-01&endDateTo=2026-11-01'

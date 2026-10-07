@@ -1636,8 +1636,9 @@ export interface paths {
      * any of its keys or cards belongs to that object. Every requested code is present,
      * mapped to an empty array when it has no loans. Receipts are not included. Max 200 codes.
      *
-     * Cards are looked up in DAX per object. With `includeCards=true` the cards found
-     * are also returned as a `cards` sidecar keyed by rentalObjectCode.
+     * With `includeCards=true` the cards found in DAX are also returned as a `cards`
+     * sidecar keyed by rentalObjectCode, and `cardsUnresolved` lists the codes whose
+     * DAX lookup failed (their cards are unknown, not empty).
      */
     get: {
       parameters: {
@@ -1660,6 +1661,8 @@ export interface paths {
               cards?: {
                 [key: string]: components['schemas']['Card'][]
               }
+              /** @description Present only when includeCards=true. Codes whose DAX lookup failed. */
+              cardsUnresolved?: string[]
             }
           }
         }
@@ -1669,6 +1672,10 @@ export interface paths {
         }
         /** @description Internal server error. */
         500: {
+          content: never
+        }
+        /** @description The DAX card owner mirror is still syncing (after a restart). Retry later. */
+        503: {
           content: never
         }
       }
@@ -2447,6 +2454,36 @@ export interface paths {
         /** @description Failed to fetch contracts */
         500: {
           content: never
+        }
+      }
+    }
+  }
+  '/dax/card-owners/sync': {
+    /** State of the DAX card owner mirror and its last sync */
+    get: {
+      responses: {
+        /** @description Mirror row count, oldest sync time, and last run outcome */
+        200: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Start a resync of the local mirror of DAX card owners
+     * @description Pages all card owners from DAX and replaces the in-memory mirror with
+     * the active owners named by rental object code. Runs on start and daily;
+     * this starts it manually. Returns at once, the run takes minutes.
+     * Poll GET /dax/card-owners/sync for the outcome.
+     */
+    post: {
+      responses: {
+        /** @description Sync started, or already running */
+        202: {
+          content: {
+            'application/json': {
+              running?: boolean
+            }
+          }
         }
       }
     }

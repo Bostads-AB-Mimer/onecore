@@ -22,6 +22,8 @@ const COLUMN_COUNT = 11
 interface MoveInOutTableProps {
   rows: MoveInOutRow[]
   isLoading: boolean
+  /** Shown in the table instead of the empty state when the request failed */
+  error?: string | null
   sortKey: MoveInOutSortKey
   sortOrder: 'asc' | 'desc'
   onSortChange: (key: MoveInOutSortKey) => void
@@ -97,6 +99,7 @@ function SortButton({
 export function MoveInOutTable({
   rows,
   isLoading,
+  error,
   sortKey,
   sortOrder,
   onSortChange,
@@ -138,7 +141,7 @@ export function MoveInOutTable({
             <TableEmptyState
               colSpan={COLUMN_COUNT}
               isLoading={isLoading}
-              message="Inga in- eller utflyttar i perioden"
+              message={error ?? 'Inga in- eller utflyttar i perioden'}
             />
           ) : (
             rows.map((row) => (

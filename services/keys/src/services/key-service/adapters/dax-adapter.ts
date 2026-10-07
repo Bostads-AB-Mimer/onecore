@@ -63,8 +63,6 @@ export async function getCardOwnerById(
   }
 }
 
-const DAX_MAX_PAGE_SIZE = 200
-
 /**
  * Query card owners. offset/limit are forwarded to DAX (default limit 50, max 200).
  */
@@ -78,27 +76,6 @@ export async function searchCardOwners(
   } catch (error) {
     logger.error({ error, params }, 'Failed to search card owners from DAX')
     throw error
-  }
-}
-
-/**
- * Query card owners and follow DAX paging until a short page.
- * dax-client drops the paging block, so totalCount is not available.
- */
-export async function searchAllCardOwners(
-  params: Omit<CardOwnerQueryParams, 'offset' | 'limit'>
-): Promise<CardOwner[]> {
-  const all: CardOwner[] = []
-  let offset = 0
-  while (true) {
-    const page = await searchCardOwners({
-      ...params,
-      offset,
-      limit: DAX_MAX_PAGE_SIZE,
-    })
-    all.push(...page)
-    if (page.length < DAX_MAX_PAGE_SIZE) return all
-    offset += DAX_MAX_PAGE_SIZE
   }
 }
 

@@ -8245,6 +8245,8 @@ export interface paths {
           q?: string
           sortBy?: 'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
           sortOrder?: 'asc' | 'desc'
+          /** @description When true, adds a `timings` block with per-phase durations. */
+          debug?: boolean
           page?: number
           limit?: number
         }
@@ -14132,6 +14134,7 @@ export interface components {
       incomingLoanPickedUpAt: string | null
       /** @enum {string} */
       status:
+        | 'UNKNOWN'
         | 'NOT_RETURNED'
         | 'LOANED_TO_OTHER'
         | 'CREATED'

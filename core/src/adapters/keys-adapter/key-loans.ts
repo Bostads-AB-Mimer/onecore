@@ -115,6 +115,7 @@ export const KeyLoansApi = {
       {
         loans: Record<string, KeyLoanWithDetails[]>
         cards: Record<string, Card[]>
+        cardsUnresolved: string[]
       },
       'bad-request' | CommonErr
     >
@@ -128,6 +129,7 @@ export const KeyLoansApi = {
       return ok({
         loans: z.record(z.array(KeyLoanWithDetailsSchema)).parse(data.content),
         cards: z.record(z.array(CardSchema)).parse(data.cards ?? {}),
+        cardsUnresolved: z.array(z.string()).parse(data.cardsUnresolved ?? []),
       })
     } catch (e) {
       logger.error(

@@ -8,17 +8,7 @@ type MoveInOutStatus = keys.MoveInOutStatus
 type MoveInOutTenant = keys.MoveInOutTenant
 
 /** Source-agnostic lease summary (built from lease search or leasing's Lease). */
-export type LeaseSummary = MoveInOutTenant & { leaseNumber?: string }
-
-export function isMaculated(lease: {
-  leaseId: string
-  leaseNumber?: string
-}): boolean {
-  const n = (lease.leaseNumber ?? '').trim()
-  if (n && /[Mm]/.test(n)) return true
-  const idTail = (lease.leaseId ?? '').split('/').pop() ?? ''
-  return /[Mm]/.test(idTail.trim())
-}
+export type LeaseSummary = MoveInOutTenant
 
 export function toDate(value: unknown): Date | null {
   if (!value) return null
@@ -38,8 +28,14 @@ export function pickOutgoingIncoming(
   endLeaseIds: Set<string>,
   startLeaseIds: Set<string>
 ): { outgoing: LeaseSummary | null; incoming: LeaseSummary | null } {
+  // A lease that ended before it started was cancelled before move-in
   const sorted = leases
-    .filter((l) => !isMaculated(l))
+    .filter(
+      (l) =>
+        !l.lastDebitDate ||
+        !l.leaseStartDate ||
+        l.lastDebitDate.getTime() >= l.leaseStartDate.getTime()
+    )
     .sort(
       (a, b) => (time(a.leaseStartDate) ?? 0) - (time(b.leaseStartDate) ?? 0)
     )
@@ -117,6 +113,8 @@ export function deriveStatus(input: {
   keys: Key[]
   cards: Card[]
   loans: KeyLoanWithDetails[]
+  /** DAX could not be asked about this object's cards */
+  cardsUnresolved?: boolean
 }): DerivedStatus {
   const { outgoing, incoming, keys, loans } = input
   // Archived DAX cards are history, not tags the tenant holds
@@ -146,22 +144,38 @@ export function deriveStatus(input: {
       )?.returnedAt
     ) ?? null
 
+  // With several open incoming loans the least positive one decides:
+  // created = earliest, picked up only when every open loan is picked up
   const openIncoming = incomingLoans.filter((l) => !l.returnedAt)
-  const incomingLoan =
-    latestBy(openIncoming, (l) => toDate(l.createdAt)) ??
-    latestBy(incomingLoans, (l) => toDate(l.createdAt))
+  const relevantIncoming =
+    openIncoming.length > 0 ? openIncoming : incomingLoans
+  const createdAts = relevantIncoming.map((l) => toDate(l.createdAt)?.getTime())
+  const incomingLoanCreatedAt =
+    createdAts.length > 0
+      ? new Date(Math.min(...createdAts.filter((t): t is number => t != null)))
+      : null
+  const allPickedUp =
+    relevantIncoming.length > 0 && relevantIncoming.every((l) => l.pickedUpAt)
+  const pickedUpAts = relevantIncoming.map((l) =>
+    toDate(l.pickedUpAt)?.getTime()
+  )
+  const incomingLoanPickedUpAt = allPickedUp
+    ? new Date(Math.max(...pickedUpAts.filter((t): t is number => t != null)))
+    : null
 
   const base = {
     keyCount: keys.filter((k) => !k.disposed).length,
     cardCount: cards.length,
     outgoingAllReturned,
     outgoingReturnedAt,
-    incomingLoanCreatedAt: toDate(incomingLoan?.createdAt),
-    incomingLoanPickedUpAt: toDate(incomingLoan?.pickedUpAt),
+    incomingLoanCreatedAt,
+    incomingLoanPickedUpAt,
   }
 
   let status: MoveInOutStatus
-  if (itemIds.size === 0) {
+  if (input.cardsUnresolved) {
+    status = 'UNKNOWN'
+  } else if (itemIds.size === 0) {
     status = 'NO_KEYS'
   } else if (outgoingAllReturned === false) {
     status = 'NOT_RETURNED'

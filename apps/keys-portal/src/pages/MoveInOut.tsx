@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { MoveInOutTable } from '@/components/move-in-out/MoveInOutTable'
 import { useToast } from '@/hooks/use-toast'
 import { useUrlPagination } from '@/hooks/useUrlPagination'
+import { ApiError } from '@/services/api/core/base-api'
 import {
   moveInOutService,
   type MoveInOutSortKey,
@@ -96,7 +97,7 @@ export default function MoveInOut() {
   // react-query dedupes concurrent fetches (StrictMode) and caches per filter
   const { data, isLoading, isError, error } = useQuery<
     PaginatedResponse<MoveInOutRow>,
-    { status?: number; reason?: string }
+    ApiError
   >({
     queryKey: [
       'move-in-out',
@@ -135,8 +136,7 @@ export default function MoveInOut() {
     toast({
       title: syncing ? 'Synkroniserar' : 'Fel',
       description: syncing
-        ? (error?.reason ??
-          'Taggar synkroniseras från DAX, försök igen om några minuter.')
+        ? error.message
         : 'Kunde inte ladda in- och utflyttar.',
       variant: syncing ? 'default' : 'destructive',
     })
@@ -241,6 +241,13 @@ export default function MoveInOut() {
       <MoveInOutTable
         rows={rows}
         isLoading={isLoading}
+        error={
+          isError
+            ? error?.status === 503
+              ? 'Nyckeltjänsten startar, försök igen om någon minut'
+              : 'Kunde inte ladda in- och utflyttar'
+            : null
+        }
         sortKey={sortKey}
         sortOrder={sortOrder}
         onSortChange={handleSortChange}

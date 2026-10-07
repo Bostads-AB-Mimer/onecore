@@ -419,8 +419,9 @@ export const routes = (router: KoaRouter) => {
    *       any of its keys or cards belongs to that object. Every requested code is present,
    *       mapped to an empty array when it has no loans. Receipts are not included. Max 200 codes.
    *
-   *       Cards are looked up in DAX per object. With `includeCards=true` the cards found
-   *       are also returned as a `cards` sidecar keyed by rentalObjectCode.
+   *       With `includeCards=true` the cards found in DAX are also returned as a `cards`
+   *       sidecar keyed by rentalObjectCode, and `cardsUnresolved` lists the codes whose
+   *       DAX lookup failed (their cards are unknown, not empty).
    *     tags: [Key Loans]
    *     parameters:
    *       - in: query
@@ -460,6 +461,11 @@ export const routes = (router: KoaRouter) => {
    *                     type: array
    *                     items:
    *                       $ref: '#/components/schemas/Card'
+   *                 cardsUnresolved:
+   *                   type: array
+   *                   description: Present only when includeCards=true. Codes whose DAX lookup failed.
+   *                   items:
+   *                     type: string
    *       400:
    *         description: Missing or too many rental object codes.
    *       503:
@@ -484,7 +490,8 @@ export const routes = (router: KoaRouter) => {
       }
       const includeCards = ctx.query.includeCards === 'true'
 
-      const cards = await cardsAdapter.getCardsByRentalObjects(codes)
+      const { cards, unresolved } =
+        await cardsAdapter.getCardsByRentalObjects(codes)
       const content = await keyLoansAdapter.getKeyLoansByRentalObjects(
         codes,
         cards,
@@ -492,7 +499,11 @@ export const routes = (router: KoaRouter) => {
       )
 
       ctx.status = 200
-      ctx.body = { content, ...(includeCards ? { cards } : {}), ...metadata }
+      ctx.body = {
+        content,
+        ...(includeCards ? { cards, cardsUnresolved: unresolved } : {}),
+        ...metadata,
+      }
     } catch (err) {
       if (err instanceof MirrorNotReadyError) {
         ctx.status = 503

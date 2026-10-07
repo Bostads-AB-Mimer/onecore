@@ -2,40 +2,15 @@ import { logger } from '@onecore/utilities'
 import type { CardOwner } from 'dax-client'
 import * as daxAdapter from './adapters/dax-adapter'
 import * as mirror from './dax-card-owner-mirror'
+import { toOwnerRows } from './dax-card-owner-mirror'
 
 const PAGE_SIZE = 200
 const PARALLEL_PAGES = 5
 export const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000
 
-/** Rental object code, optionally with one trailing letter (806-007-09-0103a). */
-const OWNER_NAME_PATTERN = /^\d{3}-\w{3}-\w{2}-\w{3,6}$/
-
-export function ownerDisplayName(owner: CardOwner): string {
-  return (owner.familyName || owner.specificName || '').trim()
-}
-
-export function isRentalObjectOwnerName(name: string): boolean {
-  return OWNER_NAME_PATTERN.test(name)
-}
-
-export function isActiveOwner(owner: CardOwner): boolean {
-  return owner.state !== 'Archived'
-}
-
-/** Keep only active owners named by a rental object code, deduped by id. */
-export function toOwnerRows(owners: CardOwner[]): mirror.DaxCardOwnerRow[] {
-  const byId = new Map<string, mirror.DaxCardOwnerRow>()
-  for (const o of owners) {
-    if (!isActiveOwner(o)) continue
-    const name = ownerDisplayName(o)
-    if (isRentalObjectOwnerName(name)) {
-      byId.set(o.cardOwnerId, { cardOwnerId: o.cardOwnerId, name })
-    }
-  }
-  return [...byId.values()]
-}
-
 const MIN_PAGE_SIZE = 25
+// Refuse a resync that would shrink the mirror below this share of the previous size
+const MIN_KEEP_RATIO = 0.8
 
 /**
  * DAX times out (500 "No reply from client") on some heavy 200-row pages,
@@ -109,7 +84,7 @@ export function getLastSyncResult() {
   return lastResult
 }
 
-/** Full resync of dax_card_owners. Concurrent calls share one run. */
+/** Full resync of the in-memory mirror. Concurrent calls share one run. */
 export function syncDaxCardOwners(): Promise<{
   fetched: number
   stored: number
@@ -122,6 +97,13 @@ export function syncDaxCardOwners(): Promise<{
       throw new Error('DAX returned no card owners, keeping existing mirror')
     }
     const rows = toOwnerRows(owners)
+    // A short non-final page would truncate the list; keep the old mirror instead
+    const previous = mirror.getState().count
+    if (previous > 0 && rows.length < previous * MIN_KEEP_RATIO) {
+      throw new Error(
+        `DAX returned ${rows.length} active owners, previous mirror had ${previous}; keeping it`
+      )
+    }
     const stored = mirror.replaceAll(rows)
     logger.info(
       { fetched: owners.length, stored, ms: Date.now() - started },
@@ -149,12 +131,32 @@ export function syncDaxCardOwners(): Promise<{
   return inFlight
 }
 
-/** Sync on start (mirror lives in memory), then every 24h. */
+const BOOT_RETRY_DELAYS_MS = [60_000, 5 * 60_000]
+
+const run = () =>
+  syncDaxCardOwners().catch((err) =>
+    logger.error({ err }, 'dax-card-owner-sync: failed')
+  )
+
+/** Start a sync if the mirror is empty and none is running (called on demand). */
+export function ensureSyncStarted(): void {
+  if (!mirror.isReady() && !inFlight) void run()
+}
+
+/**
+ * Sync on start (mirror lives in memory) with two retries if DAX is down,
+ * then every 24h. After that, a request against an empty mirror restarts it.
+ */
 export function startDaxCardOwnerSyncScheduler(): void {
-  const run = () =>
-    syncDaxCardOwners().catch((err) =>
-      logger.error({ err }, 'dax-card-owner-sync: failed')
-    )
-  void run()
+  const bootAttempt = async (attempt: number) => {
+    await run()
+    if (!mirror.isReady() && attempt < BOOT_RETRY_DELAYS_MS.length) {
+      setTimeout(
+        () => void bootAttempt(attempt + 1),
+        BOOT_RETRY_DELAYS_MS[attempt]
+      ).unref()
+    }
+  }
+  void bootAttempt(0)
   setInterval(run, SYNC_INTERVAL_MS).unref()
 }

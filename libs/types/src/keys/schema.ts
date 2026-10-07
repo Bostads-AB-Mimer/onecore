@@ -552,6 +552,7 @@ export const KeyLoanWithDetailsSchema = KeyLoanSchema.extend({
 
 // Move-in / move-out overview (core aggregation of leases + keys + loans)
 export const MoveInOutStatusSchema = z.enum([
+  'UNKNOWN',
   'NOT_RETURNED',
   'LOANED_TO_OTHER',
   'CREATED',

@@ -1,9 +1,11 @@
 import KoaRouter from '@koa/router'
 import {
   buildPaginatedResponse,
+  chunk,
   generateRouteMetadata,
   logger,
   parsePaginationParams,
+  runWithConcurrency,
 } from '@onecore/utilities'
 import { z } from 'zod'
 import { keys, leasing } from '@onecore/types'
@@ -13,14 +15,13 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import {
   LeaseSummary,
   deriveStatus,
-  isMaculated,
   pickOutgoingIncoming,
   toDate,
 } from './move-in-out-derive'
 
 type MoveInOutRow = keys.MoveInOutRow
 
-const PAGE_SIZE = 100
+const LEASE_SEARCH_PAGE_SIZE = 100
 const DEFAULT_PAGE_SIZE = 100
 const BATCH_SIZE = 100
 const OBJECT_CACHE_TTL_MS = 2 * 60 * 1000
@@ -47,6 +48,7 @@ const querySchema = z
     q: z.string().trim().min(1).optional(),
     sortBy: sortBySchema.optional(),
     sortOrder: z.enum(['asc', 'desc']).optional(),
+    debug: z.enum(['true', 'false']).optional(),
   })
   .refine(
     (q) => (q.endDateFrom && q.endDateTo) || (q.startDateFrom && q.startDateTo),
@@ -63,53 +65,27 @@ export class KeysUnavailableError extends Error {
   }
 }
 
-async function runWithConcurrency<T, R>(
-  items: T[],
-  worker: (item: T) => Promise<R>,
-  concurrency: number
-): Promise<R[]> {
-  const results: R[] = new Array(items.length)
-  let cursor = 0
-  const runners = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    async () => {
-      while (true) {
-        const index = cursor++
-        if (index >= items.length) return
-        results[index] = await worker(items[index])
-      }
-    }
-  )
-  await Promise.all(runners)
-  return results
-}
-
-function chunk<T>(items: T[], size: number): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < items.length; i += size)
-    out.push(items.slice(i, i + size))
-  return out
-}
-
 /** All pages of one lease search; pages after the first are fetched in parallel. */
 async function searchAllLeases(
   filters: Record<string, string>
 ): Promise<leasing.v1.LeaseSearchResult[]> {
-  const fetchPage = (page: number, totalCount?: number) =>
+  // leaseId is unique; the default date order is not, and parallel
+  // OFFSET/FETCH pages on a non-unique order can skip rows
+  const fetchPage = (page: number) =>
     leasingAdapter.searchLeases({
       ...filters,
       includeEnded: 'true',
+      sortBy: 'leaseId',
       page: String(page),
-      limit: String(PAGE_SIZE),
-      ...(totalCount !== undefined ? { totalCount: String(totalCount) } : {}),
+      limit: String(LEASE_SEARCH_PAGE_SIZE),
     })
 
   const first = await fetchPage(1)
   const total = first._meta.totalRecords
-  const pageCount = Math.ceil(total / PAGE_SIZE)
+  const pageCount = Math.ceil(total / LEASE_SEARCH_PAGE_SIZE)
   const rest = await runWithConcurrency(
     Array.from({ length: Math.max(0, pageCount - 1) }, (_, i) => i + 2),
-    (page) => fetchPage(page, total),
+    (page) => fetchPage(page),
     SEARCH_CONCURRENCY
   )
   return [first, ...rest].flatMap((r) => r.content)
@@ -139,10 +115,11 @@ type ObjectBucket = {
   leases: Map<string, LeaseSummary>
 }
 
-const inRange = (date: Date | null, from?: string, to?: string) =>
-  Boolean(date && from && to) &&
-  date!.toISOString().slice(0, 10) >= from! &&
-  date!.toISOString().slice(0, 10) <= to!
+function inRange(date: Date | null, from?: string, to?: string): boolean {
+  if (!date || !from || !to) return false
+  const day = date.toISOString().slice(0, 10)
+  return day >= from && day <= to
+}
 
 /**
  * Group both wide searches per object. A lease is a row match only when its
@@ -155,7 +132,7 @@ function collectObjects(
 ): Map<string, ObjectBucket> {
   const objects = new Map<string, ObjectBucket>()
   const add = (l: leasing.v1.LeaseSearchResult) => {
-    if (!l.rentalObjectCode || isMaculated(l)) return
+    if (!l.rentalObjectCode) return
     let bucket = objects.get(l.rentalObjectCode)
     if (!bucket) {
       bucket = {
@@ -361,6 +338,7 @@ export async function buildMoveInOutPage(
   const keysByCode: Record<string, keys.KeyDetails[]> = {}
   const loansByCode: Record<string, keys.KeyLoanWithDetails[]> = {}
   const cardsByCode: Record<string, keys.Card[]> = {}
+  const cardsUnresolved = new Set<string>()
   const timed = async <T>(
     key: 'keysBatchMs' | 'loansBatchMs',
     p: Promise<T>
@@ -386,33 +364,25 @@ export async function buildMoveInOutPage(
       Object.assign(keysByCode, keysResult.data)
       Object.assign(loansByCode, loansResult.data.loans)
       Object.assign(cardsByCode, loansResult.data.cards)
+      loansResult.data.cardsUnresolved.forEach((c) => cardsUnresolved.add(c))
     },
     BATCH_CONCURRENCY
   )
   timings.keysAndLoansMs = Date.now() - t1
 
-  const strip = (t: LeaseSummary | null) =>
-    t
-      ? {
-          leaseId: t.leaseId,
-          names: t.names,
-          contactCodes: t.contactCodes,
-          leaseStartDate: t.leaseStartDate,
-          lastDebitDate: t.lastDebitDate,
-        }
-      : null
   const rows = pageObjects.map((o) => ({
     rentalObjectCode: o.rentalObjectCode,
     address: o.address,
     objectTypeCode: o.objectTypeCode,
-    outgoing: strip(o.outgoing),
-    incoming: strip(o.incoming),
+    outgoing: o.outgoing,
+    incoming: o.incoming,
     ...deriveStatus({
       outgoing: o.outgoing,
       incoming: o.incoming,
       keys: keysByCode[o.rentalObjectCode] ?? [],
       cards: cardsByCode[o.rentalObjectCode] ?? [],
       loans: loansByCode[o.rentalObjectCode] ?? [],
+      cardsUnresolved: cardsUnresolved.has(o.rentalObjectCode),
     }),
   }))
   timings.totalMs = Date.now() - t0
@@ -471,6 +441,11 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           enum: [asc, desc]
    *       - in: query
+   *         name: debug
+   *         schema:
+   *           type: boolean
+   *         description: When true, adds a `timings` block with per-phase durations.
+   *       - in: query
    *         name: page
    *         schema:
    *           type: integer
@@ -520,6 +495,7 @@ export const routes = (router: KoaRouter) => {
       'sortOrder',
       'page',
       'limit',
+      'debug',
     ])
 
     const parsed = querySchema.safeParse(ctx.query)
@@ -542,7 +518,8 @@ export const routes = (router: KoaRouter) => {
       )
       const additionalParams = Object.fromEntries(
         Object.entries(parsed.data).filter(
-          (e): e is [string, string] => typeof e[1] === 'string'
+          (e): e is [string, string] =>
+            typeof e[1] === 'string' && e[0] !== 'debug'
         )
       )
       ctx.status = 200
@@ -554,7 +531,7 @@ export const routes = (router: KoaRouter) => {
           additionalParams,
           defaultLimit: DEFAULT_PAGE_SIZE,
         }),
-        timings,
+        ...(parsed.data.debug === 'true' ? { timings } : {}),
         ...metadata,
       }
     } catch (err) {

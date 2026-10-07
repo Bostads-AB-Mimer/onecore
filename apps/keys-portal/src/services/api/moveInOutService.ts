@@ -1,6 +1,6 @@
 import type { MoveInOutRow, PaginatedResponse } from '@/services/types'
 
-import { GET } from './core/base-api'
+import { ApiError, GET } from './core/base-api'
 
 export type MoveInOutSortKey =
   'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
@@ -23,11 +23,11 @@ export const moveInOutService = {
       params: { query },
     })
     if (error) {
-      // Keep the status so the page can tell "syncing" (503) from a real error
-      throw {
-        status: response.status,
-        reason: (error as { reason?: string }).reason,
-      }
+      // Status lets the page tell "syncing" (503) from a real error
+      throw new ApiError(
+        response.status,
+        (error as { reason?: string }).reason ?? 'Request failed'
+      )
     }
     return {
       content: data?.content ?? [],

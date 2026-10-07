@@ -2,6 +2,7 @@ import * as keyLoansAdapter from '../../adapters/key-loans-adapter'
 import * as keysAdapter from '../../adapters/keys-adapter'
 import * as factory from '../factories'
 import { withContext } from '../testUtils'
+import type { Card } from 'dax-client'
 
 /**
  * Integration tests for key-loans-adapter
@@ -223,6 +224,8 @@ describe('key-loans-adapter', () => {
 })
 
 describe('getKeyLoansByRentalObjects', () => {
+  const card: Card = { cardId: 'CARD-1', createTime: '2024-01-01' }
+
   it('groups loans by rental object via keys and cards', () =>
     withContext(async (ctx) => {
       const keyA = await keysAdapter.createKey(
@@ -255,7 +258,7 @@ describe('getKeyLoansByRentalObjects', () => {
       const result = await keyLoansAdapter.getKeyLoansByRentalObjects(
         ['A001', 'B002', 'C003'],
         {
-          B002: [{ cardId: 'CARD-1', createTime: '2024-01-01' } as any],
+          B002: [card],
         },
         ctx.db
       )
