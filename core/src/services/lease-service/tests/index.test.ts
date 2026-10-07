@@ -64,12 +64,10 @@ describe('lease-service', () => {
 
   describe('GET /contacts/from-lease-search', () => {
     it('resolves a personnummer in q to a contact code before calling leasing', async () => {
-      jest
-        .spyOn(contactsAdapter, 'getByNationalId')
-        .mockResolvedValue({
-          ok: true,
-          data: factory.contactsServiceContact.build({ contactCode: 'P158770' }),
-        })
+      jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
+        ok: true,
+        data: factory.contactsServiceContact.build({ contactCode: 'P158770' }),
+      })
       const filtersSpy = jest
         .spyOn(tenantLeaseAdapter, 'getContactsByFilters')
         .mockResolvedValue({ ok: true, data: { content: [] } })
