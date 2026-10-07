@@ -36,8 +36,8 @@ Apart from the core orchestration service, packages belong to one of three categ
 
 ### Documentation
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — system architecture overview: apps, services, external integrations
-- [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — how to check service status and trace an issue during an incident
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — system architecture overview: apps, services, internal structure
+- For external integrations and incident troubleshooting, see `ONECORE-INTEGRATIONS.md` and `ONECORE-TROUBLESHOOTING.md` in the private `mimer-onecore-operations` repo
 
 ### Getting started
 
