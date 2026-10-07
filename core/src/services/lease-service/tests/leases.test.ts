@@ -675,7 +675,7 @@ describe('leases routes', () => {
     })
 
     it('returns 503 when the lease cache is warming up', async () => {
-      jest.spyOn(tenantLeaseAdapter, 'exportLeasesToExcel').mockRejectedValue(
+      jest.spyOn(tenantLeaseAdapter, 'getLeasesForExport').mockRejectedValue(
         Object.assign(new Error('Service Unavailable'), {
           isAxiosError: true,
           response: { status: 503 },

@@ -31,11 +31,13 @@ import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
-import { resolvePersonnummerInQuery } from '../../adapters/contacts-adapter/lease-query'
+import {
+  resolvePersonnummerInQuery,
+  enrichLeaseContacts,
+} from '../../adapters/contacts-adapter/lease-query'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
 import { registerSchema } from '../../utils/openapi'
-import { contactsAdapter } from '../../adapters/contacts-adapter'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 
@@ -506,52 +508,10 @@ export const routes = (router: KoaRouter) => {
     try {
       const searchQuery = await resolvePersonnummerInQuery(resolved.query)
       const result = await leasingAdapter.searchLeases(searchQuery)
-
-      const contactCodes = [
-        ...new Set(
-          result.content.flatMap(
-            (lease) => lease.contacts?.map((c) => c.contactCode) ?? []
-          )
-        ),
-      ]
-
-      let enrichedContent: leasing.v1.LeaseSearchResult[] = result.content
-      if (contactCodes.length > 0) {
-        const contactsResult = await contactsAdapter.getByContactCodeBatch(
-          contactCodes,
-          { includePhone: true, includeEmail: true }
-        )
-        if (contactsResult.ok) {
-          const contactMap = new Map(
-            contactsResult.data.map((c) => [
-              c.contactCode,
-              {
-                email:
-                  c.communication.emailAddresses.find((e) => e.isPrimary)
-                    ?.emailAddress ??
-                  c.communication.emailAddresses[0]?.emailAddress ??
-                  null,
-                phone:
-                  c.communication.phoneNumbers.find((p) => p.isPrimary)
-                    ?.phoneNumber ??
-                  c.communication.phoneNumbers[0]?.phoneNumber ??
-                  null,
-              },
-            ])
-          )
-          enrichedContent = result.content.map((lease) => ({
-            ...lease,
-            contacts: lease.contacts?.map((c) => {
-              const contactInfo = contactMap.get(c.contactCode)
-              return {
-                ...c,
-                email: contactInfo?.email ?? c.email,
-                phone: contactInfo?.phone ?? c.phone,
-              }
-            }),
-          }))
-        }
-      }
+      const enrichedContent = await enrichLeaseContacts(
+        result.content,
+        'leases/search'
+      )
 
       ctx.status = 200
       ctx.body = { ...result, content: enrichedContent }
@@ -1113,54 +1073,10 @@ export const routes = (router: KoaRouter) => {
       }
 
       const rawLeases = result.data
-
-      const contactCodes = [
-        ...new Set(
-          rawLeases
-            .flatMap((lease) => lease.contacts?.map((c) => c.contactCode) ?? [])
-            .map((code) => code.trim())
-            .filter((code) => code.length > 0)
-        ),
-      ]
-
-      let enrichedLeases = rawLeases
-      if (contactCodes.length > 0) {
-        const contactsResult = await contactsAdapter.getByContactCodeBatch(
-          contactCodes,
-          { includePhone: true, includeEmail: true }
-        )
-        if (contactsResult.ok) {
-          const contactMap = new Map(
-            contactsResult.data.map((c) => [
-              c.contactCode.trim(),
-              {
-                email:
-                  c.communication.emailAddresses.find((e) => e.isPrimary)
-                    ?.emailAddress ??
-                  c.communication.emailAddresses[0]?.emailAddress ??
-                  null,
-                phone:
-                  c.communication.phoneNumbers.find((p) => p.isPrimary)
-                    ?.phoneNumber ??
-                  c.communication.phoneNumbers[0]?.phoneNumber ??
-                  null,
-              },
-            ])
-          )
-          enrichedLeases = rawLeases.map((lease) => ({
-            ...lease,
-            contacts: lease.contacts?.map((c) => ({
-              ...c,
-              ...contactMap.get(c.contactCode.trim()),
-            })),
-          }))
-        } else {
-          logger.error(
-            { err: contactsResult.err, metadata },
-            'Lease export: contact enrichment failed, exporting leases without contact info'
-          )
-        }
-      }
+      const enrichedLeases = await enrichLeaseContacts(
+        rawLeases,
+        'leases/export'
+      )
 
       const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({
         sheetName: 'Hyreskontrakt',
