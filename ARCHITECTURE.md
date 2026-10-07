@@ -4,8 +4,6 @@ Den här sidan beskriver hur ONECores applikationer och tjänster hänger ihop. 
 
 Det här dokumentet beskriver **den interna tjänstearkitekturen** (vilka tjänster finns, vad de gör, hur de hänger ihop). Externa integrationer (vilka system ONECore pratar med, riktning, syfte) och felsökning/incidenthantering hör ihop med drift och beskrivs istället i `mimer-onecore-operations` — se [Externa system och drift](#externa-system-och-drift) längst ner, för att undvika att drifts-/säkerhetskänslig information (bl.a. vilka integrationer som är inkommande) hamnar i det här publika repot.
 
-> Ersätter en äldre, ej versionshanterad arkitekturskiss som saknade Tenfast, Economy, Contacts, Keys, Work Order och Inspection helt. Den här versionen är härledd direkt ur koden (`core/src/adapters/`, varje tjänsts `adapters/`-mappar).
-
 ## Grundregeln
 
 **Core är den enda tjänst som pratar med övriga ONECore-tjänster.** Frontend-applikationerna anropar Core, aldrig tjänsterna direkt.
