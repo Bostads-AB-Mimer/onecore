@@ -180,6 +180,13 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The exact model name to search for
+   *       - in: query
+   *         name: subtypeId
+   *         required: false
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Only match models under this subtype
    *     responses:
    *       200:
    *         description: Component model found
@@ -195,10 +202,11 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('(.*)/component-models/by-name/:modelName', async (ctx) => {
     const modelName = z.string().min(1).parse(ctx.params.modelName)
-    const metadata = generateRouteMetadata(ctx)
+    const subtypeId = z.string().uuid().optional().parse(ctx.query.subtypeId)
+    const metadata = generateRouteMetadata(ctx, ['subtypeId'])
 
     try {
-      const model = await findModelByExactName(modelName)
+      const model = await findModelByExactName(modelName, subtypeId)
 
       if (!model) {
         ctx.status = 404

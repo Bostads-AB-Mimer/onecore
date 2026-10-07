@@ -56,7 +56,7 @@ export const getComponentSubtypeById = async (id: string) => {
   const subtype = await prisma.componentSubtypes.findUnique({
     where: { id },
     include: {
-      componentType: true,
+      componentType: { include: { category: true } },
       componentModels: true,
     },
   })

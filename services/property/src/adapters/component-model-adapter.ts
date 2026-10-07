@@ -83,13 +83,18 @@ export const getComponentModelById = async (id: string) => {
 /**
  * Find a component model by exact model name match (case-insensitive).
  * Used by the add-component process to check if a model already exists.
+ * Scoped to a subtype when `subtypeId` is given.
  */
-export const findModelByExactName = async (modelName: string) => {
+export const findModelByExactName = async (
+  modelName: string,
+  subtypeId?: string
+) => {
   const model = await prisma.componentModels.findFirst({
     where: {
       modelName: {
         equals: modelName,
       },
+      ...(subtypeId ? { componentSubtypeId: subtypeId } : {}),
     },
     include: {
       subtype: {
