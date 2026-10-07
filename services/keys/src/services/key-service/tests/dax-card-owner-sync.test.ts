@@ -3,6 +3,7 @@ import * as cardsAdapter from '../adapters/cards-adapter'
 import * as daxAdapter from '../adapters/dax-adapter'
 import * as mirror from '../dax-card-owner-mirror'
 import { isRentalObjectOwnerName, toOwnerRows } from '../dax-card-owner-mirror'
+import * as sync from '../dax-card-owner-sync'
 
 const owner = (
   cardOwnerId: string,
@@ -169,10 +170,16 @@ describe('getCardsByRentalObjects failures', () => {
     ])
   })
 
-  it('throws MirrorNotReadyError before the first sync', async () => {
+  it('throws MirrorNotReadyError before the first sync and kicks a sync off', async () => {
+    // Stub the sync start: a real one would reach for DAX after the test ends
+    const startSpy = jest
+      .spyOn(sync, 'ensureSyncStarted')
+      .mockImplementation(() => undefined)
+
     await expect(cardsAdapter.getCardsByRentalObjects(['A'])).rejects.toThrow(
       mirror.MirrorNotReadyError
     )
+    expect(startSpy).toHaveBeenCalledTimes(1)
   })
 })
 
