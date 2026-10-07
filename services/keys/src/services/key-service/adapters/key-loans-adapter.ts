@@ -15,9 +15,22 @@ type Receipt = keys.Receipt
 const TABLE = 'key_loans'
 const KEYS_TABLE = 'keys'
 
-// Bind a list as one JSON string: MSSQL caps queries at 2100 parameters
-const IN_JSON = (column: string) =>
-  `${column} IN (SELECT value FROM OPENJSON(?))`
+// A parameterised IN list is ~10x faster than OPENJSON here, but MSSQL caps a
+// query at 2100 parameters; beyond this size bind the list as one JSON string.
+const IN_LIST_MAX_PARAMS = 1000
+
+function whereInLarge(
+  qb: Knex.QueryBuilder,
+  column: string,
+  values: string[],
+  sqlType: 'NVARCHAR(100)' | 'UNIQUEIDENTIFIER'
+): Knex.QueryBuilder {
+  if (values.length <= IN_LIST_MAX_PARAMS) return qb.whereIn(column, values)
+  return qb.whereRaw(
+    `${column} IN (SELECT value FROM OPENJSON(?) WITH (value ${sqlType} '$'))`,
+    [JSON.stringify(values)]
+  )
+}
 
 /**
  * Database adapter functions for key loans.
@@ -771,20 +784,26 @@ export async function getKeyLoansByRentalObjects(
     .select('kl.*')
     .where(function () {
       this.whereExists(function () {
-        this.select(dbConnection.raw('1'))
-          .from('key_loan_keys as klk')
-          .join('keys as k', 'k.id', 'klk.keyId')
-          .whereRaw('klk.keyLoanId = kl.id')
-          .whereRaw(IN_JSON('k.rentalObjectCode'), [
-            JSON.stringify(rentalObjectCodes),
-          ])
+        whereInLarge(
+          this.select(dbConnection.raw('1'))
+            .from('key_loan_keys as klk')
+            .join('keys as k', 'k.id', 'klk.keyId')
+            .whereRaw('klk.keyLoanId = kl.id'),
+          'k.rentalObjectCode',
+          rentalObjectCodes,
+          'NVARCHAR(100)'
+        )
       })
       if (allCardIds.length > 0) {
         this.orWhereExists(function () {
-          this.select(dbConnection.raw('1'))
-            .from('key_loan_cards as klc')
-            .whereRaw('klc.keyLoanId = kl.id')
-            .whereRaw(IN_JSON('klc.cardId'), [JSON.stringify(allCardIds)])
+          whereInLarge(
+            this.select(dbConnection.raw('1'))
+              .from('key_loan_cards as klc')
+              .whereRaw('klc.keyLoanId = kl.id'),
+            'klc.cardId',
+            allCardIds,
+            'NVARCHAR(100)'
+          )
         })
       }
     })
@@ -794,11 +813,16 @@ export async function getKeyLoansByRentalObjects(
 
   const loanIds = loans.map((l) => l.id)
 
-  const loanIdsJson = JSON.stringify(loanIds)
-  const keyRows = await dbConnection('key_loan_keys')
-    .join('keys', 'keys.id', 'key_loan_keys.keyId')
-    .whereRaw(IN_JSON('key_loan_keys.keyLoanId'), [loanIdsJson])
-    .select('key_loan_keys.keyLoanId', 'keys.*')
+  const keyRows = await whereInLarge(
+    dbConnection('key_loan_keys').join(
+      'keys',
+      'keys.id',
+      'key_loan_keys.keyId'
+    ),
+    'key_loan_keys.keyLoanId',
+    loanIds,
+    'UNIQUEIDENTIFIER'
+  ).select('key_loan_keys.keyLoanId', 'keys.*')
 
   const keysByLoan = new Map<string, Key[]>()
   for (const row of keyRows) {
@@ -806,9 +830,12 @@ export async function getKeyLoansByRentalObjects(
     keysByLoan.get(row.keyLoanId)!.push(row)
   }
 
-  const cardRows = await dbConnection('key_loan_cards')
-    .whereRaw(IN_JSON('keyLoanId'), [loanIdsJson])
-    .select('keyLoanId', 'cardId')
+  const cardRows = await whereInLarge(
+    dbConnection('key_loan_cards'),
+    'keyLoanId',
+    loanIds,
+    'UNIQUEIDENTIFIER'
+  ).select('keyLoanId', 'cardId')
 
   const cardIdsByLoan = new Map<string, string[]>()
   for (const row of cardRows) {

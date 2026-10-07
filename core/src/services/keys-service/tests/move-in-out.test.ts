@@ -411,7 +411,7 @@ describe('GET /keys/move-in-out', () => {
     expect(searchSpy).toHaveBeenCalledTimes(2)
     expect(searchSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        endDateFrom: '2026-04-01',
+        endDateFrom: '2026-07-01',
         endDateTo: '2026-11-01',
         sortBy: 'leaseId',
       })
@@ -419,7 +419,7 @@ describe('GET /keys/move-in-out', () => {
     expect(searchSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         startDateFrom: '2026-10-01',
-        startDateTo: '2027-05-01',
+        startDateTo: '2027-02-01',
       })
     )
     const rows = Object.fromEntries(

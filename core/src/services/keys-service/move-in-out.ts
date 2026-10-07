@@ -28,7 +28,7 @@ const OBJECT_CACHE_TTL_MS = 2 * 60 * 1000
 const SEARCH_CONCURRENCY = 5
 const BATCH_CONCURRENCY = 6
 // A neighbour lease further away than this counts as vacant
-const NEIGHBOUR_WINDOW_MONTHS = 6
+const NEIGHBOUR_WINDOW_MONTHS = 3
 
 const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD')
 
@@ -65,20 +65,35 @@ export class KeysUnavailableError extends Error {
   }
 }
 
-/** All pages of one lease search; pages after the first are fetched in parallel. */
-async function searchAllLeases(
-  filters: Record<string, string>
-): Promise<leasing.v1.LeaseSearchResult[]> {
-  // leaseId is unique; the default date order is not, and parallel
-  // OFFSET/FETCH pages on a non-unique order can skip rows
-  const fetchPage = (page: number) =>
-    leasingAdapter.searchLeases({
+/** Per-search profile, logged with the request timings */
+export type LeaseSearchStats = {
+  ms: number
+  pages: number
+  avgPageMs: number
+  maxPageMs: number
+  total: number
+  unique: number
+}
+
+async function fetchAllPages(filters: Record<string, string>): Promise<{
+  leases: leasing.v1.LeaseSearchResult[]
+  total: number
+  pageMs: number[]
+}> {
+  const pageMs: number[] = []
+  const fetchPage = async (page: number) => {
+    const started = Date.now()
+    const result = await leasingAdapter.searchLeases({
       ...filters,
       includeEnded: 'true',
+      // leaseId is unique; every other order loses rows between parallel pages
       sortBy: 'leaseId',
       page: String(page),
       limit: String(LEASE_SEARCH_PAGE_SIZE),
     })
+    pageMs.push(Date.now() - started)
+    return result
+  }
 
   const first = await fetchPage(1)
   const total = first._meta.totalRecords
@@ -88,7 +103,40 @@ async function searchAllLeases(
     (page) => fetchPage(page),
     SEARCH_CONCURRENCY
   )
-  return [first, ...rest].flatMap((r) => r.content)
+  return { leases: [first, ...rest].flatMap((r) => r.content), total, pageMs }
+}
+
+/**
+ * All pages of one lease search, fetched in parallel and ordered by leaseId.
+ * Measured: date orders drop ~2% of leases between pages and rental object
+ * code occasionally loses one; leaseId is the only stable order leasing offers.
+ */
+async function searchAllLeases(
+  filters: Record<string, string>
+): Promise<{
+  leases: leasing.v1.LeaseSearchResult[]
+  stats: LeaseSearchStats
+}> {
+  const started = Date.now()
+  const { leases, total, pageMs } = await fetchAllPages(filters)
+  const unique = [...new Map(leases.map((l) => [l.leaseId, l])).values()]
+  if (unique.length < total) {
+    logger.warn(
+      { filters, unique: unique.length, total },
+      'move-in-out: lease paging lost rows despite leaseId order'
+    )
+  }
+  return {
+    leases: unique,
+    stats: {
+      ms: Date.now() - started,
+      pages: pageMs.length,
+      avgPageMs: Math.round(pageMs.reduce((a, b) => a + b, 0) / pageMs.length),
+      maxPageMs: Math.max(...pageMs),
+      total,
+      unique: unique.length,
+    },
+  }
 }
 
 /** Shift a YYYY-MM-DD date by whole months. */
@@ -168,6 +216,8 @@ function collectObjects(
 export type MoveInOutTimings = {
   leaseSearchMs: number
   leasesFound: number
+  /** Present on a cold load only; cached loads did no lease search */
+  leaseSearch?: { ending: LeaseSearchStats; starting: LeaseSearchStats }
   objects: number
   keysAndLoansMs: number
   keysBatchMs: number
@@ -188,6 +238,7 @@ type ObjectCacheEntry = {
   objects: ResolvedObject[]
   leaseSearchMs: number
   leasesFound: number
+  leaseSearch: { ending: LeaseSearchStats; starting: LeaseSearchStats }
 }
 
 // Lease-derived object list per filter; pages 2..n and re-sorts skip the search
@@ -209,7 +260,7 @@ async function resolveObjects(query: Query): Promise<ObjectCacheEntry> {
 
   const t0 = Date.now()
   // Both searches always run so the neighbour of a row is found in bulk:
-  // leases ending up to 6 months before the range, starting up to 6 months after.
+  // leases ending up to 3 months before the range, starting up to 3 months after.
   const from = [query.endDateFrom, query.startDateFrom]
     .filter((d): d is string => Boolean(d))
     .sort()[0]
@@ -217,7 +268,7 @@ async function resolveObjects(query: Query): Promise<ObjectCacheEntry> {
     .filter((d): d is string => Boolean(d))
     .sort()
     .reverse()[0]
-  const [ending, starting] = await Promise.all([
+  const [endingSearch, startingSearch] = await Promise.all([
     searchAllLeases({
       endDateFrom: shiftMonths(from, -NEIGHBOUR_WINDOW_MONTHS),
       endDateTo: to,
@@ -227,6 +278,8 @@ async function resolveObjects(query: Query): Promise<ObjectCacheEntry> {
       startDateTo: shiftMonths(to, NEIGHBOUR_WINDOW_MONTHS),
     }),
   ])
+  const ending = endingSearch.leases
+  const starting = startingSearch.leases
 
   const objects = [...collectObjects(ending, starting, query)].map(
     ([rentalObjectCode, bucket]) => ({
@@ -246,6 +299,7 @@ async function resolveObjects(query: Query): Promise<ObjectCacheEntry> {
     objects,
     leaseSearchMs: Date.now() - t0,
     leasesFound: ending.length + starting.length,
+    leaseSearch: { ending: endingSearch.stats, starting: startingSearch.stats },
   }
   for (const [k, v] of objectCache) {
     if (Date.now() - v.at >= OBJECT_CACHE_TTL_MS) objectCache.delete(k)
@@ -324,6 +378,7 @@ export async function buildMoveInOutPage(
   const timings: MoveInOutTimings = {
     leaseSearchMs: resolved.leaseSearchMs,
     leasesFound: resolved.leasesFound,
+    ...(resolved.at >= t0 ? { leaseSearch: resolved.leaseSearch } : {}),
     objects: codes.length,
     keysAndLoansMs: 0,
     keysBatchMs: 0,
