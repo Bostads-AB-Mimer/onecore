@@ -18,7 +18,6 @@ import {
 } from '@onecore/utilities'
 
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
-import * as leaseCache from '../../../common/lease-cache'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import config from '../../../common/config'
@@ -394,17 +393,9 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      if (leaseCache.getAll().length === 0) {
-        const ready = await leaseCache.ensureReady(10_000)
-        if (!ready) {
-          ctx.throw(503, 'Lease cache is warming up — retry shortly', {
-            headers: { 'Retry-After': '30' },
-          })
-        }
-      }
-
       const rawLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
-        queryParams.data
+        queryParams.data,
+        ctx
       )
 
       ctx.status = 200
