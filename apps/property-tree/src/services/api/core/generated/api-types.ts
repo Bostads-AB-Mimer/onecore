@@ -8226,12 +8226,13 @@ export interface paths {
   }
   '/keys/move-in-out': {
     /**
-     * Move-in / move-out key status per rental object
+     * Move-in / move-out key status per rental object (paginated)
      * @description Finds leases ending (lastDebitDate) and/or starting in the given ranges, then
      * returns one row per rental object with the outgoing and incoming tenant,
      * key/card counts, loan return and handout dates, and a derived status.
      * Give endDateFrom+endDateTo for move-outs, startDateFrom+startDateTo for
-     * move-ins, or both for the union.
+     * move-ins, or both for the union. Search and sort apply to the whole result;
+     * key and card data (DAX) is fetched only for the requested page.
      */
     get: {
       parameters: {
@@ -8240,13 +8241,21 @@ export interface paths {
           endDateTo?: string
           startDateFrom?: string
           startDateTo?: string
+          /** @description Matches rental object code, address, tenant name or contact code. */
+          q?: string
+          sortBy?: 'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
+          sortOrder?: 'asc' | 'desc'
+          /** @description When true, adds a `timings` block with per-phase durations. */
+          debug?: boolean
+          page?: number
+          limit?: number
         }
       }
       responses: {
-        /** @description One row per rental object */
+        /** @description One page of rows */
         200: {
           content: {
-            'application/json': {
+            'application/json': components['schemas']['PaginatedResponse'] & {
               content?: components['schemas']['MoveInOutRow'][]
             }
           }
@@ -14125,6 +14134,7 @@ export interface components {
       incomingLoanPickedUpAt: string | null
       /** @enum {string} */
       status:
+        | 'UNKNOWN'
         | 'NOT_RETURNED'
         | 'LOANED_TO_OTHER'
         | 'CREATED'
@@ -14133,6 +14143,7 @@ export interface components {
         | 'NO_KEYS'
         | 'NO_LOANS'
         | 'PARTIAL'
+      notes: string[]
     }
     PaginatedResponse: {
       content: unknown[]

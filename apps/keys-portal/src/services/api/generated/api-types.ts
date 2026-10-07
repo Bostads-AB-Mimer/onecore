@@ -1344,6 +1344,39 @@ export interface paths {
       }
     }
   }
+  '/key-notes/batch/by-rental-object': {
+    /**
+     * Get key notes for many rental objects in one call
+     * @description Returns a map keyed by rentalObjectCode; every requested code is present. Max 200 codes.
+     */
+    get: {
+      parameters: {
+        query: {
+          rentalObjectCodes: string[]
+        }
+      }
+      responses: {
+        /** @description Key notes grouped by rental object code. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                [key: string]: components['schemas']['KeyNote'][]
+              }
+            }
+          }
+        }
+        /** @description Missing or too many rental object codes. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/key-notes/{id}': {
     /**
      * Get key note by ID
@@ -1636,8 +1669,9 @@ export interface paths {
      * any of its keys or cards belongs to that object. Every requested code is present,
      * mapped to an empty array when it has no loans. Receipts are not included. Max 200 codes.
      *
-     * Cards are looked up in DAX per object. With `includeCards=true` the cards found
-     * are also returned as a `cards` sidecar keyed by rentalObjectCode.
+     * With `includeCards=true` the cards found in DAX are also returned as a `cards`
+     * sidecar keyed by rentalObjectCode, and `cardsUnresolved` lists the codes whose
+     * DAX lookup failed (their cards are unknown, not empty).
      */
     get: {
       parameters: {
@@ -1660,6 +1694,8 @@ export interface paths {
               cards?: {
                 [key: string]: components['schemas']['Card'][]
               }
+              /** @description Present only when includeCards=true. Codes whose DAX lookup failed. */
+              cardsUnresolved?: string[]
             }
           }
         }
