@@ -16,6 +16,7 @@ import {
   ComponentSchema,
   CreateComponentSchema,
   UpdateComponentSchema,
+  componentsQueryParamsSchema,
 } from '../types/component'
 
 const timestamps = {
@@ -65,6 +66,38 @@ describe('Component schema', () => {
 
     expect(result.success).toBe(false)
   })
+
+  it('parses a nested subtype and a Date warrantyStartDate from a Prisma row', () => {
+    const component = ComponentSchema.parse({
+      id: '00000000-0000-0000-0004-000000000001',
+      subtypeId,
+      modelId: null,
+      serialNumber: null,
+      warrantyStartDate: new Date('2026-01-01T00:00:00.000Z'),
+      warrantyMonths: null,
+      priceAtPurchase: null,
+      depreciationPriceAtPurchase: null,
+      economicLifespan: null,
+      quantity: 1,
+      status: 'ACTIVE',
+      subtype: {
+        id: subtypeId,
+        subTypeName: 'Målning väggar',
+        typeId: '00000000-0000-0000-0001-000000000001',
+        xpandCode: null,
+        depreciationPrice: 0,
+        technicalLifespan: 0,
+        economicLifespan: 0,
+        replacementIntervalMonths: 0,
+        quantityType: 'SQUARE_METER',
+        ...timestamps,
+      },
+      ...timestamps,
+    })
+
+    expect(component.subtype?.subTypeName).toBe('Målning väggar')
+    expect(component.warrantyStartDate).toBe('2026-01-01T00:00:00.000Z')
+  })
 })
 
 describe('Create and update component schemas', () => {
@@ -104,5 +137,31 @@ describe('Create and update component schemas', () => {
         ncsCode: 'NCS S 1050-Y90R x',
       }).success
     ).toBe(false)
+  })
+
+  it('lets an update move a component to another subtype', () => {
+    const other = '00000000-0000-0000-0002-000000000002'
+
+    expect(UpdateComponentSchema.parse({ subtypeId: other }).subtypeId).toBe(
+      other
+    )
+    expect(UpdateComponentSchema.parse({}).subtypeId).toBeUndefined()
+  })
+
+  it('trims ncsCode before applying the 15-character cap', () => {
+    const data = CreateComponentSchema.parse({
+      subtypeId,
+      ncsCode: '   S 1050-Y90R   ',
+    })
+
+    expect(data.ncsCode).toBe('S 1050-Y90R')
+  })
+})
+
+describe('componentsQueryParamsSchema', () => {
+  it('accepts a subtypeId filter', () => {
+    const params = componentsQueryParamsSchema.parse({ subtypeId })
+
+    expect(params.subtypeId).toBe(subtypeId)
   })
 })

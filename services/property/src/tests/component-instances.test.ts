@@ -5,6 +5,7 @@ import { factory } from './factories'
 
 describe('Component Instances API', () => {
   let existingModelId: string
+  let existingSubtypeId: string
   let existingComponentId: string
 
   beforeAll(async () => {
@@ -14,6 +15,14 @@ describe('Component Instances API', () => {
     )
     if (modelsResponse.body.content?.length > 0) {
       existingModelId = modelsResponse.body.content[0].id
+    }
+
+    // Get an existing subtype for tests
+    const subtypesResponse = await request(app.callback()).get(
+      '/component-subtypes'
+    )
+    if (subtypesResponse.body.content?.length > 0) {
+      existingSubtypeId = subtypesResponse.body.content[0].id
     }
 
     // Get an existing component for tests
@@ -221,7 +230,10 @@ describe('Component Instances API', () => {
     it('should create component and persist data correctly (default status ACTIVE)', async () => {
       assert(existingModelId, 'Setup failed: no existing model found')
 
-      const newComponent = factory.component.build({ modelId: existingModelId })
+      const newComponent = factory.component.build({
+        subtypeId: existingSubtypeId,
+        modelId: existingModelId,
+      })
 
       const createResponse = await request(app.callback())
         .post('/components')
@@ -264,7 +276,7 @@ describe('Component Instances API', () => {
       expect(response.body.data).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            path: expect.arrayContaining(['modelId']),
+            path: expect.arrayContaining(['subtypeId']),
             message: expect.stringMatching(/required|missing/i),
           }),
         ])
@@ -421,7 +433,10 @@ describe('Component Instances API', () => {
       assert(existingModelId, 'Setup failed: no existing model found')
 
       // Create a component to update
-      const newComponent = factory.component.build({ modelId: existingModelId })
+      const newComponent = factory.component.build({
+        subtypeId: existingSubtypeId,
+        modelId: existingModelId,
+      })
       const createResponse = await request(app.callback())
         .post('/components')
         .send(newComponent)
@@ -485,7 +500,10 @@ describe('Component Instances API', () => {
       assert(existingModelId, 'Setup failed: no existing model found')
 
       // Create a new component
-      const newComponent = factory.component.build({ modelId: existingModelId })
+      const newComponent = factory.component.build({
+        subtypeId: existingSubtypeId,
+        modelId: existingModelId,
+      })
       const createComponentResponse = await request(app.callback())
         .post('/components')
         .send(newComponent)
