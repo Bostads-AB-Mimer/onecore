@@ -179,11 +179,10 @@ VAT article — wrong and undetectable by the caller. `createLease` catches
 this specific failure and returns `{ ok: false, err:
 'could-not-fetch-articles' }`, failing the whole lease creation rather than
 creating one with incorrect VAT. When `includeVAT` is false, rows are
-passed through exactly as configured on the rental object — not
-force-zeroed. Whether a rental object's rows are guaranteed VAT-free by
-default (making this a no-op) or can carry a leftover non-zero `vat` is an
-open question with product (AVTAL-326) as of 2026-10 — see the comment on
-`buildLeaseRequestData`; revisit if that gets answered differently.
+passed through exactly as configured on the rental object — deliberately
+not force-zeroed. Confirmed with product (AVTAL-326, 2026-10): existing
+VAT on a rental object's own rows must not be stripped just because a
+particular lease doesn't itself require VAT.
 
 Tests that exercise the article cache must bust it between cases — unlike
 the tag cache above, these tests use `jest.useFakeTimers()` +

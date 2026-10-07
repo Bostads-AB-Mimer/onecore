@@ -1008,10 +1008,10 @@ function buildLeaseRequestData(
   articles: TenfastArticle[]
 ) {
   // When includeVAT is false, rows are passed through exactly as configured
-  // on the rental object in Tenfast — not force-zeroed. Whether a rental
-  // object's rows are guaranteed VAT-free by default (making this a
-  // no-op) or can carry a leftover non-zero vat is an open question with
-  // product (AVTAL-326) as of 2026-10; revisit if/when that's answered.
+  // on the rental object in Tenfast — deliberately not force-zeroed.
+  // Confirmed with product (AVTAL-326, 2026-10): existing VAT on a rental
+  // object's own rows must not be stripped just because this particular
+  // lease doesn't itself require VAT.
   const hyror = includeVAT
     ? applyVatToRentRows(rentalObject.hyror ?? [], articles)
     : (rentalObject.hyror ?? [])

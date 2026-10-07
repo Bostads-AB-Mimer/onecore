@@ -884,7 +884,8 @@ describe(tenfastAdapter.createLease, () => {
   it('passes rent rows through unmodified and does not fetch articles when includeVAT is false', async () => {
     // Arrange — a non-zero vat is used to prove rows really are passed
     // through as-is (not force-zeroed); see the comment on buildLeaseRequestData
-    // for why this is deliberately a pass-through pending a product decision.
+    // for why this is deliberately a pass-through (confirmed with product,
+    // AVTAL-326).
     const mockTenant = factory.tenfastTenant.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
