@@ -91,7 +91,10 @@ async function updateComponentCategory(
   id: string,
   data: components['schemas']['UpdateComponentCategoryRequest']
 ): Promise<
-  AdapterResult<GetComponentCategoryResponse, 'upstream_error' | 'not_found'>
+  AdapterResult<
+    GetComponentCategoryResponse,
+    'upstream_error' | 'not_found' | 'conflict'
+  >
 > {
   try {
     const response = await client().PUT('/component-categories/{id}', {
@@ -105,6 +108,10 @@ async function updateComponentCategory(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 409) {
+      return { ok: false, err: 'conflict' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -191,7 +198,12 @@ async function getComponentTypeById(
 
 async function createComponentType(
   data: components['schemas']['CreateComponentTypeRequest']
-): Promise<AdapterResult<GetComponentTypeResponse, 'upstream_error'>> {
+): Promise<
+  AdapterResult<
+    GetComponentTypeResponse,
+    'upstream_error' | 'bad_request' | 'conflict'
+  >
+> {
   try {
     const response = await client().POST('/component-types', {
       body: data,
@@ -199,6 +211,14 @@ async function createComponentType(
 
     if (response.data?.content) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
+    }
+
+    if (response.response.status === 409) {
+      return { ok: false, err: 'conflict' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -212,7 +232,10 @@ async function updateComponentType(
   id: string,
   data: components['schemas']['UpdateComponentTypeRequest']
 ): Promise<
-  AdapterResult<GetComponentTypeResponse, 'upstream_error' | 'not_found'>
+  AdapterResult<
+    GetComponentTypeResponse,
+    'upstream_error' | 'not_found' | 'bad_request' | 'conflict'
+  >
 > {
   try {
     const response = await client().PUT('/component-types/{id}', {
@@ -226,6 +249,14 @@ async function updateComponentType(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
+    }
+
+    if (response.response.status === 409) {
+      return { ok: false, err: 'conflict' }
     }
 
     return { ok: false, err: 'upstream_error' }

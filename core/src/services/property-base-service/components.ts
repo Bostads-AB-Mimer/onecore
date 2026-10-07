@@ -9,6 +9,19 @@ import * as schemas from './schemas'
 import { addComponent } from '../../processes/components'
 import { ProcessStatus } from '../../common/types'
 
+const componentCategoryErrorResponse = {
+  conflict: [409, 'Category has component types with a surface code'],
+  not_found: [404, 'Component category not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
+const componentTypeErrorResponse = {
+  bad_request: [400, 'Invalid categoryId or code'],
+  conflict: [409, 'Another component type already has this code'],
+  not_found: [404, 'Component type not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
@@ -319,6 +332,10 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentCategory'
+   *       404:
+   *         description: Component category not found
+   *       409:
+   *         description: Category has component types with a surface code
    *     security:
    *       - bearerAuth: []
    */
@@ -347,14 +364,9 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component category not found'
-              : 'Internal server error',
-          ...metadata,
-        }
+        const [status, error] = componentCategoryErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -598,6 +610,10 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentType'
+   *       400:
+   *         description: Invalid categoryId, or a surface code on a category that is not of type SURFACE
+   *       409:
+   *         description: Another component type already has this code
    *     security:
    *       - bearerAuth: []
    */
@@ -614,8 +630,9 @@ export const routes = (router: KoaRouter) => {
       const result = await propertyBaseAdapter.createComponentType(body.data)
 
       if (!result.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
+        const [status, error] = componentTypeErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -661,6 +678,12 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentType'
+   *       400:
+   *         description: Invalid categoryId, or a surface code on a category that is not of type SURFACE
+   *       404:
+   *         description: Component type not found
+   *       409:
+   *         description: Another component type already has this code
    *     security:
    *       - bearerAuth: []
    */
@@ -687,14 +710,9 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component type not found'
-              : 'Internal server error',
-          ...metadata,
-        }
+        const [status, error] = componentTypeErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -1352,8 +1370,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /component-models/surface:
    *   get:
-   *     summary: Get surface component models (Ytskikt hierarchy)
-   *     description: Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+   *     summary: Get surface component models
+   *     description: Returns all ComponentModels under categories of type SURFACE with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
    *     tags:
    *       - Property-base/Components
    *     responses:

@@ -1,3 +1,4 @@
+import { property } from '@onecore/types'
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 import type {
@@ -85,4 +86,33 @@ export const deleteComponentType = async (id: string) => {
   await prisma.componentTypes.delete({
     where: { id },
   })
+}
+
+export type ComponentTypeCodeProblem =
+  'category_not_found' | 'category_not_surface' | 'code_taken'
+
+export const findComponentTypeCodeProblem = async (params: {
+  code: string | null | undefined
+  categoryId: string
+  excludeTypeId?: string
+}): Promise<ComponentTypeCodeProblem | null> => {
+  if (!params.code) return null
+
+  const category = await prisma.componentCategories.findUnique({
+    where: { id: params.categoryId },
+    select: { type: true },
+  })
+  if (!category) return 'category_not_found'
+  if (category.type !== property.ComponentCategoryTypeSchema.enum.SURFACE) {
+    return 'category_not_surface'
+  }
+
+  const taken = await prisma.componentTypes.findFirst({
+    where: {
+      code: params.code,
+      ...(params.excludeTypeId ? { id: { not: params.excludeTypeId } } : {}),
+    },
+    select: { id: true },
+  })
+  return taken ? 'code_taken' : null
 }

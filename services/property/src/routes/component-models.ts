@@ -128,8 +128,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /component-models/surface:
    *   get:
-   *     summary: Get surface component models (Ytskikt hierarchy)
-   *     description: Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+   *     summary: Get surface component models
+   *     description: Returns all ComponentModels under categories of type SURFACE with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
    *     tags: [Component Models]
    *     responses:
    *       200:

@@ -1,3 +1,8 @@
+import {
+  COMPONENT_CATEGORY_TYPE_LABELS,
+  SURFACE_CODE_LABELS,
+} from '@/shared/lib/componentLabels'
+
 export type FieldType = 'text' | 'number' | 'textarea' | 'select' | 'date'
 
 export interface FieldConfig {
@@ -5,6 +10,8 @@ export interface FieldConfig {
   label: string
   type: FieldType
   required: boolean
+  // An empty value is sent as null instead of being omitted, so saving clears it.
+  nullable?: boolean
   defaultValue?: any
   options?: Array<{ value: string; label: string }>
   placeholder?: string
@@ -15,6 +22,9 @@ export interface EntityDialogConfig {
   editTitle: string
   fields: FieldConfig[]
 }
+
+const toOptions = (labels: Record<string, string>) =>
+  Object.entries(labels).map(([value, label]) => ({ value, label }))
 
 export const entityDialogConfig: Record<
   'category' | 'type' | 'subtype' | 'model' | 'instance',
@@ -38,6 +48,14 @@ export const entityDialogConfig: Record<
         required: true,
         placeholder: 'Beskriv kategorin',
       },
+      {
+        name: 'type',
+        label: 'Sort',
+        type: 'select',
+        required: true,
+        defaultValue: 'EQUIPMENT',
+        options: toOptions(COMPONENT_CATEGORY_TYPE_LABELS),
+      },
     ],
   },
   type: {
@@ -57,6 +75,18 @@ export const entityDialogConfig: Record<
         type: 'text',
         required: false,
         placeholder: 'Valfri beskrivning',
+      },
+      {
+        name: 'code',
+        label: 'Ytskiktskod',
+        type: 'select',
+        required: false,
+        nullable: true,
+        defaultValue: '',
+        options: [
+          { value: '', label: 'Ingen' },
+          ...toOptions(SURFACE_CODE_LABELS),
+        ],
       },
     ],
   },

@@ -142,7 +142,9 @@ export const getSurfaceModels = async () => {
     where: {
       subtype: {
         componentType: {
-          category: { categoryName: property.SURFACE_CATEGORY_NAME },
+          category: {
+            type: property.ComponentCategoryTypeSchema.enum.SURFACE,
+          },
         },
       },
     },

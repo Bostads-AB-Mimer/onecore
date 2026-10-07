@@ -9,12 +9,61 @@ import {
   UpdateComponentTypeSchema,
 } from '../types/component'
 import {
+  type ComponentTypeCodeProblem,
   getComponentTypes,
   getComponentTypeById,
   createComponentType,
   updateComponentType,
   deleteComponentType,
+  findComponentTypeCodeProblem,
 } from '../adapters/component-adapter'
+
+const prismaErrorCode = (err: unknown): string | undefined =>
+  err && typeof err === 'object' && 'code' in err
+    ? (err as { code?: string }).code
+    : undefined
+
+const codeProblemResponse: Record<
+  ComponentTypeCodeProblem,
+  { status: number; error: string }
+> = {
+  category_not_found: {
+    status: 400,
+    error: 'Invalid categoryId: category does not exist',
+  },
+  category_not_surface: {
+    status: 400,
+    error: 'A surface code requires a category of type SURFACE',
+  },
+  code_taken: {
+    status: 409,
+    error: 'Another component type already has this code',
+  },
+}
+
+// P2002: unique index on code (a concurrent write won the race after the
+// pre-check). P2003: categoryId does not reference a category.
+const respondToPrismaError = (
+  ctx: { status: number; body: unknown },
+  err: unknown,
+  metadata: ReturnType<typeof generateRouteMetadata>
+): boolean => {
+  switch (prismaErrorCode(err)) {
+    case 'P2002':
+      ctx.status = codeProblemResponse.code_taken.status
+      ctx.body = { error: codeProblemResponse.code_taken.error, ...metadata }
+      return true
+    case 'P2003':
+      ctx.status = codeProblemResponse.category_not_found.status
+      ctx.body = {
+        error: codeProblemResponse.category_not_found.error,
+        ...metadata,
+      }
+      return true
+    default:
+      return false
+  }
+}
 
 /**
  * @swagger
@@ -176,6 +225,10 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentType'
+   *       400:
+   *         description: Invalid categoryId, or a surface code on a category that is not of type SURFACE
+   *       409:
+   *         description: Another component type already has this code
    */
   router.post(
     '(.*)/component-types',
@@ -185,6 +238,16 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
+        const problem = await findComponentTypeCodeProblem({
+          code: data.code,
+          categoryId: data.categoryId,
+        })
+        if (problem) {
+          ctx.status = codeProblemResponse[problem].status
+          ctx.body = { error: codeProblemResponse[problem].error, ...metadata }
+          return
+        }
+
         const type = await createComponentType(data)
 
         ctx.status = 201
@@ -193,23 +256,10 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
+        if (respondToPrismaError(ctx, err, metadata)) return
+        ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
-        // Check for foreign key constraint violation (Prisma P2003)
-        const isPrismaFKError =
-          err &&
-          typeof err === 'object' &&
-          'code' in err &&
-          (err as { code: string }).code === 'P2003'
-        if (isPrismaFKError) {
-          ctx.status = 400
-          ctx.body = {
-            error: 'Invalid categoryId: category does not exist',
-            ...metadata,
-          }
-          return
-        }
-        ctx.status = 500
         ctx.body = { error: errorMessage, ...metadata }
       }
     }
@@ -244,6 +294,12 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentType'
+   *       400:
+   *         description: Invalid categoryId, or a surface code on a category that is not of type SURFACE
+   *       404:
+   *         description: Component type not found
+   *       409:
+   *         description: Another component type already has this code
    */
   router.put(
     '(.*)/component-types/:id',
@@ -270,6 +326,22 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
+        if (data.code !== undefined || data.categoryId !== undefined) {
+          const problem = await findComponentTypeCodeProblem({
+            code: data.code === undefined ? existing.code : data.code,
+            categoryId: data.categoryId ?? existing.categoryId,
+            excludeTypeId: id,
+          })
+          if (problem) {
+            ctx.status = codeProblemResponse[problem].status
+            ctx.body = {
+              error: codeProblemResponse[problem].error,
+              ...metadata,
+            }
+            return
+          }
+        }
+
         const type = await updateComponentType(id, data)
 
         ctx.body = {
@@ -277,6 +349,7 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
+        if (respondToPrismaError(ctx, err, metadata)) return
         ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
