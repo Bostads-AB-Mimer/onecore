@@ -315,12 +315,11 @@ export const contactsQuery = () => {
 
     Object.keys(wheres).forEach((key) => {
       if (key === NATIONAL_ID_NUMBER) {
-        qb.andWhere((b) => {
-          b.where(key, wheres[key]).orWhereRaw(
-            `REPLACE(TRANSLATE(${NATIONAL_ID_NUMBER}, '0123456789', '##########'), '#', '') = ?`,
-            [wheres[key]]
-          )
-        })
+        const candidates: string[] = wheres[key]
+        qb.andWhereRaw(
+          `${NORMALISED_NATIONAL_ID_SQL} IN (${candidates.map(() => '?').join(', ')})`,
+          candidates
+        )
       } else {
         qb.andWhere(key, wheres[key])
       }
@@ -402,10 +401,11 @@ export const contactsQuery = () => {
     },
 
     /**
-     * Adds a WHERE-criteria for single national ID number.
+     * Adds a WHERE-criteria for a national ID number. Accepts multiple
+     * candidate forms (e.g. ten- and twelve-digit) to match any of them.
      */
-    hasNationalId(nid: NationalIdNumber) {
-      wheres[NATIONAL_ID_NUMBER] = nid
+    hasNationalId(nid: NationalIdNumber | NationalIdNumber[]) {
+      wheres[NATIONAL_ID_NUMBER] = Array.isArray(nid) ? nid : [nid]
       return this
     },
 
