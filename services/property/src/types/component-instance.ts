@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { ComponentModelSchema } from './component-model'
+import { ComponentSubtypeSchema } from './component-subtype'
 
 // ==================== ENUMS ====================
 
@@ -25,6 +26,7 @@ export const ComponentConditionEnum = z.enum([
 // Query params for components
 export const componentsQueryParamsSchema = z.object({
   modelId: z.string().uuid().optional(),
+  subtypeId: z.string().uuid().optional(),
   status: ComponentStatusEnum.optional(),
   serialNumber: z.string().optional(), // Trimming handled in adapter
   page: z.coerce.number().int().min(1).optional().default(1),
@@ -89,7 +91,8 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
 // This prevents infinite loops: Component -> Installation -> Component -> Installation -> ...
 export const ComponentSchema = z.object({
   id: z.string().uuid(),
-  modelId: z.string().uuid(),
+  subtypeId: z.string().uuid(),
+  modelId: z.string().uuid().nullable(),
   serialNumber: z.string().nullable(),
   specifications: z.string().nullable().optional(),
   additionalInformation: z.string().nullable().optional(),
@@ -97,9 +100,9 @@ export const ComponentSchema = z.object({
     .union([z.string(), z.date()])
     .nullable()
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
-  warrantyMonths: z.number().int().min(0),
-  priceAtPurchase: z.number().min(0),
-  depreciationPriceAtPurchase: z.number().min(0),
+  warrantyMonths: z.number().int().min(0).nullable(),
+  priceAtPurchase: z.number().min(0).nullable(),
+  depreciationPriceAtPurchase: z.number().min(0).nullable(),
   ncsCode: z.string().nullable().optional(),
   status: ComponentStatusEnum,
   condition: ComponentConditionEnum.nullable().optional(),
@@ -109,14 +112,15 @@ export const ComponentSchema = z.object({
     .optional()
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
   quantity: z.number().min(0),
-  economicLifespan: z.number().min(0),
+  economicLifespan: z.number().min(0).nullable(),
   createdAt: z
     .union([z.string(), z.date()])
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
   updatedAt: z
     .union([z.string(), z.date()])
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
-  model: ComponentModelSchema.optional(),
+  subtype: ComponentSubtypeSchema.optional(),
+  model: ComponentModelSchema.nullable().optional(),
   componentInstallations: z
     .array(ComponentInstallationWithoutComponentSchema)
     .optional(),
@@ -124,7 +128,8 @@ export const ComponentSchema = z.object({
 
 // Create schema
 export const CreateComponentSchema = z.object({
-  modelId: z.string().uuid(),
+  subtypeId: z.string().uuid(),
+  modelId: z.string().uuid().nullable().optional(),
   serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
   additionalInformation: z.string().trim().optional(),
@@ -132,19 +137,20 @@ export const CreateComponentSchema = z.object({
     .union([z.string(), z.date()])
     .optional()
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
-  warrantyMonths: z.number().int().min(0).optional().default(0),
-  priceAtPurchase: z.number().min(0).optional().default(0),
-  depreciationPriceAtPurchase: z.number().min(0).optional().default(0),
-  ncsCode: z.string().trim().nullable().optional(),
+  warrantyMonths: z.number().int().min(0).nullable().optional(),
+  priceAtPurchase: z.number().min(0).nullable().optional(),
+  depreciationPriceAtPurchase: z.number().min(0).nullable().optional(),
+  ncsCode: z.string().trim().max(15).nullable().optional(),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
   condition: ComponentConditionEnum.nullable().optional(),
   quantity: z.number().min(0).optional().default(1),
-  economicLifespan: z.number().min(0).optional().default(0),
+  economicLifespan: z.number().min(0).nullable().optional(),
 })
 
 // Update schema
 export const UpdateComponentSchema = z.object({
-  modelId: z.string().uuid().optional(),
+  subtypeId: z.string().uuid().optional(),
+  modelId: z.string().uuid().nullable().optional(),
   serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
   additionalInformation: z.string().trim().optional(),
@@ -152,14 +158,14 @@ export const UpdateComponentSchema = z.object({
     .union([z.string(), z.date()])
     .optional()
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
-  warrantyMonths: z.number().int().min(0).optional(),
-  priceAtPurchase: z.number().min(0).optional(),
-  depreciationPriceAtPurchase: z.number().min(0).optional(),
-  ncsCode: z.string().trim().nullable().optional(),
+  warrantyMonths: z.number().int().min(0).nullable().optional(),
+  priceAtPurchase: z.number().min(0).nullable().optional(),
+  depreciationPriceAtPurchase: z.number().min(0).nullable().optional(),
+  ncsCode: z.string().trim().max(15).nullable().optional(),
   status: ComponentStatusEnum.optional(),
   condition: ComponentConditionEnum.nullable().optional(),
   quantity: z.number().min(0).optional(),
-  economicLifespan: z.number().min(0).optional(),
+  economicLifespan: z.number().min(0).nullable().optional(),
 })
 
 export type Component = z.infer<typeof ComponentSchema>
