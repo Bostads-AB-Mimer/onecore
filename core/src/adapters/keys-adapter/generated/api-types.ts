@@ -1344,6 +1344,39 @@ export interface paths {
       }
     }
   }
+  '/key-notes/batch/by-rental-object': {
+    /**
+     * Get key notes for many rental objects in one call
+     * @description Returns a map keyed by rentalObjectCode; every requested code is present. Max 200 codes.
+     */
+    get: {
+      parameters: {
+        query: {
+          rentalObjectCodes: string[]
+        }
+      }
+      responses: {
+        /** @description Key notes grouped by rental object code. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                [key: string]: components['schemas']['KeyNote'][]
+              }
+            }
+          }
+        }
+        /** @description Missing or too many rental object codes. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/key-notes/{id}': {
     /**
      * Get key note by ID

@@ -10,7 +10,7 @@ import {
 import { z } from 'zod'
 import { keys, leasing } from '@onecore/types'
 
-import { KeysApi, KeyLoansApi } from '../../adapters/keys-adapter'
+import { KeysApi, KeyLoansApi, KeyNotesApi } from '../../adapters/keys-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import {
   LeaseSummary,
@@ -111,9 +111,7 @@ async function fetchAllPages(filters: Record<string, string>): Promise<{
  * Measured: date orders drop ~2% of leases between pages and rental object
  * code occasionally loses one; leaseId is the only stable order leasing offers.
  */
-async function searchAllLeases(
-  filters: Record<string, string>
-): Promise<{
+async function searchAllLeases(filters: Record<string, string>): Promise<{
   leases: leasing.v1.LeaseSearchResult[]
   stats: LeaseSearchStats
 }> {
@@ -222,6 +220,7 @@ export type MoveInOutTimings = {
   keysAndLoansMs: number
   keysBatchMs: number
   loansBatchMs: number
+  notesBatchMs: number
   totalMs: number
 }
 
@@ -383,6 +382,7 @@ export async function buildMoveInOutPage(
     keysAndLoansMs: 0,
     keysBatchMs: 0,
     loansBatchMs: 0,
+    notesBatchMs: 0,
     totalMs: 0,
   }
   if (codes.length === 0) {
@@ -394,8 +394,9 @@ export async function buildMoveInOutPage(
   const loansByCode: Record<string, keys.KeyLoanWithDetails[]> = {}
   const cardsByCode: Record<string, keys.Card[]> = {}
   const cardsUnresolved = new Set<string>()
+  const notesByCode: Record<string, keys.KeyNote[]> = {}
   const timed = async <T>(
-    key: 'keysBatchMs' | 'loansBatchMs',
+    key: 'keysBatchMs' | 'loansBatchMs' | 'notesBatchMs',
     p: Promise<T>
   ) => {
     const start = Date.now()
@@ -406,9 +407,10 @@ export async function buildMoveInOutPage(
   await runWithConcurrency(
     chunk(codes, BATCH_SIZE),
     async (batch) => {
-      const [keysResult, loansResult] = await Promise.all([
+      const [keysResult, loansResult, notesResult] = await Promise.all([
         timed('keysBatchMs', KeysApi.getBatchByRentalObject(batch)),
         timed('loansBatchMs', KeyLoansApi.getBatchByRentalObject(batch)),
+        timed('notesBatchMs', KeyNotesApi.getBatchByRentalObject(batch)),
       ])
       if (!keysResult.ok)
         throw new Error(`keys batch failed: ${keysResult.err}`)
@@ -416,6 +418,10 @@ export async function buildMoveInOutPage(
         if (loansResult.err === 'unavailable') throw new KeysUnavailableError()
         throw new Error(`key loans batch failed: ${loansResult.err}`)
       }
+      // Notes are informational; a failed lookup leaves them empty
+      if (notesResult.ok) Object.assign(notesByCode, notesResult.data)
+      else
+        logger.warn({ err: notesResult.err }, 'move-in-out: notes batch failed')
       Object.assign(keysByCode, keysResult.data)
       Object.assign(loansByCode, loansResult.data.loans)
       Object.assign(cardsByCode, loansResult.data.cards)
@@ -431,6 +437,7 @@ export async function buildMoveInOutPage(
     objectTypeCode: o.objectTypeCode,
     outgoing: o.outgoing,
     incoming: o.incoming,
+    notes: (notesByCode[o.rentalObjectCode] ?? []).map((n) => n.description),
     ...deriveStatus({
       outgoing: o.outgoing,
       incoming: o.incoming,

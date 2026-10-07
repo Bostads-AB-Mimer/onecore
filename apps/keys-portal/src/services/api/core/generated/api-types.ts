@@ -14143,6 +14143,7 @@ export interface components {
         | 'NO_KEYS'
         | 'NO_LOANS'
         | 'PARTIAL'
+      notes: string[]
     }
     PaginatedResponse: {
       content: unknown[]

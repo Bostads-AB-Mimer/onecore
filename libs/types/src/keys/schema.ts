@@ -585,4 +585,6 @@ export const MoveInOutRowSchema = z.object({
   incomingLoanCreatedAt: z.coerce.date().nullable(),
   incomingLoanPickedUpAt: z.coerce.date().nullable(),
   status: MoveInOutStatusSchema,
+  // Key notes (anteckningar) on the rental object, newest first
+  notes: z.array(z.string()),
 })

@@ -14,10 +14,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
 import { MoveInOutStatusBadge } from '@/components/shared/tables/StatusBadges'
+import { NotePopover } from '@/components/shared/tables/NotePopover'
 import type { MoveInOutSortKey } from '@/services/api/moveInOutService'
 import type { MoveInOutRow, MoveInOutTenant } from '@/services/types'
 
-const COLUMN_COUNT = 11
+const COLUMN_COUNT = 12
 
 interface MoveInOutTableProps {
   rows: MoveInOutRow[]
@@ -134,6 +135,7 @@ export function MoveInOutTable({
             <TableHead>Lån skapat</TableHead>
             <TableHead>Utlämnat</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Anteckning</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -174,6 +176,17 @@ export function MoveInOutTable({
                 <DateCell value={row.incomingLoanPickedUpAt} />
                 <TableCell>
                   <MoveInOutStatusBadge status={row.status} />
+                </TableCell>
+                <TableCell>
+                  {row.notes.length > 0 ? (
+                    <NotePopover
+                      text={row.notes.join('\n\n')}
+                      label="Anteckning"
+                      align="end"
+                    />
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
                 </TableCell>
               </TableRow>
             ))

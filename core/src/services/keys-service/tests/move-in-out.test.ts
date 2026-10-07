@@ -28,6 +28,9 @@ app.use(router.routes())
 beforeEach(() => {
   jest.resetAllMocks()
   clearObjectCache()
+  jest
+    .spyOn(keysAdapter.KeyNotesApi, 'getBatchByRentalObject')
+    .mockResolvedValue({ ok: true, data: {} })
 })
 
 const d = (s: string) => new Date(s)
@@ -330,6 +333,20 @@ describe('GET /keys/move-in-out', () => {
         ok: true,
         data: { 'OBJ-1': [K1] },
       })
+    jest
+      .spyOn(keysAdapter.KeyNotesApi, 'getBatchByRentalObject')
+      .mockResolvedValue({
+        ok: true,
+        data: {
+          'OBJ-1': [
+            {
+              id: 'n1',
+              rentalObjectCode: 'OBJ-1',
+              description: 'Porten kärvar',
+            },
+          ],
+        },
+      })
     const loansSpy = jest
       .spyOn(keysAdapter.KeyLoansApi, 'getBatchByRentalObject')
       .mockResolvedValue({
@@ -370,6 +387,7 @@ describe('GET /keys/move-in-out', () => {
       cardCount: 0,
       outgoingAllReturned: true,
       status: 'CREATED',
+      notes: ['Porten kärvar'],
     })
   })
 
