@@ -25,6 +25,7 @@ import {
 import { getComponentSubtypeById } from '../adapters/component-subtype-adapter'
 import { findComponentTypeCodeProblem } from '../adapters/component-type-adapter'
 import { routes as categoryRoutes } from '../routes/component-categories'
+import { routes as modelRoutes } from '../routes/component-models'
 import { routes as typeRoutes } from '../routes/component-types'
 import {
   ComponentCategorySchema,
@@ -414,5 +415,26 @@ describe('getComponentSubtypeById', () => {
         }),
       })
     )
+  })
+})
+
+describe('GET /component-models/by-name/:modelName', () => {
+  const app = new Koa()
+  const router = new KoaRouter()
+  modelRoutes(router)
+  app.use(bodyParser())
+  app.use(router.routes())
+
+  beforeEach(() => {
+    ;(prisma.componentModels.findFirst as jest.Mock).mockReset()
+  })
+
+  it('rejects a malformed subtypeId with 400 before looking up the model', async () => {
+    const res = await request(app.callback()).get(
+      '/component-models/by-name/Foo?subtypeId=nope'
+    )
+
+    expect(res.status).toBe(400)
+    expect(prisma.componentModels.findFirst).not.toHaveBeenCalled()
   })
 })

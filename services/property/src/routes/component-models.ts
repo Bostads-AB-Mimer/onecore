@@ -197,16 +197,28 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentModel'
+   *       400:
+   *         description: Invalid subtypeId format
    *       404:
    *         description: Component model not found
    */
   router.get('(.*)/component-models/by-name/:modelName', async (ctx) => {
     const modelName = z.string().min(1).parse(ctx.params.modelName)
-    const subtypeId = z.string().uuid().optional().parse(ctx.query.subtypeId)
     const metadata = generateRouteMetadata(ctx, ['subtypeId'])
 
+    const subtypeIdResult = z
+      .string()
+      .uuid()
+      .optional()
+      .safeParse(ctx.query.subtypeId)
+    if (!subtypeIdResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid subtypeId format', ...metadata }
+      return
+    }
+
     try {
-      const model = await findModelByExactName(modelName, subtypeId)
+      const model = await findModelByExactName(modelName, subtypeIdResult.data)
 
       if (!model) {
         ctx.status = 404
