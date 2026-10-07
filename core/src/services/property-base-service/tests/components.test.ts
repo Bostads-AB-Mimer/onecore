@@ -905,11 +905,12 @@ describe('Components API', () => {
         .mockResolvedValueOnce({ ok: true, data: component })
 
       const res = await request(app.callback()).post('/components').send({
+        subtypeId: component.subtypeId,
         modelId: component.modelId,
       })
 
       expect(res.status).toBe(200)
-      expect(res.body.content.modelId).toBe(component.modelId)
+      expect(res.body.content.subtypeId).toBe(component.subtypeId)
     })
 
     it('returns 400 when required fields missing', async () => {
@@ -920,6 +921,7 @@ describe('Components API', () => {
 
     it('validates status enum', async () => {
       const res = await request(app.callback()).post('/components').send({
+        subtypeId: '00000000-0000-0000-0002-000000000001',
         modelId: '00000000-0000-0000-0000-000000000001',
         status: 'INVALID_STATUS',
       })
