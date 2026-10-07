@@ -22,7 +22,8 @@ export async function resolvePersonnummerInQuery(
   return { ...query, q: contactResult.data.contactCode }
 }
 
-// Keeps the lease's existing email/phone when contacts-service has nothing on file.
+// Always defers to contacts-service's answer, including null, so a contact
+// marked protected there can't be unmasked via Tenfast's own data.
 export async function enrichLeaseContacts<
   T extends { contacts?: leasing.v1.ContactInfo[] },
 >(leases: T[], logContext: string): Promise<T[]> {
@@ -67,13 +68,9 @@ export async function enrichLeaseContacts<
 
   return leases.map((lease) => ({
     ...lease,
-    contacts: lease.contacts?.map((c) => {
-      const info = contactMap.get(c.contactCode.trim())
-      return {
-        ...c,
-        email: info?.email ?? c.email,
-        phone: info?.phone ?? c.phone,
-      }
-    }),
+    contacts: lease.contacts?.map((c) => ({
+      ...c,
+      ...contactMap.get(c.contactCode.trim()),
+    })),
   }))
 }
