@@ -1,6 +1,22 @@
-import { useCallback, useMemo, useState } from 'react'
-import { AlertTriangle, ChevronDown, Info, Mail, User } from 'lucide-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import type { EmailAttachment } from '@onecore/types'
+import {
+  AlertTriangle,
+  ChevronDown,
+  Info,
+  Mail,
+  Paperclip,
+  User,
+  X,
+} from 'lucide-react'
 
+import {
+  addEmailAttachmentFiles,
+  EMAIL_ATTACHMENT_ACCEPT,
+  EMAIL_ATTACHMENT_LIMIT_TEXT,
+  toEmailAttachments,
+} from '@/shared/lib/emailAttachments'
+import { formatFileSize } from '@/shared/lib/fileUtils'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -30,7 +46,11 @@ interface EmailModalBaseProps {
 interface EmailModalSingleProps extends EmailModalBaseProps {
   recipientName: string
   emailAddress: string
-  onSend: (subject: string, body: string) => Promise<void>
+  onSend: (
+    subject: string,
+    body: string,
+    attachments: EmailAttachment[]
+  ) => Promise<void>
   recipients?: undefined
   totalSelectedItems?: undefined
 }
@@ -41,7 +61,8 @@ interface EmailModalBulkProps extends EmailModalBaseProps {
   onSend?: (
     subject: string,
     body: string,
-    recipients: EmailRecipient[]
+    recipients: EmailRecipient[],
+    attachments: EmailAttachment[]
   ) => Promise<void>
   recipientName?: undefined
   emailAddress?: undefined
@@ -57,6 +78,9 @@ export function EmailModal(props: EmailModalProps) {
   const [body, setBody] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
+  const [files, setFiles] = useState<File[]>([])
+  const [fileErrors, setFileErrors] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const recipients = props.recipients ?? []
 
@@ -74,6 +98,29 @@ export function EmailModal(props: EmailModalProps) {
       ? props.totalSelectedItems - recipients.length
       : 0
 
+  const resetForm = () => {
+    setSubject('')
+    setBody('')
+    setFiles([])
+    setFileErrors([])
+  }
+
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const result = addEmailAttachmentFiles(
+      files,
+      Array.from(e.target.files ?? [])
+    )
+    setFiles(result.files)
+    setFileErrors(result.errors)
+    // Allow picking the same file again after removing it.
+    e.target.value = ''
+  }
+
+  const handleRemoveFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
+    setFileErrors([])
+  }
+
   const handleSend = useCallback(async () => {
     if (!subject.trim() || !body.trim() || isSending) return
 
@@ -82,26 +129,31 @@ export function EmailModal(props: EmailModalProps) {
 
       setIsSending(true)
       try {
+        const attachments = await toEmailAttachments(files)
         await (
           props.onSend as (
             subject: string,
             body: string,
-            recipients: EmailRecipient[]
+            recipients: EmailRecipient[],
+            attachments: EmailAttachment[]
           ) => Promise<void>
-        )(subject, body, validRecipients)
-        setSubject('')
-        setBody('')
+        )(subject, body, validRecipients, attachments)
+        resetForm()
       } finally {
         setIsSending(false)
       }
     } else {
       setIsSending(true)
       try {
+        const attachments = await toEmailAttachments(files)
         await (
-          props.onSend as (subject: string, body: string) => Promise<void>
-        )(subject, body)
-        setSubject('')
-        setBody('')
+          props.onSend as (
+            subject: string,
+            body: string,
+            attachments: EmailAttachment[]
+          ) => Promise<void>
+        )(subject, body, attachments)
+        resetForm()
         onOpenChange(false)
       } finally {
         setIsSending(false)
@@ -110,6 +162,7 @@ export function EmailModal(props: EmailModalProps) {
   }, [
     subject,
     body,
+    files,
     isSending,
     isBulk,
     validRecipients,
@@ -118,8 +171,7 @@ export function EmailModal(props: EmailModalProps) {
   ])
 
   const handleClose = () => {
-    setSubject('')
-    setBody('')
+    resetForm()
     onOpenChange(false)
   }
 
@@ -231,6 +283,74 @@ export function EmailModal(props: EmailModalProps) {
               onChange={(e) => setBody(e.target.value)}
               className="mt-2 min-h-[150px] resize-none"
             />
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium">Bilagor</Label>
+            <div className="mt-2 space-y-2">
+              {files.length > 0 && (
+                <ul className="space-y-1">
+                  {files.map((file, index) => (
+                    <li
+                      key={`${file.name}-${index}`}
+                      className="flex items-center gap-2 px-2 py-1 border rounded-md bg-muted/30 text-sm"
+                    >
+                      <Paperclip className="h-3 w-3 shrink-0" />
+                      <span className="flex-1 truncate">{file.name}</span>
+                      <span className="text-muted-foreground shrink-0">
+                        {formatFileSize(file.size)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(index)}
+                        disabled={isSending}
+                        aria-label={`Ta bort ${file.name}`}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept={EMAIL_ATTACHMENT_ACCEPT}
+                onChange={handleFilesSelected}
+                className="hidden"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSending}
+              >
+                <Paperclip className="h-4 w-4 mr-2" />
+                Bifoga fil
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                {EMAIL_ATTACHMENT_LIMIT_TEXT}
+              </p>
+              {fileErrors.length > 0 && (
+                <div className="text-sm text-destructive space-y-1">
+                  {fileErrors.map((error) => (
+                    <div key={error}>{error}</div>
+                  ))}
+                </div>
+              )}
+              {isBulk && files.length > 0 && (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span className="text-sm">
+                    Samma bilagor skickas till alla {validRecipients.length}{' '}
+                    mottagare
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
