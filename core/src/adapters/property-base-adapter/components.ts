@@ -668,7 +668,7 @@ async function createComponent(
       return { ok: true, data: response.data.content }
     }
 
-    if (response.response?.status === 400) {
+    if (response.response.status === 400) {
       return { ok: false, err: 'bad_request' }
     }
 

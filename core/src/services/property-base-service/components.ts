@@ -1858,7 +1858,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/Component'
    *       400:
-   *         description: Unknown subtypeId or modelId, model under another subtype, or a model on a SURFACE component
+   *         description: Invalid subtypeId or modelId, model under another subtype, or a model on a SURFACE component
    *     security:
    *       - bearerAuth: []
    */
@@ -1928,7 +1928,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/Component'
    *       400:
-   *         description: Unknown subtypeId or modelId, model under another subtype, or a model on a SURFACE component
+   *         description: Invalid subtypeId or modelId, model under another subtype, or a model on a SURFACE component
    *       404:
    *         description: Component not found
    *     security:

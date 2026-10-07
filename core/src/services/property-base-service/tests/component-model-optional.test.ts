@@ -132,6 +132,32 @@ describe('Components without a model', () => {
     expect(res.status).toBe(404)
   })
 
+  it('returns 500 when property fails on create', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponent')
+      .mockResolvedValueOnce({ ok: false, err: 'upstream_error' })
+
+    const res = await request(app.callback())
+      .post('/components')
+      .send({ subtypeId })
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('Internal server error')
+  })
+
+  it('returns 500 when property fails on update', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponent')
+      .mockResolvedValueOnce({ ok: false, err: 'upstream_error' })
+
+    const res = await request(app.callback())
+      .put(`/components/${componentId}`)
+      .send({ condition: 'GOOD' })
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('Internal server error')
+  })
+
   it('reads a component with a subtype and no model', async () => {
     const wall = {
       ...factory.component.build(),
