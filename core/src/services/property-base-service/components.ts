@@ -22,6 +22,15 @@ const componentTypeErrorResponse = {
   upstream_error: [500, 'Internal server error'],
 } as const
 
+const componentErrorResponse = {
+  bad_request: [
+    400,
+    'Invalid subtypeId or modelId, model under another subtype, or a model on a SURFACE component',
+  ],
+  not_found: [404, 'Component not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
@@ -1829,7 +1838,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   post:
    *     summary: Create a new component
-   *     description: Registers a new physical unit. Requires modelId and serialNumber.
+   *     description: Registers a new physical unit. Requires subtypeId; modelId is optional and must belong to the same subtype, and components in a SURFACE category take no model.
    *     tags:
    *       - Property-base/Components
    *     requestBody:
@@ -1848,6 +1857,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Component'
+   *       400:
+   *         description: Unknown subtypeId or modelId, model under another subtype, or a model on a SURFACE component
    *     security:
    *       - bearerAuth: []
    */
@@ -1867,8 +1878,9 @@ export const routes = (router: KoaRouter) => {
       })
 
       if (!result.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
+        const [status, error] = componentErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -1915,6 +1927,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Component'
+   *       400:
+   *         description: Unknown subtypeId or modelId, model under another subtype, or a model on a SURFACE component
    *       404:
    *         description: Component not found
    *     security:
@@ -1947,14 +1961,9 @@ export const routes = (router: KoaRouter) => {
       })
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component not found'
-              : 'Internal server error',
-          ...metadata,
-        }
+        const [status, error] = componentErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 

@@ -656,7 +656,9 @@ async function getComponentById(
 
 async function createComponent(
   data: components['schemas']['CreateComponentRequest']
-): Promise<AdapterResult<GetComponentResponse, 'upstream_error'>> {
+): Promise<
+  AdapterResult<GetComponentResponse, 'upstream_error' | 'bad_request'>
+> {
   try {
     const response = await client().POST('/components', {
       body: data,
@@ -664,6 +666,10 @@ async function createComponent(
 
     if (response.data?.content) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.response?.status === 400) {
+      return { ok: false, err: 'bad_request' }
     }
 
     // Log error details from microservice response
@@ -690,7 +696,10 @@ async function updateComponent(
   id: string,
   data: components['schemas']['UpdateComponentRequest']
 ): Promise<
-  AdapterResult<GetComponentResponse, 'upstream_error' | 'not_found'>
+  AdapterResult<
+    GetComponentResponse,
+    'upstream_error' | 'not_found' | 'bad_request'
+  >
 > {
   try {
     const response = await client().PUT('/components/{id}', {
@@ -704,6 +713,10 @@ async function updateComponent(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
     }
 
     return { ok: false, err: 'upstream_error' }
