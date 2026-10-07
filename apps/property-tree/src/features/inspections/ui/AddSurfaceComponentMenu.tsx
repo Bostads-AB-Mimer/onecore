@@ -14,7 +14,7 @@ import {
 import type { SurfaceCode } from '../constants'
 import { useAddSurfaceComponent } from '../hooks/useAddSurfaceComponent'
 import { useSurfaceModels } from '../hooks/useSurfaceModels'
-import { groupSurfaceModels, surfaceLabel } from '../lib/surfaces'
+import { groupSurfaceSubtypes, surfaceLabel } from '../lib/surfaces'
 
 interface AddSurfaceComponentMenuProps {
   propertyObjectId: string
@@ -29,7 +29,7 @@ export function AddSurfaceComponentMenu({
   const addSurfaceComponent = useAddSurfaceComponent(propertyObjectId)
 
   const groups = useMemo(
-    () => groupSurfaceModels(surfaceModels),
+    () => groupSurfaceSubtypes(surfaceModels),
     [surfaceModels]
   )
 
@@ -55,9 +55,7 @@ export function AddSurfaceComponentMenu({
                 {subtypes.map((option) => (
                   <DropdownMenuItem
                     key={option.subtypeId}
-                    onClick={() =>
-                      addSurfaceComponent.mutate(option.representativeModelId)
-                    }
+                    onClick={() => addSurfaceComponent.mutate(option.subtypeId)}
                   >
                     {option.subtypeName}
                   </DropdownMenuItem>

@@ -7,14 +7,10 @@ export const useAddSurfaceComponent = (propertyObjectId: string) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (modelId: string) =>
+    mutationFn: (subtypeId: string) =>
       componentService.createInstanceWithInstallation(propertyObjectId, {
-        modelId,
+        subtypeId,
         installationDate: new Date().toISOString(),
-        warrantyMonths: 0,
-        priceAtPurchase: 0,
-        depreciationPriceAtPurchase: 0,
-        economicLifespan: 0,
         installationCost: 0,
       }),
     onSuccess: () => {

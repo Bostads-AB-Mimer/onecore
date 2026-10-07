@@ -13,7 +13,6 @@ type FetchedComponent = apiTypes['schemas']['Component']
 export interface SurfaceSubtypeOption {
   subtypeId: string
   subtypeName: string
-  representativeModelId: string
 }
 
 export interface SurfaceGroup {
@@ -27,7 +26,7 @@ const isSurfaceCode = (code: unknown): code is SurfaceCode =>
 export const getSurfaceCode = (
   component: FetchedComponent
 ): SurfaceCode | undefined => {
-  const code = component.model?.subtype?.componentType?.code
+  const code = component.subtype?.componentType?.code
   return isSurfaceCode(code) ? code : undefined
 }
 
@@ -53,46 +52,26 @@ export const findMissingSurfaces = (
     (code) => !components.some((c) => getSurfaceCode(c) === code)
   )
 
-const pickRepresentativeModel = (models: ComponentModel[]): ComponentModel => {
-  const subTypeName = models[0]?.subtype?.subTypeName ?? ''
-  return (
-    models.find((m) => m.modelName === subTypeName) ??
-    [...models].sort((a, b) => a.modelName.localeCompare(b.modelName))[0]
-  )
-}
-
-export const groupSurfaceModels = (
+export const groupSurfaceSubtypes = (
   models: ComponentModel[]
 ): Map<SurfaceCode, SurfaceGroup> => {
-  const bySubtype = new Map<string, ComponentModel[]>()
-  for (const model of models) {
-    const subtypeId = model.subtype?.id
-    if (!subtypeId) continue
-    const bucket = bySubtype.get(subtypeId)
-    if (bucket) {
-      bucket.push(model)
-    } else {
-      bySubtype.set(subtypeId, [model])
-    }
-  }
-
   const groups = new Map<SurfaceCode, SurfaceGroup>()
-  for (const subtypeModels of bySubtype.values()) {
-    const first = subtypeModels[0]
-    const componentType = first.subtype?.componentType
-    const code = componentType?.code
-    const subtypeId = first.subtype?.id
-    const subtypeName = first.subtype?.subTypeName
-    if (!isSurfaceCode(code) || !subtypeId || !subtypeName) continue
+  const seen = new Set<string>()
+
+  for (const model of models) {
+    const subtype = model.subtype
+    const code = subtype?.componentType?.code
+    if (!subtype?.id || !subtype.subTypeName || !isSurfaceCode(code)) continue
+    if (seen.has(subtype.id)) continue
+    seen.add(subtype.id)
 
     const group = groups.get(code) ?? {
-      typeName: componentType?.typeName ?? SURFACE_LABELS[code],
+      typeName: subtype.componentType?.typeName ?? SURFACE_LABELS[code],
       subtypes: [],
     }
     group.subtypes.push({
-      subtypeId,
-      subtypeName,
-      representativeModelId: pickRepresentativeModel(subtypeModels).id,
+      subtypeId: subtype.id,
+      subtypeName: subtype.subTypeName,
     })
     groups.set(code, group)
   }
