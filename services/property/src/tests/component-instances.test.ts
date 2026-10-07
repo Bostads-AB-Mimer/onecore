@@ -338,6 +338,7 @@ describe('Component Instances API', () => {
 
       for (const condition of conditions) {
         const newComponent = factory.component.build({
+          subtypeId: existingSubtypeId,
           modelId: existingModelId,
           condition: condition as 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED',
         })
@@ -378,6 +379,7 @@ describe('Component Instances API', () => {
       const nonExistentModelId = '00000000-0000-0000-0000-000000000000'
 
       const invalidComponent = factory.component.build({
+        subtypeId: existingSubtypeId,
         modelId: nonExistentModelId,
       })
 
