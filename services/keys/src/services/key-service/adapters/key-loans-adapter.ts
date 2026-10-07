@@ -738,3 +738,103 @@ export async function activateKeyLoan(
 
   return { activated: true, keyEventsCompleted: result.keyEventsCompleted }
 }
+
+/**
+ * Batch variant of getKeyLoansByRentalObject. A loan belongs to a rental
+ * object when any of its keys has that rentalObjectCode, or any of its cards
+ * is in `cardsByRentalObject[code]`. Receipts are not included.
+ */
+export async function getKeyLoansByRentalObjects(
+  rentalObjectCodes: string[],
+  cardsByRentalObject: Record<string, Card[]>,
+  dbConnection: Knex | Knex.Transaction = db
+): Promise<Record<string, KeyLoanWithDetails[]>> {
+  const result: Record<string, KeyLoanWithDetails[]> = {}
+  for (const code of rentalObjectCodes) result[code] = []
+  if (rentalObjectCodes.length === 0) return result
+
+  const cardMap = new Map<string, Card>()
+  const objectByCardId = new Map<string, string>()
+  for (const [code, cards] of Object.entries(cardsByRentalObject)) {
+    for (const card of cards) {
+      cardMap.set(card.cardId, card)
+      objectByCardId.set(card.cardId, code)
+    }
+  }
+  const allCardIds = [...cardMap.keys()]
+
+  const loans: KeyLoan[] = await dbConnection('key_loans as kl')
+    .select('kl.*')
+    .where(function () {
+      this.whereExists(function () {
+        this.select(dbConnection.raw('1'))
+          .from('key_loan_keys as klk')
+          .join('keys as k', 'k.id', 'klk.keyId')
+          .whereRaw('klk.keyLoanId = kl.id')
+          .whereIn('k.rentalObjectCode', rentalObjectCodes)
+      })
+      if (allCardIds.length > 0) {
+        this.orWhereExists(function () {
+          this.select(dbConnection.raw('1'))
+            .from('key_loan_cards as klc')
+            .whereRaw('klc.keyLoanId = kl.id')
+            .whereIn('klc.cardId', allCardIds)
+        })
+      }
+    })
+    .orderBy('kl.createdAt', 'desc')
+
+  if (loans.length === 0) return result
+
+  const loanIds = loans.map((l) => l.id)
+
+  const keyRows = await dbConnection('key_loan_keys')
+    .join('keys', 'keys.id', 'key_loan_keys.keyId')
+    .whereIn('key_loan_keys.keyLoanId', loanIds)
+    .select('key_loan_keys.keyLoanId', 'keys.*')
+
+  const keysByLoan = new Map<string, Key[]>()
+  for (const row of keyRows) {
+    if (!keysByLoan.has(row.keyLoanId)) keysByLoan.set(row.keyLoanId, [])
+    keysByLoan.get(row.keyLoanId)!.push(row)
+  }
+
+  const cardRows = await dbConnection('key_loan_cards')
+    .whereIn('keyLoanId', loanIds)
+    .select('keyLoanId', 'cardId')
+
+  const cardIdsByLoan = new Map<string, string[]>()
+  for (const row of cardRows) {
+    if (!cardIdsByLoan.has(row.keyLoanId)) cardIdsByLoan.set(row.keyLoanId, [])
+    cardIdsByLoan.get(row.keyLoanId)!.push(row.cardId)
+  }
+
+  for (const loan of loans) {
+    const keysArray = keysByLoan.get(loan.id) || []
+    const loanCardIds = cardIdsByLoan.get(loan.id) || []
+    const keyCardsArray = loanCardIds
+      .map((id) => cardMap.get(id))
+      .filter((c): c is Card => c !== undefined)
+
+    const detailed: KeyLoanWithDetails = {
+      ...loan,
+      keysArray,
+      keyCardsArray,
+      receipts: [],
+    }
+
+    const codes = new Set<string>()
+    for (const k of keysArray) {
+      if (k.rentalObjectCode && result[k.rentalObjectCode]) {
+        codes.add(k.rentalObjectCode)
+      }
+    }
+    for (const id of loanCardIds) {
+      const code = objectByCardId.get(id)
+      if (code && result[code]) codes.add(code)
+    }
+    for (const code of codes) result[code].push(detailed)
+  }
+
+  return result
+}

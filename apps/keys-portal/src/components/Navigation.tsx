@@ -1,5 +1,6 @@
 import * as React from 'react'
 import {
+  ArrowLeftRight,
   ChevronRight,
   Key,
   Lock,
@@ -73,6 +74,19 @@ export function Navigation({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <Link to="/key-loans">
                     <ListChecks className="h-4 w-4" />
                     <span>Nyckellån</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* In- och utflytt */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/move-in-out'}
+                >
+                  <Link to="/move-in-out">
+                    <ArrowLeftRight className="h-4 w-4" />
+                    <span>In- och utflytt</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -8224,6 +8224,50 @@ export interface paths {
       }
     }
   }
+  '/keys/move-in-out': {
+    /**
+     * Move-in / move-out key status per rental object
+     * @description Finds leases ending (lastDebitDate) and/or starting in the given ranges, then
+     * returns one row per rental object with the outgoing and incoming tenant,
+     * key/card counts, loan return and handout dates, and a derived status.
+     * Give endDateFrom+endDateTo for move-outs, startDateFrom+startDateTo for
+     * move-ins, or both for the union.
+     */
+    get: {
+      parameters: {
+        query?: {
+          endDateFrom?: string
+          endDateTo?: string
+          startDateFrom?: string
+          startDateTo?: string
+        }
+      }
+      responses: {
+        /** @description One row per rental object */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MoveInOutRow'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Keys service is syncing its DAX card owner mirror; retry later */
+        503: {
+          content: never
+        }
+      }
+    }
+  }
   '/logs': {
     /**
      * List logs with pagination
@@ -14055,6 +14099,40 @@ export interface components {
       organisationFilter?: string
       offset?: number
       limit?: number
+    }
+    MoveInOutRow: {
+      rentalObjectCode: string
+      address: string | null
+      objectTypeCode: string | null
+      outgoing: {
+        leaseId: string
+        names: string[]
+        contactCodes: string[]
+        /** Format: date-time */
+        leaseStartDate: string | null
+        /** Format: date-time */
+        lastDebitDate: string | null
+      } | null
+      incoming: components['schemas']['MoveInOutRow']['outgoing'] | null
+      keyCount: number
+      cardCount: number
+      outgoingAllReturned: boolean | null
+      /** Format: date-time */
+      outgoingReturnedAt: string | null
+      /** Format: date-time */
+      incomingLoanCreatedAt: string | null
+      /** Format: date-time */
+      incomingLoanPickedUpAt: string | null
+      /** @enum {string} */
+      status:
+        | 'NOT_RETURNED'
+        | 'LOANED_TO_OTHER'
+        | 'CREATED'
+        | 'HANDED_OUT'
+        | 'RETURNED_VACANT'
+        | 'NO_KEYS'
+        | 'NO_LOANS'
+        | 'PARTIAL'
     }
     PaginatedResponse: {
       content: unknown[]

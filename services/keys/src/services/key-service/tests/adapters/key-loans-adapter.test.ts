@@ -221,3 +221,51 @@ describe('key-loans-adapter', () => {
       }))
   })
 })
+
+describe('getKeyLoansByRentalObjects', () => {
+  it('groups loans by rental object via keys and cards', () =>
+    withContext(async (ctx) => {
+      const keyA = await keysAdapter.createKey(
+        factory.key.build({ rentalObjectCode: 'A001' }),
+        ctx.db
+      )
+      const keyB = await keysAdapter.createKey(
+        factory.key.build({ rentalObjectCode: 'B002' }),
+        ctx.db
+      )
+      await keysAdapter.createKey(
+        factory.key.build({ rentalObjectCode: 'Z999' }),
+        ctx.db
+      )
+
+      await keyLoansAdapter.createKeyLoan(
+        { keys: [keyA.id], loanType: 'TENANT', contact: 'P1' },
+        ctx.db
+      )
+      await keyLoansAdapter.createKeyLoan(
+        { keys: [keyB.id], loanType: 'TENANT', contact: 'P2' },
+        ctx.db
+      )
+      // Card-only loan, resolved through the cards map
+      await keyLoansAdapter.createKeyLoan(
+        { keyCards: ['CARD-1'], loanType: 'TENANT', contact: 'P3' },
+        ctx.db
+      )
+
+      const result = await keyLoansAdapter.getKeyLoansByRentalObjects(
+        ['A001', 'B002', 'C003'],
+        {
+          B002: [{ cardId: 'CARD-1', createTime: '2024-01-01' } as any],
+        },
+        ctx.db
+      )
+
+      expect(Object.keys(result).sort()).toEqual(['A001', 'B002', 'C003'])
+      expect(result.A001.map((l) => l.contact)).toEqual(['P1'])
+      expect(result.B002.map((l) => l.contact).sort()).toEqual(['P2', 'P3'])
+      expect(
+        result.B002.find((l) => l.contact === 'P3')?.keyCardsArray
+      ).toEqual([expect.objectContaining({ cardId: 'CARD-1' })])
+      expect(result.C003).toEqual([])
+    }))
+})

@@ -711,6 +711,41 @@ export interface paths {
       }
     }
   }
+  '/keys/batch/by-rental-object': {
+    /**
+     * Get non-disposed keys for many rental objects in one call
+     * @description Returns a map keyed by rentalObjectCode. Every requested code is present,
+     * mapped to an empty array when the object has no keys. Max 200 codes.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Rental object codes (repeat the param or comma-separate). */
+          rentalObjectCodes: string[]
+        }
+      }
+      responses: {
+        /** @description Keys grouped by rental object code. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                [key: string]: components['schemas']['KeyDetails'][]
+              }
+            }
+          }
+        }
+        /** @description Missing or too many rental object codes. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/keys/by-rental-object/{rentalObjectCode}': {
     /**
      * Get all keys by rental object code with optional related data
@@ -1594,6 +1629,55 @@ export interface paths {
       }
     }
   }
+  '/key-loans/batch/by-rental-object': {
+    /**
+     * Get key loans (with keys and cards) for many rental objects in one call
+     * @description Returns a map keyed by rentalObjectCode. A loan is listed under an object when
+     * any of its keys or cards belongs to that object. Every requested code is present,
+     * mapped to an empty array when it has no loans. Receipts are not included. Max 200 codes.
+     *
+     * Cards are looked up in DAX per object. With `includeCards=true` the cards found
+     * are also returned as a `cards` sidecar keyed by rentalObjectCode.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Rental object codes (repeat the param or comma-separate). */
+          rentalObjectCodes: string[]
+          /** @description When true, adds a `cards` sidecar with all DAX cards per rental object. */
+          includeCards?: boolean
+        }
+      }
+      responses: {
+        /** @description Loans grouped by rental object code. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                [key: string]: components['schemas']['KeyLoanWithDetails'][]
+              }
+              /** @description Present only when includeCards=true. */
+              cards?: {
+                [key: string]: components['schemas']['Card'][]
+              }
+            }
+          }
+        }
+        /** @description Missing or too many rental object codes. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+        /** @description The DAX card owner mirror is still syncing (after a restart). Retry later. */
+        503: {
+          content: never
+        }
+      }
+    }
+  }
   '/key-loans/by-rental-object/{rentalObjectCode}': {
     /**
      * Get key loans with enriched keys and receipts
@@ -2367,6 +2451,36 @@ export interface paths {
         /** @description Failed to fetch contracts */
         500: {
           content: never
+        }
+      }
+    }
+  }
+  '/dax/card-owners/sync': {
+    /** State of the DAX card owner mirror and its last sync */
+    get: {
+      responses: {
+        /** @description Mirror row count, oldest sync time, and last run outcome */
+        200: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Start a resync of the local mirror of DAX card owners
+     * @description Pages all card owners from DAX and replaces the in-memory mirror with
+     * the active owners named by rental object code. Runs on start and daily;
+     * this starts it manually. Returns at once, the run takes minutes.
+     * Poll GET /dax/card-owners/sync for the outcome.
+     */
+    post: {
+      responses: {
+        /** @description Sync started, or already running */
+        202: {
+          content: {
+            'application/json': {
+              running?: boolean
+            }
+          }
         }
       }
     }

@@ -2,6 +2,12 @@ import KoaRouter from '@koa/router'
 import { logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import * as daxAdapter from '../adapters/dax-adapter'
+import {
+  getLastSyncResult,
+  isSyncRunning,
+  syncDaxCardOwners,
+} from '../dax-card-owner-sync'
+import * as mirror from '../dax-card-owner-mirror'
 import createHttpError from 'http-errors'
 import { registerSchema } from '../../../utils/openapi'
 
@@ -60,6 +66,58 @@ export const routes = (router: KoaRouter) => {
     } catch (error) {
       logger.error({ error }, 'Failed to fetch DAX contracts')
       throw createHttpError(500, 'Failed to fetch contracts from DAX API')
+    }
+  })
+
+  /**
+   * @swagger
+   * /dax/card-owners/sync:
+   *   post:
+   *     summary: Start a resync of the local mirror of DAX card owners
+   *     description: |
+   *       Pages all card owners from DAX and replaces the in-memory mirror with
+   *       the active owners named by rental object code. Runs on start and daily;
+   *       this starts it manually. Returns at once, the run takes minutes.
+   *       Poll GET /dax/card-owners/sync for the outcome.
+   *     tags: [DAX API]
+   *     responses:
+   *       202:
+   *         description: Sync started, or already running
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 running:
+   *                   type: boolean
+   */
+  router.post('/dax/card-owners/sync', async (ctx) => {
+    if (!isSyncRunning()) {
+      syncDaxCardOwners().catch((error) =>
+        logger.error({ error }, 'Failed to sync DAX card owners')
+      )
+    }
+    ctx.status = 202
+    ctx.body = { running: true }
+  })
+
+  /**
+   * @swagger
+   * /dax/card-owners/sync:
+   *   get:
+   *     summary: State of the DAX card owner mirror and its last sync
+   *     tags: [DAX API]
+   *     responses:
+   *       200:
+   *         description: Mirror row count, oldest sync time, and last run outcome
+   */
+  router.get('/dax/card-owners/sync', async (ctx) => {
+    const state = mirror.getState()
+    ctx.status = 200
+    ctx.body = {
+      ...state,
+      running: isSyncRunning(),
+      lastRun: getLastSyncResult(),
     }
   })
 
@@ -204,6 +262,7 @@ export const routes = (router: KoaRouter) => {
     try {
       const params = {
         nameFilter: ctx.query.nameFilter as string | undefined,
+        idfilter: ctx.query.idfilter as string | undefined,
         offset: ctx.query.offset
           ? parseInt(ctx.query.offset as string)
           : undefined,

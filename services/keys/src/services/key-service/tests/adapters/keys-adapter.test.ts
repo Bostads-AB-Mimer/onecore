@@ -172,3 +172,35 @@ describe('keys-adapter', () => {
       }))
   })
 })
+
+describe('getKeyDetailsByRentalObjects', () => {
+  it('groups non-disposed keys by rental object', () =>
+    withContext(async (ctx) => {
+      await keysAdapter.createKey(
+        factory.key.build({ rentalObjectCode: 'A001', keyName: 'A-1' }),
+        ctx.db
+      )
+      await keysAdapter.createKey(
+        factory.key.build({ rentalObjectCode: 'A001', keyName: 'A-2' }),
+        ctx.db
+      )
+      const disposed = await keysAdapter.createKey(
+        factory.key.build({ rentalObjectCode: 'A001', keyName: 'A-3' }),
+        ctx.db
+      )
+      await keysAdapter.updateKey(disposed.id, { disposed: true }, ctx.db)
+      await keysAdapter.createKey(
+        factory.key.build({ rentalObjectCode: 'Z999', keyName: 'Z-1' }),
+        ctx.db
+      )
+
+      const result = await keysAdapter.getKeyDetailsByRentalObjects(
+        ['A001', 'B002'],
+        ctx.db
+      )
+
+      expect(Object.keys(result).sort()).toEqual(['A001', 'B002'])
+      expect(result.A001.map((k) => k.keyName).sort()).toEqual(['A-1', 'A-2'])
+      expect(result.B002).toEqual([])
+    }))
+})

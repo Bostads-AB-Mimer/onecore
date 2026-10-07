@@ -24,7 +24,13 @@ routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
-beforeEach(jest.resetAllMocks)
+beforeEach(() => {
+  jest.resetAllMocks()
+  // Never let createLogEntry reach a running keys service from tests
+  jest
+    .spyOn(keysAdapter.LogsApi, 'create')
+    .mockResolvedValue({ ok: true, data: undefined as never })
+})
 
 describe('keys-service', () => {
   // ============================================================================

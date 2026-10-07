@@ -8,6 +8,10 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
 import { paginate } from '../../../utils/pagination'
 import { buildSearchQuery } from '../../../utils/search-builder'
+import {
+  MAX_BATCH_RENTAL_OBJECT_CODES,
+  parseRentalObjectCodes,
+} from '../../../utils/rental-object-codes'
 
 const {
   KeySchema,
@@ -298,6 +302,69 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { ...metadata, ...paginatedResult }
     } catch (err) {
       logger.error(err, 'Error searching keys')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /keys/batch/by-rental-object:
+   *   get:
+   *     summary: Get non-disposed keys for many rental objects in one call
+   *     description: |
+   *       Returns a map keyed by rentalObjectCode. Every requested code is present,
+   *       mapped to an empty array when the object has no keys. Max 200 codes.
+   *     tags: [Keys]
+   *     parameters:
+   *       - in: query
+   *         name: rentalObjectCodes
+   *         required: true
+   *         style: form
+   *         explode: true
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Rental object codes (repeat the param or comma-separate).
+   *     responses:
+   *       200:
+   *         description: Keys grouped by rental object code.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   additionalProperties:
+   *                     type: array
+   *                     items:
+   *                       $ref: '#/components/schemas/KeyDetails'
+   *       400:
+   *         description: Missing or too many rental object codes.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('/keys/batch/by-rental-object', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['rentalObjectCodes'])
+    try {
+      const codes = parseRentalObjectCodes(ctx)
+      if (codes.length === 0 || codes.length > MAX_BATCH_RENTAL_OBJECT_CODES) {
+        ctx.status = 400
+        ctx.body = {
+          reason: `rentalObjectCodes must contain 1-${MAX_BATCH_RENTAL_OBJECT_CODES} codes`,
+          ...metadata,
+        }
+        return
+      }
+
+      const content = await keysAdapter.getKeyDetailsByRentalObjects(codes, db)
+
+      ctx.status = 200
+      ctx.body = { content, ...metadata }
+    } catch (err) {
+      logger.error(err, 'Error fetching keys batch by rental object')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }

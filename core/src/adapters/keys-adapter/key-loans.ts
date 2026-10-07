@@ -2,6 +2,8 @@ import { logger } from '@onecore/utilities'
 import { z } from 'zod'
 import { client, mapFetchError, ok, fail, parsePaginated } from './helpers'
 import {
+  Card,
+  CardSchema,
   KeyLoan,
   KeyLoanWithDetails,
   CreateKeyLoanRequest,
@@ -101,6 +103,36 @@ export const KeyLoansApi = {
       logger.error(
         { err: e },
         'keys-adapter: GET /key-loans/by-rental-object failed'
+      )
+      return fail('unknown')
+    }
+  },
+
+  getBatchByRentalObject: async (
+    rentalObjectCodes: string[]
+  ): Promise<
+    AdapterResult<
+      {
+        loans: Record<string, KeyLoanWithDetails[]>
+        cards: Record<string, Card[]>
+      },
+      'bad-request' | CommonErr
+    >
+  > => {
+    try {
+      const { data, error, response } = await client().GET(
+        '/key-loans/batch/by-rental-object',
+        { params: { query: { rentalObjectCodes, includeCards: true } } }
+      )
+      if (error || !response.ok) return fail(mapFetchError(response))
+      return ok({
+        loans: z.record(z.array(KeyLoanWithDetailsSchema)).parse(data.content),
+        cards: z.record(z.array(CardSchema)).parse(data.cards ?? {}),
+      })
+    } catch (e) {
+      logger.error(
+        { err: e },
+        'keys-adapter: GET /key-loans/batch/by-rental-object failed'
       )
       return fail('unknown')
     }
