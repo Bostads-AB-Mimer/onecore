@@ -45,8 +45,8 @@ flowchart TD
         XPAND_DB[("Xpand SQL DB<br/>Mimer_Summarum_DB")]
         TENFAST["Tenfast"]
         CREDITSAFE["Creditsafe"]
-        XLEDGER["Xledger (GraphQL)"]
-        STRALFORS["Strålfors (SFTP)"]
+        XLEDGER["Xledger (GraphQL + SFTP)"]
+        STRALFORS["Strålfors (REST + SFTP)"]
         SERGEL["Sergel (SFTP)"]
         MALARENERGI["Mälarenergi (SFTP)"]
         INFOBIP["Infobip"]
@@ -57,7 +57,9 @@ flowchart TD
         MINIO[("MinIO / S3")]
         AKTIVBO["AktivBo"]
         ECOGUARD["Ecoguard Curves"]
+        BERGET["Berget AI"]
         MSGRAPH["Microsoft Graph / Entra ID"]
+        KEYCLOAK["Keycloak"]
         POWERAUTOMATE["Power Automate<br/>+ kvittensskannrar"]
         LANSFORSAKRINGAR["Länsförsäkringar (SFTP)"]
     end
@@ -76,7 +78,8 @@ flowchart TD
     CORE --> WORKORDER
     CORE --> KEYS
     CORE --> FILESTORAGE
-    CORE --> MSGRAPH
+    CORE -->|"synk attribut"| MSGRAPH
+    CORE -->|"autentisering (JWKS)"| KEYCLOAK
     CORE -.->|"legacy, avvecklas"| LANSFORSAKRINGAR
 
     LEASING --> XPAND_SOAP
@@ -99,6 +102,7 @@ flowchart TD
 
     PROP --> XPAND_DB
     PROP --> ECOGUARD
+    PROP --> BERGET
 
     PROPMGMT --> XPAND_SOAP
     PROPMGMT --> XPAND_DB
@@ -133,14 +137,12 @@ flowchart TD
 | **Economy**             | Fakturering, avisering, bokföringsexport                                    | Xpand (DB), Tenfast, Xledger, Strålfors, Sergel, Mälarenergi, Infobip | Ja                                                                                                                 |
 | **Contacts**            | Kontakt-/hyresgästdata (ersätter delar av direkta Xpand-anrop från Leasing) | Xpand (DB)                                                            | Ja                                                                                                                 |
 | **Communication**       | E-post/SMS-utskick, ärendehantering                                         | Infobip, Linear                                                       | Ja                                                                                                                 |
-| **Property**            | Fastighetsdata (läser Xpand direkt via Prisma)                              | Xpand (DB)                                                            | Delvis — läser mest Xpands egen DB, men äger egna `Onecore*`-tabeller (kostnadsställe, KVV-område) i samma databas |
+| **Property**            | Fastighetsdata (läser Xpand direkt via Prisma)                              | Xpand (DB), Berget AI                                                 | Delvis — läser mest Xpands egen DB, men äger egna tabeller i samma databas: `Onecore*` (kostnadsställe, KVV-område) samt `component_*` och `documents` |
 | **Property Management** | Fastighetsförvaltning                                                       | Xpand (SOAP + DB)                                                     | Ja                                                                                                                 |
 | **Inspection**          | Besiktningar                                                                | Xpand (DB)                                                            | Ja                                                                                                                 |
-| **Work Order**          | Ärenden/felanmälan (nya i Odoo, historiska lästa direkt ur Xpand)           | Odoo, Xpand (DB, läs)                                                 | Nej*                                                                                                               |
+| **Work Order**          | Ärenden/felanmälan (nya i Odoo, historiska lästa direkt ur Xpand)           | Odoo, Xpand (DB, läs)                                                 | Nej                                                                                                                |
 | **Keys**                | Nyckelhantering, kvittenser                                                 | DAX/Alliera, Simplesign                                               | Ja                                                                                                                 |
 | **File Storage**        | Fillagring                                                                  | MinIO/S3                                                              | Nej                                                                                                                |
-
-`*` Ingen egen migrations-mapp hittad — bekräfta om Work Order är avsiktligt databaslös eller om det är en lucka.
 
 ## Externa system
 
@@ -149,10 +151,10 @@ flowchart TD
 | **Xpand** (SOAP + SQL DB)             | Leasing, Economy, Contacts, Property, Property Management, Inspection, Work Order | Ut (läs), delvis SOAP-skrivning i Leasing       | Legacy fastighets-/kontraktssystem, fortsatt källa för mycket grunddata (Work Order läser bara historiska, förmigrerade ärenden)                                 |
 | **Tenfast**                           | Leasing, Economy                                                                  | Ut + in (kontaktuppslag)                        | Avtals-/bilplatshantering                                                                                                                                        |
 | **Creditsafe**                        | Leasing                                                                           | Ut                                              | Kreditupplysning                                                                                                                                                 |
-| **Xledger**                           | Economy                                                                           | Ut                                              | Bokföring, fakturor, betalstatus                                                                                                                                 |
-| **Strålfors**                         | Economy                                                                           | Ut (SFTP)                                       | Fakturadistribution (tryck/digitalt)                                                                                                                             |
+| **Xledger**                           | Economy                                                                           | Ut (GraphQL + SFTP)                             | Bokföring, fakturor, betalstatus                                                                                                                                 |
+| **Strålfors**                         | Economy                                                                           | Ut (REST + SFTP)                                | Fakturadistribution (tryck/digitalt)                                                                                                                             |
 | **Sergel**                            | Economy                                                                           | Ut (SFTP)                                       | Inkasso                                                                                                                                                          |
-| **Mälarenergi**                       | Economy                                                                           | Ut (SFTP)                                       | Fakturor                                                                                                                                                         |
+| **Mälarenergi**                       | Economy                                                                           | In (SFTP)                                       | Fakturor                                                                                                                                                         |
 | **Infobip**                           | Economy, Communication                                                            | Ut + in (2 webhooks: leveransstatus SMS/e-post) | E-post/SMS                                                                                                                                                       |
 | **Odoo**                              | Work Order                                                                        | Ut + in                                         | Ärendehantering                                                                                                                                                  |
 | **Linear**                            | Communication                                                                     | Ut                                              | Ärendehantering/ticketing                                                                                                                                        |
@@ -161,7 +163,9 @@ flowchart TD
 | **MinIO / S3**                        | File Storage                                                                      | Ut                                              | Fillagring                                                                                                                                                       |
 | **AktivBo**                           | Core (direkt)                                                                     | In                                              | Aktiva hyresgäster/bostadsinfo — ren API-konsument av Cores redan existerande endpoints, inget AktivBo-specifikt i koden (därför ingen egen adapter att peka på) |
 | **Ecoguard Curves**                   | Property (via Core)                                                               | Ut                                              | Lägenhetstemperaturer. property-tree har även en ren UI-länk ut till Ecoguards eget gränssnitt, hämtar ingen data                                                |
-| **Microsoft Graph / Entra ID**        | Core (direkt)                                                                     | Ut                                              | Autentisering                                                                                                                                                    |
+| **Berget AI**                         | Property                                                                          | Ut                                              | Bildbaserad komponentanalys (AI)                                                                                                                                  |
+| **Microsoft Graph / Entra ID**        | Core (skript: sync-keycloak-entra-id-attributes)                                  | Ut                                              | Synk av användarattribut till Keycloak — inte autentisering                                                                                                       |
+| **Keycloak**                          | Core                                                                              | Ut (JWKS-verifiering)                           | Autentisering av inloggningar till personalapparna (property-tree, keys-portal, internal-portal)                                                                  |
 | **Länsförsäkringar**                  | Core (direkt, `home-insurance-export`-scriptet)                                   | Ut (SFTP)                                       | Hemförsäkringsexport — **legacy, avvecklas** (hanteras numera i Xpand)                                                                                           |
 | **Power Automate + kvittensskannrar** | Core (direkt)                                                                     | In (WebDAV PUT, IP-listad)                      | Kvittensskanning (plan 5, KC) — skannrarna skjuter in filer i Core, IP-allowlistat                                                                               |
 
