@@ -2,7 +2,7 @@ import {
   formatDateForExcel,
   joinField,
   setExcelDownloadHeaders,
-} from '../excel'
+} from '../../src/excel'
 
 describe('formatDateForExcel', () => {
   it('should format Date object to YYYY-MM-DD', () => {

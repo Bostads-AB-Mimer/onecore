@@ -4,9 +4,6 @@
   "type": "module",
   "private": true,
   "packageManager": "pnpm@10.6.1",
-  "engines": {
-    "node": ">=20"
-  },
   "files": [
     "dist",
     "nginx.conf"

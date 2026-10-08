@@ -488,8 +488,6 @@ export const sendEmail = async ({
   attachments?: { data: Buffer; name: string }[]
 }) => {
   try {
-    // TODO update node version to get rid of this warning
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins
     const form = new FormData()
 
     form.append('to', to)
@@ -498,8 +496,6 @@ export const sendEmail = async ({
 
     if (attachments) {
       attachments.forEach((a) => {
-        // TODO update node version to get rid of this warning
-        // eslint-disable-next-line n/no-unsupported-features/node-builtins
         form.append('attachments', new Blob([a.data]), a.name)
       })
     }

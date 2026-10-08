@@ -4,9 +4,6 @@
   "version": "0.1.0",
   "description": "MIT",
   "packageManager": "pnpm@10.6.1",
-  "engines": {
-    "node": ">=20"
-  },
   "main": "./src/index.ts",
   "scripts": {
     "build": "tsc",
