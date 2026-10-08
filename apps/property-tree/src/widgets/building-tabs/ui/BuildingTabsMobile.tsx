@@ -73,7 +73,6 @@ export const BuildingTabsMobile = ({
     },
     {
       id: 'arenden',
-      disabled: true,
       icon: MessageSquare,
       title: 'Ärenden',
       content: (
@@ -85,7 +84,6 @@ export const BuildingTabsMobile = ({
     },
     {
       id: 'dokument',
-      disabled: true,
       icon: FileText,
       title: 'Dokument',
       content: (

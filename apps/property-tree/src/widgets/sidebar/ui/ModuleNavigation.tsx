@@ -75,7 +75,9 @@ function NavItem({ item, base }: { item: ModuleNavItem; base: string }) {
       </SidebarMenuButton>
     ) : (
       <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-        <Link to={href}>{label}</Link>
+        <Link to={href} onClick={() => setOpen(true)}>
+          {label}
+        </Link>
       </SidebarMenuButton>
     )
 
@@ -86,7 +88,12 @@ function NavItem({ item, base }: { item: ModuleNavItem; base: string }) {
   return (
     <Collapsible open={open} onOpenChange={setOpen} asChild>
       <SidebarMenuItem>
-        <CollapsibleTrigger asChild>{button}</CollapsibleTrigger>
+        {/* A linked parent navigates and opens; only a plain header toggles. */}
+        {href === undefined ? (
+          <CollapsibleTrigger asChild>{button}</CollapsibleTrigger>
+        ) : (
+          button
+        )}
         <CollapsibleContent>
           <div className="pl-4 mt-1">
             <SidebarMenu>

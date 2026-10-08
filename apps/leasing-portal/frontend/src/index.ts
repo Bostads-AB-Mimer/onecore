@@ -1,6 +1,3 @@
-// Pages library entry. Hosts mount `leasingModule`; the loose exports stay for the standalone shell.
-export { LeasingHostProvider } from './host/LeasingHostProvider'
-export { useLeasingHost } from './host/useLeasingHost'
-export type { LeasingHostConfig, LeasingUser } from './host/types'
-export { leasingRoutes } from './pages/routes'
+// Pages library entry: the module contract is the only public surface.
 export { leasingModule } from './module'
+export type { LeasingHostConfig, LeasingUser } from './host/types'

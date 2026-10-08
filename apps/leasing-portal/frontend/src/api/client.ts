@@ -1,5 +1,6 @@
 import createClient, { type Middleware } from 'openapi-fetch'
 
+import { BffNotConfiguredError } from './errors'
 import type { paths } from './generated/api-types'
 
 export type LeasingApi = ReturnType<typeof createClient<paths>>
@@ -56,7 +57,16 @@ export const createLeasingApi = ({
   bffUrl,
   coreUrl,
 }: LeasingApiConfig): LeasingApi => {
-  const api = createClient<paths>({ baseUrl: bffUrl, credentials: 'include' })
+  // Without a BFF url every call fails explicitly instead of hitting the
+  // host's own origin; the placeholder keeps Request construction valid.
+  const configured = bffUrl !== ''
+  const api = createClient<paths>({
+    baseUrl: configured ? bffUrl : 'http://bff.not-configured.invalid',
+    credentials: 'include',
+    fetch: configured
+      ? undefined
+      : () => Promise.reject(new BffNotConfiguredError()),
+  })
   api.use(refreshOnUnauthorized(coreUrl))
   return api
 }
