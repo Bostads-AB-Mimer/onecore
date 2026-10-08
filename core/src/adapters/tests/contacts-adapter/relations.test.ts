@@ -1,4 +1,6 @@
 import nock from 'nock'
+import { loggedAxios } from '@onecore/utilities'
+import type { AxiosInstance } from 'axios'
 
 import config from '../../../common/config'
 import { makeContactsAdapter } from '../../contacts-adapter'
@@ -193,5 +195,50 @@ describe('contactsAdapter.removeRelation', () => {
       ok: false,
       err: 'contacts-service-error',
     })
+  })
+})
+
+// Core's timer should only fire when something is truly stuck, never while the
+// service is still working: a relation write is several Xpand and contacts DB
+// queries in sequence, each bounded at 15s by the mssql driver's default.
+const SERVICE_WORK_BOUND_MS = 60_000
+
+describe('contactsAdapter relation-write timeout', () => {
+  let instance: AxiosInstance | undefined
+  let adapterWithSpies: ReturnType<typeof makeContactsAdapter>
+
+  beforeEach(() => {
+    const realCreate = loggedAxios.create.bind(loggedAxios)
+    jest.spyOn(loggedAxios, 'create').mockImplementation((cfg) => {
+      instance = realCreate(cfg)
+      return instance
+    })
+    adapterWithSpies = makeContactsAdapter(base)
+  })
+
+  afterEach(() => jest.restoreAllMocks())
+
+  it('waits at least as long as the service may work on an add', async () => {
+    const postSpy = jest
+      .spyOn(instance!, 'post')
+      .mockResolvedValue({ status: 201, data: { content: {} } })
+
+    await adapterWithSpies.addRelation({ ...relation, createdBy: 'Anna' })
+
+    expect(postSpy.mock.calls[0][2]?.timeout).toBeGreaterThanOrEqual(
+      SERVICE_WORK_BOUND_MS
+    )
+  })
+
+  it('waits at least as long as the service may work on a remove', async () => {
+    const deleteSpy = jest
+      .spyOn(instance!, 'delete')
+      .mockResolvedValue({ status: 204, data: undefined })
+
+    await adapterWithSpies.removeRelation({ ...relation, deletedBy: 'Anna' })
+
+    expect(deleteSpy.mock.calls[0][1]?.timeout).toBeGreaterThanOrEqual(
+      SERVICE_WORK_BOUND_MS
+    )
   })
 })

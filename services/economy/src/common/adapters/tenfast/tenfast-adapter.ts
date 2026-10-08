@@ -262,7 +262,7 @@ const transformToRentalProperty = (
   return {
     rentalPropertyId: tenfastRentalProperty.externalId,
     apartmentNumber: tenfastRentalProperty.skvNummer ?? 0, // ?
-    size: tenfastRentalProperty.kvm,
+    size: tenfastRentalProperty.kvm ?? 0,
     type: tenfastRentalProperty.typ,
     rentalPropertyType: tenfastRentalProperty.typ, // ?
     address: {
@@ -392,6 +392,7 @@ const fetchTenfastInvoiceByOcr = async (
       `/v1/hyresvard/extras/hyror/${encodeURIComponent(ocr)}`,
       {
         params: { hyresvard: companyId, populate: 'avtal' },
+        validateStatus: (status) => [200, 404].includes(status),
       }
     )
 
@@ -426,11 +427,11 @@ const fetchTenfastInvoiceByOcr = async (
 
 export const getInvoiceByOcr = async (
   ocr: string
-): Promise<AdapterResult<ParsedTenfastInvoice, string>> => {
+): Promise<AdapterResult<ParsedTenfastInvoice | null, string>> => {
   const result = await fetchTenfastInvoiceByOcr(ocr)
   if (!result.ok) {
     if (result.err === 'not-found') {
-      return { ok: false, err: `Invoice with ocr ${ocr} not found` }
+      return { ok: true, data: null }
     }
     if (result.err === 'schema-error') {
       return { ok: false, err: 'schema-error' }
@@ -440,8 +441,8 @@ export const getInvoiceByOcr = async (
 
   if (!isVisibleTenfastInvoice(result.data)) {
     return {
-      ok: false,
-      err: `Invoice with ocr ${ocr} not found`,
+      ok: true,
+      data: null,
     }
   }
 
@@ -500,16 +501,19 @@ const transformToInvoice = (
       toDate: new Date(tenfastInvoice.interval.to),
       invoiceDate: tenfastInvoice.activatedAt
         ? new Date(tenfastInvoice.activatedAt)
-        : new Date(tenfastInvoice.expectedInvoiceDate),
+        : // expectedInvoiceDate is no longer returned for some invoices
+          // (e.g. credited ones), fall back to the due date.
+          new Date(tenfastInvoice.expectedInvoiceDate ?? tenfastInvoice.due),
       expirationDate: new Date(tenfastInvoice.due),
       paidAmount: tenfastInvoice.amountPaid,
       remainingAmount,
-      invoiceId: tenfastInvoice.ocrNumber,
+      // ocrNumber is no longer returned for some invoices (e.g. credited ones)
+      invoiceId: tenfastInvoice.ocrNumber ?? '',
       leaseIds: tenfastInvoice.avtal.map((a) => a.externalId),
       paymentStatus:
         remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
       type: 'Regular',
-      reference: tenfastInvoice.ocrNumber,
+      reference: tenfastInvoice.ocrNumber ?? '',
       source: 'next', // ??
       invoiceRows: tenfastInvoice.hyror.map(transformToInvoiceRow),
       transactionType: InvoiceTransactionType.Rent,
@@ -809,6 +813,7 @@ export const listNewOutboundExports = async (): Promise<
           params: {
             hyresvard: companyId,
             status: 'NEW',
+            provider: 'stralfors',
             ...(next ? { paginate: next } : {}),
           },
         }

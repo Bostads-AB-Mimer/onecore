@@ -12,6 +12,7 @@ import {
   getInvoicePdf,
   getAutogiroConsentByNationalRegistrationNumber,
   setGracePeriod,
+  listNewOutboundExports,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { PaymentStatus } from '@onecore/types'
 import {
@@ -24,6 +25,7 @@ import {
   TenfastInvoiceFactory,
   TenfastInvoiceRowFactory,
   TenfastAutogiroConsentFactory,
+  TenfastOutboundExportFactory,
 } from '../../factories'
 
 // Mock axios
@@ -334,6 +336,26 @@ describe('Tenfast Adapter', () => {
       expect(result.data[0].invoice.remainingAmount).toBe(0)
     })
 
+    it('falls back to empty ocr when invoice has no ocrNumber', async () => {
+      const invoices = [
+        TenfastInvoiceFactory.build({
+          ocrNumber: undefined,
+          hyror: [TenfastInvoiceRowFactory.build()],
+        }),
+      ]
+
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: { records: invoices, prev: null, next: null, totalCount: 1 },
+      })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      assert(result.ok)
+      expect(result.data[0].invoice.invoiceId).toBe('')
+      expect(result.data[0].invoice.reference).toBe('')
+    })
+
     it('parses draft invoices but excludes them from results', async () => {
       const invoices = [
         TenfastInvoiceFactory.build({
@@ -374,7 +396,7 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoiceByOcr(ocr)
 
       assert(result.ok)
-      expect(result.data.invoice).toMatchObject({
+      expect(result.data?.invoice).toMatchObject({
         amount: 1000,
         paidAmount: 500,
         remainingAmount: 500,
@@ -389,7 +411,7 @@ describe('Tenfast Adapter', () => {
       )
     })
 
-    it('should return error when no invoice is found', async () => {
+    it('should return null when no invoice is found', async () => {
       mockAxios.request.mockResolvedValue({
         status: 404,
         data: {},
@@ -398,8 +420,8 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoiceByOcr('NONEXISTENT')
 
       expect(result).toEqual({
-        ok: false,
-        err: 'Invoice with ocr NONEXISTENT not found',
+        ok: true,
+        data: null,
       })
     })
 
@@ -1072,6 +1094,102 @@ describe(setGracePeriod, () => {
     mockAxios.request.mockRejectedValueOnce(new Error('Network error'))
 
     const result = await setGracePeriod(params)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(listNewOutboundExports, () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  const makeListResponse = (
+    records: object[],
+    opts: { next?: string | null; totalCount?: number } = {}
+  ) => ({
+    status: 200,
+    data: {
+      records,
+      prev: null,
+      next: opts.next ?? null,
+      totalCount: opts.totalCount ?? records.length,
+    },
+  })
+
+  it('requests only NEW exports from the stralfors provider', async () => {
+    mockAxios.request.mockResolvedValueOnce(makeListResponse([]))
+
+    await listNewOutboundExports()
+
+    expect(mockAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/v1/hyresvard/outbound-exports',
+        params: expect.objectContaining({
+          status: 'NEW',
+          provider: 'stralfors',
+          hyresvard: 'test-hyresvard-id',
+        }),
+      })
+    )
+  })
+
+  it('returns all records from a single page', async () => {
+    const exports = [
+      TenfastOutboundExportFactory.build({ _id: 'id-1' }),
+      TenfastOutboundExportFactory.build({ _id: 'id-2' }),
+    ]
+    mockAxios.request.mockResolvedValueOnce(makeListResponse(exports))
+
+    const result = await listNewOutboundExports()
+
+    expect(result).toEqual({ ok: true, data: exports })
+  })
+
+  it('follows pagination until next is null', async () => {
+    const page1 = [TenfastOutboundExportFactory.build({ _id: 'id-1' })]
+    const page2 = [TenfastOutboundExportFactory.build({ _id: 'id-2' })]
+    mockAxios.request
+      .mockResolvedValueOnce(
+        makeListResponse(page1, { next: 'cursor-abc', totalCount: 2 })
+      )
+      .mockResolvedValueOnce(makeListResponse(page2, { totalCount: 2 }))
+
+    const result = await listNewOutboundExports()
+
+    expect(mockAxios.request).toHaveBeenCalledTimes(2)
+    expect(mockAxios.request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        params: expect.objectContaining({ paginate: 'cursor-abc' }),
+      })
+    )
+    expect(result).toEqual({ ok: true, data: [...page1, ...page2] })
+  })
+
+  it('returns unknown when response status is not 200', async () => {
+    mockAxios.request.mockResolvedValueOnce({ status: 500, data: {} })
+
+    const result = await listNewOutboundExports()
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown when response fails schema validation', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { unexpected: true },
+    })
+
+    const result = await listNewOutboundExports()
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown on thrown error', async () => {
+    mockAxios.request.mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await listNewOutboundExports()
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })

@@ -270,6 +270,8 @@ VALUES
   ('_0J415P100     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157FF1     ', 'SE', 'Hittepåplatsen 66', NULL, '722 15', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415P101'),
 
   ('_2300MARN4LN1U0', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157GG1     ', 'SE', '', NULL, '722 09', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2007-06-01T00:00:00.000Z', NULL, '_2300MARN5'),
+  -- P000777: a fakturaadress not yet in effect — tdate NULL, fdate far future.
+  ('_2300MARN4LN1U1', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157GG1     ', 'SE', 'Framtidsvägen 1', NULL, '722 08', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2099-01-01T00:00:00.000Z', NULL, '_2300MARN6'),
 
   ('_0J415NMUT     ', 'adrpost        ', '_RQA11RNMA     ', '_0J4157HH1     ', 'SE', 'Gammal Info:s Väg 34', NULL, '722 10', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415NMUU'),
   ('_0J415P1H6     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157HH1     ', 'SE', 'Gammal Info:s Väg 34', NULL, '722 10', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, '2005-09-30T00:00:00.000Z', '1x-415P1H7'),
@@ -281,6 +283,8 @@ VALUES
   ('_0J415NO93     ', 'adrpost        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Addressgatan 54', NULL, '724 80', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415NO94'),
   ('_0J415P2VG     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Addressgatan 54', NULL, '724 80', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, '2009-08-30T00:00:00.000Z', '1x-415P2VH'),
   ('_1C40HIQBWGDHKI', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Addressgatan 54', NULL, '724 80', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2009-09-01T00:00:00.000Z', NULL, '_1C40HIQBX'),
+  -- P001000: a second fakturaadress left open-ended; the later fdate is current.
+  ('_1C40HIQBWGDHKJ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Senaste Flyttgatan 7', NULL, '722 25', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2015-01-01T00:00:00.000Z', NULL, '_1C40HIQBY'),
 
   ('_6L20Z2POR5O24F', 'adrpost        ', '_RQA11RNMA     ', '_0J4158KK1     ', 'SE', 'Finnsintegatan 20', NULL, '72480', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '_6L20Z2PB3'),
   ('_6L20Z2Q6K5O24F', 'adrfakt        ', '_RQA11RNMA     ', '_0J4158KK1     ', 'SE', 'Finnsintegatan 20', NULL, '72480', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, '2008-01-31T00:00:00.000Z', '_6L20Z2PB3'),

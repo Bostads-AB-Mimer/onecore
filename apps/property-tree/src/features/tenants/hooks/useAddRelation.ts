@@ -14,6 +14,10 @@ export const useAddRelation = () => {
 
   return useMutation<RelatedContact[], RelationError, RelationRef>({
     mutationFn: (ref) => tenantService.addRelation(ref),
-    onSuccess: (_data, ref) => invalidateRelationQueries(queryClient, ref),
+    // onSettled, not onSuccess: a failed propagation that could not be rolled
+    // back leaves the relation saved, so refetching only on success would
+    // leave the list showing the opposite of what the server holds.
+    onSettled: (_data, _error, ref) =>
+      invalidateRelationQueries(queryClient, ref),
   })
 }

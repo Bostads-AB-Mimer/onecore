@@ -308,10 +308,10 @@ interface RentalPropertyInfo {
   type: string
   property: ApartmentInfo | CommercialSpaceInfo | ParkingSpaceInfo
   maintenanceUnits?: MaintenanceUnitInfo[]
-  districtCode: string
-  district: string
-  marketAreaCode: string
-  marketArea: string
+  districtCode: string | null
+  district: string | null
+  marketAreaCode: string | null
+  marketArea: string | null
   building: BuildingInfo
   address?: Address
 }
@@ -356,13 +356,13 @@ interface ParkingSpaceInfo {
 }
 
 interface BuildingInfo {
-  buildingCode: string
-  building: string
-  constructionYear?: number
-  renovationYear?: number
-  assessmentYear?: number
-  buildingTypeCode: string
-  buildingTypeCaption: string
+  buildingCode: string | null
+  building: string | null
+  constructionYear?: number | null
+  renovationYear?: number | null
+  assessmentYear?: number | null
+  buildingTypeCode: string | null
+  buildingTypeCaption: string | null
 }
 
 interface ParkingSpace {

@@ -615,6 +615,12 @@ export async function recordInvoicePayment(
   }
 }
 
+/**
+ * Relation writes wait on this upsert synchronously before answering the
+ * caseworker, so it may not hang for as long as the OS allows.
+ */
+const SYNC_CONTACT_TIMEOUT_MS = 30_000
+
 export async function syncContactToEconomy(
   contactCode: string,
   contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>,
@@ -628,7 +634,8 @@ export async function syncContactToEconomy(
   try {
     const response = await axios.post(
       `${config.economyService.url}/customers/${contactCode}/sync${options?.create ? `?create=${options.create}` : ''}`,
-      payload
+      payload,
+      { timeout: SYNC_CONTACT_TIMEOUT_MS }
     )
     return { ok: true, data: { skipped: response.data?.skipped === true } }
   } catch (err) {

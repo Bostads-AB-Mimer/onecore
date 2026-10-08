@@ -1,0 +1,218 @@
+import request from 'supertest'
+import Koa from 'koa'
+import KoaRouter from '@koa/router'
+import bodyParser from 'koa-body'
+import { makeOkapiRouter } from 'koa-okapi-router'
+import { TenantNotificationRole } from '@onecore/types'
+
+import { requireRole } from '../../../../middlewares/keycloak-auth'
+import { requiredRolesFor } from '../../../../middlewares/route-roles'
+import { routes } from '../index'
+import { tenantNotificationIdempotencyStore } from '../idempotency'
+import * as communicationAdapter from '../../../../adapters/communication-adapter'
+import { Config } from '@/common/config'
+
+jest.mock('../../../../adapters/communication-adapter')
+
+const LEASE_TERMINATION_ROLE = TenantNotificationRole.LeaseTermination
+const IDEMPOTENCY_KEY = 'tenfast-evt-123'
+const LEASE_TERMINATION_PATH =
+  '/v1/tenant-notifications/lease-termination-confirmation'
+
+type TestUser = {
+  name: string
+  preferred_username: string
+  realm_access: { roles: string[] }
+}
+
+const TEST_USER: TestUser = {
+  name: 'Tenfast Integration',
+  preferred_username: 'tenfast-service',
+  realm_access: { roles: [LEASE_TERMINATION_ROLE] },
+}
+
+let mockUser: TestUser | undefined = TEST_USER
+
+const app = new Koa()
+app.use(bodyParser())
+app.use((ctx, next) => {
+  ctx.state.user = mockUser
+  return next()
+})
+app.use((ctx, next) =>
+  requireRole(requiredRolesFor(ctx.path, ctx.method))(ctx, next)
+)
+const koaRouter = new KoaRouter()
+const apiRouter = makeOkapiRouter(koaRouter, {
+  openapi: { info: { title: 'test' } },
+})
+routes(apiRouter, {} as Config)
+app.use(koaRouter.routes())
+
+const body = (overrides: Record<string, unknown> = {}) => ({
+  to: 'tenant@example.com',
+  contactCode: 'P123456',
+  firstName: 'Anna',
+  leaseId: '307-002-11-0201/11',
+  endDate: '2026-10-31',
+  rentalType: 'Bilplats' as const,
+  ...overrides,
+})
+
+const postNotification = (
+  payload: Record<string, unknown> = body(),
+  idempotencyKey = IDEMPOTENCY_KEY
+) =>
+  request(app.callback())
+    .post(LEASE_TERMINATION_PATH)
+    .set('Idempotency-Key', idempotencyKey)
+    .send(payload)
+
+beforeEach(() => {
+  mockUser = TEST_USER
+  tenantNotificationIdempotencyStore.clear()
+  ;(communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock)
+    .mockReset()
+    .mockResolvedValue({ ok: true, data: null })
+})
+
+describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
+  it('sends a lease termination notification and returns sent: true', async () => {
+    const res = await postNotification()
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({ sent: true })
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).toHaveBeenCalledTimes(1)
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leaseId: '307-002-11-0201/11',
+        rentalType: 'Bilplats',
+      })
+    )
+  })
+
+  it('returns 400 when Idempotency-Key is missing', async () => {
+    const res = await request(app.callback())
+      .post(LEASE_TERMINATION_PATH)
+      .send(body())
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('missing-idempotency-key')
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).not.toHaveBeenCalled()
+  })
+
+  it('allows api-access without the type-specific role', async () => {
+    mockUser = {
+      ...TEST_USER,
+      realm_access: { roles: ['api-access'] },
+    }
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({ sent: true })
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 403 when the caller lacks api-access and the type-specific role', async () => {
+    mockUser = {
+      ...TEST_USER,
+      realm_access: { roles: ['some-other-role'] },
+    }
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(403)
+    expect(res.body.message).toBe('Insufficient permissions')
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).not.toHaveBeenCalled()
+  })
+
+  it('does not send again when the same Idempotency-Key is retried', async () => {
+    await postNotification()
+    const res = await postNotification()
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({ sent: true })
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 409 when Idempotency-Key is reused with a different payload', async () => {
+    await postNotification()
+    const res = await postNotification(body({ leaseId: 'other-lease' }))
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toBe('idempotency-conflict')
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 400 for invalid request fields', async () => {
+    const res = await postNotification(body({ endDate: 'not-a-date' }))
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('invalid-request')
+  })
+
+  it('returns 502 when the communication service fails', async () => {
+    ;(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock
+    ).mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('send-failed')
+  })
+
+  it('does not send twice when concurrent requests share an Idempotency-Key', async () => {
+    let releaseSend!: () => void
+    const sendBlocked = new Promise<void>((resolve) => {
+      releaseSend = resolve
+    })
+    ;(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock
+    ).mockImplementationOnce(async () => {
+      await sendBlocked
+      return { ok: true, data: null }
+    })
+
+    const first = postNotification()
+    const second = postNotification()
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    releaseSend()
+
+    const [firstRes, secondRes] = await Promise.all([first, second])
+
+    expect(firstRes.status).toBe(200)
+    expect(secondRes.status).toBe(200)
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows retry after a failed send with the same Idempotency-Key', async () => {
+    ;(communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock)
+      .mockResolvedValueOnce({ ok: false, err: 'unknown', statusCode: 500 })
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    expect((await postNotification()).status).toBe(502)
+    expect((await postNotification()).status).toBe(200)
+    expect(
+      communicationAdapter.sendLeaseTerminationConfirmationEmail
+    ).toHaveBeenCalledTimes(2)
+  })
+})

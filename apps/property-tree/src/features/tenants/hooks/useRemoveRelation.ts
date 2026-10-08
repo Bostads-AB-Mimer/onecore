@@ -17,6 +17,8 @@ export const useRemoveRelation = () => {
 
   return useMutation<void, RelationError, RelationRef>({
     mutationFn: (ref) => tenantService.removeRelation(ref),
-    onSuccess: (_data, ref) => invalidateRelationQueries(queryClient, ref),
+    // onSettled: see useAddRelation.
+    onSettled: (_data, _error, ref) =>
+      invalidateRelationQueries(queryClient, ref),
   })
 }
