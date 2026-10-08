@@ -11,8 +11,8 @@ export function useRouteTab<T extends string>(
   const { tab } = useParams<{ tab?: string }>()
   const { pathname } = useLocation()
 
-  const known = tabs.some((t) => t.value === tab && !t.disabled)
-  const value = known ? (tab as T) : defaultTab
+  const value =
+    tabs.find((t) => t.value === tab && !t.disabled)?.value ?? defaultTab
   // The param is decoded but the pathname is not, so cut at the last slash.
   const trimmed = pathname.replace(/\/+$/, '')
   const basePath = tab ? trimmed.slice(0, trimmed.lastIndexOf('/')) : trimmed
