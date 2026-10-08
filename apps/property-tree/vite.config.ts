@@ -9,10 +9,17 @@ export default defineConfig(({ mode }) => {
   // Optional module packages, build time only (not overridable at runtime like
   // VITE_*): unset = all; a list without a module (or `none`) aliases that
   // package to a stub so its code never enters the bundle (src/shared/config/modules.ts).
+  const knownModules = ['leasing']
   const rawModules = env.ONECORE_FRONTEND_MODULES?.trim()
   const enabledModules = rawModules
     ? rawModules.split(',').map((m) => m.trim())
-    : ['leasing']
+    : knownModules
+  const unknown = enabledModules.filter(
+    (m) => m !== 'none' && !knownModules.includes(m)
+  )
+  if (unknown.length) {
+    throw new Error(`Unknown ONECORE_FRONTEND_MODULES: ${unknown.join(', ')}`)
+  }
   const leasingSource = enabledModules.includes('leasing')
     ? mode === 'development'
       ? path.resolve(__dirname, '../leasing-portal/frontend/src/index.ts')

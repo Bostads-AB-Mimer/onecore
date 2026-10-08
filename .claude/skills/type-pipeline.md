@@ -116,7 +116,7 @@ The leasing portal also has a BFF, but a typed one. Treat it like a small servic
 
 - **BFF backend** (`apps/leasing-portal/backend/`): Koa with `koa-okapi-router`. Routes declare Zod schemas, which generate its OpenAPI document at `/leasing-portal/openapi.json`. It talks only to core, forwarding the user's token as a bearer, and validates core responses with Zod (e.g. `KeycloakUserSchema` from `@onecore/types`).
 - **BFF frontend** (`apps/leasing-portal/frontend/`): `openapi-fetch` over `src/api/generated/api-types.ts`, generated from the BFF's OpenAPI document. Spec paths are prefix-free; the client's base URL carries the `/leasing-portal` prefix.
-- The frontend is also a library: property-tree imports its route array and mounts it under `/uthyrning`. Those pages call the BFF, never core or a microservice directly.
+- The frontend is also a library: property-tree mounts its `leasingModule` (routes, navigation, host wrapper) under `/uthyrning` from `src/shared/config/modules.ts`. Those pages call the BFF, never core or a microservice directly.
 - A missing or wrong type here traces: generated file <- BFF route schema <- (if it is a core shape) `@onecore/types`.
 
 ## Tracing a Type Change Upstream
