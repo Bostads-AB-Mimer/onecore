@@ -1,4 +1,4 @@
-import { useLocation, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import { BuildingTabs } from '@/widgets/building-tabs'
 
@@ -8,13 +8,8 @@ import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 const BuildingPage = () => {
   const { buildingCode } = useParams()
-  const { state } = useLocation()
-  const propertyCode = state?.propertyCode
 
-  const { data, isLoading, error } = useBuildingDetails(
-    propertyCode,
-    buildingCode
-  )
+  const { data, isLoading, error } = useBuildingDetails(buildingCode)
 
   return (
     <ViewLayout>
@@ -30,7 +25,6 @@ const BuildingPage = () => {
             <h1 className="text-3xl font-bold">{data.building.name}</h1>
             <BuildingBasicInfo
               building={data.building}
-              property={data.property}
               address={data.building.name ?? '-'}
             />
             <BuildingTabs

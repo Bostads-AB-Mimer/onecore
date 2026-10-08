@@ -1,4 +1,4 @@
-import { Building, Property } from '@/services/types'
+import { Building } from '@/services/types'
 
 import { CollapsibleInfoCard } from '@/shared/ui/CollapsibleInfoCard'
 
@@ -6,17 +6,17 @@ import { getQuantityValue } from '../lib/quantity'
 
 interface BuildingBasicInfoProps {
   building: Building
-  property: Property
   address?: string
   objectNumber?: string
 }
 
 export const BuildingBasicInfo = ({
   building,
-  property,
   address,
 }: BuildingBasicInfoProps) => {
   const { quantityValues } = building
+  // The building embeds its property; `name` is the property's designation.
+  const propertyName = building.property?.name || 'Okänd fastighet'
 
   // Extract specific quantity values
   // TODO: Figure out which value is "allmän yta" in xpand
@@ -40,9 +40,7 @@ export const BuildingBasicInfo = ({
       </div>
       <div>
         <span className="text-sm text-muted-foreground">Fastighet: </span>
-        <span className="font-medium">
-          {property?.designation || 'Okänd fastighet'}
-        </span>
+        <span className="font-medium">{propertyName}</span>
       </div>
     </div>
   )
@@ -57,9 +55,7 @@ export const BuildingBasicInfo = ({
 
       <div>
         <p className="text-sm text-muted-foreground">Fastighet</p>
-        <p className="font-medium">
-          {property?.designation || 'Okänd fastighet'}
-        </p>
+        <p className="font-medium">{propertyName}</p>
       </div>
 
       {address && (
