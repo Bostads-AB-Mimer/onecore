@@ -649,7 +649,9 @@ describe('GET /leases/search', () => {
           postalCode: null,
           city: null,
           startDate: new Date('2024-01-01'),
+          endDate: null,
           lastDebitDate: null,
+          signedAt: null,
           status: LeaseStatus.Current,
         },
       ],
@@ -707,6 +709,21 @@ describe('GET /leases/search', () => {
 
     expect(res.status).toBe(500)
     expect(res.body.error).toBe('Failed to fetch leases from Tenfast')
+  })
+
+  it('should return 503 with Retry-After header when the cache is warming up', async () => {
+    jest.spyOn(tenfastLeaseSearchAdapter, 'searchLeases').mockRejectedValueOnce(
+      Object.assign(new Error('Lease cache is warming up — retry shortly'), {
+        status: 503,
+        headers: { 'Retry-After': '30' },
+      })
+    )
+
+    const res = await request(app.callback()).get('/leases/search')
+
+    expect(res.status).toBe(503)
+    expect(res.headers['retry-after']).toBe('30')
+    expect(res.body.error).toBe('Lease cache is warming up — retry shortly')
   })
 })
 

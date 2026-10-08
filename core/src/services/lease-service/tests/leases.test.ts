@@ -2,27 +2,56 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { Contact, Lease, schemas } from '@onecore/types'
+import {
+  Contact,
+  Lease,
+  leasing,
+  schemas,
+  LeaseStatus,
+  LeaseType,
+} from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
+import { contactsAdapter } from '../../../adapters/contacts-adapter'
 import * as factory from '../../../../test/factories'
 import { Lease as LeaseSchema } from '../schemas/lease'
 import { PaginatedResponse } from '@onecore/utilities'
 
-const buildPaginatedResponse = (
-  leases: Lease[] = []
-): PaginatedResponse<Lease> => ({
-  content: leases,
+const buildPaginatedResponse = <T>(
+  content: T[] = []
+): PaginatedResponse<T> => ({
+  content,
   _meta: {
-    totalRecords: leases.length,
+    totalRecords: content.length,
     page: 1,
     limit: 500,
-    count: leases.length,
+    count: content.length,
   },
   _links: [],
+})
+
+const buildLeaseSearchResult = (
+  overrides: Partial<leasing.v1.LeaseSearchResult> = {}
+): leasing.v1.LeaseSearchResult => ({
+  leaseId: '705-001-01-0101/1',
+  objectTypeCode: 'Bostad',
+  leaseType: LeaseType.HousingContract,
+  contacts: [
+    { contactCode: 'P158770', name: 'Test Testsson', email: null, phone: null },
+  ],
+  address: 'Testgatan 1',
+  postalCode: '72216',
+  city: 'Västerås',
+  startDate: new Date('2024-01-01'),
+  endDate: null,
+  lastDebitDate: null,
+  signedAt: null,
+  status: LeaseStatus.Current,
+  rentalObjectCode: '705-001-01-0101',
+  ...overrides,
 })
 
 const app = new Koa()
@@ -514,6 +543,71 @@ describe('leases routes', () => {
       expect(res.status).toBe(500)
       expect(searchSpy).not.toHaveBeenCalled()
     })
+
+    it('keeps existing contact email/phone when contacts-service has no info for them', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue(
+        buildPaginatedResponse([
+          buildLeaseSearchResult({
+            contacts: [
+              {
+                contactCode: 'P158770',
+                name: 'Andra Handen',
+                email: 'fran-tenfast@example.com',
+                phone: '0701112233',
+              },
+            ],
+          }),
+        ])
+      )
+      jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({ ok: true, data: [] })
+
+      const res = await request(app.callback()).get('/leases/search')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].contacts[0].email).toBe(
+        'fran-tenfast@example.com'
+      )
+      expect(res.body.content[0].contacts[0].phone).toBe('0701112233')
+    })
+
+    it('resolves a personnummer in q to a contact code before calling leasing', async () => {
+      jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
+        ok: true,
+        data: factory.contactsServiceContact.build({ contactCode: 'P158770' }),
+      })
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      const res = await request(app.callback()).get(
+        '/leases/search?q=198001011234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'P158770' })
+      )
+    })
+
+    it('leaves q untouched when it does not match a contact', async () => {
+      jest
+        .spyOn(contactsAdapter, 'getByNationalId')
+        .mockResolvedValue({ ok: false, err: 'not-found' })
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      const res = await request(app.callback()).get(
+        '/leases/search?q=198001011234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: '198001011234' })
+      )
+    })
   })
 
   describe('GET /leases/export', () => {
@@ -548,6 +642,20 @@ describe('leases routes', () => {
         expect.not.objectContaining({ buildingManager: expect.anything() })
       )
     })
+
+    it('returns 503 when the lease cache is warming up', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'exportLeasesToExcel').mockRejectedValue(
+        Object.assign(new Error('Service Unavailable'), {
+          isAxiosError: true,
+          response: { status: 503 },
+        })
+      )
+
+      const res = await request(app.callback()).get('/leases/export')
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('Lease service is warming up')
+    })
   })
 
   describe('GET /leases/for-csc', () => {
@@ -563,10 +671,17 @@ describe('leases routes', () => {
         },
       })
     const validLease = () =>
-      factory.lease.build({
+      buildLeaseSearchResult({
         leaseId: '705-001-01-0101/1',
-        tenantContactIds: ['P158770'],
-        leaseStartDate: new Date('2024-01-01'),
+        contacts: [
+          {
+            contactCode: 'P158770',
+            name: 'Test Testsson',
+            email: null,
+            phone: null,
+          },
+        ],
+        startDate: new Date('2024-01-01'),
       })
 
     it('returns 200 with empty array when no leases found', async () => {
@@ -588,6 +703,20 @@ describe('leases routes', () => {
       const res = await request(app.callback()).get('/leases/for-csc')
 
       expect(res.status).toBe(500)
+    })
+
+    it('returns 503 when the lease cache is warming up', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockRejectedValue(
+        Object.assign(new Error('Service Unavailable'), {
+          isAxiosError: true,
+          response: { status: 503 },
+        })
+      )
+
+      const res = await request(app.callback()).get('/leases/for-csc')
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('Lease service is warming up')
     })
 
     it('calls searchLeases with objectType bostad and status Current', async () => {
@@ -617,13 +746,11 @@ describe('leases routes', () => {
       )
     })
 
-    it('filters out lease with no tenantContactIds', async () => {
+    it('filters out lease with no contacts', async () => {
       jest
         .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(
-          buildPaginatedResponse([
-            factory.lease.build({ tenantContactIds: [] }),
-          ])
+          buildPaginatedResponse([buildLeaseSearchResult({ contacts: [] })])
         )
 
       const res = await request(app.callback()).get('/leases/for-csc')
@@ -864,15 +991,29 @@ describe('leases routes', () => {
     })
 
     it('response _meta count reflects number of leases after filtering', async () => {
-      const lease1 = factory.lease.build({
+      const lease1 = buildLeaseSearchResult({
         leaseId: '705-001-01-0101/1',
-        tenantContactIds: ['P158770'],
-        leaseStartDate: new Date('2024-01-01'),
+        contacts: [
+          {
+            contactCode: 'P158770',
+            name: 'Test Testsson',
+            email: null,
+            phone: null,
+          },
+        ],
+        startDate: new Date('2024-01-01'),
       })
-      const lease2 = factory.lease.build({
+      const lease2 = buildLeaseSearchResult({
         leaseId: '705-001-01-0102/1',
-        tenantContactIds: ['P158771'],
-        leaseStartDate: new Date('2024-01-01'),
+        contacts: [
+          {
+            contactCode: 'P158771',
+            name: 'Test Testsson 2',
+            email: null,
+            phone: null,
+          },
+        ],
+        startDate: new Date('2024-01-01'),
       })
 
       jest

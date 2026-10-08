@@ -42,6 +42,7 @@ const VALID_SORT_KEYS = [
   'address',
   'objectType',
   'rentalObjectCode',
+  'tenantName',
 ] as const
 type ValidSortKey = (typeof VALID_SORT_KEYS)[number]
 const isValidSortKey = (v: string | null): v is ValidSortKey =>
@@ -194,6 +195,8 @@ export function useLeaseFilters() {
     isLoading,
     isFetching,
     error,
+    failureCount,
+    failureReason,
     exportToExcel,
   } = useLeaseSearch(searchParams, filters.page, PAGE_SIZE)
 
@@ -291,6 +294,8 @@ export function useLeaseFilters() {
     isLoading,
     isFetching,
     error,
+    failureCount,
+    failureReason,
     exportToExcel,
 
     // Search params (for bulk messaging fetchAllContacts)

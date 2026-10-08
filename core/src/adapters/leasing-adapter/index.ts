@@ -773,6 +773,9 @@ const exportLeasesToExcel = async (
       },
     }
   } catch (err) {
+    // Let 503s (cache warming up) bubble up so the route can detect them,
+    // same as searchLeases.
+    if (err instanceof AxiosError && err.response?.status === 503) throw err
     logger.error({ err }, 'leasingAdapter.exportLeasesToExcel')
     return { ok: false, err: 'unknown' }
   }

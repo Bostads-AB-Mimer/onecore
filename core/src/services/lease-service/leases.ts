@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import axios from 'axios'
 import {
   generateRouteMetadata,
   logger,
@@ -25,9 +26,11 @@ import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
+import { resolvePersonnummerInQuery } from '../../adapters/contacts-adapter/lease-query'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { AdapterResult } from '@/adapters/types'
 import { registerSchema } from '../../utils/openapi'
+import { contactsAdapter } from '../../adapters/contacts-adapter'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 
@@ -143,13 +146,13 @@ export const routes = (router: KoaRouter) => {
 
       //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
       const parsedContent = await Promise.all(
-        leaseSearchResult.content.map(async (lease: Lease) => {
+        leaseSearchResult.content.map(async (lease) => {
           const rentalObjectCode =
             lease.leaseId.split('/')[0] != ''
               ? lease.leaseId.split('/')[0]
               : lease.leaseId.substring(0, lease.leaseId.lastIndexOf('-'))
 
-          if (!lease.tenantContactIds || lease.tenantContactIds.length === 0) {
+          if (!lease.contacts || lease.contacts.length === 0) {
             logger.error(
               'No tenant on contract Id ' +
                 lease.leaseId +
@@ -158,10 +161,10 @@ export const routes = (router: KoaRouter) => {
             return null
           }
 
+          const primaryContactCode = lease.contacts[0].contactCode //TODO: Vilken contact ska väljas när det finns flera?
+
           const [contactResult, rentalPropertyResult] = await Promise.all([
-            leasingAdapter.getContactByContactCode(
-              lease.tenantContactIds[0] //TODO: Vilken contact ska väljas när det finns flera?
-            ),
+            leasingAdapter.getContactByContactCode(primaryContactCode),
             propertyManagementAdapter.getRentalPropertyInfoFromXpand(
               rentalObjectCode
             ),
@@ -172,7 +175,7 @@ export const routes = (router: KoaRouter) => {
               {
                 status: contactResult.statusCode,
                 error: contactResult.err,
-                contactCode: lease.tenantContactIds[0],
+                contactCode: primaryContactCode,
               },
               'Failed to fetch contact data'
             )
@@ -181,7 +184,7 @@ export const routes = (router: KoaRouter) => {
           if (!contactResult.data) {
             logger.warn(
               {
-                contactCode: lease.tenantContactIds[0],
+                contactCode: primaryContactCode,
               },
               'No contact data found'
             )
@@ -234,10 +237,10 @@ export const routes = (router: KoaRouter) => {
           const mappedLease: z.input<typeof CustomerScoreCardInfoSchema> = {
             //lease info
             division_1038: lease.leaseId,
-            division_1037: lease.contractDate?.toString(),
-            contract_start_date: lease.leaseStartDate?.toString() ?? '',
-            contract_end_date: lease.leaseEndDate?.toString(),
-            contract_type: lease.type,
+            division_1037: lease.signedAt?.toString(),
+            contract_start_date: lease.startDate?.toString() ?? '',
+            contract_end_date: lease.endDate?.toString(),
+            contract_type: lease.leaseType,
             object_street_1: rentalObjectData.address?.street ?? '',
             object_zip: rentalObjectData.address?.postalCode ?? '',
             object_city: rentalObjectData.address?.city ?? '',
@@ -295,6 +298,11 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error getting leases for CSC report')
       ctx.status = 500
       ctx.body = {
@@ -436,7 +444,7 @@ export const routes = (router: KoaRouter) => {
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode, tenantName]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -492,11 +500,63 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await leasingAdapter.searchLeases(resolved.query)
+      const searchQuery = await resolvePersonnummerInQuery(resolved.query)
+      const result = await leasingAdapter.searchLeases(searchQuery)
+
+      const contactCodes = [
+        ...new Set(
+          result.content.flatMap(
+            (lease) => lease.contacts?.map((c) => c.contactCode) ?? []
+          )
+        ),
+      ]
+
+      let enrichedContent: leasing.v1.LeaseSearchResult[] = result.content
+      if (contactCodes.length > 0) {
+        const contactsResult = await contactsAdapter.getByContactCodeBatch(
+          contactCodes,
+          { includePhone: true, includeEmail: true }
+        )
+        if (contactsResult.ok) {
+          const contactMap = new Map(
+            contactsResult.data.map((c) => [
+              c.contactCode,
+              {
+                email:
+                  c.communication.emailAddresses.find((e) => e.isPrimary)
+                    ?.emailAddress ??
+                  c.communication.emailAddresses[0]?.emailAddress ??
+                  null,
+                phone:
+                  c.communication.phoneNumbers.find((p) => p.isPrimary)
+                    ?.phoneNumber ??
+                  c.communication.phoneNumbers[0]?.phoneNumber ??
+                  null,
+              },
+            ])
+          )
+          enrichedContent = result.content.map((lease) => ({
+            ...lease,
+            contacts: lease.contacts?.map((c) => {
+              const contactInfo = contactMap.get(c.contactCode)
+              return {
+                ...c,
+                email: contactInfo?.email ?? c.email,
+                phone: contactInfo?.phone ?? c.phone,
+              }
+            }),
+          }))
+        }
+      }
 
       ctx.status = 200
-      ctx.body = result
+      ctx.body = { ...result, content: enrichedContent }
     } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error searching leases (Tenfast)')
       ctx.status = 500
       ctx.body = {
@@ -1005,7 +1065,7 @@ export const routes = (router: KoaRouter) => {
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode, tenantName]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -1053,6 +1113,11 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = result.data.data
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error exporting leases to Excel')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
