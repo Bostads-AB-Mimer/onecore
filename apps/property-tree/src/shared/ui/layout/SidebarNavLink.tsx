@@ -16,7 +16,10 @@ interface SidebarNavLinkProps {
 
 export function SidebarNavLink({ to, icon: Icon, label }: SidebarNavLinkProps) {
   const { pathname } = useLocation()
-  const isActive = pathname === to || (to === '/' && pathname === '/sv')
+  const isActive =
+    pathname === to ||
+    (to !== '/' && pathname.startsWith(`${to}/`)) ||
+    (to === '/' && pathname === '/sv')
 
   return (
     <SidebarGroup>

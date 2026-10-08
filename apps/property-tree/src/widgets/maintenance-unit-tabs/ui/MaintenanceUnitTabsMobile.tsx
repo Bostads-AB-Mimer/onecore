@@ -1,3 +1,4 @@
+import { useRouteTab } from '@onecore/ui'
 import { ClipboardList, MessageSquare, Wrench } from 'lucide-react'
 
 import { SpaceComponents } from '@/features/component-library'
@@ -11,6 +12,11 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
+import {
+  MAINTENANCE_UNIT_DEFAULT_TAB,
+  MAINTENANCE_UNIT_TABS,
+} from '../model/tabs'
+
 interface MaintenanceUnitTabsMobileProps {
   maintenanceUnit: MaintenanceUnit
 }
@@ -18,9 +24,13 @@ interface MaintenanceUnitTabsMobileProps {
 export function MaintenanceUnitTabsMobile({
   maintenanceUnit,
 }: MaintenanceUnitTabsMobileProps) {
+  const { value } = useRouteTab(
+    MAINTENANCE_UNIT_TABS,
+    MAINTENANCE_UNIT_DEFAULT_TAB
+  )
   const accordionItems: MobileAccordionItem[] = [
     {
-      id: 'components',
+      id: 'komponenter',
       icon: Wrench,
       title: 'Komponenter',
       content: (
@@ -35,14 +45,14 @@ export function MaintenanceUnitTabsMobile({
       ),
     },
     {
-      id: 'inspections',
+      id: 'besiktningar',
       icon: ClipboardList,
       title: 'Besiktningar',
       disabled: true,
       content: null,
     },
     {
-      id: 'work-orders',
+      id: 'arenden',
       icon: MessageSquare,
       title: 'Ärenden',
       content: (
@@ -62,7 +72,7 @@ export function MaintenanceUnitTabsMobile({
   return (
     <MobileAccordion
       items={accordionItems}
-      defaultOpen={['work-orders']}
+      defaultOpen={[value]}
       className="space-y-3"
     />
   )

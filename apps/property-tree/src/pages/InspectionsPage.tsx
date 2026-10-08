@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
+import { SegmentedTabs, useRouteTab } from '@onecore/ui'
 import { Check, ChevronsUpDown, X } from 'lucide-react'
 
 import { InspectionsTable } from '@/features/inspections'
@@ -23,9 +24,13 @@ import {
 import { ViewLayout } from '@/shared/ui/layout'
 import { Pagination } from '@/shared/ui/Pagination'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
-const MY_INSPECTIONS_TAB = 'mine' as const
+const INSPECTION_TABS = [
+  { value: 'pagaende', label: 'Pågående' },
+  { value: 'mina', label: 'Mina besiktningar' },
+  { value: 'avslutade', label: 'Avslutade' },
+] as const
+type InspectionTab = (typeof INSPECTION_TABS)[number]['value']
 
 export default function InspectionsPage() {
   const userState = useUser()
@@ -39,18 +44,10 @@ export default function InspectionsPage() {
     ? formatInspectorIdentity(user.name, user.employeeId)
     : undefined
 
-  const [activeTab, setActiveTab] = useState<string>(
-    INSPECTION_STATUS_FILTER.ONGOING
-  )
+  const { value: tab, basePath } = useRouteTab(INSPECTION_TABS, 'pagaende')
 
-  const {
-    page: ongoingPage,
-    setPage: setOngoingPage,
-    limit,
-  } = useUrlPagination({ defaultLimit: 25 })
-
-  const [completedPage, setCompletedPage] = useState(1)
-  const [myPage, setMyPage] = useState(1)
+  // One `page` param for all tabs; switching tab drops it (see SegmentedTabs).
+  const { page, setPage, limit } = useUrlPagination({ defaultLimit: 25 })
 
   // Filter state needs to be initialized before queries so we can pass filter
   // values as server-side query params. The dropdown options are derived from
@@ -60,21 +57,21 @@ export default function InspectionsPage() {
 
   const ongoingQuery = useInspections({
     statusFilter: INSPECTION_STATUS_FILTER.ONGOING,
-    page: ongoingPage,
+    page,
     limit,
     inspector: selectedInspector,
     address: selectedAddress,
   })
   const completedQuery = useInspections({
     statusFilter: INSPECTION_STATUS_FILTER.COMPLETED,
-    page: completedPage,
+    page,
     limit,
     inspector: selectedInspector,
     address: selectedAddress,
   })
   const myQuery = useInspections({
     statusFilter: INSPECTION_STATUS_FILTER.ONGOING,
-    page: myPage,
+    page,
     limit,
     inspector: userName,
     enabled: !!userName,
@@ -84,9 +81,7 @@ export default function InspectionsPage() {
   const completedInspections = completedQuery.data ?? []
 
   const currentInspections =
-    activeTab === INSPECTION_STATUS_FILTER.COMPLETED
-      ? completedInspections
-      : ongoingInspections
+    tab === 'avslutade' ? completedInspections : ongoingInspections
 
   const {
     openInspectorDropdown,
@@ -100,21 +95,18 @@ export default function InspectionsPage() {
   // Wrap filter setters to reset page to 1 when filters change
   const setSelectedInspector = (value: string) => {
     setSelectedInspectorRaw(value)
-    setOngoingPage(1)
-    setCompletedPage(1)
+    setPage(1)
   }
 
   const setSelectedAddress = (value: string) => {
     setSelectedAddressRaw(value)
-    setOngoingPage(1)
-    setCompletedPage(1)
+    setPage(1)
   }
 
   const clearFilters = () => {
     setSelectedInspectorRaw('')
     setSelectedAddressRaw('')
-    setOngoingPage(1)
-    setCompletedPage(1)
+    setPage(1)
   }
 
   const myInspections = myQuery.data ?? []
@@ -138,6 +130,85 @@ export default function InspectionsPage() {
   const ongoingTotalPages = Math.ceil(ongoingTotalRecords / limit)
   const completedTotalPages = Math.ceil(completedTotalRecords / limit)
 
+  const empty = (
+    <div className="text-center py-8">
+      <p className="text-muted-foreground">
+        Inga besiktningar i denna kategori
+      </p>
+    </div>
+  )
+  const loading = (
+    <div className="text-center py-8">
+      <p className="text-muted-foreground">Laddar besiktningar...</p>
+    </div>
+  )
+
+  const counts: Record<InspectionTab, number> = {
+    pagaende: ongoingTotalRecords,
+    mina: myTotalRecords,
+    avslutade: completedTotalRecords,
+  }
+
+  const content: Record<InspectionTab, ReactNode> = {
+    pagaende: (
+      <>
+        {ongoingQuery.isLoading ? (
+          loading
+        ) : ongoingInspections.length > 0 ? (
+          <InspectionsTable inspections={ongoingInspections} />
+        ) : (
+          empty
+        )}
+        <Pagination
+          currentPage={page}
+          totalPages={ongoingTotalPages}
+          totalRecords={ongoingTotalRecords}
+          pageSize={limit}
+          onPageChange={setPage}
+          isFetching={ongoingQuery.isFetching}
+        />
+      </>
+    ),
+    mina: (
+      <>
+        {myQuery.isLoading ? (
+          loading
+        ) : myInspections.length > 0 ? (
+          <InspectionsTable inspections={myInspections} />
+        ) : (
+          empty
+        )}
+        <Pagination
+          currentPage={page}
+          totalPages={myTotalPages}
+          totalRecords={myTotalRecords}
+          pageSize={limit}
+          onPageChange={setPage}
+          isFetching={myQuery.isFetching}
+        />
+      </>
+    ),
+    avslutade: (
+      <>
+        {completedQuery.isLoading ? (
+          loading
+        ) : completedInspections.length > 0 ? (
+          <InspectionsTable inspections={completedInspections} isCompleted />
+        ) : (
+          empty
+        )}
+        <Pagination
+          currentPage={page}
+          totalPages={completedTotalPages}
+          totalRecords={completedTotalRecords}
+          pageSize={limit}
+          onPageChange={setPage}
+          isFetching={completedQuery.isFetching}
+        />
+      </>
+    ),
+  }
+
   return (
     <ViewLayout>
       <div className="space-y-6">
@@ -150,8 +221,9 @@ export default function InspectionsPage() {
           </div>
         </div>
 
-        {/* Filters - hidden on "Mina besiktningar" tab */}
-        {activeTab !== MY_INSPECTIONS_TAB && (
+        {/* Filters hidden on "mina": that query ignores them. TODO pass address
+            to myQuery and show the address filter there, also for visual congruency */}
+        {tab !== 'mina' && (
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Inspector Filter */}
@@ -274,106 +346,13 @@ export default function InspectionsPage() {
           </div>
         )}
 
-        <Tabs
-          defaultValue={INSPECTION_STATUS_FILTER.ONGOING}
-          className="space-y-6"
-          onValueChange={setActiveTab}
-        >
-          {/* Scrollable pills on mobile (labels + counts overflow a fixed
-              grid), equal-width grid from sm up. */}
-          <TabsList className="w-full justify-start overflow-x-auto sm:grid sm:grid-cols-3">
-            <TabsTrigger value={INSPECTION_STATUS_FILTER.ONGOING}>
-              Pågående ({ongoingTotalRecords})
-            </TabsTrigger>
-            <TabsTrigger value={MY_INSPECTIONS_TAB}>
-              Mina besiktningar ({myTotalRecords})
-            </TabsTrigger>
-            <TabsTrigger value={INSPECTION_STATUS_FILTER.COMPLETED}>
-              Avslutade ({completedTotalRecords})
-            </TabsTrigger>
-          </TabsList>
+        <SegmentedTabs
+          tabs={INSPECTION_TABS.map((t) => ({ ...t, count: counts[t.value] }))}
+          value={tab}
+          basePath={basePath}
+        />
 
-          <TabsContent
-            value={INSPECTION_STATUS_FILTER.ONGOING}
-            className="space-y-4"
-          >
-            {ongoingQuery.isLoading ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Laddar besiktningar...</p>
-              </div>
-            ) : ongoingInspections.length > 0 ? (
-              <InspectionsTable inspections={ongoingInspections} />
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  Inga besiktningar i denna kategori
-                </p>
-              </div>
-            )}
-            <Pagination
-              currentPage={ongoingPage}
-              totalPages={ongoingTotalPages}
-              totalRecords={ongoingTotalRecords}
-              pageSize={limit}
-              onPageChange={setOngoingPage}
-              isFetching={ongoingQuery.isFetching}
-            />
-          </TabsContent>
-
-          <TabsContent value={MY_INSPECTIONS_TAB} className="space-y-4">
-            {myQuery.isLoading ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Laddar besiktningar...</p>
-              </div>
-            ) : myInspections.length > 0 ? (
-              <InspectionsTable inspections={myInspections} />
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  Inga besiktningar i denna kategori
-                </p>
-              </div>
-            )}
-            <Pagination
-              currentPage={myPage}
-              totalPages={myTotalPages}
-              totalRecords={myTotalRecords}
-              pageSize={limit}
-              onPageChange={setMyPage}
-              isFetching={myQuery.isFetching}
-            />
-          </TabsContent>
-
-          <TabsContent
-            value={INSPECTION_STATUS_FILTER.COMPLETED}
-            className="space-y-4"
-          >
-            {completedQuery.isLoading ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Laddar besiktningar...</p>
-              </div>
-            ) : completedInspections.length > 0 ? (
-              <InspectionsTable
-                inspections={completedInspections}
-                isCompleted
-              />
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  Inga besiktningar i denna kategori
-                </p>
-              </div>
-            )}
-            <Pagination
-              currentPage={completedPage}
-              totalPages={completedTotalPages}
-              totalRecords={completedTotalRecords}
-              pageSize={limit}
-              onPageChange={setCompletedPage}
-              isFetching={completedQuery.isFetching}
-            />
-          </TabsContent>
-        </Tabs>
+        <div className="space-y-4">{content[tab]}</div>
       </div>
     </ViewLayout>
   )

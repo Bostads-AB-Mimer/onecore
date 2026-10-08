@@ -1,4 +1,5 @@
 import type { RentalPropertyInfo } from '@onecore/types'
+import { useRouteTab } from '@onecore/ui'
 import {
   FileText,
   Home,
@@ -9,7 +10,6 @@ import {
   StickyNote,
   Users,
 } from 'lucide-react'
-import { parseAsString, useQueryState } from 'nuqs'
 
 import {
   TenantCommunicationTabContent,
@@ -30,6 +30,8 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
+import { TENANT_DEFAULT_TAB, TENANT_TABS } from '../model/tabs'
+
 interface TenantTabsMobileProps {
   leases: Lease[]
   rentalProperties: Record<string, RentalPropertyInfo | null>
@@ -47,13 +49,11 @@ export const TenantTabsMobile = ({
   isLoadingLeases,
   isLoadingProperties,
 }: TenantTabsMobileProps) => {
-  // Honor `?tab=` deep links (e.g. from invoice search hits) like desktop
-  // TenantTabs does; nested content such as the ledger reads `?open=` itself.
-  const [tab] = useQueryState('tab', parseAsString.withDefault('contracts'))
+  const { value } = useRouteTab(TENANT_TABS, TENANT_DEFAULT_TAB)
 
   const accordionItems: MobileAccordionItem[] = [
     {
-      id: 'contracts',
+      id: 'hyreskontrakt',
       icon: FileText,
       title: 'Hyreskontrakt',
       content: (
@@ -66,13 +66,13 @@ export const TenantTabsMobile = ({
       ),
     },
     {
-      id: 'queue',
+      id: 'uthyrning',
       icon: Home,
       title: 'Uthyrning',
       content: <TenantQueueSystemTabContent contactCode={contactCode} />,
     },
     {
-      id: 'work-orders',
+      id: 'arenden',
       icon: MessageSquare,
       title: 'Ärenden',
       content: (
@@ -83,7 +83,7 @@ export const TenantTabsMobile = ({
       ),
     },
     {
-      id: 'ledger',
+      id: 'fakturor',
       icon: Receipt,
       title: 'Fakturor & betalningar',
       content: (
@@ -94,39 +94,35 @@ export const TenantTabsMobile = ({
       ),
     },
     {
-      id: 'notes',
+      id: 'noteringar',
       icon: StickyNote,
       title: 'Noteringar',
       content: <TenantNotesTabContent contactCode={contactCode} />,
     },
     {
-      id: 'communication',
+      id: 'kommunikation',
       icon: Mail,
       title: 'Kommunikationslogg',
       content: <TenantCommunicationTabContent contactCode={contactCode} />,
     },
     {
-      id: 'keys',
+      id: 'nyckellan',
       icon: Key,
       title: 'Nyckellån',
       content: <TenantKeyLoans contactCode={contactCode} leases={leases} />,
     },
     {
-      id: 'related',
+      id: 'kontakter',
       icon: Users,
       title: 'Relaterade kontakter',
       content: <TenantRelatedContactsTabContent contactCode={contactCode} />,
     },
   ]
 
-  const initialOpen = accordionItems.some((item) => item.id === tab)
-    ? tab
-    : 'contracts'
-
   return (
     <MobileAccordion
       items={accordionItems}
-      defaultOpen={[initialOpen]}
+      defaultOpen={[value]}
       className="space-y-3"
     />
   )

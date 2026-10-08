@@ -1,3 +1,4 @@
+import { useRouteTab } from '@onecore/ui'
 import {
   ClipboardList,
   FileText,
@@ -16,8 +17,8 @@ import { DocumentsTabContent } from '@/features/documents'
 import { InspectionsTabContent } from '@/features/inspections'
 import { LeasesTabContent } from '@/features/leases'
 import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
-import { RentalBlocksTabContent } from '@/features/rental-blocks'
 import { RentRowsTabContent } from '@/features/rent-rows'
+import { RentalBlocksTabContent } from '@/features/rental-blocks'
 import { ResidenceFloorplanTabsContent } from '@/features/residences'
 import { TenantsTabContent } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
@@ -33,6 +34,7 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
+import { RESIDENCE_DEFAULT_TAB, RESIDENCE_TABS } from '../model/tabs'
 import { RoomsTabContent } from './RoomsTabContent'
 
 type Residence = components['schemas']['ResidenceDetails']
@@ -50,23 +52,24 @@ export const ResidenceTabsMobile = ({
   leasesIsLoading,
   leasesError,
 }: ResidenceTabsMobileProps) => {
+  const { value } = useRouteTab(RESIDENCE_TABS, RESIDENCE_DEFAULT_TAB)
   const rentalId = residence.propertyObject.rentalId ?? ''
 
   const accordionItems: MobileAccordionItem[] = [
     {
-      id: 'rooms',
+      id: 'rum',
       icon: Info,
       title: 'Rumsinformation',
       content: rentalId ? <RoomsTabContent rentalId={rentalId} /> : null,
     },
     {
-      id: 'floorplan',
+      id: 'bofaktablad',
       icon: Map,
       title: 'Bofaktablad',
       content: <ResidenceFloorplanTabsContent rentalId={rentalId} />,
     },
     {
-      id: 'inspections',
+      id: 'besiktningar',
       icon: ClipboardList,
       title: 'Besiktningar',
       content: (
@@ -77,7 +80,7 @@ export const ResidenceTabsMobile = ({
       ),
     },
     {
-      id: 'tenants',
+      id: 'hyresgast',
       icon: Users,
       title: 'Hyresgäst',
       content: (
@@ -89,13 +92,13 @@ export const ResidenceTabsMobile = ({
       ),
     },
     {
-      id: 'contracts',
+      id: 'kontrakt',
       icon: FileText,
       title: 'Kontrakt',
       content: <LeasesTabContent rentalPropertyId={rentalId} />,
     },
     {
-      id: 'rent-rows',
+      id: 'hyresrader',
       icon: Receipt,
       title: 'Hyresrader',
       content: rentalId ? (
@@ -103,7 +106,7 @@ export const ResidenceTabsMobile = ({
       ) : null,
     },
     {
-      id: 'keys',
+      id: 'nycklar',
       icon: KeyRound,
       title: 'Nycklar',
       content: rentalId ? (
@@ -111,7 +114,7 @@ export const ResidenceTabsMobile = ({
       ) : null,
     },
     {
-      id: 'work-orders',
+      id: 'arenden',
       icon: MessageSquare,
       title: 'Ärenden',
       content: rentalId ? (
@@ -122,7 +125,7 @@ export const ResidenceTabsMobile = ({
       ) : null,
     },
     {
-      id: 'documents',
+      id: 'dokument',
       icon: Folder,
       title: 'Dokument',
       content: (
@@ -133,13 +136,13 @@ export const ResidenceTabsMobile = ({
       ),
     },
     {
-      id: 'rental-blocks',
+      id: 'sparrar',
       icon: Lock,
       title: 'Spärrar',
       content: <RentalBlocksTabContent rentalId={rentalId} />,
     },
     {
-      id: 'maintenance-units',
+      id: 'underhallsenheter',
       icon: Wrench,
       title: 'Underhållsenheter',
       content: (
@@ -155,7 +158,7 @@ export const ResidenceTabsMobile = ({
   return (
     <MobileAccordion
       items={accordionItems}
-      defaultOpen={['rooms']}
+      defaultOpen={[value]}
       className="space-y-3"
     />
   )

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useRouteTab } from '@onecore/ui'
 import { ArrowRight, FilePlus, Home, MessageSquare } from 'lucide-react'
 
 import { Building, ResidenceSummary, Staircase } from '@/services/types'
@@ -11,6 +12,8 @@ import {
   MobileAccordion,
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
+
+import { STAIRCASE_DEFAULT_TAB, STAIRCASE_TABS } from '../model/tabs'
 
 interface StaircaseTabsMobileProps {
   staircase: Staircase
@@ -27,11 +30,12 @@ export function StaircaseTabsMobile({
   propertyCode,
   organizationNumber,
 }: StaircaseTabsMobileProps) {
+  const { value } = useRouteTab(STAIRCASE_TABS, STAIRCASE_DEFAULT_TAB)
   const navigate = useNavigate()
 
   const accordionItems: MobileAccordionItem[] = [
     {
-      id: 'residences',
+      id: 'bostader',
       icon: Home,
       title: 'Bostäder',
       content: (
@@ -63,7 +67,7 @@ export function StaircaseTabsMobile({
       ),
     },
     {
-      id: 'work-orders',
+      id: 'arenden',
       icon: MessageSquare,
       title: 'Ärenden',
       content: (
@@ -88,7 +92,7 @@ export function StaircaseTabsMobile({
   return (
     <MobileAccordion
       items={accordionItems}
-      defaultOpen={['residences']}
+      defaultOpen={[value]}
       className="space-y-3"
     />
   )

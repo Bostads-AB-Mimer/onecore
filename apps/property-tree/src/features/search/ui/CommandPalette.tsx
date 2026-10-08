@@ -129,7 +129,7 @@ function getResultProps(item: CombinedSearchResult) {
         prefix: '[FAKTURA]',
         subtitle: `${formatCurrency(item.invoice.amount)} · ${formatDate(item.invoice.invoiceDate)}`,
         // `reference` is the Xledger customer code (= ONECore contactCode)
-        path: `${paths.tenant(item.invoice.reference)}?tab=ledger&open=${item.invoice.invoiceId}`,
+        path: `${paths.tenant(item.invoice.reference)}/fakturor?open=${item.invoice.invoiceId}`,
         state: {},
       }
     case 'work-order':

@@ -58,6 +58,20 @@ in the app that owns it. Two layers:
 - `src/hooks/` headless logic the components use, exported so it can be
   reused without the markup.
 
+The one exception to "knows nothing about routes" is `useRouteTab` +
+`SegmentedTabs`: tabs are addressed by an optional `:tab?` route segment, so
+the hook reads react-router params and the tab bar renders links.
+
+```tsx
+// router: path: '/bostader/:rentalId/:tab?'
+const TABS = [{ value: 'rum', label: 'Rum' }, { value: 'nycklar', label: 'Nycklar', count: 3 }]
+const { value, basePath } = useRouteTab(TABS, 'rum')
+<SegmentedTabs tabs={TABS} value={value} basePath={basePath} />
+```
+
+The bare page URL renders the default tab. Links keep the query string but
+drop `page`, so filters survive a tab switch and pagination resets.
+
 All three export from the package root.
 
 ## Scripts

@@ -1,12 +1,5 @@
-import {
-  ClipboardList,
-  FileText,
-  Info,
-  MessageSquare,
-  Receipt,
-  Users,
-  Wrench,
-} from 'lucide-react'
+import type { ReactNode } from 'react'
+import { SegmentedTabs, useRouteTab } from '@onecore/ui'
 
 import { SpaceComponents } from '@/features/component-library'
 import { LeasesTabContent } from '@/features/leases'
@@ -19,8 +12,12 @@ import { Lease } from '@/services/api/core/leaseService'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { ContextType } from '@/shared/types/ui'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
+import {
+  FACILITY_DEFAULT_TAB,
+  FACILITY_TABS,
+  type FacilityTab,
+} from '../model/tabs'
 import { FacilityTabsMobile } from './FacilityTabsMobile'
 import { RoomsTabContent } from './RoomsTabContent'
 
@@ -40,6 +37,7 @@ export function FacilityTabs({
   currentLease,
 }: FacilityTabsProps) {
   const isMobile = useIsMobile()
+  const { value, basePath } = useRouteTab(FACILITY_TABS, FACILITY_DEFAULT_TAB)
   const rentalId = facility.rentalInformation?.rentalId
 
   if (isMobile) {
@@ -53,85 +51,40 @@ export function FacilityTabs({
     )
   }
 
+  const content: Record<FacilityTab, ReactNode> = {
+    komponenter: (
+      <SpaceComponents
+        spaceId={facility.propertyObjectId}
+        spaceName={facility.name || facility.code}
+      />
+    ),
+    rum: <RoomsTabContent facilityId={facility.id} />,
+    hyresgast: rentalId && (
+      <CurrentTenant
+        rentalPropertyId={rentalId}
+        leases={leases}
+        isLoading={leasesIsLoading}
+      />
+    ),
+    kontrakt: rentalId && <LeasesTabContent rentalPropertyId={rentalId} />,
+    hyresrader: rentalId && (
+      <RentRowsTabContent rentalObjectCode={rentalId} lease={currentLease} />
+    ),
+    besiktningar: null,
+    arenden: rentalId && (
+      <WorkOrdersTabContent contextType={ContextType.Facility} id={rentalId} />
+    ),
+  }
+
   return (
-    <Tabs defaultValue="components" className="w-full">
-      <TabsList className="mb-4 bg-slate-100/70 p-1 rounded-lg">
-        <TabsTrigger value="components" className="flex items-center gap-1.5">
-          <Wrench className="h-4 w-4" />
-          <span className="hidden sm:inline">Komponenter</span>
-        </TabsTrigger>
-        <TabsTrigger value="rooms" className="flex items-center gap-1.5">
-          <Info className="h-4 w-4" />
-          <span className="hidden sm:inline">Rumsinformation</span>
-        </TabsTrigger>
-        <TabsTrigger value="tenant" className="flex items-center gap-1.5">
-          <Users className="h-4 w-4" />
-          <span className="hidden sm:inline">Hyresgäst</span>
-        </TabsTrigger>
-        <TabsTrigger value="leases" className="flex items-center gap-1.5">
-          <FileText className="h-4 w-4" />
-          <span className="hidden sm:inline">Kontrakt</span>
-        </TabsTrigger>
-        <TabsTrigger value="rent-rows" className="flex items-center gap-1.5">
-          <Receipt className="h-4 w-4" />
-          <span className="hidden sm:inline">Hyresrader</span>
-        </TabsTrigger>
-        <TabsTrigger
-          value="inspections"
-          className="flex items-center gap-1.5"
-          disabled
-        >
-          <ClipboardList className="h-4 w-4" />
-          <span className="hidden sm:inline">Besiktningar</span>
-        </TabsTrigger>
-        <TabsTrigger value="work-orders" className="flex items-center gap-1.5">
-          <MessageSquare className="h-4 w-4" />
-          <span className="hidden sm:inline">Ärenden</span>
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="components">
-        <SpaceComponents
-          spaceId={facility.propertyObjectId}
-          spaceName={facility.name || facility.code}
-        />
-      </TabsContent>
-
-      <TabsContent value="rooms">
-        <RoomsTabContent facilityId={facility.id} />
-      </TabsContent>
-
-      <TabsContent value="tenant">
-        {rentalId && (
-          <CurrentTenant
-            rentalPropertyId={rentalId}
-            leases={leases}
-            isLoading={leasesIsLoading}
-          />
-        )}
-      </TabsContent>
-
-      <TabsContent value="leases">
-        {rentalId && <LeasesTabContent rentalPropertyId={rentalId} />}
-      </TabsContent>
-
-      <TabsContent value="rent-rows">
-        {rentalId && (
-          <RentRowsTabContent
-            rentalObjectCode={rentalId}
-            lease={currentLease}
-          />
-        )}
-      </TabsContent>
-
-      <TabsContent value="work-orders">
-        {rentalId && (
-          <WorkOrdersTabContent
-            contextType={ContextType.Facility}
-            id={rentalId}
-          />
-        )}
-      </TabsContent>
-    </Tabs>
+    <div className="w-full">
+      <SegmentedTabs
+        tabs={FACILITY_TABS}
+        value={value}
+        basePath={basePath}
+        className="mb-4"
+      />
+      {content[value]}
+    </div>
   )
 }
