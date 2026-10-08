@@ -17,6 +17,8 @@ import {
   TenfastPaginatedLeaseResponseSchema,
   TenfastTagSchema,
   TenfastTag,
+  TenfastArticleSchema,
+  TenfastArticle,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -102,6 +104,7 @@ export const createLease = async (
     | 'create-lease-bad-request'
     | 'rent-article-is-missing'
     | 'could-not-parse-lease'
+    | 'could-not-fetch-articles'
     | 'unknown'
   >
 > => {
@@ -117,12 +120,30 @@ export const createLease = async (
   )
     return { ok: false, err: 'rent-article-is-missing' }
 
+  // VAT correctness takes priority over availability here: if the article
+  // catalog can't be fetched, fail the lease rather than silently creating
+  // one with vatEnabled:true but no rows actually switched to their VAT
+  // article (see applyVatToRentRows).
+  let articles: TenfastArticle[] = []
+  if (includeVAT) {
+    try {
+      articles = await getArticles()
+    } catch (err) {
+      logger.error(
+        { err: JSON.stringify(err) },
+        'tenfast-adapter.createLease: failed to fetch article catalog for VAT lookup'
+      )
+      return { ok: false, err: 'could-not-fetch-articles' }
+    }
+  }
+
   try {
     const createLeaseRequestData = buildLeaseRequestData(
       tenantResult.data,
       rentalObjectResponse.data,
       fromDate,
-      includeVAT
+      includeVAT,
+      articles
     )
 
     const leaseResponse = await tenfastApi.request({
@@ -499,6 +520,81 @@ const getTags = (): Promise<Map<string, TenfastTag>> => {
     }
   })()
   return tagsCache
+}
+
+const ARTICLES_CACHE_TTL_MS = 5 * 60 * 1000
+let articlesCache: Promise<TenfastArticle[]> | null = null
+let articlesCachedAt = 0
+
+// Fetches the hyresvard's full article catalog. Used to find the VAT
+// counterpart of a rent row's article when building a lease with VAT
+// included — see applyVatToRentRows below.
+// Unlike getTags (where an empty fallback on failure only degrades display
+// info), a silently-empty article list here would make createLease build a
+// lease with vatEnabled:true but no row actually switched to its VAT
+// article — wrong and undetectable by the caller. So failures are
+// re-thrown rather than swallowed; the caller (createLease) decides how to
+// handle them.
+const getArticles = (): Promise<TenfastArticle[]> => {
+  if (articlesCache && Date.now() - articlesCachedAt < ARTICLES_CACHE_TTL_MS) {
+    return articlesCache
+  }
+  articlesCachedAt = Date.now()
+  articlesCache = (async () => {
+    try {
+      const res = await tenfastApi.request({
+        method: 'get',
+        url: `${tenfastBaseUrl}/v1/hyresvard/articles?hyresvard=${tenfastCompanyId}`,
+      })
+      if (res.status !== 200) {
+        throw new Error(
+          `Tenfast responded with status ${res.status} for articles`
+        )
+      }
+      const articles = z.array(TenfastArticleSchema).safeParse(res.data)
+      if (!articles.success) {
+        throw articles.error
+      }
+      return articles.data
+    } catch (err) {
+      articlesCache = null
+      articlesCachedAt = 0
+      throw err
+    }
+  })()
+  return articlesCache
+}
+
+// Rent articles with VAT are separate articles from their VAT-free
+// counterpart, always named with a trailing "M" (e.g. HYRAG -> HYRAGM).
+// Rows whose article has no such VAT counterpart are left untouched.
+function applyVatToRentRows(
+  hyror: TenfastInvoiceRow[],
+  articles: TenfastArticle[]
+): TenfastInvoiceRow[] {
+  const articleById = new Map(articles.map((article) => [article._id, article]))
+  const articleByCode = new Map(
+    articles.map((article) => [article.code, article])
+  )
+
+  return hyror.map((hyra) => {
+    const currentArticle = hyra.article
+      ? articleById.get(hyra.article)
+      : undefined
+    const vatArticle = currentArticle
+      ? articleByCode.get(`${currentArticle.code}M`)
+      : undefined
+
+    if (!vatArticle) {
+      logger.warn(
+        { article: hyra.article, code: currentArticle?.code },
+        'tenfast-adapter.applyVatToRentRows: no VAT counterpart article found, leaving rent row unchanged'
+      )
+      return hyra
+    }
+
+    return { ...hyra, article: vatArticle._id, vat: vatArticle.vat }
+  })
 }
 
 export const getAvailabilityForVacantRentalObjects = async (
@@ -927,21 +1023,23 @@ function buildLeaseRequestData(
   tenant: TenfastTenant,
   rentalObject: TenfastRentalObject,
   fromDate: Date,
-  includeVAT: boolean
+  includeVAT: boolean,
+  articles: TenfastArticle[]
 ) {
-  let vat = 0
-  if (includeVAT) {
-    vat = 0.25
-  }
+  // When includeVAT is false, rows are passed through exactly as configured
+  // on the rental object in Tenfast — deliberately not force-zeroed.
+  // Confirmed with product (AVTAL-326, 2026-10): existing VAT on a rental
+  // object's own rows must not be stripped just because this particular
+  // lease doesn't itself require VAT.
+  const hyror = includeVAT
+    ? applyVatToRentRows(rentalObject.hyror ?? [], articles)
+    : (rentalObject.hyror ?? [])
 
   return {
     hyresgaster: [tenant?._id],
     hyresobjekt: [rentalObject._id],
     avtalsbyggare: true,
-    hyror: (rentalObject.hyror ?? []).map((hyra) => {
-      hyra.vat = vat //set vat according to includeVAT for all rent articles
-      return hyra
-    }),
+    hyror,
     startDate: fromDate.toISOString(),
     aviseringsTyp: 'none',
     uppsagningstid: '3m',

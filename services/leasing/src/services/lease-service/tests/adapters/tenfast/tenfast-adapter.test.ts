@@ -620,7 +620,7 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      true
+      false
     )
 
     // Assert
@@ -658,58 +658,258 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       new Date(),
-      true
+      false
     )
 
     // Assert
     expect(result).toEqual({ ok: true, data: '216-704-00-0022/02' })
   })
 
-  it('should set vat to 0.25 in lease request data when includeVAT is true', async () => {
-    // Arrange
-    const mockTenant = factory.tenfastTenant.build()
-    jest
-      .spyOn(tenfastAdapter, 'getTenantByContactCode')
-      .mockResolvedValue({ ok: true, data: mockTenant })
-
-    const mockRentalObject = factory.tenfastRentalObject.build()
-    jest
-      .spyOn(tenfastAdapter, 'getRentalObject')
-      .mockResolvedValue({ ok: true, data: mockRentalObject })
-
-    let leaseRequestData: any
-    ;(request as jest.Mock).mockImplementation((data) => {
-      leaseRequestData = data.data
-      return Promise.resolve({ status: 200, data: {} })
+  describe('VAT rent row article swap', () => {
+    // Each test here fetches the module-level articles cache (TTL: 5 min),
+    // so each needs its own system time to avoid reusing a previous test's
+    // cached catalog — see the `tag propagation` describe above for the same
+    // pattern applied to the tags cache.
+    afterEach(() => {
+      jest.useRealTimers()
     })
 
-    // Act
-    const contact = factory.contact.build()
-    const fromDate = new Date()
-    await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, true)
+    it('replaces a rent row article with its VAT counterpart (code + "M") when includeVAT is true', async () => {
+      // Arrange
+      jest.useFakeTimers()
+      jest.setSystemTime(new Date('2020-01-01'))
 
-    // Assert
-    expect(leaseRequestData.hyror[0].vat).toBe(0.25)
-    expect(leaseRequestData.vatEnabled).toBe(true)
+      const mockTenant = factory.tenfastTenant.build()
+      jest
+        .spyOn(tenfastAdapter, 'getTenantByContactCode')
+        .mockResolvedValue({ ok: true, data: mockTenant })
+
+      const baseArticle = factory.tenfastArticle.build({
+        code: 'HYRAG',
+        vat: 0,
+      })
+      const vatArticle = factory.tenfastArticle.build({
+        code: 'HYRAGM',
+        vat: 0.25,
+      })
+      const rentRow = factory.tenfastInvoiceRow.build({
+        article: baseArticle._id,
+        vat: 0,
+      })
+      const mockRentalObject = factory.tenfastRentalObject.build({
+        hyror: [rentRow],
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValue({ ok: true, data: mockRentalObject })
+
+      let leaseRequestData: any
+      ;(request as jest.Mock).mockImplementation(
+        ({ url, data }: { url: string; data?: any }) => {
+          if (url.includes('/hyresvard/articles')) {
+            return Promise.resolve({
+              status: 200,
+              data: [baseArticle, vatArticle],
+            })
+          }
+          leaseRequestData = data
+          return Promise.resolve({ status: 200, data: {} })
+        }
+      )
+
+      // Act
+      const contact = factory.contact.build()
+      const fromDate = new Date()
+      await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, true)
+
+      // Assert
+      expect(leaseRequestData.hyror[0].article).toBe(vatArticle._id)
+      expect(leaseRequestData.hyror[0].vat).toBe(0.25)
+      expect(leaseRequestData.vatEnabled).toBe(true)
+    })
+
+    it('leaves a rent row untouched when its article has no VAT counterpart, even when includeVAT is true', async () => {
+      // Arrange — different system time than the previous test, so the
+      // cached catalog from that test is stale.
+      jest.useFakeTimers()
+      jest.setSystemTime(new Date('2020-01-02'))
+
+      const mockTenant = factory.tenfastTenant.build()
+      jest
+        .spyOn(tenfastAdapter, 'getTenantByContactCode')
+        .mockResolvedValue({ ok: true, data: mockTenant })
+
+      const baseArticle = factory.tenfastArticle.build({
+        code: 'DEPOSIT',
+        vat: 0,
+      })
+      const rentRow = factory.tenfastInvoiceRow.build({
+        article: baseArticle._id,
+        vat: 0,
+      })
+      const mockRentalObject = factory.tenfastRentalObject.build({
+        hyror: [rentRow],
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValue({ ok: true, data: mockRentalObject })
+
+      let leaseRequestData: any
+      ;(request as jest.Mock).mockImplementation(
+        ({ url, data }: { url: string; data?: any }) => {
+          if (url.includes('/hyresvard/articles')) {
+            // No "DEPOSITM" article exists in the catalog.
+            return Promise.resolve({ status: 200, data: [baseArticle] })
+          }
+          leaseRequestData = data
+          return Promise.resolve({ status: 200, data: {} })
+        }
+      )
+
+      // Act
+      const contact = factory.contact.build()
+      const fromDate = new Date()
+      await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, true)
+
+      // Assert
+      expect(leaseRequestData.hyror[0].article).toBe(baseArticle._id)
+      expect(leaseRequestData.hyror[0].vat).toBe(0)
+    })
+
+    it('fails the lease instead of creating it without VAT when the article catalog cannot be fetched', async () => {
+      // Arrange
+      jest.useFakeTimers()
+      jest.setSystemTime(new Date('2020-01-03'))
+
+      const mockTenant = factory.tenfastTenant.build()
+      jest
+        .spyOn(tenfastAdapter, 'getTenantByContactCode')
+        .mockResolvedValue({ ok: true, data: mockTenant })
+
+      const rentRow = factory.tenfastInvoiceRow.build({
+        article: 'some-article-id',
+      })
+      const mockRentalObject = factory.tenfastRentalObject.build({
+        hyror: [rentRow],
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValue({ ok: true, data: mockRentalObject })
+
+      ;(request as jest.Mock).mockImplementation(({ url }: { url: string }) => {
+        if (url.includes('/hyresvard/articles')) {
+          return Promise.resolve({ status: 500, data: { error: 'boom' } })
+        }
+        throw new Error('should not reach create-avtal when VAT lookup fails')
+      })
+
+      // Act
+      const contact = factory.contact.build()
+      const fromDate = new Date()
+      const result = await tenfastAdapter.createLease(
+        contact,
+        'RENTAL_CODE',
+        fromDate,
+        true
+      )
+
+      // Assert
+      expect(result).toEqual({ ok: false, err: 'could-not-fetch-articles' })
+    })
+
+    it('swaps only the matched row and leaves the unmatched row untouched in a multi-row lease', async () => {
+      // Arrange
+      jest.useFakeTimers()
+      jest.setSystemTime(new Date('2020-01-04'))
+
+      const mockTenant = factory.tenfastTenant.build()
+      jest
+        .spyOn(tenfastAdapter, 'getTenantByContactCode')
+        .mockResolvedValue({ ok: true, data: mockTenant })
+
+      const baseArticle = factory.tenfastArticle.build({
+        code: 'HYRAG',
+        vat: 0,
+      })
+      const vatArticle = factory.tenfastArticle.build({
+        code: 'HYRAGM',
+        vat: 0.25,
+      })
+      const depositArticle = factory.tenfastArticle.build({
+        code: 'DEPOSIT',
+        vat: 0,
+      })
+      const matchedRow = factory.tenfastInvoiceRow.build({
+        article: baseArticle._id,
+        vat: 0,
+      })
+      const unmatchedRow = factory.tenfastInvoiceRow.build({
+        article: depositArticle._id,
+        vat: 0,
+      })
+      const mockRentalObject = factory.tenfastRentalObject.build({
+        hyror: [matchedRow, unmatchedRow],
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValue({ ok: true, data: mockRentalObject })
+
+      let leaseRequestData: any
+      ;(request as jest.Mock).mockImplementation(
+        ({ url, data }: { url: string; data?: any }) => {
+          if (url.includes('/hyresvard/articles')) {
+            return Promise.resolve({
+              status: 200,
+              data: [baseArticle, vatArticle, depositArticle],
+            })
+          }
+          leaseRequestData = data
+          return Promise.resolve({ status: 200, data: {} })
+        }
+      )
+
+      // Act
+      const contact = factory.contact.build()
+      const fromDate = new Date()
+      await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, true)
+
+      // Assert
+      expect(leaseRequestData.hyror[0].article).toBe(vatArticle._id)
+      expect(leaseRequestData.hyror[0].vat).toBe(0.25)
+      expect(leaseRequestData.hyror[1].article).toBe(depositArticle._id)
+      expect(leaseRequestData.hyror[1].vat).toBe(0)
+    })
   })
 
-  it('should set vat to 0 in lease request data when includeVAT is false', async () => {
-    // Arrange
+  it('passes rent rows through unmodified and does not fetch articles when includeVAT is false', async () => {
+    // Arrange — a non-zero vat is used to prove rows really are passed
+    // through as-is (not force-zeroed); see the comment on buildLeaseRequestData
+    // for why this is deliberately a pass-through (confirmed with product,
+    // AVTAL-326).
     const mockTenant = factory.tenfastTenant.build()
     jest
       .spyOn(tenfastAdapter, 'getTenantByContactCode')
       .mockResolvedValue({ ok: true, data: mockTenant })
 
-    const mockRentalObject = factory.tenfastRentalObject.build()
+    const rentRow = factory.tenfastInvoiceRow.build({
+      article: 'some-article-id',
+      vat: 0.25,
+    })
+    const mockRentalObject = factory.tenfastRentalObject.build({
+      hyror: [rentRow],
+    })
     jest
       .spyOn(tenfastAdapter, 'getRentalObject')
       .mockResolvedValue({ ok: true, data: mockRentalObject })
 
+    ;(request as jest.Mock).mockClear()
     let leaseRequestData: any
-    ;(request as jest.Mock).mockImplementation((data) => {
-      leaseRequestData = data.data
-      return Promise.resolve({ status: 200, data: {} })
-    })
+    ;(request as jest.Mock).mockImplementation(
+      ({ data }: { url: string; data?: any }) => {
+        leaseRequestData = data
+        return Promise.resolve({ status: 200, data: {} })
+      }
+    )
 
     // Act
     const contact = factory.contact.build()
@@ -717,7 +917,14 @@ describe(tenfastAdapter.createLease, () => {
     await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, false)
 
     // Assert
-    expect(leaseRequestData.hyror[0].vat).toBe(0)
+    const requestedUrls = (request as jest.Mock).mock.calls.map(
+      ([call]) => call.url
+    )
+    expect(
+      requestedUrls.some((url: string) => url.includes('/hyresvard/articles'))
+    ).toBe(false)
+    expect(leaseRequestData.hyror[0].article).toBe('some-article-id')
+    expect(leaseRequestData.hyror[0].vat).toBe(0.25)
     expect(leaseRequestData.vatEnabled).toBe(false)
   })
 
@@ -749,7 +956,7 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      true
+      false
     )
 
     // Assert
@@ -781,7 +988,7 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      true
+      false
     )
 
     // Assert
@@ -908,7 +1115,7 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      true
+      false
     )
 
     // Assert
@@ -945,7 +1152,7 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      true
+      false
     )
 
     // Assert
@@ -977,7 +1184,7 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      true
+      false
     )
 
     // Assert
