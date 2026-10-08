@@ -802,6 +802,7 @@ export const ComponentTypesQueryParamsSchema = z.object({
 export const ComponentSubtypesQueryParamsSchema = z.object({
   typeId: z.string().uuid().optional(),
   subtypeName: z.string().optional(), // Search parameter
+  categoryType: property.ComponentCategoryTypeSchema.optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })

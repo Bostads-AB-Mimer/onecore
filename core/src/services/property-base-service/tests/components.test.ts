@@ -388,6 +388,7 @@ describe('Component Subtypes API', () => {
         '00000000-0000-0000-0000-000000000001',
         1,
         20,
+        undefined,
         undefined
       )
     })
@@ -405,7 +406,13 @@ describe('Component Subtypes API', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getSpy).toHaveBeenCalledWith(undefined, 1, 20, 'Dishwasher')
+      expect(getSpy).toHaveBeenCalledWith(
+        undefined,
+        1,
+        20,
+        'Dishwasher',
+        undefined
+      )
     })
 
     it('response matches schema', async () => {

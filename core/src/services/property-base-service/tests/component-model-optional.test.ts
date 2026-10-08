@@ -495,3 +495,32 @@ describe('POST /processes/add-component', () => {
     )
   })
 })
+
+describe('GET /component-subtypes by category type', () => {
+  it('forwards categoryType to property', async () => {
+    const spy = jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: [factory.componentSubtype.build()],
+      })
+
+    const res = await request(app.callback()).get(
+      '/component-subtypes?categoryType=SURFACE'
+    )
+
+    expect(res.status).toBe(200)
+    expect(spy).toHaveBeenCalledWith(undefined, 1, 20, undefined, 'SURFACE')
+  })
+
+  it('rejects an unknown categoryType', async () => {
+    const spy = jest.spyOn(propertyBaseAdapter, 'getComponentSubtypes')
+
+    const res = await request(app.callback()).get(
+      '/component-subtypes?categoryType=ROOF'
+    )
+
+    expect(res.status).toBe(400)
+    expect(spy).not.toHaveBeenCalled()
+  })
+})

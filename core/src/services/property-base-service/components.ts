@@ -809,7 +809,7 @@ export const routes = (router: KoaRouter) => {
    * /component-subtypes:
    *   get:
    *     summary: Get all component subtypes
-   *     description: "Variants of a type with lifecycle data including depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName."
+   *     description: "Variants of a type with lifecycle data including depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId, subtypeName or categoryType."
    *     tags:
    *       - Property-base/Components
    *     parameters:
@@ -826,6 +826,13 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Search subtypes by name (case-insensitive)
+   *       - in: query
+   *         name: categoryType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [EQUIPMENT, SURFACE]
+   *         description: Only subtypes whose category has this type
    *       - in: query
    *         name: page
    *         schema:
@@ -878,7 +885,8 @@ export const routes = (router: KoaRouter) => {
         params.data.typeId,
         params.data.page,
         params.data.limit,
-        params.data.subtypeName
+        params.data.subtypeName,
+        params.data.categoryType
       )
 
       if (!result.ok) {

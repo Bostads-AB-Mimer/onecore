@@ -297,11 +297,12 @@ async function getComponentSubtypes(
   typeId?: string,
   page?: number,
   limit?: number,
-  subtypeName?: string
+  subtypeName?: string,
+  categoryType?: 'EQUIPMENT' | 'SURFACE'
 ): Promise<AdapterResult<GetComponentSubtypesResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/component-subtypes', {
-      params: { query: { typeId, page, limit, subtypeName } },
+      params: { query: { typeId, page, limit, subtypeName, categoryType } },
     })
 
     if (response.data?.content) {
