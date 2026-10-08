@@ -8,13 +8,13 @@ import type { MaintenanceUnit } from '@/services/types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { ContextType } from '@/shared/types/ui'
+import { TabsAccordion } from '@/shared/ui/TabsAccordion'
 
 import {
   MAINTENANCE_UNIT_DEFAULT_TAB,
   MAINTENANCE_UNIT_TABS,
   type MaintenanceUnitTab,
 } from '../model/tabs'
-import { MaintenanceUnitTabsMobile } from './MaintenanceUnitTabsMobile'
 
 interface MaintenanceUnitTabsProps {
   maintenanceUnit: MaintenanceUnit
@@ -28,10 +28,6 @@ export function MaintenanceUnitTabs({
     MAINTENANCE_UNIT_TABS,
     MAINTENANCE_UNIT_DEFAULT_TAB
   )
-
-  if (isMobile) {
-    return <MaintenanceUnitTabsMobile maintenanceUnit={maintenanceUnit} />
-  }
 
   const content: Record<MaintenanceUnitTab, ReactNode> = {
     komponenter: (
@@ -56,6 +52,16 @@ export function MaintenanceUnitTabs({
         }}
       />
     ),
+  }
+
+  if (isMobile) {
+    return (
+      <TabsAccordion
+        tabs={MAINTENANCE_UNIT_TABS}
+        content={content}
+        open={value}
+      />
+    )
   }
 
   return (

@@ -11,13 +11,13 @@ import { Building, Staircase } from '@/services/types'
 
 import { useIsMobile } from '@/shared/hooks'
 import { ContextType } from '@/shared/types/ui'
+import { TabsAccordion } from '@/shared/ui/TabsAccordion'
 
 import {
   BUILDING_DEFAULT_TAB,
   BUILDING_TABS,
   type BuildingTab,
 } from '../model/tabs'
-import { BuildingTabsMobile } from './BuildingTabsMobile'
 
 interface BuildingTabsProps {
   building: Building
@@ -30,16 +30,6 @@ export const BuildingTabs = ({ building, staircases }: BuildingTabsProps) => {
 
   const { residenceStaircaseLookupMap, isLoading: isStaircasesLoading } =
     useResidenceStaircaseLookupMap(staircases)
-
-  if (isMobile) {
-    return (
-      <BuildingTabsMobile
-        isLoading={isStaircasesLoading}
-        building={building}
-        residenceStaircaseLookupMap={residenceStaircaseLookupMap}
-      />
-    )
-  }
 
   const content: Record<BuildingTab, ReactNode> = {
     uppgangar: (
@@ -66,6 +56,10 @@ export const BuildingTabs = ({ building, staircases }: BuildingTabsProps) => {
         id={building.id}
       />
     ),
+  }
+
+  if (isMobile) {
+    return <TabsAccordion tabs={BUILDING_TABS} content={content} open={value} />
   }
 
   return (

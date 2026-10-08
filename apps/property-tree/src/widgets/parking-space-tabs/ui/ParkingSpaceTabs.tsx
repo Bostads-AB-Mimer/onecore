@@ -11,13 +11,13 @@ import { Lease } from '@/services/api/core/leaseService'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { ContextType } from '@/shared/types/ui'
+import { TabsAccordion } from '@/shared/ui/TabsAccordion'
 
 import {
   PARKING_SPACE_DEFAULT_TAB,
   PARKING_SPACE_TABS,
   type ParkingSpaceTab,
 } from '../model/tabs'
-import { ParkingSpaceTabsMobile } from './ParkingSpaceTabsMobile'
 
 type ParkingSpace = components['schemas']['ParkingSpace']
 
@@ -39,17 +39,6 @@ export function ParkingSpaceTabs({
     PARKING_SPACE_TABS,
     PARKING_SPACE_DEFAULT_TAB
   )
-
-  if (isMobile) {
-    return (
-      <ParkingSpaceTabsMobile
-        parkingSpace={parkingSpace}
-        leases={leases}
-        leasesIsLoading={leasesIsLoading}
-        currentLease={currentLease}
-      />
-    )
-  }
 
   const content: Record<ParkingSpaceTab, ReactNode> = {
     hyresgast: (
@@ -73,6 +62,12 @@ export function ParkingSpaceTabs({
         id={parkingSpace.rentalId}
       />
     ),
+  }
+
+  if (isMobile) {
+    return (
+      <TabsAccordion tabs={PARKING_SPACE_TABS} content={content} open={value} />
+    )
   }
 
   return (
