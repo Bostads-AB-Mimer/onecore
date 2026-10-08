@@ -537,14 +537,10 @@ export const routes = (router: KoaRouter) => {
           )
           enrichedContent = result.content.map((lease) => ({
             ...lease,
-            contacts: lease.contacts?.map((c) => {
-              const contactInfo = contactMap.get(c.contactCode)
-              return {
-                ...c,
-                email: contactInfo?.email ?? c.email,
-                phone: contactInfo?.phone ?? c.phone,
-              }
-            }),
+            contacts: lease.contacts?.map((c) => ({
+              ...c,
+              ...contactMap.get(c.contactCode),
+            })),
           }))
         }
       }
