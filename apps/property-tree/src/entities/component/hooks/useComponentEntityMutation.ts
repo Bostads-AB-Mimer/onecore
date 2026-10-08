@@ -18,7 +18,10 @@ import type {
   UpdateMutationVariables,
 } from '@/services/types'
 
-import { buildQueryKey } from '../lib/componentLibraryQueryKeys'
+import {
+  buildQueryKey,
+  QUERY_KEY_ROOTS,
+} from '../lib/componentLibraryQueryKeys'
 
 /**
  * Generic hook for creating, updating, or deleting component library entities
@@ -111,6 +114,9 @@ export function useComponentEntityMutation<
       // Invalidate the appropriate query key
       const queryKey = buildQueryKey(entityType, parentId as string | undefined)
       await queryClient.invalidateQueries({ queryKey })
+      await queryClient.invalidateQueries({
+        queryKey: [QUERY_KEY_ROOTS[entityType]],
+      })
 
       // If entity was moved (parent changed), also invalidate old parent's cache
       if (vars.oldParentId) {

@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('./baseApi', () => ({ GET: vi.fn(), POST: vi.fn(), PUT: vi.fn() }))
 
-import { toComponentBody } from './componentService'
+import { GET } from './baseApi'
+import { componentService, toComponentBody } from './componentService'
 
 const subtypeId = '00000000-0000-0000-0002-000000000001'
 
@@ -60,5 +61,30 @@ describe('toComponentBody', () => {
       condition: 'GOOD',
       quantity: 2,
     })
+  })
+})
+
+describe('getSurfaceSubtypes', () => {
+  it('asks for SURFACE subtypes with the backend page cap and returns the content', async () => {
+    vi.mocked(GET).mockResolvedValueOnce({
+      data: { content: [{ id: 's1' }] },
+      error: undefined,
+    } as never)
+
+    await expect(componentService.getSurfaceSubtypes()).resolves.toEqual([
+      { id: 's1' },
+    ])
+    expect(GET).toHaveBeenCalledWith('/component-subtypes', {
+      params: { query: { categoryType: 'SURFACE', limit: 100 } },
+    })
+  })
+
+  it('returns an empty list when content is missing', async () => {
+    vi.mocked(GET).mockResolvedValueOnce({
+      data: undefined,
+      error: undefined,
+    } as never)
+
+    await expect(componentService.getSurfaceSubtypes()).resolves.toEqual([])
   })
 })
