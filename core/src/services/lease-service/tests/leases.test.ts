@@ -544,7 +544,7 @@ describe('leases routes', () => {
       expect(searchSpy).not.toHaveBeenCalled()
     })
 
-    it('keeps existing contact email/phone when contacts-service has no info for them', async () => {
+    it('keeps the Tenfast contact info when contacts-service has no record for that code at all', async () => {
       jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue(
         buildPaginatedResponse([
           buildLeaseSearchResult({
@@ -570,6 +570,42 @@ describe('leases routes', () => {
         'fran-tenfast@example.com'
       )
       expect(res.body.content[0].contacts[0].phone).toBe('0701112233')
+    })
+
+    it('never falls back to Tenfast data for a contact contacts-service has but redacted (e.g. protected identity)', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue(
+        buildPaginatedResponse([
+          buildLeaseSearchResult({
+            contacts: [
+              {
+                contactCode: 'P158770',
+                name: 'Andra Handen',
+                email: 'fran-tenfast@example.com',
+                phone: '0701112233',
+              },
+            ],
+          }),
+        ])
+      )
+      jest.spyOn(contactsAdapter, 'getByContactCodeBatch').mockResolvedValue({
+        ok: true,
+        data: [
+          factory.contactsServiceContact.build({
+            contactCode: 'P158770',
+            communication: {
+              emailAddresses: [],
+              phoneNumbers: [],
+              specialAttention: false,
+            },
+          }),
+        ],
+      })
+
+      const res = await request(app.callback()).get('/leases/search')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].contacts[0].email).toBeNull()
+      expect(res.body.content[0].contacts[0].phone).toBeNull()
     })
 
     it('resolves a personnummer in q to a contact code before calling leasing', async () => {
