@@ -21,7 +21,8 @@ export interface SegmentedTabsProps {
 
 /**
  * Full-width segmented tab bar where every tab is a link to `basePath/value`.
- * Keeps the current query string except `page`, so filters survive a switch.
+ * Keeps the current query string except `page`, so filters survive a switch,
+ * and the navigation state, since a tab switch stays on the same page.
  */
 export function SegmentedTabs({
   tabs,
@@ -29,7 +30,7 @@ export function SegmentedTabs({
   basePath,
   className,
 }: SegmentedTabsProps) {
-  const { search } = useLocation()
+  const { search, state } = useLocation()
   const params = new URLSearchParams(search)
   params.delete('page')
   const query = params.toString()
@@ -63,7 +64,7 @@ export function SegmentedTabs({
             )}
           </>
         )
-        const className = cn(
+        const itemClass = cn(
           'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
           active && 'bg-background text-foreground shadow-sm',
           tab.disabled && 'pointer-events-none opacity-50'
@@ -71,7 +72,7 @@ export function SegmentedTabs({
 
         if (tab.disabled) {
           return (
-            <span key={tab.value} aria-disabled="true" className={className}>
+            <span key={tab.value} aria-disabled="true" className={itemClass}>
               {content}
             </span>
           )
@@ -80,8 +81,9 @@ export function SegmentedTabs({
           <Link
             key={tab.value}
             to={`${basePath}/${tab.value}${suffix}`}
+            state={state}
             aria-current={active ? 'page' : undefined}
-            className={className}
+            className={itemClass}
           >
             {content}
           </Link>

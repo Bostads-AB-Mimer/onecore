@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 
 import { SegmentedTabs } from '../src'
 
@@ -54,6 +55,26 @@ describe('SegmentedTabs', () => {
     expect(link(/Publicera/).textContent).toBe('Publicera7')
     expect(link(/Visning/).textContent).toBe('Visning0')
     expect(link(/Historik/).textContent).toBe('Historik')
+  })
+
+  it('carries navigation state across a tab click', async () => {
+    const ShowState = () => (
+      <output>
+        {String((useLocation().state as { code?: string })?.code)}
+      </output>
+    )
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: '/uthyrning', state: { code: 'B01' } }]}
+      >
+        <SegmentedTabs tabs={TABS} value="publicera" basePath="/uthyrning" />
+        <ShowState />
+      </MemoryRouter>
+    )
+
+    await userEvent.click(link(/Visning/))
+
+    expect(screen.getByRole('status').textContent).toBe('B01')
   })
 
   it('renders a disabled tab as plain text, not a link', () => {

@@ -9,6 +9,7 @@ import {
 import { ChevronRight } from 'lucide-react'
 
 import { cn } from '@/shared/lib/utils'
+import { isPathWithin } from '@/shared/routes'
 import {
   SidebarGroup,
   SidebarMenu,
@@ -18,9 +19,6 @@ import {
 
 const joinPath = (base: string, to: string) => (to ? `${base}/${to}` : base)
 
-const matches = (pathname: string, href: string) =>
-  pathname === href || pathname.startsWith(`${href}/`)
-
 const hasActiveDescendant = (
   item: ModuleNavItem,
   base: string,
@@ -28,7 +26,8 @@ const hasActiveDescendant = (
 ): boolean =>
   (item.children ?? []).some(
     (child) =>
-      (child.to !== undefined && matches(pathname, joinPath(base, child.to))) ||
+      (child.to !== undefined &&
+        isPathWithin(pathname, joinPath(base, child.to))) ||
       hasActiveDescendant(child, base, pathname)
   )
 
@@ -37,12 +36,12 @@ function NavItem({ item, base }: { item: ModuleNavItem; base: string }) {
   const { pathname } = useLocation()
   const href = item.to === undefined ? undefined : joinPath(base, item.to)
   const inside =
-    (href !== undefined && matches(pathname, href)) ||
+    (href !== undefined && isPathWithin(pathname, href)) ||
     hasActiveDescendant(item, base, pathname)
   // Deepest matching item wins, so a parent is not highlighted with its child.
   const isActive =
     href !== undefined &&
-    matches(pathname, href) &&
+    isPathWithin(pathname, href) &&
     !hasActiveDescendant(item, base, pathname)
 
   // Controlled so the group opens when navigation lands inside it, not only on mount.

@@ -167,6 +167,11 @@ export function getPropertyObjectPath(
   }
 }
 
+/** True for the path itself and anything below it: '/a/b' matches '/a/b' and '/a/b/c'. */
+export function isPathWithin(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`)
+}
+
 /**
  * Get the static prefix of a route pattern (everything before the first :param).
  * Useful for checking if a pathname belongs to a given route.

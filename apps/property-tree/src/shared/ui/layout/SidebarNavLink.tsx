@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { type LucideIcon } from 'lucide-react'
 
+import { isPathWithin } from '@/shared/routes'
 import {
   SidebarGroup,
   SidebarMenu,
@@ -17,9 +18,9 @@ interface SidebarNavLinkProps {
 export function SidebarNavLink({ to, icon: Icon, label }: SidebarNavLinkProps) {
   const { pathname } = useLocation()
   const isActive =
-    pathname === to ||
-    (to !== '/' && pathname.startsWith(`${to}/`)) ||
-    (to === '/' && pathname === '/sv')
+    to === '/'
+      ? pathname === '/' || pathname === '/sv'
+      : isPathWithin(pathname, to)
 
   return (
     <SidebarGroup>
