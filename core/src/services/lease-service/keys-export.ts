@@ -12,6 +12,7 @@ import { leasing, LeaseStatusLabel } from '@onecore/types'
 
 import { KeysApi } from '../../adapters/keys-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import { enrichLeaseContacts } from '../../adapters/contacts-adapter/lease-query'
 
 const querySchema = z.object({
   property: z.string().min(1),
@@ -163,7 +164,11 @@ export const routes = (router: KoaRouter) => {
               : {}),
           })
 
-          const enriched = await enrichLeasesWithKeys(response.content)
+          const withContacts = await enrichLeaseContacts(
+            response.content,
+            'leases/keys-export'
+          )
+          const enriched = await enrichLeasesWithKeys(withContacts)
           return { ...response, content: enriched }
         },
         {

@@ -172,19 +172,34 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       const { includePhone, includeEmail, includeAddress, includeRelations } =
         options ?? {}
 
-      const response = await axios<GetContactsResponseBody>(`/contacts/batch`, {
-        params: {
-          code: contactCodes,
-          includePhone,
-          includeEmail,
-          includeAddress,
-          includeRelations,
-        },
-        // Required: contacts microservice uses Koa's default Node querystring
-        // parser (no koa-qs), which doesn't unpack `?code[]=A` into an array.
-        paramsSerializer: { indexes: null },
-      })
-      return listResponse(response)
+      const CHUNK_SIZE = 500
+      const chunks: string[][] = []
+      for (let i = 0; i < contactCodes.length; i += CHUNK_SIZE) {
+        chunks.push(contactCodes.slice(i, i + CHUNK_SIZE))
+      }
+
+      const results = await Promise.all(
+        chunks.map((chunk) =>
+          axios<GetContactsResponseBody>(`/contacts/batch`, {
+            params: {
+              code: chunk,
+              includePhone,
+              includeEmail,
+              includeAddress,
+              includeRelations,
+            },
+            paramsSerializer: { indexes: null },
+          }).then(listResponse)
+        )
+      )
+
+      const failed = results.find((r) => !r.ok)
+      if (failed) return failed
+
+      return {
+        ok: true,
+        data: results.flatMap((r) => (r.ok ? r.data : [])),
+      }
     },
 
     async getByTrusteeOfContactCode(

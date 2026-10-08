@@ -150,8 +150,16 @@ export const xpandContactsRepository = (
     ) => {
       if (contactCodes.length === 0) return []
 
-      const rows = await contactsByCodesQuery(db.get(), contactCodes, options)
-      const contacts = transformDbContactRows(rows)
+      // MSSQL caps WHERE IN at 2100 parameters — chunk to stay well under
+      const CHUNK_SIZE = 1000
+      const allRows: DbContactRow[] = []
+      for (let i = 0; i < contactCodes.length; i += CHUNK_SIZE) {
+        const chunk = contactCodes.slice(i, i + CHUNK_SIZE)
+        const rows = await contactsByCodesQuery(db.get(), chunk, options)
+        allRows.push(...rows)
+      }
+
+      const contacts = transformDbContactRows(allRows)
 
       return options?.includeRelations
         ? withRelatedContacts(contacts)
@@ -177,13 +185,22 @@ export const xpandContactsRepository = (
     /**
      * Retrieves a contact by their national ID number.
      *
+     * Matches both the ten- and twelve-digit form of a personnummer, since
+     * Xpand stores a mix of both — see `parseNationalId`. Falls back to a
+     * plain digit match for input it doesn't recognise (e.g. an orgnr).
+     *
      * @param nid - The national ID number to search for.
      *
      * @returns A promise that resolves to the Contact object if found,
      */
     getByNationalIdNumber: async (nid: NationalIdNumber) => {
+      const forms = parseNationalId(nid)
+      const candidates = forms
+        ? [forms.twelveDigits, forms.tenDigits]
+        : [nid.replaceAll(/[^0-9]/g, '')]
+
       const dbContactRows = await contactsQuery()
-        .hasNationalId(nid.replaceAll(/[^0-9]/g, ''))
+        .hasNationalId(candidates)
         .getOne(db.get())
 
       const contact = transformDbContactRows(dbContactRows)[0]
