@@ -18,6 +18,10 @@ COPY libs ./libs
 COPY apps/leasing-portal/frontend ./apps/leasing-portal/frontend
 COPY apps/property-tree ./apps/property-tree
 
+# Optional frontend modules to bundle (see vite.config.ts). Unset = all.
+ARG ONECORE_FRONTEND_MODULES
+ENV ONECORE_FRONTEND_MODULES=$ONECORE_FRONTEND_MODULES
+
 RUN pnpm install
 # Build workspace dependencies (types, ui, leasing-portal-frontend) the same way CI does
 RUN pnpm run --filter @onecore/property-tree... --filter !@onecore/property-tree build

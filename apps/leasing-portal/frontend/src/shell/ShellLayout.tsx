@@ -1,12 +1,16 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { Button, Toaster } from '@onecore/ui'
-import { Home, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 
 import type { LeasingUser } from '../host/types'
+import { leasingModule } from '../module'
 import onecoreLogo from '@onecore/ui/assets/onecore_logo_black.svg'
 import { useAuth } from './auth/useAuth'
 
-const navItems = [{ to: '/', label: 'Uthyrning', icon: Home }]
+// Same menu as the property-tree sidebar: the module's sections, mounted at /.
+const navItems = leasingModule.navigation
+  .flatMap((item) => item.children ?? [item])
+  .filter((item) => item.to !== undefined && !item.disabled)
 
 /** The frame around the pages when the portal runs on its own: header, menu, content. */
 export function ShellLayout({ user }: { user: LeasingUser }) {
@@ -20,9 +24,8 @@ export function ShellLayout({ user }: { user: LeasingUser }) {
           <nav className="flex items-center gap-1">
             {navItems.map((item) => (
               <NavLink
-                key={item.to}
-                to={item.to}
-                end
+                key={item.label}
+                to={`/${item.to}`}
                 className={({ isActive }) =>
                   `flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
                     isActive
@@ -31,7 +34,7 @@ export function ShellLayout({ user }: { user: LeasingUser }) {
                   }`
                 }
               >
-                <item.icon className="h-4 w-4" />
+                {item.icon && <item.icon className="h-4 w-4" />}
                 {item.label}
               </NavLink>
             ))}

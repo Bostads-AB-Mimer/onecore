@@ -6,6 +6,18 @@ import { injectEnv } from './script/inject-env.js'
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  // Optional module packages, build time only (not overridable at runtime like
+  // VITE_*): unset = all; a list without a module (or `none`) aliases that
+  // package to a stub so its code never enters the bundle (src/shared/config/modules.ts).
+  const rawModules = env.ONECORE_FRONTEND_MODULES?.trim()
+  const enabledModules = rawModules
+    ? rawModules.split(',').map((m) => m.trim())
+    : ['leasing']
+  const leasingSource = enabledModules.includes('leasing')
+    ? mode === 'development'
+      ? path.resolve(__dirname, '../leasing-portal/frontend/src/index.ts')
+      : undefined
+    : path.resolve(__dirname, './src/shared/config/disabledModule.ts')
 
   return {
     plugins: [
@@ -29,15 +41,10 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-        // Dev: load the leasing pages from source so they hot-reload here.
-        // Builds use the package's dist/lib like any other dependency.
-        ...(mode === 'development'
-          ? {
-              '@onecore/leasing-portal-frontend': path.resolve(
-                __dirname,
-                '../leasing-portal/frontend/src/index.ts'
-              ),
-            }
+        // Dev loads the leasing pages from source so they hot-reload here;
+        // builds use the package's dist/lib like any other dependency.
+        ...(leasingSource
+          ? { '@onecore/leasing-portal-frontend': leasingSource }
           : {}),
       },
     },

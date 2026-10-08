@@ -74,6 +74,13 @@ drop `page`, so filters survive a tab switch and pagination resets.
 
 All three export from the package root.
 
+## Modules
+
+`OnecoreModule` is the contract between a host app and an optional frontend
+package: `basePath`, `routes`, `navigation` and a `Host` wrapper. The host
+mounts every module from one registry and knows nothing else about them; see
+`apps/property-tree/src/shared/config/modules.ts`.
+
 ## Scripts
 
 ```bash

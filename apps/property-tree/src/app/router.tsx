@@ -1,5 +1,4 @@
 import { createBrowserRouter, type RouterProviderProps } from 'react-router-dom'
-import { leasingRoutes } from '@onecore/leasing-portal-frontend'
 
 import BuildingView from '@/pages/BuildingPage'
 import { CompanyPage } from '@/pages/CompanyPage'
@@ -10,8 +9,8 @@ import { FacilityPage } from '@/pages/FacilityPage'
 import { ImdPage } from '@/pages/ImdPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
-import { LeasingPortalPage } from '@/pages/LeasingPortalPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
+import { ModulePage } from '@/pages/ModulePage'
 import { ParkingSpacePage } from '@/pages/ParkingSpacePage'
 import { PropertyAreasPage } from '@/pages/PropertyAreasPage'
 import { PropertyPage } from '@/pages/PropertyPage'
@@ -25,6 +24,7 @@ import { TenantsPage } from '@/pages/TenantsPage'
 
 import { AuthCallback } from '@/features/auth'
 
+import { modules } from '@/shared/config/modules'
 import { routes, withTab } from '@/shared/routes'
 
 import { AppLayout } from './layouts/AppLayout'
@@ -152,12 +152,12 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             element: <InspectionsView />,
             handle: { title: 'Besiktningar' },
           },
-          {
-            path: routes.leasing,
-            element: <LeasingPortalPage />,
-            handle: { title: 'Uthyrning' },
-            children: leasingRoutes,
-          },
+          ...modules.map((module) => ({
+            path: module.basePath,
+            element: <ModulePage module={module} />,
+            handle: { title: module.title },
+            children: module.routes,
+          })),
         ],
       },
     ],
