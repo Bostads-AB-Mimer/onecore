@@ -1,3 +1,4 @@
+import { property } from '@onecore/types'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 import createClient from 'openapi-fetch'
 
@@ -298,7 +299,7 @@ async function getComponentSubtypes(
   page?: number,
   limit?: number,
   subtypeName?: string,
-  categoryType?: 'EQUIPMENT' | 'SURFACE'
+  categoryType?: property.ComponentCategoryType
 ): Promise<AdapterResult<GetComponentSubtypesResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/component-subtypes', {

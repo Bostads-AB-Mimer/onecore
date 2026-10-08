@@ -1125,7 +1125,7 @@ export const AddComponentRequestSchema = z.object({
   depreciationPriceAtPurchase: z.number().min(0).nullable().optional(),
   economicLifespan: z.number().min(0).nullable().optional(),
   quantity: z.number().min(0).optional().default(1),
-  ncsCode: z.string().trim().optional(),
+  ncsCode: z.string().trim().max(15).optional(),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
   condition: ComponentConditionEnum.nullable().optional(),
 

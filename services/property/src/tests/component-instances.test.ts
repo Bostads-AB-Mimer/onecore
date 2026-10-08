@@ -289,6 +289,7 @@ describe('Component Instances API', () => {
       assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const invalidComponent = {
+        subtypeId: existingSubtypeId,
         modelId: existingModelId,
         serialNumber: `SN-NEG-${Date.now()}`,
         warrantyMonths: -12, // Negative warranty should be rejected
@@ -306,6 +307,7 @@ describe('Component Instances API', () => {
       assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const invalidComponent = {
+        subtypeId: existingSubtypeId,
         modelId: existingModelId,
         serialNumber: `SN-NEG-${Date.now()}`,
         priceAtPurchase: -1000, // Negative price should be rejected
@@ -323,6 +325,7 @@ describe('Component Instances API', () => {
       assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const invalidComponent = {
+        subtypeId: existingSubtypeId,
         modelId: existingModelId,
         serialNumber: `SN-NEG-${Date.now()}`,
         quantity: -1, // Negative quantity should be rejected
@@ -369,6 +372,7 @@ describe('Component Instances API', () => {
       assert(existingSubtypeId, 'Setup failed: no existing subtype found')
 
       const invalidComponent = {
+        subtypeId: existingSubtypeId,
         modelId: existingModelId,
         serialNumber: `SN-COND-${Date.now()}`,
         condition: 'INVALID_CONDITION',
