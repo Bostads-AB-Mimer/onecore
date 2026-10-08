@@ -47,6 +47,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [newParentId, setNewParentId] = useState<string | undefined>(undefined)
+  const hierarchySubtypeId = hierarchyData?.subtypeId
 
   const mutation = useComponentEntityMutation(
     entityType,
@@ -85,6 +86,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
               break
             case 'instance':
               defaults.modelId = parentId
+              if (hierarchySubtypeId) defaults.subtypeId = hierarchySubtypeId
               break
           }
         }
@@ -115,7 +117,16 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       setErrors({})
       setNewParentId(undefined) // Reset parent change when dialog opens
     }
-  }, [isOpen, mode, entity, parentId, entityType, config.fields, defaultValues])
+  }, [
+    isOpen,
+    mode,
+    entity,
+    parentId,
+    entityType,
+    config.fields,
+    defaultValues,
+    hierarchySubtypeId,
+  ])
 
   const handleChange = (name: string, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
