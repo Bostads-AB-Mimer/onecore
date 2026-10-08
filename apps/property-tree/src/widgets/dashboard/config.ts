@@ -17,11 +17,13 @@ import {
   TrendingUp,
 } from 'lucide-react'
 
+import { modules } from '@/shared/config/modules'
 import { resolve } from '@/shared/lib/env'
-import { isLeasingPortalEnabled } from '@/shared/lib/leasingPortal'
 import { routes } from '@/shared/routes'
 
 import type { DashboardCard } from './types'
+
+const leasingModule = modules.find((m) => m.id === 'leasing')
 
 export const dashboardCards: DashboardCard[] = [
   {
@@ -56,11 +58,9 @@ export const dashboardCards: DashboardCard[] = [
     title: 'Uthyrning',
     icon: Home,
     description: 'Hantera uthyrning av lägenheter',
-    // The leasing portal replaces the internal portal link once its BFF is configured.
-    path: isLeasingPortalEnabled
-      ? routes.leasing
-      : resolve('VITE_INTERNAL_PORTAL', ''),
-    isExternal: !isLeasingPortalEnabled,
+    // The leasing module replaces the internal portal link when it is bundled.
+    path: leasingModule?.basePath ?? resolve('VITE_INTERNAL_PORTAL', ''),
+    isExternal: !leasingModule,
     isDisabled: false,
   },
   {

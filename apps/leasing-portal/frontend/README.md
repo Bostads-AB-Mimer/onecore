@@ -3,9 +3,9 @@
 The leasing portal pages, packaged two ways from one source tree:
 
 - **Pages library** (`src/index.ts`, built by tsup to `dist/lib`). Exports
-  `leasingRoutes`, a react-router route array, and `LeasingHostProvider`,
-  which a host wraps around them to supply the BFF URL and the logged-in
-  user. Property-tree mounts this under `/uthyrning`.
+  `leasingModule`, the `OnecoreModule` contract from `@onecore/ui`: routes,
+  sidebar navigation and a host wrapper that reads the BFF URL from the host's
+  config. Property-tree mounts it under `/uthyrning` from its module registry.
 - **Standalone shell** (`src/shell`, built by vite to `dist/app`). A thin app
   with its own header, Keycloak login and menu, for operators who do not run
   property-tree. It mounts the same route array at `/`.
@@ -24,10 +24,24 @@ pnpm dev               # http://localhost:3020, expects core on 5010 and the BFF
 pnpm generate-api-types  # regenerate src/api/generated from the running BFF
 ```
 
-To see the pages inside property-tree, start property-tree with
-`VITE_LEASING_BFF_URL` set. In dev, property-tree's vite config aliases this
-package to its source, so edits to the pages hot-reload there without a
+Property-tree mounts the pages whenever the module is bundled; set
+`VITE_LEASING_BFF_URL` there for pages that call the BFF. In dev, property-tree's vite config aliases
+this package to its source, so edits to the pages hot-reload there without a
 build. Production builds of property-tree use `dist/lib`.
+
+## Module decisions
+
+Settled during review, so they need not be re-raised:
+
+- **Bundled by default.** Property-tree ships the leasing module unless
+  `ONECORE_FRONTEND_MODULES` leaves it out at build time. It is a Docker
+  build argument (declared in property-tree's Dockerfile), not runtime
+  config, so it cannot be set per environment from the production repo.
+- **No runtime gate.** The menu and dashboard tile show wherever the module is
+  bundled, whether or not `VITE_LEASING_BFF_URL` is set. Hiding it behind
+  backend config was judged confusing at setup; a misconfigured environment
+  shows a page error instead of a missing menu.
+- **The module root is not a page.** `/uthyrning` redirects to `bostad`.
 
 ## Auth
 

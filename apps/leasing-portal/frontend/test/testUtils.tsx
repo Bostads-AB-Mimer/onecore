@@ -27,23 +27,3 @@ export function TestHost({ children }: { children: ReactNode }) {
     </QueryClientProvider>
   )
 }
-
-/** Stubs fetch to answer the BFF profile route. Returns the mock for call assertions. */
-export function stubProfileFetch(
-  body: unknown = {
-    id: 'user-1',
-    email: 'test@example.com',
-    source: 'keycloak',
-  },
-  status = 200
-) {
-  const fetchMock = vi.fn(
-    async (_input: Request) =>
-      new Response(JSON.stringify(body), {
-        status,
-        headers: { 'Content-Type': 'application/json' },
-      })
-  )
-  vi.stubGlobal('fetch', fetchMock)
-  return fetchMock
-}

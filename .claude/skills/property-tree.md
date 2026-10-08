@@ -19,9 +19,9 @@ Property-tree is one of four frontends in the ONECore platform:
 - **property-tree** — property and customer management (this app)
 - **internal-portal** — managing new leases
 - **keys-portal** — managing physical keys
-- **leasing-portal** — the new leasing frontend (`apps/leasing-portal/frontend`), also mounted inside property-tree under `/uthyrning` when `VITE_LEASING_BFF_URL` is set
+- **leasing-portal** — the new leasing frontend (`apps/leasing-portal/frontend`), also mounted inside property-tree under `/uthyrning` as an optional module (bundled by default, left out with `ONECORE_FRONTEND_MODULES` at build time)
 
-All consume data through **core** (port 5010), which acts as the orchestration/gateway layer. Core sometimes proxies requests directly to a microservice, and sometimes aggregates data from multiple microservices. Property-tree never talks to microservices directly. The one indirection: the `/uthyrning` pages come from the leasing-portal package and call the leasing BFF (`apps/leasing-portal/backend`, served under core's host at `/leasing-portal`), which in turn talks only to core. Property-tree only supplies the frame around those pages; see `src/pages/LeasingPortalPage.tsx`.
+All consume data through **core** (port 5010), which acts as the orchestration/gateway layer. Core sometimes proxies requests directly to a microservice, and sometimes aggregates data from multiple microservices. Property-tree never talks to microservices directly. The one indirection: the `/uthyrning` pages come from the leasing-portal package and call the leasing BFF (`apps/leasing-portal/backend`, served under core's host at `/leasing-portal`), which in turn talks only to core. Property-tree only supplies the frame around those pages. Modules are mounted from the registry in `src/shared/config/modules.ts` through `src/pages/ModulePage.tsx`; the sidebar renders each module's navigation tree.
 
 ## Tabs
 

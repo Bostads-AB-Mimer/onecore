@@ -18,7 +18,7 @@ import {
   ShieldX,
 } from 'lucide-react'
 
-import { isLeasingPortalEnabled } from '@/shared/lib/leasingPortal'
+import { modules } from '@/shared/config/modules'
 import { routes } from '@/shared/routes'
 import { SidebarNavLink } from '@/shared/ui/layout'
 import {
@@ -37,6 +37,7 @@ import {
   useCompanyExpansion,
 } from './CompanyExpansionContext'
 import { CompanyList } from './CompanyList'
+import { ModuleNavigation } from './ModuleNavigation'
 
 export function SidebarNavigation() {
   return (
@@ -157,9 +158,9 @@ function SidebarNavigationContent() {
           icon={FileText}
           label="Hyreskontrakt"
         />
-        {isLeasingPortalEnabled && (
-          <SidebarNavLink to={routes.leasing} icon={Home} label="Uthyrning" />
-        )}
+        {modules.map((module) => (
+          <ModuleNavigation key={module.id} module={module} />
+        ))}
         <SidebarNavLink
           to={routes.inspections}
           icon={ClipboardList}

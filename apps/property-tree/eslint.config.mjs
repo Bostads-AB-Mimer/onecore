@@ -52,6 +52,12 @@ export default defineConfig([
         {
           patterns: [
             {
+              // Null in builds that exclude the module; only the registry may import it.
+              group: ['@onecore/leasing-portal-frontend'],
+              message:
+                'Import modules through @/shared/config/modules, never the package directly.',
+            },
+            {
               group: ['../**/shared/*', '../shared/*'],
               message: 'Use @/shared/ instead of relative paths.',
             },
