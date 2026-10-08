@@ -10,13 +10,13 @@ import { WorkOrdersTabContent } from '@/features/work-orders'
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import type { PropertyDetail } from '@/shared/types/api'
 import { ContextType } from '@/shared/types/ui'
+import { TabsAccordion } from '@/shared/ui/TabsAccordion'
 
 import {
   PROPERTY_DEFAULT_TAB,
   PROPERTY_TABS,
   type PropertyTab,
 } from '../model/tabs'
-import { PropertyTabsMobile } from './PropertyTabsMobile'
 
 interface PropertyTabsProps {
   propertyDetail: PropertyDetail
@@ -25,10 +25,6 @@ interface PropertyTabsProps {
 export const PropertyTabs = ({ propertyDetail }: PropertyTabsProps) => {
   const isMobile = useIsMobile()
   const { value, basePath } = useRouteTab(PROPERTY_TABS, PROPERTY_DEFAULT_TAB)
-
-  if (isMobile) {
-    return <PropertyTabsMobile propertyDetail={propertyDetail} />
-  }
 
   const content: Record<PropertyTab, ReactNode> = {
     sammanstallning: <PropertyStatisticsTabContent property={propertyDetail} />,
@@ -54,6 +50,10 @@ export const PropertyTabs = ({ propertyDetail }: PropertyTabsProps) => {
         id={propertyDetail.code}
       />
     ),
+  }
+
+  if (isMobile) {
+    return <TabsAccordion tabs={PROPERTY_TABS} content={content} open={value} />
   }
 
   return (

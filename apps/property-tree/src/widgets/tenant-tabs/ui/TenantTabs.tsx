@@ -17,9 +17,9 @@ import { Lease } from '@/services/api/core/leaseService'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { ContextType } from '@/shared/types/ui'
+import { TabsAccordion } from '@/shared/ui/TabsAccordion'
 
 import { TENANT_DEFAULT_TAB, TENANT_TABS, type TenantTab } from '../model/tabs'
-import { TenantTabsMobile } from './TenantTabsMobile'
 
 interface TenantTabsProps {
   leases: Lease[]
@@ -41,19 +41,6 @@ export const TenantTabs = ({
 }: TenantTabsProps) => {
   const isMobile = useIsMobile()
   const { value, basePath } = useRouteTab(TENANT_TABS, TENANT_DEFAULT_TAB)
-
-  if (isMobile) {
-    return (
-      <TenantTabsMobile
-        leases={leases}
-        rentalProperties={rentalProperties}
-        contactCode={contactCode}
-        nationalRegistrationNumber={nationalRegistrationNumber}
-        isLoadingLeases={isLoadingLeases}
-        isLoadingProperties={isLoadingProperties}
-      />
-    )
-  }
 
   const content: Record<TenantTab, ReactNode> = {
     hyreskontrakt: (
@@ -78,6 +65,10 @@ export const TenantTabs = ({
     kommunikation: <TenantCommunicationTabContent contactCode={contactCode} />,
     nyckellan: <TenantKeyLoans contactCode={contactCode} leases={leases} />,
     kontakter: <TenantRelatedContactsTabContent contactCode={contactCode} />,
+  }
+
+  if (isMobile) {
+    return <TabsAccordion tabs={TENANT_TABS} content={content} open={value} />
   }
 
   return (

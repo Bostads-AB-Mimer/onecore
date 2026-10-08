@@ -12,13 +12,13 @@ import { Lease } from '@/services/api/core/leaseService'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { ContextType } from '@/shared/types/ui'
+import { TabsAccordion } from '@/shared/ui/TabsAccordion'
 
 import {
   FACILITY_DEFAULT_TAB,
   FACILITY_TABS,
   type FacilityTab,
 } from '../model/tabs'
-import { FacilityTabsMobile } from './FacilityTabsMobile'
 import { RoomsTabContent } from './RoomsTabContent'
 
 type Facility = components['schemas']['FacilityDetails']
@@ -39,17 +39,6 @@ export function FacilityTabs({
   const isMobile = useIsMobile()
   const { value, basePath } = useRouteTab(FACILITY_TABS, FACILITY_DEFAULT_TAB)
   const rentalId = facility.rentalInformation?.rentalId
-
-  if (isMobile) {
-    return (
-      <FacilityTabsMobile
-        facility={facility}
-        leases={leases}
-        leasesIsLoading={leasesIsLoading}
-        currentLease={currentLease}
-      />
-    )
-  }
 
   const content: Record<FacilityTab, ReactNode> = {
     komponenter: (
@@ -74,6 +63,10 @@ export function FacilityTabs({
     arenden: rentalId && (
       <WorkOrdersTabContent contextType={ContextType.Facility} id={rentalId} />
     ),
+  }
+
+  if (isMobile) {
+    return <TabsAccordion tabs={FACILITY_TABS} content={content} open={value} />
   }
 
   return (

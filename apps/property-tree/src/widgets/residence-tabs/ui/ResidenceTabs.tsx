@@ -18,13 +18,13 @@ import { components } from '@/services/api/core/generated/api-types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { ContextType } from '@/shared/types/ui'
+import { TabsAccordion } from '@/shared/ui/TabsAccordion'
 
 import {
   RESIDENCE_DEFAULT_TAB,
   RESIDENCE_TABS,
   type ResidenceTab,
 } from '../model/tabs'
-import { ResidenceTabsMobile } from './ResidenceTabsMobile'
 import { RoomsTabContent } from './RoomsTabContent'
 
 type Residence = components['schemas']['ResidenceDetails']
@@ -45,17 +45,6 @@ export const ResidenceTabs = ({
   const isMobile = useIsMobile()
   const { value, basePath } = useRouteTab(RESIDENCE_TABS, RESIDENCE_DEFAULT_TAB)
   const rentalId = residence.propertyObject.rentalId ?? ''
-
-  if (isMobile) {
-    return (
-      <ResidenceTabsMobile
-        residence={residence}
-        currentLease={currentLease}
-        leasesIsLoading={leasesIsLoading}
-        leasesError={leasesError}
-      />
-    )
-  }
 
   const content: Record<ResidenceTab, ReactNode> = {
     rum: rentalId ? <RoomsTabContent rentalId={rentalId} /> : null,
@@ -95,6 +84,12 @@ export const ResidenceTabs = ({
         showFlatList
       />
     ),
+  }
+
+  if (isMobile) {
+    return (
+      <TabsAccordion tabs={RESIDENCE_TABS} content={content} open={value} />
+    )
   }
 
   return (

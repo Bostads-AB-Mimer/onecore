@@ -28,8 +28,9 @@ All consume data through **core** (port 5010), which acts as the orchestration/g
 Tabbed pages address the active tab by URL segment: `/bostader/:rentalId/rum`,
 `/hyresgaster/:contactCode/fakturor`. The router appends the segment with
 `withTab(routes.residence)`, the slugs and labels live in the widget's
-`model/tabs.ts`; the desktop tab bar (`SegmentedTabs` + `useRouteTab` from
-`@onecore/ui`) renders that list and the mobile accordion's ids are typed from it. Slugs are
+`model/tabs.ts`, and the widget builds one `content` record keyed by slug. Desktop
+renders it with `SegmentedTabs` + `useRouteTab` from `@onecore/ui`; mobile hands
+the same list and record to `TabsAccordion`. Slugs are
 folded ASCII Swedish like the routes. Tab links keep the query string except
 `page`.
 
