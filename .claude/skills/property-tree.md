@@ -23,6 +23,16 @@ Property-tree is one of four frontends in the ONECore platform:
 
 All consume data through **core** (port 5010), which acts as the orchestration/gateway layer. Core sometimes proxies requests directly to a microservice, and sometimes aggregates data from multiple microservices. Property-tree never talks to microservices directly. The one indirection: the `/uthyrning` pages come from the leasing-portal package and call the leasing BFF (`apps/leasing-portal/backend`, served under core's host at `/leasing-portal`), which in turn talks only to core. Property-tree only supplies the frame around those pages; see `src/pages/LeasingPortalPage.tsx`.
 
+## Tabs
+
+Tabbed pages address the active tab by URL segment: `/bostader/:rentalId/rum`,
+`/hyresgaster/:contactCode/fakturor`. The router appends the segment with
+`withTab(routes.residence)`, the slugs and labels live in the widget's
+`model/tabs.ts`, and both the desktop tab bar (`SegmentedTabs` + `useRouteTab`
+from `@onecore/ui`) and the mobile accordion read from that one list. Slugs are
+folded ASCII Swedish like the routes. Tab links keep the query string except
+`page`.
+
 ## Domain Model
 
 The core domain follows a hierarchical structure:

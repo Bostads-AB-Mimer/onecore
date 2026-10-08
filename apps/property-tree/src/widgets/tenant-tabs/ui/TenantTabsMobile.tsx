@@ -30,7 +30,7 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
-import { TENANT_DEFAULT_TAB, TENANT_TABS } from '../model/tabs'
+import { TENANT_DEFAULT_TAB, TENANT_TABS, type TenantTab } from '../model/tabs'
 
 interface TenantTabsMobileProps {
   leases: Lease[]
@@ -51,7 +51,7 @@ export const TenantTabsMobile = ({
 }: TenantTabsMobileProps) => {
   const { value } = useRouteTab(TENANT_TABS, TENANT_DEFAULT_TAB)
 
-  const accordionItems: MobileAccordionItem[] = [
+  const accordionItems: (MobileAccordionItem & { id: TenantTab })[] = [
     {
       id: 'hyreskontrakt',
       icon: FileText,

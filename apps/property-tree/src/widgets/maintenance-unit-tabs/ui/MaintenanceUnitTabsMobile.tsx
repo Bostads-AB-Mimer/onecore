@@ -15,6 +15,7 @@ import {
 import {
   MAINTENANCE_UNIT_DEFAULT_TAB,
   MAINTENANCE_UNIT_TABS,
+  type MaintenanceUnitTab,
 } from '../model/tabs'
 
 interface MaintenanceUnitTabsMobileProps {
@@ -28,7 +29,8 @@ export function MaintenanceUnitTabsMobile({
     MAINTENANCE_UNIT_TABS,
     MAINTENANCE_UNIT_DEFAULT_TAB
   )
-  const accordionItems: MobileAccordionItem[] = [
+  type Item = MobileAccordionItem & { id: MaintenanceUnitTab }
+  const allItems: Item[] = [
     {
       id: 'komponenter',
       icon: Wrench,
@@ -67,7 +69,8 @@ export function MaintenanceUnitTabsMobile({
         />
       ),
     },
-  ].filter((item) => item.content !== null)
+  ]
+  const accordionItems = allItems.filter((item) => item.content !== null)
 
   return (
     <MobileAccordion

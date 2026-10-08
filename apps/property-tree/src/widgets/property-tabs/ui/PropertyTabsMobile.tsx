@@ -14,7 +14,11 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
-import { PROPERTY_DEFAULT_TAB, PROPERTY_TABS } from '../model/tabs'
+import {
+  PROPERTY_DEFAULT_TAB,
+  PROPERTY_TABS,
+  type PropertyTab,
+} from '../model/tabs'
 
 interface PropertyTabsMobileProps {
   propertyDetail: PropertyDetail
@@ -32,7 +36,8 @@ export const PropertyTabsMobile = ({
     showWorkOrders: true,
   }
 
-  const accordionItems: MobileAccordionItem[] = [
+  type Item = MobileAccordionItem & { id: PropertyTab }
+  const allItems: (Item | false)[] = [
     features.showStatistics && {
       id: 'sammanstallning',
       icon: BarChart3,
@@ -81,7 +86,8 @@ export const PropertyTabsMobile = ({
         />
       ),
     },
-  ].filter(Boolean) as MobileAccordionItem[]
+  ]
+  const accordionItems = allItems.filter((item): item is Item => item !== false)
 
   return (
     <MobileAccordion

@@ -24,7 +24,11 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
-import { FACILITY_DEFAULT_TAB, FACILITY_TABS } from '../model/tabs'
+import {
+  FACILITY_DEFAULT_TAB,
+  FACILITY_TABS,
+  type FacilityTab,
+} from '../model/tabs'
 import { RoomsTabContent } from './RoomsTabContent'
 
 type Facility = components['schemas']['FacilityDetails']
@@ -45,7 +49,8 @@ export function FacilityTabsMobile({
   const { value } = useRouteTab(FACILITY_TABS, FACILITY_DEFAULT_TAB)
   const rentalId = facility.rentalInformation?.rentalId
 
-  const accordionItems: MobileAccordionItem[] = [
+  type Item = MobileAccordionItem & { id: FacilityTab }
+  const allItems: Item[] = [
     {
       id: 'komponenter',
       icon: Wrench,
@@ -109,7 +114,8 @@ export function FacilityTabsMobile({
         />
       ) : null,
     },
-  ].filter((item) => item.content !== null)
+  ]
+  const accordionItems = allItems.filter((item) => item.content !== null)
 
   return (
     <MobileAccordion
