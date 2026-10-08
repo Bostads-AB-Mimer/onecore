@@ -13,7 +13,7 @@ import {
 
 import type { SurfaceCode } from '../constants'
 import { useAddSurfaceComponent } from '../hooks/useAddSurfaceComponent'
-import { useSurfaceModels } from '../hooks/useSurfaceModels'
+import { useSurfaceSubtypes } from '../hooks/useSurfaceSubtypes'
 import { groupSurfaceSubtypes, surfaceLabel } from '../lib/surfaces'
 
 interface AddSurfaceComponentMenuProps {
@@ -25,12 +25,12 @@ export function AddSurfaceComponentMenu({
   propertyObjectId,
   missingSurfaces,
 }: AddSurfaceComponentMenuProps) {
-  const { data: surfaceModels = [] } = useSurfaceModels()
+  const { data: surfaceSubtypes = [] } = useSurfaceSubtypes()
   const addSurfaceComponent = useAddSurfaceComponent(propertyObjectId)
 
   const groups = useMemo(
-    () => groupSurfaceSubtypes(surfaceModels),
-    [surfaceModels]
+    () => groupSurfaceSubtypes(surfaceSubtypes),
+    [surfaceSubtypes]
   )
 
   if (missingSurfaces.length === 0) {

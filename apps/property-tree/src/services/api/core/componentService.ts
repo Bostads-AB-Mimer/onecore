@@ -1,4 +1,4 @@
-import { Component, ComponentModel } from '../../types'
+import { Component, ComponentSubtype } from '../../types'
 import { GET, POST, PUT } from './baseApi'
 import type { components } from './generated/api-types'
 
@@ -201,8 +201,10 @@ export const componentService = {
     return response.content as Component
   },
 
-  async getSurfaceModels(): Promise<ComponentModel[]> {
-    const { data, error } = await GET('/component-models/surface', {})
+  async getSurfaceSubtypes(): Promise<ComponentSubtype[]> {
+    const { data, error } = await GET('/component-subtypes', {
+      params: { query: { categoryType: 'SURFACE', limit: 100 } },
+    })
     if (error) throw error
     return data?.content ?? []
   },

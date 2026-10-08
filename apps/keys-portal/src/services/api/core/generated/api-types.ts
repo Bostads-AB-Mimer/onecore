@@ -5873,7 +5873,7 @@ export interface paths {
   '/component-subtypes': {
     /**
      * Get all component subtypes
-     * @description Variants of a type with lifecycle data including depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName.
+     * @description Variants of a type with lifecycle data including depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId, subtypeName or categoryType.
      */
     get: {
       parameters: {
@@ -5882,6 +5882,8 @@ export interface paths {
           typeId?: string
           /** @description Search subtypes by name (case-insensitive) */
           subtypeName?: string
+          /** @description Only subtypes whose category has this type */
+          categoryType?: 'EQUIPMENT' | 'SURFACE'
           page?: number
           limit?: number
         }

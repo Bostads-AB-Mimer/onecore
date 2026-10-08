@@ -1,5 +1,5 @@
 import type { components as apiTypes } from '@/services/api/core/generated/api-types'
-import type { ComponentModel } from '@/services/types'
+import type { ComponentSubtype } from '@/services/types'
 
 import type { ComponentType as ActionComponentType } from '../constants/actions'
 import {
@@ -53,15 +53,14 @@ export const findMissingSurfaces = (
   )
 
 export const groupSurfaceSubtypes = (
-  models: ComponentModel[]
+  subtypes: ComponentSubtype[]
 ): Map<SurfaceCode, SurfaceGroup> => {
   const groups = new Map<SurfaceCode, SurfaceGroup>()
   const seen = new Set<string>()
 
-  for (const model of models) {
-    const subtype = model.subtype
-    const code = subtype?.componentType?.code
-    if (!subtype?.id || !subtype.subTypeName || !isSurfaceCode(code)) continue
+  for (const subtype of subtypes) {
+    const code = subtype.componentType?.code
+    if (!subtype.id || !subtype.subTypeName || !isSurfaceCode(code)) continue
     if (seen.has(subtype.id)) continue
     seen.add(subtype.id)
 
