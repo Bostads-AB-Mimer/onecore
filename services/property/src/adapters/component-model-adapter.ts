@@ -145,8 +145,7 @@ export const updateComponentModel = async (
 }
 
 export type ComponentModelSubtypeProblem =
-  | 'subtype_not_found'
-  | 'surface_subtype'
+  'subtype_not_found' | 'surface_subtype'
 
 export const findModelSubtypeProblem = async (
   subtypeId: string
