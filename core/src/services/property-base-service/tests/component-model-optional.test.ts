@@ -510,6 +510,7 @@ describe('GET /component-subtypes by category type', () => {
     )
 
     expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(1)
     expect(spy).toHaveBeenCalledWith(undefined, 1, 20, undefined, 'SURFACE')
   })
 

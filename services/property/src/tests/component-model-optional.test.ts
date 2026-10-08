@@ -716,6 +716,47 @@ describe('GET /component-subtypes', () => {
     )
   })
 
+  it('keeps the type and category in the response', async () => {
+    findMany.mockResolvedValueOnce([
+      {
+        id: subtypeId,
+        subTypeName: 'Målning väggar',
+        typeId: '00000000-0000-0000-0001-000000000001',
+        xpandCode: null,
+        depreciationPrice: 0,
+        technicalLifespan: 0,
+        economicLifespan: 0,
+        replacementIntervalMonths: 0,
+        quantityType: 'SQUARE_METER',
+        ...timestamps,
+        componentType: {
+          id: '00000000-0000-0000-0001-000000000001',
+          typeName: 'Vägg',
+          categoryId: '00000000-0000-0000-0000-000000000001',
+          description: null,
+          code: 'WALL',
+          ...timestamps,
+          category: {
+            id: '00000000-0000-0000-0000-000000000001',
+            categoryName: 'Ytskikt',
+            description: 'Golv, väggar och tak',
+            type: 'SURFACE',
+            ...timestamps,
+          },
+        },
+      },
+    ])
+    count.mockResolvedValueOnce(1)
+
+    const res = await request(app.callback()).get(
+      '/component-subtypes?categoryType=SURFACE'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content[0].componentType.code).toBe('WALL')
+    expect(res.body.content[0].componentType.category.type).toBe('SURFACE')
+  })
+
   it('rejects an unknown categoryType', async () => {
     const res = await request(app.callback()).get(
       '/component-subtypes?categoryType=ROOF'
