@@ -1,3 +1,4 @@
+import { useRouteTab } from '@onecore/ui'
 import { BarChart3, Building, Home, Wrench } from 'lucide-react'
 
 import { DocumentsTabContent } from '@/features/documents'
@@ -13,6 +14,8 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
+import { PROPERTY_DEFAULT_TAB, PROPERTY_TABS } from '../model/tabs'
+
 interface PropertyTabsMobileProps {
   propertyDetail: PropertyDetail
 }
@@ -20,6 +23,7 @@ interface PropertyTabsMobileProps {
 export const PropertyTabsMobile = ({
   propertyDetail,
 }: PropertyTabsMobileProps) => {
+  const { value } = useRouteTab(PROPERTY_TABS, PROPERTY_DEFAULT_TAB)
   const features = {
     showStatistics: true,
     showBuildings: true,
@@ -30,13 +34,13 @@ export const PropertyTabsMobile = ({
 
   const accordionItems: MobileAccordionItem[] = [
     features.showStatistics && {
-      id: 'statistics',
+      id: 'sammanstallning',
       icon: BarChart3,
       title: 'Fastighetssammanställning',
       content: <PropertyStatisticsTabContent property={propertyDetail} />,
     },
     features.showBuildings && {
-      id: 'buildings',
+      id: 'byggnader',
       icon: Building,
       title: 'Byggnader',
       content: (
@@ -44,7 +48,7 @@ export const PropertyTabsMobile = ({
       ),
     },
     features.showMaintenanceUnits && {
-      id: 'maintenance-units',
+      id: 'underhallsenheter',
       icon: Wrench,
       title: 'Underhållsenheter',
       content: (
@@ -55,7 +59,7 @@ export const PropertyTabsMobile = ({
       ),
     },
     features.showDocuments && {
-      id: 'documents',
+      id: 'dokument',
       icon: Home,
       title: 'Dokument',
       content: (
@@ -66,7 +70,7 @@ export const PropertyTabsMobile = ({
       ),
     },
     features.showWorkOrders && {
-      id: 'work-orders',
+      id: 'arenden',
       icon: Home,
       title: 'Ärenden',
       content: (
@@ -82,7 +86,7 @@ export const PropertyTabsMobile = ({
   return (
     <MobileAccordion
       items={accordionItems}
-      defaultOpen={['info']}
+      defaultOpen={[value]}
       className="space-y-3"
     />
   )

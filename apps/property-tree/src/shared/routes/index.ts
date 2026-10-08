@@ -37,6 +37,10 @@ export const routes = {
 
 export type RoutePath = (typeof routes)[keyof typeof routes]
 
+/** Router-only: appends the optional tab segment read by `useRouteTab`. */
+export const withTab = <R extends RoutePath>(route: R) =>
+  `${route}/:tab?` as const
+
 /**
  * Pre-bound path builders for navigation.
  *

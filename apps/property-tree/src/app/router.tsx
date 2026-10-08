@@ -25,7 +25,7 @@ import { TenantsPage } from '@/pages/TenantsPage'
 
 import { AuthCallback } from '@/features/auth'
 
-import { routes } from '@/shared/routes'
+import { routes, withTab } from '@/shared/routes'
 
 import { AppLayout } from './layouts/AppLayout'
 import { DashboardLayout } from './layouts/DashboardLayout'
@@ -68,7 +68,7 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'Fastigheter' },
           },
           {
-            path: routes.property,
+            path: withTab(routes.property),
             element: <PropertyPage />,
             handle: { title: 'Fastighet' },
           },
@@ -78,7 +78,7 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'Förvaltningsområden' },
           },
           {
-            path: routes.building,
+            path: withTab(routes.building),
             element: <BuildingView />,
             handle: { title: 'Byggnad' },
           },
@@ -88,12 +88,12 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'Komponenter' },
           },
           {
-            path: routes.staircase,
+            path: withTab(routes.staircase),
             element: <StaircasePage />,
             handle: { title: 'Uppgång' },
           },
           {
-            path: routes.residence,
+            path: withTab(routes.residence),
             element: <ResidencePage />,
             handle: { title: 'Bostad' },
           },
@@ -103,17 +103,17 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'Rum' },
           },
           {
-            path: routes.parkingSpace,
+            path: withTab(routes.parkingSpace),
             element: <ParkingSpacePage />,
             handle: { title: 'Bilplats' },
           },
           {
-            path: routes.maintenanceUnit,
+            path: withTab(routes.maintenanceUnit),
             element: <MaintenanceUnitPage />,
             handle: { title: 'Underhållsenhet' },
           },
           {
-            path: routes.facility,
+            path: withTab(routes.facility),
             element: <FacilityPage />,
             handle: { title: 'Lokal' },
           },
@@ -123,7 +123,7 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'Kunder' },
           },
           {
-            path: routes.tenant,
+            path: withTab(routes.tenant),
             element: <TenantPage />,
             handle: { title: 'Kund' },
           },
@@ -148,7 +148,7 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'IMD' },
           },
           {
-            path: routes.inspections,
+            path: withTab(routes.inspections),
             element: <InspectionsView />,
             handle: { title: 'Besiktningar' },
           },

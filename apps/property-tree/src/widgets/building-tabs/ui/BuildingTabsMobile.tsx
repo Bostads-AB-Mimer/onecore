@@ -1,3 +1,4 @@
+import { useRouteTab } from '@onecore/ui'
 import { UseQueryResult } from '@tanstack/react-query'
 import { Building, FileText, MessageSquare, Wrench } from 'lucide-react'
 
@@ -17,6 +18,8 @@ import {
 
 import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 
+import { BUILDING_DEFAULT_TAB, BUILDING_TABS } from '../model/tabs'
+
 interface BuildingTabsMobileProps {
   building: BuildingType
   isLoading: boolean
@@ -31,10 +34,11 @@ export const BuildingTabsMobile = ({
   isLoading,
   residenceStaircaseLookupMap,
 }: BuildingTabsMobileProps) => {
+  const { value } = useRouteTab(BUILDING_TABS, BUILDING_DEFAULT_TAB)
   const { features } = useFeatureToggles()
   const accordionItems: MobileAccordionItem[] = [
     features.showBuildingEntrances && {
-      id: 'entrances',
+      id: 'uppgangar',
       icon: Building,
       title: 'Uppgångar',
       content: features.showBuildingEntrances ? (
@@ -52,7 +56,7 @@ export const BuildingTabsMobile = ({
       ),
     },
     {
-      id: 'maintenance-units',
+      id: 'underhallsenheter',
       icon: Wrench,
       title: 'Underhållsenheter',
       content: (
@@ -63,7 +67,7 @@ export const BuildingTabsMobile = ({
       ),
     },
     {
-      id: 'work-orders',
+      id: 'arenden',
       disabled: true,
       icon: MessageSquare,
       title: 'Ärenden',
@@ -75,7 +79,7 @@ export const BuildingTabsMobile = ({
       ),
     },
     {
-      id: 'documents',
+      id: 'dokument',
       disabled: true,
       icon: FileText,
       title: 'Dokument',
@@ -91,7 +95,7 @@ export const BuildingTabsMobile = ({
   return (
     <MobileAccordion
       items={accordionItems}
-      defaultOpen={['entrances']}
+      defaultOpen={[value]}
       className="space-y-3"
     />
   )

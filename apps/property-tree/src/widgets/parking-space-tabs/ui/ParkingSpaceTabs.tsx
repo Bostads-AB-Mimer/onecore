@@ -1,10 +1,5 @@
-import {
-  ClipboardList,
-  FileText,
-  MessageSquare,
-  Receipt,
-  Users,
-} from 'lucide-react'
+import type { ReactNode } from 'react'
+import { SegmentedTabs, useRouteTab } from '@onecore/ui'
 
 import { LeasesTabContent } from '@/features/leases'
 import { RentRowsTabContent } from '@/features/rent-rows'
@@ -16,8 +11,12 @@ import { Lease } from '@/services/api/core/leaseService'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
 import { ContextType } from '@/shared/types/ui'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
+import {
+  PARKING_SPACE_DEFAULT_TAB,
+  PARKING_SPACE_TABS,
+  type ParkingSpaceTab,
+} from '../model/tabs'
 import { ParkingSpaceTabsMobile } from './ParkingSpaceTabsMobile'
 
 type ParkingSpace = components['schemas']['ParkingSpace']
@@ -36,6 +35,10 @@ export function ParkingSpaceTabs({
   currentLease,
 }: ParkingSpaceTabsProps) {
   const isMobile = useIsMobile()
+  const { value, basePath } = useRouteTab(
+    PARKING_SPACE_TABS,
+    PARKING_SPACE_DEFAULT_TAB
+  )
 
   if (isMobile) {
     return (
@@ -48,60 +51,39 @@ export function ParkingSpaceTabs({
     )
   }
 
+  const content: Record<ParkingSpaceTab, ReactNode> = {
+    hyresgast: (
+      <CurrentTenant
+        rentalPropertyId={parkingSpace.rentalId}
+        leases={leases}
+        isLoading={leasesIsLoading}
+      />
+    ),
+    kontrakt: <LeasesTabContent rentalPropertyId={parkingSpace.rentalId} />,
+    hyresrader: (
+      <RentRowsTabContent
+        rentalObjectCode={parkingSpace.rentalId}
+        lease={currentLease}
+      />
+    ),
+    besiktningar: null,
+    arenden: (
+      <WorkOrdersTabContent
+        contextType={ContextType.ParkingSpace}
+        id={parkingSpace.rentalId}
+      />
+    ),
+  }
+
   return (
-    <Tabs defaultValue="tenant" className="w-full">
-      <TabsList className="mb-4 bg-slate-100/70 p-1 rounded-lg">
-        <TabsTrigger value="tenant" className="flex items-center gap-1.5">
-          <Users className="h-4 w-4" />
-          <span className="hidden sm:inline">Hyresgäst</span>
-        </TabsTrigger>
-        <TabsTrigger value="leases" className="flex items-center gap-1.5">
-          <FileText className="h-4 w-4" />
-          <span className="hidden sm:inline">Kontrakt</span>
-        </TabsTrigger>
-        <TabsTrigger value="rent-rows" className="flex items-center gap-1.5">
-          <Receipt className="h-4 w-4" />
-          <span className="hidden sm:inline">Hyresrader</span>
-        </TabsTrigger>
-        <TabsTrigger
-          value="inspections"
-          className="flex items-center gap-1.5"
-          disabled
-        >
-          <ClipboardList className="h-4 w-4" />
-          <span className="hidden sm:inline">Besiktningar</span>
-        </TabsTrigger>
-        <TabsTrigger value="work-orders" className="flex items-center gap-1.5">
-          <MessageSquare className="h-4 w-4" />
-          <span className="hidden sm:inline">Ärenden</span>
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="tenant">
-        <CurrentTenant
-          rentalPropertyId={parkingSpace.rentalId}
-          leases={leases}
-          isLoading={leasesIsLoading}
-        />
-      </TabsContent>
-
-      <TabsContent value="leases">
-        <LeasesTabContent rentalPropertyId={parkingSpace.rentalId} />
-      </TabsContent>
-
-      <TabsContent value="rent-rows">
-        <RentRowsTabContent
-          rentalObjectCode={parkingSpace.rentalId}
-          lease={currentLease}
-        />
-      </TabsContent>
-
-      <TabsContent value="work-orders">
-        <WorkOrdersTabContent
-          contextType={ContextType.ParkingSpace}
-          id={parkingSpace.rentalId}
-        />
-      </TabsContent>
-    </Tabs>
+    <div className="w-full">
+      <SegmentedTabs
+        tabs={PARKING_SPACE_TABS}
+        value={value}
+        basePath={basePath}
+        className="mb-4"
+      />
+      {content[value]}
+    </div>
   )
 }

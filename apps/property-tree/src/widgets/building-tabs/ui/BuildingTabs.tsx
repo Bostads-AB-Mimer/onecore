@@ -1,3 +1,6 @@
+import type { ReactNode } from 'react'
+import { SegmentedTabs, useRouteTab } from '@onecore/ui'
+
 import { BuildingEntrancesTabContent } from '@/features/buildings'
 import { DocumentsTabContent } from '@/features/documents'
 import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
@@ -8,8 +11,12 @@ import { Building, Staircase } from '@/services/types'
 
 import { useIsMobile } from '@/shared/hooks'
 import { ContextType } from '@/shared/types/ui'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
+import {
+  BUILDING_DEFAULT_TAB,
+  BUILDING_TABS,
+  type BuildingTab,
+} from '../model/tabs'
 import { BuildingTabsMobile } from './BuildingTabsMobile'
 
 interface BuildingTabsProps {
@@ -19,6 +26,7 @@ interface BuildingTabsProps {
 
 export const BuildingTabs = ({ building, staircases }: BuildingTabsProps) => {
   const isMobile = useIsMobile()
+  const { value, basePath } = useRouteTab(BUILDING_TABS, BUILDING_DEFAULT_TAB)
 
   const { residenceStaircaseLookupMap, isLoading: isStaircasesLoading } =
     useResidenceStaircaseLookupMap(staircases)
@@ -33,42 +41,37 @@ export const BuildingTabs = ({ building, staircases }: BuildingTabsProps) => {
     )
   }
 
+  const content: Record<BuildingTab, ReactNode> = {
+    uppgangar: (
+      <BuildingEntrancesTabContent
+        isLoading={isStaircasesLoading}
+        residenceStaircaseLookupMap={residenceStaircaseLookupMap}
+      />
+    ),
+    underhallsenheter: (
+      <MaintenanceUnitsTabContent
+        contextType="building"
+        identifier={building.code}
+      />
+    ),
+    arenden: (
+      <WorkOrdersTabContent
+        contextType={ContextType.Building}
+        id={building.code}
+      />
+    ),
+    dokument: (
+      <DocumentsTabContent
+        contextType={ContextType.Building}
+        id={building.id}
+      />
+    ),
+  }
+
   return (
-    <Tabs defaultValue="entrances" className="space-y-6">
-      <TabsList className="bg-slate-100/70 p-1 rounded-lg overflow-x-auto">
-        <TabsTrigger value="entrances">Uppgångar</TabsTrigger>
-        <TabsTrigger value="maintenance-units">Underhållsenheter</TabsTrigger>
-        <TabsTrigger value="work-orders">Ärenden</TabsTrigger>
-        <TabsTrigger value="documents">Dokument</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="entrances">
-        <BuildingEntrancesTabContent
-          isLoading={isStaircasesLoading}
-          residenceStaircaseLookupMap={residenceStaircaseLookupMap}
-        />
-      </TabsContent>
-
-      <TabsContent value="maintenance-units">
-        <MaintenanceUnitsTabContent
-          contextType="building"
-          identifier={building.code}
-        />
-      </TabsContent>
-
-      <TabsContent value="work-orders">
-        <WorkOrdersTabContent
-          contextType={ContextType.Building}
-          id={building.code}
-        />
-      </TabsContent>
-
-      <TabsContent value="documents">
-        <DocumentsTabContent
-          contextType={ContextType.Building}
-          id={building.id}
-        />
-      </TabsContent>
-    </Tabs>
+    <div className="space-y-6">
+      <SegmentedTabs tabs={BUILDING_TABS} value={value} basePath={basePath} />
+      {content[value]}
+    </div>
   )
 }

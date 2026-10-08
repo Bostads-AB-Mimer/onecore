@@ -1,3 +1,4 @@
+import { useRouteTab } from '@onecore/ui'
 import {
   ClipboardList,
   FileText,
@@ -20,6 +21,8 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
+import { PARKING_SPACE_DEFAULT_TAB, PARKING_SPACE_TABS } from '../model/tabs'
+
 type ParkingSpace = components['schemas']['ParkingSpace']
 
 interface ParkingSpaceTabsMobileProps {
@@ -35,9 +38,10 @@ export function ParkingSpaceTabsMobile({
   leasesIsLoading,
   currentLease,
 }: ParkingSpaceTabsMobileProps) {
+  const { value } = useRouteTab(PARKING_SPACE_TABS, PARKING_SPACE_DEFAULT_TAB)
   const accordionItems: MobileAccordionItem[] = [
     {
-      id: 'tenant',
+      id: 'hyresgast',
       icon: Users,
       title: 'Hyresgäst',
       content: (
@@ -49,13 +53,13 @@ export function ParkingSpaceTabsMobile({
       ),
     },
     {
-      id: 'leases',
+      id: 'kontrakt',
       icon: FileText,
       title: 'Kontrakt',
       content: <LeasesTabContent rentalPropertyId={parkingSpace.rentalId} />,
     },
     {
-      id: 'rent-rows',
+      id: 'hyresrader',
       icon: Receipt,
       title: 'Hyresrader',
       content: (
@@ -66,14 +70,14 @@ export function ParkingSpaceTabsMobile({
       ),
     },
     {
-      id: 'inspections',
+      id: 'besiktningar',
       icon: ClipboardList,
       title: 'Besiktningar',
       disabled: true,
       content: null,
     },
     {
-      id: 'work-orders',
+      id: 'arenden',
       icon: MessageSquare,
       title: 'Ärenden',
       content: (
@@ -88,7 +92,7 @@ export function ParkingSpaceTabsMobile({
   return (
     <MobileAccordion
       items={accordionItems}
-      defaultOpen={['tenant']}
+      defaultOpen={[value]}
       className="space-y-3"
     />
   )

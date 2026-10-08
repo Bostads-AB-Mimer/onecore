@@ -1,3 +1,4 @@
+import { useRouteTab } from '@onecore/ui'
 import {
   ClipboardList,
   FileText,
@@ -23,6 +24,7 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
+import { FACILITY_DEFAULT_TAB, FACILITY_TABS } from '../model/tabs'
 import { RoomsTabContent } from './RoomsTabContent'
 
 type Facility = components['schemas']['FacilityDetails']
@@ -40,11 +42,12 @@ export function FacilityTabsMobile({
   leasesIsLoading,
   currentLease,
 }: FacilityTabsMobileProps) {
+  const { value } = useRouteTab(FACILITY_TABS, FACILITY_DEFAULT_TAB)
   const rentalId = facility.rentalInformation?.rentalId
 
   const accordionItems: MobileAccordionItem[] = [
     {
-      id: 'components',
+      id: 'komponenter',
       icon: Wrench,
       title: 'Komponenter',
       content: (
@@ -55,13 +58,13 @@ export function FacilityTabsMobile({
       ),
     },
     {
-      id: 'rooms',
+      id: 'rum',
       icon: Info,
       title: 'Rumsinformation',
       content: <RoomsTabContent facilityId={facility.id} />,
     },
     {
-      id: 'tenant',
+      id: 'hyresgast',
       icon: Users,
       title: 'Hyresgäst',
       content: rentalId ? (
@@ -73,7 +76,7 @@ export function FacilityTabsMobile({
       ) : null,
     },
     {
-      id: 'leases',
+      id: 'kontrakt',
       icon: FileText,
       title: 'Kontrakt',
       content: rentalId ? (
@@ -81,7 +84,7 @@ export function FacilityTabsMobile({
       ) : null,
     },
     {
-      id: 'rent-rows',
+      id: 'hyresrader',
       icon: Receipt,
       title: 'Hyresrader',
       content: rentalId ? (
@@ -89,14 +92,14 @@ export function FacilityTabsMobile({
       ) : null,
     },
     {
-      id: 'inspections',
+      id: 'besiktningar',
       icon: ClipboardList,
       title: 'Besiktningar',
       disabled: true,
       content: null,
     },
     {
-      id: 'work-orders',
+      id: 'arenden',
       icon: MessageSquare,
       title: 'Ärenden',
       content: rentalId ? (
@@ -111,7 +114,7 @@ export function FacilityTabsMobile({
   return (
     <MobileAccordion
       items={accordionItems}
-      defaultOpen={['components']}
+      defaultOpen={[value]}
       className="space-y-3"
     />
   )
