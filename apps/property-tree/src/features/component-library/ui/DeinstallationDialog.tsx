@@ -94,10 +94,12 @@ export const DeinstallationDialog = ({
               <p className="text-sm text-muted-foreground">Komponent</p>
               <p className="font-medium">{formatComponentLabel(component)}</p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Serienummer</p>
-              <p className="font-mono text-sm">{component.serialNumber}</p>
-            </div>
+            {component.serialNumber && (
+              <div>
+                <p className="text-sm text-muted-foreground">Serienummer</p>
+                <p className="font-mono text-sm">{component.serialNumber}</p>
+              </div>
+            )}
           </div>
 
           {/* Deinstallation Date */}

@@ -20,6 +20,7 @@ import {
   getComponentsByRoomId,
   findComponentModelProblem,
 } from '../adapters/component-adapter'
+import { prismaErrorCode } from '../utils/prisma-errors'
 
 const modelProblemResponse: Record<ComponentModelProblem, string> = {
   subtype_not_found: 'Invalid subtypeId: component subtype does not exist',
@@ -28,11 +29,6 @@ const modelProblemResponse: Record<ComponentModelProblem, string> = {
     'The model belongs to another subtype than the component',
   surface_has_model: 'A component in a SURFACE category cannot have a model',
 }
-
-const prismaErrorCode = (err: unknown): string | undefined =>
-  err && typeof err === 'object' && 'code' in err
-    ? (err as { code?: string }).code
-    : undefined
 
 /**
  * @swagger

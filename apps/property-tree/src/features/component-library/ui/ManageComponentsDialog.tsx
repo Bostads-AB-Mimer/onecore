@@ -142,9 +142,11 @@ export const ManageComponentsDialog = ({
                             <p className="font-medium">
                               {formatComponentLabel(component)}
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                              SN: {component.serialNumber}
-                            </p>
+                            {component.serialNumber && (
+                              <p className="text-sm text-muted-foreground">
+                                SN: {component.serialNumber}
+                              </p>
+                            )}
                             {activeInstallation && (
                               <p className="text-xs text-muted-foreground">
                                 Installerad:{' '}

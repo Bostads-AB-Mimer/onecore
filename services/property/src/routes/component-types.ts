@@ -17,11 +17,7 @@ import {
   deleteComponentType,
   findComponentTypeCodeProblem,
 } from '../adapters/component-adapter'
-
-const prismaErrorCode = (err: unknown): string | undefined =>
-  err && typeof err === 'object' && 'code' in err
-    ? (err as { code?: string }).code
-    : undefined
+import { prismaErrorCode } from '../utils/prisma-errors'
 
 const codeProblemResponse: Record<
   ComponentTypeCodeProblem,

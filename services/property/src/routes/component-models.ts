@@ -16,7 +16,15 @@ import {
   updateComponentModel,
   deleteComponentModel,
   getSurfaceModels,
+  findModelSubtypeProblem,
+  type ComponentModelSubtypeProblem,
 } from '../adapters/component-adapter'
+import { prismaErrorCode } from '../utils/prisma-errors'
+
+const subtypeProblemResponse: Record<ComponentModelSubtypeProblem, string> = {
+  subtype_not_found: 'Invalid subtypeId: component subtype does not exist',
+  surface_subtype: 'A subtype in a SURFACE category cannot have models',
+}
 
 export const routes = (router: KoaRouter) => {
   // ==================== COMPONENT MODELS ROUTES ====================
@@ -300,7 +308,7 @@ export const routes = (router: KoaRouter) => {
    * /component-models:
    *   post:
    *     summary: Create a new component model
-   *     description: Creates a manufacturer product entry. Requires subtypeId.
+   *     description: Creates a manufacturer product entry. Requires subtypeId, which may not be in a SURFACE category.
    *     tags: [Component Models]
    *     requestBody:
    *       required: true
@@ -318,6 +326,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentModel'
+   *       400:
+   *         description: Unknown subtypeId, or a subtype in a SURFACE category
    */
   router.post(
     '(.*)/component-models',
@@ -327,6 +337,13 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
+        const problem = await findModelSubtypeProblem(data.componentSubtypeId)
+        if (problem) {
+          ctx.status = 400
+          ctx.body = { error: subtypeProblemResponse[problem], ...metadata }
+          return
+        }
+
         const model = await createComponentModel(data)
 
         ctx.status = 201
@@ -337,16 +354,10 @@ export const routes = (router: KoaRouter) => {
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
-        // Check for foreign key constraint violation (Prisma P2003)
-        const isPrismaFKError =
-          err &&
-          typeof err === 'object' &&
-          'code' in err &&
-          (err as { code: string }).code === 'P2003'
-        if (isPrismaFKError) {
+        if (prismaErrorCode(err) === 'P2003') {
           ctx.status = 400
           ctx.body = {
-            error: 'Invalid subtypeId: component subtype does not exist',
+            error: subtypeProblemResponse.subtype_not_found,
             ...metadata,
           }
           return
@@ -362,7 +373,7 @@ export const routes = (router: KoaRouter) => {
    * /component-models/{id}:
    *   put:
    *     summary: Update a component model
-   *     description: Updates model pricing, specs, or warranty info.
+   *     description: Updates model pricing, specs, or warranty info. Moving the model to another subtype moves its components with it; the new subtype may not be in a SURFACE category.
    *     tags: [Component Models]
    *     parameters:
    *       - in: path
@@ -387,6 +398,10 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentModel'
+   *       400:
+   *         description: Unknown subtypeId, or a subtype in a SURFACE category
+   *       404:
+   *         description: Component model not found
    */
   router.put(
     '(.*)/component-models/:id',
@@ -411,6 +426,18 @@ export const routes = (router: KoaRouter) => {
           ctx.status = 404
           ctx.body = { error: 'Component model not found', ...metadata }
           return
+        }
+
+        if (
+          data.componentSubtypeId &&
+          data.componentSubtypeId !== existing.componentSubtypeId
+        ) {
+          const problem = await findModelSubtypeProblem(data.componentSubtypeId)
+          if (problem) {
+            ctx.status = 400
+            ctx.body = { error: subtypeProblemResponse[problem], ...metadata }
+            return
+          }
         }
 
         const model = await updateComponentModel(id, data)

@@ -109,6 +109,18 @@ describe('groupSurfaceSubtypes', () => {
     })
   })
 
+  it('puts the Ospecificerad subtype first', () => {
+    const groups = groupSurfaceSubtypes([
+      subtype({ id: 's1', subTypeName: 'Kakel', code: 'WALL' }),
+      subtype({ id: 's2', subTypeName: 'Ospecificerad vägg', code: 'WALL' }),
+      subtype({ id: 's3', subTypeName: 'Tapet', code: 'WALL' }),
+    ])
+
+    expect(
+      groups.get('WALL')?.subtypes.map((option) => option.subtypeId)
+    ).toEqual(['s2', 's1', 's3'])
+  })
+
   it('lists a subtype once even when it appears twice', () => {
     const s = subtype({
       id: 's2',

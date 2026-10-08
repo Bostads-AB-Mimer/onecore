@@ -32,6 +32,19 @@ describe('toComponentBody', () => {
     )
   })
 
+  it('keeps specifications and additionalInformation', () => {
+    expect(
+      toComponentBody({
+        subtypeId,
+        specifications: 'Vit, matt',
+        additionalInformation: 'Målad 2024',
+      })
+    ).toMatchObject({
+      specifications: 'Vit, matt',
+      additionalInformation: 'Målad 2024',
+    })
+  })
+
   it('keeps a quantity of zero', () => {
     expect(toComponentBody({ subtypeId, quantity: 0 }).quantity).toBe(0)
   })
@@ -75,7 +88,27 @@ describe('getSurfaceSubtypes', () => {
       { id: 's1' },
     ])
     expect(GET).toHaveBeenCalledWith('/component-subtypes', {
-      params: { query: { categoryType: 'SURFACE', limit: 100 } },
+      params: { query: { categoryType: 'SURFACE', page: 1, limit: 100 } },
+    })
+  })
+
+  it('fetches every page', async () => {
+    vi.mocked(GET)
+      .mockResolvedValueOnce({
+        data: { content: [{ id: 's1' }], pagination: { totalPages: 2 } },
+        error: undefined,
+      } as never)
+      .mockResolvedValueOnce({
+        data: { content: [{ id: 's2' }], pagination: { totalPages: 2 } },
+        error: undefined,
+      } as never)
+
+    await expect(componentService.getSurfaceSubtypes()).resolves.toEqual([
+      { id: 's1' },
+      { id: 's2' },
+    ])
+    expect(GET).toHaveBeenLastCalledWith('/component-subtypes', {
+      params: { query: { categoryType: 'SURFACE', page: 2, limit: 100 } },
     })
   })
 

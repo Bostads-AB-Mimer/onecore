@@ -18,17 +18,13 @@ import type {
   UpdateMutationVariables,
 } from '@/services/types'
 
-import {
-  buildQueryKey,
-  QUERY_KEY_ROOTS,
-} from '../lib/componentLibraryQueryKeys'
+import { QUERY_KEY_ROOTS } from '../lib/componentLibraryQueryKeys'
 
 /**
  * Generic hook for creating, updating, or deleting component library entities
  *
  * @param entityType - The type of entity ('category', 'type', 'subtype', 'model', 'instance')
  * @param operation - The operation to perform ('create', 'update', 'delete')
- * @param parentIdField - Optional parent ID field name for cache invalidation (not needed for categories)
  * @param options - Optional React Query mutation options to override defaults
  * @returns UseMutationResult with the mutation state and methods
  *
@@ -51,7 +47,6 @@ export function useComponentEntityMutation<
 >(
   entityType: T,
   operation: Op,
-  parentIdField?: string,
   options?: Omit<
     UseMutationOptions<
       Op extends 'delete' ? void : EntityData<T>,
@@ -105,24 +100,10 @@ export function useComponentEntityMutation<
       variables: MutationVariables<T, Op>,
       context: unknown
     ) => {
-      // Extract parent ID from variables for cache invalidation
-      const vars = variables as { parentId?: string; oldParentId?: string }
-      const parentId =
-        vars.parentId ||
-        (variables as Record<string, unknown>)[parentIdField || '']
-
-      // Invalidate the appropriate query key
-      const queryKey = buildQueryKey(entityType, parentId as string | undefined)
-      await queryClient.invalidateQueries({ queryKey })
+      // The root key prefix-matches every parent's list, old and new
       await queryClient.invalidateQueries({
         queryKey: [QUERY_KEY_ROOTS[entityType]],
       })
-
-      // If entity was moved (parent changed), also invalidate old parent's cache
-      if (vars.oldParentId) {
-        const oldQueryKey = buildQueryKey(entityType, vars.oldParentId)
-        await queryClient.invalidateQueries({ queryKey: oldQueryKey })
-      }
 
       // Call custom onSuccess if provided
       if (options?.onSuccess) {

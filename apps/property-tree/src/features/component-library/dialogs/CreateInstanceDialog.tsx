@@ -26,11 +26,7 @@ export const CreateInstanceDialog = ({
   onClose,
   model,
 }: CreateInstanceDialogProps) => {
-  const createMutation = useComponentEntityMutation(
-    'instance',
-    'create',
-    'modelId'
-  )
+  const createMutation = useComponentEntityMutation('instance', 'create')
 
   const [formData, setFormData] = useState({
     serialNumber: '',

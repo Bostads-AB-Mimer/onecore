@@ -5,6 +5,7 @@ jest.mock('../adapters/db', () => ({
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       count: jest.fn(),
     },
     componentSubtypes: {
@@ -12,12 +13,22 @@ jest.mock('../adapters/db', () => ({
       findMany: jest.fn(),
       count: jest.fn(),
     },
-    componentModels: { findUnique: jest.fn(), findFirst: jest.fn() },
+    componentModels: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
     componentInstallations: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       count: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
     },
+    $transaction: jest.fn((fn: (tx: unknown) => unknown) =>
+      fn(jest.requireMock('../adapters/db').prisma)
+    ),
   },
 }))
 
@@ -49,6 +60,7 @@ import request from 'supertest'
 import { routes as componentRoutes } from '../routes/component-instances'
 import { routes as modelRoutes } from '../routes/component-models'
 import { routes as subtypeRoutes } from '../routes/component-subtypes'
+import { routes as installationRoutes } from '../routes/component-installations'
 
 const timestamps = {
   createdAt: '2026-10-07T00:00:00.000Z',
@@ -764,5 +776,190 @@ describe('GET /component-subtypes', () => {
 
     expect(res.status).toBe(400)
     expect(findMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST and PUT /component-models', () => {
+  const app = new Koa()
+  const router = new KoaRouter()
+  modelRoutes(router)
+  app.use(bodyParser())
+  app.use(router.routes())
+
+  const otherSubtypeId = '00000000-0000-0000-0002-000000000002'
+  const modelRow = {
+    id: modelId,
+    modelName: 'Electrolux ESF5555',
+    componentSubtypeId: subtypeId,
+    currentPrice: 0,
+    currentInstallPrice: 0,
+    warrantyMonths: 0,
+    manufacturer: 'Electrolux',
+    technicalSpecification: null,
+    installationInstructions: null,
+    dimensions: null,
+    coclassCode: null,
+    ...timestamps,
+  }
+  const subtypeOfCategory = (type: 'SURFACE' | 'APPLIANCE') => ({
+    componentType: { category: { type } },
+  })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('rejects a model on a SURFACE subtype with 400', async () => {
+    ;(prisma.componentSubtypes.findUnique as jest.Mock).mockResolvedValueOnce(
+      subtypeOfCategory('SURFACE')
+    )
+
+    const res = await request(app.callback())
+      .post('/component-models')
+      .send({ modelName: 'Vit', componentSubtypeId: subtypeId })
+
+    expect(res.status).toBe(400)
+    expect(prisma.componentModels.create).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unknown subtype with 400', async () => {
+    ;(prisma.componentSubtypes.findUnique as jest.Mock).mockResolvedValueOnce(
+      null
+    )
+
+    const res = await request(app.callback())
+      .post('/component-models')
+      .send({ modelName: 'Vit', componentSubtypeId: subtypeId })
+
+    expect(res.status).toBe(400)
+    expect(prisma.componentModels.create).not.toHaveBeenCalled()
+  })
+
+  it('creates a model on a non-surface subtype', async () => {
+    ;(prisma.componentSubtypes.findUnique as jest.Mock).mockResolvedValueOnce(
+      subtypeOfCategory('APPLIANCE')
+    )
+    ;(prisma.componentModels.create as jest.Mock).mockResolvedValueOnce(
+      modelRow
+    )
+
+    const res = await request(app.callback())
+      .post('/component-models')
+      .send({ modelName: 'Electrolux ESF5555', componentSubtypeId: subtypeId })
+
+    expect(res.status).toBe(201)
+  })
+
+  it('rejects moving a model onto a SURFACE subtype with 400', async () => {
+    ;(prisma.componentModels.findUnique as jest.Mock).mockResolvedValueOnce(
+      modelRow
+    )
+    ;(prisma.componentSubtypes.findUnique as jest.Mock).mockResolvedValueOnce(
+      subtypeOfCategory('SURFACE')
+    )
+
+    const res = await request(app.callback())
+      .put(`/component-models/${modelId}`)
+      .send({ componentSubtypeId: otherSubtypeId })
+
+    expect(res.status).toBe(400)
+    expect(prisma.componentModels.update).not.toHaveBeenCalled()
+    expect(prisma.components.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('moves the components along with the model', async () => {
+    ;(prisma.componentModels.findUnique as jest.Mock).mockResolvedValueOnce(
+      modelRow
+    )
+    ;(prisma.componentSubtypes.findUnique as jest.Mock).mockResolvedValueOnce(
+      subtypeOfCategory('APPLIANCE')
+    )
+    ;(prisma.componentModels.update as jest.Mock).mockResolvedValueOnce({
+      ...modelRow,
+      componentSubtypeId: otherSubtypeId,
+    })
+
+    const res = await request(app.callback())
+      .put(`/component-models/${modelId}`)
+      .send({ componentSubtypeId: otherSubtypeId })
+
+    expect(res.status).toBe(200)
+    expect(prisma.components.updateMany).toHaveBeenCalledWith({
+      where: { modelId, subtypeId: { not: otherSubtypeId } },
+      data: { subtypeId: otherSubtypeId },
+    })
+  })
+
+  it('leaves components alone when the subtype does not change', async () => {
+    ;(prisma.componentModels.findUnique as jest.Mock).mockResolvedValueOnce(
+      modelRow
+    )
+    ;(prisma.componentModels.update as jest.Mock).mockResolvedValueOnce(
+      modelRow
+    )
+
+    const res = await request(app.callback())
+      .put(`/component-models/${modelId}`)
+      .send({ modelName: 'Electrolux ESF5556' })
+
+    expect(res.status).toBe(200)
+    expect(prisma.componentSubtypes.findUnique).not.toHaveBeenCalled()
+    expect(prisma.components.updateMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('component installations and the one-active-installation index', () => {
+  const app = new Koa()
+  const router = new KoaRouter()
+  installationRoutes(router)
+  app.use(bodyParser())
+  app.use(router.routes())
+
+  const installationId = '00000000-0000-0000-0005-000000000001'
+  const componentId = '00000000-0000-0000-0004-000000000001'
+  const uniqueViolation = Object.assign(new Error('Unique constraint failed'), {
+    code: 'P2002',
+  })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('returns 409 when the component already has an active installation', async () => {
+    ;(prisma.componentInstallations.create as jest.Mock).mockRejectedValueOnce(
+      uniqueViolation
+    )
+
+    const res = await request(app.callback())
+      .post('/component-installations')
+      .send({
+        componentId,
+        spaceId: 'R0001',
+        spaceType: 'OBJECT',
+        installationDate: '2026-10-07',
+        cost: 0,
+      })
+
+    expect(res.status).toBe(409)
+  })
+
+  it('returns 409 when moving an active installation onto a component that already has one', async () => {
+    ;(
+      prisma.componentInstallations.findUnique as jest.Mock
+    ).mockResolvedValueOnce({
+      id: installationId,
+      componentId,
+      installationDate: new Date('2026-01-01'),
+      deinstallationDate: null,
+    })
+    ;(prisma.componentInstallations.update as jest.Mock).mockRejectedValueOnce(
+      uniqueViolation
+    )
+
+    const res = await request(app.callback())
+      .put(`/component-installations/${installationId}`)
+      .send({ componentId: '00000000-0000-0000-0004-000000000002' })
+
+    expect(res.status).toBe(409)
   })
 })

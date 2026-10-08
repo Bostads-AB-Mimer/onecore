@@ -52,6 +52,16 @@ export const findMissingSurfaces = (
     (code) => !components.some((c) => getSurfaceCode(c) === code)
   )
 
+const isUnspecified = (option: SurfaceSubtypeOption) =>
+  option.subtypeName.startsWith('Ospecificera')
+
+const bySubtypeNameUnspecifiedFirst = (
+  a: SurfaceSubtypeOption,
+  b: SurfaceSubtypeOption
+) =>
+  Number(isUnspecified(b)) - Number(isUnspecified(a)) ||
+  a.subtypeName.localeCompare(b.subtypeName)
+
 export const groupSurfaceSubtypes = (
   subtypes: ComponentSubtype[]
 ): Map<SurfaceCode, SurfaceGroup> => {
@@ -76,7 +86,7 @@ export const groupSurfaceSubtypes = (
   }
 
   for (const group of groups.values()) {
-    group.subtypes.sort((a, b) => a.subtypeName.localeCompare(b.subtypeName))
+    group.subtypes.sort(bySubtypeNameUnspecifiedFirst)
   }
 
   return groups

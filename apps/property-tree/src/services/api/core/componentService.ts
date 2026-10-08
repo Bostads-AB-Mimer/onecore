@@ -20,6 +20,8 @@ export const toComponentBody = (input: ComponentInput) => ({
   condition: input.condition,
   quantity: input.quantity ?? 1,
   ncsCode: input.ncsCode || null,
+  specifications: input.specifications,
+  additionalInformation: input.additionalInformation,
 })
 
 export const componentService = {
@@ -202,10 +204,14 @@ export const componentService = {
   },
 
   async getSurfaceSubtypes(): Promise<ComponentSubtype[]> {
-    const { data, error } = await GET('/component-subtypes', {
-      params: { query: { categoryType: 'SURFACE', limit: 100 } },
-    })
-    if (error) throw error
-    return data?.content ?? []
+    const subtypes: ComponentSubtype[] = []
+    for (let page = 1; ; page++) {
+      const { data, error } = await GET('/component-subtypes', {
+        params: { query: { categoryType: 'SURFACE', page, limit: 100 } },
+      })
+      if (error) throw error
+      subtypes.push(...(data?.content ?? []))
+      if (page >= (data?.pagination?.totalPages ?? 1)) return subtypes
+    }
   },
 }
