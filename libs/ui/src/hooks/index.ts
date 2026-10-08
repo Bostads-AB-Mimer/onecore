@@ -1,2 +1,2 @@
 export * from './useRouteTab'
-export * from './useToast'
+export { toast, useToast } from './useToast'

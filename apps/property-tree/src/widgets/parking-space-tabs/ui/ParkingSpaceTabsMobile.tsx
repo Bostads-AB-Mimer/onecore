@@ -21,7 +21,11 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
-import { PARKING_SPACE_DEFAULT_TAB, PARKING_SPACE_TABS } from '../model/tabs'
+import {
+  PARKING_SPACE_DEFAULT_TAB,
+  PARKING_SPACE_TABS,
+  type ParkingSpaceTab,
+} from '../model/tabs'
 
 type ParkingSpace = components['schemas']['ParkingSpace']
 
@@ -39,7 +43,8 @@ export function ParkingSpaceTabsMobile({
   currentLease,
 }: ParkingSpaceTabsMobileProps) {
   const { value } = useRouteTab(PARKING_SPACE_TABS, PARKING_SPACE_DEFAULT_TAB)
-  const accordionItems: MobileAccordionItem[] = [
+  type Item = MobileAccordionItem & { id: ParkingSpaceTab }
+  const allItems: Item[] = [
     {
       id: 'hyresgast',
       icon: Users,
@@ -87,7 +92,8 @@ export function ParkingSpaceTabsMobile({
         />
       ),
     },
-  ].filter((item) => item.content !== null)
+  ]
+  const accordionItems = allItems.filter((item) => item.content !== null)
 
   return (
     <MobileAccordion

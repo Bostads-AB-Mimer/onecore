@@ -46,8 +46,10 @@ export default function InspectionsPage() {
 
   const { value: tab, basePath } = useRouteTab(INSPECTION_TABS, 'pagaende')
 
-  // One `page` param for all tabs; switching tab drops it (see SegmentedTabs).
+  // One `page` param, applied to the active tab only; the others just feed
+  // their count pills. Switching tab drops it (see SegmentedTabs).
   const { page, setPage, limit } = useUrlPagination({ defaultLimit: 25 })
+  const pageFor = (t: InspectionTab) => (tab === t ? page : 1)
 
   // Filter state needs to be initialized before queries so we can pass filter
   // values as server-side query params. The dropdown options are derived from
@@ -57,21 +59,21 @@ export default function InspectionsPage() {
 
   const ongoingQuery = useInspections({
     statusFilter: INSPECTION_STATUS_FILTER.ONGOING,
-    page,
+    page: pageFor('pagaende'),
     limit,
     inspector: selectedInspector,
     address: selectedAddress,
   })
   const completedQuery = useInspections({
     statusFilter: INSPECTION_STATUS_FILTER.COMPLETED,
-    page,
+    page: pageFor('avslutade'),
     limit,
     inspector: selectedInspector,
     address: selectedAddress,
   })
   const myQuery = useInspections({
     statusFilter: INSPECTION_STATUS_FILTER.ONGOING,
-    page,
+    page: pageFor('mina'),
     limit,
     inspector: userName,
     enabled: !!userName,

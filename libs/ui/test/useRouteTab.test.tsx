@@ -8,6 +8,7 @@ const TABS = [
   { value: 'rum' },
   { value: 'kontrakt' },
   { value: 'nycklar' },
+  { value: 'besiktningar', disabled: true },
 ] as const
 
 const withRouter = (url: string) =>
@@ -47,7 +48,25 @@ describe('useRouteTab', () => {
     })
   })
 
+  it('keeps basePath intact for a typed non-ascii segment', () => {
+    expect(render('/bostader/123/sp%C3%A4rrar')).toEqual({
+      value: 'rum',
+      basePath: '/bostader/123',
+    })
+  })
+
   it('ignores a trailing slash on the bare url', () => {
     expect(render('/bostader/123/').basePath).toBe('/bostader/123')
+  })
+
+  it('ignores a trailing slash after the tab', () => {
+    expect(render('/bostader/123/nycklar/')).toEqual({
+      value: 'nycklar',
+      basePath: '/bostader/123',
+    })
+  })
+
+  it('treats a disabled tab like an unknown one', () => {
+    expect(render('/bostader/123/besiktningar').value).toBe('rum')
   })
 })

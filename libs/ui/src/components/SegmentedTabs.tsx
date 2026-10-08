@@ -37,8 +37,9 @@ export function SegmentedTabs({
 
   return (
     <nav
+      aria-label="Flikar"
       className={cn(
-        'grid w-full auto-cols-fr grid-flow-col overflow-x-auto rounded-lg bg-slate-100/70 p-1',
+        'grid w-full auto-cols-[minmax(max-content,1fr)] grid-flow-col overflow-x-auto rounded-lg bg-slate-100/70 p-1',
         className
       )}
     >

@@ -34,7 +34,11 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
-import { RESIDENCE_DEFAULT_TAB, RESIDENCE_TABS } from '../model/tabs'
+import {
+  RESIDENCE_DEFAULT_TAB,
+  RESIDENCE_TABS,
+  type ResidenceTab,
+} from '../model/tabs'
 import { RoomsTabContent } from './RoomsTabContent'
 
 type Residence = components['schemas']['ResidenceDetails']
@@ -55,7 +59,8 @@ export const ResidenceTabsMobile = ({
   const { value } = useRouteTab(RESIDENCE_TABS, RESIDENCE_DEFAULT_TAB)
   const rentalId = residence.propertyObject.rentalId ?? ''
 
-  const accordionItems: MobileAccordionItem[] = [
+  type Item = MobileAccordionItem & { id: ResidenceTab }
+  const allItems: Item[] = [
     {
       id: 'rum',
       icon: Info,
@@ -153,7 +158,8 @@ export const ResidenceTabsMobile = ({
         />
       ),
     },
-  ].filter((item) => item.content !== null)
+  ]
+  const accordionItems = allItems.filter((item) => item.content !== null)
 
   return (
     <MobileAccordion

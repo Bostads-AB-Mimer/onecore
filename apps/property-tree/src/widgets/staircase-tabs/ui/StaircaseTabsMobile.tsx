@@ -13,7 +13,11 @@ import {
   MobileAccordionItem,
 } from '@/shared/ui/MobileAccordion'
 
-import { STAIRCASE_DEFAULT_TAB, STAIRCASE_TABS } from '../model/tabs'
+import {
+  STAIRCASE_DEFAULT_TAB,
+  STAIRCASE_TABS,
+  type StaircaseTab,
+} from '../model/tabs'
 
 interface StaircaseTabsMobileProps {
   staircase: Staircase
@@ -33,7 +37,7 @@ export function StaircaseTabsMobile({
   const { value } = useRouteTab(STAIRCASE_TABS, STAIRCASE_DEFAULT_TAB)
   const navigate = useNavigate()
 
-  const accordionItems: MobileAccordionItem[] = [
+  const accordionItems: (MobileAccordionItem & { id: StaircaseTab })[] = [
     {
       id: 'bostader',
       icon: Home,

@@ -18,7 +18,11 @@ import {
 
 import { useFeatureToggles } from '@/contexts/FeatureTogglesContext'
 
-import { BUILDING_DEFAULT_TAB, BUILDING_TABS } from '../model/tabs'
+import {
+  BUILDING_DEFAULT_TAB,
+  BUILDING_TABS,
+  type BuildingTab,
+} from '../model/tabs'
 
 interface BuildingTabsMobileProps {
   building: BuildingType
@@ -36,7 +40,8 @@ export const BuildingTabsMobile = ({
 }: BuildingTabsMobileProps) => {
   const { value } = useRouteTab(BUILDING_TABS, BUILDING_DEFAULT_TAB)
   const { features } = useFeatureToggles()
-  const accordionItems: MobileAccordionItem[] = [
+  type Item = MobileAccordionItem & { id: BuildingTab }
+  const allItems: (Item | false)[] = [
     features.showBuildingEntrances && {
       id: 'uppgangar',
       icon: Building,
@@ -90,7 +95,8 @@ export const BuildingTabsMobile = ({
         />
       ),
     },
-  ].filter(Boolean) as MobileAccordionItem[]
+  ]
+  const accordionItems = allItems.filter((item): item is Item => item !== false)
 
   return (
     <MobileAccordion
