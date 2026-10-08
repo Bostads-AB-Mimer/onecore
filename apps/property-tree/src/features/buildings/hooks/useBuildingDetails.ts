@@ -1,22 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { propertyService, staircaseService } from '@/services/api/core'
-import { Building, Property } from '@/services/types'
-import { Staircase } from '@/services/types'
+import { staircaseService } from '@/services/api/core'
+import { Building, Staircase } from '@/services/types'
 
 import { useBuilding } from './useBuilding'
 
-export const useBuildingDetails = (
-  propertyCode: string,
-  buildingCode?: string
-) => {
+export const useBuildingDetails = (buildingCode?: string) => {
   const buildingQuery = useBuilding(buildingCode)
-
-  const propertyQuery = useQuery({
-    queryKey: ['property', propertyCode],
-    queryFn: () => propertyService.getPropertyByCode(propertyCode),
-    enabled: !!propertyCode,
-  })
 
   const staircasesQuery = useQuery({
     queryKey: ['staircases', buildingQuery.data?.code],
@@ -24,22 +14,13 @@ export const useBuildingDetails = (
     enabled: !!buildingQuery.data?.code,
   })
 
-  const isLoading =
-    buildingQuery.isLoading ||
-    staircasesQuery.isLoading ||
-    propertyQuery.isLoading
-  const error =
-    buildingQuery.error || staircasesQuery.error || propertyQuery.error
-
-  const building = buildingQuery.data
-  const property = propertyQuery.data
-  const staircases = staircasesQuery.data
+  const isLoading = buildingQuery.isLoading || staircasesQuery.isLoading
+  const error = buildingQuery.error || staircasesQuery.error
 
   return {
     data: {
-      building: building as Building,
-      property: property as Property,
-      staircases: staircases as Staircase[],
+      building: buildingQuery.data as Building,
+      staircases: staircasesQuery.data as Staircase[],
     },
     isLoading,
     error,
