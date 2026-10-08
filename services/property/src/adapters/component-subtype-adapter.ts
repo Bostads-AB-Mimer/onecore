@@ -1,5 +1,6 @@
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
+import type { property } from '@onecore/types'
 import type {
   CreateComponentSubtype,
   UpdateComponentSubtype,
@@ -11,6 +12,7 @@ export const getComponentSubtypes = async (
   filters: {
     typeId?: string
     subtypeName?: string
+    categoryType?: property.ComponentCategoryType
   },
   page: number = 1,
   limit: number = 20
@@ -28,6 +30,10 @@ export const getComponentSubtypes = async (
     }
   }
 
+  if (filters.categoryType) {
+    where.componentType = { category: { type: filters.categoryType } }
+  }
+
   const [subtypes, total] = await Promise.all([
     prisma.componentSubtypes.findMany({
       where,
@@ -35,7 +41,7 @@ export const getComponentSubtypes = async (
       take: limit,
       orderBy: { subTypeName: 'asc' },
       include: {
-        componentType: true,
+        componentType: { include: { category: true } },
       },
     }),
     prisma.componentSubtypes.count({ where }),

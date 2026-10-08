@@ -7,7 +7,11 @@ jest.mock('../adapters/db', () => ({
       update: jest.fn(),
       count: jest.fn(),
     },
-    componentSubtypes: { findUnique: jest.fn() },
+    componentSubtypes: {
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
     componentModels: { findUnique: jest.fn(), findFirst: jest.fn() },
     componentInstallations: {
       findMany: jest.fn(),
@@ -34,13 +38,17 @@ import {
   getComponentInstallations,
 } from '../adapters/component-installation-adapter'
 import { findModelByExactName } from '../adapters/component-model-adapter'
-import { getComponentSubtypeById } from '../adapters/component-subtype-adapter'
+import {
+  getComponentSubtypeById,
+  getComponentSubtypes,
+} from '../adapters/component-subtype-adapter'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-body'
 import request from 'supertest'
 import { routes as componentRoutes } from '../routes/component-instances'
 import { routes as modelRoutes } from '../routes/component-models'
+import { routes as subtypeRoutes } from '../routes/component-subtypes'
 
 const timestamps = {
   createdAt: '2026-10-07T00:00:00.000Z',
@@ -632,5 +640,88 @@ describe('GET /component-models/by-name/:modelName', () => {
         where: expect.objectContaining({ componentSubtypeId: subtypeId }),
       })
     )
+  })
+})
+
+describe('getComponentSubtypes by category type', () => {
+  const findMany = prisma.componentSubtypes.findMany as jest.Mock
+  const count = prisma.componentSubtypes.count as jest.Mock
+
+  beforeEach(() => {
+    findMany.mockReset()
+    count.mockReset()
+    findMany.mockResolvedValue([])
+    count.mockResolvedValue(0)
+  })
+
+  it('filters on the category type and includes type and category', async () => {
+    await getComponentSubtypes({ categoryType: 'SURFACE' })
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          componentType: { category: { type: 'SURFACE' } },
+        }),
+        include: expect.objectContaining({
+          componentType: { include: { category: true } },
+        }),
+      })
+    )
+    expect(count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          componentType: { category: { type: 'SURFACE' } },
+        }),
+      })
+    )
+  })
+
+  it('leaves the where clause alone without the filter', async () => {
+    await getComponentSubtypes({})
+
+    const [{ where }] = findMany.mock.calls[0]
+    expect(where).not.toHaveProperty('componentType')
+  })
+})
+
+describe('GET /component-subtypes', () => {
+  const app = new Koa()
+  const router = new KoaRouter()
+  subtypeRoutes(router)
+  app.use(bodyParser())
+  app.use(router.routes())
+
+  const findMany = prisma.componentSubtypes.findMany as jest.Mock
+  const count = prisma.componentSubtypes.count as jest.Mock
+
+  beforeEach(() => {
+    findMany.mockReset()
+    count.mockReset()
+    findMany.mockResolvedValue([])
+    count.mockResolvedValue(0)
+  })
+
+  it('passes categoryType through', async () => {
+    const res = await request(app.callback()).get(
+      '/component-subtypes?categoryType=SURFACE'
+    )
+
+    expect(res.status).toBe(200)
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          componentType: { category: { type: 'SURFACE' } },
+        }),
+      })
+    )
+  })
+
+  it('rejects an unknown categoryType', async () => {
+    const res = await request(app.callback()).get(
+      '/component-subtypes?categoryType=ROOF'
+    )
+
+    expect(res.status).toBe(400)
+    expect(findMany).not.toHaveBeenCalled()
   })
 })
