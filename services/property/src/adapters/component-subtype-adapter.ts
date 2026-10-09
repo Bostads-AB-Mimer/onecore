@@ -1,6 +1,6 @@
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
-import type { property } from '@onecore/types'
+import { property } from '@onecore/types'
 import type {
   CreateComponentSubtype,
   UpdateComponentSubtype,
@@ -76,6 +76,29 @@ export const createComponentSubtype = async (data: CreateComponentSubtype) => {
   })
 
   return trimStrings(subtype)
+}
+
+export type ComponentSubtypeMoveProblem =
+  { kind: 'type_not_found' } | { kind: 'surface_has_models'; models: number }
+
+export const findComponentSubtypeMoveProblem = async (params: {
+  subtypeId: string
+  typeId: string
+}): Promise<ComponentSubtypeMoveProblem | null> => {
+  const type = await prisma.componentTypes.findUnique({
+    where: { id: params.typeId },
+    select: { category: { select: { type: true } } },
+  })
+  if (!type) return { kind: 'type_not_found' }
+  if (
+    type.category.type !== property.ComponentCategoryTypeSchema.enum.SURFACE
+  ) {
+    return null
+  }
+  const models = await prisma.componentModels.count({
+    where: { componentSubtypeId: params.subtypeId },
+  })
+  return models > 0 ? { kind: 'surface_has_models', models } : null
 }
 
 export const updateComponentSubtype = async (

@@ -379,7 +379,10 @@ async function updateComponentSubtype(
   id: string,
   data: components['schemas']['UpdateComponentSubtypeRequest']
 ): Promise<
-  AdapterResult<GetComponentSubtypeResponse, 'upstream_error' | 'not_found'>
+  AdapterResult<
+    GetComponentSubtypeResponse,
+    'upstream_error' | 'not_found' | 'bad_request' | 'conflict'
+  >
 > {
   try {
     const response = await client().PUT('/component-subtypes/{id}', {
@@ -393,6 +396,14 @@ async function updateComponentSubtype(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
+    }
+
+    if (response.response.status === 409) {
+      return { ok: false, err: 'conflict' }
     }
 
     return { ok: false, err: 'upstream_error' }

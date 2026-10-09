@@ -70,6 +70,28 @@ export const createComponentType = async (data: CreateComponentType) => {
   return trimStrings(type)
 }
 
+export type ComponentTypeMoveProblem =
+  | { kind: 'category_not_found' }
+  | { kind: 'surface_has_models'; models: number }
+
+export const findComponentTypeMoveProblem = async (params: {
+  typeId: string
+  categoryId: string
+}): Promise<ComponentTypeMoveProblem | null> => {
+  const category = await prisma.componentCategories.findUnique({
+    where: { id: params.categoryId },
+    select: { type: true },
+  })
+  if (!category) return { kind: 'category_not_found' }
+  if (category.type !== property.ComponentCategoryTypeSchema.enum.SURFACE) {
+    return null
+  }
+  const models = await prisma.componentModels.count({
+    where: { subtype: { typeId: params.typeId } },
+  })
+  return models > 0 ? { kind: 'surface_has_models', models } : null
+}
+
 export const updateComponentType = async (
   id: string,
   data: UpdateComponentType

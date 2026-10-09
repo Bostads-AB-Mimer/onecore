@@ -10,15 +10,28 @@ import { addComponent } from '../../processes/components'
 import { ProcessStatus } from '../../common/types'
 
 const componentCategoryErrorResponse = {
-  conflict: [409, 'Category has component types with a surface code'],
+  conflict: [
+    409,
+    'Category has component types with a surface code, or models under it that a SURFACE category cannot have',
+  ],
   not_found: [404, 'Component category not found'],
   upstream_error: [500, 'Internal server error'],
 } as const
 
 const componentTypeErrorResponse = {
   bad_request: [400, 'Invalid categoryId or code'],
-  conflict: [409, 'Another component type already has this code'],
+  conflict: [
+    409,
+    'Another component type already has this code, or the type has models that a SURFACE category cannot have',
+  ],
   not_found: [404, 'Component type not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
+const componentSubtypeErrorResponse = {
+  bad_request: [400, 'Invalid typeId'],
+  conflict: [409, 'The subtype has models that a SURFACE category cannot have'],
+  not_found: [404, 'Component subtype not found'],
   upstream_error: [500, 'Internal server error'],
 } as const
 
@@ -1078,8 +1091,12 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentSubtype'
+   *       400:
+   *         description: Invalid typeId
    *       404:
    *         description: Component subtype not found
+   *       409:
+   *         description: The subtype is being moved under a SURFACE category while it has models
    *     security:
    *       - bearerAuth: []
    */
@@ -1108,14 +1125,9 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component subtype not found'
-              : 'Internal server error',
-          ...metadata,
-        }
+        const [status, error] = componentSubtypeErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 

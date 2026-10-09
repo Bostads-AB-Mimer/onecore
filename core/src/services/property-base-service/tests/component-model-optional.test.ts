@@ -614,3 +614,71 @@ describe('Component installations with a second active installation', () => {
     expect(res.status).toBe(409)
   })
 })
+
+describe('Moves into a SURFACE category', () => {
+  const typeId = '00000000-0000-0000-0001-000000000001'
+  const categoryId = '00000000-0000-0000-0000-000000000001'
+
+  it('returns 409 when property refuses to make a category SURFACE', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponentCategory')
+      .mockResolvedValueOnce({ ok: false, err: 'conflict' })
+
+    const res = await request(app.callback())
+      .put(`/component-categories/${categoryId}`)
+      .send({ type: 'SURFACE' })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/models/)
+  })
+
+  it('returns 409 when property refuses to move a type', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponentType')
+      .mockResolvedValueOnce({ ok: false, err: 'conflict' })
+
+    const res = await request(app.callback())
+      .put(`/component-types/${typeId}`)
+      .send({ categoryId })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/models/)
+  })
+
+  it('returns 409 when property refuses to move a subtype', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponentSubtype')
+      .mockResolvedValueOnce({ ok: false, err: 'conflict' })
+
+    const res = await request(app.callback())
+      .put(`/component-subtypes/${subtypeId}`)
+      .send({ typeId })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/models/)
+  })
+
+  it('returns 400 when property rejects the subtype target type', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponentSubtype')
+      .mockResolvedValueOnce({ ok: false, err: 'bad_request' })
+
+    const res = await request(app.callback())
+      .put(`/component-subtypes/${subtypeId}`)
+      .send({ typeId })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('still returns 404 for an unknown subtype', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponentSubtype')
+      .mockResolvedValueOnce({ ok: false, err: 'not_found' })
+
+    const res = await request(app.callback())
+      .put(`/component-subtypes/${subtypeId}`)
+      .send({ subTypeName: 'Kakel' })
+
+    expect(res.status).toBe(404)
+  })
+})

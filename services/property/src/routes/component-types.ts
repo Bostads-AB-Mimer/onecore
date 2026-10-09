@@ -16,6 +16,7 @@ import {
   updateComponentType,
   deleteComponentType,
   findComponentTypeCodeProblem,
+  findComponentTypeMoveProblem,
 } from '../adapters/component-adapter'
 import { prismaErrorCode } from '../utils/prisma-errors'
 
@@ -295,7 +296,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Component type not found
    *       409:
-   *         description: Another component type already has this code
+   *         description: Another component type already has this code, or the type is being moved into a SURFACE category while models exist under it
    */
   router.put(
     '(.*)/component-types/:id',
@@ -332,6 +333,32 @@ export const routes = (router: KoaRouter) => {
             ctx.status = codeProblemResponse[problem].status
             ctx.body = {
               error: codeProblemResponse[problem].error,
+              ...metadata,
+            }
+            return
+          }
+        }
+
+        if (
+          data.categoryId !== undefined &&
+          data.categoryId !== existing.categoryId
+        ) {
+          const problem = await findComponentTypeMoveProblem({
+            typeId: id,
+            categoryId: data.categoryId,
+          })
+          if (problem?.kind === 'category_not_found') {
+            ctx.status = codeProblemResponse.category_not_found.status
+            ctx.body = {
+              error: codeProblemResponse.category_not_found.error,
+              ...metadata,
+            }
+            return
+          }
+          if (problem?.kind === 'surface_has_models') {
+            ctx.status = 409
+            ctx.body = {
+              error: `Type has ${problem.models} models under it; a type in a SURFACE category cannot have models. Move or delete them first`,
               ...metadata,
             }
             return

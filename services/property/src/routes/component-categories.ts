@@ -14,6 +14,7 @@ import {
   createComponentCategory,
   updateComponentCategory,
   deleteComponentCategory,
+  countModelsUnderCategory,
 } from '../adapters/component-adapter'
 
 /**
@@ -226,7 +227,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Component category not found
    *       409:
-   *         description: Category has component types with a surface code
+   *         description: Category has component types with a surface code, or is being made SURFACE while models exist under it
    */
   router.put(
     '(.*)/component-categories/:id',
@@ -265,6 +266,20 @@ export const routes = (router: KoaRouter) => {
             ...metadata,
           }
           return
+        }
+
+        const entersSurface =
+          data.type === 'SURFACE' && existing.type !== 'SURFACE'
+        if (entersSurface) {
+          const models = await countModelsUnderCategory(id)
+          if (models > 0) {
+            ctx.status = 409
+            ctx.body = {
+              error: `Category has ${models} models under it; a SURFACE category cannot have models. Move or delete them first`,
+              ...metadata,
+            }
+            return
+          }
         }
 
         const category = await updateComponentCategory(id, data)

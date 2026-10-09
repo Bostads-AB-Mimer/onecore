@@ -14,6 +14,7 @@ import {
   createComponentSubtype,
   updateComponentSubtype,
   deleteComponentSubtype,
+  findComponentSubtypeMoveProblem,
 } from '../adapters/component-adapter'
 
 export const routes = (router: KoaRouter) => {
@@ -261,6 +262,12 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentSubtype'
+   *       400:
+   *         description: Invalid typeId
+   *       404:
+   *         description: Component subtype not found
+   *       409:
+   *         description: The subtype is being moved under a SURFACE category while it has models
    */
   router.put(
     '(.*)/component-subtypes/:id',
@@ -285,6 +292,29 @@ export const routes = (router: KoaRouter) => {
           ctx.status = 404
           ctx.body = { error: 'Component subtype not found', ...metadata }
           return
+        }
+
+        if (data.typeId !== undefined && data.typeId !== existing.typeId) {
+          const problem = await findComponentSubtypeMoveProblem({
+            subtypeId: id,
+            typeId: data.typeId,
+          })
+          if (problem?.kind === 'type_not_found') {
+            ctx.status = 400
+            ctx.body = {
+              error: 'Invalid typeId: component type does not exist',
+              ...metadata,
+            }
+            return
+          }
+          if (problem?.kind === 'surface_has_models') {
+            ctx.status = 409
+            ctx.body = {
+              error: `Subtype has ${problem.models} models; a subtype in a SURFACE category cannot have models. Move or delete them first`,
+              ...metadata,
+            }
+            return
+          }
         }
 
         const subtype = await updateComponentSubtype(id, data)

@@ -66,6 +66,11 @@ export const updateComponentCategory = async (
   return trimStrings(category)
 }
 
+export const countModelsUnderCategory = async (categoryId: string) =>
+  prisma.componentModels.count({
+    where: { subtype: { componentType: { categoryId } } },
+  })
+
 export const deleteComponentCategory = async (id: string) => {
   await prisma.componentCategories.delete({
     where: { id },
