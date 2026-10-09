@@ -1,6 +1,8 @@
+import type { Prisma } from '@prisma/client'
 import { trimStrings } from '@src/utils/data-conversion'
 import { property } from '@onecore/types'
 import { prisma } from './db'
+import { serializable } from './transaction'
 import type {
   CreateComponentModel,
   UpdateComponentModel,
@@ -113,8 +115,11 @@ export const findModelByExactName = async (
   return model ? trimStrings(model) : null
 }
 
-export const createComponentModel = async (data: CreateComponentModel) => {
-  const model = await prisma.componentModels.create({
+export const createComponentModel = async (
+  data: CreateComponentModel,
+  db: Prisma.TransactionClient = prisma
+) => {
+  const model = await db.componentModels.create({
     data,
   })
 
@@ -125,9 +130,10 @@ export const createComponentModel = async (data: CreateComponentModel) => {
 // model that moves takes its components with it.
 export const updateComponentModel = async (
   id: string,
-  data: UpdateComponentModel
+  data: UpdateComponentModel,
+  db?: Prisma.TransactionClient
 ) => {
-  const model = await prisma.$transaction(async (tx) => {
+  const update = async (tx: Prisma.TransactionClient) => {
     const updated = await tx.componentModels.update({
       where: { id },
       data,
@@ -139,7 +145,8 @@ export const updateComponentModel = async (
       })
     }
     return updated
-  })
+  }
+  const model = await (db ? update(db) : prisma.$transaction(update))
 
   return trimStrings(model)
 }
@@ -148,9 +155,10 @@ export type ComponentModelSubtypeProblem =
   'subtype_not_found' | 'surface_subtype'
 
 export const findModelSubtypeProblem = async (
-  subtypeId: string
+  subtypeId: string,
+  db: Prisma.TransactionClient = prisma
 ): Promise<ComponentModelSubtypeProblem | null> => {
-  const subtype = await prisma.componentSubtypes.findUnique({
+  const subtype = await db.componentSubtypes.findUnique({
     where: { id: subtypeId },
     select: {
       componentType: { select: { category: { select: { type: true } } } },
@@ -161,6 +169,34 @@ export const findModelSubtypeProblem = async (
     property.ComponentCategoryTypeSchema.enum.SURFACE
     ? 'surface_subtype'
     : null
+}
+
+export type ModelScope =
+  { categoryId: string } | { typeId: string } | { subtypeId: string }
+
+const modelScopeWhere = (
+  scope: ModelScope
+): Prisma.ComponentModelsWhereInput => {
+  if ('categoryId' in scope) {
+    return { subtype: { componentType: { categoryId: scope.categoryId } } }
+  }
+  if ('typeId' in scope) return { subtype: { typeId: scope.typeId } }
+  return { componentSubtypeId: scope.subtypeId }
+}
+
+export const updateUnlessModelsUnder = async <T>(
+  scope: ModelScope | null,
+  update: (db: Prisma.TransactionClient) => Promise<T>
+): Promise<{ ok: true; data: T } | { ok: false; models: number }> => {
+  if (!scope) return { ok: true, data: await update(prisma) }
+
+  return serializable(async (tx) => {
+    const models = await tx.componentModels.count({
+      where: modelScopeWhere(scope),
+    })
+    if (models > 0) return { ok: false, models }
+    return { ok: true, data: await update(tx) }
+  })
 }
 
 export const deleteComponentModel = async (id: string) => {

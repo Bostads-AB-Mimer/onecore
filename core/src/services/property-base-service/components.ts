@@ -372,7 +372,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Component category not found
    *       409:
-   *         description: Category has component types with a surface code
+   *         description: Category has component types with a surface code, or is being made SURFACE while models exist under it. The error names the reason.
    *     security:
    *       - bearerAuth: []
    */
@@ -403,7 +403,7 @@ export const routes = (router: KoaRouter) => {
       if (!result.ok) {
         const [status, error] = componentCategoryErrorResponse[result.err]
         ctx.status = status
-        ctx.body = { error, ...metadata }
+        ctx.body = { error: result.message ?? error, ...metadata }
         return
       }
 
@@ -720,7 +720,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Component type not found
    *       409:
-   *         description: Another component type already has this code
+   *         description: Another component type already has this code, or the type is being moved into a SURFACE category while models exist under it. The error names the reason.
    *     security:
    *       - bearerAuth: []
    */
@@ -749,7 +749,7 @@ export const routes = (router: KoaRouter) => {
       if (!result.ok) {
         const [status, error] = componentTypeErrorResponse[result.err]
         ctx.status = status
-        ctx.body = { error, ...metadata }
+        ctx.body = { error: result.message ?? error, ...metadata }
         return
       }
 
@@ -1096,7 +1096,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Component subtype not found
    *       409:
-   *         description: The subtype is being moved under a SURFACE category while it has models
+   *         description: The subtype is being moved under a SURFACE category while it has models. The error gives the model count.
    *     security:
    *       - bearerAuth: []
    */
@@ -1127,7 +1127,7 @@ export const routes = (router: KoaRouter) => {
       if (!result.ok) {
         const [status, error] = componentSubtypeErrorResponse[result.err]
         ctx.status = status
-        ctx.body = { error, ...metadata }
+        ctx.body = { error: result.message ?? error, ...metadata }
         return
       }
 

@@ -1010,7 +1010,7 @@ describe('@onecore/property-adapter', () => {
     const message =
       'Type has 12 models under it; a type in a SURFACE category cannot have models. Move or delete them first'
 
-    const refuse = (path: string, body: unknown) =>
+    const refuse = (path: string, body: Record<string, string>) =>
       mockServer.use(
         http.put(`${config.propertyBaseService.url}/${path}/${id}`, () =>
           HttpResponse.json(body, { status: 409 })

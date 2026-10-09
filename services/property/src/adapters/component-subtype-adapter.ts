@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client'
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 import { property } from '@onecore/types'
@@ -78,34 +79,20 @@ export const createComponentSubtype = async (data: CreateComponentSubtype) => {
   return trimStrings(subtype)
 }
 
-export type ComponentSubtypeMoveProblem =
-  { kind: 'type_not_found' } | { kind: 'surface_has_models'; models: number }
-
-export const findComponentSubtypeMoveProblem = async (params: {
-  subtypeId: string
-  typeId: string
-}): Promise<ComponentSubtypeMoveProblem | null> => {
+export const getComponentTypeCategoryType = async (typeId: string) => {
   const type = await prisma.componentTypes.findUnique({
-    where: { id: params.typeId },
+    where: { id: typeId },
     select: { category: { select: { type: true } } },
   })
-  if (!type) return { kind: 'type_not_found' }
-  if (
-    type.category.type !== property.ComponentCategoryTypeSchema.enum.SURFACE
-  ) {
-    return null
-  }
-  const models = await prisma.componentModels.count({
-    where: { componentSubtypeId: params.subtypeId },
-  })
-  return models > 0 ? { kind: 'surface_has_models', models } : null
+  return type ? type.category.type : null
 }
 
 export const updateComponentSubtype = async (
   id: string,
-  data: UpdateComponentSubtype
+  data: UpdateComponentSubtype,
+  db: Prisma.TransactionClient = prisma
 ) => {
-  const subtype = await prisma.componentSubtypes.update({
+  const subtype = await db.componentSubtypes.update({
     where: { id },
     data,
   })

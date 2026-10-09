@@ -17,6 +17,14 @@ const client = () =>
 
 type DocumentWithUrl = components['schemas']['DocumentWithUrl']
 
+const upstreamErrorMessage = (body: unknown): string | undefined =>
+  body &&
+  typeof body === 'object' &&
+  'error' in body &&
+  typeof body.error === 'string'
+    ? body.error
+    : undefined
+
 // ==================== COMPONENT CATEGORIES ====================
 
 type GetComponentCategoriesResponse =
@@ -112,7 +120,11 @@ async function updateComponentCategory(
     }
 
     if (response.response.status === 409) {
-      return { ok: false, err: 'conflict' }
+      return {
+        ok: false,
+        err: 'conflict',
+        message: upstreamErrorMessage(response.error),
+      }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -257,7 +269,11 @@ async function updateComponentType(
     }
 
     if (response.response.status === 409) {
-      return { ok: false, err: 'conflict' }
+      return {
+        ok: false,
+        err: 'conflict',
+        message: upstreamErrorMessage(response.error),
+      }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -403,7 +419,11 @@ async function updateComponentSubtype(
     }
 
     if (response.response.status === 409) {
-      return { ok: false, err: 'conflict' }
+      return {
+        ok: false,
+        err: 'conflict',
+        message: upstreamErrorMessage(response.error),
+      }
     }
 
     return { ok: false, err: 'upstream_error' }

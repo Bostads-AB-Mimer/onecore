@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client'
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 import type {
@@ -56,20 +57,16 @@ export const createComponentCategory = async (
 
 export const updateComponentCategory = async (
   id: string,
-  data: UpdateComponentCategory
+  data: UpdateComponentCategory,
+  db: Prisma.TransactionClient = prisma
 ) => {
-  const category = await prisma.componentCategories.update({
+  const category = await db.componentCategories.update({
     where: { id },
     data,
   })
 
   return trimStrings(category)
 }
-
-export const countModelsUnderCategory = async (categoryId: string) =>
-  prisma.componentModels.count({
-    where: { subtype: { componentType: { categoryId } } },
-  })
 
 export const deleteComponentCategory = async (id: string) => {
   await prisma.componentCategories.delete({
