@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
+import { property } from '@onecore/types'
 import { parseRequest } from '../middleware/parse-request'
 import { z } from 'zod'
 import {
@@ -16,8 +17,12 @@ import {
   updateComponentType,
   deleteComponentType,
   findComponentTypeCodeProblem,
+  getComponentCategoryType,
+  updateUnlessModelsUnder,
 } from '../adapters/component-adapter'
 import { prismaErrorCode } from '../utils/prisma-errors'
+
+const { SURFACE } = property.ComponentCategoryTypeSchema.enum
 
 const codeProblemResponse: Record<
   ComponentTypeCodeProblem,
@@ -295,7 +300,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Component type not found
    *       409:
-   *         description: Another component type already has this code
+   *         description: Another component type already has this code, or the type is being moved into a SURFACE category while models exist under it
    */
   router.put(
     '(.*)/component-types/:id',
@@ -322,10 +327,25 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
+        const targetCategory =
+          data.categoryId !== undefined &&
+          data.categoryId !== existing.categoryId
+            ? await getComponentCategoryType(data.categoryId)
+            : existing.category
+        if (!targetCategory) {
+          ctx.status = codeProblemResponse.category_not_found.status
+          ctx.body = {
+            error: codeProblemResponse.category_not_found.error,
+            ...metadata,
+          }
+          return
+        }
+
         if (data.code !== undefined || data.categoryId !== undefined) {
           const problem = await findComponentTypeCodeProblem({
             code: data.code === undefined ? existing.code : data.code,
             categoryId: data.categoryId ?? existing.categoryId,
+            category: targetCategory,
             excludeTypeId: id,
           })
           if (problem) {
@@ -338,10 +358,23 @@ export const routes = (router: KoaRouter) => {
           }
         }
 
-        const type = await updateComponentType(id, data)
+        const entersSurface =
+          targetCategory.type === SURFACE && existing.category.type !== SURFACE
+        const result = await updateUnlessModelsUnder(
+          entersSurface ? { typeId: id } : null,
+          (db) => updateComponentType(id, data, db)
+        )
+        if (!result.ok) {
+          ctx.status = 409
+          ctx.body = {
+            error: `Type has ${result.models} models under it; a type in a SURFACE category cannot have models. Move or delete them first`,
+            ...metadata,
+          }
+          return
+        }
 
         ctx.body = {
-          content: ComponentTypeSchema.parse(type),
+          content: ComponentTypeSchema.parse(result.data),
           ...metadata,
         }
       } catch (err) {

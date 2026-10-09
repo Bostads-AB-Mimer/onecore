@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
+import { property } from '@onecore/types'
 import { parseRequest } from '../middleware/parse-request'
 import { z } from 'zod'
 import {
@@ -14,7 +15,11 @@ import {
   createComponentSubtype,
   updateComponentSubtype,
   deleteComponentSubtype,
+  getComponentTypeCategoryType,
+  updateUnlessModelsUnder,
 } from '../adapters/component-adapter'
+
+const { SURFACE } = property.ComponentCategoryTypeSchema.enum
 
 export const routes = (router: KoaRouter) => {
   // ==================== COMPONENT SUBTYPES ROUTES ====================
@@ -261,6 +266,12 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentSubtype'
+   *       400:
+   *         description: Invalid typeId
+   *       404:
+   *         description: Component subtype not found
+   *       409:
+   *         description: The subtype is being moved under a SURFACE category while it has models
    */
   router.put(
     '(.*)/component-subtypes/:id',
@@ -287,10 +298,39 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const subtype = await updateComponentSubtype(id, data)
+        let entersSurface = false
+        if (data.typeId !== undefined && data.typeId !== existing.typeId) {
+          const targetCategoryType = await getComponentTypeCategoryType(
+            data.typeId
+          )
+          if (!targetCategoryType) {
+            ctx.status = 400
+            ctx.body = {
+              error: 'Invalid typeId: component type does not exist',
+              ...metadata,
+            }
+            return
+          }
+          entersSurface =
+            targetCategoryType === SURFACE &&
+            existing.componentType.category.type !== SURFACE
+        }
+
+        const result = await updateUnlessModelsUnder(
+          entersSurface ? { subtypeId: id } : null,
+          (db) => updateComponentSubtype(id, data, db)
+        )
+        if (!result.ok) {
+          ctx.status = 409
+          ctx.body = {
+            error: `Subtype has ${result.models} models; a subtype in a SURFACE category cannot have models. Move or delete them first`,
+            ...metadata,
+          }
+          return
+        }
 
         ctx.body = {
-          content: ComponentSubtypeSchema.parse(subtype),
+          content: ComponentSubtypeSchema.parse(result.data),
           ...metadata,
         }
       } catch (err) {

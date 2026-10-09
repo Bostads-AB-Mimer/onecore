@@ -1,6 +1,7 @@
+import type { Prisma } from '@prisma/client'
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
-import type { property } from '@onecore/types'
+import { property } from '@onecore/types'
 import type {
   CreateComponentSubtype,
   UpdateComponentSubtype,
@@ -78,11 +79,20 @@ export const createComponentSubtype = async (data: CreateComponentSubtype) => {
   return trimStrings(subtype)
 }
 
+export const getComponentTypeCategoryType = async (typeId: string) => {
+  const type = await prisma.componentTypes.findUnique({
+    where: { id: typeId },
+    select: { category: { select: { type: true } } },
+  })
+  return type ? type.category.type : null
+}
+
 export const updateComponentSubtype = async (
   id: string,
-  data: UpdateComponentSubtype
+  data: UpdateComponentSubtype,
+  db: Prisma.TransactionClient = prisma
 ) => {
-  const subtype = await prisma.componentSubtypes.update({
+  const subtype = await db.componentSubtypes.update({
     where: { id },
     data,
   })

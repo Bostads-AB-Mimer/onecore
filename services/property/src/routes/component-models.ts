@@ -19,6 +19,7 @@ import {
   findModelSubtypeProblem,
   type ComponentModelSubtypeProblem,
 } from '../adapters/component-adapter'
+import { serializable } from '../adapters/transaction'
 import { prismaErrorCode } from '../utils/prisma-errors'
 
 const subtypeProblemResponse: Record<ComponentModelSubtypeProblem, string> = {
@@ -337,18 +338,29 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const problem = await findModelSubtypeProblem(data.componentSubtypeId)
-        if (problem) {
+        const result = await serializable(async (tx) => {
+          const problem = await findModelSubtypeProblem(
+            data.componentSubtypeId,
+            tx
+          )
+          if (problem) return { ok: false as const, problem }
+          return {
+            ok: true as const,
+            model: await createComponentModel(data, tx),
+          }
+        })
+        if (!result.ok) {
           ctx.status = 400
-          ctx.body = { error: subtypeProblemResponse[problem], ...metadata }
+          ctx.body = {
+            error: subtypeProblemResponse[result.problem],
+            ...metadata,
+          }
           return
         }
 
-        const model = await createComponentModel(data)
-
         ctx.status = 201
         ctx.body = {
-          content: ComponentModelSchema.parse(model),
+          content: ComponentModelSchema.parse(result.model),
           ...metadata,
         }
       } catch (err) {
@@ -428,22 +440,32 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        if (
+        const newSubtypeId =
           data.componentSubtypeId &&
           data.componentSubtypeId !== existing.componentSubtypeId
-        ) {
-          const problem = await findModelSubtypeProblem(data.componentSubtypeId)
-          if (problem) {
-            ctx.status = 400
-            ctx.body = { error: subtypeProblemResponse[problem], ...metadata }
-            return
+            ? data.componentSubtypeId
+            : null
+        const result = newSubtypeId
+          ? await serializable(async (tx) => {
+              const problem = await findModelSubtypeProblem(newSubtypeId, tx)
+              if (problem) return { ok: false as const, problem }
+              return {
+                ok: true as const,
+                model: await updateComponentModel(id, data, tx),
+              }
+            })
+          : { ok: true as const, model: await updateComponentModel(id, data) }
+        if (!result.ok) {
+          ctx.status = 400
+          ctx.body = {
+            error: subtypeProblemResponse[result.problem],
+            ...metadata,
           }
+          return
         }
 
-        const model = await updateComponentModel(id, data)
-
         ctx.body = {
-          content: ComponentModelSchema.parse(model),
+          content: ComponentModelSchema.parse(result.model),
           ...metadata,
         }
       } catch (err) {

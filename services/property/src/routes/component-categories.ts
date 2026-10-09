@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
+import { property } from '@onecore/types'
 import { parseRequest } from '../middleware/parse-request'
 import { z } from 'zod'
 import {
@@ -14,7 +15,10 @@ import {
   createComponentCategory,
   updateComponentCategory,
   deleteComponentCategory,
+  updateUnlessModelsUnder,
 } from '../adapters/component-adapter'
+
+const { SURFACE } = property.ComponentCategoryTypeSchema.enum
 
 /**
  * @swagger
@@ -226,7 +230,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Component category not found
    *       409:
-   *         description: Category has component types with a surface code
+   *         description: Category has component types with a surface code, or is being made SURFACE while models exist under it
    */
   router.put(
     '(.*)/component-categories/:id',
@@ -255,8 +259,8 @@ export const routes = (router: KoaRouter) => {
 
         const leavesSurface =
           data.type !== undefined &&
-          data.type !== 'SURFACE' &&
-          existing.type === 'SURFACE'
+          data.type !== SURFACE &&
+          existing.type === SURFACE
         if (leavesSurface && existing.componentTypes.some((t) => t.code)) {
           ctx.status = 409
           ctx.body = {
@@ -267,10 +271,22 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const category = await updateComponentCategory(id, data)
+        const entersSurface = data.type === SURFACE && existing.type !== SURFACE
+        const result = await updateUnlessModelsUnder(
+          entersSurface ? { categoryId: id } : null,
+          (db) => updateComponentCategory(id, data, db)
+        )
+        if (!result.ok) {
+          ctx.status = 409
+          ctx.body = {
+            error: `Category has ${result.models} models under it; a SURFACE category cannot have models. Move or delete them first`,
+            ...metadata,
+          }
+          return
+        }
 
         ctx.body = {
-          content: ComponentCategorySchema.parse(category),
+          content: ComponentCategorySchema.parse(result.data),
           ...metadata,
         }
       } catch (err) {
