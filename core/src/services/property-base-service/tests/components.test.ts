@@ -365,7 +365,7 @@ describe('Component Subtypes API', () => {
       const subtypes = factory.componentSubtype.buildList(3)
       jest
         .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
-        .mockResolvedValueOnce({ ok: true, data: subtypes })
+        .mockResolvedValueOnce({ ok: true, data: { content: subtypes } })
 
       const res = await request(app.callback()).get('/component-subtypes')
 
@@ -377,7 +377,7 @@ describe('Component Subtypes API', () => {
       const subtypes = factory.componentSubtype.buildList(2)
       const getSpy = jest
         .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
-        .mockResolvedValueOnce({ ok: true, data: subtypes })
+        .mockResolvedValueOnce({ ok: true, data: { content: subtypes } })
 
       const res = await request(app.callback()).get(
         '/component-subtypes?typeId=00000000-0000-0000-0000-000000000001'
@@ -399,7 +399,7 @@ describe('Component Subtypes API', () => {
       })
       const getSpy = jest
         .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
-        .mockResolvedValueOnce({ ok: true, data: subtypes })
+        .mockResolvedValueOnce({ ok: true, data: { content: subtypes } })
 
       const res = await request(app.callback()).get(
         '/component-subtypes?subtypeName=Dishwasher'
@@ -419,7 +419,7 @@ describe('Component Subtypes API', () => {
       const subtypes = factory.componentSubtype.buildList(2)
       jest
         .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
-        .mockResolvedValueOnce({ ok: true, data: subtypes })
+        .mockResolvedValueOnce({ ok: true, data: { content: subtypes } })
 
       const res = await request(app.callback()).get('/component-subtypes')
 
@@ -1709,7 +1709,7 @@ describe('Cascade Delete Prevention', () => {
         .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
         .mockResolvedValueOnce({
           ok: true,
-          data: [factory.componentSubtype.build()],
+          data: { content: [factory.componentSubtype.build()] },
         })
 
       const res = await request(app.callback()).delete(

@@ -292,7 +292,13 @@ async function deleteComponentType(
 
 // ==================== COMPONENT SUBTYPES ====================
 
-type GetComponentSubtypesResponse = components['schemas']['ComponentSubtype'][]
+type ComponentSubtypesPage =
+  paths['/component-subtypes']['get']['responses'][200]['content']['application/json']
+
+type GetComponentSubtypesResponse = {
+  content: components['schemas']['ComponentSubtype'][]
+  pagination?: ComponentSubtypesPage['pagination']
+}
 
 async function getComponentSubtypes(
   typeId?: string,
@@ -307,7 +313,13 @@ async function getComponentSubtypes(
     })
 
     if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+      return {
+        ok: true,
+        data: {
+          content: response.data.content,
+          pagination: response.data.pagination,
+        },
+      }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -512,7 +524,9 @@ async function findModelByExactName(
 
 async function createComponentModel(
   data: components['schemas']['CreateComponentModelRequest']
-): Promise<AdapterResult<GetComponentModelResponse, 'upstream_error'>> {
+): Promise<
+  AdapterResult<GetComponentModelResponse, 'upstream_error' | 'bad_request'>
+> {
   try {
     const response = await client().POST('/component-models', {
       body: data,
@@ -520,6 +534,10 @@ async function createComponentModel(
 
     if (response.data?.content) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -533,7 +551,10 @@ async function updateComponentModel(
   id: string,
   data: components['schemas']['UpdateComponentModelRequest']
 ): Promise<
-  AdapterResult<GetComponentModelResponse, 'upstream_error' | 'not_found'>
+  AdapterResult<
+    GetComponentModelResponse,
+    'upstream_error' | 'not_found' | 'bad_request'
+  >
 > {
   try {
     const response = await client().PUT('/component-models/{id}', {
@@ -547,6 +568,10 @@ async function updateComponentModel(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -843,7 +868,9 @@ async function getComponentInstallationById(
 
 async function createComponentInstallation(
   data: components['schemas']['CreateComponentInstallationRequest']
-): Promise<AdapterResult<GetComponentInstallationResponse, 'upstream_error'>> {
+): Promise<
+  AdapterResult<GetComponentInstallationResponse, 'upstream_error' | 'conflict'>
+> {
   try {
     const response = await client().POST('/component-installations', {
       body: data,
@@ -851,6 +878,10 @@ async function createComponentInstallation(
 
     if (response.data?.content) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 409) {
+      return { ok: false, err: 'conflict' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -866,7 +897,7 @@ async function updateComponentInstallation(
 ): Promise<
   AdapterResult<
     GetComponentInstallationResponse,
-    'upstream_error' | 'not_found'
+    'upstream_error' | 'not_found' | 'conflict'
   >
 > {
   try {
@@ -881,6 +912,10 @@ async function updateComponentInstallation(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 409) {
+      return { ok: false, err: 'conflict' }
     }
 
     return { ok: false, err: 'upstream_error' }

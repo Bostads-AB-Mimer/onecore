@@ -502,7 +502,7 @@ describe('GET /component-subtypes by category type', () => {
       .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
       .mockResolvedValueOnce({
         ok: true,
-        data: [factory.componentSubtype.build()],
+        data: { content: [factory.componentSubtype.build()] },
       })
 
     const res = await request(app.callback()).get(
@@ -514,6 +514,23 @@ describe('GET /component-subtypes by category type', () => {
     expect(spy).toHaveBeenCalledWith(undefined, 1, 20, undefined, 'SURFACE')
   })
 
+  it('forwards pagination from property', async () => {
+    const pagination = { page: 2, limit: 20, total: 29, totalPages: 2 }
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { content: [factory.componentSubtype.build()], pagination },
+      })
+
+    const res = await request(app.callback()).get(
+      '/component-subtypes?categoryType=SURFACE&page=2'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.pagination).toEqual(pagination)
+  })
+
   it('rejects an unknown categoryType', async () => {
     const spy = jest.spyOn(propertyBaseAdapter, 'getComponentSubtypes')
 
@@ -523,5 +540,77 @@ describe('GET /component-subtypes by category type', () => {
 
     expect(res.status).toBe(400)
     expect(spy).not.toHaveBeenCalled()
+  })
+})
+
+describe('Component models on a subtype', () => {
+  it('returns 400 when property rejects the subtype on create', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponentModel')
+      .mockResolvedValueOnce({ ok: false, err: 'bad_request' })
+
+    const res = await request(app.callback())
+      .post('/component-models')
+      .send({ modelName: 'Vit', componentSubtypeId: subtypeId })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 400 when property rejects the subtype on update', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponentModel')
+      .mockResolvedValueOnce({ ok: false, err: 'bad_request' })
+
+    const res = await request(app.callback())
+      .put(`/component-models/${modelId}`)
+      .send({ componentSubtypeId: subtypeId })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('still returns 404 for an unknown model on update', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponentModel')
+      .mockResolvedValueOnce({ ok: false, err: 'not_found' })
+
+    const res = await request(app.callback())
+      .put(`/component-models/${modelId}`)
+      .send({ modelName: 'Vit' })
+
+    expect(res.status).toBe(404)
+  })
+})
+
+describe('Component installations with a second active installation', () => {
+  it('returns 409 when property reports a conflict on create', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'getComponentInstallations')
+      .mockResolvedValueOnce({ ok: true, data: [] })
+    jest
+      .spyOn(propertyBaseAdapter, 'createComponentInstallation')
+      .mockResolvedValueOnce({ ok: false, err: 'conflict' })
+
+    const res = await request(app.callback())
+      .post('/component-installations')
+      .send({
+        componentId,
+        spaceType: 'OBJECT',
+        installationDate: new Date().toISOString(),
+        cost: 0,
+      })
+
+    expect(res.status).toBe(409)
+  })
+
+  it('returns 409 when property reports a conflict on update', async () => {
+    jest
+      .spyOn(propertyBaseAdapter, 'updateComponentInstallation')
+      .mockResolvedValueOnce({ ok: false, err: 'conflict' })
+
+    const res = await request(app.callback())
+      .put(`/component-installations/${componentId}`)
+      .send({ componentId })
+
+    expect(res.status).toBe(409)
   })
 })
