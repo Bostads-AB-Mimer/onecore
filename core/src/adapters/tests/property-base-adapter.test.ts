@@ -1004,4 +1004,53 @@ describe('@onecore/property-adapter', () => {
       expect(called).toBe(false)
     })
   })
+
+  describe('component hierarchy updates refused by property', () => {
+    const id = '00000000-0000-0000-0000-000000000001'
+    const message =
+      'Type has 12 models under it; a type in a SURFACE category cannot have models. Move or delete them first'
+
+    const refuse = (path: string, body: unknown) =>
+      mockServer.use(
+        http.put(`${config.propertyBaseService.url}/${path}/${id}`, () =>
+          HttpResponse.json(body, { status: 409 })
+        )
+      )
+
+    it("returns property's message with a category conflict", async () => {
+      refuse('component-categories', { error: message })
+
+      const result = await propertyBaseAdapter.updateComponentCategory(id, {
+        type: 'SURFACE',
+      })
+      expect(result).toEqual({ ok: false, err: 'conflict', message })
+    })
+
+    it("returns property's message with a type conflict", async () => {
+      refuse('component-types', { error: message })
+
+      const result = await propertyBaseAdapter.updateComponentType(id, {
+        categoryId: id,
+      })
+      expect(result).toEqual({ ok: false, err: 'conflict', message })
+    })
+
+    it("returns property's message with a subtype conflict", async () => {
+      refuse('component-subtypes', { error: message })
+
+      const result = await propertyBaseAdapter.updateComponentSubtype(id, {
+        typeId: id,
+      })
+      expect(result).toEqual({ ok: false, err: 'conflict', message })
+    })
+
+    it('leaves the message out when property sends none', async () => {
+      refuse('component-subtypes', {})
+
+      const result = await propertyBaseAdapter.updateComponentSubtype(id, {
+        typeId: id,
+      })
+      expect(result).toEqual({ ok: false, err: 'conflict' })
+    })
+  })
 })

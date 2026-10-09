@@ -658,6 +658,26 @@ describe('Moves into a SURFACE category', () => {
     expect(res.body.error).toMatch(/models/)
   })
 
+  it.each([
+    ['updateComponentCategory', `/component-categories/${categoryId}`],
+    ['updateComponentType', `/component-types/${typeId}`],
+    ['updateComponentSubtype', `/component-subtypes/${subtypeId}`],
+  ] as const)(
+    "passes property's conflict message through from %s",
+    async (adapterFn, path) => {
+      const message =
+        'Subtype has 5 models; a subtype in a SURFACE category cannot have models. Move or delete them first'
+      jest
+        .spyOn(propertyBaseAdapter, adapterFn)
+        .mockResolvedValueOnce({ ok: false, err: 'conflict', message })
+
+      const res = await request(app.callback()).put(path).send({})
+
+      expect(res.status).toBe(409)
+      expect(res.body.error).toBe(message)
+    }
+  )
+
   it('returns 400 when property rejects the subtype target type', async () => {
     jest
       .spyOn(propertyBaseAdapter, 'updateComponentSubtype')
