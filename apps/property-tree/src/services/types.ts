@@ -110,19 +110,20 @@ export type UpdateComponentModel =
 
 // Component request types
 export type CreateComponent = {
-  modelId: string
-  serialNumber: string
+  subtypeId: string
+  modelId?: string | null
+  serialNumber?: string | null
   specifications?: string | null
   additionalInformation?: string | null
   warrantyStartDate?: string | null
-  warrantyMonths: number
-  priceAtPurchase: number
-  depreciationPriceAtPurchase: number
+  warrantyMonths?: number | null
+  priceAtPurchase?: number | null
+  depreciationPriceAtPurchase?: number | null
   ncsCode?: string | null
   status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
   condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
-  quantity: number
-  economicLifespan: number
+  quantity?: number
+  economicLifespan?: number | null
 }
 
 export type UpdateComponent = Partial<CreateComponent>

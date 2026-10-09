@@ -83,14 +83,20 @@ export const getComponentModelById = async (id: string) => {
 /**
  * Find a component model by exact model name match (case-insensitive).
  * Used by the add-component process to check if a model already exists.
+ * Scoped to a subtype when `subtypeId` is given.
  */
-export const findModelByExactName = async (modelName: string) => {
+export const findModelByExactName = async (
+  modelName: string,
+  subtypeId?: string
+) => {
   const model = await prisma.componentModels.findFirst({
     where: {
       modelName: {
         equals: modelName,
       },
+      ...(subtypeId ? { componentSubtypeId: subtypeId } : {}),
     },
+    orderBy: { createdAt: 'asc' },
     include: {
       subtype: {
         include: {
@@ -115,16 +121,46 @@ export const createComponentModel = async (data: CreateComponentModel) => {
   return trimStrings(model)
 }
 
+// Components carry their own subtypeId, which must match their model's, so a
+// model that moves takes its components with it.
 export const updateComponentModel = async (
   id: string,
   data: UpdateComponentModel
 ) => {
-  const model = await prisma.componentModels.update({
-    where: { id },
-    data,
+  const model = await prisma.$transaction(async (tx) => {
+    const updated = await tx.componentModels.update({
+      where: { id },
+      data,
+    })
+    if (data.componentSubtypeId) {
+      await tx.components.updateMany({
+        where: { modelId: id, subtypeId: { not: data.componentSubtypeId } },
+        data: { subtypeId: data.componentSubtypeId },
+      })
+    }
+    return updated
   })
 
   return trimStrings(model)
+}
+
+export type ComponentModelSubtypeProblem =
+  'subtype_not_found' | 'surface_subtype'
+
+export const findModelSubtypeProblem = async (
+  subtypeId: string
+): Promise<ComponentModelSubtypeProblem | null> => {
+  const subtype = await prisma.componentSubtypes.findUnique({
+    where: { id: subtypeId },
+    select: {
+      componentType: { select: { category: { select: { type: true } } } },
+    },
+  })
+  if (!subtype) return 'subtype_not_found'
+  return subtype.componentType.category.type ===
+    property.ComponentCategoryTypeSchema.enum.SURFACE
+    ? 'surface_subtype'
+    : null
 }
 
 export const deleteComponentModel = async (id: string) => {
@@ -142,7 +178,9 @@ export const getSurfaceModels = async () => {
     where: {
       subtype: {
         componentType: {
-          category: { categoryName: property.SURFACE_CATEGORY_NAME },
+          category: {
+            type: property.ComponentCategoryTypeSchema.enum.SURFACE,
+          },
         },
       },
     },

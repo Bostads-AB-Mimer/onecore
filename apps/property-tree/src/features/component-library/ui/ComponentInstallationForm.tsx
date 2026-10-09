@@ -16,16 +16,17 @@ import { Label } from '@/shared/ui/Label'
 import { useInstallComponent } from '../hooks/useInstallComponent'
 
 export interface InstallationFormData {
+  subtypeId: string
   modelId: string
   serialNumber: string
   warrantyStartDate: string
-  warrantyMonths: number
-  priceAtPurchase: number
-  depreciationPriceAtPurchase: number
-  economicLifespan: number
+  warrantyMonths: number | null
+  priceAtPurchase: number | null
+  depreciationPriceAtPurchase: number | null
+  economicLifespan: number | null
   status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
   condition: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
-  quantity: number
+  quantity: number | null
   ncsCode: string
   installationDate: string | null
   installationCost: number
@@ -33,16 +34,17 @@ export interface InstallationFormData {
 }
 
 const getInitialFormData = (): InstallationFormData => ({
+  subtypeId: '',
   modelId: '',
   serialNumber: '',
   warrantyStartDate: '',
-  warrantyMonths: 0,
-  priceAtPurchase: 0,
-  depreciationPriceAtPurchase: 0,
-  economicLifespan: 0,
+  warrantyMonths: null,
+  priceAtPurchase: null,
+  depreciationPriceAtPurchase: null,
+  economicLifespan: null,
   status: 'ACTIVE',
   condition: null,
-  quantity: 1,
+  quantity: null,
   ncsCode: '',
   installationDate: new Date().toISOString().split('T')[0],
   installationCost: 0,
@@ -69,6 +71,9 @@ export const ComponentInstallationForm = ({
   >()
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('')
   const installMutation = useInstallComponent(propertyObjectId)
+  const isSurface =
+    selectedModel?.subtype?.componentType?.category?.type === 'SURFACE'
+  const quantityIsArea = selectedModel?.subtype?.quantityType === 'SQUARE_METER'
 
   const [formData, setFormData] =
     useState<InstallationFormData>(getInitialFormData())
@@ -99,12 +104,12 @@ export const ComponentInstallationForm = ({
     if (selectedModel) {
       setFormData((prev) => ({
         ...prev,
-        warrantyMonths: selectedModel.warrantyMonths || 0,
-        priceAtPurchase: selectedModel.currentPrice || 0,
+        warrantyMonths: selectedModel.warrantyMonths ?? null,
+        priceAtPurchase: selectedModel.currentPrice ?? null,
         installationCost: selectedModel.currentInstallPrice || 0,
-        economicLifespan: selectedModel.subtype?.economicLifespan || 0,
+        economicLifespan: selectedModel.subtype?.economicLifespan ?? null,
         depreciationPriceAtPurchase:
-          selectedModel.subtype?.depreciationPrice || 0,
+          selectedModel.subtype?.depreciationPrice ?? null,
       }))
     }
   }, [selectedModel])
@@ -112,11 +117,17 @@ export const ComponentInstallationForm = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (installationMode === 'new' && !formData.subtypeId) {
+      setErrors((prev) => ({ ...prev, modelId: 'Välj en modell' }))
+      return
+    }
+
     try {
       if (installationMode === 'new') {
         await installMutation.mutateAsync({
-          modelId: formData.modelId,
-          serialNumber: formData.serialNumber,
+          subtypeId: formData.subtypeId,
+          modelId: isSurface ? null : formData.modelId || null,
+          serialNumber: isSurface ? null : formData.serialNumber || null,
           warrantyStartDate: formData.warrantyStartDate || undefined,
           warrantyMonths: formData.warrantyMonths,
           priceAtPurchase: formData.priceAtPurchase,
@@ -124,8 +135,8 @@ export const ComponentInstallationForm = ({
           economicLifespan: formData.economicLifespan,
           status: formData.status,
           condition: formData.condition,
-          quantity: formData.quantity,
-          ncsCode: formData.ncsCode || undefined,
+          quantity: formData.quantity ?? 1,
+          ncsCode: formData.ncsCode.trim() || null,
           installationDate: formData.installationDate,
           installationCost: formData.installationCost,
           orderNumber: formData.orderNumber || undefined,
@@ -209,6 +220,7 @@ export const ComponentInstallationForm = ({
         value={formData.modelId}
         onChange={(id, model) => {
           handleChange('modelId', id)
+          handleChange('subtypeId', model?.subtype?.id ?? '')
           setSelectedModel(model)
           setSelectedInstanceId('')
         }}
@@ -227,6 +239,7 @@ export const ComponentInstallationForm = ({
 
             setFormData((prev) => ({
               ...prev,
+              subtypeId: instance.subtypeId,
               serialNumber: instance.serialNumber ?? '',
               priceAtPurchase: instance.priceAtPurchase,
               status: instance.status,
@@ -279,7 +292,7 @@ export const ComponentInstallationForm = ({
               <Input
                 id="quantity-existing"
                 type="number"
-                value={formData.quantity}
+                value={formData.quantity ?? ''}
                 disabled
                 className="bg-muted"
               />
@@ -324,9 +337,12 @@ export const ComponentInstallationForm = ({
                 id="warrantyMonths-existing"
                 type="number"
                 min="0"
-                value={formData.warrantyMonths}
+                value={formData.warrantyMonths ?? ''}
                 onChange={(e) =>
-                  handleChange('warrantyMonths', parseInt(e.target.value) || 0)
+                  handleChange(
+                    'warrantyMonths',
+                    e.target.value === '' ? null : parseInt(e.target.value, 10)
+                  )
                 }
               />
               {errors.warrantyMonths && (
@@ -350,7 +366,7 @@ export const ComponentInstallationForm = ({
               <Input
                 id="priceAtPurchase-existing"
                 type="number"
-                value={formData.priceAtPurchase}
+                value={formData.priceAtPurchase ?? ''}
                 disabled
                 className="bg-muted"
               />
@@ -363,7 +379,7 @@ export const ComponentInstallationForm = ({
               <Input
                 id="depreciationPriceAtPurchase-existing"
                 type="number"
-                value={formData.depreciationPriceAtPurchase}
+                value={formData.depreciationPriceAtPurchase ?? ''}
                 disabled
                 className="bg-muted"
               />
@@ -377,7 +393,7 @@ export const ComponentInstallationForm = ({
             <Input
               id="economicLifespan-existing"
               type="number"
-              value={formData.economicLifespan}
+              value={formData.economicLifespan ?? ''}
               disabled
               className="bg-muted"
             />
@@ -391,20 +407,22 @@ export const ComponentInstallationForm = ({
           <h3 className="font-medium">Komponentinformation</h3>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="serialNumber">Serienummer *</Label>
-              <Input
-                id="serialNumber"
-                value={formData.serialNumber}
-                onChange={(e) => handleChange('serialNumber', e.target.value)}
-                placeholder="SN-12345"
-              />
-              {errors.serialNumber && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.serialNumber}
-                </p>
-              )}
-            </div>
+            {!isSurface && (
+              <div>
+                <Label htmlFor="serialNumber">Serienummer</Label>
+                <Input
+                  id="serialNumber"
+                  value={formData.serialNumber}
+                  onChange={(e) => handleChange('serialNumber', e.target.value)}
+                  placeholder="SN-12345"
+                />
+                {errors.serialNumber && (
+                  <p className="text-sm text-destructive mt-1">
+                    {errors.serialNumber}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <Label htmlFor="status">Status</Label>
@@ -443,34 +461,43 @@ export const ComponentInstallationForm = ({
             </div>
 
             <div>
-              <Label htmlFor="quantity">Antal</Label>
+              <Label htmlFor="ncsCode">
+                {isSurface ? 'NCS-kod' : 'NCS-kod (valfritt)'}
+              </Label>
               <Input
-                id="quantity"
-                type="number"
-                min="0"
-                value={formData.quantity}
-                onChange={(e) =>
-                  handleChange('quantity', parseInt(e.target.value) || 0)
-                }
+                id="ncsCode"
+                value={formData.ncsCode}
+                maxLength={15}
+                onChange={(e) => handleChange('ncsCode', e.target.value)}
+                placeholder="S 0502-Y"
               />
-              {errors.quantity && (
+              {errors.ncsCode && (
                 <p className="text-sm text-destructive mt-1">
-                  {errors.quantity}
+                  {errors.ncsCode}
                 </p>
               )}
             </div>
 
             <div>
-              <Label htmlFor="ncsCode">NCS-kod (valfritt)</Label>
+              <Label htmlFor="quantity">
+                {quantityIsArea ? 'Yta (m²)' : 'Antal'}
+              </Label>
               <Input
-                id="ncsCode"
-                value={formData.ncsCode}
-                onChange={(e) => handleChange('ncsCode', e.target.value)}
-                placeholder="123 eller 123.456"
+                id="quantity"
+                type="number"
+                min="0"
+                step={quantityIsArea ? 'any' : '1'}
+                value={formData.quantity ?? ''}
+                onChange={(e) =>
+                  handleChange(
+                    'quantity',
+                    e.target.value === '' ? null : parseFloat(e.target.value)
+                  )
+                }
               />
-              {errors.ncsCode && (
+              {errors.quantity && (
                 <p className="text-sm text-destructive mt-1">
-                  {errors.ncsCode}
+                  {errors.quantity}
                 </p>
               )}
             </div>
@@ -499,14 +526,17 @@ export const ComponentInstallationForm = ({
             </div>
 
             <div>
-              <Label htmlFor="warrantyMonths">Garanti (månader) *</Label>
+              <Label htmlFor="warrantyMonths">Garanti (månader)</Label>
               <Input
                 id="warrantyMonths"
                 type="number"
                 min="0"
-                value={formData.warrantyMonths}
+                value={formData.warrantyMonths ?? ''}
                 onChange={(e) =>
-                  handleChange('warrantyMonths', parseInt(e.target.value) || 0)
+                  handleChange(
+                    'warrantyMonths',
+                    e.target.value === '' ? null : parseInt(e.target.value, 10)
+                  )
                 }
               />
               {errors.warrantyMonths && (
@@ -526,17 +556,17 @@ export const ComponentInstallationForm = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="priceAtPurchase">Inköpspris (kr) *</Label>
+              <Label htmlFor="priceAtPurchase">Inköpspris (kr)</Label>
               <Input
                 id="priceAtPurchase"
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.priceAtPurchase}
+                value={formData.priceAtPurchase ?? ''}
                 onChange={(e) =>
                   handleChange(
                     'priceAtPurchase',
-                    parseFloat(e.target.value) || 0
+                    e.target.value === '' ? null : parseFloat(e.target.value)
                   )
                 }
               />
@@ -549,18 +579,18 @@ export const ComponentInstallationForm = ({
 
             <div>
               <Label htmlFor="depreciationPriceAtPurchase">
-                Avskrivningspris (kr) *
+                Avskrivningspris (kr)
               </Label>
               <Input
                 id="depreciationPriceAtPurchase"
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.depreciationPriceAtPurchase}
+                value={formData.depreciationPriceAtPurchase ?? ''}
                 onChange={(e) =>
                   handleChange(
                     'depreciationPriceAtPurchase',
-                    parseFloat(e.target.value) || 0
+                    e.target.value === '' ? null : parseFloat(e.target.value)
                   )
                 }
                 placeholder={
@@ -578,14 +608,17 @@ export const ComponentInstallationForm = ({
           </div>
 
           <div>
-            <Label htmlFor="economicLifespan">Ekonomisk livslängd (år) *</Label>
+            <Label htmlFor="economicLifespan">Ekonomisk livslängd (år)</Label>
             <Input
               id="economicLifespan"
               type="number"
               min="0"
-              value={formData.economicLifespan}
+              value={formData.economicLifespan ?? ''}
               onChange={(e) =>
-                handleChange('economicLifespan', parseInt(e.target.value) || 0)
+                handleChange(
+                  'economicLifespan',
+                  e.target.value === '' ? null : parseInt(e.target.value, 10)
+                )
               }
               placeholder={
                 selectedModel?.subtype?.economicLifespan

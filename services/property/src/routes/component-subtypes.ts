@@ -24,7 +24,7 @@ export const routes = (router: KoaRouter) => {
    * /component-subtypes:
    *   get:
    *     summary: Get all component subtypes
-   *     description: "Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName."
+   *     description: "Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId, subtypeName or categoryType."
    *     tags: [Component Subtypes]
    *     parameters:
    *       - in: query
@@ -34,6 +34,13 @@ export const routes = (router: KoaRouter) => {
    *           type: string
    *           format: uuid
    *         description: Filter subtypes by type ID
+   *       - in: query
+   *         name: categoryType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [EQUIPMENT, SURFACE]
+   *         description: Only subtypes whose category has this type
    *       - in: query
    *         name: subtypeName
    *         required: false
@@ -78,12 +85,13 @@ export const routes = (router: KoaRouter) => {
     '(.*)/component-subtypes',
     parseRequest({ query: componentSubtypesQueryParamsSchema }),
     async (ctx) => {
-      const { typeId, subtypeName, page, limit } = ctx.request.parsedQuery
+      const { typeId, subtypeName, categoryType, page, limit } =
+        ctx.request.parsedQuery
       const metadata = generateRouteMetadata(ctx)
 
       try {
         const result = await getComponentSubtypes(
-          { typeId, subtypeName },
+          { typeId, subtypeName, categoryType },
           page,
           limit
         )

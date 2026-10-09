@@ -109,6 +109,10 @@ export interface paths {
         404: {
           content: never
         }
+        /** @description Category has component types with a surface code */
+        409: {
+          content: never
+        }
       }
     }
     /**
@@ -183,6 +187,14 @@ export interface paths {
             }
           }
         }
+        /** @description Invalid categoryId, or a surface code on a category that is not of type SURFACE */
+        400: {
+          content: never
+        }
+        /** @description Another component type already has this code */
+        409: {
+          content: never
+        }
       }
     }
   }
@@ -236,6 +248,18 @@ export interface paths {
             }
           }
         }
+        /** @description Invalid categoryId, or a surface code on a category that is not of type SURFACE */
+        400: {
+          content: never
+        }
+        /** @description Component type not found */
+        404: {
+          content: never
+        }
+        /** @description Another component type already has this code */
+        409: {
+          content: never
+        }
       }
     }
     /**
@@ -259,13 +283,15 @@ export interface paths {
   '/component-subtypes': {
     /**
      * Get all component subtypes
-     * @description Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName.
+     * @description Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId, subtypeName or categoryType.
      */
     get: {
       parameters: {
         query?: {
           /** @description Filter subtypes by type ID */
           typeId?: string
+          /** @description Only subtypes whose category has this type */
+          categoryType?: 'EQUIPMENT' | 'SURFACE'
           /** @description Search by subtype name (case-insensitive partial match) */
           subtypeName?: string
           page?: number
@@ -442,8 +468,8 @@ export interface paths {
   }
   '/component-models/surface': {
     /**
-     * Get surface component models (Ytskikt hierarchy)
-     * @description Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+     * Get surface component models
+     * @description Returns all ComponentModels under categories of type SURFACE with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
      */
     get: {
       responses: {
@@ -469,6 +495,10 @@ export interface paths {
      */
     get: {
       parameters: {
+        query?: {
+          /** @description Only match models under this subtype */
+          subtypeId?: string
+        }
         path: {
           /** @description The exact model name to search for */
           modelName: string
@@ -482,6 +512,10 @@ export interface paths {
               content?: components['schemas']['ComponentModel']
             }
           }
+        }
+        /** @description Invalid subtypeId format */
+        400: {
+          content: never
         }
         /** @description Component model not found */
         404: {
@@ -563,12 +597,14 @@ export interface paths {
   '/components': {
     /**
      * Get all component instances
-     * @description Physical units with serial numbers and status. Filter by modelId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+     * @description Physical units with serial numbers and status. Filter by modelId, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
      */
     get: {
       parameters: {
         query?: {
           modelId?: string
+          /** @description Filter by subtype */
+          subtypeId?: string
           status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
           /** @description Search by serial number (case-insensitive partial match) */
           serialNumber?: string
@@ -595,7 +631,7 @@ export interface paths {
     }
     /**
      * Create a new component instance
-     * @description Registers a new physical unit. Requires modelId and serialNumber.
+     * @description Registers a new physical unit. Requires subtypeId. modelId is optional and must belong to the same subtype; components in a SURFACE category take no model.
      */
     post: {
       requestBody: {
@@ -611,6 +647,10 @@ export interface paths {
               content?: components['schemas']['Component']
             }
           }
+        }
+        /** @description Unknown subtypeId or modelId, model under another subtype, or a model on a SURFACE component */
+        400: {
+          content: never
         }
       }
     }
@@ -664,6 +704,14 @@ export interface paths {
               content?: components['schemas']['Component']
             }
           }
+        }
+        /** @description Unknown subtypeId or modelId, model under another subtype, or a model on a SURFACE component */
+        400: {
+          content: never
+        }
+        /** @description Component not found */
+        404: {
+          content: never
         }
       }
     }
@@ -3921,16 +3969,25 @@ export interface components {
       id: string
       categoryName: string
       description: string
+      /** @enum {string} */
+      type: 'EQUIPMENT' | 'SURFACE'
       createdAt: string
       updatedAt: string
     }
     CreateComponentCategoryRequest: {
       categoryName: string
       description: string
+      /**
+       * @default EQUIPMENT
+       * @enum {string}
+       */
+      type?: 'EQUIPMENT' | 'SURFACE'
     }
     UpdateComponentCategoryRequest: {
       categoryName?: string
       description?: string
+      /** @enum {string} */
+      type?: 'EQUIPMENT' | 'SURFACE'
     }
     ComponentType: {
       /** Format: uuid */
@@ -3939,6 +3996,8 @@ export interface components {
       /** Format: uuid */
       categoryId: string
       description: string | null
+      /** @enum {string|null} */
+      code: 'WALL' | 'FLOOR' | 'CEILING' | null
       createdAt: string
       updatedAt: string
       category?: {
@@ -3946,6 +4005,8 @@ export interface components {
         id: string
         categoryName: string
         description: string
+        /** @enum {string} */
+        type: 'EQUIPMENT' | 'SURFACE'
         createdAt: string
         updatedAt: string
       }
@@ -3972,6 +4033,8 @@ export interface components {
         /** Format: uuid */
         categoryId: string
         description: string | null
+        /** @enum {string|null} */
+        code: 'WALL' | 'FLOOR' | 'CEILING' | null
         createdAt: string
         updatedAt: string
         category?: {
@@ -3979,6 +4042,8 @@ export interface components {
           id: string
           categoryName: string
           description: string
+          /** @enum {string} */
+          type: 'EQUIPMENT' | 'SURFACE'
           createdAt: string
           updatedAt: string
         }
@@ -4022,6 +4087,8 @@ export interface components {
           /** Format: uuid */
           categoryId: string
           description: string | null
+          /** @enum {string|null} */
+          code: 'WALL' | 'FLOOR' | 'CEILING' | null
           createdAt: string
           updatedAt: string
           category?: {
@@ -4029,6 +4096,8 @@ export interface components {
             id: string
             categoryName: string
             description: string
+            /** @enum {string} */
+            type: 'EQUIPMENT' | 'SURFACE'
             createdAt: string
             updatedAt: string
           }
@@ -4039,14 +4108,16 @@ export interface components {
       /** Format: uuid */
       id: string
       /** Format: uuid */
-      modelId: string
+      subtypeId: string
+      /** Format: uuid */
+      modelId: string | null
       serialNumber: string | null
       specifications?: string | null
       additionalInformation?: string | null
       warrantyStartDate: string | null
-      warrantyMonths: number
-      priceAtPurchase: number
-      depreciationPriceAtPurchase: number
+      warrantyMonths: number | null
+      priceAtPurchase: number | null
+      depreciationPriceAtPurchase: number | null
       ncsCode?: string | null
       /** @enum {string} */
       status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
@@ -4054,9 +4125,47 @@ export interface components {
       condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
       lastInspectionDate?: string | null
       quantity: number
-      economicLifespan: number
+      economicLifespan: number | null
       createdAt: string
       updatedAt: string
+      subtype?: {
+        /** Format: uuid */
+        id: string
+        subTypeName: string
+        /** Format: uuid */
+        typeId: string
+        xpandCode: string | null
+        depreciationPrice: number
+        technicalLifespan: number
+        economicLifespan: number
+        replacementIntervalMonths: number
+        /** @enum {string} */
+        quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
+        createdAt: string
+        updatedAt: string
+        componentType?: {
+          /** Format: uuid */
+          id: string
+          typeName: string
+          /** Format: uuid */
+          categoryId: string
+          description: string | null
+          /** @enum {string|null} */
+          code: 'WALL' | 'FLOOR' | 'CEILING' | null
+          createdAt: string
+          updatedAt: string
+          category?: {
+            /** Format: uuid */
+            id: string
+            categoryName: string
+            description: string
+            /** @enum {string} */
+            type: 'EQUIPMENT' | 'SURFACE'
+            createdAt: string
+            updatedAt: string
+          }
+        }
+      }
       model?: {
         /** Format: uuid */
         id: string
@@ -4095,6 +4204,8 @@ export interface components {
             /** Format: uuid */
             categoryId: string
             description: string | null
+            /** @enum {string|null} */
+            code: 'WALL' | 'FLOOR' | 'CEILING' | null
             createdAt: string
             updatedAt: string
             category?: {
@@ -4102,12 +4213,14 @@ export interface components {
               id: string
               categoryName: string
               description: string
+              /** @enum {string} */
+              type: 'EQUIPMENT' | 'SURFACE'
               createdAt: string
               updatedAt: string
             }
           }
         }
-      }
+      } | null
       componentInstallations?: {
         /** Format: uuid */
         id: string
@@ -4159,14 +4272,16 @@ export interface components {
         /** Format: uuid */
         id: string
         /** Format: uuid */
-        modelId: string
+        subtypeId: string
+        /** Format: uuid */
+        modelId: string | null
         serialNumber: string | null
         specifications?: string | null
         additionalInformation?: string | null
         warrantyStartDate: string | null
-        warrantyMonths: number
-        priceAtPurchase: number
-        depreciationPriceAtPurchase: number
+        warrantyMonths: number | null
+        priceAtPurchase: number | null
+        depreciationPriceAtPurchase: number | null
         ncsCode?: string | null
         /** @enum {string} */
         status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
@@ -4174,9 +4289,47 @@ export interface components {
         condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
         lastInspectionDate?: string | null
         quantity: number
-        economicLifespan: number
+        economicLifespan: number | null
         createdAt: string
         updatedAt: string
+        subtype?: {
+          /** Format: uuid */
+          id: string
+          subTypeName: string
+          /** Format: uuid */
+          typeId: string
+          xpandCode: string | null
+          depreciationPrice: number
+          technicalLifespan: number
+          economicLifespan: number
+          replacementIntervalMonths: number
+          /** @enum {string} */
+          quantityType: 'UNIT' | 'METER' | 'SQUARE_METER' | 'CUBIC_METER'
+          createdAt: string
+          updatedAt: string
+          componentType?: {
+            /** Format: uuid */
+            id: string
+            typeName: string
+            /** Format: uuid */
+            categoryId: string
+            description: string | null
+            /** @enum {string|null} */
+            code: 'WALL' | 'FLOOR' | 'CEILING' | null
+            createdAt: string
+            updatedAt: string
+            category?: {
+              /** Format: uuid */
+              id: string
+              categoryName: string
+              description: string
+              /** @enum {string} */
+              type: 'EQUIPMENT' | 'SURFACE'
+              createdAt: string
+              updatedAt: string
+            }
+          }
+        }
         model?: {
           /** Format: uuid */
           id: string
@@ -4215,6 +4368,8 @@ export interface components {
               /** Format: uuid */
               categoryId: string
               description: string | null
+              /** @enum {string|null} */
+              code: 'WALL' | 'FLOOR' | 'CEILING' | null
               createdAt: string
               updatedAt: string
               category?: {
@@ -4222,12 +4377,14 @@ export interface components {
                 id: string
                 categoryName: string
                 description: string
+                /** @enum {string} */
+                type: 'EQUIPMENT' | 'SURFACE'
                 createdAt: string
                 updatedAt: string
               }
             }
           }
-        }
+        } | null
         componentInstallations?: {
           /** Format: uuid */
           id: string
@@ -4267,12 +4424,16 @@ export interface components {
       /** Format: uuid */
       categoryId: string
       description?: string
+      /** @enum {string|null} */
+      code?: 'WALL' | 'FLOOR' | 'CEILING' | null
     }
     UpdateComponentTypeRequest: {
       typeName?: string
       /** Format: uuid */
       categoryId?: string
       description?: string
+      /** @enum {string|null} */
+      code?: 'WALL' | 'FLOOR' | 'CEILING' | null
     }
     CreateComponentSubtypeRequest: {
       subTypeName: string
@@ -4334,17 +4495,16 @@ export interface components {
     }
     CreateComponentRequest: {
       /** Format: uuid */
-      modelId: string
+      subtypeId: string
+      /** Format: uuid */
+      modelId?: string | null
       serialNumber?: string | null
       specifications?: string
       additionalInformation?: string
       warrantyStartDate?: string
-      /** @default 0 */
-      warrantyMonths?: number
-      /** @default 0 */
-      priceAtPurchase?: number
-      /** @default 0 */
-      depreciationPriceAtPurchase?: number
+      warrantyMonths?: number | null
+      priceAtPurchase?: number | null
+      depreciationPriceAtPurchase?: number | null
       ncsCode?: string | null
       /**
        * @default ACTIVE
@@ -4355,26 +4515,27 @@ export interface components {
       condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
       /** @default 1 */
       quantity?: number
-      /** @default 0 */
-      economicLifespan?: number
+      economicLifespan?: number | null
     }
     UpdateComponentRequest: {
       /** Format: uuid */
-      modelId?: string
+      subtypeId?: string
+      /** Format: uuid */
+      modelId?: string | null
       serialNumber?: string | null
       specifications?: string
       additionalInformation?: string
       warrantyStartDate?: string
-      warrantyMonths?: number
-      priceAtPurchase?: number
-      depreciationPriceAtPurchase?: number
+      warrantyMonths?: number | null
+      priceAtPurchase?: number | null
+      depreciationPriceAtPurchase?: number | null
       ncsCode?: string | null
       /** @enum {string} */
       status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
       /** @enum {string|null} */
       condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
       quantity?: number
-      economicLifespan?: number
+      economicLifespan?: number | null
     }
     CreateComponentInstallationRequest: {
       /** Format: uuid */

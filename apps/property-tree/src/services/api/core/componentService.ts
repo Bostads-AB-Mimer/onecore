@@ -1,5 +1,28 @@
-import { Component, ComponentModel } from '../../types'
+import { Component, ComponentSubtype } from '../../types'
 import { GET, POST, PUT } from './baseApi'
+import type { components } from './generated/api-types'
+
+type ComponentInput = Omit<
+  components['schemas']['CreateComponentRequest'],
+  'files'
+>
+
+export const toComponentBody = (input: ComponentInput) => ({
+  subtypeId: input.subtypeId,
+  modelId: input.modelId ?? null,
+  serialNumber: input.serialNumber ?? undefined,
+  warrantyStartDate: input.warrantyStartDate,
+  warrantyMonths: input.warrantyMonths ?? null,
+  priceAtPurchase: input.priceAtPurchase ?? null,
+  depreciationPriceAtPurchase: input.depreciationPriceAtPurchase ?? null,
+  economicLifespan: input.economicLifespan ?? null,
+  status: input.status ?? 'ACTIVE',
+  condition: input.condition,
+  quantity: input.quantity ?? 1,
+  ncsCode: input.ncsCode || null,
+  specifications: input.specifications,
+  additionalInformation: input.additionalInformation,
+})
 
 export const componentService = {
   async getByRoomId(roomId: string): Promise<Component[]> {
@@ -15,33 +38,9 @@ export const componentService = {
     return (data?.content || []) as Component[]
   },
 
-  async createInstance(instanceData: {
-    modelId: string
-    serialNumber?: string | null
-    warrantyStartDate?: string
-    warrantyMonths: number
-    priceAtPurchase: number
-    depreciationPriceAtPurchase: number
-    economicLifespan: number
-    status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
-    condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
-    quantity?: number
-    ncsCode?: string
-  }): Promise<Component> {
+  async createInstance(instanceData: ComponentInput): Promise<Component> {
     const { data, error } = await POST('/components', {
-      body: {
-        modelId: instanceData.modelId,
-        serialNumber: instanceData.serialNumber ?? undefined,
-        warrantyStartDate: instanceData.warrantyStartDate,
-        warrantyMonths: instanceData.warrantyMonths,
-        priceAtPurchase: instanceData.priceAtPurchase,
-        depreciationPriceAtPurchase: instanceData.depreciationPriceAtPurchase,
-        economicLifespan: instanceData.economicLifespan,
-        status: instanceData.status || 'ACTIVE',
-        condition: instanceData.condition,
-        quantity: instanceData.quantity || 1,
-        ncsCode: instanceData.ncsCode || '',
-      },
+      body: toComponentBody(instanceData),
     })
 
     if (error) throw error
@@ -94,18 +93,7 @@ export const componentService = {
 
   async createInstanceWithInstallation(
     roomId: string,
-    instanceData: {
-      modelId: string
-      serialNumber?: string | null
-      warrantyStartDate?: string
-      warrantyMonths: number
-      priceAtPurchase: number
-      depreciationPriceAtPurchase: number
-      economicLifespan: number
-      status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
-      condition?: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
-      quantity?: number
-      ncsCode?: string
+    instanceData: ComponentInput & {
       installationDate: string | null
       installationCost: number
       orderNumber?: string
@@ -114,19 +102,7 @@ export const componentService = {
   ): Promise<Component> {
     // 1. Create component instance
     const { data: instance, error: instanceError } = await POST('/components', {
-      body: {
-        modelId: instanceData.modelId,
-        serialNumber: instanceData.serialNumber ?? undefined,
-        warrantyStartDate: instanceData.warrantyStartDate,
-        warrantyMonths: instanceData.warrantyMonths,
-        priceAtPurchase: instanceData.priceAtPurchase,
-        depreciationPriceAtPurchase: instanceData.depreciationPriceAtPurchase,
-        economicLifespan: instanceData.economicLifespan,
-        status: instanceData.status || 'ACTIVE',
-        condition: instanceData.condition,
-        quantity: instanceData.quantity || 1,
-        ncsCode: instanceData.ncsCode || '',
-      },
+      body: toComponentBody(instanceData),
     })
 
     if (instanceError) throw instanceError
@@ -199,16 +175,17 @@ export const componentService = {
   async updateInstance(
     instanceId: string,
     data: Partial<{
-      warrantyMonths: number
+      modelId?: string | null
+      warrantyMonths: number | null
       warrantyStartDate?: string
       serialNumber?: string | null
-      priceAtPurchase: number
-      depreciationPriceAtPurchase: number
-      economicLifespan: number
+      priceAtPurchase: number | null
+      depreciationPriceAtPurchase: number | null
+      economicLifespan: number | null
       status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
       condition: 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED' | null
       quantity: number
-      ncsCode?: string
+      ncsCode?: string | null
     }>
   ): Promise<Component> {
     const { data: response, error } = await PUT('/components/{id}', {
@@ -226,9 +203,15 @@ export const componentService = {
     return response.content as Component
   },
 
-  async getSurfaceModels(): Promise<ComponentModel[]> {
-    const { data, error } = await GET('/component-models/surface', {})
-    if (error) throw error
-    return data?.content ?? []
+  async getSurfaceSubtypes(): Promise<ComponentSubtype[]> {
+    const subtypes: ComponentSubtype[] = []
+    for (let page = 1; ; page++) {
+      const { data, error } = await GET('/component-subtypes', {
+        params: { query: { categoryType: 'SURFACE', page, limit: 100 } },
+      })
+      if (error) throw error
+      subtypes.push(...(data?.content ?? []))
+      if (page >= (data?.pagination?.totalPages ?? 1)) return subtypes
+    }
   },
 }

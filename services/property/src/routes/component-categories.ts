@@ -225,6 +225,8 @@ export const routes = (router: KoaRouter) => {
    *                   $ref: '#/components/schemas/ComponentCategory'
    *       404:
    *         description: Component category not found
+   *       409:
+   *         description: Category has component types with a surface code
    */
   router.put(
     '(.*)/component-categories/:id',
@@ -248,6 +250,20 @@ export const routes = (router: KoaRouter) => {
         if (!existing) {
           ctx.status = 404
           ctx.body = { error: 'Component category not found', ...metadata }
+          return
+        }
+
+        const leavesSurface =
+          data.type !== undefined &&
+          data.type !== 'SURFACE' &&
+          existing.type === 'SURFACE'
+        if (leavesSurface && existing.componentTypes.some((t) => t.code)) {
+          ctx.status = 409
+          ctx.body = {
+            error:
+              'Category has component types with a surface code; clear them first',
+            ...metadata,
+          }
           return
         }
 

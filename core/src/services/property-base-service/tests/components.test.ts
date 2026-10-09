@@ -365,7 +365,7 @@ describe('Component Subtypes API', () => {
       const subtypes = factory.componentSubtype.buildList(3)
       jest
         .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
-        .mockResolvedValueOnce({ ok: true, data: subtypes })
+        .mockResolvedValueOnce({ ok: true, data: { content: subtypes } })
 
       const res = await request(app.callback()).get('/component-subtypes')
 
@@ -377,7 +377,7 @@ describe('Component Subtypes API', () => {
       const subtypes = factory.componentSubtype.buildList(2)
       const getSpy = jest
         .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
-        .mockResolvedValueOnce({ ok: true, data: subtypes })
+        .mockResolvedValueOnce({ ok: true, data: { content: subtypes } })
 
       const res = await request(app.callback()).get(
         '/component-subtypes?typeId=00000000-0000-0000-0000-000000000001'
@@ -388,6 +388,7 @@ describe('Component Subtypes API', () => {
         '00000000-0000-0000-0000-000000000001',
         1,
         20,
+        undefined,
         undefined
       )
     })
@@ -398,21 +399,27 @@ describe('Component Subtypes API', () => {
       })
       const getSpy = jest
         .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
-        .mockResolvedValueOnce({ ok: true, data: subtypes })
+        .mockResolvedValueOnce({ ok: true, data: { content: subtypes } })
 
       const res = await request(app.callback()).get(
         '/component-subtypes?subtypeName=Dishwasher'
       )
 
       expect(res.status).toBe(200)
-      expect(getSpy).toHaveBeenCalledWith(undefined, 1, 20, 'Dishwasher')
+      expect(getSpy).toHaveBeenCalledWith(
+        undefined,
+        1,
+        20,
+        'Dishwasher',
+        undefined
+      )
     })
 
     it('response matches schema', async () => {
       const subtypes = factory.componentSubtype.buildList(2)
       jest
         .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
-        .mockResolvedValueOnce({ ok: true, data: subtypes })
+        .mockResolvedValueOnce({ ok: true, data: { content: subtypes } })
 
       const res = await request(app.callback()).get('/component-subtypes')
 
@@ -799,7 +806,29 @@ describe('Components API', () => {
         undefined,
         1,
         20,
+        undefined,
         undefined
+      )
+    })
+
+    it('filters by subtypeId', async () => {
+      const components = factory.component.buildList(2)
+      const getSpy = jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: true, data: components })
+
+      const res = await request(app.callback()).get(
+        '/components?subtypeId=00000000-0000-0000-0002-000000000001'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getSpy).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        1,
+        20,
+        undefined,
+        '00000000-0000-0000-0002-000000000001'
       )
     })
 
@@ -812,7 +841,14 @@ describe('Components API', () => {
       const res = await request(app.callback()).get('/components?status=ACTIVE')
 
       expect(res.status).toBe(200)
-      expect(getSpy).toHaveBeenCalledWith(undefined, 'ACTIVE', 1, 20, undefined)
+      expect(getSpy).toHaveBeenCalledWith(
+        undefined,
+        'ACTIVE',
+        1,
+        20,
+        undefined,
+        undefined
+      )
     })
 
     it('response matches schema', async () => {
@@ -905,11 +941,12 @@ describe('Components API', () => {
         .mockResolvedValueOnce({ ok: true, data: component })
 
       const res = await request(app.callback()).post('/components').send({
+        subtypeId: component.subtypeId,
         modelId: component.modelId,
       })
 
       expect(res.status).toBe(200)
-      expect(res.body.content.modelId).toBe(component.modelId)
+      expect(res.body.content.subtypeId).toBe(component.subtypeId)
     })
 
     it('returns 400 when required fields missing', async () => {
@@ -920,6 +957,7 @@ describe('Components API', () => {
 
     it('validates status enum', async () => {
       const res = await request(app.callback()).post('/components').send({
+        subtypeId: '00000000-0000-0000-0002-000000000001',
         modelId: '00000000-0000-0000-0000-000000000001',
         status: 'INVALID_STATUS',
       })
@@ -1671,7 +1709,7 @@ describe('Cascade Delete Prevention', () => {
         .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
         .mockResolvedValueOnce({
           ok: true,
-          data: [factory.componentSubtype.build()],
+          data: { content: [factory.componentSubtype.build()] },
         })
 
       const res = await request(app.callback()).delete(

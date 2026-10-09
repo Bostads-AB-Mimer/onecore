@@ -14,6 +14,7 @@ import {
 } from '@/shared/ui/Dialog'
 
 import { entityDialogConfig } from '../constants/entityDialogConfig'
+import { cleanFormData } from '../lib/cleanFormData'
 import { FieldRenderer } from './FieldRenderer'
 import {
   type HierarchyData,
@@ -46,11 +47,14 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [newParentId, setNewParentId] = useState<string | undefined>(undefined)
+  const [newParentSubtypeId, setNewParentSubtypeId] = useState<
+    string | undefined
+  >(undefined)
+  const hierarchySubtypeId = hierarchyData?.subtypeId
 
   const mutation = useComponentEntityMutation(
     entityType,
-    mode === 'create' ? 'create' : 'update',
-    entity?.id
+    mode === 'create' ? 'create' : 'update'
   )
 
   // Initialize form data
@@ -84,6 +88,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
               break
             case 'instance':
               defaults.modelId = parentId
+              if (hierarchySubtypeId) defaults.subtypeId = hierarchySubtypeId
               break
           }
         }
@@ -113,8 +118,18 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       }
       setErrors({})
       setNewParentId(undefined) // Reset parent change when dialog opens
+      setNewParentSubtypeId(undefined)
     }
-  }, [isOpen, mode, entity, parentId, entityType, config.fields, defaultValues])
+  }, [
+    isOpen,
+    mode,
+    entity,
+    parentId,
+    entityType,
+    config.fields,
+    defaultValues,
+    hierarchySubtypeId,
+  ])
 
   const handleChange = (name: string, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -146,22 +161,6 @@ export function GenericEntityDialog<T extends Record<string, any>>({
 
   // Clean form data by converting empty strings to undefined for optional fields
   // This prevents validation errors for fields with regex patterns (e.g., ncsCode)
-  const cleanFormData = (data: Record<string, any>): Record<string, any> => {
-    const cleaned: Record<string, any> = {}
-    for (const [key, value] of Object.entries(data)) {
-      // Convert empty strings to undefined for optional fields
-      if (value === '') {
-        const field = config.fields.find((f) => f.name === key)
-        if (field && !field.required) {
-          // Skip empty optional fields (don't include in payload)
-          continue
-        }
-      }
-      cleaned[key] = value
-    }
-    return cleaned
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -173,15 +172,19 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       // For mutations, we need to pass parentId separately for cache invalidation
       let mutationData
       if (mode === 'create') {
-        mutationData = { ...cleanFormData(formData), parentId }
+        mutationData = { ...cleanFormData(config.fields, formData), parentId }
       } else {
         // Build update data, including new parent ID if changed
-        const updateData = cleanFormData(formData)
+        const updateData = cleanFormData(config.fields, formData)
 
         // If parent has changed, add the new parent ID field
         if (newParentId && entityType !== 'category') {
           const parentField = parentIdFieldMap[entityType]
           updateData[parentField] = newParentId
+          // An instance's subtypeId must match its model's subtype
+          if (entityType === 'instance' && newParentSubtypeId) {
+            updateData.subtypeId = newParentSubtypeId
+          }
         }
 
         mutationData = {
@@ -217,7 +220,10 @@ export function GenericEntityDialog<T extends Record<string, any>>({
             <ParentHierarchySelector
               entityType={entityType}
               initialHierarchy={hierarchyData}
-              onParentChange={setNewParentId}
+              onParentChange={(parentId, subtypeId) => {
+                setNewParentId(parentId)
+                setNewParentSubtypeId(subtypeId)
+              }}
             />
           )}
 

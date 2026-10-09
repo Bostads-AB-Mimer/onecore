@@ -1,5 +1,6 @@
 import type { ComponentCategory } from '@/services/types'
 
+import { COMPONENT_CATEGORY_TYPE_LABELS } from '@/shared/lib/componentLabels'
 import { type Column, DataTable } from '@/shared/ui/DataTable'
 
 interface CategoriesTableProps {
@@ -28,6 +29,15 @@ export const CategoriesTable = ({
       label: 'Beskrivning',
       render: (item) => (
         <span className="text-muted-foreground">{item.description || '-'}</span>
+      ),
+    },
+    {
+      key: 'type',
+      label: 'Sort',
+      render: (item) => (
+        <span className="text-muted-foreground">
+          {item.type ? COMPONENT_CATEGORY_TYPE_LABELS[item.type] : '-'}
+        </span>
       ),
     },
   ]

@@ -3,6 +3,7 @@ model ComponentTypes {
   typeName    String   @db.NVarChar(255)
   categoryId  String   @db.UniqueIdentifier
   description String?  @db.NVarChar(255)
+  code        String?  @db.NVarChar(20)
   createdAt   DateTime @default(now()) @db.DateTime
   updatedAt   DateTime @default(now()) @updatedAt @db.DateTime
 
