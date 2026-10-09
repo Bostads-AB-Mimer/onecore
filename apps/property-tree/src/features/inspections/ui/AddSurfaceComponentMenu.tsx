@@ -13,8 +13,8 @@ import {
 
 import type { SurfaceCode } from '../constants'
 import { useAddSurfaceComponent } from '../hooks/useAddSurfaceComponent'
-import { useSurfaceModels } from '../hooks/useSurfaceModels'
-import { groupSurfaceModels, surfaceLabel } from '../lib/surfaces'
+import { useSurfaceSubtypes } from '../hooks/useSurfaceSubtypes'
+import { groupSurfaceSubtypes, surfaceLabel } from '../lib/surfaces'
 
 interface AddSurfaceComponentMenuProps {
   propertyObjectId: string
@@ -25,12 +25,12 @@ export function AddSurfaceComponentMenu({
   propertyObjectId,
   missingSurfaces,
 }: AddSurfaceComponentMenuProps) {
-  const { data: surfaceModels = [] } = useSurfaceModels()
+  const { data: surfaceSubtypes = [] } = useSurfaceSubtypes()
   const addSurfaceComponent = useAddSurfaceComponent(propertyObjectId)
 
   const groups = useMemo(
-    () => groupSurfaceModels(surfaceModels),
-    [surfaceModels]
+    () => groupSurfaceSubtypes(surfaceSubtypes),
+    [surfaceSubtypes]
   )
 
   if (missingSurfaces.length === 0) {
@@ -48,16 +48,14 @@ export function AddSurfaceComponentMenu({
 
           return (
             <DropdownMenuSub key={code}>
-              <DropdownMenuSubTrigger>
+              <DropdownMenuSubTrigger disabled={subtypes.length === 0}>
                 {surfaceLabel(code, groups)}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 {subtypes.map((option) => (
                   <DropdownMenuItem
                     key={option.subtypeId}
-                    onClick={() =>
-                      addSurfaceComponent.mutate(option.representativeModelId)
-                    }
+                    onClick={() => addSurfaceComponent.mutate(option.subtypeId)}
                   >
                     {option.subtypeName}
                   </DropdownMenuItem>

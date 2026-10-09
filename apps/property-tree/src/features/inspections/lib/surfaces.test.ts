@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import type { components as apiTypes } from '@/services/api/core/generated/api-types'
-import type { ComponentModel } from '@/services/types'
+import type { ComponentSubtype } from '@/services/types'
 
 import {
   findMissingSurfaces,
   getSurfaceCode,
-  groupSurfaceModels,
+  groupSurfaceSubtypes,
   surfaceLabel,
   toActionComponentType,
 } from './surfaces'
@@ -16,26 +16,20 @@ type FetchedComponent = apiTypes['schemas']['Component']
 const component = (code?: string | null) =>
   ({
     id: `component-${code ?? 'none'}`,
-    model: { subtype: { componentType: { code } } },
+    subtype: { componentType: { code } },
   }) as unknown as FetchedComponent
 
-const model = (m: {
+const subtype = (s: {
   id: string
-  modelName: string
-  subtypeId: string
-  subtypeName: string
+  subTypeName: string
   code?: string | null
   typeName?: string
 }) =>
   ({
-    id: m.id,
-    modelName: m.modelName,
-    subtype: {
-      id: m.subtypeId,
-      subTypeName: m.subtypeName,
-      componentType: { code: m.code, typeName: m.typeName },
-    },
-  }) as unknown as ComponentModel
+    id: s.id,
+    subTypeName: s.subTypeName,
+    componentType: { code: s.code, typeName: s.typeName },
+  }) as unknown as ComponentSubtype
 
 describe('getSurfaceCode', () => {
   it('reads the code from the component type', () => {
@@ -89,87 +83,83 @@ describe('findMissingSurfaces', () => {
   })
 })
 
-describe('groupSurfaceModels', () => {
-  const painted = {
-    subtypeId: 's1',
-    subtypeName: 'Målad vägg',
-    code: 'WALL',
-    typeName: 'Vägg',
-  }
-
-  it('groups subtypes under the type code with the type name as label', () => {
-    const groups = groupSurfaceModels([
-      model({ id: 'm1', modelName: 'MÅLAS VIT', ...painted }),
-      model({
-        id: 'm2',
-        modelName: 'Ekparkett',
-        subtypeId: 's2',
-        subtypeName: 'Parkett',
-        code: 'FLOOR',
-        typeName: 'Golv',
+describe('groupSurfaceSubtypes', () => {
+  it('groups subtypes by surface code, sorted by name', () => {
+    const groups = groupSurfaceSubtypes([
+      subtype({
+        id: 's2',
+        subTypeName: 'Målning väggar',
+        code: 'WALL',
+        typeName: 'Vägg',
+      }),
+      subtype({
+        id: 's1',
+        subTypeName: 'Kakel',
+        code: 'WALL',
+        typeName: 'Vägg',
       }),
     ])
 
     expect(groups.get('WALL')).toEqual({
       typeName: 'Vägg',
       subtypes: [
-        {
-          subtypeId: 's1',
-          subtypeName: 'Målad vägg',
-          representativeModelId: 'm1',
-        },
+        { subtypeId: 's1', subtypeName: 'Kakel' },
+        { subtypeId: 's2', subtypeName: 'Målning väggar' },
       ],
     })
-    expect(groups.get('FLOOR')?.typeName).toBe('Golv')
   })
 
-  it('picks the model named like its subtype as representative', () => {
-    const groups = groupSurfaceModels([
-      model({ id: 'm1', modelName: 'MÅLAS VIT', ...painted }),
-      model({ id: 'm2', modelName: 'Målad vägg', ...painted }),
+  it('puts the Ospecificerad subtype first', () => {
+    const groups = groupSurfaceSubtypes([
+      subtype({ id: 's1', subTypeName: 'Kakel', code: 'WALL' }),
+      subtype({ id: 's2', subTypeName: 'Ospecificerad vägg', code: 'WALL' }),
+      subtype({ id: 's3', subTypeName: 'Tapet', code: 'WALL' }),
     ])
 
-    expect(groups.get('WALL')?.subtypes[0].representativeModelId).toBe('m2')
+    expect(
+      groups.get('WALL')?.subtypes.map((option) => option.subtypeId)
+    ).toEqual(['s2', 's1', 's3'])
   })
 
-  it('falls back to the alphabetically first model', () => {
-    const groups = groupSurfaceModels([
-      model({ id: 'm1', modelName: 'NCS S 0500-N', ...painted }),
-      model({ id: 'm2', modelName: 'Beige', ...painted }),
-    ])
+  it('lists a subtype once even when it appears twice', () => {
+    const s = subtype({
+      id: 's2',
+      subTypeName: 'Målning väggar',
+      code: 'WALL',
+      typeName: 'Vägg',
+    })
 
-    expect(groups.get('WALL')?.subtypes[0].representativeModelId).toBe('m2')
-  })
+    const groups = groupSurfaceSubtypes([s, s])
 
-  it('sorts subtypes by name', () => {
-    const groups = groupSurfaceModels([
-      model({
-        id: 'm1',
-        modelName: 'A',
-        subtypeId: 's2',
-        subtypeName: 'Tapet',
-        code: 'WALL',
-        typeName: 'Vägg',
-      }),
-      model({ id: 'm2', modelName: 'B', ...painted }),
-    ])
-
-    expect(groups.get('WALL')?.subtypes.map((s) => s.subtypeName)).toEqual([
-      'Målad vägg',
-      'Tapet',
+    expect(groups.get('WALL')?.subtypes).toEqual([
+      { subtypeId: 's2', subtypeName: 'Målning väggar' },
     ])
   })
 
-  it('skips models whose type has no surface code', () => {
-    const groups = groupSurfaceModels([
-      model({
-        id: 'm1',
-        modelName: 'Bosch',
-        subtypeId: 's9',
-        subtypeName: 'Diskmaskin 60',
+  it('skips subtypes without a surface code', () => {
+    const groups = groupSurfaceSubtypes([
+      subtype({
+        id: 's9',
+        subTypeName: 'Diskmaskin 60',
         code: null,
         typeName: 'Diskmaskin',
       }),
+    ])
+
+    expect(groups.size).toBe(0)
+  })
+
+  it('falls back to the Swedish label when the type has no name', () => {
+    const groups = groupSurfaceSubtypes([
+      subtype({ id: 's1', subTypeName: 'Parkett', code: 'FLOOR' }),
+    ])
+
+    expect(groups.get('FLOOR')?.typeName).toBe('Golv')
+  })
+
+  it('skips a subtype without a name', () => {
+    const groups = groupSurfaceSubtypes([
+      subtype({ id: 's1', subTypeName: '', code: 'WALL', typeName: 'Vägg' }),
     ])
 
     expect(groups.size).toBe(0)
@@ -178,12 +168,10 @@ describe('groupSurfaceModels', () => {
 
 describe('surfaceLabel', () => {
   it('uses the type name from the library when there is one', () => {
-    const groups = groupSurfaceModels([
-      model({
-        id: 'm1',
-        modelName: 'A',
-        subtypeId: 's1',
-        subtypeName: 'Målad vägg',
+    const groups = groupSurfaceSubtypes([
+      subtype({
+        id: 's1',
+        subTypeName: 'Målad vägg',
         code: 'WALL',
         typeName: 'Väggar',
       }),
@@ -192,7 +180,7 @@ describe('surfaceLabel', () => {
     expect(surfaceLabel('WALL', groups)).toBe('Väggar')
   })
 
-  it('falls back to a Swedish label when the library has no models', () => {
+  it('falls back to a Swedish label when the library has no subtypes', () => {
     expect(surfaceLabel('CEILING', new Map())).toBe('Tak')
   })
 })

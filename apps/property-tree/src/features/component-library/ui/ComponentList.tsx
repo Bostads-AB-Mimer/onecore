@@ -2,6 +2,8 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Building, Package, Settings, Wrench } from 'lucide-react'
 
+import { formatComponentLabel } from '@/entities/component'
+
 import { Component } from '@/services/types'
 
 import { Button } from '@/shared/ui/Button'
@@ -106,7 +108,7 @@ export function ComponentList({
                       </div>
                       <div>
                         <h3 className="font-medium group-hover:text-blue-500 transition-colors">
-                          {component.serialNumber || component.id}
+                          {formatComponentLabel(component)}
                         </h3>
                         <p className="text-sm text-gray-500">? plats</p>
                       </div>

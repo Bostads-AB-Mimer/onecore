@@ -4,6 +4,7 @@ import * as schemas from '../../src/services/property-base-service/schemas'
 export const ComponentFactory = Factory.define<schemas.Component>(
   ({ sequence }) => ({
     id: `00000000-0000-0000-0004-${sequence.toString().padStart(12, '0')}`,
+    subtypeId: '00000000-0000-0000-0002-000000000001',
     modelId: '00000000-0000-0000-0003-000000000001',
     serialNumber: `SN-${sequence.toString().padStart(6, '0')}`,
     specifications: 'Component specifications',
@@ -19,6 +20,7 @@ export const ComponentFactory = Factory.define<schemas.Component>(
     economicLifespan: 15,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    subtype: undefined,
     model: undefined,
     componentInstallations: undefined,
   })

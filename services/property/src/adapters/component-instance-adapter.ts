@@ -1,4 +1,5 @@
 import { logger } from '@onecore/utilities'
+import { property } from '@onecore/types'
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 import type { CreateComponent, UpdateComponent } from '../types/component'
@@ -26,11 +27,19 @@ const propertyObjectWithStructuresSelect = {
   },
 } as const
 
+const componentHierarchyInclude = {
+  subtype: {
+    include: { componentType: { include: { category: true } } },
+  },
+  model: true,
+} as const
+
 // ==================== COMPONENTS (INSTANCES) ====================
 
 export const getComponents = async (
   filters: {
     modelId?: string
+    subtypeId?: string
     status?: string
     serialNumber?: string
   },
@@ -41,6 +50,7 @@ export const getComponents = async (
 
   const where: any = {}
   if (filters.modelId) where.modelId = filters.modelId
+  if (filters.subtypeId) where.subtypeId = filters.subtypeId
   if (filters.status) where.status = filters.status
 
   // Only apply search with minimum 2 characters (consistent with model search)
@@ -58,19 +68,7 @@ export const getComponents = async (
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
-        model: {
-          include: {
-            subtype: {
-              include: {
-                componentType: {
-                  include: {
-                    category: true,
-                  },
-                },
-              },
-            },
-          },
-        },
+        ...componentHierarchyInclude,
         componentInstallations: {
           where: {
             deinstallationDate: null, // Only active installations
@@ -104,11 +102,7 @@ export const getComponentById = async (id: string) => {
   const component = await prisma.components.findUnique({
     where: { id },
     include: {
-      model: {
-        include: {
-          subtype: true,
-        },
-      },
+      ...componentHierarchyInclude,
       componentInstallations: {
         include: {
           propertyObject: {
@@ -143,6 +137,42 @@ export const deleteComponent = async (id: string) => {
   await prisma.components.delete({
     where: { id },
   })
+}
+
+export type ComponentModelProblem =
+  | 'subtype_not_found'
+  | 'model_not_found'
+  | 'model_subtype_mismatch'
+  | 'surface_has_model'
+
+export const findComponentModelProblem = async (params: {
+  subtypeId: string
+  modelId: string | null | undefined
+}): Promise<ComponentModelProblem | null> => {
+  const subtype = await prisma.componentSubtypes.findUnique({
+    where: { id: params.subtypeId },
+    select: {
+      id: true,
+      componentType: { select: { category: { select: { type: true } } } },
+    },
+  })
+  if (!subtype) return 'subtype_not_found'
+  if (!params.modelId) return null
+
+  const isSurface =
+    subtype.componentType.category.type ===
+    property.ComponentCategoryTypeSchema.enum.SURFACE
+  if (isSurface) return 'surface_has_model'
+
+  const model = await prisma.componentModels.findUnique({
+    where: { id: params.modelId },
+    select: { id: true, componentSubtypeId: true },
+  })
+  if (!model) return 'model_not_found'
+  if (model.componentSubtypeId !== params.subtypeId) {
+    return 'model_subtype_mismatch'
+  }
+  return null
 }
 
 export const updateComponentInspectionState = async (
@@ -180,19 +210,7 @@ export const getComponentsByRoomId = async (roomId: string) => {
       },
     },
     include: {
-      model: {
-        include: {
-          subtype: {
-            include: {
-              componentType: {
-                include: {
-                  category: true,
-                },
-              },
-            },
-          },
-        },
-      },
+      ...componentHierarchyInclude,
       componentInstallations: {
         where: {
           spaceId: roomId,

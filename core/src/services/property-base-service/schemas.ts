@@ -737,23 +737,25 @@ export const ComponentInstallationWithoutComponentSchema = z.object({
 // The componentInstallations field uses the "WithoutComponent" version to break circular reference
 export const ComponentSchema = z.object({
   id: z.string().uuid(),
-  modelId: z.string().uuid(),
+  subtypeId: z.string().uuid(),
+  modelId: z.string().uuid().nullable(),
   serialNumber: z.string().nullable(),
   specifications: z.string().nullable().optional(),
   additionalInformation: z.string().nullable().optional(),
   warrantyStartDate: z.string().nullable(),
-  warrantyMonths: z.number().int().min(0),
-  priceAtPurchase: z.number().min(0),
-  depreciationPriceAtPurchase: z.number().min(0),
+  warrantyMonths: z.number().int().min(0).nullable(),
+  priceAtPurchase: z.number().min(0).nullable(),
+  depreciationPriceAtPurchase: z.number().min(0).nullable(),
   ncsCode: z.string().nullable().optional(),
   status: ComponentStatusEnum,
   condition: ComponentConditionEnum.nullable().optional(),
   lastInspectionDate: z.string().nullable().optional(),
   quantity: z.number().min(0),
-  economicLifespan: z.number().min(0),
+  economicLifespan: z.number().min(0).nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  model: ComponentModelSchema.optional(),
+  subtype: ComponentSubtypeSchema.optional(),
+  model: ComponentModelSchema.nullable().optional(),
   componentInstallations: z
     .array(ComponentInstallationWithoutComponentSchema)
     .optional(),
@@ -800,6 +802,7 @@ export const ComponentTypesQueryParamsSchema = z.object({
 export const ComponentSubtypesQueryParamsSchema = z.object({
   typeId: z.string().uuid().optional(),
   subtypeName: z.string().optional(), // Search parameter
+  categoryType: property.ComponentCategoryTypeSchema.optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
@@ -815,6 +818,7 @@ export const ComponentModelsQueryParamsSchema = z.object({
 
 export const ComponentsQueryParamsSchema = z.object({
   modelId: z.string().uuid().optional(),
+  subtypeId: z.string().uuid().optional(),
   status: ComponentStatusEnum.optional(),
   serialNumber: z.string().optional(), // Search parameter
   page: z.coerce.number().int().min(1).optional().default(1),
@@ -903,36 +907,38 @@ export const UpdateComponentModelSchema = z.object({
 })
 
 export const CreateComponentSchema = z.object({
-  modelId: z.string().uuid(),
+  subtypeId: z.string().uuid(),
+  modelId: z.string().uuid().nullable().optional(),
   serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
   additionalInformation: z.string().trim().optional(),
   warrantyStartDate: z.coerce.date().optional(),
-  warrantyMonths: z.number().int().min(0).optional().default(0),
-  priceAtPurchase: z.number().min(0).optional().default(0),
-  depreciationPriceAtPurchase: z.number().min(0).optional().default(0),
-  ncsCode: z.string().trim().optional(),
+  warrantyMonths: z.number().int().min(0).nullable().optional(),
+  priceAtPurchase: z.number().min(0).nullable().optional(),
+  depreciationPriceAtPurchase: z.number().min(0).nullable().optional(),
+  ncsCode: z.string().trim().max(15).nullable().optional(),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
   condition: ComponentConditionEnum.nullable().optional(),
   quantity: z.number().min(0).optional().default(1),
-  economicLifespan: z.number().min(0).optional().default(0),
+  economicLifespan: z.number().min(0).nullable().optional(),
   files: z.string().trim().optional(),
 })
 
 export const UpdateComponentSchema = z.object({
-  modelId: z.string().uuid().optional(),
+  subtypeId: z.string().uuid().optional(),
+  modelId: z.string().uuid().nullable().optional(),
   serialNumber: z.string().trim().nullable().optional(),
   specifications: z.string().trim().optional(),
   additionalInformation: z.string().trim().optional(),
   warrantyStartDate: z.coerce.date().optional(),
-  warrantyMonths: z.number().int().min(0).optional(),
-  priceAtPurchase: z.number().min(0).optional(),
-  depreciationPriceAtPurchase: z.number().min(0).optional(),
-  ncsCode: z.string().trim().optional(),
+  warrantyMonths: z.number().int().min(0).nullable().optional(),
+  priceAtPurchase: z.number().min(0).nullable().optional(),
+  depreciationPriceAtPurchase: z.number().min(0).nullable().optional(),
+  ncsCode: z.string().trim().max(15).nullable().optional(),
   status: ComponentStatusEnum.optional(),
   condition: ComponentConditionEnum.nullable().optional(),
   quantity: z.number().min(0).optional(),
-  economicLifespan: z.number().min(0).optional(),
+  economicLifespan: z.number().min(0).nullable().optional(),
   files: z.string().trim().optional(),
 })
 
@@ -1092,7 +1098,7 @@ export type DocumentWithUrl = z.infer<typeof DocumentWithUrlSchema>
 
 export const AddComponentRequestSchema = z.object({
   // Model info (find or create)
-  modelName: z.string().trim().min(1, 'Model name is required'),
+  modelName: z.string().trim().min(1).optional(),
   componentSubtypeId: z.string().uuid(),
 
   // Model fields - REQUIRED if model doesn't exist, ignored if model exists
@@ -1105,16 +1111,21 @@ export const AddComponentRequestSchema = z.object({
   coclassCode: z.string().trim().optional(),
 
   // Component instance info
-  serialNumber: z.string().trim().min(1, 'Serial number is required'),
+  serialNumber: z
+    .string()
+    .trim()
+    .nullable()
+    .optional()
+    .transform((v) => v || null),
   specifications: z.string().trim().optional(),
   additionalInformation: z.string().trim().optional(),
   warrantyStartDate: z.string().optional(),
-  componentWarrantyMonths: z.number().int().min(0),
-  priceAtPurchase: z.number().min(0),
-  depreciationPriceAtPurchase: z.number().min(0),
-  economicLifespan: z.number().min(0),
+  componentWarrantyMonths: z.number().int().min(0).nullable().optional(),
+  priceAtPurchase: z.number().min(0).nullable().optional(),
+  depreciationPriceAtPurchase: z.number().min(0).nullable().optional(),
+  economicLifespan: z.number().min(0).nullable().optional(),
   quantity: z.number().min(0).optional().default(1),
-  ncsCode: z.string().trim().optional(),
+  ncsCode: z.string().trim().max(15).optional(),
   status: ComponentStatusEnum.optional().default('ACTIVE'),
   condition: ComponentConditionEnum.nullable().optional(),
 
@@ -1128,14 +1139,16 @@ export const AddComponentRequestSchema = z.object({
 
 export const AddComponentResponseSchema = z.object({
   modelCreated: z.boolean(),
-  model: z.object({
-    id: z.string().uuid(),
-    modelName: z.string(),
-    manufacturer: z.string(),
-  }),
+  model: z
+    .object({
+      id: z.string().uuid(),
+      modelName: z.string(),
+      manufacturer: z.string(),
+    })
+    .nullable(),
   component: z.object({
     id: z.string().uuid(),
-    serialNumber: z.string(),
+    serialNumber: z.string().nullable(),
     status: z.string(),
   }),
   installation: z.object({

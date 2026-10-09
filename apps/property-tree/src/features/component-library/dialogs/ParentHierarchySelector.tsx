@@ -31,7 +31,10 @@ export type ParentEntityType = 'category' | 'type' | 'subtype' | 'model'
 interface ParentHierarchySelectorProps {
   entityType: Exclude<EntityType, 'category'>
   initialHierarchy: HierarchyData
-  onParentChange: (parentId: string | undefined) => void
+  onParentChange: (
+    parentId: string | undefined,
+    subtypeId: string | undefined
+  ) => void
 }
 
 // Map entity type to the parent ID field name used in the API
@@ -123,7 +126,7 @@ export function ParentHierarchySelector({
   // Notify parent component when the direct parent changes
   useEffect(() => {
     const directParentId = getDirectParentId()
-    onParentChange(directParentId)
+    onParentChange(directParentId, selectedSubtypeId)
   }, [selectedCategoryId, selectedTypeId, selectedSubtypeId, selectedModelId])
 
   // Handle category change - reset all child selections

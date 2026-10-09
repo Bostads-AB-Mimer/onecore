@@ -47,11 +47,14 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [newParentId, setNewParentId] = useState<string | undefined>(undefined)
+  const [newParentSubtypeId, setNewParentSubtypeId] = useState<
+    string | undefined
+  >(undefined)
+  const hierarchySubtypeId = hierarchyData?.subtypeId
 
   const mutation = useComponentEntityMutation(
     entityType,
-    mode === 'create' ? 'create' : 'update',
-    entity?.id
+    mode === 'create' ? 'create' : 'update'
   )
 
   // Initialize form data
@@ -85,6 +88,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
               break
             case 'instance':
               defaults.modelId = parentId
+              if (hierarchySubtypeId) defaults.subtypeId = hierarchySubtypeId
               break
           }
         }
@@ -114,8 +118,18 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       }
       setErrors({})
       setNewParentId(undefined) // Reset parent change when dialog opens
+      setNewParentSubtypeId(undefined)
     }
-  }, [isOpen, mode, entity, parentId, entityType, config.fields, defaultValues])
+  }, [
+    isOpen,
+    mode,
+    entity,
+    parentId,
+    entityType,
+    config.fields,
+    defaultValues,
+    hierarchySubtypeId,
+  ])
 
   const handleChange = (name: string, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -167,6 +181,10 @@ export function GenericEntityDialog<T extends Record<string, any>>({
         if (newParentId && entityType !== 'category') {
           const parentField = parentIdFieldMap[entityType]
           updateData[parentField] = newParentId
+          // An instance's subtypeId must match its model's subtype
+          if (entityType === 'instance' && newParentSubtypeId) {
+            updateData.subtypeId = newParentSubtypeId
+          }
         }
 
         mutationData = {
@@ -202,7 +220,10 @@ export function GenericEntityDialog<T extends Record<string, any>>({
             <ParentHierarchySelector
               entityType={entityType}
               initialHierarchy={hierarchyData}
-              onParentChange={setNewParentId}
+              onParentChange={(parentId, subtypeId) => {
+                setNewParentId(parentId)
+                setNewParentSubtypeId(subtypeId)
+              }}
             />
           )}
 
