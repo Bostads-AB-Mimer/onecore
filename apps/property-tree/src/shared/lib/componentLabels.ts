@@ -25,3 +25,16 @@ export const formatComponentModelName = (
         .filter(Boolean)
         .join(' ')
     : ''
+
+export const sortModelsByName = <
+  T extends { manufacturer?: string | null; modelName: string },
+>(
+  models: T[]
+): T[] =>
+  [...models].sort((a, b) =>
+    formatComponentModelName(a).localeCompare(
+      formatComponentModelName(b),
+      'sv',
+      { numeric: true, sensitivity: 'base' }
+    )
+  )

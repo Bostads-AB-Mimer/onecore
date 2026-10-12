@@ -1,6 +1,9 @@
 import type { ComponentModel } from '@/services/types'
 
-import { formatComponentModelName } from '@/shared/lib/componentLabels'
+import {
+  formatComponentModelName,
+  sortModelsByName,
+} from '@/shared/lib/componentLabels'
 
 import {
   entityDialogConfig,
@@ -8,12 +11,20 @@ import {
 } from '../constants/entityDialogConfig'
 import type { CategoryType } from './componentRows'
 
+const EQUIPMENT_ONLY_FIELDS = [
+  'serialNumber',
+  'warrantyMonths',
+  'warrantyStartDate',
+]
+
 export const buildInstanceFields = (
   categoryType: CategoryType,
   models: ComponentModel[]
 ): FieldConfig[] => {
   const fields = entityDialogConfig.instance.fields
-  if (categoryType === 'SURFACE') return fields
+  if (categoryType === 'SURFACE') {
+    return fields.filter((f) => !EQUIPMENT_ONLY_FIELDS.includes(f.name))
+  }
 
   const modelField: FieldConfig = {
     name: 'modelId',
@@ -24,7 +35,7 @@ export const buildInstanceFields = (
     defaultValue: '',
     options: [
       { value: '', label: 'Ingen modell' },
-      ...models.map((m) => ({
+      ...sortModelsByName(models).map((m) => ({
         value: m.id,
         label: formatComponentModelName(m),
       })),

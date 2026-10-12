@@ -2,6 +2,8 @@ import type { property } from '@onecore/types'
 
 import type { Component, ComponentSubtype } from '@/services/types'
 
+import { formatISODate } from '@/shared/lib/formatters'
+
 export type CategoryType = property.ComponentCategoryType
 
 export type ComponentColumnKey =
@@ -19,15 +21,45 @@ export const getComponentColumnKeys = (
     ? ['location', 'specifications', 'quantity', 'installed']
     : ['location', 'model', 'installed', 'serialNumber']
 
-export interface ComponentLocation {
-  label: string
+type PropertyStructure = NonNullable<
+  NonNullable<
+    NonNullable<Component['componentInstallations']>[number]['propertyObject']
+  >['propertyStructures']
+>[number]
+
+export interface PlaceLabel {
+  address: string | null
+  detail: string
+}
+
+export interface ComponentLocation extends PlaceLabel {
   rentalId: string | null
   roomCode: string | null
-  tooltip: string
 }
 
 export const activeInstallation = (component: Component) =>
   component.componentInstallations?.find((i) => !i.deinstallationDate)
+
+export const describeStructure = (
+  structure:
+    | Pick<
+        PropertyStructure,
+        'residenceCode' | 'residenceName' | 'roomName' | 'roomCode'
+      >
+    | null
+    | undefined
+): PlaceLabel => {
+  if (!structure) return { address: null, detail: '-' }
+  return {
+    address: structure.residenceName || null,
+    detail: [
+      structure.residenceCode,
+      structure.roomName || structure.roomCode || 'Okänd',
+    ]
+      .filter(Boolean)
+      .join(' · '),
+  }
+}
 
 export const getComponentLocation = (
   component: Component
@@ -35,28 +67,18 @@ export const getComponentLocation = (
   const installation = activeInstallation(component)
   if (!installation) {
     return {
-      label: 'Ej installerad',
+      address: null,
+      detail: 'Ej installerad',
       rentalId: null,
       roomCode: null,
-      tooltip: '',
     }
   }
 
   const structure = installation.propertyObject?.propertyStructures?.[0]
-  if (!structure) {
-    return { label: '-', rentalId: null, roomCode: null, tooltip: '' }
-  }
-
   return {
-    label: [
-      structure.residenceCode,
-      structure.roomName || structure.roomCode || 'Okänd',
-    ]
-      .filter(Boolean)
-      .join(' / '),
-    rentalId: structure.rentalId ?? null,
-    roomCode: structure.roomCode ?? null,
-    tooltip: `${structure.residenceName || ''}\nLägenhet: ${structure.rentalId || ''}`,
+    ...describeStructure(structure),
+    rentalId: structure?.rentalId ?? null,
+    roomCode: structure?.roomCode ?? null,
   }
 }
 
@@ -82,3 +104,28 @@ export const formatComponentQuantity = (component: Component): string => {
     : undefined
   return unit ? `${amount} ${unit}` : amount
 }
+
+// The import stores an unknown installation date as 1900-01-01.
+const UNKNOWN_DATE = '1900-01-01'
+
+export const formatInstallationDate = (
+  isoDate: string | null | undefined
+): string =>
+  isoDate?.startsWith(UNKNOWN_DATE) ? 'Okänt' : formatISODate(isoDate)
+
+export const formatSek = (value: number | null | undefined): string =>
+  value
+    ? value.toLocaleString('sv-SE', {
+        style: 'currency',
+        currency: 'SEK',
+        maximumFractionDigits: 0,
+      })
+    : '-'
+
+export const formatWithUnit = (
+  value: number | null | undefined,
+  unit: string
+): string =>
+  value
+    ? `${value.toLocaleString('sv-SE', { maximumFractionDigits: 2 })} ${unit}`
+    : '-'
