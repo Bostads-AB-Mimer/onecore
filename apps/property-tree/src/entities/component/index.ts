@@ -10,6 +10,7 @@ export { useComponentEntity } from './hooks/useComponentEntity'
 export { useComponentEntityMutation } from './hooks/useComponentEntityMutation'
 export { useComponentImages } from './hooks/useComponentImages'
 export { useComponents } from './hooks/useComponents'
+export { useSubtypeComponents } from './hooks/useSubtypeComponents'
 
 // Lib
 export { formatComponentLabel } from './lib/componentLabel'

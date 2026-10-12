@@ -23,6 +23,19 @@ import { DELETE, GET, POST, PUT } from './baseApi'
 // request would make row 101+ unreachable in the client-paginated tables.
 const PAGE_LIMIT = 100
 
+export interface ComponentPageFilter {
+  subtypeId: string
+  modelId?: string
+  search?: string
+  page: number
+  limit: number
+}
+
+export interface ComponentPage {
+  content: Component[]
+  pagination: { page: number; limit: number; total: number; totalPages: number }
+}
+
 export const componentLibraryService = {
   // ===== Category Operations =====
   async getCategories(): Promise<ComponentCategory[]> {
@@ -280,31 +293,29 @@ export const componentLibraryService = {
   },
 
   // ===== Instance Operations =====
-  async getInstances(
-    modelId?: string,
-    params?: {
-      page?: number
-      limit?: number
-      status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
-      search?: string
-    }
-  ): Promise<Component[]> {
+  async getComponentPage(filter: ComponentPageFilter): Promise<ComponentPage> {
+    const search = filter.search?.trim()
     const { data, error } = await GET('/components', {
       params: {
         query: {
-          modelId,
-          limit: params?.limit || 100,
-          page: params?.page,
-          status: params?.status,
-          serialNumber:
-            params?.search && params.search.trim().length >= 2
-              ? params.search.trim()
-              : undefined,
+          subtypeId: filter.subtypeId,
+          modelId: filter.modelId,
+          serialNumber: search && search.length >= 2 ? search : undefined,
+          page: filter.page,
+          limit: filter.limit,
         },
       },
     })
     if (error) throw error
-    return (data?.content || []) as Component[]
+    return {
+      content: (data?.content ?? []) as Component[],
+      pagination: {
+        page: data?.pagination?.page ?? filter.page,
+        limit: data?.pagination?.limit ?? filter.limit,
+        total: data?.pagination?.total ?? 0,
+        totalPages: data?.pagination?.totalPages ?? 0,
+      },
+    }
   },
 
   async getInstanceById(id: string): Promise<Component> {
