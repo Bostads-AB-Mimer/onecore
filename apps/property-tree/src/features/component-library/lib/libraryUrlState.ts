@@ -31,7 +31,7 @@ const LEGACY_LEVELS = ['models', 'instances']
 export const isLegacyLibraryUrl = (params: URLSearchParams): boolean =>
   LEGACY_LEVELS.includes(params.get('level') ?? '')
 
-export function parseViewState(params: URLSearchParams): ViewState {
+export const parseViewState = (params: URLSearchParams): ViewState => {
   const level = params.get('level') ?? 'categories'
   const categoryId = params.get('categoryId')
   const categoryName = params.get('categoryName')
@@ -77,7 +77,7 @@ export function parseViewState(params: URLSearchParams): ViewState {
   }
 }
 
-export function toSearchParams(state: ViewState): URLSearchParams {
+export const toSearchParams = (state: ViewState): URLSearchParams => {
   const params = new URLSearchParams()
   if (state.level === 'categories') return params
 
