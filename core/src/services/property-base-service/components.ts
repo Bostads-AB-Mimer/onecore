@@ -1670,11 +1670,24 @@ export const routes = (router: KoaRouter) => {
 
     try {
       // Check for child components before deleting
-      const childComponents = await propertyBaseAdapter.getComponents(id.data)
-      if (childComponents.ok && childComponents.data.content.length > 0) {
+      const childComponents = await propertyBaseAdapter.getComponents(
+        id.data,
+        undefined,
+        1,
+        1
+      )
+      if (!childComponents.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+      const childCount =
+        childComponents.data.pagination?.total ??
+        childComponents.data.content.length
+      if (childCount > 0) {
         ctx.status = 409
         ctx.body = {
-          error: `Kan inte ta bort: modellen har ${childComponents.data.content.length} komponenter`,
+          error: `Kan inte ta bort: modellen har ${childCount} komponenter`,
           ...metadata,
         }
         return

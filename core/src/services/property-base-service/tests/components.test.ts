@@ -724,7 +724,18 @@ describe('Component Models API', () => {
   })
 
   describe('DELETE /component-models/:id', () => {
+    const noChildren = {
+      ok: true as const,
+      data: {
+        content: [],
+        pagination: { page: 1, limit: 1, total: 0, totalPages: 0 },
+      },
+    }
+
     it('returns 204 on success', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce(noChildren)
       jest
         .spyOn(propertyBaseAdapter, 'deleteComponentModel')
         .mockResolvedValueOnce({ ok: true, data: undefined })
@@ -738,6 +749,9 @@ describe('Component Models API', () => {
 
     it('returns 404 when not found', async () => {
       jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce(noChildren)
+      jest
         .spyOn(propertyBaseAdapter, 'deleteComponentModel')
         .mockResolvedValueOnce({ ok: false, err: 'not_found' })
 
@@ -746,6 +760,39 @@ describe('Component Models API', () => {
       )
 
       expect(res.status).toBe(404)
+    })
+
+    it('returns 409 with the total count when the model has components', async () => {
+      jest.spyOn(propertyBaseAdapter, 'getComponents').mockResolvedValueOnce({
+        ok: true,
+        data: {
+          content: [factory.component.build()],
+          pagination: { page: 1, limit: 1, total: 659, totalPages: 659 },
+        },
+      })
+      const deleteSpy = jest.spyOn(propertyBaseAdapter, 'deleteComponentModel')
+
+      const res = await request(app.callback()).delete(
+        '/component-models/00000000-0000-0000-0000-000000000001'
+      )
+
+      expect(res.status).toBe(409)
+      expect(res.body.error).toContain('659 komponenter')
+      expect(deleteSpy).not.toHaveBeenCalled()
+    })
+
+    it('returns 500 and does not delete when the component check fails', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: false, err: 'upstream_error' })
+      const deleteSpy = jest.spyOn(propertyBaseAdapter, 'deleteComponentModel')
+
+      const res = await request(app.callback()).delete(
+        '/component-models/00000000-0000-0000-0000-000000000001'
+      )
+
+      expect(res.status).toBe(500)
+      expect(deleteSpy).not.toHaveBeenCalled()
     })
   })
 
