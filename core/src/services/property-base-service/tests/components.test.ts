@@ -790,6 +790,22 @@ describe('Components API', () => {
       expect(res.body.content).toHaveLength(3)
     })
 
+    it('forwards pagination from property', async () => {
+      const pagination = { page: 2, limit: 25, total: 45958, totalPages: 1839 }
+      jest.spyOn(propertyBaseAdapter, 'getComponents').mockResolvedValueOnce({
+        ok: true,
+        data: { content: factory.component.buildList(2), pagination },
+      })
+
+      const res = await request(app.callback()).get(
+        '/components?subtypeId=00000000-0000-0000-0002-000000000001&page=2&limit=25'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+      expect(res.body.pagination).toEqual(pagination)
+    })
+
     it('filters by modelId', async () => {
       const components = factory.component.buildList(2)
       const getSpy = jest
