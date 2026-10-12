@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest'
 import type { Component } from '@/services/types'
 
 import {
+  describeStructure,
   formatComponentQuantity,
+  formatInstallationDate,
+  formatSek,
+  formatWithUnit,
   getComponentColumnKeys,
   getComponentLocation,
   getInstallationDate,
@@ -47,49 +51,57 @@ describe('getComponentColumnKeys', () => {
 })
 
 describe('getComponentLocation', () => {
-  it('names the residence and room of the active installation', () => {
+  it('puts the address above the flat and room of the active installation', () => {
     expect(
       getComponentLocation(
         installed({
-          residenceCode: '123-456-01',
-          residenceName: 'Gatan 1',
+          residenceCode: '0202',
+          residenceName: 'HAGA PARKGATA 6 C',
           roomName: 'Kök',
           roomCode: 'KOK',
-          rentalId: '123-456-01-0101',
+          rentalId: '123-456-01-0202',
         })
       )
     ).toEqual({
-      label: '123-456-01 / Kök',
-      rentalId: '123-456-01-0101',
+      address: 'HAGA PARKGATA 6 C',
+      detail: '0202 · Kök',
+      rentalId: '123-456-01-0202',
       roomCode: 'KOK',
-      tooltip: 'Gatan 1\nLägenhet: 123-456-01-0101',
     })
   })
 
   it('falls back to the room code', () => {
     expect(
       getComponentLocation(
-        installed({ residenceCode: '123-456-01', roomCode: 'BAD' })
-      ).label
-    ).toBe('123-456-01 / BAD')
+        installed({ residenceCode: '0202', roomCode: 'BAD' })
+      ).detail
+    ).toBe('0202 · BAD')
   })
 
   it('leaves out a missing residence code', () => {
     expect(
       getComponentLocation(
         installed({ residenceCode: null, roomName: 'Tvättstuga' })
-      ).label
+      ).detail
     ).toBe('Tvättstuga')
+  })
+
+  it('has no address line when the residence has no name', () => {
+    expect(
+      getComponentLocation(
+        installed({ residenceCode: '0202', roomName: 'Kök' })
+      ).address
+    ).toBeNull()
   })
 
   it('says so when nothing is installed', () => {
     expect(
       getComponentLocation(component({ componentInstallations: [] }))
     ).toEqual({
-      label: 'Ej installerad',
+      address: null,
+      detail: 'Ej installerad',
       rentalId: null,
       roomCode: null,
-      tooltip: '',
     })
   })
 
@@ -97,12 +109,68 @@ describe('getComponentLocation', () => {
     expect(
       getComponentLocation(
         installed({ residenceCode: 'X' }, { deinstallationDate: '2020-01-01' })
-      ).label
+      ).detail
     ).toBe('Ej installerad')
   })
 
   it('shows a dash when the installation has no structure', () => {
-    expect(getComponentLocation(installed(null)).label).toBe('-')
+    expect(getComponentLocation(installed(null)).detail).toBe('-')
+  })
+})
+
+describe('describeStructure', () => {
+  it('names an installation place the same way as the list', () => {
+    expect(
+      describeStructure({
+        residenceCode: '0101',
+        residenceName: 'GATAN 1',
+        roomName: 'Bad',
+      })
+    ).toEqual({ address: 'GATAN 1', detail: '0101 · Bad' })
+  })
+
+  it('shows a dash without a structure', () => {
+    expect(describeStructure(undefined)).toEqual({ address: null, detail: '-' })
+  })
+})
+
+describe('formatInstallationDate', () => {
+  it('formats a known date', () => {
+    expect(formatInstallationDate('2016-09-01T00:00:00.000Z')).toBe(
+      '2016-09-01'
+    )
+  })
+
+  it('shows the import placeholder 1900-01-01 as unknown', () => {
+    expect(formatInstallationDate('1900-01-01')).toBe('Okänt')
+    expect(formatInstallationDate('1900-01-01T00:00:00.000Z')).toBe('Okänt')
+  })
+
+  it('shows a dash without a date', () => {
+    expect(formatInstallationDate(null)).toBe('-')
+  })
+})
+
+describe('formatSek', () => {
+  it('formats kronor without decimals', () => {
+    expect(formatSek(8000).replace(/\s/g, ' ')).toBe('8 000 kr')
+  })
+
+  it('shows a dash for zero or nothing', () => {
+    expect(formatSek(0)).toBe('-')
+    expect(formatSek(null)).toBe('-')
+  })
+})
+
+describe('formatWithUnit', () => {
+  it('joins a value and its unit', () => {
+    expect(formatWithUnit(24, 'mån')).toBe('24 mån')
+    expect(formatWithUnit(12.5, 'år')).toBe('12,5 år')
+  })
+
+  it('shows a dash for zero or nothing', () => {
+    expect(formatWithUnit(0, 'mån')).toBe('-')
+    expect(formatWithUnit(null, 'år')).toBe('-')
   })
 })
 

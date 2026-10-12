@@ -34,6 +34,22 @@ describe('buildInstanceFields', () => {
     })
   })
 
+  it('lists the models sorted by name', () => {
+    const [first] = buildInstanceFields('EQUIPMENT', [
+      { ...model, id: 'm-2', manufacturer: 'Unknown', modelName: 'Z' },
+      model,
+    ] as ComponentModel[])
+    expect(first.options?.map((o) => o.value)).toEqual(['', 'm-1', 'm-2'])
+  })
+
+  it('leaves serial number and warranty out of a surface form', () => {
+    const names = buildInstanceFields('SURFACE', []).map((f) => f.name)
+    expect(names).not.toContain('serialNumber')
+    expect(names).not.toContain('warrantyMonths')
+    expect(names).not.toContain('warrantyStartDate')
+    expect(names).toContain('quantity')
+  })
+
   it('has no model field for surfaces', () => {
     expect(
       buildInstanceFields('SURFACE', [model]).some((f) => f.name === 'modelId')
