@@ -57,11 +57,11 @@ export const instanceCreateDefaults = (
       }
     : {}
 
-// A model belongs to one subtype, so moving a component drops its model.
+// The form resets the model on a move, since a model belongs to one subtype.
 export const applyInstanceMove = (
   currentSubtypeId: string | undefined,
   newSubtypeId: string | undefined
-): { subtypeId?: string; modelId?: null } =>
+): { subtypeId?: string } =>
   newSubtypeId && newSubtypeId !== currentSubtypeId
-    ? { subtypeId: newSubtypeId, modelId: null }
+    ? { subtypeId: newSubtypeId }
     : {}

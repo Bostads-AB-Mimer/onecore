@@ -19,6 +19,7 @@ import { toast } from '@/shared/hooks/useToast'
 
 import { getComponentLocation } from '../lib/componentRows'
 import { instanceCreateDefaults } from '../lib/instanceForm'
+import { serverMessage } from '../lib/serverMessage'
 import type { ViewState } from '../lib/libraryUrlState'
 import type { Confirm, ConfirmOptions } from './useConfirmDialog'
 
@@ -85,12 +86,6 @@ interface ComponentLibraryHandlers {
   handleEditInstance: (instance: Component) => void
   handleDeleteInstance: (instance: Component) => Promise<void>
   handleViewHistory: (instance: Component) => void
-}
-
-// Core answers a refused delete with { error: '<Swedish reason>' }.
-const serverMessage = (error: unknown): string | undefined => {
-  const message = (error as { error?: unknown } | null)?.error
-  return typeof message === 'string' ? message : undefined
 }
 
 export const useComponentLibraryHandlers = (

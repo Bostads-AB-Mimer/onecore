@@ -109,3 +109,21 @@ export const toSearchParams = (state: ViewState): URLSearchParams => {
   if (state.modelId) params.set('modelId', state.modelId)
   return params
 }
+
+export const levelTitle = (state: ViewState): string => {
+  switch (state.level) {
+    case 'categories':
+      return 'Komponentbibliotek'
+    case 'types':
+      return state.categoryName
+    case 'subtypes':
+      return state.typeName
+    case 'subtype':
+      return state.subtypeName
+  }
+}
+
+export const levelSearch = (state: ViewState): string => {
+  const params = toSearchParams(state).toString()
+  return params ? `?${params}` : ''
+}

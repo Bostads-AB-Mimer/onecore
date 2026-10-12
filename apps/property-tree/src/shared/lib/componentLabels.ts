@@ -26,15 +26,20 @@ export const formatComponentModelName = (
         .join(' ')
     : ''
 
+// Imported placeholders such as "%" or "05" have no letters; they go last.
+const hasLetters = (name: string) => /\p{L}/u.test(name)
+
 export const sortModelsByName = <
   T extends { manufacturer?: string | null; modelName: string },
 >(
   models: T[]
 ): T[] =>
-  [...models].sort((a, b) =>
-    formatComponentModelName(a).localeCompare(
-      formatComponentModelName(b),
-      'sv',
-      { numeric: true, sensitivity: 'base' }
+  [...models].sort((a, b) => {
+    const nameA = formatComponentModelName(a)
+    const nameB = formatComponentModelName(b)
+    const lettersFirst = Number(hasLetters(nameB)) - Number(hasLetters(nameA))
+    return (
+      lettersFirst ||
+      nameA.localeCompare(nameB, 'sv', { numeric: true, sensitivity: 'base' })
     )
-  )
+  })
