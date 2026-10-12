@@ -27,18 +27,20 @@ describe('formatComponentModelName', () => {
 })
 
 describe('sortModelsByName', () => {
-  it('sorts by the shown name, numbers in numeric order', () => {
+  it('sorts by the shown name and puts names without letters last', () => {
     const models = [
       { id: 'b', manufacturer: 'ELECTROLUX', modelName: '947941434' },
       { id: 'c', manufacturer: 'Unknown', modelName: '10' },
       { id: 'a', manufacturer: 'CYLINDA', modelName: 'IH 60' },
+      { id: 'e', manufacturer: 'Unknown', modelName: '%' },
       { id: 'd', manufacturer: 'Unknown', modelName: '5' },
     ]
     expect(sortModelsByName(models).map((m) => m.id)).toEqual([
-      'd',
-      'c',
       'a',
       'b',
+      'e',
+      'd',
+      'c',
     ])
   })
 

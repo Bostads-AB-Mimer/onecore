@@ -5,6 +5,8 @@ import {
   parseViewState,
   toSearchParams,
   type ViewState,
+  levelSearch,
+  levelTitle,
   withCategoryType,
 } from './libraryUrlState'
 
@@ -128,5 +130,25 @@ describe('withCategoryType', () => {
 
   it('keeps the state while the category type is loading', () => {
     expect(withCategoryType(subtype, undefined)).toBe(subtype)
+  })
+})
+
+describe('levelTitle', () => {
+  it('names the level being shown', () => {
+    expect(levelTitle({ level: 'categories' })).toBe('Komponentbibliotek')
+    expect(
+      levelTitle({ level: 'types', categoryId: 'c', categoryName: 'Vitvaror' })
+    ).toBe('Vitvaror')
+    expect(levelTitle({ level: 'subtype', ...base, tab: 'components' })).toBe(
+      'Spis, 4 plattor'
+    )
+  })
+})
+
+describe('levelSearch', () => {
+  it('is the query string for a level', () => {
+    expect(
+      levelSearch({ level: 'types', categoryId: 'c', categoryName: 'Vitvaror' })
+    ).toBe('?level=types&categoryId=c&categoryName=Vitvaror')
   })
 })

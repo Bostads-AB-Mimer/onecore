@@ -89,10 +89,9 @@ describe('applyInstanceMove', () => {
     expect(applyInstanceMove('sub-1', undefined)).toEqual({})
   })
 
-  it('moves to the new subtype and drops the model', () => {
+  it('moves to the new subtype and leaves the model to the form', () => {
     expect(applyInstanceMove('sub-1', 'sub-2')).toEqual({
       subtypeId: 'sub-2',
-      modelId: null,
     })
   })
 })
