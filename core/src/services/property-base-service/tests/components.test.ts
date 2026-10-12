@@ -782,7 +782,7 @@ describe('Components API', () => {
       const components = factory.component.buildList(3)
       jest
         .spyOn(propertyBaseAdapter, 'getComponents')
-        .mockResolvedValueOnce({ ok: true, data: components })
+        .mockResolvedValueOnce({ ok: true, data: { content: components } })
 
       const res = await request(app.callback()).get('/components')
 
@@ -810,7 +810,7 @@ describe('Components API', () => {
       const components = factory.component.buildList(2)
       const getSpy = jest
         .spyOn(propertyBaseAdapter, 'getComponents')
-        .mockResolvedValueOnce({ ok: true, data: components })
+        .mockResolvedValueOnce({ ok: true, data: { content: components } })
 
       const res = await request(app.callback()).get(
         '/components?modelId=00000000-0000-0000-0000-000000000001'
@@ -831,7 +831,7 @@ describe('Components API', () => {
       const components = factory.component.buildList(2)
       const getSpy = jest
         .spyOn(propertyBaseAdapter, 'getComponents')
-        .mockResolvedValueOnce({ ok: true, data: components })
+        .mockResolvedValueOnce({ ok: true, data: { content: components } })
 
       const res = await request(app.callback()).get(
         '/components?subtypeId=00000000-0000-0000-0002-000000000001'
@@ -852,7 +852,7 @@ describe('Components API', () => {
       const components = factory.component.buildList(2, { status: 'ACTIVE' })
       const getSpy = jest
         .spyOn(propertyBaseAdapter, 'getComponents')
-        .mockResolvedValueOnce({ ok: true, data: components })
+        .mockResolvedValueOnce({ ok: true, data: { content: components } })
 
       const res = await request(app.callback()).get('/components?status=ACTIVE')
 
@@ -871,7 +871,7 @@ describe('Components API', () => {
       const components = factory.component.buildList(2)
       jest
         .spyOn(propertyBaseAdapter, 'getComponents')
-        .mockResolvedValueOnce({ ok: true, data: components })
+        .mockResolvedValueOnce({ ok: true, data: { content: components } })
 
       const res = await request(app.callback()).get('/components')
 
@@ -1759,7 +1759,7 @@ describe('Cascade Delete Prevention', () => {
     it('returns 409 when model has child components', async () => {
       jest.spyOn(propertyBaseAdapter, 'getComponents').mockResolvedValueOnce({
         ok: true,
-        data: [factory.component.build()],
+        data: { content: [factory.component.build()] },
       })
 
       const res = await request(app.callback()).delete(

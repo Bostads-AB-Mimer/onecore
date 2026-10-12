@@ -666,7 +666,13 @@ async function getSurfaceModels(): Promise<
 
 // ==================== COMPONENTS ====================
 
-type GetComponentsResponse = components['schemas']['Component'][]
+type ComponentsPage =
+  paths['/components']['get']['responses'][200]['content']['application/json']
+
+type GetComponentsResponse = {
+  content: components['schemas']['Component'][]
+  pagination?: ComponentsPage['pagination']
+}
 
 async function getComponents(
   modelId?: string,
@@ -684,7 +690,13 @@ async function getComponents(
     })
 
     if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+      return {
+        ok: true,
+        data: {
+          content: response.data.content,
+          pagination: response.data.pagination,
+        },
+      }
     }
 
     return { ok: false, err: 'upstream_error' }

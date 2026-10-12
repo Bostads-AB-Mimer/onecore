@@ -1671,10 +1671,10 @@ export const routes = (router: KoaRouter) => {
     try {
       // Check for child components before deleting
       const childComponents = await propertyBaseAdapter.getComponents(id.data)
-      if (childComponents.ok && childComponents.data.length > 0) {
+      if (childComponents.ok && childComponents.data.content.length > 0) {
         ctx.status = 409
         ctx.body = {
-          error: `Kan inte ta bort: modellen har ${childComponents.data.length} komponenter`,
+          error: `Kan inte ta bort: modellen har ${childComponents.data.content.length} komponenter`,
           ...metadata,
         }
         return
@@ -1796,7 +1796,8 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: schemas.ComponentSchema.array().parse(result.data),
+        content: schemas.ComponentSchema.array().parse(result.data.content),
+        pagination: result.data.pagination,
         ...metadata,
       }
     } catch (error) {
