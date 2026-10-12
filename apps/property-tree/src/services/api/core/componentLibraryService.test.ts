@@ -12,6 +12,32 @@ vi.mock('./baseApi', () => ({
 
 const mockGet = vi.mocked(GET)
 
+describe('componentLibraryService.getModels', () => {
+  beforeEach(() => mockGet.mockReset())
+
+  it('walks every page of a subtype with more than 100 models', async () => {
+    const page = (n: number, offset: number) =>
+      Array.from({ length: n }, (_, i) => ({ id: `m-${offset + i}` }))
+    mockGet
+      .mockResolvedValueOnce({
+        data: { content: page(100, 0) },
+        error: undefined,
+      } as never)
+      .mockResolvedValueOnce({
+        data: { content: page(26, 100) },
+        error: undefined,
+      } as never)
+
+    const models = await componentLibraryService.getModels('sub-1')
+
+    expect(models).toHaveLength(126)
+    expect(mockGet).toHaveBeenCalledTimes(2)
+    expect(mockGet.mock.calls[1][1]).toEqual({
+      params: { query: { subtypeId: 'sub-1', limit: 100, page: 2 } },
+    })
+  })
+})
+
 describe('componentLibraryService.getComponentPage', () => {
   beforeEach(() => mockGet.mockReset())
 
