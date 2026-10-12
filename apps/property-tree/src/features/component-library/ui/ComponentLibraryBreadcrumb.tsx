@@ -65,29 +65,7 @@ function getBreadcrumbItems(
   if (viewState.level === 'subtypes') return items
 
   // Add subtype
-  items.push({
-    label: viewState.subtypeName,
-    onClick:
-      viewState.level !== 'models'
-        ? () =>
-            navigateTo({
-              level: 'models',
-              subtypeId: viewState.subtypeId,
-              subtypeName: viewState.subtypeName,
-              typeId: viewState.typeId,
-              typeName: viewState.typeName,
-              categoryId: viewState.categoryId,
-              categoryName: viewState.categoryName,
-            })
-        : undefined,
-  })
-
-  if (viewState.level === 'models') return items
-
-  // Add model (only for instances level)
-  items.push({
-    label: viewState.modelName,
-  })
+  items.push({ label: viewState.subtypeName })
 
   return items
 }

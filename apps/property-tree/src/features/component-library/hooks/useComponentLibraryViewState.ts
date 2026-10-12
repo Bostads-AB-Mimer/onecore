@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { useComponentEntity } from '@/entities/component'
+import { useComponentEntity, useSubtypeComponents } from '@/entities/component'
 
 import type {
   Component,
@@ -19,128 +19,15 @@ import {
 import { useDebounce } from '@/shared/hooks/useDebounce'
 import { useUrlPagination } from '@/shared/hooks/useUrlPagination'
 
-import type { ViewState } from './useComponentLibraryHandlers'
-
-// Helper function to derive ViewState from URL search params
-function deriveViewStateFromParams(searchParams: URLSearchParams): ViewState {
-  const level = searchParams.get('level') || 'categories'
-
-  if (level === 'types') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    if (categoryId && categoryName) {
-      return { level: 'types', categoryId, categoryName }
-    }
-  }
-
-  if (level === 'subtypes') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    const typeId = searchParams.get('typeId')
-    const typeName = searchParams.get('typeName')
-    if (categoryId && categoryName && typeId && typeName) {
-      return { level: 'subtypes', categoryId, categoryName, typeId, typeName }
-    }
-  }
-
-  if (level === 'models') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    const typeId = searchParams.get('typeId')
-    const typeName = searchParams.get('typeName')
-    const subtypeId = searchParams.get('subtypeId')
-    const subtypeName = searchParams.get('subtypeName')
-    if (
-      categoryId &&
-      categoryName &&
-      typeId &&
-      typeName &&
-      subtypeId &&
-      subtypeName
-    ) {
-      return {
-        level: 'models',
-        categoryId,
-        categoryName,
-        typeId,
-        typeName,
-        subtypeId,
-        subtypeName,
-      }
-    }
-  }
-
-  if (level === 'instances') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    const typeId = searchParams.get('typeId')
-    const typeName = searchParams.get('typeName')
-    const subtypeId = searchParams.get('subtypeId')
-    const subtypeName = searchParams.get('subtypeName')
-    const modelId = searchParams.get('modelId')
-    const modelName = searchParams.get('modelName')
-    if (
-      categoryId &&
-      categoryName &&
-      typeId &&
-      typeName &&
-      subtypeId &&
-      subtypeName &&
-      modelId &&
-      modelName
-    ) {
-      return {
-        level: 'instances',
-        categoryId,
-        categoryName,
-        typeId,
-        typeName,
-        subtypeId,
-        subtypeName,
-        modelId,
-        modelName,
-      }
-    }
-  }
-
-  // Default to categories
-  return { level: 'categories' }
-}
-
-// Helper function to create URL params from ViewState
-function createParamsFromViewState(state: ViewState): URLSearchParams {
-  const params = new URLSearchParams()
-
-  if (state.level === 'categories') {
-    // No params needed for categories
-    return params
-  }
-
-  params.set('level', state.level)
-  params.set('categoryId', state.categoryId)
-  params.set('categoryName', state.categoryName)
-
-  if (
-    state.level === 'subtypes' ||
-    state.level === 'models' ||
-    state.level === 'instances'
-  ) {
-    params.set('typeId', state.typeId)
-    params.set('typeName', state.typeName)
-  }
-
-  if (state.level === 'models' || state.level === 'instances') {
-    params.set('subtypeId', state.subtypeId)
-    params.set('subtypeName', state.subtypeName)
-  }
-
-  if (state.level === 'instances') {
-    params.set('modelId', state.modelId)
-    params.set('modelName', state.modelName)
-  }
-
-  return params
-}
+import type { CategoryType } from '../lib/componentRows'
+import {
+  COMPONENT_PAGE_SIZE,
+  isLegacyLibraryUrl,
+  parseViewState,
+  type SubtypeTab,
+  toSearchParams,
+  type ViewState,
+} from '../lib/libraryUrlState'
 
 export interface ComponentLibraryDialogStates {
   categoryDialog: UseDialogStateReturn<ComponentCategory>
@@ -153,202 +40,158 @@ export interface ComponentLibraryDialogStates {
   imageGalleryDialog: UseSimpleDialogStateReturn<Component>
 }
 
-export interface ComponentLibraryDataState {
-  categories: ComponentCategory[] | undefined
-  categoriesLoading: boolean
-  categoriesError: Error | null
-  types: ComponentType[] | undefined
-  typesLoading: boolean
-  typesError: Error | null
-  subtypes: ComponentSubtype[] | undefined
-  subtypesLoading: boolean
-  subtypesError: Error | null
-  models: ComponentModel[] | undefined
-  modelsLoading: boolean
-  modelsError: Error | null
-  instances: Component[] | undefined
-  instancesLoading: boolean
-  instancesError: Error | null
-}
+// Stable reference: the instance dialog's fields are memoized on this list.
+const NO_MODELS: ComponentModel[] = []
 
-export interface UseComponentLibraryViewStateReturn {
-  // View state
-  viewState: ViewState
-  navigateTo: (newState: ViewState) => void
+export const useComponentLibraryViewState = () => {
+  const { searchParams, setSearchParams, updateUrlParams, page, setPage } =
+    useUrlPagination({ defaultLimit: COMPONENT_PAGE_SIZE })
 
-  // Search state
-  searchInput: string
-  setSearchInput: (value: string) => void
-  debouncedSearch: string
+  const viewState = useMemo(() => parseViewState(searchParams), [searchParams])
+  const subtypeState = viewState.level === 'subtype' ? viewState : undefined
 
-  // Dialog states
-  dialogs: ComponentLibraryDialogStates
+  useEffect(() => {
+    if (isLegacyLibraryUrl(searchParams)) {
+      setSearchParams(toSearchParams(viewState), { replace: true })
+    }
+  }, [searchParams, setSearchParams, viewState])
 
-  // Data state
-  data: ComponentLibraryDataState
-}
-
-export function useComponentLibraryViewState(): UseComponentLibraryViewStateReturn {
-  const { searchParams, setSearchParams, updateUrlParams } = useUrlPagination()
-
-  // Derive viewState from URL params
-  const viewState = useMemo(
-    () => deriveViewStateFromParams(searchParams),
-    [searchParams]
-  )
-
-  // Local search input state for immediate feedback
   const [searchInput, setSearchInput] = useState(
     searchParams.get('search') || ''
   )
 
-  // Sync search input when URL changes (e.g., browser back/forward)
   useEffect(() => {
-    const urlSearch = searchParams.get('search') || ''
-    setSearchInput(urlSearch)
+    setSearchInput(searchParams.get('search') || '')
   }, [searchParams])
 
-  // Debounced search for API calls
   const debouncedSearch = useDebounce(searchInput, 300)
+  const activeSearch =
+    debouncedSearch.trim().length >= 2 ? debouncedSearch.trim() : undefined
 
-  // Track previous level to detect navigation
-  const prevLevelRef = useRef(viewState.level)
+  // Search resets on navigation, so skip the first run after a view change.
+  const viewKey = `${viewState.level}:${subtypeState?.subtypeId ?? ''}:${subtypeState?.tab ?? ''}`
+  const prevViewKeyRef = useRef(viewKey)
 
-  // Update URL when debounced search changes (only for levels that support search)
   useEffect(() => {
-    // Skip if level just changed - search should be reset
-    if (prevLevelRef.current !== viewState.level) {
-      prevLevelRef.current = viewState.level
+    if (prevViewKeyRef.current !== viewKey) {
+      prevViewKeyRef.current = viewKey
       return
     }
+    if (viewState.level !== 'subtypes' && viewState.level !== 'subtype') return
 
-    if (
-      viewState.level === 'subtypes' ||
-      viewState.level === 'models' ||
-      viewState.level === 'instances'
-    ) {
-      const currentSearch = searchParams.get('search') || ''
-      const newSearch = debouncedSearch.trim()
-
-      if (currentSearch !== newSearch) {
-        updateUrlParams({ search: newSearch || undefined }, { replace: true })
-      }
+    const currentSearch = searchParams.get('search') || ''
+    const newSearch = debouncedSearch.trim()
+    if (currentSearch !== newSearch) {
+      updateUrlParams(
+        { search: newSearch || undefined, page: undefined },
+        { replace: true }
+      )
     }
-  }, [debouncedSearch, viewState, searchParams, updateUrlParams])
+  }, [debouncedSearch, viewKey, viewState.level, searchParams, updateUrlParams])
 
-  // Navigation helper that updates URL (replaces all params for level changes)
   const navigateTo = (newState: ViewState) => {
-    const params = createParamsFromViewState(newState)
-    setSearchParams(params)
-    setSearchInput('') // Reset search when navigating
+    setSearchParams(toSearchParams(newState))
+    setSearchInput('')
   }
 
-  // Dialog states
-  const categoryDialog = useDialogState<ComponentCategory>()
-  const typeDialog = useDialogState<ComponentType>()
-  const subtypeDialog = useDialogState<ComponentSubtype>()
-  const modelDialog = useDialogState<ComponentModel>()
-  const instanceDialog = useDialogState<Component>()
+  const setTab = (tab: SubtypeTab) => {
+    if (subtypeState) navigateTo({ ...subtypeState, tab })
+  }
 
-  const instanceDetailsDialog = useSimpleDialogState<Component>()
-  const deinstallDialog = useSimpleDialogState<Component>()
-  const imageGalleryDialog = useSimpleDialogState<Component>()
+  const setModelFilter = (modelId: string | undefined) => {
+    updateUrlParams({ modelId, page: undefined })
+  }
 
-  // Data fetching
-  const {
-    data: categories,
-    isLoading: categoriesLoading,
-    error: categoriesError,
-  } = useComponentEntity('category')
+  const dialogs: ComponentLibraryDialogStates = {
+    categoryDialog: useDialogState<ComponentCategory>(),
+    typeDialog: useDialogState<ComponentType>(),
+    subtypeDialog: useDialogState<ComponentSubtype>(),
+    modelDialog: useDialogState<ComponentModel>(),
+    instanceDialog: useDialogState<Component>(),
+    instanceDetailsDialog: useSimpleDialogState<Component>(),
+    deinstallDialog: useSimpleDialogState<Component>(),
+    imageGalleryDialog: useSimpleDialogState<Component>(),
+  }
 
-  const {
-    data: types,
-    isLoading: typesLoading,
-    error: typesError,
-  } = useComponentEntity(
+  const categories = useComponentEntity('category')
+
+  const types = useComponentEntity(
     'type',
     viewState.level !== 'categories' ? viewState.categoryId : undefined
   )
 
-  const {
-    data: subtypes,
-    isLoading: subtypesLoading,
-    error: subtypesError,
-  } = useComponentEntity(
+  const subtypes = useComponentEntity(
     'subtype',
-    viewState.level === 'subtypes' || viewState.level === 'models'
-      ? viewState.typeId
-      : undefined,
-    {
-      search:
-        viewState.level === 'subtypes' && debouncedSearch.trim().length >= 2
-          ? debouncedSearch
-          : undefined,
-    }
+    viewState.level === 'subtypes' ? viewState.typeId : undefined,
+    { search: viewState.level === 'subtypes' ? activeSearch : undefined }
   )
 
-  const {
-    data: models,
-    isLoading: modelsLoading,
-    error: modelsError,
-  } = useComponentEntity(
+  // The database defaults a category's type to EQUIPMENT; undefined only while loading.
+  const categoryType: CategoryType | undefined =
+    viewState.level === 'categories' || !categories.data
+      ? undefined
+      : (categories.data.find((c) => c.id === viewState.categoryId)?.type ??
+        'EQUIPMENT')
+
+  const modelOptions = useComponentEntity(
     'model',
-    viewState.level === 'models' ? viewState.subtypeId : undefined,
-    {
-      search:
-        viewState.level === 'models' && debouncedSearch.trim().length >= 2
-          ? debouncedSearch
-          : undefined,
-    }
+    subtypeState?.subtypeId,
+    undefined,
+    { enabled: subtypeState !== undefined }
   )
 
-  const {
-    data: instances,
-    isLoading: instancesLoading,
-    error: instancesError,
-  } = useComponentEntity(
-    'instance',
-    viewState.level === 'instances' ? viewState.modelId : undefined,
-    {
-      search:
-        viewState.level === 'instances' && debouncedSearch.trim().length >= 2
-          ? debouncedSearch
-          : undefined,
-    }
+  const models = useComponentEntity(
+    'model',
+    subtypeState?.subtypeId,
+    { search: subtypeState?.tab === 'models' ? activeSearch : undefined },
+    { enabled: subtypeState?.tab === 'models' }
+  )
+
+  const componentPage = useSubtypeComponents(
+    subtypeState?.tab === 'components'
+      ? {
+          subtypeId: subtypeState.subtypeId,
+          modelId: subtypeState.modelId,
+          search: activeSearch,
+          page,
+          limit: COMPONENT_PAGE_SIZE,
+        }
+      : undefined
   )
 
   return {
     viewState,
     navigateTo,
+    setTab,
+    setModelFilter,
+    page,
+    setPage,
     searchInput,
     setSearchInput,
-    debouncedSearch,
-    dialogs: {
-      categoryDialog,
-      typeDialog,
-      subtypeDialog,
-      modelDialog,
-      instanceDialog,
-      instanceDetailsDialog,
-      deinstallDialog,
-      imageGalleryDialog,
-    },
+    categoryType,
+    dialogs,
     data: {
-      categories,
-      categoriesLoading,
-      categoriesError,
-      types,
-      typesLoading,
-      typesError,
-      subtypes,
-      subtypesLoading,
-      subtypesError,
-      models,
-      modelsLoading,
-      modelsError,
-      instances,
-      instancesLoading,
-      instancesError,
+      categories: categories.data,
+      categoriesLoading: categories.isLoading,
+      categoriesError: categories.error,
+      types: types.data,
+      typesLoading: types.isLoading,
+      typesError: types.error,
+      subtypes: subtypes.data,
+      subtypesLoading: subtypes.isLoading,
+      subtypesError: subtypes.error,
+      modelOptions: modelOptions.data ?? NO_MODELS,
+      models: models.data,
+      modelsLoading: models.isLoading,
+      modelsError: models.error,
+      componentPage: componentPage.data,
+      componentsLoading: componentPage.isLoading,
+      componentsFetching: componentPage.isFetching,
+      componentsError: componentPage.error,
     },
   }
 }
+
+export type UseComponentLibraryViewStateReturn = ReturnType<
+  typeof useComponentLibraryViewState
+>

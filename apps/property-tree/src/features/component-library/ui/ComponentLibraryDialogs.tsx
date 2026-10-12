@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+
 import type {
   Component,
   ComponentCategory,
@@ -14,10 +16,14 @@ import type {
 import { GenericEntityDialog } from '../dialogs/GenericEntityDialog'
 import { InstanceDetailsDialog } from '../dialogs/InstanceDetailsDialog'
 import type { ViewState } from '../hooks/useComponentLibraryHandlers'
+import type { CategoryType } from '../lib/componentRows'
+import { buildInstanceFields } from '../lib/instanceForm'
 import { DeinstallationDialog } from './DeinstallationDialog'
 
 interface ComponentLibraryDialogsProps {
   viewState: ViewState
+  categoryType: CategoryType | undefined
+  modelOptions: ComponentModel[]
   categoryDialog: UseDialogStateReturn<ComponentCategory>
   typeDialog: UseDialogStateReturn<ComponentType>
   subtypeDialog: UseDialogStateReturn<ComponentSubtype>
@@ -29,6 +35,8 @@ interface ComponentLibraryDialogsProps {
 
 export const ComponentLibraryDialogs = ({
   viewState,
+  categoryType,
+  modelOptions,
   categoryDialog,
   typeDialog,
   subtypeDialog,
@@ -37,6 +45,14 @@ export const ComponentLibraryDialogs = ({
   instanceDetailsDialog,
   deinstallDialog,
 }: ComponentLibraryDialogsProps) => {
+  const instanceFields = useMemo(
+    () =>
+      categoryType
+        ? buildInstanceFields(categoryType, modelOptions)
+        : undefined,
+    [categoryType, modelOptions]
+  )
+
   return (
     <>
       {/* Category Dialog - always available */}
@@ -48,10 +64,10 @@ export const ComponentLibraryDialogs = ({
         mode={categoryDialog.state.mode}
       />
 
-      {/* Type Dialog - available at types, subtypes, models levels */}
+      {/* Type Dialog - available at types, subtypes, subtype levels */}
       {(viewState.level === 'types' ||
         viewState.level === 'subtypes' ||
-        viewState.level === 'models') && (
+        viewState.level === 'subtype') && (
         <GenericEntityDialog
           isOpen={typeDialog.state.isOpen}
           onClose={typeDialog.close}
@@ -65,8 +81,8 @@ export const ComponentLibraryDialogs = ({
         />
       )}
 
-      {/* Subtype Dialog - available at subtypes, models levels */}
-      {(viewState.level === 'subtypes' || viewState.level === 'models') && (
+      {/* Subtype Dialog - available at subtypes, subtype levels */}
+      {(viewState.level === 'subtypes' || viewState.level === 'subtype') && (
         <GenericEntityDialog
           isOpen={subtypeDialog.state.isOpen}
           onClose={subtypeDialog.close}
@@ -81,8 +97,8 @@ export const ComponentLibraryDialogs = ({
         />
       )}
 
-      {/* Model Dialog - available at models level */}
-      {viewState.level === 'models' && (
+      {/* Model Dialog - available at subtype level */}
+      {viewState.level === 'subtype' && (
         <GenericEntityDialog
           isOpen={modelDialog.state.isOpen}
           onClose={modelDialog.close}
@@ -98,8 +114,8 @@ export const ComponentLibraryDialogs = ({
         />
       )}
 
-      {/* Instance-related Dialogs - available at instances level */}
-      {viewState.level === 'instances' && (
+      {/* Instance-related Dialogs - available at subtype level */}
+      {viewState.level === 'subtype' && instanceFields && (
         <>
           <GenericEntityDialog
             isOpen={instanceDialog.state.isOpen}
@@ -107,13 +123,13 @@ export const ComponentLibraryDialogs = ({
             entityType="instance"
             entity={instanceDialog.state.entity}
             defaultValues={instanceDialog.state.defaultValues}
-            parentId={viewState.modelId}
+            parentId={viewState.subtypeId}
             mode={instanceDialog.state.mode}
+            fields={instanceFields}
             hierarchyData={{
               categoryId: viewState.categoryId,
               typeId: viewState.typeId,
               subtypeId: viewState.subtypeId,
-              modelId: viewState.modelId,
             }}
           />
 

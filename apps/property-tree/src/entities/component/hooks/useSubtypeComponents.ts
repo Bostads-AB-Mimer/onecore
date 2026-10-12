@@ -1,9 +1,9 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import {
+  componentLibraryService,
   type ComponentPage,
   type ComponentPageFilter,
-  componentLibraryService,
 } from '@/services/api/core/componentLibraryService'
 
 import { QUERY_KEY_ROOTS } from '../lib/componentLibraryQueryKeys'

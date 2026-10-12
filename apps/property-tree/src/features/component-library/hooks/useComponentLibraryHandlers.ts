@@ -1,6 +1,8 @@
-import { useComponentEntityMutation } from '@/entities/component'
+import {
+  formatComponentLabel,
+  useComponentEntityMutation,
+} from '@/entities/component'
 
-import { componentLibraryService } from '@/services/api/core/componentLibraryService'
 import type {
   Component,
   ComponentCategory,
@@ -14,42 +16,16 @@ import type {
   UseSimpleDialogStateReturn,
 } from '@/shared/hooks'
 
-// ViewState type definition
-export type ViewState =
-  | { level: 'categories' }
-  | { level: 'types'; categoryId: string; categoryName: string }
-  | {
-      level: 'subtypes'
-      typeId: string
-      typeName: string
-      categoryId: string
-      categoryName: string
-    }
-  | {
-      level: 'models'
-      subtypeId: string
-      subtypeName: string
-      typeId: string
-      typeName: string
-      categoryId: string
-      categoryName: string
-    }
-  | {
-      level: 'instances'
-      modelId: string
-      modelName: string
-      subtypeId: string
-      subtypeName: string
-      typeId: string
-      typeName: string
-      categoryId: string
-      categoryName: string
-    }
+import { instanceCreateDefaults } from '../lib/instanceForm'
+import type { ViewState } from '../lib/libraryUrlState'
+
+export type { ViewState } from '../lib/libraryUrlState'
 
 // Parameters interface - uses types from useDialogState
 interface UseComponentLibraryHandlersParams {
   viewState: ViewState
   navigateTo: (state: ViewState) => void
+  modelOptions: ComponentModel[]
   instanceDetailsDialog: UseSimpleDialogStateReturn<Component>
   categoryDialog: Pick<
     UseDialogStateReturn<ComponentCategory>,
@@ -91,17 +67,17 @@ interface ComponentLibraryHandlers {
   handleCreateSubtype: () => void
   handleEditSubtype: (subtype: ComponentSubtype) => void
   handleDeleteSubtype: (subtype: ComponentSubtype) => Promise<void>
-  handleNavigateToModels: (subtype: ComponentSubtype) => void
+  handleOpenSubtype: (subtype: ComponentSubtype) => void
 
   // Model handlers
   handleCreateModel: () => void
   handleEditModel: (model: ComponentModel) => void
   handleDeleteModel: (model: ComponentModel) => Promise<void>
   handleCreateInstance: (model: ComponentModel) => void
-  handleNavigateToInstances: (model: ComponentModel) => void
+  handleOpenModelComponents: (model: ComponentModel) => void
 
   // Instance handlers
-  handleCreateInstanceFromTable: () => Promise<void>
+  handleCreateInstanceFromTable: () => void
   handleEditInstance: (instance: Component) => void
   handleDeleteInstance: (instance: Component) => Promise<void>
   handleViewHistory: (instance: Component) => void
@@ -113,6 +89,7 @@ export const useComponentLibraryHandlers = (
   const {
     viewState,
     navigateTo,
+    modelOptions,
     instanceDetailsDialog,
     categoryDialog,
     typeDialog,
@@ -161,7 +138,7 @@ export const useComponentLibraryHandlers = (
   const handleEditType = (type: ComponentType) => typeDialog.openEdit(type)
 
   const handleDeleteType = async (type: ComponentType) => {
-    if (viewState.level !== 'types' && viewState.level !== 'subtypes') return
+    if (viewState.level === 'categories') return
 
     if (
       window.confirm(
@@ -221,17 +198,18 @@ export const useComponentLibraryHandlers = (
     }
   }
 
-  const handleNavigateToModels = (subtype: ComponentSubtype) => {
+  const handleOpenSubtype = (subtype: ComponentSubtype) => {
     if (viewState.level !== 'subtypes') return
 
     navigateTo({
-      level: 'models',
+      level: 'subtype',
       subtypeId: subtype.id,
       subtypeName: subtype.subTypeName,
       typeId: viewState.typeId,
       typeName: viewState.typeName,
       categoryId: viewState.categoryId,
       categoryName: viewState.categoryName,
+      tab: 'components',
     })
   }
 
@@ -240,7 +218,7 @@ export const useComponentLibraryHandlers = (
   const handleEditModel = (model: ComponentModel) => modelDialog.openEdit(model)
 
   const handleDeleteModel = async (model: ComponentModel) => {
-    if (viewState.level !== 'models') return
+    if (viewState.level !== 'subtype') return
 
     if (
       window.confirm(
@@ -261,71 +239,36 @@ export const useComponentLibraryHandlers = (
     }
   }
 
-  const handleCreateInstance = (model: ComponentModel) => {
-    // Pre-fill instance data from model
-    instanceDialog.openCreate({
-      warrantyMonths: model.warrantyMonths || 0,
-      priceAtPurchase: model.currentPrice || 0,
-      depreciationPriceAtPurchase: model.subtype?.depreciationPrice || 0,
-      economicLifespan: model.subtype?.economicLifespan || 0,
-    })
-  }
+  const handleCreateInstance = (model: ComponentModel) =>
+    instanceDialog.openCreate(instanceCreateDefaults(model))
 
-  const handleNavigateToInstances = (model: ComponentModel) => {
-    if (viewState.level !== 'models') return
-
-    navigateTo({
-      level: 'instances',
-      modelId: model.id,
-      modelName: model.modelName,
-      subtypeId: viewState.subtypeId,
-      subtypeName: viewState.subtypeName,
-      typeId: viewState.typeId,
-      typeName: viewState.typeName,
-      categoryId: viewState.categoryId,
-      categoryName: viewState.categoryName,
-    })
+  const handleOpenModelComponents = (model: ComponentModel) => {
+    if (viewState.level !== 'subtype') return
+    navigateTo({ ...viewState, tab: 'components', modelId: model.id })
   }
 
   // Instance handlers
-  const handleCreateInstanceFromTable = async () => {
-    if (viewState.level !== 'instances') return
-
-    try {
-      // Fetch model data to get pre-fill values
-      const model = await componentLibraryService.getModelById(
-        viewState.modelId
-      )
-
-      // Pre-fill same as handleCreateInstance
-      instanceDialog.openCreate({
-        warrantyMonths: model.warrantyMonths || 0,
-        priceAtPurchase: model.currentPrice || 0,
-        depreciationPriceAtPurchase: model.subtype?.depreciationPrice || 0,
-        economicLifespan: model.subtype?.economicLifespan || 0,
-      })
-    } catch (error) {
-      console.error('Error fetching model data:', error)
-      // Fallback: open dialog without pre-fill
-      instanceDialog.openCreate()
-    }
+  const handleCreateInstanceFromTable = () => {
+    if (viewState.level !== 'subtype') return
+    const model = modelOptions.find((m) => m.id === viewState.modelId)
+    instanceDialog.openCreate(instanceCreateDefaults(model))
   }
 
   const handleEditInstance = (instance: Component) =>
     instanceDialog.openEdit(instance)
 
   const handleDeleteInstance = async (instance: Component) => {
-    if (viewState.level !== 'instances') return
+    if (viewState.level !== 'subtype') return
 
     if (
       window.confirm(
-        `Är du säker på att du vill ta bort komponenten "${instance.serialNumber}"?`
+        `Är du säker på att du vill ta bort komponenten "${formatComponentLabel(instance)}"?`
       )
     ) {
       try {
         await deleteInstance.mutateAsync({
           id: instance.id,
-          parentId: viewState.modelId,
+          parentId: viewState.subtypeId,
         })
       } catch (error) {
         console.error('Error deleting instance:', error)
@@ -355,14 +298,14 @@ export const useComponentLibraryHandlers = (
     handleCreateSubtype,
     handleEditSubtype,
     handleDeleteSubtype,
-    handleNavigateToModels,
+    handleOpenSubtype,
 
     // Model handlers
     handleCreateModel,
     handleEditModel,
     handleDeleteModel,
     handleCreateInstance,
-    handleNavigateToInstances,
+    handleOpenModelComponents,
 
     // Instance handlers
     handleCreateInstanceFromTable,

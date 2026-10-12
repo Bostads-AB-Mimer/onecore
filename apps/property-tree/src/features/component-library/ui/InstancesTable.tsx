@@ -2,19 +2,29 @@ import { History, ImageIcon, Unplug } from 'lucide-react'
 
 import type { Component } from '@/services/types'
 
+import { formatComponentModelName } from '@/shared/lib/componentLabels'
 import { formatISODate } from '@/shared/lib/formatters'
 import { paths } from '@/shared/routes'
-import { Badge } from '@/shared/ui/Badge'
-import { Button } from '@/shared/ui/Button'
 import {
   type Column,
   DataTable,
   type DataTableAction,
 } from '@/shared/ui/DataTable'
 
+import {
+  type CategoryType,
+  type ComponentColumnKey,
+  formatComponentQuantity,
+  getComponentColumnKeys,
+  getComponentLocation,
+  getInstallationDate,
+} from '../lib/componentRows'
+
 interface InstancesTableProps {
   instances: Component[]
+  categoryType: CategoryType
   isLoading: boolean
+  pageSize: number
   onEdit: (instance: Component) => void
   onDelete: (instance: Component) => void
   onViewHistory: (instance: Component) => void
@@ -22,268 +32,123 @@ interface InstancesTableProps {
   onViewImages: (instance: Component) => void
 }
 
+const openResidence = (rentalId: string, roomCode: string | null) => {
+  const url = roomCode
+    ? `${paths.residence(rentalId)}?room=${encodeURIComponent(roomCode)}`
+    : paths.residence(rentalId)
+  window.open(url, '_blank')
+}
+
+const muted = (text: string) => (
+  <span className="text-muted-foreground">{text}</span>
+)
+
+const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
+  location: {
+    key: 'location',
+    label: 'Plats',
+    render: (item) => {
+      const location = getComponentLocation(item)
+      if (!location.rentalId) {
+        return (
+          <span className="text-muted-foreground" title={location.tooltip}>
+            {location.label}
+          </span>
+        )
+      }
+      const { rentalId, roomCode } = location
+      return (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            openResidence(rentalId, roomCode)
+          }}
+          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+          title={location.tooltip}
+        >
+          {location.label}
+        </button>
+      )
+    },
+  },
+  model: {
+    key: 'model',
+    label: 'Modell',
+    render: (item) => formatComponentModelName(item.model) || muted('-'),
+  },
+  installed: {
+    key: 'installed',
+    label: 'Installerad',
+    render: (item) => muted(formatISODate(getInstallationDate(item))),
+  },
+  serialNumber: {
+    key: 'serialNumber',
+    label: 'Serienr',
+    render: (item) => item.serialNumber || muted('-'),
+  },
+  specifications: {
+    key: 'specifications',
+    label: 'Specifikation',
+    render: (item) =>
+      item.specifications ? (
+        <span className="block max-w-md truncate" title={item.specifications}>
+          {item.specifications}
+        </span>
+      ) : (
+        muted('-')
+      ),
+  },
+  quantity: {
+    key: 'quantity',
+    label: 'Antal',
+    render: (item) => formatComponentQuantity(item),
+  },
+}
+
+const hasActiveInstallation = (item: Component) =>
+  item.componentInstallations?.some((i) => !i.deinstallationDate) ?? false
+
+const expandableContent = (instance: Component) => {
+  const specifications = instance.specifications?.trim()
+  const additionalInformation = instance.additionalInformation?.trim()
+  if (!specifications && !additionalInformation) return null
+
+  return (
+    <div className="space-y-4">
+      {specifications && (
+        <div>
+          <h4 className="text-sm font-medium mb-1">Specifikationer</h4>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {specifications}
+          </p>
+        </div>
+      )}
+      {additionalInformation && (
+        <div>
+          <h4 className="text-sm font-medium mb-1">Ytterligare information</h4>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {additionalInformation}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export const InstancesTable = ({
   instances,
+  categoryType,
   isLoading,
+  pageSize,
   onEdit,
   onDelete,
   onViewHistory,
   onUninstall,
   onViewImages,
 }: InstancesTableProps) => {
-  const formatCurrency = (value: number) =>
-    value.toLocaleString('sv-SE', {
-      style: 'currency',
-      currency: 'SEK',
-      maximumFractionDigits: 0,
-    })
-
-  const handleNavigateToResidence = (
-    rentalId: string | null | undefined,
-    roomCode: string | null | undefined
-  ) => {
-    if (!rentalId) return
-    const url = roomCode
-      ? `${paths.residence(rentalId)}?room=${encodeURIComponent(roomCode)}`
-      : paths.residence(rentalId)
-    window.open(url, '_blank')
-  }
-
-  const getStatusVariant = (
-    status: string
-  ): 'default' | 'secondary' | 'outline' | 'destructive' => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'default'
-      case 'INACTIVE':
-        return 'secondary'
-      case 'MAINTENANCE':
-        return 'outline'
-      case 'DECOMMISSIONED':
-        return 'destructive'
-      default:
-        return 'secondary'
-    }
-  }
-
-  const getStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'Aktiv'
-      case 'INACTIVE':
-        return 'Inaktiv'
-      case 'MAINTENANCE':
-        return 'Underhåll'
-      case 'DECOMMISSIONED':
-        return 'Ur drift'
-      default:
-        return status
-    }
-  }
-
-  const getConditionLabel = (condition: string | null | undefined): string => {
-    switch (condition) {
-      case 'NEW':
-        return 'Nyskick'
-      case 'GOOD':
-        return 'Gott skick'
-      case 'FAIR':
-        return 'Godtagbart skick'
-      case 'POOR':
-        return 'Dåligt skick'
-      case 'DAMAGED':
-        return 'Skadat'
-      default:
-        return '-'
-    }
-  }
-
-  const getConditionVariant = (
-    condition: string | null | undefined
-  ): 'default' | 'secondary' | 'outline' | 'destructive' => {
-    switch (condition) {
-      case 'NEW':
-        return 'default'
-      case 'GOOD':
-        return 'default'
-      case 'FAIR':
-        return 'secondary'
-      case 'POOR':
-        return 'outline'
-      case 'DAMAGED':
-        return 'destructive'
-      default:
-        return 'secondary'
-    }
-  }
-
-  const columns: Column<Component>[] = [
-    {
-      key: 'serialNumber',
-      label: 'Serienummer',
-      render: (item) => <div className="font-medium">{item.serialNumber}</div>,
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (item) => (
-        <Badge variant={getStatusVariant(item.status)}>
-          {getStatusLabel(item.status)}
-        </Badge>
-      ),
-    },
-    {
-      key: 'condition',
-      label: 'Skick',
-      render: (item) => (
-        <Badge variant={getConditionVariant(item.condition)}>
-          {getConditionLabel(item.condition)}
-        </Badge>
-      ),
-    },
-    {
-      key: 'quantity',
-      label: 'Antal',
-      render: (item) => (
-        <span className={!item.quantity ? 'text-muted-foreground' : ''}>
-          {item.quantity || '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'priceAtPurchase',
-      label: 'Inköpspris',
-      render: (item) => (
-        <span className={!item.priceAtPurchase ? 'text-muted-foreground' : ''}>
-          {item.priceAtPurchase ? formatCurrency(item.priceAtPurchase) : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'warrantyMonths',
-      label: 'Garantitid',
-      render: (item) => (
-        <span className={!item.warrantyMonths ? 'text-muted-foreground' : ''}>
-          {item.warrantyMonths ? `${item.warrantyMonths} mån` : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'warrantyStartDate',
-      label: 'Garantistart',
-      render: (item) => (
-        <span className="text-muted-foreground">
-          {formatISODate(item.warrantyStartDate)}
-        </span>
-      ),
-    },
-    {
-      key: 'lastInspectionDate',
-      label: 'Senaste inspektion',
-      render: (item) => (
-        <span className="text-muted-foreground">
-          {formatISODate(item.lastInspectionDate)}
-        </span>
-      ),
-    },
-    {
-      key: 'economicLifespan',
-      label: 'Ekon. livslängd',
-      render: (item) => (
-        <span className={!item.economicLifespan ? 'text-muted-foreground' : ''}>
-          {item.economicLifespan ? `${item.economicLifespan} år` : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'ncsCode',
-      label: 'NCS-kod',
-      render: (item) => (
-        <span className="text-muted-foreground">{item.ncsCode || '-'}</span>
-      ),
-    },
-    {
-      key: 'installed',
-      label: 'Installerad',
-      render: (item) => {
-        const hasActiveInstallation = item.componentInstallations?.some(
-          (install) => !install.deinstallationDate
-        )
-        return (
-          <Badge variant={hasActiveInstallation ? 'default' : 'secondary'}>
-            {hasActiveInstallation ? 'Ja' : 'Nej'}
-          </Badge>
-        )
-      },
-    },
-    {
-      key: 'location',
-      label: 'Plats',
-      render: (item) => {
-        const activeInstallation = item.componentInstallations?.find(
-          (install) => !install.deinstallationDate
-        )
-
-        if (!activeInstallation) {
-          return <span className="text-muted-foreground">Ej installerad</span>
-        }
-
-        const structure =
-          activeInstallation.propertyObject?.propertyStructures?.[0]
-
-        if (!structure) {
-          return <span className="text-muted-foreground">-</span>
-        }
-
-        const rentalId = structure.rentalId
-
-        const displayText = `${structure.residenceCode} / ${structure.roomName || structure.roomCode || 'Okänd'}`
-        const tooltipText = `${structure.residenceName || ''}\nLägenhet: ${structure.rentalId || ''}`
-
-        if (!rentalId) {
-          // Fallback: show location but not clickable if rentalId is missing
-          return (
-            <span className="text-muted-foreground" title={tooltipText}>
-              {displayText}
-            </span>
-          )
-        }
-
-        return (
-          <button
-            onClick={() =>
-              handleNavigateToResidence(rentalId, structure.roomCode)
-            }
-            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-            title={tooltipText}
-          >
-            {displayText}
-          </button>
-        )
-      },
-    },
-    {
-      key: 'images',
-      label: 'Bilder',
-      render: (item) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={(e) => {
-            e.stopPropagation()
-            onViewImages(item)
-          }}
-          title="Visa bilder"
-        >
-          <ImageIcon className="h-4 w-4" />
-        </Button>
-      ),
-    },
-  ]
-
-  const hasActiveInstallation = (item: Component) =>
-    item.componentInstallations?.some((install) => !install.deinstallationDate)
+  const columns = getComponentColumnKeys(categoryType).map(
+    (key) => COLUMNS[key]
+  )
 
   const actions: DataTableAction<Component>[] = [
     {
@@ -292,50 +157,18 @@ export const InstancesTable = ({
       icon: <History className="h-4 w-4 mr-2" />,
     },
     {
+      label: 'Visa bilder',
+      onClick: onViewImages,
+      icon: <ImageIcon className="h-4 w-4 mr-2" />,
+    },
+    {
       label: 'Avinstallera',
       onClick: (item) => {
-        if (hasActiveInstallation(item)) {
-          onUninstall(item)
-        }
+        if (hasActiveInstallation(item)) onUninstall(item)
       },
       icon: <Unplug className="h-4 w-4 mr-2" />,
     },
   ]
-
-  // Expandable content for additional information
-  const expandableContent = (instance: Component) => {
-    const hasAdditionalInfo =
-      instance.additionalInformation && instance.additionalInformation.trim()
-    const hasSpecifications =
-      instance.specifications && instance.specifications.trim()
-
-    if (!hasAdditionalInfo && !hasSpecifications) {
-      return null
-    }
-
-    return (
-      <div className="space-y-4">
-        {hasSpecifications && (
-          <div>
-            <h4 className="text-sm font-medium mb-1">Specifikationer</h4>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {instance.specifications}
-            </p>
-          </div>
-        )}
-        {hasAdditionalInfo && (
-          <div>
-            <h4 className="text-sm font-medium mb-1">
-              Ytterligare information
-            </h4>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {instance.additionalInformation}
-            </p>
-          </div>
-        )}
-      </div>
-    )
-  }
 
   return (
     <DataTable
@@ -346,7 +179,10 @@ export const InstancesTable = ({
       onDelete={onDelete}
       actions={actions}
       emptyMessage="Inga komponenter ännu"
-      expandableContent={expandableContent}
+      expandableContent={
+        categoryType === 'EQUIPMENT' ? expandableContent : undefined
+      }
+      pageSize={pageSize}
     />
   )
 }

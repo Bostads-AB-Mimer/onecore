@@ -1,9 +1,7 @@
 import { Plus } from 'lucide-react'
 
 import type {
-  Component,
   ComponentCategory,
-  ComponentModel,
   ComponentSubtype,
   ComponentType,
 } from '@/services/types'
@@ -13,8 +11,6 @@ import { TableToolbar } from '@/shared/ui/TableToolbar'
 
 import type { ViewState } from '../hooks/useComponentLibraryHandlers'
 import { CategoriesTable } from './CategoriesTable'
-import { InstancesTable } from './InstancesTable'
-import { ModelsTable } from './ModelsTable'
 import { SubtypesTable } from './SubtypesTable'
 import { TypesTable } from './TypesTable'
 
@@ -48,32 +44,11 @@ interface ComponentLibraryContentProps {
   onCreateSubtype: () => void
   onEditSubtype: (subtype: ComponentSubtype) => void
   onDeleteSubtype: (subtype: ComponentSubtype) => void
-  onNavigateToModels: (subtype: ComponentSubtype) => void
-
-  // Model level
-  models: ComponentModel[] | undefined
-  modelsLoading: boolean
-  modelsError: Error | null
-  onCreateModel: () => void
-  onEditModel: (model: ComponentModel) => void
-  onDeleteModel: (model: ComponentModel) => void
-  onCreateInstance: (model: ComponentModel) => void
-  onNavigateToInstances: (model: ComponentModel) => void
-
-  // Instance level
-  instances: Component[] | undefined
-  instancesLoading: boolean
-  instancesError: Error | null
-  onCreateInstanceFromTable: () => void
-  onEditInstance: (instance: Component) => void
-  onDeleteInstance: (instance: Component) => void
-  onViewHistory: (instance: Component) => void
-  onUninstall: (instance: Component) => void
-  onViewImages: (instance: Component) => void
+  onOpenSubtype: (subtype: ComponentSubtype) => void
 }
 
 // Error state component
-const ErrorState = ({ message }: { message: string }) => (
+export const ErrorState = ({ message }: { message: string }) => (
   <div className="text-center py-10 space-y-4">
     <h2 className="text-2xl font-bold text-destructive">Ett fel uppstod</h2>
     <p className="text-muted-foreground">{message}</p>
@@ -81,7 +56,7 @@ const ErrorState = ({ message }: { message: string }) => (
 )
 
 // Empty state component
-const EmptyState = ({
+export const EmptyState = ({
   title,
   description,
   onAction,
@@ -105,7 +80,7 @@ const EmptyState = ({
 )
 
 // No results state component
-const NoResultsState = () => (
+export const NoResultsState = () => (
   <div className="text-center py-16 space-y-4">
     <h2 className="text-xl font-medium text-muted-foreground">
       Inga resultat matchar sökningen
@@ -141,26 +116,7 @@ export const ComponentLibraryContent = ({
   onCreateSubtype,
   onEditSubtype,
   onDeleteSubtype,
-  onNavigateToModels,
-  // Models
-  models,
-  modelsLoading,
-  modelsError,
-  onCreateModel,
-  onEditModel,
-  onDeleteModel,
-  onCreateInstance,
-  onNavigateToInstances,
-  // Instances
-  instances,
-  instancesLoading,
-  instancesError,
-  onCreateInstanceFromTable,
-  onEditInstance,
-  onDeleteInstance,
-  onViewHistory,
-  onUninstall,
-  onViewImages,
+  onOpenSubtype,
 }: ComponentLibraryContentProps) => {
   const hasActiveSearch = searchInput.trim().length > 0
 
@@ -282,108 +238,7 @@ export const ComponentLibraryContent = ({
             isLoading={subtypesLoading}
             onEdit={onEditSubtype}
             onDelete={onDeleteSubtype}
-            onNavigate={onNavigateToModels}
-          />
-        )}
-      </>
-    )
-  }
-
-  // Models view
-  if (viewState.level === 'models') {
-    if (modelsError) {
-      return (
-        <ErrorState message="Kunde inte ladda modeller. Försök igen senare." />
-      )
-    }
-
-    if (
-      !modelsLoading &&
-      (!models || models.length === 0) &&
-      !hasActiveSearch
-    ) {
-      return (
-        <EmptyState
-          title="Inga modeller ännu"
-          description="Skapa din första modell för att komma igång"
-          onAction={onCreateModel}
-          actionLabel="Skapa modell"
-        />
-      )
-    }
-
-    return (
-      <>
-        <TableToolbar
-          onAddNew={onCreateModel}
-          addNewLabel="Ny modell"
-          itemCount={models?.length}
-          levelName="modeller"
-          searchValue={searchInput}
-          onSearchChange={onSearchChange}
-          searchPlaceholder="Sök efter modell eller tillverkare..."
-        />
-        {!modelsLoading && models?.length === 0 && hasActiveSearch ? (
-          <NoResultsState />
-        ) : (
-          <ModelsTable
-            models={models || []}
-            isLoading={modelsLoading}
-            onEdit={onEditModel}
-            onDelete={onDeleteModel}
-            onNavigate={onNavigateToInstances}
-            onCreateInstance={onCreateInstance}
-          />
-        )}
-      </>
-    )
-  }
-
-  // Instances view
-  if (viewState.level === 'instances') {
-    if (instancesError) {
-      return (
-        <ErrorState message="Kunde inte ladda komponenter. Försök igen senare." />
-      )
-    }
-
-    if (
-      !instancesLoading &&
-      (!instances || instances.length === 0) &&
-      !hasActiveSearch
-    ) {
-      return (
-        <EmptyState
-          title="Inga komponenter ännu"
-          description="Skapa din första komponent för att komma igång"
-          onAction={onCreateInstanceFromTable}
-          actionLabel="Skapa komponent"
-        />
-      )
-    }
-
-    return (
-      <>
-        <TableToolbar
-          onAddNew={onCreateInstanceFromTable}
-          addNewLabel="Ny komponent"
-          itemCount={instances?.length}
-          levelName="komponenter"
-          searchValue={searchInput}
-          onSearchChange={onSearchChange}
-          searchPlaceholder="Sök efter serienummer..."
-        />
-        {!instancesLoading && instances?.length === 0 && hasActiveSearch ? (
-          <NoResultsState />
-        ) : (
-          <InstancesTable
-            instances={instances || []}
-            isLoading={instancesLoading}
-            onEdit={onEditInstance}
-            onDelete={onDeleteInstance}
-            onViewHistory={onViewHistory}
-            onUninstall={onUninstall}
-            onViewImages={onViewImages}
+            onNavigate={onOpenSubtype}
           />
         )}
       </>

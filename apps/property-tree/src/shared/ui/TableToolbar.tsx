@@ -11,6 +11,7 @@ interface TableToolbarProps {
   searchValue?: string
   onSearchChange?: (value: string) => void
   searchPlaceholder?: string
+  filters?: React.ReactNode
 }
 
 export const TableToolbar = ({
@@ -21,6 +22,7 @@ export const TableToolbar = ({
   searchValue,
   onSearchChange,
   searchPlaceholder,
+  filters,
 }: TableToolbarProps) => {
   return (
     <div className="flex items-center justify-between gap-4 py-4">
@@ -39,6 +41,7 @@ export const TableToolbar = ({
             />
           </div>
         )}
+        {filters}
         {itemCount !== undefined && (
           <span className="text-sm text-muted-foreground">
             {itemCount} {levelName}

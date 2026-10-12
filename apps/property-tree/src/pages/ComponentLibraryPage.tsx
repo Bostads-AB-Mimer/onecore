@@ -2,6 +2,7 @@ import {
   ComponentLibraryBreadcrumb,
   ComponentLibraryContent,
   ComponentLibraryDialogs,
+  SubtypeView,
   useComponentLibraryHandlers,
   useComponentLibraryViewState,
 } from '@/features/component-library'
@@ -11,34 +12,24 @@ import { ComponentImageGallery } from '@/entities/component'
 import { ViewLayout } from '@/shared/ui/layout'
 
 const ComponentLibraryPage = () => {
-  const { viewState, navigateTo, searchInput, setSearchInput, dialogs, data } =
-    useComponentLibraryViewState()
-
   const {
-    handleCreateCategory,
-    handleEditCategory,
-    handleDeleteCategory,
-    handleNavigateToTypes,
-    handleCreateType,
-    handleEditType,
-    handleDeleteType,
-    handleNavigateToSubtypes,
-    handleCreateSubtype,
-    handleEditSubtype,
-    handleDeleteSubtype,
-    handleNavigateToModels,
-    handleCreateModel,
-    handleEditModel,
-    handleDeleteModel,
-    handleCreateInstance,
-    handleNavigateToInstances,
-    handleCreateInstanceFromTable,
-    handleEditInstance,
-    handleDeleteInstance,
-    handleViewHistory,
-  } = useComponentLibraryHandlers({
     viewState,
     navigateTo,
+    setTab,
+    setModelFilter,
+    page,
+    setPage,
+    searchInput,
+    setSearchInput,
+    categoryType,
+    dialogs,
+    data,
+  } = useComponentLibraryViewState()
+
+  const handlers = useComponentLibraryHandlers({
+    viewState,
+    navigateTo,
+    modelOptions: data.modelOptions,
     instanceDetailsDialog: dialogs.instanceDetailsDialog,
     categoryDialog: dialogs.categoryDialog,
     typeDialog: dialogs.typeDialog,
@@ -68,58 +59,70 @@ const ComponentLibraryPage = () => {
       </div>
 
       {/* Content */}
-      <ComponentLibraryContent
-        viewState={viewState}
-        searchInput={searchInput}
-        onSearchChange={setSearchInput}
-        // Categories
-        categories={data.categories}
-        categoriesLoading={data.categoriesLoading}
-        categoriesError={data.categoriesError}
-        onCreateCategory={handleCreateCategory}
-        onEditCategory={handleEditCategory}
-        onDeleteCategory={handleDeleteCategory}
-        onNavigateToTypes={handleNavigateToTypes}
-        // Types
-        types={data.types}
-        typesLoading={data.typesLoading}
-        typesError={data.typesError}
-        onCreateType={handleCreateType}
-        onEditType={handleEditType}
-        onDeleteType={handleDeleteType}
-        onNavigateToSubtypes={handleNavigateToSubtypes}
-        // Subtypes
-        subtypes={data.subtypes}
-        subtypesLoading={data.subtypesLoading}
-        subtypesError={data.subtypesError}
-        onCreateSubtype={handleCreateSubtype}
-        onEditSubtype={handleEditSubtype}
-        onDeleteSubtype={handleDeleteSubtype}
-        onNavigateToModels={handleNavigateToModels}
-        // Models
-        models={data.models}
-        modelsLoading={data.modelsLoading}
-        modelsError={data.modelsError}
-        onCreateModel={handleCreateModel}
-        onEditModel={handleEditModel}
-        onDeleteModel={handleDeleteModel}
-        onCreateInstance={handleCreateInstance}
-        onNavigateToInstances={handleNavigateToInstances}
-        // Instances
-        instances={data.instances}
-        instancesLoading={data.instancesLoading}
-        instancesError={data.instancesError}
-        onCreateInstanceFromTable={handleCreateInstanceFromTable}
-        onEditInstance={handleEditInstance}
-        onDeleteInstance={handleDeleteInstance}
-        onViewHistory={handleViewHistory}
-        onUninstall={(instance) => dialogs.deinstallDialog.open(instance)}
-        onViewImages={(instance) => dialogs.imageGalleryDialog.open(instance)}
-      />
+      {viewState.level === 'subtype' ? (
+        <SubtypeView
+          viewState={viewState}
+          categoryType={categoryType}
+          searchInput={searchInput}
+          onSearchChange={setSearchInput}
+          onTabChange={setTab}
+          models={data.models}
+          modelsLoading={data.modelsLoading}
+          modelsError={data.modelsError}
+          onCreateModel={handlers.handleCreateModel}
+          onEditModel={handlers.handleEditModel}
+          onDeleteModel={handlers.handleDeleteModel}
+          onCreateInstance={handlers.handleCreateInstance}
+          onOpenModelComponents={handlers.handleOpenModelComponents}
+          modelOptions={data.modelOptions}
+          componentPage={data.componentPage}
+          componentsLoading={data.componentsLoading}
+          componentsFetching={data.componentsFetching}
+          componentsError={data.componentsError}
+          page={page}
+          onPageChange={setPage}
+          onModelFilterChange={setModelFilter}
+          onCreateComponent={handlers.handleCreateInstanceFromTable}
+          onEditInstance={handlers.handleEditInstance}
+          onDeleteInstance={handlers.handleDeleteInstance}
+          onViewHistory={handlers.handleViewHistory}
+          onUninstall={(instance) => dialogs.deinstallDialog.open(instance)}
+          onViewImages={(instance) => dialogs.imageGalleryDialog.open(instance)}
+        />
+      ) : (
+        <ComponentLibraryContent
+          viewState={viewState}
+          searchInput={searchInput}
+          onSearchChange={setSearchInput}
+          categories={data.categories}
+          categoriesLoading={data.categoriesLoading}
+          categoriesError={data.categoriesError}
+          onCreateCategory={handlers.handleCreateCategory}
+          onEditCategory={handlers.handleEditCategory}
+          onDeleteCategory={handlers.handleDeleteCategory}
+          onNavigateToTypes={handlers.handleNavigateToTypes}
+          types={data.types}
+          typesLoading={data.typesLoading}
+          typesError={data.typesError}
+          onCreateType={handlers.handleCreateType}
+          onEditType={handlers.handleEditType}
+          onDeleteType={handlers.handleDeleteType}
+          onNavigateToSubtypes={handlers.handleNavigateToSubtypes}
+          subtypes={data.subtypes}
+          subtypesLoading={data.subtypesLoading}
+          subtypesError={data.subtypesError}
+          onCreateSubtype={handlers.handleCreateSubtype}
+          onEditSubtype={handlers.handleEditSubtype}
+          onDeleteSubtype={handlers.handleDeleteSubtype}
+          onOpenSubtype={handlers.handleOpenSubtype}
+        />
+      )}
 
       {/* Dialogs */}
       <ComponentLibraryDialogs
         viewState={viewState}
+        categoryType={categoryType}
+        modelOptions={data.modelOptions}
         categoryDialog={dialogs.categoryDialog}
         typeDialog={dialogs.typeDialog}
         subtypeDialog={dialogs.subtypeDialog}
