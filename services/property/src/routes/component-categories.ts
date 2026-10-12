@@ -271,11 +271,15 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const entersSurface = data.type === SURFACE && existing.type !== SURFACE
         const result = await updateUnlessModelsUnder(
-          entersSurface ? { categoryId: id } : null,
+          data.type === SURFACE ? { categoryId: id, toType: SURFACE } : null,
           (db) => updateComponentCategory(id, data, db)
         )
+        if (!result.ok && result.err === 'target_not_found') {
+          ctx.status = 404
+          ctx.body = { error: 'Component category not found', ...metadata }
+          return
+        }
         if (!result.ok) {
           ctx.status = 409
           ctx.body = {

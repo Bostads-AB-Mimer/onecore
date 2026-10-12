@@ -1,6 +1,5 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
-import { property } from '@onecore/types'
 import { parseRequest } from '../middleware/parse-request'
 import { z } from 'zod'
 import {
@@ -15,11 +14,8 @@ import {
   createComponentSubtype,
   updateComponentSubtype,
   deleteComponentSubtype,
-  getComponentTypeCategoryType,
   updateUnlessModelsUnder,
 } from '../adapters/component-adapter'
-
-const { SURFACE } = property.ComponentCategoryTypeSchema.enum
 
 export const routes = (router: KoaRouter) => {
   // ==================== COMPONENT SUBTYPES ROUTES ====================
@@ -298,28 +294,20 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        let entersSurface = false
-        if (data.typeId !== undefined && data.typeId !== existing.typeId) {
-          const targetCategoryType = await getComponentTypeCategoryType(
-            data.typeId
-          )
-          if (!targetCategoryType) {
-            ctx.status = 400
-            ctx.body = {
-              error: 'Invalid typeId: component type does not exist',
-              ...metadata,
-            }
-            return
-          }
-          entersSurface =
-            targetCategoryType === SURFACE &&
-            existing.componentType.category.type !== SURFACE
-        }
-
         const result = await updateUnlessModelsUnder(
-          entersSurface ? { subtypeId: id } : null,
+          data.typeId !== undefined && data.typeId !== existing.typeId
+            ? { subtypeId: id, toTypeId: data.typeId }
+            : null,
           (db) => updateComponentSubtype(id, data, db)
         )
+        if (!result.ok && result.err === 'target_not_found') {
+          ctx.status = 400
+          ctx.body = {
+            error: 'Invalid typeId: component type does not exist',
+            ...metadata,
+          }
+          return
+        }
         if (!result.ok) {
           ctx.status = 409
           ctx.body = {

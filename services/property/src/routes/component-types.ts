@@ -1,6 +1,5 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
-import { property } from '@onecore/types'
 import { parseRequest } from '../middleware/parse-request'
 import { z } from 'zod'
 import {
@@ -21,8 +20,6 @@ import {
   updateUnlessModelsUnder,
 } from '../adapters/component-adapter'
 import { prismaErrorCode } from '../utils/prisma-errors'
-
-const { SURFACE } = property.ComponentCategoryTypeSchema.enum
 
 const codeProblemResponse: Record<
   ComponentTypeCodeProblem,
@@ -358,12 +355,21 @@ export const routes = (router: KoaRouter) => {
           }
         }
 
-        const entersSurface =
-          targetCategory.type === SURFACE && existing.category.type !== SURFACE
         const result = await updateUnlessModelsUnder(
-          entersSurface ? { typeId: id } : null,
+          data.categoryId !== undefined &&
+            data.categoryId !== existing.categoryId
+            ? { typeId: id, toCategoryId: data.categoryId }
+            : null,
           (db) => updateComponentType(id, data, db)
         )
+        if (!result.ok && result.err === 'target_not_found') {
+          ctx.status = codeProblemResponse.category_not_found.status
+          ctx.body = {
+            error: codeProblemResponse.category_not_found.error,
+            ...metadata,
+          }
+          return
+        }
         if (!result.ok) {
           ctx.status = 409
           ctx.body = {

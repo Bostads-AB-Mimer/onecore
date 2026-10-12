@@ -101,10 +101,23 @@ const mocked = prisma as unknown as {
 
 const serializable = { isolationLevel: 'Serializable' }
 
+let inTransaction = false
+const outsideThenInside =
+  <T, U>(outside: T, inside: U) =>
+  async () =>
+    inTransaction ? inside : outside
+
 beforeEach(() => {
   jest.resetAllMocks()
-  mocked.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
-    fn(prisma)
+  mocked.$transaction.mockImplementation(
+    async (fn: (tx: unknown) => unknown) => {
+      inTransaction = true
+      try {
+        return await fn(prisma)
+      } finally {
+        inTransaction = false
+      }
+    }
   )
 })
 
@@ -167,6 +180,23 @@ describe('PUT /component-categories/:id into SURFACE', () => {
 
     expect(res.status).toBe(200)
     expect(mocked.componentModels.count).not.toHaveBeenCalled()
+  })
+
+  it('decides from the category type read inside the transaction', async () => {
+    mocked.componentCategories.findUnique.mockImplementation(
+      outsideThenInside(
+        { ...equipmentCategory, type: 'SURFACE' },
+        equipmentCategory
+      )
+    )
+    mocked.componentModels.count.mockResolvedValue(3)
+
+    const res = await request(app.callback())
+      .put(`/component-categories/${categoryId}`)
+      .send({ type: 'SURFACE' })
+
+    expect(res.status).toBe(409)
+    expect(mocked.componentCategories.update).not.toHaveBeenCalled()
   })
 
   it('does not count models when the category is SURFACE already', async () => {
@@ -275,7 +305,7 @@ describe('PUT /component-types/:id into a SURFACE category', () => {
     expect(mocked.componentModels.count).not.toHaveBeenCalled()
   })
 
-  it('looks up the target category once when moving a coded type', async () => {
+  it('shares the target category lookup with the code check, and re-reads it in the transaction', async () => {
     mocked.componentCategories.findUnique.mockResolvedValue({
       ...equipmentCategory,
       id: surfaceCategoryId,
@@ -289,7 +319,7 @@ describe('PUT /component-types/:id into a SURFACE category', () => {
       .send({ categoryId: surfaceCategoryId, code: 'WALL' })
 
     expect(res.status).toBe(200)
-    expect(mocked.componentCategories.findUnique).toHaveBeenCalledTimes(1)
+    expect(mocked.componentCategories.findUnique).toHaveBeenCalledTimes(2)
   })
 
   it('counts and updates in one serializable transaction', async () => {
@@ -309,6 +339,37 @@ describe('PUT /component-types/:id into a SURFACE category', () => {
       serializable
     )
     expect(mocked.componentTypes.update).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses when the target category turns SURFACE before the transaction reads it', async () => {
+    mocked.componentCategories.findUnique.mockImplementation(
+      outsideThenInside(
+        { ...equipmentCategory, id: surfaceCategoryId },
+        { ...equipmentCategory, id: surfaceCategoryId, type: 'SURFACE' }
+      )
+    )
+    mocked.componentModels.count.mockResolvedValue(12)
+
+    const res = await request(app.callback())
+      .put(`/component-types/${typeId}`)
+      .send({ categoryId: surfaceCategoryId })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/12 models/)
+    expect(mocked.componentTypes.update).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when the target category is gone by the time the transaction reads it', async () => {
+    mocked.componentCategories.findUnique.mockImplementation(
+      outsideThenInside({ ...equipmentCategory, id: surfaceCategoryId }, null)
+    )
+
+    const res = await request(app.callback())
+      .put(`/component-types/${typeId}`)
+      .send({ categoryId: surfaceCategoryId })
+
+    expect(res.status).toBe(400)
+    expect(mocked.componentTypes.update).not.toHaveBeenCalled()
   })
 
   it('returns 400 when the target category does not exist', async () => {
@@ -428,6 +489,34 @@ describe('PUT /component-subtypes/:id under a type in a SURFACE category', () =>
       serializable
     )
     expect(mocked.componentSubtypes.update).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses when the target type moves under SURFACE before the transaction reads it', async () => {
+    mocked.componentTypes.findUnique.mockImplementation(
+      outsideThenInside({ ...applianceType, id: surfaceTypeId }, surfaceType)
+    )
+    mocked.componentModels.count.mockResolvedValue(5)
+
+    const res = await request(app.callback())
+      .put(`/component-subtypes/${subtypeId}`)
+      .send({ typeId: surfaceTypeId })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/5 models/)
+    expect(mocked.componentSubtypes.update).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when the target type is gone by the time the transaction reads it', async () => {
+    mocked.componentTypes.findUnique.mockImplementation(
+      outsideThenInside({ ...applianceType, id: surfaceTypeId }, null)
+    )
+
+    const res = await request(app.callback())
+      .put(`/component-subtypes/${subtypeId}`)
+      .send({ typeId: surfaceTypeId })
+
+    expect(res.status).toBe(400)
+    expect(mocked.componentSubtypes.update).not.toHaveBeenCalled()
   })
 
   it('returns 400 when the target type does not exist', async () => {
