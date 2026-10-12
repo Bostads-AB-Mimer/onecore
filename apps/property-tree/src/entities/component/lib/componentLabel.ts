@@ -1,16 +1,6 @@
 import type { Component } from '@/services/types'
 
-export const formatComponentModelName = (
-  model: { manufacturer?: string | null; modelName: string } | null | undefined
-): string =>
-  model
-    ? [
-        model.manufacturer !== 'Unknown' ? model.manufacturer : null,
-        model.modelName,
-      ]
-        .filter(Boolean)
-        .join(' ')
-    : ''
+import { formatComponentModelName } from '@/shared/lib/componentLabels'
 
 export const formatComponentLabel = (component: Component): string => {
   const hierarchy = [

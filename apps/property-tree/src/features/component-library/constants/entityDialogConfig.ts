@@ -228,8 +228,9 @@ export const entityDialogConfig: Record<
         name: 'serialNumber',
         label: 'Serienummer',
         type: 'text',
-        required: true,
-        placeholder: 'Unikt serienummer',
+        required: false,
+        nullable: true,
+        placeholder: 'Valfritt',
       },
       {
         name: 'status',

@@ -13,10 +13,7 @@ export { useComponents } from './hooks/useComponents'
 export { useSubtypeComponents } from './hooks/useSubtypeComponents'
 
 // Lib
-export {
-  formatComponentLabel,
-  formatComponentModelName,
-} from './lib/componentLabel'
+export { formatComponentLabel } from './lib/componentLabel'
 
 // Types
 export type { ComponentModelWithHierarchy } from './ui/ModelSelector'

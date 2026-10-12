@@ -1,0 +1,56 @@
+import type { ComponentModel } from '@/services/types'
+
+import { formatComponentModelName } from '@/shared/lib/componentLabels'
+
+import {
+  entityDialogConfig,
+  type FieldConfig,
+} from '../constants/entityDialogConfig'
+import type { CategoryType } from './componentRows'
+
+export const buildInstanceFields = (
+  categoryType: CategoryType,
+  models: ComponentModel[]
+): FieldConfig[] => {
+  const fields = entityDialogConfig.instance.fields
+  if (categoryType === 'SURFACE') return fields
+
+  const modelField: FieldConfig = {
+    name: 'modelId',
+    label: 'Modell',
+    type: 'select',
+    required: false,
+    nullable: true,
+    defaultValue: '',
+    options: [
+      { value: '', label: 'Ingen modell' },
+      ...models.map((m) => ({
+        value: m.id,
+        label: formatComponentModelName(m),
+      })),
+    ],
+  }
+  return [modelField, ...fields]
+}
+
+export const instanceCreateDefaults = (
+  model?: ComponentModel
+): Record<string, unknown> =>
+  model
+    ? {
+        modelId: model.id,
+        warrantyMonths: model.warrantyMonths || 0,
+        priceAtPurchase: model.currentPrice || 0,
+        depreciationPriceAtPurchase: model.subtype?.depreciationPrice || 0,
+        economicLifespan: model.subtype?.economicLifespan || 0,
+      }
+    : {}
+
+// A model belongs to one subtype, so moving a component drops its model.
+export const applyInstanceMove = (
+  currentSubtypeId: string | undefined,
+  newSubtypeId: string | undefined
+): { subtypeId?: string; modelId?: null } =>
+  newSubtypeId && newSubtypeId !== currentSubtypeId
+    ? { subtypeId: newSubtypeId, modelId: null }
+    : {}
