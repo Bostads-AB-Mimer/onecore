@@ -43,7 +43,7 @@ export const getComponentModels = async (
       where,
       skip,
       take: limit,
-      orderBy: { modelName: 'asc' },
+      orderBy: [{ modelName: 'asc' }, { id: 'asc' }],
       include: {
         subtype: {
           include: {

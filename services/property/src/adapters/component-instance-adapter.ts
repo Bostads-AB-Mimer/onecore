@@ -66,7 +66,7 @@ export const getComponents = async (
       where,
       skip,
       take: limit,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       include: {
         ...componentHierarchyInclude,
         componentInstallations: {
