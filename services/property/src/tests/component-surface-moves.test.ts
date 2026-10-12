@@ -15,6 +15,7 @@ jest.mock('../adapters/db', () => ({
     },
     components: { updateMany: jest.fn() },
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
   },
 }))
 
@@ -27,7 +28,7 @@ import { routes as categoryRoutes } from '../routes/component-categories'
 import { routes as typeRoutes } from '../routes/component-types'
 import { routes as subtypeRoutes } from '../routes/component-subtypes'
 import { routes as modelRoutes } from '../routes/component-models'
-import { serializable as runSerializable } from '../adapters/transaction'
+import { retryOnDeadlock } from '../adapters/transaction'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -97,9 +98,19 @@ const mocked = prisma as unknown as {
   }
   components: { updateMany: jest.Mock }
   $transaction: jest.Mock
+  $queryRaw: jest.Mock
 }
 
-const serializable = { isolationLevel: 'Serializable' }
+const readCommitted = { isolationLevel: 'ReadCommitted' }
+
+const lockQueries = () =>
+  mocked.$queryRaw.mock.calls.map(([query]) => ({
+    sql: query.sql,
+    values: query.values,
+  }))
+const lockedBefore = (read: jest.Mock) =>
+  Math.max(...mocked.$queryRaw.mock.invocationCallOrder) <
+  Math.max(...read.mock.invocationCallOrder)
 
 let inTransaction = false
 const outsideThenInside =
@@ -147,7 +158,7 @@ describe('PUT /component-categories/:id into SURFACE', () => {
     expect(mocked.componentCategories.update).not.toHaveBeenCalled()
   })
 
-  it('counts and updates in one serializable transaction', async () => {
+  it('counts and updates in one transaction', async () => {
     mocked.componentModels.count.mockResolvedValue(0)
 
     await request(app.callback())
@@ -157,9 +168,27 @@ describe('PUT /component-categories/:id into SURFACE', () => {
     expect(mocked.$transaction).toHaveBeenCalledTimes(1)
     expect(mocked.$transaction).toHaveBeenCalledWith(
       expect.any(Function),
-      serializable
+      readCommitted
     )
     expect(mocked.componentCategories.update).toHaveBeenCalledTimes(1)
+  })
+
+  it('locks the category before reading its type in the transaction', async () => {
+    mocked.componentModels.count.mockResolvedValue(0)
+
+    await request(app.callback())
+      .put(`/component-categories/${categoryId}`)
+      .send({ type: 'SURFACE' })
+
+    expect(lockQueries()).toEqual([
+      {
+        sql: expect.stringMatching(
+          /FROM component_categories c WITH \(UPDLOCK, HOLDLOCK\)/
+        ),
+        values: [categoryId],
+      },
+    ])
+    expect(lockedBefore(mocked.componentCategories.findUnique)).toBe(true)
   })
 
   it('updates when no models exist under the category', async () => {
@@ -245,6 +274,35 @@ describe('PUT /component-types/:id into a SURFACE category', () => {
     expect(mocked.componentTypes.update).not.toHaveBeenCalled()
   })
 
+  it('locks the type, its category and the target category before reading them', async () => {
+    mocked.componentCategories.findUnique.mockResolvedValue({
+      ...equipmentCategory,
+      id: surfaceCategoryId,
+      type: 'SURFACE',
+    })
+    mocked.componentModels.count.mockResolvedValue(0)
+
+    await request(app.callback())
+      .put(`/component-types/${typeId}`)
+      .send({ categoryId: surfaceCategoryId })
+
+    expect(lockQueries()).toEqual([
+      {
+        sql: expect.stringMatching(
+          /FROM component_types t WITH \(UPDLOCK, HOLDLOCK\)\s+JOIN component_categories c WITH \(UPDLOCK, HOLDLOCK\)/
+        ),
+        values: [typeId],
+      },
+      {
+        sql: expect.stringMatching(
+          /FROM component_categories c WITH \(UPDLOCK, HOLDLOCK\)/
+        ),
+        values: [surfaceCategoryId],
+      },
+    ])
+    expect(lockedBefore(mocked.componentCategories.findUnique)).toBe(true)
+  })
+
   it('updates when the type has no models', async () => {
     mocked.componentCategories.findUnique.mockResolvedValue({
       ...equipmentCategory,
@@ -322,7 +380,7 @@ describe('PUT /component-types/:id into a SURFACE category', () => {
     expect(mocked.componentCategories.findUnique).toHaveBeenCalledTimes(2)
   })
 
-  it('counts and updates in one serializable transaction', async () => {
+  it('counts and updates in one transaction', async () => {
     mocked.componentCategories.findUnique.mockResolvedValue({
       ...equipmentCategory,
       id: surfaceCategoryId,
@@ -336,7 +394,7 @@ describe('PUT /component-types/:id into a SURFACE category', () => {
 
     expect(mocked.$transaction).toHaveBeenCalledWith(
       expect.any(Function),
-      serializable
+      readCommitted
     )
     expect(mocked.componentTypes.update).toHaveBeenCalledTimes(1)
   })
@@ -420,6 +478,31 @@ describe('PUT /component-subtypes/:id under a type in a SURFACE category', () =>
     expect(mocked.componentSubtypes.update).not.toHaveBeenCalled()
   })
 
+  it('locks the subtype and the target type with their parents before reading them', async () => {
+    mocked.componentTypes.findUnique.mockResolvedValue(surfaceType)
+    mocked.componentModels.count.mockResolvedValue(0)
+
+    await request(app.callback())
+      .put(`/component-subtypes/${subtypeId}`)
+      .send({ typeId: surfaceTypeId })
+
+    expect(lockQueries()).toEqual([
+      {
+        sql: expect.stringMatching(
+          /FROM component_subtypes s WITH \(UPDLOCK, HOLDLOCK\)\s+JOIN component_types t WITH \(UPDLOCK, HOLDLOCK\)/
+        ),
+        values: [subtypeId],
+      },
+      {
+        sql: expect.stringMatching(
+          /FROM component_types t WITH \(UPDLOCK, HOLDLOCK\)/
+        ),
+        values: [surfaceTypeId],
+      },
+    ])
+    expect(lockedBefore(mocked.componentTypes.findUnique)).toBe(true)
+  })
+
   it('updates when the subtype has no models', async () => {
     mocked.componentTypes.findUnique.mockResolvedValue(surfaceType)
     mocked.componentModels.count.mockResolvedValue(0)
@@ -476,7 +559,7 @@ describe('PUT /component-subtypes/:id under a type in a SURFACE category', () =>
     expect(mocked.componentModels.count).not.toHaveBeenCalled()
   })
 
-  it('counts and updates in one serializable transaction', async () => {
+  it('counts and updates in one transaction', async () => {
     mocked.componentTypes.findUnique.mockResolvedValue(surfaceType)
     mocked.componentModels.count.mockResolvedValue(0)
 
@@ -486,7 +569,7 @@ describe('PUT /component-subtypes/:id under a type in a SURFACE category', () =>
 
     expect(mocked.$transaction).toHaveBeenCalledWith(
       expect.any(Function),
-      serializable
+      readCommitted
     )
     expect(mocked.componentSubtypes.update).toHaveBeenCalledTimes(1)
   })
@@ -549,7 +632,7 @@ describe('component model writes and SURFACE moves', () => {
     ...timestamps,
   }
 
-  it('checks the subtype and creates the model in one serializable transaction', async () => {
+  it('checks the subtype and creates the model in one transaction', async () => {
     mocked.componentSubtypes.findUnique.mockResolvedValue(applianceSubtype)
     mocked.componentModels.create.mockResolvedValue(model)
 
@@ -563,14 +646,23 @@ describe('component model writes and SURFACE moves', () => {
     })
 
     expect(res.status).toBe(201)
+    expect(lockQueries()).toEqual([
+      {
+        sql: expect.stringMatching(
+          /FROM component_subtypes s WITH \(UPDLOCK, HOLDLOCK\)/
+        ),
+        values: [subtypeId],
+      },
+    ])
+    expect(lockedBefore(mocked.componentSubtypes.findUnique)).toBe(true)
     expect(mocked.$transaction).toHaveBeenCalledTimes(1)
     expect(mocked.$transaction).toHaveBeenCalledWith(
       expect.any(Function),
-      serializable
+      readCommitted
     )
   })
 
-  it('checks the new subtype and moves the model in one serializable transaction', async () => {
+  it('checks the new subtype and moves the model in one transaction', async () => {
     mocked.componentModels.findUnique.mockResolvedValue({
       ...model,
       subtype: applianceSubtype,
@@ -587,16 +679,34 @@ describe('component model writes and SURFACE moves', () => {
       .send({ componentSubtypeId: otherSubtypeId })
 
     expect(res.status).toBe(200)
+    expect(lockQueries()).toEqual([
+      {
+        sql: expect.stringMatching(
+          /FROM component_subtypes s WITH \(UPDLOCK, HOLDLOCK\)/
+        ),
+        values: [otherSubtypeId],
+      },
+    ])
+    expect(lockedBefore(mocked.componentSubtypes.findUnique)).toBe(true)
     expect(mocked.$transaction).toHaveBeenCalledTimes(1)
     expect(mocked.$transaction).toHaveBeenCalledWith(
       expect.any(Function),
-      serializable
+      readCommitted
     )
     expect(mocked.components.updateMany).toHaveBeenCalled()
   })
 })
 
-describe('serializable', () => {
+describe('retryOnDeadlock', () => {
+  it('runs at READ COMMITTED, so the pooled connection is not left at SERIALIZABLE', async () => {
+    await retryOnDeadlock(async () => 'done')
+
+    expect(mocked.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      readCommitted
+    )
+  })
+
   it('retries a transaction SQL Server picked as deadlock victim', async () => {
     mocked.$transaction
       .mockRejectedValueOnce(
@@ -604,7 +714,7 @@ describe('serializable', () => {
       )
       .mockResolvedValueOnce('done')
 
-    await expect(runSerializable(async () => 'done')).resolves.toBe('done')
+    await expect(retryOnDeadlock(async () => 'done')).resolves.toBe('done')
     expect(mocked.$transaction).toHaveBeenCalledTimes(2)
   })
 
@@ -612,7 +722,7 @@ describe('serializable', () => {
     const deadlock = Object.assign(new Error('deadlock'), { code: 'P2034' })
     mocked.$transaction.mockRejectedValue(deadlock)
 
-    await expect(runSerializable(async () => 'done')).rejects.toBe(deadlock)
+    await expect(retryOnDeadlock(async () => 'done')).rejects.toBe(deadlock)
     expect(mocked.$transaction).toHaveBeenCalledTimes(3)
   })
 
@@ -620,7 +730,7 @@ describe('serializable', () => {
     const failure = Object.assign(new Error('fk'), { code: 'P2003' })
     mocked.$transaction.mockRejectedValueOnce(failure)
 
-    await expect(runSerializable(async () => 'done')).rejects.toBe(failure)
+    await expect(retryOnDeadlock(async () => 'done')).rejects.toBe(failure)
     expect(mocked.$transaction).toHaveBeenCalledTimes(1)
   })
 })

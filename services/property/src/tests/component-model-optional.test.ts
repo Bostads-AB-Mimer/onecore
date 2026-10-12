@@ -29,6 +29,7 @@ jest.mock('../adapters/db', () => ({
     $transaction: jest.fn((fn: (tx: unknown) => unknown) =>
       fn(jest.requireMock('../adapters/db').prisma)
     ),
+    $queryRaw: jest.fn(),
   },
 }))
 

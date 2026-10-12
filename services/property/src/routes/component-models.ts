@@ -19,7 +19,7 @@ import {
   findModelSubtypeProblem,
   type ComponentModelSubtypeProblem,
 } from '../adapters/component-adapter'
-import { serializable } from '../adapters/transaction'
+import { retryOnDeadlock } from '../adapters/transaction'
 import { prismaErrorCode } from '../utils/prisma-errors'
 
 const subtypeProblemResponse: Record<ComponentModelSubtypeProblem, string> = {
@@ -338,7 +338,7 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx)
 
       try {
-        const result = await serializable(async (tx) => {
+        const result = await retryOnDeadlock(async (tx) => {
           const problem = await findModelSubtypeProblem(
             data.componentSubtypeId,
             tx
@@ -446,7 +446,7 @@ export const routes = (router: KoaRouter) => {
             ? data.componentSubtypeId
             : null
         const result = newSubtypeId
-          ? await serializable(async (tx) => {
+          ? await retryOnDeadlock(async (tx) => {
               const problem = await findModelSubtypeProblem(newSubtypeId, tx)
               if (problem) return { ok: false as const, problem }
               return {

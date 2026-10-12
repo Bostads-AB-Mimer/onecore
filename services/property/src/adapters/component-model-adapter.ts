@@ -1,8 +1,8 @@
-import type { Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { trimStrings } from '@src/utils/data-conversion'
 import { property } from '@onecore/types'
 import { prisma } from './db'
-import { serializable } from './transaction'
+import { retryOnDeadlock } from './transaction'
 import type {
   CreateComponentModel,
   UpdateComponentModel,
@@ -154,11 +154,40 @@ export const updateComponentModel = async (
 export type ComponentModelSubtypeProblem =
   'subtype_not_found' | 'surface_subtype'
 
+type HierarchyRow =
+  { categoryId: string } | { typeId: string } | { subtypeId: string }
+
+const lockQuery = (row: HierarchyRow): Prisma.Sql => {
+  if ('categoryId' in row) {
+    return Prisma.sql`SELECT c.id FROM component_categories c WITH (UPDLOCK, HOLDLOCK)
+      WHERE c.id = ${row.categoryId}`
+  }
+  if ('typeId' in row) {
+    return Prisma.sql`SELECT t.id FROM component_types t WITH (UPDLOCK, HOLDLOCK)
+      JOIN component_categories c WITH (UPDLOCK, HOLDLOCK) ON c.id = t.categoryId
+      WHERE t.id = ${row.typeId}`
+  }
+  return Prisma.sql`SELECT s.id FROM component_subtypes s WITH (UPDLOCK, HOLDLOCK)
+    JOIN component_types t WITH (UPDLOCK, HOLDLOCK) ON t.id = s.typeId
+    JOIN component_categories c WITH (UPDLOCK, HOLDLOCK) ON c.id = t.categoryId
+    WHERE s.id = ${row.subtypeId}`
+}
+
+// Update locks on the row and its parents, held until the transaction ends:
+// moves and model writes that touch the same rows wait for each other.
+const lockHierarchy = async (
+  tx: Prisma.TransactionClient,
+  row: HierarchyRow
+) => {
+  await tx.$queryRaw(lockQuery(row))
+}
+
 export const findModelSubtypeProblem = async (
   subtypeId: string,
-  db: Prisma.TransactionClient = prisma
+  tx: Prisma.TransactionClient
 ): Promise<ComponentModelSubtypeProblem | null> => {
-  const subtype = await db.componentSubtypes.findUnique({
+  await lockHierarchy(tx, { subtypeId })
+  const subtype = await tx.componentSubtypes.findUnique({
     where: { id: subtypeId },
     select: {
       componentType: { select: { category: { select: { type: true } } } },
@@ -185,6 +214,7 @@ const readMoveCategoryTypes = async (
   move: HierarchyMove
 ): Promise<MoveCategoryTypes> => {
   if ('categoryId' in move) {
+    await lockHierarchy(tx, { categoryId: move.categoryId })
     const category = await tx.componentCategories.findUnique({
       where: { id: move.categoryId },
       select: { type: true },
@@ -194,6 +224,8 @@ const readMoveCategoryTypes = async (
       : { current: null, target: null }
   }
   if ('typeId' in move) {
+    await lockHierarchy(tx, { typeId: move.typeId })
+    await lockHierarchy(tx, { categoryId: move.toCategoryId })
     const type = await tx.componentTypes.findUnique({
       where: { id: move.typeId },
       select: { category: { select: { type: true } } },
@@ -207,6 +239,8 @@ const readMoveCategoryTypes = async (
       target: target?.type ?? null,
     }
   }
+  await lockHierarchy(tx, { subtypeId: move.subtypeId })
+  await lockHierarchy(tx, { typeId: move.toTypeId })
   const subtype = await tx.componentSubtypes.findUnique({
     where: { id: move.subtypeId },
     select: {
@@ -242,7 +276,7 @@ export const updateUnlessModelsUnder = async <T>(
 ): Promise<HierarchyMoveResult<T>> => {
   if (!move) return { ok: true, data: await update(prisma) }
 
-  return serializable(async (tx): Promise<HierarchyMoveResult<T>> => {
+  return retryOnDeadlock(async (tx): Promise<HierarchyMoveResult<T>> => {
     const { current, target } = await readMoveCategoryTypes(tx, move)
     if (!target) return { ok: false, err: 'target_not_found' }
 
