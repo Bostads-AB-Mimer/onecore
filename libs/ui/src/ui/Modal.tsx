@@ -12,6 +12,9 @@ interface ModalProps {
   footer?: React.ReactNode
 }
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export function Modal({
   isOpen,
   onClose,
@@ -19,6 +22,9 @@ export function Modal({
   children,
   footer,
 }: ModalProps) {
+  const panelRef = React.useRef<HTMLDivElement>(null)
+  const titleId = React.useId()
+
   React.useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -29,6 +35,44 @@ export function Modal({
       document.body.style.overflow = 'unset'
     }
   }, [isOpen])
+
+  React.useEffect(() => {
+    if (!isOpen) return
+
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    panelRef.current?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+        return
+      }
+
+      if (event.key !== 'Tab' || !panelRef.current) return
+
+      const focusable = Array.from(
+        panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      )
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      previouslyFocused?.focus()
+    }
+  }, [isOpen, onClose])
 
   return (
     <AnimatePresence>
@@ -43,6 +87,11 @@ export function Modal({
             onClick={onClose}
           />
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            tabIndex={-1}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -51,10 +100,12 @@ export function Modal({
               stiffness: 300,
               damping: 30,
             }}
-            className="relative w-full max-w-lg max-h-[90vh] overflow-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl mx-4"
+            className="relative w-full max-w-lg max-h-[90vh] overflow-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl mx-4 outline-none"
           >
             <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b dark:border-gray-700 bg-white dark:bg-gray-800">
-              <h2 className="text-xl font-semibold">{title}</h2>
+              <h2 id={titleId} className="text-xl font-semibold">
+                {title}
+              </h2>
               <Button variant="secondary" onClick={onClose} className="!p-2">
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
