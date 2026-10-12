@@ -106,6 +106,14 @@ export const TenfastTagSchema = z.object({
 })
 
 export type TenfastTag = z.infer<typeof TenfastTagSchema>
+
+export const TenfastArticleSchema = z.object({
+  _id: z.string(),
+  code: z.string(),
+  vat: z.number(),
+})
+
+export type TenfastArticle = z.infer<typeof TenfastArticleSchema>
 export type TenfastRentalObject = z.infer<typeof TenfastRentalObjectSchema>
 
 export const TenfastSubletTenantSchema = z.object({
