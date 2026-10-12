@@ -11,7 +11,7 @@ import {
   Upload,
 } from 'lucide-react'
 
-import { useComponentImages } from '@/entities/component'
+import { formatComponentLabel, useComponentImages } from '@/entities/component'
 
 import type { Component } from '@/services/types'
 
@@ -255,7 +255,7 @@ export const InstanceDetailsDialog = ({
         <DialogHeader>
           <DialogTitle>Komponentdetaljer</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            {instance.serialNumber}
+            {formatComponentLabel(instance)}
           </p>
         </DialogHeader>
 
@@ -282,7 +282,9 @@ export const InstanceDetailsDialog = ({
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">Serienummer</dt>
-                <dd className="text-sm font-medium">{instance.serialNumber}</dd>
+                <dd className="text-sm font-medium">
+                  {instance.serialNumber || '-'}
+                </dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">Antal</dt>

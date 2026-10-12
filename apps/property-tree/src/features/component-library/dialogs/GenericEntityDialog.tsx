@@ -13,8 +13,12 @@ import {
   DialogTitle,
 } from '@/shared/ui/Dialog'
 
-import { entityDialogConfig } from '../constants/entityDialogConfig'
+import {
+  entityDialogConfig,
+  type FieldConfig,
+} from '../constants/entityDialogConfig'
 import { cleanFormData } from '../lib/cleanFormData'
+import { applyInstanceMove } from '../lib/instanceForm'
 import { FieldRenderer } from './FieldRenderer'
 import {
   type HierarchyData,
@@ -31,6 +35,7 @@ interface GenericEntityDialogProps<T extends Record<string, any>> {
   mode: 'create' | 'edit'
   defaultValues?: Record<string, any>
   hierarchyData?: HierarchyData
+  fields?: FieldConfig[]
 }
 
 export function GenericEntityDialog<T extends Record<string, any>>({
@@ -42,15 +47,13 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   mode,
   defaultValues,
   hierarchyData,
+  fields: fieldsOverride,
 }: GenericEntityDialogProps<T>) {
   const config = entityDialogConfig[entityType]
+  const fields = fieldsOverride ?? config.fields
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [newParentId, setNewParentId] = useState<string | undefined>(undefined)
-  const [newParentSubtypeId, setNewParentSubtypeId] = useState<
-    string | undefined
-  >(undefined)
-  const hierarchySubtypeId = hierarchyData?.subtypeId
 
   const mutation = useComponentEntityMutation(
     entityType,
@@ -63,7 +66,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       if (mode === 'create') {
         // Set default values for create mode
         const defaults: Record<string, any> = {}
-        config.fields.forEach((field) => {
+        fields.forEach((field) => {
           if (field.defaultValue !== undefined) {
             defaults[field.name] = field.defaultValue
           }
@@ -87,8 +90,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
               defaults.componentSubtypeId = parentId
               break
             case 'instance':
-              defaults.modelId = parentId
-              if (hierarchySubtypeId) defaults.subtypeId = hierarchySubtypeId
+              defaults.subtypeId = parentId
               break
           }
         }
@@ -99,7 +101,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
         // Only include fields that are defined in the config to avoid sending
         // read-only fields like id, createdAt, updatedAt, etc.
         const editData: Record<string, any> = {}
-        config.fields.forEach((field) => {
+        fields.forEach((field) => {
           if (entity[field.name] !== undefined) {
             let value = entity[field.name]
             // Convert ISO date strings to yyyy-MM-dd format
@@ -118,18 +120,8 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       }
       setErrors({})
       setNewParentId(undefined) // Reset parent change when dialog opens
-      setNewParentSubtypeId(undefined)
     }
-  }, [
-    isOpen,
-    mode,
-    entity,
-    parentId,
-    entityType,
-    config.fields,
-    defaultValues,
-    hierarchySubtypeId,
-  ])
+  }, [isOpen, mode, entity, parentId, entityType, fields, defaultValues])
 
   const handleChange = (name: string, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -146,7 +138,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    config.fields.forEach((field) => {
+    fields.forEach((field) => {
       if (field.required) {
         const value = formData[field.name]
         if (value === undefined || value === null || value === '') {
@@ -172,19 +164,18 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       // For mutations, we need to pass parentId separately for cache invalidation
       let mutationData
       if (mode === 'create') {
-        mutationData = { ...cleanFormData(config.fields, formData), parentId }
+        mutationData = { ...cleanFormData(fields, formData), parentId }
       } else {
         // Build update data, including new parent ID if changed
-        const updateData = cleanFormData(config.fields, formData)
+        const updateData = cleanFormData(fields, formData)
 
-        // If parent has changed, add the new parent ID field
-        if (newParentId && entityType !== 'category') {
-          const parentField = parentIdFieldMap[entityType]
-          updateData[parentField] = newParentId
-          // An instance's subtypeId must match its model's subtype
-          if (entityType === 'instance' && newParentSubtypeId) {
-            updateData.subtypeId = newParentSubtypeId
-          }
+        if (entityType === 'instance') {
+          Object.assign(
+            updateData,
+            applyInstanceMove(hierarchyData?.subtypeId, newParentId)
+          )
+        } else if (newParentId && entityType !== 'category') {
+          updateData[parentIdFieldMap[entityType]] = newParentId
         }
 
         mutationData = {
@@ -220,14 +211,11 @@ export function GenericEntityDialog<T extends Record<string, any>>({
             <ParentHierarchySelector
               entityType={entityType}
               initialHierarchy={hierarchyData}
-              onParentChange={(parentId, subtypeId) => {
-                setNewParentId(parentId)
-                setNewParentSubtypeId(subtypeId)
-              }}
+              onParentChange={(parentId) => setNewParentId(parentId)}
             />
           )}
 
-          {config.fields.map((field) => (
+          {fields.map((field) => (
             <FieldRenderer
               key={field.name}
               field={field}
