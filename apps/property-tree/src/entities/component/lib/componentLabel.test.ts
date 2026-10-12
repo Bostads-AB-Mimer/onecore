@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import type { Component } from '@/services/types'
 
-import { formatComponentLabel } from './componentLabel'
+import {
+  formatComponentLabel,
+  formatComponentModelName,
+} from './componentLabel'
 
 const component = (c: Partial<Component>) =>
   ({ id: 'c1', serialNumber: null, ...c }) as unknown as Component
@@ -48,5 +51,29 @@ describe('formatComponentLabel', () => {
       '4711'
     )
     expect(formatComponentLabel(component({}))).toBe('c1')
+  })
+})
+
+describe('formatComponentModelName', () => {
+  it('joins manufacturer and model name', () => {
+    expect(
+      formatComponentModelName({
+        manufacturer: 'Electrolux',
+        modelName: 'LKI6200S2W',
+      })
+    ).toBe('Electrolux LKI6200S2W')
+  })
+
+  it('leaves out the placeholder manufacturer', () => {
+    expect(
+      formatComponentModelName({
+        manufacturer: 'Unknown',
+        modelName: 'Okänd modell',
+      })
+    ).toBe('Okänd modell')
+  })
+
+  it('returns an empty string without a model', () => {
+    expect(formatComponentModelName(null)).toBe('')
   })
 })
