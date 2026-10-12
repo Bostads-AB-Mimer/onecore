@@ -1,4 +1,4 @@
-import { Modal } from '@/shared/ui/Modal'
+import { Modal } from '@onecore/ui'
 
 import { ComponentForm } from './ComponentForm'
 
