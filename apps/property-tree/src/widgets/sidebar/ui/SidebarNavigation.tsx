@@ -175,7 +175,7 @@ function SidebarNavigationContent() {
         <SidebarNavLink
           to={routes.components}
           icon={Settings}
-          label="Administrera Komponenter"
+          label="Komponentbibliotek"
         />
         <SidebarNavLink
           to={routes.guides}

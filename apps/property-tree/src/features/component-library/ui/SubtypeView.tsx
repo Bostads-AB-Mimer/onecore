@@ -9,6 +9,7 @@ import type { SubtypeTab, SubtypeViewState } from '../lib/libraryUrlState'
 import {
   EmptyState,
   ErrorState,
+  LoadingRows,
   NoResultsState,
 } from './ComponentLibraryContent'
 import { ModelsTable } from './ModelsTable'
@@ -24,6 +25,7 @@ interface SubtypeViewProps {
   models: ComponentModel[] | undefined
   modelsLoading: boolean
   modelsError: Error | null
+  onRetryModels: () => void
   onCreateModel: () => void
   onEditModel: (model: ComponentModel) => void
   onDeleteModel: (model: ComponentModel) => void
@@ -35,6 +37,9 @@ interface SubtypeViewProps {
   componentsLoading: boolean
   componentsFetching: boolean
   componentsError: Error | null
+  onRetryComponents: () => void
+  categoryError: Error | null
+  onRetryCategory: () => void
   page: number
   onPageChange: (page: number) => void
   onModelFilterChange: (modelId: string | undefined) => void
@@ -49,8 +54,17 @@ interface SubtypeViewProps {
 export const SubtypeView = (props: SubtypeViewProps) => {
   const { viewState, categoryType, searchInput, onSearchChange } = props
 
+  if (props.categoryError) {
+    return (
+      <ErrorState
+        message="Kunde inte ladda kategorin"
+        onRetry={props.onRetryCategory}
+      />
+    )
+  }
+
   if (!categoryType) {
-    return <p className="py-10 text-center text-muted-foreground">Laddar...</p>
+    return <LoadingRows />
   }
 
   const componentsTab = (
@@ -62,6 +76,7 @@ export const SubtypeView = (props: SubtypeViewProps) => {
       isLoading={props.componentsLoading}
       isFetching={props.componentsFetching}
       error={props.componentsError}
+      onRetry={props.onRetryComponents}
       page={props.page}
       searchInput={searchInput}
       onSearchChange={onSearchChange}
@@ -83,11 +98,14 @@ export const SubtypeView = (props: SubtypeViewProps) => {
   const { models, modelsLoading, modelsError } = props
 
   const modelsTab = modelsError ? (
-    <ErrorState message="Kunde inte ladda modeller. Försök igen senare." />
+    <ErrorState
+      message="Kunde inte ladda modellerna"
+      onRetry={props.onRetryModels}
+    />
   ) : !modelsLoading && (!models || models.length === 0) && !hasActiveSearch ? (
     <EmptyState
-      title="Inga modeller ännu"
-      description="Skapa din första modell för att komma igång"
+      title="Inga modeller för den här undertypen"
+      description="Komponenter kan registreras utan modell. Lägg till en modell när tillverkare och modellbeteckning är kända."
       onAction={props.onCreateModel}
       actionLabel="Skapa modell"
     />
@@ -98,12 +116,13 @@ export const SubtypeView = (props: SubtypeViewProps) => {
         addNewLabel="Ny modell"
         itemCount={models?.length}
         levelName="modeller"
+        levelNameSingular="modell"
         searchValue={searchInput}
         onSearchChange={onSearchChange}
         searchPlaceholder="Sök efter modell eller tillverkare..."
       />
       {!modelsLoading && models?.length === 0 && hasActiveSearch ? (
-        <NoResultsState />
+        <NoResultsState onClear={() => onSearchChange('')} />
       ) : (
         <ModelsTable
           models={models || []}

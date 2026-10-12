@@ -15,9 +15,12 @@ import type {
   UseDialogStateReturn,
   UseSimpleDialogStateReturn,
 } from '@/shared/hooks'
+import { toast } from '@/shared/hooks/useToast'
 
+import { getComponentLocation } from '../lib/componentRows'
 import { instanceCreateDefaults } from '../lib/instanceForm'
 import type { ViewState } from '../lib/libraryUrlState'
+import type { Confirm, ConfirmOptions } from './useConfirmDialog'
 
 export type { ViewState } from '../lib/libraryUrlState'
 
@@ -26,6 +29,7 @@ interface UseComponentLibraryHandlersParams {
   viewState: ViewState
   navigateTo: (state: ViewState) => void
   modelOptions: ComponentModel[]
+  confirm: Confirm
   instanceDetailsDialog: UseSimpleDialogStateReturn<Component>
   categoryDialog: Pick<
     UseDialogStateReturn<ComponentCategory>,
@@ -83,6 +87,12 @@ interface ComponentLibraryHandlers {
   handleViewHistory: (instance: Component) => void
 }
 
+// Core answers a refused delete with { error: '<Swedish reason>' }.
+const serverMessage = (error: unknown): string | undefined => {
+  const message = (error as { error?: unknown } | null)?.error
+  return typeof message === 'string' ? message : undefined
+}
+
 export const useComponentLibraryHandlers = (
   params: UseComponentLibraryHandlersParams
 ): ComponentLibraryHandlers => {
@@ -90,6 +100,7 @@ export const useComponentLibraryHandlers = (
     viewState,
     navigateTo,
     modelOptions,
+    confirm,
     instanceDetailsDialog,
     categoryDialog,
     typeDialog,
@@ -105,25 +116,45 @@ export const useComponentLibraryHandlers = (
   const deleteModel = useComponentEntityMutation('model', 'delete')
   const deleteInstance = useComponentEntityMutation('instance', 'delete')
 
+  const runDelete = async ({
+    run,
+    done,
+    failed,
+    ...options
+  }: ConfirmOptions & {
+    run: () => Promise<unknown>
+    done: string
+    failed: string
+  }) => {
+    if (!(await confirm(options))) return
+    try {
+      await run()
+      toast({ title: done })
+    } catch (error) {
+      toast({
+        title: 'Kunde inte ta bort',
+        description: serverMessage(error) ?? failed,
+        variant: 'destructive',
+      })
+    }
+  }
+
   // Category handlers
   const handleCreateCategory = () => categoryDialog.openCreate()
   const handleEditCategory = (category: ComponentCategory) =>
     categoryDialog.openEdit(category)
 
-  const handleDeleteCategory = async (category: ComponentCategory) => {
-    if (
-      window.confirm(
-        `Är du säker på att du vill ta bort kategorin "${category.categoryName}"?`
-      )
-    ) {
-      try {
-        await deleteCategory.mutateAsync({ id: category.id })
-      } catch (error) {
-        console.error('Error deleting category:', error)
-        alert('Det gick inte att ta bort kategorin. Den kan ha kopplade typer.')
-      }
-    }
-  }
+  const handleDeleteCategory = (category: ComponentCategory) =>
+    runDelete({
+      title: `Ta bort kategorin ${category.categoryName}?`,
+      description:
+        'Kategorin tas bort permanent. Det går bara om den saknar typer.',
+      confirmLabel: 'Ta bort kategori',
+      run: () => deleteCategory.mutateAsync({ id: category.id }),
+      done: `Kategorin ${category.categoryName} togs bort`,
+      failed:
+        'Kategorin kan ha typer. Ta bort eller flytta dem och försök igen.',
+    })
 
   const handleNavigateToTypes = (category: ComponentCategory) => {
     navigateTo({
@@ -139,24 +170,18 @@ export const useComponentLibraryHandlers = (
 
   const handleDeleteType = async (type: ComponentType) => {
     if (viewState.level === 'categories') return
+    const parentId = viewState.categoryId
 
-    if (
-      window.confirm(
-        `Är du säker på att du vill ta bort typen "${type.typeName}"?`
-      )
-    ) {
-      try {
-        await deleteType.mutateAsync({
-          id: type.id,
-          parentId: viewState.categoryId,
-        })
-      } catch (error) {
-        console.error('Error deleting type:', error)
-        alert(
-          'Det gick inte att ta bort typen. Den kan ha kopplade undertyper.'
-        )
-      }
-    }
+    await runDelete({
+      title: `Ta bort typen ${type.typeName}?`,
+      description:
+        'Typen tas bort permanent. Det går bara om den saknar undertyper.',
+      confirmLabel: 'Ta bort typ',
+      run: () => deleteType.mutateAsync({ id: type.id, parentId }),
+      done: `Typen ${type.typeName} togs bort`,
+      failed:
+        'Typen kan ha undertyper. Ta bort eller flytta dem och försök igen.',
+    })
   }
 
   const handleNavigateToSubtypes = (type: ComponentType) => {
@@ -178,24 +203,18 @@ export const useComponentLibraryHandlers = (
 
   const handleDeleteSubtype = async (subtype: ComponentSubtype) => {
     if (viewState.level !== 'subtypes') return
+    const parentId = viewState.typeId
 
-    if (
-      window.confirm(
-        `Är du säker på att du vill ta bort undertypen "${subtype.subTypeName}"?`
-      )
-    ) {
-      try {
-        await deleteSubtype.mutateAsync({
-          id: subtype.id,
-          parentId: viewState.typeId,
-        })
-      } catch (error) {
-        console.error('Error deleting subtype:', error)
-        alert(
-          'Det gick inte att ta bort undertypen, den kan ha kopplade modeller.'
-        )
-      }
-    }
+    await runDelete({
+      title: `Ta bort undertypen ${subtype.subTypeName}?`,
+      description:
+        'Undertypen tas bort permanent. Det går bara om den saknar modeller och komponenter.',
+      confirmLabel: 'Ta bort undertyp',
+      run: () => deleteSubtype.mutateAsync({ id: subtype.id, parentId }),
+      done: `Undertypen ${subtype.subTypeName} togs bort`,
+      failed:
+        'Undertypen kan ha modeller eller komponenter. Ta bort eller flytta dem och försök igen.',
+    })
   }
 
   const handleOpenSubtype = (subtype: ComponentSubtype) => {
@@ -219,24 +238,18 @@ export const useComponentLibraryHandlers = (
 
   const handleDeleteModel = async (model: ComponentModel) => {
     if (viewState.level !== 'subtype') return
+    const parentId = viewState.subtypeId
 
-    if (
-      window.confirm(
-        `Är du säker på att du vill ta bort modellen "${model.modelName}"?`
-      )
-    ) {
-      try {
-        await deleteModel.mutateAsync({
-          id: model.id,
-          parentId: viewState.subtypeId,
-        })
-      } catch (error) {
-        console.error('Error deleting model:', error)
-        alert(
-          'Det gick inte att ta bort modellen. Den kan ha kopplade komponenter.'
-        )
-      }
-    }
+    await runDelete({
+      title: `Ta bort modellen ${model.modelName}?`,
+      description:
+        'Modellen tas bort permanent. Det går bara om inga komponenter använder den.',
+      confirmLabel: 'Ta bort modell',
+      run: () => deleteModel.mutateAsync({ id: model.id, parentId }),
+      done: `Modellen ${model.modelName} togs bort`,
+      failed:
+        'Komponenter kan använda modellen. Byt modell på dem och försök igen.',
+    })
   }
 
   const handleCreateInstance = (model: ComponentModel) =>
@@ -259,22 +272,19 @@ export const useComponentLibraryHandlers = (
 
   const handleDeleteInstance = async (instance: Component) => {
     if (viewState.level !== 'subtype') return
+    const parentId = viewState.subtypeId
+    const { address, detail } = getComponentLocation(instance)
+    const place = address ? `${address}, ${detail}` : detail
 
-    if (
-      window.confirm(
-        `Är du säker på att du vill ta bort komponenten "${formatComponentLabel(instance)}"?`
-      )
-    ) {
-      try {
-        await deleteInstance.mutateAsync({
-          id: instance.id,
-          parentId: viewState.subtypeId,
-        })
-      } catch (error) {
-        console.error('Error deleting instance:', error)
-        alert('Det gick inte att ta bort komponenten.')
-      }
-    }
+    await runDelete({
+      title: 'Ta bort komponenten?',
+      description: `${formatComponentLabel(instance)} (${place}) tas bort ur registret. Det går inte att ångra.`,
+      confirmLabel: 'Ta bort komponent',
+      run: () => deleteInstance.mutateAsync({ id: instance.id, parentId }),
+      done: 'Komponenten togs bort',
+      failed:
+        'En installerad komponent kan inte tas bort. Avinstallera den och försök igen.',
+    })
   }
 
   const handleViewHistory = (instance: Component) => {

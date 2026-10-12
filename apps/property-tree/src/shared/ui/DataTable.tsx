@@ -6,13 +6,20 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu'
 import { Pagination } from '@/shared/ui/Pagination'
 
+import {
+  type HideableAction,
+  type HideableColumn,
+  visibleActions,
+  visibleColumns,
+} from './dataTableColumns'
 import { ResponsiveTableComponents } from './ResponsiveTableComponents'
 
-export interface Column<T> {
+export interface Column<T> extends HideableColumn<T> {
   key: string
   label: string
   render: (item: T) => React.ReactNode
@@ -21,7 +28,7 @@ export interface Column<T> {
   hideOnMobile?: boolean
 }
 
-export interface DataTableAction<T> {
+export interface DataTableAction<T> extends HideableAction<T> {
   label: string
   onClick: (item: T) => void
   icon?: React.ReactNode
@@ -39,6 +46,8 @@ export interface DataTableProps<T extends { id: string }> {
   expandableContent?: (item: T) => React.ReactNode | null
   /** Rows per page for client-side pagination. Defaults to 20. */
   pageSize?: number
+  /** Names a row for screen readers, e.g. in the actions button label. */
+  getRowLabel?: (item: T) => string
 }
 
 export function DataTable<T extends { id: string }>({
@@ -52,6 +61,7 @@ export function DataTable<T extends { id: string }>({
   actions = [],
   expandableContent,
   pageSize = 20,
+  getRowLabel,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -88,10 +98,18 @@ export function DataTable<T extends { id: string }>({
     )
   }
 
+  const actionsLabel = (item: T) =>
+    getRowLabel ? `Åtgärder för ${getRowLabel(item)}` : 'Åtgärder'
+
   const renderActionsCell = (item: T) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={actionsLabel(item)}
+          onClick={(e) => e.stopPropagation()}
+        >
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -105,18 +123,9 @@ export function DataTable<T extends { id: string }>({
           <Edit className="h-4 w-4 mr-2" />
           Redigera
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(item)
-          }}
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Ta bort
-        </DropdownMenuItem>
-        {actions.map((action, index) => (
+        {visibleActions(actions, item).map((action) => (
           <DropdownMenuItem
-            key={index}
+            key={action.label}
             onClick={(e) => {
               e.stopPropagation()
               action.onClick(item)
@@ -126,13 +135,26 @@ export function DataTable<T extends { id: string }>({
             {action.label}
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(item)
+          }}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Ta bort
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 
+  const shownColumns = visibleColumns(columns, data)
+
   // Add actions column to the columns array
   const columnsWithActions: Column<T>[] = [
-    ...columns,
+    ...shownColumns,
     {
       key: 'actions',
       label: '',
@@ -147,7 +169,7 @@ export function DataTable<T extends { id: string }>({
     <div className="space-y-3">
       {/* Column data */}
       <div className="space-y-2">
-        {columns
+        {shownColumns
           .filter((col) => !col.hideOnMobile)
           .map((column) => (
             <div
@@ -178,21 +200,9 @@ export function DataTable<T extends { id: string }>({
           <Edit className="h-4 w-4 mr-1" />
           Redigera
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(item)
-          }}
-          className="flex-1 min-w-[100px]"
-        >
-          <Trash2 className="h-4 w-4 mr-1" />
-          Ta bort
-        </Button>
-        {actions.map((action, index) => (
+        {visibleActions(actions, item).map((action) => (
           <Button
-            key={index}
+            key={action.label}
             variant="outline"
             size="sm"
             onClick={(e) => {
@@ -205,6 +215,18 @@ export function DataTable<T extends { id: string }>({
             {action.label}
           </Button>
         ))}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(item)
+          }}
+          className="flex-1 min-w-[100px] text-destructive hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Ta bort
+        </Button>
       </div>
     </div>
   )

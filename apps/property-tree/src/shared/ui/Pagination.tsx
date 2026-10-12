@@ -99,6 +99,8 @@ export const Pagination = ({
               key={page}
               variant={currentPage === page ? 'default' : 'outline'}
               size="sm"
+              aria-current={currentPage === page ? 'page' : undefined}
+              aria-label={`Sida ${page}`}
               onClick={() => onPageChange(page)}
               disabled={isFetching}
               className="h-8 w-8 p-0"

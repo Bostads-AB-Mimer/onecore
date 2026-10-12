@@ -48,6 +48,7 @@ export const ModelsTable = ({
     {
       key: 'currentPrice',
       label: 'Pris',
+      isEmpty: (item) => !item.currentPrice,
       render: (item) => (
         <span className={!item.currentPrice ? 'text-muted-foreground' : ''}>
           {item.currentPrice
@@ -63,6 +64,7 @@ export const ModelsTable = ({
     {
       key: 'currentInstallPrice',
       label: 'Installationspris',
+      isEmpty: (item) => !item.currentInstallPrice,
       render: (item) => (
         <span
           className={!item.currentInstallPrice ? 'text-muted-foreground' : ''}
@@ -80,6 +82,7 @@ export const ModelsTable = ({
     {
       key: 'warrantyMonths',
       label: 'Garanti',
+      isEmpty: (item) => !item.warrantyMonths,
       render: (item) => (
         <span className={!item.warrantyMonths ? 'text-muted-foreground' : ''}>
           {item.warrantyMonths ? `${item.warrantyMonths} mån` : '-'}
@@ -89,6 +92,7 @@ export const ModelsTable = ({
     {
       key: 'dimensions',
       label: 'Dimensioner',
+      isEmpty: (item) => !item.dimensions,
       render: (item) => (
         <span className="text-muted-foreground">{item.dimensions || '-'}</span>
       ),
@@ -96,6 +100,7 @@ export const ModelsTable = ({
     {
       key: 'coclassCode',
       label: 'CoClass',
+      isEmpty: (item) => !item.coclassCode,
       render: (item) => (
         <span className="text-muted-foreground">{item.coclassCode || '-'}</span>
       ),
@@ -113,6 +118,7 @@ export const ModelsTable = ({
             setDocumentsModelId(item.id)
           }}
           title="Visa dokument"
+          aria-label={`Visa dokument för ${item.modelName}`}
         >
           <FileText className="h-4 w-4" />
         </Button>
@@ -173,7 +179,8 @@ export const ModelsTable = ({
         onDelete={onDelete}
         onRowClick={onNavigate}
         actions={actions}
-        emptyMessage="Inga modeller ännu"
+        emptyMessage="Inga modeller"
+        getRowLabel={(item) => item.modelName}
         expandableContent={expandableContent}
       />
 

@@ -3,7 +3,6 @@ import { History, ImageIcon, Unplug } from 'lucide-react'
 import type { Component } from '@/services/types'
 
 import { formatComponentModelName } from '@/shared/lib/componentLabels'
-import { formatISODate } from '@/shared/lib/formatters'
 import { paths } from '@/shared/routes'
 import {
   type Column,
@@ -16,6 +15,7 @@ import {
   type CategoryType,
   type ComponentColumnKey,
   formatComponentQuantity,
+  formatInstallationDate,
   getComponentColumnKeys,
   getComponentLocation,
   getInstallationDate,
@@ -33,42 +33,47 @@ interface InstancesTableProps {
   onViewImages: (instance: Component) => void
 }
 
-const openResidence = (rentalId: string, roomCode: string | null) => {
-  const url = roomCode
+const residenceUrl = (rentalId: string, roomCode: string | null) =>
+  roomCode
     ? `${paths.residence(rentalId)}?room=${encodeURIComponent(roomCode)}`
     : paths.residence(rentalId)
-  window.open(url, '_blank')
-}
 
 const muted = (text: string) => (
   <span className="text-muted-foreground">{text}</span>
 )
+
+const rowLabel = (item: Component) => {
+  const { address, detail } = getComponentLocation(item)
+  return address ? `${address}, ${detail}` : detail
+}
 
 const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
   location: {
     key: 'location',
     label: 'Plats',
     render: (item) => {
-      const location = getComponentLocation(item)
-      if (!location.rentalId) {
+      const { address, detail, rentalId, roomCode } = getComponentLocation(item)
+      if (!rentalId) {
         return (
-          <span className="text-muted-foreground" title={location.tooltip}>
-            {location.label}
+          <span className="flex flex-col leading-snug">
+            {address && <span className="font-medium">{address}</span>}
+            <span className="text-muted-foreground">{detail}</span>
           </span>
         )
       }
-      const { rentalId, roomCode } = location
       return (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            openResidence(rentalId, roomCode)
-          }}
-          className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-          title={location.tooltip}
+        <a
+          href={residenceUrl(rentalId, roomCode)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="group flex flex-col leading-snug rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {location.label}
-        </button>
+          <span className="font-medium text-primary underline-offset-4 group-hover:underline">
+            {address ?? detail}
+          </span>
+          {address && <span className="text-muted-foreground">{detail}</span>}
+        </a>
       )
     },
   },
@@ -80,11 +85,13 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
   installed: {
     key: 'installed',
     label: 'Installerad',
-    render: (item) => muted(formatISODate(getInstallationDate(item))),
+    className: 'whitespace-nowrap tabular-nums',
+    render: (item) => muted(formatInstallationDate(getInstallationDate(item))),
   },
   serialNumber: {
     key: 'serialNumber',
     label: 'Serienr',
+    className: 'tabular-nums',
     render: (item) => item.serialNumber || muted('-'),
   },
   specifications: {
@@ -102,6 +109,7 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
   quantity: {
     key: 'quantity',
     label: 'Antal',
+    className: 'whitespace-nowrap tabular-nums',
     render: (item) => formatComponentQuantity(item),
   },
 }
@@ -164,9 +172,8 @@ export const InstancesTable = ({
     },
     {
       label: 'Avinstallera',
-      onClick: (item) => {
-        if (hasActiveInstallation(item)) onUninstall(item)
-      },
+      onClick: onUninstall,
+      isHidden: (item) => !hasActiveInstallation(item),
       icon: <Unplug className="h-4 w-4 mr-2" />,
     },
   ]
@@ -179,11 +186,12 @@ export const InstancesTable = ({
       onEdit={onEdit}
       onDelete={onDelete}
       actions={actions}
-      emptyMessage="Inga komponenter ännu"
+      emptyMessage="Inga komponenter"
       expandableContent={
         categoryType === 'EQUIPMENT' ? expandableContent : undefined
       }
       pageSize={pageSize}
+      getRowLabel={rowLabel}
     />
   )
 }

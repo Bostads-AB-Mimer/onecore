@@ -27,6 +27,8 @@ export const CategoriesTable = ({
     {
       key: 'description',
       label: 'Beskrivning',
+      isEmpty: (item) =>
+        !item.description || item.description === item.categoryName,
       render: (item) => (
         <span className="text-muted-foreground">{item.description || '-'}</span>
       ),
@@ -50,7 +52,8 @@ export const CategoriesTable = ({
       onEdit={onEdit}
       onDelete={onDelete}
       onRowClick={onNavigate}
-      emptyMessage="Inga kategorier ännu"
+      emptyMessage="Inga kategorier"
+      getRowLabel={(item) => item.categoryName}
     />
   )
 }

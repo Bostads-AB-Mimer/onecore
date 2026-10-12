@@ -1,4 +1,3 @@
-import { Fragment } from 'react'
 import { ChevronRight } from 'lucide-react'
 
 import type { ViewState } from '../hooks/useComponentLibraryHandlers'
@@ -77,24 +76,31 @@ export const ComponentLibraryBreadcrumb = ({
   const items = getBreadcrumbItems(viewState, onNavigate)
 
   return (
-    <div className="flex items-center gap-2">
-      {items.map((item, index) => (
-        <Fragment key={index}>
-          {index > 0 && (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          )}
-          {item.onClick ? (
-            <button
-              onClick={item.onClick}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {item.label}
-            </button>
-          ) : (
-            <span className="font-medium">{item.label}</span>
-          )}
-        </Fragment>
-      ))}
-    </div>
+    <nav aria-label="Brödsmulor">
+      <ol className="flex flex-wrap items-center gap-2">
+        {items.map((item, index) => (
+          <li key={index} className="flex items-center gap-2">
+            {index > 0 && (
+              <ChevronRight
+                className="h-4 w-4 text-muted-foreground"
+                aria-hidden="true"
+              />
+            )}
+            {item.onClick ? (
+              <button
+                onClick={item.onClick}
+                className="text-muted-foreground hover:text-foreground transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {item.label}
+              </button>
+            ) : (
+              <span className="font-medium text-foreground" aria-current="page">
+                {item.label}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
   )
 }

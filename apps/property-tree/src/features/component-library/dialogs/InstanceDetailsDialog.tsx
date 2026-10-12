@@ -34,11 +34,27 @@ import {
   TableRow,
 } from '@/shared/ui/Table'
 
+import {
+  describeStructure,
+  formatComponentQuantity,
+  formatInstallationDate,
+  formatSek,
+  formatWithUnit,
+  type PlaceLabel,
+} from '../lib/componentRows'
+
 interface InstanceDetailsDialogProps {
   isOpen: boolean
   onClose: () => void
   instance: Component
 }
+
+const PlaceCell = ({ place }: { place: PlaceLabel }) => (
+  <span className="flex flex-col leading-snug">
+    {place.address && <span>{place.address}</span>}
+    <span className="text-muted-foreground">{place.detail}</span>
+  </span>
+)
 
 export const InstanceDetailsDialog = ({
   isOpen,
@@ -288,20 +304,22 @@ export const InstanceDetailsDialog = ({
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">Antal</dt>
-                <dd className="text-sm font-medium">{instance.quantity}</dd>
+                <dd className="text-sm font-medium tabular-nums">
+                  {formatComponentQuantity(instance)}
+                </dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">Inköpspris</dt>
-                <dd className="text-sm font-medium">
-                  {instance.priceAtPurchase} kr
+                <dd className="text-sm font-medium tabular-nums">
+                  {formatSek(instance.priceAtPurchase)}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">
                   Avskrivningspris
                 </dt>
-                <dd className="text-sm font-medium">
-                  {instance.depreciationPriceAtPurchase} kr
+                <dd className="text-sm font-medium tabular-nums">
+                  {formatSek(instance.depreciationPriceAtPurchase)}
                 </dd>
               </div>
               <div>
@@ -311,19 +329,17 @@ export const InstanceDetailsDialog = ({
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">
-                  Garanti (månader)
-                </dt>
-                <dd className="text-sm font-medium">
-                  {instance.warrantyMonths} mån
+                <dt className="text-sm text-muted-foreground">Garanti</dt>
+                <dd className="text-sm font-medium tabular-nums">
+                  {formatWithUnit(instance.warrantyMonths, 'mån')}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">
                   Ekonomisk livslängd
                 </dt>
-                <dd className="text-sm font-medium">
-                  {instance.economicLifespan} år
+                <dd className="text-sm font-medium tabular-nums">
+                  {formatWithUnit(instance.economicLifespan, 'år')}
                 </dd>
               </div>
               {instance.ncsCode && (
@@ -346,27 +362,33 @@ export const InstanceDetailsDialog = ({
                     <TableRow>
                       <TableHead>Installationsdatum</TableHead>
                       <TableHead>Avinstallationsdatum</TableHead>
-                      <TableHead>Rum</TableHead>
+                      <TableHead>Plats</TableHead>
                       <TableHead>Kostnad</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {instance.componentInstallations.map((install) => (
                       <TableRow key={install.id}>
-                        <TableCell>
-                          {formatISODate(install.installationDate)}
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {formatInstallationDate(install.installationDate)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
                           {install.deinstallationDate ? (
                             formatISODate(install.deinstallationDate)
                           ) : (
                             <Badge variant="default">Aktiv</Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {install.spaceId || 'N/A'}
+                        <TableCell>
+                          <PlaceCell
+                            place={describeStructure(
+                              install.propertyObject?.propertyStructures?.[0]
+                            )}
+                          />
                         </TableCell>
-                        <TableCell>{install.cost || 0} kr</TableCell>
+                        <TableCell className="tabular-nums">
+                          {formatSek(install.cost)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

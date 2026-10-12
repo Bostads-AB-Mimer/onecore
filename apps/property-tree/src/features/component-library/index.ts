@@ -9,3 +9,4 @@ export { SubtypeView } from './ui/SubtypeView'
 // Hooks
 export { useComponentLibraryHandlers } from './hooks/useComponentLibraryHandlers'
 export { useComponentLibraryViewState } from './hooks/useComponentLibraryViewState'
+export { useConfirmDialog } from './hooks/useConfirmDialog'

@@ -1,7 +1,10 @@
 import type { ComponentPage } from '@/services/api/core/componentLibraryService'
 import type { Component, ComponentModel } from '@/services/types'
 
-import { formatComponentModelName } from '@/shared/lib/componentLabels'
+import {
+  formatComponentModelName,
+  sortModelsByName,
+} from '@/shared/lib/componentLabels'
 import { Pagination } from '@/shared/ui/Pagination'
 import {
   Select,
@@ -31,6 +34,7 @@ interface SubtypeComponentsTabProps {
   isLoading: boolean
   isFetching: boolean
   error: Error | null
+  onRetry: () => void
   page: number
   searchInput: string
   onSearchChange: (value: string) => void
@@ -52,6 +56,7 @@ export const SubtypeComponentsTab = ({
   isLoading,
   isFetching,
   error,
+  onRetry,
   page,
   searchInput,
   onSearchChange,
@@ -62,7 +67,7 @@ export const SubtypeComponentsTab = ({
 }: SubtypeComponentsTabProps) => {
   if (error) {
     return (
-      <ErrorState message="Kunde inte ladda komponenter. Försök igen senare." />
+      <ErrorState message="Kunde inte ladda komponenterna" onRetry={onRetry} />
     )
   }
 
@@ -73,12 +78,19 @@ export const SubtypeComponentsTab = ({
   if (!isLoading && total === 0 && !isFiltered) {
     return (
       <EmptyState
-        title="Inga komponenter ännu"
-        description="Skapa den första komponenten av den här undertypen"
+        title="Inga komponenter av den här undertypen"
+        description="Komponenter läggs till här eller när de installeras i en lägenhet."
         onAction={onCreate}
         actionLabel="Skapa komponent"
       />
     )
+  }
+
+  const sortedModels = sortModelsByName(modelOptions)
+
+  const clearFilters = () => {
+    onModelFilterChange(undefined)
+    onSearchChange('')
   }
 
   const modelFilter = isEquipment ? (
@@ -88,12 +100,15 @@ export const SubtypeComponentsTab = ({
         onModelFilterChange(value === ALL_MODELS ? undefined : value)
       }
     >
-      <SelectTrigger className="h-10 w-64" aria-label="Filtrera på modell">
+      <SelectTrigger
+        className="h-10 w-full sm:w-64"
+        aria-label="Filtrera på modell"
+      >
         <SelectValue placeholder="Alla modeller" />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={ALL_MODELS}>Alla modeller</SelectItem>
-        {modelOptions.map((model) => (
+        {sortedModels.map((model) => (
           <SelectItem key={model.id} value={model.id}>
             {formatComponentModelName(model)}
           </SelectItem>
@@ -109,6 +124,7 @@ export const SubtypeComponentsTab = ({
         addNewLabel="Ny komponent"
         itemCount={total}
         levelName="komponenter"
+        levelNameSingular="komponent"
         filters={modelFilter}
         {...(isEquipment
           ? {
@@ -119,7 +135,7 @@ export const SubtypeComponentsTab = ({
           : {})}
       />
       {!isLoading && total === 0 ? (
-        <NoResultsState />
+        <NoResultsState onClear={clearFilters} />
       ) : (
         <InstancesTable
           instances={componentPage?.content ?? []}

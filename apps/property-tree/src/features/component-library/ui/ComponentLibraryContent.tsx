@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, RotateCw } from 'lucide-react'
 
 import type {
   ComponentCategory,
@@ -23,6 +23,7 @@ interface ComponentLibraryContentProps {
   categories: ComponentCategory[] | undefined
   categoriesLoading: boolean
   categoriesError: Error | null
+  onRetryCategories: () => void
   onCreateCategory: () => void
   onEditCategory: (category: ComponentCategory) => void
   onDeleteCategory: (category: ComponentCategory) => void
@@ -32,6 +33,7 @@ interface ComponentLibraryContentProps {
   types: ComponentType[] | undefined
   typesLoading: boolean
   typesError: Error | null
+  onRetryTypes: () => void
   onCreateType: () => void
   onEditType: (type: ComponentType) => void
   onDeleteType: (type: ComponentType) => void
@@ -41,21 +43,34 @@ interface ComponentLibraryContentProps {
   subtypes: ComponentSubtype[] | undefined
   subtypesLoading: boolean
   subtypesError: Error | null
+  onRetrySubtypes: () => void
   onCreateSubtype: () => void
   onEditSubtype: (subtype: ComponentSubtype) => void
   onDeleteSubtype: (subtype: ComponentSubtype) => void
   onOpenSubtype: (subtype: ComponentSubtype) => void
 }
 
-// Error state component
-export const ErrorState = ({ message }: { message: string }) => (
-  <div className="text-center py-10 space-y-4">
-    <h2 className="text-2xl font-bold text-destructive">Ett fel uppstod</h2>
-    <p className="text-muted-foreground">{message}</p>
+export const ErrorState = ({
+  message,
+  onRetry,
+}: {
+  message: string
+  onRetry?: () => void
+}) => (
+  <div className="text-center py-12 space-y-3" role="alert">
+    <h2 className="text-lg font-semibold">{message}</h2>
+    <p className="text-sm text-muted-foreground">
+      Kontrollera anslutningen och försök igen.
+    </p>
+    {onRetry && (
+      <Button variant="outline" onClick={onRetry}>
+        <RotateCw className="h-4 w-4 mr-2" />
+        Försök igen
+      </Button>
+    )}
   </div>
 )
 
-// Empty state component
 export const EmptyState = ({
   title,
   description,
@@ -67,11 +82,13 @@ export const EmptyState = ({
   onAction?: () => void
   actionLabel?: string
 }) => (
-  <div className="text-center py-16 space-y-4">
-    <h2 className="text-2xl font-bold">{title}</h2>
-    <p className="text-muted-foreground">{description}</p>
+  <div className="text-center py-16 space-y-3">
+    <h2 className="text-lg font-semibold">{title}</h2>
+    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+      {description}
+    </p>
     {onAction && actionLabel && (
-      <Button onClick={onAction} className="mt-4">
+      <Button onClick={onAction} className="mt-2">
         <Plus className="h-4 w-4 mr-2" />
         {actionLabel}
       </Button>
@@ -79,13 +96,26 @@ export const EmptyState = ({
   </div>
 )
 
-// No results state component
-export const NoResultsState = () => (
-  <div className="text-center py-16 space-y-4">
-    <h2 className="text-xl font-medium text-muted-foreground">
-      Inga resultat matchar sökningen
-    </h2>
-    <p className="text-muted-foreground">Försök med en annan sökterm</p>
+export const LoadingRows = () => (
+  <div className="animate-pulse space-y-3 py-4" aria-busy="true">
+    <span className="sr-only">Laddar…</span>
+    {[...Array(5)].map((_, i) => (
+      <div key={i} className="h-12 bg-secondary rounded-md" />
+    ))}
+  </div>
+)
+
+export const NoResultsState = ({ onClear }: { onClear?: () => void }) => (
+  <div className="text-center py-16 space-y-3" role="status">
+    <h2 className="text-lg font-semibold">Inga träffar</h2>
+    <p className="text-sm text-muted-foreground">
+      Inget matchar sökningen eller filtret.
+    </p>
+    {onClear && (
+      <Button variant="outline" onClick={onClear}>
+        Rensa sökning och filter
+      </Button>
+    )}
   </div>
 )
 
@@ -97,6 +127,7 @@ export const ComponentLibraryContent = ({
   categories,
   categoriesLoading,
   categoriesError,
+  onRetryCategories,
   onCreateCategory,
   onEditCategory,
   onDeleteCategory,
@@ -105,6 +136,7 @@ export const ComponentLibraryContent = ({
   types,
   typesLoading,
   typesError,
+  onRetryTypes,
   onCreateType,
   onEditType,
   onDeleteType,
@@ -113,6 +145,7 @@ export const ComponentLibraryContent = ({
   subtypes,
   subtypesLoading,
   subtypesError,
+  onRetrySubtypes,
   onCreateSubtype,
   onEditSubtype,
   onDeleteSubtype,
@@ -124,15 +157,18 @@ export const ComponentLibraryContent = ({
   if (viewState.level === 'categories') {
     if (categoriesError) {
       return (
-        <ErrorState message="Kunde inte ladda kategorier. Försök igen senare." />
+        <ErrorState
+          message="Kunde inte ladda kategorierna"
+          onRetry={onRetryCategories}
+        />
       )
     }
 
     if (!categoriesLoading && (!categories || categories.length === 0)) {
       return (
         <EmptyState
-          title="Inga kategorier ännu"
-          description="Skapa din första komponentkategori för att komma igång"
+          title="Inga kategorier"
+          description="Kategorier grupperar komponenttyper, till exempel Vitvaror eller Ytskikt."
           onAction={onCreateCategory}
           actionLabel="Skapa kategori"
         />
@@ -146,6 +182,7 @@ export const ComponentLibraryContent = ({
           addNewLabel="Ny kategori"
           itemCount={categories?.length}
           levelName="kategorier"
+          levelNameSingular="kategori"
         />
         <CategoriesTable
           categories={categories || []}
@@ -162,15 +199,15 @@ export const ComponentLibraryContent = ({
   if (viewState.level === 'types') {
     if (typesError) {
       return (
-        <ErrorState message="Kunde inte ladda typer. Försök igen senare." />
+        <ErrorState message="Kunde inte ladda typerna" onRetry={onRetryTypes} />
       )
     }
 
     if (!typesLoading && (!types || types.length === 0)) {
       return (
         <EmptyState
-          title="Inga typer ännu"
-          description="Skapa din första komponenttyp för att komma igång"
+          title="Inga typer i den här kategorin"
+          description="Lägg till en typ, till exempel Spis eller Kyl."
           onAction={onCreateType}
           actionLabel="Skapa typ"
         />
@@ -184,6 +221,7 @@ export const ComponentLibraryContent = ({
           addNewLabel="Ny typ"
           itemCount={types?.length}
           levelName="typer"
+          levelNameSingular="typ"
         />
         <TypesTable
           types={types || []}
@@ -200,7 +238,10 @@ export const ComponentLibraryContent = ({
   if (viewState.level === 'subtypes') {
     if (subtypesError) {
       return (
-        <ErrorState message="Kunde inte ladda undertyper. Försök igen senare." />
+        <ErrorState
+          message="Kunde inte ladda undertyperna"
+          onRetry={onRetrySubtypes}
+        />
       )
     }
 
@@ -211,8 +252,8 @@ export const ComponentLibraryContent = ({
     ) {
       return (
         <EmptyState
-          title="Inga undertyper ännu"
-          description="Skapa din första undertyp för att komma igång"
+          title="Inga undertyper för den här typen"
+          description="Lägg till en undertyp för att kunna registrera komponenter av typen."
           onAction={onCreateSubtype}
           actionLabel="Skapa undertyp"
         />
@@ -226,12 +267,13 @@ export const ComponentLibraryContent = ({
           addNewLabel="Ny undertyp"
           itemCount={subtypes?.length}
           levelName="undertyper"
+          levelNameSingular="undertyp"
           searchValue={searchInput}
           onSearchChange={onSearchChange}
           searchPlaceholder="Sök efter undertyp..."
         />
         {!subtypesLoading && subtypes?.length === 0 && hasActiveSearch ? (
-          <NoResultsState />
+          <NoResultsState onClear={() => onSearchChange('')} />
         ) : (
           <SubtypesTable
             subtypes={subtypes || []}

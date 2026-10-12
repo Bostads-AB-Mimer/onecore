@@ -85,7 +85,10 @@ export const getComponentLocation = (
 export const getInstallationDate = (component: Component): string | null =>
   activeInstallation(component)?.installationDate ?? null
 
-const UNIT_LABELS: Record<ComponentSubtype['quantityType'], string> = {
+export const QUANTITY_UNIT_LABELS: Record<
+  ComponentSubtype['quantityType'],
+  string
+> = {
   UNIT: 'st',
   METER: 'm',
   SQUARE_METER: 'm²',
@@ -100,7 +103,7 @@ export const formatComponentQuantity = (component: Component): string => {
     maximumFractionDigits: 2,
   })
   const unit = component.subtype
-    ? UNIT_LABELS[component.subtype.quantityType]
+    ? QUANTITY_UNIT_LABELS[component.subtype.quantityType]
     : undefined
   return unit ? `${amount} ${unit}` : amount
 }

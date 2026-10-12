@@ -26,6 +26,7 @@ export const TypesTable = ({
     {
       key: 'description',
       label: 'Beskrivning',
+      isEmpty: (item) => !item.description,
       render: (item) => (
         <span className="text-muted-foreground">{item.description || '-'}</span>
       ),
@@ -40,7 +41,8 @@ export const TypesTable = ({
       onEdit={onEdit}
       onDelete={onDelete}
       onRowClick={onNavigate}
-      emptyMessage="Inga typer ännu"
+      emptyMessage="Inga typer"
+      getRowLabel={(item) => item.typeName}
     />
   )
 }

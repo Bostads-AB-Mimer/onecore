@@ -5,6 +5,7 @@ import {
   SubtypeView,
   useComponentLibraryHandlers,
   useComponentLibraryViewState,
+  useConfirmDialog,
 } from '@/features/component-library'
 
 import { ComponentImageGallery } from '@/entities/component'
@@ -26,10 +27,13 @@ const ComponentLibraryPage = () => {
     data,
   } = useComponentLibraryViewState()
 
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
+
   const handlers = useComponentLibraryHandlers({
     viewState,
     navigateTo,
     modelOptions: data.modelOptions,
+    confirm,
     instanceDetailsDialog: dialogs.instanceDetailsDialog,
     categoryDialog: dialogs.categoryDialog,
     typeDialog: dialogs.typeDialog,
@@ -40,15 +44,7 @@ const ComponentLibraryPage = () => {
 
   return (
     <ViewLayout>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Komponentbibliotek</h1>
-          <p className="text-muted-foreground mt-1">
-            Hantera komponenter, modeller och installationer
-          </p>
-        </div>
-      </div>
+      <h1 className="text-3xl font-bold">Komponentbibliotek</h1>
 
       {/* Breadcrumb Navigation */}
       <div className="text-sm text-muted-foreground">
@@ -69,6 +65,7 @@ const ComponentLibraryPage = () => {
           models={data.models}
           modelsLoading={data.modelsLoading}
           modelsError={data.modelsError}
+          onRetryModels={data.refetchModels}
           onCreateModel={handlers.handleCreateModel}
           onEditModel={handlers.handleEditModel}
           onDeleteModel={handlers.handleDeleteModel}
@@ -79,6 +76,9 @@ const ComponentLibraryPage = () => {
           componentsLoading={data.componentsLoading}
           componentsFetching={data.componentsFetching}
           componentsError={data.componentsError}
+          onRetryComponents={data.refetchComponents}
+          categoryError={data.categoriesError}
+          onRetryCategory={data.refetchCategories}
           page={page}
           onPageChange={setPage}
           onModelFilterChange={setModelFilter}
@@ -97,6 +97,7 @@ const ComponentLibraryPage = () => {
           categories={data.categories}
           categoriesLoading={data.categoriesLoading}
           categoriesError={data.categoriesError}
+          onRetryCategories={data.refetchCategories}
           onCreateCategory={handlers.handleCreateCategory}
           onEditCategory={handlers.handleEditCategory}
           onDeleteCategory={handlers.handleDeleteCategory}
@@ -104,6 +105,7 @@ const ComponentLibraryPage = () => {
           types={data.types}
           typesLoading={data.typesLoading}
           typesError={data.typesError}
+          onRetryTypes={data.refetchTypes}
           onCreateType={handlers.handleCreateType}
           onEditType={handlers.handleEditType}
           onDeleteType={handlers.handleDeleteType}
@@ -111,6 +113,7 @@ const ComponentLibraryPage = () => {
           subtypes={data.subtypes}
           subtypesLoading={data.subtypesLoading}
           subtypesError={data.subtypesError}
+          onRetrySubtypes={data.refetchSubtypes}
           onCreateSubtype={handlers.handleCreateSubtype}
           onEditSubtype={handlers.handleEditSubtype}
           onDeleteSubtype={handlers.handleDeleteSubtype}
@@ -131,6 +134,8 @@ const ComponentLibraryPage = () => {
         instanceDetailsDialog={dialogs.instanceDetailsDialog}
         deinstallDialog={dialogs.deinstallDialog}
       />
+
+      {confirmDialog}
 
       {/* Image Gallery Dialog */}
       {dialogs.imageGalleryDialog.state.data && (

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
 
 import { useComponentEntity } from '@/entities/component'
 
 import type { EntityType } from '@/services/types'
 
+import { Alert, AlertDescription } from '@/shared/ui/Alert'
 import {
   Collapsible,
   CollapsibleContent,
@@ -30,6 +31,8 @@ export type ParentEntityType = 'category' | 'type' | 'subtype'
 interface ParentHierarchySelectorProps {
   entityType: Exclude<EntityType, 'category'>
   initialHierarchy: HierarchyData
+  /** The model an instance loses when it moves to another subtype. */
+  currentModelName?: string
   onParentChange: (
     parentId: string | undefined,
     subtypeId: string | undefined
@@ -58,6 +61,7 @@ const parentLevelsMap: Record<
 export function ParentHierarchySelector({
   entityType,
   initialHierarchy,
+  currentModelName,
   onParentChange,
 }: ParentHierarchySelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -270,11 +274,16 @@ export function ParentHierarchySelector({
 
         {/* Warning message when parent has changed */}
         {hasParentChanged() && (
-          <p className="text-sm text-amber-600 dark:text-amber-500">
-            {entityType === 'instance'
-              ? 'Obs: Komponentens modell tas bort när den flyttas till en annan undertyp.'
-              : 'Obs: Alla underliggande objekt kommer att flyttas med!'}
-          </p>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              {entityType !== 'instance'
+                ? 'Allt som ligger under flyttas med.'
+                : currentModelName
+                  ? `Modellen ${currentModelName} tas bort från komponenten, eftersom en modell hör till en undertyp.`
+                  : 'Komponenten flyttas till den valda undertypen.'}
+            </AlertDescription>
+          </Alert>
         )}
       </CollapsibleContent>
     </Collapsible>

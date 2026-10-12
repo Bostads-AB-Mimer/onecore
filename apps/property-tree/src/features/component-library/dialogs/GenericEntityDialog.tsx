@@ -4,10 +4,13 @@ import { useComponentEntityMutation } from '@/entities/component'
 
 import type { EntityType } from '@/services/types'
 
+import { toast } from '@/shared/hooks/useToast'
+import { formatComponentModelName } from '@/shared/lib/componentLabels'
 import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -27,6 +30,14 @@ import {
   parentIdFieldMap,
 } from './ParentHierarchySelector'
 
+const ENTITY_NOUNS: Record<EntityType, string> = {
+  category: 'Kategorin',
+  type: 'Typen',
+  subtype: 'Undertypen',
+  model: 'Modellen',
+  instance: 'Komponenten',
+}
+
 interface GenericEntityDialogProps<T extends Record<string, any>> {
   isOpen: boolean
   onClose: () => void
@@ -37,6 +48,8 @@ interface GenericEntityDialogProps<T extends Record<string, any>> {
   defaultValues?: Record<string, any>
   hierarchyData?: HierarchyData
   fields?: FieldConfig[]
+  /** Names the edited entity under the title, e.g. a component and its place. */
+  description?: string
 }
 
 export function GenericEntityDialog<T extends Record<string, any>>({
@@ -49,6 +62,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   defaultValues,
   hierarchyData,
   fields: fieldsOverride,
+  description,
 }: GenericEntityDialogProps<T>) {
   const config = entityDialogConfig[entityType]
   const fields = fieldsOverride ?? config.fields
@@ -173,12 +187,15 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       }
 
       await mutation.mutateAsync(mutationData as any)
+      toast({
+        title:
+          mode === 'create'
+            ? `${ENTITY_NOUNS[entityType]} skapades`
+            : 'Ändringarna sparades',
+      })
       onClose()
-    } catch (error) {
-      console.error(
-        `Error ${mode === 'create' ? 'creating' : 'updating'} ${entityType}:`,
-        error
-      )
+    } catch {
+      // The form shows mutation.isError inline.
     }
   }
 
@@ -189,6 +206,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
           <DialogTitle>
             {mode === 'create' ? config.createTitle : config.editTitle}
           </DialogTitle>
+          {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -197,6 +215,11 @@ export function GenericEntityDialog<T extends Record<string, any>>({
             <ParentHierarchySelector
               entityType={entityType}
               initialHierarchy={hierarchyData}
+              currentModelName={
+                entityType === 'instance'
+                  ? formatComponentModelName(entity?.model) || undefined
+                  : undefined
+              }
               onParentChange={(parentId) => setNewParentId(parentId)}
             />
           )}

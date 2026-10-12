@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 
+import { formatComponentLabel } from '@/entities/component'
+
 import type {
   Component,
   ComponentCategory,
@@ -16,9 +18,19 @@ import type {
 import { GenericEntityDialog } from '../dialogs/GenericEntityDialog'
 import { InstanceDetailsDialog } from '../dialogs/InstanceDetailsDialog'
 import type { ViewState } from '../hooks/useComponentLibraryHandlers'
-import { activeInstallation, type CategoryType } from '../lib/componentRows'
+import {
+  activeInstallation,
+  type CategoryType,
+  getComponentLocation,
+} from '../lib/componentRows'
 import { buildInstanceFields } from '../lib/instanceForm'
 import { DeinstallationDialog } from './DeinstallationDialog'
+
+const describeComponent = (component: Component) => {
+  const { address, detail } = getComponentLocation(component)
+  const place = address ? `${address}, ${detail}` : detail
+  return `${formatComponentLabel(component)} · ${place}`
+}
 
 interface ComponentLibraryDialogsProps {
   viewState: ViewState
@@ -126,6 +138,11 @@ export const ComponentLibraryDialogs = ({
             parentId={viewState.subtypeId}
             mode={instanceDialog.state.mode}
             fields={instanceFields}
+            description={
+              instanceDialog.state.entity
+                ? describeComponent(instanceDialog.state.entity)
+                : undefined
+            }
             hierarchyData={{
               categoryId: viewState.categoryId,
               typeId: viewState.typeId,

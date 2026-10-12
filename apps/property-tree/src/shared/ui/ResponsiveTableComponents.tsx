@@ -1,4 +1,4 @@
-import { Fragment, ReactNode, useState } from 'react'
+import { Fragment, KeyboardEvent, ReactNode, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 
 import { cn } from '@/shared/lib/utils'
@@ -44,6 +44,18 @@ export function ResponsiveTableComponents<T>({
       return next
     })
   }
+
+  // Enter or Space on the row itself opens it; keys from buttons inside stay theirs.
+  const openOnKey = (e: KeyboardEvent, item: T) => {
+    if (!onRowClick || e.target !== e.currentTarget) return
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onRowClick(item)
+    }
+  }
+
+  const rowFocusClass =
+    'outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
 
   const hasExpandableContent = (item: T) => {
     if (!expandableContent) return false
@@ -94,9 +106,11 @@ export function ResponsiveTableComponents<T>({
                   <tr
                     className={cn(
                       'border-b hover:bg-muted/50 transition-colors',
-                      onRowClick && 'cursor-pointer'
+                      onRowClick && cn('cursor-pointer', rowFocusClass)
                     )}
+                    tabIndex={onRowClick ? 0 : undefined}
                     onClick={() => onRowClick?.(item)}
+                    onKeyDown={(e) => openOnKey(e, item)}
                   >
                     {expandableContent && (
                       <td className="py-3 px-2">
@@ -105,6 +119,10 @@ export function ResponsiveTableComponents<T>({
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0"
+                            aria-label={
+                              isExpanded ? 'Dölj detaljer' : 'Visa detaljer'
+                            }
+                            aria-expanded={isExpanded}
                             onClick={(e) => {
                               e.stopPropagation()
                               toggleExpanded(itemKey)
@@ -158,8 +176,13 @@ export function ResponsiveTableComponents<T>({
           return (
             <div
               key={itemKey}
-              className="border rounded-lg p-4 bg-card hover:bg-muted/50 transition-colors"
+              className={cn(
+                'border rounded-lg p-4 bg-card hover:bg-muted/50 transition-colors',
+                onRowClick && rowFocusClass
+              )}
+              tabIndex={onRowClick ? 0 : undefined}
               onClick={onRowClick ? () => onRowClick(item) : undefined}
+              onKeyDown={(e) => openOnKey(e, item)}
             >
               {mobileCardRenderer ? (
                 mobileCardRenderer(item)
@@ -184,6 +207,7 @@ export function ResponsiveTableComponents<T>({
                   variant="ghost"
                   size="sm"
                   className="w-full justify-center mt-2"
+                  aria-expanded={isExpanded}
                   onClick={(e) => {
                     e.stopPropagation()
                     toggleExpanded(itemKey)
