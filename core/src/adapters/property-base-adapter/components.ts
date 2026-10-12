@@ -265,7 +265,11 @@ async function updateComponentType(
     }
 
     if (response.response.status === 400) {
-      return { ok: false, err: 'bad_request' }
+      return {
+        ok: false,
+        err: 'bad_request',
+        message: upstreamErrorMessage(response.error),
+      }
     }
 
     if (response.response.status === 409) {
@@ -415,7 +419,11 @@ async function updateComponentSubtype(
     }
 
     if (response.response.status === 400) {
-      return { ok: false, err: 'bad_request' }
+      return {
+        ok: false,
+        err: 'bad_request',
+        message: upstreamErrorMessage(response.error),
+      }
     }
 
     if (response.response.status === 409) {

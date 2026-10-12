@@ -1044,6 +1044,44 @@ describe('@onecore/property-adapter', () => {
       expect(result).toEqual({ ok: false, err: 'conflict', message })
     })
 
+    it("returns property's message with a rejected type update", async () => {
+      const reason = 'A surface code requires a category of type SURFACE'
+      mockServer.use(
+        http.put(
+          `${config.propertyBaseService.url}/component-types/${id}`,
+          () => HttpResponse.json({ error: reason }, { status: 400 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.updateComponentType(id, {
+        code: 'WALL',
+      })
+      expect(result).toEqual({
+        ok: false,
+        err: 'bad_request',
+        message: reason,
+      })
+    })
+
+    it("returns property's message with a rejected subtype update", async () => {
+      const reason = 'Invalid typeId: component type does not exist'
+      mockServer.use(
+        http.put(
+          `${config.propertyBaseService.url}/component-subtypes/${id}`,
+          () => HttpResponse.json({ error: reason }, { status: 400 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.updateComponentSubtype(id, {
+        typeId: id,
+      })
+      expect(result).toEqual({
+        ok: false,
+        err: 'bad_request',
+        message: reason,
+      })
+    })
+
     it('leaves the message out when property sends none', async () => {
       refuse('component-subtypes', {})
 

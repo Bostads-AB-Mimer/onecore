@@ -678,6 +678,24 @@ describe('Moves into a SURFACE category', () => {
     }
   )
 
+  it.each([
+    ['updateComponentType', `/component-types/${typeId}`],
+    ['updateComponentSubtype', `/component-subtypes/${subtypeId}`],
+  ] as const)(
+    "passes property's bad-request message through from %s",
+    async (adapterFn, path) => {
+      const message = 'A surface code requires a category of type SURFACE'
+      jest
+        .spyOn(propertyBaseAdapter, adapterFn)
+        .mockResolvedValueOnce({ ok: false, err: 'bad_request', message })
+
+      const res = await request(app.callback()).put(path).send({})
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe(message)
+    }
+  )
+
   it('returns 400 when property rejects the subtype target type', async () => {
     jest
       .spyOn(propertyBaseAdapter, 'updateComponentSubtype')
