@@ -18,6 +18,7 @@ import {
   type FieldConfig,
 } from '../constants/entityDialogConfig'
 import { cleanFormData } from '../lib/cleanFormData'
+import { buildEditFormData } from '../lib/editFormData'
 import { applyInstanceMove } from '../lib/instanceForm'
 import { FieldRenderer } from './FieldRenderer'
 import {
@@ -97,26 +98,8 @@ export function GenericEntityDialog<T extends Record<string, any>>({
 
         setFormData(defaults)
       } else if (entity) {
-        // Set existing entity data for edit mode
-        // Only include fields that are defined in the config to avoid sending
-        // read-only fields like id, createdAt, updatedAt, etc.
-        const editData: Record<string, any> = {}
-        fields.forEach((field) => {
-          if (entity[field.name] !== undefined) {
-            let value = entity[field.name]
-            // Convert ISO date strings to yyyy-MM-dd format
-            if (
-              field.type === 'date' &&
-              value &&
-              typeof value === 'string' &&
-              value.includes('T')
-            ) {
-              value = value.split('T')[0]
-            }
-            editData[field.name] = value
-          }
-        })
-        setFormData(editData)
+        // Only fields in the config, so read-only ones like id and createdAt stay out
+        setFormData(buildEditFormData(fields, entity))
       }
       setErrors({})
       setNewParentId(undefined) // Reset parent change when dialog opens

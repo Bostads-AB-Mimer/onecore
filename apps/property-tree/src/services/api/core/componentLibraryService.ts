@@ -227,24 +227,27 @@ export const componentLibraryService = {
   // ===== Model Operations =====
   async getModels(
     subtypeId?: string,
-    options?: { page?: number; limit?: number; search?: string }
+    options?: { search?: string }
   ): Promise<ComponentModel[]> {
-    // Fetch all models in one request (backend caps limit at 100) — pagination
-    // is handled client-side in ModelsTable since there are few models.
-    const query: Record<string, string | number | undefined> = {
-      limit: options?.limit || 100,
-    }
-    if (subtypeId) query.subtypeId = subtypeId
-    if (options?.page) query.page = options.page
-    if (options?.search && options.search.trim().length >= 2) {
-      query.modelName = options.search.trim()
-    }
+    const all: ComponentModel[] = []
+    for (let page = 1; ; page++) {
+      const query: Record<string, string | number | undefined> = {
+        limit: PAGE_LIMIT,
+      }
+      if (subtypeId) query.subtypeId = subtypeId
+      if (page > 1) query.page = page
+      if (options?.search && options.search.trim().length >= 2) {
+        query.modelName = options.search.trim()
+      }
 
-    const { data, error } = await GET('/component-models', {
-      params: { query },
-    })
-    if (error) throw error
-    return (data?.content || []) as ComponentModel[]
+      const { data, error } = await GET('/component-models', {
+        params: { query },
+      })
+      if (error) throw error
+      const items = (data?.content || []) as ComponentModel[]
+      all.push(...items)
+      if (items.length < PAGE_LIMIT) return all
+    }
   },
 
   async getModelsBySubtypeId(subtypeId: string): Promise<ComponentModel[]> {
