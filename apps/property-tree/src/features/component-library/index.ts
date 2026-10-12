@@ -10,3 +10,6 @@ export { SubtypeView } from './ui/SubtypeView'
 export { useComponentLibraryHandlers } from './hooks/useComponentLibraryHandlers'
 export { useComponentLibraryViewState } from './hooks/useComponentLibraryViewState'
 export { useConfirmDialog } from './hooks/useConfirmDialog'
+
+// Lib
+export { levelTitle } from './lib/libraryUrlState'

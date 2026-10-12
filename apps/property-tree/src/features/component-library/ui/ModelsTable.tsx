@@ -1,14 +1,12 @@
 import { useState } from 'react'
-import { Eye, FileText } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { FileText } from 'lucide-react'
 
 import type { ComponentModel } from '@/services/types'
 
+import { sortModelsByName } from '@/shared/lib/componentLabels'
 import { Button } from '@/shared/ui/Button'
-import {
-  type Column,
-  DataTable,
-  type DataTableAction,
-} from '@/shared/ui/DataTable'
+import { type Column, DataTable } from '@/shared/ui/DataTable'
 
 import { ComponentModelDocuments } from './ComponentModelDocuments'
 
@@ -19,6 +17,7 @@ interface ModelsTableProps {
   onDelete: (model: ComponentModel) => void
   onNavigate: (model: ComponentModel) => void
   onCreateInstance: (model: ComponentModel) => void
+  getHref: (model: ComponentModel) => string
 }
 
 export const ModelsTable = ({
@@ -27,6 +26,7 @@ export const ModelsTable = ({
   onEdit,
   onDelete,
   onNavigate,
+  getHref,
 }: ModelsTableProps) => {
   const [documentsModelId, setDocumentsModelId] = useState<string | null>(null)
 
@@ -40,8 +40,16 @@ export const ModelsTable = ({
       key: 'manufacturer',
       label: 'Tillverkare',
       render: (item) => (
-        <span className={!item.manufacturer ? 'text-muted-foreground' : ''}>
-          {item.manufacturer || '-'}
+        <span
+          className={
+            !item.manufacturer || item.manufacturer === 'Unknown'
+              ? 'text-muted-foreground'
+              : ''
+          }
+        >
+          {item.manufacturer && item.manufacturer !== 'Unknown'
+            ? item.manufacturer
+            : '-'}
         </span>
       ),
     },
@@ -106,6 +114,19 @@ export const ModelsTable = ({
       ),
     },
     {
+      key: 'components',
+      label: 'Komponenter',
+      render: (item) => (
+        <Link
+          to={getHref(item)}
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 text-sm font-medium underline underline-offset-4 decoration-muted-foreground/50 hover:decoration-foreground rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap"
+        >
+          Visa komponenter
+        </Link>
+      ),
+    },
+    {
       key: 'documents',
       label: 'Dok.',
       render: (item) => (
@@ -123,14 +144,6 @@ export const ModelsTable = ({
           <FileText className="h-4 w-4" />
         </Button>
       ),
-    },
-  ]
-
-  const actions: DataTableAction<ComponentModel>[] = [
-    {
-      label: 'Visa komponenter',
-      onClick: onNavigate,
-      icon: <Eye className="h-4 w-4 mr-2" />,
     },
   ]
 
@@ -172,13 +185,14 @@ export const ModelsTable = ({
   return (
     <>
       <DataTable
-        data={models}
+        data={sortModelsByName(models)}
         columns={columns}
         isLoading={isLoading}
         onEdit={onEdit}
         onDelete={onDelete}
         onRowClick={onNavigate}
-        actions={actions}
+        getRowHref={getHref}
+        pageSize={50}
         emptyMessage="Inga modeller"
         getRowLabel={(item) => item.modelName}
         expandableContent={expandableContent}

@@ -19,8 +19,8 @@ import { toast } from '@/shared/hooks/useToast'
 
 import { getComponentLocation } from '../lib/componentRows'
 import { instanceCreateDefaults } from '../lib/instanceForm'
-import { serverMessage } from '../lib/serverMessage'
 import type { ViewState } from '../lib/libraryUrlState'
+import { serverMessage } from '../lib/serverMessage'
 import type { Confirm, ConfirmOptions } from './useConfirmDialog'
 
 export type { ViewState } from '../lib/libraryUrlState'

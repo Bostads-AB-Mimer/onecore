@@ -1,7 +1,10 @@
+import { useEffect, useRef } from 'react'
+
 import {
   ComponentLibraryBreadcrumb,
   ComponentLibraryContent,
   ComponentLibraryDialogs,
+  levelTitle,
   SubtypeView,
   useComponentLibraryHandlers,
   useComponentLibraryViewState,
@@ -29,6 +32,30 @@ const ComponentLibraryPage = () => {
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
+  const title = levelTitle(viewState)
+  useEffect(() => {
+    document.title =
+      viewState.level === 'categories'
+        ? 'Komponentbibliotek | ONECore'
+        : `${title} | Komponentbibliotek | ONECore`
+  }, [title, viewState.level])
+
+  // Move focus to the new level's heading after navigating, not on first load.
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const levelKey = [
+    viewState.level,
+    viewState.level !== 'categories' && viewState.categoryId,
+    (viewState.level === 'subtypes' || viewState.level === 'subtype') &&
+      viewState.typeId,
+    viewState.level === 'subtype' && viewState.subtypeId,
+  ].join(':')
+  const firstLevelRef = useRef(levelKey)
+  useEffect(() => {
+    if (firstLevelRef.current === levelKey) return
+    firstLevelRef.current = levelKey
+    headingRef.current?.focus()
+  }, [levelKey])
+
   const handlers = useComponentLibraryHandlers({
     viewState,
     navigateTo,
@@ -44,7 +71,13 @@ const ComponentLibraryPage = () => {
 
   return (
     <ViewLayout>
-      <h1 className="text-3xl font-bold">Komponentbibliotek</h1>
+      <h1
+        ref={headingRef}
+        tabIndex={-1}
+        className="text-3xl font-bold outline-none"
+      >
+        {title}
+      </h1>
 
       {/* Breadcrumb Navigation */}
       <div className="text-sm text-muted-foreground">

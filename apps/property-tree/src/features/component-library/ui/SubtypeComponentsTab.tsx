@@ -6,13 +6,7 @@ import {
   sortModelsByName,
 } from '@/shared/lib/componentLabels'
 import { Pagination } from '@/shared/ui/Pagination'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/Select'
+import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 import { TableToolbar } from '@/shared/ui/TableToolbar'
 
 import type { CategoryType } from '../lib/componentRows'
@@ -86,7 +80,13 @@ export const SubtypeComponentsTab = ({
     )
   }
 
-  const sortedModels = sortModelsByName(modelOptions)
+  const filterOptions = [
+    { id: ALL_MODELS, label: 'Alla modeller' },
+    ...sortModelsByName(modelOptions).map((model) => ({
+      id: model.id,
+      label: formatComponentModelName(model),
+    })),
+  ]
 
   const clearFilters = () => {
     onModelFilterChange(undefined)
@@ -94,27 +94,27 @@ export const SubtypeComponentsTab = ({
   }
 
   const modelFilter = isEquipment ? (
-    <Select
-      value={modelId ?? ALL_MODELS}
-      onValueChange={(value) =>
-        onModelFilterChange(value === ALL_MODELS ? undefined : value)
-      }
-    >
-      <SelectTrigger
-        className="h-10 w-full sm:w-64"
-        aria-label="Filtrera på modell"
-      >
-        <SelectValue placeholder="Alla modeller" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ALL_MODELS}>Alla modeller</SelectItem>
-        {sortedModels.map((model) => (
-          <SelectItem key={model.id} value={model.id}>
-            {formatComponentModelName(model)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className="w-full sm:w-72">
+      <label htmlFor="model-filter" className="sr-only">
+        Filtrera på modell
+      </label>
+      <SearchableSelect
+        id="model-filter"
+        items={filterOptions}
+        value={
+          filterOptions.find((o) => o.id === (modelId ?? ALL_MODELS)) ?? null
+        }
+        onChange={(option) =>
+          onModelFilterChange(option.id === ALL_MODELS ? undefined : option.id)
+        }
+        getKey={(option) => option.id}
+        getLabel={(option) => option.label}
+        placeholder="Alla modeller"
+        searchPlaceholder="Sök modell..."
+        emptyText="Ingen modell matchar"
+        className="h-10"
+      />
+    </div>
   ) : undefined
 
   return (
@@ -142,6 +142,7 @@ export const SubtypeComponentsTab = ({
           categoryType={categoryType}
           isLoading={isLoading}
           pageSize={COMPONENT_PAGE_SIZE}
+          hideModel={Boolean(modelId)}
           {...rowHandlers}
         />
       )}

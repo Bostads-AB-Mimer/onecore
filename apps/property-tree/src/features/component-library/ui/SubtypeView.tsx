@@ -5,7 +5,11 @@ import { TableToolbar } from '@/shared/ui/TableToolbar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 import type { CategoryType } from '../lib/componentRows'
-import type { SubtypeTab, SubtypeViewState } from '../lib/libraryUrlState'
+import {
+  levelSearch,
+  type SubtypeTab,
+  type SubtypeViewState,
+} from '../lib/libraryUrlState'
 import {
   EmptyState,
   ErrorState,
@@ -131,6 +135,9 @@ export const SubtypeView = (props: SubtypeViewProps) => {
           onDelete={props.onDeleteModel}
           onNavigate={props.onOpenModelComponents}
           onCreateInstance={props.onCreateInstance}
+          getHref={(model) =>
+            levelSearch({ ...viewState, tab: 'components', modelId: model.id })
+          }
         />
       )}
     </>
@@ -138,6 +145,7 @@ export const SubtypeView = (props: SubtypeViewProps) => {
 
   return (
     <Tabs
+      className="mt-4"
       value={viewState.tab}
       onValueChange={(value) => props.onTabChange(value as SubtypeTab)}
     >

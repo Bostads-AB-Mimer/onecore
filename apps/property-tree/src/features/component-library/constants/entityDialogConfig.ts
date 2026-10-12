@@ -50,7 +50,7 @@ export const entityDialogConfig: Record<
       },
       {
         name: 'type',
-        label: 'Sort',
+        label: 'Kategorityp',
         type: 'select',
         required: true,
         defaultValue: 'EQUIPMENT',
@@ -310,7 +310,7 @@ export const entityDialogConfig: Record<
       },
       {
         name: 'specifications',
-        label: 'Specifikationer (komponent-specifik)',
+        label: 'Specifikation',
         type: 'textarea',
         required: false,
         placeholder:

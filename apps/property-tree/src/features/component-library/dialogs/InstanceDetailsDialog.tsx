@@ -77,6 +77,7 @@ export const InstanceDetailsDialog = ({
     images: documents,
     isLoading: docsLoading,
     error: docsError,
+    refetch: refetchDocs,
     upload,
     isUploading,
     uploadError,
@@ -291,9 +292,13 @@ export const InstanceDetailsDialog = ({
               <div>
                 <dt className="text-sm text-muted-foreground">Skick</dt>
                 <dd>
-                  <Badge variant={getConditionVariant(instance.condition)}>
-                    {getConditionLabel(instance.condition)}
-                  </Badge>
+                  {instance.condition ? (
+                    <Badge variant={getConditionVariant(instance.condition)}>
+                      {getConditionLabel(instance.condition)}
+                    </Badge>
+                  ) : (
+                    <span className="text-sm font-medium">-</span>
+                  )}
                 </dd>
               </div>
               <div>
@@ -376,7 +381,7 @@ export const InstanceDetailsDialog = ({
                           {install.deinstallationDate ? (
                             formatISODate(install.deinstallationDate)
                           ) : (
-                            <Badge variant="default">Aktiv</Badge>
+                            <Badge variant="default">Nuvarande</Badge>
                           )}
                         </TableCell>
                         <TableCell>
@@ -413,9 +418,17 @@ export const InstanceDetailsDialog = ({
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : docsError ? (
-              <p className="text-sm text-red-600 py-4 text-center border rounded-md">
-                Kunde inte ladda dokument
-              </p>
+              <div
+                className="flex flex-col items-center gap-2 py-4 border rounded-md"
+                role="alert"
+              >
+                <p className="text-sm text-destructive">
+                  Kunde inte ladda dokumenten
+                </p>
+                <Button variant="outline" size="sm" onClick={refetchDocs}>
+                  Försök igen
+                </Button>
+              </div>
             ) : (
               <div className="space-y-3">
                 {/* Upload zone */}

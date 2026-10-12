@@ -87,7 +87,7 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
           {
             path: routes.components,
             element: <ComponentLibraryPage />,
-            handle: { title: 'Komponentbibliotek' },
+            handle: { title: 'Komponentbibliotek', ownsDocumentTitle: true },
           },
           {
             path: routes.staircase,

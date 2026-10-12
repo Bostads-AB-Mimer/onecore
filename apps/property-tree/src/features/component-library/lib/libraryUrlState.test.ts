@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import {
   isLegacyLibraryUrl,
+  levelSearch,
+  levelTitle,
   parseViewState,
   toSearchParams,
   type ViewState,
-  levelSearch,
-  levelTitle,
   withCategoryType,
 } from './libraryUrlState'
 

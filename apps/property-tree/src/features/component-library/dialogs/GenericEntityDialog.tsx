@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { useComponentEntityMutation } from '@/entities/component'
+import {
+  useComponentEntity,
+  useComponentEntityMutation,
+} from '@/entities/component'
 
-import type { EntityType } from '@/services/types'
+import type { ComponentModel, EntityType } from '@/services/types'
 
 import { toast } from '@/shared/hooks/useToast'
 import { formatComponentModelName } from '@/shared/lib/componentLabels'
@@ -20,15 +23,21 @@ import {
   entityDialogConfig,
   type FieldConfig,
 } from '../constants/entityDialogConfig'
+import { useConfirmDialog } from '../hooks/useConfirmDialog'
 import { cleanFormData } from '../lib/cleanFormData'
+import type { CategoryType } from '../lib/componentRows'
 import { buildEditFormData } from '../lib/editFormData'
-import { applyInstanceMove } from '../lib/instanceForm'
+import { isFormDirty } from '../lib/formDirty'
+import { applyInstanceMove, buildInstanceFields } from '../lib/instanceForm'
+import { serverMessage } from '../lib/serverMessage'
 import { FieldRenderer } from './FieldRenderer'
 import {
   type HierarchyData,
   ParentHierarchySelector,
   parentIdFieldMap,
 } from './ParentHierarchySelector'
+
+const NO_MODELS: ComponentModel[] = []
 
 const ENTITY_NOUNS: Record<EntityType, string> = {
   category: 'Kategorin',
@@ -69,6 +78,35 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [newParentId, setNewParentId] = useState<string | undefined>(undefined)
+  const [targetCategoryType, setTargetCategoryType] = useState<
+    CategoryType | undefined
+  >(undefined)
+  const initialDataRef = useRef<Record<string, any>>({})
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
+
+  const isInstanceMove =
+    entityType === 'instance' &&
+    !!newParentId &&
+    newParentId !== hierarchyData?.subtypeId
+
+  const targetModels = useComponentEntity(
+    'model',
+    isInstanceMove ? newParentId : undefined,
+    undefined,
+    { enabled: isInstanceMove && targetCategoryType !== 'SURFACE' }
+  )
+
+  // A moved component gets the target subtype's model list, or none for a surface.
+  const shownFields = useMemo(
+    () =>
+      isInstanceMove
+        ? buildInstanceFields(
+            targetCategoryType ?? 'EQUIPMENT',
+            targetModels.data ?? NO_MODELS
+          )
+        : fields,
+    [isInstanceMove, targetCategoryType, targetModels.data, fields]
+  )
 
   const mutation = useComponentEntityMutation(
     entityType,
@@ -114,12 +152,16 @@ export function GenericEntityDialog<T extends Record<string, any>>({
         }
 
         setFormData(defaults)
+        initialDataRef.current = defaults
       } else if (entity) {
         // Only fields in the config, so read-only ones like id and createdAt stay out
-        setFormData(buildEditFormData(fields, entity))
+        const editData = buildEditFormData(fields, entity)
+        setFormData(editData)
+        initialDataRef.current = editData
       }
       setErrors({})
       setNewParentId(undefined) // Reset parent change when dialog opens
+      setTargetCategoryType(undefined)
     }
   }, [isOpen, mode, entity, parentId, entityType, fields, defaultValues])
 
@@ -138,7 +180,7 @@ export function GenericEntityDialog<T extends Record<string, any>>({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    fields.forEach((field) => {
+    shownFields.forEach((field) => {
       if (field.required) {
         const value = formData[field.name]
         if (value === undefined || value === null || value === '') {
@@ -164,10 +206,10 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       // For mutations, we need to pass parentId separately for cache invalidation
       let mutationData
       if (mode === 'create') {
-        mutationData = { ...cleanFormData(fields, formData), parentId }
+        mutationData = { ...cleanFormData(shownFields, formData), parentId }
       } else {
         // Build update data, including new parent ID if changed
-        const updateData = cleanFormData(fields, formData)
+        const updateData = cleanFormData(shownFields, formData)
 
         if (entityType === 'instance') {
           Object.assign(
@@ -195,67 +237,118 @@ export function GenericEntityDialog<T extends Record<string, any>>({
       })
       onClose()
     } catch {
-      // The form shows mutation.isError inline.
+      // The form shows mutation.error inline.
     }
   }
 
+  const handleParentChange = (
+    parentId: string | undefined,
+    categoryType: CategoryType | undefined
+  ) => {
+    setNewParentId(parentId)
+    setTargetCategoryType(categoryType)
+    if (entityType !== 'instance') return
+    const moved = !!parentId && parentId !== hierarchyData?.subtypeId
+    setFormData((prev) => ({
+      ...prev,
+      modelId: moved ? null : (initialDataRef.current.modelId ?? null),
+    }))
+  }
+
+  const initialParentId =
+    entityType === 'instance' || entityType === 'model'
+      ? hierarchyData?.subtypeId
+      : entityType === 'subtype'
+        ? hierarchyData?.typeId
+        : hierarchyData?.categoryId
+
+  const requestClose = async () => {
+    const changed =
+      isFormDirty(initialDataRef.current, formData) ||
+      (!!newParentId && newParentId !== initialParentId)
+    if (
+      changed &&
+      !(await confirm({
+        title: 'Stäng utan att spara?',
+        description: 'Ändringarna i formuläret sparas inte.',
+        confirmLabel: 'Stäng utan att spara',
+      }))
+    ) {
+      return
+    }
+    onClose()
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {mode === 'create' ? config.createTitle : config.editTitle}
-          </DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
-        </DialogHeader>
+    <>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open: boolean) => {
+          if (!open) void requestClose()
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {mode === 'create' ? config.createTitle : config.editTitle}
+            </DialogTitle>
+            {description && (
+              <DialogDescription>{description}</DialogDescription>
+            )}
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Parent hierarchy selector for edit mode (non-category entities) */}
-          {mode === 'edit' && entityType !== 'category' && hierarchyData && (
-            <ParentHierarchySelector
-              entityType={entityType}
-              initialHierarchy={hierarchyData}
-              currentModelName={
-                entityType === 'instance'
-                  ? formatComponentModelName(entity?.model) || undefined
-                  : undefined
-              }
-              onParentChange={(parentId) => setNewParentId(parentId)}
-            />
-          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Parent hierarchy selector for edit mode (non-category entities) */}
+            {mode === 'edit' && entityType !== 'category' && hierarchyData && (
+              <ParentHierarchySelector
+                entityType={entityType}
+                initialHierarchy={hierarchyData}
+                currentModelName={
+                  entityType === 'instance'
+                    ? formatComponentModelName(entity?.model) || undefined
+                    : undefined
+                }
+                onParentChange={(parentId, _subtypeId, categoryType) =>
+                  handleParentChange(parentId, categoryType)
+                }
+              />
+            )}
 
-          {fields.map((field) => (
-            <FieldRenderer
-              key={field.name}
-              field={field}
-              value={formData[field.name]}
-              onChange={handleChange}
-              error={errors[field.name]}
-            />
-          ))}
+            {shownFields.map((field) => (
+              <FieldRenderer
+                key={field.name}
+                field={field}
+                value={formData[field.name]}
+                onChange={handleChange}
+                error={errors[field.name]}
+              />
+            ))}
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Avbryt
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending
-                ? mode === 'create'
-                  ? 'Skapar...'
-                  : 'Sparar...'
-                : mode === 'create'
-                  ? 'Skapa'
-                  : 'Spara'}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={requestClose}>
+                Avbryt
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending
+                  ? mode === 'create'
+                    ? 'Skapar...'
+                    : 'Sparar...'
+                  : mode === 'create'
+                    ? 'Skapa'
+                    : 'Spara'}
+              </Button>
+            </DialogFooter>
 
-          {mutation.isError && (
-            <p className="text-sm text-destructive">
-              Ett fel uppstod. Försök igen.
-            </p>
-          )}
-        </form>
-      </DialogContent>
-    </Dialog>
+            {mutation.isError && (
+              <p className="text-sm text-destructive" role="alert">
+                {serverMessage(mutation.error) ??
+                  'Det gick inte att spara. Försök igen.'}
+              </p>
+            )}
+          </form>
+        </DialogContent>
+      </Dialog>
+      {confirmDialog}
+    </>
   )
 }

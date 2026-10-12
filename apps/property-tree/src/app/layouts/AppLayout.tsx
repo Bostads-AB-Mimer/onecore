@@ -38,13 +38,19 @@ function AppLayoutContent() {
   return (
     <div className="flex-1 min-w-0 min-h-screen bg-gradient-to-b from-white to-secondary">
       <RouteDocumentTitle />
+      <a
+        href="#huvudinnehall"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-md focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        Hoppa till innehållet
+      </a>
       <AppHeader onMenuClick={toggleSidebar} />
       <div className="flex h-[calc(100vh-3.5rem)] mt-14 relative w-full overflow-x-hidden">
         <CommandPalette />
         <SidebarNavigation />
         <SidebarToggleButton />
         <SidebarInset>
-          <div className="w-full">
+          <div id="huvudinnehall" tabIndex={-1} className="w-full outline-none">
             <Outlet />
           </div>
         </SidebarInset>

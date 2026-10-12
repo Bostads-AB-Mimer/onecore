@@ -10,6 +10,7 @@ import { Button } from '@/shared/ui/Button'
 import { TableToolbar } from '@/shared/ui/TableToolbar'
 
 import type { ViewState } from '../hooks/useComponentLibraryHandlers'
+import { levelSearch } from '../lib/libraryUrlState'
 import { CategoriesTable } from './CategoriesTable'
 import { SubtypesTable } from './SubtypesTable'
 import { TypesTable } from './TypesTable'
@@ -190,6 +191,13 @@ export const ComponentLibraryContent = ({
           onEdit={onEditCategory}
           onDelete={onDeleteCategory}
           onNavigate={onNavigateToTypes}
+          getHref={(category) =>
+            levelSearch({
+              level: 'types',
+              categoryId: category.id,
+              categoryName: category.categoryName,
+            })
+          }
         />
       </>
     )
@@ -229,6 +237,15 @@ export const ComponentLibraryContent = ({
           onEdit={onEditType}
           onDelete={onDeleteType}
           onNavigate={onNavigateToSubtypes}
+          getHref={(type) =>
+            levelSearch({
+              level: 'subtypes',
+              categoryId: viewState.categoryId,
+              categoryName: viewState.categoryName,
+              typeId: type.id,
+              typeName: type.typeName,
+            })
+          }
         />
       </>
     )
@@ -281,6 +298,15 @@ export const ComponentLibraryContent = ({
             onEdit={onEditSubtype}
             onDelete={onDeleteSubtype}
             onNavigate={onOpenSubtype}
+            getHref={(subtype) =>
+              levelSearch({
+                ...viewState,
+                level: 'subtype',
+                subtypeId: subtype.id,
+                subtypeName: subtype.subTypeName,
+                tab: 'components',
+              })
+            }
           />
         )}
       </>

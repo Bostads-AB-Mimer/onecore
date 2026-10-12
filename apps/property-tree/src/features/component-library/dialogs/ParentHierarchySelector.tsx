@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Info } from 'lucide-react'
 
 import { useComponentEntity } from '@/entities/component'
 
-import type { EntityType } from '@/services/types'
+import type { ComponentCategory, EntityType } from '@/services/types'
 
 import { Alert, AlertDescription } from '@/shared/ui/Alert'
 import {
@@ -37,7 +37,8 @@ interface ParentHierarchySelectorProps {
   currentModelName?: string
   onParentChange: (
     parentId: string | undefined,
-    subtypeId: string | undefined
+    subtypeId: string | undefined,
+    categoryType: ComponentCategory['type'] | undefined
   ) => void
 }
 
@@ -121,8 +122,12 @@ export function ParentHierarchySelector({
   // Notify parent component when the direct parent changes
   useEffect(() => {
     const directParentId = getDirectParentId()
-    onParentChange(directParentId, selectedSubtypeId)
-  }, [selectedCategoryId, selectedTypeId, selectedSubtypeId])
+    onParentChange(
+      directParentId,
+      selectedSubtypeId,
+      categories?.find((c) => c.id === selectedCategoryId)?.type
+    )
+  }, [selectedCategoryId, selectedTypeId, selectedSubtypeId, categories])
 
   // Handle category change - reset all child selections
   const handleCategoryChange = (categoryId: string) => {
@@ -279,13 +284,13 @@ export function ParentHierarchySelector({
 
         {/* Warning message when parent has changed */}
         {hasParentChanged() && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+          <Alert>
+            <Info className="h-4 w-4" />
             <AlertDescription>
               {entityType !== 'instance'
                 ? 'Allt som ligger under flyttas med.'
                 : currentModelName
-                  ? `Modellen ${currentModelName} tas bort från komponenten, eftersom en modell hör till en undertyp.`
+                  ? `Modellen ${currentModelName} hör till den tidigare undertypen och tas bort. Välj en modell för den nya undertypen nedan om den är känd.`
                   : 'Komponenten flyttas till den valda undertypen.'}
             </AlertDescription>
           </Alert>

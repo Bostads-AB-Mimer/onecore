@@ -26,6 +26,8 @@ interface InstancesTableProps {
   categoryType: CategoryType
   isLoading: boolean
   pageSize: number
+  /** The list is filtered to one model, so the Modell column says nothing. */
+  hideModel?: boolean
   onEdit: (instance: Component) => void
   onDelete: (instance: Component) => void
   onViewHistory: (instance: Component) => void
@@ -69,10 +71,11 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
           onClick={(e) => e.stopPropagation()}
           className="group flex flex-col leading-snug rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className="font-medium text-primary underline-offset-4 group-hover:underline">
+          <span className="font-medium text-primary underline decoration-muted-foreground/50 underline-offset-4 group-hover:decoration-foreground">
             {address ?? detail}
           </span>
           {address && <span className="text-muted-foreground">{detail}</span>}
+          <span className="sr-only">(öppnas i ny flik)</span>
         </a>
       )
     },
@@ -149,19 +152,20 @@ export const InstancesTable = ({
   categoryType,
   isLoading,
   pageSize,
+  hideModel = false,
   onEdit,
   onDelete,
   onViewHistory,
   onUninstall,
   onViewImages,
 }: InstancesTableProps) => {
-  const columns = getComponentColumnKeys(categoryType).map(
-    (key) => COLUMNS[key]
-  )
+  const columns = getComponentColumnKeys(categoryType)
+    .filter((key) => !(hideModel && key === 'model'))
+    .map((key) => COLUMNS[key])
 
   const actions: DataTableAction<Component>[] = [
     {
-      label: 'Visa historik',
+      label: 'Visa detaljer',
       onClick: onViewHistory,
       icon: <History className="h-4 w-4 mr-2" />,
     },
@@ -185,6 +189,7 @@ export const InstancesTable = ({
       isLoading={isLoading}
       onEdit={onEdit}
       onDelete={onDelete}
+      onRowClick={onViewHistory}
       actions={actions}
       emptyMessage="Inga komponenter"
       expandableContent={
@@ -192,6 +197,11 @@ export const InstancesTable = ({
       }
       pageSize={pageSize}
       getRowLabel={rowLabel}
+      deleteBlockedReason={(item) =>
+        hasActiveInstallation(item)
+          ? 'Avinstallera komponenten först'
+          : undefined
+      }
     />
   )
 }

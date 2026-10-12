@@ -20,6 +20,10 @@ interface ResponsiveTableComponentsProps<T> {
   mobileCardRenderer?: (item: T) => ReactNode
   onRowClick?: (item: T) => void
   expandableContent?: (item: T) => ReactNode | null
+  /** Names a row for screen readers, e.g. on its expand button. */
+  rowLabel?: (item: T) => string
+  /** False when a link in the row carries keyboard focus instead of the row. */
+  rowsFocusable?: boolean
 }
 
 export function ResponsiveTableComponents<T>({
@@ -30,6 +34,8 @@ export function ResponsiveTableComponents<T>({
   mobileCardRenderer,
   onRowClick,
   expandableContent,
+  rowLabel,
+  rowsFocusable = true,
 }: ResponsiveTableComponentsProps<T>) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
@@ -63,6 +69,16 @@ export function ResponsiveTableComponents<T>({
     return content !== null
   }
 
+  const expandLabel = (item: T, isExpanded: boolean) => {
+    const label = rowLabel?.(item)
+    const verb = isExpanded ? 'Visa mindre' : 'Visa mer'
+    return label ? `${verb} om ${label}` : verb
+  }
+
+  const focusableRow = Boolean(onRowClick) && rowsFocusable
+  const showExpander =
+    Boolean(expandableContent) && data.some(hasExpandableContent)
+
   if (data.length === 0) {
     return (
       <div className="text-center py-8 text-sm text-muted-foreground">
@@ -78,7 +94,7 @@ export function ResponsiveTableComponents<T>({
         <table className="w-full">
           <thead className="border-b">
             <tr>
-              {expandableContent && <th className="w-[40px] py-3 px-2"></th>}
+              {showExpander && <th className="w-[40px] py-3 px-2"></th>}
               {columns.map((column) => (
                 <th
                   key={column.key}
@@ -106,22 +122,21 @@ export function ResponsiveTableComponents<T>({
                   <tr
                     className={cn(
                       'border-b hover:bg-muted/50 transition-colors',
-                      onRowClick && cn('cursor-pointer', rowFocusClass)
+                      onRowClick && 'cursor-pointer',
+                      focusableRow && rowFocusClass
                     )}
-                    tabIndex={onRowClick ? 0 : undefined}
+                    tabIndex={focusableRow ? 0 : undefined}
                     onClick={() => onRowClick?.(item)}
                     onKeyDown={(e) => openOnKey(e, item)}
                   >
-                    {expandableContent && (
-                      <td className="py-3 px-2">
+                    {showExpander && (
+                      <td className="py-2 px-2">
                         {canExpand && (
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0"
-                            aria-label={
-                              isExpanded ? 'Dölj detaljer' : 'Visa detaljer'
-                            }
+                            aria-label={expandLabel(item, isExpanded)}
                             aria-expanded={isExpanded}
                             onClick={(e) => {
                               e.stopPropagation()
@@ -140,7 +155,7 @@ export function ResponsiveTableComponents<T>({
                     {columns.map((column) => (
                       <td
                         key={column.key}
-                        className={cn('py-3 px-4 text-sm', column.className)}
+                        className={cn('py-2 px-4 text-sm', column.className)}
                       >
                         {column.render(item)}
                       </td>
@@ -149,7 +164,7 @@ export function ResponsiveTableComponents<T>({
                   {isExpanded && expandedContentNode && (
                     <tr className="bg-muted/30">
                       <td
-                        colSpan={columns.length + (expandableContent ? 1 : 0)}
+                        colSpan={columns.length + (showExpander ? 1 : 0)}
                         className="py-4 px-6"
                       >
                         {expandedContentNode}
@@ -178,9 +193,9 @@ export function ResponsiveTableComponents<T>({
               key={itemKey}
               className={cn(
                 'border rounded-lg p-4 bg-card hover:bg-muted/50 transition-colors',
-                onRowClick && rowFocusClass
+                focusableRow && rowFocusClass
               )}
-              tabIndex={onRowClick ? 0 : undefined}
+              tabIndex={focusableRow ? 0 : undefined}
               onClick={onRowClick ? () => onRowClick(item) : undefined}
               onKeyDown={(e) => openOnKey(e, item)}
             >
@@ -216,12 +231,12 @@ export function ResponsiveTableComponents<T>({
                   {isExpanded ? (
                     <>
                       <ChevronDown className="h-4 w-4 mr-1" />
-                      Dölj detaljer
+                      Visa mindre
                     </>
                   ) : (
                     <>
                       <ChevronRight className="h-4 w-4 mr-1" />
-                      Visa detaljer
+                      Visa mer
                     </>
                   )}
                 </Button>

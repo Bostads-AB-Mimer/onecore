@@ -1,5 +1,6 @@
 import type { ComponentSubtype } from '@/services/types'
 
+import { sortBySwedishName } from '@/shared/lib/sortByName'
 import { type Column, DataTable } from '@/shared/ui/DataTable'
 
 import { QUANTITY_UNIT_LABELS } from '../lib/componentRows'
@@ -10,6 +11,7 @@ interface SubtypesTableProps {
   onEdit: (subtype: ComponentSubtype) => void
   onDelete: (subtype: ComponentSubtype) => void
   onNavigate: (subtype: ComponentSubtype) => void
+  getHref: (subtype: ComponentSubtype) => string
 }
 
 export const SubtypesTable = ({
@@ -18,6 +20,7 @@ export const SubtypesTable = ({
   onEdit,
   onDelete,
   onNavigate,
+  getHref,
 }: SubtypesTableProps) => {
   const columns: Column<ComponentSubtype>[] = [
     {
@@ -99,12 +102,14 @@ export const SubtypesTable = ({
 
   return (
     <DataTable
-      data={subtypes}
+      data={sortBySwedishName(subtypes, (item) => item.subTypeName)}
       columns={columns}
       isLoading={isLoading}
       onEdit={onEdit}
       onDelete={onDelete}
       onRowClick={onNavigate}
+      getRowHref={getHref}
+      pageSize={50}
       emptyMessage="Inga undertyper"
       getRowLabel={(item) => item.subTypeName}
     />
