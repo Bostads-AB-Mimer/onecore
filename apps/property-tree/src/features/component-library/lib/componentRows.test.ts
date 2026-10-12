@@ -74,6 +74,14 @@ describe('getComponentLocation', () => {
     ).toBe('123-456-01 / BAD')
   })
 
+  it('leaves out a missing residence code', () => {
+    expect(
+      getComponentLocation(
+        installed({ residenceCode: null, roomName: 'Tvättstuga' })
+      ).label
+    ).toBe('Tvättstuga')
+  })
+
   it('says so when nothing is installed', () => {
     expect(
       getComponentLocation(component({ componentInstallations: [] }))

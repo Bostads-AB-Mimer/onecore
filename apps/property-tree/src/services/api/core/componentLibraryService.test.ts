@@ -33,7 +33,40 @@ describe('componentLibraryService.getModels', () => {
     expect(models).toHaveLength(126)
     expect(mockGet).toHaveBeenCalledTimes(2)
     expect(mockGet.mock.calls[1][1]).toEqual({
-      params: { query: { subtypeId: 'sub-1', limit: 100, page: 2 } },
+      params: {
+        query: {
+          subtypeId: 'sub-1',
+          limit: 100,
+          page: 2,
+          modelName: undefined,
+        },
+      },
+    })
+  })
+
+  it('fetches a single page when no subtype is given', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: {
+        content: Array.from({ length: 100 }, (_, i) => ({ id: `m-${i}` })),
+      },
+      error: undefined,
+    } as never)
+
+    const models = await componentLibraryService.getModels('', {
+      search: 'el',
+    })
+
+    expect(models).toHaveLength(100)
+    expect(mockGet).toHaveBeenCalledTimes(1)
+    expect(mockGet.mock.calls[0][1]).toEqual({
+      params: {
+        query: {
+          subtypeId: undefined,
+          limit: 100,
+          page: 1,
+          modelName: 'el',
+        },
+      },
     })
   })
 })
@@ -110,6 +143,26 @@ describe('componentLibraryService.getComponentPage', () => {
     expect(result).toEqual({
       content: [],
       pagination: { page: 2, limit: 25, total: 0, totalPages: 0 },
+    })
+  })
+
+  it('counts the rows when the response has no pagination', async () => {
+    mockGet.mockResolvedValue({
+      data: { content: [{ id: 'c1' }, { id: 'c2' }] },
+      error: undefined,
+    } as never)
+
+    const result = await componentLibraryService.getComponentPage({
+      subtypeId: 'sub-1',
+      page: 1,
+      limit: 25,
+    })
+
+    expect(result.pagination).toEqual({
+      page: 1,
+      limit: 25,
+      total: 2,
+      totalPages: 1,
     })
   })
 

@@ -26,7 +26,7 @@ export interface ComponentLocation {
   tooltip: string
 }
 
-const activeInstallation = (component: Component) =>
+export const activeInstallation = (component: Component) =>
   component.componentInstallations?.find((i) => !i.deinstallationDate)
 
 export const getComponentLocation = (
@@ -48,7 +48,12 @@ export const getComponentLocation = (
   }
 
   return {
-    label: `${structure.residenceCode} / ${structure.roomName || structure.roomCode || 'Okänd'}`,
+    label: [
+      structure.residenceCode,
+      structure.roomName || structure.roomCode || 'Okänd',
+    ]
+      .filter(Boolean)
+      .join(' / '),
     rentalId: structure.rentalId ?? null,
     roomCode: structure.roomCode ?? null,
     tooltip: `${structure.residenceName || ''}\nLägenhet: ${structure.rentalId || ''}`,

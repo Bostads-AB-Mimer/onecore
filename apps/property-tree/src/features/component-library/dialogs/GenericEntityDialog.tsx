@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useComponentEntityMutation } from '@/entities/component'
 
@@ -61,9 +61,12 @@ export function GenericEntityDialog<T extends Record<string, any>>({
     mode === 'create' ? 'create' : 'update'
   )
 
-  // Initialize form data
+  // Initialize once per opening: `fields` changes while open as the model list loads.
+  const wasOpenRef = useRef(false)
   useEffect(() => {
-    if (isOpen) {
+    const justOpened = isOpen && !wasOpenRef.current
+    wasOpenRef.current = isOpen
+    if (justOpened) {
       if (mode === 'create') {
         // Set default values for create mode
         const defaults: Record<string, any> = {}

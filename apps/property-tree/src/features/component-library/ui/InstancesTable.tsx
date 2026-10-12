@@ -12,6 +12,7 @@ import {
 } from '@/shared/ui/DataTable'
 
 import {
+  activeInstallation,
   type CategoryType,
   type ComponentColumnKey,
   formatComponentQuantity,
@@ -106,7 +107,7 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
 }
 
 const hasActiveInstallation = (item: Component) =>
-  item.componentInstallations?.some((i) => !i.deinstallationDate) ?? false
+  activeInstallation(item) !== undefined
 
 const expandableContent = (instance: Component) => {
   const specifications = instance.specifications?.trim()

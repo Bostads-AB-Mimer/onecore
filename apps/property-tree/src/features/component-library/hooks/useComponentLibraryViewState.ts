@@ -27,6 +27,7 @@ import {
   type SubtypeTab,
   toSearchParams,
   type ViewState,
+  withCategoryType,
 } from '../lib/libraryUrlState'
 
 export interface ComponentLibraryDialogStates {
@@ -47,14 +48,31 @@ export const useComponentLibraryViewState = () => {
   const { searchParams, setSearchParams, updateUrlParams, page, setPage } =
     useUrlPagination({ defaultLimit: COMPONENT_PAGE_SIZE })
 
-  const viewState = useMemo(() => parseViewState(searchParams), [searchParams])
+  const urlViewState = useMemo(
+    () => parseViewState(searchParams),
+    [searchParams]
+  )
+
+  const categories = useComponentEntity('category')
+
+  // The database defaults a category's type to EQUIPMENT; undefined only while loading.
+  const categoryType: CategoryType | undefined =
+    urlViewState.level === 'categories' || !categories.data
+      ? undefined
+      : (categories.data.find((c) => c.id === urlViewState.categoryId)?.type ??
+        'EQUIPMENT')
+
+  const viewState = useMemo(
+    () => withCategoryType(urlViewState, categoryType),
+    [urlViewState, categoryType]
+  )
   const subtypeState = viewState.level === 'subtype' ? viewState : undefined
 
   useEffect(() => {
     if (isLegacyLibraryUrl(searchParams)) {
-      setSearchParams(toSearchParams(viewState), { replace: true })
+      setSearchParams(toSearchParams(urlViewState), { replace: true })
     }
-  }, [searchParams, setSearchParams, viewState])
+  }, [searchParams, setSearchParams, urlViewState])
 
   const [searchInput, setSearchInput] = useState(
     searchParams.get('search') || ''
@@ -65,8 +83,9 @@ export const useComponentLibraryViewState = () => {
   }, [searchParams])
 
   const debouncedSearch = useDebounce(searchInput, 300)
-  const activeSearch =
-    debouncedSearch.trim().length >= 2 ? debouncedSearch.trim() : undefined
+  // Read from the URL, which receives the search and the page reset together.
+  const urlSearch = searchParams.get('search')?.trim() ?? ''
+  const activeSearch = urlSearch.length >= 2 ? urlSearch : undefined
 
   // Search resets on navigation, so skip the first run after a view change.
   const viewKey = `${viewState.level}:${subtypeState?.subtypeId ?? ''}:${subtypeState?.tab ?? ''}`
@@ -113,8 +132,6 @@ export const useComponentLibraryViewState = () => {
     imageGalleryDialog: useSimpleDialogState<Component>(),
   }
 
-  const categories = useComponentEntity('category')
-
   const types = useComponentEntity(
     'type',
     viewState.level !== 'categories' ? viewState.categoryId : undefined
@@ -123,21 +140,15 @@ export const useComponentLibraryViewState = () => {
   const subtypes = useComponentEntity(
     'subtype',
     viewState.level === 'subtypes' ? viewState.typeId : undefined,
-    { search: viewState.level === 'subtypes' ? activeSearch : undefined }
+    { search: viewState.level === 'subtypes' ? activeSearch : undefined },
+    { enabled: viewState.level === 'subtypes' }
   )
-
-  // The database defaults a category's type to EQUIPMENT; undefined only while loading.
-  const categoryType: CategoryType | undefined =
-    viewState.level === 'categories' || !categories.data
-      ? undefined
-      : (categories.data.find((c) => c.id === viewState.categoryId)?.type ??
-        'EQUIPMENT')
 
   const modelOptions = useComponentEntity(
     'model',
     subtypeState?.subtypeId,
     undefined,
-    { enabled: subtypeState !== undefined }
+    { enabled: subtypeState !== undefined && categoryType === 'EQUIPMENT' }
   )
 
   const models = useComponentEntity(
@@ -148,7 +159,7 @@ export const useComponentLibraryViewState = () => {
   )
 
   const componentPage = useSubtypeComponents(
-    subtypeState?.tab === 'components'
+    subtypeState?.tab === 'components' && categoryType
       ? {
           subtypeId: subtypeState.subtypeId,
           modelId: subtypeState.modelId,

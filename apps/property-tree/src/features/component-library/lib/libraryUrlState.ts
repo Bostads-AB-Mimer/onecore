@@ -1,3 +1,5 @@
+import type { CategoryType } from './componentRows'
+
 export const COMPONENT_PAGE_SIZE = 25
 
 export type SubtypeTab = 'components' | 'models'
@@ -75,6 +77,17 @@ export const parseViewState = (params: URLSearchParams): ViewState => {
     default:
       return { level: 'categories' }
   }
+}
+
+// Surfaces have no models: no models tab and no model filter.
+export const withCategoryType = (
+  state: ViewState,
+  categoryType: CategoryType | undefined
+): ViewState => {
+  if (state.level !== 'subtype' || categoryType !== 'SURFACE') return state
+  if (state.tab === 'components' && !state.modelId) return state
+  const { modelId: _modelId, ...rest } = state
+  return { ...rest, tab: 'components' }
 }
 
 export const toSearchParams = (state: ViewState): URLSearchParams => {

@@ -23,6 +23,23 @@ import { DELETE, GET, POST, PUT } from './baseApi'
 // request would make row 101+ unreachable in the client-paginated tables.
 const PAGE_LIMIT = 100
 
+const fetchAllPages = async <T>(
+  fetchPage: (
+    page: number
+  ) => Promise<{ data?: { content?: unknown[] }; error?: unknown }>
+): Promise<T[]> => {
+  const all: T[] = []
+  for (let page = 1; ; page++) {
+    const { data, error } = await fetchPage(page)
+    if (error) throw error
+    const items = (data?.content ?? []) as T[]
+    all.push(...items)
+    // A short page means we've reached the end (not every list response
+    // carries pagination meta to read a total from).
+    if (items.length < PAGE_LIMIT) return all
+  }
+}
+
 export interface ComponentPageFilter {
   subtypeId: string
   modelId?: string
@@ -39,18 +56,11 @@ export interface ComponentPage {
 export const componentLibraryService = {
   // ===== Category Operations =====
   async getCategories(): Promise<ComponentCategory[]> {
-    const all: ComponentCategory[] = []
-    for (let page = 1; ; page++) {
-      const { data, error } = await GET('/component-categories', {
+    return fetchAllPages<ComponentCategory>((page) =>
+      GET('/component-categories', {
         params: { query: { limit: PAGE_LIMIT, page } },
       })
-      if (error) throw error
-      const items = (data?.content || []) as ComponentCategory[]
-      all.push(...items)
-      // A short page means we've reached the end (the response carries no
-      // pagination meta to read a total from).
-      if (items.length < PAGE_LIMIT) return all
-    }
+    )
   },
 
   async getCategoryById(id: string): Promise<ComponentCategory> {
@@ -98,16 +108,11 @@ export const componentLibraryService = {
 
   // ===== Type Operations =====
   async getTypes(categoryId?: string): Promise<ComponentType[]> {
-    const all: ComponentType[] = []
-    for (let page = 1; ; page++) {
-      const { data, error } = await GET('/component-types', {
+    return fetchAllPages<ComponentType>((page) =>
+      GET('/component-types', {
         params: { query: { limit: PAGE_LIMIT, page, categoryId } },
       })
-      if (error) throw error
-      const items = (data?.content || []) as ComponentType[]
-      all.push(...items)
-      if (items.length < PAGE_LIMIT) return all
-    }
+    )
   },
 
   async getTypesByCategoryId(categoryId: string): Promise<ComponentType[]> {
@@ -229,25 +234,26 @@ export const componentLibraryService = {
     subtypeId?: string,
     options?: { search?: string }
   ): Promise<ComponentModel[]> {
-    const all: ComponentModel[] = []
-    for (let page = 1; ; page++) {
-      const query: Record<string, string | number | undefined> = {
-        limit: PAGE_LIMIT,
-      }
-      if (subtypeId) query.subtypeId = subtypeId
-      if (page > 1) query.page = page
-      if (options?.search && options.search.trim().length >= 2) {
-        query.modelName = options.search.trim()
-      }
-
-      const { data, error } = await GET('/component-models', {
-        params: { query },
+    const search = options?.search?.trim()
+    const fetchPage = (page: number) =>
+      GET('/component-models', {
+        params: {
+          query: {
+            limit: PAGE_LIMIT,
+            page,
+            subtypeId: subtypeId || undefined,
+            modelName: search && search.length >= 2 ? search : undefined,
+          },
+        },
       })
+
+    // Without a subtype this is a search across every model: one page is enough.
+    if (!subtypeId) {
+      const { data, error } = await fetchPage(1)
       if (error) throw error
-      const items = (data?.content || []) as ComponentModel[]
-      all.push(...items)
-      if (items.length < PAGE_LIMIT) return all
+      return (data?.content || []) as ComponentModel[]
     }
+    return fetchAllPages<ComponentModel>(fetchPage)
   },
 
   async getModelsBySubtypeId(subtypeId: string): Promise<ComponentModel[]> {
@@ -310,13 +316,16 @@ export const componentLibraryService = {
       },
     })
     if (error) throw error
+    const content = (data?.content ?? []) as Component[]
+    const total = data?.pagination?.total ?? content.length
     return {
-      content: (data?.content ?? []) as Component[],
+      content,
       pagination: {
         page: data?.pagination?.page ?? filter.page,
         limit: data?.pagination?.limit ?? filter.limit,
-        total: data?.pagination?.total ?? 0,
-        totalPages: data?.pagination?.totalPages ?? 0,
+        total,
+        totalPages:
+          data?.pagination?.totalPages ?? Math.ceil(total / filter.limit),
       },
     }
   },

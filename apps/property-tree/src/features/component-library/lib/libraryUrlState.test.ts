@@ -5,6 +5,7 @@ import {
   parseViewState,
   toSearchParams,
   type ViewState,
+  withCategoryType,
 } from './libraryUrlState'
 
 const base = {
@@ -102,5 +103,30 @@ describe('isLegacyLibraryUrl', () => {
     expect(isLegacyLibraryUrl(params({ level: 'instances' }))).toBe(true)
     expect(isLegacyLibraryUrl(params({ level: 'subtype' }))).toBe(false)
     expect(isLegacyLibraryUrl(params({}))).toBe(false)
+  })
+})
+
+describe('withCategoryType', () => {
+  const subtype: ViewState = {
+    level: 'subtype',
+    ...base,
+    tab: 'models',
+    modelId: 'model-1',
+  }
+
+  it('sends a surface subtype to the components tab without a model filter', () => {
+    expect(withCategoryType(subtype, 'SURFACE')).toEqual({
+      level: 'subtype',
+      ...base,
+      tab: 'components',
+    })
+  })
+
+  it('keeps an equipment subtype as it is', () => {
+    expect(withCategoryType(subtype, 'EQUIPMENT')).toBe(subtype)
+  })
+
+  it('keeps the state while the category type is loading', () => {
+    expect(withCategoryType(subtype, undefined)).toBe(subtype)
   })
 })

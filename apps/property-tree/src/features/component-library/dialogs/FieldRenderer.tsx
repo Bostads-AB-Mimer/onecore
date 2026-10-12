@@ -58,7 +58,9 @@ export function FieldRenderer({
             type="number"
             min="0"
             step={
-              field.name.includes('Price') || field.name.includes('cost')
+              field.name.includes('Price') ||
+              field.name.includes('cost') ||
+              field.name === 'quantity'
                 ? '0.01'
                 : '1'
             }

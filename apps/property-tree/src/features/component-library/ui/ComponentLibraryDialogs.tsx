@@ -16,7 +16,7 @@ import type {
 import { GenericEntityDialog } from '../dialogs/GenericEntityDialog'
 import { InstanceDetailsDialog } from '../dialogs/InstanceDetailsDialog'
 import type { ViewState } from '../hooks/useComponentLibraryHandlers'
-import type { CategoryType } from '../lib/componentRows'
+import { activeInstallation, type CategoryType } from '../lib/componentRows'
 import { buildInstanceFields } from '../lib/instanceForm'
 import { DeinstallationDialog } from './DeinstallationDialog'
 
@@ -147,9 +147,7 @@ export const ComponentLibraryDialogs = ({
               onClose={deinstallDialog.close}
               component={deinstallDialog.state.data}
               spaceId={
-                deinstallDialog.state.data.componentInstallations?.find(
-                  (inst) => !inst.deinstallationDate
-                )?.spaceId || ''
+                activeInstallation(deinstallDialog.state.data)?.spaceId || ''
               }
             />
           )}
