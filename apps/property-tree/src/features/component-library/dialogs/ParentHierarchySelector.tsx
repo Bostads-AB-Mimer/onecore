@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from '@/shared/ui/Select'
 
+import { formatSek, formatWithUnit } from '../lib/componentRows'
+
 export interface HierarchyData {
   categoryId?: string
   typeId?: string
@@ -263,12 +265,15 @@ export function ParentHierarchySelector({
                 ))}
               </SelectContent>
             </Select>
-            {selectedSubtype && (
-              <p className="text-xs text-muted-foreground">
-                Livslängd: {selectedSubtype.technicalLifespan} år | Avskrivning:{' '}
-                {selectedSubtype.depreciationPrice} kr
-              </p>
-            )}
+            {selectedSubtype &&
+              (selectedSubtype.technicalLifespan > 0 ||
+                selectedSubtype.depreciationPrice > 0) && (
+                <p className="text-xs text-muted-foreground">
+                  Livslängd:{' '}
+                  {formatWithUnit(selectedSubtype.technicalLifespan, 'år')} ·
+                  Avskrivning: {formatSek(selectedSubtype.depreciationPrice)}
+                </p>
+              )}
           </div>
         )}
 

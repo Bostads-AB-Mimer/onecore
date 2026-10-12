@@ -278,7 +278,7 @@ export const useComponentLibraryHandlers = (
 
     await runDelete({
       title: 'Ta bort komponenten?',
-      description: `${formatComponentLabel(instance)} (${place}) tas bort ur registret. Det går inte att ångra.`,
+      description: `${formatComponentLabel(instance)} på ${place} tas bort ur registret. Det går inte att ångra.`,
       confirmLabel: 'Ta bort komponent',
       run: () => deleteInstance.mutateAsync({ id: instance.id, parentId }),
       done: 'Komponenten togs bort',
