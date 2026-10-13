@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Folder } from 'lucide-react'
+import { Boxes } from 'lucide-react'
 
 import {
   libraryHref,
@@ -69,7 +69,7 @@ export function ComponentCategoryNavigation({
           title={category.categoryName}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <Folder />
+          <Boxes />
           <span>{category.categoryName}</span>
         </Link>
       </SidebarMenuButton>

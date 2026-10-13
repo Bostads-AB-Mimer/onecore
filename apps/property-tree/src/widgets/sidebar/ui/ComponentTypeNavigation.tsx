@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { CircleDot, Package } from 'lucide-react'
+import { Box, Tag } from 'lucide-react'
 
 import {
   libraryHref,
@@ -69,7 +69,7 @@ export function ComponentTypeNavigation({
           title={type.typeName}
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <Package />
+          <Box />
           <span>{type.typeName}</span>
         </Link>
       </SidebarMenuButton>
@@ -129,7 +129,7 @@ function SubtypeNavigation({ href, name, isActive }: SubtypeNavigationProps) {
     <SidebarMenuItem ref={scrollRef}>
       <SidebarMenuButton asChild tooltip={name} isActive={isActive}>
         <Link to={href} title={name}>
-          <CircleDot />
+          <Tag />
           <span>{name}</span>
         </Link>
       </SidebarMenuButton>
