@@ -5,7 +5,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
-import { ChevronRight, Settings } from 'lucide-react'
+import { ChevronRight, Library } from 'lucide-react'
 
 import {
   libraryViewFromLocation,
@@ -59,7 +59,7 @@ export function ComponentLibraryNavigation() {
                 tooltip="Komponentbibliotek"
               >
                 <Link to={routes.components} onClick={() => setIsOpen(true)}>
-                  <Settings />
+                  <Library />
                   <span>Komponentbibliotek</span>
                   <ChevronRight className="ml-auto transition-transform group-data-[state=open]/library:rotate-90" />
                 </Link>
