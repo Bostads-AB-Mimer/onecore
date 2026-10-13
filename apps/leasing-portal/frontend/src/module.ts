@@ -1,5 +1,5 @@
 import type { OnecoreModule } from '@onecore/ui'
-import { Handshake, Home, Sparkles } from 'lucide-react'
+import { Handshake, Home, ListOrdered, Sparkles } from 'lucide-react'
 
 import { LeasingModuleHost } from './host/LeasingModuleHost'
 import { leasingRoutes } from './pages/routes'
@@ -20,6 +20,11 @@ export const leasingModule: OnecoreModule = {
           to: 'bostad',
           icon: Home,
           children: [
+            {
+              label: 'Poängsatt',
+              to: 'bostad/poangsatt',
+              icon: ListOrdered,
+            },
             {
               label: 'Poängfritt',
               to: 'bostad/poangfritt',
