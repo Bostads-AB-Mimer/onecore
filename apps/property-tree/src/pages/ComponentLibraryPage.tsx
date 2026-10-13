@@ -235,6 +235,7 @@ const ComponentLibraryPage = () => {
         viewState={viewState}
         categoryType={categoryType}
         modelOptions={data.modelOptions}
+        subtypes={data.subtypes}
         categoryDialog={dialogs.categoryDialog}
         typeDialog={dialogs.typeDialog}
         subtypeDialog={dialogs.subtypeDialog}

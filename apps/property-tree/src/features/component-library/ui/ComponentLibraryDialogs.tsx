@@ -24,6 +24,7 @@ import {
   formatComponentPlace,
 } from '../lib/componentRows'
 import { buildInstanceFields } from '../lib/instanceForm'
+import { buildSubtypeFields } from '../lib/subtypeForm'
 import { DeinstallationDialog } from './DeinstallationDialog'
 
 const describeComponent = (component: Component) =>
@@ -33,6 +34,7 @@ interface ComponentLibraryDialogsProps {
   viewState: ViewState
   categoryType: CategoryType | undefined
   modelOptions: ComponentModel[]
+  subtypes: ComponentSubtype[] | undefined
   categoryDialog: UseDialogStateReturn<ComponentCategory>
   typeDialog: UseDialogStateReturn<ComponentType>
   subtypeDialog: UseDialogStateReturn<ComponentSubtype>
@@ -46,6 +48,7 @@ export const ComponentLibraryDialogs = ({
   viewState,
   categoryType,
   modelOptions,
+  subtypes,
   categoryDialog,
   typeDialog,
   subtypeDialog,
@@ -60,6 +63,11 @@ export const ComponentLibraryDialogs = ({
         ? buildInstanceFields(categoryType, modelOptions)
         : undefined,
     [categoryType, modelOptions]
+  )
+
+  const subtypeFields = useMemo(
+    () => buildSubtypeFields((subtypes ?? []).map((s) => s.subTypeName)),
+    [subtypes]
   )
 
   return (
@@ -99,6 +107,7 @@ export const ComponentLibraryDialogs = ({
           entity={subtypeDialog.state.entity}
           parentId={viewState.typeId}
           mode={subtypeDialog.state.mode}
+          fields={subtypeFields}
           hierarchyData={{
             categoryId: viewState.categoryId,
             typeId: viewState.typeId,
