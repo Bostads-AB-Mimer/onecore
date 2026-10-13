@@ -109,7 +109,7 @@ export interface paths {
         404: {
           content: never
         }
-        /** @description Category has component types with a surface code */
+        /** @description Category has component types with a surface code, or is being made SURFACE while models exist under it */
         409: {
           content: never
         }
@@ -256,7 +256,7 @@ export interface paths {
         404: {
           content: never
         }
-        /** @description Another component type already has this code */
+        /** @description Another component type already has this code, or the type is being moved into a SURFACE category while models exist under it */
         409: {
           content: never
         }
@@ -387,6 +387,18 @@ export interface paths {
             }
           }
         }
+        /** @description Invalid typeId */
+        400: {
+          content: never
+        }
+        /** @description Component subtype not found */
+        404: {
+          content: never
+        }
+        /** @description The subtype is being moved under a SURFACE category while it has models */
+        409: {
+          content: never
+        }
       }
     }
     /**
@@ -446,7 +458,7 @@ export interface paths {
     }
     /**
      * Create a new component model
-     * @description Creates a manufacturer product entry. Requires subtypeId.
+     * @description Creates a manufacturer product entry. Requires subtypeId, which may not be in a SURFACE category.
      */
     post: {
       requestBody: {
@@ -462,6 +474,10 @@ export interface paths {
               content?: components['schemas']['ComponentModel']
             }
           }
+        }
+        /** @description Unknown subtypeId, or a subtype in a SURFACE category */
+        400: {
+          content: never
         }
       }
     }
@@ -552,7 +568,7 @@ export interface paths {
     }
     /**
      * Update a component model
-     * @description Updates model pricing, specs, or warranty info.
+     * @description Updates model pricing, specs, or warranty info. Moving the model to another subtype moves its components with it; the new subtype may not be in a SURFACE category.
      */
     put: {
       parameters: {
@@ -573,6 +589,14 @@ export interface paths {
               content?: components['schemas']['ComponentModel']
             }
           }
+        }
+        /** @description Unknown subtypeId, or a subtype in a SURFACE category */
+        400: {
+          content: never
+        }
+        /** @description Component model not found */
+        404: {
+          content: never
         }
       }
     }
@@ -863,6 +887,10 @@ export interface paths {
             }
           }
         }
+        /** @description The component already has an active installation */
+        409: {
+          content: never
+        }
       }
     }
   }
@@ -915,6 +943,10 @@ export interface paths {
               content?: components['schemas']['ComponentInstallation']
             }
           }
+        }
+        /** @description The change would give a component a second active installation */
+        409: {
+          content: never
         }
       }
     }

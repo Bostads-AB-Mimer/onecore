@@ -254,6 +254,13 @@ describe('POST and PUT /component-types', () => {
     categoryId: surfaceCategoryId,
     description: null,
     code: 'WALL',
+    category: {
+      id: surfaceCategoryId,
+      categoryName: 'Ytskikt',
+      description: 'Golv, väggar och tak',
+      type: 'SURFACE',
+      ...timestamps,
+    },
     ...timestamps,
   }
 

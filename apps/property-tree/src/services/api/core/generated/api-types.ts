@@ -5709,7 +5709,7 @@ export interface paths {
         404: {
           content: never
         }
-        /** @description Category has component types with a surface code */
+        /** @description Category has component types with a surface code, or is being made SURFACE while models exist under it. The error names the reason. */
         409: {
           content: never
         }
@@ -5846,7 +5846,7 @@ export interface paths {
         404: {
           content: never
         }
-        /** @description Another component type already has this code */
+        /** @description Another component type already has this code, or the type is being moved into a SURFACE category while models exist under it. The error names the reason. */
         409: {
           content: never
         }
@@ -5977,8 +5977,16 @@ export interface paths {
             }
           }
         }
+        /** @description Invalid typeId */
+        400: {
+          content: never
+        }
         /** @description Component subtype not found */
         404: {
+          content: never
+        }
+        /** @description The subtype is being moved under a SURFACE category while it has models. The error gives the model count. */
+        409: {
           content: never
         }
       }
@@ -6059,6 +6067,10 @@ export interface paths {
             }
           }
         }
+        /** @description Invalid componentSubtypeId, or the subtype is in a SURFACE category */
+        400: {
+          content: never
+        }
       }
     }
   }
@@ -6138,6 +6150,10 @@ export interface paths {
               content?: components['schemas']['ComponentModel']
             }
           }
+        }
+        /** @description Invalid componentSubtypeId, or the subtype is in a SURFACE category */
+        400: {
+          content: never
         }
         /** @description Component model not found */
         404: {
@@ -6426,6 +6442,10 @@ export interface paths {
             }
           }
         }
+        /** @description The component already has an active installation */
+        409: {
+          content: never
+        }
       }
     }
   }
@@ -6482,6 +6502,10 @@ export interface paths {
         }
         /** @description Component installation not found */
         404: {
+          content: never
+        }
+        /** @description The change would give the component a second active installation */
+        409: {
           content: never
         }
       }

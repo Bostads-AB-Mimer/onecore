@@ -16,6 +16,8 @@ import {
   updateComponentType,
   deleteComponentType,
   findComponentTypeCodeProblem,
+  getComponentCategoryType,
+  updateUnlessModelsUnder,
 } from '../adapters/component-adapter'
 import { prismaErrorCode } from '../utils/prisma-errors'
 
@@ -295,7 +297,7 @@ export const routes = (router: KoaRouter) => {
    *       404:
    *         description: Component type not found
    *       409:
-   *         description: Another component type already has this code
+   *         description: Another component type already has this code, or the type is being moved into a SURFACE category while models exist under it
    */
   router.put(
     '(.*)/component-types/:id',
@@ -322,10 +324,25 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
+        const targetCategory =
+          data.categoryId !== undefined &&
+          data.categoryId !== existing.categoryId
+            ? await getComponentCategoryType(data.categoryId)
+            : existing.category
+        if (!targetCategory) {
+          ctx.status = codeProblemResponse.category_not_found.status
+          ctx.body = {
+            error: codeProblemResponse.category_not_found.error,
+            ...metadata,
+          }
+          return
+        }
+
         if (data.code !== undefined || data.categoryId !== undefined) {
           const problem = await findComponentTypeCodeProblem({
             code: data.code === undefined ? existing.code : data.code,
             categoryId: data.categoryId ?? existing.categoryId,
+            category: targetCategory,
             excludeTypeId: id,
           })
           if (problem) {
@@ -338,10 +355,32 @@ export const routes = (router: KoaRouter) => {
           }
         }
 
-        const type = await updateComponentType(id, data)
+        const result = await updateUnlessModelsUnder(
+          data.categoryId !== undefined &&
+            data.categoryId !== existing.categoryId
+            ? { typeId: id, toCategoryId: data.categoryId }
+            : null,
+          (db) => updateComponentType(id, data, db)
+        )
+        if (!result.ok && result.err === 'target_not_found') {
+          ctx.status = codeProblemResponse.category_not_found.status
+          ctx.body = {
+            error: codeProblemResponse.category_not_found.error,
+            ...metadata,
+          }
+          return
+        }
+        if (!result.ok) {
+          ctx.status = 409
+          ctx.body = {
+            error: `Type has ${result.models} models under it; a type in a SURFACE category cannot have models. Move or delete them first`,
+            ...metadata,
+          }
+          return
+        }
 
         ctx.body = {
-          content: ComponentTypeSchema.parse(type),
+          content: ComponentTypeSchema.parse(result.data),
           ...metadata,
         }
       } catch (err) {
