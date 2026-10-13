@@ -37,5 +37,7 @@ shared/
 ## Shared UI lib
 
 The primitives in `shared/ui` (Button, Dialog, Table, ...) are duplicated in
-`@onecore/ui`. Toast has already moved; the rest is pending migration, after
-which imports switch to `@onecore/ui` and the local copies go away.
+`@onecore/ui`. Toast, ResponsiveTable, Pagination, BulkActionBar and the
+mobile hooks have moved; their local files are one-line shims kept until the
+importers are repointed. The rest is pending migration, after which imports
+switch to `@onecore/ui` and the local copies go away.

@@ -1,3 +1,5 @@
+// Barrel for property-tree's own hooks. TODO: once the @onecore/ui shims are
+// gone, nothing the ui package provides should be re-exported from here.
 export { useClickOutside } from './useClickOutside'
 export { useClipboardCopy } from './useClipboardCopy'
 export { useDebounce } from './useDebounce'
