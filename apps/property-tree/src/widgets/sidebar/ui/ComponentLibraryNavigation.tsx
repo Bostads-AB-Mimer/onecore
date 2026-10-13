@@ -33,18 +33,14 @@ export function ComponentLibraryNavigation() {
   const isOnLibrary = view !== undefined
 
   const [isOpen, setIsOpen] = React.useState(isOnLibrary)
-  const [isCategoriesOpen, setIsCategoriesOpen] = React.useState(true)
 
   React.useEffect(() => {
-    if (isOnLibrary) {
-      setIsOpen(true)
-      setIsCategoriesOpen(true)
-    }
+    if (isOnLibrary) setIsOpen(true)
   }, [isOnLibrary])
 
-  const categoriesState = treeNodeState(view, { level: 'categories' })
+  const rootState = treeNodeState(view, { level: 'categories' })
   const categories = useComponentEntity('category', undefined, undefined, {
-    enabled: isOpen && isCategoriesOpen,
+    enabled: isOpen,
   })
 
   return (
@@ -57,11 +53,12 @@ export function ComponentLibraryNavigation() {
         <SidebarMenu>
           <SidebarMenuItem>
             <CollapsibleTrigger asChild>
-              <SidebarMenuButton asChild tooltip="Komponentbibliotek">
-                <Link
-                  to={routes.components}
-                  onClick={() => setIsCategoriesOpen(true)}
-                >
+              <SidebarMenuButton
+                asChild
+                isActive={rootState === 'active'}
+                tooltip="Komponentbibliotek"
+              >
+                <Link to={routes.components} onClick={() => setIsOpen(true)}>
                   <Settings />
                   <span>Komponentbibliotek</span>
                   <ChevronRight className="ml-auto transition-transform group-data-[state=open]/library:rotate-90" />
@@ -70,51 +67,27 @@ export function ComponentLibraryNavigation() {
             </CollapsibleTrigger>
 
             <CollapsibleContent>
-              <SidebarGroupContent>
-                <Collapsible
-                  open={isCategoriesOpen}
-                  onOpenChange={setIsCategoriesOpen}
-                  className="group/library-categories ml-4"
-                >
-                  <SidebarMenuButton
-                    asChild
-                    isActive={categoriesState === 'active'}
-                    isSelectedInHierarchy={categoriesState === 'in-path'}
-                  >
-                    <Link
-                      to={routes.components}
-                      onClick={() => setIsCategoriesOpen(true)}
-                    >
-                      <ChevronRight className="transition-transform group-data-[state=open]/library-categories:rotate-90" />
-                      <span>Kategorier</span>
-                    </Link>
-                  </SidebarMenuButton>
-
-                  <CollapsibleContent>
-                    <SidebarGroupContent>
-                      {categories.isLoading ? (
-                        <NavigationSkeleton />
-                      ) : categories.error ? (
-                        <div className="text-sm text-destructive px-2">
-                          Kunde inte ladda kategorierna
-                        </div>
-                      ) : (
-                        <SidebarMenu>
-                          {sortBySwedishName(
-                            categories.data ?? [],
-                            (category) => category.categoryName
-                          ).map((category) => (
-                            <ComponentCategoryNavigation
-                              key={category.id}
-                              category={category}
-                              view={view}
-                            />
-                          ))}
-                        </SidebarMenu>
-                      )}
-                    </SidebarGroupContent>
-                  </CollapsibleContent>
-                </Collapsible>
+              <SidebarGroupContent className="ml-4">
+                {categories.isLoading ? (
+                  <NavigationSkeleton />
+                ) : categories.error ? (
+                  <div className="text-sm text-destructive px-2">
+                    Kunde inte ladda kategorierna
+                  </div>
+                ) : (
+                  <SidebarMenu>
+                    {sortBySwedishName(
+                      categories.data ?? [],
+                      (category) => category.categoryName
+                    ).map((category) => (
+                      <ComponentCategoryNavigation
+                        key={category.id}
+                        category={category}
+                        view={view}
+                      />
+                    ))}
+                  </SidebarMenu>
+                )}
               </SidebarGroupContent>
             </CollapsibleContent>
           </SidebarMenuItem>
