@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  ancestorViewStates,
   isLegacyLibraryUrl,
   levelSearch,
   levelTitle,
@@ -194,6 +195,37 @@ describe('parentViewState', () => {
       typeId: base.typeId,
       typeName: base.typeName,
     })
+  })
+})
+
+describe('ancestorViewStates', () => {
+  it('has no ancestors on the categories page', () => {
+    expect(ancestorViewStates({ level: 'categories' })).toEqual([])
+  })
+
+  it('lists every level above a subtype, root first', () => {
+    expect(
+      ancestorViewStates({
+        level: 'subtype',
+        ...base,
+        tab: 'components',
+        modelId: 'm-1',
+      })
+    ).toEqual([
+      { level: 'categories' },
+      {
+        level: 'types',
+        categoryId: base.categoryId,
+        categoryName: base.categoryName,
+      },
+      {
+        level: 'subtypes',
+        categoryId: base.categoryId,
+        categoryName: base.categoryName,
+        typeId: base.typeId,
+        typeName: base.typeName,
+      },
+    ])
   })
 })
 
