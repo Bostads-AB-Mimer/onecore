@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Folder } from 'lucide-react'
 
 import {
@@ -35,11 +35,12 @@ export function ComponentCategoryNavigation({
     level: 'category',
     categoryId: category.id,
   })
+  const { search } = useLocation()
   const [isExpanded, setIsExpanded] = React.useState(state !== 'none')
 
   React.useEffect(() => {
     if (state !== 'none') setIsExpanded(true)
-  }, [state])
+  }, [state, search])
 
   const types = useComponentEntity('type', category.id, undefined, {
     enabled: isExpanded,

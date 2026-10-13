@@ -36,7 +36,7 @@ export function ComponentLibraryNavigation() {
 
   React.useEffect(() => {
     if (isOnLibrary) setIsOpen(true)
-  }, [isOnLibrary])
+  }, [isOnLibrary, search])
 
   const rootState = treeNodeState(view, { level: 'categories' })
   const categories = useComponentEntity('category', undefined, undefined, {

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { CircleDot, Package } from 'lucide-react'
 
 import {
@@ -33,11 +33,12 @@ export function ComponentTypeNavigation({
   view,
 }: ComponentTypeNavigationProps) {
   const state = treeNodeState(view, { level: 'type', typeId: type.id })
+  const { search } = useLocation()
   const [isExpanded, setIsExpanded] = React.useState(state !== 'none')
 
   React.useEffect(() => {
     if (state !== 'none') setIsExpanded(true)
-  }, [state])
+  }, [state, search])
 
   const subtypes = useComponentEntity('subtype', type.id, undefined, {
     enabled: isExpanded,
