@@ -15,7 +15,6 @@ import {
   LayoutGrid,
   ListOrdered,
   Receipt,
-  Settings,
   ShieldX,
 } from 'lucide-react'
 
@@ -37,6 +36,7 @@ import {
   useCompanyExpansion,
 } from './CompanyExpansionContext'
 import { CompanyList } from './CompanyList'
+import { ComponentLibraryNavigation } from './ComponentLibraryNavigation'
 
 export function SidebarNavigation() {
   return (
@@ -172,11 +172,7 @@ function SidebarNavigationContent() {
           icon={ListOrdered}
           label="Ströfakturor"
         />
-        <SidebarNavLink
-          to={routes.components}
-          icon={Settings}
-          label="Komponentbibliotek"
-        />
+        <ComponentLibraryNavigation />
         <SidebarNavLink
           to={routes.guides}
           icon={BookOpen}

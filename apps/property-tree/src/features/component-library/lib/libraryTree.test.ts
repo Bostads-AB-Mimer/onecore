@@ -52,9 +52,9 @@ describe('treeNodeState', () => {
     expect(treeNodeState(onType, node)).toBe('active')
     expect(treeNodeState(onSubtype, node)).toBe('in-path')
     expect(treeNodeState(onCategory, node)).toBe('none')
-    expect(
-      treeNodeState(onSubtype, { level: 'type', typeId: 'type-2' })
-    ).toBe('none')
+    expect(treeNodeState(onSubtype, { level: 'type', typeId: 'type-2' })).toBe(
+      'none'
+    )
   })
 
   it('makes a subtype active on its page, whichever tab is open', () => {
