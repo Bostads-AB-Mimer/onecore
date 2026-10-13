@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 
 import {
-  ComponentLibraryBreadcrumb,
   ComponentLibraryContent,
   ComponentLibraryDialogs,
   LevelActions,
@@ -130,14 +129,6 @@ const ComponentLibraryPage = () => {
             onDelete={deleteCurrentNode}
           />
         )}
-      </div>
-
-      {/* Breadcrumb Navigation */}
-      <div className="text-sm text-muted-foreground">
-        <ComponentLibraryBreadcrumb
-          viewState={viewState}
-          onNavigate={navigateTo}
-        />
       </div>
 
       {/* Content */}
