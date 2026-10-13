@@ -108,6 +108,29 @@ describe('componentLibraryService.getComponentPage', () => {
     })
   })
 
+  it('asks for components without a model', async () => {
+    mockGet.mockResolvedValue({
+      data: { content: [] },
+      error: undefined,
+    } as never)
+
+    await componentLibraryService.getComponentPage({
+      subtypeId: 'sub-1',
+      withoutModel: true,
+      page: 1,
+      limit: 25,
+    })
+
+    expect(mockGet).toHaveBeenCalledWith('/components', {
+      params: {
+        query: expect.objectContaining({
+          subtypeId: 'sub-1',
+          withoutModel: true,
+        }),
+      },
+    })
+  })
+
   it('drops a search shorter than two characters', async () => {
     mockGet.mockResolvedValue({ data: {}, error: undefined } as never)
 

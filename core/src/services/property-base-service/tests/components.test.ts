@@ -870,6 +870,7 @@ describe('Components API', () => {
         1,
         20,
         undefined,
+        undefined,
         undefined
       )
     })
@@ -891,8 +892,41 @@ describe('Components API', () => {
         1,
         20,
         undefined,
-        '00000000-0000-0000-0002-000000000001'
+        '00000000-0000-0000-0002-000000000001',
+        undefined
       )
+    })
+
+    it('filters to components without a model', async () => {
+      const getSpy = jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: true, data: { content: [] } })
+
+      const res = await request(app.callback()).get(
+        '/components?subtypeId=00000000-0000-0000-0002-000000000001&withoutModel=true'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getSpy).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        1,
+        20,
+        undefined,
+        '00000000-0000-0000-0002-000000000001',
+        true
+      )
+    })
+
+    it('returns 400 when modelId and withoutModel are combined', async () => {
+      const getSpy = jest.spyOn(propertyBaseAdapter, 'getComponents')
+
+      const res = await request(app.callback()).get(
+        '/components?modelId=00000000-0000-0000-0000-000000000001&withoutModel=true'
+      )
+
+      expect(res.status).toBe(400)
+      expect(getSpy).not.toHaveBeenCalled()
     })
 
     it('filters by status', async () => {
@@ -909,6 +943,7 @@ describe('Components API', () => {
         'ACTIVE',
         1,
         20,
+        undefined,
         undefined,
         undefined
       )

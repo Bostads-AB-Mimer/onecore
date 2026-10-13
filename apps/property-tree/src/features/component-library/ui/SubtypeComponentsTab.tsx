@@ -12,7 +12,7 @@ import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 import { TableToolbar } from '@/shared/ui/TableToolbar'
 
 import type { CategoryType } from '../lib/componentRows'
-import { COMPONENT_PAGE_SIZE } from '../lib/libraryUrlState'
+import { COMPONENT_PAGE_SIZE, NO_MODEL } from '../lib/libraryUrlState'
 import {
   EmptyState,
   ErrorState,
@@ -74,6 +74,7 @@ export const SubtypeComponentsTab = ({
   const filterOptions = useMemo(
     () => [
       { id: ALL_MODELS, label: 'Alla modeller' },
+      { id: NO_MODEL, label: 'Utan modell' },
       ...sortModelsByName(modelOptions).map((model) => ({
         id: model.id,
         label: formatComponentModelName(model),

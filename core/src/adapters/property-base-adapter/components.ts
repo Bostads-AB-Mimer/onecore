@@ -680,12 +680,21 @@ async function getComponents(
   page?: number,
   limit?: number,
   serialNumber?: string,
-  subtypeId?: string
+  subtypeId?: string,
+  withoutModel?: boolean
 ): Promise<AdapterResult<GetComponentsResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/components', {
       params: {
-        query: { modelId, subtypeId, status, page, limit, serialNumber },
+        query: {
+          modelId,
+          withoutModel,
+          subtypeId,
+          status,
+          page,
+          limit,
+          serialNumber,
+        },
       },
     })
 

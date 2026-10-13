@@ -8,6 +8,9 @@ import type { CategoryType } from './componentRows'
 
 export const COMPONENT_PAGE_SIZE = 25
 
+// The model filter's URL value for components without a model.
+export const NO_MODEL = 'none'
+
 export type SubtypeTab = 'components' | 'models'
 
 export type ViewState =

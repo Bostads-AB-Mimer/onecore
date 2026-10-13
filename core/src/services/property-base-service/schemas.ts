@@ -816,14 +816,23 @@ export const ComponentModelsQueryParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
-export const ComponentsQueryParamsSchema = z.object({
-  modelId: z.string().uuid().optional(),
-  subtypeId: z.string().uuid().optional(),
-  status: ComponentStatusEnum.optional(),
-  serialNumber: z.string().optional(), // Search parameter
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
-})
+export const ComponentsQueryParamsSchema = z
+  .object({
+    modelId: z.string().uuid().optional(),
+    withoutModel: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
+    subtypeId: z.string().uuid().optional(),
+    status: ComponentStatusEnum.optional(),
+    serialNumber: z.string().optional(), // Search parameter
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  })
+  .refine((query) => !(query.modelId && query.withoutModel), {
+    message: 'modelId and withoutModel cannot be combined',
+    path: ['withoutModel'],
+  })
 
 export const ComponentInstallationsQueryParamsSchema = z.object({
   componentId: z.string().uuid().optional(),

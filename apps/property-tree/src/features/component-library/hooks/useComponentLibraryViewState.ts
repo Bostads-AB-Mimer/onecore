@@ -23,6 +23,7 @@ import type { CategoryType } from '../lib/componentRows'
 import {
   COMPONENT_PAGE_SIZE,
   isLegacyLibraryUrl,
+  NO_MODEL,
   parseViewState,
   type SubtypeTab,
   toSearchParams,
@@ -185,7 +186,11 @@ export const useComponentLibraryViewState = () => {
     subtypeState?.tab === 'components' && categoryType
       ? {
           subtypeId: subtypeState.subtypeId,
-          modelId: subtypeState.modelId,
+          modelId:
+            subtypeState.modelId === NO_MODEL
+              ? undefined
+              : subtypeState.modelId,
+          withoutModel: subtypeState.modelId === NO_MODEL,
           search: activeSearch,
           page,
           limit: COMPONENT_PAGE_SIZE,

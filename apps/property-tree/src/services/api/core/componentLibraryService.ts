@@ -43,6 +43,7 @@ const fetchAllPages = async <T>(
 export interface ComponentPageFilter {
   subtypeId: string
   modelId?: string
+  withoutModel?: boolean
   search?: string
   page: number
   limit: number
@@ -309,6 +310,7 @@ export const componentLibraryService = {
         query: {
           subtypeId: filter.subtypeId,
           modelId: filter.modelId,
+          withoutModel: filter.withoutModel || undefined,
           serialNumber: search && search.length >= 2 ? search : undefined,
           page: filter.page,
           limit: filter.limit,

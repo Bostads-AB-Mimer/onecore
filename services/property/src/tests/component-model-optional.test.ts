@@ -208,6 +208,73 @@ describe('componentsQueryParamsSchema', () => {
 
     expect(params.subtypeId).toBe(subtypeId)
   })
+
+  it('reads withoutModel as a boolean', () => {
+    expect(
+      componentsQueryParamsSchema.parse({ withoutModel: 'true' }).withoutModel
+    ).toBe(true)
+    expect(
+      componentsQueryParamsSchema.parse({ withoutModel: 'false' }).withoutModel
+    ).toBe(false)
+  })
+
+  it('refuses withoutModel together with modelId', () => {
+    expect(
+      componentsQueryParamsSchema.safeParse({ modelId, withoutModel: 'true' })
+        .success
+    ).toBe(false)
+  })
+})
+
+describe('GET /components', () => {
+  const app = new Koa()
+  const router = new KoaRouter()
+  componentRoutes(router)
+  app.use(bodyParser())
+  app.use(router.routes())
+
+  const findMany = prisma.components.findMany as jest.Mock
+  const count = prisma.components.count as jest.Mock
+
+  beforeEach(() => {
+    findMany.mockReset()
+    count.mockReset()
+    findMany.mockResolvedValue([])
+    count.mockResolvedValue(0)
+  })
+
+  it('filters to components without a model', async () => {
+    const res = await request(app.callback()).get(
+      `/components?subtypeId=${subtypeId}&withoutModel=true`
+    )
+
+    expect(res.status).toBe(200)
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ subtypeId, modelId: null }),
+      })
+    )
+    expect(count).toHaveBeenCalledWith({
+      where: expect.objectContaining({ modelId: null }),
+    })
+  })
+
+  it('leaves the model alone when withoutModel is false', async () => {
+    await request(app.callback()).get(
+      `/components?subtypeId=${subtypeId}&withoutModel=false`
+    )
+
+    expect(findMany.mock.calls[0][0].where).not.toHaveProperty('modelId')
+  })
+
+  it('answers 400 when modelId and withoutModel are combined', async () => {
+    const res = await request(app.callback()).get(
+      `/components?modelId=${modelId}&withoutModel=true`
+    )
+
+    expect(res.status).toBe(400)
+    expect(findMany).not.toHaveBeenCalled()
+  })
 })
 
 describe('findComponentModelProblem', () => {

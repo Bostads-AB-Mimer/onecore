@@ -24,14 +24,23 @@ export const ComponentConditionEnum = z.enum([
 // ==================== COMPONENTS (INSTANCES) ====================
 
 // Query params for components
-export const componentsQueryParamsSchema = z.object({
-  modelId: z.string().uuid().optional(),
-  subtypeId: z.string().uuid().optional(),
-  status: ComponentStatusEnum.optional(),
-  serialNumber: z.string().optional(), // Trimming handled in adapter
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
-})
+export const componentsQueryParamsSchema = z
+  .object({
+    modelId: z.string().uuid().optional(),
+    withoutModel: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
+    subtypeId: z.string().uuid().optional(),
+    status: ComponentStatusEnum.optional(),
+    serialNumber: z.string().optional(), // Trimming handled in adapter
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  })
+  .refine((query) => !(query.modelId && query.withoutModel), {
+    message: 'modelId and withoutModel cannot be combined',
+    path: ['withoutModel'],
+  })
 
 // Residence schema for navigation (just the id we need for routing)
 export const ResidenceRefSchema = z.object({
