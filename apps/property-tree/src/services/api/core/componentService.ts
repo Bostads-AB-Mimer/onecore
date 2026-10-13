@@ -63,14 +63,14 @@ export const componentService = {
   },
 
   async getUninstalledInstances(
-    modelId?: string,
+    subtypeId?: string,
     serialNumber?: string
   ): Promise<Component[]> {
     const queryParams: any = {
       limit: 100, // Max allowed by backend schema
     }
 
-    if (modelId) queryParams.modelId = modelId
+    if (subtypeId) queryParams.subtypeId = subtypeId
     if (serialNumber) queryParams.serialNumber = serialNumber
 
     const { data, error } = await GET('/components', {

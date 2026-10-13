@@ -8,15 +8,25 @@ import { useDebounce } from '@/shared/hooks/useDebounce'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
 
+const instanceDetails = (instance: Component): string =>
+  [
+    instance.warrantyMonths ? `Garanti: ${instance.warrantyMonths} mån` : null,
+    instance.priceAtPurchase
+      ? `Pris: ${instance.priceAtPurchase.toLocaleString('sv-SE')} kr`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' | ')
+
 interface InstanceSelectorProps {
-  modelId: string
+  subtypeId: string
   value: string // Selected instance ID
   onChange: (instanceId: string, instance: Component | undefined) => void
   error?: string
 }
 
 export const InstanceSelector = ({
-  modelId,
+  subtypeId,
   value,
   onChange,
   error,
@@ -34,10 +44,10 @@ export const InstanceSelector = ({
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['instances', 'uninstalled', modelId, debouncedSearch],
+    queryKey: ['instances', 'uninstalled', subtypeId, debouncedSearch],
     queryFn: () =>
-      componentService.getUninstalledInstances(modelId, debouncedSearch),
-    enabled: !!modelId && shouldSearch,
+      componentService.getUninstalledInstances(subtypeId, debouncedSearch),
+    enabled: !!subtypeId && shouldSearch,
   })
 
   const selectedInstance = instances.find((inst) => inst.id === value)
@@ -95,10 +105,11 @@ export const InstanceSelector = ({
                 <div className="text-sm font-medium">
                   {instance.serialNumber}
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  Garanti: {instance.warrantyMonths} mån | Pris:{' '}
-                  {instance.priceAtPurchase} kr
-                </div>
+                {instanceDetails(instance) && (
+                  <div className="text-xs text-muted-foreground">
+                    {instanceDetails(instance)}
+                  </div>
+                )}
               </button>
             ))}
           </div>

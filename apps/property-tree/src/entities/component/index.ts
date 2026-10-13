@@ -3,7 +3,7 @@ export { ComponentCard } from './ui/ComponentCard'
 export { ComponentImageGallery } from './ui/ComponentImageGallery'
 export { ComponentImageUpload } from './ui/ComponentImageUpload'
 export { InstanceSelector } from './ui/InstanceSelector'
-export { ModelSelector } from './ui/ModelSelector'
+export { SubtypeSelector } from './ui/SubtypeSelector'
 
 // Hooks
 export { useComponentEntity } from './hooks/useComponentEntity'
@@ -15,6 +15,3 @@ export { useSubtypeComponents } from './hooks/useSubtypeComponents'
 // Lib
 export { formatComponentLabel } from './lib/componentLabel'
 export { invalidateComponentQueries } from './lib/invalidateComponentQueries'
-
-// Types
-export type { ComponentModelWithHierarchy } from './ui/ModelSelector'
