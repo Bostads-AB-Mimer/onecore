@@ -2667,6 +2667,44 @@ export interface paths {
       }
     }
   }
+  '/rental-objects/residences/leasing-details': {
+    /**
+     * Leasing details for an explicit list of residences
+     * @description What the letting process shows about an apartment before it is
+     * published: address, apartment number, område, type and room count,
+     * floor, elevator, BRA and its open rental blocks. Keyed by rental id
+     * and fetched for exactly the ids given (vacant ones), so no
+     * per-property cache widening. Rent is not included; Tenfast owns it.
+     * Unknown or non-residence ids are absent from the result.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            rentalIds: string[]
+          }
+        }
+      }
+      responses: {
+        /** @description Details per rental id */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ResidenceLeasingDetails'][]
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/rental-object-subtypes': {
     /**
      * List the subtype captions rental objects can carry
@@ -4662,6 +4700,29 @@ export interface components {
       area: number | null
       additionalInfo: string | null
       malarEnergiFacilityId: string | null
+    }
+    ResidenceLeasingDetails: {
+      rentalId: string
+      address: string | null
+      apartmentNumber: string | null
+      propertyCode: string | null
+      propertyName: string | null
+      buildingCode: string | null
+      marketAreaCode: string | null
+      marketAreaName: string | null
+      residenceTypeCode: string | null
+      residenceTypeName: string | null
+      roomCount: number | null
+      floor: string | null
+      elevator: boolean | null
+      area: number | null
+      rentalBlocks: {
+        /** Format: date-time */
+        fromDate: string
+        /** Format: date-time */
+        toDate: string | null
+        reason: string | null
+      }[]
     }
     ApartmentTemperaturePoint: {
       /** @description Unix timestamp (seconds) at the start of the aggregation bucket. */

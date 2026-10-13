@@ -6,6 +6,7 @@ import {
 } from '@onecore/types'
 
 import config from '../../common/config'
+import { describeError } from '../log-error'
 import { AdapterResult } from '../types'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
@@ -182,8 +183,37 @@ const getRentalObjectAvailabilities = async (
   }
 }
 
+export type VacantRentalObjectType = 'apartment' | 'parkingSpace' | 'storage'
+
+/** Tenfast's vacant and soon-vacant objects of one type; no block filtering. */
+const getVacantRentalObjectAvailabilities = async (
+  type: VacantRentalObjectType
+): Promise<AdapterResult<RentalObjectAvailabilityInfo[], 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/vacant-rental-objects/availabilities`,
+      { params: { type } }
+    )
+    if (response.status !== 200) {
+      logger.error(
+        { status: response.status, type },
+        'Unexpected status fetching vacant rental object availabilities'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      { ...describeError(error), type },
+      'Error fetching vacant rental object availabilities'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   getAllVacantParkingSpaces,
+  getVacantRentalObjectAvailabilities,
   getParkingSpaceByCode,
   getParkingSpaces,
   getRentalObjectAvailabilityByCode,
