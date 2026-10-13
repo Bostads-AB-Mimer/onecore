@@ -68,14 +68,12 @@ describe('useAuthCallback', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('refuses a callback when this tab started no login', async () => {
+  it('does not exchange a code this tab never asked for, and says so without an error', async () => {
     arriveAtCallback({ code: 'abc', state: 'any' })
 
     const result = renderCallback()
 
-    await waitFor(() =>
-      expect(result.current).toEqual({ tag: 'error', error: 'state-mismatch' })
-    )
+    await waitFor(() => expect(result.current).toEqual({ tag: 'not-started' }))
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -100,20 +98,30 @@ describe('useAuthCallback', () => {
 
     const second = renderCallback()
 
-    await waitFor(() =>
-      expect(second.current).toEqual({ tag: 'error', error: 'state-mismatch' })
-    )
+    await waitFor(() => expect(second.current).toEqual({ tag: 'not-started' }))
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('reports a missing code', async () => {
+    const nonce = startLogin('/')
+    arriveAtCallback({ state: nonce })
+
+    const result = renderCallback()
+
+    await waitFor(() =>
+      expect(result.current).toEqual({ tag: 'error', error: 'missing-code' })
+    )
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('reports an error Keycloak sent back instead of a code', async () => {
     const nonce = startLogin('/')
     arriveAtCallback({ state: nonce, error: 'access_denied' })
 
     const result = renderCallback()
 
     await waitFor(() =>
-      expect(result.current).toEqual({ tag: 'error', error: 'missing-code' })
+      expect(result.current).toEqual({ tag: 'error', error: 'keycloak-error' })
     )
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -155,7 +163,7 @@ describe('useAuthCallback', () => {
     )
   })
 
-  it('exchanges the code only once under StrictMode', async () => {
+  it('runs the callback once under StrictMode', async () => {
     const nonce = startLogin('/')
     arriveAtCallback({ code: 'abc', state: nonce })
     fetchMock.mockResolvedValue(jsonResponse({}))
@@ -165,10 +173,16 @@ describe('useAuthCallback', () => {
         <Inner>{children}</Inner>
       </StrictMode>
     )
+    // Without the guard the second effect run would read the pending login
+    // again, find it used up and race the first run's result. Fetch alone can't
+    // show that (the second run never gets that far), so count the reads.
+    const getItem = vi.spyOn(Storage.prototype, 'getItem')
 
     const { result } = renderHook(() => useAuthCallback(), { wrapper })
 
     await waitFor(() => expect(result.current.tag).toBe('success'))
     expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(getItem).toHaveBeenCalledTimes(1)
+    getItem.mockRestore()
   })
 })

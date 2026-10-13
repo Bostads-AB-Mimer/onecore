@@ -19,5 +19,8 @@ export function safeReturnTo(
   }
   if (url.origin !== origin) return '/'
 
-  return `${url.pathname}${url.search}${url.hash}`
+  // Normalising dot segments can itself produce a protocol-relative path:
+  // `/.//evil.example` has this origin but normalises to `//evil.example`.
+  const result = `${url.pathname}${url.search}${url.hash}`
+  return new URL(result, origin).origin === origin ? result : '/'
 }

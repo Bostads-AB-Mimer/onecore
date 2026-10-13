@@ -29,9 +29,16 @@ export function buildLoginUrl(config: AuthConfig, nonce: string): string {
  * `state` carries only a random nonce, kept with the return path in
  * sessionStorage, so a callback can only complete a login this tab started.
  */
+// getRandomValues rather than randomUUID: the latter is missing outside secure
+// contexts, e.g. a dev server reached on a LAN IP over plain http.
+const randomNonce = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
+    b.toString(16).padStart(2, '0')
+  ).join('')
+
 export function prepareLogin(config: AuthConfig, returnTo: string): string {
   const pending: PendingLogin = {
-    nonce: crypto.randomUUID(),
+    nonce: randomNonce(),
     returnTo: safeReturnTo(returnTo),
   }
   sessionStorage.setItem(PENDING_LOGIN_KEY, JSON.stringify(pending))

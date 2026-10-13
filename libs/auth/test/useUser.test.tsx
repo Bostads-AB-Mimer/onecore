@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react'
 import { act, renderHook, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-import { useRequireUser, useUser } from '../src'
+import { AuthProvider, useRequireUser, useUser } from '../src'
 import { config, jsonResponse, makeWrapper, profile } from './testUtils'
 
 const fetchMock = vi.fn<typeof fetch>()
@@ -86,6 +88,16 @@ describe('useUser', () => {
     expect(result.current).toEqual({ tag: 'error', error: 'unavailable' })
   })
 
+  it('is unavailable on 204, which core sends when it cannot reach Keycloak', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
+    const { result } = renderUser()
+
+    await runRetries()
+
+    expect(result.current).toEqual({ tag: 'error', error: 'unavailable' })
+  })
+
   it('is unknown when the profile does not match the schema', async () => {
     vi.useFakeTimers()
     fetchMock.mockResolvedValue(jsonResponse({ id: 'user-1' }))
@@ -141,12 +153,21 @@ describe('useRequireUser', () => {
       assign,
     })
     fetchMock.mockResolvedValue(jsonResponse({}, 401))
-    const { wrapper } = makeWrapper()
+    // A new config object on every render (as an app passing an inline object
+    // would) gives useAuth a new login function, which re-runs the redirect
+    // effect: only the redirecting guard keeps it to one login.
+    const queryClient = new QueryClient()
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider config={{ ...config }}>{children}</AuthProvider>
+      </QueryClientProvider>
+    )
 
     const { result, rerender } = renderHook(() => useRequireUser(), {
       wrapper,
     })
     await waitFor(() => expect(assign).toHaveBeenCalledTimes(1))
+    rerender()
     rerender()
 
     expect(result.current).toEqual({ tag: 'error', error: 'unauthenticated' })
@@ -156,6 +177,22 @@ describe('useRequireUser', () => {
     expect(
       JSON.parse(sessionStorage.getItem('onecore-auth:pending-login') ?? '')
     ).toMatchObject({ returnTo: '/uthyrning/bostad?tab=2' })
+  })
+
+  it('reports unknown instead of loading forever when the login cannot start', async () => {
+    vi.stubGlobal('location', { ...window.location, assign: vi.fn() })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Storage disabled', 'SecurityError')
+    })
+    fetchMock.mockResolvedValue(jsonResponse({}, 401))
+    const { wrapper } = makeWrapper()
+
+    const { result } = renderHook(() => useRequireUser(), { wrapper })
+
+    await waitFor(() =>
+      expect(result.current).toEqual({ tag: 'error', error: 'unknown' })
+    )
+    vi.mocked(Storage.prototype.setItem).mockRestore()
   })
 
   it('does not start a login when core is unavailable', async () => {

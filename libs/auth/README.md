@@ -37,6 +37,7 @@ const user = useRequireUser()
 const callback = useAuthCallback()
 if (callback.tag === 'success')
   return <Navigate to={callback.returnTo} replace />
+if (callback.tag === 'not-started') return <Navigate to="/" replace />
 
 // Header
 const { logout } = useAuth()
@@ -47,18 +48,24 @@ const { logout } = useAuth()
 - **`state` is a nonce.** `login()` stores a random nonce and the return path
   in sessionStorage and sends only the nonce to Keycloak. `useAuthCallback`
   exchanges the code only if the returned `state` matches, and each nonce
-  works once. A callback link that this tab did not start ends in
-  `state-mismatch`.
-- **The return path stays on the origin.** It is resolved with `URL` and
-  replaced with `/` if it would leave the origin, which includes inputs like
-  `/\evil.example` that browsers normalise to `//evil.example`.
+  works once. A nonce that doesn't match ends in `state-mismatch`.
+- **A callback the tab didn't start is not an error.** With no pending login
+  in the tab (the Back button returning to Keycloak after a finished login,
+  or a Keycloak email link opened in a new tab), `useAuthCallback` returns
+  `not-started` without exchanging the code. The app should send the user to
+  `/`, where `useRequireUser` logs in again if needed.
+- **The return path stays on the origin.** It is resolved with `URL`, and
+  both the input and the normalised result must stay on the origin, or the
+  path becomes `/`. This covers inputs browsers normalise to another origin,
+  such as `/\evil.example` and `/.//evil.example`.
 - **A user who is down is not a user who is logged out.** `useUser` reports
   `unavailable` for 5xx and network errors, and only a 401 reports
   `unauthenticated` (which `useRequireUser` turns into a login). Once a user
   has loaded, a failed poll keeps them, so a brief core outage doesn't send
   anyone away from unsaved work.
+- **Core answers 204 when it can't reach Keycloak.** If fetching Keycloak's
+  signing keys fails, core's auth middleware lets the request through without
+  a user and `/auth/profile` returns an empty 204. `useUser` treats that as
+  `unavailable` too.
 - **The profile is polled every 5 seconds.** This also keeps core's session
   cookie fresh.
-- **Keycloak outages show up as 401.** If core can't reach Keycloak's keys it
-  falls back to legacy JWT verification, which answers 401. The
-  `unavailable` state covers core and the network, not Keycloak.

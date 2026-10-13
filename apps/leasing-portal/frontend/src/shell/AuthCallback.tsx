@@ -3,6 +3,7 @@ import { useAuthCallback, type CallbackError } from '@onecore/auth'
 import { Button } from '@onecore/ui'
 
 const messages: Record<CallbackError, string> = {
+  'keycloak-error': 'Inloggningen avbröts eller misslyckades. Försök igen.',
   'missing-code': 'Ingen autentiseringskod hittades.',
   'state-mismatch': 'Inloggningen kunde inte verifieras. Försök logga in igen.',
   'exchange-failed': 'Ett fel uppstod vid inloggning.',
@@ -12,6 +13,9 @@ export function AuthCallback() {
   const state = useAuthCallback()
 
   if (state.tag === 'success') return <Navigate to={state.returnTo} replace />
+  // A callback this tab didn't start (Back button, link from a Keycloak email):
+  // go to the start page, which logs in again if needed.
+  if (state.tag === 'not-started') return <Navigate to="/" replace />
 
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-4">

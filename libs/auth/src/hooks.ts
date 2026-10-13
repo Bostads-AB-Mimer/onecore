@@ -30,8 +30,8 @@ export interface AuthUser {
 
 /**
  * - `unauthenticated`: core answered 401; send the user to login.
- * - `unavailable`: core is down or unreachable (5xx, network error). Logging in
- *   again would not help.
+ * - `unavailable`: core is down or unreachable (5xx, network error), or core
+ *   could not reach Keycloak (204, see below). Logging in again would not help.
  * - `unknown`: anything else, such as a profile that doesn't match the schema.
  */
 export type UserError = 'unauthenticated' | 'unavailable' | 'unknown'
@@ -75,6 +75,9 @@ export function useUser(): UserState {
 
       if (res.status === 401) throw 'unauthenticated' satisfies UserError
       if (res.status >= 500) throw 'unavailable' satisfies UserError
+      // When core can't fetch Keycloak's signing keys, its auth middleware lets
+      // the request through without a user and the profile route answers 204.
+      if (res.status === 204) throw 'unavailable' satisfies UserError
       if (!res.ok) throw 'unknown' satisfies UserError
 
       let body: unknown
@@ -94,12 +97,17 @@ export function useUser(): UserState {
   return { tag: 'loading' }
 }
 
-/** `useUser`, plus a single redirect to login when the user is unauthenticated. */
+/**
+ * `useUser`, plus a single redirect to login when the user is unauthenticated.
+ * If the login can't even start (sessionStorage unavailable), reports `unknown`
+ * instead of leaving the app loading forever.
+ */
 export function useRequireUser(): UserState {
   const user = useUser()
   const { login } = useAuth()
   // login() navigates away; fire it once even though the effect re-runs.
   const redirecting = useRef(false)
+  const [loginFailed, setLoginFailed] = useState(false)
 
   const unauthenticated =
     user.tag === 'error' && user.error === 'unauthenticated'
@@ -107,28 +115,42 @@ export function useRequireUser(): UserState {
   useEffect(() => {
     if (unauthenticated && !redirecting.current) {
       redirecting.current = true
-      login()
+      try {
+        login()
+      } catch {
+        setLoginFailed(true)
+      }
     }
   }, [unauthenticated, login])
 
+  if (loginFailed) return { tag: 'error', error: 'unknown' }
   return user
 }
 
 /**
+ * - `keycloak-error`: Keycloak sent back an `error` instead of a code, e.g. the
+ *   user cancelled.
  * - `missing-code`: Keycloak sent the user back without a code.
- * - `state-mismatch`: no pending login in this tab, or a different nonce. The
- *   code is not exchanged, so a login can't be completed by someone else's link.
+ * - `state-mismatch`: this tab started a login, but `state` is missing or holds
+ *   a different nonce. The code is not exchanged.
  * - `exchange-failed`: core refused the code or could not be reached.
  */
 export type CallbackError =
-  'missing-code' | 'state-mismatch' | 'exchange-failed'
+  'keycloak-error' | 'missing-code' | 'state-mismatch' | 'exchange-failed'
 
+/**
+ * `not-started`: this tab has no pending login, e.g. the Back button returned to
+ * Keycloak after a finished login, or a Keycloak email link opened a new tab.
+ * The code is not exchanged; the app should send the user to `/`, where
+ * `useRequireUser` logs in again if the session cookie isn't already set.
+ */
 export type CallbackState =
   | { tag: 'loading' }
   | { tag: 'success'; returnTo: string }
+  | { tag: 'not-started' }
   | { tag: 'error'; error: CallbackError }
 
-/** Completes a login on the app's callback route. Navigating to `returnTo` is up to the app. */
+/** Completes a login on the app's callback route. Navigating on is up to the app. */
 export function useAuthCallback(): CallbackState {
   const { coreUrl, redirectUri } = useAuthConfig()
   const [state, setState] = useState<CallbackState>({ tag: 'loading' })
@@ -141,8 +163,10 @@ export function useAuthCallback(): CallbackState {
     const nonce = params.get('state')
     const pending = takePendingLogin()
 
+    if (params.has('error')) return { tag: 'error', error: 'keycloak-error' }
     if (!code) return { tag: 'error', error: 'missing-code' }
-    if (!pending || !nonce || pending.nonce !== nonce) {
+    if (!pending) return { tag: 'not-started' }
+    if (pending.nonce !== nonce) {
       return { tag: 'error', error: 'state-mismatch' }
     }
 

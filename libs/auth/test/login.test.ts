@@ -44,7 +44,7 @@ describe('prepareLogin', () => {
     const url = new URL(prepareLogin(config, '/uthyrning/bostad?tab=2'))
     const state = url.searchParams.get('state')
 
-    expect(state).toMatch(/^[0-9a-f-]{36}$/)
+    expect(state).toMatch(/^[0-9a-f]{32}$/)
     expect(takePendingLogin()).toEqual({
       nonce: state,
       returnTo: '/uthyrning/bostad?tab=2',
