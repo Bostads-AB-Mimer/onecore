@@ -44,7 +44,7 @@ export function ComponentCategoryNavigation({
   const [isExpanded, setIsExpanded] = React.useState(state !== 'none')
 
   React.useEffect(() => {
-    if (state !== 'none') setIsExpanded(true)
+    setIsExpanded(state !== 'none')
   }, [state, search])
 
   const types = useComponentEntity('type', category.id, undefined, {

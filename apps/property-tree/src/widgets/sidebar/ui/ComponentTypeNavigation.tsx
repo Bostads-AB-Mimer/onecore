@@ -41,7 +41,7 @@ export function ComponentTypeNavigation({
   const [isExpanded, setIsExpanded] = React.useState(state !== 'none')
 
   React.useEffect(() => {
-    if (state !== 'none') setIsExpanded(true)
+    setIsExpanded(state !== 'none')
   }, [state, search])
 
   const subtypes = useComponentEntity('subtype', type.id, undefined, {
