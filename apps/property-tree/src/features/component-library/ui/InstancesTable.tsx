@@ -71,7 +71,7 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
           onClick={(e) => e.stopPropagation()}
           className="group flex flex-col leading-snug rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className="font-medium text-primary underline decoration-muted-foreground/50 underline-offset-4 group-hover:decoration-foreground">
+          <span className="font-medium text-primary underline-offset-4 group-hover:underline">
             {address ?? detail}
           </span>
           {address && <span className="text-muted-foreground">{detail}</span>}

@@ -120,7 +120,7 @@ export const ModelsTable = ({
         <Link
           to={getHref(item)}
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 text-sm font-medium underline underline-offset-4 decoration-muted-foreground/50 hover:decoration-foreground rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap"
+          className="inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap"
         >
           Visa komponenter
         </Link>
