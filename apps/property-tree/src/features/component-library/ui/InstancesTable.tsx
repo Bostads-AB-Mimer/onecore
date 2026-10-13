@@ -138,9 +138,14 @@ export const InstancesTable = ({
   onUninstall,
   onViewImages,
 }: InstancesTableProps) => {
+  // A fixed table layout needs one column without a width to take the spare space.
   const columns = getComponentColumnKeys(categoryType)
     .filter((key) => !(hideModel && key === 'model'))
-    .map((key) => COLUMNS[key])
+    .map((key) =>
+      hideModel && key === 'serialNumber'
+        ? { ...COLUMNS[key], width: undefined }
+        : COLUMNS[key]
+    )
 
   const actions: DataTableAction<Component>[] = [
     {
