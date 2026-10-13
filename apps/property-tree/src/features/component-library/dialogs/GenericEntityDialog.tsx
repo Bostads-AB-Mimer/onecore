@@ -269,8 +269,9 @@ export function GenericEntityDialog<T extends Record<string, any>>({
     if (
       changed &&
       !(await confirm({
-        title: 'Släng ändringarna?',
-        confirmLabel: 'Släng',
+        title: 'Osparade ändringar',
+        description: 'Om du stänger nu försvinner det du har fyllt i.',
+        confirmLabel: 'Släng ändringar',
         cancelLabel: 'Fortsätt redigera',
       }))
     ) {

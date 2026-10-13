@@ -14,7 +14,7 @@ import { buttonVariants } from '@/shared/ui/Button'
 
 export interface ConfirmOptions {
   title: string
-  description?: string
+  description: string
   confirmLabel: string
   cancelLabel?: string
 }
@@ -47,16 +47,12 @@ export const useConfirmDialog = () => {
         if (!open) settle(false)
       }}
     >
-      <AlertDialogContent
-        {...(options?.description ? {} : { 'aria-describedby': undefined })}
-      >
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{options?.title}</AlertDialogTitle>
-          {options?.description && (
-            <AlertDialogDescription>
-              {options.description}
-            </AlertDialogDescription>
-          )}
+          <AlertDialogDescription>
+            {options?.description}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>
