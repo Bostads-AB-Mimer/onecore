@@ -5,6 +5,7 @@ import {
   Listing,
   ListingStatus,
   UpdateListingStatusErrorCodes,
+  leasing,
 } from '@onecore/types'
 import { z } from 'zod'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
@@ -679,6 +680,76 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = { content: listingsWithApplicants.data, ...metadata }
   })
+
+  /**
+   * @swagger
+   * /listings/summaries:
+   *   post:
+   *     summary: Listing summaries for a list of rental objects
+   *     description: |
+   *       Where each rental object stands in the letting process: its open
+   *       listing (Draft, Active or Expired) if any, and how many listings
+   *       were closed without a tenant since its listingHistorySince (every
+   *       closed one when null). Every requested code gets an entry.
+   *     tags:
+   *       - Listings
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [rentalObjects, listingCategory]
+   *             properties:
+   *               rentalObjects:
+   *                 type: array
+   *                 minItems: 1
+   *                 maxItems: 5000
+   *                 items:
+   *                   type: object
+   *                   required: [rentalObjectCode, listingHistorySince]
+   *                   properties:
+   *                     rentalObjectCode:
+   *                       type: string
+   *                     listingHistorySince:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                       description: Closed listings before this belong to an earlier tenancy; null counts all.
+   *               listingCategory:
+   *                 type: string
+   *                 enum: [PARKING_SPACE, APARTMENT, STORAGE]
+   *     responses:
+   *       '200':
+   *         description: One summary per requested rental object code.
+   *       '400':
+   *         description: Invalid request body.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.post(
+    '(.*)/listings/summaries',
+    parseRequestBody(leasing.GetListingSummariesRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const result =
+        await listingAdapter.getListingSummariesByRentalObjectCodes(
+          ctx.request.body
+        )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: 'An error occurred while fetching listing summaries.',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 
   router.get('/listings/readyforoffers', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

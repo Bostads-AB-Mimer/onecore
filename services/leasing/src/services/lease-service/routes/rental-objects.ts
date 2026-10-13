@@ -346,6 +346,82 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /vacant-rental-objects/availabilities:
+   *   get:
+   *     summary: Availability for every vacant or soon-vacant rental object of one type
+   *     description: |
+   *       Tenfast's view of vacancy: objects in state vacant or soon-vacant,
+   *       plus objects whose current lease has been given notice, minus any
+   *       object that already has an upcoming lease. Rent and vacantFrom come
+   *       from Tenfast; rental blocks are not applied here.
+   *     tags:
+   *       - RentalObject
+   *     parameters:
+   *       - in: query
+   *         name: type
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [apartment, parkingSpace, storage]
+   *     responses:
+   *       '200':
+   *         description: Availability info per vacant rental object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/RentalObjectAvailabilityInfo'
+   *       '400':
+   *         description: Unknown type.
+   *       '500':
+   *         description: Internal server error.
+   */
+  const VacantAvailabilitiesQuerySchema = z.object({
+    type: z.enum(['apartment', 'parkingSpace', 'storage']),
+  })
+  const tenfastTypeByQueryType = {
+    apartment: tenfastAdapter.RentalObjectType.Apartment,
+    parkingSpace: tenfastAdapter.RentalObjectType.ParkingSpace,
+    storage: tenfastAdapter.RentalObjectType.Storage,
+  } as const
+
+  router.get('/vacant-rental-objects/availabilities', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, ['type'])
+    const query = VacantAvailabilitiesQuerySchema.safeParse(ctx.query)
+    if (!query.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid type', ...metadata }
+      return
+    }
+
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastTypeByQueryType[query.data.type]
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { err: result.err, type: query.data.type },
+        'Error fetching availability for vacant rental objects from tenfast:'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error:
+          'An error occurred while fetching availability for vacant rental objects from tenfast.',
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data ?? [], ...metadata }
+  })
+
+  /**
+   * @swagger
    * /rental-objects/by-code/{rentalObjectCode}/availability:
    *   get:
    *     summary: Get a rental object availability by code

@@ -61,11 +61,13 @@ export type DbApplicant = {
 export type DbListing = {
   Id: number
   RentalObjectCode: string
-  PublishedFrom: Date
-  PublishedTo: Date
+  PublishedFrom: Date | null
+  PublishedTo: Date | null
   Status: ListingStatus
   RentalRule: 'SCORED' | 'NON_SCORED'
   ListingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+  ReviewedAt: Date | null
+  ReviewedBy: string | null
 }
 
 export type DbComment = {

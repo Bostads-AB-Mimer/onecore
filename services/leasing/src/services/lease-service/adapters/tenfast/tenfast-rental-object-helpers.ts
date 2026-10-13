@@ -1,57 +1,68 @@
 import { RentalObjectAvailabilityInfo, RentalTag } from '@onecore/types'
 import currency from 'currency.js'
 import { TenfastLease, TenfastRentalObject, TenfastTag } from './schemas'
-import { filterByStatus } from './filters'
 
-export const getLatestActiveLeasesEndDate = (
-  leases: TenfastLease[]
-): Date | null => {
-  if (leases.length === 0) return null
-  const endDates = filterByStatus(leases, [
-    'current',
-    'about-to-end',
-    'upcoming',
-  ])
-    // `requested` indicates notice was given; `cancelled` means that
-    // termination notice was itself later withdrawn, so both must be
-    // checked — `requested` alone doesn't necessarily flip back to false
-    // when a notice is withdrawn.
-    .filter(
-      (lease) => lease.cancellation.requested && !lease.cancellation.cancelled
-    )
-    .map((lease) => lease.endDate)
-    .filter((date): date is Date => date != null)
-    .sort((a, b) => b.getTime() - a.getTime()) // Sort descending to get the latest date first
-
-  if (endDates.length === 0) return null
-
-  return new Date(endDates[0]) // Return the latest end date
+const startOfUtcDay = (d: Date) => {
+  const copy = new Date(d)
+  copy.setUTCHours(0, 0, 0, 0)
+  return copy
 }
+
+// Never a tenancy: not signed, or annulled. Same set economy skips on this data.
+const NON_TENANCY_STAGES = new Set([
+  'draft',
+  'signingInProgress',
+  'voided',
+  'rejected',
+])
+
+/** The latest lease that has begun, i.e. the object's current (or last) tenancy. */
+export const getLatestStartedLease = (
+  leases: TenfastLease[],
+  today: Date = new Date()
+): TenfastLease | null =>
+  leases
+    .filter(
+      (lease) =>
+        !NON_TENANCY_STAGES.has(lease.stage) &&
+        lease.startDate != null &&
+        lease.startDate <= today
+    )
+    .sort((a, b) => b.startDate.getTime() - a.startDate.getTime())[0] ?? null
+
+/** Start of the current tenancy; listing history before it belongs to an earlier one. */
+// Nothing is published during a tenancy, so this counts the same rounds as the
+// notice date would, and it also covers fixed-term leases that end without notice.
+export const getLatestTenancyCutoff = (leases: TenfastLease[]): Date | null =>
+  getLatestStartedLease(leases)?.startDate ?? null
+
+/** When the current tenancy ends: its end date, fixed-term or notice alike.
+ * The cancellation object describes the notice; the lease's endDate is the lease's. */
+export const getCurrentTenancyEndDate = (leases: TenfastLease[]): Date | null =>
+  getLatestStartedLease(leases)?.endDate ?? null
 
 export const mapTenfastRentalObjectToAvailabilityInfo = (
   includeVAT: boolean,
   tenfastRentalObject: TenfastRentalObject,
   tagsById: Map<string, TenfastTag> = new Map()
 ): RentalObjectAvailabilityInfo => {
-  const lastDebitDate = getLatestActiveLeasesEndDate(
-    tenfastRentalObject.avtal ?? []
-  )
+  const leases = tenfastRentalObject.avtal ?? []
+  const today = startOfUtcDay(new Date())
+  const endDate = getCurrentTenancyEndDate(leases)
 
-  let vacantFrom
-  if (lastDebitDate) {
-    //if there is a last debit date, vacantFrom should be the day after
-    vacantFrom = new Date(lastDebitDate)
-    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
-  } else {
-    //there is no last debit date, the parking space is vacant as of today
-    vacantFrom = new Date()
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+  // The day after the tenancy ends, never earlier than today (a tenancy that
+  // already ended means the object is vacant now). Blocks are applied by callers.
+  let vacantFrom = today
+  if (endDate) {
+    const dayAfter = startOfUtcDay(endDate)
+    dayAfter.setUTCDate(dayAfter.getUTCDate() + 1)
+    if (dayAfter > today) vacantFrom = dayAfter
   }
 
   return {
     rentalObjectCode: tenfastRentalObject.externalId,
     vacantFrom: vacantFrom,
+    listingHistorySince: getLatestTenancyCutoff(leases),
     rentalTenureType: {
       id: tenfastRentalObject.category.code,
       name: tenfastRentalObject.category.label,
