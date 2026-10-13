@@ -17,7 +17,6 @@ import type {
 } from '@/shared/hooks'
 import { toast } from '@/shared/hooks/useToast'
 
-import { formatComponentPlace } from '../lib/componentRows'
 import { instanceCreateDefaults } from '../lib/instanceForm'
 import type { ViewState } from '../lib/libraryUrlState'
 import { serverMessage } from '../lib/serverMessage'
@@ -271,7 +270,9 @@ export const useComponentLibraryHandlers = (
 
     return runDelete({
       title: 'Ta bort komponenten?',
-      description: `${formatComponentLabel(instance)} på ${formatComponentPlace(instance)} tas bort ur registret. Det går inte att ångra.`,
+      description: `${formatComponentLabel(instance)}${
+        instance.serialNumber ? ` med serienummer ${instance.serialNumber}` : ''
+      } tas bort ur registret. Det går inte att ångra.`,
       confirmLabel: 'Ta bort komponent',
       run: () => deleteInstance.mutateAsync({ id: instance.id, parentId }),
       done: 'Komponenten togs bort',
