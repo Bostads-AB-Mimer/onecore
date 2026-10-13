@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 import {
+  ComponentLibraryBreadcrumb,
   ComponentLibraryContent,
   ComponentLibraryDialogs,
   LevelActions,
@@ -114,6 +115,7 @@ const ComponentLibraryPage = () => {
 
   return (
     <ViewLayout>
+      <ComponentLibraryBreadcrumb viewState={viewState} />
       <div className="flex items-center gap-2">
         <h1
           ref={headingRef}

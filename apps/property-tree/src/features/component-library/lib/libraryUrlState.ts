@@ -156,6 +156,16 @@ export const parentViewState = (state: ViewState): ViewState => {
   }
 }
 
+export const ancestorViewStates = (state: ViewState): ViewState[] => {
+  const ancestors: ViewState[] = []
+  let current = state
+  while (current.level !== 'categories') {
+    current = parentViewState(current)
+    ancestors.unshift(current)
+  }
+  return ancestors
+}
+
 export interface LibraryNames {
   categories?: Pick<ComponentCategory, 'id' | 'categoryName'>[]
   types?: Pick<ComponentType, 'id' | 'typeName'>[]
