@@ -49,7 +49,11 @@ interface InstanceDetailsDialogProps {
   instance: Component
 }
 
-const PlaceCell = ({ place }: { place: PlaceLabel }) => (
+interface PlaceCellProps {
+  place: PlaceLabel
+}
+
+const PlaceCell = ({ place }: PlaceCellProps) => (
   <span className="flex flex-col leading-snug">
     {place.address && <span>{place.address}</span>}
     <span className="text-muted-foreground">{place.detail}</span>

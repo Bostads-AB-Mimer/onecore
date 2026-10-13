@@ -21,16 +21,13 @@ import type { ViewState } from '../hooks/useComponentLibraryHandlers'
 import {
   activeInstallation,
   type CategoryType,
-  getComponentLocation,
+  formatComponentPlace,
 } from '../lib/componentRows'
 import { buildInstanceFields } from '../lib/instanceForm'
 import { DeinstallationDialog } from './DeinstallationDialog'
 
-const describeComponent = (component: Component) => {
-  const { address, detail } = getComponentLocation(component)
-  const place = address ? `${address}, ${detail}` : detail
-  return `${formatComponentLabel(component)} · ${place}`
-}
+const describeComponent = (component: Component) =>
+  `${formatComponentLabel(component)} · ${formatComponentPlace(component)}`
 
 interface ComponentLibraryDialogsProps {
   viewState: ViewState

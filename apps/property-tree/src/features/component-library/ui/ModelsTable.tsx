@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useMemo, useState } from 'react'
 import { FileText } from 'lucide-react'
 
 import type { ComponentModel } from '@/services/types'
@@ -8,6 +7,7 @@ import { sortModelsByName } from '@/shared/lib/componentLabels'
 import { Button } from '@/shared/ui/Button'
 import { type Column, DataTable } from '@/shared/ui/DataTable'
 
+import { formatSek } from '../lib/componentRows'
 import { ComponentModelDocuments } from './ComponentModelDocuments'
 
 interface ModelsTableProps {
@@ -16,7 +16,6 @@ interface ModelsTableProps {
   onEdit: (model: ComponentModel) => void
   onDelete: (model: ComponentModel) => void
   onNavigate: (model: ComponentModel) => void
-  onCreateInstance: (model: ComponentModel) => void
   getHref: (model: ComponentModel) => string
 }
 
@@ -29,6 +28,7 @@ export const ModelsTable = ({
   getHref,
 }: ModelsTableProps) => {
   const [documentsModelId, setDocumentsModelId] = useState<string | null>(null)
+  const sortedModels = useMemo(() => sortModelsByName(models), [models])
 
   const columns: Column<ComponentModel>[] = [
     {
@@ -59,13 +59,7 @@ export const ModelsTable = ({
       isEmpty: (item) => !item.currentPrice,
       render: (item) => (
         <span className={!item.currentPrice ? 'text-muted-foreground' : ''}>
-          {item.currentPrice
-            ? item.currentPrice.toLocaleString('sv-SE', {
-                style: 'currency',
-                currency: 'SEK',
-                maximumFractionDigits: 0,
-              })
-            : '-'}
+          {formatSek(item.currentPrice)}
         </span>
       ),
     },
@@ -77,13 +71,7 @@ export const ModelsTable = ({
         <span
           className={!item.currentInstallPrice ? 'text-muted-foreground' : ''}
         >
-          {item.currentInstallPrice
-            ? item.currentInstallPrice.toLocaleString('sv-SE', {
-                style: 'currency',
-                currency: 'SEK',
-                maximumFractionDigits: 0,
-              })
-            : '-'}
+          {formatSek(item.currentInstallPrice)}
         </span>
       ),
     },
@@ -111,19 +99,6 @@ export const ModelsTable = ({
       isEmpty: (item) => !item.coclassCode,
       render: (item) => (
         <span className="text-muted-foreground">{item.coclassCode || '-'}</span>
-      ),
-    },
-    {
-      key: 'components',
-      label: 'Komponenter',
-      render: (item) => (
-        <Link
-          to={getHref(item)}
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap"
-        >
-          Visa komponenter
-        </Link>
       ),
     },
     {
@@ -185,7 +160,7 @@ export const ModelsTable = ({
   return (
     <>
       <DataTable
-        data={sortModelsByName(models)}
+        data={sortedModels}
         columns={columns}
         isLoading={isLoading}
         onEdit={onEdit}

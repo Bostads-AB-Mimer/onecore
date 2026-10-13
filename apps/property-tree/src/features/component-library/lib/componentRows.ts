@@ -82,6 +82,11 @@ export const getComponentLocation = (
   }
 }
 
+export const formatComponentPlace = (component: Component): string => {
+  const { address, detail } = getComponentLocation(component)
+  return address ? `${address}, ${detail}` : detail
+}
+
 export const getInstallationDate = (component: Component): string | null =>
   activeInstallation(component)?.installationDate ?? null
 

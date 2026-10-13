@@ -3,7 +3,7 @@ import type { ComponentSubtype } from '@/services/types'
 import { sortBySwedishName } from '@/shared/lib/sortByName'
 import { type Column, DataTable } from '@/shared/ui/DataTable'
 
-import { QUANTITY_UNIT_LABELS } from '../lib/componentRows'
+import { formatSek, QUANTITY_UNIT_LABELS } from '../lib/componentRows'
 
 interface SubtypesTableProps {
   subtypes: ComponentSubtype[]
@@ -66,13 +66,7 @@ export const SubtypesTable = ({
         <span
           className={!item.depreciationPrice ? 'text-muted-foreground' : ''}
         >
-          {item.depreciationPrice
-            ? item.depreciationPrice.toLocaleString('sv-SE', {
-                style: 'currency',
-                currency: 'SEK',
-                maximumFractionDigits: 0,
-              })
-            : '-'}
+          {formatSek(item.depreciationPrice)}
         </span>
       ),
     },

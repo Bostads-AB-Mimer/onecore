@@ -17,7 +17,7 @@ import type {
 } from '@/shared/hooks'
 import { toast } from '@/shared/hooks/useToast'
 
-import { getComponentLocation } from '../lib/componentRows'
+import { formatComponentPlace } from '../lib/componentRows'
 import { instanceCreateDefaults } from '../lib/instanceForm'
 import type { ViewState } from '../lib/libraryUrlState'
 import { serverMessage } from '../lib/serverMessage'
@@ -78,7 +78,6 @@ interface ComponentLibraryHandlers {
   handleCreateModel: () => void
   handleEditModel: (model: ComponentModel) => void
   handleDeleteModel: (model: ComponentModel) => Promise<boolean>
-  handleCreateInstance: (model: ComponentModel) => void
   handleOpenModelComponents: (model: ComponentModel) => void
 
   // Instance handlers
@@ -251,9 +250,6 @@ export const useComponentLibraryHandlers = (
     })
   }
 
-  const handleCreateInstance = (model: ComponentModel) =>
-    instanceDialog.openCreate(instanceCreateDefaults(model))
-
   const handleOpenModelComponents = (model: ComponentModel) => {
     if (viewState.level !== 'subtype') return
     navigateTo({ ...viewState, tab: 'components', modelId: model.id })
@@ -272,12 +268,10 @@ export const useComponentLibraryHandlers = (
   const handleDeleteInstance = async (instance: Component) => {
     if (viewState.level !== 'subtype') return false
     const parentId = viewState.subtypeId
-    const { address, detail } = getComponentLocation(instance)
-    const place = address ? `${address}, ${detail}` : detail
 
     return runDelete({
       title: 'Ta bort komponenten?',
-      description: `${formatComponentLabel(instance)} på ${place} tas bort ur registret. Det går inte att ångra.`,
+      description: `${formatComponentLabel(instance)} på ${formatComponentPlace(instance)} tas bort ur registret. Det går inte att ångra.`,
       confirmLabel: 'Ta bort komponent',
       run: () => deleteInstance.mutateAsync({ id: instance.id, parentId }),
       done: 'Komponenten togs bort',
@@ -313,7 +307,6 @@ export const useComponentLibraryHandlers = (
     handleCreateModel,
     handleEditModel,
     handleDeleteModel,
-    handleCreateInstance,
     handleOpenModelComponents,
 
     // Instance handlers

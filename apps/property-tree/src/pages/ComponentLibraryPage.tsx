@@ -177,7 +177,6 @@ const ComponentLibraryPage = () => {
           onCreateModel={handlers.handleCreateModel}
           onEditModel={handlers.handleEditModel}
           onDeleteModel={handlers.handleDeleteModel}
-          onCreateInstance={handlers.handleCreateInstance}
           onOpenModelComponents={handlers.handleOpenModelComponents}
           modelOptions={data.modelOptions}
           componentPage={data.componentPage}

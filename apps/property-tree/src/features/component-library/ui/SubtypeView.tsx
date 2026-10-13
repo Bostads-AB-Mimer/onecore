@@ -33,7 +33,6 @@ interface SubtypeViewProps {
   onCreateModel: () => void
   onEditModel: (model: ComponentModel) => void
   onDeleteModel: (model: ComponentModel) => void
-  onCreateInstance: (model: ComponentModel) => void
   onOpenModelComponents: (model: ComponentModel) => void
   // Komponenter
   modelOptions: ComponentModel[]
@@ -132,7 +131,6 @@ export const SubtypeView = (props: SubtypeViewProps) => {
           onEdit={props.onEditModel}
           onDelete={props.onDeleteModel}
           onNavigate={props.onOpenModelComponents}
-          onCreateInstance={props.onCreateInstance}
           getHref={(model) =>
             levelSearch({ ...viewState, tab: 'components', modelId: model.id })
           }

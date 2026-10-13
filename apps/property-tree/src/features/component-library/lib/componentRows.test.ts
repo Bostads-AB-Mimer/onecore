@@ -4,6 +4,7 @@ import type { Component } from '@/services/types'
 
 import {
   describeStructure,
+  formatComponentPlace,
   formatComponentQuantity,
   formatInstallationDate,
   formatSek,
@@ -115,6 +116,26 @@ describe('getComponentLocation', () => {
 
   it('shows a dash when the installation has no structure', () => {
     expect(getComponentLocation(installed(null)).detail).toBe('-')
+  })
+})
+
+describe('formatComponentPlace', () => {
+  it('puts the address before the flat and room', () => {
+    expect(
+      formatComponentPlace(
+        installed({
+          residenceCode: '0202',
+          residenceName: 'HAGA PARKGATA 6 C',
+          roomName: 'Kök',
+        })
+      )
+    ).toBe('HAGA PARKGATA 6 C, 0202 · Kök')
+  })
+
+  it('says so when nothing is installed', () => {
+    expect(
+      formatComponentPlace(component({ componentInstallations: [] }))
+    ).toBe('Ej installerad')
   })
 })
 

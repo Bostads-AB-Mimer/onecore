@@ -28,10 +28,10 @@ interface ComponentCategoryNavigationProps {
   view: ViewState | undefined
 }
 
-export function ComponentCategoryNavigation({
+export const ComponentCategoryNavigation = ({
   category,
   view,
-}: ComponentCategoryNavigationProps) {
+}: ComponentCategoryNavigationProps) => {
   const state = treeNodeState(view, {
     level: 'category',
     categoryId: category.id,

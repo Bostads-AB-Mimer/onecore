@@ -27,7 +27,7 @@ import {
 
 import { ComponentCategoryNavigation } from './ComponentCategoryNavigation'
 
-export function ComponentLibraryNavigation() {
+export const ComponentLibraryNavigation = () => {
   const { pathname, search } = useLocation()
   const view = libraryViewFromLocation(pathname, search)
   const isOnLibrary = view !== undefined

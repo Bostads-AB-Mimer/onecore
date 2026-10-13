@@ -14,6 +14,7 @@ import {
   activeInstallation,
   type CategoryType,
   type ComponentColumnKey,
+  formatComponentPlace,
   formatComponentQuantity,
   formatInstallationDate,
   getComponentColumnKeys,
@@ -43,11 +44,6 @@ const residenceUrl = (rentalId: string, roomCode: string | null) =>
 const muted = (text: string) => (
   <span className="text-muted-foreground">{text}</span>
 )
-
-const rowLabel = (item: Component) => {
-  const { address, detail } = getComponentLocation(item)
-  return address ? `${address}, ${detail}` : detail
-}
 
 const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
   location: {
@@ -176,7 +172,7 @@ export const InstancesTable = ({
       actions={actions}
       emptyMessage="Inga komponenter"
       pageSize={pageSize}
-      getRowLabel={rowLabel}
+      getRowLabel={formatComponentPlace}
       deleteBlockedReason={(item) =>
         hasActiveInstallation(item)
           ? 'Avinstallera komponenten först'

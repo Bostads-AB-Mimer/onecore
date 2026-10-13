@@ -106,7 +106,11 @@ export const LoadingRows = () => (
   </div>
 )
 
-export const NoResultsState = ({ onClear }: { onClear?: () => void }) => (
+interface NoResultsStateProps {
+  onClear?: () => void
+}
+
+export const NoResultsState = ({ onClear }: NoResultsStateProps) => (
   <div className="text-center py-16 space-y-3" role="status">
     <h2 className="text-lg font-semibold">Inga träffar</h2>
     <p className="text-sm text-muted-foreground">

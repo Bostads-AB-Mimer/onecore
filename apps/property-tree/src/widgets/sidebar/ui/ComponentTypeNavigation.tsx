@@ -27,11 +27,11 @@ interface ComponentTypeNavigationProps {
   view: ViewState | undefined
 }
 
-export function ComponentTypeNavigation({
+export const ComponentTypeNavigation = ({
   category,
   type,
   view,
-}: ComponentTypeNavigationProps) {
+}: ComponentTypeNavigationProps) => {
   const state = treeNodeState(view, { level: 'type', typeId: type.id })
   const { search } = useLocation()
   const scrollRef = useScrollToSelected<HTMLButtonElement>({
