@@ -5,8 +5,10 @@ import {
   Listing,
   ListingStatus,
   UpdateListingStatusErrorCodes,
+  leasing,
 } from '@onecore/types'
 
+import { describeError } from '../log-error'
 import { AdapterResult } from '../types'
 import config from '../../common/config'
 
@@ -296,9 +298,40 @@ const createMultipleListings = async (
   }
 }
 
+const getListingSummariesByRentalObjectCodes = async (
+  params: leasing.GetListingSummariesRequest
+): Promise<
+  AdapterResult<Array<leasing.RentalObjectListingSummary>, 'unknown'>
+> => {
+  if (params.rentalObjects.length === 0) return { ok: true, data: [] }
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/listings/summaries`,
+      params
+    )
+    if (response.status !== HttpStatusCode.Ok) {
+      logger.error(
+        { status: response.status, data: response.data },
+        'Unexpected status fetching listing summaries'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+    return {
+      ok: true,
+      data: leasing.RentalObjectListingSummarySchema.array().parse(
+        response.data.content
+      ),
+    }
+  } catch (error) {
+    logger.error(describeError(error), 'Error fetching listing summaries')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   getActiveListingByRentalObjectCode,
   getListingsWithApplicants,
+  getListingSummariesByRentalObjectCodes,
   createNewListing,
   createMultipleListings,
   applyForListing,

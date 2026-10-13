@@ -3,6 +3,7 @@ import { property } from '@onecore/types'
 import createClient from 'openapi-fetch'
 import axios from 'axios'
 
+import { describeError } from '../log-error'
 import { AdapterResult } from '../types'
 import { components, paths } from './generated/api-types'
 
@@ -1267,6 +1268,40 @@ export async function getRentalObjectDetails(
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getRentalObjectDetails')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/** Leasing details for an explicit list of residences; dates parsed via the shared schema. */
+export async function getResidenceLeasingDetails(
+  rentalIds: string[]
+): Promise<AdapterResult<property.ResidenceLeasingDetails[], 'unknown'>> {
+  if (rentalIds.length === 0) return { ok: true, data: [] }
+  try {
+    const fetchResponse = await client().POST(
+      '/rental-objects/residences/leasing-details',
+      { body: { rentalIds } }
+    )
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: property.ResidenceLeasingDetailsSchema.array().parse(
+          fetchResponse.data.content
+        ),
+      }
+    }
+
+    logger.error(
+      { status: fetchResponse.response.status, rentalIds: rentalIds.length },
+      'property-base-adapter.getResidenceLeasingDetails unexpected upstream status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error(
+      describeError(err),
+      'property-base-adapter.getResidenceLeasingDetails'
+    )
     return { ok: false, err: 'unknown' }
   }
 }

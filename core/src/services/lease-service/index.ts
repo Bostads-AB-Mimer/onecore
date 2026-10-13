@@ -36,6 +36,7 @@ import { routes as textContentRoutes } from './text-content'
 import { routes as areaTextContentRoutes } from './area-text-content'
 import { routes as leasesRoutes } from './leases'
 import { routes as keysExportRoutes } from './keys-export'
+import { routes as vacantApartmentsRoutes } from './vacant-apartments'
 
 import { registerSchema } from '../../utils/openapi'
 import { Contact, Lease, RentalObjectRentInfo } from './schemas/lease'
@@ -77,6 +78,7 @@ export const routes = (router: KoaRouter) => {
   textContentRoutes(router)
   areaTextContentRoutes(router)
   keysExportRoutes(router)
+  vacantApartmentsRoutes(router)
 
   leasesRoutes(router)
 
