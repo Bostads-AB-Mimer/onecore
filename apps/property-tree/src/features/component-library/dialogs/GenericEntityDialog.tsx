@@ -269,9 +269,9 @@ export function GenericEntityDialog<T extends Record<string, any>>({
     if (
       changed &&
       !(await confirm({
-        title: 'Stäng utan att spara?',
-        description: 'Ändringarna i formuläret sparas inte.',
-        confirmLabel: 'Stäng utan att spara',
+        title: 'Släng ändringarna?',
+        confirmLabel: 'Släng',
+        cancelLabel: 'Fortsätt redigera',
       }))
     ) {
       return

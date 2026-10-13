@@ -14,8 +14,9 @@ import { buttonVariants } from '@/shared/ui/Button'
 
 export interface ConfirmOptions {
   title: string
-  description: string
+  description?: string
   confirmLabel: string
+  cancelLabel?: string
 }
 
 export type Confirm = (options: ConfirmOptions) => Promise<boolean>
@@ -46,15 +47,21 @@ export const useConfirmDialog = () => {
         if (!open) settle(false)
       }}
     >
-      <AlertDialogContent>
+      <AlertDialogContent
+        {...(options?.description ? {} : { 'aria-describedby': undefined })}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>{options?.title}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {options?.description}
-          </AlertDialogDescription>
+          {options?.description && (
+            <AlertDialogDescription>
+              {options.description}
+            </AlertDialogDescription>
+          )}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Avbryt</AlertDialogCancel>
+          <AlertDialogCancel>
+            {options?.cancelLabel ?? 'Avbryt'}
+          </AlertDialogCancel>
           <AlertDialogAction
             className={buttonVariants({ variant: 'destructive' })}
             onClick={() => settle(true)}
