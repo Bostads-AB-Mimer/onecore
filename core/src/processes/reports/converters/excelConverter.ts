@@ -245,7 +245,7 @@ export const convertHomeInsuranceToXlsx = async (
       row.postalCode,
       row.city,
       row.numberOfRooms,
-      row.squareMeters != null ? Math.round(row.squareMeters) : null,
+      row.squareMeters,
       toDateString(row.leaseFromDate),
       toDateString(row.leaseToDate),
       row.phoneNumber,
