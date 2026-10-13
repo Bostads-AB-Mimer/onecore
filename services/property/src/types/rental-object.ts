@@ -36,6 +36,12 @@ export type GetRentalObjectsQueryParams = z.infer<
 export const { RentalObjectDetailsSchema } = property
 export type RentalObjectDetails = property.RentalObjectDetails
 
+export const {
+  ResidenceLeasingDetailsSchema,
+  GetResidenceLeasingDetailsRequestSchema,
+} = property
+export type ResidenceLeasingDetails = property.ResidenceLeasingDetails
+
 const repeatable = <T extends z.ZodTypeAny>(schema: T) =>
   z
     .union([schema, z.array(schema)])
