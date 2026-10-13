@@ -2618,7 +2618,8 @@ export interface paths {
     /**
      * Listing-only values for the objects a selection covers
      * @description Grundhyra, BRA, "annan information av vikt" and anläggnings-ID keyed
-     * by rental id. Kept apart from the objects themselves so the tree, the
+     * by rental id, plus what a listing shows for a residence: BOA,
+     * våning, antal rum and marknadsområde. Kept apart from the objects themselves so the tree, the
      * picker and the sidebar — which never show these — neither fetch nor
      * hold them. Cached on a shorter TTL than the structure, since rent
      * changes more often.
@@ -4660,6 +4661,11 @@ export interface components {
       rentalId: string
       baseRent: number | null
       area: number | null
+      boaArea: number | null
+      floor: string | null
+      roomCount: number | null
+      marketAreaCode: string | null
+      marketAreaName: string | null
       additionalInfo: string | null
       malarEnergiFacilityId: string | null
     }

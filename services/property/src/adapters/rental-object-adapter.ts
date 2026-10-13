@@ -370,6 +370,11 @@ type RentalObjectDetailsRow = {
   // Decimal columns arrive as Prisma.Decimal; toDetails coerces via Number().
   baseRent: number | Prisma.Decimal | null
   area: number | Prisma.Decimal | null
+  boaArea: number | Prisma.Decimal | null
+  floor: string | null
+  roomCount: number | null
+  marketAreaCode: string | null
+  marketAreaName: string | null
   additionalInfo: string | null
   malarEnergiFacilityId: string | null
 }
@@ -380,23 +385,39 @@ const DETAILS_SELECT = Prisma.sql`
     b.fstcode     AS propertyCode,
     hi.akthyratot AS baseRent,
     bra.value     AS area,
+    boa.value     AS boaArea,
+    lg.uppgang    AS floor,
+    gt.roomcount  AS roomCount,
+    ma.code       AS marketAreaCode,
+    ma.caption    AS marketAreaName,
     hi.otherinfo  AS additionalInfo,
     fac.text      AS malarEnergiFacilityId
 `
 
-// Every join is one row per object: hyinf is 1:1 on keycmobj; BRA and the
-// anläggnings-ID comment are collapsed with TOP 1 (duplicates would otherwise
-// multiply rows, and first-row-wins would flap between cache refreshes).
+// Every join is one row per object: hyinf is 1:1 on keycmobj and balgt,
+// bafst and babya are lookups; BRA, BOA and the anläggnings-ID comment
+// are collapsed with TOP 1 (duplicates would otherwise multiply rows, and
+// first-row-wins would flap between cache refreshes). The marknadsområde is
+// the property's, as in property-grouping-adapter.
 const DETAILS_FROM = Prisma.sql`
   FROM dbo.babuf b
   LEFT JOIN dbo.balgh lg ON lg.keycmobj = b.keycmobj
   LEFT JOIN dbo.hyinf hi ON hi.keycmobj = b.keycmobj
+  LEFT JOIN dbo.balgt gt ON gt.keybalgt = lg.keybalgt
+  LEFT JOIN dbo.bafst fs ON fs.keycmobj = b.keyobjfst
+  LEFT JOIN dbo.babya ma ON ma.keybabya = fs.keybabya
   OUTER APPLY (
     SELECT TOP 1 val.value
     FROM dbo.cmval val
     WHERE val.keycode = b.keycmobj
       AND val.keycmvat = 'BRA'
   ) bra
+  OUTER APPLY (
+    SELECT TOP 1 val.value
+    FROM dbo.cmval val
+    WHERE val.keycode = b.keycmobj
+      AND val.keycmvat = 'BOA'
+  ) boa
   OUTER APPLY (
     SELECT TOP 1 tx.text
     FROM dbo.cmtex tx
@@ -411,6 +432,11 @@ const toDetails = (row: RentalObjectDetailsRow): RentalObjectDetails => ({
   rentalId: row.rentalId,
   baseRent: row.baseRent == null ? null : Number(row.baseRent),
   area: row.area == null ? null : Number(row.area),
+  boaArea: row.boaArea == null ? null : Number(row.boaArea),
+  floor: row.floor ?? null,
+  roomCount: row.roomCount ?? null,
+  marketAreaCode: row.marketAreaCode ?? null,
+  marketAreaName: row.marketAreaName ?? null,
   additionalInfo: row.additionalInfo ?? null,
   malarEnergiFacilityId: row.malarEnergiFacilityId ?? null,
 })

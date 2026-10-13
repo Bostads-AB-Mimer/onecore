@@ -40,6 +40,11 @@ const details: RentalObjectDetails = {
   rentalId: '104-041-01-0101',
   baseRent: 7250,
   area: 72.5,
+  boaArea: 68,
+  floor: '1',
+  roomCount: 3,
+  marketAreaCode: 'MAL',
+  marketAreaName: 'Malmaberg',
   additionalInfo: null,
   malarEnergiFacilityId: 'ME-123',
 }
