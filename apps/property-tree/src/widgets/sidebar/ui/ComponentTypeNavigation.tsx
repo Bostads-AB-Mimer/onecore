@@ -34,6 +34,10 @@ export function ComponentTypeNavigation({
 }: ComponentTypeNavigationProps) {
   const state = treeNodeState(view, { level: 'type', typeId: type.id })
   const { search } = useLocation()
+  const scrollRef = useScrollToSelected<HTMLButtonElement>({
+    isSelected: state === 'active',
+    itemType: 'component',
+  })
   const [isExpanded, setIsExpanded] = React.useState(state !== 'none')
 
   React.useEffect(() => {
@@ -54,6 +58,7 @@ export function ComponentTypeNavigation({
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
+        ref={scrollRef}
         asChild
         tooltip={type.typeName}
         isActive={state === 'active'}

@@ -12,6 +12,7 @@ import { useComponentEntity } from '@/entities/component'
 
 import type { ComponentCategory } from '@/services/types'
 
+import { useScrollToSelected } from '@/shared/hooks/useScrollToSelected'
 import { sortBySwedishName } from '@/shared/lib/sortByName'
 import { NavigationSkeleton } from '@/shared/ui/layout'
 import {
@@ -36,6 +37,10 @@ export function ComponentCategoryNavigation({
     categoryId: category.id,
   })
   const { search } = useLocation()
+  const scrollRef = useScrollToSelected<HTMLButtonElement>({
+    isSelected: state === 'active',
+    itemType: 'component',
+  })
   const [isExpanded, setIsExpanded] = React.useState(state !== 'none')
 
   React.useEffect(() => {
@@ -49,6 +54,7 @@ export function ComponentCategoryNavigation({
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
+        ref={scrollRef}
         asChild
         tooltip={category.categoryName}
         isActive={state === 'active'}
