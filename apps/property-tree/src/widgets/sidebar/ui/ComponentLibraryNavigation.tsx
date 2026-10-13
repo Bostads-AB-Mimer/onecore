@@ -76,18 +76,19 @@ export function ComponentLibraryNavigation() {
                   onOpenChange={setIsCategoriesOpen}
                   className="group/library-categories ml-4"
                 >
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={categoriesState === 'active'}
-                      isSelectedInHierarchy={categoriesState === 'in-path'}
+                  <SidebarMenuButton
+                    asChild
+                    isActive={categoriesState === 'active'}
+                    isSelectedInHierarchy={categoriesState === 'in-path'}
+                  >
+                    <Link
+                      to={routes.components}
+                      onClick={() => setIsCategoriesOpen(true)}
                     >
-                      <Link to={routes.components}>
-                        <ChevronRight className="transition-transform group-data-[state=open]/library-categories:rotate-90" />
-                        <span>Kategorier</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
+                      <ChevronRight className="transition-transform group-data-[state=open]/library-categories:rotate-90" />
+                      <span>Kategorier</span>
+                    </Link>
+                  </SidebarMenuButton>
 
                   <CollapsibleContent>
                     <SidebarGroupContent>
