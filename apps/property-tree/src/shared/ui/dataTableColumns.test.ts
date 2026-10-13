@@ -32,6 +32,13 @@ describe('visibleColumns', () => {
     ).toHaveLength(1)
   })
 
+  it('keeps an empty column marked keepWhenEmpty', () => {
+    const columns = [
+      { ...column('price', (row) => row.price === null), keepWhenEmpty: true },
+    ]
+    expect(visibleColumns(columns, rows)).toHaveLength(1)
+  })
+
   it('keeps every column while there are no rows', () => {
     const columns = [column('price', () => true)]
     expect(visibleColumns(columns, [])).toHaveLength(1)
