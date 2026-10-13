@@ -8,7 +8,7 @@ export const authConfig = {
   ),
   keycloakRealm: resolve('VITE_KEYCLOAK_REALM', 'onecore'),
   clientId: resolve('VITE_KEYCLOAK_CLIENT_ID', 'onecore'),
-  apiUrl: resolve('VITE_CORE_API_URL', 'http://localhost:5010'),
+  coreUrl: resolve('VITE_CORE_API_URL', 'http://localhost:5010'),
   redirectUri: resolve(
     'VITE_KEYCLOAK_REDIRECT_URI',
     'http://localhost:3020/callback'
