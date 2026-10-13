@@ -8,6 +8,7 @@ import {
   parentViewState,
   parseViewState,
   toSearchParams,
+  toViewKey,
   type ViewState,
   withCategoryType,
   withFreshNames,
@@ -267,5 +268,46 @@ describe('withFreshNames', () => {
         { categories: [{ id: 'cat-1', categoryName: 'X' }] }
       )
     ).toEqual({ level: 'categories' })
+  })
+})
+
+describe('toViewKey', () => {
+  const subtypes: ViewState = {
+    level: 'subtypes',
+    categoryId: base.categoryId,
+    categoryName: base.categoryName,
+    typeId: base.typeId,
+    typeName: base.typeName,
+  }
+
+  it('changes when moving between sibling types', () => {
+    expect(toViewKey(subtypes)).not.toBe(
+      toViewKey({ ...subtypes, typeId: 'type-2', typeName: 'Kyl' })
+    )
+  })
+
+  it('changes when moving between categories', () => {
+    expect(
+      toViewKey({ level: 'types', categoryId: 'cat-1', categoryName: 'A' })
+    ).not.toBe(
+      toViewKey({ level: 'types', categoryId: 'cat-2', categoryName: 'B' })
+    )
+  })
+
+  it('changes with the subtype and the tab', () => {
+    const subtype: ViewState = { ...base, level: 'subtype', tab: 'components' }
+    expect(toViewKey(subtype)).not.toBe(
+      toViewKey({ ...subtype, subtypeId: 'sub-2' })
+    )
+    expect(toViewKey(subtype)).not.toBe(
+      toViewKey({ ...subtype, tab: 'models' })
+    )
+  })
+
+  it('ignores names and the model filter', () => {
+    const subtype: ViewState = { ...base, level: 'subtype', tab: 'components' }
+    expect(
+      toViewKey({ ...subtype, typeName: 'Renamed', modelId: 'model-1' })
+    ).toBe(toViewKey(subtype))
   })
 })

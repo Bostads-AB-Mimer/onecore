@@ -245,9 +245,10 @@ export function GenericEntityDialog<T extends Record<string, any>>({
     parentId: string | undefined,
     categoryType: CategoryType | undefined
   ) => {
+    const parentChanged = parentId !== newParentId
     setNewParentId(parentId)
     setTargetCategoryType(categoryType)
-    if (entityType !== 'instance') return
+    if (entityType !== 'instance' || !parentChanged) return
     const moved = !!parentId && parentId !== hierarchyData?.subtypeId
     setFormData((prev) => ({
       ...prev,

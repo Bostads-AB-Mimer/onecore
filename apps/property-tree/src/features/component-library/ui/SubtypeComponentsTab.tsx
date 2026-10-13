@@ -1,3 +1,5 @@
+import { useEffect, useMemo } from 'react'
+
 import type { ComponentPage } from '@/services/api/core/componentLibraryService'
 import type { Component, ComponentModel } from '@/services/types'
 
@@ -59,6 +61,25 @@ export const SubtypeComponentsTab = ({
   onCreate,
   ...rowHandlers
 }: SubtypeComponentsTabProps) => {
+  const totalPages = componentPage?.pagination.totalPages
+
+  useEffect(() => {
+    if (!isFetching && totalPages && page > totalPages) {
+      onPageChange(totalPages)
+    }
+  }, [isFetching, totalPages, page, onPageChange])
+
+  const filterOptions = useMemo(
+    () => [
+      { id: ALL_MODELS, label: 'Alla modeller' },
+      ...sortModelsByName(modelOptions).map((model) => ({
+        id: model.id,
+        label: formatComponentModelName(model),
+      })),
+    ],
+    [modelOptions]
+  )
+
   if (error) {
     return (
       <ErrorState message="Kunde inte ladda komponenterna" onRetry={onRetry} />
@@ -79,14 +100,6 @@ export const SubtypeComponentsTab = ({
       />
     )
   }
-
-  const filterOptions = [
-    { id: ALL_MODELS, label: 'Alla modeller' },
-    ...sortModelsByName(modelOptions).map((model) => ({
-      id: model.id,
-      label: formatComponentModelName(model),
-    })),
-  ]
 
   const clearFilters = () => {
     onModelFilterChange(undefined)

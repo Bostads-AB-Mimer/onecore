@@ -10,6 +10,9 @@ import {
 
 import type { FieldConfig } from '../constants/entityDialogConfig'
 
+// Radix Select treats '' as "no value" and shows the placeholder instead.
+const EMPTY_OPTION = '__empty__'
+
 interface FieldRendererProps {
   field: FieldConfig
   value: any
@@ -94,22 +97,29 @@ export function FieldRenderer({
         </div>
       )
 
-    case 'select':
+    case 'select': {
+      const current = value || field.defaultValue || ''
+      const hasEmptyOption = field.options?.some((o) => o.value === '')
       return (
         <div>
           <Label htmlFor={field.name}>
             {field.label} {field.required && '*'}
           </Label>
           <Select
-            value={value || field.defaultValue}
-            onValueChange={(newValue) => onChange(field.name, newValue)}
+            value={current === '' && hasEmptyOption ? EMPTY_OPTION : current}
+            onValueChange={(newValue) =>
+              onChange(field.name, newValue === EMPTY_OPTION ? '' : newValue)
+            }
           >
             <SelectTrigger id={field.name}>
               <SelectValue placeholder={field.placeholder} />
             </SelectTrigger>
             <SelectContent>
               {field.options?.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value || EMPTY_OPTION}
+                >
                   {option.label}
                 </SelectItem>
               ))}
@@ -118,6 +128,7 @@ export function FieldRenderer({
           {error && <p className="text-sm text-destructive mt-1">{error}</p>}
         </div>
       )
+    }
 
     case 'date': {
       // Convert ISO date string to yyyy-MM-dd format for HTML date input

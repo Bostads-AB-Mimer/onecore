@@ -134,6 +134,16 @@ export const levelSearch = (state: ViewState): string => {
   return params ? `?${params}` : ''
 }
 
+// Identifies the view without its names, model filter or page.
+export const toViewKey = (state: ViewState): string =>
+  [
+    state.level,
+    state.level === 'categories' ? '' : state.categoryId,
+    state.level === 'subtypes' || state.level === 'subtype' ? state.typeId : '',
+    state.level === 'subtype' ? state.subtypeId : '',
+    state.level === 'subtype' ? state.tab : '',
+  ].join(':')
+
 export const parentViewState = (state: ViewState): ViewState => {
   switch (state.level) {
     case 'categories':

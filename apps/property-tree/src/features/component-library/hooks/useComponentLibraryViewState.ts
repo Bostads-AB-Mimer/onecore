@@ -26,6 +26,7 @@ import {
   parseViewState,
   type SubtypeTab,
   toSearchParams,
+  toViewKey,
   type ViewState,
   withCategoryType,
   withFreshNames,
@@ -109,7 +110,7 @@ export const useComponentLibraryViewState = () => {
   const debouncedSearch = useDebounce(searchInput, 300)
 
   // Search resets on navigation, so skip the first run after a view change.
-  const viewKey = `${viewState.level}:${subtypeState?.subtypeId ?? ''}:${subtypeState?.tab ?? ''}`
+  const viewKey = toViewKey(viewState)
   const prevViewKeyRef = useRef(viewKey)
 
   useEffect(() => {
@@ -118,6 +119,7 @@ export const useComponentLibraryViewState = () => {
       return
     }
     if (viewState.level !== 'subtypes' && viewState.level !== 'subtype') return
+    if (debouncedSearch !== searchInput) return
 
     const currentSearch = searchParams.get('search') || ''
     const newSearch = debouncedSearch.trim()
@@ -127,7 +129,14 @@ export const useComponentLibraryViewState = () => {
         { replace: true }
       )
     }
-  }, [debouncedSearch, viewKey, viewState.level, searchParams, updateUrlParams])
+  }, [
+    debouncedSearch,
+    searchInput,
+    viewKey,
+    viewState.level,
+    searchParams,
+    updateUrlParams,
+  ])
 
   const navigateTo = (newState: ViewState) => {
     setSearchParams(toSearchParams(newState))
