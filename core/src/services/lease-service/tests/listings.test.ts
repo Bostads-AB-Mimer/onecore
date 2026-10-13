@@ -339,6 +339,28 @@ describe('listings for apartments', () => {
     ])
   })
 
+  it('GET /listings still returns parking listings when the apartment lookup fails', async () => {
+    jest.spyOn(tenantLeaseAdapter, 'getListings').mockResolvedValueOnce({
+      ok: true,
+      data: [
+        factory.listing.build({ id: 1, rentalObjectCode: 'P1' }),
+        apartmentListing(2, 'A1'),
+      ],
+    })
+    jest.spyOn(tenantLeaseAdapter, 'getParkingSpaces').mockResolvedValueOnce({
+      ok: true,
+      data: [factory.rentalObject.build({ rentalObjectCode: 'P1' })],
+    })
+    jest
+      .spyOn(apartmentRentalObjects, 'getApartments')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback()).get('/listings')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([expect.objectContaining({ id: 1 })])
+  })
+
   it('GET /listings does not apply the parking space area rule to apartments', async () => {
     jest.spyOn(tenantLeaseAdapter, 'getListings').mockResolvedValueOnce({
       ok: true,

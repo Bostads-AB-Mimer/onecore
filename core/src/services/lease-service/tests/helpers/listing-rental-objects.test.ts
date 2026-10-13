@@ -75,10 +75,11 @@ describe(getRentalObjectsForListings, () => {
     expect(result.ok && [...result.data.keys()]).toEqual(['P1'])
   })
 
-  it('fails when a lookup fails', async () => {
-    jest
-      .spyOn(leasingAdapter, 'getParkingSpaces')
-      .mockResolvedValueOnce({ ok: true, data: [] })
+  it('keeps the other categories when one lookup fails', async () => {
+    jest.spyOn(leasingAdapter, 'getParkingSpaces').mockResolvedValueOnce({
+      ok: true,
+      data: [factory.rentalObject.build({ rentalObjectCode: 'P1' })],
+    })
     jest
       .spyOn(apartmentRentalObjects, 'getApartments')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
@@ -88,7 +89,28 @@ describe(getRentalObjectsForListings, () => {
       apartment('A1'),
     ])
 
-    expect(result).toEqual({ ok: false, err: 'unknown' })
+    expect(result.ok && [...result.data.keys()]).toEqual(['P1'])
+  })
+
+  it('fails when every lookup fails', async () => {
+    jest
+      .spyOn(leasingAdapter, 'getParkingSpaces')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+    jest
+      .spyOn(apartmentRentalObjects, 'getApartments')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const both = await getRentalObjectsForListings([
+      parking('P1'),
+      apartment('A1'),
+    ])
+    jest
+      .spyOn(apartmentRentalObjects, 'getApartments')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+    const onlyApartments = await getRentalObjectsForListings([apartment('A1')])
+
+    expect(both).toEqual({ ok: false, err: 'unknown' })
+    expect(onlyApartments).toEqual({ ok: false, err: 'unknown' })
   })
 })
 

@@ -44,9 +44,13 @@ const details = (rentalId: string, overrides: Partial<Details> = {}) => ({
   ...overrides,
 })
 
-const block = (fromDate: string, toDate: string | null) => ({
+const block = (
+  fromDate: string,
+  toDate: string | null,
+  blockReasonId: string | null = 'REASON'
+) => ({
   id: `${fromDate}-${toDate}`,
-  blockReasonId: null,
+  blockReasonId,
   blockReason: null,
   fromDate,
   toDate,
@@ -174,6 +178,19 @@ describe(getApartments, () => {
     )
   })
 
+  it('leaves out objects without a rental type', async () => {
+    mockProperty(
+      [summary('A1'), summary('NO_HYINF'), summary('NO_DETAILS')],
+      [details('A1'), details('NO_HYINF', { rentalTypeCode: null })]
+    )
+
+    const result = await getApartments(['A1', 'NO_HYINF', 'NO_DETAILS'])
+
+    expect(result.ok && result.data.map((a) => a.rentalObjectCode)).toEqual([
+      'A1',
+    ])
+  })
+
   it('queries property in batches of 200 with a limit that fits each batch', async () => {
     const codes = Array.from({ length: 250 }, (_, i) => `A${i}`)
     const { search, getDetails } = mockProperty([], [])
@@ -258,6 +275,14 @@ describe(latestBlock, () => {
         block('2026-05-01', '2026-06-01'),
       ])
     ).toBe(last)
+  })
+
+  it('ignores blocks without a reason, as leasing does', () => {
+    const withReason = block('2025-01-01', '2025-02-01')
+    expect(latestBlock([block('2026-01-01', null, null), withReason])).toBe(
+      withReason
+    )
+    expect(latestBlock([block('2026-01-01', null, null)])).toBeUndefined()
   })
 
   it('is undefined without blocks', () => {

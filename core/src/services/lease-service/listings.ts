@@ -112,7 +112,7 @@ export const routes = (router: KoaRouter) => {
       if (!rentalObjectsResult.ok) {
         ctx.status = 500
         ctx.body = {
-          error: 'Error getting rental objects from leasing',
+          error: 'Error getting rental objects for listings',
           ...metadata,
         }
         return
@@ -517,7 +517,7 @@ export const routes = (router: KoaRouter) => {
         ? (ctx.status = 404)
         : (ctx.status = 500)
       ctx.body = {
-        error: 'Error getting rental object from leasing',
+        error: 'Error getting rental object for listing',
         ...metadata,
       }
       return
@@ -578,7 +578,7 @@ export const routes = (router: KoaRouter) => {
     if (!rentalObjectsResult.ok) {
       ctx.status = 500
       ctx.body = {
-        error: 'Error getting rental objects from leasing',
+        error: 'Error getting rental objects for listings',
         ...metadata,
       }
       return

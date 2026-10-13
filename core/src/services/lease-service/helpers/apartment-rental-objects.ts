@@ -17,7 +17,11 @@ const BLOCK_CONCURRENCY = 10
 // belong here is to be confirmed with the PO.
 const EXCLUDED_RENTAL_TYPE_CODES = ['STUD', 'NATT', 'BLOCK', 'AVS']
 
-type Block = { fromDate: string; toDate: string | null }
+type Block = {
+  fromDate: string
+  toDate: string | null
+  blockReasonId: string | null
+}
 type RentalObjectSummary = components['schemas']['RentalObjectSummary']
 type RentalObjectDetails = components['schemas']['RentalObjectDetails']
 
@@ -43,11 +47,16 @@ const mapWithConcurrency = async <T, R>(
 
 /**
  * The block that decides vacancy, picked as leasing does for parking spaces:
- * one without an end date if there is one, otherwise the one ending last.
+ * blocks without a reason are ignored (leasing inner joins hyspa), then one
+ * without an end date if there is one, otherwise the one ending last.
  */
-export const latestBlock = (blocks: Block[]): Block | undefined =>
-  blocks.find((block) => !block.toDate) ??
-  [...blocks].sort((a, b) => (a.toDate! < b.toDate! ? 1 : -1))[0]
+export const latestBlock = (blocks: Block[]): Block | undefined => {
+  const withReason = blocks.filter((block) => block.blockReasonId)
+  return (
+    withReason.find((block) => !block.toDate) ??
+    [...withReason].sort((a, b) => (a.toDate! < b.toDate! ? 1 : -1))[0]
+  )
+}
 
 const getLatestBlocks = async (
   rentalIds: string[]
@@ -77,8 +86,10 @@ const getLeaseAvailabilities = async (
   rentalIds: string[]
 ): Promise<Map<string, RentalObjectAvailabilityInfo>> => {
   const result = await leasingAdapter.getLeaseAvailabilities(rentalIds)
-  // Without lease data the apartments are still shown, just without rent and
-  // vacancy, as for parking spaces.
+  // Without lease data the apartments are still listed, just without rent and
+  // vacancy (as a single parking space is; the parking space list fails
+  // instead). Listing pages can show the rest of the object meanwhile.
+  // Codes the leases don't know are simply absent from the result.
   if (!result.ok) {
     logger.error(
       { rentalIds },
@@ -93,7 +104,9 @@ const getLeaseAvailabilities = async (
  * Apartments by rental object code. The object comes from property, rent and
  * vacancy from the leases, and vacantFrom is adjusted for blocks with the
  * same rule as parking spaces. Codes that aren't listable apartments are
- * left out; only a failed lookup is an error.
+ * left out. A failed property lookup, objects or blocks, is an error: a
+ * wrong vacantFrom is worse than none. A failed lease lookup is not, see
+ * getLeaseAvailabilities.
  */
 export const getApartments = async (
   rentalObjectCodes: string[]
@@ -128,10 +141,12 @@ export const getApartments = async (
     for (const row of detail.data) details.set(row.rentalId, row)
   }
 
+  // An object without hyresinformation (hyinf) has no rental type and isn't
+  // rented out, so it is left out along with the excluded types.
   const apartments = summaries.filter((summary) => {
     const rentalTypeCode = details.get(summary.rentalId)?.rentalTypeCode
     return (
-      !rentalTypeCode || !EXCLUDED_RENTAL_TYPE_CODES.includes(rentalTypeCode)
+      !!rentalTypeCode && !EXCLUDED_RENTAL_TYPE_CODES.includes(rentalTypeCode)
     )
   })
   const rentalIds = apartments.map((apartment) => apartment.rentalId)

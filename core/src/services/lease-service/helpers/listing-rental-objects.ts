@@ -1,3 +1,4 @@
+import { logger } from '@onecore/utilities'
 import { Listing, RentalObject } from '@onecore/types'
 
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
@@ -33,7 +34,9 @@ export const getRentalObjectForListing = async (
  * Rental objects for a set of listings, keyed by rental object code. Each
  * category is fetched only if some listing has it: an empty list would make
  * the parking space lookup return every parking space. A category with no
- * matches is simply absent from the map; only an actual failure is an error.
+ * matches is simply absent from the map. A category whose lookup fails is
+ * logged and left out too, so apartments failing doesn't take parking spaces
+ * down with them; only when every lookup fails is it an error.
  */
 export const getRentalObjectsForListings = async (
   listings: ListingRef[]
@@ -48,23 +51,42 @@ export const getRentalObjectsForListings = async (
   const parkingSpaceCodes = codesFor('PARKING_SPACE')
   const apartmentCodes = codesFor('APARTMENT')
 
-  const results = await Promise.all([
+  const lookups = await Promise.all([
     parkingSpaceCodes.length
-      ? leasingAdapter.getParkingSpaces(parkingSpaceCodes)
+      ? leasingAdapter
+          .getParkingSpaces(parkingSpaceCodes)
+          .then((result) => ({ category: 'PARKING_SPACE', result }))
       : null,
-    apartmentCodes.length ? getApartments(apartmentCodes) : null,
+    apartmentCodes.length
+      ? getApartments(apartmentCodes).then((result) => ({
+          category: 'APARTMENT',
+          result,
+        }))
+      : null,
   ])
 
   const rentalObjects = new Map<string, RentalObject>()
-  for (const result of results) {
-    if (!result) continue
+  let failed = 0
+  let requested = 0
+  for (const lookup of lookups) {
+    if (!lookup) continue
+    requested++
+    const { category, result } = lookup
     if (!result.ok) {
       if (result.err === 'not-found') continue
-      return { ok: false, err: 'unknown' }
+      failed++
+      logger.error(
+        { category },
+        'Could not get rental objects for listings of this category'
+      )
+      continue
     }
     for (const rentalObject of result.data) {
       rentalObjects.set(rentalObject.rentalObjectCode, rentalObject)
     }
+  }
+  if (requested > 0 && failed === requested) {
+    return { ok: false, err: 'unknown' }
   }
   return { ok: true, data: rentalObjects }
 }
