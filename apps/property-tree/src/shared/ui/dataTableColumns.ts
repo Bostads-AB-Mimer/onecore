@@ -1,5 +1,7 @@
 export interface HideableColumn<T> {
   isEmpty?: (item: T) => boolean
+  /** Shows the column on desktop even when every row is empty. */
+  keepWhenEmpty?: boolean
 }
 
 export interface HideableAction<T> {
@@ -14,7 +16,9 @@ export const visibleColumns = <T, C extends HideableColumn<T>>(
     ? columns
     : columns.filter(
         (column) =>
-          !column.isEmpty || !data.every((item) => column.isEmpty!(item))
+          column.keepWhenEmpty ||
+          !column.isEmpty ||
+          !data.every((item) => column.isEmpty!(item))
       )
 
 export const visibleActions = <T, A extends HideableAction<T>>(

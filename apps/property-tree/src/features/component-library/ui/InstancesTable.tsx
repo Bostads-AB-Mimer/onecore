@@ -53,6 +53,7 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
   location: {
     key: 'location',
     label: 'Plats',
+    width: '28%',
     render: (item) => {
       const { address, detail, rentalId, roomCode } = getComponentLocation(item)
       if (!rentalId) {
@@ -83,23 +84,31 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
   model: {
     key: 'model',
     label: 'Modell',
+    isEmpty: (item) => !formatComponentModelName(item.model),
+    keepWhenEmpty: true,
     render: (item) => formatComponentModelName(item.model) || muted('-'),
   },
   installed: {
     key: 'installed',
     label: 'Installerad',
+    width: '8.5rem',
     className: 'whitespace-nowrap tabular-nums',
     render: (item) => muted(formatInstallationDate(getInstallationDate(item))),
   },
   serialNumber: {
     key: 'serialNumber',
     label: 'Serienr',
+    width: '22%',
     className: 'tabular-nums',
+    isEmpty: (item) => !item.serialNumber,
+    keepWhenEmpty: true,
     render: (item) => item.serialNumber || muted('-'),
   },
   specifications: {
     key: 'specifications',
     label: 'Specifikation',
+    isEmpty: (item) => !item.specifications,
+    keepWhenEmpty: true,
     render: (item) =>
       item.specifications ? (
         <span className="block max-w-md truncate" title={item.specifications}>
@@ -112,6 +121,7 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
   quantity: {
     key: 'quantity',
     label: 'Antal',
+    width: '8rem',
     className: 'whitespace-nowrap tabular-nums',
     render: (item) => formatComponentQuantity(item),
   },
@@ -119,33 +129,6 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
 
 const hasActiveInstallation = (item: Component) =>
   activeInstallation(item) !== undefined
-
-const expandableContent = (instance: Component) => {
-  const specifications = instance.specifications?.trim()
-  const additionalInformation = instance.additionalInformation?.trim()
-  if (!specifications && !additionalInformation) return null
-
-  return (
-    <div className="space-y-4">
-      {specifications && (
-        <div>
-          <h4 className="text-sm font-medium mb-1">Specifikationer</h4>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {specifications}
-          </p>
-        </div>
-      )}
-      {additionalInformation && (
-        <div>
-          <h4 className="text-sm font-medium mb-1">Ytterligare information</h4>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {additionalInformation}
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
 
 export const InstancesTable = ({
   instances,
@@ -192,9 +175,6 @@ export const InstancesTable = ({
       onRowClick={onViewHistory}
       actions={actions}
       emptyMessage="Inga komponenter"
-      expandableContent={
-        categoryType === 'EQUIPMENT' ? expandableContent : undefined
-      }
       pageSize={pageSize}
       getRowLabel={rowLabel}
       deleteBlockedReason={(item) =>

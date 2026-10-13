@@ -1,5 +1,5 @@
 import { Fragment, KeyboardEvent, ReactNode, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
@@ -9,6 +9,8 @@ interface Column<T> {
   label: string
   render: (item: T) => ReactNode
   className?: string
+  /** Any column with a width switches the table to a fixed layout. */
+  width?: string
   hideOnMobile?: boolean
 }
 
@@ -17,7 +19,8 @@ interface ResponsiveTableComponentsProps<T> {
   columns: Column<T>[]
   keyExtractor: (item: T) => string
   emptyMessage?: string
-  mobileCardRenderer?: (item: T) => ReactNode
+  /** Receives the row's expand toggle, if any, to place inside the card. */
+  mobileCardRenderer?: (item: T, expandToggle: ReactNode) => ReactNode
   onRowClick?: (item: T) => void
   expandableContent?: (item: T) => ReactNode | null
   /** Names a row for screen readers, e.g. on its expand button. */
@@ -75,6 +78,7 @@ export function ResponsiveTableComponents<T>({
     return label ? `${verb} om ${label}` : verb
   }
 
+  const fixedLayout = columns.some((column) => column.width)
   const focusableRow = Boolean(onRowClick) && rowsFocusable
   const showExpander =
     Boolean(expandableContent) && data.some(hasExpandableContent)
@@ -91,13 +95,14 @@ export function ResponsiveTableComponents<T>({
     <>
       {/* Desktop Table */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="w-full">
+        <table className={cn('w-full', fixedLayout && 'table-fixed')}>
           <thead className="border-b">
             <tr>
               {showExpander && <th className="w-[40px] py-3 px-2"></th>}
               {columns.map((column) => (
                 <th
                   key={column.key}
+                  style={column.width ? { width: column.width } : undefined}
                   className={cn(
                     'text-left py-3 px-4 text-sm font-medium text-muted-foreground',
                     column.className
@@ -155,7 +160,11 @@ export function ResponsiveTableComponents<T>({
                     {columns.map((column) => (
                       <td
                         key={column.key}
-                        className={cn('py-2 px-4 text-sm', column.className)}
+                        className={cn(
+                          'py-2 px-4 text-sm',
+                          fixedLayout && 'break-words',
+                          column.className
+                        )}
                       >
                         {column.render(item)}
                       </td>
@@ -179,7 +188,7 @@ export function ResponsiveTableComponents<T>({
       </div>
 
       {/* Mobile Cards */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-2">
         {data.map((item) => {
           const itemKey = keyExtractor(item)
           const isExpanded = expandedRows.has(itemKey)
@@ -187,12 +196,30 @@ export function ResponsiveTableComponents<T>({
           const expandedContentNode = canExpand
             ? expandableContent!(item)
             : null
+          const expandToggle = canExpand ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={expandLabel(item, isExpanded)}
+              aria-expanded={isExpanded}
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleExpanded(itemKey)
+              }}
+            >
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+          ) : null
 
           return (
             <div
               key={itemKey}
               className={cn(
-                'border rounded-lg p-4 bg-card hover:bg-muted/50 transition-colors',
+                'border rounded-lg p-3 bg-card hover:bg-muted/50 transition-colors',
                 focusableRow && rowFocusClass
               )}
               tabIndex={focusableRow ? 0 : undefined}
@@ -200,7 +227,7 @@ export function ResponsiveTableComponents<T>({
               onKeyDown={(e) => openOnKey(e, item)}
             >
               {mobileCardRenderer ? (
-                mobileCardRenderer(item)
+                mobileCardRenderer(item, expandToggle)
               ) : (
                 <div className="space-y-2">
                   {columns
@@ -217,7 +244,7 @@ export function ResponsiveTableComponents<T>({
               )}
 
               {/* Expandable content for mobile */}
-              {canExpand && (
+              {canExpand && !mobileCardRenderer && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -243,7 +270,7 @@ export function ResponsiveTableComponents<T>({
               )}
 
               {isExpanded && expandedContentNode && (
-                <div className="pt-3 mt-2 border-t bg-muted/30 -mx-4 px-4 pb-3 -mb-4 rounded-b-lg">
+                <div className="pt-3 mt-2 border-t bg-muted/30 -mx-3 px-3 pb-3 -mb-3 rounded-b-lg">
                   {expandedContentNode}
                 </div>
               )}

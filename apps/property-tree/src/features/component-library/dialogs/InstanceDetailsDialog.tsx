@@ -276,7 +276,7 @@ export const InstanceDetailsDialog = ({
           </p>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {/* Basic Info */}
           <div>
             <h3 className="font-semibold mb-3">Grundinformation</h3>
@@ -355,6 +355,24 @@ export const InstanceDetailsDialog = ({
               )}
             </dl>
           </div>
+
+          {instance.specifications?.trim() && (
+            <div>
+              <h3 className="font-semibold mb-3">Specifikationer</h3>
+              <p className="text-sm whitespace-pre-wrap">
+                {instance.specifications.trim()}
+              </p>
+            </div>
+          )}
+
+          {instance.additionalInformation?.trim() && (
+            <div>
+              <h3 className="font-semibold mb-3">Ytterligare information</h3>
+              <p className="text-sm whitespace-pre-wrap">
+                {instance.additionalInformation.trim()}
+              </p>
+            </div>
+          )}
 
           {/* Installation History */}
           <div>

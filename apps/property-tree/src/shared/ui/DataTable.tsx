@@ -195,65 +195,53 @@ export function DataTable<T extends { id: string }>({
       key: 'actions',
       label: '',
       render: renderActionsCell,
-      className: 'w-[50px]',
+      className: 'w-[72px]',
       hideOnMobile: true,
     },
   ]
 
-  // Mobile card renderer with action buttons
-  const mobileCardRenderer = (item: T) => (
-    <div className="space-y-3">
-      {/* Column data */}
-      <div className="space-y-2">
-        {shownColumns
-          .filter((col) => !col.hideOnMobile)
-          .map((column) => (
-            <div
-              key={column.key}
-              className="flex justify-between items-start gap-2"
-            >
-              <span className="text-xs text-muted-foreground font-medium shrink-0">
-                {column.label}:
-              </span>
-              <span className="text-sm text-right break-words">
-                {column.render(item)}
-              </span>
-            </div>
-          ))}
-      </div>
+  const mobileCardRenderer = (item: T, expandToggle: React.ReactNode) => {
+    const [primary, ...rest] = shownColumns.filter((col) => !col.hideOnMobile)
+    const details = rest.filter((column) => !column.isEmpty?.(item))
 
-      {/* Action buttons for mobile */}
-      <div className="flex gap-2 pt-2 border-t">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation()
-            onEdit(item)
-          }}
-          className="flex-1"
-        >
-          <Edit className="h-4 w-4 mr-1" />
-          Redigera
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              aria-label={actionsLabel(item)}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreHorizontal className="h-4 w-4 mr-1" />
-              Fler
-            </Button>
-          </DropdownMenuTrigger>
-          {renderMenuContent(item)}
-        </DropdownMenu>
+    return (
+      <div className="space-y-1 text-sm">
+        <div className="flex items-start gap-1">
+          <div className="min-w-0 flex-1 break-words">
+            {primary?.render(item)}
+          </div>
+          <div className="-my-2.5 -mr-1.5 flex shrink-0">
+            {expandToggle}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={actionsLabel(item)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              {renderMenuContent(item)}
+            </DropdownMenu>
+          </div>
+        </div>
+        {details.length > 0 && (
+          <dl className="flex flex-wrap gap-x-4 gap-y-0.5">
+            {details.map((column) => (
+              <div key={column.key} className="flex min-w-0 gap-1.5">
+                <dt className="shrink-0 text-muted-foreground">
+                  {column.label}
+                </dt>
+                <dd className="min-w-0 break-words">{column.render(item)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
-    </div>
-  )
+    )
+  }
 
   const paginatedData = data.slice(
     (currentPage - 1) * pageSize,
