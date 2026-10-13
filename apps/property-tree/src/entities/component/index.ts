@@ -14,6 +14,7 @@ export { useSubtypeComponents } from './hooks/useSubtypeComponents'
 
 // Lib
 export { formatComponentLabel } from './lib/componentLabel'
+export { invalidateComponentQueries } from './lib/invalidateComponentQueries'
 
 // Types
 export type { ComponentModelWithHierarchy } from './ui/ModelSelector'

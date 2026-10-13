@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { invalidateComponentQueries } from '@/entities/component'
+
 import { componentService } from '@/services/api/core/componentService'
 
 type InstallComponentData = Parameters<
@@ -21,14 +23,6 @@ export const useInstallComponent = (propertyObjectId: string) => {
         data
       )
     },
-    onSuccess: () => {
-      // Invalidate space components query to refetch
-      queryClient.invalidateQueries({
-        queryKey: ['components', propertyObjectId],
-      })
-      // Invalidate uninstalled instances queries so installed instances no longer show in dropdowns
-      queryClient.invalidateQueries({ queryKey: ['instances', 'uninstalled'] })
-      queryClient.invalidateQueries({ queryKey: ['instances'] })
-    },
+    onSuccess: () => invalidateComponentQueries(queryClient, propertyObjectId),
   })
 }
