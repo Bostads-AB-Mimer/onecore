@@ -12,4 +12,9 @@ export { useComponentLibraryViewState } from './hooks/useComponentLibraryViewSta
 export { useConfirmDialog } from './hooks/useConfirmDialog'
 
 // Lib
-export { levelTitle } from './lib/libraryUrlState'
+export {
+  libraryHref,
+  libraryViewFromLocation,
+  treeNodeState,
+} from './lib/libraryTree'
+export { levelTitle, type ViewState } from './lib/libraryUrlState'
