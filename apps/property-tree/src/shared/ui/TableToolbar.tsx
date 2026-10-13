@@ -5,8 +5,8 @@ import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 
 interface TableToolbarProps {
-  onAddNew: () => void
-  addNewLabel: string
+  onAddNew?: () => void
+  addNewLabel?: string
   itemCount?: number
   levelName: string
   levelNameSingular?: string
@@ -52,10 +52,12 @@ export const TableToolbar = ({
           </span>
         )}
       </div>
-      <Button onClick={onAddNew} className="shrink-0">
-        <Plus className="h-4 w-4 mr-2" />
-        {addNewLabel}
-      </Button>
+      {onAddNew && addNewLabel && (
+        <Button onClick={onAddNew} className="shrink-0">
+          <Plus className="h-4 w-4 mr-2" />
+          {addNewLabel}
+        </Button>
+      )}
     </div>
   )
 }

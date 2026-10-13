@@ -179,8 +179,6 @@ export const ComponentLibraryContent = ({
     return (
       <>
         <TableToolbar
-          onAddNew={onCreateCategory}
-          addNewLabel="Ny kategori"
           itemCount={categories?.length}
           levelName="kategorier"
           levelNameSingular="kategori"
@@ -225,8 +223,6 @@ export const ComponentLibraryContent = ({
     return (
       <>
         <TableToolbar
-          onAddNew={onCreateType}
-          addNewLabel="Ny typ"
           itemCount={types?.length}
           levelName="typer"
           levelNameSingular="typ"
@@ -280,8 +276,6 @@ export const ComponentLibraryContent = ({
     return (
       <>
         <TableToolbar
-          onAddNew={onCreateSubtype}
-          addNewLabel="Ny undertyp"
           itemCount={subtypes?.length}
           levelName="undertyper"
           levelNameSingular="undertyp"

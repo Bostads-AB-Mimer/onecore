@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { Plus } from 'lucide-react'
 
 import {
   ComponentLibraryBreadcrumb,
@@ -15,6 +16,7 @@ import {
 
 import { ComponentImageGallery } from '@/entities/component'
 
+import { Button } from '@/shared/ui/Button'
 import { ViewLayout } from '@/shared/ui/layout'
 
 const ComponentLibraryPage = () => {
@@ -107,6 +109,24 @@ const ComponentLibraryPage = () => {
     }
   })()
 
+  const create = (() => {
+    switch (viewState.level) {
+      case 'categories':
+        return { label: 'Ny kategori', onClick: handlers.handleCreateCategory }
+      case 'types':
+        return { label: 'Ny typ', onClick: handlers.handleCreateType }
+      case 'subtypes':
+        return { label: 'Ny undertyp', onClick: handlers.handleCreateSubtype }
+      case 'subtype':
+        return viewState.tab === 'models'
+          ? { label: 'Ny modell', onClick: handlers.handleCreateModel }
+          : {
+              label: 'Ny komponent',
+              onClick: handlers.handleCreateInstanceFromTable,
+            }
+    }
+  })()
+
   const deleteCurrentNode = async () => {
     if (currentNode && (await currentNode.onDelete())) {
       navigateTo(parentViewState(viewState))
@@ -116,21 +136,30 @@ const ComponentLibraryPage = () => {
   return (
     <ViewLayout>
       <ComponentLibraryBreadcrumb viewState={viewState} />
-      <div className="flex items-center gap-2">
-        <h1
-          ref={headingRef}
-          tabIndex={-1}
-          className="text-3xl font-bold outline-none"
+      <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <h1
+            ref={headingRef}
+            tabIndex={-1}
+            className="min-w-0 break-words text-2xl font-bold outline-none md:text-3xl"
+          >
+            {title}
+          </h1>
+          {currentNode && (
+            <LevelActions
+              label={title}
+              onEdit={currentNode.onEdit}
+              onDelete={deleteCurrentNode}
+            />
+          )}
+        </div>
+        <Button
+          onClick={create.onClick}
+          className="shrink-0 max-sm:w-11 max-sm:px-0"
         >
-          {title}
-        </h1>
-        {currentNode && (
-          <LevelActions
-            label={title}
-            onEdit={currentNode.onEdit}
-            onDelete={deleteCurrentNode}
-          />
-        )}
+          <Plus className="h-4 w-4 sm:mr-2" />
+          <span className="max-sm:sr-only">{create.label}</span>
+        </Button>
       </div>
 
       {/* Content */}

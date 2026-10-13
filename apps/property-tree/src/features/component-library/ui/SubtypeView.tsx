@@ -116,8 +116,6 @@ export const SubtypeView = (props: SubtypeViewProps) => {
   ) : (
     <>
       <TableToolbar
-        onAddNew={props.onCreateModel}
-        addNewLabel="Ny modell"
         itemCount={models?.length}
         levelName="modeller"
         levelNameSingular="modell"

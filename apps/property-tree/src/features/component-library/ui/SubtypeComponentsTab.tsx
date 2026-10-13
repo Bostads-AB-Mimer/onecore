@@ -120,8 +120,6 @@ export const SubtypeComponentsTab = ({
   return (
     <>
       <TableToolbar
-        onAddNew={onCreate}
-        addNewLabel="Ny komponent"
         itemCount={total}
         levelName="komponenter"
         levelNameSingular="komponent"
