@@ -1041,3 +1041,64 @@ describe('parking spaces', () => {
     })
   })
 })
+
+describe('GET /vacant-rental-objects/availabilities', () => {
+  afterEach(() => jest.clearAllMocks())
+
+  it('rejects an unknown type', async () => {
+    const spy = jest.spyOn(
+      tenfastAdapter,
+      'getAvailabilityForVacantRentalObjects'
+    )
+
+    const res = await request(app.callback()).get(
+      '/vacant-rental-objects/availabilities?type=boat'
+    )
+
+    expect(res.status).toBe(400)
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('maps the type to the tenfast type and returns the availabilities', async () => {
+    const availability = factory.rentalObjectAvailabilityInfo.build()
+    const spy = jest
+      .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+      .mockResolvedValue({ ok: true, data: [availability] })
+
+    const res = await request(app.callback()).get(
+      '/vacant-rental-objects/availabilities?type=apartment'
+    )
+
+    expect(res.status).toBe(200)
+    expect(spy).toHaveBeenCalledWith(tenfastAdapter.RentalObjectType.Apartment)
+    expect(res.body.content).toHaveLength(1)
+    expect(res.body.content[0].rentalObjectCode).toBe(
+      availability.rentalObjectCode
+    )
+  })
+
+  it('returns an empty list when tenfast has nothing', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+      .mockResolvedValue({ ok: true, data: null })
+
+    const res = await request(app.callback()).get(
+      '/vacant-rental-objects/availabilities?type=storage'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([])
+  })
+
+  it('responds with 500 when tenfast fails', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+      .mockResolvedValue({ ok: false, err: 'could-not-find-rental-object' })
+
+    const res = await request(app.callback()).get(
+      '/vacant-rental-objects/availabilities?type=parkingSpace'
+    )
+
+    expect(res.status).toBe(500)
+  })
+})

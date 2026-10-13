@@ -74,9 +74,12 @@ group as "probably real, unconfirmed," not settled fact.
 `helpers/tenfast.ts:calculateLeaseStatus` and
 `adapters/tenfast/filters.ts:stageToStatus`): `active`, `upcoming`,
 `terminationScheduled`, `archived`, `terminated`, `preTermination`,
-`signingInProgress`, `draft`. Unconfirmed (no switch case, mapping, or test
-references them — if Tenfast sends these, current code silently falls
-through to `default`/"Unknown Tenfast stage"): `voided`, `rejected`.
+`signingInProgress`, `draft`. Also valid, but not mapped in those two (they
+fall through to `default`/"Unknown Tenfast stage" there): `voided`,
+`rejected`. Tenfast accepts all of these as `filter[stage]` values and
+rejects an unknown one with `400 invalidsearchfilter: filter.avtal.stage`.
+`tenfast-rental-object-helpers.ts` treats `draft`, `signingInProgress`,
+`voided` and `rejected` as never being a tenancy.
 
 **Rental object (hyresobjekt) `states`** — confirmed directly by Tenfast's
 own developer (2026-09), so treat this as authoritative rather than
@@ -112,6 +115,75 @@ handles it by deduping on rental object code, keeping the `soon-vacant`-sourced
 record when both queries return the same object (it carries more complete
 rental-object data than the record synthesized from the `avtal/search`
 response).
+
+## `includeAvtal` on `/hyresvard/hyresobjekt` and `extras/hyresobjekt/batch-get`
+
+Documented values (confirmed from the API docs, 2026-10): `signed` = signed
+and not cancelled, `open` = all not cancelled, `all` = every avtal, including
+`archived`. The array is **sorted by reference descending and capped at 10**,
+so it is fine for "the latest lease" and wrong for full history. The
+single-object `extras/hyresobjekt/{externalId}` endpoint has no
+`includeAvtal` and never returns `avtal` — probing it tells you nothing.
+Migrated objects have no lease history in Tenfast, so an already-vacant
+object returns an empty `avtal` until a tenancy ends there.
+
+`typ` values on `/hyresvard/hyresobjekt`: `bostad`, `bostadsrätt`,
+`lokal`, `förråd`, `parkering`, `villa`, `mark`, `byggnad`, `våning`,
+`reklamtavlor`, `eventyta`. Apartments are `bostad` (`lägenhet` is
+rejected with a 400). `states=` (comma list) and `state=` (single) are
+mutually exclusive.
+
+## Observed on Tenfast test (2026-10-13)
+
+Counts from `tenfast-test-api`; production may differ.
+
+- For `bostad`, `soon-vacant` is a subset of the `terminationScheduled`
+  search: all 137 soon-vacant apartments had a `terminationScheduled` lease
+  (`requested: true`, `cancelled: false`) ending within 0–31 days, and 110 of
+  them were also `soon-occupied`. Apart from `vacant`, the states query added
+  nothing the `avtal/search` queries did not already return.
+- `terminationScheduled` has no horizon: 515 `bostad` leases, 339 of them
+  ending more than 31 days out.
+- 11,125 `active` `bostad` leases, none with an `endDate`. Zero in
+  `preTermination`, `signingInProgress`, `draft`, `voided` and `rejected`;
+  383 `upcoming` (628 across all types).
+- `filter[endDate]=from,to` filters server-side with either end left open
+  (`2026-12-01,` cut 515 to 178) and does not match leases without an
+  `endDate`.
+
+To probe, run a throwaway script from `services/leasing` with
+`pnpm exec ts-node --transpile-only -P tsconfig.json <script>` that imports
+`src/common/config` and `adapters/tenfast/tenfast-api`, so it uses the
+service's own Tenfast credentials. Print counts and object codes, never
+tenant data, and don't commit it.
+
+## Which lease is "the tenancy" of a rental object
+
+`tenfast-rental-object-helpers.ts` does not read lease `stage` for vacancy.
+It takes the **latest lease whose `startDate` is in the past** as the current
+(or last) tenancy and uses its dates:
+
+- `listingHistorySince` = that lease's `startDate`. Nothing is published
+  during a tenancy, so counting closed listings from there equals counting
+  from the notice date, and it would also cover a fixed-term lease that ends
+  without a notice.
+- `vacantFrom` = the day after that lease's `endDate`, clamped to today,
+  with rental blocks applied by the callers. No `cancellation` field is
+  read: the notice is the notice, the lease's `endDate` is the lease's.
+  Assumed, not seen: that Tenfast clears `endDate` when a notice is
+  withdrawn. 0 of 800 scanned bostad leases had `cancellation.cancelled`,
+  so it could not be checked.
+
+An `upcoming` lease is never the tenancy (it has not started), nor is a
+`draft`, `signingInProgress`, `voided` or `rejected` one whatever its dates;
+the vacant list already excludes objects that have an upcoming lease.
+
+Observed 2026-10-13, one page each of soon-vacant `bostad`, soon-vacant
+`parkering` and occupied `parkering`: every started lease with an end date
+was `terminationScheduled` with a notice; no started lease carried an end
+date without a notice, and no end date lay beyond 2027. So fixed-term leases
+are unobserved in our stock so far, and dropping the `requested` check
+changes nothing for current data.
 
 ## `cancellation.requested` vs `cancellation.cancelled` — easy to get backwards
 
