@@ -4,7 +4,9 @@ import {
   ComponentLibraryBreadcrumb,
   ComponentLibraryContent,
   ComponentLibraryDialogs,
+  LevelActions,
   levelTitle,
+  parentViewState,
   SubtypeView,
   useComponentLibraryHandlers,
   useComponentLibraryViewState,
@@ -69,15 +71,66 @@ const ComponentLibraryPage = () => {
     instanceDialog: dialogs.instanceDialog,
   })
 
+  const currentNode = (() => {
+    switch (viewState.level) {
+      case 'types': {
+        const category = data.categories?.find(
+          (c) => c.id === viewState.categoryId
+        )
+        return (
+          category && {
+            onEdit: () => handlers.handleEditCategory(category),
+            onDelete: () => handlers.handleDeleteCategory(category),
+          }
+        )
+      }
+      case 'subtypes': {
+        const type = data.types?.find((t) => t.id === viewState.typeId)
+        return (
+          type && {
+            onEdit: () => handlers.handleEditType(type),
+            onDelete: () => handlers.handleDeleteType(type),
+          }
+        )
+      }
+      case 'subtype': {
+        const subtype = data.subtypes?.find((s) => s.id === viewState.subtypeId)
+        return (
+          subtype && {
+            onEdit: () => handlers.handleEditSubtype(subtype),
+            onDelete: () => handlers.handleDeleteSubtype(subtype),
+          }
+        )
+      }
+      default:
+        return undefined
+    }
+  })()
+
+  const deleteCurrentNode = async () => {
+    if (currentNode && (await currentNode.onDelete())) {
+      navigateTo(parentViewState(viewState))
+    }
+  }
+
   return (
     <ViewLayout>
-      <h1
-        ref={headingRef}
-        tabIndex={-1}
-        className="text-3xl font-bold outline-none"
-      >
-        {title}
-      </h1>
+      <div className="flex items-center gap-2">
+        <h1
+          ref={headingRef}
+          tabIndex={-1}
+          className="text-3xl font-bold outline-none"
+        >
+          {title}
+        </h1>
+        {currentNode && (
+          <LevelActions
+            label={title}
+            onEdit={currentNode.onEdit}
+            onDelete={deleteCurrentNode}
+          />
+        )}
+      </div>
 
       {/* Breadcrumb Navigation */}
       <div className="text-sm text-muted-foreground">

@@ -28,6 +28,7 @@ import {
   toSearchParams,
   type ViewState,
   withCategoryType,
+  withFreshNames,
 } from '../lib/libraryUrlState'
 
 export interface ComponentLibraryDialogStates {
@@ -53,7 +54,25 @@ export const useComponentLibraryViewState = () => {
     [searchParams]
   )
 
+  // Read from the URL, which receives the search and the page reset together.
+  const urlSearch = searchParams.get('search')?.trim() ?? ''
+  const activeSearch = urlSearch.length >= 2 ? urlSearch : undefined
+
   const categories = useComponentEntity('category')
+
+  const types = useComponentEntity(
+    'type',
+    urlViewState.level !== 'categories' ? urlViewState.categoryId : undefined
+  )
+
+  const onSubtypeLevel =
+    urlViewState.level === 'subtypes' || urlViewState.level === 'subtype'
+  const subtypes = useComponentEntity(
+    'subtype',
+    onSubtypeLevel ? urlViewState.typeId : undefined,
+    { search: urlViewState.level === 'subtypes' ? activeSearch : undefined },
+    { enabled: onSubtypeLevel }
+  )
 
   // The database defaults a category's type to EQUIPMENT; undefined only while loading.
   const categoryType: CategoryType | undefined =
@@ -63,8 +82,13 @@ export const useComponentLibraryViewState = () => {
         'EQUIPMENT')
 
   const viewState = useMemo(
-    () => withCategoryType(urlViewState, categoryType),
-    [urlViewState, categoryType]
+    () =>
+      withFreshNames(withCategoryType(urlViewState, categoryType), {
+        categories: categories.data,
+        types: types.data,
+        subtypes: subtypes.data,
+      }),
+    [urlViewState, categoryType, categories.data, types.data, subtypes.data]
   )
   const subtypeState = viewState.level === 'subtype' ? viewState : undefined
 
@@ -83,9 +107,6 @@ export const useComponentLibraryViewState = () => {
   }, [searchParams])
 
   const debouncedSearch = useDebounce(searchInput, 300)
-  // Read from the URL, which receives the search and the page reset together.
-  const urlSearch = searchParams.get('search')?.trim() ?? ''
-  const activeSearch = urlSearch.length >= 2 ? urlSearch : undefined
 
   // Search resets on navigation, so skip the first run after a view change.
   const viewKey = `${viewState.level}:${subtypeState?.subtypeId ?? ''}:${subtypeState?.tab ?? ''}`
@@ -131,18 +152,6 @@ export const useComponentLibraryViewState = () => {
     deinstallDialog: useSimpleDialogState<Component>(),
     imageGalleryDialog: useSimpleDialogState<Component>(),
   }
-
-  const types = useComponentEntity(
-    'type',
-    viewState.level !== 'categories' ? viewState.categoryId : undefined
-  )
-
-  const subtypes = useComponentEntity(
-    'subtype',
-    viewState.level === 'subtypes' ? viewState.typeId : undefined,
-    { search: viewState.level === 'subtypes' ? activeSearch : undefined },
-    { enabled: viewState.level === 'subtypes' }
-  )
 
   const modelOptions = useComponentEntity(
     'model',

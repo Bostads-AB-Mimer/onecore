@@ -4,10 +4,12 @@ import {
   isLegacyLibraryUrl,
   levelSearch,
   levelTitle,
+  parentViewState,
   parseViewState,
   toSearchParams,
   type ViewState,
   withCategoryType,
+  withFreshNames,
 } from './libraryUrlState'
 
 const base = {
@@ -150,5 +152,88 @@ describe('levelSearch', () => {
     expect(
       levelSearch({ level: 'types', categoryId: 'c', categoryName: 'Vitvaror' })
     ).toBe('?level=types&categoryId=c&categoryName=Vitvaror')
+  })
+})
+
+describe('parentViewState', () => {
+  it('goes one level up from each page', () => {
+    expect(parentViewState({ level: 'categories' })).toEqual({
+      level: 'categories',
+    })
+    expect(
+      parentViewState({
+        level: 'types',
+        categoryId: base.categoryId,
+        categoryName: base.categoryName,
+      })
+    ).toEqual({ level: 'categories' })
+    expect(
+      parentViewState({
+        level: 'subtypes',
+        categoryId: base.categoryId,
+        categoryName: base.categoryName,
+        typeId: base.typeId,
+        typeName: base.typeName,
+      })
+    ).toEqual({
+      level: 'types',
+      categoryId: base.categoryId,
+      categoryName: base.categoryName,
+    })
+    expect(
+      parentViewState({
+        level: 'subtype',
+        ...base,
+        tab: 'models',
+        modelId: 'm-1',
+      })
+    ).toEqual({
+      level: 'subtypes',
+      categoryId: base.categoryId,
+      categoryName: base.categoryName,
+      typeId: base.typeId,
+      typeName: base.typeName,
+    })
+  })
+})
+
+describe('withFreshNames', () => {
+  const subtypePage: ViewState = {
+    level: 'subtype',
+    ...base,
+    tab: 'components',
+  }
+
+  it('replaces names from the URL with names from data, matched by id', () => {
+    expect(
+      withFreshNames(subtypePage, {
+        categories: [{ id: 'cat-1', categoryName: 'Vitvaror nya' }],
+        types: [{ id: 'type-1', typeName: 'Spisar' }],
+        subtypes: [{ id: 'sub-1', subTypeName: 'Elspis' }],
+      })
+    ).toEqual({
+      ...subtypePage,
+      categoryName: 'Vitvaror nya',
+      typeName: 'Spisar',
+      subtypeName: 'Elspis',
+    })
+  })
+
+  it('keeps URL names while data is loading or the id is missing', () => {
+    expect(withFreshNames(subtypePage, {})).toEqual(subtypePage)
+    expect(
+      withFreshNames(subtypePage, {
+        types: [{ id: 'type-2', typeName: 'Kyl' }],
+      })
+    ).toEqual(subtypePage)
+  })
+
+  it('leaves the categories page alone', () => {
+    expect(
+      withFreshNames(
+        { level: 'categories' },
+        { categories: [{ id: 'cat-1', categoryName: 'X' }] }
+      )
+    ).toEqual({ level: 'categories' })
   })
 })

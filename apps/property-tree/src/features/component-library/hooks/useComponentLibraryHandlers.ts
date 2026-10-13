@@ -59,32 +59,32 @@ interface ComponentLibraryHandlers {
   // Category handlers
   handleCreateCategory: () => void
   handleEditCategory: (category: ComponentCategory) => void
-  handleDeleteCategory: (category: ComponentCategory) => Promise<void>
+  handleDeleteCategory: (category: ComponentCategory) => Promise<boolean>
   handleNavigateToTypes: (category: ComponentCategory) => void
 
   // Type handlers
   handleCreateType: () => void
   handleEditType: (type: ComponentType) => void
-  handleDeleteType: (type: ComponentType) => Promise<void>
+  handleDeleteType: (type: ComponentType) => Promise<boolean>
   handleNavigateToSubtypes: (type: ComponentType) => void
 
   // Subtype handlers
   handleCreateSubtype: () => void
   handleEditSubtype: (subtype: ComponentSubtype) => void
-  handleDeleteSubtype: (subtype: ComponentSubtype) => Promise<void>
+  handleDeleteSubtype: (subtype: ComponentSubtype) => Promise<boolean>
   handleOpenSubtype: (subtype: ComponentSubtype) => void
 
   // Model handlers
   handleCreateModel: () => void
   handleEditModel: (model: ComponentModel) => void
-  handleDeleteModel: (model: ComponentModel) => Promise<void>
+  handleDeleteModel: (model: ComponentModel) => Promise<boolean>
   handleCreateInstance: (model: ComponentModel) => void
   handleOpenModelComponents: (model: ComponentModel) => void
 
   // Instance handlers
   handleCreateInstanceFromTable: () => void
   handleEditInstance: (instance: Component) => void
-  handleDeleteInstance: (instance: Component) => Promise<void>
+  handleDeleteInstance: (instance: Component) => Promise<boolean>
   handleViewHistory: (instance: Component) => void
 }
 
@@ -120,17 +120,19 @@ export const useComponentLibraryHandlers = (
     run: () => Promise<unknown>
     done: string
     failed: string
-  }) => {
-    if (!(await confirm(options))) return
+  }): Promise<boolean> => {
+    if (!(await confirm(options))) return false
     try {
       await run()
       toast({ title: done })
+      return true
     } catch (error) {
       toast({
         title: 'Kunde inte ta bort',
         description: serverMessage(error) ?? failed,
         variant: 'destructive',
       })
+      return false
     }
   }
 
@@ -164,10 +166,10 @@ export const useComponentLibraryHandlers = (
   const handleEditType = (type: ComponentType) => typeDialog.openEdit(type)
 
   const handleDeleteType = async (type: ComponentType) => {
-    if (viewState.level === 'categories') return
+    if (viewState.level === 'categories') return false
     const parentId = viewState.categoryId
 
-    await runDelete({
+    return runDelete({
       title: `Ta bort typen ${type.typeName}?`,
       description:
         'Typen tas bort permanent. Det går bara om den saknar undertyper.',
@@ -197,10 +199,12 @@ export const useComponentLibraryHandlers = (
     subtypeDialog.openEdit(subtype)
 
   const handleDeleteSubtype = async (subtype: ComponentSubtype) => {
-    if (viewState.level !== 'subtypes') return
+    if (viewState.level !== 'subtypes' && viewState.level !== 'subtype') {
+      return false
+    }
     const parentId = viewState.typeId
 
-    await runDelete({
+    return runDelete({
       title: `Ta bort undertypen ${subtype.subTypeName}?`,
       description:
         'Undertypen tas bort permanent. Det går bara om den saknar modeller och komponenter.',
@@ -232,10 +236,10 @@ export const useComponentLibraryHandlers = (
   const handleEditModel = (model: ComponentModel) => modelDialog.openEdit(model)
 
   const handleDeleteModel = async (model: ComponentModel) => {
-    if (viewState.level !== 'subtype') return
+    if (viewState.level !== 'subtype') return false
     const parentId = viewState.subtypeId
 
-    await runDelete({
+    return runDelete({
       title: `Ta bort modellen ${model.modelName}?`,
       description:
         'Modellen tas bort permanent. Det går bara om inga komponenter använder den.',
@@ -266,12 +270,12 @@ export const useComponentLibraryHandlers = (
     instanceDialog.openEdit(instance)
 
   const handleDeleteInstance = async (instance: Component) => {
-    if (viewState.level !== 'subtype') return
+    if (viewState.level !== 'subtype') return false
     const parentId = viewState.subtypeId
     const { address, detail } = getComponentLocation(instance)
     const place = address ? `${address}, ${detail}` : detail
 
-    await runDelete({
+    return runDelete({
       title: 'Ta bort komponenten?',
       description: `${formatComponentLabel(instance)} på ${place} tas bort ur registret. Det går inte att ångra.`,
       confirmLabel: 'Ta bort komponent',

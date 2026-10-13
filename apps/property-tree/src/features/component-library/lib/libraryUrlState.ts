@@ -1,3 +1,9 @@
+import type {
+  ComponentCategory,
+  ComponentSubtype,
+  ComponentType,
+} from '@/services/types'
+
 import type { CategoryType } from './componentRows'
 
 export const COMPONENT_PAGE_SIZE = 25
@@ -126,4 +132,54 @@ export const levelTitle = (state: ViewState): string => {
 export const levelSearch = (state: ViewState): string => {
   const params = toSearchParams(state).toString()
   return params ? `?${params}` : ''
+}
+
+export const parentViewState = (state: ViewState): ViewState => {
+  switch (state.level) {
+    case 'categories':
+    case 'types':
+      return { level: 'categories' }
+    case 'subtypes':
+      return {
+        level: 'types',
+        categoryId: state.categoryId,
+        categoryName: state.categoryName,
+      }
+    case 'subtype':
+      return {
+        level: 'subtypes',
+        categoryId: state.categoryId,
+        categoryName: state.categoryName,
+        typeId: state.typeId,
+        typeName: state.typeName,
+      }
+  }
+}
+
+export interface LibraryNames {
+  categories?: Pick<ComponentCategory, 'id' | 'categoryName'>[]
+  types?: Pick<ComponentType, 'id' | 'typeName'>[]
+  subtypes?: Pick<ComponentSubtype, 'id' | 'subTypeName'>[]
+}
+
+// URL names go stale when the open node is renamed; ids never do.
+export const withFreshNames = (
+  state: ViewState,
+  names: LibraryNames
+): ViewState => {
+  if (state.level === 'categories') return state
+
+  const categoryName =
+    names.categories?.find((c) => c.id === state.categoryId)?.categoryName ??
+    state.categoryName
+  if (state.level === 'types') return { ...state, categoryName }
+
+  const typeName =
+    names.types?.find((t) => t.id === state.typeId)?.typeName ?? state.typeName
+  if (state.level === 'subtypes') return { ...state, categoryName, typeName }
+
+  const subtypeName =
+    names.subtypes?.find((s) => s.id === state.subtypeId)?.subTypeName ??
+    state.subtypeName
+  return { ...state, categoryName, typeName, subtypeName }
 }
