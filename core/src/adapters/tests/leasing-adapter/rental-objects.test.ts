@@ -299,4 +299,85 @@ describe('rental-objects adapter', () => {
       expect(result.err).toBe('unknown')
     })
   })
+
+  describe(leasingAdapter.getApartmentByCode, () => {
+    it('returns the apartment', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/apartments/by-code/211-001-01-0101')
+        .reply(200, {
+          content: factory.rentalObject.build({
+            rentalObjectCode: '211-001-01-0101',
+          }),
+        })
+
+      const result = await leasingAdapter.getApartmentByCode('211-001-01-0101')
+
+      assert(result.ok)
+      expect(result.data.rentalObjectCode).toBe('211-001-01-0101')
+    })
+
+    it.each([
+      [404, 'not-found'],
+      [500, 'unknown'],
+    ])('maps %i to %s', async (status, err) => {
+      nock(config.tenantsLeasesService.url)
+        .get('/apartments/by-code/211-001-01-0101')
+        .reply(status)
+
+      const result = await leasingAdapter.getApartmentByCode('211-001-01-0101')
+
+      expect(result).toEqual({ ok: false, err })
+    })
+  })
+
+  describe(leasingAdapter.getApartments, () => {
+    it('posts the codes and returns the apartments', async () => {
+      const scope = nock(config.tenantsLeasesService.url)
+        .post('/apartments', { rentalObjectCodes: ['A', 'B'] })
+        .reply(200, {
+          content: [
+            factory.rentalObject.build({ rentalObjectCode: 'A' }),
+            factory.rentalObject.build({ rentalObjectCode: 'B' }),
+          ],
+        })
+
+      const result = await leasingAdapter.getApartments(['A', 'B'])
+
+      assert(result.ok)
+      expect(result.data.map((a) => a.rentalObjectCode)).toEqual(['A', 'B'])
+      scope.done()
+    })
+
+    it.each([
+      [404, 'not-found'],
+      [500, 'unknown'],
+    ])('maps %i to %s', async (status, err) => {
+      nock(config.tenantsLeasesService.url).post('/apartments').reply(status)
+
+      const result = await leasingAdapter.getApartments(['A'])
+
+      expect(result).toEqual({ ok: false, err })
+    })
+  })
+
+  // getRentalObjectsForListings relies on a 404 meaning not-found, not unknown
+  describe('parking space lookups on 404', () => {
+    it('getParkingSpaceByCode returns not-found', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/parking-spaces/by-code/P1')
+        .reply(404)
+
+      const result = await leasingAdapter.getParkingSpaceByCode('P1')
+
+      expect(result).toEqual({ ok: false, err: 'not-found' })
+    })
+
+    it('getParkingSpaces returns not-found', async () => {
+      nock(config.tenantsLeasesService.url).post('/parking-spaces').reply(404)
+
+      const result = await leasingAdapter.getParkingSpaces(['P1'])
+
+      expect(result).toEqual({ ok: false, err: 'not-found' })
+    })
+  })
 })

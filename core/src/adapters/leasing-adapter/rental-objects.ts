@@ -59,6 +59,50 @@ const getParkingSpaces = async (
   }
 }
 
+const getApartmentByCode = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<RentalObject, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/apartments/by-code/${rentalObjectCode}`
+    )
+    if (response.status === 404) {
+      logger.error({ rentalObjectCode }, 'Apartment not found for code:')
+      return { ok: false, err: 'not-found' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error retrieving apartment by code: ${rentalObjectCode}`
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const getApartments = async (
+  rentalObjectCodes: string[]
+): Promise<AdapterResult<RentalObject[], 'not-found' | 'unknown'>> => {
+  try {
+    const response = await axios.post(`${tenantsLeasesServiceUrl}/apartments`, {
+      rentalObjectCodes,
+    })
+    if (response.status === 404) {
+      logger.error(
+        `Apartments not found for codes: ${rentalObjectCodes.join(', ')}`
+      )
+      return { ok: false, err: 'not-found' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error retrieving apartments by codes ${rentalObjectCodes.join(', ')}`
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getAllVacantParkingSpaces = async (): Promise<
   AdapterResult<RentalObject[], 'get-all-vacant-parking-spaces-failed'>
 > => {
@@ -184,6 +228,8 @@ const getRentalObjectAvailabilities = async (
 
 export {
   getAllVacantParkingSpaces,
+  getApartmentByCode,
+  getApartments,
   getParkingSpaceByCode,
   getParkingSpaces,
   getRentalObjectAvailabilityByCode,
