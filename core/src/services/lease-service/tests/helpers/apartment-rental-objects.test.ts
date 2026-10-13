@@ -35,8 +35,6 @@ const details = (rentalId: string, overrides: Partial<Details> = {}) => ({
   boaArea: 77,
   floor: '2',
   roomCount: 3,
-  rentalTypeCode: 'STD',
-  rentalTypeName: 'Standard hyresobjektstyp',
   marketAreaCode: 'CEN',
   marketAreaName: 'Centrum',
   additionalInfo: null,
@@ -157,17 +155,10 @@ describe(getApartments, () => {
     expect(result.ok && result.data[0].blockStartDate).toBeUndefined()
   })
 
-  it('leaves out excluded rental types and codes that are not residences', async () => {
-    mockProperty(
-      [summary('A1'), summary('STUDENT'), summary('NIGHT')],
-      [
-        details('A1'),
-        details('STUDENT', { rentalTypeCode: 'STUD' }),
-        details('NIGHT', { rentalTypeCode: 'NATT' }),
-      ]
-    )
+  it('leaves out codes that are not apartments', async () => {
+    mockProperty([summary('A1')], [details('A1')])
 
-    const result = await getApartments(['A1', 'STUDENT', 'NIGHT', 'PARKING'])
+    const result = await getApartments(['A1', 'PARKING'])
 
     expect(result.ok && result.data.map((a) => a.rentalObjectCode)).toEqual([
       'A1',
@@ -176,19 +167,6 @@ describe(getApartments, () => {
     expect(propertyBaseAdapter.getRentalBlocksByRentalId).toHaveBeenCalledTimes(
       1
     )
-  })
-
-  it('leaves out objects without a rental type', async () => {
-    mockProperty(
-      [summary('A1'), summary('NO_HYINF'), summary('NO_DETAILS')],
-      [details('A1'), details('NO_HYINF', { rentalTypeCode: null })]
-    )
-
-    const result = await getApartments(['A1', 'NO_HYINF', 'NO_DETAILS'])
-
-    expect(result.ok && result.data.map((a) => a.rentalObjectCode)).toEqual([
-      'A1',
-    ])
   })
 
   it('queries property in batches of 200 with a limit that fits each batch', async () => {

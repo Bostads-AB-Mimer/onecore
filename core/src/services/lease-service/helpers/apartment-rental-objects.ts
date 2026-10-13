@@ -11,12 +11,6 @@ const PROPERTY_BATCH_SIZE = 200
 // Blocks are fetched one apartment at a time; cap the requests in flight.
 const BLOCK_CONCURRENCY = 10
 
-// Hyresobjektstyper (hyint) that are not listed as apartments. NATT, BLOCK and
-// AVS are not rented out as homes. TODO(UTH-391): student apartments (STUD)
-// are left out for now, as in the earlier vacant-apartment query; whether they
-// belong here is to be confirmed with the PO.
-const EXCLUDED_RENTAL_TYPE_CODES = ['STUD', 'NATT', 'BLOCK', 'AVS']
-
 type Block = {
   fromDate: string
   toDate: string | null
@@ -101,10 +95,10 @@ const getLeaseAvailabilities = async (
 }
 
 /**
- * Apartments by rental object code. The object comes from property, rent and
- * vacancy from the leases, and vacantFrom is adjusted for blocks with the
- * same rule as parking spaces. Codes that aren't listable apartments are
- * left out. A failed property lookup, objects or blocks, is an error: a
+ * Apartments by rental object code. The object comes from property, rent,
+ * vacancy, rental tenure type and tags from the leases, and vacantFrom is
+ * adjusted for blocks with the same rule as parking spaces. Codes that aren't
+ * apartments are left out. A failed property lookup, objects or blocks, is an error: a
  * wrong vacantFrom is worse than none. A failed lease lookup is not, see
  * getLeaseAvailabilities.
  */
@@ -141,14 +135,11 @@ export const getApartments = async (
     for (const row of detail.data) details.set(row.rentalId, row)
   }
 
-  // An object without hyresinformation (hyinf) has no rental type and isn't
-  // rented out, so it is left out along with the excluded types.
-  const apartments = summaries.filter((summary) => {
-    const rentalTypeCode = details.get(summary.rentalId)?.rentalTypeCode
-    return (
-      !!rentalTypeCode && !EXCLUDED_RENTAL_TYPE_CODES.includes(rentalTypeCode)
-    )
-  })
+  // No filtering on rental type here: these are the objects of existing
+  // listings. Which apartments are listed in OneCore at all (not student
+  // apartments, whose leases are made by hand in Tenfast) is decided when
+  // listings are published.
+  const apartments = summaries
   const rentalIds = apartments.map((apartment) => apartment.rentalId)
   if (rentalIds.length === 0) return { ok: true, data: [] }
 
