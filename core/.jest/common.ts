@@ -26,5 +26,7 @@ jest.mock('@onecore/utilities', () => {
       content,
       ...metadata,
     }),
+    determineVacantFrom:
+      jest.requireActual('@onecore/utilities').determineVacantFrom,
   }
 })

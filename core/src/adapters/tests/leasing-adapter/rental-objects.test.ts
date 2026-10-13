@@ -300,67 +300,51 @@ describe('rental-objects adapter', () => {
     })
   })
 
-  describe(leasingAdapter.getApartmentByCode, () => {
-    it('returns the apartment', async () => {
+  describe(leasingAdapter.getLeaseAvailabilities, () => {
+    it('posts the codes and returns the availabilities', async () => {
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: '101-001-07-0201',
+      })
+      let body: unknown
       nock(config.tenantsLeasesService.url)
-        .get('/apartments/by-code/211-001-01-0101')
-        .reply(200, {
-          content: factory.rentalObject.build({
-            rentalObjectCode: '211-001-01-0101',
-          }),
+        .post('/rental-objects/lease-availabilities', (b) => {
+          body = b
+          return true
         })
+        .reply(200, { content: [availability] })
 
-      const result = await leasingAdapter.getApartmentByCode('211-001-01-0101')
+      const result = await leasingAdapter.getLeaseAvailabilities([
+        '101-001-07-0201',
+      ])
 
       assert(result.ok)
-      expect(result.data.rentalObjectCode).toBe('211-001-01-0101')
+      expect(body).toEqual({ rentalObjectCodes: ['101-001-07-0201'] })
+      expect(result.data).toEqual([
+        expect.objectContaining({ rentalObjectCode: '101-001-07-0201' }),
+      ])
     })
 
-    it.each([
-      [404, 'not-found'],
-      [500, 'unknown'],
-    ])('maps %i to %s', async (status, err) => {
+    it('returns unknown on a non-200 response', async () => {
       nock(config.tenantsLeasesService.url)
-        .get('/apartments/by-code/211-001-01-0101')
-        .reply(status)
+        .post('/rental-objects/lease-availabilities')
+        .reply(400, { error: 'bad request' })
 
-      const result = await leasingAdapter.getApartmentByCode('211-001-01-0101')
+      const result = await leasingAdapter.getLeaseAvailabilities(['x'])
 
-      expect(result).toEqual({ ok: false, err })
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns unknown on network error', async () => {
+      nock(config.tenantsLeasesService.url)
+        .post('/rental-objects/lease-availabilities')
+        .replyWithError('boom')
+
+      const result = await leasingAdapter.getLeaseAvailabilities(['x'])
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
     })
   })
 
-  describe(leasingAdapter.getApartments, () => {
-    it('posts the codes and returns the apartments', async () => {
-      const scope = nock(config.tenantsLeasesService.url)
-        .post('/apartments', { rentalObjectCodes: ['A', 'B'] })
-        .reply(200, {
-          content: [
-            factory.rentalObject.build({ rentalObjectCode: 'A' }),
-            factory.rentalObject.build({ rentalObjectCode: 'B' }),
-          ],
-        })
-
-      const result = await leasingAdapter.getApartments(['A', 'B'])
-
-      assert(result.ok)
-      expect(result.data.map((a) => a.rentalObjectCode)).toEqual(['A', 'B'])
-      scope.done()
-    })
-
-    it.each([
-      [404, 'not-found'],
-      [500, 'unknown'],
-    ])('maps %i to %s', async (status, err) => {
-      nock(config.tenantsLeasesService.url).post('/apartments').reply(status)
-
-      const result = await leasingAdapter.getApartments(['A'])
-
-      expect(result).toEqual({ ok: false, err })
-    })
-  })
-
-  // getRentalObjectsForListings relies on a 404 meaning not-found, not unknown
   describe('parking space lookups on 404', () => {
     it('getParkingSpaceByCode returns not-found', async () => {
       nock(config.tenantsLeasesService.url)

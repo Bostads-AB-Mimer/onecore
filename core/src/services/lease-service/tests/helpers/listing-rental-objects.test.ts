@@ -1,4 +1,5 @@
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
+import * as apartmentRentalObjects from '../../helpers/apartment-rental-objects'
 import {
   getRentalObjectForListing,
   getRentalObjectsForListings,
@@ -26,7 +27,7 @@ describe(getRentalObjectsForListings, () => {
         data: [factory.rentalObject.build({ rentalObjectCode: 'P1' })],
       })
     const apartmentSpy = jest
-      .spyOn(leasingAdapter, 'getApartments')
+      .spyOn(apartmentRentalObjects, 'getApartments')
       .mockResolvedValueOnce({
         ok: true,
         data: [factory.rentalObject.build({ rentalObjectCode: 'A1' })],
@@ -47,7 +48,7 @@ describe(getRentalObjectsForListings, () => {
     // getParkingSpaces without codes would return every parking space
     const parkingSpy = jest.spyOn(leasingAdapter, 'getParkingSpaces')
     jest
-      .spyOn(leasingAdapter, 'getApartments')
+      .spyOn(apartmentRentalObjects, 'getApartments')
       .mockResolvedValueOnce({ ok: true, data: [] })
 
     await getRentalObjectsForListings([apartment('A1')])
@@ -63,8 +64,8 @@ describe(getRentalObjectsForListings, () => {
       data: [factory.rentalObject.build({ rentalObjectCode: 'P1' })],
     })
     jest
-      .spyOn(leasingAdapter, 'getApartments')
-      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+      .spyOn(apartmentRentalObjects, 'getApartments')
+      .mockResolvedValueOnce({ ok: true, data: [] })
 
     const result = await getRentalObjectsForListings([
       parking('P1'),
@@ -79,7 +80,7 @@ describe(getRentalObjectsForListings, () => {
       .spyOn(leasingAdapter, 'getParkingSpaces')
       .mockResolvedValueOnce({ ok: true, data: [] })
     jest
-      .spyOn(leasingAdapter, 'getApartments')
+      .spyOn(apartmentRentalObjects, 'getApartments')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
     const result = await getRentalObjectsForListings([
@@ -94,18 +95,38 @@ describe(getRentalObjectsForListings, () => {
 describe(getRentalObjectForListing, () => {
   it('uses the apartment lookup for an apartment listing', async () => {
     const apartmentSpy = jest
-      .spyOn(leasingAdapter, 'getApartmentByCode')
+      .spyOn(apartmentRentalObjects, 'getApartments')
       .mockResolvedValueOnce({
         ok: true,
-        data: factory.rentalObject.build({ rentalObjectCode: 'A1' }),
+        data: [factory.rentalObject.build({ rentalObjectCode: 'A1' })],
       })
     const parkingSpy = jest.spyOn(leasingAdapter, 'getParkingSpaceByCode')
 
     const result = await getRentalObjectForListing(apartment('A1'))
 
-    expect(result.ok).toBe(true)
-    expect(apartmentSpy).toHaveBeenCalledWith('A1')
+    expect(result.ok && result.data.rentalObjectCode).toBe('A1')
+    expect(apartmentSpy).toHaveBeenCalledWith(['A1'])
     expect(parkingSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not find an apartment the lookup leaves out', async () => {
+    jest
+      .spyOn(apartmentRentalObjects, 'getApartments')
+      .mockResolvedValueOnce({ ok: true, data: [] })
+
+    const result = await getRentalObjectForListing(apartment('A1'))
+
+    expect(result).toEqual({ ok: false, err: 'not-found' })
+  })
+
+  it('fails when the apartment lookup fails', async () => {
+    jest
+      .spyOn(apartmentRentalObjects, 'getApartments')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const result = await getRentalObjectForListing(apartment('A1'))
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 
   it('finds nothing for a category without a lookup', async () => {

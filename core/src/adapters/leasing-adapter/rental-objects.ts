@@ -59,45 +59,31 @@ const getParkingSpaces = async (
   }
 }
 
-const getApartmentByCode = async (
-  rentalObjectCode: string
-): Promise<AdapterResult<RentalObject, 'not-found' | 'unknown'>> => {
-  try {
-    const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/apartments/by-code/${rentalObjectCode}`
-    )
-    if (response.status === 404) {
-      logger.error({ rentalObjectCode }, 'Apartment not found for code:')
-      return { ok: false, err: 'not-found' }
-    }
-    return { ok: true, data: response.data.content }
-  } catch (error) {
-    logger.error(
-      error,
-      `Error retrieving apartment by code: ${rentalObjectCode}`
-    )
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const getApartments = async (
+/**
+ * Availability and rent from the leases only: vacantFrom is not adjusted for
+ * rental blocks. For apartments, whose blocks come from property; the caller
+ * applies determineVacantFrom.
+ */
+const getLeaseAvailabilities = async (
   rentalObjectCodes: string[]
-): Promise<AdapterResult<RentalObject[], 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<RentalObjectAvailabilityInfo[], 'unknown'>> => {
   try {
-    const response = await axios.post(`${tenantsLeasesServiceUrl}/apartments`, {
-      rentalObjectCodes,
-    })
-    if (response.status === 404) {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/rental-objects/lease-availabilities`,
+      { rentalObjectCodes }
+    )
+    if (response.status !== 200) {
       logger.error(
-        `Apartments not found for codes: ${rentalObjectCodes.join(', ')}`
+        { status: response.status, rentalObjectCodes },
+        'Unexpected status retrieving lease availabilities'
       )
-      return { ok: false, err: 'not-found' }
+      return { ok: false, err: 'unknown' }
     }
     return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(
       error,
-      `Error retrieving apartments by codes ${rentalObjectCodes.join(', ')}`
+      `Error retrieving lease availabilities by codes: ${rentalObjectCodes.join(', ')}`
     )
     return { ok: false, err: 'unknown' }
   }
@@ -228,8 +214,7 @@ const getRentalObjectAvailabilities = async (
 
 export {
   getAllVacantParkingSpaces,
-  getApartmentByCode,
-  getApartments,
+  getLeaseAvailabilities,
   getParkingSpaceByCode,
   getParkingSpaces,
   getRentalObjectAvailabilityByCode,

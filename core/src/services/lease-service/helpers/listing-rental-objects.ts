@@ -2,6 +2,7 @@ import { Listing, RentalObject } from '@onecore/types'
 
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import { AdapterResult } from '../../../adapters/types'
+import { getApartments } from './apartment-rental-objects'
 
 type ListingRef = Pick<Listing, 'rentalObjectCode' | 'listingCategory'>
 
@@ -15,8 +16,14 @@ export const getRentalObjectForListing = async (
   switch (listing.listingCategory) {
     case 'PARKING_SPACE':
       return leasingAdapter.getParkingSpaceByCode(listing.rentalObjectCode)
-    case 'APARTMENT':
-      return leasingAdapter.getApartmentByCode(listing.rentalObjectCode)
+    case 'APARTMENT': {
+      const result = await getApartments([listing.rentalObjectCode])
+      if (!result.ok) return result
+      const [apartment] = result.data
+      return apartment
+        ? { ok: true, data: apartment }
+        : { ok: false, err: 'not-found' }
+    }
     default:
       return { ok: false, err: 'not-found' }
   }
@@ -45,7 +52,7 @@ export const getRentalObjectsForListings = async (
     parkingSpaceCodes.length
       ? leasingAdapter.getParkingSpaces(parkingSpaceCodes)
       : null,
-    apartmentCodes.length ? leasingAdapter.getApartments(apartmentCodes) : null,
+    apartmentCodes.length ? getApartments(apartmentCodes) : null,
   ])
 
   const rentalObjects = new Map<string, RentalObject>()

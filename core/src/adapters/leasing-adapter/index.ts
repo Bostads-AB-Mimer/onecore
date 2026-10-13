@@ -964,8 +964,7 @@ export {
 
 export {
   getAllVacantParkingSpaces,
-  getApartmentByCode,
-  getApartments,
+  getLeaseAvailabilities,
   getParkingSpaceByCode,
   getParkingSpaces,
   getRentalObjectAvailabilities,
