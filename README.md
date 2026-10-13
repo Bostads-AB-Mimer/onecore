@@ -21,18 +21,29 @@ Apart from the core orchestration service, packages belong to one of three categ
 ├── core/
 ├── apps/
 │   ├── internal-portal/
+│   ├── keys-portal/
+│   ├── leasing-portal/
 │   └── property-tree/
 ├── libs/
+│   ├── assets/
+│   ├── dax-client/
 │   ├── types/
+│   ├── ui/
 │   └── utilities/
 └── services/
     ├── communication/
+    ├── contacts/
+    ├── economy/
+    ├── file-storage/
+    ├── inspection/
+    ├── keys/
     ├── leasing/
     ├── property/
     ├── property-management/
     └── work-order/
-    └── economy/
 ```
+
+`apps/leasing-portal` is the frontend (with its own BFF) for apartment leasing as it moves from Xpand to ONECore. Its pages also run inside property-tree under `/uthyrning`. See [`apps/leasing-portal/frontend/README.md`](apps/leasing-portal/frontend/README.md) and [`apps/leasing-portal/backend/README.md`](apps/leasing-portal/backend/README.md).
 
 ### Getting started
 
