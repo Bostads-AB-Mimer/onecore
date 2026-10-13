@@ -242,11 +242,13 @@ interface WaitingList {
 interface Listing {
   id: number
   rentalObjectCode: string
-  publishedFrom: Date
+  publishedFrom?: Date // Unset while the listing is a Draft
   publishedTo?: Date
   status: ListingStatus
   rentalRule: 'SCORED' | 'NON_SCORED'
   listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+  reviewedAt?: Date | null // "Granskad – redo att publicera", set by the reviewer
+  reviewedBy?: string | null
   applicants?: Applicant[]
   rentalObject: RentalObject
 }
@@ -404,6 +406,7 @@ interface RentalTag {
 interface RentalObjectAvailabilityInfo {
   rentalObjectCode: string
   vacantFrom?: Date
+  listingHistorySince?: Date | null // closed listings before this belong to an earlier tenancy; null means count all
   rent: RentalObjectRent
   rentalTenureType: RentalTag
   rentalTags?: RentalTag[]
