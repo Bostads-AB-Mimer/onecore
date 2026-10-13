@@ -67,6 +67,8 @@ export function ComponentTypeNavigation({
         <Link
           to={libraryHref({ level: 'subtypes', ...typeState })}
           title={type.typeName}
+          aria-current={state === 'active' ? 'page' : undefined}
+          aria-expanded={isExpanded}
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <Box />
@@ -128,7 +130,11 @@ function SubtypeNavigation({ href, name, isActive }: SubtypeNavigationProps) {
   return (
     <SidebarMenuItem ref={scrollRef}>
       <SidebarMenuButton asChild tooltip={name} isActive={isActive}>
-        <Link to={href} title={name}>
+        <Link
+          to={href}
+          title={name}
+          aria-current={isActive ? 'page' : undefined}
+        >
           <Tag />
           <span>{name}</span>
         </Link>

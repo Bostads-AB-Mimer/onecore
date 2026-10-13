@@ -58,7 +58,11 @@ export function ComponentLibraryNavigation() {
                 isActive={rootState === 'active'}
                 tooltip="Komponentbibliotek"
               >
-                <Link to={routes.components} onClick={() => setIsOpen(true)}>
+                <Link
+                  to={routes.components}
+                  aria-current={rootState === 'active' ? 'page' : undefined}
+                  onClick={() => setIsOpen(true)}
+                >
                   <Warehouse />
                   <span>Komponentbibliotek</span>
                   <ChevronRight className="ml-auto transition-transform group-data-[state=open]/library:rotate-90" />

@@ -67,6 +67,8 @@ export function ComponentCategoryNavigation({
             categoryName: category.categoryName,
           })}
           title={category.categoryName}
+          aria-current={state === 'active' ? 'page' : undefined}
+          aria-expanded={isExpanded}
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <Boxes />
