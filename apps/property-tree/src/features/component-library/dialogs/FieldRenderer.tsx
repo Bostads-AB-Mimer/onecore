@@ -1,5 +1,12 @@
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/Select'
 
 import type { FieldConfig } from '../constants/entityDialogConfig'
 
@@ -17,9 +24,7 @@ export function FieldRenderer({
   error,
 }: FieldRendererProps) {
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     let newValue: any = e.target.value
     if (field.type === 'number') {
@@ -95,18 +100,21 @@ export function FieldRenderer({
           <Label htmlFor={field.name}>
             {field.label} {field.required && '*'}
           </Label>
-          <select
-            id={field.name}
+          <Select
             value={value || field.defaultValue}
-            onChange={handleChange}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onValueChange={(newValue) => onChange(field.name, newValue)}
           >
-            {field.options?.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id={field.name}>
+              <SelectValue placeholder={field.placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {error && <p className="text-sm text-destructive mt-1">{error}</p>}
         </div>
       )
