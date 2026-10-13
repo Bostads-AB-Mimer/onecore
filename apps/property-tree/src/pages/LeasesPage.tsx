@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Download } from 'lucide-react'
+import { Download, Mail, MessageSquare } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
 import { usePropertySearch } from '@/features/properties'
@@ -15,7 +15,6 @@ import { useBulkMessaging } from '@/shared/hooks/useBulkMessaging'
 import { BulkActionBar } from '@/shared/ui/BulkActionBar'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
-import { Checkbox } from '@/shared/ui/Checkbox'
 import { EmailModal } from '@/shared/ui/EmailModal'
 import {
   DateRangeFilterDropdown,
@@ -58,6 +57,16 @@ const statusOptions = [
   { label: 'Signering', value: 'pendingsignature' },
   { label: 'Ej skickat', value: 'notsent' },
 ] as const
+
+const getLeaseId = (lease: LeaseSearchResult) => lease.leaseId
+
+const getLeaseContacts = (lease: LeaseSearchResult) =>
+  (lease.contacts ?? []).map((c) => ({
+    contactCode: c.contactCode,
+    name: c.name,
+    phone: c.phone,
+    email: c.email,
+  }))
 
 const LeasesPage = () => {
   const cardRef = useRef<HTMLDivElement>(null)
@@ -108,13 +117,9 @@ const LeasesPage = () => {
   }
 
   const {
-    selectedIds: selectedLeaseIds,
-    allResultsSelected,
+    selection,
     selectedCount,
-    toggleSelection,
-    toggleSelectAll,
     clearSelection,
-    isSelected,
     showSmsModal,
     showEmailModal,
     setShowSmsModal,
@@ -129,43 +134,20 @@ const LeasesPage = () => {
   } = useBulkMessaging({
     items: enrichedLeases ?? filters.leases,
     totalCount: filters.meta?.totalRecords ?? 0,
-    getItemId: (lease) => lease.leaseId,
-    getContacts: (lease) =>
-      (lease.contacts ?? []).map((c) => ({
-        contactCode: c.contactCode,
-        name: c.name,
-        phone: c.phone,
-        email: c.email,
-      })),
+    getItemId: getLeaseId,
+    getContacts: getLeaseContacts,
     fetchAllContacts: () =>
       leaseSearchService.getContactsByFilters(filters.searchParams),
     sendBulkSms: tenantService.sendBulkSms,
     sendBulkEmail: tenantService.sendBulkEmail,
   })
 
+  // Keyed on the serialised filters: the object itself is rebuilt on every
+  // URL change, including paging, which must not drop the selection.
+  const searchKey = JSON.stringify(filters.searchParams)
   useEffect(() => {
     clearSelection()
-  }, [filters.searchParams, clearSelection])
-
-  const selectColumn = {
-    key: 'select',
-    label: (
-      <Checkbox
-        checked={allResultsSelected || selectedLeaseIds.length > 0}
-        onCheckedChange={toggleSelectAll}
-        aria-label="Välj alla"
-      />
-    ),
-    className: 'w-10 px-2',
-    render: (lease: LeaseSearchResult) => (
-      <Checkbox
-        checked={isSelected(lease.leaseId)}
-        onCheckedChange={() => toggleSelection(lease.leaseId)}
-        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-        aria-label={`Välj ${lease.leaseId}`}
-      />
-    ),
-  }
+  }, [searchKey, clearSelection])
 
   return (
     <ViewLayout>
@@ -352,8 +334,9 @@ const LeasesPage = () => {
               )}
               <ResponsiveTable
                 data={enrichedLeases ?? filters.leases}
-                columns={[selectColumn, ...leaseColumns]}
-                keyExtractor={(lease) => lease.leaseId}
+                columns={leaseColumns}
+                keyExtractor={getLeaseId}
+                selection={selection}
                 mobileCardRenderer={LeaseMobileCard}
                 sortBy={filters.sortBy}
                 sortOrder={filters.sortOrder}
@@ -376,9 +359,19 @@ const LeasesPage = () => {
       <BulkActionBar
         selectedCount={selectedCount}
         onClear={clearSelection}
-        onSendSms={handleOpenSmsModal}
-        onSendEmail={handleOpenEmailModal}
         isLoading={isLoadingContacts}
+        actions={[
+          {
+            label: isLoadingContacts ? 'Laddar...' : 'Skicka SMS',
+            icon: <MessageSquare className="mr-2 h-4 w-4" />,
+            onClick: handleOpenSmsModal,
+          },
+          {
+            label: isLoadingContacts ? 'Laddar...' : 'Skicka mejl',
+            icon: <Mail className="mr-2 h-4 w-4" />,
+            onClick: handleOpenEmailModal,
+          },
+        ]}
       />
 
       <SmsModal
