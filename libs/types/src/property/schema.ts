@@ -141,6 +141,46 @@ export const RentalObjectDetailsSchema = z.object({
 
 export type RentalObjectDetails = z.infer<typeof RentalObjectDetailsSchema>
 
+// A rental block (hyspt) as the leasing view needs it: the window and why.
+export const ResidenceRentalBlockSchema = z.object({
+  fromDate: z.coerce.date(),
+  toDate: z.coerce.date().nullable(),
+  reason: z.string().nullable(),
+})
+
+// What the letting process needs to know about a residence, keyed by rental
+// id and fetched for an explicit list of ids (vacant ones), never by scope.
+// Rent is deliberately absent: Tenfast owns it.
+export const ResidenceLeasingDetailsSchema = z.object({
+  rentalId: z.string(),
+  address: z.string().nullable(),
+  apartmentNumber: z.string().nullable(), // hyinf.lmnr, "Nummer" in the UI
+  propertyCode: z.string().nullable(),
+  propertyName: z.string().nullable(),
+  buildingCode: z.string().nullable(),
+  marketAreaCode: z.string().nullable(),
+  marketAreaName: z.string().nullable(), // babya caption, "Område"
+  residenceTypeCode: z.string().nullable(),
+  residenceTypeName: z.string().nullable(), // "3 rum och kök"
+  roomCount: z.number().nullable(),
+  floor: z.string().nullable(),
+  elevator: z.boolean().nullable(),
+  area: z.number().nullable(), // BRA (cmval), m²
+  rentalBlocks: z.array(ResidenceRentalBlockSchema), // not yet ended
+})
+
+export type ResidenceLeasingDetails = z.infer<
+  typeof ResidenceLeasingDetailsSchema
+>
+
+export const GetResidenceLeasingDetailsRequestSchema = z.object({
+  rentalIds: z.array(z.string().min(1)).min(1).max(5000),
+})
+
+export type GetResidenceLeasingDetailsRequest = z.infer<
+  typeof GetResidenceLeasingDetailsRequestSchema
+>
+
 // A subtype caption an object carries, scoped to its object type — the code
 // is only unique within a type, so filters pass `type:code` pairs.
 export const RentalObjectSubtypeSchema = z.object({
