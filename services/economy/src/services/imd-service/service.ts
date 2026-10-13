@@ -178,7 +178,6 @@ function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
-/** IMD debiteras två kalendermånader efter förbrukningsperioden i Tenfast. */
 const IMD_BILLING_MONTH_OFFSET = 2
 
 function billingPeriodForConsumption(from: Date): { from: Date; to: Date } {
