@@ -36,6 +36,7 @@ interface SubtypeComponentsTabProps {
   onSearchChange: (value: string) => void
   onPageChange: (page: number) => void
   onModelFilterChange: (modelId: string | undefined) => void
+  onClearFilters: () => void
   onCreate: () => void
   onEdit: (instance: Component) => void
   onDelete: (instance: Component) => void
@@ -58,6 +59,7 @@ export const SubtypeComponentsTab = ({
   onSearchChange,
   onPageChange,
   onModelFilterChange,
+  onClearFilters,
   onCreate,
   ...rowHandlers
 }: SubtypeComponentsTabProps) => {
@@ -101,11 +103,6 @@ export const SubtypeComponentsTab = ({
     )
   }
 
-  const clearFilters = () => {
-    onModelFilterChange(undefined)
-    onSearchChange('')
-  }
-
   const modelFilter = isEquipment ? (
     <div className="w-full sm:w-72">
       <label htmlFor="model-filter" className="sr-only">
@@ -146,7 +143,7 @@ export const SubtypeComponentsTab = ({
           : {})}
       />
       {!isLoading && total === 0 ? (
-        <NoResultsState onClear={clearFilters} />
+        <NoResultsState onClear={onClearFilters} />
       ) : (
         <InstancesTable
           instances={componentPage?.content ?? []}

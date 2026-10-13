@@ -25,6 +25,7 @@ const ComponentLibraryPage = () => {
     navigateTo,
     setTab,
     setModelFilter,
+    clearFilters,
     page,
     setPage,
     searchInput,
@@ -189,6 +190,7 @@ const ComponentLibraryPage = () => {
           page={page}
           onPageChange={setPage}
           onModelFilterChange={setModelFilter}
+          onClearFilters={clearFilters}
           onCreateComponent={handlers.handleCreateInstanceFromTable}
           onEditInstance={handlers.handleEditInstance}
           onDeleteInstance={handlers.handleDeleteInstance}

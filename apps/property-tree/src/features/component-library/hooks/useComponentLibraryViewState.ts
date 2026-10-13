@@ -151,6 +151,11 @@ export const useComponentLibraryViewState = () => {
     updateUrlParams({ modelId, page: undefined })
   }
 
+  const clearFilters = () => {
+    updateUrlParams({ modelId: undefined, search: undefined, page: undefined })
+    setSearchInput('')
+  }
+
   const dialogs: ComponentLibraryDialogStates = {
     categoryDialog: useDialogState<ComponentCategory>(),
     typeDialog: useDialogState<ComponentType>(),
@@ -193,6 +198,7 @@ export const useComponentLibraryViewState = () => {
     navigateTo,
     setTab,
     setModelFilter,
+    clearFilters,
     page,
     setPage,
     searchInput,

@@ -46,6 +46,7 @@ interface SubtypeViewProps {
   page: number
   onPageChange: (page: number) => void
   onModelFilterChange: (modelId: string | undefined) => void
+  onClearFilters: () => void
   onCreateComponent: () => void
   onEditInstance: (instance: Component) => void
   onDeleteInstance: (instance: Component) => void
@@ -85,6 +86,7 @@ export const SubtypeView = (props: SubtypeViewProps) => {
       onSearchChange={onSearchChange}
       onPageChange={props.onPageChange}
       onModelFilterChange={props.onModelFilterChange}
+      onClearFilters={props.onClearFilters}
       onCreate={props.onCreateComponent}
       onEdit={props.onEditInstance}
       onDelete={props.onDeleteInstance}
