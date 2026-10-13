@@ -84,18 +84,24 @@ export function ParentHierarchySelector({
   const { data: categories, isLoading: categoriesLoading } =
     useComponentEntity('category')
 
-  // Fetch types when category is selected
+  const typesParentId = parentLevels.includes('type')
+    ? selectedCategoryId
+    : undefined
   const { data: types, isLoading: typesLoading } = useComponentEntity(
     'type',
-    parentLevels.includes('type') && selectedCategoryId
-      ? selectedCategoryId
-      : ''
+    typesParentId,
+    undefined,
+    { enabled: Boolean(typesParentId) }
   )
 
-  // Fetch subtypes when type is selected
+  const subtypesParentId = parentLevels.includes('subtype')
+    ? selectedTypeId
+    : undefined
   const { data: subtypes, isLoading: subtypesLoading } = useComponentEntity(
     'subtype',
-    parentLevels.includes('subtype') && selectedTypeId ? selectedTypeId : ''
+    subtypesParentId,
+    undefined,
+    { enabled: Boolean(subtypesParentId) }
   )
 
   // Get current selected entities for displaying info
