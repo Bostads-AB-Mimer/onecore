@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ExternalLink, Printer } from 'lucide-react'
 
-import { getFloorplanUrl, printFloorplan } from '@/shared/lib/floorplan'
+import { getFloorplanUrl } from '@/shared/lib/floorplan'
+import { printElement } from '@/shared/lib/print'
 import { Button } from '@/shared/ui/Button'
 import { FloorplanImage } from '@/shared/ui/FloorplanImage'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
@@ -15,16 +16,17 @@ export const ResidenceFloorplanTabsContent = ({
   // while a newly selected residence's floorplan is loading or missing.
   const [loadedRentalId, setLoadedRentalId] = useState<string | null>(null)
   const isLoaded = loadedRentalId === rentalId
+  const floorplanRef = useRef<HTMLDivElement>(null)
+
+  const handlePrint = () => {
+    if (floorplanRef.current) printElement(floorplanRef.current)
+  }
 
   return (
     <TabLayout title="Bofaktablad">
       {isLoaded && (
         <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => printFloorplan(rentalId)}
-          >
+          <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer />
             Skriv ut
           </Button>
@@ -43,7 +45,7 @@ export const ResidenceFloorplanTabsContent = ({
           </Button>
         </div>
       )}
-      <div className="text-center">
+      <div ref={floorplanRef} className="text-center">
         <FloorplanImage
           key={rentalId}
           rentalId={rentalId}

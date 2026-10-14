@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as floorplan from '@/shared/lib/floorplan'
+import * as print from '@/shared/lib/print'
 
 import { ResidenceFloorplanTabsContent } from './ResidenceFloorplanTabsContent'
 
@@ -94,9 +95,9 @@ describe('ResidenceFloorplanTabsContent', () => {
     )
   })
 
-  it('prints the selected residence', () => {
-    const print = vi
-      .spyOn(floorplan, 'printFloorplan')
+  it('prints only the floorplan', () => {
+    const printElement = vi
+      .spyOn(print, 'printElement')
       .mockImplementation(() => {})
 
     render('211-001-01-0101')
@@ -104,7 +105,12 @@ describe('ResidenceFloorplanTabsContent', () => {
 
     act(() => findButton(container, 'Skriv ut')!.click())
 
-    expect(print).toHaveBeenCalledWith('211-001-01-0101')
+    expect(printElement).toHaveBeenCalledTimes(1)
+    const target = printElement.mock.calls[0][0]
+    expect(target.querySelector('img')?.src).toBe(
+      floorplan.getFloorplanUrl('211-001-01-0101')
+    )
+    expect(target.querySelector('button')).toBeNull()
   })
 
   it('links to the selected residence floorplan in a new tab', () => {
