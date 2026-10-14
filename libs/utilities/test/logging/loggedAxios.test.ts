@@ -24,6 +24,28 @@ describe(redactHeaders, () => {
     })
   })
 
+  it('redacts other credential headers by name pattern', () => {
+    expect(
+      redactHeaders({
+        'Ocp-Apim-Subscription-Key': 'apim-key',
+        'x-functions-key': 'fn-key',
+        'X-Auth-Token': 't',
+        'x-client-secret': 's',
+        Accept: 'application/json',
+        'Content-Length': '12',
+        'x-correlation-id': 'c1',
+      })
+    ).toEqual({
+      'Ocp-Apim-Subscription-Key': '[REDACTED]',
+      'x-functions-key': '[REDACTED]',
+      'X-Auth-Token': '[REDACTED]',
+      'x-client-secret': '[REDACTED]',
+      Accept: 'application/json',
+      'Content-Length': '12',
+      'x-correlation-id': 'c1',
+    })
+  })
+
   it('handles the AxiosHeaders instances axios hands interceptors', () => {
     const headers = new AxiosHeaders({
       'api-token': 'tenfast-key',
@@ -61,7 +83,7 @@ describe('loggedAxios', () => {
         data: [],
         status: 200,
         statusText: 'OK',
-        headers: { 'set-cookie': 'session=1' },
+        headers: new AxiosHeaders({ 'set-cookie': 'session=1' }),
         config,
       }),
     })
