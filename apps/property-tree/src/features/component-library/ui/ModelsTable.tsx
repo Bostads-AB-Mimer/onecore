@@ -1,15 +1,13 @@
-import { useState } from 'react'
-import { Eye, FileText } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { FileText } from 'lucide-react'
 
 import type { ComponentModel } from '@/services/types'
 
+import { sortModelsByName } from '@/shared/lib/componentLabels'
 import { Button } from '@/shared/ui/Button'
-import {
-  type Column,
-  DataTable,
-  type DataTableAction,
-} from '@/shared/ui/DataTable'
+import { type Column, DataTable } from '@/shared/ui/DataTable'
 
+import { formatSek } from '../lib/componentRows'
 import { ComponentModelDocuments } from './ComponentModelDocuments'
 
 interface ModelsTableProps {
@@ -18,7 +16,7 @@ interface ModelsTableProps {
   onEdit: (model: ComponentModel) => void
   onDelete: (model: ComponentModel) => void
   onNavigate: (model: ComponentModel) => void
-  onCreateInstance: (model: ComponentModel) => void
+  getHref: (model: ComponentModel) => string
 }
 
 export const ModelsTable = ({
@@ -27,8 +25,10 @@ export const ModelsTable = ({
   onEdit,
   onDelete,
   onNavigate,
+  getHref,
 }: ModelsTableProps) => {
   const [documentsModelId, setDocumentsModelId] = useState<string | null>(null)
+  const sortedModels = useMemo(() => sortModelsByName(models), [models])
 
   const columns: Column<ComponentModel>[] = [
     {
@@ -40,46 +40,45 @@ export const ModelsTable = ({
       key: 'manufacturer',
       label: 'Tillverkare',
       render: (item) => (
-        <span className={!item.manufacturer ? 'text-muted-foreground' : ''}>
-          {item.manufacturer || '-'}
+        <span
+          className={
+            !item.manufacturer || item.manufacturer === 'Unknown'
+              ? 'text-muted-foreground'
+              : ''
+          }
+        >
+          {item.manufacturer && item.manufacturer !== 'Unknown'
+            ? item.manufacturer
+            : '-'}
         </span>
       ),
     },
     {
       key: 'currentPrice',
       label: 'Pris',
+      isEmpty: (item) => !item.currentPrice,
       render: (item) => (
         <span className={!item.currentPrice ? 'text-muted-foreground' : ''}>
-          {item.currentPrice
-            ? item.currentPrice.toLocaleString('sv-SE', {
-                style: 'currency',
-                currency: 'SEK',
-                maximumFractionDigits: 0,
-              })
-            : '-'}
+          {formatSek(item.currentPrice)}
         </span>
       ),
     },
     {
       key: 'currentInstallPrice',
       label: 'Installationspris',
+      isEmpty: (item) => !item.currentInstallPrice,
       render: (item) => (
         <span
           className={!item.currentInstallPrice ? 'text-muted-foreground' : ''}
         >
-          {item.currentInstallPrice
-            ? item.currentInstallPrice.toLocaleString('sv-SE', {
-                style: 'currency',
-                currency: 'SEK',
-                maximumFractionDigits: 0,
-              })
-            : '-'}
+          {formatSek(item.currentInstallPrice)}
         </span>
       ),
     },
     {
       key: 'warrantyMonths',
       label: 'Garanti',
+      isEmpty: (item) => !item.warrantyMonths,
       render: (item) => (
         <span className={!item.warrantyMonths ? 'text-muted-foreground' : ''}>
           {item.warrantyMonths ? `${item.warrantyMonths} mån` : '-'}
@@ -89,6 +88,7 @@ export const ModelsTable = ({
     {
       key: 'dimensions',
       label: 'Dimensioner',
+      isEmpty: (item) => !item.dimensions,
       render: (item) => (
         <span className="text-muted-foreground">{item.dimensions || '-'}</span>
       ),
@@ -96,6 +96,7 @@ export const ModelsTable = ({
     {
       key: 'coclassCode',
       label: 'CoClass',
+      isEmpty: (item) => !item.coclassCode,
       render: (item) => (
         <span className="text-muted-foreground">{item.coclassCode || '-'}</span>
       ),
@@ -113,18 +114,11 @@ export const ModelsTable = ({
             setDocumentsModelId(item.id)
           }}
           title="Visa dokument"
+          aria-label={`Visa dokument för ${item.modelName}`}
         >
           <FileText className="h-4 w-4" />
         </Button>
       ),
-    },
-  ]
-
-  const actions: DataTableAction<ComponentModel>[] = [
-    {
-      label: 'Visa komponenter',
-      onClick: onNavigate,
-      icon: <Eye className="h-4 w-4 mr-2" />,
     },
   ]
 
@@ -166,14 +160,16 @@ export const ModelsTable = ({
   return (
     <>
       <DataTable
-        data={models}
+        data={sortedModels}
         columns={columns}
         isLoading={isLoading}
         onEdit={onEdit}
         onDelete={onDelete}
         onRowClick={onNavigate}
-        actions={actions}
-        emptyMessage="Inga modeller ännu"
+        getRowHref={getHref}
+        pageSize={50}
+        emptyMessage="Inga modeller"
+        getRowLabel={(item) => item.modelName}
         expandableContent={expandableContent}
       />
 

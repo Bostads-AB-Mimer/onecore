@@ -1670,11 +1670,24 @@ export const routes = (router: KoaRouter) => {
 
     try {
       // Check for child components before deleting
-      const childComponents = await propertyBaseAdapter.getComponents(id.data)
-      if (childComponents.ok && childComponents.data.length > 0) {
+      const childComponents = await propertyBaseAdapter.getComponents(
+        id.data,
+        undefined,
+        1,
+        1
+      )
+      if (!childComponents.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+      const childCount =
+        childComponents.data.pagination?.total ??
+        childComponents.data.content.length
+      if (childCount > 0) {
         ctx.status = 409
         ctx.body = {
-          error: `Kan inte ta bort: modellen har ${childComponents.data.length} komponenter`,
+          error: `Kan inte ta bort: modellen har ${childCount} komponenter`,
           ...metadata,
         }
         return
@@ -1709,7 +1722,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   get:
    *     summary: Get all components
-   *     description: Physical units with serial numbers and status. Filter by modelId, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+   *     description: Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
    *     tags:
    *       - Property-base/Components
    *     parameters:
@@ -1717,6 +1730,16 @@ export const routes = (router: KoaRouter) => {
    *         name: modelId
    *         schema:
    *           type: string
+   *       - in: query
+   *         name: withoutModel
+   *         schema:
+   *           type: boolean
+   *         description: Only components that have no model. Cannot be combined with modelId.
+   *       - in: query
+   *         name: notInstalled
+   *         schema:
+   *           type: boolean
+   *         description: Only components without an active installation
    *       - in: query
    *         name: subtypeId
    *         required: false
@@ -1786,7 +1809,9 @@ export const routes = (router: KoaRouter) => {
         params.data.page,
         params.data.limit,
         params.data.serialNumber,
-        params.data.subtypeId
+        params.data.subtypeId,
+        params.data.withoutModel,
+        params.data.notInstalled
       )
 
       if (!result.ok) {
@@ -1796,7 +1821,8 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: schemas.ComponentSchema.array().parse(result.data),
+        content: schemas.ComponentSchema.array().parse(result.data.content),
+        pagination: result.data.pagination,
         ...metadata,
       }
     } catch (error) {

@@ -1,19 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
 import {
-  type ComponentModelWithHierarchy,
   InstanceSelector,
-  ModelSelector,
+  invalidateComponentQueries,
+  SubtypeSelector,
+  useComponentEntity,
 } from '@/entities/component'
 
 import { componentService } from '@/services/api/core/componentService'
+import type { ComponentModel, ComponentSubtype } from '@/services/types'
 
+import {
+  formatComponentModelName,
+  sortModelsByName,
+} from '@/shared/lib/componentLabels'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
+import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 
 import { useInstallComponent } from '../hooks/useInstallComponent'
+import { serverMessage } from '../lib/serverMessage'
 
 export interface InstallationFormData {
   subtypeId: string
@@ -51,6 +59,8 @@ const getInitialFormData = (): InstallationFormData => ({
   orderNumber: '',
 })
 
+const NO_MODEL = 'none'
+
 interface ComponentInstallationFormProps {
   propertyObjectId: string
   onSuccess: () => void
@@ -66,18 +76,37 @@ export const ComponentInstallationForm = ({
   const [installationMode, setInstallationMode] = useState<'new' | 'existing'>(
     'new'
   )
+  const [selectedSubtype, setSelectedSubtype] = useState<
+    ComponentSubtype | undefined
+  >()
   const [selectedModel, setSelectedModel] = useState<
-    ComponentModelWithHierarchy | undefined
+    ComponentModel | undefined
   >()
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('')
   const installMutation = useInstallComponent(propertyObjectId)
-  const isSurface =
-    selectedModel?.subtype?.componentType?.category?.type === 'SURFACE'
-  const quantityIsArea = selectedModel?.subtype?.quantityType === 'SQUARE_METER'
+  const isSurface = selectedSubtype?.componentType?.category?.type === 'SURFACE'
+  const quantityIsArea = selectedSubtype?.quantityType === 'SQUARE_METER'
+
+  const models = useComponentEntity('model', selectedSubtype?.id, undefined, {
+    enabled:
+      installationMode === 'new' && Boolean(selectedSubtype) && !isSurface,
+  })
+  const modelOptions = useMemo(
+    () => [
+      { id: NO_MODEL, label: 'Ingen modell', model: undefined },
+      ...sortModelsByName(models.data ?? []).map((model) => ({
+        id: model.id,
+        label: formatComponentModelName(model),
+        model,
+      })),
+    ],
+    [models.data]
+  )
 
   const [formData, setFormData] =
     useState<InstallationFormData>(getInitialFormData())
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [submitError, setSubmitError] = useState<string>()
 
   const handleChange = (name: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -94,34 +123,56 @@ export const ComponentInstallationForm = ({
   useEffect(() => {
     setFormData(getInitialFormData())
     setErrors({})
+    setSelectedSubtype(undefined)
     setSelectedModel(undefined)
     setSelectedInstanceId('')
     setInstallationMode('new')
   }, [])
 
-  // Update form defaults when model is selected
-  useEffect(() => {
-    if (selectedModel) {
-      setFormData((prev) => ({
-        ...prev,
-        warrantyMonths: selectedModel.warrantyMonths ?? null,
-        priceAtPurchase: selectedModel.currentPrice ?? null,
-        installationCost: selectedModel.currentInstallPrice || 0,
-        economicLifespan: selectedModel.subtype?.economicLifespan ?? null,
-        depreciationPriceAtPurchase:
-          selectedModel.subtype?.depreciationPrice ?? null,
-      }))
-    }
-  }, [selectedModel])
+  const handleSubtypeChange = (subtype: ComponentSubtype) => {
+    setSelectedSubtype(subtype)
+    setSelectedModel(undefined)
+    setSelectedInstanceId('')
+    setFormData((prev) => ({
+      ...prev,
+      subtypeId: subtype.id,
+      modelId: '',
+      warrantyMonths: null,
+      priceAtPurchase: null,
+      installationCost: 0,
+      economicLifespan: subtype.economicLifespan ?? null,
+      depreciationPriceAtPurchase: subtype.depreciationPrice ?? null,
+    }))
+    setErrors((prev) => {
+      const { subtypeId: _subtypeId, instance: _instance, ...rest } = prev
+      return rest
+    })
+  }
+
+  const handleModelChange = (model: ComponentModel | undefined) => {
+    setSelectedModel(model)
+    setFormData((prev) => ({
+      ...prev,
+      modelId: model?.id ?? '',
+      warrantyMonths: model?.warrantyMonths ?? null,
+      priceAtPurchase: model?.currentPrice ?? null,
+      installationCost: model?.currentInstallPrice || 0,
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (installationMode === 'new' && !formData.subtypeId) {
-      setErrors((prev) => ({ ...prev, modelId: 'Välj en modell' }))
+    if (!selectedSubtype) {
+      setErrors((prev) => ({ ...prev, subtypeId: 'Välj en undertyp' }))
+      return
+    }
+    if (installationMode === 'existing' && !selectedInstanceId) {
+      setErrors((prev) => ({ ...prev, instance: 'Välj en komponent' }))
       return
     }
 
+    setSubmitError(undefined)
     try {
       if (installationMode === 'new') {
         await installMutation.mutateAsync({
@@ -142,10 +193,6 @@ export const ComponentInstallationForm = ({
           orderNumber: formData.orderNumber || undefined,
         })
       } else {
-        if (!selectedInstanceId) {
-          throw new Error('No instance selected')
-        }
-
         await componentService.updateInstance(selectedInstanceId, {
           warrantyMonths: formData.warrantyMonths,
           warrantyStartDate: formData.warrantyStartDate || undefined,
@@ -161,23 +208,14 @@ export const ComponentInstallationForm = ({
           }
         )
 
-        queryClient.invalidateQueries({
-          queryKey: ['components', propertyObjectId],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ['instances', 'uninstalled'],
-        })
-        queryClient.invalidateQueries({ queryKey: ['instances'] })
+        invalidateComponentQueries(queryClient, propertyObjectId)
       }
       onSuccess()
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { errors?: Record<string, string> } }
-      }
-      if (err.response?.data?.errors) {
-        setErrors(err.response.data.errors)
-      }
-      console.error('Failed to install component:', error)
+      setSubmitError(
+        serverMessage(error) ??
+          'Det gick inte att installera komponenten. Försök igen.'
+      )
     }
   }
 
@@ -215,25 +253,51 @@ export const ComponentInstallationForm = ({
         </div>
       </div>
 
-      {/* Model Selection */}
-      <ModelSelector
-        value={formData.modelId}
-        onChange={(id, model) => {
-          handleChange('modelId', id)
-          handleChange('subtypeId', model?.subtype?.id ?? '')
-          setSelectedModel(model)
-          setSelectedInstanceId('')
-        }}
-        error={errors.modelId}
+      <SubtypeSelector
+        value={selectedSubtype}
+        onChange={handleSubtypeChange}
+        error={errors.subtypeId}
       />
 
+      {installationMode === 'new' && selectedSubtype && !isSurface && (
+        <div className="space-y-2">
+          <Label htmlFor="installation-model">Modell (valfritt)</Label>
+          <SearchableSelect
+            id="installation-model"
+            items={modelOptions}
+            value={
+              modelOptions.find(
+                (o) => o.id === (selectedModel?.id ?? NO_MODEL)
+              ) ?? null
+            }
+            onChange={(option) => handleModelChange(option.model)}
+            getKey={(option) => option.id}
+            getLabel={(option) => option.label}
+            placeholder="Ingen modell"
+            searchPlaceholder="Sök modell..."
+            emptyText="Ingen modell matchar"
+            disabled={models.isLoading}
+          />
+          {models.error && (
+            <p className="text-sm text-destructive">
+              Kunde inte ladda modeller
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Instance Selection (only in 'existing' mode) */}
-      {installationMode === 'existing' && selectedModel && (
+      {installationMode === 'existing' && selectedSubtype && (
         <InstanceSelector
-          modelId={selectedModel.id}
+          subtypeId={selectedSubtype.id}
           value={selectedInstanceId}
+          error={errors.instance}
           onChange={(id, instance) => {
             setSelectedInstanceId(id)
+            setErrors((prev) => {
+              const { instance: _instance, ...rest } = prev
+              return rest
+            })
 
             if (!id || !instance) return
 
@@ -594,8 +658,8 @@ export const ComponentInstallationForm = ({
                   )
                 }
                 placeholder={
-                  selectedModel?.subtype?.depreciationPrice
-                    ? `Standard: ${selectedModel.subtype.depreciationPrice} kr`
+                  selectedSubtype?.depreciationPrice
+                    ? `Standard: ${selectedSubtype.depreciationPrice} kr`
                     : undefined
                 }
               />
@@ -621,8 +685,8 @@ export const ComponentInstallationForm = ({
                 )
               }
               placeholder={
-                selectedModel?.subtype?.economicLifespan
-                  ? `Standard: ${selectedModel.subtype.economicLifespan} år`
+                selectedSubtype?.economicLifespan
+                  ? `Standard: ${selectedSubtype.economicLifespan} år`
                   : undefined
               }
             />
@@ -702,9 +766,9 @@ export const ComponentInstallationForm = ({
         </Button>
       </div>
 
-      {installMutation.isError && (
-        <p className="text-sm text-destructive">
-          Ett fel uppstod vid installation. Försök igen.
+      {submitError && (
+        <p role="alert" className="text-sm text-destructive">
+          {submitError}
         </p>
       )}
     </form>

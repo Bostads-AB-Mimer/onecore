@@ -724,7 +724,18 @@ describe('Component Models API', () => {
   })
 
   describe('DELETE /component-models/:id', () => {
+    const noChildren = {
+      ok: true as const,
+      data: {
+        content: [],
+        pagination: { page: 1, limit: 1, total: 0, totalPages: 0 },
+      },
+    }
+
     it('returns 204 on success', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce(noChildren)
       jest
         .spyOn(propertyBaseAdapter, 'deleteComponentModel')
         .mockResolvedValueOnce({ ok: true, data: undefined })
@@ -738,6 +749,9 @@ describe('Component Models API', () => {
 
     it('returns 404 when not found', async () => {
       jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce(noChildren)
+      jest
         .spyOn(propertyBaseAdapter, 'deleteComponentModel')
         .mockResolvedValueOnce({ ok: false, err: 'not_found' })
 
@@ -746,6 +760,39 @@ describe('Component Models API', () => {
       )
 
       expect(res.status).toBe(404)
+    })
+
+    it('returns 409 with the total count when the model has components', async () => {
+      jest.spyOn(propertyBaseAdapter, 'getComponents').mockResolvedValueOnce({
+        ok: true,
+        data: {
+          content: [factory.component.build()],
+          pagination: { page: 1, limit: 1, total: 659, totalPages: 659 },
+        },
+      })
+      const deleteSpy = jest.spyOn(propertyBaseAdapter, 'deleteComponentModel')
+
+      const res = await request(app.callback()).delete(
+        '/component-models/00000000-0000-0000-0000-000000000001'
+      )
+
+      expect(res.status).toBe(409)
+      expect(res.body.error).toContain('659 komponenter')
+      expect(deleteSpy).not.toHaveBeenCalled()
+    })
+
+    it('returns 500 and does not delete when the component check fails', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: false, err: 'upstream_error' })
+      const deleteSpy = jest.spyOn(propertyBaseAdapter, 'deleteComponentModel')
+
+      const res = await request(app.callback()).delete(
+        '/component-models/00000000-0000-0000-0000-000000000001'
+      )
+
+      expect(res.status).toBe(500)
+      expect(deleteSpy).not.toHaveBeenCalled()
     })
   })
 
@@ -782,7 +829,7 @@ describe('Components API', () => {
       const components = factory.component.buildList(3)
       jest
         .spyOn(propertyBaseAdapter, 'getComponents')
-        .mockResolvedValueOnce({ ok: true, data: components })
+        .mockResolvedValueOnce({ ok: true, data: { content: components } })
 
       const res = await request(app.callback()).get('/components')
 
@@ -790,11 +837,27 @@ describe('Components API', () => {
       expect(res.body.content).toHaveLength(3)
     })
 
+    it('forwards pagination from property', async () => {
+      const pagination = { page: 2, limit: 25, total: 45958, totalPages: 1839 }
+      jest.spyOn(propertyBaseAdapter, 'getComponents').mockResolvedValueOnce({
+        ok: true,
+        data: { content: factory.component.buildList(2), pagination },
+      })
+
+      const res = await request(app.callback()).get(
+        '/components?subtypeId=00000000-0000-0000-0002-000000000001&page=2&limit=25'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+      expect(res.body.pagination).toEqual(pagination)
+    })
+
     it('filters by modelId', async () => {
       const components = factory.component.buildList(2)
       const getSpy = jest
         .spyOn(propertyBaseAdapter, 'getComponents')
-        .mockResolvedValueOnce({ ok: true, data: components })
+        .mockResolvedValueOnce({ ok: true, data: { content: components } })
 
       const res = await request(app.callback()).get(
         '/components?modelId=00000000-0000-0000-0000-000000000001'
@@ -807,6 +870,8 @@ describe('Components API', () => {
         1,
         20,
         undefined,
+        undefined,
+        undefined,
         undefined
       )
     })
@@ -815,7 +880,7 @@ describe('Components API', () => {
       const components = factory.component.buildList(2)
       const getSpy = jest
         .spyOn(propertyBaseAdapter, 'getComponents')
-        .mockResolvedValueOnce({ ok: true, data: components })
+        .mockResolvedValueOnce({ ok: true, data: { content: components } })
 
       const res = await request(app.callback()).get(
         '/components?subtypeId=00000000-0000-0000-0002-000000000001'
@@ -828,15 +893,72 @@ describe('Components API', () => {
         1,
         20,
         undefined,
-        '00000000-0000-0000-0002-000000000001'
+        '00000000-0000-0000-0002-000000000001',
+        undefined,
+        undefined
       )
+    })
+
+    it('filters to components without a model', async () => {
+      const getSpy = jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: true, data: { content: [] } })
+
+      const res = await request(app.callback()).get(
+        '/components?subtypeId=00000000-0000-0000-0002-000000000001&withoutModel=true'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getSpy).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        1,
+        20,
+        undefined,
+        '00000000-0000-0000-0002-000000000001',
+        true,
+        undefined
+      )
+    })
+
+    it('filters to components without an active installation', async () => {
+      const getSpy = jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: true, data: { content: [] } })
+
+      const res = await request(app.callback()).get(
+        '/components?subtypeId=00000000-0000-0000-0002-000000000001&notInstalled=true'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getSpy).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        1,
+        20,
+        undefined,
+        '00000000-0000-0000-0002-000000000001',
+        undefined,
+        true
+      )
+    })
+
+    it('returns 400 when modelId and withoutModel are combined', async () => {
+      const getSpy = jest.spyOn(propertyBaseAdapter, 'getComponents')
+
+      const res = await request(app.callback()).get(
+        '/components?modelId=00000000-0000-0000-0000-000000000001&withoutModel=true'
+      )
+
+      expect(res.status).toBe(400)
+      expect(getSpy).not.toHaveBeenCalled()
     })
 
     it('filters by status', async () => {
       const components = factory.component.buildList(2, { status: 'ACTIVE' })
       const getSpy = jest
         .spyOn(propertyBaseAdapter, 'getComponents')
-        .mockResolvedValueOnce({ ok: true, data: components })
+        .mockResolvedValueOnce({ ok: true, data: { content: components } })
 
       const res = await request(app.callback()).get('/components?status=ACTIVE')
 
@@ -847,6 +969,8 @@ describe('Components API', () => {
         1,
         20,
         undefined,
+        undefined,
+        undefined,
         undefined
       )
     })
@@ -855,7 +979,7 @@ describe('Components API', () => {
       const components = factory.component.buildList(2)
       jest
         .spyOn(propertyBaseAdapter, 'getComponents')
-        .mockResolvedValueOnce({ ok: true, data: components })
+        .mockResolvedValueOnce({ ok: true, data: { content: components } })
 
       const res = await request(app.callback()).get('/components')
 
@@ -1743,7 +1867,7 @@ describe('Cascade Delete Prevention', () => {
     it('returns 409 when model has child components', async () => {
       jest.spyOn(propertyBaseAdapter, 'getComponents').mockResolvedValueOnce({
         ok: true,
-        data: [factory.component.build()],
+        data: { content: [factory.component.build()] },
       })
 
       const res = await request(app.callback()).delete(

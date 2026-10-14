@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
@@ -6,13 +7,20 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu'
 import { Pagination } from '@/shared/ui/Pagination'
 
+import {
+  type HideableAction,
+  type HideableColumn,
+  visibleActions,
+  visibleColumns,
+} from './dataTableColumns'
 import { ResponsiveTableComponents } from './ResponsiveTableComponents'
 
-export interface Column<T> {
+export interface Column<T> extends HideableColumn<T> {
   key: string
   label: string
   render: (item: T) => React.ReactNode
@@ -21,7 +29,7 @@ export interface Column<T> {
   hideOnMobile?: boolean
 }
 
-export interface DataTableAction<T> {
+export interface DataTableAction<T> extends HideableAction<T> {
   label: string
   onClick: (item: T) => void
   icon?: React.ReactNode
@@ -39,6 +47,12 @@ export interface DataTableProps<T extends { id: string }> {
   expandableContent?: (item: T) => React.ReactNode | null
   /** Rows per page for client-side pagination. Defaults to 20. */
   pageSize?: number
+  /** Names a row for screen readers, e.g. in the actions button label. */
+  getRowLabel?: (item: T) => string
+  /** Makes the first cell a link to the row's page, for keyboard and new tabs. */
+  getRowHref?: (item: T) => string
+  /** Why a row cannot be deleted; disables Ta bort and shows the reason. */
+  deleteBlockedReason?: (item: T) => string | undefined
 }
 
 export function DataTable<T extends { id: string }>({
@@ -52,6 +66,9 @@ export function DataTable<T extends { id: string }>({
   actions = [],
   expandableContent,
   pageSize = 20,
+  getRowLabel,
+  deleteBlockedReason,
+  getRowHref,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -88,24 +105,44 @@ export function DataTable<T extends { id: string }>({
     )
   }
 
-  const renderActionsCell = (item: T) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+  const actionsLabel = (item: T) =>
+    getRowLabel ? `Åtgärder för ${getRowLabel(item)}` : 'Åtgärder'
+
+  const renderMenuContent = (item: T) => (
+    <DropdownMenuContent align="end">
+      <DropdownMenuItem
+        onClick={(e) => {
+          e.stopPropagation()
+          onEdit(item)
+        }}
+      >
+        <Edit className="h-4 w-4 mr-2" />
+        Redigera
+      </DropdownMenuItem>
+      {visibleActions(actions, item).map((action) => (
         <DropdownMenuItem
+          key={action.label}
           onClick={(e) => {
             e.stopPropagation()
-            onEdit(item)
+            action.onClick(item)
           }}
         >
-          <Edit className="h-4 w-4 mr-2" />
-          Redigera
+          {action.icon}
+          {action.label}
         </DropdownMenuItem>
+      ))}
+      <DropdownMenuSeparator />
+      {deleteBlockedReason?.(item) ? (
+        <DropdownMenuItem disabled className="flex-col items-start">
+          <span className="flex items-center">
+            <Trash2 className="h-4 w-4 mr-2" />
+            Ta bort
+          </span>
+          <span className="text-xs pl-6">{deleteBlockedReason(item)}</span>
+        </DropdownMenuItem>
+      ) : (
         <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
           onClick={(e) => {
             e.stopPropagation()
             onDelete(item)
@@ -114,100 +151,97 @@ export function DataTable<T extends { id: string }>({
           <Trash2 className="h-4 w-4 mr-2" />
           Ta bort
         </DropdownMenuItem>
-        {actions.map((action, index) => (
-          <DropdownMenuItem
-            key={index}
-            onClick={(e) => {
-              e.stopPropagation()
-              action.onClick(item)
-            }}
-          >
-            {action.icon}
-            {action.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
+      )}
+    </DropdownMenuContent>
+  )
+
+  const renderActionsCell = (item: T) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={actionsLabel(item)}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      {renderMenuContent(item)}
     </DropdownMenu>
+  )
+
+  const shownColumns = visibleColumns(columns, data).map((column, index) =>
+    index === 0 && getRowHref
+      ? {
+          ...column,
+          render: (item: T) => (
+            <Link
+              to={getRowHref(item)}
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {column.render(item)}
+            </Link>
+          ),
+        }
+      : column
   )
 
   // Add actions column to the columns array
   const columnsWithActions: Column<T>[] = [
-    ...columns,
+    ...shownColumns,
     {
       key: 'actions',
       label: '',
       render: renderActionsCell,
-      className: 'w-[50px]',
+      className: 'w-[72px]',
       hideOnMobile: true,
     },
   ]
 
-  // Mobile card renderer with action buttons
-  const mobileCardRenderer = (item: T) => (
-    <div className="space-y-3">
-      {/* Column data */}
-      <div className="space-y-2">
-        {columns
-          .filter((col) => !col.hideOnMobile)
-          .map((column) => (
-            <div
-              key={column.key}
-              className="flex justify-between items-start gap-2"
-            >
-              <span className="text-xs text-muted-foreground font-medium shrink-0">
-                {column.label}:
-              </span>
-              <span className="text-sm text-right break-words">
-                {column.render(item)}
-              </span>
-            </div>
-          ))}
-      </div>
+  const mobileCardRenderer = (item: T, expandToggle: React.ReactNode) => {
+    const [primary, ...rest] = shownColumns.filter((col) => !col.hideOnMobile)
+    const details = rest.filter((column) => !column.isEmpty?.(item))
 
-      {/* Action buttons for mobile */}
-      <div className="flex flex-wrap gap-2 pt-2 border-t">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation()
-            onEdit(item)
-          }}
-          className="flex-1 min-w-[100px]"
-        >
-          <Edit className="h-4 w-4 mr-1" />
-          Redigera
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(item)
-          }}
-          className="flex-1 min-w-[100px]"
-        >
-          <Trash2 className="h-4 w-4 mr-1" />
-          Ta bort
-        </Button>
-        {actions.map((action, index) => (
-          <Button
-            key={index}
-            variant="outline"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation()
-              action.onClick(item)
-            }}
-            className="flex-1 min-w-[100px]"
-          >
-            {action.icon}
-            {action.label}
-          </Button>
-        ))}
+    return (
+      <div className="space-y-1 text-sm">
+        <div className="flex items-start gap-1">
+          <div className="min-w-0 flex-1 break-words">
+            {primary?.render(item)}
+          </div>
+          <div className="-my-2.5 -mr-1.5 flex shrink-0">
+            {expandToggle}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={actionsLabel(item)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              {renderMenuContent(item)}
+            </DropdownMenu>
+          </div>
+        </div>
+        {details.length > 0 && (
+          <dl className="flex flex-wrap gap-x-4 gap-y-0.5">
+            {details.map((column) => (
+              <div key={column.key} className="flex min-w-0 gap-1.5">
+                <dt className="shrink-0 text-muted-foreground">
+                  {column.label}
+                </dt>
+                <dd className="min-w-0 break-words">{column.render(item)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
-    </div>
-  )
+    )
+  }
 
   const paginatedData = data.slice(
     (currentPage - 1) * pageSize,
@@ -224,6 +258,8 @@ export function DataTable<T extends { id: string }>({
         onRowClick={onRowClick}
         expandableContent={expandableContent}
         mobileCardRenderer={mobileCardRenderer}
+        rowLabel={getRowLabel}
+        rowsFocusable={!getRowHref}
       />
       <Pagination
         currentPage={currentPage}

@@ -16,28 +16,52 @@ import type {
   UpdateComponentType,
 } from '@/services/types'
 
-import { DELETE, GET, POST, PUT } from './baseApi'
+import { DELETE, GET, POST, PUT, toApiError } from './baseApi'
 
 // The backend caps `limit` at 100 per request. Categories and types have no
 // server-side search, so "fetch all" must walk every page — a single capped
 // request would make row 101+ unreachable in the client-paginated tables.
 const PAGE_LIMIT = 100
 
+const fetchAllPages = async <T>(
+  fetchPage: (
+    page: number
+  ) => Promise<{ data?: { content?: unknown[] }; error?: unknown }>
+): Promise<T[]> => {
+  const all: T[] = []
+  for (let page = 1; ; page++) {
+    const { data, error } = await fetchPage(page)
+    if (error) throw error
+    const items = (data?.content ?? []) as T[]
+    all.push(...items)
+    // A short page means we've reached the end (not every list response
+    // carries pagination meta to read a total from).
+    if (items.length < PAGE_LIMIT) return all
+  }
+}
+
+export interface ComponentPageFilter {
+  subtypeId: string
+  modelId?: string
+  withoutModel?: boolean
+  search?: string
+  page: number
+  limit: number
+}
+
+export interface ComponentPage {
+  content: Component[]
+  pagination: { page: number; limit: number; total: number; totalPages: number }
+}
+
 export const componentLibraryService = {
   // ===== Category Operations =====
   async getCategories(): Promise<ComponentCategory[]> {
-    const all: ComponentCategory[] = []
-    for (let page = 1; ; page++) {
-      const { data, error } = await GET('/component-categories', {
+    return fetchAllPages<ComponentCategory>((page) =>
+      GET('/component-categories', {
         params: { query: { limit: PAGE_LIMIT, page } },
       })
-      if (error) throw error
-      const items = (data?.content || []) as ComponentCategory[]
-      all.push(...items)
-      // A short page means we've reached the end (the response carries no
-      // pagination meta to read a total from).
-      if (items.length < PAGE_LIMIT) return all
-    }
+    )
   },
 
   async getCategoryById(id: string): Promise<ComponentCategory> {
@@ -53,10 +77,10 @@ export const componentLibraryService = {
   async createCategory(
     categoryData: CreateComponentCategory
   ): Promise<ComponentCategory> {
-    const { data, error } = await POST('/component-categories', {
+    const { data, error, response } = await POST('/component-categories', {
       body: categoryData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentCategory
   },
 
@@ -64,37 +88,32 @@ export const componentLibraryService = {
     id: string,
     categoryData: UpdateComponentCategory
   ): Promise<ComponentCategory> {
-    const { data, error } = await PUT('/component-categories/{id}', {
+    const { data, error, response } = await PUT('/component-categories/{id}', {
       params: {
         path: { id },
       },
       body: categoryData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentCategory
   },
 
   async deleteCategory(id: string): Promise<void> {
-    const { error } = await DELETE('/component-categories/{id}', {
+    const { error, response } = await DELETE('/component-categories/{id}', {
       params: {
         path: { id },
       },
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 
   // ===== Type Operations =====
   async getTypes(categoryId?: string): Promise<ComponentType[]> {
-    const all: ComponentType[] = []
-    for (let page = 1; ; page++) {
-      const { data, error } = await GET('/component-types', {
+    return fetchAllPages<ComponentType>((page) =>
+      GET('/component-types', {
         params: { query: { limit: PAGE_LIMIT, page, categoryId } },
       })
-      if (error) throw error
-      const items = (data?.content || []) as ComponentType[]
-      all.push(...items)
-      if (items.length < PAGE_LIMIT) return all
-    }
+    )
   },
 
   async getTypesByCategoryId(categoryId: string): Promise<ComponentType[]> {
@@ -112,10 +131,10 @@ export const componentLibraryService = {
   },
 
   async createType(typeData: CreateComponentType): Promise<ComponentType> {
-    const { data, error } = await POST('/component-types', {
+    const { data, error, response } = await POST('/component-types', {
       body: typeData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentType
   },
 
@@ -123,23 +142,23 @@ export const componentLibraryService = {
     id: string,
     typeData: UpdateComponentType
   ): Promise<ComponentType> {
-    const { data, error } = await PUT('/component-types/{id}', {
+    const { data, error, response } = await PUT('/component-types/{id}', {
       params: {
         path: { id },
       },
       body: typeData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentType
   },
 
   async deleteType(id: string): Promise<void> {
-    const { error } = await DELETE('/component-types/{id}', {
+    const { error, response } = await DELETE('/component-types/{id}', {
       params: {
         path: { id },
       },
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 
   // ===== Subtype Operations =====
@@ -181,10 +200,10 @@ export const componentLibraryService = {
   async createSubtype(
     subtypeData: CreateComponentSubtype
   ): Promise<ComponentSubtype> {
-    const { data, error } = await POST('/component-subtypes', {
+    const { data, error, response } = await POST('/component-subtypes', {
       body: subtypeData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentSubtype
   },
 
@@ -192,46 +211,50 @@ export const componentLibraryService = {
     id: string,
     subtypeData: UpdateComponentSubtype
   ): Promise<ComponentSubtype> {
-    const { data, error } = await PUT('/component-subtypes/{id}', {
+    const { data, error, response } = await PUT('/component-subtypes/{id}', {
       params: {
         path: { id },
       },
       body: subtypeData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentSubtype
   },
 
   async deleteSubtype(id: string): Promise<void> {
-    const { error } = await DELETE('/component-subtypes/{id}', {
+    const { error, response } = await DELETE('/component-subtypes/{id}', {
       params: {
         path: { id },
       },
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 
   // ===== Model Operations =====
   async getModels(
     subtypeId?: string,
-    options?: { page?: number; limit?: number; search?: string }
+    options?: { search?: string }
   ): Promise<ComponentModel[]> {
-    // Fetch all models in one request (backend caps limit at 100) — pagination
-    // is handled client-side in ModelsTable since there are few models.
-    const query: Record<string, string | number | undefined> = {
-      limit: options?.limit || 100,
-    }
-    if (subtypeId) query.subtypeId = subtypeId
-    if (options?.page) query.page = options.page
-    if (options?.search && options.search.trim().length >= 2) {
-      query.modelName = options.search.trim()
-    }
+    const search = options?.search?.trim()
+    const fetchPage = (page: number) =>
+      GET('/component-models', {
+        params: {
+          query: {
+            limit: PAGE_LIMIT,
+            page,
+            subtypeId: subtypeId || undefined,
+            modelName: search && search.length >= 2 ? search : undefined,
+          },
+        },
+      })
 
-    const { data, error } = await GET('/component-models', {
-      params: { query },
-    })
-    if (error) throw error
-    return (data?.content || []) as ComponentModel[]
+    // Without a subtype this is a search across every model: one page is enough.
+    if (!subtypeId) {
+      const { data, error } = await fetchPage(1)
+      if (error) throw error
+      return (data?.content || []) as ComponentModel[]
+    }
+    return fetchAllPages<ComponentModel>(fetchPage)
   },
 
   async getModelsBySubtypeId(subtypeId: string): Promise<ComponentModel[]> {
@@ -249,10 +272,10 @@ export const componentLibraryService = {
   },
 
   async createModel(modelData: CreateComponentModel): Promise<ComponentModel> {
-    const { data, error } = await POST('/component-models', {
+    const { data, error, response } = await POST('/component-models', {
       body: modelData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentModel
   },
 
@@ -260,51 +283,53 @@ export const componentLibraryService = {
     id: string,
     modelData: UpdateComponentModel
   ): Promise<ComponentModel> {
-    const { data, error } = await PUT('/component-models/{id}', {
+    const { data, error, response } = await PUT('/component-models/{id}', {
       params: {
         path: { id },
       },
       body: modelData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentModel
   },
 
   async deleteModel(id: string): Promise<void> {
-    const { error } = await DELETE('/component-models/{id}', {
+    const { error, response } = await DELETE('/component-models/{id}', {
       params: {
         path: { id },
       },
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 
   // ===== Instance Operations =====
-  async getInstances(
-    modelId?: string,
-    params?: {
-      page?: number
-      limit?: number
-      status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
-      search?: string
-    }
-  ): Promise<Component[]> {
+  async getComponentPage(filter: ComponentPageFilter): Promise<ComponentPage> {
+    const search = filter.search?.trim()
     const { data, error } = await GET('/components', {
       params: {
         query: {
-          modelId,
-          limit: params?.limit || 100,
-          page: params?.page,
-          status: params?.status,
-          serialNumber:
-            params?.search && params.search.trim().length >= 2
-              ? params.search.trim()
-              : undefined,
+          subtypeId: filter.subtypeId,
+          modelId: filter.modelId,
+          withoutModel: filter.withoutModel || undefined,
+          serialNumber: search && search.length >= 2 ? search : undefined,
+          page: filter.page,
+          limit: filter.limit,
         },
       },
     })
     if (error) throw error
-    return (data?.content || []) as Component[]
+    const content = (data?.content ?? []) as Component[]
+    const total = data?.pagination?.total ?? content.length
+    return {
+      content,
+      pagination: {
+        page: data?.pagination?.page ?? filter.page,
+        limit: data?.pagination?.limit ?? filter.limit,
+        total,
+        totalPages:
+          data?.pagination?.totalPages ?? Math.ceil(total / filter.limit),
+      },
+    }
   },
 
   async getInstanceById(id: string): Promise<Component> {
@@ -318,10 +343,10 @@ export const componentLibraryService = {
   },
 
   async createInstance(instanceData: CreateComponent): Promise<Component> {
-    const { data, error } = await POST('/components', {
+    const { data, error, response } = await POST('/components', {
       body: instanceData as any, // Local types allow null, API types expect undefined
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as Component
   },
 
@@ -329,23 +354,23 @@ export const componentLibraryService = {
     id: string,
     instanceData: UpdateComponent
   ): Promise<Component> {
-    const { data, error } = await PUT('/components/{id}', {
+    const { data, error, response } = await PUT('/components/{id}', {
       params: {
         path: { id },
       },
       body: instanceData as any, // Local types allow null, API types expect undefined
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as Component
   },
 
   async deleteInstance(id: string): Promise<void> {
-    const { error } = await DELETE('/components/{id}', {
+    const { error, response } = await DELETE('/components/{id}', {
       params: {
         path: { id },
       },
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 }
 

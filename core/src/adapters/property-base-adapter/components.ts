@@ -666,7 +666,13 @@ async function getSurfaceModels(): Promise<
 
 // ==================== COMPONENTS ====================
 
-type GetComponentsResponse = components['schemas']['Component'][]
+type ComponentsPage =
+  paths['/components']['get']['responses'][200]['content']['application/json']
+
+type GetComponentsResponse = {
+  content: components['schemas']['Component'][]
+  pagination?: ComponentsPage['pagination']
+}
 
 async function getComponents(
   modelId?: string,
@@ -674,17 +680,34 @@ async function getComponents(
   page?: number,
   limit?: number,
   serialNumber?: string,
-  subtypeId?: string
+  subtypeId?: string,
+  withoutModel?: boolean,
+  notInstalled?: boolean
 ): Promise<AdapterResult<GetComponentsResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/components', {
       params: {
-        query: { modelId, subtypeId, status, page, limit, serialNumber },
+        query: {
+          modelId,
+          withoutModel,
+          notInstalled,
+          subtypeId,
+          status,
+          page,
+          limit,
+          serialNumber,
+        },
       },
     })
 
     if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+      return {
+        ok: true,
+        data: {
+          content: response.data.content,
+          pagination: response.data.pagination,
+        },
+      }
     }
 
     return { ok: false, err: 'upstream_error' }
