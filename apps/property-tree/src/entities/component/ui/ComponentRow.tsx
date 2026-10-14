@@ -3,9 +3,10 @@ import { AlertTriangle, ChevronDown, FileText, Images } from 'lucide-react'
 
 import type { Component } from '@/services/types'
 
+import { formatComponentModelName } from '@/shared/lib/componentLabels'
 import { formatISODate } from '@/shared/lib/formatters'
 import { cn } from '@/shared/lib/utils'
-import { Badge } from '@/shared/ui/Badge'
+import { badgeVariants } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import {
   Collapsible,
@@ -18,6 +19,7 @@ import {
   calculateComponentAge,
   calculateComponentLifespanProgress,
   calculateComponentWarrantyStatus,
+  componentEconomicLifespan,
   formatComponentCurrency,
   getComponentStatusConfig,
   isKnownInstallationDate,
@@ -32,9 +34,9 @@ interface ComponentRowProps {
 }
 
 const STATUS_BADGE_CLASSES = {
-  green: 'bg-green-100 text-green-800',
-  yellow: 'bg-yellow-100 text-yellow-800',
-  red: 'bg-red-100 text-red-800',
+  green: 'bg-success/15 text-success',
+  yellow: 'bg-warning/15 text-warning',
+  red: 'bg-destructive/15 text-destructive',
   gray: 'bg-muted text-muted-foreground',
 } as const
 
@@ -60,21 +62,17 @@ export const ComponentRow = ({
   const warranty = calculateComponentWarrantyStatus(component)
   const lifespan = calculateComponentLifespanProgress(component)
   const technicalLifespan = knownLifespan(component.subtype?.technicalLifespan)
-  const economicLifespan = knownLifespan(component.subtype?.economicLifespan)
+  const economicLifespan = componentEconomicLifespan(component)
   const status = getComponentStatusConfig(component.status)
   const isPastLifespan = lifespan !== null && lifespan.percentage >= 100
+  const isSurface =
+    component.subtype?.componentType?.category?.type === 'SURFACE'
 
-  const typeName = component.subtype?.componentType?.description
+  const typeName = component.subtype?.componentType?.typeName
   const subtypeName = component.subtype?.subTypeName
   const title = [typeName, subtypeName].filter(Boolean).join(' › ') || '-'
 
-  const manufacturer =
-    component.model?.manufacturer && component.model.manufacturer !== 'Unknown'
-      ? component.model.manufacturer
-      : null
-  const modelName = [manufacturer, component.model?.modelName]
-    .filter(Boolean)
-    .join(' ')
+  const modelName = formatComponentModelName(component.model)
 
   const warrantyText =
     warranty.state === 'active'
@@ -86,7 +84,7 @@ export const ComponentRow = ({
   const summary = [
     modelName || null,
     hasKnownInstallation
-      ? `Installerad ${new Date(installationDate).getFullYear()}`
+      ? `Installerad ${new Date(installationDate).getUTCFullYear()}`
       : 'Installationsår okänt',
     warrantyText,
   ].filter(Boolean)
@@ -129,7 +127,9 @@ export const ComponentRow = ({
     },
     {
       label: 'Specifikationer',
-      value: component.model?.technicalSpecification || null,
+      value: isSurface
+        ? component.specifications || null
+        : component.model?.technicalSpecification || null,
     },
     {
       label: 'Dokumentation',
@@ -137,10 +137,10 @@ export const ComponentRow = ({
     },
   ]
   const missing = [
-    !modelName && 'modell',
-    !component.serialNumber && 'serienummer',
+    !isSurface && !modelName && 'modell',
+    !isSurface && !component.serialNumber && 'serienummer',
     !hasKnownInstallation && 'installationsdatum',
-    warranty.state === 'unknown' && 'garanti',
+    !isSurface && warranty.state === 'unknown' && 'garanti',
     technicalLifespan === null && 'teknisk livslängd',
     economicLifespan === null && 'ekonomisk livslängd',
   ].filter(Boolean)
@@ -148,26 +148,28 @@ export const ComponentRow = ({
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger className="group flex w-full items-start gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">{title}</p>
-          <p className="text-sm text-muted-foreground">{summary.join(' · ')}</p>
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium">{title}</span>
+          <span className="block text-sm text-muted-foreground">
+            {summary.join(' · ')}
+          </span>
           {isPastLifespan && (
-            <p className="mt-1 flex items-center gap-1 text-sm text-amber-700 dark:text-amber-400">
+            <span className="mt-1 flex items-center gap-1 text-sm text-warning">
               <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
               Över teknisk livslängd
-            </p>
+            </span>
           )}
-        </div>
+        </span>
         {status.color !== 'green' && status.label !== '-' && (
-          <Badge
-            variant="outline"
+          <span
             className={cn(
+              badgeVariants({ variant: 'outline' }),
               'shrink-0 border-transparent px-2.5',
               STATUS_BADGE_CLASSES[status.color]
             )}
           >
             {status.label}
-          </Badge>
+          </span>
         )}
         <ChevronDown
           className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"

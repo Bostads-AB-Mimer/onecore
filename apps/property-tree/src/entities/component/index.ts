@@ -13,6 +13,10 @@ export { useComponents, useComponentsBySpace } from './hooks/useComponents'
 export { useSubtypeComponents } from './hooks/useSubtypeComponents'
 
 // Lib
-export { componentNeedsAttention } from './lib/componentCalculations'
+export {
+  componentNeedsAttention,
+  isKnownInstallationDate,
+} from './lib/componentCalculations'
 export { formatComponentLabel } from './lib/componentLabel'
+export { QUERY_KEY_ROOTS } from './lib/componentLibraryQueryKeys'
 export { invalidateComponentQueries } from './lib/invalidateComponentQueries'

@@ -2,7 +2,6 @@
 export { ComponentLibraryBreadcrumb } from './ui/ComponentLibraryBreadcrumb'
 export { ComponentLibraryContent } from './ui/ComponentLibraryContent'
 export { ComponentLibraryDialogs } from './ui/ComponentLibraryDialogs'
-export { ComponentList } from './ui/ComponentList'
 export { LevelActions } from './ui/LevelActions'
 export { SpaceComponents } from './ui/SpaceComponents'
 export { SubtypeView } from './ui/SubtypeView'

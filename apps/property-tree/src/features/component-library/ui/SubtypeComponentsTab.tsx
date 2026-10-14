@@ -95,6 +95,13 @@ export const SubtypeComponentsTab = ({
     )
   }
 
+  const pageContent = componentPage?.content ?? []
+  const pinMarked =
+    page === 1 &&
+    markedComponent !== undefined &&
+    !pageContent.some((c) => c.id === markedComponent.id)
+  const instances = pinMarked ? [markedComponent, ...pageContent] : pageContent
+
   const isEquipment = categoryType === 'EQUIPMENT'
   const isFiltered = Boolean(modelId) || searchInput.trim().length > 0
   const total = componentPage?.pagination.total
@@ -150,14 +157,14 @@ export const SubtypeComponentsTab = ({
           : {})}
       />
       {markedComponent && (
-        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-blue-50 py-1.5 pl-4 pr-1.5 text-sm dark:bg-blue-950/40">
-          <p className="min-w-0 flex-1 text-blue-950 dark:text-blue-100">
-            <span className="text-blue-700 dark:text-blue-300">Markerad: </span>
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-info/10 py-1.5 pl-4 pr-1.5 text-sm">
+          <p className="min-w-0 flex-1 text-foreground">
+            <span className="text-info">Markerad: </span>
             <span className="font-medium">
               {formatComponentPlace(markedComponent)}
             </span>
             {markedComponent.serialNumber && (
-              <span className="whitespace-nowrap tabular-nums text-blue-700 dark:text-blue-300">
+              <span className="whitespace-nowrap tabular-nums text-info">
                 {' · SN '}
                 {markedComponent.serialNumber}
               </span>
@@ -167,7 +174,7 @@ export const SubtypeComponentsTab = ({
             <Button
               variant="ghost"
               size="sm"
-              className="text-blue-800 hover:bg-blue-100 hover:text-blue-950 dark:text-blue-200 dark:hover:bg-blue-900/60"
+              className="text-info hover:bg-info/15 hover:text-info"
               onClick={() => rowHandlers.onViewHistory(markedComponent)}
             >
               Visa detaljer
@@ -175,7 +182,7 @@ export const SubtypeComponentsTab = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 text-blue-800 hover:bg-blue-100 hover:text-blue-950 dark:text-blue-200 dark:hover:bg-blue-900/60"
+              className="h-9 w-9 text-info hover:bg-info/15 hover:text-info"
               onClick={onUnmark}
               aria-label="Ta bort markeringen"
             >
@@ -188,7 +195,7 @@ export const SubtypeComponentsTab = ({
         <NoResultsState onClear={onClearFilters} />
       ) : (
         <InstancesTable
-          instances={componentPage?.content ?? []}
+          instances={instances}
           categoryType={categoryType}
           isLoading={isLoading}
           pageSize={COMPONENT_PAGE_SIZE}

@@ -7,7 +7,7 @@ const componentsQuery = (propertyObjectId: string) => ({
   queryFn: () => componentService.getByRoomId(propertyObjectId),
 })
 
-export function useComponents(propertyObjectId: string) {
+export const useComponents = (propertyObjectId: string) => {
   const query = useQuery(componentsQuery(propertyObjectId))
 
   return {
@@ -17,8 +17,8 @@ export function useComponents(propertyObjectId: string) {
   }
 }
 
-export function useComponentsBySpace(propertyObjectIds: string[]) {
-  return useQueries({
+export const useComponentsBySpace = (propertyObjectIds: string[]) =>
+  useQueries({
     queries: propertyObjectIds.map(componentsQuery),
     combine: (results) =>
       new Map(
@@ -28,4 +28,3 @@ export function useComponentsBySpace(propertyObjectIds: string[]) {
         })
       ),
   })
-}

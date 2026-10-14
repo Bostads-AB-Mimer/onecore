@@ -6,6 +6,7 @@ import {
   calculateComponentAge,
   calculateComponentLifespanProgress,
   calculateComponentWarrantyStatus,
+  componentEconomicLifespan,
   componentNeedsAttention,
   isKnownInstallationDate,
   knownLifespan,
@@ -42,6 +43,10 @@ describe('isKnownInstallationDate', () => {
     expect(isKnownInstallationDate('1899-06-01')).toBe(false)
   })
 
+  it('reads the year in UTC', () => {
+    expect(isKnownInstallationDate('1901-01-01T00:00:00.000Z')).toBe(true)
+  })
+
   it('accepts a real date', () => {
     expect(isKnownInstallationDate('1901-01-01')).toBe(true)
     expect(isKnownInstallationDate('2024-03-01')).toBe(true)
@@ -51,6 +56,11 @@ describe('isKnownInstallationDate', () => {
 describe('calculateComponentAge', () => {
   it('counts years since a known installation', () => {
     expect(calculateComponentAge('2020-05-01')).toBe(6)
+  })
+
+  it('counts only whole elapsed years', () => {
+    expect(calculateComponentAge('2016-12-15')).toBe(9)
+    expect(calculateComponentAge('2016-10-14')).toBe(10)
   })
 
   it('has no age for the import placeholder', () => {
@@ -99,6 +109,38 @@ describe('knownLifespan', () => {
   })
 })
 
+describe('componentEconomicLifespan', () => {
+  it("prefers the component's own lifespan", () => {
+    expect(
+      componentEconomicLifespan(
+        component({
+          economicLifespan: 20,
+          subtype: { economicLifespan: 15 } as never,
+        })
+      )
+    ).toBe(20)
+  })
+
+  it('falls back to the subtype', () => {
+    expect(
+      componentEconomicLifespan(
+        component({
+          economicLifespan: 0,
+          subtype: { economicLifespan: 15 } as never,
+        })
+      )
+    ).toBe(15)
+  })
+
+  it('is unknown when neither has one', () => {
+    expect(
+      componentEconomicLifespan(
+        component({ subtype: { economicLifespan: 0 } as never })
+      )
+    ).toBeNull()
+  })
+})
+
 describe('calculateComponentLifespanProgress', () => {
   it('needs a known installation date', () => {
     expect(
@@ -130,6 +172,15 @@ describe('componentNeedsAttention', () => {
         status: 'ACTIVE',
       } as Component)
     ).toBe(true)
+  })
+
+  it('does not flag a component in the last year before its lifespan', () => {
+    expect(
+      componentNeedsAttention({
+        ...installedOn('2016-12-15', 10),
+        status: 'ACTIVE',
+      } as Component)
+    ).toBe(false)
   })
 
   it('does not flag an active component with an unknown age', () => {

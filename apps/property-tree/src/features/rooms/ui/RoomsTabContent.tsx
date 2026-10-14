@@ -9,13 +9,14 @@ import {
 import type { components } from '@/services/api/core/generated/api-types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
+import { cn } from '@/shared/lib/utils'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/shared/ui/Accordion'
-import { Badge } from '@/shared/ui/Badge'
+import { badgeVariants } from '@/shared/ui/Badge'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
 import { useRoomDeepLink } from '../hooks/useRoomDeepLink'
@@ -47,14 +48,16 @@ export const RoomsTabContent = ({
   const rooms = [...(roomsQuery.data ?? [])].sort(byDisplayOrder)
   const { openRoomId, setOpenRoomId, roomRefs } = useRoomDeepLink(rooms)
   const componentsBySpace = useComponentsBySpace(
-    rooms.map((room) => room.propertyObjectId)
+    rooms.filter((room) => !room.deleted).map((room) => room.propertyObjectId)
   )
 
   return (
     <TabLayout
       title="Rum"
       showCard={!isMobile}
-      count={roomsQuery.isLoading ? undefined : rooms.length}
+      count={
+        roomsQuery.isLoading || roomsQuery.error ? undefined : rooms.length
+      }
       isLoading={roomsQuery.isLoading}
       error={roomsQuery.error as Error | null}
       errorMessage="Kunde inte hämta rummen. Ladda om sidan för att försöka igen."
@@ -100,19 +103,21 @@ export const RoomsTabContent = ({
                       {room.code}
                     </span>
                     {room.deleted && (
-                      <Badge
-                        variant="outline"
-                        className="border-transparent bg-muted px-2.5 text-muted-foreground"
+                      <span
+                        className={cn(
+                          badgeVariants({ variant: 'outline' }),
+                          'border-transparent bg-muted px-2.5 text-muted-foreground'
+                        )}
                       >
                         Borttaget
-                      </Badge>
+                      </span>
                     )}
                   </span>
                   {roomComponents && (
                     <span className="flex shrink-0 flex-col items-end text-sm font-normal sm:flex-row sm:items-center sm:gap-3">
                       <span className="sr-only">, </span>
                       {attentionCount > 0 && (
-                        <span className="flex items-center gap-1 text-amber-700 dark:text-amber-400">
+                        <span className="flex items-center gap-1 text-warning">
                           <AlertTriangle
                             className="h-4 w-4 shrink-0"
                             aria-hidden

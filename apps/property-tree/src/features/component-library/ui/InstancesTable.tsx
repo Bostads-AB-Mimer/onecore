@@ -41,9 +41,7 @@ interface InstancesTableProps {
 }
 
 const residenceUrl = (rentalId: string, roomCode: string | null) =>
-  roomCode
-    ? `${paths.residence(rentalId)}?room=${encodeURIComponent(roomCode)}`
-    : paths.residence(rentalId)
+  roomCode ? paths.room(rentalId, roomCode) : paths.residence(rentalId)
 
 const muted = (text: string) => (
   <span className="text-muted-foreground">{text}</span>

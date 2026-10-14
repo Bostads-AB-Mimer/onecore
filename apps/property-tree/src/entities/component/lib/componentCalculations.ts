@@ -15,7 +15,7 @@ export const isKnownInstallationDate = (
   installationDate: string | null | undefined
 ): installationDate is string =>
   !!installationDate &&
-  new Date(installationDate).getFullYear() > LAST_PLACEHOLDER_YEAR
+  new Date(installationDate).getUTCFullYear() > LAST_PLACEHOLDER_YEAR
 
 export const calculateComponentAge = (
   installationDate: string | null | undefined
@@ -23,12 +23,23 @@ export const calculateComponentAge = (
   if (!isKnownInstallationDate(installationDate)) return null
   const installed = new Date(installationDate)
   const now = new Date()
-  const years = now.getFullYear() - installed.getFullYear()
+  const beforeAnniversary =
+    now.getUTCMonth() < installed.getUTCMonth() ||
+    (now.getUTCMonth() === installed.getUTCMonth() &&
+      now.getUTCDate() < installed.getUTCDate())
+  const years =
+    now.getUTCFullYear() -
+    installed.getUTCFullYear() -
+    (beforeAnniversary ? 1 : 0)
   return years >= 0 ? years : 0
 }
 
 export const knownLifespan = (years: number | null | undefined) =>
   years ? years : null
+
+export const componentEconomicLifespan = (component: Component) =>
+  knownLifespan(component.economicLifespan) ??
+  knownLifespan(component.subtype?.economicLifespan)
 
 export type WarrantyState = 'active' | 'expired' | 'unknown'
 

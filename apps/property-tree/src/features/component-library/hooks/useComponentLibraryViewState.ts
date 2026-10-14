@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
-import { useComponentEntity, useSubtypeComponents } from '@/entities/component'
+import {
+  QUERY_KEY_ROOTS,
+  useComponentEntity,
+  useSubtypeComponents,
+} from '@/entities/component'
 
 import { componentLibraryService } from '@/services/api/core/componentLibraryService'
 import type {
@@ -205,7 +209,7 @@ export const useComponentLibraryViewState = () => {
       ? (searchParams.get('componentId') ?? undefined)
       : undefined
   const markedComponent = useQuery({
-    queryKey: ['component-instances', 'by-id', markedComponentId],
+    queryKey: [QUERY_KEY_ROOTS.instance, 'by-id', markedComponentId],
     queryFn: () => componentLibraryService.getInstanceById(markedComponentId!),
     enabled: markedComponentId !== undefined,
   })
@@ -216,7 +220,10 @@ export const useComponentLibraryViewState = () => {
 
   return {
     viewState,
-    markedComponent: markedComponentId ? markedComponent.data : undefined,
+    markedComponent:
+      markedComponentId && !markedComponent.isError
+        ? markedComponent.data
+        : undefined,
     unmarkComponent,
     navigateTo,
     setTab,

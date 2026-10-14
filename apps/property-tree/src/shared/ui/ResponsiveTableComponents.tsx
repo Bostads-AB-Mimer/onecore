@@ -4,8 +4,7 @@ import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 
-const HIGHLIGHTED_ROW =
-  'bg-blue-50 hover:bg-blue-100/70 dark:bg-blue-950/40 dark:hover:bg-blue-950/60'
+const HIGHLIGHTED_ROW = 'bg-info/10 hover:bg-info/15'
 
 interface Column<T> {
   key: string
