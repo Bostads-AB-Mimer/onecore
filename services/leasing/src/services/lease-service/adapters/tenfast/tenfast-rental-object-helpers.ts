@@ -15,9 +15,10 @@ export const getLatestActiveLeasesEndDate = (
     // `requested` indicates notice was given; `cancelled` means that
     // termination notice was itself later withdrawn, so both must be
     // checked — `requested` alone doesn't necessarily flip back to false
-    // when a notice is withdrawn.
+    // when a notice is withdrawn. Leases on a rental object are parsed
+    // partially, so cancellation may be missing.
     .filter(
-      (lease) => lease.cancellation.requested && !lease.cancellation.cancelled
+      (lease) => lease.cancellation?.requested && !lease.cancellation?.cancelled
     )
     .map((lease) => lease.endDate)
     .filter((date): date is Date => date != null)
