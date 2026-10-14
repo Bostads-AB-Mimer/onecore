@@ -1,7 +1,7 @@
 // UI
-export { ComponentCard } from './ui/ComponentCard'
 export { ComponentImageGallery } from './ui/ComponentImageGallery'
 export { ComponentImageUpload } from './ui/ComponentImageUpload'
+export { ComponentRow } from './ui/ComponentRow'
 export { InstanceSelector } from './ui/InstanceSelector'
 export { SubtypeSelector } from './ui/SubtypeSelector'
 
@@ -9,9 +9,10 @@ export { SubtypeSelector } from './ui/SubtypeSelector'
 export { useComponentEntity } from './hooks/useComponentEntity'
 export { useComponentEntityMutation } from './hooks/useComponentEntityMutation'
 export { useComponentImages } from './hooks/useComponentImages'
-export { useComponents } from './hooks/useComponents'
+export { useComponents, useComponentsBySpace } from './hooks/useComponents'
 export { useSubtypeComponents } from './hooks/useSubtypeComponents'
 
 // Lib
+export { componentNeedsAttention } from './lib/componentCalculations'
 export { formatComponentLabel } from './lib/componentLabel'
 export { invalidateComponentQueries } from './lib/invalidateComponentQueries'
