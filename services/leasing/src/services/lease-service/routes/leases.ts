@@ -6,7 +6,6 @@ import {
   getLeases,
   getContacts,
   getContactByContactCode,
-  getEmailAndPhoneByContactCodes,
 } from '../adapters/xpand/tenant-lease-adapter'
 import {
   searchLeases,
@@ -15,16 +14,10 @@ import {
 import {
   logger,
   generateRouteMetadata,
-  setExcelDownloadHeaders,
-  createExcelExport,
-  joinField,
-  formatDateForExcel,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 
-import { LeaseStatusLabel } from '@onecore/types'
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
-import * as leaseCache from '../../../common/lease-cache'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import config from '../../../common/config'
@@ -296,8 +289,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /leases/export:
    *   get:
-   *     summary: Export leases to Excel
-   *     description: Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+   *     summary: Get all leases matching search filters, for export
+   *     description: Returns the full (unpaginated) set of leases matching the same filters as /leases/search. Raw data only — contact enrichment and Excel generation happen in core.
    *     tags: [Leases]
    *     parameters:
    *       - in: query
@@ -357,16 +350,9 @@ export const routes = (router: KoaRouter) => {
    *           items:
    *             type: string
    *         description: District names
-   *     produces:
-   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
    *     responses:
    *       200:
-   *         description: Excel file download
-   *         content:
-   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-   *             schema:
-   *               type: string
-   *               format: binary
+   *         description: Successfully retrieved leases.
    *       400:
    *         description: Invalid query parameters
    *       500:
@@ -407,89 +393,13 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      if (leaseCache.getAll().length === 0) {
-        const ready = await leaseCache.ensureReady(10_000)
-        if (!ready) {
-          ctx.throw(503, 'Lease cache is warming up — retry shortly', {
-            headers: { 'Retry-After': '30' },
-          })
-        }
-      }
-
       const rawLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
-        queryParams.data
+        queryParams.data,
+        ctx
       )
 
-      // TODO(AVTAL-270): Route through contacts-service instead of querying Xpand directly
-      // Enrich contacts with email/phone from Xpand (Tenfast only has names)
-      const contactCodes = [
-        ...new Set(
-          rawLeases
-            .flatMap((l) => l.contacts?.map((c) => c.contactCode) ?? [])
-            .map((c) => c.trim())
-            .filter((c) => c.length > 0)
-        ),
-      ]
-      const contactInfoMap = await getEmailAndPhoneByContactCodes(contactCodes)
-      const allLeases = rawLeases.map((l) => ({
-        ...l,
-        contacts: l.contacts?.map((c) => {
-          const info = contactInfoMap.get(c.contactCode.trim())
-          return {
-            ...c,
-            email: info?.email ?? c.email,
-            phone: info?.phone ?? c.phone,
-          }
-        }),
-      }))
-
-      // Create Excel from the complete dataset
-      const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({
-        sheetName: 'Hyreskontrakt',
-        columns: [
-          { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
-          { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
-          { header: 'Hyresgäst', key: 'tenantName', width: 30 },
-          { header: 'Kundnummer', key: 'contactCode', width: 18 },
-          { header: 'E-post', key: 'email', width: 30 },
-          { header: 'Telefon', key: 'phone', width: 15 },
-          { header: 'Objekttyp', key: 'objectType', width: 12 },
-          { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
-          { header: 'Adress', key: 'address', width: 35 },
-          { header: 'Fastighet', key: 'property', width: 20 },
-          { header: 'Distrikt', key: 'district', width: 15 },
-          { header: 'Startdatum', key: 'startDate', width: 12 },
-          { header: 'Slutdatum', key: 'endDate', width: 12 },
-          { header: 'Status', key: 'status', width: 15 },
-        ],
-        data: allLeases,
-        rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
-          leaseId: lease.leaseId,
-          rentalObjectCode: lease.rentalObjectCode || '',
-          tenantName: joinField(lease.contacts, (c) =>
-            c.contactType === 'subletTenant' ? `${c.name} (andrahand)` : c.name
-          ),
-          contactCode: joinField(lease.contacts, (c) =>
-            c.contactType === 'subletTenant'
-              ? `${c.contactCode} (andrahand)`
-              : c.contactCode
-          ),
-          email: joinField(lease.contacts, (c) => c.email),
-          phone: joinField(lease.contacts, (c) => c.phone),
-          objectType: lease.parkingSpaceType || lease.objectTypeCode,
-          leaseType: lease.leaseType,
-          address: lease.address || '',
-          property: lease.property || '',
-          district: lease.districtName || '',
-          startDate: formatDateForExcel(lease.startDate),
-          endDate: formatDateForExcel(lease.lastDebitDate),
-          status: LeaseStatusLabel[lease.status] ?? String(lease.status),
-        }),
-      })
-
-      // 3. Set headers and return
-      setExcelDownloadHeaders(ctx, 'hyreskontrakt')
-      ctx.body = buffer
+      ctx.status = 200
+      ctx.body = { content: rawLeases, ...metadata }
     } catch (error: unknown) {
       // Set by hand — a re-thrown error hits errorHandler(), which always
       // forces status 500 regardless of the error's own status.
@@ -499,7 +409,7 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { error: error.message, ...metadata }
         return
       }
-      logger.error({ error, metadata }, 'Error exporting leases to Excel')
+      logger.error({ error, metadata }, 'Error fetching leases for export')
       ctx.status = 500
       ctx.body = {
         error: error instanceof Error ? error.message : 'Export failed',

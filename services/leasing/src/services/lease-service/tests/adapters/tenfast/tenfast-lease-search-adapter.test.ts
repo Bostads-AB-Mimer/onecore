@@ -32,6 +32,10 @@ const mockedRefreshIfStale = leaseCache.refreshIfStale as jest.MockedFunction<
   typeof leaseCache.refreshIfStale
 >
 
+const mockedEnsureReady = leaseCache.ensureReady as jest.MockedFunction<
+  typeof leaseCache.ensureReady
+>
+
 const mockedGetRentalObjectCodesByBuildingManager =
   xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingManager as jest.MockedFunction<
     typeof xpandLeaseSearchAdapter.getRentalObjectCodesByBuildingManager
@@ -745,10 +749,10 @@ describe('tenfast-lease-search-adapter', () => {
     })
 
     it('refreshes a stale cache before reading it, same as searchLeases', async () => {
-      await tenfastLeaseSearchAdapter.fetchAllLeasesForExport({
-        page: 1,
-        limit: 500,
-      })
+      await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+        { page: 1, limit: 500 },
+        mockCtx
+      )
 
       expect(mockedRefreshIfStale).toHaveBeenCalledWith(60_000, 10_000)
     })
@@ -759,12 +763,24 @@ describe('tenfast-lease-search-adapter', () => {
         makeLeaseResult('lease-2'),
       ])
 
-      const result = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport({
-        page: 1,
-        limit: 500,
-      })
+      const result = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+        { page: 1, limit: 500 },
+        mockCtx
+      )
 
       expect(result).toHaveLength(2)
+    })
+
+    it('throws 503 when the cache is empty and does not warm up in time, same as searchLeases', async () => {
+      mockedGetAll.mockReturnValue([])
+      mockedEnsureReady.mockResolvedValue(false)
+
+      await expect(
+        tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+          { page: 1, limit: 500 },
+          mockCtx
+        )
+      ).rejects.toMatchObject({ status: 503 })
     })
   })
 

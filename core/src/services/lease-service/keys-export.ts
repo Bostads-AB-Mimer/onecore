@@ -12,6 +12,8 @@ import { leasing, LeaseStatusLabel } from '@onecore/types'
 
 import { KeysApi } from '../../adapters/keys-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import { enrichLeaseContacts } from '../../adapters/contacts-adapter/lease-query'
+import * as utils from '../../utils'
 
 const querySchema = z.object({
   property: z.string().min(1),
@@ -23,29 +25,6 @@ const PAGE_SIZE = 100
 
 type EnrichedLease = leasing.v1.LeaseSearchResult & {
   keyName: string
-}
-
-async function runWithConcurrency<T, R>(
-  items: T[],
-  worker: (item: T) => Promise<R>,
-  concurrency: number
-): Promise<R[]> {
-  const results: R[] = new Array(items.length)
-  let cursor = 0
-
-  const runners = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    async () => {
-      while (true) {
-        const index = cursor++
-        if (index >= items.length) return
-        results[index] = await worker(items[index])
-      }
-    }
-  )
-
-  await Promise.all(runners)
-  return results
 }
 
 async function enrichLeasesWithKeys(
@@ -61,7 +40,7 @@ async function enrichLeasesWithKeys(
   let empty = 0
   let withKeys = 0
 
-  await runWithConcurrency(
+  await utils.concurrency.runWithConcurrency(
     enriched,
     async (lease) => {
       if (!lease.rentalObjectCode) return
@@ -163,7 +142,11 @@ export const routes = (router: KoaRouter) => {
               : {}),
           })
 
-          const enriched = await enrichLeasesWithKeys(response.content)
+          const withContacts = await enrichLeaseContacts(
+            response.content,
+            'leases/keys-export'
+          )
+          const enriched = await enrichLeasesWithKeys(withContacts)
           return { ...response, content: enriched }
         },
         {

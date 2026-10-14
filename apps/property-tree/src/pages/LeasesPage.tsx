@@ -212,7 +212,8 @@ const LeasesPage = () => {
               hint={
                 /^\d+$/.test(filters.searchInput) &&
                 filters.searchInput.length >= 4 &&
-                filters.searchInput.length < 10
+                filters.searchInput.length !== 10 &&
+                filters.searchInput.length !== 12
                   ? 'Ange hela personnumret (10 eller 12 siffror) för att söka på personnummer.'
                   : undefined
               }

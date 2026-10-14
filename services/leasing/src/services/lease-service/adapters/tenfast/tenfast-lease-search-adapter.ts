@@ -152,8 +152,18 @@ async function resolveXpandRentalObjectCodes(
 }
 
 export async function fetchAllLeasesForExport(
-  params: leasing.v1.LeaseSearchQueryParams
+  params: leasing.v1.LeaseSearchQueryParams,
+  ctx: Context
 ): Promise<leasing.v1.LeaseSearchResult[]> {
+  if (leaseCache.getAll().length === 0) {
+    const ready = await leaseCache.ensureReady(STALE_SYNC_TIMEOUT_MS)
+    if (!ready) {
+      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
+        headers: { 'Retry-After': '30' },
+      })
+    }
+  }
+
   await leaseCache.refreshIfStale(STALE_THRESHOLD_MS, STALE_SYNC_TIMEOUT_MS)
 
   const rentalObjectCodes = await resolveXpandRentalObjectCodes(params)
