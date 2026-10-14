@@ -1,25 +1,15 @@
 import KoaRouter from '@koa/router'
-import { isAxiosError } from 'axios'
-import { logger } from '@onecore/utilities'
 
 import {
   exchangeContactsAuthorizationCode,
   isContactsKeycloakConfigured,
   refreshContactsAccessToken,
 } from './keycloak-contacts'
-
-function keycloakErrorStatus(error: unknown): number {
-  if (isAxiosError(error)) {
-    const status = error.response?.status
-    if (status === 400 || status === 401) {
-      return 400
-    }
-    if (status && status >= 500) {
-      return 502
-    }
-  }
-  return 500
-}
+import {
+  bodyForContactsKeycloakError,
+  httpStatusForContactsKeycloakError,
+  logContactsKeycloakTokenError,
+} from './contacts-keycloak-errors'
 
 /**
  * OAuth helper routes for mimer.nu (mimer-contacts realm).
@@ -50,9 +40,11 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
    *                 type: string
    *     responses:
    *       '200':
-   *         description: Tokens and user profile from Keycloak
+   *         description: OAuth tokens from Keycloak
    *       '400':
    *         description: Invalid request or invalid_grant from Keycloak
+   *       '502':
+   *         description: Keycloak unavailable or misconfigured
    *       '503':
    *         description: Contacts Keycloak not configured on this environment
    */
@@ -85,14 +77,12 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = result
     } catch (error) {
-      logger.error(error, 'Authentication error in /auth/contacts/callback')
-      ctx.status = keycloakErrorStatus(error)
-      ctx.body = {
-        error:
-          ctx.status === 400
-            ? 'invalid_grant'
-            : 'contacts_token_exchange_failed',
-      }
+      logContactsKeycloakTokenError(
+        'Authentication error in /auth/contacts/callback',
+        error
+      )
+      ctx.status = httpStatusForContactsKeycloakError(error)
+      ctx.body = bodyForContactsKeycloakError(ctx.status)
     }
   })
 
@@ -120,6 +110,8 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
    *         description: New access and refresh tokens
    *       '400':
    *         description: Invalid refresh token
+   *       '502':
+   *         description: Keycloak unavailable
    *       '503':
    *         description: Contacts Keycloak not configured
    */
@@ -141,23 +133,15 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
     }
 
     try {
-      const tokens = await refreshContactsAccessToken(refreshToken)
       ctx.status = 200
-      ctx.body = {
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expires_in: tokens.expires_in,
-        token_type: tokens.token_type ?? 'Bearer',
-      }
+      ctx.body = await refreshContactsAccessToken(refreshToken)
     } catch (error) {
-      logger.error(error, 'Token refresh failed in /auth/contacts/refresh')
-      ctx.status = keycloakErrorStatus(error)
-      ctx.body = {
-        error:
-          ctx.status === 400
-            ? 'invalid_grant'
-            : 'contacts_token_refresh_failed',
-      }
+      logContactsKeycloakTokenError(
+        'Token refresh failed in /auth/contacts/refresh',
+        error
+      )
+      ctx.status = httpStatusForContactsKeycloakError(error)
+      ctx.body = bodyForContactsKeycloakError(ctx.status)
     }
   })
 }

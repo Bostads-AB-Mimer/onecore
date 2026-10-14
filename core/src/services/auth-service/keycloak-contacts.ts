@@ -13,8 +13,11 @@ function contactsKeycloakRealmUrl(): string {
   return `${config.auth.keycloak.url}/realms/${config.auth.keycloak.contacts.realm}`
 }
 
+function tokenEndpointUrl(): string {
+  return `${contactsKeycloakRealmUrl()}/protocol/openid-connect/token`
+}
+
 let contactsAuth: ReturnType<typeof keycloak> | null = null
-let refreshInProgress: Promise<TokenData> | null = null
 
 function getContactsAuth(): ReturnType<typeof keycloak> {
   if (!isContactsKeycloakConfigured()) {
@@ -35,69 +38,56 @@ function getContactsAuth(): ReturnType<typeof keycloak> {
   return contactsAuth
 }
 
+export type ContactsTokenResponse = {
+  access_token: string
+  refresh_token?: string
+  expires_in: number
+  refresh_expires_in?: number
+  token_type: string
+}
+
+function toContactsTokenResponse(data: TokenData): ContactsTokenResponse {
+  const extended = data as TokenData & { refresh_expires_in?: number }
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_in: data.expires_in,
+    refresh_expires_in: extended.refresh_expires_in,
+    token_type: data.token_type ?? 'Bearer',
+  }
+}
+
 export async function refreshContactsAccessToken(
   refreshToken: string
-): Promise<TokenData> {
-  if (refreshInProgress) {
-    return refreshInProgress
-  }
+): Promise<ContactsTokenResponse> {
+  const params = new URLSearchParams({
+    grant_type: 'refresh_token',
+    client_id: config.auth.keycloak.contacts.clientId,
+    client_secret: config.auth.keycloak.contacts.clientSecret,
+    refresh_token: refreshToken,
+  }).toString()
 
-  refreshInProgress = (async () => {
-    const params = new URLSearchParams({
-      grant_type: 'refresh_token',
-      client_id: config.auth.keycloak.contacts.clientId,
-      client_secret: config.auth.keycloak.contacts.clientSecret,
-      refresh_token: refreshToken,
-    }).toString()
+  const response = await axios.post<TokenData>(tokenEndpointUrl(), params, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    timeout: 10000,
+  })
 
-    const tokenEndpoint = `${contactsKeycloakRealmUrl()}/protocol/openid-connect/token`
-
-    const response = await axios.post<TokenData>(tokenEndpoint, params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      timeout: 10000,
-    })
-
-    return response.data
-  })()
-
-  try {
-    return await refreshInProgress
-  } finally {
-    refreshInProgress = null
-  }
+  return toContactsTokenResponse(response.data)
 }
 
 export async function exchangeContactsAuthorizationCode(
   code: string,
   redirectUri: string
-) {
+): Promise<ContactsTokenResponse> {
   const auth = getContactsAuth()
   const tokenData = await auth.tokenService.exchangeCodeForTokens(
     code,
     redirectUri
   )
-  const verifiedToken = await auth.jwksService.verifyToken(
-    tokenData.access_token
-  )
-
-  return {
-    access_token: tokenData.access_token,
-    refresh_token: tokenData.refresh_token,
-    expires_in: tokenData.expires_in,
-    token_type: tokenData.token_type ?? 'Bearer',
-    user: {
-      id: verifiedToken.sub,
-      email: verifiedToken.email,
-      name: verifiedToken.name,
-      preferred_username: verifiedToken.preferred_username,
-      realm_access: verifiedToken.realm_access,
-      source: 'keycloak' as const,
-    },
-  }
+  return toContactsTokenResponse(tokenData)
 }
 
 /** @internal Test hook to reset cached client between tests */
 export function resetContactsKeycloakClientForTests(): void {
   contactsAuth = null
-  refreshInProgress = null
 }
