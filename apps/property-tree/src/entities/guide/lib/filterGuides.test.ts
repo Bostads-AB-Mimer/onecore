@@ -50,4 +50,29 @@ describe('filterGuides', () => {
   it('returns an empty list when nothing matches', () => {
     expect(filterGuides(guides, 'besiktning')).toEqual([])
   })
+
+  describe('with a category', () => {
+    const withOdoo = [
+      ...guides,
+      summary('Registrera felanmälan', 'Felanmälan i Odoo', 'Odoo'),
+    ]
+
+    it('returns only that category for an empty search', () => {
+      expect(filterGuides(withOdoo, '', 'Odoo').map((g) => g.title)).toEqual([
+        'Registrera felanmälan',
+      ])
+    })
+
+    it('searches within the category only', () => {
+      expect(filterGuides(withOdoo, 'registrera')).toHaveLength(2)
+      expect(
+        filterGuides(withOdoo, 'registrera', 'Tenfast').map((g) => g.title)
+      ).toEqual(['Registrera uppsägning'])
+      expect(filterGuides(withOdoo, 'faktura', 'Tenfast')).toEqual([])
+    })
+
+    it('returns an empty list for an unknown category', () => {
+      expect(filterGuides(withOdoo, '', 'okänd')).toEqual([])
+    })
+  })
 })

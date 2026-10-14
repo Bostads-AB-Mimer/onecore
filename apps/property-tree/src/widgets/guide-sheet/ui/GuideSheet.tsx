@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, BookX, ExternalLink } from 'lucide-react'
 
@@ -7,7 +8,7 @@ import {
   UnpublishedGuideNotice,
 } from '@/features/guides'
 
-import { useGuide } from '@/entities/guide'
+import { type GuideCategoryGroup, useGuide } from '@/entities/guide'
 import { GUIDES_ADMIN_ROLE, useHasRole, useUser } from '@/entities/user'
 
 import { isUnpublishedGuide } from '@/services/api/core'
@@ -33,6 +34,17 @@ export function GuideSheet() {
   const { isOpen, slug, openGuide, openOverview, close } = useGuideSheet()
   const canEdit = useHasRole(GUIDES_ADMIN_ROLE)
   const userState = useUser()
+  // Which category the overview is showing. Kept here rather than in the
+  // sheet context so going back from a guide returns to its category.
+  const [category, setCategory] = useState<Pick<
+    GuideCategoryGroup,
+    'id' | 'name'
+  > | null>(null)
+
+  // However the sheet was closed, it reopens on all categories.
+  useEffect(() => {
+    if (!isOpen) setCategory(null)
+  }, [isOpen])
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && close()}>
@@ -49,12 +61,31 @@ export function GuideSheet() {
           />
         ) : (
           <>
-            <SheetHeader className="border-b p-4 text-left">
-              <SheetTitle>Guider</SheetTitle>
-              <SheetDescription>
-                Steg-för-steg-instruktioner, utan att lämna sidan.
-              </SheetDescription>
-            </SheetHeader>
+            {category ? (
+              <SheetHeader className="flex-row items-center gap-2 space-y-0 border-b p-3 text-left">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setCategory(null)}
+                  aria-label="Tillbaka till alla kategorier"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <SheetTitle className="flex-1 truncate text-base">
+                  {category.name}
+                </SheetTitle>
+                <SheetDescription className="sr-only">
+                  Guider i kategorin {category.name}
+                </SheetDescription>
+              </SheetHeader>
+            ) : (
+              <SheetHeader className="border-b p-4 text-left">
+                <SheetTitle>Guider</SheetTitle>
+                <SheetDescription>
+                  Steg-för-steg-instruktioner, utan att lämna sidan.
+                </SheetDescription>
+              </SheetHeader>
+            )}
             <div className="p-4">
               {/* Wait for the role to be known, otherwise the list is fetched
                   once without drafts and again with them. */}
@@ -62,14 +93,25 @@ export function GuideSheet() {
                 <Skeleton className="h-64" />
               ) : (
                 <GuidesOverview
+                  // Remount so the search starts empty in each category.
+                  key={category?.id ?? 'all'}
                   includeDrafts={canEdit}
                   variant="sheet"
+                  categoryId={category?.id}
                   onSelectGuide={(guide) => openGuide(guide.slug)}
+                  onSelectCategory={({ id, name }) => setCategory({ id, name })}
                 />
               )}
               <Button asChild variant="link" className="mt-4 px-0">
-                <Link to={routes.guides} onClick={close}>
-                  Öppna alla guider som sida
+                <Link
+                  to={
+                    category ? paths.guideCategory(category.id) : routes.guides
+                  }
+                  onClick={close}
+                >
+                  {category
+                    ? 'Öppna kategorin som sida'
+                    : 'Öppna alla guider som sida'}
                   <ExternalLink className="ml-1 h-3.5 w-3.5" />
                 </Link>
               </Button>

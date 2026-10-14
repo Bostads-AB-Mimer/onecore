@@ -2,9 +2,11 @@ import { useId, useMemo, useState } from 'react'
 import { BookOpen, Search, SearchX } from 'lucide-react'
 
 import {
+  CategoryCard,
   filterGuides,
   groupByCategory,
   GuideCard,
+  type GuideCategoryGroup,
   type GuideSummary,
   useGuides,
 } from '@/entities/guide'
@@ -17,17 +19,28 @@ import { Skeleton } from '@/shared/ui/Skeleton'
 interface GuidesOverviewProps {
   includeDrafts: boolean
   variant?: 'page' | 'sheet'
+  /** Limit the list to one category. Without it, an empty search shows one
+   * card per category instead of every guide. */
+  categoryId?: string
   /** Override navigation, e.g. to open the guide inside a sheet. */
   onSelectGuide?: (guide: GuideSummary) => void
+  /** Override navigation, e.g. to open the category inside a sheet. */
+  onSelectCategory?: (category: GuideCategoryGroup) => void
   /** Rendered next to the search field, e.g. a "Ny guide" button. */
   actions?: React.ReactNode
 }
 
-/** Searchable list of guides grouped by category. */
+/**
+ * Searchable guide overview. Without a search it lists the categories; a
+ * search lists the matching guides grouped by category. With `categoryId`
+ * it lists (and searches) that category's guides.
+ */
 export function GuidesOverview({
   includeDrafts,
   variant = 'page',
+  categoryId,
   onSelectGuide,
+  onSelectCategory,
   actions,
 }: GuidesOverviewProps) {
   const [search, setSearch] = useState('')
@@ -36,9 +49,13 @@ export function GuidesOverview({
   const { data, isLoading, isError } = useGuides(includeDrafts)
 
   const groups = useMemo(
-    () => groupByCategory(filterGuides(data ?? [], search)),
-    [data, search]
+    () => groupByCategory(filterGuides(data ?? [], search, categoryId)),
+    [data, search, categoryId]
   )
+  const isSearching = search.trim().length > 0
+  const isCategoryEmpty =
+    categoryId !== undefined &&
+    !(data ?? []).some((guide) => guide.category.id === categoryId)
 
   const gridClassName = cn(
     'grid gap-3',
@@ -81,12 +98,40 @@ export function GuidesOverview({
           title="Inga guider än"
           description="När en guide publiceras dyker den upp här."
         />
+      ) : isCategoryEmpty ? (
+        <EmptyState
+          icon={BookOpen}
+          title="Inga guider i kategorin"
+          description="När en guide i kategorin publiceras dyker den upp här."
+        />
       ) : groups.length === 0 ? (
         <EmptyState
           icon={SearchX}
           title="Inga träffar"
           description={`Ingen guide matchar "${search}".`}
         />
+      ) : categoryId === undefined && !isSearching ? (
+        <div className={gridClassName}>
+          {groups.map((group) => (
+            <CategoryCard
+              key={group.id}
+              category={group}
+              onSelect={onSelectCategory}
+            />
+          ))}
+        </div>
+      ) : categoryId !== undefined ? (
+        <div className={gridClassName}>
+          {groups.flatMap((group) =>
+            group.guides.map((guide) => (
+              <GuideCard
+                key={guide.id}
+                guide={guide}
+                onSelect={onSelectGuide}
+              />
+            ))
+          )}
+        </div>
       ) : (
         <div className="space-y-8">
           {groups.map((group) => (

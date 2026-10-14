@@ -6,6 +6,7 @@ import ComponentLibraryPage from '@/pages/ComponentLibraryPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { EconomyPage } from '@/pages/EconomyPage'
 import { FacilityPage } from '@/pages/FacilityPage'
+import { GuideCategoryPage } from '@/pages/GuideCategoryPage'
 import { GuideEditorPage } from '@/pages/GuideEditorPage'
 import { GuidePage } from '@/pages/GuidePage'
 import { GuidesPage } from '@/pages/GuidesPage'
@@ -179,6 +180,14 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: routes.guideEdit,
             element: <GuideEditorPage />,
             handle: { title: 'Redigera guide' },
+          },
+          {
+            // Ranks equal to guideEdit for /guider/kategori/redigera; listed
+            // after it so that path still edits a guide with slug "kategori".
+            path: routes.guideCategory,
+            element: <GuideCategoryPage />,
+            // The title is the category's name, which only the page knows.
+            handle: { ownsDocumentTitle: true },
           },
         ],
       },

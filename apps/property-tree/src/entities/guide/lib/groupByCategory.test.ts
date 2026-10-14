@@ -37,6 +37,23 @@ describe('groupByCategory', () => {
     expect(groups[1].guides.map((g) => g.title)).toEqual(['b'])
   })
 
+  it('counts the guides in each category', () => {
+    const tenfast = { id: 'c1', name: 'Tenfast' }
+    const odoo = { id: 'c2', name: 'Odoo' }
+
+    const groups = groupByCategory([
+      summary('a', tenfast),
+      summary('b', tenfast),
+      summary('c', odoo),
+      summary('d', tenfast),
+    ])
+
+    expect(groups.map((g) => [g.name, g.guides.length])).toEqual([
+      ['Tenfast', 3],
+      ['Odoo', 1],
+    ])
+  })
+
   it('returns an empty list for no guides', () => {
     expect(groupByCategory([])).toEqual([])
   })
