@@ -640,6 +640,111 @@ describe('leases routes', () => {
       expect(res.body.content[0].contacts[0].phone).toBeNull()
     })
 
+    it('redacts contact info to null when contacts-service returns an error status', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue(
+        buildPaginatedResponse([
+          buildLeaseSearchResult({
+            contacts: [
+              {
+                contactCode: 'P158770',
+                name: 'Andra Handen',
+                email: 'fran-tenfast@example.com',
+                phone: '0701112233',
+              },
+            ],
+          }),
+        ])
+      )
+      jest.spyOn(contactsAdapter, 'getByContactCodeBatch').mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+      })
+
+      const res = await request(app.callback()).get('/leases/search')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].contacts[0].email).toBeNull()
+      expect(res.body.content[0].contacts[0].phone).toBeNull()
+    })
+
+    it('redacts contact info to null when the contacts-service request throws', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue(
+        buildPaginatedResponse([
+          buildLeaseSearchResult({
+            contacts: [
+              {
+                contactCode: 'P158770',
+                name: 'Andra Handen',
+                email: 'fran-tenfast@example.com',
+                phone: '0701112233',
+              },
+            ],
+          }),
+        ])
+      )
+      jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockRejectedValue(new Error('timeout'))
+
+      const res = await request(app.callback()).get('/leases/search')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].contacts[0].email).toBeNull()
+      expect(res.body.content[0].contacts[0].phone).toBeNull()
+    })
+
+    it('matches a contact code that has extra whitespace', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue(
+        buildPaginatedResponse([
+          buildLeaseSearchResult({
+            contacts: [
+              {
+                contactCode: ' P158770 ',
+                name: 'Andra Handen',
+                email: 'fran-tenfast@example.com',
+                phone: '0701112233',
+              },
+            ],
+          }),
+        ])
+      )
+      const batchSpy = jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            factory.contactsServiceContact.build({
+              contactCode: 'P158770',
+              communication: {
+                emailAddresses: [
+                  {
+                    emailAddress: 'fran-contacts-service@example.com',
+                    isPrimary: true,
+                    type: 'unspecified',
+                  },
+                ],
+                phoneNumbers: [
+                  {
+                    phoneNumber: '0709998877',
+                    isPrimary: true,
+                    type: 'unspecified',
+                  },
+                ],
+                specialAttention: false,
+              },
+            }),
+          ],
+        })
+
+      const res = await request(app.callback()).get('/leases/search')
+
+      expect(res.status).toBe(200)
+      expect(batchSpy).toHaveBeenCalledWith(['P158770'], expect.anything())
+      expect(res.body.content[0].contacts[0].email).toBe(
+        'fran-contacts-service@example.com'
+      )
+    })
+
     it('resolves a personnummer in q to a contact code before calling leasing', async () => {
       jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
         ok: true,
@@ -744,6 +849,62 @@ describe('leases routes', () => {
       expect(exportSpy).toHaveBeenCalledWith(
         expect.objectContaining({ q: 'P158770' })
       )
+    })
+
+    it('enriches contacts from contacts-service before building the export', async () => {
+      ;(utilities.createExcelExport as jest.Mock).mockResolvedValue(
+        Buffer.from('excel')
+      )
+      jest.spyOn(tenantLeaseAdapter, 'getLeasesForExport').mockResolvedValue({
+        ok: true,
+        data: [
+          buildLeaseSearchResult({
+            contacts: [
+              {
+                contactCode: 'P158770',
+                name: 'Andra Handen',
+                email: 'fran-tenfast@example.com',
+                phone: '0701112233',
+              },
+            ],
+          }),
+        ],
+      })
+      jest.spyOn(contactsAdapter, 'getByContactCodeBatch').mockResolvedValue({
+        ok: true,
+        data: [
+          factory.contactsServiceContact.build({
+            contactCode: 'P158770',
+            communication: {
+              emailAddresses: [
+                {
+                  emailAddress: 'fran-contacts-service@example.com',
+                  isPrimary: true,
+                  type: 'unspecified',
+                },
+              ],
+              phoneNumbers: [
+                {
+                  phoneNumber: '0709998877',
+                  isPrimary: true,
+                  type: 'unspecified',
+                },
+              ],
+              specialAttention: false,
+            },
+          }),
+        ],
+      })
+
+      const res = await request(app.callback()).get('/leases/export')
+
+      expect(res.status).toBe(200)
+      const exportArgs = (utilities.createExcelExport as jest.Mock).mock
+        .calls[0][0]
+      expect(exportArgs.data[0].contacts[0].email).toBe(
+        'fran-contacts-service@example.com'
+      )
+      expect(exportArgs.data[0].contacts[0].phone).toBe('0709998877')
     })
   })
 
