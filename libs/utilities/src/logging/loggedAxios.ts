@@ -26,7 +26,8 @@ const SECRET_HEADERS = new Set([
   'cookie',
   'set-cookie',
 ])
-const SECRET_HEADER_PATTERN = /auth|cookie|token|secret|passw|key/i
+const SECRET_HEADER_PATTERN =
+  /auth|cookie|token|secret|passw|key|sign|credential|session|jwt/i
 
 const isSecretHeader = (name: string) =>
   SECRET_HEADERS.has(name.toLowerCase()) || SECRET_HEADER_PATTERN.test(name)
