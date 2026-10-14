@@ -674,30 +674,16 @@ type GetComponentsResponse = {
   pagination?: ComponentsPage['pagination']
 }
 
+type GetComponentsQuery = NonNullable<
+  paths['/components']['get']['parameters']['query']
+>
+
 async function getComponents(
-  modelId?: string,
-  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED',
-  page?: number,
-  limit?: number,
-  serialNumber?: string,
-  subtypeId?: string,
-  withoutModel?: boolean,
-  notInstalled?: boolean
+  query: GetComponentsQuery
 ): Promise<AdapterResult<GetComponentsResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/components', {
-      params: {
-        query: {
-          modelId,
-          withoutModel,
-          notInstalled,
-          subtypeId,
-          status,
-          page,
-          limit,
-          serialNumber,
-        },
-      },
+      params: { query },
     })
 
     if (response.data?.content) {

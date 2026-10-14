@@ -674,6 +674,7 @@ export const ComponentSubtypeSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   componentType: ComponentTypeSchema.optional(),
+  componentCount: z.number().int().min(0).optional(),
 })
 
 // Component Model Schema (Level 4)
@@ -692,6 +693,7 @@ export const ComponentModelSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   subtype: ComponentSubtypeSchema.optional(),
+  componentCount: z.number().int().min(0).optional(),
 })
 
 // Residence schema for navigation (just the id we need for routing)
@@ -833,10 +835,24 @@ export const ComponentsQueryParamsSchema = z
     page: z.coerce.number().int().min(1).optional().default(1),
     limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   })
+  .merge(property.ComponentsListQuerySchema)
   .refine((query) => !(query.modelId && query.withoutModel), {
     message: 'modelId and withoutModel cannot be combined',
     path: ['withoutModel'],
   })
+  .refine(
+    (query) =>
+      !(
+        query.notInstalled &&
+        query.installation &&
+        query.installation !== 'notInstalled'
+      ),
+    {
+      message:
+        'notInstalled cannot be combined with another installation filter',
+      path: ['installation'],
+    }
+  )
 
 export const ComponentInstallationsQueryParamsSchema = z.object({
   componentId: z.string().uuid().optional(),
