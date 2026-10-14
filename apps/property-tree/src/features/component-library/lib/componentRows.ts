@@ -122,6 +122,9 @@ export const formatInstallationDate = (
     ? 'Okänt'
     : formatISODate(isoDate)
 
+export const formatComponentCount = (count: number | undefined): string =>
+  count === undefined ? '-' : count.toLocaleString('sv-SE')
+
 export const formatSek = (value: number | null | undefined): string =>
   value
     ? value.toLocaleString('sv-SE', {

@@ -6,8 +6,9 @@ import type { ComponentModel } from '@/services/types'
 import { sortModelsByName } from '@/shared/lib/componentLabels'
 import { Button } from '@/shared/ui/Button'
 import { type Column, DataTable } from '@/shared/ui/DataTable'
+import type { SortControl } from '@/shared/ui/dataTableSort'
 
-import { formatSek } from '../lib/componentRows'
+import { formatComponentCount, formatSek } from '../lib/componentRows'
 import { ComponentModelDocuments } from './ComponentModelDocuments'
 
 interface ModelsTableProps {
@@ -17,7 +18,11 @@ interface ModelsTableProps {
   onDelete: (model: ComponentModel) => void
   onNavigate: (model: ComponentModel) => void
   getHref: (model: ComponentModel) => string
+  sort: SortControl
 }
+
+// The imports write 0 and "Unknown" for unknown values; they sort as blanks.
+const known = (value: number) => value || null
 
 export const ModelsTable = ({
   models,
@@ -26,6 +31,7 @@ export const ModelsTable = ({
   onDelete,
   onNavigate,
   getHref,
+  sort,
 }: ModelsTableProps) => {
   const [documentsModelId, setDocumentsModelId] = useState<string | null>(null)
   const sortedModels = useMemo(() => sortModelsByName(models), [models])
@@ -35,10 +41,27 @@ export const ModelsTable = ({
       key: 'modelName',
       label: 'Modellnamn',
       render: (item) => <div className="font-medium">{item.modelName}</div>,
+      sort: { value: (item) => item.modelName, kind: 'text' },
+    },
+    {
+      key: 'componentCount',
+      label: 'Komponenter',
+      className: 'tabular-nums',
+      render: (item) => formatComponentCount(item.componentCount),
+      sort: {
+        value: (item) => item.componentCount,
+        kind: 'number',
+        firstOrder: 'desc',
+      },
     },
     {
       key: 'manufacturer',
       label: 'Tillverkare',
+      sort: {
+        value: (item) =>
+          item.manufacturer === 'Unknown' ? null : item.manufacturer,
+        kind: 'text',
+      },
       render: (item) => (
         <span
           className={
@@ -55,6 +78,7 @@ export const ModelsTable = ({
     },
     {
       key: 'currentPrice',
+      sort: { value: (item) => known(item.currentPrice), kind: 'number' },
       label: 'Pris',
       isEmpty: (item) => !item.currentPrice,
       render: (item) => (
@@ -65,6 +89,10 @@ export const ModelsTable = ({
     },
     {
       key: 'currentInstallPrice',
+      sort: {
+        value: (item) => known(item.currentInstallPrice),
+        kind: 'number',
+      },
       label: 'Installationspris',
       isEmpty: (item) => !item.currentInstallPrice,
       render: (item) => (
@@ -77,6 +105,7 @@ export const ModelsTable = ({
     },
     {
       key: 'warrantyMonths',
+      sort: { value: (item) => known(item.warrantyMonths), kind: 'number' },
       label: 'Garanti',
       isEmpty: (item) => !item.warrantyMonths,
       render: (item) => (
@@ -171,6 +200,9 @@ export const ModelsTable = ({
         emptyMessage="Inga modeller"
         getRowLabel={(item) => item.modelName}
         expandableContent={expandableContent}
+        sort={sort.value}
+        defaultSort={sort.fallback}
+        onSortChange={sort.onChange}
       />
 
       {documentsModelId && (

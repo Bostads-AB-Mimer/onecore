@@ -7,6 +7,7 @@ import type {
 } from '@/services/types'
 
 import { Button } from '@/shared/ui/Button'
+import type { SortControl } from '@/shared/ui/dataTableSort'
 import { TableToolbar } from '@/shared/ui/TableToolbar'
 
 import type { ViewState } from '../hooks/useComponentLibraryHandlers'
@@ -19,6 +20,7 @@ interface ComponentLibraryContentProps {
   viewState: ViewState
   searchInput: string
   onSearchChange: (value: string) => void
+  sort: SortControl
 
   // Category level
   categories: ComponentCategory[] | undefined
@@ -128,6 +130,7 @@ export const ComponentLibraryContent = ({
   viewState,
   searchInput,
   onSearchChange,
+  sort,
   // Categories
   categories,
   categoriesLoading,
@@ -296,6 +299,7 @@ export const ComponentLibraryContent = ({
             onEdit={onEditSubtype}
             onDelete={onDeleteSubtype}
             onNavigate={onOpenSubtype}
+            sort={sort}
             getHref={(subtype) =>
               levelSearch({
                 ...viewState,

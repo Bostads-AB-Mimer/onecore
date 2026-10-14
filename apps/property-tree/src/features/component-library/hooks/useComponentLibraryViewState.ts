@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { property } from '@onecore/types'
 import { useQuery } from '@tanstack/react-query'
 
 import {
@@ -24,13 +25,20 @@ import {
 } from '@/shared/hooks'
 import { useDebounce } from '@/shared/hooks/useDebounce'
 import { useUrlPagination } from '@/shared/hooks/useUrlPagination'
+import type { SortControl, TableSort } from '@/shared/ui/dataTableSort'
 
 import type { CategoryType } from '../lib/componentRows'
 import {
+  COMPONENT_DEFAULT_SORT,
   COMPONENT_PAGE_SIZE,
+  type ComponentFilterControl,
   isLegacyLibraryUrl,
+  NAME_DEFAULT_SORT,
   NO_MODEL,
+  parseComponentFilters,
+  parseSort,
   parseViewState,
+  sortUrlParams,
   type SubtypeTab,
   toSearchParams,
   toViewKey,
@@ -159,8 +167,50 @@ export const useComponentLibraryViewState = () => {
   }
 
   const clearFilters = () => {
-    updateUrlParams({ modelId: undefined, search: undefined, page: undefined })
+    updateUrlParams({
+      modelId: undefined,
+      search: undefined,
+      installation: undefined,
+      installedBefore: undefined,
+      page: undefined,
+    })
     setSearchInput('')
+  }
+
+  const onComponentList = subtypeState?.tab === 'components'
+  const fallbackSort = onComponentList
+    ? COMPONENT_DEFAULT_SORT
+    : NAME_DEFAULT_SORT
+  const sort: SortControl = {
+    value:
+      parseSort(
+        searchParams,
+        onComponentList ? property.ComponentSortKeySchema.options : undefined
+      ) ?? fallbackSort,
+    fallback: fallbackSort,
+    onChange: (next: TableSort) =>
+      updateUrlParams({
+        ...sortUrlParams(next, fallbackSort),
+        page: undefined,
+      }),
+  }
+
+  const componentFilterValue = useMemo(
+    () => parseComponentFilters(searchParams),
+    [searchParams]
+  )
+  const componentFilters: ComponentFilterControl = {
+    value: componentFilterValue,
+    onInstallationChange: (installation) =>
+      updateUrlParams({
+        installation,
+        ...(installation === 'notInstalled'
+          ? { installedBefore: undefined }
+          : {}),
+        page: undefined,
+      }),
+    onInstalledBeforeChange: (year) =>
+      updateUrlParams({ installedBefore: year, page: undefined }),
   }
 
   const dialogs: ComponentLibraryDialogStates = {
@@ -198,6 +248,10 @@ export const useComponentLibraryViewState = () => {
               : subtypeState.modelId,
           withoutModel: subtypeState.modelId === NO_MODEL,
           search: activeSearch,
+          searchField:
+            categoryType === 'SURFACE' ? 'specifications' : 'serialNumber',
+          ...componentFilterValue,
+          sort: sort.value,
           page,
           limit: COMPONENT_PAGE_SIZE,
         }
@@ -229,6 +283,8 @@ export const useComponentLibraryViewState = () => {
     setTab,
     setModelFilter,
     clearFilters,
+    sort,
+    componentFilters,
     page,
     setPage,
     searchInput,

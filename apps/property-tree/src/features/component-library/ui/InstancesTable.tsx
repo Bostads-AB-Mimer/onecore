@@ -11,6 +11,7 @@ import {
   DataTable,
   type DataTableAction,
 } from '@/shared/ui/DataTable'
+import type { SortControl } from '@/shared/ui/dataTableSort'
 
 import { markedComponentUrl } from '../lib/componentLibraryLink'
 import {
@@ -33,6 +34,8 @@ interface InstancesTableProps {
   /** The list is filtered to one model, so the Modell column says nothing. */
   hideModel?: boolean
   highlightedId?: string
+  /** The server sorts; the column keys double as its sort keys. */
+  sort: SortControl
   onEdit: (instance: Component) => void
   onDelete: (instance: Component) => void
   onViewHistory: (instance: Component) => void
@@ -84,6 +87,7 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
     label: 'Modell',
     isEmpty: (item) => !formatComponentModelName(item.model),
     keepWhenEmpty: true,
+    sort: { kind: 'text' },
     render: (item) => formatComponentModelName(item.model) || muted('-'),
   },
   installed: {
@@ -91,6 +95,7 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
     label: 'Installerad',
     width: '8.5rem',
     className: 'whitespace-nowrap tabular-nums',
+    sort: { kind: 'date', firstOrder: 'desc' },
     render: (item) => muted(formatInstallationDate(getInstallationDate(item))),
   },
   serialNumber: {
@@ -98,6 +103,7 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
     label: 'Serienr',
     width: '22%',
     className: 'tabular-nums',
+    sort: { kind: 'text' },
     isEmpty: (item) => !item.serialNumber,
     keepWhenEmpty: true,
     render: (item) => item.serialNumber || muted('-'),
@@ -105,6 +111,7 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
   specifications: {
     key: 'specifications',
     label: 'Specifikation',
+    sort: { kind: 'text' },
     isEmpty: (item) => !item.specifications,
     keepWhenEmpty: true,
     render: (item) =>
@@ -121,6 +128,7 @@ const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
     label: 'Antal',
     width: '8rem',
     className: 'whitespace-nowrap tabular-nums',
+    sort: { kind: 'number', firstOrder: 'desc' },
     render: (item) => formatComponentQuantity(item),
   },
 }
@@ -135,6 +143,7 @@ export const InstancesTable = ({
   pageSize,
   hideModel = false,
   highlightedId,
+  sort,
   onEdit,
   onDelete,
   onViewHistory,
@@ -199,6 +208,9 @@ export const InstancesTable = ({
       pageSize={pageSize}
       getRowLabel={formatComponentPlace}
       isRowHighlighted={(item) => item.id === highlightedId}
+      sort={sort.value}
+      onSortChange={sort.onChange}
+      serverSorted
       deleteBlockedReason={(item) =>
         hasActiveInstallation(item)
           ? 'Avinstallera komponenten först'
