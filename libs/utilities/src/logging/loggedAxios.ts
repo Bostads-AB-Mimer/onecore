@@ -13,6 +13,34 @@ const getCorrelationId = (): string | undefined | null => {
   return null
 }
 
+// Headers that carry credentials. Logs go to Elasticsearch, so these must
+// never be written there: Tenfast's api-token, bearer and basic auth, API keys
+// and session cookies.
+const SECRET_HEADERS = new Set([
+  'api-token',
+  'authorization',
+  'proxy-authorization',
+  'x-api-key',
+  'cookie',
+  'set-cookie',
+])
+
+/** A plain copy of the headers with credential values replaced, for logging. */
+export const redactHeaders = (headers: unknown): Record<string, unknown> => {
+  if (!headers || typeof headers !== 'object') return {}
+  const plain =
+    'toJSON' in headers && typeof headers.toJSON === 'function'
+      ? (headers.toJSON() as Record<string, unknown>)
+      : (headers as Record<string, unknown>)
+
+  return Object.fromEntries(
+    Object.entries(plain).map(([name, value]) => [
+      name,
+      SECRET_HEADERS.has(name.toLowerCase()) ? '[REDACTED]' : value,
+    ])
+  )
+}
+
 let loggingExlusionFilters: RegExp[] | null = null
 
 export const setExclusionFilters = (exlusionFilters: RegExp[]) => {
@@ -48,7 +76,7 @@ axios.interceptors.request.use((request) => {
 
   const requestFields = {
     url: request.url,
-    headers: request.headers,
+    headers: redactHeaders(request.headers),
     method: request.method,
     correlationId: request.headers['x-correlation-id'],
   }
@@ -70,7 +98,7 @@ axios.interceptors.response.use((response) => {
 
   const responseFields = {
     status: response.status,
-    headers: response.headers,
+    headers: redactHeaders(response.headers),
     url: response.config.url,
     correlationId,
   }
