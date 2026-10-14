@@ -455,6 +455,22 @@ describe(imdService.toTenfastCsv, () => {
     expect(cols[2]).toBe('El januari,7,58,m3(25% moms tillkommer)')
   })
 
+  it('maps EL to IMDELM article and builds Avitext with Elförbrukning', () => {
+    const row = makeEnrichedRow('306-008-01-0201', 'L1', {
+      cost: 26.82,
+      unit: 'EL',
+    })
+    row.from = new Date('2026-08-01')
+    row.to = new Date('2026-08-31')
+    row.volume = 15
+    row.measurementUnit = 'kWh'
+
+    const cols = parseRow(imdService.toTenfastCsv([row]).split('\n')[1])
+    expect(cols[1]).toBe('IMDELM')
+    expect(cols[2]).toBe('Elförbrukning augusti,15,kWh(25% moms tillkommer)')
+    expect(cols[5]).toBe('321,84')
+  })
+
   it('maps VMM to VÄRMEENERGIM article and builds Avitext with Värmeenergi', () => {
     const csv = imdService.toTenfastCsv([
       makeEnrichedRow('306-008-01-0201', 'L1', { cost: 500, unit: 'VMM' }),
