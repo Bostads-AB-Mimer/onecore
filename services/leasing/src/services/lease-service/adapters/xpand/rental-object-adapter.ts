@@ -88,7 +88,7 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     blockEndDate: row.blockenddate,
     districtCaption: district,
     districtCode: districtCode,
-    braArea: row.braarea,
+    braArea: row.braarea ?? undefined,
     isSpecialResidentialArea: isSpecialResidentialArea,
     isSpecialProperty: isSpecialProperty,
   }
