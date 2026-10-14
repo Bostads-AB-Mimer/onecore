@@ -148,6 +148,27 @@ To reliably check "this lease is genuinely still terminating," check
 alone doesn't necessarily flip back to `false` when a notice is withdrawn, so
 checking only `requested` can produce false positives.
 
+## vacantFrom from leases: mostly the end date, not the notice flags
+
+`getLeasedUntil` (`tenfast-rental-object-helpers.ts`) looks at leases in
+force: `active`, `terminationScheduled`, `preTermination` and `upcoming`. A
+lease with a missing or unknown stage counts as in force without an end (not
+vacant), so an unreadable lease never makes an object vacant.
+
+- **No such lease:** vacant today.
+- **Any of them without `endDate`:** not vacant (`vacantFrom` undefined). That
+  covers a tenancy until further notice and a signed successor to a terminated
+  lease.
+- **Otherwise:** vacant the day after the latest end.
+
+`determineVacantFrom` keeps undefined as undefined, whatever the Xpand block
+says. Rule decided in AVTAL-343.
+
+On Tenfast test (2,229 objects, 2026-10-14), `endDate` was set exactly when
+notice had been given, both on terminating and on upcoming leases. No lease
+had a withdrawn notice. A withdrawn notice (`requested && cancelled`) still
+counts as no end, in case Tenfast leaves the date behind.
+
 ## Query syntax
 
 `/v1/hyresvard/avtal/search` supports nested bracket-notation filters, e.g.:

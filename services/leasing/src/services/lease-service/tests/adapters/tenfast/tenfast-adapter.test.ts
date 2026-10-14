@@ -1893,6 +1893,34 @@ describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
     expect(result.data.vacantFrom).toEqual(new Date('2099-11-01T00:00:00.000Z'))
   })
 
+  it('is not vacant when a terminated lease has a signed successor', async () => {
+    const terminated = factory.tenfastLease.build({
+      stage: 'terminationScheduled',
+      endDate: new Date('2099-10-31'),
+    })
+    const successor = factory.tenfastLease.build({
+      stage: 'upcoming',
+      startDate: new Date('2099-11-01'),
+      endDate: null,
+    })
+    jest
+      .spyOn(tenfastAdapter, 'getRentalObjectWithLeases')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenfastRentalObject.build({
+          avtal: [terminated, successor],
+        }),
+      })
+
+    const result = await tenfastAdapter.getAvailabilityForRentalObject(
+      'R1001',
+      false
+    )
+
+    assert(result.ok)
+    expect(result.data.vacantFrom).toBeUndefined()
+  })
+
   it('does not fail on a lease without cancellation', async () => {
     const { cancellation: _, ...leaseWithoutCancellation } =
       factory.tenfastLease.build()
