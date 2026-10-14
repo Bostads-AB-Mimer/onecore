@@ -233,7 +233,6 @@ export const routes = (router: KoaRouter) => {
       ctx.body = user
     } catch (error) {
       logger.error(error, 'Authentication error in /auth/callback:')
-      console.log('auth error in callback route: ', error)
       if (typeof error === 'object' && error !== null && 'status' in error) {
         if (error.status === 400) {
           ctx.status = 400
