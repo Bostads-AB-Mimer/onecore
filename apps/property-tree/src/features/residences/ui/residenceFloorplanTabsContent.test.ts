@@ -16,6 +16,11 @@ const findButton = (container: HTMLElement, label: string) =>
     (button) => button.textContent === label
   )
 
+const findOpenLink = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll('a')).find(
+    (link) => link.textContent === 'Öppna'
+  )
+
 const fireImageEvent = (container: HTMLElement, type: 'load' | 'error') =>
   act(() => {
     container.querySelector('img')!.dispatchEvent(new Event(type))
@@ -52,12 +57,12 @@ describe('ResidenceFloorplanTabsContent', () => {
     render('211-001-01-0101')
 
     expect(findButton(container, 'Skriv ut')).toBeUndefined()
-    expect(findButton(container, 'Spara')).toBeUndefined()
+    expect(findOpenLink(container)).toBeUndefined()
 
     fireImageEvent(container, 'load')
 
     expect(findButton(container, 'Skriv ut')).toBeDefined()
-    expect(findButton(container, 'Spara')).toBeDefined()
+    expect(findOpenLink(container)).toBeDefined()
   })
 
   it('shows no buttons when the residence has no floorplan', () => {
@@ -66,7 +71,7 @@ describe('ResidenceFloorplanTabsContent', () => {
 
     expect(container.querySelector('img')).toBeNull()
     expect(findButton(container, 'Skriv ut')).toBeUndefined()
-    expect(findButton(container, 'Spara')).toBeUndefined()
+    expect(findOpenLink(container)).toBeUndefined()
   })
 
   it('hides the buttons again while another residence is loading', () => {
@@ -89,21 +94,26 @@ describe('ResidenceFloorplanTabsContent', () => {
     )
   })
 
-  it('prints and saves the selected residence', async () => {
+  it('prints the selected residence', () => {
     const print = vi
       .spyOn(floorplan, 'printFloorplan')
       .mockImplementation(() => {})
-    const download = vi
-      .spyOn(floorplan, 'downloadFloorplan')
-      .mockResolvedValue()
 
     render('211-001-01-0101')
     fireImageEvent(container, 'load')
 
     act(() => findButton(container, 'Skriv ut')!.click())
-    await act(async () => findButton(container, 'Spara')!.click())
 
     expect(print).toHaveBeenCalledWith('211-001-01-0101')
-    expect(download).toHaveBeenCalledWith('211-001-01-0101')
+  })
+
+  it('links to the selected residence floorplan in a new tab', () => {
+    render('211-001-01-0101')
+    fireImageEvent(container, 'load')
+
+    const link = findOpenLink(container)!
+    expect(link.href).toBe(floorplan.getFloorplanUrl('211-001-01-0101'))
+    expect(link.target).toBe('_blank')
+    expect(link.rel).toBe('noopener noreferrer')
   })
 })

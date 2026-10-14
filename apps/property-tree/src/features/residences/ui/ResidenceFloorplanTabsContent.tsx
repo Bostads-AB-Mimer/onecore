@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Download, Printer } from 'lucide-react'
+import { ExternalLink, Printer } from 'lucide-react'
 
-import { downloadFloorplan, printFloorplan } from '@/shared/lib/floorplan'
+import { getFloorplanUrl, printFloorplan } from '@/shared/lib/floorplan'
 import { Button } from '@/shared/ui/Button'
 import { FloorplanImage } from '@/shared/ui/FloorplanImage'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
@@ -15,16 +15,6 @@ export const ResidenceFloorplanTabsContent = ({
   // while a newly selected residence's floorplan is loading or missing.
   const [loadedRentalId, setLoadedRentalId] = useState<string | null>(null)
   const isLoaded = loadedRentalId === rentalId
-  const [isDownloading, setIsDownloading] = useState(false)
-
-  const handleDownload = async () => {
-    setIsDownloading(true)
-    try {
-      await downloadFloorplan(rentalId)
-    } finally {
-      setIsDownloading(false)
-    }
-  }
 
   return (
     <TabLayout title="Bofaktablad">
@@ -38,14 +28,18 @@ export const ResidenceFloorplanTabsContent = ({
             <Printer />
             Skriv ut
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
-            disabled={isDownloading}
-          >
-            <Download />
-            Spara
+          {/* A plain link rather than a download: the CDN sends no CORS
+              headers, so the image can't be fetched and saved under a custom
+              name. Users save it from the opened tab instead. */}
+          <Button variant="outline" size="sm" asChild>
+            <a
+              href={getFloorplanUrl(rentalId)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink />
+              Öppna
+            </a>
           </Button>
         </div>
       )}
