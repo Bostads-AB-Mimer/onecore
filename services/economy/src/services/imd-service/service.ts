@@ -195,6 +195,7 @@ const UNIT_CONFIG: Record<
   VV: { articleCode: 'IMDM', description: 'Varmvatten' },
   VMM: { articleCode: 'VÄRMEENERGIM', description: 'Värmeenergi' },
   ELEC: { articleCode: 'IMDELM', description: 'El' },
+  EL: { articleCode: 'IMDELM', description: 'Elförbrukning' },
 }
 
 const SWEDISH_MONTHS = [
