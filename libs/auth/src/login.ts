@@ -23,12 +23,6 @@ export function buildLoginUrl(config: AuthConfig, nonce: string): string {
   return url.toString()
 }
 
-/**
- * Records a pending login and returns the Keycloak URL to send the user to.
- *
- * `state` carries only a random nonce, kept with the return path in
- * sessionStorage, so a callback can only complete a login this tab started.
- */
 // getRandomValues rather than randomUUID: the latter is missing outside secure
 // contexts, e.g. a dev server reached on a LAN IP over plain http.
 const randomNonce = () =>
@@ -36,6 +30,12 @@ const randomNonce = () =>
     b.toString(16).padStart(2, '0')
   ).join('')
 
+/**
+ * Records a pending login and returns the Keycloak URL to send the user to.
+ *
+ * `state` carries only a random nonce, kept with the return path in
+ * sessionStorage, so a callback can only complete a login this tab started.
+ */
 export function prepareLogin(config: AuthConfig, returnTo: string): string {
   const pending: PendingLogin = {
     nonce: randomNonce(),
@@ -71,7 +71,7 @@ export function takePendingLogin(): PendingLogin | null {
 
 export function login(
   config: AuthConfig,
-  returnTo = `${window.location.pathname}${window.location.search}`
+  returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`
 ) {
   window.location.assign(prepareLogin(config, returnTo))
 }

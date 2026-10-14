@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { KeycloakUserSchema } from '@onecore/types'
+import { KeycloakUserSchema, type KeycloakUser } from '@onecore/types'
 
 import { useAuthConfig } from './context'
 import { login, logout, takePendingLogin } from './login'
@@ -19,12 +19,10 @@ export function useAuth() {
 }
 
 /** The logged-in user. Structurally a `ModuleUser` from `@onecore/ui`, plus `employeeId`. */
-export interface AuthUser {
-  id: string
-  name?: string
-  email?: string
-  /** Xpand signature (e.g. "YY2333"), present once the realm maps employeeId. */
-  employeeId?: string
+export type AuthUser = Pick<
+  KeycloakUser,
+  'id' | 'name' | 'email' | 'employeeId'
+> & {
   roles: string[]
 }
 

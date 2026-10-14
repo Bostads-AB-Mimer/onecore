@@ -149,6 +149,7 @@ describe('useRequireUser', () => {
       ...window.location,
       pathname: '/uthyrning/bostad',
       search: '?tab=2',
+      hash: '#rad-7',
       origin: 'https://app.example',
       assign,
     })
@@ -176,7 +177,7 @@ describe('useRequireUser', () => {
     expect(loginUrl.searchParams.get('client_id')).toBe(config.clientId)
     expect(
       JSON.parse(sessionStorage.getItem('onecore-auth:pending-login') ?? '')
-    ).toMatchObject({ returnTo: '/uthyrning/bostad?tab=2' })
+    ).toMatchObject({ returnTo: '/uthyrning/bostad?tab=2#rad-7' })
   })
 
   it('reports unknown instead of loading forever when the login cannot start', async () => {
