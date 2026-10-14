@@ -6,6 +6,7 @@ import {
   applyInstanceMove,
   buildInstanceFields,
   instanceCreateDefaults,
+  instanceMoveFormData,
 } from './instanceForm'
 
 const model = {
@@ -93,5 +94,47 @@ describe('applyInstanceMove', () => {
     expect(applyInstanceMove('sub-1', 'sub-2')).toEqual({
       subtypeId: 'sub-2',
     })
+  })
+})
+
+describe('instanceMoveFormData', () => {
+  const initial = {
+    modelId: 'm-1',
+    serialNumber: 'SN-1',
+    warrantyMonths: 24,
+    quantity: 1,
+  }
+
+  it('drops the model on a move to another equipment subtype', () => {
+    expect(instanceMoveFormData(initial, initial, true, 'EQUIPMENT')).toEqual({
+      ...initial,
+      modelId: null,
+    })
+  })
+
+  it('clears serial number and warranty months on a move to a surface', () => {
+    expect(instanceMoveFormData(initial, initial, true, 'SURFACE')).toEqual({
+      ...initial,
+      modelId: null,
+      serialNumber: null,
+      warrantyMonths: null,
+    })
+  })
+
+  it('restores the cleared fields when moved back', () => {
+    const onSurface = instanceMoveFormData(initial, initial, true, 'SURFACE')
+    expect(instanceMoveFormData(onSurface, initial, false, undefined)).toEqual(
+      initial
+    )
+    expect(instanceMoveFormData(onSurface, initial, true, 'EQUIPMENT')).toEqual(
+      { ...initial, modelId: null }
+    )
+  })
+
+  it('keeps a serial number typed before the move', () => {
+    const typed = { ...initial, serialNumber: 'SN-2' }
+    expect(
+      instanceMoveFormData(typed, initial, true, 'EQUIPMENT').serialNumber
+    ).toBe('SN-2')
   })
 })

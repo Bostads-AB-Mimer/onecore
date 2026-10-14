@@ -28,7 +28,11 @@ import { cleanFormData } from '../lib/cleanFormData'
 import type { CategoryType } from '../lib/componentRows'
 import { buildEditFormData } from '../lib/editFormData'
 import { isFormDirty } from '../lib/formDirty'
-import { applyInstanceMove, buildInstanceFields } from '../lib/instanceForm'
+import {
+  applyInstanceMove,
+  buildInstanceFields,
+  instanceMoveFormData,
+} from '../lib/instanceForm'
 import { serverMessage } from '../lib/serverMessage'
 import { FieldRenderer } from './FieldRenderer'
 import {
@@ -250,10 +254,9 @@ export function GenericEntityDialog<T extends Record<string, any>>({
     setTargetCategoryType(categoryType)
     if (entityType !== 'instance' || !parentChanged) return
     const moved = !!parentId && parentId !== hierarchyData?.subtypeId
-    setFormData((prev) => ({
-      ...prev,
-      modelId: moved ? null : (initialDataRef.current.modelId ?? null),
-    }))
+    setFormData((prev) =>
+      instanceMoveFormData(prev, initialDataRef.current, moved, categoryType)
+    )
   }
 
   const initialParentId =

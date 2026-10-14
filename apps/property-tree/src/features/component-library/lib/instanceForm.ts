@@ -65,3 +65,19 @@ export const applyInstanceMove = (
   newSubtypeId && newSubtypeId !== currentSubtypeId
     ? { subtypeId: newSubtypeId }
     : {}
+
+// Core cannot clear warrantyStartDate yet (null becomes 1970-01-01), so a surface keeps it.
+export const instanceMoveFormData = (
+  current: Record<string, unknown>,
+  initial: Record<string, unknown>,
+  moved: boolean,
+  targetCategoryType: CategoryType | undefined
+): Record<string, unknown> =>
+  moved && targetCategoryType === 'SURFACE'
+    ? { ...current, modelId: null, serialNumber: null, warrantyMonths: null }
+    : {
+        ...current,
+        modelId: moved ? null : (initial.modelId ?? null),
+        serialNumber: current.serialNumber ?? initial.serialNumber,
+        warrantyMonths: current.warrantyMonths ?? initial.warrantyMonths,
+      }
