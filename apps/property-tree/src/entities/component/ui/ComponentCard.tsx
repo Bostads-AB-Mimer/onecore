@@ -62,19 +62,21 @@ export const ComponentCard = ({
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <h3 className="text-base font-semibold">
-                  {component.model?.subtype?.componentType?.description}
-                  {component.model?.subtype?.componentType?.description &&
-                    component.model?.subtype?.subTypeName &&
+                  {component.subtype?.componentType?.description}
+                  {component.subtype?.componentType?.description &&
+                    component.subtype?.subTypeName &&
                     ' • '}
-                  {component.model?.subtype?.subTypeName || '-'}
+                  {component.subtype?.subTypeName || '-'}
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  {component.model?.manufacturer &&
-                  component.model.manufacturer !== 'Unknown'
-                    ? `${component.model.manufacturer} | `
-                    : ''}
-                  {component.model?.modelName}
-                </p>
+                {component.model && (
+                  <p className="text-sm text-muted-foreground">
+                    {component.model.manufacturer &&
+                    component.model.manufacturer !== 'Unknown'
+                      ? `${component.model.manufacturer} | `
+                      : ''}
+                    {component.model.modelName}
+                  </p>
+                )}
                 {component.serialNumber && (
                   <p className="text-xs text-muted-foreground">
                     SN: {component.serialNumber}
@@ -156,17 +158,20 @@ export const ComponentCard = ({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Typ:</span>
                     <span className="font-medium">
-                      {component.model?.subtype?.componentType?.description ||
-                        '-'}{' '}
-                      › {component.model?.subtype?.subTypeName || '-'}
+                      {component.subtype?.componentType?.description || '-'} ›{' '}
+                      {component.subtype?.subTypeName || '-'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tillverkare:</span>
-                    <span className="font-medium">
-                      {component.model?.manufacturer || '-'}
-                    </span>
-                  </div>
+                  {component.model && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Tillverkare:
+                      </span>
+                      <span className="font-medium">
+                        {component.model.manufacturer || '-'}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Serienummer:</span>
                     <div className="flex items-center gap-2">
@@ -207,7 +212,7 @@ export const ComponentCard = ({
                         <button
                           onClick={() =>
                             copyToClipboard(
-                              component.model!.coclassCode || '',
+                              component.model?.coclassCode ?? '',
                               'coclass'
                             )
                           }
@@ -285,8 +290,8 @@ export const ComponentCard = ({
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">Livslängd</p>
                       <p className="text-lg font-semibold">
-                        {component.model?.subtype?.technicalLifespan
-                          ? `${component.model.subtype.technicalLifespan} år`
+                        {component.subtype?.technicalLifespan
+                          ? `${component.subtype.technicalLifespan} år`
                           : '-'}
                       </p>
                       <p className="text-xs text-muted-foreground">(teknisk)</p>
@@ -360,15 +365,14 @@ export const ComponentCard = ({
                       </div>
                     )}
 
-                    {component.model?.subtype?.economicLifespan !== null &&
-                      component.model?.subtype?.economicLifespan !==
-                        undefined && (
+                    {component.subtype?.economicLifespan !== null &&
+                      component.subtype?.economicLifespan !== undefined && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">
                             Ekonomisk livslängd:
                           </span>
                           <span className="font-medium">
-                            {component.model.subtype.economicLifespan} år
+                            {component.subtype.economicLifespan} år
                           </span>
                         </div>
                       )}
@@ -394,7 +398,7 @@ export const ComponentCard = ({
                         <button
                           onClick={() =>
                             copyToClipboard(
-                              component.model!.dimensions || '',
+                              component.model?.dimensions ?? '',
                               'dimensions'
                             )
                           }

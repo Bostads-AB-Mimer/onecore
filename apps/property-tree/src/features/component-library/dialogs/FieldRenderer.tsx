@@ -1,7 +1,17 @@
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/Select'
 
 import type { FieldConfig } from '../constants/entityDialogConfig'
+
+// Radix Select treats '' as "no value" and shows the placeholder instead.
+const EMPTY_OPTION = '__empty__'
 
 interface FieldRendererProps {
   field: FieldConfig
@@ -17,9 +27,7 @@ export function FieldRenderer({
   error,
 }: FieldRendererProps) {
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     let newValue: any = e.target.value
     if (field.type === 'number') {
@@ -58,7 +66,9 @@ export function FieldRenderer({
             type="number"
             min="0"
             step={
-              field.name.includes('Price') || field.name.includes('cost')
+              field.name.includes('Price') ||
+              field.name.includes('cost') ||
+              field.name === 'quantity'
                 ? '0.01'
                 : '1'
             }
@@ -87,27 +97,38 @@ export function FieldRenderer({
         </div>
       )
 
-    case 'select':
+    case 'select': {
+      const current = value || field.defaultValue || ''
+      const hasEmptyOption = field.options?.some((o) => o.value === '')
       return (
         <div>
           <Label htmlFor={field.name}>
             {field.label} {field.required && '*'}
           </Label>
-          <select
-            id={field.name}
-            value={value || field.defaultValue}
-            onChange={handleChange}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <Select
+            value={current === '' && hasEmptyOption ? EMPTY_OPTION : current}
+            onValueChange={(newValue) =>
+              onChange(field.name, newValue === EMPTY_OPTION ? '' : newValue)
+            }
           >
-            {field.options?.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id={field.name}>
+              <SelectValue placeholder={field.placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option) => (
+                <SelectItem
+                  key={option.value}
+                  value={option.value || EMPTY_OPTION}
+                >
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {error && <p className="text-sm text-destructive mt-1">{error}</p>}
         </div>
       )
+    }
 
     case 'date': {
       // Convert ISO date string to yyyy-MM-dd format for HTML date input

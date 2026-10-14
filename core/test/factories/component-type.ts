@@ -7,6 +7,7 @@ export const ComponentTypeFactory = Factory.define<schemas.ComponentType>(
     typeName: `Type ${sequence}`,
     categoryId: '00000000-0000-0000-0000-000000000001',
     description: `Description for type ${sequence}`,
+    code: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     category: undefined,

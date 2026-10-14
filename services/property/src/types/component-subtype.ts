@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { property } from '@onecore/types'
 import { ComponentTypeSchema } from './component-type'
 
 // ==================== ENUMS ====================
@@ -16,6 +17,7 @@ export const QuantityTypeEnum = z.enum([
 export const componentSubtypesQueryParamsSchema = z.object({
   typeId: z.string().uuid().optional(),
   subtypeName: z.string().optional(), // Search parameter
+  categoryType: property.ComponentCategoryTypeSchema.optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })

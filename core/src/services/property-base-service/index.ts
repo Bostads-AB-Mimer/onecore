@@ -72,12 +72,18 @@ export const routes = (router: KoaRouter) => {
     'ParkingSpaceSearchResult',
     schemas.ParkingSpaceSearchResultSchema
   )
-  registerSchema('Component', schemas.ComponentSchema)
+  registerSchema('Component', schemas.ComponentSchema, {
+    ComponentSubtype: schemas.ComponentSubtypeSchema,
+  })
   registerSchema('ComponentCategory', schemas.ComponentCategorySchema)
   registerSchema('ComponentType', schemas.ComponentTypeSchema)
   registerSchema('ComponentSubtype', schemas.ComponentSubtypeSchema)
-  registerSchema('ComponentModel', schemas.ComponentModelSchema)
-  registerSchema('ComponentInstallation', schemas.ComponentInstallationSchema)
+  registerSchema('ComponentModel', schemas.ComponentModelSchema, {
+    ComponentSubtype: schemas.ComponentSubtypeSchema,
+  })
+  registerSchema('ComponentInstallation', schemas.ComponentInstallationSchema, {
+    ComponentSubtype: schemas.ComponentSubtypeSchema,
+  })
   registerSchema(
     'CreateComponentCategoryRequest',
     schemas.CreateComponentCategorySchema

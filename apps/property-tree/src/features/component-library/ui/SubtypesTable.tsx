@@ -1,7 +1,9 @@
 import type { ComponentSubtype } from '@/services/types'
 
-import { Badge } from '@/shared/ui/Badge'
+import { sortBySwedishName } from '@/shared/lib/sortByName'
 import { type Column, DataTable } from '@/shared/ui/DataTable'
+
+import { formatSek, QUANTITY_UNIT_LABELS } from '../lib/componentRows'
 
 interface SubtypesTableProps {
   subtypes: ComponentSubtype[]
@@ -9,6 +11,7 @@ interface SubtypesTableProps {
   onEdit: (subtype: ComponentSubtype) => void
   onDelete: (subtype: ComponentSubtype) => void
   onNavigate: (subtype: ComponentSubtype) => void
+  getHref: (subtype: ComponentSubtype) => string
 }
 
 export const SubtypesTable = ({
@@ -17,6 +20,7 @@ export const SubtypesTable = ({
   onEdit,
   onDelete,
   onNavigate,
+  getHref,
 }: SubtypesTableProps) => {
   const columns: Column<ComponentSubtype>[] = [
     {
@@ -27,6 +31,7 @@ export const SubtypesTable = ({
     {
       key: 'xpandCode',
       label: 'Xpand-kod',
+      isEmpty: (item) => !item.xpandCode,
       render: (item) => (
         <span className="text-muted-foreground">{item.xpandCode || '-'}</span>
       ),
@@ -34,6 +39,7 @@ export const SubtypesTable = ({
     {
       key: 'technicalLifespan',
       label: 'Teknisk livslängd',
+      isEmpty: (item) => !item.technicalLifespan,
       render: (item) => (
         <span
           className={!item.technicalLifespan ? 'text-muted-foreground' : ''}
@@ -45,6 +51,7 @@ export const SubtypesTable = ({
     {
       key: 'economicLifespan',
       label: 'Ekonomisk livslängd',
+      isEmpty: (item) => !item.economicLifespan,
       render: (item) => (
         <span className={!item.economicLifespan ? 'text-muted-foreground' : ''}>
           {item.economicLifespan ? `${item.economicLifespan} år` : '-'}
@@ -54,23 +61,19 @@ export const SubtypesTable = ({
     {
       key: 'depreciationPrice',
       label: 'Avskrivningspris',
+      isEmpty: (item) => !item.depreciationPrice,
       render: (item) => (
         <span
           className={!item.depreciationPrice ? 'text-muted-foreground' : ''}
         >
-          {item.depreciationPrice
-            ? item.depreciationPrice.toLocaleString('sv-SE', {
-                style: 'currency',
-                currency: 'SEK',
-                maximumFractionDigits: 0,
-              })
-            : '-'}
+          {formatSek(item.depreciationPrice)}
         </span>
       ),
     },
     {
       key: 'replacementIntervalMonths',
       label: 'Utbytesintervall',
+      isEmpty: (item) => !item.replacementIntervalMonths,
       render: (item) => (
         <span
           className={
@@ -85,30 +88,24 @@ export const SubtypesTable = ({
     },
     {
       key: 'quantityType',
-      label: 'Kvantitetstyp',
-      render: (item) => (
-        <Badge variant="outline">
-          {item.quantityType === 'UNIT'
-            ? 'Styck'
-            : item.quantityType === 'METER'
-              ? 'Meter'
-              : item.quantityType === 'SQUARE_METER'
-                ? 'Kvm'
-                : 'Kbm'}
-        </Badge>
-      ),
+      label: 'Enhet',
+      isEmpty: (item) => item.quantityType === 'UNIT',
+      render: (item) => <span>{QUANTITY_UNIT_LABELS[item.quantityType]}</span>,
     },
   ]
 
   return (
     <DataTable
-      data={subtypes}
+      data={sortBySwedishName(subtypes, (item) => item.subTypeName)}
       columns={columns}
       isLoading={isLoading}
       onEdit={onEdit}
       onDelete={onDelete}
       onRowClick={onNavigate}
-      emptyMessage="Inga undertyper ännu"
+      getRowHref={getHref}
+      pageSize={50}
+      emptyMessage="Inga undertyper"
+      getRowLabel={(item) => item.subTypeName}
     />
   )
 }
