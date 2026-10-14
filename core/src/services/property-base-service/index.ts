@@ -2474,7 +2474,7 @@ export const routes = (router: KoaRouter) => {
           return
         }
       } catch (error) {
-        console.error('Error:', error)
+        logger.error({ err: error }, 'Error getting maintenance units')
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
         return

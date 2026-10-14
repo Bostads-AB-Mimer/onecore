@@ -9,6 +9,7 @@ import {
   storage,
   getCorrelationId as getCorrelationIdFromStorage,
 } from './loggingStorage'
+import { redactPaths, serializers } from './serializers'
 
 import {
   ConnectionOptions,
@@ -97,6 +98,10 @@ const pinoOptions = {
   mixin() {
     return { correlationId: getCorrelationIdFromStorage() }
   },
+  // Keep credentials from axios errors and responses out of the logs (see
+  // serializers.ts).
+  serializers,
+  redact: { paths: redactPaths, censor: '[REDACTED]' },
 }
 
 const childProperties = {
