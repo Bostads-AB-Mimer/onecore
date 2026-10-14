@@ -709,6 +709,9 @@ importers:
         specifier: ^0.13.8
         version: 0.13.8
     devDependencies:
+      '@onecore/auth':
+        specifier: workspace:*
+        version: link:../../../libs/auth
       '@tanstack/react-query':
         specifier: ^5.102.8
         version: 5.102.8(react@18.3.1)
@@ -1215,6 +1218,49 @@ importers:
       typescript-eslint:
         specifier: 8.42.0
         version: 8.42.0(eslint@9.39.5(jiti@1.21.7))(typescript@5.9.3)
+
+  libs/auth:
+    dependencies:
+      '@onecore/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.102.8
+        version: 5.102.8(react@18.3.1)
+      '@testing-library/react':
+        specifier: ^16.3.0
+        version: 16.3.3(@testing-library/dom@8.20.1)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@types/react':
+        specifier: ^18.3.31
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.7
+        version: 18.3.7(@types/react@18.3.31)
+      eslint:
+        specifier: ^9.39.5
+        version: 9.39.5(jiti@1.21.7)
+      jsdom:
+        specifier: ^26.1.0
+        version: 26.1.0
+      prettier:
+        specifier: ^3.9.6
+        version: 3.9.6
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@1.21.7)(postcss@8.5.27)(tsx@4.23.13)(typescript@5.9.3)(yaml@2.9.0)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@26.4.1)(jiti@1.21.7)(jsdom@26.1.0)(msw@2.11.1(@types/node@26.4.1)(typescript@5.9.3))(tsx@4.23.13)(yaml@2.9.0)
 
   libs/dax-client:
     devDependencies:

@@ -45,9 +45,11 @@ Settled during review, so they need not be re-raised:
 
 ## Auth
 
-The shell logs in through core's Keycloak flow, exactly like property-tree,
-and reads the user from core's profile route. Calls to the BFF carry core's
-cookie, so there is no second login.
+The shell logs in through core's Keycloak flow with
+[`@onecore/auth`](../../../libs/auth/README.md) and reads the user from core's
+profile route. `src/shell/authConfig.ts` resolves the config, and the shell
+renders its own callback, loading and "service unavailable" views. Calls to
+the BFF carry core's cookie, so there is no second login.
 
 The BFF forwards the token as a bearer, so core never refreshes it on the
 way through. The API client in `src/api/client.ts` handles that: on a 401 it
