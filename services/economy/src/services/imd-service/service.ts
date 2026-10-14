@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { match } from 'ts-pattern'
 import { logger } from '@onecore/utilities'
 import { economy } from '@onecore/types'
@@ -177,6 +178,16 @@ function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
+const IMD_BILLING_MONTH_OFFSET = 2
+
+function billingPeriodForConsumption(from: Date): { from: Date; to: Date } {
+  const billingMonth = dayjs(from).add(IMD_BILLING_MONTH_OFFSET, 'month')
+  return {
+    from: billingMonth.startOf('month').toDate(),
+    to: billingMonth.endOf('month').toDate(),
+  }
+}
+
 const UNIT_CONFIG: Record<
   string,
   { articleCode: string; description: string }
@@ -241,12 +252,13 @@ function toTenfastCsv(rows: Array<EnrichedIMDRow>): string {
   const lines = rows.map((row) => {
     const { articleCode, description } = getUnitConfig(row.unit)
     const yearlyRent = (row.cost * 12).toFixed(2).replace('.', ',')
+    const billingPeriod = billingPeriodForConsumption(row.from)
     return csvRow([
       row.leaseId,
       articleCode,
       buildInvoiceText(row, description),
-      formatDate(row.from),
-      formatDate(row.to),
+      formatDate(billingPeriod.from),
+      formatDate(billingPeriod.to),
       yearlyRent,
       '',
     ])

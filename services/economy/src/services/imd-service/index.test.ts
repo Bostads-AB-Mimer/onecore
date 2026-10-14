@@ -439,8 +439,8 @@ describe(imdService.toTenfastCsv, () => {
     expect(cols[0]).toBe('306-008-01-0201/02')
     expect(cols[1]).toBe('IMDM')
     expect(cols[2]).toBe('Varmvatten januari,7,58,m3(25% moms tillkommer)')
-    expect(cols[3]).toBe('2026-01-01')
-    expect(cols[4]).toBe('2026-01-31')
+    expect(cols[3]).toBe('2026-03-01')
+    expect(cols[4]).toBe('2026-03-31')
     expect(cols[5]).toBe('7460,16')
     expect(cols[6]).toBe('')
   })
@@ -508,6 +508,20 @@ describe(imdService.toTenfastCsv, () => {
 
     const lines = csv.split('\n')
     expect(lines).toHaveLength(3)
+  })
+
+  it('sets Fr.o.m/T.o.m to consumption period plus two months for Tenfast billing', () => {
+    const row = makeEnrichedRow('306-008-01-0201', '306-008-01-0201/06', {
+      cost: 4710.36,
+      unit: 'VV',
+    })
+    row.from = new Date('2026-09-01')
+    row.to = new Date('2026-09-30')
+
+    const cols = parseRow(imdService.toTenfastCsv([row]).split('\n')[1])
+    expect(cols[2]).toBe('Varmvatten september,7,58,m3(25% moms tillkommer)')
+    expect(cols[3]).toBe('2026-11-01')
+    expect(cols[4]).toBe('2026-11-30')
   })
 })
 
