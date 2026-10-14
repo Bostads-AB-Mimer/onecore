@@ -20,11 +20,27 @@ export function contactsTokenToJson(
   }
 }
 
-export function readRefreshTokenFromBody(body: unknown): string | undefined {
-  if (!body || typeof body !== 'object') {
-    return undefined
+/** JSON `null`, arrays, and non-objects normalize to {} for validation. */
+export function readJsonBodyRecord(body: unknown): Record<string, unknown> {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return {}
   }
-  const record = body as Record<string, unknown>
+  return body as Record<string, unknown>
+}
+
+export function readCodeVerifierFromBody(body: unknown): string | undefined {
+  const record = readJsonBodyRecord(body)
+  if (typeof record.codeVerifier === 'string' && record.codeVerifier) {
+    return record.codeVerifier
+  }
+  if (typeof record.code_verifier === 'string' && record.code_verifier) {
+    return record.code_verifier
+  }
+  return undefined
+}
+
+export function readRefreshTokenFromBody(body: unknown): string | undefined {
+  const record = readJsonBodyRecord(body)
   if (typeof record.refreshToken === 'string' && record.refreshToken) {
     return record.refreshToken
   }

@@ -62,7 +62,8 @@ export async function refreshContactsAccessToken(
 
 export async function exchangeContactsAuthorizationCode(
   code: string,
-  redirectUri: string
+  redirectUri: string,
+  codeVerifier?: string
 ): Promise<ContactsTokenResponse> {
   const params = new URLSearchParams({
     grant_type: 'authorization_code',
@@ -70,11 +71,15 @@ export async function exchangeContactsAuthorizationCode(
     client_secret: config.auth.keycloak.contacts.clientSecret,
     code,
     redirect_uri: redirectUri,
-  }).toString()
+  })
+  if (codeVerifier) {
+    params.set('code_verifier', codeVerifier)
+  }
+  const body = params.toString()
 
   const response = await axios.post<TokenData>(
     tokenEndpointUrl(),
-    params,
+    body,
     contactsTokenPostConfig
   )
 

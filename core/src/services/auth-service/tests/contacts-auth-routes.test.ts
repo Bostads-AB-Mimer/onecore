@@ -86,7 +86,29 @@ describe('contacts auth routes', () => {
       expect(res.body.refreshExpiresIn).toBe(1800)
       expect(mocked.exchangeContactsAuthorizationCode).toHaveBeenCalledWith(
         'auth-code',
-        'https://mina-sidor/callback'
+        'https://mina-sidor/callback',
+        undefined
+      )
+    })
+
+    it('forwards codeVerifier to Keycloak exchange when present', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+      mocked.exchangeContactsAuthorizationCode.mockResolvedValue({
+        access_token: 'access',
+        expires_in: 300,
+        token_type: 'Bearer',
+      })
+
+      await request(buildApp().callback()).post('/auth/contacts/token').send({
+        code: 'auth-code',
+        redirectUri: 'https://mina-sidor/callback',
+        codeVerifier: 'pkce-verifier',
+      })
+
+      expect(mocked.exchangeContactsAuthorizationCode).toHaveBeenCalledWith(
+        'auth-code',
+        'https://mina-sidor/callback',
+        'pkce-verifier'
       )
     })
 

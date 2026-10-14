@@ -12,6 +12,8 @@ import {
 } from './contacts-keycloak-errors'
 import {
   contactsTokenToJson,
+  readCodeVerifierFromBody,
+  readJsonBodyRecord,
   readRefreshTokenFromBody,
 } from './contacts-auth-dto'
 
@@ -44,6 +46,9 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
    *                 type: string
    *               redirectUri:
    *                 type: string
+   *               codeVerifier:
+   *                 type: string
+   *                 description: PKCE code verifier — forwarded to Keycloak when present
    *     responses:
    *       '200':
    *         description: OAuth tokens from Keycloak
@@ -61,10 +66,9 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
       return
     }
 
-    const { code, redirectUri } = ctx.request.body as {
-      code?: unknown
-      redirectUri?: unknown
-    }
+    const body = readJsonBodyRecord(ctx.request.body)
+    const code = body.code
+    const redirectUri = body.redirectUri
 
     if (typeof code !== 'string' || !code) {
       ctx.status = 400
@@ -78,8 +82,14 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
       return
     }
 
+    const codeVerifier = readCodeVerifierFromBody(ctx.request.body)
+
     try {
-      const result = await exchangeContactsAuthorizationCode(code, redirectUri)
+      const result = await exchangeContactsAuthorizationCode(
+        code,
+        redirectUri,
+        codeVerifier
+      )
       ctx.status = 200
       ctx.body = contactsTokenToJson(result)
     } catch (error) {

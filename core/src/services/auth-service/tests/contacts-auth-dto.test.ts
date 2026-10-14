@@ -1,5 +1,7 @@
 import {
   contactsTokenToJson,
+  readCodeVerifierFromBody,
+  readJsonBodyRecord,
   readRefreshTokenFromBody,
 } from '../contacts-auth-dto'
 
@@ -26,5 +28,17 @@ describe('contacts-auth-dto', () => {
     expect(readRefreshTokenFromBody({ refreshToken: 'x' })).toBe('x')
     expect(readRefreshTokenFromBody({ refresh_token: 'y' })).toBe('y')
     expect(readRefreshTokenFromBody({})).toBeUndefined()
+    expect(readRefreshTokenFromBody(null)).toBeUndefined()
+  })
+
+  it('reads codeVerifier and legacy code_verifier', () => {
+    expect(readCodeVerifierFromBody({ codeVerifier: 'v' })).toBe('v')
+    expect(readCodeVerifierFromBody({ code_verifier: 'w' })).toBe('w')
+    expect(readCodeVerifierFromBody(null)).toBeUndefined()
+  })
+
+  it('normalizes non-object JSON bodies to an empty record', () => {
+    expect(readJsonBodyRecord(null)).toEqual({})
+    expect(readJsonBodyRecord([])).toEqual({})
   })
 })

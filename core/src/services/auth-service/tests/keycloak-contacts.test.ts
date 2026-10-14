@@ -114,6 +114,28 @@ describe('keycloak-contacts', () => {
       expect(nock.isDone()).toBe(true)
     })
 
+    it('includes code_verifier in the token request when provided', async () => {
+      nock('http://keycloak.test')
+        .post(tokenPath)
+        .reply(200, (_uri, body) => {
+          const text = requestBodyText(body)
+          expect(text).toContain('code_verifier=pkce-secret')
+          return {
+            access_token: 'access',
+            expires_in: 300,
+            token_type: 'Bearer',
+          }
+        })
+
+      await exchangeContactsAuthorizationCode(
+        'auth-code',
+        'https://mina-sidor/callback',
+        'pkce-secret'
+      )
+
+      expect(nock.isDone()).toBe(true)
+    })
+
     it('propagates invalid_grant from Keycloak', async () => {
       nock('http://keycloak.test')
         .post(tokenPath)
