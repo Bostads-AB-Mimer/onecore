@@ -54,13 +54,17 @@ export const getComponentModels = async (
             },
           },
         },
+        _count: { select: { components: true } },
       },
     }),
     prisma.componentModels.count({ where }),
   ])
 
   return {
-    models: models.map(trimStrings),
+    models: models.map(({ _count, ...model }) => ({
+      ...trimStrings(model),
+      componentCount: _count.components,
+    })),
     pagination: {
       page,
       limit,
