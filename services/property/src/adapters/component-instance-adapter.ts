@@ -1,6 +1,8 @@
+import { Prisma } from '@prisma/client'
 import { logger } from '@onecore/utilities'
 import { property } from '@onecore/types'
 import { trimStrings } from '@src/utils/data-conversion'
+import { openJsonList } from '@src/utils/sql'
 import { prisma } from './db'
 import type { CreateComponent, UpdateComponent } from '../types/component'
 
@@ -26,6 +28,88 @@ const propertyObjectWithStructuresSelect = {
     },
   },
 } as const
+
+type SpaceStructureRow = {
+  id: string
+  structureId: string | null
+  roomId: string | null
+  roomCode: string | null
+  roomName: string | null
+  residenceId: string | null
+  residenceCode: string | null
+  residenceName: string | null
+  rentalId: string | null
+  buildingCode: string | null
+  buildingName: string | null
+  residenceRowId: string | null
+}
+
+type SpaceWithStructures = {
+  id: string
+  propertyStructures: {
+    roomId: string | null
+    roomCode: string | null
+    roomName: string | null
+    residenceId: string | null
+    residenceCode: string | null
+    residenceName: string | null
+    rentalId: string | null
+    buildingCode: string | null
+    buildingName: string | null
+    residence: { id: string } | null
+  }[]
+}
+
+/** Same shape as `propertyObjectWithStructuresSelect`, for many spaces at once.
+ * Prisma binds ids as nvarchar, which scans these char(15) keys; see sql.ts. */
+const getSpacesWithStructures = async (
+  spaceIds: string[]
+): Promise<Map<string, SpaceWithStructures>> => {
+  const spaces = new Map<string, SpaceWithStructures>()
+  if (spaceIds.length === 0) return spaces
+
+  const rows = await prisma.$queryRaw<SpaceStructureRow[]>(Prisma.sql`
+    SELECT
+      o.keycmobj AS id,
+      b.keybabuf AS structureId,
+      b.keyobjrum AS roomId,
+      b.rumcode AS roomCode,
+      b.rumcaption AS roomName,
+      b.keyobjlgh AS residenceId,
+      b.lghcode AS residenceCode,
+      b.lghcaption AS residenceName,
+      b.hyresid AS rentalId,
+      b.bygcode AS buildingCode,
+      b.bygcaption AS buildingName,
+      l.keybalgh AS residenceRowId
+    FROM cmobj o
+    LEFT JOIN babuf b ON b.keycmobj = o.keycmobj
+    LEFT JOIN balgh l ON l.keycmobj = b.keyobjlgh
+    WHERE o.keycmobj IN ${openJsonList(spaceIds)}
+  `)
+
+  for (const row of rows) {
+    const key = row.id.trim()
+    const space = spaces.get(key) ?? { id: row.id, propertyStructures: [] }
+    if (row.structureId !== null) {
+      space.propertyStructures.push({
+        roomId: row.roomId,
+        roomCode: row.roomCode,
+        roomName: row.roomName,
+        residenceId: row.residenceId,
+        residenceCode: row.residenceCode,
+        residenceName: row.residenceName,
+        rentalId: row.rentalId,
+        buildingCode: row.buildingCode,
+        buildingName: row.buildingName,
+        residence: row.residenceRowId ? { id: row.residenceRowId } : null,
+      })
+    }
+    spaces.set(key, space)
+  }
+
+  return spaces
+}
 
 const componentHierarchyInclude = {
   subtype: {
@@ -82,19 +166,34 @@ export const getComponents = async (
           orderBy: {
             installationDate: 'desc',
           },
-          include: {
-            propertyObject: {
-              select: propertyObjectWithStructuresSelect,
-            },
-          },
         },
       },
     }),
     prisma.components.count({ where }),
   ])
 
+  const spaceIds = new Map<string, string>()
+  for (const { componentInstallations } of components) {
+    for (const { spaceId } of componentInstallations) {
+      if (spaceId) spaceIds.set(spaceId.trim(), spaceId)
+    }
+  }
+  const spaces = await getSpacesWithStructures([...spaceIds.values()])
+
+  const withSpaces = components.map((component) => ({
+    ...component,
+    componentInstallations: component.componentInstallations.map(
+      (installation) => ({
+        ...installation,
+        propertyObject: installation.spaceId
+          ? (spaces.get(installation.spaceId.trim()) ?? null)
+          : null,
+      })
+    ),
+  }))
+
   return {
-    components: components.map(trimStrings),
+    components: withSpaces.map(trimStrings),
     pagination: {
       page,
       limit,
