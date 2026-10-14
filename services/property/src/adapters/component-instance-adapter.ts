@@ -6,32 +6,7 @@ import { openJsonList } from '@src/utils/sql'
 import { prisma } from './db'
 import type { CreateComponent, UpdateComponent } from '../types/component'
 
-// Reusable Prisma select for propertyObject with room/residence structure info
-const propertyObjectWithStructuresSelect = {
-  id: true,
-  propertyStructures: {
-    select: {
-      roomId: true,
-      roomCode: true,
-      roomName: true,
-      residenceId: true,
-      residenceCode: true,
-      residenceName: true,
-      rentalId: true,
-      buildingCode: true,
-      buildingName: true,
-      residence: {
-        select: {
-          id: true,
-        },
-      },
-    },
-  },
-} as const
-
-type SpaceStructureRow = {
-  id: string
-  structureId: string | null
+type PropertyStructure = {
   roomId: string | null
   roomCode: string | null
   roomName: string | null
@@ -41,74 +16,101 @@ type SpaceStructureRow = {
   rentalId: string | null
   buildingCode: string | null
   buildingName: string | null
-  residenceRowId: string | null
+  residence: { id: string } | null
 }
 
 type SpaceWithStructures = {
   id: string
-  propertyStructures: {
-    roomId: string | null
-    roomCode: string | null
-    roomName: string | null
-    residenceId: string | null
-    residenceCode: string | null
-    residenceName: string | null
-    rentalId: string | null
-    buildingCode: string | null
-    buildingName: string | null
-    residence: { id: string } | null
-  }[]
+  propertyStructures: PropertyStructure[]
 }
 
-/** Same shape as `propertyObjectWithStructuresSelect`, for many spaces at once.
- * Prisma binds ids as nvarchar, which scans these char(15) keys; see sql.ts. */
+type SpaceRow = Omit<PropertyStructure, 'residence'> & {
+  id: string
+  structureId: string | null
+  residenceRowId: string | null
+}
+
+// SQL Server matched these keys case-insensitively, so the JS lookup must too.
+const spaceKey = (id: string) => id.trim().toUpperCase()
+
+/** Looks up many spaces in one indexed query; see sql.ts for why not Prisma. */
 const getSpacesWithStructures = async (
   spaceIds: string[]
 ): Promise<Map<string, SpaceWithStructures>> => {
   const spaces = new Map<string, SpaceWithStructures>()
   if (spaceIds.length === 0) return spaces
 
-  const rows = await prisma.$queryRaw<SpaceStructureRow[]>(Prisma.sql`
-    SELECT
-      o.keycmobj AS id,
-      b.keybabuf AS structureId,
-      b.keyobjrum AS roomId,
-      b.rumcode AS roomCode,
-      b.rumcaption AS roomName,
-      b.keyobjlgh AS residenceId,
-      b.lghcode AS residenceCode,
-      b.lghcaption AS residenceName,
-      b.hyresid AS rentalId,
-      b.bygcode AS buildingCode,
-      b.bygcaption AS buildingName,
-      l.keybalgh AS residenceRowId
-    FROM cmobj o
-    LEFT JOIN babuf b ON b.keycmobj = o.keycmobj
-    LEFT JOIN balgh l ON l.keycmobj = b.keyobjlgh
-    WHERE o.keycmobj IN ${openJsonList(spaceIds)}
-  `)
+  try {
+    const rows = await prisma.$queryRaw<SpaceRow[]>(Prisma.sql`
+      SELECT
+        o.keycmobj AS id,
+        b.keybabuf AS structureId,
+        b.keyobjrum AS roomId,
+        b.rumcode AS roomCode,
+        b.rumcaption AS roomName,
+        b.keyobjlgh AS residenceId,
+        b.lghcode AS residenceCode,
+        b.lghcaption AS residenceName,
+        b.hyresid AS rentalId,
+        b.bygcode AS buildingCode,
+        b.bygcaption AS buildingName,
+        l.keybalgh AS residenceRowId
+      FROM dbo.cmobj o
+      LEFT JOIN dbo.babuf b ON b.keycmobj = o.keycmobj AND b.deletemark = 0
+      LEFT JOIN dbo.balgh l ON l.keycmobj = b.keyobjlgh
+      WHERE o.keycmobj IN ${openJsonList(spaceIds)}
+    `)
 
-  for (const row of rows) {
-    const key = row.id.trim()
-    const space = spaces.get(key) ?? { id: row.id, propertyStructures: [] }
-    if (row.structureId !== null) {
-      space.propertyStructures.push({
-        roomId: row.roomId,
-        roomCode: row.roomCode,
-        roomName: row.roomName,
-        residenceId: row.residenceId,
-        residenceCode: row.residenceCode,
-        residenceName: row.residenceName,
-        rentalId: row.rentalId,
-        buildingCode: row.buildingCode,
-        buildingName: row.buildingName,
-        residence: row.residenceRowId ? { id: row.residenceRowId } : null,
+    for (const { id, structureId, residenceRowId, ...structure } of trimStrings(
+      rows
+    )) {
+      spaces.set(spaceKey(id), {
+        id,
+        propertyStructures:
+          structureId === null
+            ? []
+            : [
+                {
+                  ...structure,
+                  residence: residenceRowId ? { id: residenceRowId } : null,
+                },
+              ],
       })
     }
-    spaces.set(key, space)
-  }
 
-  return spaces
+    return spaces
+  } catch (err) {
+    logger.error({ err }, 'component-instance-adapter.getSpacesWithStructures')
+    throw err
+  }
+}
+
+/** Trims the components and gives each installation its `propertyObject`. */
+const attachSpaces = async <
+  C extends { componentInstallations: { spaceId: string | null }[] },
+>(
+  components: C[]
+) => {
+  const trimmed = components.map(trimStrings)
+  const spaceIds = new Set<string>()
+  for (const { componentInstallations } of trimmed) {
+    for (const { spaceId } of componentInstallations) {
+      if (spaceId) spaceIds.add(spaceId)
+    }
+  }
+  const spaces = await getSpacesWithStructures([...spaceIds])
+
+  return trimmed.map((component) => ({
+    ...component,
+    componentInstallations: component.componentInstallations.map(
+      (installation) => ({
+        ...installation,
+        propertyObject: installation.spaceId
+          ? (spaces.get(spaceKey(installation.spaceId)) ?? null)
+          : null,
+      })
+    ),
+  }))
 }
 
 const componentHierarchyInclude = {
@@ -152,48 +154,30 @@ export const getComponents = async (
   }
 
   const [components, total] = await Promise.all([
-    prisma.components.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-      include: {
-        ...componentHierarchyInclude,
-        componentInstallations: {
-          where: {
-            deinstallationDate: null, // Only active installations
-          },
-          orderBy: {
-            installationDate: 'desc',
+    prisma.components
+      .findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        include: {
+          ...componentHierarchyInclude,
+          componentInstallations: {
+            where: {
+              deinstallationDate: null, // Only active installations
+            },
+            orderBy: {
+              installationDate: 'desc',
+            },
           },
         },
-      },
-    }),
+      })
+      .then(attachSpaces),
     prisma.components.count({ where }),
   ])
 
-  const spaceIds = new Map<string, string>()
-  for (const { componentInstallations } of components) {
-    for (const { spaceId } of componentInstallations) {
-      if (spaceId) spaceIds.set(spaceId.trim(), spaceId)
-    }
-  }
-  const spaces = await getSpacesWithStructures([...spaceIds.values()])
-
-  const withSpaces = components.map((component) => ({
-    ...component,
-    componentInstallations: component.componentInstallations.map(
-      (installation) => ({
-        ...installation,
-        propertyObject: installation.spaceId
-          ? (spaces.get(installation.spaceId.trim()) ?? null)
-          : null,
-      })
-    ),
-  }))
-
   return {
-    components: withSpaces.map(trimStrings),
+    components,
     pagination: {
       page,
       limit,
@@ -208,17 +192,13 @@ export const getComponentById = async (id: string) => {
     where: { id },
     include: {
       ...componentHierarchyInclude,
-      componentInstallations: {
-        include: {
-          propertyObject: {
-            select: propertyObjectWithStructuresSelect,
-          },
-        },
-      },
+      componentInstallations: true,
     },
   })
+  if (!component) return null
 
-  return component ? trimStrings(component) : null
+  const [withSpaces] = await attachSpaces([component])
+  return withSpaces
 }
 
 export const createComponent = async (data: CreateComponent) => {
@@ -305,39 +285,33 @@ export const updateComponentInspectionState = async (
 // ==================== COMPONENTS BY ROOM ====================
 
 export const getComponentsByRoomId = async (roomId: string) => {
+  let installed: { componentId: string }[]
+  try {
+    installed = await prisma.$queryRaw<{ componentId: string }[]>(Prisma.sql`
+      SELECT componentId
+      FROM dbo.component_installations
+      WHERE spaceId = CAST(${roomId} AS CHAR(15))
+        AND deinstallationDate IS NULL
+    `)
+  } catch (err) {
+    logger.error({ err }, 'component-instance-adapter.getComponentsByRoomId')
+    throw err
+  }
+  if (installed.length === 0) return []
+
+  // A component has at most one active installation (UX_component_installations_active).
   const components = await prisma.components.findMany({
-    where: {
-      componentInstallations: {
-        some: {
-          spaceId: roomId,
-          deinstallationDate: null, // Only currently installed components
-        },
-      },
-    },
+    where: { id: { in: installed.map(({ componentId }) => componentId) } },
     include: {
       ...componentHierarchyInclude,
-      componentInstallations: {
-        where: {
-          spaceId: roomId,
-          deinstallationDate: null,
-        },
-        take: 1,
-        orderBy: {
-          installationDate: 'desc',
-        },
-        include: {
-          propertyObject: {
-            select: propertyObjectWithStructuresSelect,
-          },
-        },
-      },
+      componentInstallations: { where: { deinstallationDate: null } },
     },
     orderBy: {
       createdAt: 'desc',
     },
   })
 
-  return components.map(trimStrings)
+  return attachSpaces(components)
 }
 
 // ==================== COMPONENT FILES ====================
