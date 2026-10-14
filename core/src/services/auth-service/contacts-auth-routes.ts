@@ -10,6 +10,10 @@ import {
   httpStatusForContactsKeycloakError,
   logContactsKeycloakTokenError,
 } from './contacts-keycloak-errors'
+import {
+  contactsTokenToJson,
+  readRefreshTokenFromBody,
+} from './contacts-auth-dto'
 
 /**
  * OAuth helper routes for mimer.nu (mimer-contacts realm).
@@ -77,7 +81,7 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
     try {
       const result = await exchangeContactsAuthorizationCode(code, redirectUri)
       ctx.status = 200
-      ctx.body = result
+      ctx.body = contactsTokenToJson(result)
     } catch (error) {
       logContactsKeycloakTokenError(
         'Authentication error in /auth/contacts/token',
@@ -105,9 +109,9 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             required:
-   *               - refresh_token
+   *               - refreshToken
    *             properties:
-   *               refresh_token:
+   *               refreshToken:
    *                 type: string
    *     responses:
    *       '200':
@@ -126,11 +130,9 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
       return
     }
 
-    const { refresh_token: refreshToken } = ctx.request.body as {
-      refresh_token?: unknown
-    }
+    const refreshToken = readRefreshTokenFromBody(ctx.request.body)
 
-    if (typeof refreshToken !== 'string' || !refreshToken) {
+    if (!refreshToken) {
       ctx.status = 400
       ctx.body = { error: 'missing_refresh_token' }
       return
@@ -138,7 +140,9 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
 
     try {
       ctx.status = 200
-      ctx.body = await refreshContactsAccessToken(refreshToken)
+      ctx.body = contactsTokenToJson(
+        await refreshContactsAccessToken(refreshToken)
+      )
     } catch (error) {
       logContactsKeycloakTokenError(
         'Token refresh failed in /auth/contacts/refresh',

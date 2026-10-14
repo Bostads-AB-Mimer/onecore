@@ -82,8 +82,8 @@ describe('contacts auth routes', () => {
         })
 
       expect(res.status).toBe(200)
-      expect(res.body.access_token).toBe('access')
-      expect(res.body.refresh_expires_in).toBe(1800)
+      expect(res.body.accessToken).toBe('access')
+      expect(res.body.refreshExpiresIn).toBe(1800)
       expect(mocked.exchangeContactsAuthorizationCode).toHaveBeenCalledWith(
         'auth-code',
         'https://mina-sidor/callback'
@@ -120,7 +120,7 @@ describe('contacts auth routes', () => {
   })
 
   describe('POST /auth/contacts/refresh', () => {
-    it('returns 400 when refresh_token is missing', async () => {
+    it('returns 400 when refreshToken is missing', async () => {
       mocked.isContactsKeycloakConfigured.mockReturnValue(true)
 
       const res = await request(buildApp().callback())
@@ -142,12 +142,31 @@ describe('contacts auth routes', () => {
 
       const res = await request(buildApp().callback())
         .post('/auth/contacts/refresh')
-        .send({ refresh_token: 'old-refresh' })
+        .send({ refreshToken: 'old-refresh' })
 
       expect(res.status).toBe(200)
-      expect(res.body.access_token).toBe('new-access')
+      expect(res.body.accessToken).toBe('new-access')
       expect(mocked.refreshContactsAccessToken).toHaveBeenCalledWith(
         'old-refresh'
+      )
+    })
+
+    it('accepts legacy refresh_token in the body', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+      mocked.refreshContactsAccessToken.mockResolvedValue({
+        access_token: 'new-access',
+        refresh_token: 'new-refresh',
+        expires_in: 300,
+        token_type: 'Bearer',
+      })
+
+      const res = await request(buildApp().callback())
+        .post('/auth/contacts/refresh')
+        .send({ refresh_token: 'legacy-refresh' })
+
+      expect(res.status).toBe(200)
+      expect(mocked.refreshContactsAccessToken).toHaveBeenCalledWith(
+        'legacy-refresh'
       )
     })
 
@@ -159,7 +178,7 @@ describe('contacts auth routes', () => {
 
       const res = await request(buildApp().callback())
         .post('/auth/contacts/refresh')
-        .send({ refresh_token: 'rt' })
+        .send({ refreshToken: 'rt' })
 
       expect(res.status).toBe(502)
       expect(res.body.error).toBe('keycloak_unavailable')
