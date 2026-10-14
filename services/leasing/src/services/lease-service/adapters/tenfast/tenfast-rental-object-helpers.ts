@@ -1,32 +1,62 @@
 import { RentalObjectAvailabilityInfo, RentalTag } from '@onecore/types'
 import currency from 'currency.js'
+import { logger } from '@onecore/utilities'
 import { TenfastLease, TenfastRentalObject, TenfastTag } from './schemas'
-import { filterByStatus } from './filters'
 
-export const getLatestActiveLeasesEndDate = (
+// Lease stages (Tenfast's avtal.stage) in force: running, terminating with or
+// without signed notice, or signed to start later.
+const IN_FORCE_STAGES = new Set([
+  'active',
+  'terminationScheduled',
+  'preTermination',
+  'upcoming',
+])
+// Stages that never hold the object: ended, annulled or never signed.
+const NOT_IN_FORCE_STAGES = new Set([
+  'archived',
+  'terminated',
+  'voided',
+  'rejected',
+  'draft',
+  'signingInProgress',
+])
+
+/**
+ * When the leases in force (IN_FORCE_STAGES) leave the rental object: the
+ * latest end date among them, null if there are none, or 'indefinite' if any
+ * of them has no end. Without an end means a tenancy until further notice,
+ * which includes a signed successor to a terminated lease: the object never
+ * becomes vacant in between.
+ *
+ * Tenfast sets endDate when notice is given (and for fixed-term leases). A
+ * notice that was withdrawn (`requested` and `cancelled`) counts as no end,
+ * in case the end date is left behind. Leases on a rental object are parsed
+ * partially, so stage and cancellation may be missing: a lease whose stage is
+ * missing or unknown counts as in force without an end, so an object is never
+ * shown as vacant on a lease we can't read.
+ */
+export const getLeasedUntil = (
   leases: TenfastLease[]
-): Date | null => {
-  if (leases.length === 0) return null
-  const endDates = filterByStatus(leases, [
-    'current',
-    'about-to-end',
-    'upcoming',
-  ])
-    // `requested` indicates notice was given; `cancelled` means that
-    // termination notice was itself later withdrawn, so both must be
-    // checked — `requested` alone doesn't necessarily flip back to false
-    // when a notice is withdrawn. Leases on a rental object are parsed
-    // partially, so cancellation may be missing.
-    .filter(
-      (lease) => lease.cancellation?.requested && !lease.cancellation?.cancelled
-    )
-    .map((lease) => lease.endDate)
-    .filter((date): date is Date => date != null)
-    .sort((a, b) => b.getTime() - a.getTime()) // Sort descending to get the latest date first
+): Date | null | 'indefinite' => {
+  const endDates: Date[] = []
+  for (const lease of leases) {
+    if (NOT_IN_FORCE_STAGES.has(lease.stage)) continue
+    if (!IN_FORCE_STAGES.has(lease.stage)) {
+      logger.warn(
+        { stage: lease.stage, leaseId: lease.externalId },
+        'getLeasedUntil: unknown lease stage, rental object counted as not vacant'
+      )
+      return 'indefinite'
+    }
 
+    const noticeWithdrawn =
+      lease.cancellation?.requested && lease.cancellation?.cancelled
+    if (!lease.endDate || noticeWithdrawn) return 'indefinite'
+    endDates.push(new Date(lease.endDate))
+  }
   if (endDates.length === 0) return null
 
-  return new Date(endDates[0]) // Return the latest end date
+  return new Date(Math.max(...endDates.map((date) => date.getTime())))
 }
 
 export const mapTenfastRentalObjectToAvailabilityInfo = (
@@ -34,20 +64,21 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
   tenfastRentalObject: TenfastRentalObject,
   tagsById: Map<string, TenfastTag> = new Map()
 ): RentalObjectAvailabilityInfo => {
-  const lastDebitDate = getLatestActiveLeasesEndDate(
-    tenfastRentalObject.avtal ?? []
-  )
+  const leasedUntil = getLeasedUntil(tenfastRentalObject.avtal ?? [])
 
-  let vacantFrom
-  if (lastDebitDate) {
-    //if there is a last debit date, vacantFrom should be the day after
-    vacantFrom = new Date(lastDebitDate)
+  // undefined: leased until further notice, so not vacant at all.
+  let vacantFrom: Date | undefined
+  if (leasedUntil === 'indefinite') {
+    vacantFrom = undefined
+  } else if (leasedUntil) {
+    // Vacant the day after the last lease ends.
+    vacantFrom = new Date(leasedUntil)
     vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+    vacantFrom.setUTCHours(0, 0, 0, 0)
   } else {
-    //there is no last debit date, the parking space is vacant as of today
+    // No lease running or to come: vacant as of today.
     vacantFrom = new Date()
-    vacantFrom.setUTCHours(0, 0, 0, 0) // Set to start of the day UTC
+    vacantFrom.setUTCHours(0, 0, 0, 0)
   }
 
   return {

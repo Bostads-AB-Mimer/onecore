@@ -135,6 +135,34 @@ describe('parking spaces', () => {
       )
     })
 
+    it('leaves vacantFrom unset for a space leased until further notice, whatever the block', async () => {
+      // A bounded future block would otherwise give the day after it ends.
+      const nextWeek = new Date()
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+        blockStartDate: new Date(),
+        blockEndDate: nextWeek,
+      })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+        vacantFrom: undefined,
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValue({ ok: true, data: [parkingSpace] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValue({ ok: true, data: [availability] })
+
+      const res = await request(app.callback())
+        .post('/parking-spaces')
+        .send({ includeRentalObjectCodes: ['code-1'] })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].availabilityInfo.vacantFrom).toBeUndefined()
+    })
+
     it('should not set availability if availability is not found for parking space', async () => {
       // Arrange
       const parkingSpace = factory.rentalObject.build({
@@ -226,6 +254,33 @@ describe('parking spaces', () => {
       expect(new Date(res.body.content.availabilityInfo.vacantFrom)).toEqual(
         expectedVacantFrom
       )
+    })
+
+    it('leaves vacantFrom unset for a space leased until further notice, whatever the block', async () => {
+      const nextWeek = new Date()
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+        blockStartDate: new Date(),
+        blockEndDate: nextWeek,
+      })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+        vacantFrom: undefined,
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpace')
+        .mockResolvedValue({ ok: true, data: parkingSpace })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValue({ ok: true, data: availability })
+
+      const res = await request(app.callback()).get(
+        '/parking-spaces/by-code/code-1'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.availabilityInfo.vacantFrom).toBeUndefined()
     })
 
     it('should respond with 200 and not include availability if availability is not found', async () => {
