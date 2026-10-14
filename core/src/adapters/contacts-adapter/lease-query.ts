@@ -60,7 +60,11 @@ export async function enrichLeaseContacts<
     )
     return leases.map((lease) => ({
       ...lease,
-      contacts: lease.contacts?.map((c) => ({ ...c, email: null, phone: null })),
+      contacts: lease.contacts?.map((c) => ({
+        ...c,
+        email: null,
+        phone: null,
+      })),
     }))
   }
 
