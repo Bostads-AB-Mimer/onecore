@@ -47,13 +47,15 @@ describe('isValidSlug', () => {
 
   it('rejects reserved slugs that collide with static routes', () => {
     expect(isValidSlug('ny')).toBe(false)
+    expect(isValidSlug('kategori')).toBe(false)
     expect(isValidSlug('ny-guide')).toBe(true)
   })
 })
 
 describe('isReservedSlug', () => {
-  it('flags the editor route slug', () => {
+  it('flags the editor and category route slugs', () => {
     expect(isReservedSlug('ny')).toBe(true)
+    expect(isReservedSlug('kategori')).toBe(true)
     expect(isReservedSlug('nyheter')).toBe(false)
   })
 })

@@ -2,9 +2,11 @@ import { useId, useMemo, useState } from 'react'
 import { BookOpen, Search, SearchX } from 'lucide-react'
 
 import {
+  CategoryCard,
   filterGuides,
   groupByCategory,
   GuideCard,
+  type GuideCategoryGroup,
   type GuideSummary,
   useGuides,
 } from '@/entities/guide'
@@ -17,17 +19,28 @@ import { Skeleton } from '@/shared/ui/Skeleton'
 interface GuidesOverviewProps {
   includeDrafts: boolean
   variant?: 'page' | 'sheet'
+  /** Limit the list to one category. Without it, an empty search shows one
+   * card per category instead of every guide. */
+  categoryId?: string
   /** Override navigation, e.g. to open the guide inside a sheet. */
   onSelectGuide?: (guide: GuideSummary) => void
+  /** Override navigation, e.g. to open the category inside a sheet. */
+  onSelectCategory?: (category: GuideCategoryGroup) => void
   /** Rendered next to the search field, e.g. a "Ny guide" button. */
   actions?: React.ReactNode
 }
 
-/** Searchable list of guides grouped by category. */
+/**
+ * Searchable guide overview. Without a search it lists the categories; a
+ * search lists the matching guides grouped by category. With `categoryId`
+ * it lists (and searches) that category's guides.
+ */
 export function GuidesOverview({
   includeDrafts,
   variant = 'page',
+  categoryId,
   onSelectGuide,
+  onSelectCategory,
   actions,
 }: GuidesOverviewProps) {
   const [search, setSearch] = useState('')
@@ -35,15 +48,121 @@ export function GuidesOverview({
   const idPrefix = useId()
   const { data, isLoading, isError } = useGuides(includeDrafts)
 
-  const groups = useMemo(
-    () => groupByCategory(filterGuides(data ?? [], search)),
-    [data, search]
+  // Filter by category once; both the empty-category check and the search
+  // work from this list.
+  const inCategory = useMemo(
+    () => filterGuides(data ?? [], '', categoryId),
+    [data, categoryId]
   )
+  const matches = useMemo(
+    () => filterGuides(inCategory, search),
+    [inCategory, search]
+  )
+  const isSearching = search.trim().length > 0
 
   const gridClassName = cn(
     'grid gap-3',
     variant === 'page' ? 'sm:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'
   )
+
+  const results = () => {
+    if (isLoading) {
+      return (
+        <div className={gridClassName} aria-busy>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="h-32" />
+          ))}
+        </div>
+      )
+    }
+    if (isError) {
+      return (
+        <p className="py-8 text-center text-destructive">
+          Guiderna kunde inte hämtas. Försök igen om en stund.
+        </p>
+      )
+    }
+    if ((data ?? []).length === 0) {
+      return (
+        <EmptyState
+          icon={BookOpen}
+          title="Inga guider än"
+          description="När en guide publiceras dyker den upp här."
+        />
+      )
+    }
+    if (inCategory.length === 0) {
+      return (
+        <EmptyState
+          icon={BookOpen}
+          title="Inga guider i kategorin"
+          description="När en guide i kategorin publiceras dyker den upp här."
+        />
+      )
+    }
+    if (matches.length === 0) {
+      return (
+        <EmptyState
+          icon={SearchX}
+          title="Inga träffar"
+          description={`Ingen guide matchar "${search}".`}
+        />
+      )
+    }
+
+    // A flat list: the page or sheet heading already names the category.
+    if (categoryId !== undefined) {
+      return (
+        <div className={gridClassName}>
+          {matches.map((guide) => (
+            <GuideCard key={guide.id} guide={guide} onSelect={onSelectGuide} />
+          ))}
+        </div>
+      )
+    }
+
+    const groups = groupByCategory(matches)
+    if (!isSearching) {
+      return (
+        <div className={gridClassName}>
+          {groups.map((group) => (
+            <CategoryCard
+              key={group.id}
+              category={group}
+              onSelect={onSelectCategory}
+            />
+          ))}
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-8">
+        {groups.map((group) => (
+          <section
+            key={group.id}
+            aria-labelledby={`${idPrefix}-category-${group.id}`}
+          >
+            <h2
+              id={`${idPrefix}-category-${group.id}`}
+              className="mb-3 text-lg font-semibold"
+            >
+              {group.name}
+            </h2>
+            <div className={gridClassName}>
+              {group.guides.map((guide) => (
+                <GuideCard
+                  key={guide.id}
+                  guide={guide}
+                  onSelect={onSelectGuide}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -65,54 +184,7 @@ export function GuidesOverview({
         {actions}
       </div>
 
-      {isLoading ? (
-        <div className={gridClassName} aria-busy>
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-32" />
-          ))}
-        </div>
-      ) : isError ? (
-        <p className="py-8 text-center text-destructive">
-          Guiderna kunde inte hämtas. Försök igen om en stund.
-        </p>
-      ) : (data ?? []).length === 0 ? (
-        <EmptyState
-          icon={BookOpen}
-          title="Inga guider än"
-          description="När en guide publiceras dyker den upp här."
-        />
-      ) : groups.length === 0 ? (
-        <EmptyState
-          icon={SearchX}
-          title="Inga träffar"
-          description={`Ingen guide matchar "${search}".`}
-        />
-      ) : (
-        <div className="space-y-8">
-          {groups.map((group) => (
-            <section
-              key={group.id}
-              aria-labelledby={`${idPrefix}-category-${group.id}`}
-            >
-              <h2
-                id={`${idPrefix}-category-${group.id}`}
-                className="mb-3 text-lg font-semibold"
-              >
-                {group.name}
-              </h2>
-              <div className={gridClassName}>
-                {group.guides.map((guide) => (
-                  <GuideCard
-                    key={guide.id}
-                    guide={guide}
-                    onSelect={onSelectGuide}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+      {results()}
     </div>
   )
 }

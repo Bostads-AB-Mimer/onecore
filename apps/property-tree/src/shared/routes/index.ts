@@ -35,6 +35,7 @@ export const routes = {
   guideNew: '/guider/ny',
   guide: '/guider/:slug',
   guideEdit: '/guider/:slug/redigera',
+  guideCategory: '/guider/kategori/:categoryId',
   releaseNotesAdmin: '/nyheter/admin',
   callback: '/callback',
 } as const
@@ -69,6 +70,8 @@ export const paths = {
   tenant: (contactCode: string) => generatePath(routes.tenant, { contactCode }),
   guide: (slug: string) => generatePath(routes.guide, { slug }),
   guideEdit: (slug: string) => generatePath(routes.guideEdit, { slug }),
+  guideCategory: (categoryId: string) =>
+    generatePath(routes.guideCategory, { categoryId }),
   economy: (params?: { contactCode?: string }) => {
     if (!params?.contactCode) {
       return routes.economy
