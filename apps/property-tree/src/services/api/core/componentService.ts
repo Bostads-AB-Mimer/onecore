@@ -1,5 +1,5 @@
 import { Component, ComponentSubtype } from '../../types'
-import { GET, POST, PUT } from './baseApi'
+import { GET, POST, PUT, toApiError } from './baseApi'
 import type { components } from './generated/api-types'
 
 type ComponentInput = Omit<
@@ -39,11 +39,11 @@ export const componentService = {
   },
 
   async createInstance(instanceData: ComponentInput): Promise<Component> {
-    const { data, error } = await POST('/components', {
+    const { data, error, response } = await POST('/components', {
       body: toComponentBody(instanceData),
     })
 
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     if (!data?.content) throw new Error('Failed to create component instance')
 
     return data.content as Component
@@ -101,32 +101,39 @@ export const componentService = {
     }
   ): Promise<Component> {
     // 1. Create component instance
-    const { data: instance, error: instanceError } = await POST('/components', {
+    const {
+      data: instance,
+      error: instanceError,
+      response: instanceResponse,
+    } = await POST('/components', {
       body: toComponentBody(instanceData),
     })
 
-    if (instanceError) throw instanceError
+    if (instanceError) throw toApiError(instanceError, instanceResponse)
     if (!instance?.content)
       throw new Error('Failed to create component instance')
 
     const createdInstance = instance.content as Component
 
     // 2. Create installation record
-    const { error: installError } = await POST('/component-installations', {
-      body: {
-        componentId: createdInstance.id,
-        spaceId: roomId,
-        spaceType: instanceData.spaceType ?? 'OBJECT',
-        installationDate: instanceData.installationDate,
-        cost: instanceData.installationCost,
-        orderNumber: instanceData.orderNumber,
-      },
-    })
+    const { error: installError, response: installResponse } = await POST(
+      '/component-installations',
+      {
+        body: {
+          componentId: createdInstance.id,
+          spaceId: roomId,
+          spaceType: instanceData.spaceType ?? 'OBJECT',
+          installationDate: instanceData.installationDate,
+          cost: instanceData.installationCost,
+          orderNumber: instanceData.orderNumber,
+        },
+      }
+    )
 
     if (installError) {
       // Installation failed, but instance was created
       // In a production system, we might want to rollback or mark as uninstalled
-      throw installError
+      throw toApiError(installError, installResponse)
     }
 
     return createdInstance
@@ -136,7 +143,7 @@ export const componentService = {
     installationId: string,
     deinstallationDate: string
   ): Promise<void> {
-    const { error } = await PUT('/component-installations/{id}', {
+    const { error, response } = await PUT('/component-installations/{id}', {
       params: {
         path: { id: installationId },
       },
@@ -145,7 +152,7 @@ export const componentService = {
       },
     })
 
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 
   async installExistingInstance(
@@ -158,7 +165,7 @@ export const componentService = {
       spaceType?: 'OBJECT' | 'PropertyObject'
     }
   ): Promise<void> {
-    const { error } = await POST('/component-installations', {
+    const { error, response } = await POST('/component-installations', {
       body: {
         componentId: instanceId,
         spaceId: roomId,
@@ -169,7 +176,7 @@ export const componentService = {
       },
     })
 
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 
   async updateInstance(
@@ -188,7 +195,11 @@ export const componentService = {
       ncsCode?: string | null
     }>
   ): Promise<Component> {
-    const { data: response, error } = await PUT('/components/{id}', {
+    const {
+      data: updated,
+      error,
+      response,
+    } = await PUT('/components/{id}', {
       params: { path: { id: instanceId } },
       body: {
         ...data,
@@ -196,11 +207,11 @@ export const componentService = {
       },
     })
 
-    if (error) throw error
-    if (!response?.content)
+    if (error) throw toApiError(error, response)
+    if (!updated?.content)
       throw new Error('Failed to update component instance')
 
-    return response.content as Component
+    return updated.content as Component
   },
 
   async getSurfaceSubtypes(): Promise<ComponentSubtype[]> {

@@ -21,6 +21,7 @@ import { Label } from '@/shared/ui/Label'
 import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 
 import { useInstallComponent } from '../hooks/useInstallComponent'
+import { serverMessage } from '../lib/serverMessage'
 
 export interface InstallationFormData {
   subtypeId: string
@@ -105,6 +106,7 @@ export const ComponentInstallationForm = ({
   const [formData, setFormData] =
     useState<InstallationFormData>(getInitialFormData())
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [submitError, setSubmitError] = useState<string>()
 
   const handleChange = (name: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -170,6 +172,7 @@ export const ComponentInstallationForm = ({
       return
     }
 
+    setSubmitError(undefined)
     try {
       if (installationMode === 'new') {
         await installMutation.mutateAsync({
@@ -209,13 +212,10 @@ export const ComponentInstallationForm = ({
       }
       onSuccess()
     } catch (error: unknown) {
-      const err = error as {
-        response?: { data?: { errors?: Record<string, string> } }
-      }
-      if (err.response?.data?.errors) {
-        setErrors(err.response.data.errors)
-      }
-      console.error('Failed to install component:', error)
+      setSubmitError(
+        serverMessage(error) ??
+          'Det gick inte att installera komponenten. Försök igen.'
+      )
     }
   }
 
@@ -766,9 +766,9 @@ export const ComponentInstallationForm = ({
         </Button>
       </div>
 
-      {installMutation.isError && (
-        <p className="text-sm text-destructive">
-          Ett fel uppstod vid installation. Försök igen.
+      {submitError && (
+        <p role="alert" className="text-sm text-destructive">
+          {submitError}
         </p>
       )}
     </form>

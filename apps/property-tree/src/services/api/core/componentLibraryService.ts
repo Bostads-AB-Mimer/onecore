@@ -16,7 +16,7 @@ import type {
   UpdateComponentType,
 } from '@/services/types'
 
-import { DELETE, GET, POST, PUT } from './baseApi'
+import { DELETE, GET, POST, PUT, toApiError } from './baseApi'
 
 // The backend caps `limit` at 100 per request. Categories and types have no
 // server-side search, so "fetch all" must walk every page — a single capped
@@ -77,10 +77,10 @@ export const componentLibraryService = {
   async createCategory(
     categoryData: CreateComponentCategory
   ): Promise<ComponentCategory> {
-    const { data, error } = await POST('/component-categories', {
+    const { data, error, response } = await POST('/component-categories', {
       body: categoryData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentCategory
   },
 
@@ -88,23 +88,23 @@ export const componentLibraryService = {
     id: string,
     categoryData: UpdateComponentCategory
   ): Promise<ComponentCategory> {
-    const { data, error } = await PUT('/component-categories/{id}', {
+    const { data, error, response } = await PUT('/component-categories/{id}', {
       params: {
         path: { id },
       },
       body: categoryData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentCategory
   },
 
   async deleteCategory(id: string): Promise<void> {
-    const { error } = await DELETE('/component-categories/{id}', {
+    const { error, response } = await DELETE('/component-categories/{id}', {
       params: {
         path: { id },
       },
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 
   // ===== Type Operations =====
@@ -131,10 +131,10 @@ export const componentLibraryService = {
   },
 
   async createType(typeData: CreateComponentType): Promise<ComponentType> {
-    const { data, error } = await POST('/component-types', {
+    const { data, error, response } = await POST('/component-types', {
       body: typeData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentType
   },
 
@@ -142,23 +142,23 @@ export const componentLibraryService = {
     id: string,
     typeData: UpdateComponentType
   ): Promise<ComponentType> {
-    const { data, error } = await PUT('/component-types/{id}', {
+    const { data, error, response } = await PUT('/component-types/{id}', {
       params: {
         path: { id },
       },
       body: typeData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentType
   },
 
   async deleteType(id: string): Promise<void> {
-    const { error } = await DELETE('/component-types/{id}', {
+    const { error, response } = await DELETE('/component-types/{id}', {
       params: {
         path: { id },
       },
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 
   // ===== Subtype Operations =====
@@ -200,10 +200,10 @@ export const componentLibraryService = {
   async createSubtype(
     subtypeData: CreateComponentSubtype
   ): Promise<ComponentSubtype> {
-    const { data, error } = await POST('/component-subtypes', {
+    const { data, error, response } = await POST('/component-subtypes', {
       body: subtypeData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentSubtype
   },
 
@@ -211,23 +211,23 @@ export const componentLibraryService = {
     id: string,
     subtypeData: UpdateComponentSubtype
   ): Promise<ComponentSubtype> {
-    const { data, error } = await PUT('/component-subtypes/{id}', {
+    const { data, error, response } = await PUT('/component-subtypes/{id}', {
       params: {
         path: { id },
       },
       body: subtypeData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentSubtype
   },
 
   async deleteSubtype(id: string): Promise<void> {
-    const { error } = await DELETE('/component-subtypes/{id}', {
+    const { error, response } = await DELETE('/component-subtypes/{id}', {
       params: {
         path: { id },
       },
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 
   // ===== Model Operations =====
@@ -272,10 +272,10 @@ export const componentLibraryService = {
   },
 
   async createModel(modelData: CreateComponentModel): Promise<ComponentModel> {
-    const { data, error } = await POST('/component-models', {
+    const { data, error, response } = await POST('/component-models', {
       body: modelData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentModel
   },
 
@@ -283,23 +283,23 @@ export const componentLibraryService = {
     id: string,
     modelData: UpdateComponentModel
   ): Promise<ComponentModel> {
-    const { data, error } = await PUT('/component-models/{id}', {
+    const { data, error, response } = await PUT('/component-models/{id}', {
       params: {
         path: { id },
       },
       body: modelData,
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as ComponentModel
   },
 
   async deleteModel(id: string): Promise<void> {
-    const { error } = await DELETE('/component-models/{id}', {
+    const { error, response } = await DELETE('/component-models/{id}', {
       params: {
         path: { id },
       },
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 
   // ===== Instance Operations =====
@@ -343,10 +343,10 @@ export const componentLibraryService = {
   },
 
   async createInstance(instanceData: CreateComponent): Promise<Component> {
-    const { data, error } = await POST('/components', {
+    const { data, error, response } = await POST('/components', {
       body: instanceData as any, // Local types allow null, API types expect undefined
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as Component
   },
 
@@ -354,23 +354,23 @@ export const componentLibraryService = {
     id: string,
     instanceData: UpdateComponent
   ): Promise<Component> {
-    const { data, error } = await PUT('/components/{id}', {
+    const { data, error, response } = await PUT('/components/{id}', {
       params: {
         path: { id },
       },
       body: instanceData as any, // Local types allow null, API types expect undefined
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
     return data?.content as Component
   },
 
   async deleteInstance(id: string): Promise<void> {
-    const { error } = await DELETE('/components/{id}', {
+    const { error, response } = await DELETE('/components/{id}', {
       params: {
         path: { id },
       },
     })
-    if (error) throw error
+    if (error) throw toApiError(error, response)
   },
 }
 
