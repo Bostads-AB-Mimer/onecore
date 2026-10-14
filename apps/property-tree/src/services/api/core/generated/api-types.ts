@@ -196,6 +196,65 @@ export interface paths {
       }
     }
   }
+  '/auth/contacts/callback': {
+    /**
+     * Exchange authorization code for mimer-contacts tokens
+     * @description Server-to-server helper for webapi. Exchanges a Keycloak authorization code using the mina-sidor confidential client.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            code: string
+            redirectUri: string
+          }
+        }
+      }
+      responses: {
+        /** @description Tokens and user profile from Keycloak */
+        200: {
+          content: never
+        }
+        /** @description Invalid request or invalid_grant from Keycloak */
+        400: {
+          content: never
+        }
+        /** @description Contacts Keycloak not configured on this environment */
+        503: {
+          content: never
+        }
+      }
+    }
+  }
+  '/auth/contacts/refresh': {
+    /**
+     * Refresh mimer-contacts access token
+     * @description Server-to-server helper for webapi using a Keycloak refresh token.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            refresh_token: string
+          }
+        }
+      }
+      responses: {
+        /** @description New access and refresh tokens */
+        200: {
+          content: never
+        }
+        /** @description Invalid refresh token */
+        400: {
+          content: never
+        }
+        /** @description Contacts Keycloak not configured */
+        503: {
+          content: never
+        }
+      }
+    }
+  }
   openapi: {}
   security: {}
   '/sendBulkSms': {
@@ -11718,6 +11777,60 @@ export interface paths {
       }
     }
   }
+  '/v1/tenant-notifications/lease-termination-confirmation': {
+    /**
+     * Send a lease termination confirmation email
+     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking lease is terminated. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['SendLeaseTerminationConfirmationRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                /** @enum {boolean} */
+                sent: true
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>
@@ -16511,6 +16624,18 @@ export interface components {
       relatedContactCode: string
       /** @enum {string} */
       roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
+    }
+    SendLeaseTerminationConfirmationRequest: {
+      /** Format: email */
+      to: string
+      contactCode: string
+      firstName: string
+      leaseId: string
+      /** Format: date */
+      endDate: string
+      /** @enum {string} */
+      rentalType: 'Bilplats'
+      correlationId?: string
     }
     ContactV1:
       | {
