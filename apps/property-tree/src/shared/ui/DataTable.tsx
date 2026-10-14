@@ -51,6 +51,8 @@ export interface DataTableProps<T extends { id: string }> {
   getRowLabel?: (item: T) => string
   /** Makes the first cell a link to the row's page, for keyboard and new tabs. */
   getRowHref?: (item: T) => string
+  /** Marks rows the user arrived for, e.g. from a deep link. */
+  isRowHighlighted?: (item: T) => boolean
   /** Why a row cannot be deleted; disables Ta bort and shows the reason. */
   deleteBlockedReason?: (item: T) => string | undefined
 }
@@ -69,6 +71,7 @@ export function DataTable<T extends { id: string }>({
   getRowLabel,
   deleteBlockedReason,
   getRowHref,
+  isRowHighlighted,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -259,6 +262,7 @@ export function DataTable<T extends { id: string }>({
         expandableContent={expandableContent}
         mobileCardRenderer={mobileCardRenderer}
         rowLabel={getRowLabel}
+        isRowHighlighted={isRowHighlighted}
         rowsFocusable={!getRowHref}
       />
       <Pagination
