@@ -135,6 +135,11 @@ export const RentalObjectDetailsSchema = z.object({
   rentalId: z.string(),
   baseRent: z.number().nullable(), // grundhyra (hyinf.akthyratot), monthly
   area: z.number().nullable(), // BRA (cmval); hyra per m² is derived
+  boaArea: z.number().nullable(), // BOA (cmval); residences only
+  floor: z.string().nullable(), // våning (balgh.uppgang); residences only
+  roomCount: z.number().nullable(), // balgt.roomcount; residences only
+  marketAreaCode: z.string().nullable(), // babya.code, via the property
+  marketAreaName: z.string().nullable(), // babya.caption ("Malmaberg")
   additionalInfo: z.string().nullable(), // "annan information av vikt"
   malarEnergiFacilityId: z.string().nullable(), // "facility" = lokal, avoided
 })
