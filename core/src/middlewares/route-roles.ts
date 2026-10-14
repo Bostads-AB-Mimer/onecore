@@ -60,7 +60,8 @@ export const requiredRolesFor = (rawPath: string, method: string): string[] => {
   }
 
   // mimer.nu BFF (webapi): exchange mimer-contacts OAuth tokens via core only.
-  if (path.startsWith('/auth/contacts/') && method === 'POST') {
+  // Handlers use (.*)/auth/contacts/* — match any path prefix (e.g. /v1/auth/...).
+  if (path.includes('/auth/contacts/') && method === 'POST') {
     return ['contact-auth']
   }
 
