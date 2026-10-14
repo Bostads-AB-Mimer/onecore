@@ -267,6 +267,35 @@ describe('GET /components', () => {
     expect(findMany.mock.calls[0][0].where).not.toHaveProperty('modelId')
   })
 
+  it('filters to components without an active installation', async () => {
+    const res = await request(app.callback()).get(
+      `/components?subtypeId=${subtypeId}&notInstalled=true`
+    )
+
+    const notInstalled = {
+      componentInstallations: { none: { deinstallationDate: null } },
+    }
+    expect(res.status).toBe(200)
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ subtypeId, ...notInstalled }),
+      })
+    )
+    expect(count).toHaveBeenCalledWith({
+      where: expect.objectContaining(notInstalled),
+    })
+  })
+
+  it('leaves installations alone when notInstalled is false', async () => {
+    await request(app.callback()).get(
+      `/components?subtypeId=${subtypeId}&notInstalled=false`
+    )
+
+    expect(findMany.mock.calls[0][0].where).not.toHaveProperty(
+      'componentInstallations'
+    )
+  })
+
   it('answers 400 when modelId and withoutModel are combined', async () => {
     const res = await request(app.callback()).get(
       `/components?modelId=${modelId}&withoutModel=true`

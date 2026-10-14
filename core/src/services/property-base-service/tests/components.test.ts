@@ -871,6 +871,7 @@ describe('Components API', () => {
         20,
         undefined,
         undefined,
+        undefined,
         undefined
       )
     })
@@ -893,6 +894,7 @@ describe('Components API', () => {
         20,
         undefined,
         '00000000-0000-0000-0002-000000000001',
+        undefined,
         undefined
       )
     })
@@ -914,6 +916,29 @@ describe('Components API', () => {
         20,
         undefined,
         '00000000-0000-0000-0002-000000000001',
+        true,
+        undefined
+      )
+    })
+
+    it('filters to components without an active installation', async () => {
+      const getSpy = jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: true, data: { content: [] } })
+
+      const res = await request(app.callback()).get(
+        '/components?subtypeId=00000000-0000-0000-0002-000000000001&notInstalled=true'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getSpy).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        1,
+        20,
+        undefined,
+        '00000000-0000-0000-0002-000000000001',
+        undefined,
         true
       )
     })
@@ -943,6 +968,7 @@ describe('Components API', () => {
         'ACTIVE',
         1,
         20,
+        undefined,
         undefined,
         undefined,
         undefined

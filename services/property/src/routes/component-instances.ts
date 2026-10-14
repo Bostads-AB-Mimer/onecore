@@ -44,7 +44,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   get:
    *     summary: Get all component instances
-   *     description: Physical units with serial numbers and status. Filter by modelId, withoutModel, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+   *     description: Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
    *     tags: [Component Instances]
    *     parameters:
    *       - in: query
@@ -56,6 +56,11 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *         description: Only components that have no model. Cannot be combined with modelId.
+   *       - in: query
+   *         name: notInstalled
+   *         schema:
+   *           type: boolean
+   *         description: Only components without an active installation
    *       - in: query
    *         name: subtypeId
    *         schema:
@@ -113,6 +118,7 @@ export const routes = (router: KoaRouter) => {
       const {
         modelId,
         withoutModel,
+        notInstalled,
         subtypeId,
         status,
         serialNumber,
@@ -122,6 +128,7 @@ export const routes = (router: KoaRouter) => {
       const metadata = generateRouteMetadata(ctx, [
         'modelId',
         'withoutModel',
+        'notInstalled',
         'subtypeId',
         'status',
         'serialNumber',
@@ -131,7 +138,14 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await getComponents(
-          { modelId, withoutModel, subtypeId, status, serialNumber },
+          {
+            modelId,
+            withoutModel,
+            notInstalled,
+            subtypeId,
+            status,
+            serialNumber,
+          },
           page,
           limit
         )

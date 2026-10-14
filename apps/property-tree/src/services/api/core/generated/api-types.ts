@@ -6208,7 +6208,7 @@ export interface paths {
   '/components': {
     /**
      * Get all components
-     * @description Physical units with serial numbers and status. Filter by modelId, withoutModel, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+     * @description Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
      */
     get: {
       parameters: {
@@ -6216,6 +6216,8 @@ export interface paths {
           modelId?: string
           /** @description Only components that have no model. Cannot be combined with modelId. */
           withoutModel?: boolean
+          /** @description Only components without an active installation */
+          notInstalled?: boolean
           /** @description Filter by subtype */
           subtypeId?: string
           status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'

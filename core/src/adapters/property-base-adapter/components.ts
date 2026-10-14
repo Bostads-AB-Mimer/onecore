@@ -681,7 +681,8 @@ async function getComponents(
   limit?: number,
   serialNumber?: string,
   subtypeId?: string,
-  withoutModel?: boolean
+  withoutModel?: boolean,
+  notInstalled?: boolean
 ): Promise<AdapterResult<GetComponentsResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/components', {
@@ -689,6 +690,7 @@ async function getComponents(
         query: {
           modelId,
           withoutModel,
+          notInstalled,
           subtypeId,
           status,
           page,

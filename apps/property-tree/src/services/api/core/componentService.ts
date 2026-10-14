@@ -63,32 +63,26 @@ export const componentService = {
   },
 
   async getUninstalledInstances(
-    subtypeId?: string,
+    subtypeId: string,
     serialNumber?: string
-  ): Promise<Component[]> {
-    const queryParams: any = {
-      limit: 100, // Max allowed by backend schema
-    }
-
-    if (subtypeId) queryParams.subtypeId = subtypeId
-    if (serialNumber) queryParams.serialNumber = serialNumber
-
+  ): Promise<{ content: Component[]; total: number }> {
     const { data, error } = await GET('/components', {
       params: {
-        query: queryParams,
+        query: {
+          subtypeId,
+          notInstalled: true,
+          serialNumber: serialNumber || undefined,
+          limit: 100, // Max allowed by backend schema
+        },
       },
     })
     if (error) throw error
 
-    const instances = (data?.content || []) as Component[]
-
-    // Filter to only uninstalled instances (no active installations)
-    return instances.filter((instance) => {
-      const hasActiveInstallation = instance.componentInstallations?.some(
-        (installation) => !installation.deinstallationDate
-      )
-      return !hasActiveInstallation
-    })
+    const content = (data?.content || []) as Component[]
+    return {
+      content,
+      total: data?.pagination?.total ?? content.length,
+    }
   },
 
   async createInstanceWithInstallation(

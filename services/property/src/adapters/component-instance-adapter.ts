@@ -40,6 +40,7 @@ export const getComponents = async (
   filters: {
     modelId?: string
     withoutModel?: boolean
+    notInstalled?: boolean
     subtypeId?: string
     status?: string
     serialNumber?: string
@@ -52,6 +53,9 @@ export const getComponents = async (
   const where: any = {}
   if (filters.modelId) where.modelId = filters.modelId
   if (filters.withoutModel) where.modelId = null
+  if (filters.notInstalled) {
+    where.componentInstallations = { none: { deinstallationDate: null } }
+  }
   if (filters.subtypeId) where.subtypeId = filters.subtypeId
   if (filters.status) where.status = filters.status
 

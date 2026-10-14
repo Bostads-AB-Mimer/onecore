@@ -823,6 +823,10 @@ export const ComponentsQueryParamsSchema = z
       .enum(['true', 'false'])
       .transform((value) => value === 'true')
       .optional(),
+    notInstalled: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
     subtypeId: z.string().uuid().optional(),
     status: ComponentStatusEnum.optional(),
     serialNumber: z.string().optional(), // Search parameter

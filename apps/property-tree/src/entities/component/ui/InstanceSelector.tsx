@@ -8,15 +8,10 @@ import { useDebounce } from '@/shared/hooks/useDebounce'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
 
-const instanceDetails = (instance: Component): string =>
-  [
-    instance.warrantyMonths ? `Garanti: ${instance.warrantyMonths} mån` : null,
-    instance.priceAtPurchase
-      ? `Pris: ${instance.priceAtPurchase.toLocaleString('sv-SE')} kr`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(' | ')
+import {
+  instanceOptionDetails,
+  instanceOptionTitle,
+} from '../lib/instanceOption'
 
 interface InstanceSelectorProps {
   subtypeId: string
@@ -34,21 +29,21 @@ export const InstanceSelector = ({
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
 
-  // Minimum search length to trigger query
+  // Minimum search length before the serial number narrows the list
   const MIN_SEARCH_LENGTH = 2
-  const shouldSearch = debouncedSearch.trim().length >= MIN_SEARCH_LENGTH
+  const serialSearch =
+    debouncedSearch.trim().length >= MIN_SEARCH_LENGTH
+      ? debouncedSearch.trim()
+      : undefined
 
-  // Query with backend search - only enabled when search meets minimum length
-  const {
-    data: instances = [],
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ['instances', 'uninstalled', subtypeId, debouncedSearch],
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['instances', 'uninstalled', subtypeId, serialSearch ?? ''],
     queryFn: () =>
-      componentService.getUninstalledInstances(subtypeId, debouncedSearch),
-    enabled: !!subtypeId && shouldSearch,
+      componentService.getUninstalledInstances(subtypeId, serialSearch),
+    enabled: !!subtypeId,
   })
+  const instances = data?.content ?? []
+  const total = data?.total ?? 0
 
   const selectedInstance = instances.find((inst) => inst.id === value)
 
@@ -60,7 +55,7 @@ export const InstanceSelector = ({
         <Input
           id="instance-search"
           type="text"
-          placeholder="Sök efter serienummer..."
+          placeholder="Sök på serienummer..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="mb-2"
@@ -79,14 +74,11 @@ export const InstanceSelector = ({
       )}
 
       <div className="border rounded-md max-h-60 overflow-y-auto">
-        {!shouldSearch ? (
+        {instances.length === 0 && !isLoading ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
-            Skriv minst {MIN_SEARCH_LENGTH} tecken för att söka efter
-            serienummer
-          </div>
-        ) : instances.length === 0 && !isLoading ? (
-          <div className="p-4 text-center text-muted-foreground text-sm">
-            Inga komponenter hittades för "{debouncedSearch}"
+            {serialSearch
+              ? `Inga oinstallerade komponenter hittades för "${serialSearch}"`
+              : 'Det finns inga oinstallerade komponenter av den här undertypen'}
           </div>
         ) : (
           <div className="divide-y">
@@ -103,24 +95,29 @@ export const InstanceSelector = ({
                 }`}
               >
                 <div className="text-sm font-medium">
-                  {instance.serialNumber}
+                  {instanceOptionTitle(instance)}
                 </div>
-                {instanceDetails(instance) && (
-                  <div className="text-xs text-muted-foreground">
-                    {instanceDetails(instance)}
-                  </div>
-                )}
+                <div className="text-xs text-muted-foreground">
+                  {instanceOptionDetails(instance)}
+                </div>
               </button>
             ))}
           </div>
         )}
       </div>
 
+      {total > instances.length && (
+        <p className="text-xs text-muted-foreground">
+          Visar {instances.length} av {total}. Sök på serienummer för att hitta
+          fler.
+        </p>
+      )}
+
       {selectedInstance && (
         <div className="mt-2 p-3 bg-accent rounded-md">
           <p className="text-sm font-medium">Vald komponent:</p>
           <p className="text-sm text-muted-foreground">
-            {selectedInstance.serialNumber}
+            {instanceOptionTitle(selectedInstance)}
           </p>
         </div>
       )}
