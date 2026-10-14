@@ -22,8 +22,10 @@ export async function resolvePersonnummerInQuery(
   return { ...query, q: contactResult.data.contactCode }
 }
 
-// Always defers to contacts-service's answer, including null, so a contact
-// marked protected there can't be unmasked via Tenfast's own data.
+// Defers to contacts-service when it has a record, including null — a
+// protected contact is never omitted, only returned with empty fields.
+// No record at all (not yet synced) keeps Tenfast's data; there's
+// nothing to redact.
 export async function enrichLeaseContacts<
   T extends { contacts?: leasing.v1.ContactInfo[] },
 >(leases: T[], logContext: string): Promise<T[]> {
