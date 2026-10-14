@@ -24,6 +24,8 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
    *     description: Server-to-server helper for webapi. Exchanges a Keycloak authorization code using the mina-sidor confidential client.
    *     tags:
    *       - Auth
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
@@ -94,6 +96,8 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
    *     description: Server-to-server helper for webapi using a Keycloak refresh token.
    *     tags:
    *       - Auth
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:

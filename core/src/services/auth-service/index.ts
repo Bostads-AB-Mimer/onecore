@@ -8,8 +8,6 @@ import auth from './keycloak'
 import { getUsersByRole } from './keycloak-admin-adapter'
 import { extractToken } from '../../middlewares/extract-token'
 import { requireAuth } from '../../middlewares/keycloak-auth'
-import { registerContactsAuthRoutes } from './contacts-auth-routes'
-
 /**
  * @swagger
  * tags:
@@ -383,6 +381,4 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { content: result.data }
     }
   )
-
-  registerContactsAuthRoutes(router)
 }
