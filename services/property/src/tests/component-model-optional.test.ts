@@ -297,7 +297,7 @@ describe('GET /components', () => {
     expect(res.status).toBe(200)
     const page = sentQuery('page')
     expect(page.sql).toContain(
-      'c.specifications COLLATE Finnish_Swedish_CI_AS DESC'
+      "NULLIF(LTRIM(c.specifications), '') COLLATE Finnish_Swedish_CI_AS DESC"
     )
     expect(page.sql).toContain('i.id IS NOT NULL')
     expect(page.values).toEqual([subtypeId, '%Decorama%', '2010-01-01', 25, 25])

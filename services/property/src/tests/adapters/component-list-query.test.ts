@@ -33,17 +33,17 @@ describe('componentPageSql', () => {
 
   it('sorts by installation date, newest first and unknown dates last, by default', () => {
     expect(orderBy(componentPageSql({}, undefined, 0, 25))).toBe(
-      "ORDER BY CASE WHEN i.installationDate >= '1901-01-01' THEN 0 ELSE 1 END, i.installationDate DESC, c.id ASC"
+      "ORDER BY CASE WHEN i.installationDate >= '1901-01-01' THEN 0 ELSE 1 END, CASE WHEN i.installationDate >= '1901-01-01' THEN i.installationDate END DESC, c.id ASC"
     )
   })
 
-  it('keeps unknown installation dates last when sorting oldest first', () => {
+  it('keeps unknown installation dates last, unordered among themselves, when sorting oldest first', () => {
     expect(
       orderBy(
         componentPageSql({}, { sortBy: 'installed', sortOrder: 'asc' }, 0, 25)
       )
     ).toBe(
-      "ORDER BY CASE WHEN i.installationDate >= '1901-01-01' THEN 0 ELSE 1 END, i.installationDate ASC, c.id ASC"
+      "ORDER BY CASE WHEN i.installationDate >= '1901-01-01' THEN 0 ELSE 1 END, CASE WHEN i.installationDate >= '1901-01-01' THEN i.installationDate END ASC, c.id ASC"
     )
   })
 
@@ -53,7 +53,7 @@ describe('componentPageSql', () => {
         componentPageSql({}, { sortBy: 'model', sortOrder: 'desc' }, 0, 25)
       )
     ).toBe(
-      "ORDER BY CASE WHEN NULLIF(LTRIM(m.modelName), '') IS NULL THEN 1 ELSE 0 END, m.modelName COLLATE Finnish_Swedish_CI_AS DESC, c.id ASC"
+      "ORDER BY CASE WHEN NULLIF(LTRIM(m.modelName), '') IS NULL THEN 1 ELSE 0 END, NULLIF(LTRIM(m.modelName), '') COLLATE Finnish_Swedish_CI_AS DESC, c.id ASC"
     )
     expect(
       orderBy(
@@ -64,7 +64,9 @@ describe('componentPageSql', () => {
           25
         )
       )
-    ).toContain('c.serialNumber COLLATE Finnish_Swedish_CI_AS ASC')
+    ).toContain(
+      "NULLIF(LTRIM(c.serialNumber), '') COLLATE Finnish_Swedish_CI_AS ASC"
+    )
     expect(
       orderBy(
         componentPageSql(
@@ -91,7 +93,7 @@ describe('componentPageSql', () => {
 
   it('defaults to ascending when only the column is given', () => {
     expect(orderBy(componentPageSql({}, { sortBy: 'model' }, 0, 25))).toContain(
-      'm.modelName COLLATE Finnish_Swedish_CI_AS ASC'
+      "NULLIF(LTRIM(m.modelName), '') COLLATE Finnish_Swedish_CI_AS ASC"
     )
   })
 })

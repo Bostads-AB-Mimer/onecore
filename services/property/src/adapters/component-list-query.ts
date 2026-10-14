@@ -96,8 +96,9 @@ const whereSql = (filters: ComponentListFilters) => {
 const blankLast = (column: string) =>
   Prisma.raw(`CASE WHEN NULLIF(LTRIM(${column}), '') IS NULL THEN 1 ELSE 0 END`)
 
+// Blank text sorts as NULL, so all blanks tie and fall back to the id.
 const swedishText = (column: string, direction: Prisma.Sql) =>
-  Prisma.sql`${blankLast(column)}, ${Prisma.raw(column)} COLLATE Finnish_Swedish_CI_AS ${direction}`
+  Prisma.sql`${blankLast(column)}, ${Prisma.raw(`NULLIF(LTRIM(${column}), '')`)} COLLATE Finnish_Swedish_CI_AS ${direction}`
 
 const orderBySql = (sort: ComponentListSort | undefined) => {
   const { sortBy, sortOrder = 'asc' } = sort ?? DEFAULT_SORT
@@ -105,7 +106,7 @@ const orderBySql = (sort: ComponentListSort | undefined) => {
 
   switch (sortBy) {
     case 'installed':
-      return Prisma.sql`CASE WHEN i.installationDate >= ${FIRST_KNOWN_DATE} THEN 0 ELSE 1 END, i.installationDate ${direction}`
+      return Prisma.sql`CASE WHEN i.installationDate >= ${FIRST_KNOWN_DATE} THEN 0 ELSE 1 END, CASE WHEN i.installationDate >= ${FIRST_KNOWN_DATE} THEN i.installationDate END ${direction}`
     case 'model':
       return swedishText('m.modelName', direction)
     case 'serialNumber':
