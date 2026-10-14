@@ -204,7 +204,11 @@ const structureScopes = (params: StructureScope): Prisma.Sql[] => {
     )
   }
   if (params.rentalIds?.length) {
-    scopes.push(Prisma.sql`b.hyresid IN ${openJsonList(params.rentalIds)}`)
+    // A parameter list, not OPENJSON: next to the company filter's OPENJSON,
+    // an OPENJSON id list gets a plan that costs ~65ms per id in the search
+    // count (200 ids took 13s, now 0.4s). The schema caps ids at 200, well
+    // under SQL Server's 2100 parameters.
+    scopes.push(Prisma.sql`b.hyresid IN (${Prisma.join(params.rentalIds)})`)
   }
   if (params.staircaseCodes?.length) {
     const pairs = staircasePairs(params.staircaseCodes)
