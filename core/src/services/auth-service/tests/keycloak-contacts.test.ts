@@ -1,3 +1,4 @@
+import axios from 'axios'
 import nock from 'nock'
 
 jest.mock('../../../common/config', () => ({
@@ -123,6 +124,25 @@ describe('keycloak-contacts', () => {
       ).rejects.toMatchObject({
         response: { status: 400, data: { error: 'invalid_grant' } },
       })
+    })
+
+    it('rejects invalid_grant when axios defaults accept 4xx', async () => {
+      nock('http://keycloak.test')
+        .post(tokenPath)
+        .reply(400, { error: 'invalid_grant' })
+
+      const original = axios.defaults.validateStatus
+      axios.defaults.validateStatus = (status) => status >= 200 && status < 500
+
+      try {
+        await expect(
+          exchangeContactsAuthorizationCode('bad', 'https://example/cb')
+        ).rejects.toMatchObject({
+          response: { status: 400, data: { error: 'invalid_grant' } },
+        })
+      } finally {
+        axios.defaults.validateStatus = original
+      }
     })
   })
 })

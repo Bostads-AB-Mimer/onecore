@@ -1,8 +1,13 @@
-import keycloak from 'keycloak-koa'
 import axios from 'axios'
 import config from '../../common/config'
-import { logger } from '@onecore/utilities'
 import type { TokenData } from 'keycloak-koa/dist/types'
+
+/** OAuth token endpoint — must reject 4xx even when leasing-adapter widens axios defaults. */
+const contactsTokenPostConfig = {
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  timeout: 10000,
+  validateStatus: (status: number) => status >= 200 && status < 300,
+} as const
 
 export function isContactsKeycloakConfigured(): boolean {
   const { clientSecret, clientId, realm } = config.auth.keycloak.contacts
@@ -15,27 +20,6 @@ function contactsKeycloakRealmUrl(): string {
 
 function tokenEndpointUrl(): string {
   return `${contactsKeycloakRealmUrl()}/protocol/openid-connect/token`
-}
-
-let contactsAuth: ReturnType<typeof keycloak> | null = null
-
-function getContactsAuth(): ReturnType<typeof keycloak> {
-  if (!isContactsKeycloakConfigured()) {
-    throw new Error('Contacts Keycloak is not configured')
-  }
-
-  if (!contactsAuth) {
-    contactsAuth = keycloak({
-      keycloakUrl: contactsKeycloakRealmUrl(),
-      clientId: config.auth.keycloak.contacts.clientId,
-      clientSecret: config.auth.keycloak.contacts.clientSecret,
-    })
-    logger.info(
-      `Contacts Keycloak initialized for realm ${config.auth.keycloak.contacts.realm}`
-    )
-  }
-
-  return contactsAuth
 }
 
 export type ContactsTokenResponse = {
@@ -67,10 +51,11 @@ export async function refreshContactsAccessToken(
     refresh_token: refreshToken,
   }).toString()
 
-  const response = await axios.post<TokenData>(tokenEndpointUrl(), params, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    timeout: 10000,
-  })
+  const response = await axios.post<TokenData>(
+    tokenEndpointUrl(),
+    params,
+    contactsTokenPostConfig
+  )
 
   return toContactsTokenResponse(response.data)
 }
@@ -79,15 +64,22 @@ export async function exchangeContactsAuthorizationCode(
   code: string,
   redirectUri: string
 ): Promise<ContactsTokenResponse> {
-  const auth = getContactsAuth()
-  const tokenData = await auth.tokenService.exchangeCodeForTokens(
+  const params = new URLSearchParams({
+    grant_type: 'authorization_code',
+    client_id: config.auth.keycloak.contacts.clientId,
+    client_secret: config.auth.keycloak.contacts.clientSecret,
     code,
-    redirectUri
+    redirect_uri: redirectUri,
+  }).toString()
+
+  const response = await axios.post<TokenData>(
+    tokenEndpointUrl(),
+    params,
+    contactsTokenPostConfig
   )
-  return toContactsTokenResponse(tokenData)
+
+  return toContactsTokenResponse(response.data)
 }
 
-/** @internal Test hook to reset cached client between tests */
-export function resetContactsKeycloakClientForTests(): void {
-  contactsAuth = null
-}
+/** @internal Test hook — kept for tests that reset module state between cases */
+export function resetContactsKeycloakClientForTests(): void {}
