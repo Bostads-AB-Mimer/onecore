@@ -793,6 +793,53 @@ export const getAvailabilityForVacantRentalObjects = async (
   }
 }
 
+/**
+ * A rental object with its signed leases, which vacantFrom is computed from.
+ * Goes through batch-get: per Tenfast's API docs only batch-get and the list
+ * endpoint take includeAvtal, and the single-object GET has no leases in its
+ * schema. At most the 10 latest leases are included.
+ */
+export const getRentalObjectWithLeases = async (
+  rentalObjectCode: string
+): Promise<
+  AdapterResult<
+    TenfastRentalObject | null,
+    'could-not-find-rental-object' | 'could-not-parse-rental-object'
+  >
+> => {
+  try {
+    const rentalObjectResponse = await tenfastApi.request({
+      method: 'post',
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/hyresobjekt/batch-get?hyresvard=${tenfastCompanyId}&includeAvtal=signed`,
+      data: { externalIds: [rentalObjectCode] },
+    })
+
+    if (
+      rentalObjectResponse.status !== 200 &&
+      rentalObjectResponse.status !== 201
+    )
+      return handleTenfastError(
+        {
+          error: rentalObjectResponse.data.error,
+          status: rentalObjectResponse.status,
+        },
+        'could-not-find-rental-object'
+      )
+
+    // Unknown codes are left out of the response rather than answered 404.
+    const [rentalObjectData] = rentalObjectResponse.data ?? []
+    if (!rentalObjectData) return { ok: true, data: null }
+
+    const parsed = TenfastRentalObjectSchema.safeParse(rentalObjectData)
+    if (!parsed.success)
+      return handleTenfastError(parsed.error, 'could-not-parse-rental-object')
+
+    return { ok: true, data: parsed.data }
+  } catch (err: any) {
+    return handleTenfastError(err, 'could-not-find-rental-object')
+  }
+}
+
 export const getAvailabilityForRentalObject = async (
   rentalObjectCode: string,
   includeVAT: boolean
@@ -803,7 +850,7 @@ export const getAvailabilityForRentalObject = async (
   >
 > => {
   const [rentalObjectResult, tagsById] = await Promise.all([
-    getRentalObject(rentalObjectCode),
+    getRentalObjectWithLeases(rentalObjectCode),
     getTags(),
   ])
 

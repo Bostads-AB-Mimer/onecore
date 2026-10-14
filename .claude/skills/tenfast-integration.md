@@ -114,6 +114,26 @@ record when both queries return the same object (it carries more complete
 rental-object data than the record synthesized from the `avtal/search`
 response).
 
+## The single-object GET never returns leases (by design)
+
+`GET /v1/hyresvard/extras/hyresobjekt/:code` returns `hyresobjektBaseSchema`
+per Tenfast's OpenAPI docs (`/docs/` on the API host). That schema has **no
+`avtal` field**, only `avtalStates`/`states`. The endpoint takes no
+`includeAvtal`; its `populate` parameter is undocumented, and `populate=avtal`
+returns no leases either (tried against test, 2026-10-14). Anything computed
+from leases, such as `vacantFrom` in `mapTenfastRentalObjectToAvailabilityInfo`,
+silently falls back to "vacant today" on that response. That was AVTAL-340:
+the parking by-code route showed every space as vacant today.
+
+`includeAvtal` exists only on `POST …/extras/hyresobjekt/batch-get` and
+`GET /hyresvard/hyresobjekt`. Use batch-get even for a single code
+(`getRentalObjectWithLeases`). It leaves unknown codes out of the response
+instead of answering 404. Documented values: `signed` (signed and not
+cancelled), `open` (all not cancelled), `all`. Leases are **sorted by
+reference descending and limited to 10** per object. `getRentalObject`
+(single GET) is still fine for callers that don't need leases, such as rent
+articles and rent rows.
+
 ## `cancellation.requested` vs `cancellation.cancelled` — easy to get backwards
 
 On a lease's `cancellation` object:
