@@ -18,7 +18,7 @@ import {
 export const registerContactsAuthRoutes = (router: KoaRouter) => {
   /**
    * @swagger
-   * /auth/contacts/callback:
+   * /auth/contacts/token:
    *   post:
    *     summary: Exchange authorization code for mimer-contacts tokens
    *     description: Server-to-server helper for webapi. Exchanges a Keycloak authorization code using the mina-sidor confidential client.
@@ -48,7 +48,7 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
    *       '503':
    *         description: Contacts Keycloak not configured on this environment
    */
-  router.post('(.*)/auth/contacts/callback', async (ctx) => {
+  router.post('(.*)/auth/contacts/token', async (ctx) => {
     if (!isContactsKeycloakConfigured()) {
       ctx.status = 503
       ctx.body = { error: 'contacts_keycloak_not_configured' }
@@ -78,7 +78,7 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
       ctx.body = result
     } catch (error) {
       logContactsKeycloakTokenError(
-        'Authentication error in /auth/contacts/callback',
+        'Authentication error in /auth/contacts/token',
         error
       )
       ctx.status = httpStatusForContactsKeycloakError(error)

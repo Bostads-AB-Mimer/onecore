@@ -41,12 +41,12 @@ describe('contacts auth routes', () => {
     jest.clearAllMocks()
   })
 
-  describe('POST /auth/contacts/callback', () => {
+  describe('POST /auth/contacts/token', () => {
     it('returns 503 when contacts Keycloak is not configured', async () => {
       mocked.isContactsKeycloakConfigured.mockReturnValue(false)
 
       const res = await request(buildApp().callback())
-        .post('/auth/contacts/callback')
+        .post('/auth/contacts/token')
         .send({ code: 'abc', redirectUri: 'https://example/cb' })
 
       expect(res.status).toBe(503)
@@ -57,7 +57,7 @@ describe('contacts auth routes', () => {
       mocked.isContactsKeycloakConfigured.mockReturnValue(true)
 
       const res = await request(buildApp().callback())
-        .post('/auth/contacts/callback')
+        .post('/auth/contacts/token')
         .send({ redirectUri: 'https://example/cb' })
 
       expect(res.status).toBe(400)
@@ -75,7 +75,7 @@ describe('contacts auth routes', () => {
       })
 
       const res = await request(buildApp().callback())
-        .post('/auth/contacts/callback')
+        .post('/auth/contacts/token')
         .send({
           code: 'auth-code',
           redirectUri: 'https://mina-sidor/callback',
@@ -97,7 +97,7 @@ describe('contacts auth routes', () => {
       )
 
       const res = await request(buildApp().callback())
-        .post('/auth/contacts/callback')
+        .post('/auth/contacts/token')
         .send({ code: 'bad', redirectUri: 'https://example/cb' })
 
       expect(res.status).toBe(400)
@@ -111,7 +111,7 @@ describe('contacts auth routes', () => {
       )
 
       const res = await request(buildApp().callback())
-        .post('/auth/contacts/callback')
+        .post('/auth/contacts/token')
         .send({ code: 'x', redirectUri: 'https://example/cb' })
 
       expect(res.status).toBe(502)
