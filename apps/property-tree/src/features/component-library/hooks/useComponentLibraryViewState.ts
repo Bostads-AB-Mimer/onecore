@@ -29,11 +29,10 @@ import type { SortControl, TableSort } from '@/shared/ui/dataTableSort'
 
 import type { CategoryType } from '../lib/componentRows'
 import {
-  COMPONENT_DEFAULT_SORT,
   COMPONENT_PAGE_SIZE,
   type ComponentFilterControl,
+  fallbackSortFor,
   isLegacyLibraryUrl,
-  NAME_DEFAULT_SORT,
   NO_MODEL,
   parseComponentFilters,
   parseSort,
@@ -178,9 +177,7 @@ export const useComponentLibraryViewState = () => {
   }
 
   const onComponentList = subtypeState?.tab === 'components'
-  const fallbackSort = onComponentList
-    ? COMPONENT_DEFAULT_SORT
-    : NAME_DEFAULT_SORT
+  const fallbackSort = fallbackSortFor(viewState)
   const sort: SortControl = {
     value:
       parseSort(

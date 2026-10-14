@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   ancestorViewStates,
+  fallbackSortFor,
   isLegacyLibraryUrl,
   levelSearch,
   levelTitle,
@@ -313,6 +314,21 @@ describe('toViewKey', () => {
     expect(
       toViewKey({ ...subtype, typeName: 'Renamed', modelId: 'model-1' })
     ).toBe(toViewKey(subtype))
+  })
+})
+
+describe('fallbackSortFor', () => {
+  it('sorts each table by a column it has', () => {
+    expect(fallbackSortFor({ level: 'subtypes', ...base })).toEqual({
+      key: 'name',
+      order: 'asc',
+    })
+    expect(
+      fallbackSortFor({ level: 'subtype', ...base, tab: 'models' })
+    ).toEqual({ key: 'modelName', order: 'asc' })
+    expect(
+      fallbackSortFor({ level: 'subtype', ...base, tab: 'components' })
+    ).toEqual({ key: 'installed', order: 'desc' })
   })
 })
 

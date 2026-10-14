@@ -34,7 +34,10 @@ export const ModelsTable = ({
   sort,
 }: ModelsTableProps) => {
   const [documentsModelId, setDocumentsModelId] = useState<string | null>(null)
-  const sortedModels = useMemo(() => sortModelsByName(models), [models])
+  const sortedModels = useMemo(
+    () => sortModelsByName(models, (model) => model.modelName),
+    [models]
+  )
 
   const columns: Column<ComponentModel>[] = [
     {

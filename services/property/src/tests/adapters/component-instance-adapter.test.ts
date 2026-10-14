@@ -308,7 +308,7 @@ describe('component-instance-adapter.getComponents', () => {
 
     const [[page], [count]] = mockPrisma.$queryRaw.mock.calls
     expect(page.sql).toContain(
-      "NULLIF(LTRIM(m.modelName), '') COLLATE Finnish_Swedish_CI_AS DESC"
+      "m.modelName)), '') COLLATE Finnish_Swedish_CI_AS DESC"
     )
     expect(page.values).toEqual(['S1', 50, 25])
     expect(count.sql).toContain('i.id IS NOT NULL')

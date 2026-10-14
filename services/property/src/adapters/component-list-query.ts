@@ -100,6 +100,10 @@ const blankLast = (column: string) =>
 const swedishText = (column: string, direction: Prisma.Sql) =>
   Prisma.sql`${blankLast(column)}, ${Prisma.raw(`NULLIF(LTRIM(${column}), '')`)} COLLATE Finnish_Swedish_CI_AS ${direction}`
 
+// Mirrors formatComponentModelName in property-tree: the manufacturer, unless it
+// is the import's 'Unknown' placeholder, then the model name.
+const MODEL_LABEL = `CONCAT(CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN m.manufacturer + ' ' END, m.modelName)`
+
 const orderBySql = (sort: ComponentListSort | undefined) => {
   const { sortBy, sortOrder = 'asc' } = sort ?? DEFAULT_SORT
   const direction = Prisma.raw(sortOrder === 'desc' ? 'DESC' : 'ASC')
@@ -108,7 +112,7 @@ const orderBySql = (sort: ComponentListSort | undefined) => {
     case 'installed':
       return Prisma.sql`CASE WHEN i.installationDate >= ${FIRST_KNOWN_DATE} THEN 0 ELSE 1 END, CASE WHEN i.installationDate >= ${FIRST_KNOWN_DATE} THEN i.installationDate END ${direction}`
     case 'model':
-      return swedishText('m.modelName', direction)
+      return swedishText(MODEL_LABEL, direction)
     case 'serialNumber':
       return swedishText('c.serialNumber', direction)
     case 'specifications':

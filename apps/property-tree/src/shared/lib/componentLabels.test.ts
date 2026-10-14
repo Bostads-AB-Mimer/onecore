@@ -44,6 +44,16 @@ describe('sortModelsByName', () => {
     ])
   })
 
+  it('sorts by the given label', () => {
+    const models = [
+      { id: 'b', manufacturer: 'ABB', modelName: 'Z 60' },
+      { id: 'a', manufacturer: 'ZANUSSI', modelName: 'A 60' },
+    ]
+    expect(
+      sortModelsByName(models, (model) => model.modelName).map((m) => m.id)
+    ).toEqual(['a', 'b'])
+  })
+
   it('leaves the input untouched', () => {
     const models = [
       { id: 'b', modelName: 'B' },

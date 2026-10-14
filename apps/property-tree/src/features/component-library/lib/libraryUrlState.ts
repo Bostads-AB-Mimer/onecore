@@ -17,6 +17,7 @@ export const COMPONENT_DEFAULT_SORT: TableSort = {
   order: 'desc',
 }
 export const NAME_DEFAULT_SORT: TableSort = { key: 'name', order: 'asc' }
+export const MODEL_DEFAULT_SORT: TableSort = { key: 'modelName', order: 'asc' }
 
 // The model filter's URL value for components without a model.
 export const NO_MODEL = 'none'
@@ -215,6 +216,13 @@ export const withFreshNames = (
     names.subtypes?.find((s) => s.id === state.subtypeId)?.subTypeName ??
     state.subtypeName
   return { ...state, categoryName, typeName, subtypeName }
+}
+
+export const fallbackSortFor = (state: ViewState): TableSort => {
+  if (state.level !== 'subtype') return NAME_DEFAULT_SORT
+  return state.tab === 'components'
+    ? COMPONENT_DEFAULT_SORT
+    : MODEL_DEFAULT_SORT
 }
 
 export const parseSort = (
