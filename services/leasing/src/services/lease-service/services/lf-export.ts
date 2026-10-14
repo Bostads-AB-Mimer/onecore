@@ -35,7 +35,8 @@ export const mapLeasesToLfExportRows = (
           leaseToDate: lease.endDate ?? null,
           rentalObjectCode: rentalObject.externalId,
           numberOfRooms: rentalObject.roomCount ?? null,
-          squareMeters: rentalObject.kvm ?? null,
+          squareMeters:
+            rentalObject.kvm != null ? Math.round(rentalObject.kvm) : null,
           rowFromDate: new Date(insuranceRow.from),
           rowToDate: insuranceRow.to ? new Date(insuranceRow.to) : null,
           annualRent: insuranceRow.amount,

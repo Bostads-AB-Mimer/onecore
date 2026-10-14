@@ -219,5 +219,19 @@ describe(mapLeasesToLfExportRows, () => {
         leaseToDate: null,
       })
     })
+
+    it('rounds square meters to the nearest integer', () => {
+      const rows = mapLeasesToLfExportRows(
+        [
+          makeLease({
+            hyresobjekt: [factory.tenfastRentalObject.build({ kvm: 75.7 })],
+          }),
+        ],
+        ARTICLE_ID
+      )
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0].squareMeters).toBe(76)
+    })
   })
 })
