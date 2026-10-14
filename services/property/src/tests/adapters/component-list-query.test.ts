@@ -53,7 +53,7 @@ describe('componentPageSql', () => {
         componentPageSql({}, { sortBy: 'model', sortOrder: 'desc' }, 0, 25)
       )
     ).toBe(
-      "ORDER BY CASE WHEN NULLIF(LTRIM(CONCAT(CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN m.manufacturer + ' ' END, m.modelName)), '') IS NULL THEN 1 ELSE 0 END, NULLIF(LTRIM(CONCAT(CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN m.manufacturer + ' ' END, m.modelName)), '') COLLATE Finnish_Swedish_CI_AS DESC, c.id ASC"
+      "ORDER BY CASE WHEN NULLIF(LTRIM(CONCAT(CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN NULLIF(LTRIM(RTRIM(m.manufacturer)), '') + ' ' END, LTRIM(RTRIM(m.modelName)))), '') IS NULL THEN 1 ELSE 0 END, NULLIF(LTRIM(CONCAT(CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN NULLIF(LTRIM(RTRIM(m.manufacturer)), '') + ' ' END, LTRIM(RTRIM(m.modelName)))), '') COLLATE Finnish_Swedish_CI_AS DESC, c.id ASC"
     )
     expect(
       orderBy(
@@ -93,13 +93,13 @@ describe('componentPageSql', () => {
 
   it('defaults to ascending when only the column is given', () => {
     expect(orderBy(componentPageSql({}, { sortBy: 'model' }, 0, 25))).toContain(
-      "NULLIF(LTRIM(CONCAT(CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN m.manufacturer + ' ' END, m.modelName)), '') COLLATE Finnish_Swedish_CI_AS ASC"
+      "NULLIF(LTRIM(CONCAT(CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN NULLIF(LTRIM(RTRIM(m.manufacturer)), '') + ' ' END, LTRIM(RTRIM(m.modelName)))), '') COLLATE Finnish_Swedish_CI_AS ASC"
     )
   })
 
-  it('sorts models by the label the table shows, without the Unknown manufacturer', () => {
+  it('sorts models by the trimmed label the table shows, without the Unknown manufacturer', () => {
     expect(orderBy(componentPageSql({}, { sortBy: 'model' }, 0, 25))).toContain(
-      "CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN m.manufacturer + ' ' END, m.modelName"
+      "CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN NULLIF(LTRIM(RTRIM(m.manufacturer)), '') + ' ' END, LTRIM(RTRIM(m.modelName))"
     )
   })
 })

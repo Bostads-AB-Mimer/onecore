@@ -109,13 +109,16 @@ export function DataTable<T extends { id: string }>({
   const [currentPage, setCurrentPage] = useState(1)
 
   const sortable = onSortChange !== undefined
+  const sortKey = sort?.key
+  const sortOrder = sort?.order
+  const isDefaultSort = sameSort(sort, defaultSort)
   const sortedData = useMemo(() => {
-    if (!sortable || !sort || serverSorted || sameSort(sort, defaultSort)) {
+    if (!sortable || !sortKey || !sortOrder || serverSorted || isDefaultSort) {
       return data
     }
-    const value = columns.find((column) => column.key === sort.key)?.sort?.value
-    return value ? sortRows(data, value, sort.order) : data
-  }, [data, columns, sortable, sort, serverSorted, defaultSort])
+    const value = columns.find((column) => column.key === sortKey)?.sort?.value
+    return value ? sortRows(data, value, sortOrder) : data
+  }, [data, columns, sortable, sortKey, sortOrder, serverSorted, isDefaultSort])
 
   useEffect(() => {
     setCurrentPage(1)
@@ -240,6 +243,9 @@ export function DataTable<T extends { id: string }>({
   const sortableColumns = sortable
     ? shownColumns.filter((column) => column.sort)
     : []
+  const sortMatchesOption =
+    sort !== undefined &&
+    sortableColumns.some((column) => column.key === sort.key)
 
   const sortHeader = (column: Column<T>) => {
     const isActive = sort?.key === column.key
@@ -348,13 +354,18 @@ export function DataTable<T extends { id: string }>({
         <div className="mb-3 md:hidden">
           <select
             aria-label="Sortera"
-            value={sort ? `${sort.key}:${sort.order}` : ''}
+            value={sortMatchesOption ? `${sort.key}:${sort.order}` : ''}
             onChange={(e) => {
               const [key, order] = e.target.value.split(':')
               onSortChange?.({ key, order: order === 'desc' ? 'desc' : 'asc' })
             }}
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
+            {!sortMatchesOption && (
+              <option value="" disabled>
+                Sortera
+              </option>
+            )}
             {sortableColumns.flatMap((column) => {
               const first: SortOrder = column.sort?.firstOrder ?? 'asc'
               const orders: SortOrder[] = [

@@ -36,10 +36,9 @@ type SpaceRow = Omit<PropertyStructure, 'residence'> & {
   residenceRowId: string | null
 }
 
-// SQL Server matched these keys case-insensitively, so the JS lookup must too.
+// SQL Server compares these keys case-insensitively; the Map must too.
 const spaceKey = (id: string) => id.trim().toUpperCase()
 
-/** Looks up many spaces in one indexed query; see sql.ts for why not Prisma. */
 const getSpacesWithStructures = async (
   spaceIds: string[]
 ): Promise<Map<string, SpaceWithStructures>> => {
@@ -62,7 +61,14 @@ const getSpacesWithStructures = async (
         b.bygcaption AS buildingName,
         l.keybalgh AS residenceRowId
       FROM dbo.cmobj o
-      LEFT JOIN dbo.babuf b ON b.keycmobj = o.keycmobj AND b.deletemark = 0
+      OUTER APPLY (
+        SELECT TOP 1
+          keybabuf, keyobjrum, rumcode, rumcaption, keyobjlgh, lghcode,
+          lghcaption, hyresid, bygcode, bygcaption
+        FROM dbo.babuf
+        WHERE keycmobj = o.keycmobj
+        ORDER BY deletemark, keybabuf
+      ) b
       LEFT JOIN dbo.balgh l ON l.keycmobj = b.keyobjlgh
       WHERE o.keycmobj IN ${openJsonList(spaceIds)}
     `)

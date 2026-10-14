@@ -252,6 +252,11 @@ export interface ComponentFilterControl {
   onInstalledBeforeChange: (year: number | undefined) => void
 }
 
+/** Not installed and an unknown date both rule out an installation year. */
+export const allowsInstalledBefore = (
+  installation: property.ComponentInstallationFilter | undefined
+) => installation !== 'notInstalled' && installation !== 'unknownDate'
+
 /** A four-digit year after the placeholder year, or undefined. */
 export const parseInstalledBeforeYear = (text: string): number | undefined => {
   const trimmed = text.trim()
@@ -272,7 +277,7 @@ export const parseComponentFilters = (
 
   const filters: ComponentFilters = {}
   if (installation.success) filters.installation = installation.data
-  if (installedBefore && filters.installation !== 'notInstalled') {
+  if (installedBefore && allowsInstalledBefore(filters.installation)) {
     filters.installedBefore = installedBefore
   }
   return filters

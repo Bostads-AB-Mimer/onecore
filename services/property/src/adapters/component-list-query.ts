@@ -100,9 +100,8 @@ const blankLast = (column: string) =>
 const swedishText = (column: string, direction: Prisma.Sql) =>
   Prisma.sql`${blankLast(column)}, ${Prisma.raw(`NULLIF(LTRIM(${column}), '')`)} COLLATE Finnish_Swedish_CI_AS ${direction}`
 
-// Mirrors formatComponentModelName in property-tree: the manufacturer, unless it
-// is the import's 'Unknown' placeholder, then the model name.
-const MODEL_LABEL = `CONCAT(CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN m.manufacturer + ' ' END, m.modelName)`
+// Mirrors formatComponentModelName in property-tree, which gets trimmed values.
+const MODEL_LABEL = `CONCAT(CASE WHEN m.manufacturer COLLATE Latin1_General_CS_AS <> 'Unknown' THEN NULLIF(LTRIM(RTRIM(m.manufacturer)), '') + ' ' END, LTRIM(RTRIM(m.modelName)))`
 
 const orderBySql = (sort: ComponentListSort | undefined) => {
   const { sortBy, sortOrder = 'asc' } = sort ?? DEFAULT_SORT

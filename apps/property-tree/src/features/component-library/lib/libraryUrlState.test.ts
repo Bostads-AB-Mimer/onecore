@@ -395,6 +395,14 @@ describe('parseComponentFilters', () => {
       )
     ).toEqual({ installation: 'notInstalled' })
   })
+
+  it('drops the year for components with an unknown date', () => {
+    expect(
+      parseComponentFilters(
+        new URLSearchParams('installation=unknownDate&installedBefore=2010')
+      )
+    ).toEqual({ installation: 'unknownDate' })
+  })
 })
 
 describe('parseInstalledBeforeYear', () => {

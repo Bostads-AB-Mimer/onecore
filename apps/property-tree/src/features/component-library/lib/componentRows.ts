@@ -122,6 +122,9 @@ export const formatInstallationDate = (
     ? 'Okänt'
     : formatISODate(isoDate)
 
+// The imports write 0 for unknown prices and lifespans; they sort as blanks.
+export const knownNumber = (value: number) => value || null
+
 export const formatComponentCount = (count: number | undefined): string =>
   count === undefined ? '-' : count.toLocaleString('sv-SE')
 

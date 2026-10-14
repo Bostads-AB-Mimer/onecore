@@ -106,7 +106,7 @@ describe('component-instance-adapter.getComponents', () => {
     expect(queriedIds()).toEqual(['OBJ1', 'OBJ2'])
   })
 
-  it('joins the structure on the space and the residence on the structure, skipping deleted structures', async () => {
+  it('takes one structure per space, preferring one not marked deleted, and joins the residence on it', async () => {
     givenComponents([component('C1', [installation('I1', 'OBJ1')])])
     spaceLookup.mockResolvedValue([structureRow('OBJ1')])
 
@@ -114,9 +114,9 @@ describe('component-instance-adapter.getComponents', () => {
 
     const sql = spaceQuery().sql.replace(/\s+/g, ' ')
     expect(sql).toContain('FROM dbo.cmobj o')
-    expect(sql).toContain(
-      'LEFT JOIN dbo.babuf b ON b.keycmobj = o.keycmobj AND b.deletemark = 0'
-    )
+    expect(sql).toContain('OUTER APPLY ( SELECT TOP 1')
+    expect(sql).toContain('WHERE keycmobj = o.keycmobj')
+    expect(sql).toContain('ORDER BY deletemark, keybabuf ) b')
     expect(sql).toContain('LEFT JOIN dbo.balgh l ON l.keycmobj = b.keyobjlgh')
   })
 
@@ -308,7 +308,7 @@ describe('component-instance-adapter.getComponents', () => {
 
     const [[page], [count]] = mockPrisma.$queryRaw.mock.calls
     expect(page.sql).toContain(
-      "m.modelName)), '') COLLATE Finnish_Swedish_CI_AS DESC"
+      "LTRIM(RTRIM(m.modelName)))), '') COLLATE Finnish_Swedish_CI_AS DESC"
     )
     expect(page.values).toEqual(['S1', 50, 25])
     expect(count.sql).toContain('i.id IS NOT NULL')

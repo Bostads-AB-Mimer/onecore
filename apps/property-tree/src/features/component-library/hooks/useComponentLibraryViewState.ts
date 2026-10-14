@@ -29,6 +29,7 @@ import type { SortControl, TableSort } from '@/shared/ui/dataTableSort'
 
 import type { CategoryType } from '../lib/componentRows'
 import {
+  allowsInstalledBefore,
   COMPONENT_PAGE_SIZE,
   type ComponentFilterControl,
   fallbackSortFor,
@@ -56,6 +57,12 @@ export interface ComponentLibraryDialogStates {
   deinstallDialog: UseSimpleDialogStateReturn<Component>
   imageGalleryDialog: UseSimpleDialogStateReturn<Component>
 }
+
+// A model filter hides the Modell column, so it cannot be sorted on.
+const componentSortKeys = (modelFiltered: boolean) =>
+  property.ComponentSortKeySchema.options.filter(
+    (key) => !(modelFiltered && key === 'model')
+  )
 
 // Stable reference: the instance dialog's fields are memoized on this list.
 const NO_MODELS: ComponentModel[] = []
@@ -162,7 +169,13 @@ export const useComponentLibraryViewState = () => {
   }
 
   const setModelFilter = (modelId: string | undefined) => {
-    updateUrlParams({ modelId, page: undefined })
+    updateUrlParams({
+      modelId,
+      ...(modelId && searchParams.get('sortBy') === 'model'
+        ? { sortBy: undefined, sortOrder: undefined }
+        : {}),
+      page: undefined,
+    })
   }
 
   const clearFilters = () => {
@@ -182,7 +195,9 @@ export const useComponentLibraryViewState = () => {
     value:
       parseSort(
         searchParams,
-        onComponentList ? property.ComponentSortKeySchema.options : undefined
+        onComponentList
+          ? componentSortKeys(subtypeState.modelId !== undefined)
+          : undefined
       ) ?? fallbackSort,
     fallback: fallbackSort,
     onChange: (next: TableSort) =>
@@ -201,9 +216,9 @@ export const useComponentLibraryViewState = () => {
     onInstallationChange: (installation) =>
       updateUrlParams({
         installation,
-        ...(installation === 'notInstalled'
-          ? { installedBefore: undefined }
-          : {}),
+        ...(allowsInstalledBefore(installation)
+          ? {}
+          : { installedBefore: undefined }),
         page: undefined,
       }),
     onInstalledBeforeChange: (year) =>

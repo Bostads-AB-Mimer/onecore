@@ -148,6 +148,17 @@ describe('DataTable sorting', () => {
     expect(select.value).toBe('name:asc')
   })
 
+  it('shows a placeholder on phones when the active sort has no option', () => {
+    renderTable({ sort: { key: 'note', order: 'asc' }, onSortChange: vi.fn() })
+
+    const select = container.querySelector<HTMLSelectElement>(
+      'select[aria-label="Sortera"]'
+    )!
+    expect(select.options[0].textContent).toBe('Sortera')
+    expect(select.options[0].disabled).toBe(true)
+    expect(select.value).toBe('')
+  })
+
   it('renders plain headers without onSortChange', () => {
     renderTable({})
 

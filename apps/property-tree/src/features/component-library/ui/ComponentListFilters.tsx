@@ -11,6 +11,7 @@ import {
 } from '@/shared/ui/Select'
 
 import {
+  allowsInstalledBefore,
   type ComponentFilterControl,
   parseInstalledBeforeYear,
 } from '../lib/libraryUrlState'
@@ -72,11 +73,18 @@ export const InstalledBeforeFilter = ({
   const year = filters.value.installedBefore
   const [text, setText] = useState(year ? String(year) : '')
 
+  // Keep half-typed text; replace it only when the URL's year changes elsewhere.
   useEffect(() => {
-    setText(year ? String(year) : '')
+    setText((current) =>
+      parseInstalledBeforeYear(current) === year
+        ? current
+        : year
+          ? String(year)
+          : ''
+    )
   }, [year])
 
-  if (filters.value.installation === 'notInstalled') return null
+  if (!allowsInstalledBefore(filters.value.installation)) return null
 
   const parsed = parseInstalledBeforeYear(text)
   const isInvalid = text.trim().length === 4 && parsed === undefined
@@ -101,13 +109,8 @@ export const InstalledBeforeFilter = ({
         onChange={(e) => {
           const next = e.target.value
           setText(next)
-          if (next.trim() === '') filters.onInstalledBeforeChange(undefined)
-          else {
-            const nextYear = parseInstalledBeforeYear(next)
-            if (nextYear !== undefined && nextYear !== year) {
-              filters.onInstalledBeforeChange(nextYear)
-            }
-          }
+          const nextYear = parseInstalledBeforeYear(next)
+          if (nextYear !== year) filters.onInstalledBeforeChange(nextYear)
         }}
         className="h-10 w-20 tabular-nums aria-[invalid=true]:border-destructive"
       />

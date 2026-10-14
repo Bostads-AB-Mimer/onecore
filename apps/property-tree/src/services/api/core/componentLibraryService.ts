@@ -178,23 +178,27 @@ export const componentLibraryService = {
   // ===== Subtype Operations =====
   async getSubtypes(
     typeId?: string,
-    params?: { page?: number; limit?: number; search?: string }
+    options?: { search?: string }
   ): Promise<ComponentSubtype[]> {
-    const { data, error } = await GET('/component-subtypes', {
-      params: {
-        query: {
-          typeId,
-          limit: params?.limit || 100,
-          page: params?.page,
-          subtypeName:
-            params?.search && params.search.trim().length >= 2
-              ? params.search.trim()
-              : undefined,
+    const search = options?.search?.trim()
+    const fetchPage = (page: number) =>
+      GET('/component-subtypes', {
+        params: {
+          query: {
+            typeId,
+            limit: PAGE_LIMIT,
+            page,
+            subtypeName: search && search.length >= 2 ? search : undefined,
+          },
         },
-      },
-    })
-    if (error) throw error
-    return (data?.content || []) as ComponentSubtype[]
+      })
+
+    if (!typeId) {
+      const { data, error } = await fetchPage(1)
+      if (error) throw error
+      return (data?.content || []) as ComponentSubtype[]
+    }
+    return fetchAllPages<ComponentSubtype>(fetchPage)
   },
 
   async getSubtypesByTypeId(typeId: string): Promise<ComponentSubtype[]> {
