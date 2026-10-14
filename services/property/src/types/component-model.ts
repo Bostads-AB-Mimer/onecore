@@ -33,6 +33,7 @@ export const ComponentModelSchema = z.object({
     .union([z.string(), z.date()])
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
   subtype: ComponentSubtypeSchema.optional(),
+  componentCount: z.number().int().min(0).optional(),
 })
 
 // Create schema

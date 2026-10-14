@@ -1,3 +1,5 @@
+import { property } from '@onecore/types'
+
 import type { Component } from '@/services/types'
 
 export const formatComponentCurrency = (
@@ -8,14 +10,12 @@ export const formatComponentCurrency = (
   return `${value.toLocaleString(locale)} kr`
 }
 
-// The component imports write 1900-01-01 when Xpand has no installation date.
-const LAST_PLACEHOLDER_YEAR = 1900
-
 export const isKnownInstallationDate = (
   installationDate: string | null | undefined
 ): installationDate is string =>
   !!installationDate &&
-  new Date(installationDate).getUTCFullYear() > LAST_PLACEHOLDER_YEAR
+  new Date(installationDate).getUTCFullYear() >=
+    property.FIRST_KNOWN_INSTALLATION_YEAR
 
 export const calculateComponentAge = (
   installationDate: string | null | undefined

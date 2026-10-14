@@ -109,7 +109,7 @@ export interface paths {
         404: {
           content: never
         }
-        /** @description Category has component types with a surface code */
+        /** @description Category has component types with a surface code, or is being made SURFACE while models exist under it */
         409: {
           content: never
         }
@@ -256,7 +256,7 @@ export interface paths {
         404: {
           content: never
         }
-        /** @description Another component type already has this code */
+        /** @description Another component type already has this code, or the type is being moved into a SURFACE category while models exist under it */
         409: {
           content: never
         }
@@ -283,13 +283,15 @@ export interface paths {
   '/component-subtypes': {
     /**
      * Get all component subtypes
-     * @description Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName.
+     * @description Variants of a type with lifecycle data: depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId, subtypeName or categoryType.
      */
     get: {
       parameters: {
         query?: {
           /** @description Filter subtypes by type ID */
           typeId?: string
+          /** @description Only subtypes whose category has this type */
+          categoryType?: 'EQUIPMENT' | 'SURFACE'
           /** @description Search by subtype name (case-insensitive partial match) */
           subtypeName?: string
           page?: number
@@ -385,6 +387,18 @@ export interface paths {
             }
           }
         }
+        /** @description Invalid typeId */
+        400: {
+          content: never
+        }
+        /** @description Component subtype not found */
+        404: {
+          content: never
+        }
+        /** @description The subtype is being moved under a SURFACE category while it has models */
+        409: {
+          content: never
+        }
       }
     }
     /**
@@ -444,7 +458,7 @@ export interface paths {
     }
     /**
      * Create a new component model
-     * @description Creates a manufacturer product entry. Requires subtypeId.
+     * @description Creates a manufacturer product entry. Requires subtypeId, which may not be in a SURFACE category.
      */
     post: {
       requestBody: {
@@ -460,6 +474,10 @@ export interface paths {
               content?: components['schemas']['ComponentModel']
             }
           }
+        }
+        /** @description Unknown subtypeId, or a subtype in a SURFACE category */
+        400: {
+          content: never
         }
       }
     }
@@ -550,7 +568,7 @@ export interface paths {
     }
     /**
      * Update a component model
-     * @description Updates model pricing, specs, or warranty info.
+     * @description Updates model pricing, specs, or warranty info. Moving the model to another subtype moves its components with it; the new subtype may not be in a SURFACE category.
      */
     put: {
       parameters: {
@@ -571,6 +589,14 @@ export interface paths {
               content?: components['schemas']['ComponentModel']
             }
           }
+        }
+        /** @description Unknown subtypeId, or a subtype in a SURFACE category */
+        400: {
+          content: never
+        }
+        /** @description Component model not found */
+        404: {
+          content: never
         }
       }
     }
@@ -595,17 +621,35 @@ export interface paths {
   '/components': {
     /**
      * Get all component instances
-     * @description Physical units with serial numbers and status. Filter by modelId, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+     * @description Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), serialNumber, specifications, installation or installedBefore, and sort with sortBy and sortOrder.
      */
     get: {
       parameters: {
         query?: {
           modelId?: string
+          /** @description Only components that have no model. Cannot be combined with modelId. */
+          withoutModel?: boolean
+          /** @description Only components without an active installation */
+          notInstalled?: boolean
           /** @description Filter by subtype */
           subtypeId?: string
           status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
           /** @description Search by serial number (case-insensitive partial match) */
           serialNumber?: string
+          /** @description Search the specification text (case-insensitive partial match, 2 characters minimum) */
+          specifications?: string
+          /** @description Filter on the active installation. unknownDate means installed with no date or the 1900 placeholder. Cannot be combined with notInstalled=true. */
+          installation?: 'installed' | 'notInstalled' | 'unknownDate'
+          /** @description Only components whose known installation date falls before 1 January of this year */
+          installedBefore?: number
+          /** @description Sort column. Blank and unknown values always sort last. Without it, newest installation first. */
+          sortBy?:
+            | 'installed'
+            | 'model'
+            | 'serialNumber'
+            | 'specifications'
+            | 'quantity'
+          sortOrder?: 'asc' | 'desc'
           page?: number
           limit?: number
         }
@@ -861,6 +905,10 @@ export interface paths {
             }
           }
         }
+        /** @description The component already has an active installation */
+        409: {
+          content: never
+        }
       }
     }
   }
@@ -913,6 +961,10 @@ export interface paths {
               content?: components['schemas']['ComponentInstallation']
             }
           }
+        }
+        /** @description The change would give a component a second active installation */
+        409: {
+          content: never
         }
       }
     }
@@ -4046,6 +4098,7 @@ export interface components {
           updatedAt: string
         }
       }
+      componentCount?: number
     }
     ComponentModel: {
       /** Format: uuid */
@@ -4100,7 +4153,9 @@ export interface components {
             updatedAt: string
           }
         }
+        componentCount?: number
       }
+      componentCount?: number
     }
     Component: {
       /** Format: uuid */
@@ -4163,6 +4218,7 @@ export interface components {
             updatedAt: string
           }
         }
+        componentCount?: number
       }
       model?: {
         /** Format: uuid */
@@ -4217,7 +4273,9 @@ export interface components {
               updatedAt: string
             }
           }
+          componentCount?: number
         }
+        componentCount?: number
       } | null
       componentInstallations?: {
         /** Format: uuid */
@@ -4327,6 +4385,7 @@ export interface components {
               updatedAt: string
             }
           }
+          componentCount?: number
         }
         model?: {
           /** Format: uuid */
@@ -4381,7 +4440,9 @@ export interface components {
                 updatedAt: string
               }
             }
+            componentCount?: number
           }
+          componentCount?: number
         } | null
         componentInstallations?: {
           /** Format: uuid */

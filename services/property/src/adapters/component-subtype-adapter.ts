@@ -43,13 +43,17 @@ export const getComponentSubtypes = async (
       orderBy: { subTypeName: 'asc' },
       include: {
         componentType: { include: { category: true } },
+        _count: { select: { components: true } },
       },
     }),
     prisma.componentSubtypes.count({ where }),
   ])
 
   return {
-    subtypes: subtypes.map(trimStrings),
+    subtypes: subtypes.map(({ _count, ...subtype }) => ({
+      ...trimStrings(subtype),
+      componentCount: _count.components,
+    })),
     pagination: {
       page,
       limit,

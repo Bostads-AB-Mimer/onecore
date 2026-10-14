@@ -9,17 +9,26 @@ import {
   sortModelsByName,
 } from '@/shared/lib/componentLabels'
 import { Button } from '@/shared/ui/Button'
+import type { SortControl } from '@/shared/ui/dataTableSort'
 import { Pagination } from '@/shared/ui/Pagination'
 import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 import { TableToolbar } from '@/shared/ui/TableToolbar'
 
 import { type CategoryType, formatComponentPlace } from '../lib/componentRows'
-import { COMPONENT_PAGE_SIZE, NO_MODEL } from '../lib/libraryUrlState'
+import {
+  COMPONENT_PAGE_SIZE,
+  type ComponentFilterControl,
+  NO_MODEL,
+} from '../lib/libraryUrlState'
 import {
   EmptyState,
   ErrorState,
   NoResultsState,
 } from './ComponentLibraryContent'
+import {
+  InstallationFilter,
+  InstalledBeforeFilter,
+} from './ComponentListFilters'
 import { InstancesTable } from './InstancesTable'
 
 const ALL_MODELS = 'all'
@@ -38,6 +47,8 @@ interface SubtypeComponentsTabProps {
   onSearchChange: (value: string) => void
   onPageChange: (page: number, options?: { replace?: boolean }) => void
   onModelFilterChange: (modelId: string | undefined) => void
+  filters: ComponentFilterControl
+  sort: SortControl
   onClearFilters: () => void
   onCreate: () => void
   markedComponent: Component | undefined
@@ -63,6 +74,8 @@ export const SubtypeComponentsTab = ({
   onSearchChange,
   onPageChange,
   onModelFilterChange,
+  filters,
+  sort,
   onClearFilters,
   onCreate,
   markedComponent,
@@ -103,7 +116,11 @@ export const SubtypeComponentsTab = ({
   const instances = pinMarked ? [markedComponent, ...pageContent] : pageContent
 
   const isEquipment = categoryType === 'EQUIPMENT'
-  const isFiltered = Boolean(modelId) || searchInput.trim().length > 0
+  const isFiltered =
+    Boolean(modelId) ||
+    searchInput.trim().length > 0 ||
+    Boolean(filters.value.installation) ||
+    Boolean(filters.value.installedBefore)
   const total = componentPage?.pagination.total
 
   if (!isLoading && total === 0 && !isFiltered) {
@@ -147,14 +164,18 @@ export const SubtypeComponentsTab = ({
         itemCount={total}
         levelName="komponenter"
         levelNameSingular="komponent"
-        filters={modelFilter}
-        {...(isEquipment
-          ? {
-              searchValue: searchInput,
-              onSearchChange,
-              searchPlaceholder: 'Sök efter serienummer...',
-            }
-          : {})}
+        filters={
+          <>
+            {modelFilter}
+            <InstallationFilter filters={filters} />
+            <InstalledBeforeFilter filters={filters} />
+          </>
+        }
+        searchValue={searchInput}
+        onSearchChange={onSearchChange}
+        searchPlaceholder={
+          isEquipment ? 'Sök efter serienummer...' : 'Sök i specifikation...'
+        }
       />
       {markedComponent && (
         <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-info/10 py-1.5 pl-4 pr-1.5 text-sm">
@@ -201,6 +222,7 @@ export const SubtypeComponentsTab = ({
           pageSize={COMPONENT_PAGE_SIZE}
           hideModel={Boolean(modelId)}
           highlightedId={markedComponent?.id}
+          sort={sort}
           {...rowHandlers}
         />
       )}

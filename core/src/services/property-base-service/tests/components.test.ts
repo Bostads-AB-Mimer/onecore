@@ -361,6 +361,23 @@ describe('Component Types API', () => {
 
 describe('Component Subtypes API', () => {
   describe('GET /component-subtypes', () => {
+    it('keeps the component count', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponentSubtypes')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
+            content: [
+              { ...factory.componentSubtype.build(), componentCount: 639 },
+            ],
+          },
+        })
+
+      const res = await request(app.callback()).get('/component-subtypes')
+
+      expect(res.body.content[0].componentCount).toBe(639)
+    })
+
     it('returns list on success', async () => {
       const subtypes = factory.componentSubtype.buildList(3)
       jest
@@ -561,6 +578,19 @@ describe('Component Subtypes API', () => {
 
 describe('Component Models API', () => {
   describe('GET /component-models', () => {
+    it('keeps the component count', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponentModels')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [{ ...factory.componentModel.build(), componentCount: 0 }],
+        })
+
+      const res = await request(app.callback()).get('/component-models')
+
+      expect(res.body.content[0].componentCount).toBe(0)
+    })
+
     it('returns list on success', async () => {
       const models = factory.componentModel.buildList(3)
       jest
@@ -762,6 +792,25 @@ describe('Component Models API', () => {
       expect(res.status).toBe(404)
     })
 
+    it('asks property for one component of the model', async () => {
+      const getSpy = jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce(noChildren)
+      jest
+        .spyOn(propertyBaseAdapter, 'deleteComponentModel')
+        .mockResolvedValueOnce({ ok: true, data: undefined })
+
+      await request(app.callback()).delete(
+        '/component-models/00000000-0000-0000-0000-000000000001'
+      )
+
+      expect(getSpy).toHaveBeenCalledWith({
+        modelId: '00000000-0000-0000-0000-000000000001',
+        page: 1,
+        limit: 1,
+      })
+    })
+
     it('returns 409 with the total count when the model has components', async () => {
       jest.spyOn(propertyBaseAdapter, 'getComponents').mockResolvedValueOnce({
         ok: true,
@@ -825,6 +874,47 @@ describe('Component Models API', () => {
 
 describe('Components API', () => {
   describe('GET /components', () => {
+    it('forwards the sort, the installation filters and the specification search', async () => {
+      const getSpy = jest
+        .spyOn(propertyBaseAdapter, 'getComponents')
+        .mockResolvedValueOnce({ ok: true, data: { content: [] } })
+
+      const res = await request(app.callback()).get(
+        '/components?subtypeId=00000000-0000-0000-0002-000000000001' +
+          '&sortBy=installed&sortOrder=asc&installation=unknownDate' +
+          '&installedBefore=2010&specifications=Decorama'
+      )
+
+      expect(res.status).toBe(200)
+      expect(getSpy).toHaveBeenCalledWith({
+        subtypeId: '00000000-0000-0000-0002-000000000001',
+        sortBy: 'installed',
+        sortOrder: 'asc',
+        installation: 'unknownDate',
+        installedBefore: 2010,
+        specifications: 'Decorama',
+        page: 1,
+        limit: 20,
+      })
+    })
+
+    it.each([
+      ['an unknown sort column', 'sortBy=location'],
+      ['an unknown installation filter', 'installation=broken'],
+      ['a year without known dates', 'installedBefore=1900'],
+      [
+        'notInstalled with another installation filter',
+        'notInstalled=true&installation=unknownDate',
+      ],
+    ])('returns 400 for %s', async (_, query) => {
+      const getSpy = jest.spyOn(propertyBaseAdapter, 'getComponents')
+
+      const res = await request(app.callback()).get(`/components?${query}`)
+
+      expect(res.status).toBe(400)
+      expect(getSpy).not.toHaveBeenCalled()
+    })
+
     it('returns list on success', async () => {
       const components = factory.component.buildList(3)
       jest
@@ -864,16 +954,11 @@ describe('Components API', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getSpy).toHaveBeenCalledWith(
-        '00000000-0000-0000-0000-000000000001',
-        undefined,
-        1,
-        20,
-        undefined,
-        undefined,
-        undefined,
-        undefined
-      )
+      expect(getSpy).toHaveBeenCalledWith({
+        modelId: '00000000-0000-0000-0000-000000000001',
+        page: 1,
+        limit: 20,
+      })
     })
 
     it('filters by subtypeId', async () => {
@@ -887,16 +972,11 @@ describe('Components API', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getSpy).toHaveBeenCalledWith(
-        undefined,
-        undefined,
-        1,
-        20,
-        undefined,
-        '00000000-0000-0000-0002-000000000001',
-        undefined,
-        undefined
-      )
+      expect(getSpy).toHaveBeenCalledWith({
+        page: 1,
+        limit: 20,
+        subtypeId: '00000000-0000-0000-0002-000000000001',
+      })
     })
 
     it('filters to components without a model', async () => {
@@ -909,16 +989,12 @@ describe('Components API', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getSpy).toHaveBeenCalledWith(
-        undefined,
-        undefined,
-        1,
-        20,
-        undefined,
-        '00000000-0000-0000-0002-000000000001',
-        true,
-        undefined
-      )
+      expect(getSpy).toHaveBeenCalledWith({
+        page: 1,
+        limit: 20,
+        subtypeId: '00000000-0000-0000-0002-000000000001',
+        withoutModel: true,
+      })
     })
 
     it('filters to components without an active installation', async () => {
@@ -931,16 +1007,12 @@ describe('Components API', () => {
       )
 
       expect(res.status).toBe(200)
-      expect(getSpy).toHaveBeenCalledWith(
-        undefined,
-        undefined,
-        1,
-        20,
-        undefined,
-        '00000000-0000-0000-0002-000000000001',
-        undefined,
-        true
-      )
+      expect(getSpy).toHaveBeenCalledWith({
+        page: 1,
+        limit: 20,
+        subtypeId: '00000000-0000-0000-0002-000000000001',
+        notInstalled: true,
+      })
     })
 
     it('returns 400 when modelId and withoutModel are combined', async () => {
@@ -963,16 +1035,11 @@ describe('Components API', () => {
       const res = await request(app.callback()).get('/components?status=ACTIVE')
 
       expect(res.status).toBe(200)
-      expect(getSpy).toHaveBeenCalledWith(
-        undefined,
-        'ACTIVE',
-        1,
-        20,
-        undefined,
-        undefined,
-        undefined,
-        undefined
-      )
+      expect(getSpy).toHaveBeenCalledWith({
+        status: 'ACTIVE',
+        page: 1,
+        limit: 20,
+      })
     })
 
     it('response matches schema', async () => {

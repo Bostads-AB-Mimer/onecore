@@ -44,7 +44,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   get:
    *     summary: Get all component instances
-   *     description: Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+   *     description: Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), serialNumber, specifications, installation or installedBefore, and sort with sortBy and sortOrder.
    *     tags: [Component Instances]
    *     parameters:
    *       - in: query
@@ -77,6 +77,35 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Search by serial number (case-insensitive partial match)
+   *       - in: query
+   *         name: specifications
+   *         schema:
+   *           type: string
+   *         description: Search the specification text (case-insensitive partial match, 2 characters minimum)
+   *       - in: query
+   *         name: installation
+   *         schema:
+   *           type: string
+   *           enum: [installed, notInstalled, unknownDate]
+   *         description: Filter on the active installation. unknownDate means installed with no date or the 1900 placeholder. Cannot be combined with notInstalled=true.
+   *       - in: query
+   *         name: installedBefore
+   *         schema:
+   *           type: integer
+   *           minimum: 1902
+   *         description: Only components whose known installation date falls before 1 January of this year
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [installed, model, serialNumber, specifications, quantity]
+   *         description: Sort column. Blank and unknown values always sort last. Without it, newest installation first.
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: asc
    *       - in: query
    *         name: page
    *         schema:
@@ -122,6 +151,11 @@ export const routes = (router: KoaRouter) => {
         subtypeId,
         status,
         serialNumber,
+        specifications,
+        installation,
+        installedBefore,
+        sortBy,
+        sortOrder,
         page,
         limit,
       } = ctx.request.parsedQuery
@@ -132,6 +166,11 @@ export const routes = (router: KoaRouter) => {
         'subtypeId',
         'status',
         'serialNumber',
+        'specifications',
+        'installation',
+        'installedBefore',
+        'sortBy',
+        'sortOrder',
         'page',
         'limit',
       ])
@@ -145,9 +184,13 @@ export const routes = (router: KoaRouter) => {
             subtypeId,
             status,
             serialNumber,
+            specifications,
+            installation,
+            installedBefore,
           },
           page,
-          limit
+          limit,
+          sortBy ? { sortBy, sortOrder } : undefined
         )
 
         ctx.body = {

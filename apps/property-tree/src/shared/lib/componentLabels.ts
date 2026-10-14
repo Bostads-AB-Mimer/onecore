@@ -37,11 +37,12 @@ const modelNameCollator = new Intl.Collator('sv', {
 export const sortModelsByName = <
   T extends { manufacturer?: string | null; modelName: string },
 >(
-  models: T[]
+  models: T[],
+  label: (model: T) => string = formatComponentModelName
 ): T[] =>
   models
     .map((model) => {
-      const name = formatComponentModelName(model)
+      const name = label(model)
       return { model, name, lettered: hasLetters(name) }
     })
     .sort(

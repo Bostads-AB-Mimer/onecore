@@ -233,14 +233,21 @@ describe('GET /components', () => {
   app.use(bodyParser())
   app.use(router.routes())
 
+  const queryRaw = prisma.$queryRaw as jest.Mock
   const findMany = prisma.components.findMany as jest.Mock
-  const count = prisma.components.count as jest.Mock
+
+  const sentQuery = (kind: 'page' | 'count') => {
+    const marker = kind === 'count' ? 'COUNT(*)' : 'SELECT c.id'
+    const [query] = queryRaw.mock.calls.find(([q]) => q.sql.includes(marker))
+    return { sql: query.sql.replace(/\s+/g, ' '), values: query.values }
+  }
 
   beforeEach(() => {
+    queryRaw.mockReset()
     findMany.mockReset()
-    count.mockReset()
-    findMany.mockResolvedValue([])
-    count.mockResolvedValue(0)
+    queryRaw.mockImplementation((query: { sql: string }) =>
+      Promise.resolve(query.sql.includes('COUNT(*)') ? [{ total: 0 }] : [])
+    )
   })
 
   it('filters to components without a model', async () => {
@@ -249,14 +256,10 @@ describe('GET /components', () => {
     )
 
     expect(res.status).toBe(200)
-    expect(findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ subtypeId, modelId: null }),
-      })
+    expect(sentQuery('page').sql).toContain(
+      'c.subtypeId = ? AND c.modelId IS NULL'
     )
-    expect(count).toHaveBeenCalledWith({
-      where: expect.objectContaining({ modelId: null }),
-    })
+    expect(sentQuery('count').sql).toContain('c.modelId IS NULL')
   })
 
   it('leaves the model alone when withoutModel is false', async () => {
@@ -264,7 +267,7 @@ describe('GET /components', () => {
       `/components?subtypeId=${subtypeId}&withoutModel=false`
     )
 
-    expect(findMany.mock.calls[0][0].where).not.toHaveProperty('modelId')
+    expect(sentQuery('page').sql).not.toContain('c.modelId IS NULL')
   })
 
   it('filters to components without an active installation', async () => {
@@ -272,18 +275,9 @@ describe('GET /components', () => {
       `/components?subtypeId=${subtypeId}&notInstalled=true`
     )
 
-    const notInstalled = {
-      componentInstallations: { none: { deinstallationDate: null } },
-    }
     expect(res.status).toBe(200)
-    expect(findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ subtypeId, ...notInstalled }),
-      })
-    )
-    expect(count).toHaveBeenCalledWith({
-      where: expect.objectContaining(notInstalled),
-    })
+    expect(sentQuery('page').sql).toContain('i.id IS NULL')
+    expect(sentQuery('count').sql).toContain('i.id IS NULL')
   })
 
   it('leaves installations alone when notInstalled is false', async () => {
@@ -291,9 +285,38 @@ describe('GET /components', () => {
       `/components?subtypeId=${subtypeId}&notInstalled=false`
     )
 
-    expect(findMany.mock.calls[0][0].where).not.toHaveProperty(
-      'componentInstallations'
+    expect(sentQuery('page').sql).not.toContain('i.id IS')
+  })
+
+  it('passes the sort, the installation filters and the specification search through', async () => {
+    const res = await request(app.callback()).get(
+      `/components?subtypeId=${subtypeId}&sortBy=specifications&sortOrder=desc` +
+        '&installation=installed&installedBefore=2010&specifications=Decorama&page=2&limit=25'
     )
+
+    expect(res.status).toBe(200)
+    const page = sentQuery('page')
+    expect(page.sql).toContain(
+      "NULLIF(LTRIM(c.specifications), '') COLLATE Finnish_Swedish_CI_AS DESC"
+    )
+    expect(page.sql).toContain('i.id IS NOT NULL')
+    expect(page.values).toEqual([subtypeId, '%Decorama%', '2010-01-01', 25, 25])
+  })
+
+  it.each([
+    ['an unknown sort column', 'sortBy=location'],
+    ['an unknown sort order', 'sortBy=model&sortOrder=up'],
+    ['an unknown installation filter', 'installation=broken'],
+    ['a year without known dates', 'installedBefore=1901'],
+    [
+      'notInstalled with another installation filter',
+      'notInstalled=true&installation=installed',
+    ],
+  ])('answers 400 for %s', async (_, query) => {
+    const res = await request(app.callback()).get(`/components?${query}`)
+
+    expect(res.status).toBe(400)
+    expect(queryRaw).not.toHaveBeenCalled()
   })
 
   it('answers 400 when modelId and withoutModel are combined', async () => {
@@ -302,7 +325,7 @@ describe('GET /components', () => {
     )
 
     expect(res.status).toBe(400)
-    expect(findMany).not.toHaveBeenCalled()
+    expect(queryRaw).not.toHaveBeenCalled()
   })
 })
 
@@ -498,7 +521,10 @@ describe('POST and PUT /components', () => {
   })
 
   it('re-checks on update when modelId changes', async () => {
-    findComponent.mockResolvedValueOnce(storedWall)
+    findComponent.mockResolvedValueOnce({
+      ...storedWall,
+      componentInstallations: [],
+    })
     findSubtype.mockResolvedValueOnce(surfaceSubtype)
 
     const res = await request(app.callback())
@@ -510,7 +536,10 @@ describe('POST and PUT /components', () => {
   })
 
   it('does not re-check on update when only the condition changes', async () => {
-    findComponent.mockResolvedValueOnce(storedWall)
+    findComponent.mockResolvedValueOnce({
+      ...storedWall,
+      componentInstallations: [],
+    })
     updateComponent.mockResolvedValueOnce({ ...storedWall, condition: 'GOOD' })
 
     const res = await request(app.callback())
@@ -522,7 +551,11 @@ describe('POST and PUT /components', () => {
   })
 
   it('clears a model with null on update', async () => {
-    findComponent.mockResolvedValueOnce({ ...storedWall, modelId })
+    findComponent.mockResolvedValueOnce({
+      ...storedWall,
+      modelId,
+      componentInstallations: [],
+    })
     findSubtype.mockResolvedValueOnce(equipmentSubtype)
     updateComponent.mockResolvedValueOnce(storedWall)
 
@@ -537,7 +570,11 @@ describe('POST and PUT /components', () => {
 
   it('rejects moving a component with a model to another subtype', async () => {
     const otherSubtypeId = '00000000-0000-0000-0002-000000000002'
-    findComponent.mockResolvedValueOnce({ ...storedWall, modelId })
+    findComponent.mockResolvedValueOnce({
+      ...storedWall,
+      modelId,
+      componentInstallations: [],
+    })
     findSubtype.mockResolvedValueOnce({
       id: otherSubtypeId,
       componentType: { category: { type: 'EQUIPMENT' } },
@@ -587,6 +624,9 @@ describe('component reads include the subtype directly', () => {
   })
 
   it('getComponentsByRoomId includes subtype -> type -> category and the model', async () => {
+    ;(prisma.$queryRaw as jest.Mock).mockResolvedValueOnce([
+      { componentId: '00000000-0000-0000-0004-000000000001' },
+    ])
     findMany.mockResolvedValueOnce([])
 
     await getComponentsByRoomId('ROOM-1')
@@ -853,6 +893,7 @@ describe('GET /component-subtypes', () => {
             ...timestamps,
           },
         },
+        _count: { components: 12 },
       },
     ])
     count.mockResolvedValueOnce(1)
@@ -860,6 +901,7 @@ describe('GET /component-subtypes', () => {
     const res = await request(app.callback()).get(
       '/component-subtypes?categoryType=SURFACE'
     )
+    expect(res.body.content[0].componentCount).toBe(12)
 
     expect(res.status).toBe(200)
     expect(res.body.content[0].componentType.code).toBe('WALL')

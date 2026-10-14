@@ -4,6 +4,7 @@ import type { Component } from '@/services/types'
 
 import {
   describeStructure,
+  formatComponentCount,
   formatComponentPlace,
   formatComponentQuantity,
   formatInstallationDate,
@@ -235,5 +236,13 @@ describe('formatComponentQuantity', () => {
 
   it('shows a dash without a quantity', () => {
     expect(formatComponentQuantity(component({ quantity: null }))).toBe('-')
+  })
+})
+
+describe('formatComponentCount', () => {
+  it('groups thousands the Swedish way and marks a missing count', () => {
+    expect(formatComponentCount(45958).replace(/\s/g, ' ')).toBe('45 958')
+    expect(formatComponentCount(0)).toBe('0')
+    expect(formatComponentCount(undefined)).toBe('-')
   })
 })

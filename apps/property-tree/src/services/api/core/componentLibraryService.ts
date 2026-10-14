@@ -1,3 +1,5 @@
+import { property } from '@onecore/types'
+
 import type {
   Component,
   ComponentCategory,
@@ -15,6 +17,8 @@ import type {
   UpdateComponentSubtype,
   UpdateComponentType,
 } from '@/services/types'
+
+import type { TableSort } from '@/shared/ui/dataTableSort'
 
 import { DELETE, GET, POST, PUT, toApiError } from './baseApi'
 
@@ -45,8 +49,18 @@ export interface ComponentPageFilter {
   modelId?: string
   withoutModel?: boolean
   search?: string
+  /** Surfaces have no serial numbers; their search reads the specification. */
+  searchField?: 'serialNumber' | 'specifications'
+  installation?: property.ComponentInstallationFilter
+  installedBefore?: number
+  sort?: TableSort
   page: number
   limit: number
+}
+
+const serverSortKey = (sort: TableSort | undefined) => {
+  const parsed = property.ComponentSortKeySchema.safeParse(sort?.key)
+  return parsed.success ? parsed.data : undefined
 }
 
 export interface ComponentPage {
@@ -164,23 +178,27 @@ export const componentLibraryService = {
   // ===== Subtype Operations =====
   async getSubtypes(
     typeId?: string,
-    params?: { page?: number; limit?: number; search?: string }
+    options?: { search?: string }
   ): Promise<ComponentSubtype[]> {
-    const { data, error } = await GET('/component-subtypes', {
-      params: {
-        query: {
-          typeId,
-          limit: params?.limit || 100,
-          page: params?.page,
-          subtypeName:
-            params?.search && params.search.trim().length >= 2
-              ? params.search.trim()
-              : undefined,
+    const search = options?.search?.trim()
+    const fetchPage = (page: number) =>
+      GET('/component-subtypes', {
+        params: {
+          query: {
+            typeId,
+            limit: PAGE_LIMIT,
+            page,
+            subtypeName: search && search.length >= 2 ? search : undefined,
+          },
         },
-      },
-    })
-    if (error) throw error
-    return (data?.content || []) as ComponentSubtype[]
+      })
+
+    if (!typeId) {
+      const { data, error } = await fetchPage(1)
+      if (error) throw error
+      return (data?.content || []) as ComponentSubtype[]
+    }
+    return fetchAllPages<ComponentSubtype>(fetchPage)
   },
 
   async getSubtypesByTypeId(typeId: string): Promise<ComponentSubtype[]> {
@@ -304,14 +322,22 @@ export const componentLibraryService = {
 
   // ===== Instance Operations =====
   async getComponentPage(filter: ComponentPageFilter): Promise<ComponentPage> {
-    const search = filter.search?.trim()
+    const trimmed = filter.search?.trim()
+    const search = trimmed && trimmed.length >= 2 ? trimmed : undefined
+    const searchField = filter.searchField ?? 'serialNumber'
+    const sortBy = serverSortKey(filter.sort)
     const { data, error } = await GET('/components', {
       params: {
         query: {
           subtypeId: filter.subtypeId,
           modelId: filter.modelId,
           withoutModel: filter.withoutModel || undefined,
-          serialNumber: search && search.length >= 2 ? search : undefined,
+          serialNumber: searchField === 'serialNumber' ? search : undefined,
+          specifications: searchField === 'specifications' ? search : undefined,
+          installation: filter.installation,
+          installedBefore: filter.installedBefore,
+          sortBy,
+          sortOrder: sortBy ? filter.sort?.order : undefined,
           page: filter.page,
           limit: filter.limit,
         },

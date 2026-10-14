@@ -6208,7 +6208,7 @@ export interface paths {
   '/components': {
     /**
      * Get all components
-     * @description Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+     * @description Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), serialNumber, specifications, installation or installedBefore, and sort with sortBy and sortOrder.
      */
     get: {
       parameters: {
@@ -6223,6 +6223,20 @@ export interface paths {
           status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
           /** @description Search by serial number (case-insensitive partial match) */
           serialNumber?: string
+          /** @description Search the specification text (case-insensitive partial match, 2 characters minimum) */
+          specifications?: string
+          /** @description Filter on the active installation. unknownDate means installed with no date or the 1900 placeholder. Cannot be combined with notInstalled=true. */
+          installation?: 'installed' | 'notInstalled' | 'unknownDate'
+          /** @description Only components whose known installation date falls before 1 January of this year */
+          installedBefore?: number
+          /** @description Sort column. Blank and unknown values always sort last. Without it, newest installation first. */
+          sortBy?:
+            | 'installed'
+            | 'model'
+            | 'serialNumber'
+            | 'specifications'
+            | 'quantity'
+          sortOrder?: 'asc' | 'desc'
           page?: number
           limit?: number
         }
@@ -12332,6 +12346,7 @@ export interface components {
           updatedAt: string
         }
       }
+      componentCount?: number
     }
     Component: {
       /** Format: uuid */
@@ -12375,6 +12390,7 @@ export interface components {
         createdAt: string
         updatedAt: string
         subtype?: components['schemas']['ComponentSubtype']
+        componentCount?: number
       } | null
       componentInstallations?: {
         /** Format: uuid */
@@ -12467,6 +12483,7 @@ export interface components {
       createdAt: string
       updatedAt: string
       subtype?: components['schemas']['ComponentSubtype']
+      componentCount?: number
     }
     ComponentInstallation: {
       /** Format: uuid */
@@ -12524,6 +12541,7 @@ export interface components {
           createdAt: string
           updatedAt: string
           subtype?: components['schemas']['ComponentSubtype']
+          componentCount?: number
         } | null
         componentInstallations?: {
           /** Format: uuid */
