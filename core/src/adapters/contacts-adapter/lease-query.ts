@@ -37,16 +37,29 @@ export async function enrichLeaseContacts<
   ]
   if (contactCodes.length === 0) return leases
 
-  const contactsResult = await contactsAdapter.getByContactCodeBatch(
-    contactCodes,
-    { includePhone: true, includeEmail: true }
-  )
+  const contactsResult = await contactsAdapter
+    .getByContactCodeBatch(contactCodes, {
+      includePhone: true,
+      includeEmail: true,
+    })
+    .catch(
+      (
+        err
+      ): Awaited<ReturnType<typeof contactsAdapter.getByContactCodeBatch>> => ({
+        ok: false,
+        err: 'unknown',
+        detail: err instanceof Error ? err.message : undefined,
+      })
+    )
   if (!contactsResult.ok) {
     logger.error(
       { err: contactsResult.err, logContext },
-      'enrichLeaseContacts: contact enrichment failed, returning leases without contact info'
+      'enrichLeaseContacts: contact enrichment failed, redacting contact info'
     )
-    return leases
+    return leases.map((lease) => ({
+      ...lease,
+      contacts: lease.contacts?.map((c) => ({ ...c, email: null, phone: null })),
+    }))
   }
 
   const contactMap = new Map(
