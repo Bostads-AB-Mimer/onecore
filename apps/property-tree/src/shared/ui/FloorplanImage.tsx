@@ -7,11 +7,13 @@ import { EmptyState } from '@/shared/ui/EmptyState'
 interface FloorplanImageProps {
   rentalId?: string
   className?: string
+  onLoad?: () => void
 }
 
 export const FloorplanImage = ({
   rentalId,
   className,
+  onLoad,
 }: FloorplanImageProps) => {
   const [imageError, setImageError] = useState(false)
 
@@ -29,6 +31,7 @@ export const FloorplanImage = ({
     <img
       src={getFloorplanUrl(rentalId)}
       alt="Planritning"
+      onLoad={onLoad}
       onError={() => setImageError(true)}
       className={className ?? 'max-w-full h-auto mx-auto'}
     />

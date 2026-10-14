@@ -1,4 +1,20 @@
 /**
+ * Saves a blob as a file via a temporary download link
+ * @param blob - The file data
+ * @param filename - The name to save the file as
+ */
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+/**
  * Downloads a file from a base64-encoded string
  * @param base64Data - The base64-encoded file data
  * @param filename - The name to save the file as
@@ -18,13 +34,5 @@ export function downloadFileFromBase64(
   const byteArray = new Uint8Array(byteNumbers)
   const blob = new Blob([byteArray], { type: mimeType })
 
-  // Create download link
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(url)
+  downloadBlob(blob, filename)
 }
