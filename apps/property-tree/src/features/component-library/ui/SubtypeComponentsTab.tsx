@@ -34,7 +34,7 @@ interface SubtypeComponentsTabProps {
   page: number
   searchInput: string
   onSearchChange: (value: string) => void
-  onPageChange: (page: number) => void
+  onPageChange: (page: number, options?: { replace?: boolean }) => void
   onModelFilterChange: (modelId: string | undefined) => void
   onClearFilters: () => void
   onCreate: () => void
@@ -67,7 +67,7 @@ export const SubtypeComponentsTab = ({
 
   useEffect(() => {
     if (!isFetching && totalPages && page > totalPages) {
-      onPageChange(totalPages)
+      onPageChange(totalPages, { replace: true })
     }
   }, [isFetching, totalPages, page, onPageChange])
 

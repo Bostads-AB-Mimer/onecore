@@ -48,8 +48,11 @@ export const useUrlPagination = (options: UseUrlPaginationOptions = {}) => {
 
   // Convenience setters
   const setPage = useCallback(
-    (newPage: number) => {
-      updateUrlParams({ page: newPage === defaultPage ? undefined : newPage })
+    (newPage: number, { replace = false }: { replace?: boolean } = {}) => {
+      updateUrlParams(
+        { page: newPage === defaultPage ? undefined : newPage },
+        { replace }
+      )
     },
     [updateUrlParams, defaultPage]
   )

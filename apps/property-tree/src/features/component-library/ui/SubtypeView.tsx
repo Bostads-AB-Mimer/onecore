@@ -44,7 +44,7 @@ interface SubtypeViewProps {
   categoryError: Error | null
   onRetryCategory: () => void
   page: number
-  onPageChange: (page: number) => void
+  onPageChange: (page: number, options?: { replace?: boolean }) => void
   onModelFilterChange: (modelId: string | undefined) => void
   onClearFilters: () => void
   onCreateComponent: () => void
