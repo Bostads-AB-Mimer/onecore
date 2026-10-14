@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { property } from '@onecore/types'
 import { ComponentModelSchema } from './component-model'
 import { ComponentSubtypeSchema } from './component-subtype'
 
@@ -41,10 +42,24 @@ export const componentsQueryParamsSchema = z
     page: z.coerce.number().int().min(1).optional().default(1),
     limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   })
+  .merge(property.ComponentsListQuerySchema)
   .refine((query) => !(query.modelId && query.withoutModel), {
     message: 'modelId and withoutModel cannot be combined',
     path: ['withoutModel'],
   })
+  .refine(
+    (query) =>
+      !(
+        query.notInstalled &&
+        query.installation &&
+        query.installation !== 'notInstalled'
+      ),
+    {
+      message:
+        'notInstalled cannot be combined with another installation filter',
+      path: ['installation'],
+    }
+  )
 
 // Residence schema for navigation (just the id we need for routing)
 export const ResidenceRefSchema = z.object({

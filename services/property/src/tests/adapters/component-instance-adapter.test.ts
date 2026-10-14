@@ -51,7 +51,11 @@ const structureRow = (id: string, overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-const spaceQuery = () => mockPrisma.$queryRaw.mock.calls.at(-1)[0]
+const spaceQuery = () =>
+  mockPrisma.$queryRaw.mock.calls
+    .map(([query]) => query)
+    .filter((query) => query.sql.includes('dbo.cmobj'))
+    .at(-1)
 
 const queriedIds = () =>
   JSON.parse(
@@ -63,20 +67,34 @@ const queriedIds = () =>
 const flushPromises = () => new Promise((resolve) => setImmediate(resolve))
 
 describe('component-instance-adapter.getComponents', () => {
+  const spaceLookup = jest.fn()
+  const countLookup = jest.fn()
+  let pageIds: string[] = []
+
+  const givenComponents = (components: ReturnType<typeof component>[]) => {
+    pageIds = components.map(({ id }) => id)
+    mockPrisma.components.findMany.mockResolvedValue(components)
+  }
+
   beforeEach(() => {
     jest.resetAllMocks()
-    mockPrisma.components.count.mockResolvedValue(1)
+    pageIds = []
+    countLookup.mockResolvedValue([{ total: 1 }])
+    mockPrisma.$queryRaw.mockImplementation((query: { sql: string }) => {
+      if (query.sql.includes('COUNT(*)')) return countLookup(query)
+      if (query.sql.includes('SELECT c.id')) {
+        return Promise.resolve(pageIds.map((id) => ({ id })))
+      }
+      return spaceLookup(query)
+    })
   })
 
   it('looks up the space structure in one raw query instead of a nested include', async () => {
-    mockPrisma.components.findMany.mockResolvedValue([
+    givenComponents([
       component('C1', [installation('I1', 'OBJ1')]),
       component('C2', [installation('I2', 'OBJ2')]),
     ])
-    mockPrisma.$queryRaw.mockResolvedValue([
-      structureRow('OBJ1'),
-      structureRow('OBJ2'),
-    ])
+    spaceLookup.mockResolvedValue([structureRow('OBJ1'), structureRow('OBJ2')])
 
     await getComponents({ subtypeId: 'S1' }, 1, 25)
 
@@ -84,15 +102,13 @@ describe('component-instance-adapter.getComponents', () => {
       mockPrisma.components.findMany.mock.calls[0][0].include
         .componentInstallations
     expect(include.include?.propertyObject).toBeUndefined()
-    expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(1)
+    expect(spaceLookup).toHaveBeenCalledTimes(1)
     expect(queriedIds()).toEqual(['OBJ1', 'OBJ2'])
   })
 
   it('joins the structure on the space and the residence on the structure, skipping deleted structures', async () => {
-    mockPrisma.components.findMany.mockResolvedValue([
-      component('C1', [installation('I1', 'OBJ1')]),
-    ])
-    mockPrisma.$queryRaw.mockResolvedValue([structureRow('OBJ1')])
+    givenComponents([component('C1', [installation('I1', 'OBJ1')])])
+    spaceLookup.mockResolvedValue([structureRow('OBJ1')])
 
     await getComponents({ subtypeId: 'S1' }, 1, 25)
 
@@ -105,10 +121,8 @@ describe('component-instance-adapter.getComponents', () => {
   })
 
   it('builds propertyObject from the structure row', async () => {
-    mockPrisma.components.findMany.mockResolvedValue([
-      component('C1', [installation('I1', 'OBJ1')]),
-    ])
-    mockPrisma.$queryRaw.mockResolvedValue([structureRow('OBJ1')])
+    givenComponents([component('C1', [installation('I1', 'OBJ1')])])
+    spaceLookup.mockResolvedValue([structureRow('OBJ1')])
 
     const result = await getComponents({ subtypeId: 'S1' }, 1, 25)
 
@@ -134,11 +148,11 @@ describe('component-instance-adapter.getComponents', () => {
   })
 
   it('gives null when the installation has no space or the space is missing', async () => {
-    mockPrisma.components.findMany.mockResolvedValue([
+    givenComponents([
       component('C1', [installation('I1', null)]),
       component('C2', [installation('I2', 'GONE')]),
     ])
-    mockPrisma.$queryRaw.mockResolvedValue([])
+    spaceLookup.mockResolvedValue([])
 
     const result = await getComponents({ subtypeId: 'S1' }, 1, 25)
 
@@ -152,11 +166,11 @@ describe('component-instance-adapter.getComponents', () => {
   })
 
   it('gives no structures for a space without one, and no residence for a structure without one', async () => {
-    mockPrisma.components.findMany.mockResolvedValue([
+    givenComponents([
       component('C1', [installation('I1', 'BARE')]),
       component('C2', [installation('I2', 'NOLGH')]),
     ])
-    mockPrisma.$queryRaw.mockResolvedValue([
+    spaceLookup.mockResolvedValue([
       structureRow('BARE', {
         structureId: null,
         roomId: null,
@@ -185,11 +199,11 @@ describe('component-instance-adapter.getComponents', () => {
   })
 
   it('asks for each space once, trimmed, and matches padded keys', async () => {
-    mockPrisma.components.findMany.mockResolvedValue([
+    givenComponents([
       component('C1', [installation('I1', 'OBJ1           ')]),
       component('C2', [installation('I2', 'OBJ1           ')]),
     ])
-    mockPrisma.$queryRaw.mockResolvedValue([structureRow('OBJ1           ')])
+    spaceLookup.mockResolvedValue([structureRow('OBJ1           ')])
 
     const result = await getComponents({ subtypeId: 'S1' }, 1, 25)
 
@@ -200,10 +214,8 @@ describe('component-instance-adapter.getComponents', () => {
   })
 
   it('matches keys that differ only in case, as SQL Server does', async () => {
-    mockPrisma.components.findMany.mockResolvedValue([
-      component('C1', [installation('I1', 'abc123')]),
-    ])
-    mockPrisma.$queryRaw.mockResolvedValue([structureRow('ABC123')])
+    givenComponents([component('C1', [installation('I1', 'abc123')])])
+    spaceLookup.mockResolvedValue([structureRow('ABC123')])
 
     const result = await getComponents({ subtypeId: 'S1' }, 1, 25)
 
@@ -213,30 +225,28 @@ describe('component-instance-adapter.getComponents', () => {
   })
 
   it('skips the raw query when no installation has a space', async () => {
-    mockPrisma.components.findMany.mockResolvedValue([
+    givenComponents([
       component('C1', []),
       component('C2', [installation('I2', null)]),
     ])
 
     await getComponents({ subtypeId: 'S1' }, 1, 25)
 
-    expect(mockPrisma.$queryRaw).not.toHaveBeenCalled()
+    expect(spaceLookup).not.toHaveBeenCalled()
   })
 
   it('looks up spaces without waiting for the count', async () => {
     let resolveCount: (total: number) => void = () => undefined
-    mockPrisma.components.count.mockReturnValue(
-      new Promise((resolve) => (resolveCount = resolve))
+    countLookup.mockReturnValue(
+      new Promise((resolve) => (resolveCount = (total) => resolve([{ total }])))
     )
-    mockPrisma.components.findMany.mockResolvedValue([
-      component('C1', [installation('I1', 'OBJ1')]),
-    ])
-    mockPrisma.$queryRaw.mockResolvedValue([structureRow('OBJ1')])
+    givenComponents([component('C1', [installation('I1', 'OBJ1')])])
+    spaceLookup.mockResolvedValue([structureRow('OBJ1')])
 
     const pending = getComponents({ subtypeId: 'S1' }, 1, 25)
     await flushPromises()
 
-    expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(1)
+    expect(spaceLookup).toHaveBeenCalledTimes(1)
     resolveCount(1)
     await expect(pending).resolves.toMatchObject({
       pagination: { total: 1 },
@@ -246,10 +256,8 @@ describe('component-instance-adapter.getComponents', () => {
   it('logs and rethrows when the space lookup fails', async () => {
     const error = jest.spyOn(logger, 'error')
     const failure = new Error('Invalid object name')
-    mockPrisma.components.findMany.mockResolvedValue([
-      component('C1', [installation('I1', 'OBJ1')]),
-    ])
-    mockPrisma.$queryRaw.mockRejectedValue(failure)
+    givenComponents([component('C1', [installation('I1', 'OBJ1')])])
+    spaceLookup.mockRejectedValue(failure)
 
     await expect(getComponents({ subtypeId: 'S1' }, 1, 25)).rejects.toBe(
       failure
@@ -258,6 +266,57 @@ describe('component-instance-adapter.getComponents', () => {
       { err: failure },
       'component-instance-adapter.getSpacesWithStructures'
     )
+  })
+
+  it('returns the page in the order the sorted query gave, whatever order Prisma loads it in', async () => {
+    givenComponents([
+      component('C1', []),
+      component('C2', []),
+      component('C3', []),
+    ])
+    pageIds = ['c3', 'C1', 'C2']
+
+    const result = await getComponents({ subtypeId: 'S1' }, 1, 25)
+
+    expect(mockPrisma.components.findMany.mock.calls[0][0].where).toEqual({
+      id: { in: ['c3', 'C1', 'C2'] },
+    })
+    expect(result.components.map(({ id }) => id)).toEqual(['C3', 'C1', 'C2'])
+  })
+
+  it('loads nothing more when the page is empty', async () => {
+    countLookup.mockResolvedValue([{ total: 0 }])
+
+    const result = await getComponents({ subtypeId: 'S1' }, 3, 25)
+
+    expect(mockPrisma.components.findMany).not.toHaveBeenCalled()
+    expect(result).toEqual({
+      components: [],
+      pagination: { page: 3, limit: 25, total: 0, totalPages: 0 },
+    })
+  })
+
+  it('pages and sorts in the query and counts with the same filters', async () => {
+    countLookup.mockResolvedValue([{ total: 51 }])
+
+    const result = await getComponents(
+      { subtypeId: 'S1', installation: 'installed' },
+      3,
+      25,
+      { sortBy: 'model', sortOrder: 'desc' }
+    )
+
+    const [[page], [count]] = mockPrisma.$queryRaw.mock.calls
+    expect(page.sql).toContain('m.modelName COLLATE Finnish_Swedish_CI_AS DESC')
+    expect(page.values).toEqual(['S1', 50, 25])
+    expect(count.sql).toContain('i.id IS NOT NULL')
+    expect(count.values).toEqual(['S1'])
+    expect(result.pagination).toEqual({
+      page: 3,
+      limit: 25,
+      total: 51,
+      totalPages: 3,
+    })
   })
 })
 

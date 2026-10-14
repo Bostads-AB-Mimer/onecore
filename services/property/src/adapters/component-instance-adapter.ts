@@ -4,6 +4,12 @@ import { property } from '@onecore/types'
 import { trimStrings } from '@src/utils/data-conversion'
 import { openJsonList } from '@src/utils/sql'
 import { prisma } from './db'
+import {
+  componentCountSql,
+  componentPageSql,
+  type ComponentListFilters,
+  type ComponentListSort,
+} from './component-list-query'
 import type { CreateComponent, UpdateComponent } from '../types/component'
 
 type PropertyStructure = {
@@ -122,58 +128,49 @@ const componentHierarchyInclude = {
 
 // ==================== COMPONENTS (INSTANCES) ====================
 
+/** Loads the components with these ids, in the order of the ids. */
+const getComponentsInOrder = async (ids: string[]) => {
+  if (ids.length === 0) return []
+
+  const components = await prisma.components.findMany({
+    where: { id: { in: ids } },
+    include: {
+      ...componentHierarchyInclude,
+      componentInstallations: {
+        where: {
+          deinstallationDate: null, // Only active installations
+        },
+        orderBy: {
+          installationDate: 'desc',
+        },
+      },
+    },
+  })
+
+  const position = new Map(ids.map((id, index) => [id.toLowerCase(), index]))
+  return components.sort(
+    (a, b) =>
+      (position.get(a.id.toLowerCase()) ?? 0) -
+      (position.get(b.id.toLowerCase()) ?? 0)
+  )
+}
+
 export const getComponents = async (
-  filters: {
-    modelId?: string
-    withoutModel?: boolean
-    notInstalled?: boolean
-    subtypeId?: string
-    status?: string
-    serialNumber?: string
-  },
+  filters: ComponentListFilters,
   page: number = 1,
-  limit: number = 20
+  limit: number = 20,
+  sort?: ComponentListSort
 ) => {
   const skip = (page - 1) * limit
 
-  const where: any = {}
-  if (filters.modelId) where.modelId = filters.modelId
-  if (filters.withoutModel) where.modelId = null
-  if (filters.notInstalled) {
-    where.componentInstallations = { none: { deinstallationDate: null } }
-  }
-  if (filters.subtypeId) where.subtypeId = filters.subtypeId
-  if (filters.status) where.status = filters.status
-
-  // Only apply search with minimum 2 characters (consistent with model search)
-  if (filters.serialNumber && filters.serialNumber.trim().length >= 2) {
-    where.serialNumber = {
-      contains: filters.serialNumber.trim(),
-      // mode: 'insensitive' removed - SQL Server uses case-insensitive collation by default
-    }
-  }
-
   const [components, total] = await Promise.all([
-    prisma.components
-      .findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-        include: {
-          ...componentHierarchyInclude,
-          componentInstallations: {
-            where: {
-              deinstallationDate: null, // Only active installations
-            },
-            orderBy: {
-              installationDate: 'desc',
-            },
-          },
-        },
-      })
+    prisma
+      .$queryRaw<{ id: string }[]>(componentPageSql(filters, sort, skip, limit))
+      .then((rows) => getComponentsInOrder(rows.map(({ id }) => id)))
       .then(attachSpaces),
-    prisma.components.count({ where }),
+    prisma
+      .$queryRaw<{ total: number }[]>(componentCountSql(filters))
+      .then(([row]) => Number(row?.total ?? 0)),
   ])
 
   return {
