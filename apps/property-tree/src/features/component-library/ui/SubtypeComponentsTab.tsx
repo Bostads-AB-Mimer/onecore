@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import { X } from 'lucide-react'
 
 import type { ComponentPage } from '@/services/api/core/componentLibraryService'
 import type { Component, ComponentModel } from '@/services/types'
@@ -7,11 +8,12 @@ import {
   formatComponentModelName,
   sortModelsByName,
 } from '@/shared/lib/componentLabels'
+import { Button } from '@/shared/ui/Button'
 import { Pagination } from '@/shared/ui/Pagination'
 import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 import { TableToolbar } from '@/shared/ui/TableToolbar'
 
-import type { CategoryType } from '../lib/componentRows'
+import { type CategoryType, formatComponentPlace } from '../lib/componentRows'
 import { COMPONENT_PAGE_SIZE, NO_MODEL } from '../lib/libraryUrlState'
 import {
   EmptyState,
@@ -38,6 +40,8 @@ interface SubtypeComponentsTabProps {
   onModelFilterChange: (modelId: string | undefined) => void
   onClearFilters: () => void
   onCreate: () => void
+  markedComponent: Component | undefined
+  onUnmark: () => void
   onEdit: (instance: Component) => void
   onDelete: (instance: Component) => void
   onViewHistory: (instance: Component) => void
@@ -61,6 +65,8 @@ export const SubtypeComponentsTab = ({
   onModelFilterChange,
   onClearFilters,
   onCreate,
+  markedComponent,
+  onUnmark,
   ...rowHandlers
 }: SubtypeComponentsTabProps) => {
   const totalPages = componentPage?.pagination.totalPages
@@ -143,6 +149,41 @@ export const SubtypeComponentsTab = ({
             }
           : {})}
       />
+      {markedComponent && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-blue-50 py-1.5 pl-4 pr-1.5 text-sm dark:bg-blue-950/40">
+          <p className="min-w-0 flex-1 text-blue-950 dark:text-blue-100">
+            <span className="text-blue-700 dark:text-blue-300">Markerad: </span>
+            <span className="font-medium">
+              {formatComponentPlace(markedComponent)}
+            </span>
+            {markedComponent.serialNumber && (
+              <span className="whitespace-nowrap tabular-nums text-blue-700 dark:text-blue-300">
+                {' · SN '}
+                {markedComponent.serialNumber}
+              </span>
+            )}
+          </p>
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-blue-800 hover:bg-blue-100 hover:text-blue-950 dark:text-blue-200 dark:hover:bg-blue-900/60"
+              onClick={() => rowHandlers.onViewHistory(markedComponent)}
+            >
+              Visa detaljer
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 text-blue-800 hover:bg-blue-100 hover:text-blue-950 dark:text-blue-200 dark:hover:bg-blue-900/60"
+              onClick={onUnmark}
+              aria-label="Ta bort markeringen"
+            >
+              <X />
+            </Button>
+          </div>
+        </div>
+      )}
       {!isLoading && total === 0 ? (
         <NoResultsState onClear={onClearFilters} />
       ) : (
@@ -152,6 +193,7 @@ export const SubtypeComponentsTab = ({
           isLoading={isLoading}
           pageSize={COMPONENT_PAGE_SIZE}
           hideModel={Boolean(modelId)}
+          highlightedId={markedComponent?.id}
           {...rowHandlers}
         />
       )}

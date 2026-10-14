@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { useComponentEntity, useSubtypeComponents } from '@/entities/component'
 
+import { componentLibraryService } from '@/services/api/core/componentLibraryService'
 import type {
   Component,
   ComponentCategory,
@@ -198,8 +200,24 @@ export const useComponentLibraryViewState = () => {
       : undefined
   )
 
+  const markedComponentId =
+    subtypeState?.tab === 'components'
+      ? (searchParams.get('componentId') ?? undefined)
+      : undefined
+  const markedComponent = useQuery({
+    queryKey: ['component-instances', 'by-id', markedComponentId],
+    queryFn: () => componentLibraryService.getInstanceById(markedComponentId!),
+    enabled: markedComponentId !== undefined,
+  })
+
+  const unmarkComponent = () => {
+    updateUrlParams({ componentId: undefined }, { replace: true })
+  }
+
   return {
     viewState,
+    markedComponent: markedComponentId ? markedComponent.data : undefined,
+    unmarkComponent,
     navigateTo,
     setTab,
     setModelFilter,

@@ -4,6 +4,9 @@ import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 
+const HIGHLIGHTED_ROW =
+  'bg-blue-50 hover:bg-blue-100/70 dark:bg-blue-950/40 dark:hover:bg-blue-950/60'
+
 interface Column<T> {
   key: string
   label: string
@@ -25,6 +28,7 @@ interface ResponsiveTableComponentsProps<T> {
   expandableContent?: (item: T) => ReactNode | null
   /** Names a row for screen readers, e.g. on its expand button. */
   rowLabel?: (item: T) => string
+  isRowHighlighted?: (item: T) => boolean
   /** False when a link in the row carries keyboard focus instead of the row. */
   rowsFocusable?: boolean
 }
@@ -38,6 +42,7 @@ export function ResponsiveTableComponents<T>({
   onRowClick,
   expandableContent,
   rowLabel,
+  isRowHighlighted,
   rowsFocusable = true,
 }: ResponsiveTableComponentsProps<T>) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -127,6 +132,7 @@ export function ResponsiveTableComponents<T>({
                   <tr
                     className={cn(
                       'border-b hover:bg-muted/50 transition-colors',
+                      isRowHighlighted?.(item) && HIGHLIGHTED_ROW,
                       onRowClick && 'cursor-pointer',
                       focusableRow && rowFocusClass
                     )}
@@ -220,6 +226,7 @@ export function ResponsiveTableComponents<T>({
               key={itemKey}
               className={cn(
                 'border rounded-lg p-3 bg-card hover:bg-muted/50 transition-colors',
+                isRowHighlighted?.(item) && HIGHLIGHTED_ROW,
                 focusableRow && rowFocusClass
               )}
               tabIndex={focusableRow ? 0 : undefined}

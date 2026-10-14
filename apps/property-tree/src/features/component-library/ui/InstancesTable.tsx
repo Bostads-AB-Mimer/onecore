@@ -1,7 +1,9 @@
-import { History, ImageIcon, Unplug } from 'lucide-react'
+import { History, ImageIcon, Link2, Unplug } from 'lucide-react'
 
 import type { Component } from '@/services/types'
 
+import { useClipboardCopy } from '@/shared/hooks/useClipboardCopy'
+import { useToast } from '@/shared/hooks/useToast'
 import { formatComponentModelName } from '@/shared/lib/componentLabels'
 import { paths } from '@/shared/routes'
 import {
@@ -10,6 +12,7 @@ import {
   type DataTableAction,
 } from '@/shared/ui/DataTable'
 
+import { markedComponentUrl } from '../lib/componentLibraryLink'
 import {
   activeInstallation,
   type CategoryType,
@@ -29,6 +32,7 @@ interface InstancesTableProps {
   pageSize: number
   /** The list is filtered to one model, so the Modell column says nothing. */
   hideModel?: boolean
+  highlightedId?: string
   onEdit: (instance: Component) => void
   onDelete: (instance: Component) => void
   onViewHistory: (instance: Component) => void
@@ -132,6 +136,7 @@ export const InstancesTable = ({
   isLoading,
   pageSize,
   hideModel = false,
+  highlightedId,
   onEdit,
   onDelete,
   onViewHistory,
@@ -147,6 +152,17 @@ export const InstancesTable = ({
         : COLUMNS[key]
     )
 
+  const { toast } = useToast()
+  const { copyToClipboard } = useClipboardCopy({
+    onSuccess: () =>
+      toast({
+        title: 'Länken har kopierats',
+        description: 'Den öppnar listan med komponenten markerad.',
+      }),
+    onError: () =>
+      toast({ title: 'Kunde inte kopiera länken', variant: 'destructive' }),
+  })
+
   const actions: DataTableAction<Component>[] = [
     {
       label: 'Visa detaljer',
@@ -157,6 +173,12 @@ export const InstancesTable = ({
       label: 'Visa bilder',
       onClick: onViewImages,
       icon: <ImageIcon className="h-4 w-4 mr-2" />,
+    },
+    {
+      label: 'Kopiera länk',
+      onClick: (item) =>
+        copyToClipboard(markedComponentUrl(window.location.href, item.id)),
+      icon: <Link2 className="h-4 w-4 mr-2" />,
     },
     {
       label: 'Avinstallera',
@@ -178,6 +200,7 @@ export const InstancesTable = ({
       emptyMessage="Inga komponenter"
       pageSize={pageSize}
       getRowLabel={formatComponentPlace}
+      isRowHighlighted={(item) => item.id === highlightedId}
       deleteBlockedReason={(item) =>
         hasActiveInstallation(item)
           ? 'Avinstallera komponenten först'
