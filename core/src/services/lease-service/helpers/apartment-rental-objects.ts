@@ -98,9 +98,10 @@ const getLeaseAvailabilities = async (
  * Apartments by rental object code. The object comes from property, rent,
  * vacancy, rental tenure type and tags from the leases, and vacantFrom is
  * adjusted for blocks with the same rule as parking spaces. Codes that aren't
- * apartments are left out. A failed property lookup, objects or blocks, is an error: a
- * wrong vacantFrom is worse than none. A failed lease lookup is not, see
- * getLeaseAvailabilities.
+ * apartments are left out. An apartment without a details row is still
+ * returned, without area, BOA, floor and room count. A failed property
+ * lookup, objects or blocks, is an error: a wrong vacantFrom is worse than
+ * none. A failed lease lookup is not, see getLeaseAvailabilities.
  */
 export const getApartments = async (
   rentalObjectCodes: string[]
@@ -139,8 +140,7 @@ export const getApartments = async (
   // listings. Which apartments are listed in OneCore at all (not student
   // apartments, whose leases are made by hand in Tenfast) is decided when
   // listings are published.
-  const apartments = summaries
-  const rentalIds = apartments.map((apartment) => apartment.rentalId)
+  const rentalIds = summaries.map((summary) => summary.rentalId)
   if (rentalIds.length === 0) return { ok: true, data: [] }
 
   const [blocks, availabilities] = await Promise.all([
@@ -154,7 +154,7 @@ export const getApartments = async (
 
   return {
     ok: true,
-    data: apartments.map((summary): RentalObject => {
+    data: summaries.map((summary): RentalObject => {
       const detail = details.get(summary.rentalId)
       const block = blocks.data.get(summary.rentalId)
       const availability = availabilities.get(summary.rentalId)

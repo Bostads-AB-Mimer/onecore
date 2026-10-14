@@ -169,6 +169,25 @@ describe(getApartments, () => {
     )
   })
 
+  it('keeps an apartment without a details row, without the details fields', async () => {
+    mockProperty([summary('A1')], [])
+
+    const result = await getApartments(['A1'])
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(1)
+    expect(result.data[0]).toMatchObject({
+      rentalObjectCode: 'A1',
+      address: 'Polisgränd 3',
+      residentialAreaCode: '',
+      residentialAreaCaption: '',
+    })
+    expect(result.data[0].boaArea).toBeUndefined()
+    expect(result.data[0].floor).toBeUndefined()
+    expect(result.data[0].roomCount).toBeUndefined()
+  })
+
   it('queries property in batches of 200 with a limit that fits each batch', async () => {
     const codes = Array.from({ length: 250 }, (_, i) => `A${i}`)
     const { search, getDetails } = mockProperty([], [])
