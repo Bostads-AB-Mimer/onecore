@@ -519,9 +519,7 @@ describe(imdService.toTenfastCsv, () => {
     row.to = new Date('2026-09-30')
 
     const cols = parseRow(imdService.toTenfastCsv([row]).split('\n')[1])
-    expect(cols[2]).toBe(
-      'Varmvatten september,7,58,m3(25% moms tillkommer)'
-    )
+    expect(cols[2]).toBe('Varmvatten september,7,58,m3(25% moms tillkommer)')
     expect(cols[3]).toBe('2026-11-01')
     expect(cols[4]).toBe('2026-11-30')
   })
