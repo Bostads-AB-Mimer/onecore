@@ -5,12 +5,12 @@ import { logger } from '@onecore/utilities'
 import type { TokenData } from 'keycloak-koa/dist/types'
 
 export function isContactsKeycloakConfigured(): boolean {
-  const { clientSecret, clientId, realm } = config.auth.keycloakContacts
+  const { clientSecret, clientId, realm } = config.auth.keycloak.contacts
   return Boolean(clientSecret && clientId && realm && config.auth.keycloak.url)
 }
 
 function contactsKeycloakRealmUrl(): string {
-  return `${config.auth.keycloak.url}/realms/${config.auth.keycloakContacts.realm}`
+  return `${config.auth.keycloak.url}/realms/${config.auth.keycloak.contacts.realm}`
 }
 
 let contactsAuth: ReturnType<typeof keycloak> | null = null
@@ -24,11 +24,11 @@ function getContactsAuth(): ReturnType<typeof keycloak> {
   if (!contactsAuth) {
     contactsAuth = keycloak({
       keycloakUrl: contactsKeycloakRealmUrl(),
-      clientId: config.auth.keycloakContacts.clientId,
-      clientSecret: config.auth.keycloakContacts.clientSecret,
+      clientId: config.auth.keycloak.contacts.clientId,
+      clientSecret: config.auth.keycloak.contacts.clientSecret,
     })
     logger.info(
-      `Contacts Keycloak initialized for realm ${config.auth.keycloakContacts.realm}`
+      `Contacts Keycloak initialized for realm ${config.auth.keycloak.contacts.realm}`
     )
   }
 
@@ -45,8 +45,8 @@ export async function refreshContactsAccessToken(
   refreshInProgress = (async () => {
     const params = new URLSearchParams({
       grant_type: 'refresh_token',
-      client_id: config.auth.keycloakContacts.clientId,
-      client_secret: config.auth.keycloakContacts.clientSecret,
+      client_id: config.auth.keycloak.contacts.clientId,
+      client_secret: config.auth.keycloak.contacts.clientSecret,
       refresh_token: refreshToken,
     }).toString()
 
