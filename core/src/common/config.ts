@@ -64,6 +64,11 @@ export interface Config {
       clientId: string
       clientSecret: string
     }
+    keycloakContacts: {
+      realm: string
+      clientId: string
+      clientSecret: string
+    }
   }
   microsoftGraph: {
     tenantId: string
@@ -158,6 +163,11 @@ const config = configPackage({
         realm: 'onecore-test',
         clientId: 'onecore-test',
         clientSecret: 'your-client-secret',
+      },
+      keycloakContacts: {
+        realm: 'mimer-contacts',
+        clientId: 'mina-sidor',
+        clientSecret: '',
       },
     },
     microsoftGraph: {
