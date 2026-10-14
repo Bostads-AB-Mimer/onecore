@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Edit, MoreHorizontal, Trash2 } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Edit,
+  MoreHorizontal,
+  Trash2,
+} from 'lucide-react'
 
+import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import {
   DropdownMenu,
@@ -18,6 +26,15 @@ import {
   visibleActions,
   visibleColumns,
 } from './dataTableColumns'
+import {
+  ariaSort,
+  type ColumnSort,
+  nextSort,
+  sortOptionLabel,
+  type SortOrder,
+  sortRows,
+  type TableSort,
+} from './dataTableSort'
 import { ResponsiveTableComponents } from './ResponsiveTableComponents'
 
 export interface Column<T> extends HideableColumn<T> {
@@ -27,6 +44,8 @@ export interface Column<T> extends HideableColumn<T> {
   width?: string
   className?: string
   hideOnMobile?: boolean
+  /** Makes the header sortable when the table gets onSortChange. */
+  sort?: ColumnSort<T>
 }
 
 export interface DataTableAction<T> extends HideableAction<T> {
@@ -55,7 +74,17 @@ export interface DataTableProps<T extends { id: string }> {
   isRowHighlighted?: (item: T) => boolean
   /** Why a row cannot be deleted; disables Ta bort and shows the reason. */
   deleteBlockedReason?: (item: T) => string | undefined
+  /** The active sort. Sorting is controlled: the table only asks to change it. */
+  sort?: TableSort
+  onSortChange?: (sort: TableSort) => void
+  /** With this sort active the rows are shown in the order given. */
+  defaultSort?: TableSort
+  /** The rows arrive sorted, e.g. one server page; never re-sort them. */
+  serverSorted?: boolean
 }
+
+const sameSort = (a: TableSort | undefined, b: TableSort | undefined) =>
+  a?.key === b?.key && a?.order === b?.order
 
 export function DataTable<T extends { id: string }>({
   data,
@@ -72,8 +101,25 @@ export function DataTable<T extends { id: string }>({
   deleteBlockedReason,
   getRowHref,
   isRowHighlighted,
+  sort,
+  onSortChange,
+  defaultSort,
+  serverSorted = false,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1)
+
+  const sortable = onSortChange !== undefined
+  const sortedData = useMemo(() => {
+    if (!sortable || !sort || serverSorted || sameSort(sort, defaultSort)) {
+      return data
+    }
+    const value = columns.find((column) => column.key === sort.key)?.sort?.value
+    return value ? sortRows(data, value, sort.order) : data
+  }, [data, columns, sortable, sort, serverSorted, defaultSort])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [sort?.key, sort?.order])
 
   const totalPages = Math.max(1, Math.ceil(data.length / pageSize))
 
@@ -191,9 +237,54 @@ export function DataTable<T extends { id: string }>({
       : column
   )
 
+  const sortableColumns = sortable
+    ? shownColumns.filter((column) => column.sort)
+    : []
+
+  const sortHeader = (column: Column<T>) => {
+    const isActive = sort?.key === column.key
+    const Icon = !isActive
+      ? ArrowUpDown
+      : sort.order === 'asc'
+        ? ArrowUp
+        : ArrowDown
+    return (
+      <button
+        type="button"
+        onClick={() => onSortChange?.(nextSort(sort, column))}
+        className={cn(
+          'group -mx-2 inline-flex items-center gap-1 rounded-sm px-2 py-1 text-left hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          isActive && 'text-foreground'
+        )}
+      >
+        {column.label}
+        <Icon
+          aria-hidden="true"
+          className={cn(
+            'h-3.5 w-3.5 shrink-0',
+            !isActive &&
+              'opacity-0 group-hover:opacity-60 group-focus-visible:opacity-60'
+          )}
+        />
+      </button>
+    )
+  }
+
+  const headedColumns = sortable
+    ? shownColumns.map((column) =>
+        column.sort
+          ? {
+              ...column,
+              header: sortHeader(column),
+              ariaSort: ariaSort(column, sort),
+            }
+          : column
+      )
+    : shownColumns
+
   // Add actions column to the columns array
-  const columnsWithActions: Column<T>[] = [
-    ...shownColumns,
+  const columnsWithActions = [
+    ...headedColumns,
     {
       key: 'actions',
       label: '',
@@ -246,13 +337,42 @@ export function DataTable<T extends { id: string }>({
     )
   }
 
-  const paginatedData = data.slice(
+  const paginatedData = sortedData.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   )
 
   return (
     <>
+      {sortableColumns.length > 0 && data.length > 0 && (
+        <div className="mb-3 md:hidden">
+          <select
+            aria-label="Sortera"
+            value={sort ? `${sort.key}:${sort.order}` : ''}
+            onChange={(e) => {
+              const [key, order] = e.target.value.split(':')
+              onSortChange?.({ key, order: order === 'desc' ? 'desc' : 'asc' })
+            }}
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {sortableColumns.flatMap((column) => {
+              const first: SortOrder = column.sort?.firstOrder ?? 'asc'
+              const orders: SortOrder[] = [
+                first,
+                first === 'asc' ? 'desc' : 'asc',
+              ]
+              return orders.map((order) => (
+                <option
+                  key={`${column.key}:${order}`}
+                  value={`${column.key}:${order}`}
+                >
+                  {sortOptionLabel(column, order)}
+                </option>
+              ))
+            })}
+          </select>
+        </div>
+      )}
       <ResponsiveTableComponents
         data={paginatedData}
         columns={columnsWithActions}
