@@ -60,7 +60,10 @@ describe('contacts auth routes', () => {
         token_type: 'Bearer',
         user: {
           id: 'sub-1',
+          email: 'test@example.com',
+          name: 'Test User',
           preferred_username: '199001019999',
+          realm_access: { roles: ['contact'] },
           source: 'keycloak',
         },
       })

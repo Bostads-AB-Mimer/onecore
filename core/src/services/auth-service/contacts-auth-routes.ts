@@ -89,7 +89,9 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
       ctx.status = keycloakErrorStatus(error)
       ctx.body = {
         error:
-          ctx.status === 400 ? 'invalid_grant' : 'contacts_token_exchange_failed',
+          ctx.status === 400
+            ? 'invalid_grant'
+            : 'contacts_token_exchange_failed',
       }
     }
   })
@@ -152,7 +154,9 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
       ctx.status = keycloakErrorStatus(error)
       ctx.body = {
         error:
-          ctx.status === 400 ? 'invalid_grant' : 'contacts_token_refresh_failed',
+          ctx.status === 400
+            ? 'invalid_grant'
+            : 'contacts_token_refresh_failed',
       }
     }
   })
