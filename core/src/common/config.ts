@@ -63,6 +63,11 @@ export interface Config {
       realm: string
       clientId: string
       clientSecret: string
+      contacts: {
+        realm: string
+        clientId: string
+        clientSecret: string
+      }
     }
   }
   microsoftGraph: {
@@ -158,6 +163,11 @@ const config = configPackage({
         realm: 'onecore-test',
         clientId: 'onecore-test',
         clientSecret: 'your-client-secret',
+        contacts: {
+          realm: 'mimer-contacts',
+          clientId: 'mina-sidor',
+          clientSecret: '',
+        },
       },
     },
     microsoftGraph: {

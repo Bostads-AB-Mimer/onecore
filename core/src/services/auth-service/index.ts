@@ -8,7 +8,6 @@ import auth from './keycloak'
 import { getUsersByRole } from './keycloak-admin-adapter'
 import { extractToken } from '../../middlewares/extract-token'
 import { requireAuth } from '../../middlewares/keycloak-auth'
-
 /**
  * @swagger
  * tags:
