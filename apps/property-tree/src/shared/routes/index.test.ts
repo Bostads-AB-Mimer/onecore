@@ -24,8 +24,8 @@ describe('guide routes', () => {
     expect(matchedId(paths.guideCategory('abc-123'))).toBe('guideCategory')
   })
 
-  it('still reaches a guide whose slug is "kategori"', () => {
-    expect(matchedId(paths.guide('kategori'))).toBe('guide')
-    expect(matchedId(paths.guideEdit('kategori'))).toBe('guideEdit')
+  it('still routes guide slugs to the guide pages', () => {
+    expect(matchedId(paths.guide('skapa-hyresobjekt'))).toBe('guide')
+    expect(matchedId(paths.guideEdit('skapa-hyresobjekt'))).toBe('guideEdit')
   })
 })

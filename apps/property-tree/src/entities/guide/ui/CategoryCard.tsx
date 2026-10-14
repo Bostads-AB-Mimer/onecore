@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { ChevronRight, FolderOpen } from 'lucide-react'
 
 import { cn } from '@/shared/lib/utils'
@@ -6,6 +5,7 @@ import { paths } from '@/shared/routes'
 import { Card, CardContent } from '@/shared/ui/Card'
 
 import type { GuideCategoryGroup } from '../lib/groupByCategory'
+import { SelectableCardLink } from './SelectableCardLink'
 
 interface CategoryCardProps {
   category: GuideCategoryGroup
@@ -46,33 +46,12 @@ export function CategoryCard({
     </Card>
   )
 
-  // Same pattern as GuideCard: stays a real link when navigation is overridden.
-  if (onSelect) {
-    return (
-      <a
-        href={paths.guideCategory(category.id)}
-        onClick={(event) => {
-          if (
-            event.metaKey ||
-            event.ctrlKey ||
-            event.shiftKey ||
-            event.button !== 0
-          ) {
-            return
-          }
-          event.preventDefault()
-          onSelect(category)
-        }}
-        className="block rounded-lg"
-      >
-        {content}
-      </a>
-    )
-  }
-
   return (
-    <Link to={paths.guideCategory(category.id)} className="block rounded-lg">
+    <SelectableCardLink
+      href={paths.guideCategory(category.id)}
+      onSelect={onSelect && (() => onSelect(category))}
+    >
       {content}
-    </Link>
+    </SelectableCardLink>
   )
 }

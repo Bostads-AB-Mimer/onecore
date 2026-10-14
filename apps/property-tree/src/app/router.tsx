@@ -182,8 +182,8 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'Redigera guide' },
           },
           {
-            // Ranks equal to guideEdit for /guider/kategori/redigera; listed
-            // after it so that path still edits a guide with slug "kategori".
+            // "kategori" is a reserved slug (RESERVED_SLUGS in @onecore/types),
+            // so no guide route can shadow this one.
             path: routes.guideCategory,
             element: <GuideCategoryPage />,
             // The title is the category's name, which only the page knows.

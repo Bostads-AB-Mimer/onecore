@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { BookX } from 'lucide-react'
 
@@ -9,6 +8,7 @@ import { GUIDES_ADMIN_ROLE, useHasRole } from '@/entities/user'
 
 import { isUnpublishedGuide } from '@/services/api/core'
 
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
 import { routes } from '@/shared/routes'
 import {
   Breadcrumb,
@@ -38,9 +38,7 @@ export function GuidePage() {
 
   // Route handles cover static titles; a guide's title is only known here,
   // so the route opts out of RouteDocumentTitle.
-  useEffect(() => {
-    document.title = `${documentTitle} | ONECore`
-  }, [documentTitle])
+  useDocumentTitle(documentTitle)
 
   return (
     <ViewLayout>

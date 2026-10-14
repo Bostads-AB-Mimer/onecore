@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, FolderX } from 'lucide-react'
 
@@ -7,6 +6,7 @@ import { GuidesOverview } from '@/features/guides'
 import { useGuideCategories } from '@/entities/guide'
 import { GUIDES_ADMIN_ROLE, useHasRole, useUser } from '@/entities/user'
 
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
 import { routes } from '@/shared/routes'
 import {
   Breadcrumb,
@@ -28,24 +28,32 @@ export function GuideCategoryPage() {
   const { data: categories, isLoading, isError } = useGuideCategories()
 
   const category = categories?.find(({ id }) => id === categoryId)
-  // Follows what the page renders: loading, not found, or the category.
-  const documentTitle = isLoading
-    ? 'Guider'
-    : category
-      ? category.name
-      : 'Kategorin hittades inte'
+  // Follows what the page renders: loading, a fetch error, not found, or the
+  // category. Null while loading.
+  const title = isLoading
+    ? null
+    : isError
+      ? 'Kategorin kunde inte hämtas'
+      : category
+        ? category.name
+        : 'Kategorin hittades inte'
 
   // The category name is only known here, so the route opts out of
   // RouteDocumentTitle.
-  useEffect(() => {
-    document.title = `${documentTitle} | ONECore`
-  }, [documentTitle])
+  useDocumentTitle(title ?? 'Guider')
 
   const content = () => {
     if (isLoading || userState.tag === 'loading') {
       return <Skeleton className="h-64" />
     }
-    if (isError || !category) {
+    if (isError) {
+      return (
+        <p className="py-8 text-center text-destructive">
+          Kategorin kunde inte hämtas. Försök igen om en stund.
+        </p>
+      )
+    }
+    if (!category) {
       return (
         <EmptyState
           icon={FolderX}
@@ -73,7 +81,7 @@ export function GuideCategoryPage() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{category?.name ?? 'Kategori'}</BreadcrumbPage>
+            <BreadcrumbPage>{title ?? 'Kategori'}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -85,7 +93,13 @@ export function GuideCategoryPage() {
             Alla kategorier
           </Link>
         </Button>
-        <h1 className="text-3xl font-bold">{category?.name ?? 'Guider'}</h1>
+        {/* Only a found category gets a heading; the error and not-found
+            states below explain themselves. */}
+        {isLoading ? (
+          <Skeleton className="h-9 w-1/3" />
+        ) : (
+          category && <h1 className="text-3xl font-bold">{category.name}</h1>
+        )}
       </div>
 
       {content()}

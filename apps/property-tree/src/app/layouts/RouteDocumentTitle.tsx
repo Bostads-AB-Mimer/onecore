@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
 import { useMatches } from 'react-router-dom'
+
+import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
 
 interface RouteHandle {
   title?: string
@@ -27,10 +28,7 @@ export function RouteDocumentTitle() {
 
   // Keyed on the resolved title rather than the matches, which change on
   // every navigation, hash-only ones included.
-  useEffect(() => {
-    if (ownsDocumentTitle) return
-    document.title = title ? `${title} | ONECore` : 'ONECore'
-  }, [ownsDocumentTitle, title])
+  useDocumentTitle(title, { enabled: !ownsDocumentTitle })
 
   return null
 }

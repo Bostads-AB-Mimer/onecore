@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, BookX, ExternalLink } from 'lucide-react'
 
@@ -8,7 +7,7 @@ import {
   UnpublishedGuideNotice,
 } from '@/features/guides'
 
-import { type GuideCategoryGroup, useGuide } from '@/entities/guide'
+import { useGuide } from '@/entities/guide'
 import { GUIDES_ADMIN_ROLE, useHasRole, useUser } from '@/entities/user'
 
 import { isUnpublishedGuide } from '@/services/api/core'
@@ -26,6 +25,8 @@ import {
 } from '@/shared/ui/Sheet'
 import { Skeleton } from '@/shared/ui/Skeleton'
 
+import { useSheetCategory } from './useSheetCategory'
+
 /**
  * Slide-in panel that shows the guide overview or a single guide next to
  * whatever page the user is working on. Mounted once per layout.
@@ -34,17 +35,8 @@ export function GuideSheet() {
   const { isOpen, slug, openGuide, openOverview, close } = useGuideSheet()
   const canEdit = useHasRole(GUIDES_ADMIN_ROLE)
   const userState = useUser()
-  // Which category the overview is showing. Kept here rather than in the
-  // sheet context so going back from a guide returns to its category.
-  const [category, setCategory] = useState<Pick<
-    GuideCategoryGroup,
-    'id' | 'name'
-  > | null>(null)
-
-  // However the sheet was closed, it reopens on all categories.
-  useEffect(() => {
-    if (!isOpen) setCategory(null)
-  }, [isOpen])
+  const { category, selectCategory, clearCategory, markGuideListed } =
+    useSheetCategory({ isOpen, slug })
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && close()}>
@@ -66,7 +58,7 @@ export function GuideSheet() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setCategory(null)}
+                  onClick={clearCategory}
                   aria-label="Tillbaka till alla kategorier"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -98,8 +90,13 @@ export function GuideSheet() {
                   includeDrafts={canEdit}
                   variant="sheet"
                   categoryId={category?.id}
-                  onSelectGuide={(guide) => openGuide(guide.slug)}
-                  onSelectCategory={({ id, name }) => setCategory({ id, name })}
+                  onSelectGuide={(guide) => {
+                    markGuideListed(guide.slug)
+                    openGuide(guide.slug)
+                  }}
+                  onSelectCategory={({ id, name }) =>
+                    selectCategory({ id, name })
+                  }
                 />
               )}
               <Button asChild variant="link" className="mt-4 px-0">
