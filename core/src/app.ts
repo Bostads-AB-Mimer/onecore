@@ -10,6 +10,7 @@ import config from './common/config'
 
 import api from './api'
 import { routes as authRoutes } from './services/auth-service'
+import { registerContactsAuthRoutes } from './services/auth-service/contacts-auth-routes'
 import { routes as healthRoutes } from './services/health-service'
 import { routes as infobipSmsWebhookRoutes } from './services/communication-service/infobip-sms-webhook'
 
@@ -82,6 +83,10 @@ app.use(requireAuth)
 app.use(async (ctx, next) =>
   requireRole(requiredRolesFor(ctx.path, ctx.method))(ctx, next)
 )
+
+const contactsAuthRouter = new KoaRouter()
+registerContactsAuthRoutes(contactsAuthRouter)
+app.use(contactsAuthRouter.routes())
 
 // @koa/router matches paths case-insensitively, so these gates compare against
 // a lower-cased path — otherwise /GUIDES would route but skip the role check.

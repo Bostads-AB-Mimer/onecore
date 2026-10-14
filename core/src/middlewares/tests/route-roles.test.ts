@@ -36,6 +36,24 @@ describe('requiredRolesFor', () => {
     ])
   })
 
+  it('gates mimer-contacts token helpers on contact-auth only', () => {
+    expect(requiredRolesFor('/auth/contacts/token', 'POST')).toEqual([
+      'contact-auth',
+    ])
+    expect(requiredRolesFor('/auth/contacts/refresh', 'POST')).toEqual([
+      'contact-auth',
+    ])
+    expect(requiredRolesFor('/v1/auth/contacts/token', 'POST')).toEqual([
+      'contact-auth',
+    ])
+    expect(requiredRolesFor('/v1/auth/contacts/refresh', 'POST')).toEqual([
+      'contact-auth',
+    ])
+    expect(requiredRolesFor('/auth/contacts/token', 'GET')).toEqual([
+      'api-access',
+    ])
+  })
+
   it('keeps the existing special cases', () => {
     expect(requiredRolesFor('/scan-receipt/x', 'POST')).toEqual([
       'scanner-upload',
