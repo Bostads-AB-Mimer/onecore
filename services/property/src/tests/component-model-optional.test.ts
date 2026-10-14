@@ -498,7 +498,10 @@ describe('POST and PUT /components', () => {
   })
 
   it('re-checks on update when modelId changes', async () => {
-    findComponent.mockResolvedValueOnce(storedWall)
+    findComponent.mockResolvedValueOnce({
+      ...storedWall,
+      componentInstallations: [],
+    })
     findSubtype.mockResolvedValueOnce(surfaceSubtype)
 
     const res = await request(app.callback())
@@ -510,7 +513,10 @@ describe('POST and PUT /components', () => {
   })
 
   it('does not re-check on update when only the condition changes', async () => {
-    findComponent.mockResolvedValueOnce(storedWall)
+    findComponent.mockResolvedValueOnce({
+      ...storedWall,
+      componentInstallations: [],
+    })
     updateComponent.mockResolvedValueOnce({ ...storedWall, condition: 'GOOD' })
 
     const res = await request(app.callback())
@@ -522,7 +528,11 @@ describe('POST and PUT /components', () => {
   })
 
   it('clears a model with null on update', async () => {
-    findComponent.mockResolvedValueOnce({ ...storedWall, modelId })
+    findComponent.mockResolvedValueOnce({
+      ...storedWall,
+      modelId,
+      componentInstallations: [],
+    })
     findSubtype.mockResolvedValueOnce(equipmentSubtype)
     updateComponent.mockResolvedValueOnce(storedWall)
 
@@ -537,7 +547,11 @@ describe('POST and PUT /components', () => {
 
   it('rejects moving a component with a model to another subtype', async () => {
     const otherSubtypeId = '00000000-0000-0000-0002-000000000002'
-    findComponent.mockResolvedValueOnce({ ...storedWall, modelId })
+    findComponent.mockResolvedValueOnce({
+      ...storedWall,
+      modelId,
+      componentInstallations: [],
+    })
     findSubtype.mockResolvedValueOnce({
       id: otherSubtypeId,
       componentType: { category: { type: 'EQUIPMENT' } },
@@ -587,6 +601,9 @@ describe('component reads include the subtype directly', () => {
   })
 
   it('getComponentsByRoomId includes subtype -> type -> category and the model', async () => {
+    ;(prisma.$queryRaw as jest.Mock).mockResolvedValueOnce([
+      { componentId: '00000000-0000-0000-0004-000000000001' },
+    ])
     findMany.mockResolvedValueOnce([])
 
     await getComponentsByRoomId('ROOM-1')
