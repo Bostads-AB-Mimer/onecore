@@ -22,6 +22,7 @@ import type {
 } from '@onecore/contacts/schema'
 
 import { AdapterResult } from '@/adapters/types'
+import * as utils from '@/utils'
 import { AxiosResponse } from 'axios'
 import config from '../../common/config'
 
@@ -173,13 +174,15 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
         options ?? {}
 
       const CHUNK_SIZE = 500
+      const BATCH_CONCURRENCY = 5
       const chunks: string[][] = []
       for (let i = 0; i < contactCodes.length; i += CHUNK_SIZE) {
         chunks.push(contactCodes.slice(i, i + CHUNK_SIZE))
       }
 
-      const results = await Promise.all(
-        chunks.map((chunk) =>
+      const results = await utils.concurrency.runWithConcurrency(
+        chunks,
+        (chunk) =>
           axios<GetContactsResponseBody>(`/contacts/batch`, {
             params: {
               code: chunk,
@@ -189,8 +192,8 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
               includeRelations,
             },
             paramsSerializer: { indexes: null },
-          }).then(listResponse)
-        )
+          }).then(listResponse),
+        BATCH_CONCURRENCY
       )
 
       const failed = results.find((r) => !r.ok)
