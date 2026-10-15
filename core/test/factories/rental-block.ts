@@ -2,6 +2,7 @@ import { Factory } from 'fishery'
 
 type RentalBlock = {
   id: string
+  rentalId: string
   blockReasonId: string
   blockReason: string
   fromDate: string
@@ -12,6 +13,7 @@ type RentalBlock = {
 export const RentalBlockFactory = Factory.define<RentalBlock>(
   ({ sequence }) => ({
     id: `block-${sequence}`,
+    rentalId: '1234',
     blockReasonId: `reason-${sequence}`,
     blockReason: 'Underhållsarbete',
     fromDate: '2024-01-01T00:00:00Z',

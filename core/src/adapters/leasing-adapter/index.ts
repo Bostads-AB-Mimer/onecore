@@ -940,6 +940,7 @@ export {
   updateListingStatus,
   getExpiredListingsWithNoOffers,
   getListings,
+  getListingSummariesByRentalObjectCodes,
 } from './listings'
 
 export {
@@ -964,6 +965,7 @@ export {
 
 export {
   getAllVacantParkingSpaces,
+  getVacantRentalObjectAvailabilities,
   getParkingSpaceByCode,
   getParkingSpaces,
   getRentalObjectAvailabilities,

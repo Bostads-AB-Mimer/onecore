@@ -1,3 +1,4 @@
+import { property } from '@onecore/types'
 import { z } from 'zod'
 import { createGenericResponseSchema } from './response'
 import { StaircaseBaseSchema } from './staircase'
@@ -206,22 +207,12 @@ export const GetResidenceByRentalIdResponseSchema = createGenericResponseSchema(
   ResidenceDetailedSchema
 )
 
-export const RentalBlockSchema = z.object({
-  id: z.string(),
-  blockReasonId: z.string().nullable(),
-  blockReason: z.string().nullable(),
-  fromDate: z.date(),
-  toDate: z.date().nullable(),
-  amount: z.number().nullable(),
-})
+export const { RentalBlockSchema } = property
 
-export const RentalBlockWithRentalObjectSchema = z.object({
-  id: z.string(),
-  blockReasonId: z.string().nullable(),
-  blockReason: z.string().nullable(),
-  fromDate: z.date(),
-  toDate: z.date().nullable(),
-  amount: z.number().nullable(),
+// The block with its object expanded; the bare rentalId gives way to it.
+export const RentalBlockWithRentalObjectSchema = RentalBlockSchema.omit({
+  rentalId: true,
+}).extend({
   distrikt: z.string().nullable(),
   rentalObject: z.object({
     code: z.string().nullable(),
@@ -307,3 +298,8 @@ export type BlockReason = z.infer<typeof BlockReasonSchema>
 export type GetRentalBlocksByRentalIdResponse = z.infer<
   typeof GetRentalBlocksByRentalIdResponseSchema
 >
+
+// Batch projections, shared with core through libs/types.
+export const { ResidenceBatchItemSchema, ResidencesBatchRequestSchema } =
+  property
+export type ResidenceBatchItem = property.ResidenceBatchItem

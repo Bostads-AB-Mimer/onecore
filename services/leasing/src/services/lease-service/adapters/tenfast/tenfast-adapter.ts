@@ -439,9 +439,10 @@ export const getRentalObject = async (
   }
 }
 
+// Tenfast's `typ` values; it also knows bostadsrätt, lokal, villa, mark m.fl.
 export enum RentalObjectType {
   ParkingSpace = 'parkering',
-  Apartment = 'lägenhet',
+  Apartment = 'bostad',
   Storage = 'förråd',
 }
 

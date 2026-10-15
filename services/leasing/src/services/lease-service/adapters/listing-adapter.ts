@@ -1,31 +1,32 @@
 import { logger } from '@onecore/utilities'
 import {
   Applicant,
-  Listing,
   ApplicantStatus,
   ListingStatus,
   GetListingsWithApplicantsFilterParams,
   OfferStatus,
+  leasing,
 } from '@onecore/types'
 import { RequestError } from 'tedious'
 import { Knex } from 'knex'
 import { match } from 'ts-pattern'
 
+import { ListingWithoutRentalObject } from '../../../common/types'
 import { db } from './db'
 import { AdapterResult, DbApplicant, DbListing } from './types'
-
-type ListingWithoutRentalObject = Omit<Listing, 'rentalObject'>
 
 function transformFromDbListing(row: DbListing): ListingWithoutRentalObject {
   return {
     id: row.Id,
     rentalObjectCode: row.RentalObjectCode,
-    publishedFrom: row.PublishedFrom || undefined,
-    publishedTo: row.PublishedTo,
+    publishedFrom: row.PublishedFrom ?? undefined,
+    publishedTo: row.PublishedTo ?? undefined,
     status: row.Status,
     applicants: undefined,
     rentalRule: row.RentalRule,
     listingCategory: row.ListingCategory,
+    reviewedAt: row.ReviewedAt ?? null,
+    reviewedBy: row.ReviewedBy ?? null,
   }
 }
 
@@ -55,11 +56,13 @@ const createListing = async (
     const insertedRow = await dbConnection<DbListing>('Listing')
       .insert({
         RentalObjectCode: listingData.rentalObjectCode,
-        PublishedFrom: listingData.publishedFrom,
-        PublishedTo: listingData.publishedTo,
+        PublishedFrom: listingData.publishedFrom ?? null,
+        PublishedTo: listingData.publishedTo ?? null,
         Status: listingData.status,
         RentalRule: listingData.rentalRule,
         ListingCategory: listingData.listingCategory,
+        ReviewedAt: listingData.reviewedAt ?? null,
+        ReviewedBy: listingData.reviewedBy ?? null,
       })
       .returning('*')
 
@@ -106,11 +109,13 @@ const createMultipleListings = async (
   try {
     const insertData = listingsData.map((listingData) => ({
       RentalObjectCode: listingData.rentalObjectCode,
-      PublishedFrom: listingData.publishedFrom,
-      PublishedTo: listingData.publishedTo,
+      PublishedFrom: listingData.publishedFrom ?? null,
+      PublishedTo: listingData.publishedTo ?? null,
       Status: listingData.status,
       RentalRule: listingData.rentalRule,
       ListingCategory: listingData.listingCategory,
+      ReviewedAt: listingData.reviewedAt ?? null,
+      ReviewedBy: listingData.reviewedBy ?? null,
     }))
 
     const insertedRows = await dbConnection<DbListing>('Listing')
@@ -545,6 +550,65 @@ const applicationExists = async (
   return true
 }
 
+const OPEN_LISTING_STATUSES = [
+  ListingStatus.Draft,
+  ListingStatus.Active,
+  ListingStatus.Expired,
+]
+
+/** Open listing plus closed rounds since the caller's cut-off, per code; a null
+ * cut-off counts every closed round. One query, grouped here; every code answered. */
+// Rental rule is deliberately ignored: a closed poängfritt round is a failed attempt too.
+const getListingSummariesByRentalObjectCodes = async (
+  params: leasing.GetListingSummariesRequest,
+  dbConnection = db
+): Promise<
+  AdapterResult<Array<leasing.RentalObjectListingSummary>, 'unknown'>
+> => {
+  const sinceByCode = new Map(
+    params.rentalObjects.map((o) => [o.rentalObjectCode, o.listingHistorySince])
+  )
+  const codes = [...sinceByCode.keys()]
+  if (codes.length === 0) return { ok: true, data: [] }
+
+  try {
+    const rows = await dbConnection<DbListing>('listing')
+      .whereRaw('RentalObjectCode IN (SELECT value FROM OPENJSON(?))', [
+        JSON.stringify(codes),
+      ])
+      .andWhere('ListingCategory', params.listingCategory)
+      .select('*')
+
+    const byCode = new Map<string, DbListing[]>(codes.map((c) => [c, []]))
+    for (const row of rows) byCode.get(row.RentalObjectCode)?.push(row)
+
+    const data = codes.map((rentalObjectCode) => {
+      const history = byCode.get(rentalObjectCode) ?? []
+      const since = sinceByCode.get(rentalObjectCode) ?? null
+      const current = history.find((l) =>
+        OPEN_LISTING_STATUSES.includes(l.Status)
+      )
+      const closedListingsSinceLastLease = history.filter(
+        (l) =>
+          l.Status === ListingStatus.Closed &&
+          (since === null ||
+            (l.PublishedFrom != null && l.PublishedFrom > since))
+      ).length
+
+      return {
+        rentalObjectCode,
+        currentListing: current ? transformFromDbListing(current) : null,
+        closedListingsSinceLastLease,
+      }
+    })
+
+    return { ok: true, data }
+  } catch (err) {
+    logger.error(err, 'listingAdapter.getListingSummariesByRentalObjectCodes')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getExpiredListings = async (dbConnection = db) => {
   const currentDate = new Date()
   const listings = await dbConnection('listing')
@@ -621,6 +685,7 @@ export {
   getExpiredListingsWithNoOffers,
   getListings,
   getListingsWithApplicants,
+  getListingSummariesByRentalObjectCodes,
   getApplicantById,
   getApplicantsByContactCode,
   getApplicantByContactCodeAndListingId,

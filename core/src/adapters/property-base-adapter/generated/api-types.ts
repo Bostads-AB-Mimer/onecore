@@ -1397,6 +1397,77 @@ export interface paths {
       }
     }
   }
+  '/residences/batch': {
+    /**
+     * Describe many residences by rental id
+     * @description The residence projection (address, property, building, market area,
+     * type, floor, elevator, BOA) for an explicit list of rental ids in one
+     * query. POST because the list can run to thousands of ids, which does
+     * not fit a query string. Unknown or non-residence ids are left out.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            rentalIds: string[]
+          }
+        }
+      }
+      responses: {
+        /** @description Residences found */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ResidenceBatchItem'][]
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-blocks/batch': {
+    /**
+     * Open rental blocks for many rental objects by rental id
+     * @description Every block that has not ended (no end date, or end date today or
+     * later) on the given rental ids, with or without a reason. Ids
+     * without open blocks are simply absent.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            rentalIds: string[]
+          }
+        }
+      }
+      responses: {
+        /** @description Open rental blocks */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalBlock'][]
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/buildings': {
     /**
      * Get all buildings for a specific property
@@ -3874,6 +3945,7 @@ export interface components {
     }
     RentalBlock: {
       id: string
+      rentalId: string
       blockReasonId: string | null
       blockReason: string | null
       /** Format: date-time */
@@ -4662,6 +4734,38 @@ export interface components {
       area: number | null
       additionalInfo: string | null
       malarEnergiFacilityId: string | null
+    }
+    ResidenceBatchItem: {
+      rentalId: string
+      code: string
+      name: string | null
+      apartmentNumber: string | null
+      address: {
+        street: string
+        street2: string | null
+        postalCode: string | null
+        city: string | null
+      } | null
+      property: {
+        code: string
+        name: string | null
+      } | null
+      building: {
+        code: string
+        name: string | null
+      } | null
+      marketArea: {
+        code: string
+        name: string | null
+      } | null
+      residenceType: {
+        code: string
+        name: string | null
+        roomCount: number | null
+      } | null
+      floor: string | null
+      elevator: boolean | null
+      area: number | null
     }
     ApartmentTemperaturePoint: {
       /** @description Unix timestamp (seconds) at the start of the aggregation bucket. */

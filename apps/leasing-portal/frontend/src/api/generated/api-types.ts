@@ -20,11 +20,11 @@ export interface paths {
               name?: string
               preferred_username?: string
               employeeId?: string
-              source?: string
+              /** @enum {string} */
+              source: 'keycloak'
               realm_access?: {
                 roles: string[]
               }
-              [key: string]: unknown
             }
           }
         }
@@ -43,6 +43,99 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/bostad/vacant-apartments': {
+    /**
+     * Apartments ready to be published
+     * @description Vacant or soon-vacant apartments without an indefinite rental block that are not already published or further along in the letting process. Passthrough to core.
+     */
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                rentalObjectCode: string
+                address: {
+                  street: string
+                  street2: string | null
+                  postalCode: string | null
+                  city: string | null
+                } | null
+                apartmentNumber: string | null
+                propertyCode: string | null
+                propertyName: string | null
+                buildingCode: string | null
+                marketAreaCode: string | null
+                marketAreaName: string | null
+                residenceTypeName: string | null
+                roomCount: number | null
+                floor: string | null
+                elevator: boolean | null
+                area: number | null
+                rent: number
+                rentalTenureType: {
+                  id: string
+                  name: string
+                } | null
+                rentalTags: {
+                  id: string
+                  name: string
+                }[]
+                /** Format: date-time */
+                vacantFrom: string | null
+                block: {
+                  /** Format: date-time */
+                  fromDate: string
+                  /** Format: date-time */
+                  toDate: string | null
+                  reason: string | null
+                } | null
+                listing: {
+                  id: number
+                  rentalObjectCode: string
+                  /** Format: date-time */
+                  publishedFrom?: string | null
+                  /** Format: date-time */
+                  publishedTo?: string | null
+                  /** @enum {number} */
+                  status: 1 | 2 | 3 | 4 | 5
+                  /** @enum {string} */
+                  rentalRule: 'SCORED' | 'NON_SCORED'
+                  /** @enum {string} */
+                  listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+                  /** Format: date-time */
+                  reviewedAt?: string | null
+                  reviewedBy?: string | null
+                } | null
+                closedListingsSinceLastLease: number
+              }[]
+            }
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
             }
           }
         }

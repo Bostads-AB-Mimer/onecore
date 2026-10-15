@@ -491,6 +491,32 @@ export interface paths {
       }
     }
   }
+  '/vacant-apartments': {
+    /**
+     * Apartments ready to be published
+     * @description Apartments that are vacant or becoming vacant (Tenfast), described
+     * by the property service, not under an indefinite rental block, and
+     * not already published or further along in the letting process. Each
+     * row carries its draft listing (if any) and how many earlier rounds
+     * closed without a tenant since the apartment was last let.
+     */
+    get: {
+      responses: {
+        /** @description The vacant apartments. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['VacantApartment'][]
+            }
+          }
+        }
+        /** @description One of the upstream services failed. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/listing-text-content/{rentalObjectCode}': {
     /**
      * Get listing text content by rental object code
@@ -12279,6 +12305,59 @@ export interface components {
           }
       )[]
     }
+    VacantApartment: {
+      rentalObjectCode: string
+      address: {
+        street: string
+        street2: string | null
+        postalCode: string | null
+        city: string | null
+      } | null
+      apartmentNumber: string | null
+      propertyCode: string | null
+      propertyName: string | null
+      buildingCode: string | null
+      marketAreaCode: string | null
+      marketAreaName: string | null
+      residenceTypeName: string | null
+      roomCount: number | null
+      floor: string | null
+      elevator: boolean | null
+      area: number | null
+      rent: number
+      rentalTenureType: {
+        id: string
+        name: string
+      } | null
+      rentalTags: components['schemas']['VacantApartment']['rentalTenureType'][]
+      /** Format: date-time */
+      vacantFrom: string | null
+      block: {
+        /** Format: date-time */
+        fromDate: string
+        /** Format: date-time */
+        toDate: string | null
+        reason: string | null
+      } | null
+      listing: {
+        id: number
+        rentalObjectCode: string
+        /** Format: date-time */
+        publishedFrom?: string | null
+        /** Format: date-time */
+        publishedTo?: string | null
+        /** @enum {number} */
+        status: 1 | 2 | 3 | 4 | 5
+        /** @enum {string} */
+        rentalRule: 'SCORED' | 'NON_SCORED'
+        /** @enum {string} */
+        listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+        /** Format: date-time */
+        reviewedAt?: string | null
+        reviewedBy?: string | null
+      } | null
+      closedListingsSinceLastLease: number
+    }
     WorkOrder: {
       accessCaption: string
       caption: string
@@ -12820,8 +12899,9 @@ export interface components {
     }
     RentalBlock: {
       id: string
-      blockReasonId: string
-      blockReason: string
+      rentalId: string
+      blockReasonId: string | null
+      blockReason: string | null
       /** Format: date-time */
       fromDate: string
       /** Format: date-time */

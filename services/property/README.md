@@ -92,6 +92,16 @@ $ pnpm run seed:property-areas
 
 The script is idempotent (upserts on natural unique keys).
 
+### Batch reads by rental id
+
+`POST /residences/batch` is the one batch projection of a residence (address,
+property, building, market area, type, floor, elevator, BOA). When a consumer
+needs another field, extend it rather than adding a sibling endpoint per
+consumer. Rental blocks are state, not description, so they have their own
+`POST /rental-blocks/batch`. Both take `{ rentalIds }` (1–5000) in
+the body and read the ids through OPENJSON, so the list is not capped by SQL
+Server's 2,100-parameter limit.
+
 ### Prisma AI Renamer
 
 To convert schemas first install the prisma-ai-renamer tool and then run to convert a model

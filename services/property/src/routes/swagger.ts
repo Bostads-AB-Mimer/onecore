@@ -277,6 +277,11 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
+  ...zodToJsonSchema(types.ResidenceBatchItemSchema, {
+    name: 'ResidenceBatchItem',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
 }
 
 swaggerSpec.definition.components = {

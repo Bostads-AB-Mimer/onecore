@@ -45,8 +45,8 @@ const getListingsWithApplicants = async (
     const listings = listingsResponse.data?.content
 
     listings.sort((a, b) => {
-      const dateA = new Date(a.publishedFrom).getTime()
-      const dateB = new Date(b.publishedFrom).getTime()
+      const dateA = new Date(a.publishedFrom ?? 0).getTime()
+      const dateB = new Date(b.publishedFrom ?? 0).getTime()
       return dateB - dateA
     })
 

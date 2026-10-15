@@ -141,6 +141,70 @@ export const RentalObjectDetailsSchema = z.object({
 
 export type RentalObjectDetails = z.infer<typeof RentalObjectDetailsSchema>
 
+// ---- Residences in batch ----
+// One batch projection for residences, read by rental id. Extend it; do not
+// add a sibling per consumer. Every nullable is "Xpand left it empty".
+
+// Postal address as Xpand stores it: the number is part of the street line.
+export const ResidenceAddressSchema = z.object({
+  street: z.string(),
+  street2: z.string().nullable(),
+  postalCode: z.string().nullable(),
+  city: z.string().nullable(),
+})
+
+export type ResidenceAddress = z.infer<typeof ResidenceAddressSchema>
+
+const CodeAndNameSchema = z.object({
+  code: z.string(),
+  name: z.string().nullable(),
+})
+
+export const ResidenceBatchItemSchema = z.object({
+  rentalId: z.string(),
+  code: z.string(),
+  name: z.string().nullable(),
+  apartmentNumber: z.string().nullable(), // hyinf.lmnr, "Nummer" in the UI
+  address: ResidenceAddressSchema.nullable(),
+  property: CodeAndNameSchema.nullable(),
+  building: CodeAndNameSchema.nullable(),
+  marketArea: CodeAndNameSchema.nullable(), // babya, "Område"
+  residenceType: z
+    .object({
+      code: z.string(),
+      name: z.string().nullable(), // "3 rum och kök"
+      roomCount: z.number().nullable(),
+    })
+    .nullable(),
+  floor: z.string().nullable(),
+  elevator: z.boolean().nullable(),
+  area: z.number().nullable(), // BOA, m²
+})
+
+export type ResidenceBatchItem = z.infer<typeof ResidenceBatchItemSchema>
+
+export const ResidencesBatchRequestSchema = z.object({
+  rentalIds: z.array(z.string().min(1)).min(1).max(5000),
+})
+
+export type ResidencesBatchRequest = z.infer<
+  typeof ResidencesBatchRequestSchema
+>
+
+// A rental block (hyspt) on the object `rentalId`. The list view expands the
+// object instead of carrying the key; see property's RentalBlockWithRentalObject.
+export const RentalBlockSchema = z.object({
+  id: z.string(),
+  rentalId: z.string(),
+  blockReasonId: z.string().nullable(),
+  blockReason: z.string().nullable(), // null when Xpand has no reason
+  fromDate: z.coerce.date(),
+  toDate: z.coerce.date().nullable(),
+  amount: z.number().nullable(),
+})
+
+export type RentalBlock = z.infer<typeof RentalBlockSchema>
+
 // A subtype caption an object carries, scoped to its object type — the code
 // is only unique within a type, so filters pass `type:code` pairs.
 export const RentalObjectSubtypeSchema = z.object({

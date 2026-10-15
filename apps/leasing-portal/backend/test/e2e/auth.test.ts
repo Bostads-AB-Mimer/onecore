@@ -87,9 +87,25 @@ describe('GET /leasing-portal/auth/profile', () => {
     })
   })
 
-  it('maps core 5xx and network failure to 502', async () => {
+  it('maps core 5xx to 502 and keeps the reason', async () => {
     const { app, coreClient } = makeTestApp()
     coreClient.respondWith({ ok: false, statusCode: 503, err: 'down' })
+
+    const res = await request(app.callback())
+      .get('/leasing-portal/auth/profile')
+      .set('Cookie', 'auth_token=token')
+
+    expect(res.status).toBe(502)
+    expect(res.body).toEqual({ error: 'down' })
+  })
+
+  it('maps a network failure to 502 core-unavailable', async () => {
+    const { app, coreClient } = makeTestApp()
+    coreClient.respondWith({
+      ok: false,
+      statusCode: 502,
+      err: 'core-unavailable',
+    })
 
     const res = await request(app.callback())
       .get('/leasing-portal/auth/profile')

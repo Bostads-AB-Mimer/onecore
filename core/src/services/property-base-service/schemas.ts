@@ -545,14 +545,7 @@ export const ResidenceSummarySchema = z.object({
   ),
 })
 
-export const RentalBlockSchema = z.object({
-  id: z.string(),
-  blockReasonId: z.string(),
-  blockReason: z.string(),
-  fromDate: z.coerce.date(),
-  toDate: z.coerce.date().nullable(),
-  amount: z.number().nullable(),
-})
+export const RentalBlockSchema = property.RentalBlockSchema
 
 export const GetRentalBlocksByRentalIdQueryParamsSchema = z.object({
   active: booleanStringSchema.optional(),

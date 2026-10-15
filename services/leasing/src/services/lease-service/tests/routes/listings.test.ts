@@ -524,3 +524,63 @@ describe('POST /listings/batch', () => {
     })
   })
 })
+
+describe('POST /listings/summaries', () => {
+  it('rejects a body without codes', async () => {
+    const spy = jest.spyOn(
+      listingAdapter,
+      'getListingSummariesByRentalObjectCodes'
+    )
+
+    const res = await request(app.callback())
+      .post('/listings/summaries')
+      .send({ rentalObjects: [], listingCategory: 'APARTMENT' })
+
+    expect(res.status).toBe(400)
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('returns the summaries from the adapter', async () => {
+    const summary = {
+      rentalObjectCode: 'apt-1',
+      currentListing: null,
+      closedListingsSinceLastLease: 2,
+    }
+    const spy = jest
+      .spyOn(listingAdapter, 'getListingSummariesByRentalObjectCodes')
+      .mockResolvedValueOnce({ ok: true, data: [summary] })
+
+    const res = await request(app.callback())
+      .post('/listings/summaries')
+      .send({
+        rentalObjects: [
+          { rentalObjectCode: 'apt-1', listingHistorySince: null },
+        ],
+        listingCategory: 'APARTMENT',
+      })
+
+    expect(res.status).toBe(200)
+    expect(spy).toHaveBeenCalledWith({
+      rentalObjects: [{ rentalObjectCode: 'apt-1', listingHistorySince: null }],
+      listingCategory: 'APARTMENT',
+    })
+    expect(res.body.content).toEqual([summary])
+  })
+
+  it('responds with 500 when the adapter fails', async () => {
+    jest
+      .spyOn(listingAdapter, 'getListingSummariesByRentalObjectCodes')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback())
+      .post('/listings/summaries')
+      .send({
+        rentalObjects: [
+          { rentalObjectCode: 'apt-1', listingHistorySince: null },
+        ],
+        listingCategory: 'APARTMENT',
+      })
+
+    expect(res.status).toBe(500)
+  })
+})

@@ -68,6 +68,7 @@ enum ListingStatus {
   Assigned = 2,
   Closed = 3,
   Expired = 4,
+  Draft = 5, // Utkast: created but not yet published (housing)
 }
 
 enum ApplicantStatus {

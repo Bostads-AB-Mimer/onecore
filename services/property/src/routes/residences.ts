@@ -22,6 +22,7 @@ import {
   getDistinctBlockReasons,
   upsertMalarEnergiFacilityId,
 } from '../adapters/residence-adapter'
+import { getResidencesByRentalIds } from '../adapters/residence-batch-adapter'
 import {
   residencesQueryParamsSchema,
   ResidenceSchema,
@@ -33,6 +34,7 @@ import {
   getAllRentalBlocksQueryParamsSchema,
   searchRentalBlocksQueryParamsSchema,
   exportRentalBlocksQueryParamsSchema,
+  ResidencesBatchRequestSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
 import { property } from '@onecore/types'
@@ -667,6 +669,7 @@ export const routes = (router: KoaRouter) => {
 
         const mappedRentalBlocks: RentalBlock[] = rentalBlocks.map((rb) => ({
           id: rb.id,
+          rentalId,
           blockReasonId: rb.blockReasonId,
           blockReason: rb.blockReason?.caption ?? null,
           fromDate: rb.fromDate,
@@ -1156,4 +1159,65 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { reason: errorMessage, ...metadata }
     }
   })
+  /**
+   * @swagger
+   * /residences/batch:
+   *   post:
+   *     summary: Describe many residences by rental id
+   *     description: |
+   *       The residence projection (address, property, building, market area,
+   *       type, floor, elevator, BOA) for an explicit list of rental ids in one
+   *       query. POST because the list can run to thousands of ids, which does
+   *       not fit a query string. Unknown or non-residence ids are left out.
+   *     tags:
+   *       - Residences
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [rentalIds]
+   *             properties:
+   *               rentalIds:
+   *                 type: array
+   *                 minItems: 1
+   *                 maxItems: 5000
+   *                 items:
+   *                   type: string
+   *     responses:
+   *       200:
+   *         description: Residences found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ResidenceBatchItem'
+   *       400:
+   *         description: Invalid request body
+   *       500:
+   *         description: Internal server error
+   */
+  router.post(
+    '(.*)/residences/batch',
+    parseRequest({ body: ResidencesBatchRequestSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      try {
+        const content = await getResidencesByRentalIds(
+          ctx.request.parsedBody.rentalIds
+        )
+        ctx.status = 200
+        ctx.body = { content, ...metadata }
+      } catch (err) {
+        logger.error({ err }, 'Error fetching residences batch')
+        ctx.status = 500
+        ctx.body = { reason: 'Internal server error', ...metadata }
+      }
+    }
+  )
 }
