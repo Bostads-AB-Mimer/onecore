@@ -44,6 +44,7 @@ describe('reconcile', () => {
       unchangedCount: 0,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -140,6 +141,7 @@ describe('reconcile', () => {
       unchangedCount: 2,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -156,6 +158,7 @@ describe('reconcile', () => {
       unchangedCount: 1,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -173,6 +176,7 @@ describe('reconcile', () => {
       unchangedCount: 0,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -189,6 +193,7 @@ describe('reconcile', () => {
       unchangedCount: 0,
       protectedCount: 1,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -210,6 +215,7 @@ describe('reconcile', () => {
       unchangedCount: 0,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -250,6 +256,7 @@ describe('reconcile', () => {
       unchangedCount: 1,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -266,6 +273,7 @@ describe('reconcile', () => {
       unchangedCount: 1,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -282,6 +290,7 @@ describe('reconcile', () => {
       unchangedCount: 1,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -298,6 +307,7 @@ describe('reconcile', () => {
       unchangedCount: 0,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -314,6 +324,7 @@ describe('reconcile', () => {
       unchangedCount: 0,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -394,6 +405,7 @@ describe('reconcile', () => {
       unchangedCount: 0,
       protectedCount: 0,
       skippedGuardians: [],
+      skippedRecipients: [],
     })
   })
 
@@ -434,5 +446,65 @@ describe('reconcile', () => {
 
     expect(plan.toInsert).toEqual([recipient])
     expect(plan.skippedGuardians).toEqual([])
+  })
+
+  it('skips an xpand fakturamottagare when another actor already set one for the subject', () => {
+    const manual: RelationEdge = { ...recipient, relatedContactCode: 'P9' }
+    const plan = reconcile(
+      [recipient],
+      [row('manual', manual, { createdBy: OTHER_ACTOR })],
+      new Set(),
+      IMPORT_ACTOR
+    )
+
+    expect(plan.toInsert).toEqual([])
+    expect(plan.toDelete).toEqual([])
+    expect(plan.skippedRecipients).toEqual([
+      {
+        subjectContactCode: 'P5',
+        desired: recipient,
+        existing: {
+          relatedContactCode: 'P9',
+          roleType: 'annan_fakturamottagare',
+          createdBy: OTHER_ACTOR,
+        },
+      },
+    ])
+  })
+
+  it('replaces an import-owned fakturamottagare rather than skipping it', () => {
+    const previous: RelationEdge = { ...recipient, relatedContactCode: 'P9' }
+    const plan = reconcile(
+      [recipient],
+      [row('old', previous)],
+      new Set(),
+      IMPORT_ACTOR
+    )
+
+    expect(plan).toEqual({
+      toInsert: [recipient],
+      toDelete: ['old'],
+      unchangedCount: 0,
+      protectedCount: 0,
+      skippedGuardians: [],
+      skippedRecipients: [],
+    })
+  })
+
+  it('never skips a guardian edge because the subject has a fakturamottagare', () => {
+    const manualRecipient: RelationEdge = {
+      subjectContactCode: 'P1',
+      relatedContactCode: 'P9',
+      roleType: 'annan_fakturamottagare',
+    }
+    const plan = reconcile(
+      [godMan],
+      [row('manual', manualRecipient, { createdBy: OTHER_ACTOR })],
+      new Set(),
+      IMPORT_ACTOR
+    )
+
+    expect(plan.toInsert).toEqual([godMan])
+    expect(plan.skippedRecipients).toEqual([])
   })
 })

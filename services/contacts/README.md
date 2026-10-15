@@ -82,7 +82,14 @@ again.
 A contact can have at most one active god man or förvaltare, so a guardian set
 outside the import — by a caseworker on the customer card — wins. If Xpand
 names a different guardian for that contact, the existing row is kept and the
-Xpand relation is reported as "Överhoppade" instead of being written.
+Xpand relation is reported as "Överhoppade" instead of being written. The same
+goes for annan fakturamottagare: the import never gives a contact a second
+active one next to a row someone else set.
+
+Fakturamottagare come from ANNANFM rows and from the c/o addressee on the
+lease's invoice settings. A c/o counts only when the invoice row belongs to the
+current lease holder and the invoice goes to that holder, not to a third-party
+payer.
 
 A guardian a caseworker _removes_ on the customer card is not protected in the
 same way. The import only looks at active rows, so once the caseworker's row is

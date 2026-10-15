@@ -8,11 +8,12 @@ import {
   ROLE_TYPES,
 } from '@src/adapters/contact-relations'
 import {
+  allCoAddresseeCandidates,
   allGuardianEdges,
   allInvoiceRecipientCandidates,
 } from '@src/adapters/xpand/relation-import-query'
 import { collapseInvoiceRecipients, Conflict } from './collapse'
-import { reconcile, SkippedGuardian } from './reconcile'
+import { reconcile, SkippedEdge } from './reconcile'
 
 export const IMPORT_ACTOR = 'xpand-import'
 
@@ -31,7 +32,8 @@ export type ImportReport = {
   unchanged: number
   protected: number
   conflicts: Conflict[]
-  skippedGuardians: SkippedGuardian[]
+  skippedGuardians: SkippedEdge[]
+  skippedRecipients: SkippedEdge[]
 }
 
 const countByRole = (edges: RelationEdge[]): Record<RoleType, number> => {
@@ -44,14 +46,15 @@ const countByRole = (edges: RelationEdge[]): Record<RoleType, number> => {
 }
 
 /**
- * Reads today's relations from Xpand, collapses fakturamottagare to contact
- * level, and makes the import-owned rows in `contact_relation` mirror the
+ * Reads today's relations from Xpand, collapses fakturamottagare (ANNANFM
+ * rows and c/o addressees) to contact level, and makes the import-owned rows in `contact_relation` mirror the
  * result. Idempotent: rerunning against unchanged data writes nothing. All
  * writes happen in one transaction; `dryRun` skips them entirely.
  *
- * A guardian someone else set wins: only one is allowed per subject and the
- * import may not remove another actor's row, so the Xpand edge is reported in
- * `skippedGuardians` instead.
+ * A guardian or fakturamottagare someone else set wins: only one of each is
+ * allowed per subject and the import may not remove another actor's row, so
+ * the Xpand edge is reported in `skippedGuardians` or `skippedRecipients`
+ * instead.
  *
  * `inserted`/`softDeleted`/`unchanged`/`protected` on the returned report are
  * the planned counts from the reconcile step, not affected-row counts read
@@ -74,11 +77,17 @@ export const runImport = async ({
   dryRun?: boolean
   force?: boolean
 }): Promise<ImportReport> => {
-  const [guardians, candidates] = await Promise.all([
+  const [guardians, annanfmCandidates, coCandidates] = await Promise.all([
     allGuardianEdges(xpandDb),
     allInvoiceRecipientCandidates(xpandDb, now),
+    allCoAddresseeCandidates(xpandDb, now),
   ])
-  const { edges: recipients, conflicts } = collapseInvoiceRecipients(candidates)
+  // ANNANFM and c/o rows collapse together: the same contact from both
+  // sources is one edge, different contacts are a conflict.
+  const { edges: recipients, conflicts } = collapseInvoiceRecipients([
+    ...annanfmCandidates,
+    ...coCandidates,
+  ])
   const desired = [...guardians, ...recipients]
 
   const existing = await listActive(contactsDb)
@@ -123,5 +132,6 @@ export const runImport = async ({
     protected: plan.protectedCount,
     conflicts,
     skippedGuardians: plan.skippedGuardians,
+    skippedRecipients: plan.skippedRecipients,
   }
 }
