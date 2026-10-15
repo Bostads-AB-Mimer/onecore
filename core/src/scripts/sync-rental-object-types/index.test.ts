@@ -283,6 +283,51 @@ describe('syncRentalObjectTypes', () => {
     expect(await readQueue(queueFile)).toHaveLength(1)
   })
 
+  it('does not sync a change again when the next fetch returns it at the checkpoint time', async () => {
+    const t = new Date('2026-10-15T08:08:28.000Z')
+    const a = change({ rentalObjectCode: 'A-1', timestamp: t })
+    const b = change({ rentalObjectCode: 'B-2', timestamp: t })
+    const sync = mockSync().mockResolvedValue({
+      ok: true,
+      data: { action: 'updated' },
+    })
+    mockChanges([a])
+    await syncRentalObjectTypes({ stateFile, queueFile })
+
+    mockChanges([a, b])
+    await syncRentalObjectTypes({ stateFile, queueFile })
+
+    expect(sync.mock.calls.map(([code]) => code)).toEqual(['A-1', 'B-2'])
+    expect(await readState()).toBe(t.toISOString())
+  })
+
+  it('still syncs a rental object whose newer change lands after the checkpoint time', async () => {
+    const a1 = change({
+      rentalObjectCode: 'A-1',
+      timestamp: new Date('2026-10-15T08:08:28.000Z'),
+    })
+    const a2 = change({
+      rentalObjectCode: 'A-1',
+      code: 'STD',
+      label: 'Standard hyresobjektstyp',
+      timestamp: new Date('2026-10-15T08:09:00.000Z'),
+    })
+    const sync = mockSync().mockResolvedValue({
+      ok: true,
+      data: { action: 'updated' },
+    })
+    mockChanges([a1])
+    await syncRentalObjectTypes({ stateFile, queueFile })
+
+    mockChanges([a2])
+    await syncRentalObjectTypes({ stateFile, queueFile })
+
+    expect(sync.mock.calls.map(([, code]) => code)).toEqual([
+      'POÄNGFRITT',
+      'STD',
+    ])
+  })
+
   it('throws when fetching changes fails and leaves the timestamp alone', async () => {
     jest
       .spyOn(leasingAdapter, 'getRentalObjectTypeChanges')

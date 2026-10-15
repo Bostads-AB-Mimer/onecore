@@ -10,7 +10,9 @@ const TYPE_CHANGE_PATTERN =
   /^Värdet i fältet 'Hyresobjekttyp' ändrat från '.*' till '(.*)'\.?$/
 
 /**
- * Queries cmlog for rental object type changes after the given timestamp.
+ * Queries cmlog for rental object type changes at or after the given
+ * timestamp. Inclusive since logtime has whole-second precision; callers
+ * drop rows they already handled at that second.
  *
  * cmlog.logtime is Swedish local time without a zone; see the note on
  * cmlogLeaseChanges in cmlog-lease-adapter.ts.
@@ -23,7 +25,7 @@ export const cmlogRentalObjectTypeChanges = (
     .from('cmlog')
     .whereLike('logmemo', 'Hyresobjekt %')
     .andWhereLike('logmemo', "%'Hyresobjekttyp'%")
-    .andWhere('logtime', '>', since)
+    .andWhere('logtime', '>=', since)
     .orderBy('logtime', 'asc')
     .select('logmemo', 'logtime')
 
@@ -59,7 +61,7 @@ export const parseRentalObjectTypeChanges = (
 
     if (!codeMatch || !typeMatch) {
       logger.warn(
-        { logmemo: row.logmemo },
+        { firstLine: lines[0] },
         'parseRentalObjectTypeChanges: row without rental object code or type line, skipping'
       )
       continue

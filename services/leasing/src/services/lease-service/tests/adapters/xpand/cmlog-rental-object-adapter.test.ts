@@ -1,4 +1,25 @@
-import { parseRentalObjectTypeChanges } from '../../../adapters/xpand/cmlog-rental-object-adapter'
+import knex, { Knex } from 'knex'
+import { logger } from '@onecore/utilities'
+
+import {
+  cmlogRentalObjectTypeChanges,
+  parseRentalObjectTypeChanges,
+} from '../../../adapters/xpand/cmlog-rental-object-adapter'
+
+describe('cmlogRentalObjectTypeChanges', () => {
+  it('includes rows logged at exactly the since time', () => {
+    const db = knex({ client: 'mssql' })
+
+    const { sql } = (
+      cmlogRentalObjectTypeChanges(
+        db,
+        new Date('2026-10-15T08:08:28.000Z')
+      ) as unknown as Knex.QueryBuilder
+    ).toSQL()
+
+    expect(sql).toMatch(/\[logtime\] >= \?/)
+  })
+})
 
 const memo = (firstLine: string, ...lines: string[]) =>
   [firstLine, ...lines].join('\r\n')
@@ -120,6 +141,28 @@ describe('parseRentalObjectTypeChanges', () => {
     ]
 
     expect(parseRentalObjectTypeChanges(rows)).toEqual([])
+  })
+
+  it('logs only the first memo line of a skipped row', () => {
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => logger)
+    const rows = [
+      {
+        logmemo: memo(
+          'Hyresobjekt 705-025-01-0301',
+          "Värdet i fältet 'Notering' ändrat från '' till 'Ring P123456 först'."
+        ),
+        logtime: at('2026-10-01T10:00:00.000Z'),
+      },
+    ]
+
+    parseRentalObjectTypeChanges(rows)
+
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(JSON.stringify(warn.mock.calls[0])).toContain(
+      'Hyresobjekt 705-025-01-0301'
+    )
+    expect(JSON.stringify(warn.mock.calls[0])).not.toContain('P123456')
+    warn.mockRestore()
   })
 
   it('skips rows without a rental object code on the first line', () => {

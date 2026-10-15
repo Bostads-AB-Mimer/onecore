@@ -35,6 +35,44 @@ const saveLastTimestamp = async (stateFile: string, ts: Date) => {
   await fs.rename(tmp, stateFile)
 }
 
+const handledFileFor = (stateFile: string) => `${stateFile}.handled.json`
+
+const getHandledAtCheckpoint = async (
+  stateFile: string,
+  checkpoint: Date
+): Promise<Set<string>> => {
+  try {
+    const content = await fs.readFile(handledFileFor(stateFile), 'utf-8')
+    const handled = JSON.parse(content) as {
+      timestamp: string
+      rentalObjectCodes: string[]
+    }
+    return handled.timestamp === checkpoint.toISOString()
+      ? new Set(handled.rentalObjectCodes)
+      : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+const saveHandledAtCheckpoint = async (
+  stateFile: string,
+  checkpoint: Date,
+  rentalObjectCodes: Set<string>
+) => {
+  const file = handledFileFor(stateFile)
+  const tmp = `${file}.tmp`
+  await fs.writeFile(
+    tmp,
+    JSON.stringify({
+      timestamp: checkpoint.toISOString(),
+      rentalObjectCodes: Array.from(rentalObjectCodes),
+    }),
+    'utf-8'
+  )
+  await fs.rename(tmp, file)
+}
+
 const keyFor = (rentalObjectCode: string): string =>
   `rental-object-type:${rentalObjectCode}`
 
@@ -155,7 +193,16 @@ export const syncRentalObjectTypes = async (
     )
     throw new Error(changesResult.err)
   }
-  const changes = changesResult.data
+  let checkpoint = lastTimestamp
+  let handledAtCheckpoint = await getHandledAtCheckpoint(
+    stateFile,
+    lastTimestamp
+  )
+  const changes = changesResult.data.filter(
+    (change) =>
+      change.timestamp.getTime() !== lastTimestamp.getTime() ||
+      !handledAtCheckpoint.has(change.rentalObjectCode)
+  )
   logger.info({ count: changes.length }, 'rental object type changes to sync')
 
   let synced = 0
@@ -211,6 +258,12 @@ export const syncRentalObjectTypes = async (
         )
       }
     }
+    if (change.timestamp.getTime() !== checkpoint.getTime()) {
+      checkpoint = change.timestamp
+      handledAtCheckpoint = new Set()
+    }
+    handledAtCheckpoint.add(change.rentalObjectCode)
+    await saveHandledAtCheckpoint(stateFile, checkpoint, handledAtCheckpoint)
     await saveLastTimestamp(stateFile, change.timestamp)
   }
 
