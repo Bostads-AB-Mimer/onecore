@@ -12361,7 +12361,12 @@ export interface components {
     }
     VacantApartment: {
       rentalObjectCode: string
-      address: string | null
+      address: {
+        street: string
+        street2: string | null
+        postalCode: string | null
+        city: string | null
+      } | null
       apartmentNumber: string | null
       propertyCode: string | null
       propertyName: string | null
@@ -12948,8 +12953,9 @@ export interface components {
     }
     RentalBlock: {
       id: string
-      blockReasonId: string
-      blockReason: string
+      rentalId: string
+      blockReasonId: string | null
+      blockReason: string | null
       /** Format: date-time */
       fromDate: string
       /** Format: date-time */
