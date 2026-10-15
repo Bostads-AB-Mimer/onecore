@@ -2,6 +2,7 @@ import { logger, PaginatedResponse } from '@onecore/utilities'
 import { property } from '@onecore/types'
 import createClient from 'openapi-fetch'
 import axios from 'axios'
+import { z } from 'zod'
 
 import { describeError } from '../log-error'
 import { AdapterResult } from '../types'
@@ -1272,39 +1273,53 @@ export async function getRentalObjectDetails(
   }
 }
 
-/** Leasing details for an explicit list of residences; dates parsed via the shared schema. */
-export async function getResidenceLeasingDetails(
-  rentalIds: string[]
-): Promise<AdapterResult<property.ResidenceLeasingDetails[], 'unknown'>> {
+/**
+ * One batch read against property for an explicit rental id list. Both batch
+ * routes share the body and the 1–5000 cap, so the plumbing is shared too.
+ */
+async function postRentalIdBatch<T>(
+  path: '/residences/batch' | '/rental-blocks/batch',
+  rentalIds: string[],
+  schema: z.ZodType<T>,
+  name: string
+): Promise<AdapterResult<T[], 'unknown'>> {
   if (rentalIds.length === 0) return { ok: true, data: [] }
   try {
-    const fetchResponse = await client().POST(
-      '/rental-objects/residences/leasing-details',
-      { body: { rentalIds } }
-    )
+    const fetchResponse = await client().POST(path, { body: { rentalIds } })
 
     if (fetchResponse.data?.content) {
       return {
         ok: true,
-        data: property.ResidenceLeasingDetailsSchema.array().parse(
-          fetchResponse.data.content
-        ),
+        data: schema.array().parse(fetchResponse.data.content),
       }
     }
 
     logger.error(
       { status: fetchResponse.response.status, rentalIds: rentalIds.length },
-      'property-base-adapter.getResidenceLeasingDetails unexpected upstream status'
+      `property-base-adapter.${name} unexpected upstream status`
     )
     return { ok: false, err: 'unknown' }
   } catch (err) {
-    logger.error(
-      describeError(err),
-      'property-base-adapter.getResidenceLeasingDetails'
-    )
+    logger.error(describeError(err), `property-base-adapter.${name}`)
     return { ok: false, err: 'unknown' }
   }
 }
+
+export const getResidencesBatch = (rentalIds: string[]) =>
+  postRentalIdBatch(
+    '/residences/batch',
+    rentalIds,
+    property.ResidenceBatchItemSchema,
+    'getResidencesBatch'
+  )
+
+export const getRentalBlocksBatch = (rentalIds: string[]) =>
+  postRentalIdBatch(
+    '/rental-blocks/batch',
+    rentalIds,
+    property.RentalBlockSchema,
+    'getRentalBlocksBatch'
+  )
 
 // ==================== APARTMENT TEMPERATURES (EcoGuard Curves) ====================
 

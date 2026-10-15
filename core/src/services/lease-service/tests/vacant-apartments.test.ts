@@ -23,24 +23,39 @@ const TODAY = new Date('2026-10-09T00:00:00.000Z')
 const day = (offset: number) =>
   new Date(TODAY.getTime() + offset * 24 * 60 * 60 * 1000)
 
-const details = (
-  overrides: Partial<property.ResidenceLeasingDetails> = {}
-): property.ResidenceLeasingDetails => ({
+const residence = (
+  overrides: Partial<property.ResidenceBatchItem> = {}
+): property.ResidenceBatchItem => ({
   rentalId: 'apt-1',
-  address: 'Trädgårdsgatan 19',
+  code: '1203',
+  name: 'Lägenhet 1203',
   apartmentNumber: '1203',
-  propertyCode: '123-456',
-  propertyName: 'LINDAREN 2',
-  buildingCode: '123-456-01',
-  marketAreaCode: 'VAS',
-  marketAreaName: 'Vasastan',
-  residenceTypeCode: '4RK',
-  residenceTypeName: '4 rum och kök',
-  roomCount: 4,
+  address: {
+    street: 'Trädgårdsgatan 19',
+    street2: null,
+    postalCode: '722 12',
+    city: 'Västerås',
+  },
+  property: { code: '123-456', name: 'LINDAREN 2' },
+  building: { code: '123-456-01', name: null },
+  marketArea: { code: 'VAS', name: 'Vasastan' },
+  residenceType: { code: '4RK', name: '4 rum och kök', roomCount: 4 },
   floor: '4',
   elevator: true,
   area: 102,
-  rentalBlocks: [],
+  ...overrides,
+})
+
+const block = (
+  overrides: Partial<property.RentalBlock> = {}
+): property.RentalBlock => ({
+  id: 'block-1',
+  rentalId: 'apt-1',
+  blockReasonId: 'reason-1',
+  blockReason: 'Reparation',
+  fromDate: day(-2),
+  toDate: day(20),
+  amount: null,
   ...overrides,
 })
 
@@ -72,7 +87,7 @@ const availability = (vacantFrom: Date | undefined = day(10)) =>
     rentalObjectCode: 'apt-1',
     vacantFrom,
     rent: factory.rentalObjectRent.build({ amount: 14200 }),
-    rentalTenureType: { id: 'STUD', name: 'Studentbostad' },
+    rentalTenureType: { id: 'STD', name: 'Standard' },
     rentalTags: [{ id: 'kompisbo', name: 'Kompisbo' }],
   })
 
@@ -88,14 +103,18 @@ describe(pickGoverningBlock, () => {
   })
 
   it('prefers an open-ended block over any dated one', () => {
-    const open = { fromDate: day(1), toDate: null, reason: 'Renovering' }
-    const dated = { fromDate: day(-5), toDate: day(30), reason: null }
+    const open = block({
+      fromDate: day(1),
+      toDate: null,
+      blockReason: 'Renovering',
+    })
+    const dated = block({ fromDate: day(-5), toDate: day(30) })
     expect(pickGoverningBlock([dated, open])).toBe(open)
   })
 
   it('otherwise takes the block that ends last', () => {
-    const early = { fromDate: day(-5), toDate: day(3), reason: null }
-    const late = { fromDate: day(-1), toDate: day(20), reason: null }
+    const early = block({ fromDate: day(-5), toDate: day(3) })
+    const late = block({ fromDate: day(-1), toDate: day(20) })
     expect(pickGoverningBlock([late, early])).toBe(late)
   })
 })
@@ -104,18 +123,19 @@ describe(toVacantApartment, () => {
   it('keeps an apartment without a listing and copies the sources', () => {
     const row = toVacantApartment({
       availability: availability(),
-      details: details(),
+      residence: residence(),
+      blocks: [],
       summary: summary({ closedListingsSinceLastLease: 2 }),
     })
 
     expect(row).toMatchObject({
       rentalObjectCode: 'apt-1',
-      address: 'Trädgårdsgatan 19',
+      address: { street: 'Trädgårdsgatan 19', city: 'Västerås' },
       marketAreaName: 'Vasastan',
       roomCount: 4,
       area: 102,
       rent: 14200,
-      rentalTenureType: { id: 'STUD', name: 'Studentbostad' },
+      rentalTenureType: { id: 'STD', name: 'Standard' },
       rentalTags: [{ id: 'kompisbo', name: 'Kompisbo' }],
       vacantFrom: day(10),
       block: null,
@@ -128,7 +148,8 @@ describe(toVacantApartment, () => {
     const draft = listing(ListingStatus.Draft)
     const row = toVacantApartment({
       availability: availability(),
-      details: details(),
+      residence: residence(),
+      blocks: [],
       summary: summary({ currentListing: draft }),
     })
 
@@ -140,7 +161,8 @@ describe(toVacantApartment, () => {
     (status) => {
       const row = toVacantApartment({
         availability: availability(),
-        details: details(),
+        residence: residence(),
+        blocks: [],
         summary: summary({ currentListing: listing(status) }),
       })
 
@@ -148,7 +170,7 @@ describe(toVacantApartment, () => {
     }
   )
 
-  it.each(['NATT', 'BLOCK', 'AVS'])(
+  it.each(['NATT', 'BLOCK', 'AVS', 'STUD'])(
     'drops an apartment with tenure type %s',
     (id) => {
       const row = toVacantApartment({
@@ -156,7 +178,8 @@ describe(toVacantApartment, () => {
           rentalObjectCode: 'apt-1',
           rentalTenureType: { id, name: id },
         }),
-        details: details(),
+        residence: residence(),
+        blocks: [],
         summary: summary(),
       })
 
@@ -170,7 +193,8 @@ describe(toVacantApartment, () => {
         rentalObjectCode: 'apt-1',
         rent: factory.rentalObjectRent.build({ amount: 0 }),
       }),
-      details: details(),
+      residence: residence(),
+      blocks: [],
       summary: summary(),
     })
 
@@ -183,9 +207,8 @@ describe(toVacantApartment, () => {
   ])('drops an apartment under a %s open-ended block', (_label, fromDate) => {
     const row = toVacantApartment({
       availability: availability(),
-      details: details({
-        rentalBlocks: [{ fromDate, toDate: null, reason: 'Rivning' }],
-      }),
+      residence: residence(),
+      blocks: [block({ fromDate, toDate: null, blockReason: 'Rivning' })],
       summary: summary(),
     })
 
@@ -198,9 +221,8 @@ describe(toVacantApartment, () => {
   ])('lets from the day after a %s dated block', (_label, fromDate) => {
     const row = toVacantApartment({
       availability: availability(day(2)),
-      details: details({
-        rentalBlocks: [{ fromDate, toDate: day(20), reason: 'Reparation' }],
-      }),
+      residence: residence(),
+      blocks: [block({ fromDate, toDate: day(20), blockReason: 'Reparation' })],
       summary: summary(),
     })
 
@@ -211,9 +233,8 @@ describe(toVacantApartment, () => {
   it('keeps the Tenfast date when it is later than the block end', () => {
     const row = toVacantApartment({
       availability: availability(day(30)),
-      details: details({
-        rentalBlocks: [{ fromDate: day(-2), toDate: day(20), reason: null }],
-      }),
+      residence: residence(),
+      blocks: [block({ fromDate: day(-2), toDate: day(20) })],
       summary: summary(),
     })
 
@@ -223,12 +244,11 @@ describe(toVacantApartment, () => {
   it('uses the block that ends last when there are several', () => {
     const row = toVacantApartment({
       availability: availability(day(2)),
-      details: details({
-        rentalBlocks: [
-          { fromDate: day(-2), toDate: day(10), reason: 'Kort' },
-          { fromDate: day(12), toDate: day(40), reason: 'Lång' },
-        ],
-      }),
+      residence: residence(),
+      blocks: [
+        block({ fromDate: day(-2), toDate: day(10), blockReason: 'Kort' }),
+        block({ fromDate: day(12), toDate: day(40), blockReason: 'Lång' }),
+      ],
       summary: summary(),
     })
 
@@ -250,9 +270,12 @@ describe('GET /vacant-apartments', () => {
           }),
         ],
       })
-    const detailsSpy = jest
-      .spyOn(propertyBaseAdapter, 'getResidenceLeasingDetails')
-      .mockResolvedValueOnce({ ok: true, data: [details()] })
+    const residencesSpy = jest
+      .spyOn(propertyBaseAdapter, 'getResidencesBatch')
+      .mockResolvedValueOnce({ ok: true, data: [residence()] })
+    const blocksSpy = jest
+      .spyOn(propertyBaseAdapter, 'getRentalBlocksBatch')
+      .mockResolvedValueOnce({ ok: true, data: [block()] })
     const summariesSpy = jest
       .spyOn(leasingAdapter, 'getListingSummariesByRentalObjectCodes')
       .mockResolvedValueOnce({
@@ -263,7 +286,8 @@ describe('GET /vacant-apartments', () => {
     const res = await request(app.callback()).get('/vacant-apartments')
 
     expect(res.status).toBe(200)
-    expect(detailsSpy).toHaveBeenCalledWith(['apt-1', 'sold-1'])
+    expect(residencesSpy).toHaveBeenCalledWith(['apt-1', 'sold-1'])
+    expect(blocksSpy).toHaveBeenCalledWith(['apt-1', 'sold-1'])
     expect(summariesSpy).toHaveBeenCalledWith({
       rentalObjects: [
         { rentalObjectCode: 'apt-1', listingHistorySince: null },
@@ -275,6 +299,8 @@ describe('GET /vacant-apartments', () => {
     expect(res.body.content[0]).toMatchObject({
       rentalObjectCode: 'apt-1',
       rent: 14200,
+      vacantFrom: day(21).toISOString(),
+      block: { reason: 'Reparation' },
     })
   })
 
@@ -282,16 +308,13 @@ describe('GET /vacant-apartments', () => {
     jest
       .spyOn(leasingAdapter, 'getVacantRentalObjectAvailabilities')
       .mockResolvedValueOnce({ ok: true, data: [] })
-    const detailsSpy = jest.spyOn(
-      propertyBaseAdapter,
-      'getResidenceLeasingDetails'
-    )
+    const residencesSpy = jest.spyOn(propertyBaseAdapter, 'getResidencesBatch')
 
     const res = await request(app.callback()).get('/vacant-apartments')
 
     expect(res.status).toBe(200)
     expect(res.body.content).toEqual([])
-    expect(detailsSpy).not.toHaveBeenCalled()
+    expect(residencesSpy).not.toHaveBeenCalled()
   })
 
   it('responds with 500 when a source fails', async () => {
@@ -299,8 +322,11 @@ describe('GET /vacant-apartments', () => {
       .spyOn(leasingAdapter, 'getVacantRentalObjectAvailabilities')
       .mockResolvedValueOnce({ ok: true, data: [availability()] })
     jest
-      .spyOn(propertyBaseAdapter, 'getResidenceLeasingDetails')
+      .spyOn(propertyBaseAdapter, 'getResidencesBatch')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+    jest
+      .spyOn(propertyBaseAdapter, 'getRentalBlocksBatch')
+      .mockResolvedValueOnce({ ok: true, data: [] })
     jest
       .spyOn(leasingAdapter, 'getListingSummariesByRentalObjectCodes')
       .mockResolvedValueOnce({ ok: true, data: [summary()] })
@@ -308,6 +334,6 @@ describe('GET /vacant-apartments', () => {
     const res = await request(app.callback()).get('/vacant-apartments')
 
     expect(res.status).toBe(500)
-    expect(res.body.error).toBe('get-residence-details-failed')
+    expect(res.body.error).toBe('get-residences-failed')
   })
 })
