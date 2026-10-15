@@ -10,15 +10,15 @@ import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import { AdapterResult } from '../../../adapters/types'
 
-type Block = property.ResidenceLeasingDetails['rentalBlocks'][number]
+type Block = property.RentalBlock
 
 // A listing at these stages means the apartment is already being let:
 // published now, or publishing is over and it sits in visning/erbjudande.
 const LETTING_IN_PROGRESS = [ListingStatus.Active, ListingStatus.Expired]
 
 // Tenure types (Xpand hyresobjektstyp, mirrored as Tenfast category) that never
-// go through the queue: övernattningslägenheter and Västerås Stad's stock.
-export const EXCLUDED_TENURE_TYPES = new Set(['NATT', 'BLOCK', 'AVS'])
+// go through this queue: övernattning, Västerås Stad's stock and student flats.
+export const EXCLUDED_TENURE_TYPES = new Set(['NATT', 'BLOCK', 'AVS', 'STUD'])
 
 /**
  * The block that governs availability: an open-ended one wins, otherwise
@@ -56,14 +56,16 @@ export const vacantFromAfterBlock = (
 
 export type VacantApartmentSources = {
   availability: RentalObjectAvailabilityInfo
-  details: property.ResidenceLeasingDetails
+  residence: property.ResidenceBatchItem
+  blocks: Block[]
   summary: leasing.RentalObjectListingSummary
 }
 
-/** Pure merge of the three sources into one row; null when the row is out. */
+/** Pure merge of the sources into one row; null when the row is out. */
 export const toVacantApartment = ({
   availability,
-  details,
+  residence,
+  blocks,
   summary,
 }: VacantApartmentSources): leasing.VacantApartment | null => {
   if (EXCLUDED_TENURE_TYPES.has(availability.rentalTenureType?.id)) return null
@@ -74,29 +76,33 @@ export const toVacantApartment = ({
   if (listing && LETTING_IN_PROGRESS.includes(listing.status)) return null
 
   // An open-ended block, started or not, has no date to let from.
-  const block = pickGoverningBlock(details.rentalBlocks)
+  const block = pickGoverningBlock(blocks)
   if (block && block.toDate === null) return null
 
   return {
     rentalObjectCode: availability.rentalObjectCode,
-    address: details.address,
-    apartmentNumber: details.apartmentNumber,
-    propertyCode: details.propertyCode,
-    propertyName: details.propertyName,
-    buildingCode: details.buildingCode,
-    marketAreaCode: details.marketAreaCode,
-    marketAreaName: details.marketAreaName,
-    residenceTypeName: details.residenceTypeName,
-    roomCount: details.roomCount,
-    floor: details.floor,
-    elevator: details.elevator,
-    area: details.area,
+    address: residence.address,
+    apartmentNumber: residence.apartmentNumber,
+    propertyCode: residence.property?.code ?? null,
+    propertyName: residence.property?.name ?? null,
+    buildingCode: residence.building?.code ?? null,
+    marketAreaCode: residence.marketArea?.code ?? null,
+    marketAreaName: residence.marketArea?.name ?? null,
+    residenceTypeName: residence.residenceType?.name ?? null,
+    roomCount: residence.residenceType?.roomCount ?? null,
+    floor: residence.floor,
+    elevator: residence.elevator,
+    area: residence.area,
     rent: availability.rent.amount,
     rentalTenureType: availability.rentalTenureType ?? null,
     rentalTags: availability.rentalTags ?? [],
     vacantFrom: vacantFromAfterBlock(availability.vacantFrom, block),
     block: block
-      ? { fromDate: block.fromDate, toDate: block.toDate, reason: block.reason }
+      ? {
+          fromDate: block.fromDate,
+          toDate: block.toDate,
+          reason: block.blockReason,
+        }
       : null,
     listing,
     closedListingsSinceLastLease: summary.closedListingsSinceLastLease,
@@ -105,7 +111,8 @@ export const toVacantApartment = ({
 
 export type GetVacantApartmentsError =
   | 'get-availabilities-failed'
-  | 'get-residence-details-failed'
+  | 'get-residences-failed'
+  | 'get-rental-blocks-failed'
   | 'get-listing-summaries-failed'
 
 /** Apartments for the "Publicera" step; see toVacantApartment for the rules.
@@ -121,8 +128,9 @@ export const getVacantApartments = async (): Promise<
   if (availabilities.data.length === 0) return { ok: true, data: [] }
 
   const codes = availabilities.data.map((a) => a.rentalObjectCode)
-  const [details, summaries] = await Promise.all([
-    propertyBaseAdapter.getResidenceLeasingDetails(codes),
+  const [residences, blocks, summaries] = await Promise.all([
+    propertyBaseAdapter.getResidencesBatch(codes),
+    propertyBaseAdapter.getRentalBlocksBatch(codes),
     leasingAdapter.getListingSummariesByRentalObjectCodes({
       rentalObjects: availabilities.data.map((a) => ({
         rentalObjectCode: a.rentalObjectCode,
@@ -131,25 +139,37 @@ export const getVacantApartments = async (): Promise<
       listingCategory: 'APARTMENT',
     }),
   ])
-  if (!details.ok) return { ok: false, err: 'get-residence-details-failed' }
+  if (!residences.ok) return { ok: false, err: 'get-residences-failed' }
+  if (!blocks.ok) return { ok: false, err: 'get-rental-blocks-failed' }
   if (!summaries.ok) return { ok: false, err: 'get-listing-summaries-failed' }
 
-  const detailsByCode = new Map(details.data.map((d) => [d.rentalId, d]))
+  const residenceByCode = new Map(residences.data.map((r) => [r.rentalId, r]))
   const summaryByCode = new Map(
     summaries.data.map((s) => [s.rentalObjectCode, s])
   )
+  const blocksByCode = new Map<string, Block[]>()
+  for (const block of blocks.data) {
+    const list = blocksByCode.get(block.rentalId) ?? []
+    list.push(block)
+    blocksByCode.set(block.rentalId, list)
+  }
 
   const rows: leasing.VacantApartment[] = []
   const unknown: string[] = []
   for (const availability of availabilities.data) {
     const code = availability.rentalObjectCode
-    const d = detailsByCode.get(code)
-    const s = summaryByCode.get(code)
-    if (!d || !s) {
+    const residence = residenceByCode.get(code)
+    const summary = summaryByCode.get(code)
+    if (!residence || !summary) {
       unknown.push(code)
       continue
     }
-    const row = toVacantApartment({ availability, details: d, summary: s })
+    const row = toVacantApartment({
+      availability,
+      residence,
+      blocks: blocksByCode.get(code) ?? [],
+      summary,
+    })
     if (row) rows.push(row)
   }
 
