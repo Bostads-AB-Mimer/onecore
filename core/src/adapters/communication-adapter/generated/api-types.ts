@@ -224,7 +224,7 @@ export interface paths {
   '/guides': {
     /**
      * List guides
-     * @description Returns guide summaries ordered by category and title. Drafts are only included when includeDrafts=true.
+     * @description Returns guide summaries ordered by top-level category, then subcategory and title. Drafts are only included when includeDrafts=true.
      */
     get: {
       parameters: {
@@ -249,6 +249,8 @@ export interface paths {
                 /** Format: uuid */
                 id: string
                 name: string
+                /** Format: uuid */
+                parentId: string | null
                 /** Format: date-time */
                 createdAt: string
                 /** Format: date-time */
@@ -294,7 +296,7 @@ export interface paths {
     }
     /**
      * Create a guide
-     * @description Creates a guide with its steps. Step bodies are sanitized to the allowed HTML subset. Images are added afterwards via the image endpoint, so any image metadata in the payload is ignored. Errors: 409 slug-taken, 400 category-not-found, 400 step-belongs-to-other-guide when a step id is already used by another guide.
+     * @description Creates a guide with its steps. Step bodies are sanitized to the allowed HTML subset. Images are added afterwards via the image endpoint, so any image metadata in the payload is ignored. Errors: 409 slug-taken, 400 category-not-found (also for an unknown parentId), 400 category-parent-not-top-level when a new subcategory names a subcategory as parent, 400 step-belongs-to-other-guide when a step id is already used by another guide.
      */
     post: {
       /** @description Request Body */
@@ -312,6 +314,8 @@ export interface paths {
                 }
               | {
                   name: string
+                  /** Format: uuid */
+                  parentId?: string
                 }
             /** @enum {string} */
             status: 'draft' | 'published'
@@ -352,6 +356,8 @@ export interface paths {
                 /** Format: uuid */
                 id: string
                 name: string
+                /** Format: uuid */
+                parentId: string | null
                 /** Format: date-time */
                 createdAt: string
                 /** Format: date-time */
@@ -449,6 +455,8 @@ export interface paths {
               /** Format: uuid */
               id: string
               name: string
+              /** Format: uuid */
+              parentId: string | null
               /** Format: date-time */
               createdAt: string
               /** Format: date-time */
@@ -499,6 +507,8 @@ export interface paths {
                 /** Format: uuid */
                 id: string
                 name: string
+                /** Format: uuid */
+                parentId: string | null
                 /** Format: date-time */
                 createdAt: string
                 /** Format: date-time */
@@ -598,6 +608,8 @@ export interface paths {
                 /** Format: uuid */
                 id: string
                 name: string
+                /** Format: uuid */
+                parentId: string | null
                 /** Format: date-time */
                 createdAt: string
                 /** Format: date-time */
@@ -673,7 +685,7 @@ export interface paths {
     }
     /**
      * Update a guide
-     * @description Replaces metadata and steps. Steps are upserted by id and steps missing from the payload are deleted with their images. Returns the storage keys of removed images so the caller can delete files. expectedUpdatedAt must equal the stored updatedAt (millisecond precision); image uploads and deletes also move it forward. Errors: 409 guide-modified when expectedUpdatedAt is stale (the guide changed since the caller loaded it), 409 slug-taken, 400 category-not-found, 400 step-belongs-to-other-guide when a step id is owned by another guide, and 400 image-not-in-step when an image id is unknown or sent on a step it does not belong to (images cannot be moved between steps by a save).
+     * @description Replaces metadata and steps. Steps are upserted by id and steps missing from the payload are deleted with their images. Returns the storage keys of removed images so the caller can delete files. expectedUpdatedAt must equal the stored updatedAt (millisecond precision); image uploads and deletes also move it forward. Errors: 409 guide-modified when expectedUpdatedAt is stale (the guide changed since the caller loaded it), 409 slug-taken, 400 category-not-found, 400 category-parent-not-top-level, 400 step-belongs-to-other-guide when a step id is owned by another guide, and 400 image-not-in-step when an image id is unknown or sent on a step it does not belong to (images cannot be moved between steps by a save).
      */
     put: {
       parameters: {
@@ -697,6 +709,8 @@ export interface paths {
                 }
               | {
                   name: string
+                  /** Format: uuid */
+                  parentId?: string
                 }
             /** @enum {string} */
             status: 'draft' | 'published'
@@ -740,6 +754,8 @@ export interface paths {
                   /** Format: uuid */
                   id: string
                   name: string
+                  /** Format: uuid */
+                  parentId: string | null
                   /** Format: date-time */
                   createdAt: string
                   /** Format: date-time */

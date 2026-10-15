@@ -6,6 +6,7 @@ import { guides } from '@onecore/types'
 export type GuideCategoryRow = {
   id: string
   name: string
+  parentId: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -53,6 +54,7 @@ export const normalizeId = (id: string) => id.toLowerCase()
 export const mapCategory = (row: GuideCategoryRow): guides.GuideCategory => ({
   id: normalizeId(row.id),
   name: row.name,
+  parentId: row.parentId === null ? null : normalizeId(row.parentId),
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })

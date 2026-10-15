@@ -2,7 +2,10 @@ import { useState } from 'react'
 
 import type { GuideCategoryGroup } from '@/entities/guide'
 
-export type SheetCategory = Pick<GuideCategoryGroup, 'id' | 'name'>
+type CategoryRef = Pick<GuideCategoryGroup, 'id' | 'name'>
+
+/** A subcategory keeps its parent so going back returns to it. */
+export type SheetCategory = CategoryRef & { parent?: CategoryRef }
 
 /**
  * Which category the guide sheet's overview is showing. Kept in the sheet
@@ -38,7 +41,8 @@ export function useSheetCategory({
   return {
     category,
     selectCategory: setCategory,
-    clearCategory: () => setCategory(null),
+    /** Back to the parent category, or to all categories. */
+    leaveCategory: () => setCategory(category?.parent ?? null),
     /** Call before opening a guide from the list to keep its category. */
     markGuideListed: setListedSlug,
   }

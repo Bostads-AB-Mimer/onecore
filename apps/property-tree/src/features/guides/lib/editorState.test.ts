@@ -45,7 +45,13 @@ const guide: GuideWithUrls = {
   title: 'Min guide',
   description: 'Beskrivning',
   status: 'draft',
-  category: { id: 'c1', name: 'Tenfast', createdAt: '', updatedAt: '' },
+  category: {
+    id: 'c1',
+    name: 'Tenfast',
+    parentId: null,
+    createdAt: '',
+    updatedAt: '',
+  },
   stepCount: 1,
   createdBy: 'Anna',
   updatedBy: 'Anna',
@@ -300,6 +306,16 @@ describe('validate', () => {
       'Ange ett namn på den nya kategorin.',
     ])
   })
+
+  it('requires a name for a new subcategory', () => {
+    const state = {
+      ...fromGuide(guide),
+      category: { name: '  ', parentId: 'c1' },
+    }
+    expect(validate(state, 'draft')).toEqual([
+      'Ange ett namn på den nya underkategorin.',
+    ])
+  })
 })
 
 describe('toRequest', () => {
@@ -319,6 +335,20 @@ describe('toRequest', () => {
       { id: 'img-1', sortOrder: 0, altText: 'Dialogen', caption: null },
     ])
     expect(request.steps[0].calloutText).toBe('Tänk på')
+  })
+
+  it('sends the parent of a new subcategory', () => {
+    const state = {
+      ...fromGuide(guide),
+      category: { name: '  Avtal ', parentId: 'c1' },
+    }
+    expect(toRequest(state, 'draft').category).toEqual({
+      name: 'Avtal',
+      parentId: 'c1',
+    })
+    expect(
+      toRequest({ ...state, category: { name: 'Nytt' } }, 'draft').category
+    ).toEqual({ name: 'Nytt' })
   })
 
   it('drops callout text when no callout type is set', () => {
@@ -382,7 +412,8 @@ describe('toUpdateRequest', () => {
 
 describe('toPreview', () => {
   const categories: GuideCategory[] = [
-    { id: 'c1', name: 'Tenfast', createdAt: '', updatedAt: '' },
+    { id: 'c1', name: 'Tenfast', parentId: null, createdAt: '', updatedAt: '' },
+    { id: 'c3', name: 'Avtal', parentId: 'c1', createdAt: '', updatedAt: '' },
   ]
 
   it('resolves the name of an existing category', () => {
@@ -397,6 +428,21 @@ describe('toPreview', () => {
         .category.name
     ).toBe('Nytt')
     expect(toPreview(state, 'Anna', []).category.name).toBe('')
+  })
+
+  it('keeps the parent of a subcategory', () => {
+    const state = fromGuide(guide)
+    expect(
+      toPreview({ ...state, category: { id: 'c3' } }, 'Anna', categories)
+        .category
+    ).toMatchObject({ id: 'c3', name: 'Avtal', parentId: 'c1' })
+    expect(
+      toPreview(
+        { ...state, category: { name: 'Nytt', parentId: 'c1' } },
+        'Anna',
+        categories
+      ).category.parentId
+    ).toBe('c1')
   })
 
   it('falls back to placeholder titles for empty fields', () => {

@@ -7,7 +7,7 @@ import { useGuideCategories } from '@/entities/guide'
 import { GUIDES_ADMIN_ROLE, useHasRole, useUser } from '@/entities/user'
 
 import { useDocumentTitle } from '@/shared/hooks/useDocumentTitle'
-import { routes } from '@/shared/routes'
+import { paths, routes } from '@/shared/routes'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -28,6 +28,10 @@ export function GuideCategoryPage() {
   const { data: categories, isLoading, isError } = useGuideCategories()
 
   const category = categories?.find(({ id }) => id === categoryId)
+  const parent =
+    category?.parentId != null
+      ? categories?.find(({ id }) => id === category.parentId)
+      : undefined
   // Follows what the page renders: loading, a fetch error, not found, or the
   // category. Null while loading.
   const title = isLoading
@@ -67,7 +71,15 @@ export function GuideCategoryPage() {
         />
       )
     }
-    return <GuidesOverview includeDrafts={canEdit} categoryId={category.id} />
+    return (
+      <GuidesOverview
+        // Remount so the search starts empty when moving from a category to
+        // one of its subcategories on the same route.
+        key={category.id}
+        includeDrafts={canEdit}
+        categoryId={category.id}
+      />
+    )
   }
 
   return (
@@ -80,6 +92,16 @@ export function GuideCategoryPage() {
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
+          {parent && (
+            <>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to={paths.guideCategory(parent.id)}>{parent.name}</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+            </>
+          )}
           <BreadcrumbItem>
             <BreadcrumbPage>{title ?? 'Kategori'}</BreadcrumbPage>
           </BreadcrumbItem>
@@ -88,9 +110,9 @@ export function GuideCategoryPage() {
 
       <div className="mb-6">
         <Button asChild variant="link" className="mb-2 px-0">
-          <Link to={routes.guides}>
+          <Link to={parent ? paths.guideCategory(parent.id) : routes.guides}>
             <ArrowLeft className="mr-1 h-4 w-4" />
-            Alla kategorier
+            {parent ? `Tillbaka till ${parent.name}` : 'Alla kategorier'}
           </Link>
         </Button>
         {/* Only a found category gets a heading; the error and not-found

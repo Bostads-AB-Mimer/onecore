@@ -24,6 +24,10 @@ describe('saveErrorMessage', () => {
       'Kategorin finns inte längre. Välj en annan kategori.',
     ],
     [
+      'category-parent-not-top-level',
+      'En underkategori kan inte ha egna underkategorier. Välj en annan kategori.',
+    ],
+    [
       'step-belongs-to-other-guide',
       'Ett steg tillhör en annan guide. Ladda om guiden och försök igen.',
     ],

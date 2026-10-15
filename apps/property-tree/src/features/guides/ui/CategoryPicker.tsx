@@ -10,28 +10,41 @@ import {
   SelectValue,
 } from '@/shared/ui/Select'
 
+import {
+  chooseSubcategory,
+  NEW_CATEGORY,
+  NO_SUBCATEGORY,
+  splitCategory,
+} from '../lib/categorySelection'
 import type { EditorCategory } from '../lib/editorState'
-
-// Sentinel option that reveals the "new category" field.
-const NEW_CATEGORY = '__new__'
 
 interface CategoryPickerProps {
   value: EditorCategory | null
   onChange: (category: EditorCategory | null) => void
 }
 
-/** Pick an existing category or type the name of a new one. */
+/**
+ * Pick an existing category or type the name of a new one, then optionally
+ * a subcategory of it. Subcategories can only be added under an existing
+ * category, since a new one has no id to point at yet.
+ */
 export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
   const { data: categories, isLoading } = useGuideCategories()
+  const all = categories ?? []
 
-  const selectValue =
-    value === null ? '' : 'id' in value ? value.id : NEW_CATEGORY
+  const { category: parentId, subcategory: subValue } = splitCategory(
+    value,
+    all
+  )
+  const topLevel = all.filter((category) => category.parentId === null)
+  const subcategories = all.filter((category) => category.parentId === parentId)
+  const hasExistingParent = parentId !== '' && parentId !== NEW_CATEGORY
 
   return (
     <div className="space-y-2">
       <Label htmlFor="guide-category">Kategori</Label>
       <Select
-        value={selectValue}
+        value={parentId}
         onValueChange={(next) =>
           onChange(next === NEW_CATEGORY ? { name: '' } : { id: next })
         }
@@ -43,7 +56,7 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
           />
         </SelectTrigger>
         <SelectContent>
-          {(categories ?? []).map((category) => (
+          {topLevel.map((category) => (
             <SelectItem key={category.id} value={category.id}>
               {category.name}
             </SelectItem>
@@ -51,7 +64,7 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
           <SelectItem value={NEW_CATEGORY}>Skapa ny kategori...</SelectItem>
         </SelectContent>
       </Select>
-      {value && 'name' in value && (
+      {value && 'name' in value && !value.parentId && (
         <Input
           value={value.name}
           onChange={(event) => onChange({ name: event.target.value })}
@@ -60,6 +73,49 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
           maxLength={100}
           autoFocus
         />
+      )}
+
+      {hasExistingParent && (
+        <>
+          <Label htmlFor="guide-subcategory" className="block pt-2">
+            Underkategori
+          </Label>
+          <Select
+            value={subValue}
+            onValueChange={(next) =>
+              onChange(chooseSubcategory(parentId, next))
+            }
+          >
+            <SelectTrigger id="guide-subcategory">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_SUBCATEGORY}>
+                Ingen underkategori
+              </SelectItem>
+              {subcategories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+              <SelectItem value={NEW_CATEGORY}>
+                Skapa ny underkategori...
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          {value && 'name' in value && value.parentId && (
+            <Input
+              value={value.name}
+              onChange={(event) =>
+                onChange({ name: event.target.value, parentId })
+              }
+              placeholder="Namn på ny underkategori, t.ex. Avtal"
+              aria-label="Namn på ny underkategori"
+              maxLength={100}
+              autoFocus
+            />
+          )}
+        </>
       )}
     </div>
   )

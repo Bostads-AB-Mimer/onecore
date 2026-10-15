@@ -2,7 +2,7 @@ import type { GuideSummary } from '../types'
 
 /**
  * Case-insensitive match on title, description and category name, optionally
- * limited to one category.
+ * limited to one category and its subcategories.
  */
 export function filterGuides(
   guides: GuideSummary[],
@@ -13,7 +13,10 @@ export function filterGuides(
   const inCategory =
     categoryId === undefined
       ? guides
-      : guides.filter((guide) => guide.category.id === categoryId)
+      : guides.filter(
+          ({ category }) =>
+            category.id === categoryId || category.parentId === categoryId
+        )
   if (needle.length === 0) return inCategory
 
   return inCategory.filter((guide) =>

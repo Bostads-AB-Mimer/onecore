@@ -15711,6 +15711,8 @@ export interface components {
       /** Format: uuid */
       id: string
       name: string
+      /** Format: uuid */
+      parentId: string | null
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
@@ -15728,6 +15730,8 @@ export interface components {
         /** Format: uuid */
         id: string
         name: string
+        /** Format: uuid */
+        parentId: string | null
         /** Format: date-time */
         createdAt: string
         /** Format: date-time */
@@ -15770,6 +15774,8 @@ export interface components {
         /** Format: uuid */
         id: string
         name: string
+        /** Format: uuid */
+        parentId: string | null
         /** Format: date-time */
         createdAt: string
         /** Format: date-time */
@@ -15834,6 +15840,8 @@ export interface components {
           }
         | {
             name: string
+            /** Format: uuid */
+            parentId?: string
           }
       /** @enum {string} */
       status: 'draft' | 'published'
@@ -15867,6 +15875,8 @@ export interface components {
           }
         | {
             name: string
+            /** Format: uuid */
+            parentId?: string
           }
       /** @enum {string} */
       status: 'draft' | 'published'

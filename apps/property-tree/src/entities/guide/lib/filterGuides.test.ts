@@ -16,6 +16,7 @@ const summary = (
   category: {
     id: categoryName,
     name: categoryName,
+    parentId: null,
     createdAt: '',
     updatedAt: '',
   },
@@ -69,6 +70,25 @@ describe('filterGuides', () => {
         filterGuides(withOdoo, 'registrera', 'Tenfast').map((g) => g.title)
       ).toEqual(['Registrera uppsägning'])
       expect(filterGuides(withOdoo, 'faktura', 'Tenfast')).toEqual([])
+    })
+
+    it('includes the guides of its subcategories', () => {
+      const inSubcategory: GuideSummary = {
+        ...summary('Säga upp avtal', '', 'Avtal'),
+        category: {
+          id: 'Avtal',
+          name: 'Avtal',
+          parentId: 'Tenfast',
+          createdAt: '',
+          updatedAt: '',
+        },
+      }
+
+      expect(
+        filterGuides([...withOdoo, inSubcategory], '', 'Tenfast').map(
+          (g) => g.title
+        )
+      ).toEqual(['Registrera uppsägning', 'Säga upp avtal'])
     })
 
     it('returns an empty list for an unknown category', () => {
