@@ -11,11 +11,9 @@ import {
   searchRentalObjects,
 } from '@src/adapters/rental-object-adapter'
 import { listRentalObjectSubtypes } from '@src/adapters/rental-object-subtype-adapter'
-import { getResidenceLeasingDetailsByRentalIds } from '@src/adapters/residence-leasing-adapter'
 import {
   GetRentalObjectDetailsQueryParamsSchema,
   GetRentalObjectsQueryParamsSchema,
-  GetResidenceLeasingDetailsRequestSchema,
   SearchRentalObjectsQueryParamsSchema,
 } from '@src/types/rental-object'
 
@@ -242,69 +240,6 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { content, ...metadata }
       } catch (err) {
         logger.error({ err }, 'Error fetching rental object details')
-        ctx.status = 500
-        ctx.body = { reason: 'Internal server error', ...metadata }
-      }
-    }
-  )
-
-  /**
-   * @swagger
-   * /rental-objects/residences/leasing-details:
-   *   post:
-   *     summary: Leasing details for an explicit list of residences
-   *     description: |
-   *       What the letting process shows about an apartment before it is
-   *       published: address, apartment number, område, type and room count,
-   *       floor, elevator, BRA and its open rental blocks. Keyed by rental id
-   *       and fetched for exactly the ids given (vacant ones), so no
-   *       per-property cache widening. Rent is not included; Tenfast owns it.
-   *       Unknown or non-residence ids are absent from the result.
-   *     tags:
-   *       - Rental objects
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             required: [rentalIds]
-   *             properties:
-   *               rentalIds:
-   *                 type: array
-   *                 items:
-   *                   type: string
-   *                 maxItems: 5000
-   *     responses:
-   *       200:
-   *         description: Details per rental id
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/ResidenceLeasingDetails'
-   *       400:
-   *         description: Invalid request body
-   *       500:
-   *         description: Internal server error
-   */
-  router.post(
-    '(.*)/rental-objects/residences/leasing-details',
-    parseRequest({ body: GetResidenceLeasingDetailsRequestSchema }),
-    async (ctx) => {
-      const metadata = generateRouteMetadata(ctx)
-      const { rentalIds } = ctx.request.parsedBody
-
-      try {
-        const content = await getResidenceLeasingDetailsByRentalIds(rentalIds)
-        ctx.status = 200
-        ctx.body = { content, ...metadata }
-      } catch (err) {
-        logger.error({ err }, 'Error fetching residence leasing details')
         ctx.status = 500
         ctx.body = { reason: 'Internal server error', ...metadata }
       }

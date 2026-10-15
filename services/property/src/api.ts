@@ -24,6 +24,7 @@ import { routes as kvvAreasRoutes } from './routes/kvv-areas'
 import { routes as marketAreasRoutes } from './routes/market-areas'
 import { routes as propertyTreeRoutes } from './routes/property-tree'
 import { routes as rentalObjectsRoutes } from './routes/rental-objects'
+import { routes as rentalBlocksRoutes } from './routes/rental-blocks'
 
 import { routes as healthRoutes } from './routes/health'
 
@@ -52,6 +53,7 @@ costCentersRoutes(router)
 kvvAreasRoutes(router)
 marketAreasRoutes(router)
 rentalObjectsRoutes(router)
+rentalBlocksRoutes(router)
 propertyTreeRoutes(router)
 healthRoutes(router)
 

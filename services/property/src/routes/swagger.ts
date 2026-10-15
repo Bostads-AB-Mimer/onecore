@@ -277,8 +277,8 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
-  ...zodToJsonSchema(types.ResidenceLeasingDetailsSchema, {
-    name: 'ResidenceLeasingDetails',
+  ...zodToJsonSchema(types.ResidenceBatchItemSchema, {
+    name: 'ResidenceBatchItem',
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
