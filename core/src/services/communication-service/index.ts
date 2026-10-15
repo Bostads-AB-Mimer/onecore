@@ -180,6 +180,24 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *               text:
    *                 type: string
+   *               attachments:
+   *                 type: array
+   *                 description: Files to attach. Max 10 files and 10 MB in total (decoded). Allowed types are PDF, JPEG, PNG, GIF, plain text, CSV, Word and Excel.
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - filename
+   *                     - content
+   *                     - contentType
+   *                   properties:
+   *                     filename:
+   *                       type: string
+   *                     content:
+   *                       type: string
+   *                       description: Base64-encoded file content
+   *                     contentType:
+   *                       type: string
+   *                       example: application/pdf
    *               logMeta:
    *                 type: object
    *                 properties:

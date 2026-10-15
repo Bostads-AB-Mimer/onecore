@@ -1,4 +1,4 @@
-import { Email, Sms } from './types'
+import { Email, EmailAttachment, Sms } from './types'
 
 interface ParkingSpaceOfferEmail extends Email {
   contactCode: string
@@ -72,12 +72,33 @@ interface BulkSms {
   logMeta?: CommunicationLogMeta
 }
 
+// Limits for files attached to bulk/customer emails. Shared so the frontend can
+// reject a file before upload with the same rules the communication service
+// enforces.
+const EMAIL_ATTACHMENT_MAX_COUNT = 10
+// Decoded (raw) bytes across all attachments on one email. Base64 adds ~33% on
+// the wire, which stays well under the 50 MB JSON limit in core/communication.
+const EMAIL_ATTACHMENT_MAX_TOTAL_BYTES = 10 * 1024 * 1024
+const EMAIL_ATTACHMENT_ALLOWED_CONTENT_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'text/plain',
+  'text/csv',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+] as const
+
 // Either emails or recipients required.
 interface BulkEmail {
   emails?: string[]
   recipients?: BulkEmailRecipient[]
   subject: string
   text: string
+  attachments?: EmailAttachment[]
   logMeta?: CommunicationLogMeta
 }
 
@@ -164,4 +185,10 @@ export type {
   BulkEmailResult,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
+}
+
+export {
+  EMAIL_ATTACHMENT_MAX_COUNT,
+  EMAIL_ATTACHMENT_MAX_TOTAL_BYTES,
+  EMAIL_ATTACHMENT_ALLOWED_CONTENT_TYPES,
 }
