@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { ResidenceAddressSchema } from '../property/schema'
 import { ListingSchema } from './listing'
 
 // A block as the vacancy view needs it: dates and reason only.
@@ -19,7 +20,7 @@ export const VacantApartmentTagSchema = z.object({
 // rent), property (object, blocks) and leasing (listing history).
 export const VacantApartmentSchema = z.object({
   rentalObjectCode: z.string(),
-  address: z.string().nullable(),
+  address: ResidenceAddressSchema.nullable(),
   apartmentNumber: z.string().nullable(),
   propertyCode: z.string().nullable(),
   propertyName: z.string().nullable(),
