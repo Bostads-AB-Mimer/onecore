@@ -3,7 +3,12 @@ import { makeTestApp } from './app-fixture'
 
 const apartment = {
   rentalObjectCode: '123-456-01-0101',
-  address: 'Trädgårdsgatan 19',
+  address: {
+    street: 'Trädgårdsgatan 19',
+    street2: null,
+    postalCode: '722 12',
+    city: 'Västerås',
+  },
   apartmentNumber: '1203',
   propertyCode: '123-456',
   propertyName: 'LINDAREN 2',
@@ -16,7 +21,7 @@ const apartment = {
   elevator: true,
   area: 102,
   rent: 14200,
-  rentalTenureType: { id: 'STUD', name: 'Studentbostad' },
+  rentalTenureType: { id: 'STD', name: 'Standard' },
   rentalTags: [],
   vacantFrom: '2026-10-22T00:00:00.000Z',
   block: null,

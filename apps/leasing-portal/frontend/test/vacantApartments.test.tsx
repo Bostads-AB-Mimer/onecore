@@ -6,7 +6,12 @@ import { bffUrl, TestHost } from './testUtils'
 
 const apartment = {
   rentalObjectCode: '123-456-01-0101',
-  address: 'Trädgårdsgatan 19',
+  address: {
+    street: 'Trädgårdsgatan 19',
+    street2: null,
+    postalCode: '722 12',
+    city: 'Västerås',
+  },
   apartmentNumber: '1203',
   propertyCode: '123-456',
   propertyName: 'LINDAREN 2',
@@ -19,7 +24,7 @@ const apartment = {
   elevator: true,
   area: 102,
   rent: 14200,
-  rentalTenureType: { id: 'STUD', name: 'Studentbostad' },
+  rentalTenureType: { id: 'STD', name: 'Standard' },
   rentalTags: [{ id: 'POÄNGFRITT', name: 'Poängfritt' }],
   vacantFrom: '2026-10-22T00:00:00.000Z',
   block: null,
@@ -86,7 +91,7 @@ describe('BostadPage', () => {
     expect(screen.getByText('Ingen annons')).toBeTruthy()
     expect(screen.getByText('Redo att publicera')).toBeTruthy()
     expect(screen.getAllByText('Vasastan')).toHaveLength(2)
-    expect(screen.getAllByText('Student')).toHaveLength(2)
+    expect(screen.getAllByText('Standard')).toHaveLength(2)
     expect(screen.getAllByText('Poängfritt')).toHaveLength(2)
     expect(screen.getAllByText('14 200 kr/mån')).toHaveLength(2)
   })

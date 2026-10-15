@@ -45,7 +45,11 @@ const COLUMNS: ResponsiveTableColumn<VacantApartment>[] = [
     className: 'font-mono',
     render: (a) => a.rentalObjectCode,
   },
-  { key: 'address', label: 'Adress', render: (a) => a.address ?? '–' },
+  {
+    key: 'address',
+    label: 'Adress',
+    render: (a) => a.address?.street ?? '–',
+  },
   { key: 'area', label: 'Område', render: (a) => a.marketAreaName ?? '–' },
   { key: 'type', label: 'Typ', render: (a) => a.residenceTypeName ?? '–' },
   {

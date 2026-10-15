@@ -62,7 +62,12 @@ export interface paths {
             'application/json': {
               content: {
                 rentalObjectCode: string
-                address: string | null
+                address: {
+                  street: string
+                  street2: string | null
+                  postalCode: string | null
+                  city: string | null
+                } | null
                 apartmentNumber: string | null
                 propertyCode: string | null
                 propertyName: string | null
