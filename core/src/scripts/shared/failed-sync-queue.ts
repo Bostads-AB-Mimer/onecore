@@ -3,7 +3,7 @@ import { logger } from '@onecore/utilities'
 
 export type FailedRowEntry = {
   key: string
-  type: 'lease' | 'contact'
+  type: 'lease' | 'contact' | 'rental-object-type'
   payload: unknown
   addedAt: string
   lastError: string
@@ -55,6 +55,17 @@ export const addEntry = async (
   if (queue.some((e) => e.key === entry.key)) return
   queue.push(entry)
   await writeQueueAtomic(path, queue)
+}
+
+export const upsertEntry = async (
+  path: string,
+  entry: FailedRowEntry
+): Promise<void> => {
+  const queue = await readQueue(path)
+  await writeQueueAtomic(path, [
+    ...queue.filter((e) => e.key !== entry.key),
+    entry,
+  ])
 }
 
 export const removeEntry = async (path: string, key: string): Promise<void> => {

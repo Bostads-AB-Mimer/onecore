@@ -6,6 +6,7 @@ import {
   addEntry,
   removeEntry,
   hasKey,
+  upsertEntry,
   FailedRowEntry,
 } from './failed-sync-queue'
 
@@ -78,5 +79,33 @@ describe('failed-sync-queue', () => {
     const q = [makeEntry('a'), makeEntry('b')]
     expect(hasKey(q, 'a')).toBe(true)
     expect(hasKey(q, 'c')).toBe(false)
+  })
+})
+
+describe('upsertEntry', () => {
+  it('appends an entry when the key is not in the queue', async () => {
+    await addEntry(file, makeEntry('a'))
+
+    await upsertEntry(file, makeEntry('b'))
+
+    expect((await readQueue(file)).map((e) => e.key)).toEqual(['a', 'b'])
+  })
+
+  it('replaces the entry with the same key', async () => {
+    await addEntry(file, makeEntry('a'))
+    await addEntry(file, makeEntry('b'))
+
+    await upsertEntry(file, { ...makeEntry('a'), lastError: 'newer' })
+
+    const queue = await readQueue(file)
+    expect(queue).toHaveLength(2)
+    expect(queue.find((e) => e.key === 'a')?.lastError).toBe('newer')
+    expect(queue.find((e) => e.key === 'b')?.lastError).toBe('oops')
+  })
+
+  it('creates the file when it does not exist', async () => {
+    await upsertEntry(file, makeEntry('a'))
+
+    expect(await readQueue(file)).toEqual([makeEntry('a')])
   })
 })
