@@ -2861,7 +2861,24 @@ describe(tenfastAdapter.updateRentalObjectCategory, () => {
     )
   })
 
-  it('returns update-failed on a non-200 response', async () => {
+  it.each([400, 422])(
+    'returns update-rejected when Tenfast answers %i',
+    async (status) => {
+      ;(request as jest.Mock).mockResolvedValueOnce({
+        status,
+        data: { error: 'invalid category' },
+      })
+
+      const result = await tenfastAdapter.updateRentalObjectCategory(
+        'tf-1',
+        category
+      )
+
+      expect(result).toEqual({ ok: false, err: 'update-rejected' })
+    }
+  )
+
+  it('returns update-failed on any other non-200 response', async () => {
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 404,
       data: { error: 'Not found' },

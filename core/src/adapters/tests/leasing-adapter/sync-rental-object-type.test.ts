@@ -113,6 +113,32 @@ describe('syncRentalObjectType', () => {
     expect(result).toEqual({ ok: false, err: 'unknown-type', statusCode: 422 })
   })
 
+  it('maps 422 rental-object-rejected to rejected', async () => {
+    nock(config.tenantsLeasesService.url)
+      .post('/rental-objects/807-033-01-0101/type/sync')
+      .reply(422, { error: 'rental-object-rejected' })
+
+    const result = await leasingAdapter.syncRentalObjectType(
+      '807-033-01-0101',
+      'STD'
+    )
+
+    expect(result).toEqual({ ok: false, err: 'rejected', statusCode: 422 })
+  })
+
+  it('maps 502 to sync-failed and keeps the status', async () => {
+    nock(config.tenantsLeasesService.url)
+      .post('/rental-objects/807-033-01-0101/type/sync')
+      .reply(502, 'Bad Gateway')
+
+    const result = await leasingAdapter.syncRentalObjectType(
+      '807-033-01-0101',
+      'STD'
+    )
+
+    expect(result).toEqual({ ok: false, err: 'sync-failed', statusCode: 502 })
+  })
+
   it('maps 500 to sync-failed and keeps the status', async () => {
     nock(config.tenantsLeasesService.url)
       .post('/rental-objects/807-033-01-0101/type/sync')

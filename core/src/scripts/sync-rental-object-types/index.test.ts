@@ -14,6 +14,7 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../adapters/communication-adapter'
 
 const START = new Date('2026-10-15T00:00:00.000Z')
+const TWO_HOURS = 2 * 60 * 60 * 1000
 
 const change = (
   overrides: Partial<RentalObjectTypeChange> = {}
@@ -25,11 +26,14 @@ const change = (
   ...overrides,
 })
 
-const queuedEntry = (c: RentalObjectTypeChange): FailedRowEntry => ({
+const queuedEntry = (
+  c: RentalObjectTypeChange,
+  addedAt = '2026-10-15T00:00:00.000Z'
+): FailedRowEntry => ({
   key: `rental-object-type:${c.rentalObjectCode}`,
   type: 'rental-object-type',
   payload: { ...c, timestamp: c.timestamp.toISOString() },
-  addedAt: '2026-10-15T00:00:00.000Z',
+  addedAt,
   lastError: 'sync-failed (status 500)',
 })
 
@@ -40,7 +44,22 @@ let sendEmailSpy: jest.SpyInstance
 
 const originalXpandSync = config.emailAddresses.xpandSync
 
-const readState = async () => (await fs.readFile(stateFile, 'utf-8')).trim()
+const writeCheckpoint = (checkpoint: Date) =>
+  fs.writeFile(
+    stateFile,
+    JSON.stringify({ checkpoint: checkpoint.toISOString(), seen: {} }),
+    'utf-8'
+  )
+
+const readCheckpoint = async (): Promise<string> =>
+  JSON.parse(await fs.readFile(stateFile, 'utf-8')).checkpoint
+
+const run = (now?: Date) =>
+  syncRentalObjectTypes({
+    stateFile,
+    queueFile,
+    now: now ? () => now : undefined,
+  })
 
 const mockChanges = (changes: RentalObjectTypeChange[]) =>
   jest
@@ -49,11 +68,14 @@ const mockChanges = (changes: RentalObjectTypeChange[]) =>
 
 const mockSync = () => jest.spyOn(leasingAdapter, 'syncRentalObjectType')
 
+const subjects = () =>
+  sendEmailSpy.mock.calls.map(([email]) => email.subject as string)
+
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'srot-'))
-  stateFile = path.join(dir, 'last-timestamp-rental-object-types.txt')
+  stateFile = path.join(dir, 'state.json')
   queueFile = path.join(dir, 'failed-rows.jsonl')
-  await fs.writeFile(stateFile, START.toISOString(), 'utf-8')
+  await writeCheckpoint(START)
   ;(config.emailAddresses as Record<string, string>).xpandSync =
     'sync@example.com'
   sendEmailSpy = jest
@@ -69,36 +91,44 @@ afterEach(async () => {
 })
 
 describe('syncRentalObjectTypes', () => {
-  it('first run: saves the current time and makes no calls', async () => {
-    await fs.rm(stateFile)
-    const getChanges = mockChanges([])
-    const sync = mockSync()
-    const before = Date.now()
+  describe('first run', () => {
+    beforeEach(() => fs.rm(stateFile))
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    it('saves Swedish summer wall-clock time and makes no calls', async () => {
+      const getChanges = mockChanges([])
+      const sync = mockSync()
 
-    const saved = new Date(await readState()).getTime()
-    expect(saved).toBeGreaterThanOrEqual(before)
-    expect(saved).toBeLessThanOrEqual(Date.now())
-    expect(getChanges).not.toHaveBeenCalled()
-    expect(sync).not.toHaveBeenCalled()
+      await run(new Date('2026-10-15T08:00:00.000Z'))
+
+      expect(await readCheckpoint()).toBe('2026-10-15T10:00:00.000Z')
+      expect(getChanges).not.toHaveBeenCalled()
+      expect(sync).not.toHaveBeenCalled()
+    })
+
+    it('saves Swedish winter wall-clock time', async () => {
+      await run(new Date('2026-12-01T08:00:00.000Z'))
+
+      expect(await readCheckpoint()).toBe('2026-12-01T09:00:00.000Z')
+    })
   })
 
-  it('happy path: syncs, sends no mail, advances the timestamp', async () => {
+  it('happy path: fetches with a two-hour overlap, syncs, sends no mail', async () => {
     const c = change()
     const getChanges = mockChanges([c])
     mockSync().mockResolvedValue({ ok: true, data: { action: 'updated' } })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    await run()
 
-    expect(getChanges).toHaveBeenCalledWith(START)
+    expect(getChanges).toHaveBeenCalledWith(
+      new Date(START.getTime() - TWO_HOURS)
+    )
     expect(leasingAdapter.syncRentalObjectType).toHaveBeenCalledWith(
       '807-033-01-0101',
       'POÄNGFRITT'
     )
     expect(sendEmailSpy).not.toHaveBeenCalled()
     expect(await readQueue(queueFile)).toEqual([])
-    expect(await readState()).toBe(c.timestamp.toISOString())
+    expect(await readCheckpoint()).toBe(c.timestamp.toISOString())
   })
 
   it('failure: queues the change and sends one failure mail', async () => {
@@ -110,7 +140,7 @@ describe('syncRentalObjectTypes', () => {
       statusCode: 500,
     })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    await run()
 
     const queue = await readQueue(queueFile)
     expect(queue).toHaveLength(1)
@@ -125,22 +155,24 @@ describe('syncRentalObjectTypes', () => {
         ),
       })
     )
-    expect(await readState()).toBe(c.timestamp.toISOString())
+    expect(await readCheckpoint()).toBe(c.timestamp.toISOString())
   })
 
-  it('crashed run redone: same change already queued sends no mail', async () => {
+  it('crashed run redone: same change already queued sends no mail and keeps addedAt', async () => {
     const c = change()
-    await addEntry(queueFile, queuedEntry(c))
+    await addEntry(queueFile, queuedEntry(c, '2026-10-15T08:08:30.000Z'))
     mockChanges([c])
     mockSync().mockResolvedValue({ ok: false, err: 'sync-failed' })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    await run(new Date('2026-10-15T08:09:00.000Z'))
 
     expect(sendEmailSpy).not.toHaveBeenCalled()
-    expect(await readQueue(queueFile)).toHaveLength(1)
+    const queue = await readQueue(queueFile)
+    expect(queue).toHaveLength(1)
+    expect(queue[0].addedAt).toBe('2026-10-15T08:08:30.000Z')
   })
 
-  it('newer failure replaces the stale queue entry', async () => {
+  it('newer failure replaces the stale queue entry without retrying it', async () => {
     const older = change({
       code: 'STD',
       label: 'Standard hyresobjektstyp',
@@ -149,35 +181,67 @@ describe('syncRentalObjectTypes', () => {
     const newer = change({ timestamp: new Date('2026-10-15T08:10:00.000Z') })
     await addEntry(queueFile, queuedEntry(older))
     mockChanges([newer])
-    mockSync().mockResolvedValue({ ok: false, err: 'sync-failed' })
+    const sync = mockSync().mockResolvedValue({
+      ok: false,
+      err: 'sync-failed',
+    })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    await run()
 
+    expect(sync.mock.calls).toEqual([['807-033-01-0101', 'POÄNGFRITT']])
     const queue = await readQueue(queueFile)
     expect(queue).toHaveLength(1)
     expect((queue[0].payload as { code: string }).code).toBe('POÄNGFRITT')
     expect(sendEmailSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('newer success drops the stale queue entry', async () => {
+  it('newer success drops the stale queue entry without retrying it and confirms by mail', async () => {
     const older = change({
-      code: 'STD',
-      label: 'Standard hyresobjektstyp',
+      code: 'KORTTID',
+      label: 'Korttidskontrakt',
       timestamp: new Date('2026-10-15T08:00:00.000Z'),
     })
     const newer = change({ timestamp: new Date('2026-10-15T08:10:00.000Z') })
     await addEntry(queueFile, queuedEntry(older))
     mockChanges([newer])
-    mockSync().mockImplementation(async (_rentalObjectCode, code) =>
-      code === 'STD'
-        ? { ok: false, err: 'sync-failed' }
-        : { ok: true, data: { action: 'updated' } }
-    )
+    const sync = mockSync().mockResolvedValue({
+      ok: true,
+      data: { action: 'updated' },
+    })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    await run()
 
+    expect(sync.mock.calls).toEqual([['807-033-01-0101', 'POÄNGFRITT']])
     expect(await readQueue(queueFile)).toEqual([])
-    expect(sendEmailSpy).not.toHaveBeenCalled()
+    expect(sendEmailSpy).toHaveBeenCalledTimes(1)
+    expect(sendEmailSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: expect.stringContaining('är nu synkat'),
+        body: expect.stringContaining("hyresobjektstyp 'POÄNGFRITT'"),
+      })
+    )
+  })
+
+  it('newer unknown type drops the stale queue entry without retrying it', async () => {
+    const older = change({
+      code: 'KORTTID',
+      timestamp: new Date('2026-10-15T08:00:00.000Z'),
+    })
+    const newer = change({
+      code: 'HDK',
+      timestamp: new Date('2026-10-15T08:10:00.000Z'),
+    })
+    await addEntry(queueFile, queuedEntry(older))
+    mockChanges([newer])
+    const sync = mockSync().mockResolvedValue({
+      ok: false,
+      err: 'unknown-type',
+    })
+
+    await run()
+
+    expect(sync.mock.calls).toEqual([['807-033-01-0101', 'HDK']])
+    expect(await readQueue(queueFile)).toEqual([])
   })
 
   it('unknown type: mails once and does not queue', async () => {
@@ -189,75 +253,131 @@ describe('syncRentalObjectTypes', () => {
       statusCode: 422,
     })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    await run()
 
     expect(await readQueue(queueFile)).toEqual([])
-    expect(sendEmailSpy).toHaveBeenCalledTimes(1)
-    expect(sendEmailSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        subject: expect.stringContaining(
-          "okänd hyresobjektstyp 'HDK' på hyresobjekt 807-033-01-0101"
-        ),
-      })
-    )
-    expect(await readState()).toBe(c.timestamp.toISOString())
+    expect(subjects()).toEqual([
+      expect.stringContaining(
+        "okänd hyresobjektstyp 'HDK' på hyresobjekt 807-033-01-0101"
+      ),
+    ])
+    expect(await readCheckpoint()).toBe(c.timestamp.toISOString())
   })
 
   it('unknown type for a cleared type shows the code as empty quotes', async () => {
     mockChanges([change({ code: null, label: null })])
     mockSync().mockResolvedValue({ ok: false, err: 'unknown-type' })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    await run()
 
-    expect(sendEmailSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        subject: expect.stringContaining("okänd hyresobjektstyp ''"),
-      })
-    )
+    expect(subjects()).toEqual([
+      expect.stringContaining("okänd hyresobjektstyp ''"),
+    ])
   })
 
-  it('queue retry success: removes the entry and sends a recovery mail', async () => {
-    await addEntry(queueFile, queuedEntry(change()))
-    mockChanges([])
-    mockSync().mockResolvedValue({ ok: true, data: { action: 'updated' } })
+  it('rejected: mails once, does not queue and is not retried', async () => {
+    mockChanges([change()])
+    mockSync().mockResolvedValue({
+      ok: false,
+      err: 'rejected',
+      statusCode: 422,
+    })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    await run()
 
     expect(await readQueue(queueFile)).toEqual([])
-    expect(sendEmailSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        subject: expect.stringContaining('är nu synkat'),
-      })
-    )
+    expect(subjects()).toEqual([
+      expect.stringContaining('Tenfast avvisade hyresobjekt 807-033-01-0101'),
+    ])
   })
 
-  it('queue retry still failing: keeps the entry and sends no mail', async () => {
-    await addEntry(queueFile, queuedEntry(change()))
-    mockChanges([])
-    mockSync().mockResolvedValue({ ok: false, err: 'sync-failed' })
+  describe('retry queue', () => {
+    it('updated: removes the entry and sends a recovery mail', async () => {
+      await addEntry(queueFile, queuedEntry(change()))
+      mockChanges([])
+      mockSync().mockResolvedValue({ ok: true, data: { action: 'updated' } })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+      await run()
 
-    expect(await readQueue(queueFile)).toHaveLength(1)
-    expect(sendEmailSpy).not.toHaveBeenCalled()
-  })
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual([expect.stringContaining('är nu synkat')])
+    })
 
-  it('leaves lease and contact entries in a shared queue file alone', async () => {
-    const leaseEntry: FailedRowEntry = {
-      key: 'L-1:create:2026-10-15T00:00:00.000Z',
-      type: 'lease',
-      payload: { leaseId: 'L-1' },
-      addedAt: '2026-10-15T00:00:00.000Z',
-      lastError: 'x',
-    }
-    await addEntry(queueFile, leaseEntry)
-    mockChanges([])
-    const sync = mockSync()
+    it('skipped: removes the entry and says the rental object is missing in Tenfast', async () => {
+      await addEntry(queueFile, queuedEntry(change()))
+      mockChanges([])
+      mockSync().mockResolvedValue({ ok: true, data: { action: 'skipped' } })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+      await run()
 
-    expect(sync).not.toHaveBeenCalled()
-    expect(await readQueue(queueFile)).toEqual([leaseEntry])
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual([
+        expect.stringContaining(
+          'hyresobjekt 807-033-01-0101 finns inte i Tenfast'
+        ),
+      ])
+      expect(sendEmailSpy.mock.calls[0][0].body).not.toContain(
+        'har nu hyresobjektstyp'
+      )
+    })
+
+    it('rejected: removes the entry and sends a rejection mail', async () => {
+      await addEntry(queueFile, queuedEntry(change()))
+      mockChanges([])
+      mockSync().mockResolvedValue({ ok: false, err: 'rejected' })
+
+      await run()
+
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual([
+        expect.stringContaining('Tenfast avvisade hyresobjekt'),
+      ])
+    })
+
+    it('still failing: keeps the entry and sends no mail', async () => {
+      await addEntry(queueFile, queuedEntry(change()))
+      mockChanges([])
+      mockSync().mockResolvedValue({ ok: false, err: 'sync-failed' })
+
+      await run(new Date('2026-10-15T09:00:00.000Z'))
+
+      expect(await readQueue(queueFile)).toHaveLength(1)
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+    })
+
+    it('still failing after 24 hours: gives up, removes the entry and mails', async () => {
+      await addEntry(
+        queueFile,
+        queuedEntry(change(), '2026-10-14T08:00:00.000Z')
+      )
+      mockChanges([])
+      mockSync().mockResolvedValue({ ok: false, err: 'sync-failed' })
+
+      await run(new Date('2026-10-15T08:00:01.000Z'))
+
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual([
+        expect.stringContaining('ger upp hyresobjekt 807-033-01-0101'),
+      ])
+    })
+
+    it('leaves lease and contact entries in a shared queue file alone', async () => {
+      const leaseEntry: FailedRowEntry = {
+        key: 'L-1:create:2026-10-15T00:00:00.000Z',
+        type: 'lease',
+        payload: { leaseId: 'L-1' },
+        addedAt: '2026-10-01T00:00:00.000Z',
+        lastError: 'x',
+      }
+      await addEntry(queueFile, leaseEntry)
+      mockChanges([])
+      const sync = mockSync()
+
+      await run()
+
+      expect(sync).not.toHaveBeenCalled()
+      expect(await readQueue(queueFile)).toEqual([leaseEntry])
+    })
   })
 
   it('a failing mail does not stop the row from being queued and saved', async () => {
@@ -266,10 +386,10 @@ describe('syncRentalObjectTypes', () => {
     mockSync().mockResolvedValue({ ok: false, err: 'sync-failed' })
     sendEmailSpy.mockRejectedValue(new Error('smtp down'))
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    await run()
 
     expect(await readQueue(queueFile)).toHaveLength(1)
-    expect(await readState()).toBe(c.timestamp.toISOString())
+    expect(await readCheckpoint()).toBe(c.timestamp.toISOString())
   })
 
   it('skips mail when no address is configured', async () => {
@@ -277,65 +397,112 @@ describe('syncRentalObjectTypes', () => {
     mockChanges([change()])
     mockSync().mockResolvedValue({ ok: false, err: 'sync-failed' })
 
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    await run()
 
     expect(sendEmailSpy).not.toHaveBeenCalled()
     expect(await readQueue(queueFile)).toHaveLength(1)
   })
 
-  it('does not sync a change again when the next fetch returns it at the checkpoint time', async () => {
-    const t = new Date('2026-10-15T08:08:28.000Z')
-    const a = change({ rentalObjectCode: 'A-1', timestamp: t })
-    const b = change({ rentalObjectCode: 'B-2', timestamp: t })
-    const sync = mockSync().mockResolvedValue({
-      ok: true,
-      data: { action: 'updated' },
+  describe('overlap window', () => {
+    it('does not sync or mail a change again when the next fetch returns it', async () => {
+      const t = new Date('2026-10-15T08:08:28.997Z')
+      const a = change({ rentalObjectCode: 'A-1', code: 'HDK', timestamp: t })
+      const b = change({ rentalObjectCode: 'B-2', timestamp: t })
+      const sync = mockSync().mockImplementation(async (_code, type) =>
+        type === 'HDK'
+          ? { ok: false, err: 'unknown-type' }
+          : { ok: true, data: { action: 'updated' } }
+      )
+      mockChanges([a])
+      await run()
+
+      mockChanges([a, b])
+      await run()
+
+      expect(sync.mock.calls.map(([code]) => code)).toEqual(['A-1', 'B-2'])
+      expect(sendEmailSpy).toHaveBeenCalledTimes(1)
+      expect(await readCheckpoint()).toBe(t.toISOString())
     })
-    mockChanges([a])
-    await syncRentalObjectTypes({ stateFile, queueFile })
 
-    mockChanges([a, b])
-    await syncRentalObjectTypes({ stateFile, queueFile })
+    it('syncs a change logged before the checkpoint when clocks go back', async () => {
+      const firstPass = change({
+        rentalObjectCode: 'A-1',
+        timestamp: new Date('2026-10-25T02:50:00.000Z'),
+      })
+      const secondPass = change({
+        rentalObjectCode: 'B-2',
+        timestamp: new Date('2026-10-25T02:10:00.000Z'),
+      })
+      const sync = mockSync().mockResolvedValue({
+        ok: true,
+        data: { action: 'updated' },
+      })
+      mockChanges([firstPass])
+      await run()
 
-    expect(sync.mock.calls.map(([code]) => code)).toEqual(['A-1', 'B-2'])
-    expect(await readState()).toBe(t.toISOString())
+      mockChanges([secondPass, firstPass])
+      await run()
+
+      expect(sync.mock.calls.map(([code]) => code)).toEqual(['A-1', 'B-2'])
+      expect(await readCheckpoint()).toBe(firstPass.timestamp.toISOString())
+    })
+
+    it('syncs a second-pass change to the same rental object after its first-pass change', async () => {
+      const firstPass = change({
+        rentalObjectCode: 'A-1',
+        code: 'STD',
+        timestamp: new Date('2026-10-25T02:50:00.000Z'),
+      })
+      const secondPass = change({
+        rentalObjectCode: 'A-1',
+        code: 'POÄNGFRITT',
+        timestamp: new Date('2026-10-25T02:10:00.000Z'),
+      })
+      const sync = mockSync().mockResolvedValue({
+        ok: true,
+        data: { action: 'updated' },
+      })
+      mockChanges([firstPass])
+      await run()
+
+      mockChanges([secondPass, firstPass])
+      await run()
+
+      expect(sync.mock.calls.map(([, code]) => code)).toEqual([
+        'STD',
+        'POÄNGFRITT',
+      ])
+    })
+
+    it('syncs only the latest of several new changes to one rental object', async () => {
+      const a1 = change({
+        rentalObjectCode: 'A-1',
+        code: 'STD',
+        timestamp: new Date('2026-10-15T08:08:28.000Z'),
+      })
+      const a2 = change({
+        rentalObjectCode: 'A-1',
+        timestamp: new Date('2026-10-15T08:09:00.000Z'),
+      })
+      const sync = mockSync().mockResolvedValue({
+        ok: true,
+        data: { action: 'updated' },
+      })
+      mockChanges([a1, a2])
+
+      await run()
+
+      expect(sync.mock.calls).toEqual([['A-1', 'POÄNGFRITT']])
+      expect(await readCheckpoint()).toBe(a2.timestamp.toISOString())
+    })
   })
 
-  it('still syncs a rental object whose newer change lands after the checkpoint time', async () => {
-    const a1 = change({
-      rentalObjectCode: 'A-1',
-      timestamp: new Date('2026-10-15T08:08:28.000Z'),
-    })
-    const a2 = change({
-      rentalObjectCode: 'A-1',
-      code: 'STD',
-      label: 'Standard hyresobjektstyp',
-      timestamp: new Date('2026-10-15T08:09:00.000Z'),
-    })
-    const sync = mockSync().mockResolvedValue({
-      ok: true,
-      data: { action: 'updated' },
-    })
-    mockChanges([a1])
-    await syncRentalObjectTypes({ stateFile, queueFile })
-
-    mockChanges([a2])
-    await syncRentalObjectTypes({ stateFile, queueFile })
-
-    expect(sync.mock.calls.map(([, code]) => code)).toEqual([
-      'POÄNGFRITT',
-      'STD',
-    ])
-  })
-
-  it('throws when fetching changes fails and leaves the timestamp alone', async () => {
+  it('throws when fetching changes fails and leaves the checkpoint alone', async () => {
     jest
       .spyOn(leasingAdapter, 'getRentalObjectTypeChanges')
       .mockResolvedValue({ ok: false, err: 'unknown' })
 
-    await expect(
-      syncRentalObjectTypes({ stateFile, queueFile })
-    ).rejects.toThrow('unknown')
-    expect(await readState()).toBe(START.toISOString())
+    await expect(run()).rejects.toThrow('unknown')
+    expect(await readCheckpoint()).toBe(START.toISOString())
   })
 })

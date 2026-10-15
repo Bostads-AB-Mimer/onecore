@@ -169,14 +169,46 @@ describe('POST /rental-objects/:rentalObjectCode/type/sync', () => {
   it('returns 500 when the Tenfast lookup fails', async () => {
     getRentalObject.mockResolvedValueOnce({
       ok: false,
-      err: 'could-not-parse-rental-object',
+      err: 'could-not-find-rental-object',
     })
 
     const res = await post({ code: 'POÄNGFRITT' })
 
     expect(res.status).toBe(500)
-    expect(res.body.error).toBe('could-not-parse-rental-object')
+    expect(res.body.error).toBe('could-not-find-rental-object')
     expect(updateRentalObjectCategory).not.toHaveBeenCalled()
+  })
+
+  it('returns 422 rental-object-rejected when the Tenfast rental object cannot be parsed', async () => {
+    getRentalObject.mockResolvedValueOnce({
+      ok: false,
+      err: 'could-not-parse-rental-object',
+    })
+
+    const res = await post({ code: 'POÄNGFRITT' })
+
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('rental-object-rejected')
+    expect(updateRentalObjectCategory).not.toHaveBeenCalled()
+  })
+
+  it('returns 422 rental-object-rejected when Tenfast rejects the update', async () => {
+    getRentalObject.mockResolvedValueOnce({
+      ok: true,
+      data: factory.tenfastRentalObject.build({
+        _id: 'tf-1',
+        category: { code: 'STD', label: 'Standard hyresobjektstyp' },
+      }),
+    })
+    updateRentalObjectCategory.mockResolvedValueOnce({
+      ok: false,
+      err: 'update-rejected',
+    })
+
+    const res = await post({ code: 'POÄNGFRITT' })
+
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('rental-object-rejected')
   })
 
   it('returns 500 when the Tenfast update fails', async () => {

@@ -179,7 +179,7 @@ describe('parseRentalObjectTypeChanges', () => {
     expect(parseRentalObjectTypeChanges(rows)).toEqual([])
   })
 
-  it('keeps only the latest change per rental object, ordered by that change', () => {
+  it('returns every change in row order, including repeats for one rental object', () => {
     const rows = [
       {
         logmemo: memo(
@@ -205,6 +205,12 @@ describe('parseRentalObjectTypeChanges', () => {
     ]
 
     expect(parseRentalObjectTypeChanges(rows)).toEqual([
+      {
+        rentalObjectCode: 'A-1',
+        code: 'STD',
+        label: 'Standard hyresobjektstyp',
+        timestamp: at('2026-10-15T08:00:00.000Z'),
+      },
       {
         rentalObjectCode: 'B-2',
         code: 'KORTTID',
