@@ -32,7 +32,7 @@ describe('communication-adapter guides', () => {
         },
       ],
       error: undefined,
-      response: new Response(null, { status: 200 }),
+      response: { ok: true, status: 200 },
     } as never)
 
     const result = await guidesAdapter.listCategories()
