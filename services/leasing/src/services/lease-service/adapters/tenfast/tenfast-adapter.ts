@@ -476,6 +476,32 @@ export const getRentalObject = async (
   }
 }
 
+export const updateRentalObjectCategory = async (
+  tenfastRentalObjectId: string,
+  category: { code: string; label: string }
+): Promise<AdapterResult<null, 'update-rejected' | 'update-failed'>> => {
+  try {
+    const response = await tenfastApi.request({
+      method: 'patch',
+      url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt/${encodeURIComponent(tenfastRentalObjectId)}?hyresvard=${tenfastCompanyId}`,
+      data: { category },
+    })
+
+    if (response.status === 200) return { ok: true, data: null }
+
+    logger.error(
+      { tenfastRentalObjectId, status: response.status, error: response.data },
+      'tenfast-adapter.updateRentalObjectCategory'
+    )
+    if (response.status === 400 || response.status === 422)
+      return { ok: false, err: 'update-rejected' }
+    return { ok: false, err: 'update-failed' }
+  } catch (err) {
+    logger.error({ err }, 'tenfast-adapter.updateRentalObjectCategory')
+    return { ok: false, err: 'update-failed' }
+  }
+}
+
 export enum RentalObjectType {
   ParkingSpace = 'parkering',
   Apartment = 'lägenhet',

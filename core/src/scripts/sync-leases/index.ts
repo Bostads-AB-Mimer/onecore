@@ -2,7 +2,6 @@ import fs from 'fs/promises'
 import { logger } from '@onecore/utilities'
 import { LeaseChange, RentalPropertyInfo } from '@onecore/types'
 import config from '../../common/config'
-import { sendEmail } from '../../adapters/communication-adapter'
 import {
   getUpdatedLeases,
   syncLease as syncLeaseToTenfast,
@@ -17,6 +16,7 @@ import {
   removeEntry,
   FailedRowEntry,
 } from '../shared/failed-sync-queue'
+import { notifyXpandSync } from '../shared/notify'
 
 const DEFAULT_STATE_FILE = '/data/last-timestamp-leases.txt'
 const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
@@ -60,50 +60,25 @@ const reviveLeaseFromPayload = (payload: unknown): LeaseChange => {
   return { ...p, timestamp: new Date(p.timestamp) }
 }
 
-const notifyFailure = async (entry: FailedRowEntry) => {
-  if (!config.emailAddresses.xpandSync) {
-    logger.warn(
-      'config.emailAddresses.xpandSync is not set — skipping failure notification'
-    )
-    return
-  }
+const notifyFailure = (entry: FailedRowEntry) => {
   const lease = reviveLeaseFromPayload(entry.payload)
-  try {
-    await sendEmail({
-      to: config.emailAddresses.xpandSync,
-      subject: `sync-leases: nytt fel på avtal ${lease.leaseId}`,
-      body: [
-        `Misslyckades på avtal ${lease.leaseId} (action ${lease.action}) vid ${lease.timestamp.toISOString()}.`,
-        `Fel: ${entry.lastError}`,
-        ``,
-        `Raden ligger nu i återförsökskön på PVC (/data/failed-rows.jsonl) och kommer att försökas igen vid nästa körning. Du får ett bekräftelsemail när den lyckas synkas.`,
-      ].join('\n'),
-    })
-  } catch (emailErr) {
-    logger.error({ emailErr }, 'failed to send failure notification')
-  }
+  return notifyXpandSync(`sync-leases: nytt fel på avtal ${lease.leaseId}`, [
+    `Misslyckades på avtal ${lease.leaseId} (action ${lease.action}) vid ${lease.timestamp.toISOString()}.`,
+    `Fel: ${entry.lastError}`,
+    ``,
+    `Raden ligger nu i återförsökskön på PVC (/data/failed-rows.jsonl) och kommer att försökas igen vid nästa körning. Du får ett bekräftelsemail när den lyckas synkas.`,
+  ])
 }
 
-const notifyRecovery = async (entry: FailedRowEntry) => {
-  if (!config.emailAddresses.xpandSync) {
-    logger.warn(
-      'config.emailAddresses.xpandSync is not set — skipping recovery notification'
-    )
-    return
-  }
+const notifyRecovery = (entry: FailedRowEntry) => {
   const lease = reviveLeaseFromPayload(entry.payload)
-  try {
-    await sendEmail({
-      to: config.emailAddresses.xpandSync,
-      subject: `sync-leases: tidigare felande avtal ${lease.leaseId} är nu synkat`,
-      body: [
-        `Avtal ${lease.leaseId} (action ${lease.action}) är nu synkat.`,
-        `Ursprungligt fel (loggat ${entry.addedAt}): ${entry.lastError}`,
-      ].join('\n'),
-    })
-  } catch (emailErr) {
-    logger.error({ emailErr }, 'failed to send recovery notification')
-  }
+  return notifyXpandSync(
+    `sync-leases: tidigare felande avtal ${lease.leaseId} är nu synkat`,
+    [
+      `Avtal ${lease.leaseId} (action ${lease.action}) är nu synkat.`,
+      `Ursprungligt fel (loggat ${entry.addedAt}): ${entry.lastError}`,
+    ]
+  )
 }
 
 const syncLease = async (lease: LeaseChange): Promise<void> => {

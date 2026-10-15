@@ -2837,3 +2837,69 @@ describe(tenfastAdapter.uploadLeaseFile, () => {
     expect(result).toEqual({ ok: false, err: 'upload-failed' })
   })
 })
+
+describe(tenfastAdapter.updateRentalObjectCategory, () => {
+  const category = { code: 'POÄNGFRITT', label: 'Poängfritt' }
+
+  it('sends a JSON PATCH with the category and returns ok on 200', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 200, data: {} })
+
+    const result = await tenfastAdapter.updateRentalObjectCategory(
+      'tf-1',
+      category
+    )
+
+    expect(result).toEqual({ ok: true, data: null })
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'patch',
+        url: expect.stringMatching(
+          /\/v1\/hyresvard\/hyresobjekt\/tf-1\?hyresvard=/
+        ),
+        data: { category },
+      })
+    )
+  })
+
+  it.each([400, 422])(
+    'returns update-rejected when Tenfast answers %i',
+    async (status) => {
+      ;(request as jest.Mock).mockResolvedValueOnce({
+        status,
+        data: { error: 'invalid category' },
+      })
+
+      const result = await tenfastAdapter.updateRentalObjectCategory(
+        'tf-1',
+        category
+      )
+
+      expect(result).toEqual({ ok: false, err: 'update-rejected' })
+    }
+  )
+
+  it('returns update-failed on any other non-200 response', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 404,
+      data: { error: 'Not found' },
+    })
+
+    const result = await tenfastAdapter.updateRentalObjectCategory(
+      'tf-1',
+      category
+    )
+
+    expect(result).toEqual({ ok: false, err: 'update-failed' })
+  })
+
+  it('returns update-failed when the request throws', async () => {
+    ;(request as jest.Mock).mockRejectedValueOnce(new Error('socket hang up'))
+
+    const result = await tenfastAdapter.updateRentalObjectCategory(
+      'tf-1',
+      category
+    )
+
+    expect(result).toEqual({ ok: false, err: 'update-failed' })
+  })
+})

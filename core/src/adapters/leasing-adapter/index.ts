@@ -16,7 +16,7 @@ import {
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
-import type { LeaseChange } from '@onecore/types'
+import type { LeaseChange, RentalObjectTypeChange } from '@onecore/types'
 import config from '../../common/config'
 
 //todo: move to global config or handle error statuses in middleware
@@ -855,6 +855,70 @@ const syncLease = async (
   }
 }
 
+const getRentalObjectTypeChanges = async (
+  since: Date
+): Promise<AdapterResult<RentalObjectTypeChange[], 'unknown'>> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/rental-objects/types/sync`,
+      { params: { since: since.toISOString() }, validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      const content: RentalObjectTypeChange[] = response.data.content.map(
+        (
+          c: Omit<RentalObjectTypeChange, 'timestamp'> & { timestamp: string }
+        ) => ({ ...c, timestamp: new Date(c.timestamp) })
+      )
+      return { ok: true, data: content }
+    }
+
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getRentalObjectTypeChanges')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const syncRentalObjectType = async (
+  rentalObjectCode: string,
+  code: string | null
+): Promise<
+  AdapterResult<
+    { action: 'updated' | 'unchanged' | 'skipped' },
+    'unknown-type' | 'rejected' | 'sync-failed'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/rental-objects/${encodeURIComponent(rentalObjectCode)}/type/sync`,
+      { code },
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: { action: response.data.content.action } }
+    }
+
+    if (response.status === 422) {
+      return {
+        ok: false,
+        err:
+          response.data?.error === 'rental-object-rejected'
+            ? 'rejected'
+            : 'unknown-type',
+        statusCode: 422,
+      }
+    }
+
+    logger.error(response.data, 'leasing-adapter.syncRentalObjectType')
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.syncRentalObjectType')
+    return { ok: false, err: 'sync-failed' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   getLeasesForExport,
@@ -886,6 +950,8 @@ export {
   deleteListingTextContent,
   getUpdatedLeases,
   syncLease,
+  getRentalObjectTypeChanges,
+  syncRentalObjectType,
 }
 
 export {
