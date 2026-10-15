@@ -180,6 +180,18 @@ describe('GuidesOverview', () => {
       expect(html).toContain('4 guider')
     })
 
+    it('names a parent that only has guides in its subcategories', () => {
+      useGuidesMock.mockReturnValue({
+        data: [summary('Säga upp avtal', contracts)],
+        isLoading: false,
+        isError: false,
+      })
+      const html = render()
+
+      expect(html).toContain(`href="${paths.guideCategory('c1')}"`)
+      expect(container.querySelector('h3')?.textContent).toBe('Tenfast')
+    })
+
     it('shows the subcategories above the guides of the category', () => {
       const html = render({ categoryId: 'c1' })
 
