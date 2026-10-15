@@ -74,6 +74,11 @@ export const routes = (router: KoaRouter) => {
             { rentalObjectCode, error: rentalObject.err },
             'Failed to fetch rental object from Tenfast'
           )
+          if (rentalObject.err === 'could-not-parse-rental-object') {
+            ctx.status = 422
+            ctx.body = { error: 'rental-object-rejected', ...metadata }
+            return
+          }
           ctx.status = 500
           ctx.body = { error: rentalObject.err, ...metadata }
           return
@@ -101,6 +106,12 @@ export const routes = (router: KoaRouter) => {
           rentalObject.data._id,
           { code, label }
         )
+
+        if (!updated.ok && updated.err === 'update-rejected') {
+          ctx.status = 422
+          ctx.body = { error: 'rental-object-rejected', ...metadata }
+          return
+        }
 
         if (!updated.ok) {
           ctx.status = 500

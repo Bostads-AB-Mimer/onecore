@@ -861,7 +861,7 @@ const getRentalObjectTypeChanges = async (
   try {
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/rental-objects/types/sync`,
-      { params: { since: since.toISOString() } }
+      { params: { since: since.toISOString() }, validateStatus: () => true }
     )
 
     if (response.status === 200) {
@@ -886,13 +886,14 @@ const syncRentalObjectType = async (
 ): Promise<
   AdapterResult<
     { action: 'updated' | 'unchanged' | 'skipped' },
-    'unknown-type' | 'sync-failed'
+    'unknown-type' | 'rejected' | 'sync-failed'
   >
 > => {
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/rental-objects/${encodeURIComponent(rentalObjectCode)}/type/sync`,
-      { code }
+      { code },
+      { validateStatus: () => true }
     )
 
     if (response.status === 200) {
@@ -900,19 +901,21 @@ const syncRentalObjectType = async (
     }
 
     if (response.status === 422) {
-      return { ok: false, err: 'unknown-type', statusCode: 422 }
+      return {
+        ok: false,
+        err:
+          response.data?.error === 'rental-object-rejected'
+            ? 'rejected'
+            : 'unknown-type',
+        statusCode: 422,
+      }
     }
 
     logger.error(response.data, 'leasing-adapter.syncRentalObjectType')
     return { ok: false, err: 'sync-failed', statusCode: response.status }
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.syncRentalObjectType')
-    return {
-      ok: false,
-      err: 'sync-failed',
-      // Duck-typed: loggedAxios may come from a different axios copy than core's AxiosError.
-      statusCode: (err as { response?: { status?: number } }).response?.status,
-    }
+    return { ok: false, err: 'sync-failed' }
   }
 }
 

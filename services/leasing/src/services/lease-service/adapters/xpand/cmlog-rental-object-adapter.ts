@@ -11,11 +11,9 @@ const TYPE_CHANGE_PATTERN =
 
 /**
  * Queries cmlog for rental object type changes at or after the given
- * timestamp. Inclusive since logtime has whole-second precision; callers
- * drop rows they already handled at that second.
- *
- * cmlog.logtime is Swedish local time without a zone; see the note on
- * cmlogLeaseChanges in cmlog-lease-adapter.ts.
+ * timestamp. cmlog.logtime is Swedish wall-clock time that the mssql driver
+ * reads as UTC, and it repeats an hour when clocks go back, so callers fetch
+ * with an overlap and drop changes they already handled.
  */
 export const cmlogRentalObjectTypeChanges = (
   db: Knex,
@@ -42,14 +40,13 @@ const toCodeAndLabel = (
 }
 
 /**
- * Parses cmlog rows into one change per rental object: its latest type
- * change in `rows`, ordered by that change's timestamp. Callers pass rows
- * oldest first.
+ * Parses cmlog rows into one change per type change, in row order. Callers
+ * pass rows oldest first.
  */
 export const parseRentalObjectTypeChanges = (
   rows: { logmemo: string; logtime: Date }[]
 ): RentalObjectTypeChange[] => {
-  const latestByRentalObject = new Map<string, RentalObjectTypeChange>()
+  const changes: RentalObjectTypeChange[] = []
 
   for (const row of rows) {
     const lines = row.logmemo.split('\n').map((line) => line.trim())
@@ -67,17 +64,14 @@ export const parseRentalObjectTypeChanges = (
       continue
     }
 
-    const rentalObjectCode = codeMatch[1]
-    // Delete before set so the Map keeps insertion order by latest change.
-    latestByRentalObject.delete(rentalObjectCode)
-    latestByRentalObject.set(rentalObjectCode, {
-      rentalObjectCode,
+    changes.push({
+      rentalObjectCode: codeMatch[1],
       ...toCodeAndLabel(typeMatch[1].trim()),
       timestamp: row.logtime,
     })
   }
 
-  return Array.from(latestByRentalObject.values())
+  return changes
 }
 
 export const getRentalObjectTypeChanges = async (
