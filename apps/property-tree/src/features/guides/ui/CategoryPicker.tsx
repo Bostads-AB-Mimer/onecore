@@ -29,8 +29,12 @@ interface CategoryPickerProps {
  * category, since a new one has no id to point at yet.
  */
 export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
-  const { data: categories, isLoading } = useGuideCategories()
+  const { data: categories, isLoading, isError } = useGuideCategories()
   const all = categories ?? []
+  // Without the categories a saved subcategory cannot be told from a
+  // top-level one, so picking anything would move the guide; keep the
+  // select closed until they are there.
+  const unavailable = isLoading || isError
 
   const { category: parentId, subcategory: subValue } = splitCategory(
     value,
@@ -51,11 +55,17 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
         onValueChange={(next) =>
           onChange(next === NEW_CATEGORY ? { name: '' } : { id: next })
         }
-        disabled={isLoading}
+        disabled={unavailable}
       >
         <SelectTrigger id="guide-category">
           <SelectValue
-            placeholder={isLoading ? 'Laddar...' : 'Välj kategori...'}
+            placeholder={
+              isLoading
+                ? 'Laddar...'
+                : isError
+                  ? 'Kategorierna kunde inte hämtas'
+                  : 'Välj kategori...'
+            }
           />
         </SelectTrigger>
         <SelectContent>

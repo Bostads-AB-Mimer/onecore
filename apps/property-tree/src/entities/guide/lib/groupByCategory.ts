@@ -2,6 +2,8 @@ import type { GuideCategory, GuideSummary } from '../types'
 
 export interface GuideCategoryGroup {
   id: string
+  /** Set when the group is a subcategory. */
+  parentId: string | null
   name: string
   guides: GuideSummary[]
 }
@@ -12,7 +14,9 @@ export interface GuideCategoryGroup {
  */
 function groupGuides(
   guides: GuideSummary[],
-  groupOf: (guide: GuideSummary) => { id: string; name: string } | null
+  groupOf: (
+    guide: GuideSummary
+  ) => { id: string; name: string; parentId: string | null } | null
 ): GuideCategoryGroup[] {
   const groups = new Map<string, GuideCategoryGroup>()
 
@@ -23,7 +27,12 @@ function groupGuides(
     if (existing) {
       existing.guides.push(guide)
     } else {
-      groups.set(group.id, { id: group.id, name: group.name, guides: [guide] })
+      groups.set(group.id, {
+        id: group.id,
+        parentId: group.parentId,
+        name: group.name,
+        guides: [guide],
+      })
     }
   }
 
@@ -34,7 +43,8 @@ function groupGuides(
  * Group summaries by top-level category, keeping the API's order (top-level
  * category, subcategory, then title) so the overview reads the same as the
  * backend sorts it. A guide in a subcategory counts towards its parent, whose
- * name is looked up in `categories`.
+ * name is looked up in `categories`; the subcategory's own name stands in
+ * while the parent is unknown, e.g. from a stale category list.
  */
 export function groupByCategory(
   guides: GuideSummary[],
@@ -45,8 +55,10 @@ export function groupByCategory(
       ? category
       : {
           id: category.parentId,
+          parentId: null,
           name:
-            categories.find(({ id }) => id === category.parentId)?.name ?? '',
+            categories.find(({ id }) => id === category.parentId)?.name ??
+            category.name,
         }
   )
 }

@@ -310,7 +310,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/GuideWithUrls'
    *       400:
-   *         description: Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation.
+   *         description: Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation.
    *         content:
    *           application/json:
    *             schema:
@@ -412,7 +412,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/GuideWithUrls'
    *       400:
-   *         description: Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation.
+   *         description: Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation.
    *         content:
    *           application/json:
    *             schema:

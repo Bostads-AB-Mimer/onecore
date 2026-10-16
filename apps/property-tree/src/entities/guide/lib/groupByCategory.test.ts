@@ -94,7 +94,17 @@ describe('groupByCategory', () => {
       [category('c1', 'Tenfast')]
     )
 
-    expect(groups.map((g) => [g.id, g.name])).toEqual([['c1', 'Tenfast']])
+    expect(groups.map((g) => [g.id, g.name, g.parentId])).toEqual([
+      ['c1', 'Tenfast', null],
+    ])
+  })
+
+  it('falls back to the subcategory name while the parent is unknown', () => {
+    const groups = groupByCategory([
+      summary('a', { id: 'c3', name: 'Avtal', parentId: 'c1' }),
+    ])
+
+    expect(groups.map((g) => [g.id, g.name])).toEqual([['c1', 'Avtal']])
   })
 
   it('returns an empty list for no guides', () => {
@@ -120,9 +130,11 @@ describe('groupBySubcategory', () => {
       'c1'
     )
 
-    expect(groups.map((g) => [g.name, g.guides.map((x) => x.title)])).toEqual([
-      ['Avtal', ['b', 'd']],
-      ['Hyresobjekt', ['c']],
+    expect(
+      groups.map((g) => [g.name, g.parentId, g.guides.map((x) => x.title)])
+    ).toEqual([
+      ['Avtal', 'c1', ['b', 'd']],
+      ['Hyresobjekt', 'c1', ['c']],
     ])
   })
 })

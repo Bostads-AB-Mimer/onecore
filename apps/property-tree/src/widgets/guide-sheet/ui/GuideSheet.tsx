@@ -98,10 +98,11 @@ export function GuideSheet() {
                     markGuideListed(guide.slug)
                     openGuide(guide.slug)
                   }}
-                  // Inside a category the cards are its subcategories.
-                  onSelectCategory={({ id, name }) =>
+                  // A subcategory card is only listed inside its parent, so
+                  // the shown category names it.
+                  onSelectCategory={({ id, name, parentId }) =>
                     selectCategory(
-                      category
+                      category && parentId === category.id
                         ? {
                             id,
                             name,

@@ -59,17 +59,21 @@ describe('filterGuides', () => {
     ]
 
     it('returns only that category for an empty search', () => {
-      expect(filterGuides(withOdoo, '', 'Odoo').map((g) => g.title)).toEqual([
-        'Registrera felanmälan',
-      ])
+      expect(
+        filterGuides(withOdoo, '', { categoryId: 'Odoo' }).map((g) => g.title)
+      ).toEqual(['Registrera felanmälan'])
     })
 
     it('searches within the category only', () => {
       expect(filterGuides(withOdoo, 'registrera')).toHaveLength(2)
       expect(
-        filterGuides(withOdoo, 'registrera', 'Tenfast').map((g) => g.title)
+        filterGuides(withOdoo, 'registrera', { categoryId: 'Tenfast' }).map(
+          (g) => g.title
+        )
       ).toEqual(['Registrera uppsägning'])
-      expect(filterGuides(withOdoo, 'faktura', 'Tenfast')).toEqual([])
+      expect(
+        filterGuides(withOdoo, 'faktura', { categoryId: 'Tenfast' })
+      ).toEqual([])
     })
 
     it('includes the guides of its subcategories', () => {
@@ -85,9 +89,9 @@ describe('filterGuides', () => {
       }
 
       expect(
-        filterGuides([...withOdoo, inSubcategory], '', 'Tenfast').map(
-          (g) => g.title
-        )
+        filterGuides([...withOdoo, inSubcategory], '', {
+          categoryId: 'Tenfast',
+        }).map((g) => g.title)
       ).toEqual(['Registrera uppsägning', 'Säga upp avtal'])
     })
 
@@ -113,7 +117,7 @@ describe('filterGuides', () => {
       ]
 
       expect(
-        filterGuides([inSubcategory], 'tenfast', undefined, categories).map(
+        filterGuides([inSubcategory], 'tenfast', { categories }).map(
           (g) => g.title
         )
       ).toEqual(['Säga upp avtal'])
@@ -122,7 +126,7 @@ describe('filterGuides', () => {
     })
 
     it('returns an empty list for an unknown category', () => {
-      expect(filterGuides(withOdoo, '', 'okänd')).toEqual([])
+      expect(filterGuides(withOdoo, '', { categoryId: 'okänd' })).toEqual([])
     })
   })
 })

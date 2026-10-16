@@ -65,11 +65,11 @@ export function GuidesOverview({
   // Filter by category once; both the empty-category check and the search
   // work from this list.
   const inCategory = useMemo(
-    () => filterGuides(data ?? [], '', categoryId),
+    () => filterGuides(data ?? [], '', { categoryId }),
     [data, categoryId]
   )
   const matches = useMemo(
-    () => filterGuides(inCategory, search, undefined, categories.data),
+    () => filterGuides(inCategory, search, { categories: categories.data }),
     [inCategory, search, categories.data]
   )
   const isSearching = search.trim().length > 0
