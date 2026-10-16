@@ -16,6 +16,7 @@ import { createStepImage, deleteStepImage } from './adapters/images-adapter'
 import {
   AltTextRequiredError,
   CategoryNotFoundError,
+  CategoryParentNotTopLevelError,
   GuideModifiedError,
   ImageNotInStepError,
   SlugTakenError,
@@ -139,6 +140,11 @@ const respondWithError = (ctx: ErrorContext, error: unknown) => {
     ctx.body = { error: 'category-not-found' }
     return
   }
+  if (error instanceof CategoryParentNotTopLevelError) {
+    ctx.status = 400
+    ctx.body = { error: 'category-parent-not-top-level' }
+    return
+  }
   if (error instanceof ImageNotInStepError) {
     ctx.status = 400
     ctx.body = { error: 'image-not-in-step' }
@@ -165,8 +171,9 @@ export const routes = (router: OkapiRouter) => {
     {
       summary: 'List guides',
       description:
-        'Returns guide summaries ordered by category and title. Drafts are ' +
-        'only included when includeDrafts=true.',
+        'Returns guide summaries ordered by top-level category, then ' +
+        'subcategory and title. Drafts are only included when ' +
+        'includeDrafts=true.',
       tags: ['Guides'],
       query: {
         includeDrafts: {
@@ -285,7 +292,9 @@ export const routes = (router: OkapiRouter) => {
         'Creates a guide with its steps. Step bodies are sanitized to the ' +
         'allowed HTML subset. Images are added afterwards via the image ' +
         'endpoint, so any image metadata in the payload is ignored. ' +
-        'Errors: 409 slug-taken, 400 category-not-found, 400 ' +
+        'Errors: 409 slug-taken, 400 category-not-found (also for an ' +
+        'unknown parentId), 400 category-parent-not-top-level when a new ' +
+        'subcategory names a subcategory as parent, 400 ' +
         'step-belongs-to-other-guide when a step id is already used by ' +
         'another guide.',
       tags: ['Guides'],
@@ -322,7 +331,7 @@ export const routes = (router: OkapiRouter) => {
         'precision); image uploads and deletes also move it forward. ' +
         'Errors: 409 guide-modified when expectedUpdatedAt is stale (the ' +
         'guide changed since the caller loaded it), 409 slug-taken, 400 ' +
-        'category-not-found, 400 ' +
+        'category-not-found, 400 category-parent-not-top-level, 400 ' +
         'step-belongs-to-other-guide when a step id is owned by another ' +
         'guide, and 400 image-not-in-step when an image id is unknown or ' +
         'sent on a step it does not belong to (images cannot be moved ' +

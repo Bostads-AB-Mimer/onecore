@@ -39,6 +39,17 @@ export class CategoryNotFoundError extends Error {
 }
 
 /**
+ * Thrown when a new subcategory names a parent that is itself a
+ * subcategory. Categories nest one level deep.
+ */
+export class CategoryParentNotTopLevelError extends Error {
+  constructor(public readonly parentId: string) {
+    super(`Category "${parentId}" is a subcategory and cannot be a parent`)
+    this.name = 'CategoryParentNotTopLevelError'
+  }
+}
+
+/**
  * Thrown when a save was based on an older version of the guide than the one
  * stored, e.g. another tab saved or uploaded an image in between. Accepting it
  * would delete images the stale payload does not know about.
@@ -69,6 +80,7 @@ export class AltTextRequiredError extends Error {
 export const isGuideDomainError = (err: unknown): boolean =>
   err instanceof SlugTakenError ||
   err instanceof CategoryNotFoundError ||
+  err instanceof CategoryParentNotTopLevelError ||
   err instanceof ImageNotInStepError ||
   err instanceof StepBelongsToOtherGuideError ||
   err instanceof GuideModifiedError ||

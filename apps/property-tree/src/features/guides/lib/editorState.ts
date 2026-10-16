@@ -76,7 +76,12 @@ export interface EditorStep {
   saved: boolean
 }
 
-export type EditorCategory = { id: string } | { name: string }
+/**
+ * An existing category by id, or a new one by name. A new name with
+ * `parentId` is a subcategory of that top-level category.
+ */
+export type EditorCategory =
+  { id: string } | { name: string; parentId?: string }
 
 export type StepPatch = Partial<
   Pick<EditorStep, 'title' | 'body' | 'calloutType' | 'calloutText'>
@@ -508,10 +513,15 @@ export function validate(state: EditorState, status: GuideStatus): string[] {
   }
   if (!state.category) problems.push('Välj eller skapa en kategori.')
   if (
-    'name' in (state.category ?? {}) &&
-    !(state.category as { name: string }).name.trim()
+    state.category &&
+    'name' in state.category &&
+    !state.category.name.trim()
   ) {
-    problems.push('Ange ett namn på den nya kategorin.')
+    problems.push(
+      state.category.parentId
+        ? 'Ange ett namn på den nya underkategorin.'
+        : 'Ange ett namn på den nya kategorin.'
+    )
   }
   state.steps.forEach((step, index) => {
     if (step.title.trim().length === 0) {
@@ -549,7 +559,12 @@ export function toRequest(
     category:
       'id' in state.category
         ? { id: state.category.id }
-        : { name: state.category.name.trim() },
+        : {
+            name: state.category.name.trim(),
+            ...(state.category.parentId && {
+              parentId: state.category.parentId,
+            }),
+          },
     status,
     steps: state.steps.map((step) => ({
       id: step.id,
@@ -606,6 +621,12 @@ export function toPreview(
     category: {
       id: state.category && 'id' in state.category ? state.category.id : 'new',
       name: categoryName,
+      parentId: !category
+        ? null
+        : 'id' in category
+          ? (categories.find((item) => item.id === category.id)?.parentId ??
+            null)
+          : (category.parentId ?? null),
       createdAt: now,
       updatedAt: now,
     },

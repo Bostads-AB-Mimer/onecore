@@ -30,6 +30,7 @@ import {
 
 type ListRow = GuideRow & {
   categoryName: string
+  categoryParentId: string | null
   categoryCreatedAt: Date
   categoryUpdatedAt: Date
   stepCount: number
@@ -42,9 +43,11 @@ export async function listGuides(
   try {
     const rows: ListRow[] = await db('guide as g')
       .join('guide_category as c', 'c.id', 'g.categoryId')
+      .leftJoin('guide_category as p', 'p.id', 'c.parentId')
       .select(
         'g.*',
         'c.name as categoryName',
+        'c.parentId as categoryParentId',
         'c.createdAt as categoryCreatedAt',
         'c.updatedAt as categoryUpdatedAt',
         db.raw(
@@ -54,10 +57,13 @@ export async function listGuides(
       .modify((qb) => {
         if (!query.includeDrafts) qb.where('g.status', 'published')
       })
-      .orderBy([
-        { column: 'c.name', order: 'asc' },
-        { column: 'g.title', order: 'asc' },
-      ])
+      // Top-level category name first, so a subcategory's guides follow
+      // their parent's own guides, then subcategory name and title.
+      .orderByRaw(
+        'COALESCE(p.name, c.name) ASC, ' +
+          'CASE WHEN c.parentId IS NULL THEN 0 ELSE 1 END ASC, ' +
+          'c.name ASC, g.title ASC'
+      )
 
     return rows.map((row) =>
       mapSummary(
@@ -65,6 +71,7 @@ export async function listGuides(
         {
           id: row.categoryId,
           name: row.categoryName,
+          parentId: row.categoryParentId,
           createdAt: row.categoryCreatedAt,
           updatedAt: row.categoryUpdatedAt,
         },
