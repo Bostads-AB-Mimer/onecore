@@ -44,18 +44,33 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
   const subcategories = all.filter((category) => category.parentId === parentId)
   // Until the categories are there, a saved subcategory cannot be told from a
   // top-level category, so the subcategory select waits for them.
+  // A save that created a category puts its id in the state before the list
+  // has been refetched. Radix Select echoes a value without a matching item
+  // back as '' through its native select, which would clear the category, so
+  // such a value is shown as empty until the list knows it.
+  const knownParent =
+    parentId === NEW_CATEGORY || topLevel.some(({ id }) => id === parentId)
+  const knownSub =
+    subValue === NO_SUBCATEGORY ||
+    subValue === NEW_CATEGORY ||
+    subcategories.some(({ id }) => id === subValue)
   const hasExistingParent =
-    categories !== undefined && parentId !== '' && parentId !== NEW_CATEGORY
+    categories !== undefined &&
+    parentId !== '' &&
+    parentId !== NEW_CATEGORY &&
+    knownParent
 
   return (
     <div className="space-y-2">
       <Label htmlFor="guide-category">Kategori</Label>
       <Select
-        value={parentId}
-        onValueChange={(next) =>
+        value={knownParent ? parentId : ''}
+        onValueChange={(next) => {
+          // '' is the native select's echo of an unknown value, never a pick.
+          if (next === '') return
           onChange(next === NEW_CATEGORY ? { name: '' } : { id: next })
-        }
-        disabled={unavailable}
+        }}
+        disabled={unavailable || !knownParent}
       >
         <SelectTrigger id="guide-category">
           <SelectValue
@@ -94,10 +109,12 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
             Underkategori
           </Label>
           <Select
-            value={subValue}
-            onValueChange={(next) =>
+            value={knownSub ? subValue : ''}
+            onValueChange={(next) => {
+              if (next === '') return
               onChange(chooseSubcategory(parentId, next))
-            }
+            }}
+            disabled={!knownSub}
           >
             <SelectTrigger id="guide-subcategory">
               <SelectValue />
