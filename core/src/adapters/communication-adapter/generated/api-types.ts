@@ -1046,6 +1046,404 @@ export interface paths {
       }
     }
   }
+  '/release-notes': {
+    /**
+     * List release notes
+     * @description Pinned notes first, then newest. Drafts and scheduled notes are excluded unless includeDrafts=true.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Only notes concerning this app */
+          app?:
+            | 'general'
+            | 'property-tree'
+            | 'keys-portal'
+            | 'internal-portal'
+            | 'mina-sidor'
+            | 'sok-ledigt'
+            | 'odoo'
+            | 'core'
+            | 'leasing'
+            | 'property'
+            | 'work-order'
+            | 'keys'
+            | 'communication'
+            | 'contacts'
+            | 'inspection'
+            | 'economy'
+          /** @description Include drafts and scheduled notes */
+          includeDrafts?: boolean
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              /** @enum {string} */
+              app:
+                | 'general'
+                | 'property-tree'
+                | 'keys-portal'
+                | 'internal-portal'
+                | 'mina-sidor'
+                | 'sok-ledigt'
+                | 'odoo'
+                | 'core'
+                | 'leasing'
+                | 'property'
+                | 'work-order'
+                | 'keys'
+                | 'communication'
+                | 'contacts'
+                | 'inspection'
+                | 'economy'
+              title: string
+              description: string
+              /** @enum {string} */
+              category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+              pinned: boolean
+              /** Format: date-time */
+              publishedAt: string | null
+              createdBy: string | null
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }[]
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+      }
+    }
+    /**
+     * Create a release note
+     * @description Omit publishedAt (or pass null) to save the note as a draft.
+     */
+    post: {
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            app:
+              | 'general'
+              | 'property-tree'
+              | 'keys-portal'
+              | 'internal-portal'
+              | 'mina-sidor'
+              | 'sok-ledigt'
+              | 'odoo'
+              | 'core'
+              | 'leasing'
+              | 'property'
+              | 'work-order'
+              | 'keys'
+              | 'communication'
+              | 'contacts'
+              | 'inspection'
+              | 'economy'
+            title: string
+            description: string
+            /** @enum {string} */
+            category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+            pinned?: boolean
+            /** Format: date-time */
+            publishedAt?: string | null
+            createdBy?: string | null
+          }
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              /** @enum {string} */
+              app:
+                | 'general'
+                | 'property-tree'
+                | 'keys-portal'
+                | 'internal-portal'
+                | 'mina-sidor'
+                | 'sok-ledigt'
+                | 'odoo'
+                | 'core'
+                | 'leasing'
+                | 'property'
+                | 'work-order'
+                | 'keys'
+                | 'communication'
+                | 'contacts'
+                | 'inspection'
+                | 'economy'
+              title: string
+              description: string
+              /** @enum {string} */
+              category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+              pinned: boolean
+              /** Format: date-time */
+              publishedAt: string | null
+              createdBy: string | null
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/release-notes/{id}': {
+    /** Get a release note by id */
+    get: {
+      parameters: {
+        path: {
+          /** @description Release note id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              /** @enum {string} */
+              app:
+                | 'general'
+                | 'property-tree'
+                | 'keys-portal'
+                | 'internal-portal'
+                | 'mina-sidor'
+                | 'sok-ledigt'
+                | 'odoo'
+                | 'core'
+                | 'leasing'
+                | 'property'
+                | 'work-order'
+                | 'keys'
+                | 'communication'
+                | 'contacts'
+                | 'inspection'
+                | 'economy'
+              title: string
+              description: string
+              /** @enum {string} */
+              category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+              pinned: boolean
+              /** Format: date-time */
+              publishedAt: string | null
+              createdBy: string | null
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+      }
+    }
+    /**
+     * Update a release note
+     * @description Only the supplied fields change. Pass publishedAt: null to unpublish.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description Release note id (UUID) */
+          id: string
+        }
+      }
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            app?:
+              | 'general'
+              | 'property-tree'
+              | 'keys-portal'
+              | 'internal-portal'
+              | 'mina-sidor'
+              | 'sok-ledigt'
+              | 'odoo'
+              | 'core'
+              | 'leasing'
+              | 'property'
+              | 'work-order'
+              | 'keys'
+              | 'communication'
+              | 'contacts'
+              | 'inspection'
+              | 'economy'
+            title?: string
+            description?: string
+            /** @enum {string} */
+            category?: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+            pinned?: boolean
+            /** Format: date-time */
+            publishedAt?: string | null
+          }
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              /** @enum {string} */
+              app:
+                | 'general'
+                | 'property-tree'
+                | 'keys-portal'
+                | 'internal-portal'
+                | 'mina-sidor'
+                | 'sok-ledigt'
+                | 'odoo'
+                | 'core'
+                | 'leasing'
+                | 'property'
+                | 'work-order'
+                | 'keys'
+                | 'communication'
+                | 'contacts'
+                | 'inspection'
+                | 'economy'
+              title: string
+              description: string
+              /** @enum {string} */
+              category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+              pinned: boolean
+              /** Format: date-time */
+              publishedAt: string | null
+              createdBy: string | null
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+      }
+    }
+    /** Delete a release note */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Release note id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>
