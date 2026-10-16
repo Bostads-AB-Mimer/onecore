@@ -38,7 +38,10 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
   )
   const topLevel = all.filter((category) => category.parentId === null)
   const subcategories = all.filter((category) => category.parentId === parentId)
-  const hasExistingParent = parentId !== '' && parentId !== NEW_CATEGORY
+  // Until the categories are there, a saved subcategory cannot be told from a
+  // top-level category, so the subcategory select waits for them.
+  const hasExistingParent =
+    categories !== undefined && parentId !== '' && parentId !== NEW_CATEGORY
 
   return (
     <div className="space-y-2">

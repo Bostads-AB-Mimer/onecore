@@ -213,6 +213,30 @@ describe('GuidesOverview', () => {
       expect(html).not.toContain(`href="${paths.guideCategory('c3')}"`)
     })
 
+    it("finds subcategory guides by their parent's name", () => {
+      render()
+      const html = search('tenfast')
+
+      expect(html).toContain('Säga upp avtal')
+      expect(html).toContain('Förlänga avtal')
+    })
+
+    it('lists a category while the categories are loading or failed', () => {
+      useGuideCategoriesMock.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        isError: false,
+      })
+      expect(render({ categoryId: 'c3' })).toContain('Säga upp avtal')
+
+      useGuideCategoriesMock.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isError: true,
+      })
+      expect(render({ categoryId: 'c3' })).toContain('Säga upp avtal')
+    })
+
     it('lists the guides of a subcategory', () => {
       const html = render({ categoryId: 'c3' })
 

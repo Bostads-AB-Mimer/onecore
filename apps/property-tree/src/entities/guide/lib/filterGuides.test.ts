@@ -91,6 +91,36 @@ describe('filterGuides', () => {
       ).toEqual(['Registrera uppsägning', 'Säga upp avtal'])
     })
 
+    it("matches a subcategory guide on its parent's name", () => {
+      const inSubcategory: GuideSummary = {
+        ...summary('Säga upp avtal', '', 'Avtal'),
+        category: {
+          id: 'Avtal',
+          name: 'Avtal',
+          parentId: 'Tenfast',
+          createdAt: '',
+          updatedAt: '',
+        },
+      }
+      const categories = [
+        {
+          ...inSubcategory.category,
+          id: 'Tenfast',
+          name: 'Tenfast',
+          parentId: null,
+        },
+        inSubcategory.category,
+      ]
+
+      expect(
+        filterGuides([inSubcategory], 'tenfast', undefined, categories).map(
+          (g) => g.title
+        )
+      ).toEqual(['Säga upp avtal'])
+      // Without the categories the parent's name is unknown.
+      expect(filterGuides([inSubcategory], 'tenfast')).toEqual([])
+    })
+
     it('returns an empty list for an unknown category', () => {
       expect(filterGuides(withOdoo, '', 'okänd')).toEqual([])
     })

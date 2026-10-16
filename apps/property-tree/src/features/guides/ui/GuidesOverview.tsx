@@ -54,8 +54,13 @@ export function GuidesOverview({
   // Names the parent of a subcategory, which a summary only holds by id.
   const categories = useGuideCategories()
   const data = guides.data
-  const isLoading = guides.isLoading || categories.isLoading
-  const isError = guides.isError || categories.isError
+  // Only the top-level overview needs the names to group by. In a category
+  // the search uses them when they are there, so a slow or failed categories
+  // request does not hide its guides.
+  const needsCategories = categoryId === undefined
+  const isLoading =
+    guides.isLoading || (needsCategories && categories.isLoading)
+  const isError = guides.isError || (needsCategories && categories.isError)
 
   // Filter by category once; both the empty-category check and the search
   // work from this list.
@@ -64,8 +69,8 @@ export function GuidesOverview({
     [data, categoryId]
   )
   const matches = useMemo(
-    () => filterGuides(inCategory, search),
-    [inCategory, search]
+    () => filterGuides(inCategory, search, undefined, categories.data),
+    [inCategory, search, categories.data]
   )
   const isSearching = search.trim().length > 0
 
