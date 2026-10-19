@@ -180,6 +180,7 @@ const buildSubQueries = () => {
     .where('babuf.cmpcode', '=', '001') //only gets parking spaces with company code 001
 
   //query that gets the block with the last block date. If there is a block without blockenddate, it will return NULL for blockenddate
+  //A block without a block reason (hyspa) still counts: the reason only describes it, as in property
   const rentalBlockDatesQuery = xpandDb.raw(`
     (
       SELECT sub.keycmobj, sub.fdate AS blockstartdate, sub.tdate AS blockenddate
@@ -193,7 +194,6 @@ const buildSubQueries = () => {
             ORDER BY CASE WHEN hyspt.tdate IS NULL THEN 1 ELSE 0 END DESC, hyspt.tdate DESC
           ) AS rn
         FROM hyspt
-        INNER JOIN hyspa ON hyspa.keyhyspa = hyspt.keyhyspa
       ) AS sub
       WHERE sub.rn = 1
     ) AS orb
