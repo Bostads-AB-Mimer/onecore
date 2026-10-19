@@ -7,7 +7,7 @@ import {
 } from '../../../adapters/xpand/cmlog-rental-object-adapter'
 
 describe('cmlogRentalObjectTypeChanges', () => {
-  it('includes rows logged at exactly the since time', () => {
+  it('reads strictly after the since time', () => {
     const db = knex({ client: 'mssql' })
 
     const { sql } = (
@@ -17,7 +17,7 @@ describe('cmlogRentalObjectTypeChanges', () => {
       ) as unknown as Knex.QueryBuilder
     ).toSQL()
 
-    expect(sql).toMatch(/\[logtime\] >= \?/)
+    expect(sql).toMatch(/\[logtime\] > \?/)
   })
 })
 
@@ -179,7 +179,7 @@ describe('parseRentalObjectTypeChanges', () => {
     expect(parseRentalObjectTypeChanges(rows)).toEqual([])
   })
 
-  it('returns every change in row order, including repeats for one rental object', () => {
+  it('keeps only the latest change per rental object, ordered by that change', () => {
     const rows = [
       {
         logmemo: memo(
@@ -205,12 +205,6 @@ describe('parseRentalObjectTypeChanges', () => {
     ]
 
     expect(parseRentalObjectTypeChanges(rows)).toEqual([
-      {
-        rentalObjectCode: 'A-1',
-        code: 'STD',
-        label: 'Standard hyresobjektstyp',
-        timestamp: at('2026-10-15T08:00:00.000Z'),
-      },
       {
         rentalObjectCode: 'B-2',
         code: 'KORTTID',
