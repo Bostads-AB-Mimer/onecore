@@ -41,7 +41,8 @@ export const getOpenRentalBlocksByRentalIds = async (
           WHERE b.deletemark = 0
             AND ${operatingCompanyFilter('b.cmpcode')}
             AND b.hyresid IN ${openJsonList(uniqueIds)}
-            AND (hyspt.tdate IS NULL OR hyspt.tdate >= GETDATE())
+            -- A block ending today still applies today.
+            AND (hyspt.tdate IS NULL OR hyspt.tdate >= CAST(GETDATE() AS date))
         `
       )
       .then(trimStrings)

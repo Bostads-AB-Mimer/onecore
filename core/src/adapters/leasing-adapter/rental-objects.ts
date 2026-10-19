@@ -75,7 +75,11 @@ const getLeaseAvailabilities = async (
     )
     if (response.status !== 200) {
       logger.error(
-        { status: response.status, rentalObjectCodes },
+        {
+          status: response.status,
+          count: rentalObjectCodes.length,
+          sample: rentalObjectCodes.slice(0, 10),
+        },
         'Unexpected status retrieving lease availabilities'
       )
       return { ok: false, err: 'unknown' }
@@ -83,8 +87,12 @@ const getLeaseAvailabilities = async (
     return { ok: true, data: response.data.content }
   } catch (error) {
     logger.error(
-      error,
-      `Error retrieving lease availabilities by codes: ${rentalObjectCodes.join(', ')}`
+      {
+        err: error,
+        count: rentalObjectCodes.length,
+        sample: rentalObjectCodes.slice(0, 10),
+      },
+      'Error retrieving lease availabilities'
     )
     return { ok: false, err: 'unknown' }
   }

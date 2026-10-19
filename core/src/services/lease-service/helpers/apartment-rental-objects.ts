@@ -46,7 +46,10 @@ const getLeaseAvailabilities = async (
   // instead). Listing pages can show the rest of the object meanwhile.
   // Codes the leases don't know are simply absent from the result.
   if (!result.ok) {
-    logger.error({ codes }, 'Could not get lease availabilities for apartments')
+    logger.error(
+      { err: result.err, count: codes.length, sample: codes.slice(0, 10) },
+      'Could not get lease availabilities for apartments'
+    )
     return new Map()
   }
   return new Map(result.data.map((info) => [info.rentalObjectCode, info]))
@@ -110,7 +113,12 @@ export const getApartments = async (
   ])
   if (!residences.ok || !blocks.ok) {
     logger.error(
-      { codes, residences: residences.ok, blocks: blocks.ok },
+      {
+        count: codes.length,
+        sample: codes.slice(0, 10),
+        residences: residences.ok,
+        blocks: blocks.ok,
+      },
       'Could not get apartments from property for listings'
     )
     return { ok: false, err: 'unknown' }
