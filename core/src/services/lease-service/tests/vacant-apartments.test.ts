@@ -5,10 +5,7 @@ import bodyParser from 'koa-bodyparser'
 import { ListingStatus, leasing, property } from '@onecore/types'
 
 import { routes } from '../vacant-apartments'
-import {
-  pickGoverningBlock,
-  toVacantApartment,
-} from '../services/get-vacant-apartments'
+import { toVacantApartment } from '../services/get-vacant-apartments'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as factory from '../../../../test/factories'
@@ -96,28 +93,6 @@ beforeEach(() => {
   jest.useFakeTimers({ now: TODAY })
 })
 afterEach(() => jest.useRealTimers())
-
-describe(pickGoverningBlock, () => {
-  it('returns null without blocks', () => {
-    expect(pickGoverningBlock([])).toBeNull()
-  })
-
-  it('prefers an open-ended block over any dated one', () => {
-    const open = block({
-      fromDate: day(1),
-      toDate: null,
-      blockReason: 'Renovering',
-    })
-    const dated = block({ fromDate: day(-5), toDate: day(30) })
-    expect(pickGoverningBlock([dated, open])).toBe(open)
-  })
-
-  it('otherwise takes the block that ends last', () => {
-    const early = block({ fromDate: day(-5), toDate: day(3) })
-    const late = block({ fromDate: day(-1), toDate: day(20) })
-    expect(pickGoverningBlock([late, early])).toBe(late)
-  })
-})
 
 describe(toVacantApartment, () => {
   it('keeps an apartment without a listing and copies the sources', () => {

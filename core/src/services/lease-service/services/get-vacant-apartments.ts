@@ -4,11 +4,12 @@ import {
   leasing,
   property,
 } from '@onecore/types'
-import { logger } from '@onecore/utilities'
+import { determineVacantFrom, logger } from '@onecore/utilities'
 
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import { AdapterResult } from '../../../adapters/types'
+import { governingBlock } from '../helpers/rental-blocks'
 
 type Block = property.RentalBlock
 
@@ -19,40 +20,6 @@ const LETTING_IN_PROGRESS = [ListingStatus.Active, ListingStatus.Expired]
 // Tenure types (Xpand hyresobjektstyp, mirrored as Tenfast category) that never
 // go through this queue: övernattning, Västerås Stad's stock and student flats.
 export const EXCLUDED_TENURE_TYPES = new Set(['NATT', 'BLOCK', 'AVS', 'STUD'])
-
-/**
- * The block that governs availability: an open-ended one wins, otherwise
- * the one ending last. Mirrors the ROW_NUMBER pick in leasing's Xpand query.
- */
-export const pickGoverningBlock = (blocks: Block[]): Block | null => {
-  if (blocks.length === 0) return null
-  return blocks.reduce((best, b) => {
-    if (best.toDate === null) return best
-    if (b.toDate === null) return b
-    return b.toDate > best.toDate ? b : best
-  })
-}
-
-const startOfUtcDay = (d: Date) => {
-  const copy = new Date(d)
-  copy.setUTCHours(0, 0, 0, 0)
-  return copy
-}
-
-/** Free the day after the block ends, or Tenfast's date if later. The block's
- * start is irrelevant: a block ahead means no letting before it either. */
-export const vacantFromAfterBlock = (
-  vacantFrom: Date | string | undefined,
-  block: Block | null
-): Date => {
-  const fromTenfast = vacantFrom
-    ? startOfUtcDay(new Date(vacantFrom))
-    : startOfUtcDay(new Date())
-  if (!block?.toDate) return fromTenfast
-  const dayAfterBlock = startOfUtcDay(block.toDate)
-  dayAfterBlock.setUTCDate(dayAfterBlock.getUTCDate() + 1)
-  return fromTenfast > dayAfterBlock ? fromTenfast : dayAfterBlock
-}
 
 export type VacantApartmentSources = {
   availability: RentalObjectAvailabilityInfo
@@ -76,7 +43,7 @@ export const toVacantApartment = ({
   if (listing && LETTING_IN_PROGRESS.includes(listing.status)) return null
 
   // An open-ended block, started or not, has no date to let from.
-  const block = pickGoverningBlock(blocks)
+  const block = governingBlock(blocks)
   if (block && block.toDate === null) return null
 
   return {
@@ -96,7 +63,14 @@ export const toVacantApartment = ({
     rent: availability.rent.amount,
     rentalTenureType: availability.rentalTenureType ?? null,
     rentalTags: availability.rentalTags ?? [],
-    vacantFrom: vacantFromAfterBlock(availability.vacantFrom, block),
+    // Same rule as parking spaces and the listing page: the day after the
+    // block ends, or the leases' date if later.
+    vacantFrom:
+      determineVacantFrom(
+        availability.vacantFrom,
+        block?.fromDate,
+        block?.toDate
+      ) ?? null,
     block: block
       ? {
           fromDate: block.fromDate,
