@@ -283,7 +283,9 @@ export const routes = (router: KoaRouter) => {
    *       '200':
    *         description: User profile information
    *       '401':
-   *         description: Unauthorized
+   *         description: Unauthorized, or the token is expired or can't be verified
+   *       '503':
+   *         description: Keycloak unreachable, so the token can't be verified
    */
   router.get('(.*)/auth/profile', extractToken, requireAuth, async (ctx) => {
     ctx.body = ctx.state.user
@@ -361,6 +363,8 @@ export const routes = (router: KoaRouter) => {
    *         description: Role not found
    *       '502':
    *         description: Keycloak unreachable
+   *       '503':
+   *         description: Keycloak unreachable, so the token can't be verified
    *       '500':
    *         description: Internal server error
    */
