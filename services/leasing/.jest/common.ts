@@ -17,5 +17,6 @@ jest.mock('@onecore/utilities', () => {
     buildPaginatedResponse: utilities.buildPaginatedResponse,
     buildPaginationLinks: utilities.buildPaginationLinks,
     parsePaginationParams: utilities.parsePaginationParams,
+    determineVacantFrom: utilities.determineVacantFrom,
   }
 })
