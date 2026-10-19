@@ -66,6 +66,8 @@ lib-cov
 !.claude/skills/
 !.claude/skills/*
 
+local.claude.md
+
 # --- Private Keys ---
 *.pem
 
