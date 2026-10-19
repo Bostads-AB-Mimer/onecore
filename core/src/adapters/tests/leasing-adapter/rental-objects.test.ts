@@ -299,4 +299,69 @@ describe('rental-objects adapter', () => {
       expect(result.err).toBe('unknown')
     })
   })
+
+  describe(leasingAdapter.getLeaseAvailabilities, () => {
+    it('posts the codes and returns the availabilities', async () => {
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: '101-001-07-0201',
+      })
+      let body: unknown
+      nock(config.tenantsLeasesService.url)
+        .post('/leases/availabilities', (b) => {
+          body = b
+          return true
+        })
+        .reply(200, { content: [availability] })
+
+      const result = await leasingAdapter.getLeaseAvailabilities([
+        '101-001-07-0201',
+      ])
+
+      assert(result.ok)
+      expect(body).toEqual({ rentalObjectCodes: ['101-001-07-0201'] })
+      expect(result.data).toEqual([
+        expect.objectContaining({ rentalObjectCode: '101-001-07-0201' }),
+      ])
+    })
+
+    it('returns unknown on a non-200 response', async () => {
+      nock(config.tenantsLeasesService.url)
+        .post('/leases/availabilities')
+        .reply(400, { error: 'bad request' })
+
+      const result = await leasingAdapter.getLeaseAvailabilities(['x'])
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns unknown on network error', async () => {
+      nock(config.tenantsLeasesService.url)
+        .post('/leases/availabilities')
+        .replyWithError('boom')
+
+      const result = await leasingAdapter.getLeaseAvailabilities(['x'])
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+  })
+
+  describe('parking space lookups on 404', () => {
+    it('getParkingSpaceByCode returns not-found', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/parking-spaces/by-code/P1')
+        .reply(404)
+
+      const result = await leasingAdapter.getParkingSpaceByCode('P1')
+
+      expect(result).toEqual({ ok: false, err: 'not-found' })
+    })
+
+    it('getParkingSpaces returns not-found', async () => {
+      nock(config.tenantsLeasesService.url).post('/parking-spaces').reply(404)
+
+      const result = await leasingAdapter.getParkingSpaces(['P1'])
+
+      expect(result).toEqual({ ok: false, err: 'not-found' })
+    })
+  })
 })
