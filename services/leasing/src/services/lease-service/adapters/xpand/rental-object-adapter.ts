@@ -88,7 +88,7 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     blockEndDate: row.blockenddate,
     districtCaption: district,
     districtCode: districtCode,
-    braArea: row.braarea,
+    braArea: row.braarea ?? undefined,
     isSpecialResidentialArea: isSpecialResidentialArea,
     isSpecialProperty: isSpecialProperty,
   }
@@ -100,22 +100,22 @@ const buildMainQuery = (queries: {
   rentalBlockDatesQuery?: any
   latestEndedContractPerParkingSpaceQuery?: any
 }) => {
-  let query = xpandDb
-    .from(queries.parkingSpacesQuery.as('ps'))
-    .select(
-      'ps.rentalObjectCode',
-      'ps.estatecode',
-      'ps.estatecaption',
-      'ps.vehiclespacetypecode',
-      'ps.vehiclespacetypecaption',
-      'ps.postaladdress',
-      'ps.zipcode',
-      'ps.city',
-      'ps.scegcaption',
-      'ps.scegcode',
-      'ps.residentialareacode',
-      'ps.residentialareacaption'
-    )
+  let query = xpandDb.from(queries.parkingSpacesQuery.as('ps')).select(
+    'ps.rentalObjectCode',
+    'ps.estatecode',
+    'ps.estatecaption',
+    'ps.vehiclespacetypecode',
+    'ps.vehiclespacetypecaption',
+    'ps.postaladdress',
+    'ps.zipcode',
+    'ps.city',
+    'ps.scegcaption',
+    'ps.scegcode',
+    'ps.residentialareacode',
+    'ps.residentialareacaption',
+    // Joined below for every query, not only those with a contract.
+    'cmvalbar.value as braarea'
+  )
 
   if (queries.latestEndedContractPerParkingSpaceQuery) {
     query = query
@@ -123,8 +123,7 @@ const buildMainQuery = (queries: {
         'ac.contractid',
         'ac.fromdate as contractfromdate',
         'ac.todate as contracttodate',
-        'ac.lastdebitdate',
-        'cmvalbar.value as braarea'
+        'ac.lastdebitdate'
       )
       .leftJoin(
         queries.latestEndedContractPerParkingSpaceQuery,
