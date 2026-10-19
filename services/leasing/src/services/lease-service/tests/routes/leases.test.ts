@@ -748,3 +748,58 @@ describe('GET /leases/lf-export', () => {
     expect(res.body.error).toBe('unknown')
   })
 })
+
+describe('POST /leases/availabilities', () => {
+  it('returns the availability from the leases untouched', async () => {
+    const vacantFrom = new Date('2026-11-01T00:00:00.000Z')
+    const availability = factory.rentalObjectAvailabilityInfo.build({
+      rentalObjectCode: '101-001-07-0201',
+      vacantFrom,
+    })
+    const getAvailability = jest
+      .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+      .mockResolvedValueOnce({ ok: true, data: [availability] })
+
+    const res = await request(app.callback())
+      .post('/leases/availabilities')
+      .send({ rentalObjectCodes: ['101-001-07-0201'] })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(1)
+    expect(new Date(res.body.content[0].vacantFrom)).toEqual(vacantFrom)
+    expect(getAvailability).toHaveBeenCalledWith(['101-001-07-0201'], false)
+  })
+
+  it('responds with 400 without rental object codes', async () => {
+    const getAvailability = jest.spyOn(
+      tenfastAdapter,
+      'getRentalObjectAvailabilityInfo'
+    )
+
+    const empty = await request(app.callback())
+      .post('/leases/availabilities')
+      .send({ rentalObjectCodes: [] })
+    const missing = await request(app.callback())
+      .post('/leases/availabilities')
+      .send({})
+
+    expect(empty.status).toBe(400)
+    expect(missing.status).toBe(400)
+    expect(getAvailability).not.toHaveBeenCalled()
+  })
+
+  it('responds with 500 if the lease lookup fails', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+      .mockResolvedValueOnce({
+        ok: false,
+        err: 'could-not-find-rental-objects',
+      })
+
+    const res = await request(app.callback())
+      .post('/leases/availabilities')
+      .send({ rentalObjectCodes: ['101-001-07-0201'] })
+
+    expect(res.status).toBe(500)
+  })
+})
