@@ -45,14 +45,10 @@ let sendEmailSpy: jest.SpyInstance
 const originalXpandSync = config.emailAddresses.xpandSync
 
 const writeCheckpoint = (checkpoint: Date) =>
-  fs.writeFile(
-    stateFile,
-    JSON.stringify({ checkpoint: checkpoint.toISOString(), seen: {} }),
-    'utf-8'
-  )
+  fs.writeFile(stateFile, checkpoint.toISOString(), 'utf-8')
 
 const readCheckpoint = async (): Promise<string> =>
-  JSON.parse(await fs.readFile(stateFile, 'utf-8')).checkpoint
+  (await fs.readFile(stateFile, 'utf-8')).trim()
 
 const run = (now?: Date) =>
   syncRentalObjectTypes({
@@ -73,7 +69,7 @@ const subjects = () =>
 
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'srot-'))
-  stateFile = path.join(dir, 'state.json')
+  stateFile = path.join(dir, 'last-timestamp-rental-object-types.txt')
   queueFile = path.join(dir, 'failed-rows.jsonl')
   await writeCheckpoint(START)
   ;(config.emailAddresses as Record<string, string>).xpandSync =
@@ -334,14 +330,21 @@ describe('syncRentalObjectTypes', () => {
       ])
     })
 
-    it('still failing: keeps the entry and sends no mail', async () => {
+    it('still failing: keeps the entry with the latest error and sends no mail', async () => {
       await addEntry(queueFile, queuedEntry(change()))
       mockChanges([])
-      mockSync().mockResolvedValue({ ok: false, err: 'sync-failed' })
+      mockSync().mockResolvedValue({
+        ok: false,
+        err: 'sync-failed',
+        statusCode: 503,
+      })
 
       await run(new Date('2026-10-15T09:00:00.000Z'))
 
-      expect(await readQueue(queueFile)).toHaveLength(1)
+      const queue = await readQueue(queueFile)
+      expect(queue).toHaveLength(1)
+      expect(queue[0].addedAt).toBe('2026-10-15T00:00:00.000Z')
+      expect(queue[0].lastError).toBe('sync-failed (status 503)')
       expect(sendEmailSpy).not.toHaveBeenCalled()
     })
 

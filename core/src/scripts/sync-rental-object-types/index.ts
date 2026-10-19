@@ -10,54 +10,49 @@ import {
   writeQueue,
   FailedRowEntry,
 } from '../shared/failed-sync-queue'
+import { getLastTimestamp, saveLastTimestamp } from '../shared/last-timestamp'
 import { notifyXpandSync as notify } from '../shared/notify'
 
-const DEFAULT_STATE_FILE = '/data/sync-rental-object-types-state.json'
+const DEFAULT_STATE_FILE = '/data/last-timestamp-rental-object-types.txt'
 const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
 const OVERLAP_MS = 2 * 60 * 60 * 1000
 const GIVE_UP_AFTER_MS = 24 * 60 * 60 * 1000
 
-type SyncState = {
-  checkpoint: Date
-  seen: Map<string, Date>
-}
+const seenFileFor = (stateFile: string) => `${stateFile}.seen.json`
 
-const readState = async (stateFile: string): Promise<SyncState | null> => {
+const getSeen = async (stateFile: string): Promise<Map<string, Date>> => {
   try {
-    const content = JSON.parse(await fs.readFile(stateFile, 'utf-8')) as {
-      checkpoint: string
-      seen: Record<string, string>
-    }
-    const checkpoint = new Date(content.checkpoint)
-    if (isNaN(checkpoint.getTime())) return null
-    return {
-      checkpoint,
-      seen: new Map(
-        Object.entries(content.seen ?? {}).map(([key, ts]) => [
-          key,
-          new Date(ts),
-        ])
-      ),
-    }
+    const content = JSON.parse(
+      await fs.readFile(seenFileFor(stateFile), 'utf-8')
+    ) as Record<string, string>
+    return new Map(
+      Object.entries(content).map(([key, ts]) => [key, new Date(ts)])
+    )
   } catch {
-    return null
+    return new Map()
   }
 }
 
-const saveState = async (stateFile: string, state: SyncState) => {
-  const windowStart = state.checkpoint.getTime() - OVERLAP_MS
-  const seen = Object.fromEntries(
-    Array.from(state.seen)
-      .filter(([, ts]) => ts.getTime() >= windowStart)
-      .map(([key, ts]) => [key, ts.toISOString()])
-  )
-  const tmp = `${stateFile}.tmp`
+const saveSeen = async (
+  stateFile: string,
+  seen: Map<string, Date>,
+  checkpoint: Date
+) => {
+  const windowStart = checkpoint.getTime() - OVERLAP_MS
+  const file = seenFileFor(stateFile)
+  const tmp = `${file}.tmp`
   await fs.writeFile(
     tmp,
-    JSON.stringify({ checkpoint: state.checkpoint.toISOString(), seen }),
+    JSON.stringify(
+      Object.fromEntries(
+        Array.from(seen)
+          .filter(([, ts]) => ts.getTime() >= windowStart)
+          .map(([key, ts]) => [key, ts.toISOString()])
+      )
+    ),
     'utf-8'
   )
-  await fs.rename(tmp, stateFile)
+  await fs.rename(tmp, file)
 }
 
 // cmlog.logtime is Swedish wall-clock time that the mssql driver reads as UTC.
@@ -187,6 +182,92 @@ const notifyGiveUp = (entry: FailedRowEntry) => {
   )
 }
 
+type SyncOutcome = 'succeeded' | 'unknownType' | 'rejected' | 'failed'
+
+const syncChange = async (
+  change: RentalObjectTypeChange,
+  existing: FailedRowEntry | undefined,
+  queue: {
+    remove: (key: string) => Promise<void>
+    upsert: (entry: FailedRowEntry) => Promise<void>
+  },
+  now: Date
+): Promise<SyncOutcome> => {
+  const key = keyFor(change.rentalObjectCode)
+  const result = await syncRentalObjectType(
+    change.rentalObjectCode,
+    change.code
+  )
+
+  if (result.ok) {
+    await queue.remove(key)
+    if (existing && result.data.action === 'skipped')
+      await notifyMissing(change)
+    else if (existing) await notifyRecovery(existing, change)
+    logger.info(
+      {
+        rentalObjectCode: change.rentalObjectCode,
+        code: change.code,
+        action: result.data.action,
+      },
+      'rental object type synced'
+    )
+    return 'succeeded'
+  }
+
+  if (result.err === 'unknown-type') {
+    await queue.remove(key)
+    await notifyUnknownType(change)
+    return 'unknownType'
+  }
+
+  if (result.err === 'rejected') {
+    await queue.remove(key)
+    await notifyRejected(change)
+    return 'rejected'
+  }
+
+  const alreadyQueued =
+    existing !== undefined &&
+    reviveChange(existing.payload).timestamp.getTime() ===
+      change.timestamp.getTime()
+  const entry: FailedRowEntry = {
+    key,
+    type: 'rental-object-type',
+    payload: { ...change, timestamp: change.timestamp.toISOString() },
+    addedAt: alreadyQueued && existing ? existing.addedAt : now.toISOString(),
+    lastError: `${result.err} (status ${result.statusCode ?? 'none'})`,
+  }
+
+  if (
+    alreadyQueued &&
+    now.getTime() - new Date(entry.addedAt).getTime() >= GIVE_UP_AFTER_MS
+  ) {
+    await queue.remove(key)
+    await notifyGiveUp(entry)
+    logger.error(
+      { key, err: result.err },
+      'sync-rental-object-types: queued entry failed for a day, giving up'
+    )
+    return 'failed'
+  }
+
+  await queue.upsert(entry)
+  if (alreadyQueued) {
+    logger.warn(
+      { key, err: result.err },
+      'sync-rental-object-types: queued entry still failing, keeping in queue'
+    )
+  } else {
+    await notifyFailure(entry)
+    logger.error(
+      { err: result.err, rentalObjectCode: change.rentalObjectCode },
+      'sync-rental-object-types: queued for retry, mail sent'
+    )
+  }
+  return 'failed'
+}
+
 export const syncRentalObjectTypes = async (
   opts: { stateFile?: string; queueFile?: string; now?: () => Date } = {}
 ) => {
@@ -194,21 +275,18 @@ export const syncRentalObjectTypes = async (
   const queueFile = opts.queueFile ?? DEFAULT_QUEUE_FILE
   const now = opts.now ?? (() => new Date())
 
-  const state = await readState(stateFile)
-  if (!state) {
+  const lastTimestamp = await getLastTimestamp(stateFile)
+  if (!lastTimestamp) {
     const startFrom = toXpandTime(now())
-    await saveState(stateFile, { checkpoint: startFrom, seen: new Map() })
-    logger.info(
-      { startFrom },
-      'sync-rental-object-types: no saved state, starting from now'
-    )
+    await saveLastTimestamp(stateFile, startFrom)
+    logger.info({ startFrom }, 'no saved timestamp, starting from now')
     return
   }
 
-  const since = new Date(state.checkpoint.getTime() - OVERLAP_MS)
+  const since = new Date(lastTimestamp.getTime() - OVERLAP_MS)
   logger.info(
-    { checkpoint: state.checkpoint, since },
-    'syncing rental object types since checkpoint minus overlap'
+    { lastTimestamp, since },
+    'syncing rental object types since last timestamp'
   )
   const changesResult = await getRentalObjectTypeChanges(since)
   if (!changesResult.ok) {
@@ -218,20 +296,27 @@ export const syncRentalObjectTypes = async (
     )
     throw new Error(changesResult.err)
   }
+  const seen = await getSeen(stateFile)
   const unseen = changesResult.data.filter(
-    (change) => !state.seen.has(eventKey(change))
+    (change) => !seen.has(eventKey(change))
   )
   const changes = latestPerRentalObject(unseen)
   const changedCodes = new Set(changes.map((c) => c.rentalObjectCode))
 
   let queue = await readQueue(queueFile)
-  const removeFromQueue = async (key: string) => {
-    if (!queue.some((e) => e.key === key)) return
-    queue = queue.filter((e) => e.key !== key)
-    await writeQueue(queueFile, queue)
+  const queueOps = {
+    remove: async (key: string) => {
+      if (!queue.some((e) => e.key === key)) return
+      queue = queue.filter((e) => e.key !== key)
+      await writeQueue(queueFile, queue)
+    },
+    upsert: async (entry: FailedRowEntry) => {
+      queue = [...queue.filter((e) => e.key !== entry.key), entry]
+      await writeQueue(queueFile, queue)
+    },
   }
 
-  // 1) Retry queued entries that no new change replaces
+  // 1) Drain queue, except entries a new change replaces
   const toRetry = queue.filter(
     (entry) =>
       entry.type === 'rental-object-type' &&
@@ -239,116 +324,30 @@ export const syncRentalObjectTypes = async (
   )
   logger.info({ queueDepth: toRetry.length }, 'draining failure queue')
   for (const entry of toRetry) {
-    const change = reviveChange(entry.payload)
-    const result = await syncRentalObjectType(
-      change.rentalObjectCode,
-      change.code
-    )
-    if (result.ok) {
-      await removeFromQueue(entry.key)
-      if (result.data.action === 'skipped') await notifyMissing(change)
-      else await notifyRecovery(entry, change)
-    } else if (result.err === 'unknown-type') {
-      await removeFromQueue(entry.key)
-      await notifyUnknownType(change)
-    } else if (result.err === 'rejected') {
-      await removeFromQueue(entry.key)
-      await notifyRejected(change)
-    } else if (
-      now().getTime() - new Date(entry.addedAt).getTime() >=
-      GIVE_UP_AFTER_MS
-    ) {
-      await removeFromQueue(entry.key)
-      await notifyGiveUp(entry)
-      logger.error(
-        { key: entry.key, err: result.err },
-        'sync-rental-object-types: queued entry failed for a day, giving up'
-      )
-    } else {
-      logger.warn(
-        { key: entry.key, err: result.err },
-        'sync-rental-object-types: queued entry still failing, keeping in queue'
-      )
-    }
+    await syncChange(reviveChange(entry.payload), entry, queueOps, now())
   }
 
-  // 2) Sync new changes, latest per rental object
-  logger.info({ count: changes.length }, 'rental object type changes to sync')
-  const counts = {
-    synced: 0,
-    skipped: 0,
-    unknownType: 0,
-    rejected: 0,
-    failed: 0,
-  }
+  // 2) Process new cmlog rows, latest per rental object
+  logger.info(
+    { count: changes.length },
+    'rental object type changes to process'
+  )
+  const counts = { succeeded: 0, failed: 0, unknownType: 0, rejected: 0 }
+  let checkpoint = lastTimestamp
   for (const change of changes) {
-    const key = keyFor(change.rentalObjectCode)
-    const existing = queue.find((e) => e.key === key)
-    const result = await syncRentalObjectType(
-      change.rentalObjectCode,
-      change.code
+    const existing = queue.find(
+      (e) => e.key === keyFor(change.rentalObjectCode)
     )
-
-    if (result.ok) {
-      if (result.data.action === 'skipped') counts.skipped++
-      else counts.synced++
-      await removeFromQueue(key)
-      if (existing && result.data.action === 'skipped')
-        await notifyMissing(change)
-      else if (existing) await notifyRecovery(existing, change)
-      logger.info(
-        {
-          rentalObjectCode: change.rentalObjectCode,
-          code: change.code,
-          action: result.data.action,
-        },
-        'rental object type synced'
-      )
-    } else if (result.err === 'unknown-type') {
-      counts.unknownType++
-      await removeFromQueue(key)
-      await notifyUnknownType(change)
-    } else if (result.err === 'rejected') {
-      counts.rejected++
-      await removeFromQueue(key)
-      await notifyRejected(change)
-    } else {
-      counts.failed++
-      const isCrashRetry =
-        existing !== undefined &&
-        reviveChange(existing.payload).timestamp.getTime() ===
-          change.timestamp.getTime()
-      const entry: FailedRowEntry = {
-        key,
-        type: 'rental-object-type',
-        payload: { ...change, timestamp: change.timestamp.toISOString() },
-        addedAt:
-          isCrashRetry && existing ? existing.addedAt : now().toISOString(),
-        lastError: `${result.err} (status ${result.statusCode ?? 'none'})`,
-      }
-      queue = [...queue.filter((e) => e.key !== key), entry]
-      await writeQueue(queueFile, queue)
-      if (isCrashRetry) {
-        logger.warn(
-          { key },
-          'sync-rental-object-types: row failed but already in queue (crash-retry), skipping mail'
-        )
-      } else {
-        await notifyFailure(entry)
-        logger.error(
-          { err: result.err, rentalObjectCode: change.rentalObjectCode },
-          'sync-rental-object-types: queued for retry, mail sent'
-        )
-      }
-    }
+    counts[await syncChange(change, existing, queueOps, now())]++
 
     for (const handled of unseen) {
       if (handled.rentalObjectCode !== change.rentalObjectCode) continue
-      state.seen.set(eventKey(handled), handled.timestamp)
-      if (handled.timestamp.getTime() > state.checkpoint.getTime())
-        state.checkpoint = handled.timestamp
+      seen.set(eventKey(handled), handled.timestamp)
+      if (handled.timestamp.getTime() > checkpoint.getTime())
+        checkpoint = handled.timestamp
     }
-    await saveState(stateFile, state)
+    await saveSeen(stateFile, seen, checkpoint)
+    await saveLastTimestamp(stateFile, checkpoint)
   }
 
   logger.info(
