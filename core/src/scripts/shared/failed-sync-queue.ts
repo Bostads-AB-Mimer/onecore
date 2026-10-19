@@ -35,7 +35,7 @@ export const readQueue = async (path: string): Promise<FailedRowEntry[]> => {
   }
 }
 
-export const writeQueue = async (
+const writeQueueAtomic = async (
   path: string,
   queue: FailedRowEntry[]
 ): Promise<void> => {
@@ -54,7 +54,7 @@ export const addEntry = async (
   const queue = await readQueue(path)
   if (queue.some((e) => e.key === entry.key)) return
   queue.push(entry)
-  await writeQueue(path, queue)
+  await writeQueueAtomic(path, queue)
 }
 
 export const upsertEntry = async (
@@ -62,14 +62,17 @@ export const upsertEntry = async (
   entry: FailedRowEntry
 ): Promise<void> => {
   const queue = await readQueue(path)
-  await writeQueue(path, [...queue.filter((e) => e.key !== entry.key), entry])
+  await writeQueueAtomic(path, [
+    ...queue.filter((e) => e.key !== entry.key),
+    entry,
+  ])
 }
 
 export const removeEntry = async (path: string, key: string): Promise<void> => {
   const queue = await readQueue(path)
   const filtered = queue.filter((e) => e.key !== key)
   if (filtered.length === queue.length) return
-  await writeQueue(path, filtered)
+  await writeQueueAtomic(path, filtered)
 }
 
 export const hasKey = (queue: FailedRowEntry[], key: string): boolean =>
