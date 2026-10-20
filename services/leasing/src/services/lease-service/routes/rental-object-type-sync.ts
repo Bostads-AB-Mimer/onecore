@@ -7,6 +7,7 @@ import {
 import { z } from 'zod'
 
 import { getRentalObjectTypeChanges } from '../adapters/xpand/cmlog-rental-object-adapter'
+import { parseSinceQuery } from '../adapters/xpand/cmlog-rows'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import { TENFAST_RENTAL_OBJECT_CATEGORIES } from '../adapters/tenfast/rental-object-categories'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
@@ -18,9 +19,9 @@ const SyncRentalObjectTypeRequestSchema = z.object({
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/rental-objects/types/sync', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['since'])
-    const since = ctx.query.since ? new Date(ctx.query.since as string) : null
+    const since = parseSinceQuery(ctx.query.since)
 
-    if (since && isNaN(since.getTime())) {
+    if (since === undefined) {
       ctx.status = 400
       ctx.body = {
         error: 'Invalid since parameter, expected ISO 8601 date',
@@ -30,12 +31,12 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const changes = await getRentalObjectTypeChanges(since)
+      const result = await getRentalObjectTypeChanges(since)
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(changes, metadata)
+      ctx.body = makeSuccessResponseBody(result, metadata)
     } catch (error: unknown) {
       logger.error(
-        { error, metadata },
+        { err: error, metadata },
         'Error fetching rental object type changes'
       )
       ctx.status = 500
@@ -74,11 +75,6 @@ export const routes = (router: KoaRouter) => {
             { rentalObjectCode, error: rentalObject.err },
             'Failed to fetch rental object from Tenfast'
           )
-          if (rentalObject.err === 'could-not-parse-rental-object') {
-            ctx.status = 422
-            ctx.body = { error: 'rental-object-rejected', ...metadata }
-            return
-          }
           ctx.status = 500
           ctx.body = { error: rentalObject.err, ...metadata }
           return
@@ -130,7 +126,7 @@ export const routes = (router: KoaRouter) => {
         )
       } catch (error: unknown) {
         logger.error(
-          { error, metadata },
+          { err: error, metadata },
           'Error syncing rental object type to Tenfast'
         )
         ctx.status = 500

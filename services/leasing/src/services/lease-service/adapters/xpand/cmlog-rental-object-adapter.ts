@@ -3,6 +3,7 @@ import { logger } from '@onecore/utilities'
 import type { RentalObjectTypeChange } from '@onecore/types'
 
 import { xpandDb } from './xpandDb'
+import { cmlogRowsSince } from './cmlog-rows'
 
 const RENTAL_OBJECT_CODE_PATTERN = /^Hyresobjekt (\S+)/
 
@@ -12,23 +13,9 @@ const TYPE_CHANGE_PATTERN =
 /**
  * Queries cmlog for rental object type changes after the given timestamp,
  * or all of them when it is null.
- *
- * cmlog.logtime is Swedish local time without a zone; see the note on
- * cmlogLeaseChanges in cmlog-lease-adapter.ts.
  */
-export const cmlogRentalObjectTypeChanges = (
-  db: Knex,
-  since: Date | null
-): Promise<{ logmemo: string; logtime: Date }[]> => {
-  const base = db
-    .from('cmlog')
-    .whereLike('logmemo', 'Hyresobjekt %')
-    .andWhereLike('logmemo', "%'Hyresobjekttyp'%")
-    .orderBy('logtime', 'asc')
-    .select('logmemo', 'logtime')
-
-  return since ? base.andWhere('logtime', '>', since) : base
-}
+export const cmlogRentalObjectTypeChanges = (db: Knex, since: Date | null) =>
+  cmlogRowsSince(db, since, ['Hyresobjekt %', "%'Hyresobjekttyp'%"])
 
 const toCodeAndLabel = (
   target: string
@@ -81,9 +68,13 @@ export const parseRentalObjectTypeChanges = (
   return Array.from(latestByRentalObject.values())
 }
 
+/**
+ * Returns the parsed changes and `until`, the logtime of the newest row read
+ * (parsed or skipped), so the caller can move past rows it cannot parse.
+ */
 export const getRentalObjectTypeChanges = async (
   since: Date | null
-): Promise<RentalObjectTypeChange[]> => {
+): Promise<{ changes: RentalObjectTypeChange[]; until: Date | null }> => {
   const rows = await cmlogRentalObjectTypeChanges(xpandDb, since)
   const changes = parseRentalObjectTypeChanges(rows)
 
@@ -92,5 +83,5 @@ export const getRentalObjectTypeChanges = async (
     'cmlog rental object type changes since last sync'
   )
 
-  return changes
+  return { changes, until: rows.at(-1)?.logtime ?? null }
 }

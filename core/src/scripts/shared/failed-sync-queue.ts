@@ -8,6 +8,7 @@ export type FailedRowEntry = {
   addedAt: string
   lastError: string
   lastAttemptAt?: string
+  retriesStartedAt?: string
   stillFailingNotifiedAt?: string
 }
 
@@ -37,7 +38,7 @@ export const readQueue = async (path: string): Promise<FailedRowEntry[]> => {
   }
 }
 
-const writeQueueAtomic = async (
+export const writeQueue = async (
   path: string,
   queue: FailedRowEntry[]
 ): Promise<void> => {
@@ -49,33 +50,16 @@ const writeQueueAtomic = async (
   await fs.rename(tmp, path)
 }
 
-export const addEntry = async (
+export const appendEntry = async (
   path: string,
   entry: FailedRowEntry
 ): Promise<void> => {
-  const queue = await readQueue(path)
-  if (queue.some((e) => e.key === entry.key)) return
-  queue.push(entry)
-  await writeQueueAtomic(path, queue)
-}
-
-export const upsertEntry = async (
-  path: string,
-  entry: FailedRowEntry
-): Promise<void> => {
-  const queue = await readQueue(path)
-  await writeQueueAtomic(path, [
-    ...queue.filter((e) => e.key !== entry.key),
-    entry,
-  ])
+  await fs.appendFile(path, JSON.stringify(entry) + '\n', 'utf-8')
 }
 
 export const removeEntry = async (path: string, key: string): Promise<void> => {
   const queue = await readQueue(path)
   const filtered = queue.filter((e) => e.key !== key)
   if (filtered.length === queue.length) return
-  await writeQueueAtomic(path, filtered)
+  await writeQueue(path, filtered)
 }
-
-export const hasKey = (queue: FailedRowEntry[], key: string): boolean =>
-  queue.some((e) => e.key === key)

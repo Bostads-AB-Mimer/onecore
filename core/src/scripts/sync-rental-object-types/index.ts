@@ -4,7 +4,7 @@ import {
   getRentalObjectTypeChanges,
   syncRentalObjectType,
 } from '../../adapters/leasing-adapter'
-import { PermanentSyncError, runCmlogSync } from '../shared/run-cmlog-sync'
+import { runCmlogSync, SyncOutcome } from '../shared/run-cmlog-sync'
 
 const DEFAULT_STATE_FILE = '/data/last-timestamp-rental-object-types.txt'
 const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
@@ -12,33 +12,28 @@ const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
 const quotedCode = (change: RentalObjectTypeChange): string =>
   `'${change.code ?? ''}'`
 
-const syncChange = async (change: RentalObjectTypeChange): Promise<void> => {
+const syncChange = async (
+  change: RentalObjectTypeChange
+): Promise<SyncOutcome> => {
   const result = await syncRentalObjectType(
     change.rentalObjectCode,
     change.code
   )
-  if (result.ok) {
-    logger.info(
-      {
-        rentalObjectCode: change.rentalObjectCode,
-        code: change.code,
-        action: result.data.action,
-      },
-      'rental object type synced'
-    )
-    return
-  }
-  if (result.err === 'unknown-type') {
-    throw new PermanentSyncError(
-      `Tenfast har ingen hyresobjektstyp ${quotedCode(change)}. Om Tenfast ska få typen behöver den läggas till i TENFAST_RENTAL_OBJECT_CATEGORIES i leasing-tjänsten.`
+  if (!result.ok) {
+    throw new Error(
+      `Failed to sync rental object type ${quotedCode(change)} for ${change.rentalObjectCode}: ${result.err}`
     )
   }
-  if (result.err === 'rejected') {
-    throw new PermanentSyncError(
-      `Tenfast avvisade hyresobjektstyp ${quotedCode(change)}. Kontrollera hyresobjektet i Tenfast och ändra typen i Xpand på nytt när det är rättat.`
-    )
-  }
-  throw new Error(`${result.err} (status ${result.statusCode ?? 'none'})`)
+  logger.info(
+    {
+      rentalObjectCode: change.rentalObjectCode,
+      code: change.code,
+      action: result.data.action,
+    },
+    'rental object type synced'
+  )
+  if (result.data.action === 'skipped')
+    return { skipped: 'hyresobjektet finns inte i Tenfast' }
 }
 
 export const syncRentalObjectTypes = (
@@ -48,9 +43,19 @@ export const syncRentalObjectTypes = (
     {
       name: 'sync-rental-object-types',
       entryType: 'rental-object-type',
-      fetchChanges: getRentalObjectTypeChanges,
+      fetchChanges: async (since) => {
+        const result = await getRentalObjectTypeChanges(since)
+        if (!result.ok) return result
+        return {
+          ok: true,
+          data: result.data.changes,
+          until: result.data.until ?? undefined,
+        }
+      },
       sync: syncChange,
-      keyFor: (change) => `rental-object-type:${change.rentalObjectCode}`,
+      keyFor: (change) =>
+        `${change.rentalObjectCode}:${change.timestamp.toISOString()}`,
+      supersedeKey: (change) => change.rentalObjectCode,
       timestampOf: (change) => change.timestamp,
       toPayload: (change) => ({
         ...change,

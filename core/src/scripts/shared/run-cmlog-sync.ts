@@ -1,29 +1,36 @@
 import { logger } from '@onecore/utilities'
 
 import {
+  appendEntry,
   readQueue,
   removeEntry,
-  upsertEntry,
+  writeQueue,
   FailedRowEntry,
 } from './failed-sync-queue'
 import { getLastTimestamp, saveLastTimestamp } from './last-timestamp'
 import { notifyXpandSync } from './notify'
-
-export class PermanentSyncError extends Error {}
 
 const HOUR_MS = 60 * 60 * 1000
 const RETRY_EVERY_RUN_FOR_MS = 24 * HOUR_MS
 const SLOW_RETRY_INTERVAL_MS = 6 * HOUR_MS
 const GIVE_UP_AFTER_MS = 7 * 24 * HOUR_MS
 
+export type SyncOutcome = void | { skipped: string }
+
 export type CmlogSync<T> = {
   name: string
   entryType: FailedRowEntry['type']
+  // `until` is the newest cmlog row read, parsed or not; it is saved as the
+  // timestamp when it is later than the last change.
   fetchChanges: (
     since: Date | null
-  ) => Promise<{ ok: true; data: T[] } | { ok: false; err: string }>
-  sync: (change: T) => Promise<void>
+  ) => Promise<
+    { ok: true; data: T[]; until?: Date } | { ok: false; err: string }
+  >
+  sync: (change: T) => Promise<SyncOutcome>
   keyFor: (change: T) => string
+  // Changes sharing a supersede key replace each other: only the newest is synced.
+  supersedeKey?: (change: T) => string
   timestampOf: (change: T) => Date
   toPayload: (change: T) => unknown
   fromPayload: (payload: unknown) => T
@@ -56,7 +63,8 @@ export const runCmlogSync = async <T>(
   const notifyStillFailing = (change: T, entry: FailedRowEntry) => {
     const { subject, detail } = def.describe(change)
     const giveUpAt = new Date(
-      new Date(entry.addedAt).getTime() + GIVE_UP_AFTER_MS
+      new Date(entry.retriesStartedAt ?? entry.addedAt).getTime() +
+        GIVE_UP_AFTER_MS
     ).toISOString()
     return notifyXpandSync(`${def.name}: ${subject} misslyckas fortfarande`, [
       `${capitalize(detail)} har misslyckats sedan ${entry.addedAt}.`,
@@ -87,47 +95,114 @@ export const runCmlogSync = async <T>(
     )
   }
 
-  const notifyPermanent = (change: T, err: unknown) => {
+  const notifySkipped = (change: T, entry: FailedRowEntry, reason: string) => {
     const { subject, detail } = def.describe(change)
-    return notifyXpandSync(`${def.name}: ${subject} kan inte synkas`, [
-      `Misslyckades på ${detail} vid ${def.timestampOf(change).toISOString()}.`,
-      `Fel: ${errorMessage(err)}`,
-      ``,
-      `Felet går inte över av sig självt, så raden läggs inte i återförsökskön.`,
-    ])
+    return notifyXpandSync(
+      `${def.name}: tidigare felande ${subject} synkades inte`,
+      [
+        `${capitalize(detail)} synkades inte: ${reason}.`,
+        `Ursprungligt fel (loggat ${entry.addedAt}): ${entry.lastError}`,
+        ``,
+        `Raden har tagits bort ur återförsökskön.`,
+      ]
+    )
   }
 
-  // 1) Drain queue first
+  const notifySuperseded = (change: T, entry: FailedRowEntry) => {
+    const { subject, detail } = def.describe(change)
+    return notifyXpandSync(
+      `${def.name}: tidigare felande ${subject} ersatt av en senare ändring`,
+      [
+        `${capitalize(detail)} försöks inte igen, eftersom en senare ändring har kommit.`,
+        `Ursprungligt fel (loggat ${entry.addedAt}): ${entry.lastError}`,
+      ]
+    )
+  }
+
+  const notifyResolved = (
+    change: T,
+    entry: FailedRowEntry,
+    outcome: SyncOutcome
+  ) =>
+    outcome
+      ? notifySkipped(change, entry, outcome.skipped)
+      : notifyRecovery(change, entry)
+
+  const lastTimestamp = await getLastTimestamp(stateFile)
+  if (lastTimestamp) {
+    logger.info({ lastTimestamp }, 'syncing since last timestamp')
+  } else {
+    logger.info('no saved timestamp, syncing all')
+  }
+  const result = await def.fetchChanges(lastTimestamp)
+
+  // 1) Retry the queue
   const queue = await readQueue(queueFile)
   logger.info({ queueDepth: queue.length }, 'draining failure queue')
+
+  const newestBySupersedeKey = new Map<string, number>()
+  if (def.supersedeKey) {
+    const supersedeKey = def.supersedeKey
+    const candidates = [
+      ...queue
+        .filter((e) => e.type === def.entryType)
+        .map((e) => def.fromPayload(e.payload)),
+      ...(result.ok ? result.data : []),
+    ]
+    for (const change of candidates) {
+      const key = supersedeKey(change)
+      const time = def.timestampOf(change).getTime()
+      if (time > (newestBySupersedeKey.get(key) ?? -Infinity))
+        newestBySupersedeKey.set(key, time)
+    }
+  }
+  const isSuperseded = (change: T) =>
+    def.supersedeKey !== undefined &&
+    def.timestampOf(change).getTime() <
+      (newestBySupersedeKey.get(def.supersedeKey(change)) ?? -Infinity)
+
+  const kept: FailedRowEntry[] = []
+  let queueChanged = false
   for (const entry of queue) {
-    if (entry.type !== def.entryType) continue
-    const failingFor = now().getTime() - new Date(entry.addedAt).getTime()
+    if (entry.type !== def.entryType) {
+      kept.push(entry)
+      continue
+    }
+    const change = def.fromPayload(entry.payload)
+    if (isSuperseded(change)) {
+      queueChanged = true
+      logger.info(
+        { key: entry.key },
+        `${def.name}: queued entry replaced by a newer change, dropping`
+      )
+      await notifySuperseded(change, entry)
+      continue
+    }
+    const retriesStartedAt =
+      entry.retriesStartedAt ??
+      (entry.lastAttemptAt ? entry.addedAt : now().toISOString())
+    const failingFor = now().getTime() - new Date(retriesStartedAt).getTime()
     const sinceLastAttempt =
       now().getTime() - new Date(entry.lastAttemptAt ?? entry.addedAt).getTime()
     if (
       failingFor >= RETRY_EVERY_RUN_FOR_MS &&
       sinceLastAttempt < SLOW_RETRY_INTERVAL_MS
-    )
+    ) {
+      kept.push(entry)
       continue
-    const change = def.fromPayload(entry.payload)
+    }
+    queueChanged = true
     try {
-      await def.sync(change)
-      await removeEntry(queueFile, entry.key)
-      await notifyRecovery(change, entry)
+      const outcome = await def.sync(change)
+      await notifyResolved(change, entry, outcome)
     } catch (err) {
-      if (err instanceof PermanentSyncError) {
-        await removeEntry(queueFile, entry.key)
-        await notifyPermanent(change, err)
-        continue
-      }
       const updated: FailedRowEntry = {
         ...entry,
+        ...(retriesStartedAt !== entry.addedAt && { retriesStartedAt }),
         lastAttemptAt: now().toISOString(),
         lastError: errorMessage(err),
       }
       if (failingFor >= GIVE_UP_AFTER_MS) {
-        await removeEntry(queueFile, entry.key)
         await notifyGiveUp(change, updated)
         logger.error(
           { err, key: entry.key },
@@ -142,22 +217,16 @@ export const runCmlogSync = async <T>(
         updated.stillFailingNotifiedAt = now().toISOString()
         await notifyStillFailing(change, updated)
       }
-      await upsertEntry(queueFile, updated)
+      kept.push(updated)
       logger.warn(
         { err, key: entry.key },
         `${def.name}: queued entry still failing, keeping in queue`
       )
     }
   }
+  if (queueChanged) await writeQueue(queueFile, kept)
 
   // 2) Process new cmlog rows
-  const lastTimestamp = await getLastTimestamp(stateFile)
-  if (lastTimestamp) {
-    logger.info({ lastTimestamp }, 'syncing since last timestamp')
-  } else {
-    logger.info('no saved timestamp, syncing all')
-  }
-  const result = await def.fetchChanges(lastTimestamp)
   if (!result.ok) {
     logger.error({ err: result.err }, `${def.name}: failed to fetch changes`)
     throw new Error(result.err)
@@ -165,60 +234,71 @@ export const runCmlogSync = async <T>(
   const changes = result.data
   logger.info({ count: changes.length }, 'changes to process')
 
-  let queueForRun = await readQueue(queueFile)
-  const forget = async (key: string) => {
-    await removeEntry(queueFile, key)
-    queueForRun = queueForRun.filter((e) => e.key !== key)
+  let queueForRun = kept
+  let savedTimestamp = lastTimestamp
+  const saveTimestamp = async (timestamp: Date) => {
+    await saveLastTimestamp(stateFile, timestamp)
+    savedTimestamp = timestamp
   }
 
   let succeeded = 0
+  let skipped = 0
   let failed = 0
   for (const change of changes) {
     const key = def.keyFor(change)
     const existing = queueForRun.find((e) => e.key === key)
     try {
-      await def.sync(change)
-      succeeded++
+      const outcome = await def.sync(change)
+      if (outcome) skipped++
+      else succeeded++
       if (existing) {
-        await forget(key)
-        await notifyRecovery(change, existing)
+        await removeEntry(queueFile, key)
+        queueForRun = queueForRun.filter((e) => e.key !== key)
+        await notifyResolved(change, existing, outcome)
       }
     } catch (err) {
       failed++
-      if (err instanceof PermanentSyncError) {
-        if (existing) await forget(key)
-        await notifyPermanent(change, err)
+      const entry: FailedRowEntry = {
+        key,
+        type: def.entryType,
+        payload: def.toPayload(change),
+        addedAt: now().toISOString(),
+        lastError: errorMessage(err),
+        lastAttemptAt: now().toISOString(),
+      }
+      const sameRow =
+        existing !== undefined &&
+        def.timestampOf(def.fromPayload(existing.payload)).getTime() ===
+          def.timestampOf(change).getTime()
+      if (sameRow) {
+        logger.warn(
+          { err, key },
+          `${def.name}: row failed but already in queue (crash-retry), skipping mail`
+        )
       } else {
-        const entry: FailedRowEntry = {
-          key,
-          type: def.entryType,
-          payload: def.toPayload(change),
-          addedAt: now().toISOString(),
-          lastError: errorMessage(err),
-          lastAttemptAt: now().toISOString(),
-        }
-        const sameRow =
-          existing !== undefined &&
-          def.timestampOf(def.fromPayload(existing.payload)).getTime() ===
-            def.timestampOf(change).getTime()
-        if (sameRow) {
-          logger.warn(
-            { key },
-            `${def.name}: row failed but already in queue (crash-retry), skipping mail`
-          )
-        } else {
-          await upsertEntry(queueFile, entry)
+        if (existing) {
           queueForRun = [...queueForRun.filter((e) => e.key !== key), entry]
-          await notifyFailure(change, entry)
-          logger.error({ err, key }, `${def.name}: queued for retry, mail sent`)
+          await writeQueue(queueFile, queueForRun)
+        } else {
+          queueForRun = [...queueForRun, entry]
+          await appendEntry(queueFile, entry)
         }
+        await notifyFailure(change, entry)
+        logger.error({ err, key }, `${def.name}: queued for retry, mail sent`)
       }
     }
-    await saveLastTimestamp(stateFile, def.timestampOf(change))
+    await saveTimestamp(def.timestampOf(change))
+  }
+
+  if (
+    result.until &&
+    (!savedTimestamp || result.until.getTime() > savedTimestamp.getTime())
+  ) {
+    await saveTimestamp(result.until)
   }
 
   logger.info(
-    { total: changes.length, succeeded, failed },
+    { total: changes.length, succeeded, skipped, failed },
     `${def.name} run complete`
   )
 }

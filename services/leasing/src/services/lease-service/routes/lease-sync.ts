@@ -5,6 +5,7 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { getLeaseChanges } from '../adapters/xpand/cmlog-lease-adapter'
+import { parseSinceQuery } from '../adapters/xpand/cmlog-rows'
 import { getLeases } from '../adapters/xpand/tenant-lease-adapter'
 import {
   getSignedContractPdf,
@@ -25,9 +26,9 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx, ['since'])
 
     try {
-      const since = ctx.query.since ? new Date(ctx.query.since as string) : null
+      const since = parseSinceQuery(ctx.query.since)
 
-      if (since && isNaN(since.getTime())) {
+      if (since === undefined) {
         ctx.status = 400
         ctx.body = {
           error: 'Invalid since parameter, expected ISO 8601 date',

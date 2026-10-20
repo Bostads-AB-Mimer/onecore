@@ -857,7 +857,12 @@ const syncLease = async (
 
 const getRentalObjectTypeChanges = async (
   since: Date | null
-): Promise<AdapterResult<RentalObjectTypeChange[], 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    { changes: RentalObjectTypeChange[]; until: Date | null },
+    'unknown'
+  >
+> => {
   try {
     const params = since ? { since: since.toISOString() } : {}
     const response = await axios.get(
@@ -866,12 +871,22 @@ const getRentalObjectTypeChanges = async (
     )
 
     if (response.status === 200) {
-      const content: RentalObjectTypeChange[] = response.data.content.map(
-        (
-          c: Omit<RentalObjectTypeChange, 'timestamp'> & { timestamp: string }
-        ) => ({ ...c, timestamp: new Date(c.timestamp) })
-      )
-      return { ok: true, data: content }
+      const content: {
+        changes: (Omit<RentalObjectTypeChange, 'timestamp'> & {
+          timestamp: string
+        })[]
+        until: string | null
+      } = response.data.content
+      return {
+        ok: true,
+        data: {
+          changes: content.changes.map((c) => ({
+            ...c,
+            timestamp: new Date(c.timestamp),
+          })),
+          until: content.until ? new Date(content.until) : null,
+        },
+      }
     }
 
     return { ok: false, err: 'unknown', statusCode: response.status }
@@ -912,7 +927,10 @@ const syncRentalObjectType = async (
       }
     }
 
-    logger.error(response.data, 'leasing-adapter.syncRentalObjectType')
+    logger.error(
+      { rentalObjectCode, status: response.status, body: response.data },
+      'leasing-adapter.syncRentalObjectType'
+    )
     return { ok: false, err: 'sync-failed', statusCode: response.status }
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.syncRentalObjectType')
