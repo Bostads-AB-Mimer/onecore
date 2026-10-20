@@ -1270,6 +1270,77 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /leases/availabilities:
+   *   post:
+   *     summary: Get availability for rental objects from their leases
+   *     description: |
+   *       Availability and rent from the leases in Tenfast only, without
+   *       applying rental blocks: vacantFrom is what the leases give, untouched.
+   *       For rental objects whose blocks this service does not read (e.g.
+   *       apartments), so the caller can apply determineVacantFrom with blocks
+   *       it fetched elsewhere.
+   *     tags:
+   *       - Lease service
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [rentalObjectCodes]
+   *             properties:
+   *               rentalObjectCodes:
+   *                 type: array
+   *                 minItems: 1
+   *                 items:
+   *                   type: string
+   *     responses:
+   *       '200':
+   *         description: Availability per rental object found in Tenfast.
+   *       '400':
+   *         description: No rental object codes given.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  const LeaseAvailabilitiesRequestSchema = z.object({
+    rentalObjectCodes: z.array(z.string().min(1)).min(1),
+  })
+  router.post(
+    '(.*)/leases/availabilities',
+    parseRequestBody(LeaseAvailabilitiesRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { rentalObjectCodes } = ctx.request
+        .body as typeof LeaseAvailabilitiesRequestSchema._type
+
+      const result = await tenfastAdapter.getRentalObjectAvailabilityInfo(
+        rentalObjectCodes,
+        false
+      )
+
+      if (!result.ok) {
+        logger.error(
+          { err: result.err, rentalObjectCodes },
+          'Error fetching lease availability for rental objects'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error:
+            'An error occurred while fetching availability for rental objects.',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
+
   // TODO This should be replaced with the contacts microservice that is currently under construction
   router.post('(.*)/contacts/batch', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

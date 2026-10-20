@@ -60,6 +60,44 @@ const getParkingSpaces = async (
   }
 }
 
+/**
+ * Availability and rent from the leases only: vacantFrom is not adjusted for
+ * rental blocks. For apartments, whose blocks come from property; the caller
+ * applies determineVacantFrom.
+ */
+const getLeaseAvailabilities = async (
+  rentalObjectCodes: string[]
+): Promise<AdapterResult<RentalObjectAvailabilityInfo[], 'unknown'>> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/availabilities`,
+      { rentalObjectCodes }
+    )
+    if (response.status !== 200) {
+      logger.error(
+        {
+          status: response.status,
+          count: rentalObjectCodes.length,
+          sample: rentalObjectCodes.slice(0, 10),
+        },
+        'Unexpected status retrieving lease availabilities'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+    return { ok: true, data: response.data.content }
+  } catch (error) {
+    logger.error(
+      {
+        err: error,
+        count: rentalObjectCodes.length,
+        sample: rentalObjectCodes.slice(0, 10),
+      },
+      'Error retrieving lease availabilities'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const getAllVacantParkingSpaces = async (): Promise<
   AdapterResult<RentalObject[], 'get-all-vacant-parking-spaces-failed'>
 > => {
@@ -213,6 +251,7 @@ const getVacantRentalObjectAvailabilities = async (
 
 export {
   getAllVacantParkingSpaces,
+  getLeaseAvailabilities,
   getVacantRentalObjectAvailabilities,
   getParkingSpaceByCode,
   getParkingSpaces,

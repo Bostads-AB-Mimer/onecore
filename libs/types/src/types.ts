@@ -393,6 +393,8 @@ interface RentalObject {
   braArea?: number
   btaArea?: number
   boaArea?: number
+  floor?: string // apartments only
+  roomCount?: number // apartments only
   isSpecialResidentialArea?: boolean
   isSpecialProperty?: boolean
 }

@@ -18,6 +18,11 @@ import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
+import {
+  getRentalObjectForListing,
+  getRentalObjectsForListings,
+  withRentalObjects,
+} from './helpers/listing-rental-objects'
 import { ProcessStatus } from '../../common/types'
 
 export const routes = (router: KoaRouter) => {
@@ -103,31 +108,21 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const parkingSpacesResult = await leasingAdapter.getParkingSpaces(
-        result.data.map((listing) => listing.rentalObjectCode)
-      )
-      if (!parkingSpacesResult.ok) {
-        parkingSpacesResult.err === 'not-found'
-          ? (ctx.status = 404)
-          : (ctx.status = 500)
+      const rentalObjectsResult = await getRentalObjectsForListings(result.data)
+      if (!rentalObjectsResult.ok) {
+        ctx.status = 500
         ctx.body = {
-          error: 'Error getting parking spaces from leasing',
+          error: 'Error getting rental objects for listings',
           ...metadata,
         }
         return
       }
 
       //TODO flytta til leasing när adaptern flyttats från property-mgmt
-      const listingsWithRentalObjects: Listing[] = result.data
-        .map((listing) => {
-          const rentalObject = parkingSpacesResult.data.find(
-            (ps) => ps.rentalObjectCode === listing.rentalObjectCode
-          )
-          if (!rentalObject) return undefined
-          listing.rentalObject = rentalObject
-          return listing
-        })
-        .filter((item): item is Listing => !!item)
+      const listingsWithRentalObjects: Listing[] = withRentalObjects(
+        result.data,
+        rentalObjectsResult.data
+      )
 
       logger.info(
         {
@@ -173,6 +168,8 @@ export const routes = (router: KoaRouter) => {
         // unexpected errors are logged above.
 
         const listings = listingsWithRentalObjects.filter((listing) => {
+          // The area rule below is for parking spaces only; apartments are unfiltered
+          if (listing.listingCategory !== 'PARKING_SPACE') return true
           return (
             listing.rentalRule == 'NON_SCORED' || //all NON_SCORED will be included
             (listing.rentalRule == 'SCORED' &&
@@ -513,16 +510,14 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const parkingSpacesResult = await leasingAdapter.getParkingSpaceByCode(
-      responseData.rentalObjectCode
-    )
+    const rentalObjectResult = await getRentalObjectForListing(responseData)
 
-    if (!parkingSpacesResult.ok) {
-      parkingSpacesResult.err === 'not-found'
+    if (!rentalObjectResult.ok) {
+      rentalObjectResult.err === 'not-found'
         ? (ctx.status = 404)
         : (ctx.status = 500)
       ctx.body = {
-        error: 'Error getting parking spaces from leasing',
+        error: 'Error getting rental object for listing',
         ...metadata,
       }
       return
@@ -530,7 +525,7 @@ export const routes = (router: KoaRouter) => {
 
     const listingWithRentalObject = {
       ...responseData,
-      rentalObject: parkingSpacesResult.data,
+      rentalObject: rentalObjectResult.data,
     }
 
     ctx.body = { content: listingWithRentalObject, ...metadata }
@@ -579,30 +574,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const parkingSpacesResult = await leasingAdapter.getParkingSpaces(
-      result.data.map((listing) => listing.rentalObjectCode)
-    )
-    if (!parkingSpacesResult.ok) {
-      parkingSpacesResult.err === 'not-found'
-        ? (ctx.status = 404)
-        : (ctx.status = 500)
+    const rentalObjectsResult = await getRentalObjectsForListings(result.data)
+    if (!rentalObjectsResult.ok) {
+      ctx.status = 500
       ctx.body = {
-        error: 'Error getting parking spaces from leasing',
+        error: 'Error getting rental objects for listings',
         ...metadata,
       }
       return
     }
 
-    const listingsWithRentalObjects: Listing[] = result.data
-      .map((listing) => {
-        const rentalObject = parkingSpacesResult.data.find(
-          (ps) => ps.rentalObjectCode === listing.rentalObjectCode
-        )
-        if (!rentalObject) return undefined
-        listing.rentalObject = rentalObject
-        return listing
-      })
-      .filter((item): item is Listing => !!item)
+    const listingsWithRentalObjects: Listing[] = withRentalObjects(
+      result.data,
+      rentalObjectsResult.data
+    )
 
     ctx.status = 200
     ctx.body = { content: listingsWithRentalObjects, ...metadata }
@@ -733,14 +718,15 @@ export const routes = (router: KoaRouter) => {
         const rentalObjectCodes = result.data.map(
           (listing) => listing.rentalObjectCode
         )
-        const parkingSpacesResult =
-          await leasingAdapter.getParkingSpaces(rentalObjectCodes)
+        const rentalObjectsResult = await getRentalObjectsForListings(
+          result.data
+        )
 
-        if (parkingSpacesResult.ok) {
-          // Add rental objects to listings
+        if (rentalObjectsResult.ok) {
+          // Add rental objects to listings; unlike the reads, keep listings without one
           const listingsWithRentalObjects = result.data.map((listing) => {
-            const rentalObject = parkingSpacesResult.data.find(
-              (ps) => ps.rentalObjectCode === listing.rentalObjectCode
+            const rentalObject = rentalObjectsResult.data.get(
+              listing.rentalObjectCode
             )
             if (rentalObject) {
               return { ...listing, rentalObject }

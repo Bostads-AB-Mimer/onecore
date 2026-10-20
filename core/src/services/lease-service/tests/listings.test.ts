@@ -5,6 +5,7 @@ import bodyParser from 'koa-bodyparser'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
+import * as apartmentRentalObjects from '../helpers/apartment-rental-objects'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 
 import * as factory from '../../../../test/factories'
@@ -282,6 +283,188 @@ describe('GET /listings', () => {
 
     expect(getListingsSpy).toHaveBeenCalled()
     expect(res.status).toBe(500)
+  })
+})
+
+describe('listings for apartments', () => {
+  const apartmentListing = (id: number, rentalObjectCode: string) =>
+    factory.listing.build({
+      id,
+      rentalObjectCode,
+      listingCategory: 'APARTMENT',
+      rentalRule: 'SCORED',
+    })
+
+  it('GET /listings returns apartment and parking listings with their rental objects', async () => {
+    jest.spyOn(tenantLeaseAdapter, 'getListings').mockResolvedValueOnce({
+      ok: true,
+      data: [
+        factory.listing.build({ id: 1, rentalObjectCode: 'P1' }),
+        apartmentListing(2, 'A1'),
+      ],
+    })
+    jest.spyOn(tenantLeaseAdapter, 'getParkingSpaces').mockResolvedValueOnce({
+      ok: true,
+      data: [factory.rentalObject.build({ rentalObjectCode: 'P1' })],
+    })
+    jest.spyOn(apartmentRentalObjects, 'getApartments').mockResolvedValueOnce({
+      ok: true,
+      data: [
+        factory.rentalObject.build({
+          rentalObjectCode: 'A1',
+          objectTypeCaption: '3 rum och kök',
+          floor: '4',
+          roomCount: 3,
+        }),
+      ],
+    })
+
+    const res = await request(app.callback()).get('/listings')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([
+      expect.objectContaining({
+        id: 1,
+        rentalObject: expect.objectContaining({ rentalObjectCode: 'P1' }),
+      }),
+      expect.objectContaining({
+        id: 2,
+        rentalObject: expect.objectContaining({
+          rentalObjectCode: 'A1',
+          objectTypeCaption: '3 rum och kök',
+          floor: '4',
+          roomCount: 3,
+        }),
+      }),
+    ])
+  })
+
+  it('GET /listings still returns parking listings when the apartment lookup fails', async () => {
+    jest.spyOn(tenantLeaseAdapter, 'getListings').mockResolvedValueOnce({
+      ok: true,
+      data: [
+        factory.listing.build({ id: 1, rentalObjectCode: 'P1' }),
+        apartmentListing(2, 'A1'),
+      ],
+    })
+    jest.spyOn(tenantLeaseAdapter, 'getParkingSpaces').mockResolvedValueOnce({
+      ok: true,
+      data: [factory.rentalObject.build({ rentalObjectCode: 'P1' })],
+    })
+    jest
+      .spyOn(apartmentRentalObjects, 'getApartments')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback()).get('/listings')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([expect.objectContaining({ id: 1 })])
+  })
+
+  it('GET /listings does not apply the parking space area rule to apartments', async () => {
+    jest.spyOn(tenantLeaseAdapter, 'getListings').mockResolvedValueOnce({
+      ok: true,
+      data: [apartmentListing(2, 'A1')],
+    })
+    jest.spyOn(apartmentRentalObjects, 'getApartments').mockResolvedValueOnce({
+      ok: true,
+      data: [
+        factory.rentalObject.build({
+          rentalObjectCode: 'A1',
+          residentialAreaCode: 'ANOTHER_AREA',
+        }),
+      ],
+    })
+    jest
+      .spyOn(tenantLeaseAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenant.build({
+          currentHousingContract: { residentialArea: { code: 'AREA123' } },
+        }),
+      })
+
+    const res = await request(app.callback()).get(
+      '/listings?validToRentForContactCode=abc123'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([expect.objectContaining({ id: 2 })])
+  })
+
+  it('GET /listings returns an empty list without looking up rental objects when there are no listings', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getListings')
+      .mockResolvedValueOnce({ ok: true, data: [] })
+    const parkingSpy = jest.spyOn(tenantLeaseAdapter, 'getParkingSpaces')
+
+    const res = await request(app.callback()).get('/listings')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([])
+    expect(parkingSpy).not.toHaveBeenCalled()
+  })
+
+  it('GET /listings/:id returns an apartment listing with its rental object', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getListingByListingId')
+      .mockResolvedValueOnce(apartmentListing(2, 'A1'))
+    jest.spyOn(apartmentRentalObjects, 'getApartments').mockResolvedValueOnce({
+      ok: true,
+      data: [factory.rentalObject.build({ rentalObjectCode: 'A1' })],
+    })
+    const parkingSpy = jest.spyOn(tenantLeaseAdapter, 'getParkingSpaceByCode')
+
+    const res = await request(app.callback()).get('/listings/2')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.rentalObject.rentalObjectCode).toBe('A1')
+    expect(parkingSpy).not.toHaveBeenCalled()
+  })
+
+  it.each<
+    [
+      string,
+      Awaited<ReturnType<typeof apartmentRentalObjects.getApartments>>,
+      number,
+    ]
+  >([
+    ['is not a listable apartment', { ok: true, data: [] }, 404],
+    ['lookup fails', { ok: false, err: 'unknown' }, 500],
+  ])(
+    'GET /listings/:id responds when the apartment %s',
+    async (_, result, status) => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getListingByListingId')
+        .mockResolvedValueOnce(apartmentListing(2, 'A1'))
+      jest
+        .spyOn(apartmentRentalObjects, 'getApartments')
+        .mockResolvedValueOnce(result)
+
+      const res = await request(app.callback()).get('/listings/2')
+
+      expect(res.status).toBe(status)
+    }
+  )
+
+  it('GET /listings-with-applicants includes apartment listings', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getListingsWithApplicants')
+      .mockResolvedValueOnce({ ok: true, data: [apartmentListing(2, 'A1')] })
+    jest.spyOn(apartmentRentalObjects, 'getApartments').mockResolvedValueOnce({
+      ok: true,
+      data: [factory.rentalObject.build({ rentalObjectCode: 'A1' })],
+    })
+
+    const res = await request(app.callback()).get('/listings-with-applicants')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([
+      expect.objectContaining({
+        id: 2,
+        rentalObject: expect.objectContaining({ rentalObjectCode: 'A1' }),
+      }),
+    ])
   })
 })
 
