@@ -7,6 +7,8 @@ export type FailedRowEntry = {
   payload: unknown
   addedAt: string
   lastError: string
+  lastAttemptAt?: string
+  stillFailingNotifiedAt?: string
 }
 
 export const readQueue = async (path: string): Promise<FailedRowEntry[]> => {

@@ -11,6 +11,11 @@ import { notifyXpandSync } from './notify'
 
 export class PermanentSyncError extends Error {}
 
+const HOUR_MS = 60 * 60 * 1000
+const RETRY_EVERY_RUN_FOR_MS = 24 * HOUR_MS
+const SLOW_RETRY_INTERVAL_MS = 6 * HOUR_MS
+const GIVE_UP_AFTER_MS = 7 * 24 * HOUR_MS
+
 export type CmlogSync<T> = {
   name: string
   entryType: FailedRowEntry['type']
@@ -33,9 +38,10 @@ const errorMessage = (err: unknown) =>
 
 export const runCmlogSync = async <T>(
   def: CmlogSync<T>,
-  opts: { stateFile: string; queueFile: string }
+  opts: { stateFile: string; queueFile: string; now?: () => Date }
 ) => {
   const { stateFile, queueFile } = opts
+  const now = opts.now ?? (() => new Date())
 
   const notifyFailure = (change: T, entry: FailedRowEntry) => {
     const { subject, detail } = def.describe(change)
@@ -43,7 +49,30 @@ export const runCmlogSync = async <T>(
       `Misslyckades på ${detail} vid ${def.timestampOf(change).toISOString()}.`,
       `Fel: ${entry.lastError}`,
       ``,
-      `Raden ligger nu i återförsökskön på PVC (/data/failed-rows.jsonl) och kommer att försökas igen vid nästa körning. Du får ett bekräftelsemail när den lyckas synkas.`,
+      `Raden ligger nu i återförsökskön på PVC (/data/failed-rows.jsonl). Den försöks igen varje minut i ett dygn och sedan var sjätte timme i en vecka. Du får ett bekräftelsemail när den lyckas synkas.`,
+    ])
+  }
+
+  const notifyStillFailing = (change: T, entry: FailedRowEntry) => {
+    const { subject, detail } = def.describe(change)
+    const giveUpAt = new Date(
+      new Date(entry.addedAt).getTime() + GIVE_UP_AFTER_MS
+    ).toISOString()
+    return notifyXpandSync(`${def.name}: ${subject} misslyckas fortfarande`, [
+      `${capitalize(detail)} har misslyckats sedan ${entry.addedAt}.`,
+      `Senaste fel: ${entry.lastError}`,
+      ``,
+      `Raden försöks nu igen var sjätte timme till ${giveUpAt}, och tas sedan bort ur återförsökskön.`,
+    ])
+  }
+
+  const notifyGiveUp = (change: T, entry: FailedRowEntry) => {
+    const { subject, detail } = def.describe(change)
+    return notifyXpandSync(`${def.name}: ger upp ${subject}`, [
+      `${capitalize(detail)} har misslyckats sedan ${entry.addedAt}.`,
+      `Senaste fel: ${entry.lastError}`,
+      ``,
+      `Raden har tagits bort ur återförsökskön och försöks inte igen. Gör ändringen i Xpand på nytt för att försöka igen.`,
     ])
   }
 
@@ -73,6 +102,14 @@ export const runCmlogSync = async <T>(
   logger.info({ queueDepth: queue.length }, 'draining failure queue')
   for (const entry of queue) {
     if (entry.type !== def.entryType) continue
+    const failingFor = now().getTime() - new Date(entry.addedAt).getTime()
+    const sinceLastAttempt =
+      now().getTime() - new Date(entry.lastAttemptAt ?? entry.addedAt).getTime()
+    if (
+      failingFor >= RETRY_EVERY_RUN_FOR_MS &&
+      sinceLastAttempt < SLOW_RETRY_INTERVAL_MS
+    )
+      continue
     const change = def.fromPayload(entry.payload)
     try {
       await def.sync(change)
@@ -84,6 +121,28 @@ export const runCmlogSync = async <T>(
         await notifyPermanent(change, err)
         continue
       }
+      const updated: FailedRowEntry = {
+        ...entry,
+        lastAttemptAt: now().toISOString(),
+        lastError: errorMessage(err),
+      }
+      if (failingFor >= GIVE_UP_AFTER_MS) {
+        await removeEntry(queueFile, entry.key)
+        await notifyGiveUp(change, updated)
+        logger.error(
+          { err, key: entry.key },
+          `${def.name}: queued entry failed for a week, giving up`
+        )
+        continue
+      }
+      if (
+        failingFor >= RETRY_EVERY_RUN_FOR_MS &&
+        !entry.stillFailingNotifiedAt
+      ) {
+        updated.stillFailingNotifiedAt = now().toISOString()
+        await notifyStillFailing(change, updated)
+      }
+      await upsertEntry(queueFile, updated)
       logger.warn(
         { err, key: entry.key },
         `${def.name}: queued entry still failing, keeping in queue`
@@ -134,8 +193,9 @@ export const runCmlogSync = async <T>(
           key,
           type: def.entryType,
           payload: def.toPayload(change),
-          addedAt: new Date().toISOString(),
+          addedAt: now().toISOString(),
           lastError: errorMessage(err),
+          lastAttemptAt: now().toISOString(),
         }
         const sameRow =
           existing !== undefined &&
