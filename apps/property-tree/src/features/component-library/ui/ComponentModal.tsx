@@ -1,4 +1,4 @@
-import { Modal } from '@/shared/ui/Modal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@onecore/ui'
 
 import { ComponentForm } from './ComponentForm'
 
@@ -18,17 +18,20 @@ export function ComponentModal({
   initialData,
 }: ComponentModalProps) {
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={initialData ? 'Redigera komponent' : 'Lägg till komponent'}
-    >
-      <ComponentForm
-        onSubmit={onSubmit}
-        onCancel={onClose}
-        rooms={rooms}
-        initialData={initialData}
-      />
-    </Modal>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {initialData ? 'Redigera komponent' : 'Lägg till komponent'}
+          </DialogTitle>
+        </DialogHeader>
+        <ComponentForm
+          onSubmit={onSubmit}
+          onCancel={onClose}
+          rooms={rooms}
+          initialData={initialData}
+        />
+      </DialogContent>
+    </Dialog>
   )
 }
