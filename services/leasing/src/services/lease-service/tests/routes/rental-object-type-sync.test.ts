@@ -55,12 +55,13 @@ describe('GET /rental-objects/types/sync', () => {
     )
   })
 
-  it('returns 400 when since is missing', async () => {
+  it('reads every change when since is missing', async () => {
+    getRentalObjectTypeChanges.mockResolvedValueOnce([])
+
     const res = await request(app.callback()).get('/rental-objects/types/sync')
 
-    expect(res.status).toBe(400)
-    expect(res.body.error).toBeDefined()
-    expect(getRentalObjectTypeChanges).not.toHaveBeenCalled()
+    expect(res.status).toBe(200)
+    expect(getRentalObjectTypeChanges).toHaveBeenCalledWith(null)
   })
 
   it('returns 400 when since is not a date', async () => {

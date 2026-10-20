@@ -41,6 +41,17 @@ describe('getRentalObjectTypeChanges', () => {
     })
   })
 
+  it('sends no since parameter when since is null', async () => {
+    nock(config.tenantsLeasesService.url)
+      .get('/rental-objects/types/sync')
+      .query({})
+      .reply(200, { content: [] })
+
+    const result = await leasingAdapter.getRentalObjectTypeChanges(null)
+
+    expect(result).toEqual({ ok: true, data: [] })
+  })
+
   it('returns unknown on a 400', async () => {
     nock(config.tenantsLeasesService.url)
       .get('/rental-objects/types/sync')

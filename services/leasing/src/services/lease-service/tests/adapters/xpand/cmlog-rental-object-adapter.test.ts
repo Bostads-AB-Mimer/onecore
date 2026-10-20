@@ -19,6 +19,16 @@ describe('cmlogRentalObjectTypeChanges', () => {
 
     expect(sql).toMatch(/\[logtime\] > \?/)
   })
+
+  it('reads every row when since is null', () => {
+    const db = knex({ client: 'mssql' })
+
+    const { sql } = (
+      cmlogRentalObjectTypeChanges(db, null) as unknown as Knex.QueryBuilder
+    ).toSQL()
+
+    expect(sql).not.toMatch(/logtime\] >/)
+  })
 })
 
 const memo = (firstLine: string, ...lines: string[]) =>

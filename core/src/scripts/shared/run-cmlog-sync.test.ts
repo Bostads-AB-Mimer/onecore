@@ -38,7 +38,6 @@ const definition = (
 ): CmlogSync<Change> => ({
   name: 'sync-things',
   entryType: 'rental-object-type',
-  firstRun: 'all',
   fetchChanges,
   sync,
   keyFor: (c) => `thing:${c.id}`,
@@ -52,12 +51,8 @@ const definition = (
   ...overrides,
 })
 
-const run = (overrides: Partial<CmlogSync<Change>> = {}, now?: Date) =>
-  runCmlogSync(definition(overrides), {
-    stateFile,
-    queueFile,
-    now: now ? () => now : undefined,
-  })
+const run = (overrides: Partial<CmlogSync<Change>> = {}) =>
+  runCmlogSync(definition(overrides), { stateFile, queueFile })
 
 const readState = async () => (await fs.readFile(stateFile, 'utf-8')).trim()
 
@@ -85,31 +80,15 @@ afterEach(async () => {
 })
 
 describe('runCmlogSync', () => {
-  describe('first run', () => {
-    it("'all' fetches everything and saves the last row's timestamp", async () => {
-      const c = change()
-      fetchChanges.mockResolvedValue({ ok: true, data: [c] })
+  it("first run fetches everything and saves the last row's timestamp", async () => {
+    const c = change()
+    fetchChanges.mockResolvedValue({ ok: true, data: [c] })
 
-      await run()
+    await run()
 
-      expect(fetchChanges).toHaveBeenCalledWith(null)
-      expect(sync).toHaveBeenCalledWith(c)
-      expect(await readState()).toBe(c.timestamp.toISOString())
-    })
-
-    it("'now' saves Swedish summer wall-clock time and syncs nothing", async () => {
-      await run({ firstRun: 'now' }, new Date('2026-10-15T08:00:00.000Z'))
-
-      expect(await readState()).toBe('2026-10-15T10:00:00.000Z')
-      expect(fetchChanges).not.toHaveBeenCalled()
-      expect(sync).not.toHaveBeenCalled()
-    })
-
-    it("'now' saves Swedish winter wall-clock time", async () => {
-      await run({ firstRun: 'now' }, new Date('2026-12-01T08:00:00.000Z'))
-
-      expect(await readState()).toBe('2026-12-01T09:00:00.000Z')
-    })
+    expect(fetchChanges).toHaveBeenCalledWith(null)
+    expect(sync).toHaveBeenCalledWith(c)
+    expect(await readState()).toBe(c.timestamp.toISOString())
   })
 
   it('fetches since the saved timestamp, syncs and sends no mail', async () => {
@@ -118,7 +97,7 @@ describe('runCmlogSync', () => {
     const c = change()
     fetchChanges.mockResolvedValue({ ok: true, data: [c] })
 
-    await run({ firstRun: 'now' })
+    await run()
 
     expect(fetchChanges).toHaveBeenCalledWith(since)
     expect(sync).toHaveBeenCalledWith(c)

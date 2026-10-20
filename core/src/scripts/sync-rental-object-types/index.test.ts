@@ -60,18 +60,16 @@ afterEach(async () => {
 })
 
 describe('syncRentalObjectTypes', () => {
-  it('first run: saves Swedish wall-clock time and fetches nothing', async () => {
+  it('first run: syncs every change in cmlog', async () => {
     await fs.rm(stateFile)
-    const getChanges = mockChanges([])
+    const c = change()
+    const getChanges = mockChanges([c])
+    mockSync().mockResolvedValue({ ok: true, data: { action: 'unchanged' } })
 
-    await syncRentalObjectTypes({
-      stateFile,
-      queueFile,
-      now: () => new Date('2026-10-15T08:00:00.000Z'),
-    })
+    await syncRentalObjectTypes({ stateFile, queueFile })
 
-    expect(await readState()).toBe('2026-10-15T10:00:00.000Z')
-    expect(getChanges).not.toHaveBeenCalled()
+    expect(getChanges).toHaveBeenCalledWith(null)
+    expect(await readState()).toBe(c.timestamp.toISOString())
   })
 
   it('syncs each change since the saved timestamp and sends no mail', async () => {
