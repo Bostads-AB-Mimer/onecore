@@ -80,7 +80,10 @@ describe('odoo-adapter createWorkOrder', () => {
       ([model]) => model === 'maintenance.maintenance.unit'
     )
     expect(maintenanceUnitCall).toBeDefined()
-    expect(maintenanceUnitCall?.[1]).toMatchObject({ code: '705T15' })
+    expect(maintenanceUnitCall?.[1]).toMatchObject({
+      code: '705T15',
+      property_object_id: '_3SB0PK5VC9K1IT',
+    })
 
     const requestCall = odooMock.create.mock.calls.find(
       ([model]) => model === 'maintenance.request'
