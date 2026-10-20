@@ -26,6 +26,7 @@ Apart from the core orchestration service, packages belong to one of three categ
 │   └── property-tree/
 ├── libs/
 │   ├── assets/
+│   ├── auth/
 │   ├── dax-client/
 │   ├── types/
 │   ├── ui/

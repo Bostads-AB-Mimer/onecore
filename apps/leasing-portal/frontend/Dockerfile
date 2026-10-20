@@ -18,7 +18,7 @@ COPY libs ./libs
 COPY apps/leasing-portal/frontend ./apps/leasing-portal/frontend
 
 RUN pnpm install
-# Build workspace dependencies (ui, types) the same way CI does
+# Build workspace dependencies (ui, types, auth) the same way CI does
 RUN pnpm run --filter @onecore/leasing-portal-frontend... --filter !@onecore/leasing-portal-frontend build
 RUN pnpm install
 RUN pnpm run --filter @onecore/leasing-portal-frontend build

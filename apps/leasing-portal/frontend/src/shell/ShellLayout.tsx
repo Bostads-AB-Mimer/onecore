@@ -5,7 +5,7 @@ import { LogOut } from 'lucide-react'
 import type { LeasingUser } from '../host/types'
 import { leasingModule } from '../module'
 import onecoreLogo from '@onecore/ui/assets/onecore_logo_black.svg'
-import { useAuth } from './auth/useAuth'
+import { useAuth } from '@onecore/auth'
 
 // Same menu as the property-tree sidebar: the module's sections, mounted at /.
 const navItems = leasingModule.navigation
