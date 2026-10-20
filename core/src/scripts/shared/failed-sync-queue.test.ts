@@ -3,10 +3,9 @@ import os from 'os'
 import path from 'path'
 import {
   readQueue,
-  addEntry,
+  appendEntry,
   removeEntry,
-  hasKey,
-  upsertEntry,
+  writeQueue,
   FailedRowEntry,
 } from './failed-sync-queue'
 
@@ -35,37 +34,29 @@ describe('failed-sync-queue', () => {
     expect(await readQueue(file)).toEqual([])
   })
 
-  it('addEntry persists and readQueue round-trips', async () => {
-    await addEntry(file, makeEntry('a'))
+  it('appendEntry persists and readQueue round-trips', async () => {
+    await appendEntry(file, makeEntry('a'))
     expect(await readQueue(file)).toEqual([makeEntry('a')])
   })
 
-  it('addEntry is idempotent on duplicate key', async () => {
-    await addEntry(file, makeEntry('a'))
-    await addEntry(file, { ...makeEntry('a'), lastError: 'different' })
-    const q = await readQueue(file)
-    expect(q).toHaveLength(1)
-    expect(q[0].lastError).toBe('oops')
-  })
-
-  it('addEntry preserves insertion order', async () => {
-    await addEntry(file, makeEntry('a'))
-    await addEntry(file, makeEntry('b'))
-    await addEntry(file, makeEntry('c'))
+  it('appendEntry preserves insertion order', async () => {
+    await appendEntry(file, makeEntry('a'))
+    await appendEntry(file, makeEntry('b'))
+    await appendEntry(file, makeEntry('c'))
     const q = await readQueue(file)
     expect(q.map((e) => e.key)).toEqual(['a', 'b', 'c'])
   })
 
   it('removeEntry removes by key', async () => {
-    await addEntry(file, makeEntry('a'))
-    await addEntry(file, makeEntry('b'))
+    await appendEntry(file, makeEntry('a'))
+    await appendEntry(file, makeEntry('b'))
     await removeEntry(file, 'a')
     const q = await readQueue(file)
     expect(q.map((e) => e.key)).toEqual(['b'])
   })
 
   it('removeEntry is a no-op when key is absent', async () => {
-    await addEntry(file, makeEntry('a'))
+    await appendEntry(file, makeEntry('a'))
     await removeEntry(file, 'never-existed')
     expect(await readQueue(file)).toHaveLength(1)
   })
@@ -75,37 +66,25 @@ describe('failed-sync-queue', () => {
     expect(await readQueue(file)).toEqual([])
   })
 
-  it('hasKey returns true / false correctly', () => {
-    const q = [makeEntry('a'), makeEntry('b')]
-    expect(hasKey(q, 'a')).toBe(true)
-    expect(hasKey(q, 'c')).toBe(false)
+  it('appendEntry creates the file when it does not exist', async () => {
+    await appendEntry(file, makeEntry('a'))
+    expect(await readQueue(file)).toEqual([makeEntry('a')])
   })
-})
 
-describe('upsertEntry', () => {
-  it('appends an entry when the key is not in the queue', async () => {
-    await addEntry(file, makeEntry('a'))
+  it('writeQueue replaces the whole queue', async () => {
+    await appendEntry(file, makeEntry('a'))
+    await writeQueue(file, [makeEntry('b'), makeEntry('c')])
+    expect((await readQueue(file)).map((e) => e.key)).toEqual(['b', 'c'])
+  })
 
-    await upsertEntry(file, makeEntry('b'))
-
+  it('appendEntry after writeQueue keeps one entry per line', async () => {
+    await writeQueue(file, [makeEntry('a')])
+    await appendEntry(file, makeEntry('b'))
     expect((await readQueue(file)).map((e) => e.key)).toEqual(['a', 'b'])
   })
 
-  it('replaces the entry with the same key', async () => {
-    await addEntry(file, makeEntry('a'))
-    await addEntry(file, makeEntry('b'))
-
-    await upsertEntry(file, { ...makeEntry('a'), lastError: 'newer' })
-
-    const queue = await readQueue(file)
-    expect(queue).toHaveLength(2)
-    expect(queue.find((e) => e.key === 'a')?.lastError).toBe('newer')
-    expect(queue.find((e) => e.key === 'b')?.lastError).toBe('oops')
-  })
-
-  it('creates the file when it does not exist', async () => {
-    await upsertEntry(file, makeEntry('a'))
-
-    expect(await readQueue(file)).toEqual([makeEntry('a')])
+  it('writeQueue with an empty queue leaves an empty file', async () => {
+    await writeQueue(file, [])
+    expect(await readQueue(file)).toEqual([])
   })
 })

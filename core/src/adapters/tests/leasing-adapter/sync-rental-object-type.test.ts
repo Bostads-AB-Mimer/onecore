@@ -14,14 +14,17 @@ describe('getRentalObjectTypeChanges', () => {
       .get('/rental-objects/types/sync')
       .query({ since: '2026-10-15T00:00:00.000Z' })
       .reply(200, {
-        content: [
-          {
-            rentalObjectCode: '807-033-01-0101',
-            code: 'POÄNGFRITT',
-            label: 'Poängfritt',
-            timestamp: '2026-10-15T08:08:28.000Z',
-          },
-        ],
+        content: {
+          changes: [
+            {
+              rentalObjectCode: '807-033-01-0101',
+              code: 'POÄNGFRITT',
+              label: 'Poängfritt',
+              timestamp: '2026-10-15T08:08:28.000Z',
+            },
+          ],
+          until: '2026-10-15T08:09:00.000Z',
+        },
       })
 
     const result = await leasingAdapter.getRentalObjectTypeChanges(
@@ -30,14 +33,17 @@ describe('getRentalObjectTypeChanges', () => {
 
     expect(result).toEqual({
       ok: true,
-      data: [
-        {
-          rentalObjectCode: '807-033-01-0101',
-          code: 'POÄNGFRITT',
-          label: 'Poängfritt',
-          timestamp: new Date('2026-10-15T08:08:28.000Z'),
-        },
-      ],
+      data: {
+        changes: [
+          {
+            rentalObjectCode: '807-033-01-0101',
+            code: 'POÄNGFRITT',
+            label: 'Poängfritt',
+            timestamp: new Date('2026-10-15T08:08:28.000Z'),
+          },
+        ],
+        until: new Date('2026-10-15T08:09:00.000Z'),
+      },
     })
   })
 
@@ -45,11 +51,11 @@ describe('getRentalObjectTypeChanges', () => {
     nock(config.tenantsLeasesService.url)
       .get('/rental-objects/types/sync')
       .query({})
-      .reply(200, { content: [] })
+      .reply(200, { content: { changes: [], until: null } })
 
     const result = await leasingAdapter.getRentalObjectTypeChanges(null)
 
-    expect(result).toEqual({ ok: true, data: [] })
+    expect(result).toEqual({ ok: true, data: { changes: [], until: null } })
   })
 
   it('returns unknown on a 400', async () => {

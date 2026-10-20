@@ -5,7 +5,7 @@ import config from '../../common/config'
 import { syncContacts } from './index'
 import * as factory from '../../../test/factories'
 import {
-  addEntry,
+  appendEntry,
   readQueue,
   FailedRowEntry,
 } from '../shared/failed-sync-queue'
@@ -160,7 +160,7 @@ describe('syncContacts', () => {
 
     // Pre-seed the queue
     const entry = makeContactEntry(contact, ts)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Drain attempt: leasing sync fails
     jest
@@ -207,7 +207,7 @@ describe('syncContacts', () => {
 
     // Pre-seed the queue
     const entry = makeContactEntry(contact, ts)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Drain attempt: all sync adapters succeed
     jest
@@ -255,7 +255,7 @@ describe('syncContacts', () => {
 
     // Pre-seed the queue with that key
     const entry = makeContactEntry(contact, ts)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Both drain attempt and new row attempt fail (leasing fails)
     jest

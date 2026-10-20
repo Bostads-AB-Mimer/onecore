@@ -40,23 +40,30 @@ describe('GET /rental-objects/types/sync', () => {
       label: 'Poängfritt',
       timestamp: new Date('2026-10-15T08:08:28.000Z'),
     }
-    getRentalObjectTypeChanges.mockResolvedValueOnce([change])
+    getRentalObjectTypeChanges.mockResolvedValueOnce({
+      changes: [change],
+      until: new Date('2026-10-15T08:09:00.000Z'),
+    })
 
     const res = await request(app.callback()).get(
       '/rental-objects/types/sync?since=2026-10-15T00:00:00.000Z'
     )
 
     expect(res.status).toBe(200)
-    expect(res.body.content).toEqual([
-      { ...change, timestamp: '2026-10-15T08:08:28.000Z' },
-    ])
+    expect(res.body.content).toEqual({
+      changes: [{ ...change, timestamp: '2026-10-15T08:08:28.000Z' }],
+      until: '2026-10-15T08:09:00.000Z',
+    })
     expect(getRentalObjectTypeChanges).toHaveBeenCalledWith(
       new Date('2026-10-15T00:00:00.000Z')
     )
   })
 
   it('reads every change when since is missing', async () => {
-    getRentalObjectTypeChanges.mockResolvedValueOnce([])
+    getRentalObjectTypeChanges.mockResolvedValueOnce({
+      changes: [],
+      until: null,
+    })
 
     const res = await request(app.callback()).get('/rental-objects/types/sync')
 
@@ -180,7 +187,7 @@ describe('POST /rental-objects/:rentalObjectCode/type/sync', () => {
     expect(updateRentalObjectCategory).not.toHaveBeenCalled()
   })
 
-  it('returns 422 rental-object-rejected when the Tenfast rental object cannot be parsed', async () => {
+  it('returns 500 when the Tenfast rental object cannot be parsed', async () => {
     getRentalObject.mockResolvedValueOnce({
       ok: false,
       err: 'could-not-parse-rental-object',
@@ -188,8 +195,8 @@ describe('POST /rental-objects/:rentalObjectCode/type/sync', () => {
 
     const res = await post({ code: 'POÄNGFRITT' })
 
-    expect(res.status).toBe(422)
-    expect(res.body.error).toBe('rental-object-rejected')
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('could-not-parse-rental-object')
     expect(updateRentalObjectCategory).not.toHaveBeenCalled()
   })
 

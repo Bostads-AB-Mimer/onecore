@@ -4,8 +4,8 @@ import path from 'path'
 
 import config from '../../common/config'
 import * as communicationAdapter from '../../adapters/communication-adapter'
-import { addEntry, readQueue, FailedRowEntry } from './failed-sync-queue'
-import { CmlogSync, PermanentSyncError, runCmlogSync } from './run-cmlog-sync'
+import { appendEntry, readQueue, FailedRowEntry } from './failed-sync-queue'
+import { CmlogSync, runCmlogSync } from './run-cmlog-sync'
 
 type Change = { id: string; value: string; timestamp: Date }
 
@@ -141,7 +141,7 @@ describe('runCmlogSync', () => {
   })
 
   it('silent retry: queued row still failing keeps the entry and sends no mail', async () => {
-    await addEntry(queueFile, entryFor(change()))
+    await appendEntry(queueFile, entryFor(change()))
     sync.mockRejectedValue(new Error('still down'))
 
     await run()
@@ -152,7 +152,7 @@ describe('runCmlogSync', () => {
   })
 
   it('recovery: queued row syncing removes the entry and sends a recovery mail', async () => {
-    await addEntry(queueFile, entryFor(change()))
+    await appendEntry(queueFile, entryFor(change()))
 
     await run()
 
@@ -164,7 +164,7 @@ describe('runCmlogSync', () => {
 
   it('crash retry: the same row failing again keeps one entry and sends no mail', async () => {
     const c = change()
-    await addEntry(queueFile, entryFor(c))
+    await appendEntry(queueFile, entryFor(c))
     fetchChanges.mockResolvedValue({ ok: true, data: [c] })
     sync.mockRejectedValue(new Error('still down'))
 
@@ -180,7 +180,7 @@ describe('runCmlogSync', () => {
       value: 'new',
       timestamp: new Date('2026-10-15T08:10:00.000Z'),
     })
-    await addEntry(queueFile, entryFor(older))
+    await appendEntry(queueFile, entryFor(older))
     fetchChanges.mockResolvedValue({ ok: true, data: [newer] })
     sync.mockRejectedValue(new Error('down'))
 
@@ -198,7 +198,7 @@ describe('runCmlogSync', () => {
       value: 'new',
       timestamp: new Date('2026-10-15T08:10:00.000Z'),
     })
-    await addEntry(queueFile, entryFor(older))
+    await appendEntry(queueFile, entryFor(older))
     fetchChanges.mockResolvedValue({ ok: true, data: [newer] })
     sync.mockImplementation(async (c: Change) => {
       if (c.value === 'old') throw new Error('down')
@@ -213,31 +213,6 @@ describe('runCmlogSync', () => {
     ])
   })
 
-  describe('permanent errors', () => {
-    it('a new row is mailed once and not queued', async () => {
-      const c = change()
-      fetchChanges.mockResolvedValue({ ok: true, data: [c] })
-      sync.mockRejectedValue(new PermanentSyncError('no such type'))
-
-      await run()
-
-      expect(await readQueue(queueFile)).toEqual([])
-      expect(subjects()).toEqual(['sync-things: sak A-1 kan inte synkas'])
-      expect(sendEmailSpy.mock.calls[0][0].body).toContain('no such type')
-      expect(await readState()).toBe(c.timestamp.toISOString())
-    })
-
-    it('a queued row is removed and mailed once', async () => {
-      await addEntry(queueFile, entryFor(change()))
-      sync.mockRejectedValue(new PermanentSyncError('no such type'))
-
-      await run()
-
-      expect(await readQueue(queueFile)).toEqual([])
-      expect(subjects()).toEqual(['sync-things: sak A-1 kan inte synkas'])
-    })
-  })
-
   it('leaves queue entries of other types alone', async () => {
     const other: FailedRowEntry = {
       key: 'L-1:create:2026-10-15T00:00:00.000Z',
@@ -246,7 +221,7 @@ describe('runCmlogSync', () => {
       addedAt: '2026-10-15T00:00:00.000Z',
       lastError: 'x',
     }
-    await addEntry(queueFile, other)
+    await appendEntry(queueFile, other)
 
     await run()
 
@@ -273,7 +248,7 @@ describe('runCmlogSync', () => {
     ) => entryFor(change(), { addedAt: hoursBefore(NOW, hours), ...overrides })
 
     it('first day: retries every run and records the attempt and latest error', async () => {
-      await addEntry(
+      await appendEntry(
         queueFile,
         failedFor(23, { lastAttemptAt: hoursBefore(NOW, 0.02) })
       )
@@ -290,7 +265,7 @@ describe('runCmlogSync', () => {
     })
 
     it('after a day: skips an entry tried less than six hours ago', async () => {
-      await addEntry(
+      await appendEntry(
         queueFile,
         failedFor(30, { lastAttemptAt: hoursBefore(NOW, 5) })
       )
@@ -303,7 +278,7 @@ describe('runCmlogSync', () => {
     })
 
     it('after a day: retries six hours after the last attempt and mails once that it still fails', async () => {
-      await addEntry(
+      await appendEntry(
         queueFile,
         failedFor(30, { lastAttemptAt: hoursBefore(NOW, 6) })
       )
@@ -322,7 +297,7 @@ describe('runCmlogSync', () => {
     })
 
     it('after a day: does not repeat the still-failing mail', async () => {
-      await addEntry(
+      await appendEntry(
         queueFile,
         failedFor(60, {
           lastAttemptAt: hoursBefore(NOW, 6),
@@ -338,7 +313,7 @@ describe('runCmlogSync', () => {
     })
 
     it('treats an entry without lastAttemptAt as last tried when it was added', async () => {
-      await addEntry(queueFile, failedFor(30))
+      await appendEntry(queueFile, failedFor(30))
       sync.mockRejectedValue(new Error('still down'))
 
       await run()
@@ -346,8 +321,37 @@ describe('runCmlogSync', () => {
       expect(sync).toHaveBeenCalledTimes(1)
     })
 
+    it('an entry without lastAttemptAt starts its week at the first retry', async () => {
+      await appendEntry(queueFile, failedFor(10 * 24))
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run()
+
+      const [entry] = await readQueue(queueFile)
+      expect(entry.retriesStartedAt).toBe(NOW.toISOString())
+      expect(entry.addedAt).toBe(hoursBefore(NOW, 10 * 24))
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+    })
+
+    it('gives up a week after retriesStartedAt, not addedAt', async () => {
+      await appendEntry(
+        queueFile,
+        failedFor(10 * 24, {
+          retriesStartedAt: hoursBefore(NOW, 6 * 24),
+          lastAttemptAt: hoursBefore(NOW, 6),
+          stillFailingNotifiedAt: hoursBefore(NOW, 5 * 24),
+        })
+      )
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run()
+
+      expect(await readQueue(queueFile)).toHaveLength(1)
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+    })
+
     it('after a day: recovery still removes the entry and mails', async () => {
-      await addEntry(
+      await appendEntry(
         queueFile,
         failedFor(100, { lastAttemptAt: hoursBefore(NOW, 7) })
       )
@@ -361,7 +365,7 @@ describe('runCmlogSync', () => {
     })
 
     it('after a week: gives up on the next failed attempt, removes the entry and mails', async () => {
-      await addEntry(
+      await appendEntry(
         queueFile,
         failedFor(7 * 24 + 1, {
           lastAttemptAt: hoursBefore(NOW, 6),
@@ -379,7 +383,7 @@ describe('runCmlogSync', () => {
     })
 
     it('a newer change for the same key starts a fresh clock', async () => {
-      await addEntry(
+      await appendEntry(
         queueFile,
         failedFor(7 * 24 + 1, { lastAttemptAt: hoursBefore(NOW, 1) })
       )
@@ -396,6 +400,124 @@ describe('runCmlogSync', () => {
       expect(entry.addedAt).toBe(NOW.toISOString())
       expect(subjects()).toEqual(['sync-things: nytt fel på sak A-1'])
     })
+  })
+
+  it('a queued row that sync skips is removed and mailed as skipped', async () => {
+    await appendEntry(queueFile, entryFor(change()))
+    sync.mockResolvedValue({ skipped: 'finns inte i Tenfast' })
+
+    await run()
+
+    expect(await readQueue(queueFile)).toEqual([])
+    expect(subjects()).toEqual([
+      'sync-things: tidigare felande sak A-1 synkades inte',
+    ])
+    expect(sendEmailSpy.mock.calls[0][0].body).toContain('finns inte i Tenfast')
+  })
+
+  it('a new row that sync skips sends no mail and saves its timestamp', async () => {
+    const c = change()
+    fetchChanges.mockResolvedValue({ ok: true, data: [c] })
+    sync.mockResolvedValue({ skipped: 'finns inte i Tenfast' })
+
+    await run()
+
+    expect(sendEmailSpy).not.toHaveBeenCalled()
+    expect(await readState()).toBe(c.timestamp.toISOString())
+  })
+
+  describe('supersedeKey', () => {
+    const keyedByTimestamp = {
+      keyFor: (c: Change) => `thing:${c.id}:${c.timestamp.toISOString()}`,
+      supersedeKey: (c: Change) => c.id,
+    }
+    const older = change({ value: 'old' })
+    const newer = change({
+      value: 'new',
+      timestamp: new Date('2026-10-15T08:10:00.000Z'),
+    })
+
+    it('drops a queued change that a fetched change replaces, without retrying it', async () => {
+      await appendEntry(
+        queueFile,
+        entryFor(older, { key: keyedByTimestamp.keyFor(older) })
+      )
+      fetchChanges.mockResolvedValue({ ok: true, data: [newer] })
+
+      await run(keyedByTimestamp)
+
+      expect(sync.mock.calls.map(([c]) => c.value)).toEqual(['new'])
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual([
+        'sync-things: tidigare felande sak A-1 ersatt av en senare ändring',
+      ])
+    })
+
+    it('of two queued changes for one thing, retries only the newest', async () => {
+      await appendEntry(
+        queueFile,
+        entryFor(older, { key: keyedByTimestamp.keyFor(older) })
+      )
+      await appendEntry(
+        queueFile,
+        entryFor(newer, { key: keyedByTimestamp.keyFor(newer) })
+      )
+
+      await run(keyedByTimestamp)
+
+      expect(sync.mock.calls.map(([c]) => c.value)).toEqual(['new'])
+      expect(await readQueue(queueFile)).toEqual([])
+    })
+
+    it('keeps queued changes for other things', async () => {
+      const other = change({ id: 'B-2' })
+      await appendEntry(
+        queueFile,
+        entryFor(other, { key: keyedByTimestamp.keyFor(other) })
+      )
+      fetchChanges.mockResolvedValue({ ok: true, data: [newer] })
+
+      await run(keyedByTimestamp)
+
+      expect(sync.mock.calls.map(([c]) => c.id)).toEqual(['B-2', 'A-1'])
+    })
+  })
+
+  describe('until', () => {
+    it('saves until when it is later than the last change', async () => {
+      const c = change()
+      fetchChanges.mockResolvedValue({
+        ok: true,
+        data: [c],
+        until: new Date('2026-10-15T08:20:00.000Z'),
+      })
+
+      await run()
+
+      expect(await readState()).toBe('2026-10-15T08:20:00.000Z')
+    })
+
+    it('saves until when no change was parsed', async () => {
+      await fs.writeFile(stateFile, '2026-10-15T07:00:00.000Z', 'utf-8')
+      fetchChanges.mockResolvedValue({
+        ok: true,
+        data: [],
+        until: new Date('2026-10-15T08:20:00.000Z'),
+      })
+
+      await run()
+
+      expect(await readState()).toBe('2026-10-15T08:20:00.000Z')
+    })
+  })
+
+  it('still retries the queue when fetching fails', async () => {
+    await appendEntry(queueFile, entryFor(change()))
+    fetchChanges.mockResolvedValue({ ok: false, err: 'unknown' })
+
+    await expect(run()).rejects.toThrow('unknown')
+    expect(sync).toHaveBeenCalledTimes(1)
+    expect(await readQueue(queueFile)).toEqual([])
   })
 
   it('throws when fetching fails and leaves the timestamp alone', async () => {

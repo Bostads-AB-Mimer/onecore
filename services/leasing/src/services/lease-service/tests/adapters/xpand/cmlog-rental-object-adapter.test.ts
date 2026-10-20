@@ -6,6 +6,10 @@ import {
   parseRentalObjectTypeChanges,
 } from '../../../adapters/xpand/cmlog-rental-object-adapter'
 
+afterEach(() => {
+  jest.restoreAllMocks()
+})
+
 describe('cmlogRentalObjectTypeChanges', () => {
   it('reads strictly after the since time', () => {
     const db = knex({ client: 'mssql' })
@@ -172,7 +176,6 @@ describe('parseRentalObjectTypeChanges', () => {
       'Hyresobjekt 705-025-01-0301'
     )
     expect(JSON.stringify(warn.mock.calls[0])).not.toContain('P123456')
-    warn.mockRestore()
   })
 
   it('skips rows without a rental object code on the first line', () => {

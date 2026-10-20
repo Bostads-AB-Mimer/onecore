@@ -5,7 +5,7 @@ import config from '../../common/config'
 import { syncLeases } from './index'
 import * as factory from '../../../test/factories'
 import {
-  addEntry,
+  appendEntry,
   readQueue,
   FailedRowEntry,
 } from '../shared/failed-sync-queue'
@@ -148,7 +148,7 @@ describe('syncLeases', () => {
 
     // Pre-seed the queue
     const entry = makeLeaseEntry(lease)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Drain attempt fails (propertyInfo 500)
     jest
@@ -186,7 +186,7 @@ describe('syncLeases', () => {
 
     // Pre-seed the queue
     const entry = makeLeaseEntry(lease)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Drain attempt succeeds
     jest
@@ -233,7 +233,7 @@ describe('syncLeases', () => {
 
     // Pre-seed the queue with that same lease key
     const entry = makeLeaseEntry(lease)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Drain attempt fails, then new row attempt also fails
     jest
