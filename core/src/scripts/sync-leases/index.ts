@@ -97,7 +97,6 @@ export const syncLeases = (
     {
       name: 'sync-leases',
       entryType: 'lease',
-      firstRun: 'all',
       fetchChanges: getUpdatedLeases,
       sync: syncLease,
       keyFor: (lease) =>

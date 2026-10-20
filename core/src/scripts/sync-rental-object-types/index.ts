@@ -42,17 +42,13 @@ const syncChange = async (change: RentalObjectTypeChange): Promise<void> => {
 }
 
 export const syncRentalObjectTypes = (
-  opts: { stateFile?: string; queueFile?: string; now?: () => Date } = {}
+  opts: { stateFile?: string; queueFile?: string } = {}
 ) =>
   runCmlogSync<RentalObjectTypeChange>(
     {
       name: 'sync-rental-object-types',
       entryType: 'rental-object-type',
-      firstRun: 'now',
-      fetchChanges: (since) =>
-        since
-          ? getRentalObjectTypeChanges(since)
-          : Promise.resolve({ ok: true, data: [] }),
+      fetchChanges: getRentalObjectTypeChanges,
       sync: syncChange,
       keyFor: (change) => `rental-object-type:${change.rentalObjectCode}`,
       timestampOf: (change) => change.timestamp,
@@ -74,7 +70,6 @@ export const syncRentalObjectTypes = (
     {
       stateFile: opts.stateFile ?? DEFAULT_STATE_FILE,
       queueFile: opts.queueFile ?? DEFAULT_QUEUE_FILE,
-      now: opts.now,
     }
   )
 

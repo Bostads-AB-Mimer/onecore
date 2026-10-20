@@ -14,7 +14,6 @@ export class PermanentSyncError extends Error {}
 export type CmlogSync<T> = {
   name: string
   entryType: FailedRowEntry['type']
-  firstRun: 'all' | 'now'
   fetchChanges: (
     since: Date | null
   ) => Promise<{ ok: true; data: T[] } | { ok: false; err: string }>
@@ -26,35 +25,6 @@ export type CmlogSync<T> = {
   describe: (change: T) => { subject: string; detail: string }
 }
 
-// cmlog.logtime is Swedish wall-clock time that the mssql driver reads as UTC.
-const toXpandTime = (date: Date): Date => {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Europe/Stockholm',
-      hourCycle: 'h23',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
-      .formatToParts(date)
-      .map(({ type, value }) => [type, Number(value)])
-  )
-  return new Date(
-    Date.UTC(
-      parts.year,
-      parts.month - 1,
-      parts.day,
-      parts.hour,
-      parts.minute,
-      parts.second,
-      date.getUTCMilliseconds()
-    )
-  )
-}
-
 const capitalize = (text: string) =>
   text.charAt(0).toUpperCase() + text.slice(1)
 
@@ -63,10 +33,9 @@ const errorMessage = (err: unknown) =>
 
 export const runCmlogSync = async <T>(
   def: CmlogSync<T>,
-  opts: { stateFile: string; queueFile: string; now?: () => Date }
+  opts: { stateFile: string; queueFile: string }
 ) => {
   const { stateFile, queueFile } = opts
-  const now = opts.now ?? (() => new Date())
 
   const notifyFailure = (change: T, entry: FailedRowEntry) => {
     const { subject, detail } = def.describe(change)
@@ -124,12 +93,6 @@ export const runCmlogSync = async <T>(
 
   // 2) Process new cmlog rows
   const lastTimestamp = await getLastTimestamp(stateFile)
-  if (!lastTimestamp && def.firstRun === 'now') {
-    const startFrom = toXpandTime(now())
-    await saveLastTimestamp(stateFile, startFrom)
-    logger.info({ startFrom }, 'no saved timestamp, starting from now')
-    return
-  }
   if (lastTimestamp) {
     logger.info({ lastTimestamp }, 'syncing since last timestamp')
   } else {
@@ -171,7 +134,7 @@ export const runCmlogSync = async <T>(
           key,
           type: def.entryType,
           payload: def.toPayload(change),
-          addedAt: now().toISOString(),
+          addedAt: new Date().toISOString(),
           lastError: errorMessage(err),
         }
         const sameRow =

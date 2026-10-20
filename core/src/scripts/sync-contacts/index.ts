@@ -53,7 +53,6 @@ export const syncContacts = (
     {
       name: 'sync-contacts',
       entryType: 'contact',
-      firstRun: 'all',
       fetchChanges: (since) =>
         makeContactsAdapter(config.contactsService.url).getUpdatedContacts(
           since

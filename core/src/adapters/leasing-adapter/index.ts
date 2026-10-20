@@ -856,12 +856,13 @@ const syncLease = async (
 }
 
 const getRentalObjectTypeChanges = async (
-  since: Date
+  since: Date | null
 ): Promise<AdapterResult<RentalObjectTypeChange[], 'unknown'>> => {
   try {
+    const params = since ? { since: since.toISOString() } : {}
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/rental-objects/types/sync`,
-      { params: { since: since.toISOString() }, validateStatus: () => true }
+      { params, validateStatus: () => true }
     )
 
     if (response.status === 200) {

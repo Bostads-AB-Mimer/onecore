@@ -10,22 +10,25 @@ const TYPE_CHANGE_PATTERN =
   /^Värdet i fältet 'Hyresobjekttyp' ändrat från '.*' till '(.*)'\.?$/
 
 /**
- * Queries cmlog for rental object type changes after the given timestamp.
+ * Queries cmlog for rental object type changes after the given timestamp,
+ * or all of them when it is null.
  *
  * cmlog.logtime is Swedish local time without a zone; see the note on
  * cmlogLeaseChanges in cmlog-lease-adapter.ts.
  */
 export const cmlogRentalObjectTypeChanges = (
   db: Knex,
-  since: Date
-): Promise<{ logmemo: string; logtime: Date }[]> =>
-  db
+  since: Date | null
+): Promise<{ logmemo: string; logtime: Date }[]> => {
+  const base = db
     .from('cmlog')
     .whereLike('logmemo', 'Hyresobjekt %')
     .andWhereLike('logmemo', "%'Hyresobjekttyp'%")
-    .andWhere('logtime', '>', since)
     .orderBy('logtime', 'asc')
     .select('logmemo', 'logtime')
+
+  return since ? base.andWhere('logtime', '>', since) : base
+}
 
 const toCodeAndLabel = (
   target: string
@@ -79,7 +82,7 @@ export const parseRentalObjectTypeChanges = (
 }
 
 export const getRentalObjectTypeChanges = async (
-  since: Date
+  since: Date | null
 ): Promise<RentalObjectTypeChange[]> => {
   const rows = await cmlogRentalObjectTypeChanges(xpandDb, since)
   const changes = parseRentalObjectTypeChanges(rows)

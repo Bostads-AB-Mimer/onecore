@@ -20,10 +20,10 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx, ['since'])
     const since = ctx.query.since ? new Date(ctx.query.since as string) : null
 
-    if (!since || isNaN(since.getTime())) {
+    if (since && isNaN(since.getTime())) {
       ctx.status = 400
       ctx.body = {
-        error: 'Missing or invalid since parameter, expected ISO 8601 date',
+        error: 'Invalid since parameter, expected ISO 8601 date',
         ...metadata,
       }
       return
