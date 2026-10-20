@@ -126,6 +126,17 @@ describe('Tenfast Adapter', () => {
       )
     })
 
+    it('accepts a parking space without skvNummer (AVTAL-348)', async () => {
+      const { skvNummer: _, ...parkingSpace } =
+        TenfastRentalPropertyFactory.build({ typ: 'parkering' })
+      mockAxios.request.mockResolvedValue({ status: 200, data: parkingSpace })
+
+      const result = await getRentalProperty(parkingSpace.externalId)
+
+      assert(result.ok)
+      expect(result.data.apartmentNumber).toBe(0)
+    })
+
     it('should return error when rental property is not found (404)', async () => {
       mockAxios.request.mockResolvedValue({
         status: 404,
@@ -838,6 +849,35 @@ describe(getInvoicePdf, () => {
         contentDisposition: 'attachment; filename=Hyresavi.pdf',
       },
     })
+  })
+
+  it('returns the pdf for an invoice covering a parking space (AVTAL-348)', async () => {
+    // A co-invoiced apartment and parking space. Tenfast leaves out
+    // skvNummer for the parking space.
+    const [apartmentLease] = mockInvoice.avtal
+    const { skvNummer: _, ...parkingSpace } = apartmentLease.hyresobjekt[0]
+    const coInvoiced = {
+      ...mockInvoice,
+      avtal: [
+        apartmentLease,
+        {
+          ...apartmentLease,
+          _id: 'lease-parking',
+          hyresobjekt: [{ ...parkingSpace, externalId: '806-721-00-0018' }],
+        },
+      ],
+    }
+    mockAxios.request
+      .mockResolvedValueOnce({ status: 200, data: coInvoiced })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: Buffer.from('%PDF-1.4 mock'),
+        headers: {},
+      })
+
+    const result = await getInvoicePdf(ocr)
+
+    expect(result.ok).toBe(true)
   })
 
   it('returns not-found when OCR lookup returns 404', async () => {

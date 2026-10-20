@@ -37,7 +37,9 @@ export const TenfastRentalPropertySchema = z.object({
   hyraVat: z.number(),
   hyror: z.array(TenfastInvoiceRowSchema),
   nummer: z.string(),
-  skvNummer: z.number().nullable(),
+  // The Swedish Tax Agency's apartment number. Tenfast leaves it out for
+  // objects that have none, such as parking spaces.
+  skvNummer: z.number().nullish(),
   postnummer: z.string(),
   postadress: z.string(),
   commonName: z.string().optional(),
@@ -156,7 +158,8 @@ export const TenfastInvoiceSchema = z.object({
           z.object({
             _id: z.string(),
             nummer: z.string(),
-            skvNummer: z.number().nullable(),
+            // Left out for parking spaces, see TenfastRentalPropertySchema.
+            skvNummer: z.number().nullish(),
             postadress: z.string(),
             externalId: z.string(),
             displayName: z.string(),
