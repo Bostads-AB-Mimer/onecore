@@ -16,12 +16,22 @@ const change = (overrides: Partial<Change> = {}): Change => ({
   ...overrides,
 })
 
-const entryFor = (c: Change, lastError = 'boom'): FailedRowEntry => ({
+const NOW = new Date('2026-10-15T08:30:00.000Z')
+const HOUR = 60 * 60 * 1000
+
+const hoursBefore = (date: Date, hours: number) =>
+  new Date(date.getTime() - hours * HOUR).toISOString()
+
+const entryFor = (
+  c: Change,
+  overrides: Partial<FailedRowEntry> = {}
+): FailedRowEntry => ({
   key: `thing:${c.id}`,
   type: 'rental-object-type',
   payload: { ...c, timestamp: c.timestamp.toISOString() },
   addedAt: '2026-10-15T00:00:00.000Z',
-  lastError,
+  lastError: 'boom',
+  ...overrides,
 })
 
 let dir: string
@@ -51,8 +61,12 @@ const definition = (
   ...overrides,
 })
 
-const run = (overrides: Partial<CmlogSync<Change>> = {}) =>
-  runCmlogSync(definition(overrides), { stateFile, queueFile })
+const run = (overrides: Partial<CmlogSync<Change>> = {}, now = NOW) =>
+  runCmlogSync(definition(overrides), {
+    stateFile,
+    queueFile,
+    now: () => now,
+  })
 
 const readState = async () => (await fs.readFile(stateFile, 'utf-8')).trim()
 
@@ -118,6 +132,8 @@ describe('runCmlogSync', () => {
     expect(queue[0]).toMatchObject({
       key: 'thing:A-1',
       type: 'rental-object-type',
+      addedAt: NOW.toISOString(),
+      lastAttemptAt: NOW.toISOString(),
       lastError: 'tenfast down',
     })
     expect(subjects()).toEqual(['sync-things: nytt fel på sak A-1'])
@@ -248,6 +264,138 @@ describe('runCmlogSync', () => {
 
     expect(await readQueue(queueFile)).toHaveLength(1)
     expect(await readState()).toBe(c.timestamp.toISOString())
+  })
+
+  describe('retry schedule', () => {
+    const failedFor = (
+      hours: number,
+      overrides: Partial<FailedRowEntry> = {}
+    ) => entryFor(change(), { addedAt: hoursBefore(NOW, hours), ...overrides })
+
+    it('first day: retries every run and records the attempt and latest error', async () => {
+      await addEntry(
+        queueFile,
+        failedFor(23, { lastAttemptAt: hoursBefore(NOW, 0.02) })
+      )
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run()
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      const [entry] = await readQueue(queueFile)
+      expect(entry.lastAttemptAt).toBe(NOW.toISOString())
+      expect(entry.lastError).toBe('still down')
+      expect(entry.addedAt).toBe(hoursBefore(NOW, 23))
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+    })
+
+    it('after a day: skips an entry tried less than six hours ago', async () => {
+      await addEntry(
+        queueFile,
+        failedFor(30, { lastAttemptAt: hoursBefore(NOW, 5) })
+      )
+
+      await run()
+
+      expect(sync).not.toHaveBeenCalled()
+      expect(await readQueue(queueFile)).toHaveLength(1)
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+    })
+
+    it('after a day: retries six hours after the last attempt and mails once that it still fails', async () => {
+      await addEntry(
+        queueFile,
+        failedFor(30, { lastAttemptAt: hoursBefore(NOW, 6) })
+      )
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run()
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      const [entry] = await readQueue(queueFile)
+      expect(entry.lastAttemptAt).toBe(NOW.toISOString())
+      expect(entry.stillFailingNotifiedAt).toBe(NOW.toISOString())
+      expect(subjects()).toEqual([
+        'sync-things: sak A-1 misslyckas fortfarande',
+      ])
+      expect(sendEmailSpy.mock.calls[0][0].body).toContain('var sjätte timme')
+    })
+
+    it('after a day: does not repeat the still-failing mail', async () => {
+      await addEntry(
+        queueFile,
+        failedFor(60, {
+          lastAttemptAt: hoursBefore(NOW, 6),
+          stillFailingNotifiedAt: hoursBefore(NOW, 30),
+        })
+      )
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run()
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+    })
+
+    it('treats an entry without lastAttemptAt as last tried when it was added', async () => {
+      await addEntry(queueFile, failedFor(30))
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run()
+
+      expect(sync).toHaveBeenCalledTimes(1)
+    })
+
+    it('after a day: recovery still removes the entry and mails', async () => {
+      await addEntry(
+        queueFile,
+        failedFor(100, { lastAttemptAt: hoursBefore(NOW, 7) })
+      )
+
+      await run()
+
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual([
+        'sync-things: tidigare felande sak A-1 är nu synkat',
+      ])
+    })
+
+    it('after a week: gives up on the next failed attempt, removes the entry and mails', async () => {
+      await addEntry(
+        queueFile,
+        failedFor(7 * 24 + 1, {
+          lastAttemptAt: hoursBefore(NOW, 6),
+          stillFailingNotifiedAt: hoursBefore(NOW, 6 * 24),
+        })
+      )
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run()
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual(['sync-things: ger upp sak A-1'])
+      expect(sendEmailSpy.mock.calls[0][0].body).toContain('still down')
+    })
+
+    it('a newer change for the same key starts a fresh clock', async () => {
+      await addEntry(
+        queueFile,
+        failedFor(7 * 24 + 1, { lastAttemptAt: hoursBefore(NOW, 1) })
+      )
+      const newer = change({
+        value: 'new',
+        timestamp: new Date('2026-10-15T08:10:00.000Z'),
+      })
+      fetchChanges.mockResolvedValue({ ok: true, data: [newer] })
+      sync.mockRejectedValue(new Error('down'))
+
+      await run()
+
+      const [entry] = await readQueue(queueFile)
+      expect(entry.addedAt).toBe(NOW.toISOString())
+      expect(subjects()).toEqual(['sync-things: nytt fel på sak A-1'])
+    })
   })
 
   it('throws when fetching fails and leaves the timestamp alone', async () => {
