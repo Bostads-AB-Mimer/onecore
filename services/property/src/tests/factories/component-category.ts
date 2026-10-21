@@ -5,5 +5,6 @@ export const ComponentCategoryFactory = Factory.define<CreateComponentCategory>(
   ({ sequence }) => ({
     categoryName: `Test Category ${sequence}`,
     description: `Test category description ${sequence}`,
+    type: 'EQUIPMENT',
   })
 )

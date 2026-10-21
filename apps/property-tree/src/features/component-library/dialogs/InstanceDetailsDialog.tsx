@@ -11,7 +11,7 @@ import {
   Upload,
 } from 'lucide-react'
 
-import { useComponentImages } from '@/entities/component'
+import { formatComponentLabel, useComponentImages } from '@/entities/component'
 
 import type { Component } from '@/services/types'
 
@@ -34,11 +34,31 @@ import {
   TableRow,
 } from '@/shared/ui/Table'
 
+import {
+  describeStructure,
+  formatComponentQuantity,
+  formatInstallationDate,
+  formatSek,
+  formatWithUnit,
+  type PlaceLabel,
+} from '../lib/componentRows'
+
 interface InstanceDetailsDialogProps {
   isOpen: boolean
   onClose: () => void
   instance: Component
 }
+
+interface PlaceCellProps {
+  place: PlaceLabel
+}
+
+const PlaceCell = ({ place }: PlaceCellProps) => (
+  <span className="flex flex-col leading-snug">
+    {place.address && <span>{place.address}</span>}
+    <span className="text-muted-foreground">{place.detail}</span>
+  </span>
+)
 
 export const InstanceDetailsDialog = ({
   isOpen,
@@ -61,6 +81,7 @@ export const InstanceDetailsDialog = ({
     images: documents,
     isLoading: docsLoading,
     error: docsError,
+    refetch: refetchDocs,
     upload,
     isUploading,
     uploadError,
@@ -255,11 +276,11 @@ export const InstanceDetailsDialog = ({
         <DialogHeader>
           <DialogTitle>Komponentdetaljer</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            {instance.serialNumber}
+            {formatComponentLabel(instance)}
           </p>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {/* Basic Info */}
           <div>
             <h3 className="font-semibold mb-3">Grundinformation</h3>
@@ -275,31 +296,39 @@ export const InstanceDetailsDialog = ({
               <div>
                 <dt className="text-sm text-muted-foreground">Skick</dt>
                 <dd>
-                  <Badge variant={getConditionVariant(instance.condition)}>
-                    {getConditionLabel(instance.condition)}
-                  </Badge>
+                  {instance.condition ? (
+                    <Badge variant={getConditionVariant(instance.condition)}>
+                      {getConditionLabel(instance.condition)}
+                    </Badge>
+                  ) : (
+                    <span className="text-sm font-medium">-</span>
+                  )}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">Serienummer</dt>
-                <dd className="text-sm font-medium">{instance.serialNumber}</dd>
+                <dd className="text-sm font-medium">
+                  {instance.serialNumber || '-'}
+                </dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">Antal</dt>
-                <dd className="text-sm font-medium">{instance.quantity}</dd>
+                <dd className="text-sm font-medium tabular-nums">
+                  {formatComponentQuantity(instance)}
+                </dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">Inköpspris</dt>
-                <dd className="text-sm font-medium">
-                  {instance.priceAtPurchase} kr
+                <dd className="text-sm font-medium tabular-nums">
+                  {formatSek(instance.priceAtPurchase)}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">
                   Avskrivningspris
                 </dt>
-                <dd className="text-sm font-medium">
-                  {instance.depreciationPriceAtPurchase} kr
+                <dd className="text-sm font-medium tabular-nums">
+                  {formatSek(instance.depreciationPriceAtPurchase)}
                 </dd>
               </div>
               <div>
@@ -309,19 +338,17 @@ export const InstanceDetailsDialog = ({
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted-foreground">
-                  Garanti (månader)
-                </dt>
-                <dd className="text-sm font-medium">
-                  {instance.warrantyMonths} mån
+                <dt className="text-sm text-muted-foreground">Garanti</dt>
+                <dd className="text-sm font-medium tabular-nums">
+                  {formatWithUnit(instance.warrantyMonths, 'mån')}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm text-muted-foreground">
                   Ekonomisk livslängd
                 </dt>
-                <dd className="text-sm font-medium">
-                  {instance.economicLifespan} år
+                <dd className="text-sm font-medium tabular-nums">
+                  {formatWithUnit(instance.economicLifespan, 'år')}
                 </dd>
               </div>
               {instance.ncsCode && (
@@ -332,6 +359,24 @@ export const InstanceDetailsDialog = ({
               )}
             </dl>
           </div>
+
+          {instance.specifications?.trim() && (
+            <div>
+              <h3 className="font-semibold mb-3">Specifikationer</h3>
+              <p className="text-sm whitespace-pre-wrap">
+                {instance.specifications.trim()}
+              </p>
+            </div>
+          )}
+
+          {instance.additionalInformation?.trim() && (
+            <div>
+              <h3 className="font-semibold mb-3">Ytterligare information</h3>
+              <p className="text-sm whitespace-pre-wrap">
+                {instance.additionalInformation.trim()}
+              </p>
+            </div>
+          )}
 
           {/* Installation History */}
           <div>
@@ -344,27 +389,33 @@ export const InstanceDetailsDialog = ({
                     <TableRow>
                       <TableHead>Installationsdatum</TableHead>
                       <TableHead>Avinstallationsdatum</TableHead>
-                      <TableHead>Rum</TableHead>
+                      <TableHead>Plats</TableHead>
                       <TableHead>Kostnad</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {instance.componentInstallations.map((install) => (
                       <TableRow key={install.id}>
-                        <TableCell>
-                          {formatISODate(install.installationDate)}
+                        <TableCell className="whitespace-nowrap tabular-nums">
+                          {formatInstallationDate(install.installationDate)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap tabular-nums">
                           {install.deinstallationDate ? (
                             formatISODate(install.deinstallationDate)
                           ) : (
-                            <Badge variant="default">Aktiv</Badge>
+                            <Badge variant="default">Nuvarande</Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {install.spaceId || 'N/A'}
+                        <TableCell>
+                          <PlaceCell
+                            place={describeStructure(
+                              install.propertyObject?.propertyStructures?.[0]
+                            )}
+                          />
                         </TableCell>
-                        <TableCell>{install.cost || 0} kr</TableCell>
+                        <TableCell className="tabular-nums">
+                          {formatSek(install.cost)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -389,9 +440,17 @@ export const InstanceDetailsDialog = ({
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : docsError ? (
-              <p className="text-sm text-red-600 py-4 text-center border rounded-md">
-                Kunde inte ladda dokument
-              </p>
+              <div
+                className="flex flex-col items-center gap-2 py-4 border rounded-md"
+                role="alert"
+              >
+                <p className="text-sm text-destructive">
+                  Kunde inte ladda dokumenten
+                </p>
+                <Button variant="outline" size="sm" onClick={refetchDocs}>
+                  Försök igen
+                </Button>
+              </div>
             ) : (
               <div className="space-y-3">
                 {/* Upload zone */}

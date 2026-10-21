@@ -1,5 +1,6 @@
 import type { ComponentType } from '@/services/types'
 
+import { sortBySwedishName } from '@/shared/lib/sortByName'
 import { type Column, DataTable } from '@/shared/ui/DataTable'
 
 interface TypesTableProps {
@@ -8,6 +9,7 @@ interface TypesTableProps {
   onEdit: (type: ComponentType) => void
   onDelete: (type: ComponentType) => void
   onNavigate: (type: ComponentType) => void
+  getHref: (type: ComponentType) => string
 }
 
 export const TypesTable = ({
@@ -16,6 +18,7 @@ export const TypesTable = ({
   onEdit,
   onDelete,
   onNavigate,
+  getHref,
 }: TypesTableProps) => {
   const columns: Column<ComponentType>[] = [
     {
@@ -26,6 +29,7 @@ export const TypesTable = ({
     {
       key: 'description',
       label: 'Beskrivning',
+      isEmpty: (item) => !item.description,
       render: (item) => (
         <span className="text-muted-foreground">{item.description || '-'}</span>
       ),
@@ -34,13 +38,16 @@ export const TypesTable = ({
 
   return (
     <DataTable
-      data={types}
+      data={sortBySwedishName(types, (item) => item.typeName)}
       columns={columns}
       isLoading={isLoading}
       onEdit={onEdit}
       onDelete={onDelete}
       onRowClick={onNavigate}
-      emptyMessage="Inga typer ännu"
+      getRowHref={getHref}
+      pageSize={50}
+      emptyMessage="Inga typer"
+      getRowLabel={(item) => item.typeName}
     />
   )
 }

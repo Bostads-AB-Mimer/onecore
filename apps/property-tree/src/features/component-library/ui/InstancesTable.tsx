@@ -2,19 +2,33 @@ import { History, ImageIcon, Unplug } from 'lucide-react'
 
 import type { Component } from '@/services/types'
 
-import { formatISODate } from '@/shared/lib/formatters'
+import { formatComponentModelName } from '@/shared/lib/componentLabels'
 import { paths } from '@/shared/routes'
-import { Badge } from '@/shared/ui/Badge'
-import { Button } from '@/shared/ui/Button'
 import {
   type Column,
   DataTable,
   type DataTableAction,
 } from '@/shared/ui/DataTable'
 
+import {
+  activeInstallation,
+  type CategoryType,
+  type ComponentColumnKey,
+  formatComponentPlace,
+  formatComponentQuantity,
+  formatInstallationDate,
+  getComponentColumnKeys,
+  getComponentLocation,
+  getInstallationDate,
+} from '../lib/componentRows'
+
 interface InstancesTableProps {
   instances: Component[]
+  categoryType: CategoryType
   isLoading: boolean
+  pageSize: number
+  /** The list is filtered to one model, so the Modell column says nothing. */
+  hideModel?: boolean
   onEdit: (instance: Component) => void
   onDelete: (instance: Component) => void
   onViewHistory: (instance: Component) => void
@@ -22,320 +36,135 @@ interface InstancesTableProps {
   onViewImages: (instance: Component) => void
 }
 
+const residenceUrl = (rentalId: string, roomCode: string | null) =>
+  roomCode
+    ? `${paths.residence(rentalId)}?room=${encodeURIComponent(roomCode)}`
+    : paths.residence(rentalId)
+
+const muted = (text: string) => (
+  <span className="text-muted-foreground">{text}</span>
+)
+
+const COLUMNS: Record<ComponentColumnKey, Column<Component>> = {
+  location: {
+    key: 'location',
+    label: 'Plats',
+    width: '28%',
+    render: (item) => {
+      const { address, detail, rentalId, roomCode } = getComponentLocation(item)
+      if (!rentalId) {
+        return (
+          <span className="flex flex-col leading-snug">
+            {address && <span className="font-medium">{address}</span>}
+            <span className="text-muted-foreground">{detail}</span>
+          </span>
+        )
+      }
+      return (
+        <a
+          href={residenceUrl(rentalId, roomCode)}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="group flex flex-col leading-snug rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="font-medium text-primary underline-offset-4 group-hover:underline">
+            {address ?? detail}
+          </span>
+          {address && <span className="text-muted-foreground">{detail}</span>}
+          <span className="sr-only">(öppnas i ny flik)</span>
+        </a>
+      )
+    },
+  },
+  model: {
+    key: 'model',
+    label: 'Modell',
+    isEmpty: (item) => !formatComponentModelName(item.model),
+    keepWhenEmpty: true,
+    render: (item) => formatComponentModelName(item.model) || muted('-'),
+  },
+  installed: {
+    key: 'installed',
+    label: 'Installerad',
+    width: '8.5rem',
+    className: 'whitespace-nowrap tabular-nums',
+    render: (item) => muted(formatInstallationDate(getInstallationDate(item))),
+  },
+  serialNumber: {
+    key: 'serialNumber',
+    label: 'Serienr',
+    width: '22%',
+    className: 'tabular-nums',
+    isEmpty: (item) => !item.serialNumber,
+    keepWhenEmpty: true,
+    render: (item) => item.serialNumber || muted('-'),
+  },
+  specifications: {
+    key: 'specifications',
+    label: 'Specifikation',
+    isEmpty: (item) => !item.specifications,
+    keepWhenEmpty: true,
+    render: (item) =>
+      item.specifications ? (
+        <span className="block max-w-md truncate" title={item.specifications}>
+          {item.specifications}
+        </span>
+      ) : (
+        muted('-')
+      ),
+  },
+  quantity: {
+    key: 'quantity',
+    label: 'Antal',
+    width: '8rem',
+    className: 'whitespace-nowrap tabular-nums',
+    render: (item) => formatComponentQuantity(item),
+  },
+}
+
+const hasActiveInstallation = (item: Component) =>
+  activeInstallation(item) !== undefined
+
 export const InstancesTable = ({
   instances,
+  categoryType,
   isLoading,
+  pageSize,
+  hideModel = false,
   onEdit,
   onDelete,
   onViewHistory,
   onUninstall,
   onViewImages,
 }: InstancesTableProps) => {
-  const formatCurrency = (value: number) =>
-    value.toLocaleString('sv-SE', {
-      style: 'currency',
-      currency: 'SEK',
-      maximumFractionDigits: 0,
-    })
-
-  const handleNavigateToResidence = (
-    rentalId: string | null | undefined,
-    roomCode: string | null | undefined
-  ) => {
-    if (!rentalId) return
-    const url = roomCode
-      ? `${paths.residence(rentalId)}?room=${encodeURIComponent(roomCode)}`
-      : paths.residence(rentalId)
-    window.open(url, '_blank')
-  }
-
-  const getStatusVariant = (
-    status: string
-  ): 'default' | 'secondary' | 'outline' | 'destructive' => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'default'
-      case 'INACTIVE':
-        return 'secondary'
-      case 'MAINTENANCE':
-        return 'outline'
-      case 'DECOMMISSIONED':
-        return 'destructive'
-      default:
-        return 'secondary'
-    }
-  }
-
-  const getStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'Aktiv'
-      case 'INACTIVE':
-        return 'Inaktiv'
-      case 'MAINTENANCE':
-        return 'Underhåll'
-      case 'DECOMMISSIONED':
-        return 'Ur drift'
-      default:
-        return status
-    }
-  }
-
-  const getConditionLabel = (condition: string | null | undefined): string => {
-    switch (condition) {
-      case 'NEW':
-        return 'Nyskick'
-      case 'GOOD':
-        return 'Gott skick'
-      case 'FAIR':
-        return 'Godtagbart skick'
-      case 'POOR':
-        return 'Dåligt skick'
-      case 'DAMAGED':
-        return 'Skadat'
-      default:
-        return '-'
-    }
-  }
-
-  const getConditionVariant = (
-    condition: string | null | undefined
-  ): 'default' | 'secondary' | 'outline' | 'destructive' => {
-    switch (condition) {
-      case 'NEW':
-        return 'default'
-      case 'GOOD':
-        return 'default'
-      case 'FAIR':
-        return 'secondary'
-      case 'POOR':
-        return 'outline'
-      case 'DAMAGED':
-        return 'destructive'
-      default:
-        return 'secondary'
-    }
-  }
-
-  const columns: Column<Component>[] = [
-    {
-      key: 'serialNumber',
-      label: 'Serienummer',
-      render: (item) => <div className="font-medium">{item.serialNumber}</div>,
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (item) => (
-        <Badge variant={getStatusVariant(item.status)}>
-          {getStatusLabel(item.status)}
-        </Badge>
-      ),
-    },
-    {
-      key: 'condition',
-      label: 'Skick',
-      render: (item) => (
-        <Badge variant={getConditionVariant(item.condition)}>
-          {getConditionLabel(item.condition)}
-        </Badge>
-      ),
-    },
-    {
-      key: 'quantity',
-      label: 'Antal',
-      render: (item) => (
-        <span className={!item.quantity ? 'text-muted-foreground' : ''}>
-          {item.quantity || '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'priceAtPurchase',
-      label: 'Inköpspris',
-      render: (item) => (
-        <span className={!item.priceAtPurchase ? 'text-muted-foreground' : ''}>
-          {item.priceAtPurchase ? formatCurrency(item.priceAtPurchase) : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'warrantyMonths',
-      label: 'Garantitid',
-      render: (item) => (
-        <span className={!item.warrantyMonths ? 'text-muted-foreground' : ''}>
-          {item.warrantyMonths ? `${item.warrantyMonths} mån` : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'warrantyStartDate',
-      label: 'Garantistart',
-      render: (item) => (
-        <span className="text-muted-foreground">
-          {formatISODate(item.warrantyStartDate)}
-        </span>
-      ),
-    },
-    {
-      key: 'lastInspectionDate',
-      label: 'Senaste inspektion',
-      render: (item) => (
-        <span className="text-muted-foreground">
-          {formatISODate(item.lastInspectionDate)}
-        </span>
-      ),
-    },
-    {
-      key: 'economicLifespan',
-      label: 'Ekon. livslängd',
-      render: (item) => (
-        <span className={!item.economicLifespan ? 'text-muted-foreground' : ''}>
-          {item.economicLifespan ? `${item.economicLifespan} år` : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'ncsCode',
-      label: 'NCS-kod',
-      render: (item) => (
-        <span className="text-muted-foreground">{item.ncsCode || '-'}</span>
-      ),
-    },
-    {
-      key: 'installed',
-      label: 'Installerad',
-      render: (item) => {
-        const hasActiveInstallation = item.componentInstallations?.some(
-          (install) => !install.deinstallationDate
-        )
-        return (
-          <Badge variant={hasActiveInstallation ? 'default' : 'secondary'}>
-            {hasActiveInstallation ? 'Ja' : 'Nej'}
-          </Badge>
-        )
-      },
-    },
-    {
-      key: 'location',
-      label: 'Plats',
-      render: (item) => {
-        const activeInstallation = item.componentInstallations?.find(
-          (install) => !install.deinstallationDate
-        )
-
-        if (!activeInstallation) {
-          return <span className="text-muted-foreground">Ej installerad</span>
-        }
-
-        const structure =
-          activeInstallation.propertyObject?.propertyStructures?.[0]
-
-        if (!structure) {
-          return <span className="text-muted-foreground">-</span>
-        }
-
-        const rentalId = structure.rentalId
-
-        const displayText = `${structure.residenceCode} / ${structure.roomName || structure.roomCode || 'Okänd'}`
-        const tooltipText = `${structure.residenceName || ''}\nLägenhet: ${structure.rentalId || ''}`
-
-        if (!rentalId) {
-          // Fallback: show location but not clickable if rentalId is missing
-          return (
-            <span className="text-muted-foreground" title={tooltipText}>
-              {displayText}
-            </span>
-          )
-        }
-
-        return (
-          <button
-            onClick={() =>
-              handleNavigateToResidence(rentalId, structure.roomCode)
-            }
-            className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-            title={tooltipText}
-          >
-            {displayText}
-          </button>
-        )
-      },
-    },
-    {
-      key: 'images',
-      label: 'Bilder',
-      render: (item) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={(e) => {
-            e.stopPropagation()
-            onViewImages(item)
-          }}
-          title="Visa bilder"
-        >
-          <ImageIcon className="h-4 w-4" />
-        </Button>
-      ),
-    },
-  ]
-
-  const hasActiveInstallation = (item: Component) =>
-    item.componentInstallations?.some((install) => !install.deinstallationDate)
+  // A fixed table layout needs one column without a width to take the spare space.
+  const columns = getComponentColumnKeys(categoryType)
+    .filter((key) => !(hideModel && key === 'model'))
+    .map((key) =>
+      hideModel && key === 'serialNumber'
+        ? { ...COLUMNS[key], width: undefined }
+        : COLUMNS[key]
+    )
 
   const actions: DataTableAction<Component>[] = [
     {
-      label: 'Visa historik',
+      label: 'Visa detaljer',
       onClick: onViewHistory,
       icon: <History className="h-4 w-4 mr-2" />,
     },
     {
+      label: 'Visa bilder',
+      onClick: onViewImages,
+      icon: <ImageIcon className="h-4 w-4 mr-2" />,
+    },
+    {
       label: 'Avinstallera',
-      onClick: (item) => {
-        if (hasActiveInstallation(item)) {
-          onUninstall(item)
-        }
-      },
+      onClick: onUninstall,
+      isHidden: (item) => !hasActiveInstallation(item),
       icon: <Unplug className="h-4 w-4 mr-2" />,
     },
   ]
-
-  // Expandable content for additional information
-  const expandableContent = (instance: Component) => {
-    const hasAdditionalInfo =
-      instance.additionalInformation && instance.additionalInformation.trim()
-    const hasSpecifications =
-      instance.specifications && instance.specifications.trim()
-
-    if (!hasAdditionalInfo && !hasSpecifications) {
-      return null
-    }
-
-    return (
-      <div className="space-y-4">
-        {hasSpecifications && (
-          <div>
-            <h4 className="text-sm font-medium mb-1">Specifikationer</h4>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {instance.specifications}
-            </p>
-          </div>
-        )}
-        {hasAdditionalInfo && (
-          <div>
-            <h4 className="text-sm font-medium mb-1">
-              Ytterligare information
-            </h4>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {instance.additionalInformation}
-            </p>
-          </div>
-        )}
-      </div>
-    )
-  }
 
   return (
     <DataTable
@@ -344,9 +173,16 @@ export const InstancesTable = ({
       isLoading={isLoading}
       onEdit={onEdit}
       onDelete={onDelete}
+      onRowClick={onViewHistory}
       actions={actions}
-      emptyMessage="Inga komponenter ännu"
-      expandableContent={expandableContent}
+      emptyMessage="Inga komponenter"
+      pageSize={pageSize}
+      getRowLabel={formatComponentPlace}
+      deleteBlockedReason={(item) =>
+        hasActiveInstallation(item)
+          ? 'Avinstallera komponenten först'
+          : undefined
+      }
     />
   )
 }
