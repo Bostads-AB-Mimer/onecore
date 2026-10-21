@@ -16,7 +16,14 @@ import {
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
-import type { LeaseChange } from '@onecore/types'
+import {
+  RentalObjectTypeChangesSchema,
+  SyncRentalObjectTypeResponseSchema,
+  type LeaseChange,
+  type RentalObjectTypeChanges,
+  type SyncRentalObjectTypeRequest,
+  type SyncRentalObjectTypeResponse,
+} from '@onecore/types'
 import config from '../../common/config'
 
 //todo: move to global config or handle error statuses in middleware
@@ -855,6 +862,78 @@ const syncLease = async (
   }
 }
 
+const getRentalObjectTypeChanges = async (
+  since: Date | null
+): Promise<AdapterResult<RentalObjectTypeChanges, 'unknown'>> => {
+  try {
+    const params = since ? { since: since.toISOString() } : {}
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/rental-objects/types/sync`,
+      { params, validateStatus: () => true }
+    )
+
+    if (response.status !== 200)
+      return { ok: false, err: 'unknown', statusCode: response.status }
+
+    const parsed = RentalObjectTypeChangesSchema.safeParse(
+      response.data?.content
+    )
+    if (!parsed.success) {
+      logger.error(
+        { error: parsed.error.issues },
+        'leasing-adapter.getRentalObjectTypeChanges: invalid response'
+      )
+      return { ok: false, err: 'unknown', statusCode: response.status }
+    }
+    return { ok: true, data: parsed.data }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getRentalObjectTypeChanges')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const syncRentalObjectType = async (
+  rentalObjectCode: string,
+  code: string | null
+): Promise<
+  AdapterResult<
+    { action: SyncRentalObjectTypeResponse['action'] },
+    'unknown-type' | 'rejected' | 'sync-failed'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/rental-objects/${encodeURIComponent(rentalObjectCode)}/type/sync`,
+      { code } satisfies SyncRentalObjectTypeRequest,
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      const parsed = SyncRentalObjectTypeResponseSchema.safeParse(
+        response.data?.content
+      )
+      if (parsed.success)
+        return { ok: true, data: { action: parsed.data.action } }
+    }
+
+    if (response.status === 422) {
+      if (response.data?.error === 'unknown-rental-object-type')
+        return { ok: false, err: 'unknown-type', statusCode: 422 }
+      if (response.data?.error === 'rental-object-rejected')
+        return { ok: false, err: 'rejected', statusCode: 422 }
+    }
+
+    logger.error(
+      { rentalObjectCode, status: response.status, body: response.data },
+      'leasing-adapter.syncRentalObjectType'
+    )
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.syncRentalObjectType')
+    return { ok: false, err: 'sync-failed' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
   getLeasesForExport,
@@ -886,6 +965,8 @@ export {
   deleteListingTextContent,
   getUpdatedLeases,
   syncLease,
+  getRentalObjectTypeChanges,
+  syncRentalObjectType,
 }
 
 export {
