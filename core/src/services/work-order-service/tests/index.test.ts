@@ -675,6 +675,68 @@ describe('work-order-service index', () => {
     })
   })
 
+  describe('POST /work-orders/from-inspection', () => {
+    const group = {
+      maintenanceTeamId: 1,
+      maintenanceTeamName: 'Snickare',
+      descriptionHtml: 'A',
+    }
+
+    beforeEach(() => {
+      jest
+        .spyOn(propertyManagementAdapter, 'getRentalPropertyInfo')
+        .mockResolvedValue(factory.rentalPropertyInfo.build())
+    })
+
+    // The request schema is a plain z.object, which strips keys it doesn't
+    // know — without the field in the shared group schema the ids would
+    // silently never reach the work-order service.
+    it('passes the component ids through to the work-order adapter', async () => {
+      const createSpy = jest
+        .spyOn(workOrderAdapter, 'createInspectionWorkOrders')
+        .mockResolvedValue({
+          ok: true,
+          data: { results: [{ maintenanceTeamId: 1, ok: true }] },
+        })
+
+      const res = await request(app.callback())
+        .post('/work-orders/from-inspection')
+        .send({
+          rentalObjectCode: '123-456-789',
+          inspectionId: 'INSP-1',
+          groups: [{ ...group, componentIds: ['comp-a', 'comp-b'] }],
+        })
+
+      expect(res.status).toBe(200)
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inspectionId: 'INSP-1',
+          groups: [
+            expect.objectContaining({ componentIds: ['comp-a', 'comp-b'] }),
+          ],
+        })
+      )
+    })
+
+    it('accepts groups without component ids', async () => {
+      const createSpy = jest
+        .spyOn(workOrderAdapter, 'createInspectionWorkOrders')
+        .mockResolvedValue({
+          ok: true,
+          data: { results: [{ maintenanceTeamId: 1, ok: true }] },
+        })
+
+      const res = await request(app.callback())
+        .post('/work-orders/from-inspection')
+        .send({ rentalObjectCode: '123-456-789', groups: [group] })
+
+      expect(res.status).toBe(200)
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ groups: [group] })
+      )
+    })
+  })
+
   describe('POST /work-orders/:workOrderId/update', () => {
     const workOrderId = '13'
     const message = 'test'

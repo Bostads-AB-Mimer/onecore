@@ -11696,6 +11696,7 @@ export interface components {
         maintenanceTeamId: number
         maintenanceTeamName: string
         descriptionHtml: string
+        componentIds?: string[]
       }[]
     }
     CreateInspectionWorkOrdersResponse: {

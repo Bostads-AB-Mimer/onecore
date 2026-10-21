@@ -324,6 +324,64 @@ describe('work-order-service index', () => {
     })
   })
 
+  describe('POST /workOrders/fromInspection', () => {
+    const group = {
+      maintenanceTeamId: 1,
+      maintenanceTeamName: 'Snickare',
+      descriptionHtml: 'A',
+    }
+
+    // The body schema is a plain z.object, which strips keys it doesn't
+    // know — without the field in the shared group schema the ids would
+    // silently never reach Odoo.
+    it('passes the component ids through to the adapter', async () => {
+      const createSpy = jest
+        .spyOn(odooAdapter, 'createInspectionWorkOrders')
+        .mockResolvedValue({
+          ok: true,
+          data: [{ maintenanceTeamId: 1, ok: true, workOrderId: 100 }],
+        })
+
+      const res = await request(app.callback())
+        .post('/api/workOrders/fromInspection')
+        .send({
+          rentalProperty: factory.rentalProperty.build(),
+          inspectionId: 'INSP-1',
+          groups: [{ ...group, componentIds: ['comp-a', 'comp-b'] }],
+        })
+
+      expect(res.status).toBe(200)
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        [expect.objectContaining({ componentIds: ['comp-a', 'comp-b'] })],
+        'INSP-1'
+      )
+    })
+
+    it('accepts groups without component ids', async () => {
+      const createSpy = jest
+        .spyOn(odooAdapter, 'createInspectionWorkOrders')
+        .mockResolvedValue({
+          ok: true,
+          data: [{ maintenanceTeamId: 1, ok: true, workOrderId: 100 }],
+        })
+
+      const res = await request(app.callback())
+        .post('/api/workOrders/fromInspection')
+        .send({
+          rentalProperty: factory.rentalProperty.build(),
+          groups: [group],
+        })
+
+      expect(res.status).toBe(200)
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.anything(),
+        [group],
+        undefined
+      )
+    })
+  })
+
   describe('GET /workOrders/propertyId/{propertyId}', () => {
     const propertyId = '123-456'
     const workOrderMock = factory.workOrder.buildList(4)

@@ -11,6 +11,7 @@ import {
   buildInspectionWorkOrderGroups,
   getDamagedComponents,
   type InspectionWorkOrderGroup,
+  workOrderGroupSignature,
 } from '../lib/buildInspectionWorkOrderGroups'
 import { useMaintenanceTeams } from './useMaintenanceTeams'
 
@@ -51,13 +52,13 @@ export const useInspectionWorkOrders = ({
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   // Snapshot per team of what was successfully created/updated in Odoo this
   // session. A team only counts as "already created" while its group content
-  // still matches `descriptionHtml` — assigning another component to the team
+  // still matches `signature` — assigning another component to the team
   // afterwards re-submits the group (the backend upserts the existing
   // request), so a retry never silently drops late additions. `workOrderId`
   // lets us close the request again if the team later loses all its
   // components (see createWorkOrders).
   const [submittedByTeam, setSubmittedByTeam] = useState<
-    Map<number, { descriptionHtml: string; workOrderId?: number }>
+    Map<number, { signature: string; workOrderId?: number }>
   >(new Map())
 
   const assignTeam = (key: string, teamId: number | null) =>
@@ -88,7 +89,7 @@ export const useInspectionWorkOrders = ({
   ): InspectionWorkOrderGroupStatus => {
     const submitted = submittedByTeam.get(group.maintenanceTeamId)
     if (submitted === undefined) return 'pending'
-    return submitted.descriptionHtml === group.descriptionHtml
+    return submitted.signature === workOrderGroupSignature(group)
       ? 'created'
       : 'changed'
   }
@@ -96,10 +97,10 @@ export const useInspectionWorkOrders = ({
   const createMutation = useMutation({
     mutationFn: workOrderService.createInspectionWorkOrders,
     onSuccess: ({ results }, variables) => {
-      const sentHtmlByTeam = new Map(
+      const sentSignatureByTeam = new Map(
         variables.groups.map((group) => [
           group.maintenanceTeamId,
-          group.descriptionHtml,
+          workOrderGroupSignature(group),
         ])
       )
       const succeeded = results.filter((result) => result.ok)
@@ -107,10 +108,10 @@ export const useInspectionWorkOrders = ({
         setSubmittedByTeam((prev) => {
           const next = new Map(prev)
           for (const result of succeeded) {
-            const html = sentHtmlByTeam.get(result.maintenanceTeamId)
-            if (html !== undefined) {
+            const signature = sentSignatureByTeam.get(result.maintenanceTeamId)
+            if (signature !== undefined) {
               next.set(result.maintenanceTeamId, {
-                descriptionHtml: html,
+                signature,
                 workOrderId: result.workOrderId,
               })
             }
@@ -229,6 +230,7 @@ export const useInspectionWorkOrders = ({
           maintenanceTeamId: group.maintenanceTeamId,
           maintenanceTeamName: group.maintenanceTeamName,
           descriptionHtml: group.descriptionHtml,
+          componentIds: group.componentIds,
         })),
       })
       return staleOk && results.every((result) => result.ok)
