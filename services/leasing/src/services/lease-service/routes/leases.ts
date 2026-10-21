@@ -1323,8 +1323,13 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
+        // The list can be thousands of codes long: log a sample, as core does.
         logger.error(
-          { err: result.err, rentalObjectCodes },
+          {
+            err: result.err,
+            count: rentalObjectCodes.length,
+            sample: rentalObjectCodes.slice(0, 10),
+          },
           'Error fetching lease availability for rental objects'
         )
         ctx.status = 500
