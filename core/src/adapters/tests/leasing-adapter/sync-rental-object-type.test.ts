@@ -58,6 +58,25 @@ describe('getRentalObjectTypeChanges', () => {
     expect(result).toEqual({ ok: true, data: { changes: [], until: null } })
   })
 
+  it('returns unknown when the response does not match the schema', async () => {
+    nock(config.tenantsLeasesService.url)
+      .get('/rental-objects/types/sync')
+      .query(true)
+      .reply(200, {
+        content: {
+          changes: [{ rentalObjectCode: 1, timestamp: 'not-a-date' }],
+          until: null,
+        },
+      })
+
+    const result = await leasingAdapter.getRentalObjectTypeChanges(
+      new Date('2026-10-15T00:00:00.000Z')
+    )
+
+    assert(!result.ok)
+    expect(result.err).toBe('unknown')
+  })
+
   it('returns unknown on a 400', async () => {
     nock(config.tenantsLeasesService.url)
       .get('/rental-objects/types/sync')
@@ -130,6 +149,34 @@ describe('syncRentalObjectType', () => {
     expect(result).toEqual({ ok: false, err: 'unknown-type', statusCode: 422 })
   })
 
+  it('maps a 422 with another error to sync-failed', async () => {
+    nock(config.tenantsLeasesService.url)
+      .post('/rental-objects/807-033-01-0101/type/sync')
+      .reply(422, { error: 'something-else' })
+
+    const result = await leasingAdapter.syncRentalObjectType(
+      '807-033-01-0101',
+      'STD'
+    )
+
+    expect(result).toEqual({ ok: false, err: 'sync-failed', statusCode: 422 })
+  })
+
+  it('maps a 200 with an unknown action to sync-failed', async () => {
+    nock(config.tenantsLeasesService.url)
+      .post('/rental-objects/807-033-01-0101/type/sync')
+      .reply(200, {
+        content: { action: 'deleted', rentalObjectCode: '807-033-01-0101' },
+      })
+
+    const result = await leasingAdapter.syncRentalObjectType(
+      '807-033-01-0101',
+      'STD'
+    )
+
+    expect(result).toEqual({ ok: false, err: 'sync-failed', statusCode: 200 })
+  })
+
   it('maps 422 rental-object-rejected to rejected', async () => {
     nock(config.tenantsLeasesService.url)
       .post('/rental-objects/807-033-01-0101/type/sync')
@@ -186,7 +233,9 @@ describe('syncRentalObjectType', () => {
   it('URL-encodes the rental object code', async () => {
     nock(config.tenantsLeasesService.url)
       .post('/rental-objects/807%20033/type/sync')
-      .reply(200, { content: { action: 'skipped' } })
+      .reply(200, {
+        content: { action: 'skipped', rentalObjectCode: '807 033' },
+      })
 
     const result = await leasingAdapter.syncRentalObjectType('807 033', 'STD')
 

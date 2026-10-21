@@ -98,20 +98,58 @@ describe('POST /rental-objects/:rentalObjectCode/type/sync', () => {
       .post('/rental-objects/807-033-01-0101/type/sync')
       .send(body as object)
 
-  it('returns 422 without calling Tenfast when code is null', async () => {
+  const inTenfast = () =>
+    getRentalObject.mockResolvedValueOnce({
+      ok: true,
+      data: factory.tenfastRentalObject.build({
+        _id: 'tf-1',
+        category: { code: 'STD', label: 'Standard hyresobjektstyp' },
+      }),
+    })
+
+  it('returns 422 without patching when code is null', async () => {
+    inTenfast()
+
     const res = await post({ code: null })
 
     expect(res.status).toBe(422)
     expect(res.body.error).toBe('unknown-rental-object-type')
-    expect(getRentalObject).not.toHaveBeenCalled()
+    expect(updateRentalObjectCategory).not.toHaveBeenCalled()
   })
 
-  it('returns 422 without calling Tenfast when code is not a Tenfast category', async () => {
+  it('returns 422 without patching when code is not a Tenfast category', async () => {
+    inTenfast()
+
     const res = await post({ code: 'HDK' })
 
     expect(res.status).toBe(422)
     expect(res.body.error).toBe('unknown-rental-object-type')
-    expect(getRentalObject).not.toHaveBeenCalled()
+    expect(updateRentalObjectCategory).not.toHaveBeenCalled()
+  })
+
+  it.each([null, 'HDK'])(
+    'returns skipped for code %p when the rental object is not in Tenfast',
+    async (code) => {
+      getRentalObject.mockResolvedValueOnce({ ok: true, data: null })
+
+      const res = await post({ code })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.action).toBe('skipped')
+    }
+  )
+
+  it('trims the code before matching it to a Tenfast category', async () => {
+    inTenfast()
+    updateRentalObjectCategory.mockResolvedValueOnce({ ok: true, data: null })
+
+    const res = await post({ code: ' POÄNGFRITT ' })
+
+    expect(res.status).toBe(200)
+    expect(updateRentalObjectCategory).toHaveBeenCalledWith('tf-1', {
+      code: 'POÄNGFRITT',
+      label: 'Poängfritt',
+    })
   })
 
   it('returns 400 when the body has no code', async () => {

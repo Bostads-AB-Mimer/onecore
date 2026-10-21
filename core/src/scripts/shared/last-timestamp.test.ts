@@ -28,11 +28,17 @@ describe('last-timestamp', () => {
     expect(await getLastTimestamp(stateFile)).toBeNull()
   })
 
-  it('returns null for an empty or invalid file', async () => {
+  it('throws for an empty or invalid file', async () => {
     await fs.writeFile(stateFile, '  \n', 'utf-8')
-    expect(await getLastTimestamp(stateFile)).toBeNull()
+    await expect(getLastTimestamp(stateFile)).rejects.toThrow(stateFile)
 
     await fs.writeFile(stateFile, 'not-a-date', 'utf-8')
-    expect(await getLastTimestamp(stateFile)).toBeNull()
+    await expect(getLastTimestamp(stateFile)).rejects.toThrow(stateFile)
+  })
+
+  it('throws when the file cannot be read', async () => {
+    await fs.mkdir(stateFile)
+
+    await expect(getLastTimestamp(stateFile)).rejects.toThrow()
   })
 })

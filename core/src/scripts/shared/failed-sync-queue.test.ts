@@ -66,6 +66,23 @@ describe('failed-sync-queue', () => {
     expect(await readQueue(file)).toEqual([])
   })
 
+  it('readQueue skips a broken line and keeps the others', async () => {
+    await appendEntry(file, makeEntry('a'))
+    await fs.appendFile(file, '{"key":"b","ty', 'utf-8')
+    await fs.appendFile(file, '\n' + JSON.stringify(makeEntry('c')) + '\n')
+
+    expect((await readQueue(file)).map((e) => e.key)).toEqual(['a', 'c'])
+  })
+
+  it('appendEntry after a torn last line keeps the new entry readable', async () => {
+    await appendEntry(file, makeEntry('a'))
+    await fs.appendFile(file, '{"key":"b","ty', 'utf-8')
+
+    await appendEntry(file, makeEntry('c'))
+
+    expect((await readQueue(file)).map((e) => e.key)).toEqual(['a', 'c'])
+  })
+
   it('appendEntry creates the file when it does not exist', async () => {
     await appendEntry(file, makeEntry('a'))
     expect(await readQueue(file)).toEqual([makeEntry('a')])

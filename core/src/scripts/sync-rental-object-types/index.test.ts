@@ -72,16 +72,18 @@ afterEach(async () => {
 })
 
 describe('syncRentalObjectTypes', () => {
-  it('first run: syncs every change in cmlog', async () => {
+  it('first run: syncs nothing and starts from the newest cmlog row', async () => {
     await fs.rm(stateFile)
-    const c = change()
-    const getChanges = mockChanges([c])
-    mockSync().mockResolvedValue({ ok: true, data: { action: 'unchanged' } })
+    const until = new Date('2026-10-15T09:00:00.000Z')
+    const getChanges = mockChanges([change()], until)
+    const sync = mockSync()
 
     await syncRentalObjectTypes({ stateFile, queueFile })
 
     expect(getChanges).toHaveBeenCalledWith(null)
-    expect(await readState()).toBe(c.timestamp.toISOString())
+    expect(sync).not.toHaveBeenCalled()
+    expect(sendEmailSpy).not.toHaveBeenCalled()
+    expect(await readState()).toBe(until.toISOString())
   })
 
   it('syncs each change since the saved timestamp and sends no mail', async () => {

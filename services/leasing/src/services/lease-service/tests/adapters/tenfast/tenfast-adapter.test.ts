@@ -3,6 +3,7 @@ jest.mock('../../../adapters/tenfast/tenfast-api', () => ({
 }))
 
 import assert from 'node:assert'
+import { logger } from '@onecore/utilities'
 import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
@@ -2878,7 +2879,18 @@ describe(tenfastAdapter.updateRentalObjectCategory, () => {
     }
   )
 
-  it('returns update-failed on any other non-200 response', async () => {
+  it('returns ok on 204', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 204, data: '' })
+
+    const result = await tenfastAdapter.updateRentalObjectCategory(
+      'tf-1',
+      category
+    )
+
+    expect(result).toEqual({ ok: true, data: null })
+  })
+
+  it('returns update-failed on any other non-2xx response', async () => {
     ;(request as jest.Mock).mockResolvedValueOnce({
       status: 404,
       data: { error: 'Not found' },
@@ -2901,5 +2913,27 @@ describe(tenfastAdapter.updateRentalObjectCategory, () => {
     )
 
     expect(result).toEqual({ ok: false, err: 'update-failed' })
+  })
+
+  it('logs only the message and status when the request throws, not the request', async () => {
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation()
+    const err = Object.assign(new Error('timeout of 5000ms exceeded'), {
+      config: { headers: { 'api-token': 'secret' } },
+      response: { status: 504 },
+    })
+    ;(request as jest.Mock).mockRejectedValueOnce(err)
+
+    await tenfastAdapter.updateRentalObjectCategory('tf-1', category)
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      {
+        tenfastRentalObjectId: 'tf-1',
+        status: 504,
+        message: 'timeout of 5000ms exceeded',
+      },
+      'tenfast-adapter.updateRentalObjectCategory'
+    )
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('secret')
+    errorSpy.mockRestore()
   })
 })

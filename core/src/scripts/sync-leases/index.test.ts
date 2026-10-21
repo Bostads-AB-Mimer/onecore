@@ -140,6 +140,38 @@ describe('syncLeases', () => {
     expect(written).toBe(lease.timestamp.toISOString())
   })
 
+  it('the give-up mail asks for the change to be made in Tenfast by hand', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T09:00:00.000Z'),
+    })
+    const monthAgo = new Date(
+      Date.now() - 31 * 24 * 60 * 60 * 1000
+    ).toISOString()
+    await appendEntry(queueFile, {
+      ...makeLeaseEntry(lease),
+      addedAt: monthAgo,
+      lastAttemptAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
+      stillFailingNotifiedAt: monthAgo,
+    })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({ status: 500, data: undefined })
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [] })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(await readQueue(queueFile)).toEqual([])
+    const body = sendEmailSpy.mock.calls[0][0].body as string
+    expect(body).toContain('i Tenfast för hand')
+    expect(body).not.toContain('Gör ändringen i Xpand på nytt')
+  })
+
   it('case 3: silent retry — queue has entry, drain fails, no mails sent', async () => {
     const lease = factory.leaseChange.build({
       action: 'terminate',
