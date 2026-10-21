@@ -10,6 +10,10 @@ type InspectionRoom = components['schemas']['InspectionRoom']
 
 export interface DamagedComponent {
   key: string
+  // 'component' ids are OneCore component instance ids; 'detail' ids are
+  // generated in the browser and must never reach Odoo.
+  componentId: string
+  source: 'component' | 'detail'
   roomName: string
   label: string
   actions: string[]
@@ -23,7 +27,20 @@ export interface InspectionWorkOrderGroup {
   maintenanceTeamName: string
   descriptionHtml: string
   componentLabels: string[]
+  // OneCore component ids only (no detail components), deduplicated — Odoo
+  // turns them into component rows on the request.
+  componentIds: string[]
 }
+
+/**
+ * What a group was submitted with. A group whose signature differs from the
+ * one last sent is re-submitted. The ids are part of it because two damaged
+ * components with the same label produce the same description.
+ */
+export const workOrderGroupSignature = (group: {
+  descriptionHtml: string
+  componentIds?: string[]
+}): string => JSON.stringify([group.descriptionHtml, group.componentIds ?? []])
 
 /**
  * Stable per-component key used both for the resursgrupp dropdown state in the
@@ -59,6 +76,8 @@ export const getDamagedComponents = (
           'component',
           component.componentId
         ),
+        componentId: component.componentId,
+        source: 'component',
         roomName,
         label: component.label || component.componentId,
         actions: component.action ?? [],
@@ -72,6 +91,8 @@ export const getDamagedComponents = (
       if (detail.condition !== CONDITION_TYPE.DAMAGED) continue
       result.push({
         key: componentAssignmentKey(room.id, 'detail', detail.id),
+        componentId: detail.id,
+        source: 'detail',
         roomName,
         label: detail.label || detail.id,
         actions: [],
@@ -155,6 +176,13 @@ export const buildInspectionWorkOrderGroups = (
       maintenanceTeamName: teamName(teamId),
       descriptionHtml: `${header}<br><br>${roomBlocks.join('<br><br>')}`,
       componentLabels: components.map((component) => component.label),
+      componentIds: [
+        ...new Set(
+          components
+            .filter((component) => component.source === 'component')
+            .map((component) => component.componentId)
+        ),
+      ],
     }
   })
 }
