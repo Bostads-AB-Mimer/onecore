@@ -165,7 +165,6 @@ export default defineConfig([
         // Root-level files (outside folder structure)
         'src/App.tsx',
         'src/main.tsx',
-        'src/index.css',
         'src/vite-env.d.ts',
         'src/authConfig.ts',
       ],
