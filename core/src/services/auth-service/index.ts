@@ -90,7 +90,7 @@ export const routes = (router: KoaRouter) => {
    *              salt:
    *                type: string
    */
-  router.get('(.*)/auth/generatehash', async (ctx) => {
+  router.get('/auth/generatehash', async (ctx) => {
     const { query } = ctx
 
     if (!query.password) {
@@ -151,7 +151,7 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    */
-  router.post('(.*)/auth/generatetoken', async (ctx) => {
+  router.post('/auth/generatetoken', async (ctx) => {
     const username = ctx.request.body?.username as string
     const password = ctx.request.body?.password as string
 
@@ -187,7 +187,7 @@ export const routes = (router: KoaRouter) => {
    *       '302':
    *         description: Redirect to Keycloak login
    */
-  router.get('(.*)/auth/login', async (ctx) => {
+  router.get('/auth/login', async (ctx) => {
     const redirectUri =
       typeof ctx.request.query?.redirectUri === 'string'
         ? ctx.request.query?.redirectUri
@@ -220,7 +220,7 @@ export const routes = (router: KoaRouter) => {
    *       '200':
    *         description: User profile information
    */
-  router.post('(.*)/auth/callback', async (ctx) => {
+  router.post('/auth/callback', async (ctx) => {
     try {
       const { code, redirectUri } = ctx.request.body
       if (!code || typeof code !== 'string') {
@@ -260,7 +260,7 @@ export const routes = (router: KoaRouter) => {
    *       '302':
    *         description: Redirect to login page
    */
-  router.get('(.*)/auth/logout', async (ctx) => {
+  router.get('/auth/logout', async (ctx) => {
     // Clear cookies
     auth.logout(ctx)
 
@@ -288,7 +288,7 @@ export const routes = (router: KoaRouter) => {
    *       '503':
    *         description: Keycloak's signing keys can't be fetched, so the token can't be verified
    */
-  router.get('(.*)/auth/profile', extractToken, requireAuth, async (ctx) => {
+  router.get('/auth/profile', extractToken, requireAuth, async (ctx) => {
     ctx.body = ctx.state.user
   })
 
@@ -306,7 +306,7 @@ export const routes = (router: KoaRouter) => {
    *       '401':
    *         description: Invalid or expired refresh token
    */
-  router.post('(.*)/auth/refresh', async (ctx) => {
+  router.post('/auth/refresh', async (ctx) => {
     try {
       const refreshToken = ctx.cookies.get('refresh_token')
 
@@ -370,9 +370,10 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error
    */
   router.get(
-    '(.*)/auth/roles/:roleName/users',
+    '/auth/roles/:roleName/users',
     extractToken,
     requireAuth,
+    requireRole('api-access'),
     requireRole('api-access'),
     async (ctx) => {
       const { roleName } = ctx.params

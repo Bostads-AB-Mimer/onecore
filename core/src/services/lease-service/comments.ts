@@ -5,7 +5,7 @@ import { generateRouteMetadata } from '@onecore/utilities'
 import z from 'zod'
 
 export const routes = (router: KoaRouter) => {
-  router.get('(.*)/comments/:targetType/thread/:targetId', async (ctx) => {
+  router.get('/comments/:targetType/thread/:targetId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const { targetType, targetId } = ctx.params
@@ -29,7 +29,7 @@ export const routes = (router: KoaRouter) => {
     typeof leasing.v1.AddCommentRequestParamsSchema
   >
 
-  router.post('(.*)/comments/:targetType/thread/:targetId', async (ctx) => {
+  router.post('/comments/:targetType/thread/:targetId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const { targetType, targetId } = ctx.params
@@ -51,7 +51,7 @@ export const routes = (router: KoaRouter) => {
   })
 
   router.delete(
-    '(.*)/comments/:targetType/thread/:targetId/:commentId',
+    '/comments/:targetType/thread/:targetId/:commentId',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
@@ -138,7 +138,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.put(
-    '(.*)/comments/:targetType/thread/:targetId/:commentId',
+    '/comments/:targetType/thread/:targetId/:commentId',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 

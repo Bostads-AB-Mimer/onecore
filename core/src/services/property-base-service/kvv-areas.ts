@@ -69,7 +69,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/kvv-areas', async (ctx) => {
+  router.get('/kvv-areas', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['responsibleUserId'])
     const parsed = QuerySchema.safeParse(ctx.query)
     if (!parsed.success) {
@@ -166,7 +166,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.patch(
-    '(.*)/kvv-areas/:id/responsible',
+    '/kvv-areas/:id/responsible',
     requireRole(PROPERTY_AREA_WRITE_ROLE),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)

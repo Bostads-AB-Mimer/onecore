@@ -672,7 +672,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/listings/batch', async (ctx) => {
+  router.post('/listings/batch', async (ctx) => {
     try {
       const metadata = generateRouteMetadata(ctx)
 

@@ -22,6 +22,12 @@ const app = new Koa()
 const router = new KoaRouter()
 routes(router)
 app.use(bodyParser())
+// Stands in for requireAuth: roles from the x-roles header.
+app.use(async (ctx, next) => {
+  const roles = (ctx.get('x-roles') || 'api-access,keys-admin').split(',')
+  ctx.state.user = { realm_access: { roles } }
+  await next()
+})
 app.use(router.routes())
 
 beforeEach(() => {
@@ -283,6 +289,18 @@ describe('keys-service', () => {
   })
 
   describe('DELETE /keys/:id', () => {
+    it('requires the keys-admin role', async () => {
+      const removeSpy = jest.spyOn(keysAdapter.KeysApi, 'remove')
+
+      // Trailing slash: the router still matches /keys/:id.
+      const res = await request(app.callback())
+        .delete('/keys/00000000-0000-0000-0000-000000000001/')
+        .set('x-roles', 'api-access')
+
+      expect(res.status).toBe(403)
+      expect(removeSpy).not.toHaveBeenCalled()
+    })
+
     it('responds with 200 on successful deletion', async () => {
       const key = factory.key.build()
 

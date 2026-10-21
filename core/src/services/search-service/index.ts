@@ -84,7 +84,7 @@ export const routes = (router: KoaRouter) => {
     typeof schemas.SearchResultSchema
   >[]
 
-  router.get('(.*)/search', async (ctx) => {
+  router.get('/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const queryParams = schemas.SearchQueryParamsSchema.safeParse(ctx.query)
 

@@ -64,7 +64,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/properties/:propertyCode/kvv-area', async (ctx) => {
+  router.get('/properties/:propertyCode/kvv-area', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { propertyCode } = ctx.params
 
@@ -151,7 +151,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.put(
-    '(.*)/properties/:propertyCode/kvv-area',
+    '/properties/:propertyCode/kvv-area',
     requireRole(PROPERTY_AREA_WRITE_ROLE),
     parseRequestBody(PutPropertyKvvAreaBodySchema) as Middleware,
     async (ctx) => {

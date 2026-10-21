@@ -1,15 +1,15 @@
-import KoaRouter from '@koa/router'
+import { Context } from 'koa'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import { LogsApi } from '../../adapters/keys-adapter'
 import { contactsAdapter } from '../../adapters/contacts-adapter'
 import { transformContacts } from '../../api/v1/contacts/transform'
 
-export const getUserName = (ctx: KoaRouter.RouterContext): string =>
+export const getUserName = (ctx: Context): string =>
   ctx.state.user?.name || ctx.state.user?.preferred_username || 'system'
 
 export async function createLogEntry(
-  ctx: KoaRouter.RouterContext,
+  ctx: Context,
   params: Omit<keys.CreateLogRequest, 'userName'>
 ) {
   try {

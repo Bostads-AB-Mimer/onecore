@@ -83,7 +83,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/property-tree', async (ctx) => {
+  router.get('/property-tree', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const query = parseQuery(ctx, GetPropertyTreeQuerySchema, metadata)
     if (!query) return
