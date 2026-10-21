@@ -28,14 +28,26 @@ describe(redactHeaders, () => {
       'X-Auth-Token': 'secret',
       'x-functions-key': 'secret',
       'X-Client-Secret': 'secret',
+      Signature: 'secret',
+      'x-session-id': 'secret',
+      'x-jwt-assertion': 'secret',
+      'X-Password': 'secret',
+      'x-credential': 'secret',
       Accept: 'application/json',
+      'Content-Length': '12',
     })
 
     expect(result).toEqual({
       'X-Auth-Token': '[REDACTED]',
       'x-functions-key': '[REDACTED]',
       'X-Client-Secret': '[REDACTED]',
+      Signature: '[REDACTED]',
+      'x-session-id': '[REDACTED]',
+      'x-jwt-assertion': '[REDACTED]',
+      'X-Password': '[REDACTED]',
+      'x-credential': '[REDACTED]',
       Accept: 'application/json',
+      'Content-Length': '12',
     })
   })
 

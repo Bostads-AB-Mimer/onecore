@@ -23,7 +23,8 @@ const REDACTED_HEADERS = new Set([
 ])
 
 // Catches credential headers not in the explicit list (x-auth-token, x-functions-key...).
-const REDACTED_HEADER_PATTERN = /auth|token|secret|key|cookie/i
+const REDACTED_HEADER_PATTERN =
+  /auth|token|secret|passw|key|sign|credential|session|jwt|cookie/i
 
 const isCredentialHeader = (name: string) =>
   REDACTED_HEADERS.has(name.toLowerCase()) || REDACTED_HEADER_PATTERN.test(name)
