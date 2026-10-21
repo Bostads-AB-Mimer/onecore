@@ -2,8 +2,8 @@ import axios from 'axios'
 import config from '../../common/config'
 import type { TokenData } from 'keycloak-koa/dist/types'
 
-/** OAuth token endpoint — must reject 4xx even when leasing-adapter widens axios defaults. */
-const contactsTokenPostConfig = {
+/** OAuth endpoints — must reject 4xx even when leasing-adapter widens axios defaults. */
+const contactsOAuthPostConfig = {
   headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   timeout: 10000,
   validateStatus: (status: number) => status >= 200 && status < 300,
@@ -20,6 +20,10 @@ function contactsKeycloakRealmUrl(): string {
 
 function tokenEndpointUrl(): string {
   return `${contactsKeycloakRealmUrl()}/protocol/openid-connect/token`
+}
+
+function logoutEndpointUrl(): string {
+  return `${contactsKeycloakRealmUrl()}/protocol/openid-connect/logout`
 }
 
 export type ContactsTokenResponse = {
@@ -54,7 +58,7 @@ export async function refreshContactsAccessToken(
   const response = await axios.post<TokenData>(
     tokenEndpointUrl(),
     params,
-    contactsTokenPostConfig
+    contactsOAuthPostConfig
   )
 
   return toContactsTokenResponse(response.data)
@@ -80,10 +84,23 @@ export async function exchangeContactsAuthorizationCode(
   const response = await axios.post<TokenData>(
     tokenEndpointUrl(),
     body,
-    contactsTokenPostConfig
+    contactsOAuthPostConfig
   )
 
   return toContactsTokenResponse(response.data)
+}
+
+/** Ends the Keycloak session the refresh token belongs to (Keycloak answers 204). */
+export async function logoutContactsSession(
+  refreshToken: string
+): Promise<void> {
+  const params = new URLSearchParams({
+    client_id: config.auth.keycloak.contacts.clientId,
+    client_secret: config.auth.keycloak.contacts.clientSecret,
+    refresh_token: refreshToken,
+  }).toString()
+
+  await axios.post(logoutEndpointUrl(), params, contactsOAuthPostConfig)
 }
 
 /** @internal Test hook — kept for tests that reset module state between cases */

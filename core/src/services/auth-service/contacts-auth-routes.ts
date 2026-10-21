@@ -3,6 +3,7 @@ import KoaRouter from '@koa/router'
 import {
   exchangeContactsAuthorizationCode,
   isContactsKeycloakConfigured,
+  logoutContactsSession,
   refreshContactsAccessToken,
 } from './keycloak-contacts'
 import {
@@ -156,6 +157,65 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
     } catch (error) {
       logContactsKeycloakTokenError(
         'Token refresh failed in /auth/contacts/refresh',
+        error
+      )
+      ctx.status = httpStatusForContactsKeycloakError(error)
+      ctx.body = bodyForContactsKeycloakError(ctx.status)
+    }
+  })
+
+  /**
+   * @swagger
+   * /auth/contacts/logout:
+   *   post:
+   *     summary: End a mimer-contacts Keycloak session
+   *     description: Server-to-server helper for webapi. Revokes the refresh token and ends its Keycloak session.
+   *     tags:
+   *       - Auth
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - refreshToken
+   *             properties:
+   *               refreshToken:
+   *                 type: string
+   *     responses:
+   *       '204':
+   *         description: Session ended
+   *       '400':
+   *         description: Missing refresh token, or invalid_grant (already ended or expired)
+   *       '502':
+   *         description: Keycloak unavailable
+   *       '503':
+   *         description: Contacts Keycloak not configured
+   */
+  router.post('(.*)/auth/contacts/logout', async (ctx) => {
+    if (!isContactsKeycloakConfigured()) {
+      ctx.status = 503
+      ctx.body = { error: 'contacts_keycloak_not_configured' }
+      return
+    }
+
+    const refreshToken = readRefreshTokenFromBody(ctx.request.body)
+
+    if (!refreshToken) {
+      ctx.status = 400
+      ctx.body = { error: 'missing_refresh_token' }
+      return
+    }
+
+    try {
+      await logoutContactsSession(refreshToken)
+      ctx.status = 204
+    } catch (error) {
+      logContactsKeycloakTokenError(
+        'Logout failed in /auth/contacts/logout',
         error
       )
       ctx.status = httpStatusForContactsKeycloakError(error)

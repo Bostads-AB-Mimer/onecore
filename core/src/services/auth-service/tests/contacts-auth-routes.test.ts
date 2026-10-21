@@ -11,6 +11,7 @@ jest.mock('../keycloak-contacts', () => ({
   isContactsKeycloakConfigured: jest.fn(),
   exchangeContactsAuthorizationCode: jest.fn(),
   refreshContactsAccessToken: jest.fn(),
+  logoutContactsSession: jest.fn(),
 }))
 
 const mocked = contactsKeycloak as jest.Mocked<typeof contactsKeycloak>
@@ -200,6 +201,69 @@ describe('contacts auth routes', () => {
 
       const res = await request(buildApp().callback())
         .post('/auth/contacts/refresh')
+        .send({ refreshToken: 'rt' })
+
+      expect(res.status).toBe(502)
+      expect(res.body.error).toBe('keycloak_unavailable')
+    })
+  })
+
+  describe('POST /auth/contacts/logout', () => {
+    it('returns 503 when contacts Keycloak is not configured', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(false)
+
+      const res = await request(buildApp().callback())
+        .post('/auth/contacts/logout')
+        .send({ refreshToken: 'rt' })
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('contacts_keycloak_not_configured')
+    })
+
+    it('returns 400 when refreshToken is missing', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+
+      const res = await request(buildApp().callback())
+        .post('/auth/contacts/logout')
+        .send({})
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('missing_refresh_token')
+      expect(mocked.logoutContactsSession).not.toHaveBeenCalled()
+    })
+
+    it('returns 204 when the session is ended', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+      mocked.logoutContactsSession.mockResolvedValue()
+
+      const res = await request(buildApp().callback())
+        .post('/auth/contacts/logout')
+        .send({ refreshToken: 'rt' })
+
+      expect(res.status).toBe(204)
+      expect(mocked.logoutContactsSession).toHaveBeenCalledWith('rt')
+    })
+
+    it('returns 400 invalid_grant when the session is already gone', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+      mocked.logoutContactsSession.mockRejectedValue(
+        keycloakAxiosError(400, { error: 'invalid_grant' })
+      )
+
+      const res = await request(buildApp().callback())
+        .post('/auth/contacts/logout')
+        .send({ refreshToken: 'rt' })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('invalid_grant')
+    })
+
+    it('returns 502 when Keycloak is unreachable', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+      mocked.logoutContactsSession.mockRejectedValue(new Error('ECONNREFUSED'))
+
+      const res = await request(buildApp().callback())
+        .post('/auth/contacts/logout')
         .send({ refreshToken: 'rt' })
 
       expect(res.status).toBe(502)
