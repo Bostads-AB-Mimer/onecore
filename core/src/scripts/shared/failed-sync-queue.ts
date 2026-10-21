@@ -24,18 +24,20 @@ export const readQueue = async (path: string): Promise<FailedRowEntry[]> => {
     )
     return []
   }
-  try {
-    return content
-      .split('\n')
-      .filter((line) => line.trim().length > 0)
-      .map((line) => JSON.parse(line) as FailedRowEntry)
-  } catch (err) {
-    logger.warn(
-      { err, path },
-      'failed-sync-queue: unable to parse queue file, treating as empty'
-    )
-    return []
-  }
+  return content
+    .split('\n')
+    .filter((line) => line.trim().length > 0)
+    .flatMap((line, index) => {
+      try {
+        return [JSON.parse(line) as FailedRowEntry]
+      } catch (err) {
+        logger.warn(
+          { err, path, line: index + 1 },
+          'failed-sync-queue: unable to parse line, skipping it'
+        )
+        return []
+      }
+    })
 }
 
 export const writeQueue = async (
@@ -54,7 +56,8 @@ export const appendEntry = async (
   path: string,
   entry: FailedRowEntry
 ): Promise<void> => {
-  await fs.appendFile(path, JSON.stringify(entry) + '\n', 'utf-8')
+  // The leading newline ends a line torn by an earlier crashed append.
+  await fs.appendFile(path, '\n' + JSON.stringify(entry) + '\n', 'utf-8')
 }
 
 export const removeEntry = async (path: string, key: string): Promise<void> => {

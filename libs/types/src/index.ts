@@ -37,6 +37,12 @@ export { LeaseChangeSchema, type LeaseChange } from './schemas/v1/lease-sync'
 export {
   RentalObjectTypeChangeSchema,
   type RentalObjectTypeChange,
+  RentalObjectTypeChangesSchema,
+  type RentalObjectTypeChanges,
+  SyncRentalObjectTypeRequestSchema,
+  type SyncRentalObjectTypeRequest,
+  SyncRentalObjectTypeResponseSchema,
+  type SyncRentalObjectTypeResponse,
 } from './schemas/v1/rental-object-type-sync'
 export { paginatedResponseSchema } from './schemas/pagination'
 export * as fileStorageSchemas from './schemas/file-storage'

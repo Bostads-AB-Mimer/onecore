@@ -487,7 +487,8 @@ export const updateRentalObjectCategory = async (
       data: { category },
     })
 
-    if (response.status === 200) return { ok: true, data: null }
+    if (response.status >= 200 && response.status < 300)
+      return { ok: true, data: null }
 
     logger.error(
       { tenfastRentalObjectId, status: response.status, error: response.data },
@@ -497,7 +498,14 @@ export const updateRentalObjectCategory = async (
       return { ok: false, err: 'update-rejected' }
     return { ok: false, err: 'update-failed' }
   } catch (err) {
-    logger.error({ err }, 'tenfast-adapter.updateRentalObjectCategory')
+    logger.error(
+      {
+        tenfastRentalObjectId,
+        status: (err as { response?: { status?: number } }).response?.status,
+        message: err instanceof Error ? err.message : String(err),
+      },
+      'tenfast-adapter.updateRentalObjectCategory'
+    )
     return { ok: false, err: 'update-failed' }
   }
 }

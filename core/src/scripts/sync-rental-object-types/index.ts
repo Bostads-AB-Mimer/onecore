@@ -43,6 +43,7 @@ export const syncRentalObjectTypes = (
     {
       name: 'sync-rental-object-types',
       entryType: 'rental-object-type',
+      firstRun: 'start-now',
       fetchChanges: async (since) => {
         const result = await getRentalObjectTypeChanges(since)
         if (!result.ok) return result

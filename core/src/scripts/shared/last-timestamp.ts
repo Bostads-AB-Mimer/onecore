@@ -3,15 +3,17 @@ import fs from 'fs/promises'
 export const getLastTimestamp = async (
   stateFile: string
 ): Promise<Date | null> => {
+  let content: string
   try {
-    const content = await fs.readFile(stateFile, 'utf-8')
-    const trimmed = content.trim()
-    if (!trimmed) return null
-    const date = new Date(trimmed)
-    return isNaN(date.getTime()) ? null : date
-  } catch {
-    return null
+    content = await fs.readFile(stateFile, 'utf-8')
+  } catch (err) {
+    if ((err as { code?: string }).code === 'ENOENT') return null
+    throw err
   }
+  const date = new Date(content.trim())
+  if (isNaN(date.getTime()))
+    throw new Error(`${stateFile} holds no timestamp: '${content.trim()}'`)
+  return date
 }
 
 export const saveLastTimestamp = async (stateFile: string, ts: Date) => {

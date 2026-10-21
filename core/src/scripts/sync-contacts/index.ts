@@ -53,6 +53,7 @@ export const syncContacts = (
     {
       name: 'sync-contacts',
       entryType: 'contact',
+      firstRun: 'sync-all',
       fetchChanges: (since) =>
         makeContactsAdapter(config.contactsService.url).getUpdatedContacts(
           since
@@ -60,6 +61,7 @@ export const syncContacts = (
       sync: syncContact,
       keyFor: (update) =>
         `${update.contact.contactCode}:${update.timestamp.toISOString()}`,
+      supersedeKey: (update) => update.contact.contactCode,
       timestampOf: (update) => update.timestamp,
       toPayload: (update) => ({
         contact: update.contact,

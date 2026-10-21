@@ -97,6 +97,7 @@ export const syncLeases = (
     {
       name: 'sync-leases',
       entryType: 'lease',
+      firstRun: 'sync-all',
       fetchChanges: getUpdatedLeases,
       sync: syncLease,
       keyFor: (lease) =>
@@ -116,6 +117,8 @@ export const syncLeases = (
         subject: `avtal ${lease.leaseId}`,
         detail: `avtal ${lease.leaseId} (action ${lease.action})`,
       }),
+      giveUpAdvice:
+        'Ändringen har inte nått Tenfast. Gör den i Tenfast för hand.',
     },
     {
       stateFile: opts.stateFile ?? DEFAULT_STATE_FILE,

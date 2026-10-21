@@ -13,13 +13,27 @@ import { notifyXpandSync } from './notify'
 const HOUR_MS = 60 * 60 * 1000
 const RETRY_EVERY_RUN_FOR_MS = 24 * HOUR_MS
 const SLOW_RETRY_INTERVAL_MS = 6 * HOUR_MS
-const GIVE_UP_AFTER_MS = 7 * 24 * HOUR_MS
+const DAILY_RETRY_AFTER_MS = 7 * 24 * HOUR_MS
+const DAILY_RETRY_INTERVAL_MS = 24 * HOUR_MS
+const GIVE_UP_AFTER_MS = 30 * 24 * HOUR_MS
+
+const retryIntervalFor = (failingFor: number) =>
+  failingFor < RETRY_EVERY_RUN_FOR_MS
+    ? 0
+    : failingFor < DAILY_RETRY_AFTER_MS
+      ? SLOW_RETRY_INTERVAL_MS
+      : DAILY_RETRY_INTERVAL_MS
+
+const DEFAULT_GIVE_UP_ADVICE =
+  'Gör ändringen i Xpand på nytt för att försöka igen.'
 
 export type SyncOutcome = void | { skipped: string }
 
 export type CmlogSync<T> = {
   name: string
   entryType: FailedRowEntry['type']
+  // 'start-now' saves the newest row on a run without a saved timestamp and syncs nothing.
+  firstRun: 'sync-all' | 'start-now'
   // `until` is the newest cmlog row read, parsed or not; it is saved as the
   // timestamp when it is later than the last change.
   fetchChanges: (
@@ -35,6 +49,7 @@ export type CmlogSync<T> = {
   toPayload: (change: T) => unknown
   fromPayload: (payload: unknown) => T
   describe: (change: T) => { subject: string; detail: string }
+  giveUpAdvice?: string
 }
 
 const capitalize = (text: string) =>
@@ -56,7 +71,7 @@ export const runCmlogSync = async <T>(
       `Misslyckades på ${detail} vid ${def.timestampOf(change).toISOString()}.`,
       `Fel: ${entry.lastError}`,
       ``,
-      `Raden ligger nu i återförsökskön på PVC (/data/failed-rows.jsonl). Den försöks igen varje minut i ett dygn och sedan var sjätte timme i en vecka. Du får ett bekräftelsemail när den lyckas synkas.`,
+      `Raden ligger nu i återförsökskön på PVC (/data/failed-rows.jsonl). Den försöks igen varje minut i ett dygn, var sjätte timme resten av första veckan och sedan en gång om dygnet i upp till 30 dagar. Du får ett bekräftelsemail när den lyckas synkas.`,
     ])
   }
 
@@ -70,7 +85,7 @@ export const runCmlogSync = async <T>(
       `${capitalize(detail)} har misslyckats sedan ${entry.addedAt}.`,
       `Senaste fel: ${entry.lastError}`,
       ``,
-      `Raden försöks nu igen var sjätte timme till ${giveUpAt}, och tas sedan bort ur återförsökskön.`,
+      `Raden försöks nu igen var sjätte timme resten av första veckan och sedan en gång om dygnet till ${giveUpAt}, och tas sedan bort ur återförsökskön.`,
     ])
   }
 
@@ -80,7 +95,7 @@ export const runCmlogSync = async <T>(
       `${capitalize(detail)} har misslyckats sedan ${entry.addedAt}.`,
       `Senaste fel: ${entry.lastError}`,
       ``,
-      `Raden har tagits bort ur återförsökskön och försöks inte igen. Gör ändringen i Xpand på nytt för att försöka igen.`,
+      `Raden har tagits bort ur återförsökskön och försöks inte igen. ${def.giveUpAdvice ?? DEFAULT_GIVE_UP_ADVICE}`,
     ])
   }
 
@@ -129,12 +144,16 @@ export const runCmlogSync = async <T>(
       : notifyRecovery(change, entry)
 
   const lastTimestamp = await getLastTimestamp(stateFile)
+  const skipExisting = !lastTimestamp && def.firstRun === 'start-now'
   if (lastTimestamp) {
     logger.info({ lastTimestamp }, 'syncing since last timestamp')
+  } else if (skipExisting) {
+    logger.info('no saved timestamp, starting from the newest row')
   } else {
     logger.info('no saved timestamp, syncing all')
   }
   const result = await def.fetchChanges(lastTimestamp)
+  const fetched = result.ok && !skipExisting ? result.data : []
 
   // 1) Retry the queue
   const queue = await readQueue(queueFile)
@@ -147,7 +166,7 @@ export const runCmlogSync = async <T>(
       ...queue
         .filter((e) => e.type === def.entryType)
         .map((e) => def.fromPayload(e.payload)),
-      ...(result.ok ? result.data : []),
+      ...fetched,
     ]
     for (const change of candidates) {
       const key = supersedeKey(change)
@@ -184,10 +203,7 @@ export const runCmlogSync = async <T>(
     const failingFor = now().getTime() - new Date(retriesStartedAt).getTime()
     const sinceLastAttempt =
       now().getTime() - new Date(entry.lastAttemptAt ?? entry.addedAt).getTime()
-    if (
-      failingFor >= RETRY_EVERY_RUN_FOR_MS &&
-      sinceLastAttempt < SLOW_RETRY_INTERVAL_MS
-    ) {
+    if (sinceLastAttempt < retryIntervalFor(failingFor)) {
       kept.push(entry)
       continue
     }
@@ -206,7 +222,7 @@ export const runCmlogSync = async <T>(
         await notifyGiveUp(change, updated)
         logger.error(
           { err, key: entry.key },
-          `${def.name}: queued entry failed for a week, giving up`
+          `${def.name}: queued entry failed for 30 days, giving up`
         )
         continue
       }
@@ -231,7 +247,7 @@ export const runCmlogSync = async <T>(
     logger.error({ err: result.err }, `${def.name}: failed to fetch changes`)
     throw new Error(result.err)
   }
-  const changes = result.data
+  const changes = fetched
   logger.info({ count: changes.length }, 'changes to process')
 
   let queueForRun = kept
@@ -244,7 +260,7 @@ export const runCmlogSync = async <T>(
   let succeeded = 0
   let skipped = 0
   let failed = 0
-  for (const change of changes) {
+  for (const [index, change] of changes.entries()) {
     const key = def.keyFor(change)
     const existing = queueForRun.find((e) => e.key === key)
     try {
@@ -287,15 +303,33 @@ export const runCmlogSync = async <T>(
         logger.error({ err, key }, `${def.name}: queued for retry, mail sent`)
       }
     }
-    await saveTimestamp(def.timestampOf(change))
+    // cmlog has whole seconds: save only once a second is done, so a crash
+    // mid-second re-reads the whole second instead of skipping its rest.
+    const next = changes[index + 1]
+    if (
+      !next ||
+      def.timestampOf(next).getTime() > def.timestampOf(change).getTime()
+    )
+      await saveTimestamp(def.timestampOf(change))
   }
 
+  const newest =
+    result.until ??
+    (skipExisting
+      ? result.data
+          .map(def.timestampOf)
+          .reduce<Date | undefined>(
+            (max, t) => (max && max.getTime() >= t.getTime() ? max : t),
+            undefined
+          )
+      : undefined)
   if (
-    result.until &&
-    (!savedTimestamp || result.until.getTime() > savedTimestamp.getTime())
+    newest &&
+    (!savedTimestamp || newest.getTime() > savedTimestamp.getTime())
   ) {
-    await saveTimestamp(result.until)
+    await saveTimestamp(newest)
   }
+  if (skipExisting && !savedTimestamp) await saveTimestamp(now())
 
   logger.info(
     { total: changes.length, succeeded, skipped, failed },

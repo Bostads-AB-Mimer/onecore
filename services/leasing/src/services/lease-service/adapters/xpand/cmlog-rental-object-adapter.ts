@@ -1,6 +1,9 @@
 import { Knex } from 'knex'
 import { logger } from '@onecore/utilities'
-import type { RentalObjectTypeChange } from '@onecore/types'
+import type {
+  RentalObjectTypeChange,
+  RentalObjectTypeChanges,
+} from '@onecore/types'
 
 import { xpandDb } from './xpandDb'
 import { cmlogRowsSince } from './cmlog-rows'
@@ -74,7 +77,7 @@ export const parseRentalObjectTypeChanges = (
  */
 export const getRentalObjectTypeChanges = async (
   since: Date | null
-): Promise<{ changes: RentalObjectTypeChange[]; until: Date | null }> => {
+): Promise<RentalObjectTypeChanges> => {
   const rows = await cmlogRentalObjectTypeChanges(xpandDb, since)
   const changes = parseRentalObjectTypeChanges(rows)
 
