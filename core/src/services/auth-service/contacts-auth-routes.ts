@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import { logger } from '@onecore/utilities'
 
 import {
   exchangeContactsAuthorizationCode,
@@ -17,6 +18,7 @@ import {
   readJsonBodyRecord,
   readRefreshTokenFromBody,
 } from './contacts-auth-dto'
+import { ContactCodeError, ensureContactCode } from './contacts-contact-code'
 
 /**
  * OAuth helper routes for mimer.nu (mimer-contacts realm).
@@ -28,7 +30,7 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
    * /auth/contacts/token:
    *   post:
    *     summary: Exchange authorization code for mimer-contacts tokens
-   *     description: Server-to-server helper for webapi. Exchanges a Keycloak authorization code using the mina-sidor confidential client.
+   *     description: Server-to-server helper for webapi. Exchanges a Keycloak authorization code using the mina-sidor confidential client, then makes sure the access token carries the contact_code of an existing contact (set from the personnummer when missing or stale). Without a contact for the personnummer the tokens have no contact_code.
    *     tags:
    *       - Auth
    *     security:
@@ -56,7 +58,7 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
    *       '400':
    *         description: Invalid request or invalid_grant from Keycloak
    *       '502':
-   *         description: Keycloak unavailable or misconfigured
+   *         description: Keycloak or the contacts service unavailable; a session the exchange started is ended
    *       '503':
    *         description: Contacts Keycloak not configured on this environment
    */
@@ -85,14 +87,13 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
 
     const codeVerifier = readCodeVerifierFromBody(ctx.request.body)
 
+    let exchanged
     try {
-      const result = await exchangeContactsAuthorizationCode(
+      exchanged = await exchangeContactsAuthorizationCode(
         code,
         redirectUri,
         codeVerifier
       )
-      ctx.status = 200
-      ctx.body = contactsTokenToJson(result)
     } catch (error) {
       logContactsKeycloakTokenError(
         'Authentication error in /auth/contacts/token',
@@ -100,6 +101,28 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
       )
       ctx.status = httpStatusForContactsKeycloakError(error)
       ctx.body = bodyForContactsKeycloakError(ctx.status)
+      return
+    }
+
+    try {
+      ctx.status = 200
+      ctx.body = contactsTokenToJson(await ensureContactCode(exchanged))
+    } catch (error) {
+      const reason =
+        error instanceof ContactCodeError ? error.reason : 'unknown'
+      logContactsKeycloakTokenError(
+        `Setting contact_code failed in /auth/contacts/token (${reason})`,
+        error instanceof ContactCodeError ? error.cause : error
+      )
+      // webapi never got these tokens, so it cannot end the session; left alive, the next
+      // login on a shared computer would silently sign in as this user.
+      if (exchanged.refresh_token) {
+        await logoutContactsSession(exchanged.refresh_token).catch(() =>
+          logger.warn('Ending the session after a failed login failed')
+        )
+      }
+      ctx.status = 502
+      ctx.body = { error: 'contact_lookup_unavailable' }
     }
   })
 

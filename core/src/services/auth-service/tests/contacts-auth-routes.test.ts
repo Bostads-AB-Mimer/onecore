@@ -6,6 +6,7 @@ import { AxiosError, AxiosHeaders } from 'axios'
 
 import { registerContactsAuthRoutes } from '../contacts-auth-routes'
 import * as contactsKeycloak from '../keycloak-contacts'
+import * as contactCode from '../contacts-contact-code'
 
 jest.mock('../keycloak-contacts', () => ({
   isContactsKeycloakConfigured: jest.fn(),
@@ -14,7 +15,19 @@ jest.mock('../keycloak-contacts', () => ({
   logoutContactsSession: jest.fn(),
 }))
 
+jest.mock('../contacts-contact-code', () => {
+  class ContactCodeError extends Error {
+    constructor(readonly reason: string) {
+      super(reason)
+    }
+  }
+  return { ContactCodeError, ensureContactCode: jest.fn() }
+})
+
 const mocked = contactsKeycloak as jest.Mocked<typeof contactsKeycloak>
+const ensureContactCode = contactCode.ensureContactCode as jest.MockedFunction<
+  typeof contactCode.ensureContactCode
+>
 
 function buildApp() {
   const app = new Koa()
@@ -40,6 +53,7 @@ function keycloakAxiosError(status: number, data: unknown): AxiosError {
 describe('contacts auth routes', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    ensureContactCode.mockImplementation(async (tokens) => tokens)
   })
 
   describe('POST /auth/contacts/token', () => {
@@ -90,6 +104,51 @@ describe('contacts auth routes', () => {
         'https://mina-sidor/callback',
         undefined
       )
+    })
+
+    it('returns the tokens with contact_code ensured', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+      const exchanged = {
+        access_token: 'access',
+        refresh_token: 'refresh',
+        expires_in: 300,
+        token_type: 'Bearer',
+      }
+      mocked.exchangeContactsAuthorizationCode.mockResolvedValue(exchanged)
+      ensureContactCode.mockResolvedValue({
+        ...exchanged,
+        access_token: 'access-with-contact-code',
+      })
+
+      const res = await request(buildApp().callback())
+        .post('/auth/contacts/token')
+        .send({ code: 'auth-code', redirectUri: 'https://example/cb' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.accessToken).toBe('access-with-contact-code')
+      expect(ensureContactCode).toHaveBeenCalledWith(exchanged)
+    })
+
+    it('ends the new session and returns 502 when the contact lookup fails', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+      mocked.exchangeContactsAuthorizationCode.mockResolvedValue({
+        access_token: 'access',
+        refresh_token: 'refresh',
+        expires_in: 300,
+        token_type: 'Bearer',
+      })
+      mocked.logoutContactsSession.mockResolvedValue()
+      ensureContactCode.mockRejectedValue(
+        new contactCode.ContactCodeError('contacts_unavailable')
+      )
+
+      const res = await request(buildApp().callback())
+        .post('/auth/contacts/token')
+        .send({ code: 'auth-code', redirectUri: 'https://example/cb' })
+
+      expect(res.status).toBe(502)
+      expect(res.body.error).toBe('contact_lookup_unavailable')
+      expect(mocked.logoutContactsSession).toHaveBeenCalledWith('refresh')
     })
 
     it('forwards codeVerifier to Keycloak exchange when present', async () => {
