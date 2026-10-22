@@ -10714,7 +10714,7 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
             'application/json': {
@@ -10863,7 +10863,7 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
             'application/json': {
@@ -15711,6 +15711,8 @@ export interface components {
       /** Format: uuid */
       id: string
       name: string
+      /** Format: uuid */
+      parentId: string | null
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
@@ -15728,6 +15730,8 @@ export interface components {
         /** Format: uuid */
         id: string
         name: string
+        /** Format: uuid */
+        parentId: string | null
         /** Format: date-time */
         createdAt: string
         /** Format: date-time */
@@ -15770,6 +15774,8 @@ export interface components {
         /** Format: uuid */
         id: string
         name: string
+        /** Format: uuid */
+        parentId: string | null
         /** Format: date-time */
         createdAt: string
         /** Format: date-time */
@@ -15834,6 +15840,8 @@ export interface components {
           }
         | {
             name: string
+            /** Format: uuid */
+            parentId?: string
           }
       /** @enum {string} */
       status: 'draft' | 'published'
@@ -15867,6 +15875,8 @@ export interface components {
           }
         | {
             name: string
+            /** Format: uuid */
+            parentId?: string
           }
       /** @enum {string} */
       status: 'draft' | 'published'

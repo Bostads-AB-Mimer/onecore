@@ -34,6 +34,9 @@ export const SlugSchema = z
 export const GuideCategorySchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  // Set on a subcategory. Categories nest one level deep, so the parent is
+  // always a top-level category.
+  parentId: z.string().uuid().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
@@ -132,10 +135,14 @@ export const StepInputSchema = z.object({
   images: z.array(StepImageInputSchema).default([]),
 })
 
-// Pick an existing category by id, or create one by name.
+// Pick an existing category by id, or create one by name. A name with
+// parentId reuses or creates a subcategory of that top-level category.
 export const CategoryInputSchema = z.union([
   z.object({ id: z.string().uuid() }),
-  z.object({ name: z.string().trim().min(1).max(100) }),
+  z.object({
+    name: z.string().trim().min(1).max(100),
+    parentId: z.string().uuid().optional(),
+  }),
 ])
 
 export const GuideInputBaseSchema = z.object({

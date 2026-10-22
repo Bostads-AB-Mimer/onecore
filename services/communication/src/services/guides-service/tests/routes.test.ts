@@ -12,6 +12,7 @@ import * as imagesAdapter from '../adapters/images-adapter'
 import {
   AltTextRequiredError,
   CategoryNotFoundError,
+  CategoryParentNotTopLevelError,
   GuideModifiedError,
   ImageNotInStepError,
   SlugTakenError,
@@ -41,6 +42,7 @@ const now = new Date()
 const category: guides.GuideCategory = {
   id: randomUUID(),
   name: 'Tenfast',
+  parentId: null,
   createdAt: now,
   updatedAt: now,
 }
@@ -135,6 +137,26 @@ describe('GET /guides/categories', () => {
 
     expect(res.status).toBe(200)
     expect(res.body[0].name).toBe('Tenfast')
+  })
+
+  it('returns the parent of a subcategory', async () => {
+    const subcategory: guides.GuideCategory = {
+      ...category,
+      id: randomUUID(),
+      name: 'Avtal',
+      parentId: category.id,
+    }
+    jest
+      .spyOn(categoriesAdapter, 'listCategories')
+      .mockResolvedValue([category, subcategory])
+
+    const res = await request(app.callback()).get('/guides/categories')
+
+    expect(res.status).toBe(200)
+    expect(res.body.map((c: guides.GuideCategory) => c.parentId)).toEqual([
+      null,
+      category.id,
+    ])
   })
 })
 
@@ -409,6 +431,11 @@ describe('PUT /guides/:id', () => {
     [409, 'slug-taken', new SlugTakenError('taken')],
     [409, 'guide-modified', new GuideModifiedError(randomUUID())],
     [400, 'category-not-found', new CategoryNotFoundError(randomUUID())],
+    [
+      400,
+      'category-parent-not-top-level',
+      new CategoryParentNotTopLevelError(randomUUID()),
+    ],
     [
       400,
       'image-not-in-step',

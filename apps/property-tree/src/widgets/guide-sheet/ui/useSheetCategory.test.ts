@@ -68,11 +68,21 @@ describe('useSheetCategory', () => {
     expect(current.category).toBeNull()
   })
 
-  it('goes back to all categories on clear', () => {
+  it('goes back to all categories when leaving a top-level category', () => {
     render({ isOpen: true, slug: null })
     act(() => current.selectCategory(tenfast))
-    act(() => current.clearCategory())
+    act(() => current.leaveCategory())
 
     expect(current.category).toBeNull()
+  })
+
+  it('goes back to the parent when leaving a subcategory', () => {
+    render({ isOpen: true, slug: null })
+    act(() =>
+      current.selectCategory({ id: 'c3', name: 'Avtal', parent: tenfast })
+    )
+    act(() => current.leaveCategory())
+
+    expect(current.category).toEqual(tenfast)
   })
 })

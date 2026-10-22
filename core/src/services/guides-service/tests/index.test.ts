@@ -43,6 +43,7 @@ const guide: guides.Guide = {
   category: {
     id: randomUUID(),
     name: 'Tenfast',
+    parentId: null,
     createdAt: now,
     updatedAt: now,
   },
@@ -261,6 +262,21 @@ describe('POST /guides', () => {
 
     expect(res.status).toBe(200)
     expect(spy.mock.calls[0][0].author).toBe('Anna')
+  })
+
+  it('passes the parent of a new subcategory on to communication', async () => {
+    const spy = jest
+      .spyOn(communicationAdapter.guides, 'createGuide')
+      .mockResolvedValue({ ok: true, data: guide })
+    const parentId = randomUUID()
+
+    const res = await request(app.callback())
+      .post('/guides')
+      .set(asAdmin)
+      .send({ ...writeBody(), category: { name: 'Avtal', parentId } })
+
+    expect(res.status).toBe(200)
+    expect(spy.mock.calls[0][0].category).toEqual({ name: 'Avtal', parentId })
   })
 
   it('returns 400 with issues on invalid input', async () => {

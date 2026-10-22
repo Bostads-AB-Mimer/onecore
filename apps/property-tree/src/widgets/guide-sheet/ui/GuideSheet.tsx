@@ -35,7 +35,7 @@ export function GuideSheet() {
   const { isOpen, slug, openGuide, openOverview, close } = useGuideSheet()
   const canEdit = useHasRole(GUIDES_ADMIN_ROLE)
   const userState = useUser()
-  const { category, selectCategory, clearCategory, markGuideListed } =
+  const { category, selectCategory, leaveCategory, markGuideListed } =
     useSheetCategory({ isOpen, slug })
 
   return (
@@ -58,8 +58,12 @@ export function GuideSheet() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={clearCategory}
-                  aria-label="Tillbaka till alla kategorier"
+                  onClick={leaveCategory}
+                  aria-label={
+                    category.parent
+                      ? `Tillbaka till ${category.parent.name}`
+                      : 'Tillbaka till alla kategorier'
+                  }
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
@@ -94,8 +98,18 @@ export function GuideSheet() {
                     markGuideListed(guide.slug)
                     openGuide(guide.slug)
                   }}
-                  onSelectCategory={({ id, name }) =>
-                    selectCategory({ id, name })
+                  // A subcategory card is only listed inside its parent, so
+                  // the shown category names it.
+                  onSelectCategory={({ id, name, parentId }) =>
+                    selectCategory(
+                      category && parentId === category.id
+                        ? {
+                            id,
+                            name,
+                            parent: { id: category.id, name: category.name },
+                          }
+                        : { id, name }
+                    )
                   }
                 />
               )}
