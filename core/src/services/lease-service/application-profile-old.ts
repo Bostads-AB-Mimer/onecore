@@ -11,7 +11,7 @@ import { schemas } from './schemas'
 // profile (with housing references)
 export const routes = (router: KoaRouter) => {
   router.post(
-    '(.*)/contacts/:contactCode/application-profile',
+    '/contacts/:contactCode/application-profile',
     parseRequestBody(
       schemas.client.applicationProfile.UpdateApplicationProfileRequestParamsOld
     ),

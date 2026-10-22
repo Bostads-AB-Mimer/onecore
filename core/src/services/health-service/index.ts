@@ -138,7 +138,7 @@ export const routes = (router: KoaRouter) => {
    *                         type: string
    *                         description: Additional details about the subsystem status.
    */
-  router.get('(.*)/health', async (ctx) => {
+  router.get('/health', async (ctx) => {
     ctx.body = await pollSystemHealth('core', subsystems)
   })
 }

@@ -2,6 +2,9 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { KeysApi, CardsApi } from '../../adapters/keys-adapter'
 import { createLogEntry, enrichWithContacts } from './helpers'
+import { requireRole } from '../../middlewares/keycloak-auth'
+
+const adminOnly = requireRole('keys-admin')
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -752,7 +755,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('/keys/:id', async (ctx) => {
+  router.delete('/keys/:id', adminOnly, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const getResult = await KeysApi.get(ctx.params.id)
@@ -919,7 +922,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('/keys/bulk-delete', async (ctx) => {
+  router.post('/keys/bulk-delete', adminOnly, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const payload = ctx.request.body as { keyIds: string[] }
 

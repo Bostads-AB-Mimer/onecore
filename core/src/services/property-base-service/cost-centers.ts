@@ -56,7 +56,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/cost-centers', async (ctx) => {
+  router.get('/cost-centers', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await propertyBaseAdapter.listCostCenters()
     if (!result.ok) {
@@ -106,7 +106,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/cost-centers/:id/tree', async (ctx) => {
+  router.get('/cost-centers/:id/tree', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = ctx.params.id
 

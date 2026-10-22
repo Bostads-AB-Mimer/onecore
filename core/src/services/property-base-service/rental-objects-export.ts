@@ -94,7 +94,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rental-objects/search/export', async (ctx) => {
+  router.get('/rental-objects/search/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     // Same schema as the search; the export walks every page itself.
     const query = parseQuery(ctx, SearchRentalObjectsQuerySchema, metadata)

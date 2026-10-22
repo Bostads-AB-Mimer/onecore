@@ -76,7 +76,10 @@ app.use(extractToken)
 // Authentication — verifies the extracted token
 app.use(requireAuth)
 
-// Role-based authorization
+// Role-based authorization. Picking the role by path prefix only holds while
+// routes have absolute paths: a route like '(.*)/x' would also match under
+// /scan-receipt or /webhooks/infobip and be reachable with those roles.
+// Routes that need more than these roles check it with requireRole.
 app.use(async (ctx, next) => {
   if (ctx.path.startsWith('/scan-receipt')) {
     return requireRole('scanner-upload')(ctx, next)
@@ -95,21 +98,8 @@ app.use(async (ctx, next) => {
   return requireRole('api-access')(ctx, next)
 })
 
-// @koa/router matches paths case-insensitively, so these gates compare against
+// @koa/router matches paths case-insensitively, so this gate compares against
 // a lower-cased path — otherwise /GUIDES would route but skip the role check.
-// Requires 'keys-admin' in addition to 'api-access' for key deletion (single and bulk).
-// Kept as a separate middleware so api-access is always checked first.
-app.use(async (ctx, next) => {
-  const path = ctx.path.toLowerCase()
-  if (
-    (ctx.method === 'DELETE' && /^\/keys\/[^/]+$/.test(path)) ||
-    (ctx.method === 'POST' && path === '/keys/bulk-delete')
-  ) {
-    return requireRole('keys-admin')(ctx, next)
-  }
-  return next()
-})
-
 // Requires 'guides-admin' in addition to 'api-access' for writing guides.
 // Reading guides needs only api-access.
 app.use(async (ctx, next) => {
