@@ -26,11 +26,13 @@ jest.mock('@onecore/utilities', () => ({
 
 import {
   exchangeContactsAuthorizationCode,
+  logoutContactsSession,
   refreshContactsAccessToken,
   resetContactsKeycloakClientForTests,
 } from '../keycloak-contacts'
 
 const tokenPath = '/realms/mimer-contacts/protocol/openid-connect/token'
+const logoutPath = '/realms/mimer-contacts/protocol/openid-connect/logout'
 
 function requestBodyText(body: unknown): string {
   if (typeof body === 'string') {
@@ -160,6 +162,41 @@ describe('keycloak-contacts', () => {
         await expect(
           exchangeContactsAuthorizationCode('bad', 'https://example/cb')
         ).rejects.toMatchObject({
+          response: { status: 400, data: { error: 'invalid_grant' } },
+        })
+      } finally {
+        axios.defaults.validateStatus = original
+      }
+    })
+  })
+
+  describe('logoutContactsSession', () => {
+    it('posts the refresh token and client credentials to the logout endpoint', async () => {
+      nock('http://keycloak.test')
+        .post(logoutPath)
+        .reply(204, (_uri, body) => {
+          const text = requestBodyText(body)
+          expect(text).toContain('refresh_token=rt')
+          expect(text).toContain('client_id=mina-sidor')
+          expect(text).toContain('client_secret=client-secret')
+          return ''
+        })
+
+      await logoutContactsSession('rt')
+
+      expect(nock.isDone()).toBe(true)
+    })
+
+    it('rejects invalid_grant when axios defaults accept 4xx', async () => {
+      nock('http://keycloak.test')
+        .post(logoutPath)
+        .reply(400, { error: 'invalid_grant' })
+
+      const original = axios.defaults.validateStatus
+      axios.defaults.validateStatus = (status) => status >= 200 && status < 500
+
+      try {
+        await expect(logoutContactsSession('gone')).rejects.toMatchObject({
           response: { status: 400, data: { error: 'invalid_grant' } },
         })
       } finally {
