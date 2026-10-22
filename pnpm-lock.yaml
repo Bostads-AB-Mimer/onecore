@@ -702,6 +702,9 @@ importers:
       '@onecore/ui':
         specifier: workspace:*
         version: link:../../../libs/ui
+      date-fns:
+        specifier: ^3.6.0
+        version: 3.6.0
       lucide-react:
         specifier: ^0.462.0
         version: 0.462.0(react@18.3.1)

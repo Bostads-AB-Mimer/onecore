@@ -1,14 +1,21 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   BulkActionBar,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   ResponsiveTable,
   type ResponsiveTableColumn,
   Skeleton,
   useRowSelection,
 } from '@onecore/ui'
+import { MoreHorizontal } from 'lucide-react'
 
 import { QueryError } from '../QueryError'
+import { EditListingDialog } from './EditListingDialog'
 import {
   useVacantApartments,
   type VacantApartment,
@@ -38,7 +45,39 @@ function ListingBadge({ listing }: { listing: VacantApartment['listing'] }) {
   return <Badge variant="secondary">Utkast</Badge>
 }
 
-const COLUMNS: ResponsiveTableColumn<VacantApartment>[] = [
+const buildColumns = (
+  onEdit: (apartment: VacantApartment) => void
+): ResponsiveTableColumn<VacantApartment>[] => [
+  {
+    key: 'actions',
+    label: '',
+    className: 'w-10',
+    render: (a) => (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Fler alternativ"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {/* Not built yet — see UTH-356. */}
+          <DropdownMenuItem disabled>Publicera</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onEdit(a)}>
+            Redigera annons
+          </DropdownMenuItem>
+          {/* No deletion flow exists yet. */}
+          <DropdownMenuItem disabled className="text-destructive">
+            Ta bort
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ),
+  },
   {
     key: 'rentalObjectCode',
     label: 'Objektsnummer',
@@ -112,6 +151,9 @@ export function VacantApartmentsTable() {
   const { clear } = selection
   useEffect(() => clear(), [data, clear])
 
+  const [editing, setEditing] = useState<VacantApartment | null>(null)
+  const columns = useMemo(() => buildColumns(setEditing), [])
+
   if (isError) return <QueryError error={error} />
 
   if (isPending) {
@@ -128,7 +170,7 @@ export function VacantApartmentsTable() {
     <>
       <ResponsiveTable
         data={data}
-        columns={COLUMNS}
+        columns={columns}
         keyExtractor={getId}
         selection={selection}
         emptyMessage="Inga lediga lägenheter att publicera"
@@ -138,6 +180,16 @@ export function VacantApartmentsTable() {
         selectedCount={selection.count}
         onClear={selection.clear}
         actions={[]}
+      />
+      <EditListingDialog
+        apartment={editing}
+        onClose={() => setEditing(null)}
+        onSave={() => {
+          // TODO(UTH-354): no write endpoint exists yet for the review/publish
+          // fields (see core/leasing's /listings routes) — wire this up once
+          // that's built instead of persisting anything here.
+          setEditing(null)
+        }}
       />
     </>
   )

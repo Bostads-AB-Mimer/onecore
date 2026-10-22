@@ -44,6 +44,7 @@
   "dependencies": {
     "@onecore/types": "workspace:*",
     "@onecore/ui": "workspace:*",
+    "date-fns": "^3.6.0",
     "lucide-react": "^0.462.0",
     "openapi-fetch": "^0.13.8"
   },
