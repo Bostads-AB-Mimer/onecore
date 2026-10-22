@@ -102,7 +102,6 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
           {
             path: routes.room,
             element: <RoomPage />,
-            handle: { title: 'Rum' },
           },
           {
             path: routes.parkingSpace,

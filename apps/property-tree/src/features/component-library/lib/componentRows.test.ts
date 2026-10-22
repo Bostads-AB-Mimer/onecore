@@ -167,6 +167,11 @@ describe('formatInstallationDate', () => {
     expect(formatInstallationDate('1900-01-01T00:00:00.000Z')).toBe('Okänt')
   })
 
+  it('shows any date up to 1900 as unknown', () => {
+    expect(formatInstallationDate('1900-06-01')).toBe('Okänt')
+    expect(formatInstallationDate('1899-12-30')).toBe('Okänt')
+  })
+
   it('shows a dash without a date', () => {
     expect(formatInstallationDate(null)).toBe('-')
   })

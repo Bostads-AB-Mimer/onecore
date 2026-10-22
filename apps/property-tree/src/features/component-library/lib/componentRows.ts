@@ -1,5 +1,7 @@
 import type { property } from '@onecore/types'
 
+import { isKnownInstallationDate } from '@/entities/component/lib/componentCalculations'
+
 import type { Component, ComponentSubtype } from '@/services/types'
 
 import { formatISODate } from '@/shared/lib/formatters'
@@ -113,13 +115,12 @@ export const formatComponentQuantity = (component: Component): string => {
   return unit ? `${amount} ${unit}` : amount
 }
 
-// The import stores an unknown installation date as 1900-01-01.
-const UNKNOWN_DATE = '1900-01-01'
-
 export const formatInstallationDate = (
   isoDate: string | null | undefined
 ): string =>
-  isoDate?.startsWith(UNKNOWN_DATE) ? 'Okänt' : formatISODate(isoDate)
+  isoDate && !isKnownInstallationDate(isoDate)
+    ? 'Okänt'
+    : formatISODate(isoDate)
 
 export const formatSek = (value: number | null | undefined): string =>
   value
