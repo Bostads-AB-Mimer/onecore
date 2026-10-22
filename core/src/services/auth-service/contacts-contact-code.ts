@@ -294,10 +294,12 @@ async function replaceContactCode(
     throw new ContactCodeError('contact_not_owned')
   }
 
+  // The contacts service trims the code it looks up, so the stored code is the one it resolved,
+  // not the caller's spelling of it.
   const current = readContactCodeClaim(claims[CONTACT_CODE_ATTRIBUTE])
-  if (current === contactCode) return tokens
+  if (current === contact.contactCode) return tokens
 
-  await account.writeContactCode(contactCode, current ?? null)
+  await account.writeContactCode(contact.contactCode, current ?? null)
   return refreshSession(tokens.refresh_token)
 }
 

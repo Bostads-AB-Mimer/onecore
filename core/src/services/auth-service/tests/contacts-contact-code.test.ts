@@ -416,6 +416,34 @@ describe('setContactCode', () => {
     expect(refresh).toHaveBeenCalledTimes(1)
   })
 
+  it('writes the code the contacts service resolved, not the input', async () => {
+    refresh.mockResolvedValueOnce(session).mockResolvedValueOnce(withP200)
+    contacts.getByContactCode.mockResolvedValue(
+      individual('P200', '199001011239')
+    )
+    let putBody: Record<string, unknown> | undefined
+    keycloakUser()
+      .put(userPath, (body) => {
+        putBody = body
+        return true
+      })
+      .reply(204)
+
+    await expect(setContactCode('rt-1', ' P200 ')).resolves.toBe(withP200)
+    expect(putBody?.attributes).toEqual({ contact_code: ['P200'] })
+  })
+
+  it('does not write when the token carries the resolved code', async () => {
+    refresh.mockResolvedValueOnce(withP200)
+    contacts.getByContactCode.mockResolvedValue(
+      individual('P200', '199001011239')
+    )
+    keycloakUser()
+
+    await expect(setContactCode('rt-1', ' P200 ')).resolves.toBe(withP200)
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
   it.each([
     ['another personnummer', individual('P300', '198501011237')],
     ['no personnummer', individual('P300', null)],
