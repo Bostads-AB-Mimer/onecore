@@ -45,7 +45,7 @@ Går objektinformationen inte att hämta räknas raden som ett **fel** och hamna
 
 ## Annan fakturamottagare
 
-Vid `create` hämtas hyresgästen från Contacts, med relationer. Har hen en **annan fakturamottagare** hämtas den kontakten i sin helhet och synkas till Xledger — **skapas** om kunden saknas. Mottagaren måste finnas som kund innan avtalet börjar aviseras, även om hen aldrig varit hyresgäst. Misslyckas det avbryts hela avtalssynken och raden köas. Undantag: avvisar Economy kunden med ett 4xx-svar räknas det som lyckat, och avtalet skapas utan att mottagaren blivit kund — se [processöversikten](../DOCS_Sync_Overview.md#att-känna-till).
+Vid `create` hämtas hyresgästen från Contacts, med relationer. Har hen en **annan fakturamottagare** hämtas den kontakten i sin helhet och synkas till Xledger — **skapas** om kunden saknas. Mottagaren måste finnas som kund innan avtalet börjar aviseras, även om hen aldrig varit hyresgäst. Misslyckas det avbryts hela avtalssynken och raden köas. Det gäller även när Economy avvisar kunden med ett 4xx-svar, t.ex. för att mottagaren saknar namn i Xpand: avtalet skapas inte i Tenfast förrän mottagaren rättats och blivit kund.
 
 God man och förvaltare läses men används inte av scriptet. De når Tenfast när hyresgästen importeras (se nedan), eftersom Tenfast då hämtar kontakten med relationer från ONECore.
 
