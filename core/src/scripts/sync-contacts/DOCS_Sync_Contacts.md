@@ -8,7 +8,7 @@ Scriptet körs som CronJobbet `sync-contacts` varje minut. Vid första körninge
 
 ## Vilka ändringar som plockas upp
 
-Contacts-tjänsten (`GET /contacts/sync`) läser `cmlog`-rader som börjar med `Kontakt ` och plockar ut kontaktkoden ur första ordet efter. Har samma kontakt ändrats flera gånger sedan förra körningen blir det en enda synk, med den senaste tidsstämpeln — hela kontakten hämtas färskt ändå. Kontaktuppgifterna läses därefter ur Xpand. En kontaktkod som inte längre finns i Xpand faller bort tyst.
+Contacts-tjänsten (`GET /contacts/sync`) läser `cmlog`-rader som börjar med `Kontakt ` och plockar ut kontaktkoden ur första ordet efter. Har samma kontakt ändrats flera gånger sedan förra körningen blir det en enda synk, med den senaste tidsstämpeln — hela kontakten hämtas färskt ändå. Kontaktuppgifterna läses därefter ur Xpand, i en enda fråga för alla ändrade koder. En kontaktkod som inte längre finns i Xpand faller bort tyst. Det kan även en befintlig kontakt göra: frågan begränsas till lika många kontaktrader som koder, så om en kod har två rader i Xpands kontakttabell trängs en annan ändrad kontakt ut — utan logg och utan mejl. Om sådana dubbletter finns i Xpand i dag är inte kontrollerat.
 
 ## Vad som synkas
 
@@ -25,6 +25,11 @@ Core plattar ut kontakten till en synkpayload (`payload.ts`) och skickar olika d
 - **E-post och telefon** är den post som är markerad som primär, annars den första i listan.
 - **Adress** är kontaktens första adress.
 
+Två undantag ändrar vad som skickas:
+
+- **Skyddad identitet.** För en kontakt med skyddade personuppgifter (lagsökt) svarar Contacts med namnet `redacted` och utan adress, e-post och telefon, i alla miljöer. Synken skriver det vidare: kunden i Xledger får namnet `redacted` och tom adress och e-post, och hyresgästen i Odoo får namnet `redacted` (e-post och telefon lämnas som de var). Fakturor och arbetsordrar för hyresgästen förlorar därmed namn och adress.
+- **Testmiljöer.** Utanför produktion (`NODE_ENV` är inte `production`) ersätter Contacts all e-post och alla telefonnummer med `redacted`. I `epic-avtal-49`, där jobbet körs, skriver synken därför `redacted` som e-post i Xledger och Odoo och som telefon i Odoo. Det är inget fel i synken.
+
 Tenfast-kolumnen är tom med flit: dit skickas **bara kontaktkoden**. Tenfast hämtar själv färska kontaktuppgifter från ONECore och uppdaterar hyresgästen, och alla relationer som pekar på samma kontakt.
 
 ## Vad varje målsystem gör
@@ -32,7 +37,7 @@ Tenfast-kolumnen är tom med flit: dit skickas **bara kontaktkoden**. Tenfast h�
 Ingen av de tre skapar något nytt i det här flödet — de uppdaterar bara det som redan finns.
 
 - **Tenfast** — en kontakt som inte finns som hyresgäst ger 404, vilket räknas som lyckat (hoppas över).
-- **Xledger** — kunden slås upp på kontaktkod. Finns den uppdateras namn, gatuadress, postnummer, ort och e-post. Saknas den händer ingenting: scriptet skapar medvetet inga kunder. En helt ny kontakt når Xledger först när den behövs, som annan fakturamottagare på ett nytt avtal i [sync-leases](../sync-leases/DOCS_Sync_Leases.md#annan-fakturamottagare) eller när en relation läggs till på kundkortet. En tom adress eller e-post i Xpand skrivs som tom i Xledger.
+- **Xledger** — kunden slås upp på kontaktkod. Finns den uppdateras namn, gatuadress, postnummer, ort och e-post. Saknas den händer ingenting: scriptet skapar medvetet inga kunder. En helt ny kontakt når Xledger först när den behövs, som annan fakturamottagare på ett nytt avtal i [sync-leases](../sync-leases/DOCS_Sync_Leases.md#annan-fakturamottagare) eller när en relation läggs till på kundkortet. En tom adress eller e-post skrivs som tom i Xledger — även när den bara saknas för att kontakten har skyddad identitet. Uppdateringen görs varje gång, även om inget har ändrats.
 - **Odoo** — `maintenance.tenant` söks upp på `contact_code`. Hittas ingen räknas raden som lyckad. Hittas flera uppdateras alla. Namnet skrivs alltid; e-post och telefon bara om kontakten har en sådan.
 
 ## Relationer
@@ -49,6 +54,8 @@ Relationerna själva hanteras utanför den här synken:
 ## Felhantering
 
 De tre anropen görs parallellt och **alla tre måste lyckas** för att raden ska räknas som synkad. Misslyckas något hamnar hela raden i felkön, med status per mål i felmeddelandet (`tenfast=… xledger=… odoo=…`).
+
+Undantag: för Xledger räknas bara serverfel (5xx) och nätverksfel som fel. Avvisar Economy kunden med ett 4xx-svar — t.ex. för att kontakten saknar namn i Xpand — räknas Xledger som lyckat, fast inget uppdaterats. Raden köas inte och inget mejl skickas.
 
 Ett återförsök kör om alla tre, även de som redan lyckats. Det är ofarligt eftersom alla tre bara uppdaterar befintlig data.
 
@@ -160,4 +167,5 @@ sequenceDiagram
 
 - **Bara befintliga poster uppdateras.** En kontakt som är ny i Xpand dyker inte upp i Tenfast, Xledger eller Odoo genom den här synken. Den kommer in den väg där den först behövs — t.ex. när ett avtal skapas.
 - **Telefon går bara till Odoo**, och adressen bara till Xledger.
-- **Första körningen är tung.** Utan sparad position hämtas alla kontakter som någonsin loggats, och anropet mot Contacts har ingen tidsgräns just därför.
+- **Högst cirka 2 000 ändrade kontakter per körning.** Contacts hämtar alla ändrade kontakter i en enda SQL-fråga med en parameter per kontaktkod, och SQL Server tillåter högst 2 100 parametrar. Har fler kontakter ändrats sedan sparad position svarar Contacts med fel, körningen avbryts utan att flytta positionen, och nästa körning försöker med samma — och fler — kontakter. Synken kommer då aldrig ifatt, utan mejl. Det gäller första körningen (hela historiken i testmiljön omfattar långt fler) och varje avbrott som är långt nog.
+- **Inga relationer, ingen ny kund.** Se [Relationer](#relationer) och [Vad varje målsystem gör](#vad-varje-målsystem-gör).

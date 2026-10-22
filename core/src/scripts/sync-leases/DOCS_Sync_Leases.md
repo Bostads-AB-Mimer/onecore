@@ -24,7 +24,12 @@ Leasing-tjänsten (`GET /leases/sync`) läser `cmlog`-rader som börjar med `Hyr
 
 **Makulerade avtal byter nummer i Xpand.** Kontraktsnumret får ett M-suffix i samma ändring (t.ex. `…/10` → `…/10M`), medan Tenfast känner avtalet under det gamla numret. Därför läses det ursprungliga numret ur raden `Värdet i fältet 'Kontraktsnummer' ändrat från … till …` i samma logg-post. Saknas den raden går makuleringen inte att koppla till rätt avtal: den loggas som varning och hoppas över helt.
 
-**Händelser slås inte ihop.** Varje händelse spelas upp i ordning, så att ett avtal som både tecknats och sagts upp sedan förra körningen hamnar rätt i Tenfast. Av samma skäl stryker en nyare händelse inte en äldre som ligger i felkön.
+**Händelser slås inte ihop.** Varje händelse spelas upp i ordning, så att ett avtal som både tecknats och sagts upp sedan förra körningen hamnar rätt i Tenfast — så länge varje steg lyckas. Av samma skäl stryker en nyare händelse inte en äldre som ligger i felkön.
+
+**En senare händelse väntar inte på en köad.** Misslyckas tecknandet av ett avtal hamnar det i felkön, men en senare uppsägning eller makulering av samma avtal körs ändå. Avtalet finns inte i Tenfast än, så den räknas som lyckad och hoppas över — utan kö och utan mejl. Lyckas tecknandet senare blir följden olika:
+
+- **Uppsägning:** Tenfast får ett aktivt avtal utan slutdatum, som Xpand har sagt upp, och fortsätter avisera det. Bekräftelsemejlet säger bara att avtalet nu är synkat.
+- **Makulering:** tecknandet lyckas aldrig, eftersom avtalet bytt nummer i Xpand — se [Om samma händelse körs igen](#om-samma-händelse-körs-igen).
 
 ## Vilka objekt som är i scope
 
@@ -36,11 +41,11 @@ Innan något skickas till Tenfast hämtar Core hyresobjektets typ från Xpand vi
 
 Garagekontrakt plockas alltså upp ur loggen men faller bort här. Det är avsiktligt: bilplatser hanteras direkt i Tenfast — se [Uppsägning av Avtal](../../processes/leasetermination/DOCS_Overview.md).
 
-Går objektinformationen inte att hämta räknas raden som ett **fel** och hamnar i felkön — till skillnad från "utanför scope".
+Går objektinformationen inte att hämta räknas raden som ett **fel** och hamnar i felkön — till skillnad från "utanför scope". Det gäller även objekt av en sort som Property Management inte känner till: Xpand har en fjärde sort, Övrigt (`bahyr`), som ger ett serverfel i stället för "utanför scope". En sådan rad köas, mejlas och ges upp efter 30 dagar med rådet att göra ändringen i Tenfast — fast objektet aldrig skulle dit. Om Övrigt-objekt har bostads-, lokal- eller garagekontrakt i Xpand är inte kontrollerat.
 
 ## Annan fakturamottagare
 
-Vid `create` hämtas hyresgästen från Contacts, med relationer. Har hen en **annan fakturamottagare** hämtas den kontakten i sin helhet och synkas till Xledger — **skapas** om kunden saknas. Mottagaren måste finnas som kund innan avtalet börjar aviseras, även om hen aldrig varit hyresgäst. Misslyckas det avbryts hela avtalssynken och raden köas.
+Vid `create` hämtas hyresgästen från Contacts, med relationer. Har hen en **annan fakturamottagare** hämtas den kontakten i sin helhet och synkas till Xledger — **skapas** om kunden saknas. Mottagaren måste finnas som kund innan avtalet börjar aviseras, även om hen aldrig varit hyresgäst. Misslyckas det avbryts hela avtalssynken och raden köas. Undantag: avvisar Economy kunden med ett 4xx-svar räknas det som lyckat, och avtalet skapas utan att mottagaren blivit kund — se [processöversikten](../DOCS_Sync_Overview.md#att-känna-till).
 
 God man och förvaltare läses men används inte av scriptet. De når Tenfast när hyresgästen importeras (se nedan), eftersom Tenfast då hämtar kontakten med relationer från ONECore.
 
@@ -57,18 +62,20 @@ God man och förvaltare läses men används inte av scriptet. De når Tenfast n�
    - startdatum från Xpand,
    - hyresrader kopierade från hyresobjektet i Tenfast,
    - månadsavisering, två veckor i förskott.
-6. Det signerade kontraktet hämtas som PDF ur Xpands dokumentarkiv och laddas upp på avtalet. **Det här steget kan inte fälla synken** — saknas PDF:en eller misslyckas uppladdningen loggas en varning, men avtalet räknas som skapat.
+6. Det signerade kontraktet hämtas som PDF ur Xpands dokumentarkiv och laddas upp på avtalet. **Det här steget kan inte fälla synken** — saknas PDF:en eller misslyckas uppladdningen loggas en varning, men avtalet räknas som skapat. Raden köas inte, så PDF:en saknas sedan i Tenfast tills någon laddar upp den för hand.
 
 ### terminate — avtalet sägs upp
 
 1. Avtalet läses i Xpand för att få sista debiteringsdatum. Saknas avtalet eller datumet blir det fel och raden köas.
 2. Avtalet slås upp i Tenfast. Finns det inte räknas raden som lyckad — typiskt ett avtal som aldrig kom in i Tenfast.
 3. Avtalet sägs upp med sista debiteringsdatum som slutdatum, `reason: "Synced from xpand"`, utan avisering till hyresgästen och markerat som redan hanterat.
-4. Svarar Tenfast att avtalet inte kan sägas upp (`Avtalet kan inte sägas upp`) eller att det ändå löper ut inom uppsägningstiden, räknas det också som lyckat.
-5. Uppsägningshandlingen bifogas. Det görs både efter en lyckad uppsägning och när avtalet redan var uppsagt, så en tidigare misslyckad uppladdning lagas vid nästa körning:
+4. Två svar från Tenfast räknas också som lyckade, utan mejl:
+   - `Avtalet kan inte sägas upp` — avtalet är redan uppsagt.
+   - `Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.` — Tenfast ger det när avtalet ändå tar slut inom uppsägningstiden (så används svaret i hyresgästens egen uppsägning), och det kan komma redan första gången. Exakt vad Tenfast jämför med är inte verifierat. **Xpands sista debiteringsdatum förs då inte över**: är det tidigare än Tenfasts slutdatum aviserar Tenfast för länge.
+5. Uppsägningshandlingen bifogas. Det görs både efter en lyckad uppsägning och när avtalet redan var uppsagt:
    - Har avtalet redan en uppsägningsfil i Tenfast händer inget mer.
    - Annars hämtas den senaste uppsägnings-PDF:en ur Xpands dokumentarkiv och laddas upp.
-   - **Det här steget kan inte fälla synken** — varje fel loggas som varning.
+   - **Det här steget kan inte fälla synken** — varje fel loggas som varning. Raden köas inte och ingen senare körning tittar på den igen, så en PDF som saknades eller inte gick att ladda upp får läggas in i Tenfast för hand.
 
 ### void — avtalet makuleras
 
@@ -80,11 +87,12 @@ God man och förvaltare läses men används inte av scriptet. De når Tenfast n�
 
 En händelse kan köras om — från felkön, efter en krasch mitt i en sekund, eller efter att PVC:n tömts. Utfallet skiljer sig per action:
 
-| Action      | Vid omkörning                                                                                                                                                                                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `create`    | Inget dubbelavtal skapas. Den signerade PDF:en laddas däremot upp en gång till.                                                                                                                                                                                     |
-| `terminate` | Ofarligt. Svaret `Avtalet kan inte sägas upp` räknas som lyckat, och uppsägnings-PDF:en laddas inte upp igen om den redan finns.                                                                                                                                    |
-| `void`      | **Kan misslyckas.** Det finns inget skydd mot en andra makulering: varje svar från Tenfast utom OK är ett fel. Avvisar Tenfast den köas raden och försöks igen i 30 dagar innan den ges upp. Hur Tenfast faktiskt svarar på en andra makulering är inte verifierat. |
+| Action                                                                 | Vid omkörning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create`                                                               | Inget dubbelavtal skapas. Den signerade PDF:en laddas däremot upp en gång till.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `terminate`                                                            | Ofarligt. Svaret `Avtalet kan inte sägas upp` räknas som lyckat, och uppsägnings-PDF:en laddas inte upp igen om den redan finns. Saknades PDF:en förra gången försöks den nu igen — det enda sättet den kommer in utan handpåläggning.                                                                                                                                                                                                                                                                                                                            |
+| `void`                                                                 | **Kan misslyckas.** Det finns inget skydd mot en andra makulering: varje svar från Tenfast utom OK är ett fel. Avvisar Tenfast den köas raden och försöks igen i 30 dagar innan den ges upp. Hur Tenfast faktiskt svarar på en andra makulering är inte verifierat.                                                                                                                                                                                                                                                                                               |
+| `create` eller `terminate` för ett avtal som **makulerats sedan dess** | **Misslyckas i 30 dagar.** Makuleringen gav avtalet ett nytt nummer i Xpand (`…/10M`), men tecknande och uppsägning slår upp det gamla (`…/10`). Leasing hittar inget avtal och svarar 404, innan Tenfast ens tillfrågas. Raden köas, mejlas och ges upp med rådet att göra ändringen i Tenfast för hand. **Gör inte det** — avtalet är makulerat. Har Xpand återanvänt numret (t.ex. `…/09M2`) kan uppslaget i stället träffa ett nyare avtal. Det händer vid första körningen, efter en tömd PVC, eller när ett köat tecknande försöks igen efter makuleringen. |
 
 ## Flödesdiagram
 
