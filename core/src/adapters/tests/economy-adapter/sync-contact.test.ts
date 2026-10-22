@@ -57,6 +57,33 @@ describe('economy-adapter.syncContactToEconomy', () => {
     }
   })
 
+  it.each([400, 404])(
+    'returns sync-failed on %i when 4xx resolves process-wide',
+    async (status) => {
+      // Sets axios.defaults.validateStatus to accept < 500 on the shared instance
+      await import('../../leasing-adapter')
+      const payload = factory.syncContactToEconomyPayload.build()
+
+      nock(config.economyService.url)
+        .post(`/customers/${payload.contactCode}/sync`)
+        .query({ create: 'true' })
+        .reply(status, { error: 'Invalid request body' })
+
+      const { contactCode, ...contactData } = payload
+      const result = await economyAdapter.syncContactToEconomy(
+        contactCode,
+        contactData,
+        { create: true }
+      )
+
+      expect(result).toEqual({
+        ok: false,
+        err: 'sync-failed',
+        statusCode: status,
+      })
+    }
+  )
+
   it('returns unknown on network error', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
