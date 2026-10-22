@@ -18,7 +18,11 @@ import {
   readJsonBodyRecord,
   readRefreshTokenFromBody,
 } from './contacts-auth-dto'
-import { ContactCodeError, ensureContactCode } from './contacts-contact-code'
+import {
+  ContactCodeError,
+  ensureContactCode,
+  setContactCode,
+} from './contacts-contact-code'
 
 /**
  * Short, so that the code exchange, ensureContactCode's budget and this logout together stay
@@ -265,6 +269,97 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
       )
       ctx.status = httpStatusForContactsKeycloakError(error)
       ctx.body = bodyForContactsKeycloakError(ctx.status)
+    }
+  })
+
+  /**
+   * @swagger
+   * /auth/contacts/contact-code:
+   *   post:
+   *     summary: Point a customer's account at another contact
+   *     description: Server-to-server helper for webapi. Sets contact_code on the mimer-contacts user behind the refresh token's session and returns tokens that carry it. Used when the token's contact exists but webapi will not accept it (inactive in Xpand) and webapi has picked the active contact for the same personnummer. Only a contact whose personnummer is the user's username is accepted. Does not end the session on failure; webapi does.
+   *     tags:
+   *       - Auth
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - refreshToken
+   *               - contactCode
+   *             properties:
+   *               refreshToken:
+   *                 type: string
+   *               contactCode:
+   *                 type: string
+   *     responses:
+   *       '200':
+   *         description: OAuth tokens whose access token carries the contact_code
+   *       '400':
+   *         description: Missing refresh token or contact code, or invalid_grant (session ended)
+   *       '422':
+   *         description: contact_not_found, or contact_not_owned when the contact's personnummer is not the user's
+   *       '502':
+   *         description: Keycloak or the contacts service unavailable or too slow
+   *       '503':
+   *         description: Contacts Keycloak or its provisioning client not configured
+   */
+  router.post('(.*)/auth/contacts/contact-code', async (ctx) => {
+    if (!isContactsKeycloakConfigured()) {
+      ctx.status = 503
+      ctx.body = { error: 'contacts_keycloak_not_configured' }
+      return
+    }
+
+    const refreshToken = readRefreshTokenFromBody(ctx.request.body)
+    if (!refreshToken) {
+      ctx.status = 400
+      ctx.body = { error: 'missing_refresh_token' }
+      return
+    }
+
+    const contactCode = readJsonBodyRecord(ctx.request.body).contactCode
+    if (typeof contactCode !== 'string' || !contactCode) {
+      ctx.status = 400
+      ctx.body = { error: 'missing_contact_code' }
+      return
+    }
+
+    try {
+      ctx.status = 200
+      ctx.body = contactsTokenToJson(
+        await setContactCode(refreshToken, contactCode)
+      )
+    } catch (error) {
+      const reason =
+        error instanceof ContactCodeError ? error.reason : 'unknown'
+      logContactsKeycloakTokenError(
+        `Setting contact_code failed in /auth/contacts/contact-code (${reason})`,
+        error instanceof ContactCodeError ? (error.cause ?? error) : error
+      )
+
+      switch (reason) {
+        case 'session_ended':
+          ctx.status = 400
+          ctx.body = { error: 'invalid_grant' }
+          return
+        case 'contact_not_found':
+        case 'contact_not_owned':
+          ctx.status = 422
+          ctx.body = { error: reason }
+          return
+        case 'provisioning_not_configured':
+          ctx.status = 503
+          ctx.body = { error: 'contact_provisioning_not_configured' }
+          return
+        default:
+          ctx.status = 502
+          ctx.body = { error: 'contact_lookup_unavailable' }
+      }
     }
   })
 }

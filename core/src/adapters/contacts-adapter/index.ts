@@ -153,7 +153,7 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       contactCode: string
     ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {
       const response = await axios<GetContactResponseBody>(
-        `/contacts/${contactCode}`
+        `/contacts/${encodeURIComponent(contactCode)}`
       )
       return singleResponse(response)
     },

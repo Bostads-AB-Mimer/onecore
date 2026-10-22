@@ -52,6 +52,9 @@ describe('requiredRolesFor', () => {
     expect(requiredRolesFor('/auth/contacts/logout', 'POST')).toEqual([
       'contact-auth',
     ])
+    expect(requiredRolesFor('/auth/contacts/contact-code', 'POST')).toEqual([
+      'contact-auth',
+    ])
     expect(requiredRolesFor('/auth/contacts/token', 'GET')).toEqual([
       'api-access',
     ])

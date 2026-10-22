@@ -21,12 +21,19 @@ jest.mock('../contacts-contact-code', () => {
       super(reason)
     }
   }
-  return { ContactCodeError, ensureContactCode: jest.fn() }
+  return {
+    ContactCodeError,
+    ensureContactCode: jest.fn(),
+    setContactCode: jest.fn(),
+  }
 })
 
 const mocked = contactsKeycloak as jest.Mocked<typeof contactsKeycloak>
 const ensureContactCode = contactCode.ensureContactCode as jest.MockedFunction<
   typeof contactCode.ensureContactCode
+>
+const setContactCode = contactCode.setContactCode as jest.MockedFunction<
+  typeof contactCode.setContactCode
 >
 
 function buildApp() {
@@ -376,6 +383,75 @@ describe('contacts auth routes', () => {
 
       expect(res.status).toBe(502)
       expect(res.body.error).toBe('keycloak_unavailable')
+    })
+  })
+
+  describe('POST /auth/contacts/contact-code', () => {
+    const post = (body: Record<string, unknown>) =>
+      request(buildApp().callback())
+        .post('/auth/contacts/contact-code')
+        .send(body)
+
+    beforeEach(() => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+    })
+
+    it('returns 503 when contacts Keycloak is not configured', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(false)
+
+      const res = await post({ refreshToken: 'rt', contactCode: 'P200' })
+
+      expect(res.status).toBe(503)
+    })
+
+    it.each([
+      [{ contactCode: 'P200' }, 'missing_refresh_token'],
+      [{ refreshToken: 'rt' }, 'missing_contact_code'],
+    ])('returns 400 for %p', async (body, error) => {
+      const res = await post(body)
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe(error)
+      expect(setContactCode).not.toHaveBeenCalled()
+    })
+
+    it('returns the tokens that carry the contact', async () => {
+      setContactCode.mockResolvedValue({
+        access_token: 'access-p200',
+        refresh_token: 'refresh-2',
+        expires_in: 300,
+        token_type: 'Bearer',
+      })
+
+      const res = await post({ refreshToken: 'rt', contactCode: 'P200' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.accessToken).toBe('access-p200')
+      expect(res.body.refreshToken).toBe('refresh-2')
+      expect(setContactCode).toHaveBeenCalledWith('rt', 'P200')
+    })
+
+    it.each([
+      ['session_ended', 400, 'invalid_grant'],
+      ['contact_not_found', 422, 'contact_not_found'],
+      ['contact_not_owned', 422, 'contact_not_owned'],
+      [
+        'provisioning_not_configured',
+        503,
+        'contact_provisioning_not_configured',
+      ],
+      ['contacts_unavailable', 502, 'contact_lookup_unavailable'],
+      ['timeout', 502, 'contact_lookup_unavailable'],
+    ])('maps %s to %i', async (reason, status, error) => {
+      setContactCode.mockRejectedValue(
+        new contactCode.ContactCodeError(reason as never)
+      )
+
+      const res = await post({ refreshToken: 'rt', contactCode: 'P200' })
+
+      expect(res.status).toBe(status)
+      expect(res.body.error).toBe(error)
+      expect(mocked.logoutContactsSession).not.toHaveBeenCalled()
     })
   })
 })
