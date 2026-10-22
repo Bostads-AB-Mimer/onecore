@@ -33,6 +33,10 @@ export type ContactCodeErrorReason =
   /** A repair was needed but the mimer-contacts provisioning client is not configured. */
   | 'provisioning_not_configured'
   | 'timeout'
+  /** setContactCode: the contacts service has no such contact. */
+  | 'contact_not_found'
+  /** setContactCode: the contact's personnummer is not the account's username. */
+  | 'contact_not_owned'
 
 export class ContactCodeError extends Error {
   constructor(
@@ -74,16 +78,17 @@ function readContactCodeClaim(value: unknown): string | undefined {
 }
 
 /**
- * The Keycloak username as a twelve-digit personnummer, or null when it is not one.
+ * A personnummer (or samordningsnummer) in its twelve-digit form, or null when the value is not
+ * one.
  *
  * The contacts service's by-nid lookup matches anything for an input without digits, so only a
- * valid personnummer (or samordningsnummer) is ever looked up. Twelve digits is the form Xpand
- * stores for nearly all private individuals.
+ * valid personnummer is ever looked up. Twelve digits is the form Xpand stores for nearly all
+ * private individuals, and a single form makes two values comparable.
  */
-function personnummerFromUsername(username: string): string | null {
+function toTwelveDigitPersonnummer(value: string): string | null {
   const options = { allowCoordinationNumber: true, allowInterimNumber: false }
-  if (!Personnummer.valid(username, options)) return null
-  return Personnummer.parse(username, options).format(true)
+  if (!Personnummer.valid(value, options)) return null
+  return Personnummer.parse(value, options).format(true)
 }
 
 /** null when the contacts service has no such contact. */
@@ -133,14 +138,13 @@ async function getProvisioningToken(): Promise<string> {
   return tokens.access_token
 }
 
-/** The attribute was just set, so only a refreshed token carries it. */
-async function refreshWithContactCode(
+async function refreshSession(
   refreshToken: string
 ): Promise<ContactsTokenResponse> {
   try {
     return await refreshContactsAccessToken(refreshToken)
   } catch (error) {
-    // The session ended between the exchange and here; webapi sends the user back to log in.
+    // The session ended in the meantime; webapi sends the user back to log in.
     if (httpStatusForContactsKeycloakError(error) === 400) {
       throw new ContactCodeError('session_ended', error)
     }
@@ -148,7 +152,67 @@ async function refreshWithContactCode(
   }
 }
 
-async function setContactCode(
+/** The mimer-contacts user behind sub, read and written with the provisioning client. */
+async function provisioningUser(sub: string) {
+  if (!isContactsProvisioningConfigured()) {
+    throw new ContactCodeError('provisioning_not_configured')
+  }
+
+  const adminToken = await getProvisioningToken()
+  const userUrl = `${contactsKeycloakAdminUrl()}/users/${encodeURIComponent(sub)}`
+  const adminConfig = {
+    ...contactsKeycloakRequestConfig,
+    headers: { Authorization: `Bearer ${adminToken}` },
+  }
+  const user = await keycloak(() =>
+    axios.get<KeycloakUserRepresentation>(userUrl, adminConfig)
+  )
+
+  return {
+    user,
+    async writeContactCode(contactCode: string, previous: string | null) {
+      logger.info(
+        { sub, contactCode, previous },
+        'Setting contact_code on mimer-contacts user'
+      )
+      // With the declarative user profile, attributes missing from a PUT are removed, so the
+      // whole representation goes back with only contact_code changed.
+      await keycloak(() =>
+        axios.put(
+          userUrl,
+          {
+            ...user,
+            attributes: {
+              ...user.attributes,
+              [CONTACT_CODE_ATTRIBUTE]: [contactCode],
+            },
+          },
+          adminConfig
+        )
+      )
+    },
+  }
+}
+
+/** The work is not cancelled on timeout; whatever it still writes is a correct contact_code. */
+function withinBudget<T>(work: Promise<T>, budgetMs: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new ContactCodeError(
+            'timeout',
+            new Error(`Setting contact_code took longer than ${budgetMs} ms`)
+          )
+        ),
+      budgetMs
+    )
+  })
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer))
+}
+
+async function repairContactCode(
   tokens: ContactsTokenResponse
 ): Promise<ContactsTokenResponse> {
   const claims = decodeJwt(tokens.access_token)
@@ -168,21 +232,9 @@ async function setContactCode(
       new Error('Token from the code exchange has no sub or refresh_token')
     )
   }
-  if (!isContactsProvisioningConfigured()) {
-    throw new ContactCodeError('provisioning_not_configured')
-  }
 
-  const adminToken = await getProvisioningToken()
-  const userUrl = `${contactsKeycloakAdminUrl()}/users/${encodeURIComponent(claims.sub)}`
-  const adminConfig = {
-    ...contactsKeycloakRequestConfig,
-    headers: { Authorization: `Bearer ${adminToken}` },
-  }
-
-  const user = await keycloak(() =>
-    axios.get<KeycloakUserRepresentation>(userUrl, adminConfig)
-  )
-  const personnummer = personnummerFromUsername(user.username)
+  const account = await provisioningUser(claims.sub)
+  const personnummer = toTwelveDigitPersonnummer(account.user.username)
   if (!personnummer) {
     logger.warn(
       { sub: claims.sub },
@@ -198,31 +250,55 @@ async function setContactCode(
     return tokens
   }
 
-  logger.info(
-    {
-      sub: claims.sub,
-      contactCode: contact.contactCode,
-      previous: current ?? null,
-    },
-    'Setting contact_code on mimer-contacts user'
-  )
-  // With the declarative user profile, attributes missing from a PUT are removed, so the whole
-  // representation goes back with only contact_code changed.
-  await keycloak(() =>
-    axios.put(
-      userUrl,
-      {
-        ...user,
-        attributes: {
-          ...user.attributes,
-          [CONTACT_CODE_ATTRIBUTE]: [contact.contactCode],
-        },
-      },
-      adminConfig
-    )
-  )
+  await account.writeContactCode(contact.contactCode, current ?? null)
+  // The attribute was just set, so only a refreshed token carries it.
+  return refreshSession(tokens.refresh_token)
+}
 
-  return refreshWithContactCode(tokens.refresh_token)
+async function replaceContactCode(
+  refreshToken: string,
+  contactCode: string
+): Promise<ContactsTokenResponse> {
+  if (!isContactsProvisioningConfigured()) {
+    throw new ContactCodeError('provisioning_not_configured')
+  }
+
+  // Refreshing first proves the session is live and says whose it is, without trusting a
+  // token the caller decoded. The realm does not rotate refresh tokens, so the caller's token
+  // still ends the session if this fails.
+  const tokens = await refreshSession(refreshToken)
+  const claims = decodeJwt(tokens.access_token)
+  if (!claims.sub || !tokens.refresh_token) {
+    throw new ContactCodeError(
+      'keycloak_unavailable',
+      new Error('Refreshed token has no sub or refresh_token')
+    )
+  }
+
+  const account = await provisioningUser(claims.sub)
+  const contact = await findContact(() =>
+    contactsAdapter.getByContactCode(contactCode)
+  )
+  if (!contact) throw new ContactCodeError('contact_not_found')
+
+  const personnummer = toTwelveDigitPersonnummer(account.user.username)
+  const contactPersonnummer =
+    contact.type === 'individual' && contact.personal.nationalId
+      ? toTwelveDigitPersonnummer(contact.personal.nationalId)
+      : null
+  if (!personnummer || personnummer !== contactPersonnummer) {
+    logger.warn(
+      { sub: claims.sub, contactCode },
+      'Refusing contact_code: the contact does not belong to the mimer-contacts user'
+    )
+    throw new ContactCodeError('contact_not_owned')
+  }
+
+  const current = readContactCodeClaim(claims[CONTACT_CODE_ATTRIBUTE])
+  if (current === contactCode) return tokens
+
+  await account.writeContactCode(contactCode, current ?? null)
+  return refreshSession(tokens.refresh_token)
 }
 
 /**
@@ -237,26 +313,27 @@ async function setContactCode(
  *   is not configured, or the step runs past budgetMs, so none of these is ever reported as a
  *   missing contact.
  */
-export async function ensureContactCode(
+export function ensureContactCode(
   tokens: ContactsTokenResponse,
   budgetMs: number = CONTACT_CODE_BUDGET_MS
 ): Promise<ContactsTokenResponse> {
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () =>
-        reject(
-          new ContactCodeError(
-            'timeout',
-            new Error(`Setting contact_code took longer than ${budgetMs} ms`)
-          )
-        ),
-      budgetMs
-    )
-  })
-  // The work is not cancelled on timeout. Whatever it still writes is the right contact_code,
-  // and the next login picks it up.
-  return Promise.race([setContactCode(tokens), timeout]).finally(() =>
-    clearTimeout(timer)
-  )
+  return withinBudget(repairContactCode(tokens), budgetMs)
+}
+
+/**
+ * Points a customer's account at the contact webapi chose and returns tokens that carry it.
+ *
+ * For a contact_code that resolves but that webapi will not accept (the contact is inactive in
+ * Xpand), so webapi picks the active contact for the same personnummer. Core stays the only
+ * writer of contact_code, and only writes a contact whose personnummer is the account's username.
+ *
+ * @throws ContactCodeError: contact_not_found, contact_not_owned, session_ended,
+ *   provisioning_not_configured, contacts_unavailable, keycloak_unavailable or timeout.
+ */
+export function setContactCode(
+  refreshToken: string,
+  contactCode: string,
+  budgetMs: number = CONTACT_CODE_BUDGET_MS
+): Promise<ContactsTokenResponse> {
+  return withinBudget(replaceContactCode(refreshToken, contactCode), budgetMs)
 }

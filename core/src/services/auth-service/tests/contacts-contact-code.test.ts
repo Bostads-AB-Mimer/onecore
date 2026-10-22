@@ -41,7 +41,11 @@ jest.mock('../keycloak-contacts', () => ({
 
 import { contactsAdapter } from '../../../adapters/contacts-adapter'
 import { refreshContactsAccessToken } from '../keycloak-contacts'
-import { ContactCodeError, ensureContactCode } from '../contacts-contact-code'
+import {
+  ContactCodeError,
+  ensureContactCode,
+  setContactCode,
+} from '../contacts-contact-code'
 
 const contacts = contactsAdapter as jest.Mocked<typeof contactsAdapter>
 const refresh = refreshContactsAccessToken as jest.MockedFunction<
@@ -335,5 +339,144 @@ describe('ensureContactCode', () => {
 
     expect(error).toBeInstanceOf(ContactCodeError)
     expect(error.reason).toBe('keycloak_unavailable')
+  })
+})
+
+describe('setContactCode', () => {
+  const individual = (contactCode: string, nationalId: string | null) =>
+    ({
+      ok: true,
+      data: { contactCode, type: 'individual', personal: { nationalId } },
+    }) as never
+
+  const session = {
+    access_token: jwt({ sub: 'user-1', contact_code: 'P100' }),
+    refresh_token: 'rt-2',
+    expires_in: 300,
+    token_type: 'Bearer',
+  }
+  const withP200 = {
+    access_token: jwt({ sub: 'user-1', contact_code: 'P200' }),
+    refresh_token: 'rt-3',
+    expires_in: 300,
+    token_type: 'Bearer',
+  }
+
+  function keycloakUser(username = '199001011239') {
+    return nock('http://keycloak.test')
+      .post(tokenPath)
+      .reply(200, { access_token: 'admin-token' })
+      .get(userPath)
+      .reply(200, {
+        id: 'user-1',
+        username,
+        attributes: { contact_code: ['P100'] },
+      })
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    nock.cleanAll()
+    mockConfig.auth.keycloak.contacts.provisioning.clientSecret =
+      'provisioning-secret'
+  })
+
+  afterEach(() => {
+    nock.cleanAll()
+  })
+
+  it('writes the contact and returns tokens that carry it', async () => {
+    refresh.mockResolvedValueOnce(session).mockResolvedValueOnce(withP200)
+    contacts.getByContactCode.mockResolvedValue(
+      individual('P200', '19900101-1239')
+    )
+    let putBody: Record<string, any> | undefined
+    keycloakUser()
+      .put(userPath, (body) => {
+        putBody = body
+        return true
+      })
+      .reply(204)
+
+    await expect(setContactCode('rt-1', 'P200')).resolves.toBe(withP200)
+    expect(refresh).toHaveBeenNthCalledWith(1, 'rt-1')
+    expect(refresh).toHaveBeenNthCalledWith(2, 'rt-2')
+    expect(putBody?.attributes).toEqual({ contact_code: ['P200'] })
+    expect(nock.isDone()).toBe(true)
+  })
+
+  it('does not write when the token already carries the contact', async () => {
+    refresh.mockResolvedValueOnce(withP200)
+    contacts.getByContactCode.mockResolvedValue(
+      individual('P200', '199001011239')
+    )
+    keycloakUser()
+
+    await expect(setContactCode('rt-1', 'P200')).resolves.toBe(withP200)
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['another personnummer', individual('P300', '198501011237')],
+    ['no personnummer', individual('P300', null)],
+    [
+      'an organisation',
+      {
+        ok: true,
+        data: { contactCode: 'F300', type: 'organisation' },
+      } as never,
+    ],
+  ])('refuses a contact with %s', async (_, found) => {
+    refresh.mockResolvedValueOnce(session)
+    contacts.getByContactCode.mockResolvedValue(found)
+    keycloakUser()
+
+    await expect(setContactCode('rt-1', 'P300')).rejects.toMatchObject({
+      reason: 'contact_not_owned',
+    })
+    expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses when the username is not a personnummer', async () => {
+    refresh.mockResolvedValueOnce(session)
+    contacts.getByContactCode.mockResolvedValue(
+      individual('P200', '199001011239')
+    )
+    keycloakUser('admin')
+
+    await expect(setContactCode('rt-1', 'P200')).rejects.toMatchObject({
+      reason: 'contact_not_owned',
+    })
+  })
+
+  it('reports contact_not_found for an unknown contact', async () => {
+    refresh.mockResolvedValueOnce(session)
+    contacts.getByContactCode.mockResolvedValue(notFound)
+    keycloakUser()
+
+    await expect(setContactCode('rt-1', 'P999')).rejects.toMatchObject({
+      reason: 'contact_not_found',
+    })
+  })
+
+  it('reports session_ended when the refresh token is rejected', async () => {
+    refresh.mockRejectedValue(
+      Object.assign(new AxiosError('Bad Request'), {
+        response: { status: 400, data: { error: 'invalid_grant' } },
+      })
+    )
+
+    await expect(setContactCode('rt-1', 'P200')).rejects.toMatchObject({
+      reason: 'session_ended',
+    })
+  })
+
+  it('checks the provisioning client before touching the session', async () => {
+    mockConfig.auth.keycloak.contacts.provisioning.clientSecret = ''
+
+    await expect(setContactCode('rt-1', 'P200')).rejects.toMatchObject({
+      reason: 'provisioning_not_configured',
+    })
+    expect(refresh).not.toHaveBeenCalled()
   })
 })
