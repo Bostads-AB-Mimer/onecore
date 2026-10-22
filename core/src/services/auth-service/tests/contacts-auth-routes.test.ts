@@ -148,7 +148,56 @@ describe('contacts auth routes', () => {
 
       expect(res.status).toBe(502)
       expect(res.body.error).toBe('contact_lookup_unavailable')
-      expect(mocked.logoutContactsSession).toHaveBeenCalledWith('refresh')
+      expect(mocked.logoutContactsSession).toHaveBeenCalledWith(
+        'refresh',
+        expect.any(Number)
+      )
+    })
+
+    it('ends the new session and returns 503 when the provisioning client is not configured', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+      mocked.exchangeContactsAuthorizationCode.mockResolvedValue({
+        access_token: 'access',
+        refresh_token: 'refresh',
+        expires_in: 300,
+        token_type: 'Bearer',
+      })
+      mocked.logoutContactsSession.mockResolvedValue()
+      ensureContactCode.mockRejectedValue(
+        new contactCode.ContactCodeError('provisioning_not_configured')
+      )
+
+      const res = await request(buildApp().callback())
+        .post('/auth/contacts/token')
+        .send({ code: 'auth-code', redirectUri: 'https://example/cb' })
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('contact_provisioning_not_configured')
+      expect(mocked.logoutContactsSession).toHaveBeenCalledWith(
+        'refresh',
+        expect.any(Number)
+      )
+    })
+
+    it('returns 400 invalid_grant when the session ended before the refresh', async () => {
+      mocked.isContactsKeycloakConfigured.mockReturnValue(true)
+      mocked.exchangeContactsAuthorizationCode.mockResolvedValue({
+        access_token: 'access',
+        refresh_token: 'refresh',
+        expires_in: 300,
+        token_type: 'Bearer',
+      })
+      ensureContactCode.mockRejectedValue(
+        new contactCode.ContactCodeError('session_ended')
+      )
+
+      const res = await request(buildApp().callback())
+        .post('/auth/contacts/token')
+        .send({ code: 'auth-code', redirectUri: 'https://example/cb' })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('invalid_grant')
+      expect(mocked.logoutContactsSession).not.toHaveBeenCalled()
     })
 
     it('forwards codeVerifier to Keycloak exchange when present', async () => {

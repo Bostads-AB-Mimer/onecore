@@ -1,26 +1,42 @@
 import axios, { isAxiosError } from 'axios'
 import { decodeJwt } from 'jose'
+import Personnummer from 'personnummer'
 import { logger } from '@onecore/utilities'
 
 import config from '../../common/config'
 import { contactsAdapter } from '../../adapters/contacts-adapter'
 import type { AdapterResult } from '../../adapters/types'
+import { httpStatusForContactsKeycloakError } from './contacts-keycloak-errors'
 import {
   type ContactsTokenResponse,
+  contactsKeycloakAdminUrl,
+  contactsKeycloakRequestConfig,
+  contactsOAuthPostConfig,
   refreshContactsAccessToken,
+  tokenEndpointUrl,
 } from './keycloak-contacts'
 
 const CONTACT_CODE_ATTRIBUTE = 'contact_code'
 
-/** Must reject 4xx even when leasing-adapter widens axios defaults. */
-const keycloakRequestConfig = {
-  timeout: 10000,
-  validateStatus: (status: number) => status >= 200 && status < 300,
-} as const
+/**
+ * Upper bound on the whole step. webapi gives up on /auth/contacts/token after 15 s, and the
+ * code exchange before this and the logout after a failure have to fit in that as well; a
+ * response webapi never receives leaves a live session nobody can end.
+ */
+export const CONTACT_CODE_BUDGET_MS = 8000
+
+export type ContactCodeErrorReason =
+  | 'contacts_unavailable'
+  | 'keycloak_unavailable'
+  /** Keycloak rejected the refresh that should carry the new contact_code (invalid_grant). */
+  | 'session_ended'
+  /** A repair was needed but the mimer-contacts provisioning client is not configured. */
+  | 'provisioning_not_configured'
+  | 'timeout'
 
 export class ContactCodeError extends Error {
   constructor(
-    readonly reason: 'contacts_unavailable' | 'keycloak_unavailable',
+    readonly reason: ContactCodeErrorReason,
     readonly cause?: unknown
   ) {
     super(reason)
@@ -39,11 +55,35 @@ export function isContactsProvisioningConfigured(): boolean {
   return Boolean(clientId && clientSecret)
 }
 
-function contactsRealmUrl(path: string): string {
-  return `${config.auth.keycloak.url}${path.replace(
-    '{realm}',
-    config.auth.keycloak.contacts.realm
-  )}`
+/**
+ * The contact_code claim as a single value. A user attribute mapper set to multivalued puts a
+ * one-element array in the token; without accepting that, every login would look like a missing
+ * code and overwrite a working one.
+ */
+function readContactCodeClaim(value: unknown): string | undefined {
+  if (typeof value === 'string' && value) return value
+  if (
+    Array.isArray(value) &&
+    value.length === 1 &&
+    typeof value[0] === 'string' &&
+    value[0]
+  ) {
+    return value[0]
+  }
+  return undefined
+}
+
+/**
+ * The Keycloak username as a twelve-digit personnummer, or null when it is not one.
+ *
+ * The contacts service's by-nid lookup matches anything for an input without digits, so only a
+ * valid personnummer (or samordningsnummer) is ever looked up. Twelve digits is the form Xpand
+ * stores for nearly all private individuals.
+ */
+function personnummerFromUsername(username: string): string | null {
+  const options = { allowCoordinationNumber: true, allowInterimNumber: false }
+  if (!Personnummer.valid(username, options)) return null
+  return Personnummer.parse(username, options).format(true)
 }
 
 /** null when the contacts service has no such contact. */
@@ -61,7 +101,12 @@ async function findContact<T>(
   }
   if (result.ok) return result.data
   if (result.err === 'not-found') return null
-  throw new ContactCodeError('contacts_unavailable')
+  throw new ContactCodeError(
+    'contacts_unavailable',
+    new Error(
+      `Contacts service answered ${result.statusCode ?? 'without a status'}`
+    )
+  )
 }
 
 async function keycloak<T>(request: () => Promise<{ data: T }>): Promise<T> {
@@ -76,40 +121,38 @@ async function getProvisioningToken(): Promise<string> {
   const { clientId, clientSecret } = config.auth.keycloak.contacts.provisioning
   const tokens = await keycloak(() =>
     axios.post<{ access_token: string }>(
-      contactsRealmUrl('/realms/{realm}/protocol/openid-connect/token'),
+      tokenEndpointUrl(),
       new URLSearchParams({
         grant_type: 'client_credentials',
         client_id: clientId,
         client_secret: clientSecret,
       }).toString(),
-      {
-        ...keycloakRequestConfig,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      }
+      contactsOAuthPostConfig
     )
   )
   return tokens.access_token
 }
 
-/**
- * Makes sure a customer's token names a contact that exists, before webapi gets it.
- *
- * A personnummer can belong to several contacts and the contacts service picks which one a
- * lookup returns, so a contact_code that still resolves is never replaced; only a missing or
- * deleted one is set from the personnummer (the Keycloak username). Without a contact for the
- * personnummer the tokens go back without contact_code, and webapi answers no_active_account.
- *
- * @throws ContactCodeError when the contacts service or Keycloak's admin API fails, so a
- *   failed lookup is never reported as a missing contact.
- */
-export async function ensureContactCode(
+/** The attribute was just set, so only a refreshed token carries it. */
+async function refreshWithContactCode(
+  refreshToken: string
+): Promise<ContactsTokenResponse> {
+  try {
+    return await refreshContactsAccessToken(refreshToken)
+  } catch (error) {
+    // The session ended between the exchange and here; webapi sends the user back to log in.
+    if (httpStatusForContactsKeycloakError(error) === 400) {
+      throw new ContactCodeError('session_ended', error)
+    }
+    throw new ContactCodeError('keycloak_unavailable', error)
+  }
+}
+
+async function setContactCode(
   tokens: ContactsTokenResponse
 ): Promise<ContactsTokenResponse> {
   const claims = decodeJwt(tokens.access_token)
-  const current =
-    typeof claims[CONTACT_CODE_ATTRIBUTE] === 'string'
-      ? (claims[CONTACT_CODE_ATTRIBUTE] as string)
-      : undefined
+  const current = readContactCodeClaim(claims[CONTACT_CODE_ATTRIBUTE])
 
   if (
     current &&
@@ -118,30 +161,37 @@ export async function ensureContactCode(
     return tokens
   }
 
-  if (!claims.sub || !tokens.refresh_token) return tokens
-
-  if (!isContactsProvisioningConfigured()) {
-    logger.warn(
-      { sub: claims.sub },
-      'contact_code missing or stale, but the mimer-contacts provisioning client is not configured'
+  // A repair is needed from here on, so a setup fault must not pass for "no contact".
+  if (!claims.sub || !tokens.refresh_token) {
+    throw new ContactCodeError(
+      'keycloak_unavailable',
+      new Error('Token from the code exchange has no sub or refresh_token')
     )
-    return tokens
+  }
+  if (!isContactsProvisioningConfigured()) {
+    throw new ContactCodeError('provisioning_not_configured')
   }
 
   const adminToken = await getProvisioningToken()
-  const userUrl = contactsRealmUrl(
-    `/admin/realms/{realm}/users/${encodeURIComponent(claims.sub)}`
-  )
+  const userUrl = `${contactsKeycloakAdminUrl()}/users/${encodeURIComponent(claims.sub)}`
   const adminConfig = {
-    ...keycloakRequestConfig,
+    ...contactsKeycloakRequestConfig,
     headers: { Authorization: `Bearer ${adminToken}` },
   }
 
   const user = await keycloak(() =>
     axios.get<KeycloakUserRepresentation>(userUrl, adminConfig)
   )
+  const personnummer = personnummerFromUsername(user.username)
+  if (!personnummer) {
+    logger.warn(
+      { sub: claims.sub },
+      'mimer-contacts username is not a personnummer, so it has no contact'
+    )
+    return tokens
+  }
   const contact = await findContact(() =>
-    contactsAdapter.getByNationalId(user.username)
+    contactsAdapter.getByNationalId(personnummer)
   )
   if (!contact) {
     logger.info({ sub: claims.sub }, 'No contact for mimer-contacts user')
@@ -172,8 +222,41 @@ export async function ensureContactCode(
     )
   )
 
-  // The attribute was just set, so only a refreshed token carries it.
-  return keycloak(async () => ({
-    data: await refreshContactsAccessToken(tokens.refresh_token as string),
-  }))
+  return refreshWithContactCode(tokens.refresh_token)
+}
+
+/**
+ * Makes sure a customer's token names a contact that exists, before webapi gets it.
+ *
+ * A personnummer can belong to several contacts and the contacts service picks which one a
+ * lookup returns, so a contact_code that still resolves is never replaced; only a missing or
+ * deleted one is set from the personnummer (the Keycloak username). Without a contact for the
+ * personnummer the tokens go back without contact_code, and webapi answers no_active_account.
+ *
+ * @throws ContactCodeError when the contacts service or Keycloak fails, the provisioning client
+ *   is not configured, or the step runs past budgetMs, so none of these is ever reported as a
+ *   missing contact.
+ */
+export async function ensureContactCode(
+  tokens: ContactsTokenResponse,
+  budgetMs: number = CONTACT_CODE_BUDGET_MS
+): Promise<ContactsTokenResponse> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new ContactCodeError(
+            'timeout',
+            new Error(`Setting contact_code took longer than ${budgetMs} ms`)
+          )
+        ),
+      budgetMs
+    )
+  })
+  // The work is not cancelled on timeout. Whatever it still writes is the right contact_code,
+  // and the next login picks it up.
+  return Promise.race([setContactCode(tokens), timeout]).finally(() =>
+    clearTimeout(timer)
+  )
 }

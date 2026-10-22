@@ -2,11 +2,16 @@ import axios from 'axios'
 import config from '../../common/config'
 import type { TokenData } from 'keycloak-koa/dist/types'
 
-/** OAuth endpoints — must reject 4xx even when leasing-adapter widens axios defaults. */
-const contactsOAuthPostConfig = {
-  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+/** Any contacts-realm Keycloak call — must reject 4xx even when leasing-adapter widens axios defaults. */
+export const contactsKeycloakRequestConfig = {
   timeout: 10000,
   validateStatus: (status: number) => status >= 200 && status < 300,
+} as const
+
+/** OAuth endpoints (form-encoded). */
+export const contactsOAuthPostConfig = {
+  ...contactsKeycloakRequestConfig,
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 } as const
 
 export function isContactsKeycloakConfigured(): boolean {
@@ -18,7 +23,12 @@ function contactsKeycloakRealmUrl(): string {
   return `${config.auth.keycloak.url}/realms/${config.auth.keycloak.contacts.realm}`
 }
 
-function tokenEndpointUrl(): string {
+/** Base of the admin REST API for the contacts realm. */
+export function contactsKeycloakAdminUrl(): string {
+  return `${config.auth.keycloak.url}/admin/realms/${config.auth.keycloak.contacts.realm}`
+}
+
+export function tokenEndpointUrl(): string {
   return `${contactsKeycloakRealmUrl()}/protocol/openid-connect/token`
 }
 
@@ -92,7 +102,8 @@ export async function exchangeContactsAuthorizationCode(
 
 /** Ends the Keycloak session the refresh token belongs to (Keycloak answers 204). */
 export async function logoutContactsSession(
-  refreshToken: string
+  refreshToken: string,
+  timeoutMs: number = contactsOAuthPostConfig.timeout
 ): Promise<void> {
   const params = new URLSearchParams({
     client_id: config.auth.keycloak.contacts.clientId,
@@ -100,7 +111,10 @@ export async function logoutContactsSession(
     refresh_token: refreshToken,
   }).toString()
 
-  await axios.post(logoutEndpointUrl(), params, contactsOAuthPostConfig)
+  await axios.post(logoutEndpointUrl(), params, {
+    ...contactsOAuthPostConfig,
+    timeout: timeoutMs,
+  })
 }
 
 /** @internal Test hook — kept for tests that reset module state between cases */

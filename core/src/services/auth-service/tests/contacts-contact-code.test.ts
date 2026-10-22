@@ -35,6 +35,7 @@ jest.mock('../../../adapters/contacts-adapter', () => ({
 }))
 
 jest.mock('../keycloak-contacts', () => ({
+  ...jest.requireActual('../keycloak-contacts'),
   refreshContactsAccessToken: jest.fn(),
 }))
 
@@ -117,7 +118,7 @@ describe('ensureContactCode', () => {
       .matchHeader('authorization', 'Bearer admin-token')
       .reply(200, {
         id: 'user-1',
-        username: '199001011234',
+        username: '199001011239',
         firstName: 'Kim',
         attributes: { phone: ['0700000000'] },
       })
@@ -128,10 +129,10 @@ describe('ensureContactCode', () => {
       .reply(204)
 
     await expect(ensureContactCode(tokens({}))).resolves.toBe(refreshed)
-    expect(contacts.getByNationalId).toHaveBeenCalledWith('199001011234')
+    expect(contacts.getByNationalId).toHaveBeenCalledWith('199001011239')
     expect(putBody).toEqual({
       id: 'user-1',
-      username: '199001011234',
+      username: '199001011239',
       firstName: 'Kim',
       attributes: { phone: ['0700000000'], contact_code: ['P200'] },
     })
@@ -147,7 +148,7 @@ describe('ensureContactCode', () => {
       .post(tokenPath)
       .reply(200, { access_token: 'admin-token' })
       .get(userPath)
-      .reply(200, { id: 'user-1', username: '199001011234' })
+      .reply(200, { id: 'user-1', username: '199001011239' })
       .put(userPath)
       .reply(204)
 
@@ -162,7 +163,7 @@ describe('ensureContactCode', () => {
       .post(tokenPath)
       .reply(200, { access_token: 'admin-token' })
       .get(userPath)
-      .reply(200, { id: 'user-1', username: '199001011234' })
+      .reply(200, { id: 'user-1', username: '199001011239' })
     const original = tokens({})
 
     await expect(ensureContactCode(original)).resolves.toBe(original)
@@ -180,18 +181,133 @@ describe('ensureContactCode', () => {
       .post(tokenPath)
       .reply(200, { access_token: 'admin-token' })
       .get(userPath)
-      .reply(200, { id: 'user-1', username: '199001011234' })
+      .reply(200, { id: 'user-1', username: '199001011239' })
     const original = tokens({})
 
     await expect(ensureContactCode(original)).resolves.toBe(original)
   })
 
-  it('returns the tokens unchanged when the provisioning client is not configured', async () => {
+  it('throws when a repair is needed and the provisioning client is not configured', async () => {
     mockConfig.auth.keycloak.contacts.provisioning.clientSecret = ''
-    const original = tokens({})
+
+    await expect(ensureContactCode(tokens({}))).rejects.toMatchObject({
+      reason: 'provisioning_not_configured',
+    })
+    expect(contacts.getByNationalId).not.toHaveBeenCalled()
+  })
+
+  it('does not need the provisioning client when the contact_code resolves', async () => {
+    mockConfig.auth.keycloak.contacts.provisioning.clientSecret = ''
+    contacts.getByContactCode.mockResolvedValue(contact('P100'))
+    const original = tokens({ contact_code: 'P100' })
 
     await expect(ensureContactCode(original)).resolves.toBe(original)
+  })
+
+  it('throws instead of reporting a missing contact when the token has no refresh_token', async () => {
+    const original = { ...tokens({}), refresh_token: undefined }
+
+    await expect(ensureContactCode(original)).rejects.toMatchObject({
+      reason: 'keycloak_unavailable',
+    })
+  })
+
+  it('accepts contact_code as a one-element array (multivalued mapper)', async () => {
+    contacts.getByContactCode.mockResolvedValue(contact('P100'))
+    const original = tokens({ contact_code: ['P100'] })
+
+    await expect(ensureContactCode(original)).resolves.toBe(original)
+    expect(contacts.getByContactCode).toHaveBeenCalledWith('P100')
     expect(contacts.getByNationalId).not.toHaveBeenCalled()
+  })
+
+  it('looks up a ten-digit username with separator as twelve digits', async () => {
+    contacts.getByNationalId.mockResolvedValue(notFound)
+    nock('http://keycloak.test')
+      .post(tokenPath)
+      .reply(200, { access_token: 'admin-token' })
+      .get(userPath)
+      .reply(200, { id: 'user-1', username: '900101-1239' })
+
+    await ensureContactCode(tokens({}))
+
+    expect(contacts.getByNationalId).toHaveBeenCalledWith('199001011239')
+  })
+
+  it.each(['admin', '199001011234', ''])(
+    'does not look up a username that is not a valid personnummer (%p)',
+    async (username) => {
+      nock('http://keycloak.test')
+        .post(tokenPath)
+        .reply(200, { access_token: 'admin-token' })
+        .get(userPath)
+        .reply(200, { id: 'user-1', username })
+      const original = tokens({})
+
+      await expect(ensureContactCode(original)).resolves.toBe(original)
+      expect(contacts.getByNationalId).not.toHaveBeenCalled()
+    }
+  )
+
+  it('throws and does not refresh when the PUT fails', async () => {
+    contacts.getByNationalId.mockResolvedValue(contact('P200'))
+    nock('http://keycloak.test')
+      .post(tokenPath)
+      .reply(200, { access_token: 'admin-token' })
+      .get(userPath)
+      .reply(200, { id: 'user-1', username: '199001011239' })
+      .put(userPath)
+      .reply(403, { error: 'unknown_error' })
+
+    await expect(ensureContactCode(tokens({}))).rejects.toMatchObject({
+      reason: 'keycloak_unavailable',
+    })
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
+  describe('when the refresh after the PUT fails', () => {
+    beforeEach(() => {
+      contacts.getByNationalId.mockResolvedValue(contact('P200'))
+      nock('http://keycloak.test')
+        .post(tokenPath)
+        .reply(200, { access_token: 'admin-token' })
+        .get(userPath)
+        .reply(200, { id: 'user-1', username: '199001011239' })
+        .put(userPath)
+        .reply(204)
+    })
+
+    it('reports session_ended for invalid_grant', async () => {
+      refresh.mockRejectedValue(
+        Object.assign(new AxiosError('Bad Request'), {
+          response: { status: 400, data: { error: 'invalid_grant' } },
+        })
+      )
+
+      await expect(ensureContactCode(tokens({}))).rejects.toMatchObject({
+        reason: 'session_ended',
+      })
+    })
+
+    it('reports keycloak_unavailable for anything else', async () => {
+      refresh.mockRejectedValue(
+        Object.assign(new AxiosError('Bad Gateway'), {
+          response: { status: 502, data: {} },
+        })
+      )
+
+      await expect(ensureContactCode(tokens({}))).rejects.toMatchObject({
+        reason: 'keycloak_unavailable',
+      })
+    })
+  })
+
+  it('throws a timeout when the step runs past its budget', async () => {
+    contacts.getByContactCode.mockReturnValue(new Promise(() => {}))
+
+    await expect(
+      ensureContactCode(tokens({ contact_code: 'P100' }), 20)
+    ).rejects.toMatchObject({ reason: 'timeout' })
   })
 
   it('throws instead of reporting a missing contact when the contacts service fails', async () => {
@@ -201,9 +317,13 @@ describe('ensureContactCode', () => {
       statusCode: 500,
     })
 
-    await expect(
-      ensureContactCode(tokens({ contact_code: 'P100' }))
-    ).rejects.toMatchObject({ reason: 'contacts_unavailable' })
+    const error = await ensureContactCode(
+      tokens({ contact_code: 'P100' })
+    ).catch((e) => e)
+
+    expect(error).toBeInstanceOf(ContactCodeError)
+    expect(error.reason).toBe('contacts_unavailable')
+    expect(error.cause.message).toContain('500')
   })
 
   it('throws when Keycloak refuses the provisioning client', async () => {

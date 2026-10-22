@@ -21,6 +21,12 @@ import {
 import { ContactCodeError, ensureContactCode } from './contacts-contact-code'
 
 /**
+ * Short, so that the code exchange, ensureContactCode's budget and this logout together stay
+ * inside webapi's 15 s timeout in the usual case.
+ */
+const LOGOUT_AFTER_FAILED_LOGIN_TIMEOUT_MS = 3000
+
+/**
  * OAuth helper routes for mimer.nu (mimer-contacts realm).
  * Returns token JSON for webapi — does not set browser cookies on core.
  */
@@ -56,11 +62,11 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
    *       '200':
    *         description: OAuth tokens from Keycloak
    *       '400':
-   *         description: Invalid request or invalid_grant from Keycloak
+   *         description: Invalid request, or invalid_grant from Keycloak (also when the session ends before the token carrying contact_code is issued)
    *       '502':
-   *         description: Keycloak or the contacts service unavailable; a session the exchange started is ended
+   *         description: Keycloak or the contacts service unavailable or too slow (contact_lookup_unavailable); a session the exchange started is ended
    *       '503':
-   *         description: Contacts Keycloak not configured on this environment
+   *         description: Contacts Keycloak not configured on this environment (contacts_keycloak_not_configured), or contact_code needs setting and the provisioning client is not configured (contact_provisioning_not_configured; the session is ended)
    */
   router.post('(.*)/auth/contacts/token', async (ctx) => {
     if (!isContactsKeycloakConfigured()) {
@@ -112,14 +118,30 @@ export const registerContactsAuthRoutes = (router: KoaRouter) => {
         error instanceof ContactCodeError ? error.reason : 'unknown'
       logContactsKeycloakTokenError(
         `Setting contact_code failed in /auth/contacts/token (${reason})`,
-        error instanceof ContactCodeError ? error.cause : error
+        error instanceof ContactCodeError ? (error.cause ?? error) : error
       )
+
+      if (reason === 'session_ended') {
+        ctx.status = 400
+        ctx.body = { error: 'invalid_grant' }
+        return
+      }
+
       // webapi never got these tokens, so it cannot end the session; left alive, the next
       // login on a shared computer would silently sign in as this user.
       if (exchanged.refresh_token) {
-        await logoutContactsSession(exchanged.refresh_token).catch(() =>
+        await logoutContactsSession(
+          exchanged.refresh_token,
+          LOGOUT_AFTER_FAILED_LOGIN_TIMEOUT_MS
+        ).catch(() =>
           logger.warn('Ending the session after a failed login failed')
         )
+      }
+
+      if (reason === 'provisioning_not_configured') {
+        ctx.status = 503
+        ctx.body = { error: 'contact_provisioning_not_configured' }
+        return
       }
       ctx.status = 502
       ctx.body = { error: 'contact_lookup_unavailable' }
