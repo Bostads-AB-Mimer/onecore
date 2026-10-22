@@ -78,13 +78,13 @@ sequenceDiagram
             end
         end
 
-        SyncScript ->> SyncScript: Spara checkpoint-tidsstämpel<br/>(oavsett utfall för raden — se not i systerdokumentet<br/>om uppsägning för detaljer)
+        SyncScript ->> SyncScript: Spara position när sekunden är klar<br/>(oavsett utfall för raden — se not i systerdokumentet<br/>om uppsägning för detaljer)
     end
 
 ```
 
 ## Att känna till
 
-- **Ingen idempotens-guard, till skillnad från uppsägning.** `voidLease` har ingen specialhantering av något "redan makulerat"-felmeddelande motsvarande terminate-flödets `'Avtalet kan inte sägas upp'` — varje oväntat 4xx-svar räknas som ett hårt fel. En rad som redan är makulerad i Tenfast (t.ex. efter en tidigare delvis lyckad körning) kan därför fastna i återförsökskön permanent, eftersom varje ny körning ger samma fel tills någon manuellt tar bort den ur kön.
+- **Ingen idempotens-guard, till skillnad från uppsägning.** `voidLease` har ingen specialhantering av något "redan makulerat"-felmeddelande motsvarande terminate-flödets `'Avtalet kan inte sägas upp'` — varje oväntat 4xx-svar räknas som ett hårt fel. En rad som redan är makulerad i Tenfast (t.ex. efter en tidigare delvis lyckad körning) kan därför fastna i återförsökskön: varje nytt försök ger samma fel, tills raden ges upp efter 30 dagar med ett mejl som säger att ändringen ska göras i Tenfast för hand. Kontrollera då först om avtalet redan är makulerat där.
 - **Kontraktsnummer-bytesraden är ett hårt krav.** Saknas "Kontraktsnummer ändrat"-raden i samma cmlog-post kan original-leaseId inte extraheras, och hela raden hoppas över med bara en varningslogg — ingen synk sker alls, trots att "Makulerat datum" faktiskt sattes i Xpand.
 - **Samma bilplats-filtrering som uppsägningsflödet.** Se [processöversiktens](./DOCS_Overview.md) not — `isResidenceOrStorage` filtrerar bort Garagekontrakt precis som för terminate.
