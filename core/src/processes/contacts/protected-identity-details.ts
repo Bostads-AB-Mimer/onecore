@@ -1,10 +1,18 @@
 import { logger } from '@onecore/utilities'
-import type { Contact } from '@onecore/contacts/domain'
-import { AdapterResult } from '../../adapters/types'
 import { ContactLookup } from './sync-invoice-recipient'
 
 // The value the contacts service puts in every personal field it redacts.
 const REDACTED = 'redacted'
+
+/**
+ * What became of a protected identity's details:
+ * - `shown`: filled in from the contacts service (a tenant or invoice
+ *   recipient, already anonymised in Xpand)
+ * - `withheld`: the contacts service redacts the contact as well
+ * - `unavailable`: the contacts service could not be asked, so the details
+ *   stay hidden (fails closed)
+ */
+export type ProtectedIdentityDetails = 'shown' | 'withheld' | 'unavailable'
 
 /** The identity fields of the legacy leasing Contact/Tenant model. */
 type LegacyIdentity = {
@@ -23,41 +31,55 @@ type LegacyIdentity = {
  * what of a protected identity may be shown. It lifts redaction for tenants
  * and invoice recipients, whose data in Xpand is already anonymised.
  *
- * Fails closed: if the contacts service fails, or redacts the contact
- * itself, the legacy record is returned unchanged (still redacted).
+ * A protected identity gets `protectedIdentityDetails` so clients can tell
+ * withheld details from a failed lookup. Fails closed: if the contacts
+ * service fails, or redacts the contact itself, the identity fields are
+ * returned unchanged (still redacted).
  */
 export const withProtectedIdentityDetails = async <T extends LegacyIdentity>(
   contacts: ContactLookup,
   legacy: T
-): Promise<T> => {
+): Promise<T & { protectedIdentityDetails?: ProtectedIdentityDetails }> => {
   if (!legacy.protectedIdentity) return legacy
 
   const result = await contacts
     .getByContactCode(legacy.contactCode)
-    .catch((err: unknown): AdapterResult<Contact, 'unknown'> => {
+    .catch((err: unknown): undefined => {
       logger.error(
         { contactCode: legacy.contactCode, err },
         'withProtectedIdentityDetails.contactLookupThrew'
       )
-      return { ok: false, err: 'unknown' }
+      return undefined
     })
 
+  if (!result) return { ...legacy, protectedIdentityDetails: 'unavailable' }
+
   if (!result.ok) {
-    logger.error(
-      { contactCode: legacy.contactCode, err: result.err },
-      'withProtectedIdentityDetails.contactLookupFailed'
-    )
-    return legacy
+    // Leasing found the contact, so a 404 here means the two disagree — worth
+    // a warning, but not a failure of this request.
+    if (result.err === 'not-found') {
+      logger.warn(
+        { contactCode: legacy.contactCode },
+        'withProtectedIdentityDetails.contactNotFound'
+      )
+    } else {
+      logger.error(
+        { contactCode: legacy.contactCode, err: result.err },
+        'withProtectedIdentityDetails.contactLookupFailed'
+      )
+    }
+    return { ...legacy, protectedIdentityDetails: 'unavailable' }
   }
 
   const contact = result.data
-  if (contact.type !== 'individual') return legacy
+  if (contact.type !== 'individual' || contact.personal.fullName === REDACTED) {
+    return { ...legacy, protectedIdentityDetails: 'withheld' }
+  }
 
   const { personal } = contact
-  if (personal.fullName === REDACTED) return legacy
-
   return {
     ...legacy,
+    protectedIdentityDetails: 'shown',
     firstName: personal.firstName ?? legacy.firstName,
     lastName: personal.lastName ?? legacy.lastName,
     fullName: personal.fullName,

@@ -35,13 +35,18 @@ export const FINAL_INVOICE_GRACE_DAYS = 60
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+/** CTE name for one `{ keycmctc, isLeaseHolder }` row per selected contact. */
+export const LEASE_HOLDER = 'lease_holder'
+
 /**
  * Select column `isLeaseHolder`: 1 when the `cmctc` row has a protected
  * identity and is INNEHAVARE on a lease that is current, upcoming, or ended
  * at most FINAL_INVOICE_GRACE_DAYS ago; otherwise 0. Only evaluated for
  * protected identities, since that is the only place the answer is used
  * (to lift redaction — our protected tenants are already anonymised in Xpand).
- * Must be selected in a query that has `cmctc` in scope.
+ * Must be selected in a query that has `cmctc` in scope. Select it in a CTE
+ * with one row per contact, before any join that fans out the rows (address,
+ * email, phone), so the EXISTS runs once per contact — see `LEASE_HOLDER`.
  */
 export const isLeaseHolderColumn = (db: knex.Knex, now: Date) => {
   const cutoff = new Date(now.getTime() - FINAL_INVOICE_GRACE_DAYS * DAY_MS)

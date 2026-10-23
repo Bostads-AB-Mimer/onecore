@@ -11961,6 +11961,9 @@ export interface components {
         emailAddress?: string | null
         isTenant: boolean
         specialAttention?: boolean
+        protectedIdentity: boolean
+        /** @enum {string} */
+        protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
         parkingSpaceWaitingList?: {
           /** Format: date-time */
           queueTime: string
@@ -12062,6 +12065,9 @@ export interface components {
       emailAddress?: string | null
       isTenant: boolean
       specialAttention?: boolean
+      protectedIdentity: boolean
+      /** @enum {string} */
+      protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
     }
     RentalObjectRentInfo: {
       rentalObjectCode: string
@@ -15230,6 +15236,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -15594,6 +15603,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -16050,6 +16062,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string

@@ -1,3 +1,4 @@
+import { logger } from '@onecore/utilities'
 import { ContactLookup } from '../sync-invoice-recipient'
 import { withProtectedIdentityDetails } from '../protected-identity-details'
 import * as factory from '../../../../test/factories'
@@ -22,6 +23,8 @@ const redactedLegacy = (protectedIdentity: boolean) => ({
 })
 
 describe('withProtectedIdentityDetails', () => {
+  afterEach(() => jest.restoreAllMocks())
+
   it('leaves an unprotected contact alone without calling the contacts service', async () => {
     const contacts = makeContactsStub({ ok: false, err: 'unknown' })
     const legacy = redactedLegacy(false)
@@ -52,10 +55,11 @@ describe('withProtectedIdentityDetails', () => {
       fullName: 'Test Testsson',
       nationalRegistrationNumber: '199001011234',
       birthDate: new Date('1990-01-01'),
+      protectedIdentityDetails: 'shown',
     })
   })
 
-  it('stays redacted when the contacts service redacts the contact too', async () => {
+  it('marks the details withheld when the contacts service redacts the contact too', async () => {
     const contact = factory.contactsServiceContact.build({
       protectedIdentity: true,
       personal: {
@@ -73,10 +77,11 @@ describe('withProtectedIdentityDetails', () => {
         makeContactsStub({ ok: true, data: contact }),
         legacy
       )
-    ).toBe(legacy)
+    ).toEqual({ ...legacy, protectedIdentityDetails: 'withheld' })
   })
 
-  it('fails closed when the contacts service fails', async () => {
+  it('fails closed and logs one error when the contacts service fails', async () => {
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {})
     const legacy = redactedLegacy(true)
 
     expect(
@@ -84,15 +89,36 @@ describe('withProtectedIdentityDetails', () => {
         makeContactsStub({ ok: false, err: 'unknown' }),
         legacy
       )
-    ).toBe(legacy)
+    ).toEqual({ ...legacy, protectedIdentityDetails: 'unavailable' })
+    expect(errorSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('fails closed when the contacts lookup throws', async () => {
+  it('fails closed and logs one error when the contacts lookup throws', async () => {
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {})
     const legacy = redactedLegacy(true)
     const contacts: ContactLookup = {
       getByContactCode: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
     }
 
-    expect(await withProtectedIdentityDetails(contacts, legacy)).toBe(legacy)
+    expect(await withProtectedIdentityDetails(contacts, legacy)).toEqual({
+      ...legacy,
+      protectedIdentityDetails: 'unavailable',
+    })
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('fails closed with a warning, not an error, when the contacts service has no such contact', async () => {
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {})
+    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {})
+    const legacy = redactedLegacy(true)
+
+    expect(
+      await withProtectedIdentityDetails(
+        makeContactsStub({ ok: false, err: 'not-found' }),
+        legacy
+      )
+    ).toEqual({ ...legacy, protectedIdentityDetails: 'unavailable' })
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    expect(errorSpy).not.toHaveBeenCalled()
   })
 })

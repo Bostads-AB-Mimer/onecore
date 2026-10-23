@@ -58,7 +58,9 @@ Our protected tenants are already anonymised in Xpand, and invoicing needs their
 Names of related contacts (`relatedContacts`) are always redacted for protected identities.
 Leasing's legacy contact model still hides the identity of every protected identity; core's
 `/contacts/:contactCode` and `/tenants/by-contact-code/:contactCode` fill it in from this service
-(`withProtectedIdentityDetails`), so the kundkort follows the same rule.
+(`withProtectedIdentityDetails`), so the kundkort follows the same rule. They also set
+`protectedIdentityDetails` (`shown`, `withheld`, or `unavailable` when this service could not be
+reached — the details then stay hidden) so the UI does not mistake a failed lookup for the rule.
 
 ### Build
 

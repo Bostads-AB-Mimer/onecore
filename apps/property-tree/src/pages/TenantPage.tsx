@@ -25,6 +25,19 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/Tooltip'
 
+// The identity of a protected contact is only filled in for tenants and
+// invoice recipients (already anonymised in Xpand); for everyone else it is
+// withheld. A failed lookup is told apart so it is not mistaken for the rule.
+const protectedIdentityText: Record<
+  NonNullable<Tenant['protectedIdentityDetails']>,
+  string
+> = {
+  shown: 'Skyddade personuppgifter, uppgifterna är fingerade',
+  withheld: 'Skyddade personuppgifter, uppgifterna visas inte',
+  unavailable:
+    'Skyddade personuppgifter, uppgifterna kunde inte hämtas just nu',
+}
+
 // Helper component: Tenant header with name, special attention and protected identity badges
 function TenantHeader({ tenant }: { tenant: Tenant }) {
   return (
@@ -56,13 +69,12 @@ function TenantHeader({ tenant }: { tenant: Tenant }) {
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              {/* The identity of a protected contact is only filled in for
-                  tenants and invoice recipients (already anonymised in
-                  Xpand); for everyone else it is withheld entirely. */}
               <p>
-                {tenant.nationalRegistrationNumber
-                  ? 'Skyddade personuppgifter, uppgifterna är fingerade'
-                  : 'Skyddade personuppgifter, uppgifterna visas inte'}
+                {
+                  protectedIdentityText[
+                    tenant.protectedIdentityDetails ?? 'unavailable'
+                  ]
+                }
               </p>
             </TooltipContent>
           </Tooltip>
