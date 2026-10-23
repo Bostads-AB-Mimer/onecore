@@ -4,6 +4,7 @@ import { ContactCode, NationalIdNumber } from '@src/domain'
 import { ContactTypeFilter, ObjectKey } from '@src/domain/contact'
 
 import { currentInvoiceAddress } from './address-sql'
+import { isLeaseHolderColumn } from './relation-sql'
 import { DbContactRow } from './db-model'
 
 const CONTACT_CODE = 'cmctc.cmctckod'
@@ -596,6 +597,7 @@ export const contactsQuery = () => {
           'cmctc.keycmobj as objectKey',
           'cmctc.keycmctc as contactKey',
           'cmctc.lagsokt as protectedIdentity',
+          isLeaseHolderColumn(db, new Date()),
           'cmctc.utslag as specialAttention',
           'cmadr.keycmadr as addressId',
           'cmadr.region',

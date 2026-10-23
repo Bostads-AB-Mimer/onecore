@@ -4,6 +4,7 @@ import {
   activeRelationsForMany,
   activeRelationsInRole,
   insertMany,
+  invoiceRecipientCodes,
   listActive,
   softDeleteByIds,
 } from '@src/adapters/contact-relations'
@@ -457,5 +458,46 @@ describe('contact-relations repository', () => {
       expect(
         await activeRelationsInRole(db, '  ', 'god_man', 'subject')
       ).toEqual([])
+    }))
+
+  it('invoiceRecipientCodes returns only active annan_fakturamottagare recipients', () =>
+    withContext(async ({ db }) => {
+      await insertMany(
+        db,
+        [
+          {
+            subjectContactCode: 'P000001',
+            relatedContactCode: 'P000002',
+            roleType: 'annan_fakturamottagare',
+          },
+          {
+            subjectContactCode: 'P000003',
+            relatedContactCode: 'P000004',
+            roleType: 'god_man',
+          },
+          {
+            subjectContactCode: 'P000005',
+            relatedContactCode: 'P000006',
+            roleType: 'annan_fakturamottagare',
+          },
+        ],
+        ACTOR
+      )
+      const deleted = (await listActive(db)).find(
+        (r) => r.related_contact_code === 'P000006'
+      )
+      // Inserted just above, so it is there.
+      await softDeleteByIds(db, [deleted!.id], ACTOR)
+
+      // P000001 is the subject (lease holder), not the recipient; P000004 is
+      // related in another role; P000006's row is soft-deleted.
+      const codes = await invoiceRecipientCodes(db, [
+        ' P000002 ',
+        'P000001',
+        'P000004',
+        'P000006',
+      ])
+      expect([...codes]).toEqual(['P000002'])
+      expect((await invoiceRecipientCodes(db, [])).size).toBe(0)
     }))
 })

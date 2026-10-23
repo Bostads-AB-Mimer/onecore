@@ -266,6 +266,7 @@ export interface Tenant {
   isTenant: boolean
   parkingSpaceWaitingList: WaitingListResponse
   specialAttention: boolean
+  protectedIdentity?: boolean
   isAboutToLeave: boolean
   currentHousingContract: ContractType
   parkingSpaceContracts: ContractType[]

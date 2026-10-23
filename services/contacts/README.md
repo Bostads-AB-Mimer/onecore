@@ -43,6 +43,23 @@ The data quality of the production source is, for lack of better words, all over
 The bulk of the application deals with making the unstructured information searchable and presentable.
 For any meaningful testing, manual or automated, you will need a data set that is production-like.
 
+### Protected identity (skyddad identitet)
+
+An individual with `cmctc.lagsokt` set has a protected identity. Every contact carries
+`protectedIdentity: boolean`, and a protected individual is redacted (name and national id become
+`'redacted'`; addresses, phone numbers and email addresses are dropped) **unless** they are:
+
+- **a tenant** — `INNEHAVARE` on a lease (`hyavk`) that is current, upcoming, or ended at most
+  `FINAL_INVOICE_GRACE_DAYS` (60) ago, so final invoices can still be sent; or
+- **an annan fakturamottagare** — the related side of an active `annan_fakturamottagare` row in
+  `contact_relation`.
+
+Our protected tenants are already anonymised in Xpand, and invoicing needs their name and address.
+Names of related contacts (`relatedContacts`) are always redacted for protected identities.
+Leasing's legacy contact model still hides the identity of every protected identity; core's
+`/contacts/:contactCode` and `/tenants/by-contact-code/:contactCode` fill it in from this service
+(`withProtectedIdentityDetails`), so the kundkort follows the same rule.
+
 ### Build
 
 This module builds as both **cjs** and **esm**, serving as a pilot within the platform for moving away

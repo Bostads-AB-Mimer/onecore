@@ -1,6 +1,7 @@
 {
   "type": "organisation",
   "contactCode": "F055405",
+  "protectedIdentity": false,
   "contactKey": "_1YZ0YVZJ5Q25BC",
   "organisation": {
     "organisationNumber": null,
