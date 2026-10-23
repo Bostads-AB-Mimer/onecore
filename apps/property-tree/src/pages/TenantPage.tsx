@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import type { RentalPropertyInfo } from '@onecore/types'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, ShieldAlert } from 'lucide-react'
 
 import { TenantTabs } from '@/widgets/tenant-tabs'
 
@@ -25,7 +25,7 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/Tooltip'
 
-// Helper component: Tenant header with name and special attention badge
+// Helper component: Tenant header with name, special attention and protected identity badges
 function TenantHeader({ tenant }: { tenant: Tenant }) {
   return (
     <TooltipProvider>
@@ -44,6 +44,25 @@ function TenantHeader({ tenant }: { tenant: Tenant }) {
               <p>
                 Åk aldrig ensam till kund. Ta alltid med dig en kollega vid
                 hembesök.
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+        {tenant.protectedIdentity && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full border border-blue-200 cursor-help">
+                <ShieldAlert className="h-4 w-4 text-blue-600" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {/* The identity of a protected contact is only filled in for
+                  tenants and invoice recipients (already anonymised in
+                  Xpand); for everyone else it is withheld entirely. */}
+              <p>
+                {tenant.nationalRegistrationNumber
+                  ? 'Skyddade personuppgifter, uppgifterna är fingerade'
+                  : 'Skyddade personuppgifter, uppgifterna visas inte'}
               </p>
             </TooltipContent>
           </Tooltip>

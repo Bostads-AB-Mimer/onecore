@@ -20,6 +20,7 @@ export const transformContact = (contact: Contact): Contact_APIv1 => {
       return {
         type: contact.type,
         contactCode: contact.contactCode,
+        protectedIdentity: contact.protectedIdentity,
         personal: {
           nationalRegistrationNumber: contact.personal.nationalId,
           birthDate: contact.personal.birthDate,
@@ -37,6 +38,7 @@ export const transformContact = (contact: Contact): Contact_APIv1 => {
       return {
         type: contact.type,
         contactCode: contact.contactCode,
+        protectedIdentity: contact.protectedIdentity,
         organisation: contact.organisation,
         ...(contact.relatedContacts
           ? { relatedContacts: contact.relatedContacts }

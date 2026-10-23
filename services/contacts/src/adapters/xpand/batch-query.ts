@@ -2,6 +2,7 @@ import knex from 'knex'
 import { ContactCode } from '@src/domain'
 import { currentInvoiceAddress } from './address-sql'
 import { DbContactRow } from './db-model'
+import { isLeaseHolderColumn } from './relation-sql'
 
 export type ContactIncludeOptions = {
   includePhone?: boolean
@@ -71,7 +72,10 @@ export const contactsByCodesQuery = async (
     .from('cmctc')
     .whereRaw(`TRIM(cmctc.cmctckod) IN (${placeholders})`, trimmed)
 
-  const columns: string[] = [...BASE_COLUMNS]
+  const columns: (string | knex.Knex.Raw)[] = [
+    ...BASE_COLUMNS,
+    isLeaseHolderColumn(db, new Date()),
+  ]
 
   if (options.includeAddress) {
     query = query.leftJoin('cmadr', (join) => {

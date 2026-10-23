@@ -1,6 +1,7 @@
 {
   "type": "individual",
   "contactCode": "P002505",
+  "protectedIdentity": false,
   "personal": {
     "firstName": "",
     "lastName": "",
