@@ -141,3 +141,33 @@ describe('key-notes-adapter', () => {
       }))
   })
 })
+
+describe('getKeyNotesByRentalObjects', () => {
+  it('groups notes by rental object with every requested code present', () =>
+    withContext(async (ctx) => {
+      await keyNotesAdapter.createKeyNote(
+        { rentalObjectCode: 'A001', description: 'Porten kärvar' },
+        ctx.db
+      )
+      await keyNotesAdapter.createKeyNote(
+        { rentalObjectCode: 'A001', description: 'Extra nyckel hos grannen' },
+        ctx.db
+      )
+      await keyNotesAdapter.createKeyNote(
+        { rentalObjectCode: 'Z999', description: 'Annat objekt' },
+        ctx.db
+      )
+
+      const result = await keyNotesAdapter.getKeyNotesByRentalObjects(
+        ['A001', 'B002'],
+        ctx.db
+      )
+
+      expect(Object.keys(result).sort()).toEqual(['A001', 'B002'])
+      expect(result.A001.map((n) => n.description).sort()).toEqual([
+        'Extra nyckel hos grannen',
+        'Porten kärvar',
+      ])
+      expect(result.B002).toEqual([])
+    }))
+})

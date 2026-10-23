@@ -5,9 +5,14 @@ export { guideQueryKeys, useGuides } from './hooks/useGuides'
 
 // Lib
 export { filterGuides } from './lib/filterGuides'
-export { groupByCategory, type GuideCategoryGroup } from './lib/groupByCategory'
+export {
+  groupByCategory,
+  groupBySubcategory,
+  type GuideCategoryGroup,
+} from './lib/groupByCategory'
 
 // UI
+export { CategoryCard } from './ui/CategoryCard'
 export { GuideCard } from './ui/GuideCard'
 export { GuideStatusBadge } from './ui/GuideStatusBadge'
 

@@ -8113,7 +8113,7 @@ export interface paths {
     }
     /**
      * Delete a receipt
-     * @description Delete a receipt by ID (and associated file from MinIO)
+     * @description Delete a receipt by ID (and associated file from file storage)
      */
     delete: {
       parameters: {
@@ -8281,6 +8281,59 @@ export interface paths {
         }
         /** @description Internal server error */
         500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/keys/move-in-out': {
+    /**
+     * Move-in / move-out key status per rental object (paginated)
+     * @description Finds leases ending (lastDebitDate) and/or starting in the given ranges, then
+     * returns one row per rental object with the outgoing and incoming tenant,
+     * key/card counts, loan return and handout dates, and a derived status.
+     * Give endDateFrom+endDateTo for move-outs, startDateFrom+startDateTo for
+     * move-ins, or both for the union. Search and sort apply to the whole result;
+     * key and card data (DAX) is fetched only for the requested page.
+     */
+    get: {
+      parameters: {
+        query?: {
+          endDateFrom?: string
+          endDateTo?: string
+          startDateFrom?: string
+          startDateTo?: string
+          /** @description Matches rental object code, address, tenant name or contact code. */
+          q?: string
+          sortBy?: 'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
+          sortOrder?: 'asc' | 'desc'
+          /** @description When true, adds a `timings` block with per-phase durations. */
+          debug?: boolean
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description One page of rows */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['MoveInOutRow'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Keys service is syncing its DAX card owner mirror; retry later */
+        503: {
           content: never
         }
       }
@@ -10723,7 +10776,7 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
             'application/json': {
@@ -10872,7 +10925,7 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
             'application/json': {
@@ -11647,6 +11700,7 @@ export interface components {
       dueDate: ('null' | null) | string
       rentalObjectCode: string
       status: string
+      maintenanceTeam?: string | null
       hiddenFromMyPages?: boolean
       workOrderRows: {
         description: string | null
@@ -14127,6 +14181,42 @@ export interface components {
       offset?: number
       limit?: number
     }
+    MoveInOutRow: {
+      rentalObjectCode: string
+      address: string | null
+      objectTypeCode: string | null
+      outgoing: {
+        leaseId: string
+        names: string[]
+        contactCodes: string[]
+        /** Format: date-time */
+        leaseStartDate: string | null
+        /** Format: date-time */
+        lastDebitDate: string | null
+      } | null
+      incoming: components['schemas']['MoveInOutRow']['outgoing'] | null
+      keyCount: number
+      cardCount: number
+      outgoingAllReturned: boolean | null
+      /** Format: date-time */
+      outgoingReturnedAt: string | null
+      /** Format: date-time */
+      incomingLoanCreatedAt: string | null
+      /** Format: date-time */
+      incomingLoanPickedUpAt: string | null
+      /** @enum {string} */
+      status:
+        | 'UNKNOWN'
+        | 'NOT_RETURNED'
+        | 'LOANED_TO_OTHER'
+        | 'CREATED'
+        | 'HANDED_OUT'
+        | 'RETURNED_VACANT'
+        | 'NO_KEYS'
+        | 'NO_LOANS'
+        | 'PARTIAL'
+      notes: string[]
+    }
     PaginatedResponse: {
       content: unknown[]
       _meta: {
@@ -15693,6 +15783,8 @@ export interface components {
       /** Format: uuid */
       id: string
       name: string
+      /** Format: uuid */
+      parentId: string | null
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
@@ -15710,6 +15802,8 @@ export interface components {
         /** Format: uuid */
         id: string
         name: string
+        /** Format: uuid */
+        parentId: string | null
         /** Format: date-time */
         createdAt: string
         /** Format: date-time */
@@ -15752,6 +15846,8 @@ export interface components {
         /** Format: uuid */
         id: string
         name: string
+        /** Format: uuid */
+        parentId: string | null
         /** Format: date-time */
         createdAt: string
         /** Format: date-time */
@@ -15816,6 +15912,8 @@ export interface components {
           }
         | {
             name: string
+            /** Format: uuid */
+            parentId?: string
           }
       /** @enum {string} */
       status: 'draft' | 'published'
@@ -15849,6 +15947,8 @@ export interface components {
           }
         | {
             name: string
+            /** Format: uuid */
+            parentId?: string
           }
       /** @enum {string} */
       status: 'draft' | 'published'

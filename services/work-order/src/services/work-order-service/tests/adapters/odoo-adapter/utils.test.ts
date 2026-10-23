@@ -57,6 +57,20 @@ describe('odoo-adapter utils', () => {
 
       expect(result.CloseRequestPending).toBe(false)
     })
+
+    it('should map maintenance team to resursgrupp name', () => {
+      const withTeam = transformWorkOrder({
+        ...odooWorkOrderMock,
+        maintenance_team_id: [3, 'Kundcenter'],
+      })
+      expect(withTeam.MaintenanceTeam).toBe('Kundcenter')
+
+      const withoutTeam = transformWorkOrder({
+        ...odooWorkOrderMock,
+        maintenance_team_id: false,
+      })
+      expect(withoutTeam.MaintenanceTeam).toBeNull()
+    })
   })
 
   describe('transformMessages', () => {

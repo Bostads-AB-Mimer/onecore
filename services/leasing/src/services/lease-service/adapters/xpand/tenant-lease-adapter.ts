@@ -289,6 +289,9 @@ const getLeasesForPropertyId = async (
         (
           SELECT rentalpropertyid, SUM(yearrent) as totalYearRent
           FROM hy_debitrowrentalproperty_xpand_api
+          -- Only rows active today; future rows (next year's rent) must not be summed in
+          WHERE (debitfdate IS NULL OR debitfdate <= GETDATE())
+            AND (debittodate IS NULL OR debittodate >= GETDATE())
           GROUP BY rentalpropertyid
         ) as rent
       `),

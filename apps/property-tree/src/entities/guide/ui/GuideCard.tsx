@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { ListOrdered } from 'lucide-react'
 
 import { formatDate } from '@/shared/lib/fileUtils'
@@ -9,6 +8,7 @@ import { Card, CardContent } from '@/shared/ui/Card'
 
 import type { GuideSummary } from '../types'
 import { GuideStatusBadge } from './GuideStatusBadge'
+import { SelectableCardLink } from './SelectableCardLink'
 
 interface GuideCardProps {
   guide: GuideSummary
@@ -47,36 +47,12 @@ export function GuideCard({ guide, onSelect, className }: GuideCardProps) {
     </Card>
   )
 
-  // Stays an anchor even when overridden, so the card remains a real link
-  // (middle-click, open in new tab) and keeps valid markup around the card.
-  if (onSelect) {
-    return (
-      <a
-        href={paths.guide(guide.slug)}
-        onClick={(event) => {
-          // Let the browser handle modifier- and non-primary-button clicks so
-          // the card can still be opened in a new tab or window.
-          if (
-            event.metaKey ||
-            event.ctrlKey ||
-            event.shiftKey ||
-            event.button !== 0
-          ) {
-            return
-          }
-          event.preventDefault()
-          onSelect(guide)
-        }}
-        className="block rounded-lg"
-      >
-        {content}
-      </a>
-    )
-  }
-
   return (
-    <Link to={paths.guide(guide.slug)} className="block rounded-lg">
+    <SelectableCardLink
+      href={paths.guide(guide.slug)}
+      onSelect={onSelect && (() => onSelect(guide))}
+    >
       {content}
-    </Link>
+    </SelectableCardLink>
   )
 }

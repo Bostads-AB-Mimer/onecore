@@ -97,8 +97,6 @@ S3__SECRET_KEY=minio123
 S3__BUCKET_NAME=onecore-documents
 ```
 
-The legacy `MINIO__*` names are still read as a fallback when the matching `S3__*` variable is unset. The fallback will be removed in DEV-117, so use `S3__*` for new configuration.
-
 #### Install runtime
 
 Install the required node version, if not already installed.

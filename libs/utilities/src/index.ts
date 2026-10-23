@@ -14,6 +14,7 @@ export * from './health-check'
 export * from './pagination'
 export * from './search'
 export * from './resource'
+export * from './concurrency'
 
 export {
   logger,

@@ -118,6 +118,9 @@ export const MarketAreaSchema = z.object({
 // ---- Rental objects ----
 // Shared by the property service and core's proxy. Source of truth — do not
 // re-declare in consumers; core-only divergences are derived in core.
+// TODO(MIM-2177): residence and parking shapes drift (Residence, ResidenceSummary,
+// ResidenceSearchResult, ResidenceDetails, ParkingSpace). Target: one RentalObject
+// base that Residence, ParkingSpace, Facility etc. extend with type-specific fields.
 
 // One rental object (balgh/babps/balok/bahyr structure row): what it is,
 // where it sits, and its postal address.

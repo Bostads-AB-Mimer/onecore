@@ -4,6 +4,27 @@ import { client, mapFetchError, ok, fail } from './helpers'
 import { KeyNote, KeyNoteSchema, CommonErr, AdapterResult } from './types'
 
 export const KeyNotesApi = {
+  getBatchByRentalObject: async (
+    rentalObjectCodes: string[]
+  ): Promise<
+    AdapterResult<Record<string, KeyNote[]>, 'bad-request' | CommonErr>
+  > => {
+    try {
+      const { data, error, response } = await client().GET(
+        '/key-notes/batch/by-rental-object',
+        { params: { query: { rentalObjectCodes } } }
+      )
+      if (error || !response.ok) return fail(mapFetchError(response))
+      return ok(z.record(z.array(KeyNoteSchema)).parse(data.content))
+    } catch (e) {
+      logger.error(
+        { err: e },
+        'keys-adapter: GET /key-notes/batch/by-rental-object failed'
+      )
+      return fail('unknown')
+    }
+  },
+
   getByRentalObjectCode: async (
     rentalObjectCode: string
   ): Promise<AdapterResult<KeyNote[], CommonErr>> => {

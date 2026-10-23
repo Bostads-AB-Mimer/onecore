@@ -16,11 +16,13 @@ import { GuideCategoryRow } from '../adapters/rows'
 import {
   AltTextRequiredError,
   CategoryNotFoundError,
+  CategoryParentNotTopLevelError,
   GuideModifiedError,
   ImageNotInStepError,
   SlugTakenError,
   StepBelongsToOtherGuideError,
 } from '../errors'
+import { isUniqueViolation } from '../adapters/db-errors'
 import * as factory from './factories'
 import { withContext } from './testUtils'
 
@@ -100,10 +102,92 @@ describe('categories-adapter', () => {
       ).rejects.toBeInstanceOf(CategoryNotFoundError)
     }))
 
+  it('creates a subcategory under a top-level category', () =>
+    withContext(async ({ db }) => {
+      const parent = await resolveCategory(
+        { name: `Tenfast ${randomUUID().slice(0, 8)}` },
+        db
+      )
+      const sub = await resolveCategory(
+        { name: 'Avtal', parentId: parent.id },
+        db
+      )
+      const again = await resolveCategory(
+        { name: ' Avtal ', parentId: parent.id },
+        db
+      )
+
+      expect(parent.parentId).toBeNull()
+      expect(sub.parentId).toBe(parent.id)
+      expect(again.id).toBe(sub.id)
+      const listed = await listCategories(db)
+      expect(listed.find((c) => c.id === sub.id)?.parentId).toBe(parent.id)
+    }))
+
+  it('keeps names apart per parent', () =>
+    withContext(async ({ db }) => {
+      const suffix = randomUUID().slice(0, 8)
+      const tenfast = await resolveCategory({ name: `Tenfast ${suffix}` }, db)
+      const odoo = await resolveCategory({ name: `Odoo ${suffix}` }, db)
+
+      const underTenfast = await resolveCategory(
+        { name: `Avtal ${suffix}`, parentId: tenfast.id },
+        db
+      )
+      const underOdoo = await resolveCategory(
+        { name: `Avtal ${suffix}`, parentId: odoo.id },
+        db
+      )
+      const topLevel = await resolveCategory({ name: `Avtal ${suffix}` }, db)
+
+      expect(new Set([underTenfast.id, underOdoo.id, topLevel.id]).size).toBe(3)
+      expect(topLevel.parentId).toBeNull()
+    }))
+
+  it('rejects a subcategory as parent', () =>
+    withContext(async ({ db }) => {
+      const parent = await resolveCategory(
+        { name: `Tenfast ${randomUUID().slice(0, 8)}` },
+        db
+      )
+      const sub = await resolveCategory(
+        { name: 'Avtal', parentId: parent.id },
+        db
+      )
+
+      await expect(
+        resolveCategory({ name: 'Uppsägning', parentId: sub.id }, db)
+      ).rejects.toBeInstanceOf(CategoryParentNotTopLevelError)
+    }))
+
+  it('rejects an unknown parent id', () =>
+    withContext(async ({ db }) => {
+      await expect(
+        resolveCategory({ name: 'Avtal', parentId: randomUUID() }, db)
+      ).rejects.toBeInstanceOf(CategoryNotFoundError)
+    }))
+
+  // The race fallback relies on the index treating two top-level rows with
+  // the same name as duplicates although parentId is NULL in both.
+  it('keeps top-level names unique in the database', () =>
+    withContext(async ({ db }) => {
+      const name = `Tenfast ${randomUUID().slice(0, 8)}`
+      await db('guide_category').insert({ id: randomUUID(), name })
+
+      const duplicate = await db('guide_category')
+        .insert({ id: randomUUID(), name })
+        .then(
+          () => null,
+          (err: unknown) => err
+        )
+      expect(isUniqueViolation(duplicate)).toBe(true)
+    }))
+
   it('reuses the row when the insert races with another save', async () => {
     const existing: GuideCategoryRow = {
       id: randomUUID(),
       name: 'Tenfast',
+      parentId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -120,6 +204,7 @@ describe('categories-adapter', () => {
     const existing: GuideCategoryRow = {
       id: randomUUID(),
       name: 'Tenfast',
+      parentId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -192,6 +277,49 @@ describe('guides-adapter', () => {
         expect.arrayContaining([draft.id, published.id])
       )
       expect(all.find((g) => g.id === draft.id)?.stepCount).toBe(2)
+    }))
+
+  it('lists subcategory guides after the parent category guides', () =>
+    withContext(async ({ db }) => {
+      // Sorts first, so the guides below lead the list.
+      const prefix = `000 ${randomUUID().slice(0, 8)}`
+      const parent = await createGuide(
+        factory.guideWrite.build({
+          title: 'Ö direkt i kategorin',
+          category: { name: `${prefix} B` },
+        }),
+        db
+      )
+      const parentId = parent.category.id
+      const inSub = await createGuide(
+        factory.guideWrite.build({
+          title: 'A i underkategorin',
+          category: { name: 'Avtal', parentId },
+        }),
+        db
+      )
+      // Sorts between the parent and "Avtal", so ordering by the guide's
+      // own category name would put it before the subcategory's guide.
+      const other = await createGuide(
+        factory.guideWrite.build({
+          title: 'Annan kategori',
+          category: { name: `${prefix} C` },
+        }),
+        db
+      )
+
+      const listed = await listGuides({ includeDrafts: true }, db)
+      const ids = listed
+        .map((g) => g.id)
+        .filter((id) => [parent.id, inSub.id, other.id].includes(id))
+
+      expect(ids).toEqual([parent.id, inSub.id, other.id])
+      expect(listed.find((g) => g.id === inSub.id)?.category.parentId).toBe(
+        parentId
+      )
+      expect(listed.find((g) => g.id === parent.id)?.category.parentId).toBe(
+        null
+      )
     }))
 
   it('upserts steps by id, reorders them and deletes missing ones', () =>

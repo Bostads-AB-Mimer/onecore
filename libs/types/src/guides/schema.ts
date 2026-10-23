@@ -8,10 +8,10 @@ export const CALLOUT_TYPE = ['tip', 'note', 'warning'] as const
 export const GuideStatusSchema = z.enum(GUIDE_STATUS)
 export const CalloutTypeSchema = z.enum(CALLOUT_TYPE)
 
-// Slugs that would collide with a static route under /guider, e.g. the
-// editor at /guider/ny. Kept here so the service, core and the frontend all
+// Slugs that would collide with a static route under /guider: the editor at
+// /guider/ny and the category pages under /guider/kategori. Kept here so the service, core and the frontend all
 // reject the same values.
-export const RESERVED_SLUGS = ['ny'] as const
+export const RESERVED_SLUGS = ['ny', 'kategori'] as const
 
 // URL-safe identifier: lowercase ascii letters, digits and single hyphens.
 export const SlugSchema = z
@@ -34,6 +34,9 @@ export const SlugSchema = z
 export const GuideCategorySchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  // Set on a subcategory. Categories nest one level deep, so the parent is
+  // always a top-level category.
+  parentId: z.string().uuid().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
@@ -42,7 +45,7 @@ export const GuideStepImageSchema = z.object({
   id: z.string().uuid(),
   stepId: z.string().uuid(),
   sortOrder: z.number().int().nonnegative(),
-  // Object key in file-storage (MinIO). Bytes never pass through the
+  // Object key in file-storage (S3). Bytes never pass through the
   // communication service.
   storageKey: z.string(),
   filename: z.string(),
@@ -132,10 +135,14 @@ export const StepInputSchema = z.object({
   images: z.array(StepImageInputSchema).default([]),
 })
 
-// Pick an existing category by id, or create one by name.
+// Pick an existing category by id, or create one by name. A name with
+// parentId reuses or creates a subcategory of that top-level category.
 export const CategoryInputSchema = z.union([
   z.object({ id: z.string().uuid() }),
-  z.object({ name: z.string().trim().min(1).max(100) }),
+  z.object({
+    name: z.string().trim().min(1).max(100),
+    parentId: z.string().uuid().optional(),
+  }),
 ])
 
 export const GuideInputBaseSchema = z.object({

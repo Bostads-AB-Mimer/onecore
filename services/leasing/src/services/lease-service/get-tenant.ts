@@ -6,7 +6,7 @@ import * as tenantLeaseAdapter from './adapters/xpand/tenant-lease-adapter'
 import * as priorityListService from './priority-list-service'
 import { logger } from '@onecore/utilities'
 
-type GetTenantError =
+export type GetTenantError =
   | 'get-contact'
   | 'contact-not-found'
   | 'contact-not-tenant'
@@ -27,12 +27,15 @@ const NOT_TENANT_ERRORS: GetTenantError[] = [
   'no-valid-housing-contract',
 ]
 
+export const isNotTenantError = (err: GetTenantError) =>
+  NOT_TENANT_ERRORS.includes(err)
+
 export async function getTenant(params: {
   contactCode: string
 }): Promise<AdapterResult<Tenant, GetTenantError>> {
   const result = await fetchTenant(params)
   if (!result.ok) {
-    if (NOT_TENANT_ERRORS.includes(result.err)) {
+    if (isNotTenantError(result.err)) {
       logger.info(
         { errorCode: result.err },
         `No tenant found for contact code: ${params.contactCode}`

@@ -5,11 +5,12 @@ import bodyParser from 'koa-bodyparser'
 
 import * as listingAdapter from '../../adapters/listing-adapter'
 import * as rentalObjectAdapter from '../../adapters/xpand/rental-object-adapter'
+import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as factory from './../factories'
 import * as getTenantService from '../../get-tenant'
 
 import { routes } from '../../routes/listings'
-import { ListingStatus } from '@onecore/types'
+import { ListingStatus, WaitingListType } from '@onecore/types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -80,6 +81,100 @@ describe('GET /listing/:listingId/applicants/details', () => {
     expect(getRentalObjectSpy).toHaveBeenCalled()
     expect(res.status).toBe(200)
     expect(res.body).toBeDefined()
+  })
+
+  it('includes applicants that are no longer tenants, built from contact data', async () => {
+    const listingId = 1337
+    const tenantApplicant = factory.applicant.build({ listingId })
+    const formerTenantApplicant = factory.applicant.build({
+      listingId,
+      contactCode: 'P126159',
+      name: 'Gammalt Namn',
+      nationalRegistrationNumber: '190001010000',
+    })
+
+    const listing = factory.listing.build({
+      id: listingId,
+      applicants: [tenantApplicant, formerTenantApplicant],
+    })
+
+    jest.spyOn(listingAdapter, 'getListingById').mockResolvedValueOnce(listing)
+
+    jest
+      .spyOn(getTenantService, 'getTenant')
+      .mockResolvedValueOnce({ ok: true, data: factory.tenant.build() })
+      .mockResolvedValueOnce({ ok: false, err: 'no-valid-housing-contract' })
+
+    const getContactSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build({
+          contactCode: 'P126159',
+          fullName: 'Tolvansson, Tolvan',
+          nationalRegistrationNumber: '191212121212',
+          address: {
+            street: 'Gatan 1',
+            number: '',
+            postalCode: '72211',
+            city: 'Västerås',
+          },
+          parkingSpaceWaitingList: {
+            queuePoints: 42,
+            queueTime: new Date(),
+            type: WaitingListType.ParkingSpace,
+          },
+        }),
+      })
+
+    jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValue({
+      ok: true,
+      data: factory.rentalObject.build(),
+    })
+
+    const res = await request(app.callback()).get(
+      `/listing/${listingId}/applicants/details`
+    )
+
+    expect(res.status).toBe(200)
+    expect(getContactSpy).toHaveBeenCalledWith('P126159', false)
+    expect(res.body.content).toHaveLength(2)
+
+    const formerTenant = res.body.content.find(
+      (a: { contactCode: string }) => a.contactCode === 'P126159'
+    )
+    expect(formerTenant).toMatchObject({
+      name: 'Tolvansson, Tolvan',
+      nationalRegistrationNumber: '191212121212',
+      queuePoints: 42,
+      address: expect.objectContaining({ street: 'Gatan 1' }),
+      parkingSpaceContracts: [],
+      priority: null,
+    })
+    expect(formerTenant.currentHousingContract).toBeUndefined()
+    expect(formerTenant.upcomingHousingContract).toBeUndefined()
+  })
+
+  it('responds with 500 when getTenant fails for a reason other than not being a tenant', async () => {
+    const listing = factory.listing.build({
+      id: 1337,
+      applicants: [factory.applicant.build({ listingId: 1337 })],
+    })
+
+    jest.spyOn(listingAdapter, 'getListingById').mockResolvedValueOnce(listing)
+    jest
+      .spyOn(getTenantService, 'getTenant')
+      .mockResolvedValueOnce({ ok: false, err: 'get-contact' })
+    const getContactSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValue({ ok: true, data: factory.contact.build() })
+
+    const res = await request(app.callback()).get(
+      '/listing/1337/applicants/details'
+    )
+
+    expect(res.status).toBe(500)
+    expect(getContactSpy).not.toHaveBeenCalled()
   })
 })
 

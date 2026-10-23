@@ -359,6 +359,7 @@ const createApplicantRequestBody = (
 ) => {
   const applicantRequestBody: Applicant = {
     id: 0, //should not be passed
+    // TODO UTH-386: name/nationalRegistrationNumber should not be persisted here.
     name: applicantContact.fullName,
     nationalRegistrationNumber: applicantContact.nationalRegistrationNumber,
     contactCode: applicantContact.contactCode,

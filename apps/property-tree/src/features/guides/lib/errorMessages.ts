@@ -19,6 +19,9 @@ export function saveErrorMessage(error: unknown): string {
   if (code === 'category-not-found') {
     return 'Kategorin finns inte längre. Välj en annan kategori.'
   }
+  if (code === 'category-parent-not-top-level') {
+    return 'En underkategori kan inte ha egna underkategorier. Välj en annan kategori.'
+  }
   if (code === 'image-not-in-step') {
     return 'En bild hör inte till det steg den skickades med. Ladda om guiden och försök igen.'
   }

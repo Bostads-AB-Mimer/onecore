@@ -315,6 +315,8 @@ const createApplication = async (
 
   const insertedRow = await dbConnection('applicant')
     .insert({
+      // TODO UTH-386: stop copying Name/NationalRegistrationNumber from Xpand;
+      // resolve them at read time from ContactCode instead.
       Name: applicationData.name,
       NationalRegistrationNumber: applicationData.nationalRegistrationNumber,
       ContactCode: applicationData.contactCode,
