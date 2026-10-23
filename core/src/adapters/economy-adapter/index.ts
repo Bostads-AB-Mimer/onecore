@@ -4,6 +4,7 @@ import {
   Invoice,
   InvoicePaymentEvent,
   MiscellaneousInvoice,
+  PaymentStatus,
   RentInvoiceRow,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
@@ -88,8 +89,14 @@ export async function getInvoicesSentToDebtCollection(
   const isPaidBy = (invoice: Invoice) =>
     normalize(invoice.reference) === normalize(contactCode)
 
+  // A kundförlust write-off in Xledger is structural; the debt collection
+  // text is typed by hand and may be missing or misspelled.
+  const isInDebtCollection = (invoice: Invoice) =>
+    invoice.sentToDebtCollection !== undefined ||
+    invoice.paymentStatus === PaymentStatus.WrittenOff
+
   const hasDebtCollection = invoicesResult.data.filter((invoice: Invoice) => {
-    return invoice.sentToDebtCollection !== undefined && isPaidBy(invoice)
+    return isInDebtCollection(invoice) && isPaidBy(invoice)
   })
 
   return { ok: true, data: hasDebtCollection }
