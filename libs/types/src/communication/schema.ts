@@ -1,7 +1,10 @@
 import { z } from 'zod'
 
 export const DIRECTION = ['outbound', 'inbound'] as const
-export const CHANNEL = ['sms', 'email'] as const
+// 'my-pages' is a publication to the tenant portal rather than a provider send:
+// there is no address and no delivery webhook, so recipients land as 'sent'
+// with toAddress 'Mina sidor' (MIM-1957).
+export const CHANNEL = ['sms', 'email', 'my-pages'] as const
 export const RECIPIENT_STATUS = [
   'pending',
   'sent',
@@ -30,6 +33,10 @@ export const DispatchSchema = z.object({
   audienceCriteria: z.string().nullable(),
   inReplyToDispatchId: z.string().uuid().nullable(),
   templateId: z.string().uuid().nullable(),
+  // od-<odoo id> of the maintenance request this dispatch belongs to, when it
+  // has one. Null for dispatches with no errand (bulk sends, parking offers).
+  // The internal portal builds the Odoo deep link from this code alone.
+  workOrderCode: z.string().nullable(),
   createdAt: z.coerce.date(),
 })
 
@@ -90,6 +97,7 @@ export const LogOutboundParamsSchema = z.object({
   // which koa-okapi-router's media-type linker requires (it Object.entries() it).
   audienceCriteria: z.object({}).passthrough().optional(),
   templateId: z.string().uuid().optional(),
+  workOrderCode: z.string().optional(),
   recipients: z.array(LogOutboundRecipientSchema),
 })
 

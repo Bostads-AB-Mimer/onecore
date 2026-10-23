@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import * as odooAdapter from './adapters/odoo-adapter'
 import {
+  CloseWorkOrderRequestSchema,
   CreateInspectionWorkOrdersBodySchema,
   CreateInspectionWorkOrdersResponseSchema,
   CreateWorkOrderBodySchema,
@@ -1658,6 +1659,145 @@ export const routes = (router: KoaRouter) => {
           error: error.message,
           ...metadata,
         }
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /workOrders/{workOrderId}/close-request:
+   *   post:
+   *     summary: Request, on the tenant's behalf, that a work order be closed
+   *     tags:
+   *       - Work Order Service
+   *     description: |
+   *       Records that the tenant wants the work order closed. Nothing is closed
+   *       here: Odoo posts a close_request_from_tenant message and flags the
+   *       request, and whoever handles the case accepts or declines it. Staff
+   *       who close a work order themselves use /workOrders/{workOrderId}/close.
+   *     parameters:
+   *       - in: path
+   *         name: workOrderId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The Odoo id of the work order.
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               reason:
+   *                 type: string
+   *                 maxLength: 1000
+   *                 description: Optional reason from the tenant, shown to the handler.
+   *                 example: The washing machine works again.
+   *     responses:
+   *       '200':
+   *         description: Close request recorded in Odoo.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: Close requested for work order with ID {workOrderId}
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '400':
+   *         description: The request body is malformed, or the reason is longer than 1000 characters.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '409':
+   *         description: Odoo refused the request. One is already pending, the work order is closed, or it is hidden from Mina sidor.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: close-request-conflict
+   *                 reason:
+   *                   type: string
+   *                   enum: [already_pending, closed, hidden]
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Odoo could not be reached or failed.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/workOrders/:workOrderId/close-request', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { workOrderId } = ctx.params
+
+    try {
+      // An empty POST has no body at all. That is a request without a reason.
+      const { reason } = CloseWorkOrderRequestSchema.parse(
+        ctx.request.body ?? {}
+      )
+
+      await odooAdapter.requestCloseWorkOrder(parseInt(workOrderId, 10), reason)
+
+      ctx.status = 200
+      ctx.body = {
+        message: `Close requested for work order with ID ${workOrderId}`,
+        ...metadata,
+      }
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        ctx.status = 400
+        ctx.body = {
+          error: error.issues.map(({ message, path }) => ({ message, path })),
+          ...metadata,
+        }
+        return
+      }
+
+      // Odoo said no, for a reason the tenant can be told about. This is an
+      // answer, not a failure.
+      if (error instanceof odooAdapter.CloseRequestConflictError) {
+        ctx.status = 409
+        ctx.body = {
+          error: 'close-request-conflict',
+          reason: error.reason,
+          ...metadata,
+        }
+        return
+      }
+
+      logger.error({ err: error }, 'work-order-service.requestCloseWorkOrder')
+      ctx.status = 500
+      ctx.body = {
+        error: error instanceof Error ? error.message : 'Internal server error',
+        ...metadata,
       }
     }
   })
