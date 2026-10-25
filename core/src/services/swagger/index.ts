@@ -6,7 +6,7 @@ import { OkapiRouter } from 'koa-okapi-router'
 const swaggerOptions = swaggerJsdoc(swaggerSpec) as any
 
 export const routes = (router: KoaRouter, apiRouter: OkapiRouter) => {
-  router.get('(.*)/swagger.json', async (ctx) => {
+  router.get('/swagger.json', async (ctx) => {
     ctx.set('Content-Type', 'application/json')
 
     const apiSpec = apiRouter.extendOpenApiJson(swaggerOptions) as any

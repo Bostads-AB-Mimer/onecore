@@ -62,7 +62,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/components/by-room/:roomId', async (ctx) => {
+  router.get('/components/by-room/:roomId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { roomId } = ctx.params
 
@@ -129,7 +129,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/component-categories', async (ctx) => {
+  router.get('/component-categories', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.ComponentCategoriesQueryParamsSchema.safeParse(
       ctx.query
@@ -193,7 +193,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/component-categories/:id', async (ctx) => {
+  router.get('/component-categories/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -255,7 +255,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/component-categories', async (ctx) => {
+  router.post('/component-categories', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.CreateComponentCategorySchema.safeParse(
       ctx.request.body
@@ -322,7 +322,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/component-categories/:id', async (ctx) => {
+  router.put('/component-categories/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -390,7 +390,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/component-categories/:id', async (ctx) => {
+  router.delete('/component-categories/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -476,7 +476,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/component-types', async (ctx) => {
+  router.get('/component-types', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.ComponentTypesQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
@@ -539,7 +539,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/component-types/:id', async (ctx) => {
+  router.get('/component-types/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -601,7 +601,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/component-types', async (ctx) => {
+  router.post('/component-types', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.CreateComponentTypeSchema.safeParse(ctx.request.body)
     if (!body.success) {
@@ -664,7 +664,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/component-types/:id', async (ctx) => {
+  router.put('/component-types/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -730,7 +730,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/component-types/:id', async (ctx) => {
+  router.delete('/component-types/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -835,7 +835,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/component-subtypes', async (ctx) => {
+  router.get('/component-subtypes', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.ComponentSubtypesQueryParamsSchema.safeParse(
       ctx.query
@@ -901,7 +901,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/component-subtypes/:id', async (ctx) => {
+  router.get('/component-subtypes/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -963,7 +963,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/component-subtypes', async (ctx) => {
+  router.post('/component-subtypes', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.CreateComponentSubtypeSchema.safeParse(
       ctx.request.body
@@ -1030,7 +1030,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/component-subtypes/:id', async (ctx) => {
+  router.put('/component-subtypes/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -1100,7 +1100,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/component-subtypes/:id', async (ctx) => {
+  router.delete('/component-subtypes/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -1213,7 +1213,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/component-models', async (ctx) => {
+  router.get('/component-models', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.ComponentModelsQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
@@ -1280,7 +1280,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/documents/component-models/:id', async (ctx) => {
+  router.get('/documents/component-models/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const id = z.string().uuid().safeParse(ctx.params.id)
@@ -1376,7 +1376,7 @@ export const routes = (router: KoaRouter) => {
   // Registered before `/component-models/:id` so Koa router matches the
   // literal path first; otherwise `surface` would be captured as the `:id`
   // param.
-  router.get('(.*)/component-models/surface', async (ctx) => {
+  router.get('/component-models/surface', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
@@ -1399,7 +1399,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.get('(.*)/component-models/:id', async (ctx) => {
+  router.get('/component-models/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -1461,7 +1461,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/component-models', async (ctx) => {
+  router.post('/component-models', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.CreateComponentModelSchema.safeParse(ctx.request.body)
     if (!body.success) {
@@ -1526,7 +1526,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/component-models/:id', async (ctx) => {
+  router.put('/component-models/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -1594,7 +1594,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/component-models/:id', async (ctx) => {
+  router.delete('/component-models/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -1698,7 +1698,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/components', async (ctx) => {
+  router.get('/components', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.ComponentsQueryParamsSchema.safeParse(ctx.query)
     if (!params.success) {
@@ -1763,7 +1763,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/components/:id', async (ctx) => {
+  router.get('/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -1825,7 +1825,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/components', async (ctx) => {
+  router.post('/components', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.CreateComponentSchema.safeParse(ctx.request.body)
     if (!body.success) {
@@ -1894,7 +1894,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/components/:id', async (ctx) => {
+  router.put('/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -1966,7 +1966,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/components/:id', async (ctx) => {
+  router.delete('/components/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -2057,7 +2057,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/components/:id/inspection-state', async (ctx) => {
+  router.put('/components/:id/inspection-state', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { id } = ctx.params
 
@@ -2169,7 +2169,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/component-installations', async (ctx) => {
+  router.get('/component-installations', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const params = schemas.ComponentInstallationsQueryParamsSchema.safeParse(
       ctx.query
@@ -2236,7 +2236,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/component-installations/:id', async (ctx) => {
+  router.get('/component-installations/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -2300,7 +2300,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/component-installations', async (ctx) => {
+  router.post('/component-installations', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.CreateComponentInstallationSchema.safeParse(
       ctx.request.body
@@ -2391,7 +2391,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.put('(.*)/component-installations/:id', async (ctx) => {
+  router.put('/component-installations/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -2465,7 +2465,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/component-installations/:id', async (ctx) => {
+  router.delete('/component-installations/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const id = z.string().uuid().safeParse(ctx.params.id)
     if (!id.success) {
@@ -2550,7 +2550,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/components/:id/upload', async (ctx) => {
+  router.post('/components/:id/upload', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const id = z.string().uuid().safeParse(ctx.params.id)
@@ -2632,7 +2632,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/documents/component-instances/:id', async (ctx) => {
+  router.get('/documents/component-instances/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const id = z.string().uuid().safeParse(ctx.params.id)
@@ -2690,7 +2690,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/documents/:id', async (ctx) => {
+  router.delete('/documents/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const id = z.string().uuid().safeParse(ctx.params.id)
@@ -2771,7 +2771,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/component-models/:id/upload', async (ctx) => {
+  router.post('/component-models/:id/upload', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     const id = z.string().uuid().safeParse(ctx.params.id)
@@ -2868,7 +2868,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/components/analyze-image', async (ctx) => {
+  router.post('/components/analyze-image', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.AnalyzeComponentImageRequestSchema.safeParse(
       ctx.request.body
@@ -3055,7 +3055,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/processes/add-component', async (ctx) => {
+  router.post('/processes/add-component', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = schemas.AddComponentRequestSchema.safeParse(ctx.request.body)
 

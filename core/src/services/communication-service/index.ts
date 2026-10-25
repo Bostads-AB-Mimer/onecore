@@ -115,7 +115,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/sendBulkSms', async (ctx) => {
+  router.post('/sendBulkSms', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = ctx.request.body as BulkSms
     const triggeredByUser = getActingUserName(ctx)
@@ -210,7 +210,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/sendBulkEmail', async (ctx) => {
+  router.post('/sendBulkEmail', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const body = ctx.request.body as BulkEmail
     const triggeredByUser = getActingUserName(ctx)
@@ -315,7 +315,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.get(
-    '(.*)/communication-log/customers/:contactCode/messages',
+    '/communication-log/customers/:contactCode/messages',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const result = await communicationAdapter.getCustomerMessages(
@@ -363,7 +363,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/communication-log/dispatches/:id', async (ctx) => {
+  router.get('/communication-log/dispatches/:id', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await communicationAdapter.getDispatchById(ctx.params.id)
 
@@ -404,7 +404,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/getLinearTickets', async (ctx) => {
+  router.get('/getLinearTickets', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const firstParam = ctx.query.first
     const afterParam = ctx.query.after
@@ -465,7 +465,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/createLinearErrand', async (ctx) => {
+  router.post('/createLinearErrand', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await communicationAdapter.createLinearErrand(
       ctx.request.body
@@ -496,7 +496,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/getLinearLabels', async (ctx) => {
+  router.get('/getLinearLabels', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await communicationAdapter.getLinearLabels()
 

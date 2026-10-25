@@ -134,7 +134,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rental-objects', async (ctx) => {
+  router.get('/rental-objects', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const query = parseQuery(ctx, GetRentalObjectsQuerySchema, metadata)
     if (!query) return
@@ -200,7 +200,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rental-objects/search', async (ctx) => {
+  router.get('/rental-objects/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const query = parseQuery(ctx, SearchRentalObjectsQuerySchema, metadata)
     if (!query) return
@@ -265,7 +265,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rental-objects/details', async (ctx) => {
+  router.get('/rental-objects/details', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const query = parseQuery(ctx, GetRentalObjectDetailsQuerySchema, metadata)
     if (!query) return
@@ -311,7 +311,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/rental-object-subtypes', async (ctx) => {
+  router.get('/rental-object-subtypes', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await propertyBaseAdapter.listRentalObjectSubtypes()
     if (!result.ok) return replyError(ctx, result.err, metadata)

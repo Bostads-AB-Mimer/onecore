@@ -77,7 +77,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/release-notes', async (ctx) => {
+  router.get('/release-notes', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, ['app', 'includeDrafts'])
 
     const parsed = ListQuerySchema.safeParse(ctx.query)
@@ -145,7 +145,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.post(
-    '(.*)/release-notes',
+    '/release-notes',
     requireRole(RELEASE_NOTES_WRITE_ROLE),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
@@ -224,7 +224,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.put(
-    '(.*)/release-notes/:id',
+    '/release-notes/:id',
     requireRole(RELEASE_NOTES_WRITE_ROLE),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
@@ -286,7 +286,7 @@ export const routes = (router: KoaRouter) => {
    *       - bearerAuth: []
    */
   router.delete(
-    '(.*)/release-notes/:id',
+    '/release-notes/:id',
     requireRole(RELEASE_NOTES_WRITE_ROLE),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)

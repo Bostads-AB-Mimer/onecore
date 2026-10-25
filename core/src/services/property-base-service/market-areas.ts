@@ -40,7 +40,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/market-areas', async (ctx) => {
+  router.get('/market-areas', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await propertyBaseAdapter.listMarketAreas()
 

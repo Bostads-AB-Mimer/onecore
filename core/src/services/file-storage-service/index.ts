@@ -123,7 +123,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files', refuseGuideKeys, async (ctx) => {
+  router.get('/files', refuseGuideKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     // Validate query parameters
@@ -190,7 +190,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/files/upload', refuseGuideKeys, async (ctx) => {
+  router.post('/files/upload', refuseGuideKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     // Validate request body
@@ -266,7 +266,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files/:fileName/url', refuseGuideKeys, async (ctx) => {
+  router.get('/files/:fileName/url', refuseGuideKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName } = ctx.params
 
@@ -329,7 +329,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files/:fileName/metadata', refuseGuideKeys, async (ctx) => {
+  router.get('/files/:fileName/metadata', refuseGuideKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName } = ctx.params
 
@@ -371,7 +371,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/files/:fileName', refuseGuideKeys, async (ctx) => {
+  router.delete('/files/:fileName', refuseGuideKeys, async (ctx) => {
     const { fileName } = ctx.params
 
     const result = await fileStorageAdapter.deleteFile(fileName)
@@ -416,7 +416,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files/:fileName/exists', refuseGuideKeys, async (ctx) => {
+  router.get('/files/:fileName/exists', refuseGuideKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName } = ctx.params
 
