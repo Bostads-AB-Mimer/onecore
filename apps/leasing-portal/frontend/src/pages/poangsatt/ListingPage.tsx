@@ -85,8 +85,13 @@ export function ListingPage() {
               <h2 id="floorplan-heading" className="text-lg font-semibold">
                 Planritning
               </h2>
-              <div className="mt-4 rounded-lg border p-4">
-                <FloorplanImage rentalId={listing.rentalObjectCode} />
+              {/* Square like the mockup; portrait and landscape plans scale to fit it. */}
+              <div className="mt-4 flex aspect-square items-center justify-center rounded-lg border p-4">
+                <FloorplanImage
+                  rentalId={listing.rentalObjectCode}
+                  className="max-h-full max-w-full object-contain"
+                  expandable
+                />
               </div>
             </section>
           </div>
