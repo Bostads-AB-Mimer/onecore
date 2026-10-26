@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  CloseWorkOrderRequestSchema,
   CreateInspectionWorkOrderGroupSchema,
   CreateInspectionWorkOrderResultSchema,
   CreateInspectionWorkOrdersRequestSchema,
@@ -20,3 +21,4 @@ export type CreateInspectionWorkOrderResult = z.infer<
 export type CreateInspectionWorkOrdersResponse = z.infer<
   typeof CreateInspectionWorkOrdersResponseSchema
 >
+export type CloseWorkOrderRequest = z.infer<typeof CloseWorkOrderRequestSchema>

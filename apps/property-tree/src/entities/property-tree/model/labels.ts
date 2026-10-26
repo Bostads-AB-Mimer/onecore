@@ -1,4 +1,23 @@
+import type { property } from '@onecore/types'
+
 import type { PropertyTreeLevel, RentalObjectType } from './selection'
+
+// Badge + tooltip for a split property's share; consumers may append a sentence.
+export const SHARE_LABELS: Record<
+  property.PropertyShareKind,
+  { badge: string; title: string }
+> = {
+  default: {
+    badge: 'huvuddel',
+    title:
+      'Fastigheten är delad mellan förvaltningsområden; detta är huvuddelen (allt utom undantagna byggnader).',
+  },
+  exception: {
+    badge: 'undantag',
+    title:
+      'Fastigheten är delad mellan förvaltningsområden; detta är byggnader undantagna till detta område.',
+  },
+}
 
 export const LEVEL_LABELS: Record<PropertyTreeLevel, string> = {
   district: 'Distrikt',

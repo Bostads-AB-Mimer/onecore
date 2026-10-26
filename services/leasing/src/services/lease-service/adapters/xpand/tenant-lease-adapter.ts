@@ -1018,9 +1018,7 @@ const getLeases = async (leaseIds: string[]) => {
     )
     .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
     .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
-    .whereRaw(
-      `hyobj.hyobjben IN (${leaseIds.map((id) => `'${id}'`).join(', ')})`
-    )
+    .whereIn('hyobj.hyobjben', leaseIds)
 
   return rows.map((row) => transformFromXPandDb.toLease(row, [], []))
 }

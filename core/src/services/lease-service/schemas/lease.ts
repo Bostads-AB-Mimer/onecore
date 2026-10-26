@@ -169,6 +169,10 @@ export const Lease = z.object({
     .optional(),
 })
 
+export const LeaseBatchRequestBody = z.object({
+  leaseIds: z.array(z.string()).min(1),
+})
+
 export const GetLeasesByRentalPropertyIdQueryParams = z.object({
   includeUpcomingLeases: z
     .enum(['true', 'false'])

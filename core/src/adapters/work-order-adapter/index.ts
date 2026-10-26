@@ -577,3 +577,49 @@ export const closeWorkOrder = async (
     return { ok: false, err: errorMessage }
   }
 }
+
+export type CloseRequestConflictReason = NonNullable<
+  paths['/workOrders/{workOrderId}/close-request']['post']['responses'][409]['content']['application/json']['reason']
+>
+
+export const requestCloseWorkOrder = async (
+  workOrderId: string,
+  reason?: string
+): Promise<
+  | AdapterResult<null, 'unknown'>
+  | { ok: false; err: 'conflict'; reason?: CloseRequestConflictReason }
+> => {
+  try {
+    const fetchResponse = await client().POST(
+      '/workOrders/{workOrderId}/close-request',
+      {
+        params: { path: { workOrderId } },
+        // An undefined reason is dropped by JSON serialisation, so the service
+        // receives {} and Odoo gets no reason.
+        body: { reason },
+      }
+    )
+
+    if (fetchResponse.response.ok) {
+      return { ok: true, data: null }
+    }
+
+    // Odoo refused: a request is already pending, or the work order is closed
+    // or hidden from Mina sidor. The tenant is told so. It is not a failure.
+    // The reason is passed on so the caller can tell the three apart.
+    if (fetchResponse.response.status === 409) {
+      const conflict = fetchResponse.error as
+        { reason?: CloseRequestConflictReason } | undefined
+      return { ok: false, err: 'conflict', reason: conflict?.reason }
+    }
+
+    logger.error(
+      { status: fetchResponse.response.status, error: fetchResponse.error },
+      'work-order-adapter.requestCloseWorkOrder'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (error) {
+    logger.error({ error }, 'work-order-adapter.requestCloseWorkOrder')
+    return { ok: false, err: 'unknown' }
+  }
+}

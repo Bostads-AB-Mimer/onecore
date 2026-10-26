@@ -926,6 +926,32 @@ export async function searchRentalBlocks(
   }
 }
 
+type GetRentalIdsWithBlockQuery = NonNullable<
+  paths['/residences/rental-blocks/rental-ids']['get']['parameters']['query']
+>
+
+export async function getRentalIdsWithBlock(
+  query: GetRentalIdsWithBlockQuery
+): Promise<AdapterResult<string[], 'unknown'>> {
+  try {
+    // openapi-fetch serializes the query itself: arrays as style "form" with
+    // explode (?blockReason=A&blockReason=B) and undefined values omitted
+    const response = await client().GET(
+      '/residences/rental-blocks/rental-ids',
+      { params: { query } }
+    )
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    throw new Error(`Unexpected response status: ${response.response.status}`)
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getRentalIdsWithBlock')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function exportRentalBlocksToExcel(
   queryParams: QueryParams
 ): Promise<AdapterResult<ArrayBuffer, 'unknown'>> {
@@ -1330,6 +1356,31 @@ export async function getKvvAreaByPropertyCode(
     return { ok: false, err: 'unknown' }
   } catch (err) {
     logger.error({ err }, 'property-base-adapter.getKvvAreaByPropertyCode')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/** Location-level variant for split properties: the property service resolves
+ * a building-level KVV-area exception before the property default. */
+export async function resolveKvvArea(
+  query: property.ResolveKvvAreaQuery
+): Promise<AdapterResult<PropertyKvvAreaLookup, 'not-found' | 'unknown'>> {
+  try {
+    const fetchResponse = await client().GET('/kvv-areas/resolve', {
+      params: { query },
+    })
+
+    if (fetchResponse.data?.content) {
+      return { ok: true, data: fetchResponse.data.content }
+    }
+
+    if (fetchResponse.response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: false, err: 'unknown' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.resolveKvvArea')
     return { ok: false, err: 'unknown' }
   }
 }

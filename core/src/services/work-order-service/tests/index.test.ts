@@ -6,6 +6,7 @@ import * as propertyManagementAdapter from '../../../adapters/property-managemen
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import * as workOrderAdapter from '../../../adapters/work-order-adapter'
+import * as logWrites from '../../../adapters/communication-adapter/log-writes'
 import { routes } from '../index'
 import bodyParser from 'koa-bodyparser'
 import * as factory from '../../../../test/factories'
@@ -158,6 +159,25 @@ describe('work-order-service index', () => {
       expect(res.body.content).toHaveProperty('workOrders')
       expect(res.body.content.workOrders).toHaveLength(1)
       expect(getWorkOrdersByContactCodeSpy).toHaveBeenCalledWith('P174958')
+    })
+
+    // Mina sidor disables the close button on this flag, via the .NET API.
+    it('should expose a pending close request as closeRequestPending', async () => {
+      jest
+        .spyOn(workOrderAdapter, 'getWorkOrdersByContactCode')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            factory.externalOdooWorkOrder.build({ CloseRequestPending: true }),
+          ],
+        })
+
+      const res = await request(app.callback()).get(
+        '/work-orders/by-contact-code/P174958'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.workOrders[0].closeRequestPending).toBe(true)
     })
     it('should return 500 if error', async () => {
       const getWorkOrdersByContactCodeSpy = jest
@@ -390,6 +410,7 @@ describe('work-order-service index', () => {
                 },
               ],
               UseMasterKey: false,
+              CloseRequestPending: false,
               Messages: [],
               DueDate: null,
             },
@@ -458,6 +479,7 @@ describe('work-order-service index', () => {
                 },
               ],
               UseMasterKey: false,
+              CloseRequestPending: false,
               Messages: [],
               DueDate: null,
               Url: 'http://example.com',
@@ -675,6 +697,77 @@ describe('work-order-service index', () => {
     })
   })
 
+  describe('POST /work-orders/:workOrderId/close-request', () => {
+    it('forwards a close request without a reason', async () => {
+      const requestCloseSpy = jest
+        .spyOn(workOrderAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue({ ok: true, data: null })
+
+      const res = await request(app.callback()).post(
+        '/work-orders/13/close-request'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.message).toBeDefined()
+      expect(requestCloseSpy).toHaveBeenLastCalledWith('13', undefined)
+    })
+
+    it('forwards the reason the tenant gave', async () => {
+      const requestCloseSpy = jest
+        .spyOn(workOrderAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue({ ok: true, data: null })
+
+      const res = await request(app.callback())
+        .post('/work-orders/13/close-request')
+        .send({ reason: 'Felet har försvunnit' })
+
+      expect(res.status).toBe(200)
+      expect(requestCloseSpy).toHaveBeenLastCalledWith(
+        '13',
+        'Felet har försvunnit'
+      )
+    })
+
+    it('returns 409 when a close request is refused', async () => {
+      jest
+        .spyOn(workOrderAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue({ ok: false, err: 'conflict' })
+
+      const res = await request(app.callback()).post(
+        '/work-orders/13/close-request'
+      )
+
+      expect(res.status).toBe(409)
+      expect(res.body.error).toBe('close-request-conflict')
+    })
+
+    it('returns 500 when the work-order service fails', async () => {
+      jest
+        .spyOn(workOrderAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).post(
+        '/work-orders/13/close-request'
+      )
+
+      expect(res.status).toBe(500)
+    })
+
+    it('returns 400 and does not call the service when the reason is not a string', async () => {
+      const requestCloseSpy = jest
+        .spyOn(workOrderAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue({ ok: true, data: null })
+      requestCloseSpy.mockClear()
+
+      const res = await request(app.callback())
+        .post('/work-orders/13/close-request')
+        .send({ reason: 42 })
+
+      expect(res.status).toBe(400)
+      expect(requestCloseSpy).not.toHaveBeenCalled()
+    })
+  })
+
   describe('POST /work-orders/:workOrderId/update', () => {
     const workOrderId = '13'
     const message = 'test'
@@ -858,6 +951,7 @@ describe('work-order-service index', () => {
                 },
               ],
               UseMasterKey: false,
+              CloseRequestPending: false,
               Messages: [],
               DueDate: null,
               Url: 'http://example.com',
@@ -957,6 +1051,58 @@ describe('work-order-service index', () => {
         buildingId,
         { limit: undefined, skip: undefined, sortAscending: undefined }
       )
+    })
+  })
+
+  describe('POST /work-orders/log-my-pages-message', () => {
+    it('writes a my-pages dispatch row for the tenant', async () => {
+      const logSpy = jest
+        .spyOn(logWrites, 'logOutboundDispatch')
+        .mockResolvedValue({ ok: true, data: { dispatchId: 'dispatch-1' } })
+
+      const res = await request(app.callback())
+        .post('/work-orders/log-my-pages-message')
+        .send({
+          workOrderCode: 'od-12345',
+          contactCode: 'P123456',
+          text: 'Vi har bokat in ett besök på tisdag.',
+          triggeredByUser: 'Anna Handläggare',
+        })
+
+      expect(res.status).toBe(200)
+      expect(logSpy).toHaveBeenCalledWith({
+        channel: 'my-pages',
+        fromAddress: 'Mimer',
+        body: 'Vi har bokat in ett besök på tisdag.',
+        messageType: 'work_order_tenant_my_pages',
+        provider: 'odoo',
+        triggeredByUser: 'Anna Handläggare',
+        workOrderCode: 'od-12345',
+        recipients: [
+          {
+            contactCode: 'P123456',
+            toAddress: 'Mina sidor',
+            status: 'sent',
+          },
+        ],
+      })
+    })
+
+    it('rejects a request missing contactCode or text', async () => {
+      const logSpy = jest
+        .spyOn(logWrites, 'logOutboundDispatch')
+        .mockResolvedValue({ ok: true, data: { dispatchId: 'dispatch-1' } })
+      // jest.spyOn re-wraps the same underlying mock across `it` blocks in
+      // this file (no global clearMocks), so start from a clean call count
+      // rather than one carried over from the previous test.
+      logSpy.mockClear()
+
+      const res = await request(app.callback())
+        .post('/work-orders/log-my-pages-message')
+        .send({ workOrderCode: 'od-12345' })
+
+      expect(res.status).toBe(400)
+      expect(logSpy).not.toHaveBeenCalled()
     })
   })
 })
