@@ -55,7 +55,7 @@ Relationerna själva hanteras utanför den här synken:
 
 De tre anropen görs parallellt och **alla tre måste lyckas** för att raden ska räknas som synkad. Misslyckas något hamnar hela raden i felkön, med status per mål i felmeddelandet (`tenfast=… xledger=… odoo=…`).
 
-Undantag: för Xledger räknas bara serverfel (5xx) och nätverksfel som fel. Avvisar Economy kunden med ett 4xx-svar — t.ex. för att kontakten saknar namn i Xpand — räknas Xledger som lyckat, fast inget uppdaterats. Raden köas inte och inget mejl skickas.
+Det gäller även när Economy avvisar kunden med ett 4xx-svar, t.ex. för att kontakten saknar namn i Xpand. Ett återförsök lyckas först när uppgiften rättats i Xpand; rättelsen skriver en ny `cmlog`-rad som ersätter den köade.
 
 Ett återförsök kör om alla tre, även de som redan lyckats. Det är ofarligt eftersom alla tre bara uppdaterar befintlig data.
 
