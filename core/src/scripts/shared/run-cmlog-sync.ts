@@ -1,3 +1,5 @@
+import { createHash } from 'crypto'
+
 import { logger } from '@onecore/utilities'
 
 import {
@@ -51,6 +53,17 @@ export type CmlogSync<T> = {
   describe: (change: T) => { subject: string; detail: string }
   giveUpAdvice?: string
 }
+
+// Services collapse rows to one change per key and second, so a later row in
+// the saved second can share a key with a handled one and still carry new data.
+export const handledIdOf = <T>(
+  def: Pick<CmlogSync<T>, 'keyFor' | 'toPayload'>,
+  change: T
+) =>
+  `${def.keyFor(change)}#${createHash('sha1')
+    .update(JSON.stringify(def.toPayload(change)))
+    .digest('hex')
+    .slice(0, 12)}`
 
 const capitalize = (text: string) =>
   text.charAt(0).toUpperCase() + text.slice(1)
@@ -160,7 +173,7 @@ export const runCmlogSync = async <T>(
   const isHandled = (change: T) =>
     lastTimestamp !== null &&
     def.timestampOf(change).getTime() === lastTimestamp.getTime() &&
-    handledInLastSecond.has(def.keyFor(change))
+    handledInLastSecond.has(handledIdOf(def, change))
   const read = result.ok ? result.data : []
   const fetched = skipExisting ? [] : read.filter((c) => !isHandled(c))
 
@@ -268,7 +281,7 @@ export const runCmlogSync = async <T>(
         : []
     const thisRun = read
       .filter((c) => def.timestampOf(c).getTime() === timestamp.getTime())
-      .map(def.keyFor)
+      .map((c) => handledIdOf(def, c))
     return [...new Set([...earlier, ...thisRun])]
   }
   const saveTimestamp = async (timestamp: Date) => {

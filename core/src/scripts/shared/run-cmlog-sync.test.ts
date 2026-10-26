@@ -5,7 +5,7 @@ import path from 'path'
 import config from '../../common/config'
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { appendEntry, readQueue, FailedRowEntry } from './failed-sync-queue'
-import { CmlogSync, runCmlogSync } from './run-cmlog-sync'
+import { CmlogSync, handledIdOf, runCmlogSync } from './run-cmlog-sync'
 
 type Change = { id: string; value: string; timestamp: Date }
 
@@ -61,6 +61,8 @@ const definition = (
   describe: (c) => ({ subject: `sak ${c.id}`, detail: `sak ${c.id}` }),
   ...overrides,
 })
+
+const handledId = (c: Change) => handledIdOf(definition(), c)
 
 const run = (overrides: Partial<CmlogSync<Change>> = {}, now = NOW) =>
   runCmlogSync(definition(overrides), {
@@ -613,7 +615,7 @@ describe('runCmlogSync', () => {
       expect(sync).not.toHaveBeenCalled()
       expect(await readPosition()).toEqual({
         timestamp: c.timestamp.toISOString(),
-        handled: ['thing:A-1'],
+        handled: [handledId(c)],
       })
     })
 
@@ -685,14 +687,14 @@ describe('runCmlogSync', () => {
 
       expect(await readPosition()).toEqual({
         timestamp: later.timestamp.toISOString(),
-        handled: ['thing:A-3'],
+        handled: [handledId(later)],
       })
     })
 
     it('syncs a row in the saved second that was not handled before, once', async () => {
       const handled = change({ id: 'A-1' })
       const missed = change({ id: 'A-2' })
-      await writePosition(handled.timestamp.toISOString(), ['thing:A-1'])
+      await writePosition(handled.timestamp.toISOString(), [handledId(handled)])
       fetchChanges.mockResolvedValue({ ok: true, data: [handled, missed] })
 
       await run()
@@ -702,13 +704,13 @@ describe('runCmlogSync', () => {
       expect(sync).toHaveBeenCalledWith(missed)
       expect(await readPosition()).toEqual({
         timestamp: handled.timestamp.toISOString(),
-        handled: ['thing:A-1', 'thing:A-2'],
+        handled: [handledId(handled), handledId(missed)],
       })
     })
 
     it('does not sync a row in the saved second that was handled before', async () => {
       const handled = change({ id: 'A-1' })
-      await writePosition(handled.timestamp.toISOString(), ['thing:A-1'])
+      await writePosition(handled.timestamp.toISOString(), [handledId(handled)])
       fetchChanges.mockResolvedValue({ ok: true, data: [handled] })
 
       await run()
@@ -717,7 +719,23 @@ describe('runCmlogSync', () => {
       expect(subjects()).toEqual([])
       expect(await readPosition()).toEqual({
         timestamp: handled.timestamp.toISOString(),
-        handled: ['thing:A-1'],
+        handled: [handledId(handled)],
+      })
+    })
+
+    it('syncs a row in the saved second that shares a handled key but carries new data', async () => {
+      const handled = change({ id: 'A-1', value: 'old' })
+      const newer = change({ id: 'A-1', value: 'new' })
+      await writePosition(handled.timestamp.toISOString(), [handledId(handled)])
+      fetchChanges.mockResolvedValue({ ok: true, data: [newer] })
+
+      await run()
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      expect(sync).toHaveBeenCalledWith(newer)
+      expect(await readPosition()).toEqual({
+        timestamp: handled.timestamp.toISOString(),
+        handled: [handledId(handled), handledId(newer)],
       })
     })
 
@@ -730,7 +748,7 @@ describe('runCmlogSync', () => {
 
       expect(await readPosition()).toEqual({
         timestamp: c.timestamp.toISOString(),
-        handled: ['thing:A-1'],
+        handled: [handledId(c)],
       })
       expect(await readQueue(queueFile)).toHaveLength(1)
     })
@@ -745,7 +763,7 @@ describe('runCmlogSync', () => {
       expect(sync).toHaveBeenCalledWith(c)
       expect(await readPosition()).toEqual({
         timestamp: c.timestamp.toISOString(),
-        handled: ['thing:A-1'],
+        handled: [handledId(c)],
       })
     })
   })
