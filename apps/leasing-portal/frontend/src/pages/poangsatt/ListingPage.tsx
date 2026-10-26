@@ -75,11 +75,9 @@ export function ListingPage() {
         <>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-bold">{listing.address}</h1>
-            {stage ? (
-              <Badge variant="secondary">{stageLabel(stage)}</Badge>
-            ) : (
-              <Badge variant="outline">Ej publicerad</Badge>
-            )}
+            <Badge variant="info">
+              {stage ? stageLabel(stage) : 'Ej publicerad'}
+            </Badge>
           </div>
           <div className="grid gap-8 lg:grid-cols-3">
             <ObjectInformation listing={listing} />
