@@ -1,6 +1,12 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, useLocation, useParams, useResolvedPath } from 'react-router-dom'
-import { Badge, Button, SegmentedTabs, Skeleton } from '@onecore/ui'
+import {
+  Badge,
+  Button,
+  FloorplanImage,
+  SegmentedTabs,
+  Skeleton,
+} from '@onecore/ui'
 
 import { BffRequestError } from '../../api/errors'
 import { QueryError } from '../QueryError'
@@ -77,6 +83,14 @@ export function ListingPage() {
           </div>
           <div className="grid gap-8 lg:grid-cols-3">
             <ObjectInformation listing={listing} />
+            <section aria-labelledby="floorplan-heading">
+              <h2 id="floorplan-heading" className="text-lg font-semibold">
+                Planritning
+              </h2>
+              <div className="mt-4 rounded-lg border p-4">
+                <FloorplanImage rentalId={listing.rentalObjectCode} />
+              </div>
+            </section>
           </div>
         </>
       )}

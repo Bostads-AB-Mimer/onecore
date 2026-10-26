@@ -89,6 +89,18 @@ describe('ListingPage', () => {
     ).toBe('https://www.mimer.nu/sok-ledigt/lediga-lagenheter/234-234-234-1009')
   })
 
+  it('shows the floorplan for the apartment', async () => {
+    stubFetch(json({ content: listing }))
+
+    renderAt(url)
+    await screen.findByRole('heading', { name: 'Järnvägsgatan 28' })
+
+    expect(screen.getByRole('heading', { name: 'Planritning' })).toBeTruthy()
+    expect(screen.getByAltText('Planritning').getAttribute('src')).toBe(
+      'https://pub.mimer.nu/bofaktablad/bofaktablad/234-234-234-1009.jpg'
+    )
+  })
+
   it('shows a dash for values Tenfast did not give', async () => {
     stubFetch(
       json({

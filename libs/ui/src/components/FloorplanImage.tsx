@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { FileImage } from 'lucide-react'
 
-import { getFloorplanUrl } from '@/shared/lib/floorplan'
-import { EmptyState } from '@/shared/ui/EmptyState'
+import { getFloorplanUrl } from '../lib/floorplan'
+import { EmptyState } from './EmptyState'
 
 interface FloorplanImageProps {
   rentalId?: string
   className?: string
 }
 
+/** A residence's floorplan, or an empty state when it has none published. */
 export const FloorplanImage = ({
   rentalId,
   className,

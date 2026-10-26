@@ -1,4 +1,5 @@
-import { FloorplanImage } from '@/shared/ui/FloorplanImage'
+import { FloorplanImage } from '@onecore/ui'
+
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
 export const ResidenceFloorplanTabsContent = ({
