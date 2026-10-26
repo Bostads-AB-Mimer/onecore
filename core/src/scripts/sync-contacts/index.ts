@@ -13,35 +13,57 @@ const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
 
 type ContactUpdate = { contact: Contact; timestamp: Date }
 
+/**
+ * The targets are written one at a time, and a failure stops the rest, so a
+ * rejected row leaves the later targets untouched instead of half of them on
+ * the new data. Xledger goes first: it is the one that validates the payload
+ * and refuses it. Tenfast goes last: it pulls the contact rather than taking
+ * the payload, so it is the least likely to object to the data.
+ */
 const syncContact = async (update: ContactUpdate): Promise<void> => {
   const payload = toSyncPayload(update.contact)
-  const [tenfastResult, xledgerResult, odooResult] = await Promise.all([
-    syncContactToLeasing(payload.contactCode),
-    syncContactToEconomy(
-      payload.contactCode,
-      {
-        fullName: payload.fullName,
-        street: payload.street,
-        zipCode: payload.zipCode,
-        city: payload.city,
-        emailAddress: payload.emailAddress,
-      },
-      { create: false } // Do not create new contact in economy when syncing contacts, only update existing
-    ),
-    syncContactToWorkOrder(payload.contactCode, {
-      fullName: payload.fullName,
-      emailAddress: payload.emailAddress,
-      phoneNumber: payload.phoneNumber,
-    }),
-  ])
-  if (!tenfastResult.ok || !xledgerResult.ok || !odooResult.ok) {
-    throw new Error(
-      `contact ${payload.contactCode} failed to sync: tenfast=${
-        tenfastResult.ok ? 'ok' : tenfastResult.err
-      }, xledger=${
-        xledgerResult.ok ? 'ok' : xledgerResult.err
-      }, odoo=${odooResult.ok ? 'ok' : odooResult.err}`
-    )
+  const steps: [string, () => Promise<{ ok: boolean; err?: string }>][] = [
+    [
+      'xledger',
+      () =>
+        syncContactToEconomy(
+          payload.contactCode,
+          {
+            fullName: payload.fullName,
+            street: payload.street,
+            zipCode: payload.zipCode,
+            city: payload.city,
+            emailAddress: payload.emailAddress,
+          },
+          { create: false } // Do not create new contact in economy when syncing contacts, only update existing
+        ),
+    ],
+    [
+      'odoo',
+      () =>
+        syncContactToWorkOrder(payload.contactCode, {
+          fullName: payload.fullName,
+          emailAddress: payload.emailAddress,
+          phoneNumber: payload.phoneNumber,
+        }),
+    ],
+    ['tenfast', () => syncContactToLeasing(payload.contactCode)],
+  ]
+
+  const done: string[] = []
+  for (const [target, run] of steps) {
+    const result = await run()
+    if (!result.ok) {
+      const rest = steps
+        .map(([name]) => name)
+        .filter((name) => name !== target && !done.includes(name))
+      throw new Error(
+        `contact ${payload.contactCode} failed to sync: ${target}=${result.err}` +
+          (done.length ? `, already written: ${done.join(', ')}` : '') +
+          (rest.length ? `, not attempted: ${rest.join(', ')}` : '')
+      )
+    }
+    done.push(target)
   }
   logger.info({ contactCode: payload.contactCode }, 'contact synced')
 }
