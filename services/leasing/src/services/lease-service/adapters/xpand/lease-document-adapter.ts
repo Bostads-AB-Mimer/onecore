@@ -6,6 +6,7 @@ import {
   pickTerminationDocument,
 } from '../../helpers/lease-document-classification'
 import { xpandDb } from './xpandDb'
+import { AdapterResult } from '../types'
 
 // Tenfast/xpand document type code for signed contracts ("DO_SLUTF").
 const SIGNED_CONTRACT_KEYDOTYP = '_4HQ0MIK0R8SLEU'
@@ -19,8 +20,7 @@ export type LeaseDocument = {
 }
 
 /** `data: null` means Xpand holds no such document; `ok: false` means the lookup failed. */
-export type LeaseDocumentLookup =
-  { ok: true; data: LeaseDocument | null } | { ok: false; err: 'unknown' }
+export type LeaseDocumentLookup = AdapterResult<LeaseDocument | null, 'unknown'>
 
 const decodeFildata = (raw: unknown): Buffer | null => {
   if (raw == null) return null

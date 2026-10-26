@@ -13,6 +13,7 @@ import {
 } from '../adapters/xpand/lease-document-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { AdapterResult } from '../adapters/types'
 import { z } from 'zod'
 
 const SyncLeaseRequestSchema = z.object({
@@ -21,19 +22,15 @@ const SyncLeaseRequestSchema = z.object({
   action: z.enum(['create', 'terminate', 'void']),
 })
 
-type DocumentOutcome = 'attached' | 'already-attached' | 'missing'
-type DocumentFailure =
-  | { ok: true; data: DocumentOutcome }
-  | {
-      ok: false
-      err:
-        | 'contract-pdf-check-failed'
-        | 'contract-pdf-lookup-failed'
-        | 'contract-pdf-upload-failed'
-        | 'termination-pdf-check-failed'
-        | 'termination-pdf-lookup-failed'
-        | 'termination-pdf-upload-failed'
-    }
+type DocumentResult = AdapterResult<
+  'attached' | 'already-attached' | 'missing',
+  | 'contract-pdf-check-failed'
+  | 'contract-pdf-lookup-failed'
+  | 'contract-pdf-upload-failed'
+  | 'termination-pdf-check-failed'
+  | 'termination-pdf-lookup-failed'
+  | 'termination-pdf-upload-failed'
+>
 
 /**
  * Attaches the signed contract from Xpand to a Tenfast lease, unless it has
@@ -43,7 +40,7 @@ type DocumentFailure =
 const attachSignedContract = async (
   leaseId: string,
   tenfastLeaseId: string
-): Promise<DocumentFailure> => {
+): Promise<DocumentResult> => {
   const tenfastLease = await tenfastAdapter.getLeaseByExternalId(leaseId)
   if (!tenfastLease.ok) {
     logger.error(
@@ -95,7 +92,7 @@ const attachSignedContract = async (
  */
 const attachTerminationDocument = async (
   leaseId: string
-): Promise<DocumentFailure> => {
+): Promise<DocumentResult> => {
   const tenfastLease = await tenfastAdapter.getLeaseByExternalId(leaseId)
   if (!tenfastLease.ok) {
     logger.error(
