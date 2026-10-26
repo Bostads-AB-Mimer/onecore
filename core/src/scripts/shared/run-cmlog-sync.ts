@@ -197,6 +197,8 @@ export const runCmlogSync = async <T>(
   const kept: FailedRowEntry[] = []
   let queueChanged = false
   const droppedWithBlocker = new Set<string>()
+  // A released entry that fails holds the entries released after it.
+  const failedRelease = new Map<string, string>()
   for (const entry of queue) {
     if (entry.type !== def.entryType) {
       kept.push(entry)
@@ -210,8 +212,10 @@ export const runCmlogSync = async <T>(
     if (entry.heldBehind) {
       // The entry it waits for was queued first, so it has been handled above:
       // still in `kept` means still failing or not yet due.
-      if (kept.some((e) => e.key === entry.heldBehind)) {
-        kept.push(entry)
+      const blockerKey = failedRelease.get(entry.heldBehind) ?? entry.heldBehind
+      if (kept.some((e) => e.key === blockerKey)) {
+        if (blockerKey !== entry.heldBehind) queueChanged = true
+        kept.push({ ...entry, heldBehind: blockerKey })
         continue
       }
       queueChanged = true
@@ -230,6 +234,7 @@ export const runCmlogSync = async <T>(
           retriesStartedAt: now().toISOString(),
         }
         kept.push(failed)
+        failedRelease.set(entry.heldBehind, entry.key)
         await notifyFailure(change, failed)
         logger.error(
           { err, key: entry.key },

@@ -804,6 +804,26 @@ describe('runCmlogSync', () => {
       ])
     })
 
+    it('keeps the next held row waiting behind a released row that fails', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      await appendEntry(queueFile, heldEntry(terminate))
+      await appendEntry(queueFile, heldEntry(voided))
+      failOn('terminate')
+
+      await run(ordered)
+
+      expect(sync.mock.calls.map(([c]) => (c as Change).value)).toEqual([
+        'create',
+        'terminate',
+      ])
+      const queue = await readQueue(queueFile)
+      expect(queue.map((e) => e.key)).toEqual([
+        'thing:L-1:terminate',
+        'thing:L-1:void',
+      ])
+      expect(queue[1].heldBehind).toBe('thing:L-1:terminate')
+    })
+
     it('drops held rows when the create is given up and names them in the mail', async () => {
       await appendEntry(
         queueFile,
