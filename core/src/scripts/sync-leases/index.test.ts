@@ -562,4 +562,80 @@ describe('syncLeases', () => {
     )
     expect(sendEmailSpy).toHaveBeenCalledTimes(1)
   })
+
+  it('case 11: terminate synced but Xpand has no uppsägning PDF — one mail, row not queued', async () => {
+    const lease = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T10:00:00.000Z'),
+    })
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: true,
+      data: { action: 'terminated', leaseId: 'L-1', document: 'missing' },
+    })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(await readQueue(queueFile)).toHaveLength(0)
+    expect(sendEmailSpy).toHaveBeenCalledTimes(1)
+    expect(sendEmailSpy.mock.calls[0][0].subject).toBe(
+      'sync-leases: avtal L-1 saknar uppsägningsdokument i Xpand'
+    )
+    expect(sendEmailSpy.mock.calls[0][0].body).toContain(
+      'Lägg till dokumentet i Tenfast för hand.'
+    )
+  })
+
+  it('case 12: a failed PDF step fails the row with the service error in the queue', async () => {
+    const lease = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'create',
+      timestamp: new Date('2026-05-01T10:00:00.000Z'),
+    })
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+    const getByContactCode = jest.fn().mockResolvedValue({
+      ok: true,
+      data: factory.contactsServiceContact.build({ relatedContacts: [] }),
+    })
+    jest
+      .spyOn(contactsAdapter, 'makeContactsAdapter')
+      .mockReturnValue({ getByContactCode } as any)
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: false,
+      err: 'sync-failed',
+      statusCode: 500,
+      detail: 'contract-pdf-upload-failed',
+    })
+    jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    const queue = await readQueue(queueFile)
+    expect(queue).toHaveLength(1)
+    expect(queue[0].lastError).toBe(
+      'Failed to sync lease L-1: sync-failed (contract-pdf-upload-failed)'
+    )
+  })
 })

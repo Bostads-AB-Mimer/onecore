@@ -9,6 +9,7 @@ import { getRentalPropertyInfoFromXpand } from '../../adapters/property-manageme
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
 import { syncInvoiceRecipientToEconomy } from '../../processes/contacts'
 import { runCmlogSync } from '../shared/run-cmlog-sync'
+import { notifyXpandSync } from '../shared/notify'
 
 const DEFAULT_STATE_FILE = '/data/last-timestamp-leases.txt'
 const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
@@ -82,11 +83,33 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
     lease.action
   )
   if (!syncResult.ok) {
-    throw new Error(`Failed to sync lease ${lease.leaseId}: ${syncResult.err}`)
+    throw new Error(
+      `Failed to sync lease ${lease.leaseId}: ${syncResult.err}${syncResult.detail ? ` (${syncResult.detail})` : ''}`
+    )
   }
   logger.info(
-    { leaseId: lease.leaseId, action: syncResult.data.action },
+    {
+      leaseId: lease.leaseId,
+      action: syncResult.data.action,
+      document: syncResult.data.document,
+    },
     'lease synced'
+  )
+  if (syncResult.data.document === 'missing') {
+    await notifyMissingDocument(lease)
+  }
+}
+
+const notifyMissingDocument = (lease: LeaseChange) => {
+  const document =
+    lease.action === 'create' ? 'signerat kontrakt' : 'uppsägningsdokument'
+  const done = lease.action === 'create' ? 'skapat' : 'uppsagt'
+  return notifyXpandSync(
+    `sync-leases: avtal ${lease.leaseId} saknar ${document} i Xpand`,
+    [
+      `Avtal ${lease.leaseId} är ${done} i Tenfast, men inget ${document} hittades i Xpand, så ingen PDF har bifogats.`,
+      `Lägg till dokumentet i Tenfast för hand.`,
+    ]
   )
 }
 
