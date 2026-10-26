@@ -69,7 +69,16 @@ const run = (overrides: Partial<CmlogSync<Change>> = {}, now = NOW) =>
     now: () => now,
   })
 
-const readState = async () => (await fs.readFile(stateFile, 'utf-8')).trim()
+const readPosition = async () =>
+  JSON.parse(await fs.readFile(stateFile, 'utf-8')) as {
+    timestamp: string
+    handled: string[]
+  }
+
+const readState = async () => (await readPosition()).timestamp
+
+const writePosition = (timestamp: string, handled: string[] = []) =>
+  fs.writeFile(stateFile, JSON.stringify({ timestamp, handled }), 'utf-8')
 
 const subjects = () =>
   sendEmailSpy.mock.calls.map(([email]) => email.subject as string)
@@ -563,7 +572,10 @@ describe('runCmlogSync', () => {
 
       await run()
 
-      expect(await readState()).toBe('2026-10-15T08:20:00.000Z')
+      expect(await readPosition()).toEqual({
+        timestamp: '2026-10-15T08:20:00.000Z',
+        handled: [],
+      })
     })
 
     it('saves until when no change was parsed', async () => {
@@ -599,7 +611,22 @@ describe('runCmlogSync', () => {
       await run({ firstRun: 'start-now' })
 
       expect(sync).not.toHaveBeenCalled()
-      expect(await readState()).toBe(c.timestamp.toISOString())
+      expect(await readPosition()).toEqual({
+        timestamp: c.timestamp.toISOString(),
+        handled: ['thing:A-1'],
+      })
+    })
+
+    it('start-now: remembers the rows of the saved second so they are not synced later', async () => {
+      const c = change()
+      fetchChanges.mockResolvedValue({ ok: true, data: [c] })
+      await run({ firstRun: 'start-now' })
+      sync.mockClear()
+
+      await run({ firstRun: 'start-now' })
+
+      expect(fetchChanges).toHaveBeenLastCalledWith(c.timestamp)
+      expect(sync).not.toHaveBeenCalled()
     })
 
     it('start-now: saves now when cmlog has nothing', async () => {
@@ -641,6 +668,86 @@ describe('runCmlogSync', () => {
       expect(statesSeen).toEqual([null, null, first.timestamp.toISOString()])
       expect(await readState()).toBe(later.timestamp.toISOString())
     })
+
+    it('saves the keys handled in the saved second, and only that second', async () => {
+      const first = change({ id: 'A-1' })
+      const second = change({ id: 'A-2' })
+      const later = change({
+        id: 'A-3',
+        timestamp: new Date('2026-10-15T08:00:01.000Z'),
+      })
+      fetchChanges.mockResolvedValue({
+        ok: true,
+        data: [first, second, later],
+      })
+
+      await run()
+
+      expect(await readPosition()).toEqual({
+        timestamp: later.timestamp.toISOString(),
+        handled: ['thing:A-3'],
+      })
+    })
+
+    it('syncs a row in the saved second that was not handled before, once', async () => {
+      const handled = change({ id: 'A-1' })
+      const missed = change({ id: 'A-2' })
+      await writePosition(handled.timestamp.toISOString(), ['thing:A-1'])
+      fetchChanges.mockResolvedValue({ ok: true, data: [handled, missed] })
+
+      await run()
+
+      expect(fetchChanges).toHaveBeenCalledWith(handled.timestamp)
+      expect(sync).toHaveBeenCalledTimes(1)
+      expect(sync).toHaveBeenCalledWith(missed)
+      expect(await readPosition()).toEqual({
+        timestamp: handled.timestamp.toISOString(),
+        handled: ['thing:A-1', 'thing:A-2'],
+      })
+    })
+
+    it('does not sync a row in the saved second that was handled before', async () => {
+      const handled = change({ id: 'A-1' })
+      await writePosition(handled.timestamp.toISOString(), ['thing:A-1'])
+      fetchChanges.mockResolvedValue({ ok: true, data: [handled] })
+
+      await run()
+
+      expect(sync).not.toHaveBeenCalled()
+      expect(subjects()).toEqual([])
+      expect(await readPosition()).toEqual({
+        timestamp: handled.timestamp.toISOString(),
+        handled: ['thing:A-1'],
+      })
+    })
+
+    it('counts a failed row as handled, leaving the retry to the queue', async () => {
+      const c = change({ id: 'A-1' })
+      fetchChanges.mockResolvedValue({ ok: true, data: [c] })
+      sync.mockRejectedValue(new Error('boom'))
+
+      await run()
+
+      expect(await readPosition()).toEqual({
+        timestamp: c.timestamp.toISOString(),
+        handled: ['thing:A-1'],
+      })
+      expect(await readQueue(queueFile)).toHaveLength(1)
+    })
+
+    it('reads a position saved before handled keys existed', async () => {
+      const c = change()
+      await fs.writeFile(stateFile, '2026-10-15T07:00:00.000Z', 'utf-8')
+      fetchChanges.mockResolvedValue({ ok: true, data: [c] })
+
+      await run()
+
+      expect(sync).toHaveBeenCalledWith(c)
+      expect(await readPosition()).toEqual({
+        timestamp: c.timestamp.toISOString(),
+        handled: ['thing:A-1'],
+      })
+    })
   })
 
   it('throws without syncing when the timestamp file cannot be read', async () => {
@@ -662,7 +769,7 @@ describe('runCmlogSync', () => {
   })
 
   it('throws when fetching fails and leaves the timestamp alone', async () => {
-    await fs.writeFile(stateFile, '2026-10-15T07:00:00.000Z', 'utf-8')
+    await writePosition('2026-10-15T07:00:00.000Z')
     fetchChanges.mockResolvedValue({ ok: false, err: 'unknown' })
 
     await expect(run()).rejects.toThrow('unknown')

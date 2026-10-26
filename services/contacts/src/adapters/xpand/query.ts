@@ -228,11 +228,14 @@ export const contactCodeForNationalId = async (
 }
 
 /**
- * Retrieves cmlog rows for contact changes recorded since the given timestamp.
+ * Retrieves cmlog rows for contact changes recorded at or after the given
+ * timestamp.
  *
  * Only rows whose logmemo starts with "Kontakt " are returned, as these
  * represent changes to contacts. If no timestamp is provided, returns all
- * matching rows.
+ * matching rows. The read is inclusive because logtime has whole seconds: a
+ * row logged in the `since` second after the previous read would otherwise
+ * never be seen. The caller skips the rows of that second it already handled.
  *
  * @param db - The Knex database connection to use
  * @param since - The timestamp to query changes from, or null for all rows
@@ -247,7 +250,7 @@ export const cmlogContactChanges = (
     .whereLike('logmemo', 'Kontakt %')
     .orderBy('logtime', 'asc')
 
-  return since ? base.andWhere('logtime', '>', since) : base
+  return since ? base.andWhere('logtime', '>=', since) : base
 }
 
 /**

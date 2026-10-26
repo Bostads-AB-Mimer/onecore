@@ -21,14 +21,14 @@ describe('cmlogRowsSince', () => {
     expect(bindings).toEqual(['Hyresobjekt %', "%'Hyresobjekttyp'%"])
   })
 
-  it('reads strictly after since when given', () => {
+  it('reads from since inclusive, so the rest of a half-read second is seen', () => {
     const since = new Date('2026-10-15T08:08:28.000Z')
 
     const { sql, bindings } = toSQL(
       cmlogRowsSince(db, since, ['Hyreskontrakt %'])
     )
 
-    expect(sql).toMatch(/\[logtime\] > \?/)
+    expect(sql).toMatch(/\[logtime\] >= \?/)
     expect(bindings).toContain(since)
   })
 })

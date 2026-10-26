@@ -11,7 +11,7 @@ afterEach(() => {
 })
 
 describe('cmlogRentalObjectTypeChanges', () => {
-  it('reads strictly after the since time', () => {
+  it('reads from the since time inclusive', () => {
     const db = knex({ client: 'mssql' })
 
     const { sql } = (
@@ -21,7 +21,7 @@ describe('cmlogRentalObjectTypeChanges', () => {
       ) as unknown as Knex.QueryBuilder
     ).toSQL()
 
-    expect(sql).toMatch(/\[logtime\] > \?/)
+    expect(sql).toMatch(/\[logtime\] >= \?/)
   })
 
   it('reads every row when since is null', () => {

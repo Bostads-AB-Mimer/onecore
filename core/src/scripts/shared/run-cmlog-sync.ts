@@ -7,7 +7,7 @@ import {
   writeQueue,
   FailedRowEntry,
 } from './failed-sync-queue'
-import { getLastTimestamp, saveLastTimestamp } from './last-timestamp'
+import { readPosition, savePosition } from './last-timestamp'
 import { notifyXpandSync } from './notify'
 
 const HOUR_MS = 60 * 60 * 1000
@@ -143,7 +143,9 @@ export const runCmlogSync = async <T>(
       ? notifySkipped(change, entry, outcome.skipped)
       : notifyRecovery(change, entry)
 
-  const lastTimestamp = await getLastTimestamp(stateFile)
+  const position = await readPosition(stateFile)
+  const lastTimestamp = position?.timestamp ?? null
+  const handledInLastSecond = new Set(position?.handled ?? [])
   const skipExisting = !lastTimestamp && def.firstRun === 'start-now'
   if (lastTimestamp) {
     logger.info({ lastTimestamp }, 'syncing since last timestamp')
@@ -152,8 +154,15 @@ export const runCmlogSync = async <T>(
   } else {
     logger.info('no saved timestamp, syncing all')
   }
+  // The fetch reads the saved second again, since a row can be logged in
+  // that second after the previous run read it. Rows handled then are skipped.
   const result = await def.fetchChanges(lastTimestamp)
-  const fetched = result.ok && !skipExisting ? result.data : []
+  const isHandled = (change: T) =>
+    lastTimestamp !== null &&
+    def.timestampOf(change).getTime() === lastTimestamp.getTime() &&
+    handledInLastSecond.has(def.keyFor(change))
+  const read = result.ok ? result.data : []
+  const fetched = skipExisting ? [] : read.filter((c) => !isHandled(c))
 
   // 1) Retry the queue
   const queue = await readQueue(queueFile)
@@ -252,8 +261,21 @@ export const runCmlogSync = async <T>(
 
   let queueForRun = kept
   let savedTimestamp = lastTimestamp
+  const handledAt = (timestamp: Date) => {
+    const earlier =
+      lastTimestamp && timestamp.getTime() === lastTimestamp.getTime()
+        ? [...handledInLastSecond]
+        : []
+    const thisRun = read
+      .filter((c) => def.timestampOf(c).getTime() === timestamp.getTime())
+      .map(def.keyFor)
+    return [...new Set([...earlier, ...thisRun])]
+  }
   const saveTimestamp = async (timestamp: Date) => {
-    await saveLastTimestamp(stateFile, timestamp)
+    await savePosition(stateFile, {
+      timestamp,
+      handled: handledAt(timestamp),
+    })
     savedTimestamp = timestamp
   }
 

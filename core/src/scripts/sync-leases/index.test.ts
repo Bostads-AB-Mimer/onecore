@@ -97,7 +97,7 @@ describe('syncLeases', () => {
     expect(await readQueue(queueFile)).toHaveLength(0)
 
     // State file advanced to lease.timestamp
-    const written = (await fs.readFile(stateFile, 'utf-8')).trim()
+    const written = JSON.parse(await fs.readFile(stateFile, 'utf-8')).timestamp
     expect(written).toBe(lease.timestamp.toISOString())
   })
 
@@ -136,7 +136,7 @@ describe('syncLeases', () => {
     )
 
     // State advanced to that row's timestamp
-    const written = (await fs.readFile(stateFile, 'utf-8')).trim()
+    const written = JSON.parse(await fs.readFile(stateFile, 'utf-8')).timestamp
     expect(written).toBe(lease.timestamp.toISOString())
   })
 
@@ -292,7 +292,7 @@ describe('syncLeases', () => {
     expect(sendEmailSpy).not.toHaveBeenCalled()
 
     // State advanced to the row's timestamp
-    const written = (await fs.readFile(stateFile, 'utf-8')).trim()
+    const written = JSON.parse(await fs.readFile(stateFile, 'utf-8')).timestamp
     expect(written).toBe(lease.timestamp.toISOString())
   })
 
@@ -372,7 +372,7 @@ describe('syncLeases', () => {
 
     // No failures
     expect(await readQueue(queueFile)).toHaveLength(0)
-    const written = (await fs.readFile(stateFile, 'utf-8')).trim()
+    const written = JSON.parse(await fs.readFile(stateFile, 'utf-8')).timestamp
     expect(written).toBe(lease.timestamp.toISOString())
   })
 
