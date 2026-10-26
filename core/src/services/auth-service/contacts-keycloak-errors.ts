@@ -19,7 +19,7 @@ function keycloakOAuthErrorData(
   return undefined
 }
 
-/** OAuth token-endpoint failures: invalid_grant → 400, everything else → 502. */
+/** OAuth token/logout endpoint failures: invalid_grant → 400, everything else → 502. */
 export function httpStatusForContactsKeycloakError(error: unknown): number {
   if (isAxiosError(error)) {
     const status = error.response?.status

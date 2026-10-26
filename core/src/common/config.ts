@@ -67,6 +67,11 @@ export interface Config {
         realm: string
         clientId: string
         clientSecret: string
+        /** Service client with realm-management view-users and manage-users in the realm. */
+        provisioning: {
+          clientId: string
+          clientSecret: string
+        }
       }
     }
   }
@@ -167,6 +172,10 @@ const config = configPackage({
           realm: 'mimer-contacts',
           clientId: 'mina-sidor',
           clientSecret: '',
+          provisioning: {
+            clientId: 'mimer-contacts-provisioning',
+            clientSecret: '',
+          },
         },
       },
     },
