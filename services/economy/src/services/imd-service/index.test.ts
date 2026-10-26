@@ -3,19 +3,27 @@ import { economy } from '@onecore/types'
 import type {
   LeaseMatch,
   MultipleLeaseMatch,
+  TenantLease,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 
 jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
   getActiveLeasesByRentalObjectCodes: jest.fn(),
+  getLeasesByTenantId: jest.fn(),
 }))
 
-import { getActiveLeasesByRentalObjectCodes } from '@src/common/adapters/tenfast/tenfast-adapter'
+import {
+  getActiveLeasesByRentalObjectCodes,
+  getLeasesByTenantId,
+} from '@src/common/adapters/tenfast/tenfast-adapter'
 import { imdService } from '.'
 
 const mockGetActiveLeases =
   getActiveLeasesByRentalObjectCodes as jest.MockedFunction<
     typeof getActiveLeasesByRentalObjectCodes
   >
+const mockGetLeasesByTenantId = getLeasesByTenantId as jest.MockedFunction<
+  typeof getLeasesByTenantId
+>
 
 const csv = `
 306-008-01-0201;2026-01-01;2026-01-31;VV;129,312;136,892;7,580;621,680;;82,016;m3;;;1
@@ -51,11 +59,11 @@ describe(imdService.enrichIMDRows, () => {
       new Map<string, LeaseMatch | null>([
         [
           '306-008-01-0201',
-          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null, tenantIds: [] },
         ],
         [
           '306-008-01-0202',
-          { leaseId: '306-008-01-0202/01', leaseEndDate: null },
+          { leaseId: '306-008-01-0202/01', leaseEndDate: null, tenantIds: [] },
         ],
       ])
     )
@@ -102,7 +110,7 @@ describe(imdService.enrichIMDRows, () => {
       new Map<string, LeaseMatch | null>([
         [
           '306-008-01-0201',
-          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null, tenantIds: [] },
         ],
         ['306-008-01-0299', null],
       ])
@@ -180,7 +188,7 @@ describe(imdService.enrichIMDRows, () => {
       new Map<string, LeaseMatch | null>([
         [
           '306-008-01-0201',
-          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null, tenantIds: [] },
         ],
       ])
     )
@@ -223,7 +231,7 @@ describe(imdService.enrichIMDRows, () => {
       new Map<string, LeaseMatch | null>([
         [
           '306-008-01-0201',
-          { leaseId: '306-008-01-0201/02', leaseEndDate: null },
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null, tenantIds: [] },
         ],
       ])
     )
@@ -273,6 +281,7 @@ describe(imdService.enrichIMDRows, () => {
           {
             leaseId: '306-008-01-0201/02',
             leaseEndDate: new Date(leaseEndDate),
+            tenantIds: [],
           },
         ],
       ])
@@ -336,7 +345,10 @@ describe(imdService.enrichIMDRows, () => {
     async (_, leaseEndDate) => {
       mockGetActiveLeases.mockResolvedValue(
         new Map<string, LeaseMatch | null>([
-          ['306-008-01-0201', { leaseId: '306-008-01-0201/02', leaseEndDate }],
+          [
+            '306-008-01-0201',
+            { leaseId: '306-008-01-0201/02', leaseEndDate, tenantIds: [] },
+          ],
         ])
       )
 
@@ -369,6 +381,273 @@ describe(imdService.enrichIMDRows, () => {
     ])
 
     expect(result.ok).toBe(false)
+  })
+
+  describe("moving rows to the tenant's new lease", () => {
+    const oldLeaseId = '306-008-01-0501/04'
+    const newLeaseId = '306-008-01-0302/12'
+
+    const makeRow = (rentalObjectCode = '306-008-01-0501', unit = 'VV') => ({
+      rentalObjectCode,
+      from: new Date('2026-09-01'),
+      to: new Date('2026-09-30'),
+      unit,
+      volume: 7.58,
+      cost: 621.68,
+      measurementUnit: 'm3',
+    })
+
+    // Tenants usually keep the old home for a while after moving in, so the
+    // new lease overlaps the old one by default.
+    const makeTenantLease = (overrides: Partial<TenantLease>): TenantLease => ({
+      leaseId: newLeaseId,
+      stage: 'active',
+      startDate: new Date('2026-09-01'),
+      endDate: null,
+      isResidential: true,
+      ...overrides,
+    })
+
+    const oldLease = makeTenantLease({
+      leaseId: oldLeaseId,
+      stage: 'terminationScheduled',
+      startDate: new Date('2020-01-01'),
+      endDate: new Date('2026-10-31'),
+    })
+    const newLease = makeTenantLease({})
+
+    const mockOldLease = (tenantIds = ['tenant-1']) =>
+      mockGetActiveLeases.mockResolvedValue(
+        new Map<string, LeaseMatch | null>([
+          [
+            '306-008-01-0501',
+            {
+              leaseId: oldLeaseId,
+              leaseEndDate: new Date('2026-10-31'),
+              tenantIds,
+            },
+          ],
+        ])
+      )
+
+    beforeEach(() => {
+      mockGetLeasesByTenantId.mockReset()
+    })
+
+    it.each([
+      ['overlaps the old one', newLease],
+      [
+        'starts with the billing month',
+        makeTenantLease({
+          stage: 'upcoming',
+          startDate: new Date('2026-11-01'),
+        }),
+      ],
+    ])(
+      'moves the row to the new residential lease when it %s',
+      async (_, lease) => {
+        mockOldLease()
+        mockGetLeasesByTenantId.mockResolvedValue({
+          ok: true,
+          data: [oldLease, lease],
+        })
+
+        const result = await imdService.enrichIMDRows([makeRow()])
+
+        assert(result.ok)
+        expect(mockGetLeasesByTenantId).toHaveBeenCalledWith('tenant-1')
+        expect(result.data.unprocessed).toHaveLength(0)
+        expect(result.data.enriched).toEqual([
+          expect.objectContaining({
+            rentalObjectCode: '306-008-01-0501',
+            leaseId: newLeaseId,
+          }),
+        ])
+        expect(result.data.enriched[0]).not.toHaveProperty('reason')
+      }
+    )
+
+    it('looks up each tenant once and moves all their rows', async () => {
+      mockOldLease()
+      mockGetLeasesByTenantId.mockResolvedValue({
+        ok: true,
+        data: [oldLease, newLease],
+      })
+
+      const result = await imdService.enrichIMDRows([
+        makeRow('306-008-01-0501', 'VV'),
+        makeRow('306-008-01-0501', 'EL'),
+      ])
+
+      assert(result.ok)
+      expect(mockGetLeasesByTenantId).toHaveBeenCalledTimes(1)
+      expect(result.data.unprocessed).toHaveLength(0)
+      expect(result.data.enriched.map((row) => row.leaseId)).toEqual([
+        newLeaseId,
+        newLeaseId,
+      ])
+    })
+
+    it.each<
+      [string, Parameters<typeof mockGetLeasesByTenantId.mockResolvedValue>[0]]
+    >([
+      ['the tenant has no other lease', { ok: true, data: [oldLease] }],
+      [
+        'the only other lease is not residential',
+        {
+          ok: true,
+          data: [oldLease, makeTenantLease({ isResidential: false })],
+        },
+      ],
+      [
+        'the new lease is not signed yet',
+        {
+          ok: true,
+          data: [oldLease, makeTenantLease({ stage: 'signingInProgress' })],
+        },
+      ],
+      [
+        'the new lease is voided',
+        { ok: true, data: [oldLease, makeTenantLease({ stage: 'voided' })] },
+      ],
+      [
+        'the new lease starts during the billing month',
+        {
+          ok: true,
+          data: [
+            oldLease,
+            makeTenantLease({ startDate: new Date('2026-11-15') }),
+          ],
+        },
+      ],
+      [
+        'the new lease ends during the billing month',
+        {
+          ok: true,
+          data: [
+            oldLease,
+            makeTenantLease({ endDate: new Date('2026-11-15') }),
+          ],
+        },
+      ],
+      [
+        'several residential leases cover the billing month',
+        {
+          ok: true,
+          data: [
+            oldLease,
+            newLease,
+            makeTenantLease({ leaseId: '306-008-01-0303/01', stage: 'active' }),
+          ],
+        },
+      ],
+      [
+        'the old lease is not residential',
+        {
+          ok: true,
+          data: [{ ...oldLease, isResidential: false }, newLease],
+        },
+      ],
+      [
+        "the old lease is missing from the tenant's leases",
+        { ok: true, data: [newLease] },
+      ],
+      ['the lookup fails', { ok: false, err: 'unknown' }],
+    ])('keeps the row as tenant-moved when %s', async (_, tenantLeases) => {
+      mockOldLease()
+      mockGetLeasesByTenantId.mockResolvedValue(tenantLeases)
+
+      const result = await imdService.enrichIMDRows([makeRow()])
+
+      assert(result.ok)
+      expect(result.data.enriched).toHaveLength(0)
+      expect(result.data.unprocessed).toEqual([
+        expect.objectContaining({ reason: 'tenant-moved' }),
+      ])
+    })
+
+    it('keeps the row as tenant-moved without lookup when the lease has several tenants', async () => {
+      mockOldLease(['tenant-1', 'tenant-2'])
+
+      const result = await imdService.enrichIMDRows([makeRow()])
+
+      assert(result.ok)
+      expect(mockGetLeasesByTenantId).not.toHaveBeenCalled()
+      expect(result.data.unprocessed).toEqual([
+        expect.objectContaining({ reason: 'tenant-moved' }),
+      ])
+    })
+
+    it('keeps the row as tenant-moved without lookup when the unit is unsupported', async () => {
+      mockOldLease()
+
+      const result = await imdService.enrichIMDRows([
+        makeRow('306-008-01-0501', 'UNKNOWN'),
+      ])
+
+      assert(result.ok)
+      expect(mockGetLeasesByTenantId).not.toHaveBeenCalled()
+      expect(result.data.unprocessed).toEqual([
+        expect.objectContaining({ reason: 'tenant-moved' }),
+      ])
+    })
+
+    // With overlapping leases the new home has its own rows for the same
+    // month. Until we know the Tenfast import keeps two rows with the same
+    // article on one lease, the moved row of that article is left manual.
+    it('keeps the row as tenant-moved when the new home already has a row with the same article', async () => {
+      mockGetActiveLeases.mockResolvedValue(
+        new Map<string, LeaseMatch | null>([
+          [
+            '306-008-01-0501',
+            {
+              leaseId: oldLeaseId,
+              leaseEndDate: new Date('2026-10-31'),
+              tenantIds: ['tenant-1'],
+            },
+          ],
+          [
+            '306-008-01-0302',
+            {
+              leaseId: newLeaseId,
+              leaseEndDate: null,
+              tenantIds: ['tenant-1'],
+            },
+          ],
+        ])
+      )
+      mockGetLeasesByTenantId.mockResolvedValue({
+        ok: true,
+        data: [oldLease, newLease],
+      })
+
+      const result = await imdService.enrichIMDRows([
+        makeRow('306-008-01-0501', 'VV'),
+        makeRow('306-008-01-0302', 'VV'),
+        makeRow('306-008-01-0501', 'VMM'),
+      ])
+
+      assert(result.ok)
+      expect(result.data.enriched).toEqual([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0302',
+          unit: 'VV',
+          leaseId: newLeaseId,
+        }),
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0501',
+          unit: 'VMM',
+          leaseId: newLeaseId,
+        }),
+      ])
+      expect(result.data.unprocessed).toEqual([
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0501',
+          unit: 'VV',
+          reason: 'tenant-moved',
+        }),
+      ])
+    })
   })
 })
 

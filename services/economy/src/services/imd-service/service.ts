@@ -5,8 +5,10 @@ import { economy } from '@onecore/types'
 
 import {
   getActiveLeasesByRentalObjectCodes,
+  getLeasesByTenantId,
   type LeaseMatch,
   type MultipleLeaseMatch,
+  type TenantLease,
 } from '../../common/adapters/tenfast/tenfast-adapter'
 
 import z from 'zod'
@@ -153,6 +155,149 @@ function classifyRows(
   )
 }
 
+// Stages of a lease that will be invoiced for the billing month. Leases still
+// being signed don't count, nor do ones that are voided or over.
+const INVOICEABLE_STAGES = new Set([
+  'active',
+  'upcoming',
+  'terminationScheduled',
+  'preTermination',
+])
+
+function coversPeriod(
+  lease: TenantLease,
+  period: { from: Date; to: Date }
+): boolean {
+  return (
+    lease.startDate !== null &&
+    !dayjs(lease.startDate).isAfter(period.from, 'day') &&
+    (lease.endDate === null || !dayjs(lease.endDate).isBefore(period.to, 'day'))
+  )
+}
+
+// A tenant who moved from one residential lease to another is billed for the
+// old home on the new lease. Anything ambiguous is left for manual handling.
+function findNewLease(
+  tenantLeases: Array<TenantLease>,
+  oldLeaseId: string,
+  billingPeriod: { from: Date; to: Date }
+): string | null {
+  const oldLease = tenantLeases.find((lease) => lease.leaseId === oldLeaseId)
+  if (!oldLease?.isResidential) {
+    return null
+  }
+
+  const candidates = tenantLeases.filter(
+    (lease) =>
+      lease.leaseId !== oldLeaseId &&
+      lease.isResidential &&
+      INVOICEABLE_STAGES.has(lease.stage) &&
+      coversPeriod(lease, billingPeriod)
+  )
+  return candidates.length === 1 ? candidates[0].leaseId : null
+}
+
+const TENANT_LOOKUP_CONCURRENCY = 5
+
+async function getLeasesByTenantIds(
+  tenantIds: Array<string>
+): Promise<Map<string, Array<TenantLease> | null>> {
+  const results = new Map<string, Array<TenantLease> | null>()
+  for (let i = 0; i < tenantIds.length; i += TENANT_LOOKUP_CONCURRENCY) {
+    const batch = tenantIds.slice(i, i + TENANT_LOOKUP_CONCURRENCY)
+    const responses = await Promise.all(
+      batch.map((tenantId) => getLeasesByTenantId(tenantId))
+    )
+    batch.forEach((tenantId, j) => {
+      const response = responses[j]
+      if (!response.ok) {
+        logger.warn({ tenantId }, 'IMD: Failed to fetch leases for tenant')
+      }
+      results.set(tenantId, response.ok ? response.data : null)
+    })
+  }
+  return results
+}
+
+function articleKey(leaseId: string, unit: string): string {
+  return `${leaseId}:${UNIT_CONFIG[unit].articleCode}`
+}
+
+async function moveToNewLeases(
+  result: EnrichResult,
+  leaseMap: Map<string, LeaseMatch | MultipleLeaseMatch | null>
+): Promise<EnrichResult> {
+  // Leases shared by several tenants are left for manual handling, since the
+  // tenants may have moved to different homes.
+  const candidates = result.unprocessed.flatMap((row) => {
+    const lease = leaseMap.get(row.rentalObjectCode)
+    if (
+      row.reason !== 'tenant-moved' ||
+      !UNIT_CONFIG[row.unit] ||
+      !lease ||
+      isMultipleLeaseMatch(lease) ||
+      lease.tenantIds.length !== 1
+    ) {
+      return []
+    }
+    return [{ row, oldLeaseId: lease.leaseId, tenantId: lease.tenantIds[0] }]
+  })
+  if (candidates.length === 0) {
+    return result
+  }
+
+  const tenantLeases = await getLeasesByTenantIds([
+    ...new Set(candidates.map(({ tenantId }) => tenantId)),
+  ])
+
+  const moved = candidates.flatMap(({ row, oldLeaseId, tenantId }) => {
+    const leases = tenantLeases.get(tenantId)
+    const newLeaseId = leases
+      ? findNewLease(leases, oldLeaseId, billingPeriodForConsumption(row.from))
+      : null
+    return newLeaseId ? [{ row, oldLeaseId, newLeaseId }] : []
+  })
+
+  // Two rows with the same article on one lease would read as a duplicate on
+  // the invoice, so a moved row only goes through if its article is unique.
+  const articleCounts = new Map<string, number>()
+  for (const { leaseId, unit } of [
+    ...result.enriched,
+    ...moved.map(({ row, newLeaseId }) => ({
+      leaseId: newLeaseId,
+      unit: row.unit,
+    })),
+  ]) {
+    const key = articleKey(leaseId, unit)
+    articleCounts.set(key, (articleCounts.get(key) ?? 0) + 1)
+  }
+  const accepted = moved.filter(
+    ({ row, newLeaseId }) =>
+      articleCounts.get(articleKey(newLeaseId, row.unit)) === 1
+  )
+
+  for (const { row, oldLeaseId, newLeaseId } of accepted) {
+    logger.info(
+      { rentalObjectCode: row.rentalObjectCode, oldLeaseId, newLeaseId },
+      "IMD: Moved row to tenant's new lease"
+    )
+  }
+
+  const acceptedRows = new Set<UnprocessedIMDRow>(
+    accepted.map(({ row }) => row)
+  )
+  return {
+    enriched: [
+      ...result.enriched,
+      ...accepted.map(({ row, newLeaseId }) => {
+        const { reason: _reason, ...imdRow } = row
+        return { ...imdRow, leaseId: newLeaseId }
+      }),
+    ],
+    unprocessed: result.unprocessed.filter((row) => !acceptedRows.has(row)),
+  }
+}
+
 async function enrichIMDRows(
   imdRows: Array<IMDRow>
 ): Promise<Result<EnrichResult>> {
@@ -176,7 +321,10 @@ async function enrichIMDRows(
       periodEnd: period.end,
     })
 
-    const { enriched, unprocessed } = classifyRows(imdRows, leaseMap)
+    const { enriched, unprocessed } = await moveToNewLeases(
+      classifyRows(imdRows, leaseMap),
+      leaseMap
+    )
 
     return { ok: true, data: { enriched, unprocessed } }
   } catch (err) {
