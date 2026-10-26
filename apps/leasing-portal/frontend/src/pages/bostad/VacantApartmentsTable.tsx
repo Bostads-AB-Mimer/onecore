@@ -16,6 +16,7 @@ import { MoreHorizontal } from 'lucide-react'
 
 import { QueryError } from '../QueryError'
 import { EditListingDialog } from './EditListingDialog'
+import { useCreateListing } from './useCreateListing'
 import {
   useVacantApartments,
   type VacantApartment,
@@ -42,12 +43,101 @@ function ListingBadge({ listing }: { listing: VacantApartment['listing'] }) {
   if (listing.reviewedAt) {
     return <Badge variant="success">Redo att publicera</Badge>
   }
-  return <Badge variant="secondary">Utkast</Badge>
+  return <Badge variant="priority-medium">Behöver granskning</Badge>
+}
+
+// Approximated from the design's colors with the variants @onecore/ui already
+// has — not a 1:1 palette match, but close enough without adding new ones.
+const TENURE_BADGE_VARIANTS: Record<
+  string,
+  'outline' | 'priority-medium' | 'priority-high' | 'success'
+> = {
+  Standard: 'outline',
+  Student: 'priority-medium',
+  'Co-living': 'priority-high',
+  Trygghetsboende: 'success',
+}
+
+function TenureBadge({
+  tenure,
+}: {
+  tenure: VacantApartment['rentalTenureType']
+}) {
+  const label = tenureLabel(tenure)
+  return (
+    <Badge variant={TENURE_BADGE_VARIANTS[label] ?? 'outline'}>{label}</Badge>
+  )
 }
 
 const buildColumns = (
-  onEdit: (apartment: VacantApartment) => void
+  onEdit: (apartment: VacantApartment) => void,
+  creatingFor: string | null
 ): ResponsiveTableColumn<VacantApartment>[] => [
+  {
+    key: 'address',
+    label: 'Adress',
+    render: (a) => (
+      <>
+        {a.address?.street ?? '–'}
+        <span className="block text-xs text-muted-foreground">
+          {a.rentalObjectCode}
+        </span>
+      </>
+    ),
+  },
+  { key: 'area', label: 'Område', render: (a) => a.marketAreaName ?? '–' },
+  { key: 'type', label: 'Typ', render: (a) => a.residenceTypeName ?? '–' },
+  { key: 'rooms', label: 'Rum', render: (a) => a.roomCount ?? '–' },
+  {
+    key: 'size',
+    label: 'Yta',
+    render: (a) => (a.area != null ? `${a.area} m²` : '–'),
+  },
+  { key: 'rent', label: 'Hyra', render: (a) => formatRent(a.rent) },
+  {
+    key: 'tenure',
+    label: 'Hyresobjektstyp',
+    render: (a) => (
+      <>
+        <TenureBadge tenure={a.rentalTenureType} />
+        {a.rentalTags.length > 0 && (
+          <span className="mt-1 flex flex-wrap gap-1">
+            {a.rentalTags.map((tag) => (
+              <Badge key={tag.id} variant="outline">
+                {tag.name}
+              </Badge>
+            ))}
+          </span>
+        )}
+      </>
+    ),
+  },
+  {
+    key: 'vacantFrom',
+    label: 'Tillgänglig från',
+    render: (a) => (
+      <>
+        {/* availableFrom overrides the computed vacantFrom when a leasing
+            officer has set one via "Redigera annons". */}
+        {formatDate(a.listing?.availableFrom ?? a.vacantFrom)}
+        {a.block?.reason && (
+          <span className="block text-xs text-muted-foreground">
+            Spärr: {a.block.reason}
+          </span>
+        )}
+      </>
+    ),
+  },
+  {
+    key: 'listing',
+    label: 'Status',
+    render: (a) => <ListingBadge listing={a.listing} />,
+  },
+  {
+    key: 'attempts',
+    label: 'Tidigare försök',
+    render: (a) => a.closedListingsSinceLastLease,
+  },
   {
     key: 'actions',
     label: '',
@@ -67,7 +157,11 @@ const buildColumns = (
         <DropdownMenuContent align="end">
           {/* Not built yet — see UTH-356. */}
           <DropdownMenuItem disabled>Publicera</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onEdit(a)}>
+          {/* Creates a draft listing first if the apartment doesn't have one yet. */}
+          <DropdownMenuItem
+            disabled={creatingFor === a.rentalObjectCode}
+            onClick={() => onEdit(a)}
+          >
             Redigera annons
           </DropdownMenuItem>
           {/* No deletion flow exists yet. */}
@@ -77,67 +171,6 @@ const buildColumns = (
         </DropdownMenuContent>
       </DropdownMenu>
     ),
-  },
-  {
-    key: 'rentalObjectCode',
-    label: 'Objektsnummer',
-    className: 'font-mono',
-    render: (a) => a.rentalObjectCode,
-  },
-  {
-    key: 'address',
-    label: 'Adress',
-    render: (a) => a.address?.street ?? '–',
-  },
-  { key: 'area', label: 'Område', render: (a) => a.marketAreaName ?? '–' },
-  { key: 'type', label: 'Typ', render: (a) => a.residenceTypeName ?? '–' },
-  {
-    key: 'size',
-    label: 'Yta',
-    render: (a) => (a.area != null ? `${a.area} m²` : '–'),
-  },
-  { key: 'rent', label: 'Hyra', render: (a) => formatRent(a.rent) },
-  {
-    key: 'tenure',
-    label: 'Upplåtelseform',
-    render: (a) => (
-      <>
-        {tenureLabel(a.rentalTenureType)}
-        {a.rentalTags.length > 0 && (
-          <span className="mt-1 flex flex-wrap gap-1">
-            {a.rentalTags.map((tag) => (
-              <Badge key={tag.id} variant="outline">
-                {tag.name}
-              </Badge>
-            ))}
-          </span>
-        )}
-      </>
-    ),
-  },
-  {
-    key: 'vacantFrom',
-    label: 'Tillgänglig från',
-    render: (a) => (
-      <>
-        {formatDate(a.vacantFrom)}
-        {a.block?.reason && (
-          <span className="block text-xs text-muted-foreground">
-            Spärr: {a.block.reason}
-          </span>
-        )}
-      </>
-    ),
-  },
-  {
-    key: 'listing',
-    label: 'Annons',
-    render: (a) => <ListingBadge listing={a.listing} />,
-  },
-  {
-    key: 'attempts',
-    label: 'Tidigare försök',
-    render: (a) => a.closedListingsSinceLastLease,
   },
 ]
 
@@ -152,7 +185,26 @@ export function VacantApartmentsTable() {
   useEffect(() => clear(), [data, clear])
 
   const [editing, setEditing] = useState<VacantApartment | null>(null)
-  const columns = useMemo(() => buildColumns(setEditing), [])
+  const createListing = useCreateListing()
+
+  const handleEdit = (apartment: VacantApartment) => {
+    if (apartment.listing) {
+      setEditing(apartment)
+      return
+    }
+    createListing.mutate(apartment.rentalObjectCode, {
+      onSuccess: (listing) => setEditing({ ...apartment, listing }),
+    })
+  }
+
+  const columns = useMemo(
+    () =>
+      buildColumns(
+        handleEdit,
+        createListing.isPending ? createListing.variables : null
+      ),
+    [createListing.isPending, createListing.variables]
+  )
 
   if (isError) return <QueryError error={error} />
 
@@ -181,16 +233,7 @@ export function VacantApartmentsTable() {
         onClear={selection.clear}
         actions={[]}
       />
-      <EditListingDialog
-        apartment={editing}
-        onClose={() => setEditing(null)}
-        onSave={() => {
-          // TODO(UTH-354): no write endpoint exists yet for the review/publish
-          // fields (see core/leasing's /listings routes) — wire this up once
-          // that's built instead of persisting anything here.
-          setEditing(null)
-        }}
-      />
+      <EditListingDialog apartment={editing} onClose={() => setEditing(null)} />
     </>
   )
 }

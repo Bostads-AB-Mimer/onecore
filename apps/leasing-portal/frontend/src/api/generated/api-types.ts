@@ -113,6 +113,10 @@ export interface paths {
                   /** Format: date-time */
                   reviewedAt?: string | null
                   reviewedBy?: string | null
+                  /** Format: date-time */
+                  availableFrom?: string | null
+                  /** Format: date-time */
+                  tentativeAvailableFrom?: string | null
                 } | null
                 closedListingsSinceLastLease: number
               }[]
@@ -121,6 +125,190 @@ export interface paths {
         }
         /** @description Unauthorized */
         401: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
+            }
+          }
+        }
+      }
+    }
+  }
+  '/bostad/listings': {
+    /**
+     * Create a draft listing for an apartment
+     * @description Creates a Draft listing for a rental object that has none yet. Passthrough to core.
+     */
+    post: {
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            rentalObjectCode: string
+          }
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              content: {
+                id: number
+                rentalObjectCode: string
+                /** Format: date-time */
+                publishedFrom?: string | null
+                /** Format: date-time */
+                publishedTo?: string | null
+                /** @enum {number} */
+                status: 1 | 2 | 3 | 4 | 5
+                /** @enum {string} */
+                rentalRule: 'SCORED' | 'NON_SCORED'
+                /** @enum {string} */
+                listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+                /** Format: date-time */
+                reviewedAt?: string | null
+                reviewedBy?: string | null
+                /** Format: date-time */
+                availableFrom?: string | null
+                /** Format: date-time */
+                tentativeAvailableFrom?: string | null
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
+            }
+          }
+        }
+      }
+    }
+  }
+  '/bostad/listings/{listingId}': {
+    /**
+     * Update a listing
+     * @description Partially updates publishedFrom, publishedTo, reviewedAt, reviewedBy, availableFrom and tentativeAvailableFrom on a listing. Passthrough to core.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The listing id */
+          listingId: number
+        }
+      }
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** Format: date-time */
+            publishedFrom?: string | null
+            /** Format: date-time */
+            publishedTo?: string | null
+            /** Format: date-time */
+            reviewedAt?: string | null
+            reviewedBy?: string | null
+            /** Format: date-time */
+            availableFrom?: string | null
+            /** Format: date-time */
+            tentativeAvailableFrom?: string | null
+          }
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                id: number
+                rentalObjectCode: string
+                /** Format: date-time */
+                publishedFrom?: string | null
+                /** Format: date-time */
+                publishedTo?: string | null
+                /** @enum {number} */
+                status: 1 | 2 | 3 | 4 | 5
+                /** @enum {string} */
+                rentalRule: 'SCORED' | 'NON_SCORED'
+                /** @enum {string} */
+                listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+                /** Format: date-time */
+                reviewedAt?: string | null
+                reviewedBy?: string | null
+                /** Format: date-time */
+                availableFrom?: string | null
+                /** Format: date-time */
+                tentativeAvailableFrom?: string | null
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
           content: {
             'application/json': {
               error?: string

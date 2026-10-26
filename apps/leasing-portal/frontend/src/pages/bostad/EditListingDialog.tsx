@@ -30,18 +30,22 @@ import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { CalendarIcon } from 'lucide-react'
 
+import { useLeasingHost } from '../../host/useLeasingHost'
+
+import { useUpdateListing } from './useUpdateListing'
 import type { VacantApartment } from './useVacantApartments'
 
 interface ListingFormValues {
   publishedTo: Date | undefined
   publishUntilFurtherNotice: boolean
+  availableFrom: Date | undefined
+  tentativeAvailableFrom: Date | undefined
   reviewed: boolean
 }
 
 interface EditListingDialogProps {
   apartment: VacantApartment | null
   onClose: () => void
-  onSave: (apartment: VacantApartment, values: ListingFormValues) => void
 }
 
 const formatAddress = (address: VacantApartment['address']) =>
@@ -50,40 +54,22 @@ const formatAddress = (address: VacantApartment['address']) =>
 const formatDate = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleDateString('sv-SE') : '–'
 
-/**
- * Matches the design's date-input look (border, calendar icon) for a date
- * that isn't actually editable here — not a plain Field, so it doesn't read
- * as just another fact in the grid above.
- */
-function DisabledDateField({
-  label,
-  display,
-}: {
-  label: string
-  display: string
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium">{label}</label>
-      <Button
-        type="button"
-        variant="outline"
-        disabled
-        className="w-full justify-start text-left font-normal"
-      >
-        <CalendarIcon className="mr-2 h-4 w-4" />
-        {display}
-      </Button>
-    </div>
-  )
-}
-
 const defaultValues = (apartment: VacantApartment): ListingFormValues => ({
   publishedTo: apartment.listing?.publishedTo
     ? new Date(apartment.listing.publishedTo)
     : undefined,
   publishUntilFurtherNotice:
     !!apartment.listing?.publishedFrom && !apartment.listing?.publishedTo,
+  // availableFrom overrides the computed vacantFrom when set; prefill with
+  // the override if one exists, otherwise the computed value (as before).
+  availableFrom: apartment.listing?.availableFrom
+    ? new Date(apartment.listing.availableFrom)
+    : apartment.vacantFrom
+      ? new Date(apartment.vacantFrom)
+      : undefined,
+  tentativeAvailableFrom: apartment.listing?.tentativeAvailableFrom
+    ? new Date(apartment.listing.tentativeAvailableFrom)
+    : undefined,
   reviewed: !!apartment.listing?.reviewedAt,
 })
 
@@ -95,8 +81,9 @@ const defaultValues = (apartment: VacantApartment): ListingFormValues => ({
 export function EditListingDialog({
   apartment,
   onClose,
-  onSave,
 }: EditListingDialogProps) {
+  const { user } = useLeasingHost()
+  const updateListing = useUpdateListing()
   const form = useForm<ListingFormValues>({
     defaultValues: apartment
       ? defaultValues(apartment)
@@ -120,7 +107,45 @@ export function EditListingDialog({
   }
 
   const onSubmit = (values: ListingFormValues) => {
-    onSave(apartment, values)
+    // No listing exists yet to edit — creating one is a separate flow, not
+    // built here (the menu item that opens this dialog is disabled until then).
+    if (!apartment.listing) return
+
+    const alreadyPublished = !!apartment.listing.publishedFrom
+
+    // Only persist availableFrom as an override when it actually diverges
+    // from the computed vacantFrom — otherwise every save would freeze a
+    // stale snapshot of the computed value as a permanent override.
+    const computedVacantFrom = apartment.vacantFrom
+      ? new Date(apartment.vacantFrom).getTime()
+      : null
+    const availableFromChanged =
+      (values.availableFrom?.getTime() ?? null) !== computedVacantFrom
+
+    updateListing.mutate(
+      {
+        listingId: apartment.listing.id,
+        // "Publicera till" is only actually editable while still a draft;
+        // once published it's shown disabled, so leave it untouched here.
+        ...(!alreadyPublished && {
+          publishedTo: values.publishUntilFurtherNotice
+            ? null
+            : (values.publishedTo?.toISOString() ?? null),
+        }),
+        availableFrom: availableFromChanged
+          ? (values.availableFrom?.toISOString() ?? null)
+          : null,
+        tentativeAvailableFrom:
+          values.tentativeAvailableFrom?.toISOString() ?? null,
+        reviewedAt: values.reviewed
+          ? (apartment.listing.reviewedAt ?? new Date().toISOString())
+          : null,
+        reviewedBy: values.reviewed
+          ? (apartment.listing.reviewedBy ?? user.email ?? user.name ?? user.id)
+          : null,
+      },
+      { onSuccess: onClose }
+    )
   }
 
   return (
@@ -133,21 +158,21 @@ export function EditListingDialog({
           </p>
         </DialogHeader>
 
-        <Tabs defaultValue="grundlaggande">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="grundlaggande">Grundläggande</TabsTrigger>
-            <TabsTrigger value="beskrivning">
-              Detaljerad beskrivning
-            </TabsTrigger>
-            <TabsTrigger value="media">Media</TabsTrigger>
-            <TabsTrigger value="planritning">Planritning</TabsTrigger>
-          </TabsList>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <Tabs defaultValue="grundlaggande">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="grundlaggande">Grundläggande</TabsTrigger>
+                <TabsTrigger value="beskrivning">
+                  Detaljerad beskrivning
+                </TabsTrigger>
+                <TabsTrigger value="media">Media</TabsTrigger>
+                <TabsTrigger value="planritning">Planritning</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="grundlaggande" className="min-h-[520px]">
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-6"
+              <TabsContent
+                value="grundlaggande"
+                className="min-h-[520px] space-y-6"
               >
                 <Card>
                   <CardHeader>
@@ -196,79 +221,53 @@ export function EditListingDialog({
                   </CardContent>
                 </Card>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {/* publishedFrom is set once the listing is actually
-                      published, not by this form — shown disabled so it's
-                      visible without implying it can be edited here. */}
-                  <DisabledDateField
-                    label="Publicera från"
-                    display={
-                      apartment.listing?.publishedFrom
-                        ? format(
-                            new Date(apartment.listing.publishedFrom),
-                            'd MMMM yyyy',
-                            { locale: sv }
-                          )
-                        : 'Välj startdatum'
-                    }
+                {/* Per the ticket: "Publicera från" is removed from this view
+                    entirely (not shown disabled either) while still a draft;
+                    once published, show the actual date as plain text. */}
+                {apartment.listing?.publishedFrom ? (
+                  <Field
+                    label="Publicerad från"
+                    value={formatDate(apartment.listing.publishedFrom)}
                   />
-
-                  {apartment.listing?.publishedFrom ? (
-                    <DisabledDateField
-                      label="Publicera till"
-                      display={
-                        apartment.listing.publishedTo
-                          ? format(
-                              new Date(apartment.listing.publishedTo),
-                              'd MMMM yyyy',
-                              { locale: sv }
-                            )
-                          : 'Tillsvidare'
-                      }
-                    />
-                  ) : (
-                    <FormField
-                      control={form.control}
-                      name="publishedTo"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Publicera till</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  disabled={publishUntilFurtherNotice}
-                                  className="w-full justify-start text-left font-normal"
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {publishUntilFurtherNotice
-                                    ? 'Tillsvidare'
-                                    : field.value
-                                      ? format(field.value, 'd MMMM yyyy', {
-                                          locale: sv,
-                                        })
-                                      : 'Välj slutdatum'}
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent
-                              className="w-auto p-0"
-                              align="start"
-                            >
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                </div>
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="publishedTo"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Publicera till</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled={publishUntilFurtherNotice}
+                                className="w-full justify-start text-left font-normal"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {publishUntilFurtherNotice
+                                  ? 'Tillsvidare'
+                                  : field.value
+                                    ? format(field.value, 'd MMMM yyyy', {
+                                        locale: sv,
+                                      })
+                                    : 'Välj slutdatum'}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {!apartment.listing?.publishedFrom && (
                   <FormField
@@ -295,67 +294,134 @@ export function EditListingDialog({
                 )}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {/* vacantFrom is computed from Tenfast lease data (AVTAL-343),
-                      so it's shown disabled here rather than as an editable
-                      date picker like the design mockup has it. */}
-                  <DisabledDateField
-                    label="Tillgänglig från"
-                    display={formatDate(apartment.vacantFrom)}
+                  {/* Prefilled with the computed vacantFrom (AVTAL-343); saving
+                      without changing it keeps relying on that computed value
+                      instead of freezing it as a permanent override. */}
+                  <FormField
+                    control={form.control}
+                    name="availableFrom"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Tillgänglig från</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full justify-start text-left font-normal"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value
+                                  ? format(field.value, 'd MMMM yyyy', {
+                                      locale: sv,
+                                    })
+                                  : 'Välj datum'}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </FormItem>
+                    )}
                   />
-                  {/* No backing field yet, see Byggnadsår above. */}
-                  <DisabledDateField
-                    label="Eventuellt tillgänglig från"
-                    display={formatDate(undefined)}
+                  {/* No computed fallback — an unconfirmed earlier move-out
+                      date, see Byggnadsår above for the other open fields. */}
+                  <FormField
+                    control={form.control}
+                    name="tentativeAvailableFrom"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Eventuellt tillgänglig från</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full justify-start text-left font-normal"
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {field.value
+                                  ? format(field.value, 'd MMMM yyyy', {
+                                      locale: sv,
+                                    })
+                                  : 'Välj datum'}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </FormItem>
+                    )}
                   />
                 </div>
+              </TabsContent>
 
-                <FormField
-                  control={form.control}
-                  name="reviewed"
-                  render={({ field }) => (
-                    <FormItem className="flex items-start gap-2 space-y-0 border-t pt-4">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div>
-                        <FormLabel className="!mt-0">
-                          Granskad – redo att publicera
-                        </FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Annonsen flyttas till &quot;Redo att publicera&quot;
-                          när den sparas.
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+              <TabsContent value="beskrivning" className="min-h-[520px]">
+                <p className="py-8 text-center text-muted-foreground">
+                  Innehåll kommer
+                </p>
+              </TabsContent>
+              <TabsContent value="media" className="min-h-[520px]">
+                <p className="py-8 text-center text-muted-foreground">
+                  Innehåll kommer
+                </p>
+              </TabsContent>
+              <TabsContent value="planritning" className="min-h-[520px]">
+                <p className="py-8 text-center text-muted-foreground">
+                  Innehåll kommer
+                </p>
+              </TabsContent>
+            </Tabs>
 
-                <div className="flex justify-end">
-                  <Button type="submit">Spara/uppdatera annons</Button>
-                </div>
-              </form>
-            </Form>
-          </TabsContent>
+            {/* Outside the tab panels so it stays visible — and savable —
+                regardless of which tab is active, matching the design. */}
+            <FormField
+              control={form.control}
+              name="reviewed"
+              render={({ field }) => (
+                <FormItem className="flex items-start gap-2 space-y-0 border-t pt-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div>
+                    <FormLabel className="!mt-0">
+                      Granskad – redo att publicera
+                    </FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      Annonsen flyttas till &quot;Redo att publicera&quot; när
+                      den sparas.
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
 
-          <TabsContent value="beskrivning" className="min-h-[520px]">
-            <p className="py-8 text-center text-muted-foreground">
-              Innehåll kommer
-            </p>
-          </TabsContent>
-          <TabsContent value="media" className="min-h-[520px]">
-            <p className="py-8 text-center text-muted-foreground">
-              Innehåll kommer
-            </p>
-          </TabsContent>
-          <TabsContent value="planritning" className="min-h-[520px]">
-            <p className="py-8 text-center text-muted-foreground">
-              Innehåll kommer
-            </p>
-          </TabsContent>
-        </Tabs>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={updateListing.isPending}>
+                {updateListing.isPending
+                  ? 'Sparar...'
+                  : 'Spara/uppdatera annons'}
+              </Button>
+            </div>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )
