@@ -27,10 +27,6 @@ export const createHeaders = (
   return headers
 }
 
-/**
- * Without a bound, a Tenfast call that is accepted but never answered holds
- * the caller for as long as the OS allows; for the sync jobs that is for ever.
- */
 const DEFAULT_TIMEOUT_MS = 30_000
 
 export const request = async <T = any>(
