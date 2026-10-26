@@ -142,6 +142,87 @@ export interface paths {
       }
     }
   }
+  '/bostad/listings/{listingId}': {
+    /**
+     * An apartment listing with its object information
+     * @description The listing, its apartment and the number of active applicants, for the listing page. Reads core’s GET /listings/:id.
+     */
+    get: {
+      parameters: {
+        path: {
+          listingId: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                id: number
+                /** @enum {number} */
+                status: 1 | 2 | 3 | 4 | 5
+                /** Format: date-time */
+                publishedTo: string | null
+                rentalObjectCode: string
+                address: string
+                areaName: string
+                tenureType: {
+                  id: string
+                  name: string
+                } | null
+                roomCount: number | null
+                size: number | null
+                floor: string | null
+                rent: number | null
+                /** Format: date-time */
+                vacantFrom: string | null
+                activeApplicantCount: number
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+            }
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              error?: string
+              message?: string
+              [key: string]: unknown
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>

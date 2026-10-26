@@ -1,13 +1,6 @@
 import { SegmentedTabs, useRouteTab } from '@onecore/ui'
 
-// The queue-based (poängsatt) letting process, one tab per stage after publishing.
-const POANGSATT_TABS = [
-  { value: 'publicerat-nu', label: 'Publicerat nu' },
-  { value: 'erbjud-visning', label: 'Erbjud visning' },
-  { value: 'visning', label: 'Visning' },
-  { value: 'erbjud-kontrakt', label: 'Erbjud kontrakt' },
-  { value: 'historik', label: 'Historik' },
-] as const
+import { POANGSATT_TABS } from './poangsatt/stages'
 
 export function PoangsattPage() {
   const { value, basePath } = useRouteTab(POANGSATT_TABS, 'publicerat-nu')
