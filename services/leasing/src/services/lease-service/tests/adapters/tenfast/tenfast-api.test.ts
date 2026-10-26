@@ -14,12 +14,12 @@ describe('tenfast-api.request', () => {
     axiosMock.mockResolvedValue({ status: 200, data: {} })
   })
 
-  it('bounds every call so a hung Tenfast fails within a minute', async () => {
+  it('bounds every call at 10s so a hung Tenfast fails well inside a run', async () => {
     await request({ method: 'get', url: 'https://tenfast.test/v1/avtal' })
 
     const config = axiosMock.mock.calls[0][0]
     expect(config.timeout).toBeGreaterThan(0)
-    expect(config.timeout).toBeLessThanOrEqual(60_000)
+    expect(config.timeout).toBeLessThanOrEqual(10_000)
   })
 
   it('keeps a timeout the caller set', async () => {

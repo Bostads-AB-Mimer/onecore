@@ -155,11 +155,10 @@ describe(leasingAdapter.syncLease, () => {
   })
 })
 
-// A hung call must fail within a few minutes so the next scheduled run can
-// start, but core may not give up while Leasing is still working: a lease
-// sync is up to six Tenfast calls in sequence, each bounded at 30s there.
-const FEW_MINUTES_MS = 5 * 60_000
-const LEASING_WORK_BOUND_MS = 6 * 30_000
+// Must stay under the CronJob's activeDeadlineSeconds (300s) and above
+// Leasing's worst case: six Tenfast calls at 10s plus one 60s upload.
+const FEW_MINUTES_MS = 3 * 60_000
+const LEASING_WORK_BOUND_MS = 6 * 10_000 + 60_000
 
 describe('lease sync call timeouts', () => {
   afterEach(() => jest.restoreAllMocks())

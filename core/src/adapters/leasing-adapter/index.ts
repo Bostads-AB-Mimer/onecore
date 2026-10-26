@@ -805,14 +805,10 @@ const syncContactToLeasing = async (
   }
 }
 
-/**
- * The sync jobs run one at a time, so a call that never returns stops all
- * syncing until someone removes the stuck job. Reads are single Xpand queries
- * bounded by the driver; writes are several Tenfast calls in sequence, each
- * bounded at 30s in Leasing, and must not be cut off while Leasing still works.
- */
+// Must stay under the sync CronJobs' activeDeadlineSeconds (300s) and above
+// Leasing's own worst case (six 10s Tenfast calls plus one 60s upload).
 const SYNC_FETCH_TIMEOUT_MS = 2 * 60_000
-const SYNC_LEASE_TIMEOUT_MS = 5 * 60_000
+const SYNC_LEASE_TIMEOUT_MS = 3 * 60_000
 const SYNC_RENTAL_OBJECT_TYPE_TIMEOUT_MS = 2 * 60_000
 
 const getUpdatedLeases = async (
