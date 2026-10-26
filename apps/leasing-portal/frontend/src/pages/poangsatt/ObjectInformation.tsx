@@ -3,6 +3,9 @@ import type { ReactNode } from 'react'
 import { formatDate, formatRent, tenureLabel } from '../bostad/format'
 import type { BostadListing } from './useBostadListing'
 
+// ListingStatus.Active
+const PUBLISHED = 1
+
 // Sök ledigt uses the rental object code as the listing's id.
 const mimerNuListingUrl = (rentalObjectCode: string) =>
   `https://www.mimer.nu/sok-ledigt/lediga-lagenheter/${encodeURIComponent(rentalObjectCode)}`
@@ -45,16 +48,19 @@ export function ObjectInformation({ listing }: { listing: BostadListing }) {
         <Field label="Ledig från och med">
           {formatDate(listing.vacantFrom)}
         </Field>
-        <Field label="Annons">
-          <a
-            href={mimerNuListingUrl(listing.rentalObjectCode)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-4"
-          >
-            Visa annons på Mimer.nu
-          </a>
-        </Field>
+        {/* Only a published listing is on mimer.nu. */}
+        {listing.status === PUBLISHED && (
+          <Field label="Annons">
+            <a
+              href={mimerNuListingUrl(listing.rentalObjectCode)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-4"
+            >
+              Visa annons på Mimer.nu
+            </a>
+          </Field>
+        )}
       </dl>
     </section>
   )

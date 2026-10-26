@@ -38,12 +38,14 @@ const CoreListingSchema = leasing.ListingSchema.extend({
   }),
 })
 
-// Applicants who withdrew, were withdrawn or no longer qualify are kept on the
-// listing for its history but are not counted as applying.
-const INACTIVE_APPLICANT_STATUSES: ReadonlySet<ApplicantStatus> = new Set([
-  ApplicantStatus.WithdrawnByUser,
-  ApplicantStatus.WithdrawnByManager,
-  ApplicantStatus.Disqualified,
+// Applicants still in the running count as applying. Those who withdrew, were
+// withdrawn, no longer qualify, declined or let an offer expire, or lost the
+// object to someone else stay on the listing for its history only.
+const ACTIVE_APPLICANT_STATUSES: ReadonlySet<ApplicantStatus> = new Set([
+  ApplicantStatus.Active,
+  ApplicantStatus.Offered,
+  ApplicantStatus.OfferAccepted,
+  ApplicantStatus.Assigned,
 ])
 
 // What the listing page shows: the listing and its apartment, with the number
@@ -84,8 +86,8 @@ const toBostadListing = (
     floor: rentalObject.floor ?? null,
     rent: availability?.rent.amount ?? null,
     vacantFrom: availability?.vacantFrom ?? null,
-    activeApplicantCount: (listing.applicants ?? []).filter(
-      (a) => !INACTIVE_APPLICANT_STATUSES.has(a.status)
+    activeApplicantCount: (listing.applicants ?? []).filter((a) =>
+      ACTIVE_APPLICANT_STATUSES.has(a.status)
     ).length,
   }
 }
@@ -167,19 +169,28 @@ export const routes = (router: OkapiRouter, { coreClient }: AppModules) => {
         return forwardCoreError(ctx, result)
       }
 
+      // The page is for apartments; other listings are not found here. Checked
+      // before the full parse, since their rental object has another shape.
+      const category = z
+        .object({
+          content: leasing.ListingSchema.pick({ listingCategory: true }),
+        })
+        .safeParse(result.data)
+      if (
+        category.success &&
+        category.data.content.listingCategory !== 'APARTMENT'
+      ) {
+        ctx.status = 404
+        ctx.body = { error: 'listing-not-found' }
+        return
+      }
+
       const parsed = z
         .object({ content: CoreListingSchema })
         .safeParse(result.data)
       if (!parsed.success) {
         ctx.status = 502
         ctx.body = { error: 'unexpected-core-response' }
-        return
-      }
-
-      // The page is for apartments; other listings are not found here.
-      if (parsed.data.content.listingCategory !== 'APARTMENT') {
-        ctx.status = 404
-        ctx.body = { error: 'listing-not-found' }
         return
       }
 

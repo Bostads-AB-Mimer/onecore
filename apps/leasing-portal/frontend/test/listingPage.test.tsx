@@ -170,6 +170,38 @@ describe('ListingPage', () => {
     ).toBe('/uthyrning/bostad/poangsatt/publicerat-nu?sok=jarnvag')
   })
 
+  it('ignores a back target that is not a path on this site', async () => {
+    stubFetch(json({ content: listing }))
+
+    renderAt(url, { from: '//evil.example/phish' })
+    await screen.findByRole('heading', { name: 'Järnvägsgatan 28' })
+
+    expect(
+      screen.getByRole('link', { name: 'Tillbaka' }).getAttribute('href')
+    ).toBe('/uthyrning/bostad/poangsatt/publicerat-nu')
+  })
+
+  it('links to the listing on mimer.nu only while it is published', async () => {
+    stubFetch(json({ content: { ...listing, status: 3 } }))
+
+    renderAt(url)
+    await screen.findByRole('heading', { name: 'Järnvägsgatan 28' })
+
+    expect(
+      screen.queryByRole('link', { name: 'Visa annons på Mimer.nu' })
+    ).toBeNull()
+  })
+
+  it('treats a mistyped id as a listing that does not exist', async () => {
+    stubFetch(json({ error: 'invalid-listing-id' }, 400))
+
+    renderAt('/uthyrning/bostad/poangsatt/annons/abc')
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Annonsen finns inte.'
+    )
+  })
+
   it('says so when the listing does not exist', async () => {
     stubFetch(json({ error: 'Listing not found' }, 404))
 

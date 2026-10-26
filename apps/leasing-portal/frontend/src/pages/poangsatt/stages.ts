@@ -1,3 +1,5 @@
+import type { BostadListing } from './useBostadListing'
+
 // The queue-based (poängsatt) letting process, one tab per stage after publishing.
 export const POANGSATT_TABS = [
   { value: 'publicerat-nu', label: 'Publicerat nu' },
@@ -13,14 +15,18 @@ export type PoangsattStage = (typeof POANGSATT_TABS)[number]['value']
 // under. Draft listings are not published yet and live on the Bostad page.
 // Expired and the assigned/closed mapping follow the parking flow; revisit
 // when the later stages are built (UTH-363, UTH-364).
-const STAGE_BY_LISTING_STATUS: Record<number, PoangsattStage | undefined> = {
+const STAGE_BY_LISTING_STATUS: Record<
+  BostadListing['status'],
+  PoangsattStage | undefined
+> = {
   1: 'publicerat-nu', // Active
   4: 'erbjud-visning', // Expired: published period over, ready for offers
   2: 'historik', // Assigned
   3: 'historik', // Closed
+  5: undefined, // Draft
 }
 
-export const stageForListingStatus = (status: number) =>
+export const stageForListingStatus = (status: BostadListing['status']) =>
   STAGE_BY_LISTING_STATUS[status]
 
 export const stageLabel = (stage: PoangsattStage) =>

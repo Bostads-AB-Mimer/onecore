@@ -143,6 +143,15 @@ const coreListing = {
       status: 6,
       listingId: 42,
     },
+    // Out of the running: disqualified, declined, expired, lost to another.
+    ...[10, 8, 9, 3].map((status, i) => ({
+      id: 5 + i,
+      contactCode: `P${5 + i}`,
+      applicationDate: '2026-09-28T00:00:00.000Z',
+      applicationType: 'Additional',
+      status,
+      listingId: 42,
+    })),
   ],
   rentalObject: {
     rentalObjectCode: '234-234-234-1009',
@@ -194,7 +203,8 @@ describe('GET /leasing-portal/bostad/listings/:listingId', () => {
         floor: '4',
         rent: 10200,
         vacantFrom: '2026-11-01T00:00:00.000Z',
-        // Active and offered count; withdrawn by the user or a manager do not.
+        // Active and offered count; withdrawn, disqualified, declined, expired and
+        // assigned to another do not.
         activeApplicantCount: 2,
       },
     })
@@ -264,10 +274,20 @@ describe('GET /leasing-portal/bostad/listings/:listingId', () => {
 
   it('answers 404 for a listing that is not an apartment', async () => {
     const { app, coreClient } = makeTestApp()
+    // A parking space's rental object has another shape than an apartment's.
     coreClient.respondWith({
       ok: true,
       statusCode: 200,
-      data: { content: { ...coreListing, listingCategory: 'PARKING_SPACE' } },
+      data: {
+        content: {
+          ...coreListing,
+          listingCategory: 'PARKING_SPACE',
+          rentalObject: {
+            rentalObjectCode: 'P-1',
+            vehicleSpaceCaption: 'Garage',
+          },
+        },
+      },
     })
 
     const res = await request(app.callback())

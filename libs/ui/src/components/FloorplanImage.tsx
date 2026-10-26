@@ -53,7 +53,11 @@ export const FloorplanImage = ({
           {image}
         </button>
       </DialogTrigger>
-      <DialogContent className="max-w-[min(90vw,72rem)]">
+      {/* The image is the whole content; there is no description to point to. */}
+      <DialogContent
+        className="max-w-[min(90vw,72rem)]"
+        aria-describedby={undefined}
+      >
         <DialogTitle className="sr-only">Planritning</DialogTitle>
         <img
           src={src}

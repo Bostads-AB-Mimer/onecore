@@ -14,14 +14,19 @@ import { ObjectInformation } from './ObjectInformation'
 import { POANGSATT_TABS, stageForListingStatus, stageLabel } from './stages'
 import { useBostadListing } from './useBostadListing'
 
-/** Where to go back to, when a list in the portal linked here (router state). */
-const backTarget = (state: unknown): string | undefined =>
-  state &&
-  typeof state === 'object' &&
-  'from' in state &&
-  typeof state.from === 'string'
-    ? state.from
+/**
+ * Where to go back to, when a list in the portal linked here (router state).
+ * Only a path on this site: anything else is ignored.
+ */
+const backTarget = (state: unknown): string | undefined => {
+  if (!state || typeof state !== 'object' || !('from' in state)) return
+  const { from } = state
+  return typeof from === 'string' &&
+    from.startsWith('/') &&
+    !from.startsWith('//')
+    ? from
     : undefined
+}
 
 /**
  * One apartment listing, at a URL that holds whatever stage the listing is in,
@@ -59,7 +64,9 @@ export function ListingPage() {
       </Button>
 
       {isError ? (
-        error instanceof BffRequestError && error.status === 404 ? (
+        // A mistyped id (400) or a listing that does not exist (404).
+        error instanceof BffRequestError &&
+        (error.status === 400 || error.status === 404) ? (
           <p role="alert" className="py-8 text-center text-muted-foreground">
             Annonsen finns inte.
           </p>
