@@ -1,8 +1,8 @@
+import { EmptyState } from '@onecore/ui'
 import { Building } from 'lucide-react'
 
 import type { Property } from '@/services/types'
 
-import { EmptyState } from '@/shared/ui/EmptyState'
 import { RemovableChip } from '@/shared/ui/filters'
 import { Skeleton } from '@/shared/ui/Skeleton'
 

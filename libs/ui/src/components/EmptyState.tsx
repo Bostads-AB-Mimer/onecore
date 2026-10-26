@@ -1,12 +1,14 @@
-import { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
+import type { LucideIcon } from 'lucide-react'
 
 interface EmptyStateProps {
   icon: LucideIcon
   title: string
   description?: string
-  action?: React.ReactNode
+  action?: ReactNode
 }
 
+/** Centred icon, title and optional description and action, for a section with nothing to show. */
 export const EmptyState = ({
   icon: Icon,
   title,

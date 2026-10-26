@@ -9,25 +9,11 @@ import {
 } from '@onecore/ui'
 
 import { QueryError } from '../QueryError'
+import { formatDate, formatRent, tenureLabel } from './format'
 import {
   useVacantApartments,
   type VacantApartment,
 } from './useVacantApartments'
-
-const formatDate = (value: string | null) =>
-  value ? new Date(value).toLocaleDateString('sv-SE') : '–'
-
-const formatRent = (amount: number) =>
-  `${Math.round(amount).toLocaleString('sv-SE')} kr/mån`
-
-// Tenfast tenure names are long; short labels by code, name as fallback.
-const TENURE_LABELS: Record<string, string> = {
-  STD: 'Standard',
-  STUD: 'Student',
-}
-
-const tenureLabel = (tenure: VacantApartment['rentalTenureType']) =>
-  tenure ? (TENURE_LABELS[tenure.id] ?? tenure.name) : '–'
 
 /** Draft listings are the only ones that can appear here; everything else is excluded upstream. */
 function ListingBadge({ listing }: { listing: VacantApartment['listing'] }) {

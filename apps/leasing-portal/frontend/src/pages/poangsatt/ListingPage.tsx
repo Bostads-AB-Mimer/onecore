@@ -1,0 +1,109 @@
+import { ArrowLeft } from 'lucide-react'
+import { Link, useLocation, useParams, useResolvedPath } from 'react-router-dom'
+import {
+  Badge,
+  Button,
+  FloorplanImage,
+  SegmentedTabs,
+  Skeleton,
+} from '@onecore/ui'
+
+import { BffRequestError } from '../../api/errors'
+import { QueryError } from '../QueryError'
+import { ObjectInformation } from './ObjectInformation'
+import { POANGSATT_TABS, stageForListingStatus, stageLabel } from './stages'
+import { useBostadListing } from './useBostadListing'
+
+/**
+ * Where to go back to, when a list in the portal linked here (router state).
+ * Only a path on this site: anything else is ignored.
+ */
+const backTarget = (state: unknown): string | undefined => {
+  if (!state || typeof state !== 'object' || !('from' in state)) return
+  const { from } = state
+  return typeof from === 'string' &&
+    from.startsWith('/') &&
+    !from.startsWith('//')
+    ? from
+    : undefined
+}
+
+/**
+ * One apartment listing, at a URL that holds whatever stage the listing is in,
+ * so a shared link keeps working. The tab follows the listing's status; Back
+ * returns to the list that linked here, or to the list for the current stage.
+ */
+export function ListingPage() {
+  const { listingId = '' } = useParams<{ listingId: string }>()
+  const { state } = useLocation()
+  const poangsattPath = useResolvedPath('../..', { relative: 'path' }).pathname
+  const bostadPath = useResolvedPath('../../..', { relative: 'path' }).pathname
+  const {
+    data: listing,
+    isPending,
+    isError,
+    error,
+  } = useBostadListing(listingId)
+
+  const stage = listing ? stageForListingStatus(listing.status) : undefined
+  const backTo =
+    backTarget(state) ?? (stage ? `${poangsattPath}/${stage}` : bostadPath)
+
+  return (
+    <div className="space-y-6 p-6">
+      <SegmentedTabs
+        tabs={POANGSATT_TABS}
+        value={stage ?? ''}
+        basePath={poangsattPath}
+      />
+      <Button asChild variant="outline" size="sm">
+        <Link to={backTo}>
+          <ArrowLeft className="h-4 w-4" />
+          Tillbaka
+        </Link>
+      </Button>
+
+      {isError ? (
+        // A mistyped id (400) or a listing that does not exist (404).
+        error instanceof BffRequestError &&
+        (error.status === 400 || error.status === 404) ? (
+          <p role="alert" className="py-8 text-center text-muted-foreground">
+            Annonsen finns inte.
+          </p>
+        ) : (
+          <QueryError error={error} />
+        )
+      ) : isPending ? (
+        <div className="space-y-4">
+          <Skeleton className="h-9 w-80" />
+          <Skeleton className="h-64 w-full max-w-xl" />
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold">{listing.address}</h1>
+            <Badge variant="info">
+              {stage ? stageLabel(stage) : 'Ej publicerad'}
+            </Badge>
+          </div>
+          <div className="grid gap-8 lg:grid-cols-3">
+            <ObjectInformation listing={listing} />
+            <section aria-labelledby="floorplan-heading">
+              <h2 id="floorplan-heading" className="text-lg font-semibold">
+                Planritning
+              </h2>
+              {/* Square like the mockup; portrait and landscape plans scale to fit it. */}
+              <div className="mt-4 flex aspect-square items-center justify-center rounded-lg border p-4">
+                <FloorplanImage
+                  rentalId={listing.rentalObjectCode}
+                  className="max-h-full max-w-full object-contain"
+                  expandable
+                />
+              </div>
+            </section>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}

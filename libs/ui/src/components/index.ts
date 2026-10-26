@@ -4,3 +4,6 @@ export * from './SegmentedTabs'
 export * from './ResponsiveTable'
 export * from './Pagination'
 export * from './BulkActionBar'
+export * from './EmptyState'
+// Mimer-specific: floorplans are served from Mimer's public CDN.
+export * from './FloorplanImage'

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { EmptyState } from '@onecore/ui'
 import { ChevronRight, FilePlus, Wrench } from 'lucide-react'
 
 import type { MaintenanceUnit } from '@/services/types'
@@ -13,7 +14,6 @@ import {
   AccordionTrigger,
 } from '@/shared/ui/Accordion'
 import { Button } from '@/shared/ui/Button'
-import { EmptyState } from '@/shared/ui/EmptyState'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 
 import { MAINTENANCE_UNIT_TYPES, TYPE_CONFIG } from '../constants'

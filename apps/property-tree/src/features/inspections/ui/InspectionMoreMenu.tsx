@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FloorplanImage } from '@onecore/ui'
 import { FileImage, MoreHorizontal, Plus } from 'lucide-react'
 
 import type { Room } from '@/services/types'
@@ -16,7 +17,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu'
-import { FloorplanImage } from '@/shared/ui/FloorplanImage'
 
 import { AddInspectionRoomDialog } from './AddInspectionRoomDialog'
 

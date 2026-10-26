@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { EmptyState } from '@onecore/ui'
 import {
   ChevronDown,
   ChevronRight,
@@ -22,7 +23,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/shared/ui/Collapsible'
-import { EmptyState } from '@/shared/ui/EmptyState'
 import { Input } from '@/shared/ui/Input'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import {

@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from 'react-router-dom'
 
 import { BostadPage } from './BostadPage'
 import { PoangsattPage } from './PoangsattPage'
+import { ListingPage } from './poangsatt/ListingPage'
 import { ShellPage } from './ShellPage'
 
 /**
@@ -20,6 +21,12 @@ export const leasingRoutes: RouteObject[] = [
     path: 'bostad/poangfritt',
     element: <ShellPage title="Poängfritt" />,
     handle: { title: 'Poängfritt' },
+  },
+  {
+    // By listing id alone, so a shared link works whatever stage the listing is in.
+    path: 'bostad/poangsatt/annons/:listingId',
+    element: <ListingPage />,
+    handle: { title: 'Annons' },
   },
   {
     path: 'bostad/poangsatt/:tab?',
