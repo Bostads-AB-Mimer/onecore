@@ -476,6 +476,8 @@ export const sendBulkEmail = async (
   }
 }
 
+const SEND_EMAIL_TIMEOUT_MS = 30_000
+
 export const sendEmail = async ({
   to,
   subject,
@@ -506,7 +508,8 @@ export const sendEmail = async ({
 
     const result = await axios.postForm(
       `${config.communicationService.url}/send-email`,
-      form
+      form,
+      { timeout: SEND_EMAIL_TIMEOUT_MS }
     )
 
     if (result.status !== 200) {

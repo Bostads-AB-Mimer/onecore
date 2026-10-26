@@ -805,6 +805,16 @@ const syncContactToLeasing = async (
   }
 }
 
+/**
+ * The sync jobs run one at a time, so a call that never returns stops all
+ * syncing until someone removes the stuck job. Reads are single Xpand queries
+ * bounded by the driver; writes are several Tenfast calls in sequence, each
+ * bounded at 30s in Leasing, and must not be cut off while Leasing still works.
+ */
+const SYNC_FETCH_TIMEOUT_MS = 2 * 60_000
+const SYNC_LEASE_TIMEOUT_MS = 5 * 60_000
+const SYNC_RENTAL_OBJECT_TYPE_TIMEOUT_MS = 2 * 60_000
+
 const getUpdatedLeases = async (
   since: Date | null
 ): Promise<AdapterResult<LeaseChange[], 'unknown'>> => {
@@ -812,6 +822,7 @@ const getUpdatedLeases = async (
     const params = since ? { since: since.toISOString() } : {}
     const response = await axios.get(`${tenantsLeasesServiceUrl}/leases/sync`, {
       params,
+      timeout: SYNC_FETCH_TIMEOUT_MS,
     })
 
     if (response.status === 200) {
@@ -847,7 +858,8 @@ const syncLease = async (
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/leases/sync`,
-      { leaseId, contactCode, action }
+      { leaseId, contactCode, action },
+      { timeout: SYNC_LEASE_TIMEOUT_MS }
     )
 
     if (response.status === 200 || response.status === 201) {
@@ -869,7 +881,7 @@ const getRentalObjectTypeChanges = async (
     const params = since ? { since: since.toISOString() } : {}
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/rental-objects/types/sync`,
-      { params, validateStatus: () => true }
+      { params, validateStatus: () => true, timeout: SYNC_FETCH_TIMEOUT_MS }
     )
 
     if (response.status !== 200)
@@ -905,7 +917,10 @@ const syncRentalObjectType = async (
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/rental-objects/${encodeURIComponent(rentalObjectCode)}/type/sync`,
       { code } satisfies SyncRentalObjectTypeRequest,
-      { validateStatus: () => true }
+      {
+        validateStatus: () => true,
+        timeout: SYNC_RENTAL_OBJECT_TYPE_TIMEOUT_MS,
+      }
     )
 
     if (response.status === 200) {

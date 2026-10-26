@@ -1,5 +1,6 @@
 import assert from 'node:assert'
 import nock from 'nock'
+import { loggedAxios } from '@onecore/utilities'
 
 import config from '../../../common/config'
 import * as leasingAdapter from '../../leasing-adapter'
@@ -151,5 +152,40 @@ describe(leasingAdapter.syncLease, () => {
       ok: true,
       data: { action: 'terminated', leaseId },
     })
+  })
+})
+
+// A hung call must fail within a few minutes so the next scheduled run can
+// start, but core may not give up while Leasing is still working: a lease
+// sync is up to six Tenfast calls in sequence, each bounded at 30s there.
+const FEW_MINUTES_MS = 5 * 60_000
+const LEASING_WORK_BOUND_MS = 6 * 30_000
+
+describe('lease sync call timeouts', () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  it('bounds getUpdatedLeases', async () => {
+    const getSpy = jest
+      .spyOn(loggedAxios, 'get')
+      .mockResolvedValue({ status: 200, data: { content: [] } })
+
+    await leasingAdapter.getUpdatedLeases(null)
+
+    const timeout = getSpy.mock.calls[0][1]?.timeout
+    expect(timeout).toBeGreaterThan(0)
+    expect(timeout).toBeLessThanOrEqual(FEW_MINUTES_MS)
+  })
+
+  it('bounds syncLease without cutting Leasing off mid-sync', async () => {
+    const postSpy = jest.spyOn(loggedAxios, 'post').mockResolvedValue({
+      status: 200,
+      data: { content: { action: 'created', leaseId: '1' } },
+    })
+
+    await leasingAdapter.syncLease('1', 'P1', 'create')
+
+    const timeout = postSpy.mock.calls[0][2]?.timeout
+    expect(timeout).toBeGreaterThanOrEqual(LEASING_WORK_BOUND_MS)
+    expect(timeout).toBeLessThanOrEqual(FEW_MINUTES_MS)
   })
 })

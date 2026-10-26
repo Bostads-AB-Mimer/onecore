@@ -69,11 +69,14 @@ const getApartmentRentalPropertyInfo = async (
   }
 }
 
+const RENTAL_PROPERTY_INFO_TIMEOUT_MS = 30_000
+
 //todo: copy of getRentalPropertyInfo above
 //todo: added because callers needs to know more about the response than just the body
 const getRentalPropertyInfoFromXpand = async (rentalPropertyId: string) => {
-  const propertyResponse = await axios(
-    propertyManagementServiceUrl + '/rentalPropertyInfo/' + rentalPropertyId
+  const propertyResponse = await axios.get(
+    propertyManagementServiceUrl + '/rentalPropertyInfo/' + rentalPropertyId,
+    { timeout: RENTAL_PROPERTY_INFO_TIMEOUT_MS }
   )
 
   return {
