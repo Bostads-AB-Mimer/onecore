@@ -13,13 +13,8 @@ const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
 
 type ContactUpdate = { contact: Contact; timestamp: Date }
 
-/**
- * The targets are written one at a time, and a failure stops the rest, so a
- * rejected row leaves the later targets untouched instead of half of them on
- * the new data. Xledger goes first: it is the one that validates the payload
- * and refuses it. Tenfast goes last: it pulls the contact rather than taking
- * the payload, so it is the least likely to object to the data.
- */
+// Written in order, stopping at the first failure. Xledger goes first because
+// it is the target that rejects payloads.
 const syncContact = async (update: ContactUpdate): Promise<void> => {
   const payload = toSyncPayload(update.contact)
   const steps: [string, () => Promise<{ ok: boolean; err?: string }>][] = [
