@@ -661,6 +661,187 @@ describe('runCmlogSync', () => {
     expect(await readQueue(queueFile)).toEqual([])
   })
 
+  describe('heldBehind', () => {
+    const ordered: Partial<CmlogSync<Change>> = {
+      keyFor: (c) => `thing:${c.id}:${c.value}`,
+      heldBehind: (c, queued) =>
+        queued.value === 'create' && c.value !== 'create' && queued.id === c.id,
+      describe: (c) => ({
+        subject: `sak ${c.id}`,
+        detail: `sak ${c.id} (${c.value})`,
+      }),
+    }
+    const create = change({ id: 'L-1', value: 'create' })
+    const terminate = change({
+      id: 'L-1',
+      value: 'terminate',
+      timestamp: new Date('2026-10-15T08:05:00.000Z'),
+    })
+    const voided = change({
+      id: 'L-1',
+      value: 'void',
+      timestamp: new Date('2026-10-15T08:10:00.000Z'),
+    })
+    const queuedCreate = entryFor(create, { key: 'thing:L-1:create' })
+    const heldEntry = (c: Change): FailedRowEntry => ({
+      key: `thing:${c.id}:${c.value}`,
+      type: 'rental-object-type',
+      payload: { ...c, timestamp: c.timestamp.toISOString() },
+      addedAt: '2026-10-15T00:00:00.000Z',
+      lastError: 'Väntar på sak L-1 (create)',
+      heldBehind: 'thing:L-1:create',
+    })
+    const failOn = (value: string) =>
+      sync.mockImplementation(async (c: Change) => {
+        if (c.value === value) throw new Error('boom')
+      })
+
+    it('holds a new row behind a queued create for the same thing, unsynced and unmailed', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      fetchChanges.mockResolvedValue({ ok: true, data: [terminate] })
+      failOn('create')
+
+      await run(ordered)
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      expect(sync).toHaveBeenCalledWith(create)
+      const queue = await readQueue(queueFile)
+      expect(queue.map((e) => e.key)).toEqual([
+        'thing:L-1:create',
+        'thing:L-1:terminate',
+      ])
+      expect(queue[1]).toMatchObject({
+        heldBehind: 'thing:L-1:create',
+        lastError: 'Väntar på sak L-1 (create)',
+      })
+      expect(queue[1].lastAttemptAt).toBeUndefined()
+      expect(subjects()).toEqual([])
+      expect(await readState()).toBe(terminate.timestamp.toISOString())
+    })
+
+    it('holds a row behind a create that failed earlier in the same run', async () => {
+      fetchChanges.mockResolvedValue({ ok: true, data: [create, terminate] })
+      failOn('create')
+
+      await run(ordered)
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      const queue = await readQueue(queueFile)
+      expect(queue.map((e) => e.key)).toEqual([
+        'thing:L-1:create',
+        'thing:L-1:terminate',
+      ])
+      expect(queue[1].heldBehind).toBe('thing:L-1:create')
+      expect(subjects()).toEqual(['sync-things: nytt fel på sak L-1'])
+    })
+
+    it('does not hold a row behind a create for another thing', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      const other = change({ id: 'L-2', value: 'terminate' })
+      fetchChanges.mockResolvedValue({ ok: true, data: [other] })
+      failOn('create')
+
+      await run(ordered)
+
+      expect(sync).toHaveBeenCalledWith(other)
+      expect((await readQueue(queueFile)).map((e) => e.key)).toEqual([
+        'thing:L-1:create',
+      ])
+    })
+
+    it('keeps held rows untouched while the create still fails', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      await appendEntry(queueFile, heldEntry(terminate))
+      failOn('create')
+
+      await run(ordered)
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      expect(sync).toHaveBeenCalledWith(create)
+      const queue = await readQueue(queueFile)
+      expect(queue).toHaveLength(2)
+      expect(queue[1]).toEqual(heldEntry(terminate))
+      expect(subjects()).toEqual([])
+    })
+
+    it('runs held rows in order once the create syncs, with no mail for them', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      await appendEntry(queueFile, heldEntry(terminate))
+      await appendEntry(queueFile, heldEntry(voided))
+
+      await run(ordered)
+
+      expect(sync.mock.calls.map(([c]) => (c as Change).value)).toEqual([
+        'create',
+        'terminate',
+        'void',
+      ])
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual([
+        'sync-things: tidigare felande sak L-1 är nu synkat',
+      ])
+    })
+
+    it('a held row that fails once released is queued as a new failure and mailed', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      await appendEntry(queueFile, heldEntry(terminate))
+      failOn('terminate')
+
+      await run(ordered)
+
+      const queue = await readQueue(queueFile)
+      expect(queue).toHaveLength(1)
+      expect(queue[0]).toMatchObject({
+        key: 'thing:L-1:terminate',
+        lastError: 'boom',
+        lastAttemptAt: NOW.toISOString(),
+        retriesStartedAt: NOW.toISOString(),
+      })
+      expect(queue[0].heldBehind).toBeUndefined()
+      expect(subjects()).toEqual([
+        'sync-things: tidigare felande sak L-1 är nu synkat',
+        'sync-things: nytt fel på sak L-1',
+      ])
+    })
+
+    it('drops held rows when the create is given up and names them in the mail', async () => {
+      await appendEntry(
+        queueFile,
+        entryFor(create, {
+          key: 'thing:L-1:create',
+          retriesStartedAt: hoursBefore(NOW, 31 * 24),
+          lastAttemptAt: hoursBefore(NOW, 25),
+        })
+      )
+      await appendEntry(queueFile, heldEntry(terminate))
+      await appendEntry(queueFile, heldEntry(voided))
+      failOn('create')
+
+      await run(ordered)
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual(['sync-things: ger upp sak L-1'])
+      expect(sendEmailSpy.mock.calls[0][0].body).toContain(
+        'sak L-1 (terminate), sak L-1 (void)'
+      )
+    })
+
+    it('leaves a re-fetched held row waiting', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      await appendEntry(queueFile, heldEntry(terminate))
+      fetchChanges.mockResolvedValue({ ok: true, data: [terminate] })
+      failOn('create')
+
+      await run(ordered)
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      const queue = await readQueue(queueFile)
+      expect(queue).toHaveLength(2)
+      expect(queue[1]).toEqual(heldEntry(terminate))
+    })
+  })
+
   it('throws when fetching fails and leaves the timestamp alone', async () => {
     await fs.writeFile(stateFile, '2026-10-15T07:00:00.000Z', 'utf-8')
     fetchChanges.mockResolvedValue({ ok: false, err: 'unknown' })

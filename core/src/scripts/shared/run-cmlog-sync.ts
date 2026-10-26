@@ -45,6 +45,10 @@ export type CmlogSync<T> = {
   keyFor: (change: T) => string
   // Changes sharing a supersede key replace each other: only the newest is synced.
   supersedeKey?: (change: T) => string
+  // A new change is held in the queue, unsynced and unmailed, while a queued
+  // change it is held behind is still there. Held changes run in order once
+  // that change syncs, and are dropped with it if it is given up.
+  heldBehind?: (change: T, queued: T) => boolean
   timestampOf: (change: T) => Date
   toPayload: (change: T) => unknown
   fromPayload: (payload: unknown) => T
@@ -89,13 +93,23 @@ export const runCmlogSync = async <T>(
     ])
   }
 
-  const notifyGiveUp = (change: T, entry: FailedRowEntry) => {
+  const notifyGiveUp = (
+    change: T,
+    entry: FailedRowEntry,
+    heldDetails: string[]
+  ) => {
     const { subject, detail } = def.describe(change)
     return notifyXpandSync(`${def.name}: ger upp ${subject}`, [
       `${capitalize(detail)} har misslyckats sedan ${entry.addedAt}.`,
       `Senaste fel: ${entry.lastError}`,
       ``,
       `Raden har tagits bort ur återförsökskön och försöks inte igen. ${def.giveUpAdvice ?? DEFAULT_GIVE_UP_ADVICE}`,
+      ...(heldDetails.length
+        ? [
+            ``,
+            `Följande ändringar väntade på den här och har också tagits bort ur återförsökskön: ${heldDetails.join(', ')}.`,
+          ]
+        : []),
     ])
   }
 
@@ -182,12 +196,48 @@ export const runCmlogSync = async <T>(
 
   const kept: FailedRowEntry[] = []
   let queueChanged = false
+  const droppedWithBlocker = new Set<string>()
   for (const entry of queue) {
     if (entry.type !== def.entryType) {
       kept.push(entry)
       continue
     }
+    if (droppedWithBlocker.has(entry.key)) {
+      queueChanged = true
+      continue
+    }
     const change = def.fromPayload(entry.payload)
+    if (entry.heldBehind) {
+      // The entry it waits for was queued first, so it has been handled above:
+      // still in `kept` means still failing or not yet due.
+      if (kept.some((e) => e.key === entry.heldBehind)) {
+        kept.push(entry)
+        continue
+      }
+      queueChanged = true
+      try {
+        await def.sync(change)
+        logger.info(
+          { key: entry.key },
+          `${def.name}: held entry synced after the change it waited for`
+        )
+      } catch (err) {
+        const { heldBehind: _released, ...rest } = entry
+        const failed: FailedRowEntry = {
+          ...rest,
+          lastError: errorMessage(err),
+          lastAttemptAt: now().toISOString(),
+          retriesStartedAt: now().toISOString(),
+        }
+        kept.push(failed)
+        await notifyFailure(change, failed)
+        logger.error(
+          { err, key: entry.key },
+          `${def.name}: held entry failed once released, queued for retry, mail sent`
+        )
+      }
+      continue
+    }
     if (isSuperseded(change)) {
       queueChanged = true
       logger.info(
@@ -219,9 +269,15 @@ export const runCmlogSync = async <T>(
         lastError: errorMessage(err),
       }
       if (failingFor >= GIVE_UP_AFTER_MS) {
-        await notifyGiveUp(change, updated)
+        const held = queue.filter((e) => e.heldBehind === entry.key)
+        held.forEach((e) => droppedWithBlocker.add(e.key))
+        await notifyGiveUp(
+          change,
+          updated,
+          held.map((e) => def.describe(def.fromPayload(e.payload)).detail)
+        )
         logger.error(
-          { err, key: entry.key },
+          { err, key: entry.key, dropped: held.map((e) => e.key) },
           `${def.name}: queued entry failed for 30 days, giving up`
         )
         continue
@@ -257,12 +313,43 @@ export const runCmlogSync = async <T>(
     savedTimestamp = timestamp
   }
 
+  const blockerOf = (change: T, key: string) =>
+    def.heldBehind
+      ? queueForRun.find(
+          (e) =>
+            e.type === def.entryType &&
+            e.key !== key &&
+            def.heldBehind!(change, def.fromPayload(e.payload))
+        )
+      : undefined
+
   let succeeded = 0
   let skipped = 0
   let failed = 0
-  for (const [index, change] of changes.entries()) {
-    const key = def.keyFor(change)
-    const existing = queueForRun.find((e) => e.key === key)
+  let held = 0
+
+  const hold = async (change: T, key: string, blocker: FailedRowEntry) => {
+    const entry: FailedRowEntry = {
+      key,
+      type: def.entryType,
+      payload: def.toPayload(change),
+      addedAt: now().toISOString(),
+      lastError: `Väntar på ${def.describe(def.fromPayload(blocker.payload)).detail}`,
+      heldBehind: blocker.key,
+    }
+    queueForRun = [...queueForRun, entry]
+    await appendEntry(queueFile, entry)
+    logger.info(
+      { key, heldBehind: blocker.key },
+      `${def.name}: held behind a queued change`
+    )
+  }
+
+  const syncRow = async (
+    change: T,
+    key: string,
+    existing: FailedRowEntry | undefined
+  ) => {
     try {
       const outcome = await def.sync(change)
       if (outcome) skipped++
@@ -303,6 +390,18 @@ export const runCmlogSync = async <T>(
         logger.error({ err, key }, `${def.name}: queued for retry, mail sent`)
       }
     }
+  }
+
+  for (const [index, change] of changes.entries()) {
+    const key = def.keyFor(change)
+    const existing = queueForRun.find((e) => e.key === key)
+    const blocker = existing ? undefined : blockerOf(change, key)
+    if (existing?.heldBehind || blocker) {
+      held++
+      if (blocker) await hold(change, key, blocker)
+    } else {
+      await syncRow(change, key, existing)
+    }
     // cmlog has whole seconds: save only once a second is done, so a crash
     // mid-second re-reads the whole second instead of skipping its rest.
     const next = changes[index + 1]
@@ -332,7 +431,7 @@ export const runCmlogSync = async <T>(
   if (skipExisting && !savedTimestamp) await saveTimestamp(now())
 
   logger.info(
-    { total: changes.length, succeeded, skipped, failed },
+    { total: changes.length, succeeded, skipped, failed, held },
     `${def.name} run complete`
   )
 }

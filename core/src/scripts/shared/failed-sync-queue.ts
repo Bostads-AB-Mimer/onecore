@@ -10,6 +10,8 @@ export type FailedRowEntry = {
   lastAttemptAt?: string
   retriesStartedAt?: string
   stillFailingNotifiedAt?: string
+  // Key of a queued entry this one waits for; not retried while that one is queued.
+  heldBehind?: string
 }
 
 export const readQueue = async (path: string): Promise<FailedRowEntry[]> => {
