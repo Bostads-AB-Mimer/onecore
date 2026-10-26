@@ -56,15 +56,25 @@ describe(propertyManagementAdapter.getRentalPropertyInfoFromXpand, () => {
     expect(result).toEqual({ status: 200, data: apartmentInfo })
   })
 
-  it('bounds the call so a hung lookup fails within a few minutes', async () => {
+  it('leaves the call unbounded unless the caller sets a timeout', async () => {
     const getSpy = jest
       .spyOn(loggedAxios, 'get')
       .mockResolvedValue({ status: 200, data: { content: {} } })
 
     await propertyManagementAdapter.getRentalPropertyInfoFromXpand('1234')
 
-    const timeout = getSpy.mock.calls[0][1]?.timeout
-    expect(timeout).toBeGreaterThan(0)
-    expect(timeout).toBeLessThanOrEqual(5 * 60_000)
+    expect(getSpy.mock.calls[0][1]?.timeout).toBeUndefined()
+  })
+
+  it('passes a caller timeout through', async () => {
+    const getSpy = jest
+      .spyOn(loggedAxios, 'get')
+      .mockResolvedValue({ status: 200, data: { content: {} } })
+
+    await propertyManagementAdapter.getRentalPropertyInfoFromXpand('1234', {
+      timeoutMs: 30_000,
+    })
+
+    expect(getSpy.mock.calls[0][1]?.timeout).toBe(30_000)
   })
 })

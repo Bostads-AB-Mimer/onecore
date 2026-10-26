@@ -28,15 +28,23 @@ describe('sendEmail', () => {
     expect(result).toEqual({ ok: true, data: { messageId: 'abc' } })
   })
 
-  it('bounds the call so a hung mail service fails within a few minutes', async () => {
+  it('leaves the call unbounded unless the caller sets a timeout', async () => {
     const postFormSpy = jest
       .spyOn(axios, 'postForm')
       .mockResolvedValue({ status: 200, data: { content: {} } })
 
     await sendEmail(email)
 
-    const timeout = postFormSpy.mock.calls[0][2]?.timeout
-    expect(timeout).toBeGreaterThan(0)
-    expect(timeout).toBeLessThanOrEqual(5 * 60_000)
+    expect(postFormSpy.mock.calls[0][2]?.timeout).toBeUndefined()
+  })
+
+  it('passes a caller timeout through', async () => {
+    const postFormSpy = jest
+      .spyOn(axios, 'postForm')
+      .mockResolvedValue({ status: 200, data: { content: {} } })
+
+    await sendEmail(email, { timeoutMs: 30_000 })
+
+    expect(postFormSpy.mock.calls[0][2]?.timeout).toBe(30_000)
   })
 })

@@ -476,19 +476,20 @@ export const sendBulkEmail = async (
   }
 }
 
-const SEND_EMAIL_TIMEOUT_MS = 30_000
-
-export const sendEmail = async ({
-  to,
-  subject,
-  body,
-  attachments,
-}: {
-  to: string
-  subject: string
-  body: string
-  attachments?: { data: Buffer; name: string }[]
-}) => {
+export const sendEmail = async (
+  {
+    to,
+    subject,
+    body,
+    attachments,
+  }: {
+    to: string
+    subject: string
+    body: string
+    attachments?: { data: Buffer; name: string }[]
+  },
+  opts: { timeoutMs?: number } = {}
+) => {
   try {
     // TODO update node version to get rid of this warning
     // eslint-disable-next-line n/no-unsupported-features/node-builtins
@@ -509,7 +510,7 @@ export const sendEmail = async ({
     const result = await axios.postForm(
       `${config.communicationService.url}/send-email`,
       form,
-      { timeout: SEND_EMAIL_TIMEOUT_MS }
+      { timeout: opts.timeoutMs }
     )
 
     if (result.status !== 200) {

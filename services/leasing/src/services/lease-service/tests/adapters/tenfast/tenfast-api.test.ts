@@ -4,7 +4,11 @@ jest.mock('axios', () => {
 })
 
 import axios from 'axios'
-import { request } from '../../../adapters/tenfast/tenfast-api'
+import { Context } from 'koa'
+import {
+  boundTenfastCalls,
+  request,
+} from '../../../adapters/tenfast/tenfast-api'
 
 const axiosMock = axios as unknown as jest.Mock
 
@@ -14,21 +18,29 @@ describe('tenfast-api.request', () => {
     axiosMock.mockResolvedValue({ status: 200, data: {} })
   })
 
-  it('bounds every call at 10s so a hung Tenfast fails well inside a run', async () => {
+  it('leaves a call outside a sync route unbounded', async () => {
     await request({ method: 'get', url: 'https://tenfast.test/v1/avtal' })
 
-    const config = axiosMock.mock.calls[0][0]
-    expect(config.timeout).toBeGreaterThan(0)
-    expect(config.timeout).toBeLessThanOrEqual(10_000)
+    expect(axiosMock.mock.calls[0][0].timeout).toBeUndefined()
   })
 
-  it('keeps a timeout the caller set', async () => {
-    await request({
-      method: 'get',
-      url: 'https://tenfast.test/v1/avtal',
-      timeout: 120_000,
-    })
+  it('bounds every call inside a sync route at 10s', async () => {
+    await boundTenfastCalls({} as Context, () =>
+      request({ method: 'get', url: 'https://tenfast.test/v1/avtal' })
+    )
 
-    expect(axiosMock.mock.calls[0][0].timeout).toBe(120_000)
+    expect(axiosMock.mock.calls[0][0].timeout).toBe(10_000)
+  })
+
+  it('keeps a timeout the caller set inside a sync route', async () => {
+    await boundTenfastCalls({} as Context, () =>
+      request({
+        method: 'get',
+        url: 'https://tenfast.test/v1/avtal',
+        timeout: 60_000,
+      })
+    )
+
+    expect(axiosMock.mock.calls[0][0].timeout).toBe(60_000)
   })
 })
