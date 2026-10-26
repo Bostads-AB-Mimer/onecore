@@ -234,7 +234,7 @@ describe('POST /leases/sync', () => {
       expect(uploadLeaseFile).not.toHaveBeenCalled()
     })
 
-    it('returns 500 when the contract PDF upload fails, so core queues the row', async () => {
+    it('answers 201 with document "failed" when the contract PDF upload fails', async () => {
       getLeases.mockResolvedValueOnce([
         factory.lease.build({
           leaseId: '123-456/01',
@@ -261,11 +261,15 @@ describe('POST /leases/sync', () => {
         action: 'create',
       })
 
-      expect(res.status).toBe(500)
-      expect(res.body.error).toBe('contract-pdf-upload-failed')
+      expect(res.status).toBe(201)
+      expect(res.body.content).toMatchObject({
+        action: 'created',
+        document: 'failed',
+        documentError: 'contract-pdf-upload-failed',
+      })
     })
 
-    it('returns 500 when the xpand contract lookup fails', async () => {
+    it('answers 201 with document "failed" when the xpand contract lookup fails', async () => {
       getLeases.mockResolvedValueOnce([
         factory.lease.build({
           leaseId: '123-456/01',
@@ -288,8 +292,11 @@ describe('POST /leases/sync', () => {
         action: 'create',
       })
 
-      expect(res.status).toBe(500)
-      expect(res.body.error).toBe('contract-pdf-lookup-failed')
+      expect(res.status).toBe(201)
+      expect(res.body.content).toMatchObject({
+        document: 'failed',
+        documentError: 'contract-pdf-lookup-failed',
+      })
       expect(uploadLeaseFile).not.toHaveBeenCalled()
     })
 

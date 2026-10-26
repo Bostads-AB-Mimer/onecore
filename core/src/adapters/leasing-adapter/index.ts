@@ -855,7 +855,9 @@ const syncLease = async (
       action: 'created' | 'terminated' | 'voided' | 'skipped'
       leaseId: string
       // Set on create and terminate: whether the PDF from Xpand is on the Tenfast lease.
-      document?: 'attached' | 'already-attached' | 'missing'
+      // 'failed' only on create, with documentError naming the failed step.
+      document?: 'attached' | 'already-attached' | 'missing' | 'failed'
+      documentError?: string
     },
     'sync-failed' | 'unknown'
   >

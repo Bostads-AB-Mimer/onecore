@@ -34,8 +34,7 @@ type DocumentResult = AdapterResult<
 
 /**
  * Attaches the signed contract from Xpand to a Tenfast lease, unless it has
- * one. A failure here fails the sync row so core retries it; the lease
- * import itself is safe to repeat.
+ * one.
  */
 const attachSignedContract = async (
   leaseId: string,
@@ -245,15 +244,17 @@ export const routes = (router: KoaRouter) => {
             leaseId,
             createResult.data._id
           )
-          if (!document.ok) {
-            ctx.status = 500
-            ctx.body = { error: document.err, ...metadata }
-            return
-          }
-
+          // The lease exists in Tenfast, so a PDF failure must not fail the create.
           ctx.status = 201
           ctx.body = makeSuccessResponseBody(
-            { action: 'created', leaseId, document: document.data },
+            document.ok
+              ? { action: 'created', leaseId, document: document.data }
+              : {
+                  action: 'created',
+                  leaseId,
+                  document: 'failed',
+                  documentError: document.err,
+                },
             metadata
           )
           return

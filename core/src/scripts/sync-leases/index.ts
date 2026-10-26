@@ -98,7 +98,19 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
   if (syncResult.data.document === 'missing') {
     await notifyMissingDocument(lease)
   }
+  if (syncResult.data.document === 'failed') {
+    await notifyFailedContract(lease, syncResult.data.documentError)
+  }
 }
+
+const notifyFailedContract = (lease: LeaseChange, error?: string) =>
+  notifyXpandSync(
+    `sync-leases: signerat kontrakt kunde inte bifogas till avtal ${lease.leaseId}`,
+    [
+      `Avtal ${lease.leaseId} är skapat i Tenfast, men det signerade kontraktet från Xpand kunde inte bifogas (${error ?? 'okänt fel'}). Det försöks inte igen.`,
+      `Bifoga kontraktet i Tenfast för hand.`,
+    ]
+  )
 
 const notifyMissingDocument = (lease: LeaseChange) => {
   const document =
