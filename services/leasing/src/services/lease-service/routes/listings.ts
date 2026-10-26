@@ -4,6 +4,7 @@ import {
   DetailedApplicant,
   Listing,
   ListingStatus,
+  UpdateListingErrorCodes,
   UpdateListingStatusErrorCodes,
   leasing,
 } from '@onecore/types'
@@ -1047,6 +1048,86 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = { ...metadata }
+    }
+  )
+
+  /**
+   * @swagger
+   * /listings/{listingId}:
+   *   patch:
+   *     summary: Update listing publish/review fields
+   *     tags:
+   *       - Lease service
+   *     description: Partially updates a listing's publishedFrom, publishedTo, reviewedAt, reviewedBy, availableFrom and tentativeAvailableFrom fields.
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: ID of the listing to update.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               publishedFrom:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               publishedTo:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               reviewedAt:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               reviewedBy:
+   *                 type: string
+   *                 nullable: true
+   *               availableFrom:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               tentativeAvailableFrom:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *     responses:
+   *       '200':
+   *         description: Successfully updated listing.
+   *       '404':
+   *         description: Listing not found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.patch(
+    '(.*)/listings/:listingId',
+    parseRequestBody(leasing.UpdateListingSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const result = await listingAdapter.updateListing(
+        Number(ctx.params.listingId),
+        ctx.request.body
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: UpdateListingErrorCodes.NotFound, ...metadata }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = { error: UpdateListingErrorCodes.Unknown, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
     }
   )
 }

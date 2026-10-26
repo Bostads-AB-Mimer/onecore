@@ -938,6 +938,7 @@ export {
   getActiveListingByRentalObjectCode,
   getListingsWithApplicants,
   updateListingStatus,
+  updateListing,
   getExpiredListingsWithNoOffers,
   getListings,
   getListingSummariesByRentalObjectCodes,

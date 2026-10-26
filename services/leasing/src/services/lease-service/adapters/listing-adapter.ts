@@ -27,6 +27,8 @@ function transformFromDbListing(row: DbListing): ListingWithoutRentalObject {
     listingCategory: row.ListingCategory,
     reviewedAt: row.ReviewedAt ?? null,
     reviewedBy: row.ReviewedBy ?? null,
+    availableFrom: row.AvailableFrom ?? null,
+    tentativeAvailableFrom: row.TentativeAvailableFrom ?? null,
   }
 }
 
@@ -63,6 +65,8 @@ const createListing = async (
         ListingCategory: listingData.listingCategory,
         ReviewedAt: listingData.reviewedAt ?? null,
         ReviewedBy: listingData.reviewedBy ?? null,
+        AvailableFrom: listingData.availableFrom ?? null,
+        TentativeAvailableFrom: listingData.tentativeAvailableFrom ?? null,
       })
       .returning('*')
 
@@ -116,6 +120,8 @@ const createMultipleListings = async (
       ListingCategory: listingData.listingCategory,
       ReviewedAt: listingData.reviewedAt ?? null,
       ReviewedBy: listingData.reviewedBy ?? null,
+      AvailableFrom: listingData.availableFrom ?? null,
+      TentativeAvailableFrom: listingData.tentativeAvailableFrom ?? null,
     }))
 
     const insertedRows = await dbConnection<DbListing>('Listing')
@@ -657,6 +663,42 @@ const updateListingStatuses = async (
   }
 }
 
+const updateListing = async (
+  listingId: number,
+  data: leasing.UpdateListing,
+  dbConnection: Knex = db
+): Promise<
+  AdapterResult<ListingWithoutRentalObject, 'not-found' | 'unknown'>
+> => {
+  try {
+    const updateFields: Partial<DbListing> = {}
+    if ('publishedFrom' in data)
+      updateFields.PublishedFrom = data.publishedFrom ?? null
+    if ('publishedTo' in data)
+      updateFields.PublishedTo = data.publishedTo ?? null
+    if ('reviewedAt' in data) updateFields.ReviewedAt = data.reviewedAt ?? null
+    if ('reviewedBy' in data) updateFields.ReviewedBy = data.reviewedBy ?? null
+    if ('availableFrom' in data)
+      updateFields.AvailableFrom = data.availableFrom ?? null
+    if ('tentativeAvailableFrom' in data)
+      updateFields.TentativeAvailableFrom = data.tentativeAvailableFrom ?? null
+
+    const updatedRows = await dbConnection<DbListing>('Listing')
+      .where('Id', listingId)
+      .update(updateFields)
+      .returning('*')
+
+    if (updatedRows.length === 0) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: true, data: transformFromDbListing(updatedRows[0]) }
+  } catch (err) {
+    logger.error({ err }, 'listingAdapter.updateListing')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const deleteListing = async (
   listingId: number,
   dbConnection = db
@@ -693,5 +735,6 @@ export {
   updateApplicantStatus,
   getExpiredListings,
   updateListingStatuses,
+  updateListing,
   deleteListing,
 }
