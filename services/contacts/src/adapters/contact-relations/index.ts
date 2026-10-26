@@ -2,6 +2,7 @@ export {
   activeRelationsForMany,
   activeRelationsInRole,
   insertMany,
+  invoiceRecipientCodes,
   listActive,
   softDeleteByIds,
   type RelationDirection,

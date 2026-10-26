@@ -41,6 +41,8 @@ import { registerSchema } from '../../utils/openapi'
 import { Contact, Lease, RentalObjectRentInfo } from './schemas/lease'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
 import { resolvePersonnummerInQuery } from '../../adapters/contacts-adapter/lease-query'
+import { contactsAdapter } from '../../adapters/contacts-adapter'
+import { withProtectedIdentityDetails } from '../../processes/contacts'
 
 /**
  * @swagger
@@ -1097,7 +1099,7 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: res.data,
+      content: await withProtectedIdentityDetails(contactsAdapter, res.data),
       ...metadata,
     }
   })
@@ -1193,7 +1195,7 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: res.data,
+      content: await withProtectedIdentityDetails(contactsAdapter, res.data),
       ...metadata,
     }
   })
