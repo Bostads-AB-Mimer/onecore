@@ -1,39 +1,10 @@
 import fs from 'fs/promises'
 
-/**
- * Where a sync left off: the logtime of the last cmlog second it finished,
- * and the keys of the changes it handled in that second. cmlog has whole
- * seconds, so the next run reads that second again and uses the keys to
- * skip what it already did.
- */
-export type SyncPosition = { timestamp: Date; handled: string[] }
+const SECOND_MS = 1000
 
-const parsePosition = (content: string): SyncPosition | null => {
-  const text = content.trim()
-  // Files written before handled keys existed hold a bare ISO timestamp.
-  if (!text.startsWith('{')) {
-    const date = new Date(text)
-    return isNaN(date.getTime()) ? null : { timestamp: date, handled: [] }
-  }
-  let raw: unknown
-  try {
-    raw = JSON.parse(text)
-  } catch {
-    return null
-  }
-  if (typeof raw !== 'object' || raw === null) return null
-  const { timestamp, handled } = raw as Record<string, unknown>
-  if (typeof timestamp !== 'string') return null
-  const date = new Date(timestamp)
-  if (isNaN(date.getTime())) return null
-  if (!Array.isArray(handled) || handled.some((k) => typeof k !== 'string'))
-    return null
-  return { timestamp: date, handled }
-}
-
-export const readPosition = async (
+export const getLastTimestamp = async (
   stateFile: string
-): Promise<SyncPosition | null> => {
+): Promise<Date | null> => {
   let content: string
   try {
     content = await fs.readFile(stateFile, 'utf-8')
@@ -41,24 +12,90 @@ export const readPosition = async (
     if ((err as { code?: string }).code === 'ENOENT') return null
     throw err
   }
-  const position = parsePosition(content)
-  if (!position)
-    throw new Error(`${stateFile} holds no sync position: '${content.trim()}'`)
-  return position
+  const date = new Date(content.trim())
+  if (isNaN(date.getTime()))
+    throw new Error(`${stateFile} holds no timestamp: '${content.trim()}'`)
+  return date
 }
 
-export const savePosition = async (
+const writeAtomically = async (file: string, content: string) => {
+  const tmp = `${file}.tmp`
+  await fs.writeFile(tmp, content, 'utf-8')
+  await fs.rename(tmp, file)
+}
+
+export const saveLastTimestamp = (stateFile: string, ts: Date) =>
+  writeAtomically(stateFile, ts.toISOString())
+
+/**
+ * Where a sync left off. `timestamp` is the last finished second, also kept as
+ * a bare timestamp in the state file for older code. The next run reads cmlog
+ * from `readFrom` and skips the rows in `handled` (id → logtime in ms).
+ */
+export type SyncPosition = {
+  timestamp: Date | null
+  readFrom: Date
+  handled: Map<string, number>
+}
+
+const positionFileOf = (stateFile: string) => `${stateFile}.position.json`
+
+const readPositionFile = async (
+  stateFile: string
+): Promise<SyncPosition | null> => {
+  try {
+    const raw = JSON.parse(
+      await fs.readFile(positionFileOf(stateFile), 'utf-8')
+    ) as { timestamp: string | null; readFrom: string; handled: object }
+    const readFrom = new Date(raw.readFrom)
+    if (isNaN(readFrom.getTime())) return null
+    return {
+      timestamp: raw.timestamp === null ? null : new Date(raw.timestamp),
+      readFrom,
+      handled: new Map(
+        Object.entries(raw.handled).map(([id, at]) => [
+          id,
+          new Date(at).getTime(),
+        ])
+      ),
+    }
+  } catch {
+    return null
+  }
+}
+
+export const readSyncPosition = async (
+  stateFile: string
+): Promise<SyncPosition | null> => {
+  const timestamp = await getLastTimestamp(stateFile)
+  const position = await readPositionFile(stateFile)
+  // A position file left behind by a rollback no longer matches the state file.
+  if (position && position.timestamp?.getTime() === timestamp?.getTime())
+    return position
+  if (!timestamp) return null
+  return {
+    timestamp,
+    readFrom: new Date(timestamp.getTime() + SECOND_MS),
+    handled: new Map(),
+  }
+}
+
+export const saveSyncPosition = async (
   stateFile: string,
   position: SyncPosition
 ) => {
-  const tmp = `${stateFile}.tmp`
-  await fs.writeFile(
-    tmp,
+  await writeAtomically(
+    positionFileOf(stateFile),
     JSON.stringify({
-      timestamp: position.timestamp.toISOString(),
-      handled: position.handled,
-    }),
-    'utf-8'
+      timestamp: position.timestamp?.toISOString() ?? null,
+      readFrom: position.readFrom.toISOString(),
+      handled: Object.fromEntries(
+        [...position.handled].map(([id, at]) => [
+          id,
+          new Date(at).toISOString(),
+        ])
+      ),
+    })
   )
-  await fs.rename(tmp, stateFile)
+  if (position.timestamp) await saveLastTimestamp(stateFile, position.timestamp)
 }
