@@ -75,6 +75,35 @@ describe('sync position', () => {
     })
   })
 
+  it('uses a position file saved ahead of the timestamp file', async () => {
+    await fs.writeFile(stateFile, '2026-10-15T08:00:00.000Z', 'utf-8')
+    await saveSyncPosition(stateFile, { ...position, timestamp: null })
+    await fs.writeFile(
+      positionFile,
+      (await fs.readFile(positionFile, 'utf-8')).replace(
+        '"timestamp":null',
+        `"timestamp":"${position.timestamp.toISOString()}"`
+      ),
+      'utf-8'
+    )
+
+    expect(await readSyncPosition(stateFile)).toEqual(position)
+  })
+
+  it('uses a position file when the timestamp file was never written', async () => {
+    await saveSyncPosition(stateFile, position)
+    await fs.rm(stateFile)
+
+    expect(await readSyncPosition(stateFile)).toEqual(position)
+  })
+
+  it('ignores a position file without a timestamp once the timestamp file has one', async () => {
+    await saveSyncPosition(stateFile, { ...position, timestamp: null })
+    await fs.writeFile(stateFile, '2026-10-15T08:00:00.000Z', 'utf-8')
+
+    expect((await readSyncPosition(stateFile))?.handled).toEqual(new Map())
+  })
+
   it('ignores an unreadable position file', async () => {
     await fs.writeFile(stateFile, '2026-10-15T08:08:28.000Z', 'utf-8')
     await fs.writeFile(positionFile, '{"timestamp":', 'utf-8')
