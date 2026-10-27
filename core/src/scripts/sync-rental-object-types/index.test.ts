@@ -28,8 +28,7 @@ let sendEmailSpy: jest.SpyInstance
 
 const originalXpandSync = config.emailAddresses.xpandSync
 
-const readState = async () =>
-  JSON.parse(await fs.readFile(stateFile, 'utf-8')).timestamp as string
+const readState = async () => (await fs.readFile(stateFile, 'utf-8')).trim()
 
 const mockChanges = (
   changes: RentalObjectTypeChange[],

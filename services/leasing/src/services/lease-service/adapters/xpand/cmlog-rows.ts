@@ -1,11 +1,8 @@
 import { Knex } from 'knex'
 
 /**
- * Reads cmlog rows whose logmemo matches every pattern, from `since`
- * inclusive or all of them when it is null, oldest first. Inclusive because
- * logtime has whole seconds: a row logged in the `since` second after the
- * previous read would otherwise never be seen. The caller skips the rows of
- * that second it already handled.
+ * Reads cmlog rows whose logmemo matches every pattern, after `since` or all
+ * of them when it is null, oldest first.
  *
  * cmlog.logtime is a naive SQL Server `datetime` populated by xpand with
  * Swedish local time. Knex/mssql passes our JS Date as UTC; the driver
@@ -32,7 +29,7 @@ export const cmlogRowsSince = (
     ])
     .select('logmemo', 'logtime')
 
-  return since ? base.andWhere('logtime', '>=', since) : base
+  return since ? base.andWhere('logtime', '>', since) : base
 }
 
 /**

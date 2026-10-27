@@ -97,7 +97,7 @@ describe('syncContacts', () => {
     expect(await readQueue(queueFile)).toHaveLength(0)
 
     // State file advanced
-    const written = JSON.parse(await fs.readFile(stateFile, 'utf-8')).timestamp
+    const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(ts.toISOString())
 
     // No emails sent
@@ -150,7 +150,7 @@ describe('syncContacts', () => {
     )
 
     // State advanced
-    const written = JSON.parse(await fs.readFile(stateFile, 'utf-8')).timestamp
+    const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(ts.toISOString())
   })
 
@@ -327,7 +327,7 @@ describe('syncContacts', () => {
     expect(sendEmailSpy).not.toHaveBeenCalled()
 
     // State advanced to the row's timestamp
-    const written = JSON.parse(await fs.readFile(stateFile, 'utf-8')).timestamp
+    const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(ts.toISOString())
   })
 })
