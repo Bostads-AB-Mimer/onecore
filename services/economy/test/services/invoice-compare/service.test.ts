@@ -2,6 +2,7 @@ import {
   ComparisonRow,
   aggregateRows,
   applyFilters,
+  excelText,
   findDiffKeys,
   groupKey,
   invoiceContributions,
@@ -16,6 +17,7 @@ const row = (overrides: Partial<ComparisonRow>): ComparisonRow => ({
   side: 'xpand',
   invoiceNumber: '100001',
   state: 'faktura',
+  invoiceDate: '2026-09-28',
   customer: 'C1',
   contract: '306-008-01-0201/02',
   rentalObject: '306-008-01-0201',
@@ -116,6 +118,8 @@ describe('invoice-compare service', () => {
         {
           group: '110-005-02-0601/04|FAKT AVG',
           status: 'bara i tenfast',
+          konto: '',
+          fastighet: '',
           xpandNetto: '',
           tenfastNetto: 49,
           diffNetto: -49,
@@ -127,6 +131,8 @@ describe('invoice-compare service', () => {
         {
           group: '306-008-01-0201/02|HYRAB2',
           status: 'olika belopp',
+          konto: '',
+          fastighet: '',
           xpandNetto: 1000,
           tenfastNetto: 950,
           diffNetto: 50,
@@ -138,12 +144,40 @@ describe('invoice-compare service', () => {
       ])
     })
 
-    it('ignores differences within tolerance', () => {
+    it('fills konto and fastighet from the underlying rows', () => {
+      const diffs = toDiffRows(left, right, findDiffKeys(left, right), [
+        row({ account: '3011', property: '26001' }),
+        row({
+          side: 'tenfast',
+          contract: '110-005-02-0601/04',
+          article: 'FAKT AVG',
+          account: '5731',
+          property: '26002',
+          netto: 49,
+          vat: 0,
+        }),
+      ])
+      expect(diffs.map((diff) => diff.konto)).toEqual(['5731', '3011'])
+      expect(diffs.map((diff) => diff.fastighet)).toEqual(['26002', '26001'])
+    })
+
+    it('ignores differences of 1 SEK or less', () => {
       const near = aggregateRows(
-        [row({ netto: 950.004, vat: 237.5 })],
+        [row({ netto: 951, vat: 237.5 })],
         groupKey
       )
       expect(findDiffKeys(near, right)).toEqual(['110-005-02-0601/04|FAKT AVG'])
+    })
+
+    it('flags differences above 1 SEK', () => {
+      const near = aggregateRows(
+        [row({ netto: 951.01, vat: 237.5 })],
+        groupKey
+      )
+      expect(findDiffKeys(near, right)).toEqual([
+        '110-005-02-0601/04|FAKT AVG',
+        '306-008-01-0201/02|HYRAB2',
+      ])
     })
   })
 
@@ -304,13 +338,23 @@ describe('invoice-compare service', () => {
   })
 
   describe('toCsv', () => {
-    it('writes header and semicolon separated values with quoting', () => {
+    it('quotes every field so codes with leading zeros survive Excel', () => {
       expect(
         toCsv([
           { a: 1, b: 'x;y', c: 'say "hi"' },
           { a: 2, b: '', c: null },
         ])
-      ).toBe('a;b;c\n1;"x;y";"say ""hi"""\n2;;')
+      ).toBe('a;b;c\n"1";"x;y";"say ""hi"""\n"2";"";""')
+    })
+
+    it('keeps leading zeros on property codes via formula escape', () => {
+      expect(toCsv([{ fastighet: excelText('04010') }])).toBe(
+        'fastighet\n"=""04010"""'
+      )
+    })
+
+    it('excelText leaves empty fields untouched', () => {
+      expect(excelText('')).toBe('')
     })
 
     it('returns empty string for no rows', () => {

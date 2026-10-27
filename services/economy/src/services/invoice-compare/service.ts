@@ -38,6 +38,8 @@ export type ComparisonRow = {
   side: ComparisonSide
   invoiceNumber: string
   state: string
+  /** Skapandedatum på fakturan, fallback fakturadatum (YYYY-MM-DD). */
+  invoiceDate: string
   customer: string
   contract: string
   rentalObject: string
@@ -61,6 +63,8 @@ export type Aggregates = Record<string, GroupAggregates>
 export type DiffRow = {
   group: string
   status: string
+  konto: string
+  fastighet: string
   xpandNetto: number | ''
   tenfastNetto: number | ''
   diffNetto: number
@@ -75,6 +79,7 @@ export type InvoiceContribution = {
   side: ComparisonSide
   invoiceNumber: string
   state: string
+  invoiceDate: string
   invoiceNetto: number
   invoiceVat: number
   rowCount: number
@@ -101,6 +106,7 @@ type XpandInvoiceRowDbRow = {
   invoiceNumber: string
   invoiceType: number
   debitStatus: number
+  invoiceDate: Date | string
   headerContract: string | null
   customerCode: string
   rowType: number
@@ -115,6 +121,7 @@ type XpandInvoice = {
   invoiceNumber: string
   invoiceType: number
   debitStatus: number
+  invoiceDate: Date | string
   customer: string
   headerContract: string
   rows: {
@@ -180,6 +187,7 @@ const groupXpandRowsByInvoice = (
       invoiceNumber,
       invoiceType: row.invoiceType,
       debitStatus: row.debitStatus,
+      invoiceDate: row.invoiceDate,
       customer: row.customerCode.trim(),
       headerContract: (row.headerContract ?? '').trim(),
       rows: [],
@@ -215,6 +223,7 @@ export const getXpandInvoiceRows = async (
       'krfkh.invoice as invoiceNumber',
       'krfkh.type as invoiceType',
       'krfkh.debstatus as debitStatus',
+      'krfkh.invdate as invoiceDate',
       'krfkh.reference as headerContract',
       'cmctc.cmctckod as customerCode',
       'krfkr.rowtype as rowType',
@@ -275,6 +284,8 @@ export const getXpandInvoiceRows = async (
         side: 'xpand',
         invoiceNumber: invoice.invoiceNumber,
         state: invoice.invoiceType === 2 ? 'kredit' : 'faktura',
+        // Xpand har inget skapandedatum på krfkh, använd fakturadatum (invdate)
+        invoiceDate: new Date(invoice.invoiceDate).toISOString().slice(0, 10),
         customer: invoice.customer,
         contract: currentContract,
         rentalObject: currentContract.split('/')[0] ?? '',
@@ -320,6 +331,8 @@ const TenfastCompareInvoiceSchema = z
     _id: z.string(),
     ocrNumber: z.string().optional().default(''),
     state: z.string(),
+    createdAt: z.string().optional(),
+    expectedInvoiceDate: z.string().optional(),
     interval: z.object({
       from: z.string(),
       to: z.string(),
@@ -508,6 +521,9 @@ export const getTenfastInvoiceRows = async (
         side: 'tenfast',
         invoiceNumber: invoice.ocrNumber || invoice._id,
         state: invoice.state,
+        invoiceDate: (
+          invoice.createdAt ?? invoice.expectedInvoiceDate ?? ''
+        ).slice(0, 10),
         customer: lease?.hyresgaster[0]?.externalId ?? '',
         contract: lease?.externalId ?? '',
         rentalObject,
@@ -585,11 +601,12 @@ export const aggregateRows = (
   return aggregates
 }
 
-const TOLERANCE = 0.005
+/** Diffar på 1 SEK eller mindre ignoreras, allt över 1 SEK rapporteras. */
+const TOLERANCE = 1
 
 /**
  * Keys where the two sides differ: present on only one side, or with a netto
- * or vat difference beyond the tolerance.
+ * or vat difference above the tolerance.
  */
 export const findDiffKeys = (
   left: Aggregates,
@@ -606,8 +623,8 @@ export const findDiffKeys = (
       return
     }
     if (
-      Math.abs(a.netto - b.netto) >= TOLERANCE ||
-      Math.abs(a.vat - b.vat) >= TOLERANCE
+      Math.abs(a.netto - b.netto) > TOLERANCE ||
+      Math.abs(a.vat - b.vat) > TOLERANCE
     ) {
       diffs.push(key)
     }
@@ -619,14 +636,30 @@ export const findDiffKeys = (
 export const toDiffRows = (
   left: Aggregates,
   right: Aggregates,
-  diffKeys: string[]
+  diffKeys: string[],
+  rows: ComparisonRow[] = []
 ): DiffRow[] => {
+  // Konto och fastighet hämtas från de underliggande raderna i varje grupp
+  const kontoByKey = new Map<string, string>()
+  const fastighetByKey = new Map<string, string>()
+  rows.forEach((row) => {
+    const key = groupKey(row)
+    if (row.account && !kontoByKey.has(key)) {
+      kontoByKey.set(key, row.account)
+    }
+    if (row.property && !fastighetByKey.has(key)) {
+      fastighetByKey.set(key, row.property)
+    }
+  })
+
   return diffKeys.map((key) => {
     const a = left[key]
     const b = right[key]
     return {
       group: key,
       status: !b ? 'bara i xpand' : !a ? 'bara i tenfast' : 'olika belopp',
+      konto: kontoByKey.get(key) ?? '',
+      fastighet: fastighetByKey.get(key) ?? '',
       xpandNetto: a ? a.netto : '',
       tenfastNetto: b ? b.netto : '',
       diffNetto: round2((a?.netto ?? 0) - (b?.netto ?? 0)),
@@ -664,6 +697,7 @@ export const invoiceContributions = (
         side: row.side,
         invoiceNumber,
         state: row.state,
+        invoiceDate: row.invoiceDate,
         invoiceNetto: 0,
         invoiceVat: 0,
         rowCount: 0,
@@ -677,20 +711,20 @@ export const invoiceContributions = (
   })
 
   const out: InvoiceContribution[] = []
-  ;[...byKey.keys()]
-    .sort()
-    .forEach((key) => {
-      const contributions = [...byKey.get(key)!.values()]
-      const byAbsAmount = (a: InvoiceContribution, b: InvoiceContribution) =>
-        Math.abs(b.invoiceNetto) - Math.abs(a.invoiceNetto)
-      const xpand = contributions
-        .filter((contribution) => contribution.side === 'xpand')
-        .sort(byAbsAmount)
-      const tenfast = contributions
-        .filter((contribution) => contribution.side === 'tenfast')
-        .sort(byAbsAmount)
-      out.push(...xpand, ...tenfast)
-    })
+    ;[...byKey.keys()]
+      .sort()
+      .forEach((key) => {
+        const contributions = [...byKey.get(key)!.values()]
+        const byAbsAmount = (a: InvoiceContribution, b: InvoiceContribution) =>
+          Math.abs(b.invoiceNetto) - Math.abs(a.invoiceNetto)
+        const xpand = contributions
+          .filter((contribution) => contribution.side === 'xpand')
+          .sort(byAbsAmount)
+        const tenfast = contributions
+          .filter((contribution) => contribution.side === 'tenfast')
+          .sort(byAbsAmount)
+        out.push(...xpand, ...tenfast)
+      })
   return out
 }
 
@@ -745,13 +779,22 @@ export const applyFilters = (
   return { rows: filtered, droppedUnknownProperty }
 }
 
+/**
+ * Alla fält citattecken-omsluts alltid. Annars tolkar Excel koder med
+ * inledande nolla (t.ex. fastighetskoden "04010") som siffror och klipper
+ * nollan ("4010").
+ */
 const csvEscape = (value: unknown): string => {
   const text = value === null || value === undefined ? '' : String(value)
-  if (text.includes(';') || text.includes('"') || text.includes('\n')) {
-    return `"${text.replaceAll('"', '""')}"`
-  }
-  return text
+  return `"${text.replaceAll('"', '""')}"`
 }
+
+/**
+ * Excel tolkar även citerade "04010" som siffran 4010. Genom att skriva
+ * cellen som ="04010" tvingar Excel att hantera värdet som text.
+ */
+export const excelText = (value: string): string =>
+  value === '' ? '' : `="${value.replaceAll('"', '""')}"`
 
 export const toCsv = (rows: Record<string, unknown>[]): string => {
   if (rows.length === 0) return ''
@@ -765,18 +808,50 @@ export const toCsv = (rows: Record<string, unknown>[]): string => {
 
 const comparisonRowToRecord = (row: ComparisonRow) => ({
   side: row.side,
-  faktura: row.invoiceNumber,
+  fakturanummer: row.invoiceNumber,
   state: row.state,
+  fakturadatum: row.invoiceDate,
   kundnr: row.customer,
   kontrakt: row.contract,
   hyresobjekt: row.rentalObject,
-  fastighet: row.property,
+  fastighet: excelText(row.property),
   artikel: row.article,
   konto: row.account,
   radtext: row.text,
   netto: row.netto.toFixed(2),
   vat: row.vat.toFixed(2),
 })
+
+const diffRowToRecord = (row: DiffRow, contributions: InvoiceContribution[]) => {
+  const [kontrakt, artikel] = row.group.split('|')
+  // Xpand-kontributioner ligger före tenfast i listan, så nummer och datum
+  // hör ihop parvis (största belopp först per sida)
+  const rowContributions = contributions.filter(
+    (contribution) => contribution.group === row.group
+  )
+  const invoiceNumbers = rowContributions
+    .map((contribution) => contribution.invoiceNumber)
+    .join(',')
+  const invoiceDates = rowContributions
+    .map((contribution) => contribution.invoiceDate)
+    .join(',')
+  return {
+    kontrakt,
+    artikel,
+    status: row.status,
+    konto: row.konto,
+    fastighet: excelText(row.fastighet),
+    xpand_netto: row.xpandNetto,
+    tenfast_netto: row.tenfastNetto,
+    diff_netto: row.diffNetto,
+    xpand_vat: row.xpandVat,
+    tenfast_vat: row.tenfastVat,
+    fakturanummer: invoiceNumbers,
+    fakturadatum: invoiceDates,
+    xpand_rader: row.xpandCount,
+    tenfast_rader: row.tenfastCount,
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Orchestration
@@ -839,9 +914,9 @@ export const compareInvoices = async (
   )
   const propertyMap = await getPropertyMap(allRentalObjects, month)
 
-  ;[...xpandRows, ...tenfastRows].forEach((row) => {
-    row.property = propertyMap.get(row.rentalObject.split('/')[0]) ?? ''
-  })
+    ;[...xpandRows, ...tenfastRows].forEach((row) => {
+      row.property = propertyMap.get(row.rentalObject.split('/')[0]) ?? ''
+    })
 
   const filteredXpand = applyFilters(xpandRows, {
     properties: options.properties,
@@ -874,7 +949,12 @@ export const compareInvoices = async (
   const xpandAggregates = aggregateRows(filteredXpand.rows, groupKey)
   const tenfastAggregates = aggregateRows(filteredTenfast.rows, groupKey)
   const diffKeys = findDiffKeys(xpandAggregates, tenfastAggregates)
-  const diffRows = toDiffRows(xpandAggregates, tenfastAggregates, diffKeys)
+  const diffRows = toDiffRows(
+    xpandAggregates,
+    tenfastAggregates,
+    diffKeys,
+    [...filteredXpand.rows, ...filteredTenfast.rows]
+  )
   const contributions = invoiceContributions(
     [...filteredXpand.rows, ...filteredTenfast.rows],
     diffKeys,
@@ -906,31 +986,7 @@ export const compareInvoices = async (
     write(
       'diff_per_kontrakt_artikel.csv',
       toCsv(
-        diffRows.map((row) => {
-          const [kontrakt, artikel] = row.group.split('|')
-          const invoiceNumbers = (side: ComparisonSide) =>
-            contributions
-              .filter(
-                (contribution) =>
-                  contribution.group === row.group && contribution.side === side
-              )
-              .map((contribution) => contribution.invoiceNumber)
-              .join(',')
-          return {
-            kontrakt,
-            artikel,
-            status: row.status,
-            xpand_netto: row.xpandNetto,
-            tenfast_netto: row.tenfastNetto,
-            diff_netto: row.diffNetto,
-            xpand_vat: row.xpandVat,
-            tenfast_vat: row.tenfastVat,
-            xpand_fakturor: invoiceNumbers('xpand'),
-            tenfast_fakturor: invoiceNumbers('tenfast'),
-            xpand_rader: row.xpandCount,
-            tenfast_rader: row.tenfastCount,
-          }
-        })
+        diffRows.map((row) => diffRowToRecord(row, contributions))
       )
     )
     write(
@@ -939,8 +995,9 @@ export const compareInvoices = async (
         contributions.map((row) => ({
           kontrakt_artikel: row.group,
           side: row.side,
-          faktura: row.invoiceNumber,
+          fakturanummer: row.invoiceNumber,
           state: row.state,
+          fakturadatum: row.invoiceDate,
           netto: row.invoiceNetto.toFixed(2),
           vat: row.invoiceVat.toFixed(2),
           rader: row.rowCount,
@@ -958,26 +1015,12 @@ export const compareInvoices = async (
 
   const top = [...diffRows]
     .sort((a, b) => Math.abs(b.diffNetto) - Math.abs(a.diffNetto))
-    .slice(0, 25)
+  //.slice(0, 25)
   if (top.length) {
-    console.log('\nStörsta diffar per kontrakt+artikel:')
-    top.forEach((row) => {
-      const invoiceNumbers = (side: ComparisonSide) =>
-        contributions
-          .filter(
-            (contribution) =>
-              contribution.group === row.group && contribution.side === side
-          )
-          .map((contribution) => contribution.invoiceNumber)
-          .join(', ')
-      console.log(
-        `  ${row.group}\t${row.status}\txpand ${row.xpandNetto} / tenfast ${row.tenfastNetto} (diff ${row.diffNetto})`
-      )
-      if (row.status !== 'olika belopp') {
-        const side = row.status === 'bara i xpand' ? 'xpand' : 'tenfast'
-        console.log(`    fakturor (${side}): ${invoiceNumbers(side as ComparisonSide)}`)
-      }
-    })
+    console.log('\nDiffar per kontrakt+artikel (CSV):')
+    console.log(
+      toCsv(top.map((row) => diffRowToRecord(row, contributions)))
+    )
   }
 
   return {

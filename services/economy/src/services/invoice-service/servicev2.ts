@@ -1108,10 +1108,10 @@ export const uploadCsvFiles = async (
     throw new Error('Could not find company ' + companyId)
   }
 
-  const aggregateFilename = `${company.xpandId}/${Date.now()}-${company.xpandId}-aggregated.gl.csv`
+  const aggregateFilename = `${company.xpandId}/GL-HYRESAVISERING_-${Date.now()}-${company.xpandId}-aggregated.gl.csv`
   await uploadFile(aggregateFilename, aggregateAccountingCsv.join('\n'))
 
-  const ledgerFilename = `${company.xpandId}/${Date.now()}-${company.xpandId}-ledger.gl.csv`
+  const ledgerFilename = `${company.xpandId}/GL-HYRESAVISERING_${Date.now()}-${company.xpandId}-ledger.gl.csv`
   await uploadFile(ledgerFilename, ledgerAccountingCsv.join('\n'))
 }
 

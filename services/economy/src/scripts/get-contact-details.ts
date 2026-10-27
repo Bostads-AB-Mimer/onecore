@@ -31,7 +31,7 @@ const getContactDetails = async () => {
   }
   await saveContacts(contacts, batchId)
 
-  const contactsFilename = `contacts.csv`
+  const contactsFilename = `AR-HYRESAVISERING_contacts.csv`
   const contactsCsv = await getBatchContactsCsv(batchId)
   if (contactsCsv) {
     await fs.writeFile(

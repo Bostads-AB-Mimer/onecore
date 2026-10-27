@@ -11,12 +11,17 @@ import {
  *   pnpm dev:script:compare-invoices-xpand-tenfast -- --month 2026-09 --property 26001 [--article HYRAB2] [--account 3011] [--company 001] [--out ./generated/invoice-compare]
  *
  * Utdata (CSV i --out-katalogen):
- *   xpand_rows.csv, tenfast_rows.csv            normaliserade fakurarader
- *   diff_per_kontrakt_artikel.csv               grupper som skiljer sig
+ *   xpand_rows.csv, tenfast_rows.csv            normaliserade fakturarader
+ *                                               (fakturadatum = skapandedatum
+ *                                               med fakturadatum som fallback)
+ *   diff_per_kontrakt_artikel.csv               grupper som skiljer sig (med
+ *                                               konto och fastighet)
  *   invoice_contributions.csv                   per diffande grupp: vilka
  *                                               fakturor som bidrar på vardera
  *                                               sidan (här syns vilken faktura
  *                                               en skillnad kommer ifrån)
+ *
+ * Diff-listan skrivs även till terminalen som CSV med samma kolumner.
  */
 const parseArgs = () => {
   const args = process.argv.slice(2)
