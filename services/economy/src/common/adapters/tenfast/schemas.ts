@@ -318,6 +318,28 @@ export const TenfastBatchGetLeaseSchema = TenfastLeaseSchema.extend({
   ),
 })
 
+// Lean lease schema for looking up a tenant's leases, parsing only what the
+// IMD enrichment needs so unrelated fields can't fail the lookup.
+export const TenfastTenantLeaseSchema = z.object({
+  externalId: z.string(),
+  stage: z.string(),
+  startDate: optionalDateField,
+  endDate: optionalDateField,
+  hyresobjekt: z.array(
+    z.union([
+      z.string(),
+      z.object({ typ: z.string().optional() }).passthrough(),
+    ])
+  ),
+})
+
+export const TenfastTenantLeasesResponseSchema = z.object({
+  records: z.array(TenfastTenantLeaseSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
 export const TenfastBatchGetRentalObjectSchema = z
   .object({
     _id: z.string(),
@@ -365,6 +387,7 @@ export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
 export type TenfastBatchGetLease = z.infer<typeof TenfastBatchGetLeaseSchema>
+export type TenfastTenantLease = z.infer<typeof TenfastTenantLeaseSchema>
 export type TenfastBatchGetRentalObject = z.infer<
   typeof TenfastBatchGetRentalObjectSchema
 >
