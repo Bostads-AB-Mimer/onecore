@@ -219,10 +219,6 @@ async function getLeasesByTenantIds(
   return results
 }
 
-function articleKey(leaseId: string, unit: string): string {
-  return `${leaseId}:${UNIT_CONFIG[unit].articleCode}`
-}
-
 async function moveToNewLeases(
   result: EnrichResult,
   leaseMap: Map<string, LeaseMatch | MultipleLeaseMatch | null>
@@ -258,22 +254,17 @@ async function moveToNewLeases(
     return newLeaseId ? [{ row, oldLeaseId, newLeaseId }] : []
   })
 
-  // Two rows with the same article on one lease would read as a duplicate on
-  // the invoice, so a moved row only goes through if its article is unique.
-  const articleCounts = new Map<string, number>()
-  for (const { leaseId, unit } of [
-    ...result.enriched,
-    ...moved.map(({ row, newLeaseId }) => ({
-      leaseId: newLeaseId,
-      unit: row.unit,
-    })),
+  // Tenfast refuses an import file in which a lease appears more than once,
+  // so a moved row only goes through if its new lease gets no other row.
+  const leaseCounts = new Map<string, number>()
+  for (const leaseId of [
+    ...result.enriched.map(({ leaseId }) => leaseId),
+    ...moved.map(({ newLeaseId }) => newLeaseId),
   ]) {
-    const key = articleKey(leaseId, unit)
-    articleCounts.set(key, (articleCounts.get(key) ?? 0) + 1)
+    leaseCounts.set(leaseId, (leaseCounts.get(leaseId) ?? 0) + 1)
   }
   const accepted = moved.filter(
-    ({ row, newLeaseId }) =>
-      articleCounts.get(articleKey(newLeaseId, row.unit)) === 1
+    ({ newLeaseId }) => leaseCounts.get(newLeaseId) === 1
   )
 
   for (const { row, oldLeaseId, newLeaseId } of accepted) {

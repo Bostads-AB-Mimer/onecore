@@ -467,7 +467,8 @@ describe(imdService.enrichIMDRows, () => {
       }
     )
 
-    it('looks up each tenant once and moves all their rows', async () => {
+    // Tenfast refuses an import file in which a lease appears more than once.
+    it('looks up each tenant once and keeps rows manual that would put the new lease in the file twice', async () => {
       mockOldLease()
       mockGetLeasesByTenantId.mockResolvedValue({
         ok: true,
@@ -481,10 +482,10 @@ describe(imdService.enrichIMDRows, () => {
 
       assert(result.ok)
       expect(mockGetLeasesByTenantId).toHaveBeenCalledTimes(1)
-      expect(result.data.unprocessed).toHaveLength(0)
-      expect(result.data.enriched.map((row) => row.leaseId)).toEqual([
-        newLeaseId,
-        newLeaseId,
+      expect(result.data.enriched).toHaveLength(0)
+      expect(result.data.unprocessed).toEqual([
+        expect.objectContaining({ unit: 'VV', reason: 'tenant-moved' }),
+        expect.objectContaining({ unit: 'EL', reason: 'tenant-moved' }),
       ])
     })
 
@@ -593,9 +594,8 @@ describe(imdService.enrichIMDRows, () => {
     })
 
     // With overlapping leases the new home has its own rows for the same
-    // month. Until we know the Tenfast import keeps two rows with the same
-    // article on one lease, the moved row of that article is left manual.
-    it('keeps the row as tenant-moved when the new home already has a row with the same article', async () => {
+    // month, and Tenfast refuses an import file with the lease in it twice.
+    it('keeps the rows as tenant-moved when the new lease already gets a row', async () => {
       mockGetActiveLeases.mockResolvedValue(
         new Map<string, LeaseMatch | null>([
           [
@@ -634,16 +634,16 @@ describe(imdService.enrichIMDRows, () => {
           unit: 'VV',
           leaseId: newLeaseId,
         }),
-        expect.objectContaining({
-          rentalObjectCode: '306-008-01-0501',
-          unit: 'VMM',
-          leaseId: newLeaseId,
-        }),
       ])
       expect(result.data.unprocessed).toEqual([
         expect.objectContaining({
           rentalObjectCode: '306-008-01-0501',
           unit: 'VV',
+          reason: 'tenant-moved',
+        }),
+        expect.objectContaining({
+          rentalObjectCode: '306-008-01-0501',
+          unit: 'VMM',
           reason: 'tenant-moved',
         }),
       ])
