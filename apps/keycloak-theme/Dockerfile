@@ -5,23 +5,36 @@
 # ==========================
 # Build stage
 # ==========================
-FROM alpine:3.22 AS builder
+FROM node:22-alpine AS builder
 
-RUN apk add --no-cache zip
+ENV CI=true
 
-WORKDIR /build
+RUN apk add --no-cache bash zip
 
-COPY apps/keycloak-theme/META-INF ./META-INF
-COPY apps/keycloak-theme/theme ./theme
+WORKDIR /app
 
-RUN zip -qr /mimer-theme.jar META-INF theme
+COPY package.json tsconfig*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Install pnpm using version from package.json
+RUN corepack enable && corepack prepare --activate
+
+# Only what scripts/build.sh reads, so a local node_modules or dist is never copied in
+COPY apps/keycloak-theme/package.json apps/keycloak-theme/tsconfig.json ./apps/keycloak-theme/
+COPY apps/keycloak-theme/META-INF ./apps/keycloak-theme/META-INF
+COPY apps/keycloak-theme/scripts ./apps/keycloak-theme/scripts
+COPY apps/keycloak-theme/src ./apps/keycloak-theme/src
+COPY apps/keycloak-theme/theme ./apps/keycloak-theme/theme
+COPY apps/internal-portal/frontend/assets/*.woff2 ./apps/internal-portal/frontend/assets/
+
+RUN pnpm install --filter @onecore/keycloak-theme
+RUN pnpm run --filter @onecore/keycloak-theme build
 
 # ==========================
 # Runtime stage
 # ==========================
 FROM busybox:1.37
 
-COPY --from=builder /mimer-theme.jar /theme/mimer-theme.jar
+COPY --from=builder /app/apps/keycloak-theme/dist/mimer-theme.jar /theme/mimer-theme.jar
 
 # Same non-root user as the Bitnami Keycloak containers, which own the providers volume
 USER 1001

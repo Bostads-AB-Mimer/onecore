@@ -30,8 +30,10 @@
                 <div class="mimer-divider"><span>${msg("mimerLoginWithPassword")}</span></div>
             </#if>
 
-            <#-- Mimer: existing users have no password after the move from Xpand; point them to the reset flow -->
-            <#if realm.resetPasswordAllowed>
+            <#-- Mimer: existing users have no password after the move from Xpand; point them to the reset flow.
+                 Only on the normal login form: not when password login is off, and not on a
+                 re-authentication prompt (usernameHidden), where the user already has a password. -->
+            <#if realm.password && realm.resetPasswordAllowed && !usernameHidden??>
                 <div class="mimer-notice" role="note">
                     ${kcSanitize(msg("mimerFirstLoginInfo", url.loginResetCredentialsUrl))?no_esc}
                 </div>

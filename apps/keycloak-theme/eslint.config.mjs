@@ -5,11 +5,10 @@ import onecoreBase from '../../eslint.config.mjs'
 
 export default defineConfig([
   onecoreBase,
-  // Theme scripts run in the browser on Keycloak's login pages, not in Node
+  // src/ is bundled into a script for Keycloak's login pages, so it runs in the browser
   {
-    files: ['theme/**/*.js'],
+    files: ['src/**/*.ts'],
     languageOptions: {
-      sourceType: 'script',
       globals: globals.browser,
     },
   },

@@ -13,11 +13,12 @@ pnpm preview      # Keycloak + Mailpit, and a fresh local mimer-contacts realm
 pnpm preview:stop
 ```
 
-- Login: http://localhost:18080/realms/mimer-contacts/account (`198501011234` / `Test1234!`)
+- Login: http://localhost:18080/realms/mimer-contacts/account (`198501011236` / `Test1234!`)
 - Mail (password reset): http://localhost:18025
 
 Theme caching is off, so edits to templates, texts and CSS show on reload (use a
-fresh or incognito window for CSS, the browser caches it).
+fresh or incognito window for CSS, the browser caches it). Changes to `src/` or the
+Swedish texts' English copy need `pnpm build` first (see below).
 
 ## How it works
 
@@ -30,12 +31,12 @@ from Keycloak's own `keycloak.v2`.
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `theme.properties`                | `parent=keycloak.v2`; adds `css/mimer.css` after the parent's CSS; `darkMode=false` (the parent follows the OS dark mode); `locales=sv` (Swedish only)                                                                         |
 | `resources/css/mimer.css`         | Most of the look. PatternFly 5 (Keycloak's UI kit) reads colour and font from `--pf-v5-global--*` variables, so section 1 recolours everything; the rest is layout (header bar, card, fields, buttons)                        |
-| `messages/messages_sv.properties` | Texts by key, overriding Keycloak's own Swedish. `loginTitleHtml` is rendered as HTML in the header, which is how the logo replaces the realm name                                                                             |
+| `messages/messages_sv.properties` | Texts by key, overriding Keycloak's own Swedish. `loginTitleHtml` is rendered as HTML in the header, which is how the logo replaces the realm name. The build copies it to `messages_en.properties`, which Keycloak uses if the realm has internationalization off |
 | `login.ftl`                       | Copy of the parent's with `Mimer:` comments: BankID first, the first-login notice, "Glömt lösenord" below the button, placeholder on the username field                                                                       |
 | `login-reset-password.ftl`        | Copy of the parent's, only to add the same placeholder                                                                                                                                                                         |
 | `mimer-field.ftl`                 | Our own macro: the parent's text input plus a `placeholder` (the parent's `field.input` has no such parameter). Both templates above use it                                                                                    |
-| `resources/js/normalize-login-id.js` | Turns what the tenant types into the canonical username before the form is posted: personnummer to 12 digits, organisationsnummer to 10. Tested in `test/`                                                                  |
-| `resources/fonts/`, `resources/img/` | Bison and Graphik (the same files `apps/internal-portal` ships), the mimer.nu logo and the white BankID mark from Mina sidor                                                                                                |
+| `resources/js/normalize-login-id.global.js` | Generated from `src/normalize-login-id.ts`: turns what the tenant types into the canonical username before the form is posted, personnummer to 12 digits (with the `personnummer` library, as in `services/contacts`), organisationsnummer to 10. Tested in `test/` |
+| `resources/fonts/`, `resources/img/` | Bison and Graphik, copied by the build from `apps/internal-portal/frontend/assets`; the mimer.nu logo and the white BankID mark from Mina sidor                                                                             |
 
 Every other page (set new password, errors) still uses the parent's templates and
 only picks up the CSS and texts.
@@ -43,10 +44,13 @@ only picks up the CSS and texts.
 ## Packaging and deployment
 
 `META-INF/keycloak-themes.json` plus `theme/` zipped together is a theme JAR,
-which Keycloak loads from its `providers` directory. `pnpm build` writes it to
-`dist/mimer-theme.jar`; the `Dockerfile` builds the same JAR into a small image,
-`ghcr.io/bostads-ab-mimer/onecore/keycloak-theme`, published by CI like the other
-apps.
+which Keycloak loads from its `providers` directory. `pnpm build`
+(`scripts/build.sh`) first generates the git-ignored files in `theme/` (the
+bundled script, the fonts, `messages_en.properties`), then writes the JAR to
+`dist/mimer-theme.jar` with fixed timestamps, so an unchanged theme gives a
+byte-identical JAR. The `Dockerfile` runs the same script and puts the JAR in a
+small image, `ghcr.io/bostads-ab-mimer/onecore/keycloak-theme`, published by CI
+like the other apps. Anything added to the JAR goes in `scripts/build.sh` only.
 
 In the cluster that image runs as an **init container** next to Keycloak and
 copies the JAR into the providers volume. Installing the theme does nothing by

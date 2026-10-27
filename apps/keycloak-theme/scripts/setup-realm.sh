@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Creates a local "mimer-contacts" realm that uses the theme, on the Keycloak from docker-compose.yml.
 # Recreates it from scratch on every run. Local only: never point KC at a shared Keycloak.
-#   Login page: http://localhost:18080/realms/mimer-contacts/account  (198501011234 / Test1234!)
+#   Login page: http://localhost:18080/realms/mimer-contacts/account  (198501011236 / Test1234!)
 #   Mail (password reset): http://localhost:18025
 set -euo pipefail
 KC=http://localhost:18080
@@ -10,7 +10,9 @@ OUT=$(mktemp)
 trap 'rm -f "$OUT"' EXIT
 
 echo "== waiting for Keycloak"
-for _ in $(seq 1 60); do curl -sf -o /dev/null "$KC/realms/master" && break; sleep 2; done
+up=
+for _ in $(seq 1 60); do curl -sf -o /dev/null "$KC/realms/master" && up=1 && break; sleep 2; done
+if [[ -z $up ]]; then echo "Keycloak did not come up on $KC (docker compose logs keycloak)" >&2; exit 1; fi
 
 tok() { curl -sf -d client_id=admin-cli -d username=admin -d password=admin -d grant_type=password \
   "$KC/realms/master/protocol/openid-connect/token" | jq -r .access_token; }
@@ -33,7 +35,7 @@ api POST "" '{
 }'
 
 echo "== test user"
-api POST "/$R/users" '{"username": "198501011234", "enabled": true, "email": "test@mimer.example.test",
+api POST "/$R/users" '{"username": "198501011236", "enabled": true, "email": "test@mimer.example.test",
   "emailVerified": true, "firstName": "Test", "lastName": "Hyresgäst",
   "credentials": [{"type": "password", "value": "Test1234!", "temporary": false}]}'
 
