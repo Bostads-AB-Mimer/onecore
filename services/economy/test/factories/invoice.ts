@@ -5,6 +5,7 @@ import {
   InvoicePaymentEvent,
   InvoiceRow,
   InvoiceTransactionType,
+  PaymentSyncEvent,
 } from '@onecore/types'
 
 export const InvoiceFactory = Factory.define<Invoice>((options) => {
@@ -69,5 +70,12 @@ export const InvoicePaymentEventFactory = Factory.define<InvoicePaymentEvent>(
     type: 'OCR',
     matchId: sequence,
     slTransactionType: 'ELECTRONIC_PAYMENT',
+  })
+)
+
+export const PaymentSyncEventFactory = Factory.define<PaymentSyncEvent>(
+  ({ sequence }) => ({
+    ...InvoicePaymentEventFactory.build({ matchId: sequence }),
+    cursor: `cursor-${sequence}`,
   })
 )

@@ -1,6 +1,5 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { InvoicePaymentEvent } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import {
   getLatestPaymentCursor,
@@ -28,27 +27,16 @@ export const fileCursorStore: CursorStore = {
       return null
     }
   },
+  // Saved after every payment, so write to a temp file and rename it over the
+  // state file: a crash mid-write must never leave an empty cursor, which
+  // would read as a first run and skip ahead to Xledger's latest payment.
   async save(cursor) {
     const stateFile = getStateFile()
+    const tmpFile = `${stateFile}.tmp`
     await fs.mkdir(path.dirname(stateFile), { recursive: true })
-    await fs.writeFile(stateFile, cursor, 'utf-8')
+    await fs.writeFile(tmpFile, cursor, 'utf-8')
+    await fs.rename(tmpFile, stateFile)
   },
-}
-
-// Groups payment events by invoice ID so that when an invoice is not found in
-// Tenfast all of its events can be skipped together without triggering a
-// separate lookup for each one. Invoices that are found still result in one
-// Tenfast call per payment event.
-function groupByInvoiceId(
-  events: InvoicePaymentEvent[]
-): Map<string, InvoicePaymentEvent[]> {
-  const map = new Map<string, InvoicePaymentEvent[]>()
-  for (const event of events) {
-    const existing = map.get(event.invoiceId) ?? []
-    existing.push(event)
-    map.set(event.invoiceId, existing)
-  }
-  return map
 }
 
 async function notifySyncFailure(err: unknown) {
@@ -67,7 +55,7 @@ async function notifySyncFailure(err: unknown) {
       '',
       `Fel: ${err instanceof Error ? err.message : String(err)}`,
       '',
-      'Markören har inte förflyttats. Nästa körning kommer att försöka igen från samma position.',
+      'Markören står kvar efter den senast registrerade betalningen. Nästa körning fortsätter därifrån.',
     ].join('\n'),
   })
 
@@ -127,51 +115,57 @@ async function syncPayments(store: CursorStore = fileCursorStore) {
     return
   }
 
-  const byInvoice = groupByInvoiceId(payments)
-  logger.info({ uniqueInvoices: byInvoice.size }, 'unique invoices to process')
+  // Payments are recorded in Xledger order and the cursor is saved after each
+  // one, so a run that fails part-way resumes after the last recorded payment
+  // instead of posting the earlier ones to Tenfast again.
+  const notInTenfast = new Set<string>()
+  let recorded = 0
+  let skipped = 0
 
-  for (const [invoiceId, events] of byInvoice) {
-    let invoiceNotFound = false
-
-    for (const event of events) {
-      const result = await recordInvoicePayment(invoiceId, {
+  for (const event of payments) {
+    if (notInTenfast.has(event.invoiceId)) {
+      skipped++
+    } else {
+      const result = await recordInvoicePayment(event.invoiceId, {
         amount: event.amount,
         dateTime: event.paymentDate,
         method: event.transactionSourceCode,
       })
 
-      if (!result.ok) {
-        if (result.err === 'not-found') {
-          // Expected — ströfakturor and procurement invoices won't exist in Tenfast
-          logger.info({ invoiceId }, 'invoice not found in Tenfast, skipping')
-          invoiceNotFound = true
-          break
-        }
+      if (result.ok) {
+        logger.info(
+          { invoiceId: event.invoiceId, amount: event.amount },
+          'payment recorded in Tenfast'
+        )
+        recorded++
+      } else if (result.err === 'not-found') {
+        // Expected — ströfakturor and procurement invoices won't exist in Tenfast
+        logger.info(
+          { invoiceId: event.invoiceId },
+          'invoice not found in Tenfast, skipping'
+        )
+        notInTenfast.add(event.invoiceId)
+        skipped++
+      } else {
         throw new Error(
-          `Failed to record payment for invoice ${invoiceId} in Tenfast: ${result.err}`
+          `Failed to record payment for invoice ${event.invoiceId} in Tenfast: ${result.err}`
         )
       }
-
-      logger.info(
-        { invoiceId, amount: event.amount },
-        'payment recorded in Tenfast'
-      )
     }
 
-    if (!invoiceNotFound) {
-      logger.info(
-        { invoiceId, count: events.length },
-        'all payments recorded for invoice'
-      )
-    }
+    await store.save(event.cursor)
   }
 
+  // Covers rows after the last payment that Xledger returned but that had no
+  // invoice reference to sync.
   if (newCursor) {
     await store.save(newCursor)
-    logger.info({ newCursor }, 'cursor advanced')
   }
 
-  logger.info({ uniqueInvoices: byInvoice.size }, 'all invoices processed')
+  logger.info(
+    { recorded, skipped, cursor: newCursor },
+    'all payments processed'
+  )
 }
 
 export { syncPayments, notifySyncFailure }

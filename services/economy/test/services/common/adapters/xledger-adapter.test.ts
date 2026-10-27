@@ -399,9 +399,10 @@ describe(adapter.getPaymentsSince, () => {
       amount: -1000,
       paymentDate: new Date('2026-04-02'),
       transactionSourceCode: 'OCR',
+      cursor: 'cursor-42',
     })
     expect(() =>
-      schemas.v1.InvoicePaymentEventSchema.array().parse(result.events)
+      schemas.v1.PaymentSyncEventSchema.array().parse(result.events)
     ).not.toThrow()
   })
 
@@ -501,7 +502,10 @@ describe(adapter.getPaymentsSince, () => {
 
     const result = await adapter.getPaymentsSince('some-cursor')
 
-    expect(result.events).toHaveLength(2)
+    expect(result.events.map((e) => e.cursor)).toEqual([
+      'page1-cursor',
+      'page2-cursor',
+    ])
     expect(result.lastCursor).toBe('page2-cursor')
   })
 
