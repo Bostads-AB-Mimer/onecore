@@ -1043,8 +1043,6 @@ export {
   getAllVacantParkingSpaces,
   getParkingSpaceByCode,
   getParkingSpaces,
-  getRentalObjectRentByCode,
-  getRentalObjectRents,
   getRentalObjectAvailabilities,
   getRentalObjectAvailabilityByCode,
   getRentalObjectLegacyRentByCode,
