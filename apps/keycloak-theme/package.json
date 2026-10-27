@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "build": "rm -rf dist && mkdir -p dist && zip -qr dist/mimer-theme.jar META-INF theme",
-    "dev": "docker compose up -d && ./scripts/setup-realm.sh",
-    "dev:stop": "docker compose stop",
+    "preview": "docker compose up -d && ./scripts/setup-realm.sh",
+    "preview:stop": "docker compose stop",
     "format": "prettier --write theme test",
     "lint": "eslint theme test",
     "lint:fix": "eslint theme test --fix",

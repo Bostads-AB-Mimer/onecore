@@ -9,8 +9,8 @@ Keycloak **26.3.3**, the version pinned in the ops repo.
 Requires Docker and `jq`.
 
 ```sh
-pnpm dev        # Keycloak + Mailpit, and a fresh local mimer-contacts realm
-pnpm dev:stop
+pnpm preview      # Keycloak + Mailpit, and a fresh local mimer-contacts realm
+pnpm preview:stop
 ```
 
 - Login: http://localhost:18080/realms/mimer-contacts/account (`198501011234` / `Test1234!`)

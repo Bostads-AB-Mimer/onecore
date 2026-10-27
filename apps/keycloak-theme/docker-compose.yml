@@ -1,4 +1,4 @@
-# Local preview of the theme: `pnpm dev`, then http://localhost:18080/realms/mimer-contacts/account
+# Local preview of the theme: `pnpm preview`, then http://localhost:18080/realms/mimer-contacts/account
 # Same Keycloak version as auth.dev.mimer.nu. Theme caching is off, so edits show on reload.
 name: keycloak-theme
 services:
