@@ -1,0 +1,28 @@
+{
+  "name": "@onecore/keycloak-theme",
+  "version": "1.0.0",
+  "description": "Mimer login theme for the tenant realm in Keycloak",
+  "private": true,
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist && zip -qr dist/mimer-theme.jar META-INF theme",
+    "dev": "docker compose up -d && ./scripts/setup-realm.sh",
+    "dev:stop": "docker compose stop",
+    "format": "prettier --write theme test",
+    "lint": "eslint theme test",
+    "lint:fix": "eslint theme test --fix",
+    "prettier": "prettier --check theme test",
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.32.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.43",
+    "eslint": "^9.39.5",
+    "globals": "^15.15.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.9.6",
+    "ts-jest": "^29.4.12",
+    "typescript": "^5.9.3"
+  }
+}
