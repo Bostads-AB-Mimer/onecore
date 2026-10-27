@@ -26,14 +26,17 @@ const isOrganisationNumber = (tenDigits: string): boolean =>
  * For ten-digit input the library picks the century from the year alone, so on
  * 2026-10-27 `261028-1236` becomes 2026-10-28, a birth date in the future. Such
  * a person was born in 1926 (and is 99, so `-` is the right separator).
+ * Twelve-digit input is kept as typed: its century was not inferred.
  */
 function toTwelveDigits(input: string): string {
   const parsed = Personnummer.parse(input, PARSE_OPTIONS)
-  let year = Number(parsed.fullYear)
+  const rest = `${parsed.month}${parsed.day}${parsed.num}${parsed.check}`
+  if (input.replace(/\D/g, '').length === 12) return `${parsed.fullYear}${rest}`
 
   // getDate() applies the samordningsnummer day offset and is UTC midnight
   const birth = parsed.getDate()
   const now = new Date()
+  let year = Number(parsed.fullYear)
   if (
     toDateKey(year, birth.getUTCMonth() + 1, birth.getUTCDate()) >
     toDateKey(now.getFullYear(), now.getMonth() + 1, now.getDate())
@@ -41,7 +44,7 @@ function toTwelveDigits(input: string): string {
     year -= 100
   }
 
-  return `${year}${parsed.month}${parsed.day}${parsed.num}${parsed.check}`
+  return `${year}${rest}`
 }
 
 export function normalizeLoginId(input: unknown): string {

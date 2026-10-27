@@ -29,7 +29,7 @@ from Keycloak's own `keycloak.v2`.
 
 | File (under `theme/mimer/login/`) | What it does                                                                                                                                                                                                                   |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `theme.properties`                | `parent=keycloak.v2`; adds `css/mimer.css` after the parent's CSS; `darkMode=false` (the parent follows the OS dark mode); `locales=sv` (Swedish only)                                                                         |
+| `theme.properties`                | `parent=keycloak.v2`; adds `css/mimer.css` after the parent's CSS; `darkMode=false` (the parent follows the OS dark mode); `locales=sv` (the languages the theme has texts for; the realm's Localization settings decide the picker)                                                                         |
 | `resources/css/mimer.css`         | Most of the look. PatternFly 5 (Keycloak's UI kit) reads colour and font from `--pf-v5-global--*` variables, so section 1 recolours everything; the rest is layout (header bar, card, fields, buttons)                        |
 | `messages/messages_sv.properties` | Texts by key, overriding Keycloak's own Swedish. `loginTitleHtml` is rendered as HTML in the header, which is how the logo replaces the realm name. The build copies it to `messages_en.properties`, which Keycloak uses if the realm has internationalization off |
 | `login.ftl`                       | Copy of the parent's with `Mimer:` comments: BankID first, the first-login notice, "Glömt lösenord" below the button, placeholder on the username field                                                                       |
@@ -58,7 +58,10 @@ itself: a realm has to select it (_Realm settings → Themes → Login theme_), 
 other realms on the same Keycloak are unaffected. The tenant realm is Swedish
 only: _Realm settings → Localization_, internationalization **on**, supported
 locales `sv` only, default `sv`. With internationalization off Keycloak uses
-English; with more than one locale it shows a language picker.
+English: `messages_en.properties` keeps our own texts Swedish, but every text the
+theme does not override (e.g. the password label) falls back to Keycloak's
+English. With more than one supported locale on the realm it shows a language
+picker, whatever the theme's `locales` says.
 
 ## Upgrading Keycloak
 

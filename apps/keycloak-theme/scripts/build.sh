@@ -4,8 +4,8 @@
 # Generates the files theme/ does not commit (git-ignored, so `pnpm preview` mounts a complete theme):
 #   - js/normalize-login-id.global.js: src/ bundled with the personnummer library
 #   - fonts/: the Bison and Graphik files from internal-portal, so both apps ship the same fonts
-#   - messages_en.properties: a copy of the Swedish texts, used when the realm has
-#     internationalization off (Keycloak then resolves English)
+#   - messages_en.properties: a copy of the Swedish texts, so our own keys never show as raw key
+#     names when the realm has internationalization off (Keycloak then resolves English)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

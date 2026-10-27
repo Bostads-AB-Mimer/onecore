@@ -208,6 +208,12 @@
 .mimer-idp-button img {
   height: 24px;
 }
+/* data-once-link adds this class after the first click, while the redirect loads */
+.mimer-idp-button.pf-m-aria-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: default;
+}
 
 .mimer-divider {
   display: flex;

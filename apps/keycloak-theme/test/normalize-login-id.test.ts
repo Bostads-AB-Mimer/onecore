@@ -15,6 +15,8 @@ describe('normalizeLoginId', () => {
     ['19850101-1236', '198501011236'],
     ['198501011236', '198501011236'],
     [' 19850101 1236 ', '198501011236'],
+    // A future date typed with its century stays as typed, it is not moved back 100 years
+    ['20270101-1237', '202701011237'],
   ])('keeps a 12-digit personnummer as 12 digits: %s', (input, expected) => {
     expect(normalizeLoginId(input)).toBe(expected)
   })
