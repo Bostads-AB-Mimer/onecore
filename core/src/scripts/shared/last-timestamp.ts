@@ -64,14 +64,16 @@ const readPositionFile = async (
   }
 }
 
+const isAtOrAfter = (time: Date | null, other: Date | null) =>
+  other === null || (time !== null && time.getTime() >= other.getTime())
+
 export const readSyncPosition = async (
   stateFile: string
 ): Promise<SyncPosition | null> => {
   const timestamp = await getLastTimestamp(stateFile)
   const position = await readPositionFile(stateFile)
-  // A position file left behind by a rollback no longer matches the state file.
-  if (position && position.timestamp?.getTime() === timestamp?.getTime())
-    return position
+  // saveSyncPosition writes the position file first, so it can be one save ahead.
+  if (position && isAtOrAfter(position.timestamp, timestamp)) return position
   if (!timestamp) return null
   return {
     timestamp,
