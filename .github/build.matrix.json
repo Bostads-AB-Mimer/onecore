@@ -156,5 +156,13 @@
         "VITE_KEYCLOAK_REALM": "onecore"
       }
     }
+  },
+  {
+    "name": "keycloak-theme",
+    "label": "ONECore Keycloak Login Theme",
+    "package": "@onecore/keycloak-theme",
+    "path": "apps/keycloak-theme",
+    "docker": true,
+    "imageName": "keycloak-theme"
   }
 ]

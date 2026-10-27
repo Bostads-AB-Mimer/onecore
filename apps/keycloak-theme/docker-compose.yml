@@ -1,0 +1,21 @@
+# Local preview of the theme: `pnpm preview`, then http://localhost:18080/realms/mimer-contacts/account
+# Same Keycloak version as auth.dev.mimer.nu. Theme caching is off, so edits show on reload.
+name: keycloak-theme
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3.3
+    command: ['start-dev', '--http-port=18080']
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:18080
+      KC_SPI_THEME_CACHE_THEMES: 'false'
+      KC_SPI_THEME_CACHE_TEMPLATES: 'false'
+    ports:
+      - '18080:18080'
+    volumes:
+      - ./theme/mimer:/opt/keycloak/themes/mimer:ro
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - '18025:8025'

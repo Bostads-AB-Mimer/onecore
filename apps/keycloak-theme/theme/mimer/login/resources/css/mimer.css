@@ -1,0 +1,246 @@
+/* Mimer look for the Keycloak login, matched against mimer.nu/mina-sidor.
+   Loaded after keycloak.v2's styles.css and PatternFly 5, so equal-specificity
+   rules here win. */
+
+@font-face {
+  font-family: 'Bison';
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/Bison-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Graphik Web';
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/Graphik-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Graphik Web';
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/Graphik-Bold.woff2') format('woff2');
+}
+
+/* 1. Tokens. PatternFly reads colours and fonts from these variables, so
+      changing them here recolours buttons, links and focus states everywhere. */
+:root {
+  --mimer-purple: #951b81;
+  --mimer-purple-hover: #ab1f94;
+  --mimer-text: #252525;
+  --mimer-page: #f3f4f6;
+  --mimer-input-bg: #f3f4f6;
+  --mimer-input-border: #6b7280;
+  --mimer-card-edge: #e5e7eb;
+  --mimer-info-bg: #ecf3fb;
+  --mimer-info-edge: #007bc4;
+  --mimer-font-text:
+    'Graphik Web', system-ui, -apple-system, 'Segoe UI', Tahoma, sans-serif;
+  --mimer-font-heading:
+    'Bison', 'Graphik Web', system-ui, -apple-system, 'Segoe UI', Tahoma,
+    sans-serif;
+
+  --pf-v5-global--FontFamily--text: var(--mimer-font-text);
+  --pf-v5-global--FontFamily--heading: var(--mimer-font-heading);
+  --pf-v5-global--Color--100: var(--mimer-text);
+  --pf-v5-global--primary-color--100: var(--mimer-purple);
+  --pf-v5-global--primary-color--200: var(--mimer-purple-hover);
+  --pf-v5-global--link--Color: var(--mimer-purple);
+  --pf-v5-global--link--Color--hover: var(--mimer-purple-hover);
+  --pf-v5-global--active-color--100: var(--mimer-purple);
+
+  --keycloak-card-top-color: transparent;
+}
+
+/* 2. Page: light grey like mimer.nu instead of the dark Keycloak background */
+.login-pf body {
+  background: var(--mimer-page);
+  color: var(--mimer-text);
+  font-family: var(--mimer-font-text);
+}
+
+/* 3. Header: full-width white bar with the logo on the left, as on mimer.nu */
+#kc-header {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 68px;
+  margin: 0;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+}
+#kc-header-wrapper {
+  margin: 0;
+  color: inherit !important;
+  text-align: left;
+  letter-spacing: normal;
+}
+.mimer-logo {
+  display: block;
+  width: 138px;
+  height: 18px;
+  background: url('../img/mimer-logo.svg') no-repeat left center / contain;
+}
+.mimer-logo span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.pf-v5-c-login {
+  padding-top: calc(68px + 2rem);
+}
+
+/* 4. Card: white, square, thick grey bottom edge (Mina sidor's content box) */
+.pf-v5-c-login__main {
+  background: #fff;
+  border-radius: 0;
+  box-shadow: none;
+  border-bottom: 8px solid var(--mimer-card-edge);
+}
+.pf-v5-c-login__main-header {
+  border-top: none;
+}
+
+#kc-page-title {
+  font-family: var(--mimer-font-heading);
+  font-weight: 700;
+  font-size: 2.4rem;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--mimer-text);
+}
+
+/* 5. Form fields */
+.pf-v5-c-form__label-text {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  text-transform: uppercase;
+  color: var(--mimer-text);
+}
+/* PatternFly draws top/left/right edges on ::before and a separate bottom line
+   on ::after (which turns blue on hover/focus). Mina sidor has a plain 1px box,
+   so all four edges go on ::before and the ::after line is switched off. */
+.pf-v5-c-form-control {
+  --pf-v5-c-form-control--BackgroundColor: var(--mimer-input-bg);
+  --pf-v5-c-form-control--before--BorderTopColor: var(--mimer-input-border);
+  --pf-v5-c-form-control--before--BorderRightColor: var(--mimer-input-border);
+  --pf-v5-c-form-control--before--BorderLeftColor: var(--mimer-input-border);
+  --pf-v5-c-form-control--before--BorderBottomColor: var(--mimer-input-border);
+  --pf-v5-c-form-control--before--BorderBottomWidth: 1px;
+  --pf-v5-c-form-control--after--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--focus--after--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--m-error--after--BorderBottomWidth: 0;
+  border-radius: 4px;
+  font-size: 1.0625rem;
+  min-height: 53px;
+}
+.pf-v5-c-form-control::before {
+  border-radius: 4px;
+}
+.pf-v5-c-form-control:focus-within::before {
+  border: 2px solid var(--mimer-purple);
+}
+.pf-v5-c-form-control.pf-m-error::before {
+  border: 2px solid var(--pf-v5-global--danger-color--100);
+}
+/* Graphik's Å ring sits above the cap height; with PatternFly's 1.5 line-height
+   Chromium clips it inside inputs and Å renders as Ă. A taller line box fixes it;
+   the smaller vertical padding keeps the field at Mina sidor's height. */
+.pf-v5-c-form-control > input {
+  padding: 0.5rem 1rem;
+  line-height: 2;
+}
+/* The placeholder is drawn in its own clipped box, so it needs the same fix separately */
+.pf-v5-c-form-control > input::placeholder {
+  line-height: normal;
+  overflow: visible;
+  color: #6b7280;
+}
+/* The purple border above already shows focus; drop the browser's blue ring inside it */
+.pf-v5-c-form-control > input:focus {
+  outline: none;
+}
+/* Show-password button sits inside the field instead of as a separate box */
+.pf-v5-c-input-group__item .pf-v5-c-button.pf-m-control {
+  background: var(--mimer-input-bg);
+  border-radius: 0 4px 4px 0;
+}
+.pf-v5-c-input-group__item .pf-v5-c-button.pf-m-control::after {
+  border: 1px solid var(--mimer-input-border);
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+}
+
+/* 6. Buttons: purple, rounded like Mina sidor */
+.pf-v5-c-button.pf-m-primary,
+.mimer-idp-button {
+  border-radius: 8.5px;
+  font-size: 1.0625rem;
+  padding: 0.625rem 1rem;
+}
+
+.mimer-idp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mimer-idp-list li + li {
+  margin-top: 0.5rem;
+}
+.mimer-idp-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  background: var(--mimer-purple);
+  color: #fff;
+  text-decoration: underline;
+}
+.mimer-idp-button:hover,
+.mimer-idp-button:focus {
+  background: var(--mimer-purple-hover);
+  color: #fff;
+}
+.mimer-idp-button img {
+  height: 24px;
+}
+/* data-once-link adds this class after the first click, while the redirect loads */
+.mimer-idp-button.pf-m-aria-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: default;
+}
+
+.mimer-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+.mimer-divider::before,
+.mimer-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--mimer-card-edge);
+}
+
+/* 7. First-login notice and links */
+.mimer-notice {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--mimer-info-bg);
+  border-left: 4px solid var(--mimer-info-edge);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.mimer-links {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.9375rem;
+}
