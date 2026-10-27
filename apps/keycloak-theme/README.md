@@ -2,7 +2,13 @@
 
 The `mimer` login theme for the tenant realm (`mimer-contacts`) in Keycloak. It makes
 the Keycloak login look like the login on mimer.nu/mina-sidor. Built against
-Keycloak **26.3.3**, the version pinned in the ops repo.
+Keycloak **26.3.3**, the version pinned for dev in `mimer-onecore-operations`
+(`apps/keycloak/keycloak-helm.yaml`, branch `refactor/dev`). Production
+(`mimer-onecore-operations-production`) does not pin an image tag and runs an
+older chart, so it must be on the same version before the theme is enabled there:
+`login.ftl` and `login-reset-password.ftl` are copies of the 26.3.3 templates, and
+`login.ftl` imports `passkeys.ftl`, which an older Keycloak may not have, turning
+every login page into a 500.
 
 ## Preview locally
 

@@ -34,6 +34,14 @@ describe('normalizeLoginId', () => {
     expect(normalizeLoginId(input)).toBe(expected)
   })
 
+  it.each([
+    ['850101\u20131236', 'en dash'],
+    ['850101\u20141236', 'em dash'],
+    ['850101\u22121236', 'minus sign'],
+  ])('accepts %s (%s) as the separator', (input) => {
+    expect(normalizeLoginId(input)).toBe('198501011236')
+  })
+
   it("treats '+' as 100 years or older", () => {
     expect(normalizeLoginId('201010+1232')).toBe('192010101232')
   })

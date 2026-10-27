@@ -49,7 +49,9 @@ function toTwelveDigits(input: string): string {
 
 export function normalizeLoginId(input: unknown): string {
   const raw = String(input ?? '').trim()
-  const compact = raw.replace(/\s/g, '')
+  // Phone autocorrect and copy-paste turn '-' into an en dash or similar, which the
+  // library rejects. Non-digits can't all be stripped: '+' marks age 100 or older.
+  const compact = raw.replace(/\s/g, '').replace(/[\u2010-\u2015\u2212]/g, '-')
   if (Personnummer.valid(compact, PARSE_OPTIONS)) return toTwelveDigits(compact)
 
   const digits = compact.replace(/\D/g, '')
