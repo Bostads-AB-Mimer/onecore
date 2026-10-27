@@ -805,6 +805,12 @@ const syncContactToLeasing = async (
   }
 }
 
+// Must stay under the sync CronJobs' activeDeadlineSeconds (300s) and above
+// Leasing's own worst case (six 10s Tenfast calls plus one 60s upload).
+const SYNC_FETCH_TIMEOUT_MS = 2 * 60_000
+const SYNC_LEASE_TIMEOUT_MS = 3 * 60_000
+const SYNC_RENTAL_OBJECT_TYPE_TIMEOUT_MS = 2 * 60_000
+
 const getUpdatedLeases = async (
   since: Date | null
 ): Promise<AdapterResult<LeaseChange[], 'unknown'>> => {
@@ -812,6 +818,7 @@ const getUpdatedLeases = async (
     const params = since ? { since: since.toISOString() } : {}
     const response = await axios.get(`${tenantsLeasesServiceUrl}/leases/sync`, {
       params,
+      timeout: SYNC_FETCH_TIMEOUT_MS,
     })
 
     if (response.status === 200) {
@@ -847,7 +854,8 @@ const syncLease = async (
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/leases/sync`,
-      { leaseId, contactCode, action }
+      { leaseId, contactCode, action },
+      { timeout: SYNC_LEASE_TIMEOUT_MS }
     )
 
     if (response.status === 200 || response.status === 201) {
@@ -869,7 +877,7 @@ const getRentalObjectTypeChanges = async (
     const params = since ? { since: since.toISOString() } : {}
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/rental-objects/types/sync`,
-      { params, validateStatus: () => true }
+      { params, validateStatus: () => true, timeout: SYNC_FETCH_TIMEOUT_MS }
     )
 
     if (response.status !== 200)
@@ -905,7 +913,10 @@ const syncRentalObjectType = async (
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/rental-objects/${encodeURIComponent(rentalObjectCode)}/type/sync`,
       { code } satisfies SyncRentalObjectTypeRequest,
-      { validateStatus: () => true }
+      {
+        validateStatus: () => true,
+        timeout: SYNC_RENTAL_OBJECT_TYPE_TIMEOUT_MS,
+      }
     )
 
     if (response.status === 200) {

@@ -2918,6 +2918,7 @@ describe(tenfastAdapter.uploadTerminationFile, () => {
       expect.objectContaining({
         method: 'post',
         url: expect.stringContaining('/upload-termination-file'),
+        timeout: 60_000,
       }),
       { contentType: false }
     )
@@ -2959,6 +2960,7 @@ describe(tenfastAdapter.uploadLeaseFile, () => {
       expect.objectContaining({
         method: 'post',
         url: expect.stringContaining('/upload-file'),
+        timeout: 60_000,
       }),
       { contentType: false }
     )
