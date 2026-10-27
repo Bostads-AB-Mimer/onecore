@@ -1,30 +1,27 @@
 import { RentalObject } from '@onecore/types'
 
 /**
- * Returns true if the rental object has no currently active block.
- * A block is considered active if its start date is today or earlier and it has no end date,
- * or if today falls within the block's start and end dates (inclusive).
- * A block that starts in the future is not considered active.
+ * Returns true if the rental object has an indefinite block (no end date)
+ * that has already started. Such a block has no way to determine a future
+ * vacant-from date, so the rental object should be excluded from vacancy
+ * listings entirely — unlike a block with an end date, which should still
+ * be listed with a computed vacant-from date (see determineVacantFrom).
  */
-export function hasNoActiveBlock(ps: RentalObject): boolean {
-  if (!ps.blockStartDate) return true
+export function hasIndefiniteActiveBlock(ps: RentalObject): boolean {
+  if (!ps.blockStartDate || ps.blockEndDate) return false
   const today = new Date()
   today.setUTCHours(0, 0, 0, 0)
   const start = new Date(ps.blockStartDate)
   start.setUTCHours(0, 0, 0, 0)
-  if (!ps.blockEndDate) {
-    // Block with no end date, active if start is today or earlier
-    return start > today
-  }
-  const end = new Date(ps.blockEndDate)
-  end.setUTCHours(0, 0, 0, 0)
-  // Block is active if today is between start and end (inclusive)
-  return today < start || today > end
+  // Active if start is today or earlier
+  return start <= today
 }
 
 /**
- * Determines the date from which a rental object is vacant,
- * based on the last debit date, block start date, and block end date.
+ * Determines the date from which a rental object is vacant, from the date the
+ * leases give (see mapTenfastRentalObjectToAvailabilityInfo) and the block.
+ * Without a date from the leases the object is leased until further notice,
+ * so it is not vacant whatever the block says.
  */
 export function determineVacantFrom(
   vacantFromDate?: Date | null,
@@ -36,9 +33,11 @@ export function determineVacantFrom(
 
   const lastBlockStartDate = toDate(blockStartDate)
   const lastBlockEndDate = toDate(blockEndDate)
-  const lastDebit = toDate(vacantFromDate)
+  const leaseVacantFrom = toDate(vacantFromDate)
   const today = new Date()
   today.setUTCHours(0, 0, 0, 0)
+
+  if (!leaseVacantFrom) return undefined
 
   let vacantFrom: Date | undefined
 
@@ -47,13 +46,11 @@ export function determineVacantFrom(
     dayAfterBlock.setUTCDate(dayAfterBlock.getUTCDate() + 1)
     dayAfterBlock.setUTCHours(0, 0, 0, 0)
     vacantFrom =
-      lastDebit && lastDebit > dayAfterBlock ? lastDebit : dayAfterBlock
+      leaseVacantFrom > dayAfterBlock ? leaseVacantFrom : dayAfterBlock
   } else if (lastBlockStartDate && !lastBlockEndDate) {
     vacantFrom = undefined
-  } else if (lastDebit) {
-    vacantFrom = lastDebit
   } else {
-    vacantFrom = today
+    vacantFrom = leaseVacantFrom
   }
 
   return vacantFrom

@@ -6,10 +6,11 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import { generateRouteMetadata } from '@onecore/utilities'
+import { generateRouteMetadata, logger } from '@onecore/utilities'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
+import { RentalObjectRentInfo } from './schemas/lease'
 import z from 'zod'
 
 export const routes = (router: KoaRouter) => {
@@ -267,6 +268,151 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
+    }
+  )
+
+  /**
+   * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent:
+   *   get:
+   *     summary: Get rent for a rental object
+   *     description: Fetches the rental object's configured rent from Tenfast, independent of any lease. Works for vacant objects.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to fetch rent for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object rent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/RentalObjectRentInfo'
+   *       '404':
+   *         description: Not found. The specified rental object was not found.
+   *       '500':
+   *         description: Internal server error. Failed to fetch rental object rent.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/rental-objects/by-code/:rentalObjectCode/rent', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const rentalObjectCode = ctx.params.rentalObjectCode
+
+    const result =
+      await leasingAdapter.getRentalObjectRentByCode(rentalObjectCode)
+
+    if (!result.ok && result.err === 'not-found') {
+      ctx.status = 404
+      ctx.body = { error: 'Rental object not found', ...metadata }
+      return
+    }
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unexpected error when getting rent for ' + rentalObjectCode,
+        ...metadata,
+      }
+      return
+    }
+
+    const parsed = RentalObjectRentInfo.safeParse(result.data)
+    if (!parsed.success) {
+      logger.error(
+        { rentalObjectCode, issues: parsed.error.issues },
+        'Rental object rent from leasing did not match schema'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Invalid rental object rent data', ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: parsed.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent-legacy:
+   *   get:
+   *     summary: Get legacy (Xpand) rent for a rental object
+   *     description: Fetches the rental object's rent rows from Xpand, converted to monthly amounts. Used to compare against Tenfast during the transition.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to fetch legacy rent for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the legacy rental object rent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/RentalObjectRentInfo'
+   *       '404':
+   *         description: Not found. No rent rows exist in Xpand for the specified rental object.
+   *       '500':
+   *         description: Internal server error. Failed to fetch legacy rental object rent.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get(
+    '/rental-objects/by-code/:rentalObjectCode/rent-legacy',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalObjectCode = ctx.params.rentalObjectCode
+
+      const result =
+        await leasingAdapter.getRentalObjectLegacyRentByCode(rentalObjectCode)
+
+      if (!result.ok && result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = { error: 'No legacy rent rows found', ...metadata }
+        return
+      }
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error:
+            'Unexpected error when getting legacy rent for ' + rentalObjectCode,
+          ...metadata,
+        }
+        return
+      }
+
+      const parsed = RentalObjectRentInfo.safeParse(result.data)
+      if (!parsed.success) {
+        logger.error(
+          { rentalObjectCode, issues: parsed.error.issues },
+          'Legacy rental object rent from leasing did not match schema'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: 'Invalid legacy rental object rent data',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: parsed.data, ...metadata }
     }
   )
 

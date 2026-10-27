@@ -39,8 +39,14 @@ export const BuildingSchema = z.object({
     )
     .optional(),
   deleted: z.boolean(),
+  // `id` (the bafst uuid) is only present on search results; detail lookups
+  // resolve the property from the babuf row, which carries code/name but no id.
   property: z
-    .object({ name: z.string().nullable(), code: z.string(), id: z.string() })
+    .object({
+      name: z.string().nullable(),
+      code: z.string(),
+      id: z.string().optional(),
+    })
     .nullish(),
 })
 

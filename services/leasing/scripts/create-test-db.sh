@@ -1,6 +1,6 @@
 #!/bin/sh
 
-docker compose -f ../../docker-compose.yaml up -d
+docker compose -f ../../docker-compose.yaml up -d sql
 
 # Vänta på att SQL Server är redo och skapa databasen
 MAX_RETRIES=30

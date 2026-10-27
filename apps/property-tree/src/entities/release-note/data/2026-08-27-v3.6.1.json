@@ -1,0 +1,58 @@
+[
+  {
+    "id": "rn-2026-08-27-v361-1",
+    "date": "2026-08-27",
+    "title": "Inaktivering av låssystem kasserar systemets nycklar",
+    "description": "När ett låssystem inaktiveras i nyckelportalen visas en varning, och vid bekräftelse kasseras alla nycklar i systemet – även utlånade. Allt loggas i aktivitetsloggen så att åtgärden kan spåras och vid behov återställas.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-08-27-v361-2",
+    "date": "2026-08-27",
+    "title": "Nya nyckeltyper: Miljöbod och Tvättstuga",
+    "description": "Nycklar kan nu ha typerna Miljöbod (MB) och Tvättstuga (TV). Befintliga övrigt-nycklar märkta \"(MB)\" eller \"(TV)\" i namnet har automatiskt fått rätt typ, och märkningen har tagits bort från namnet.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-08-27-v361-3",
+    "date": "2026-08-27",
+    "title": "Odoo: Distrikt och kvartersvärdsområde på ärenden",
+    "description": "Ärenden visar nu vilket distrikt och kvartersvärdsområde objektet tillhör, tillsammans med nuvarande kvartersvärd och distriktschef. Du kan även söka och gruppera ärendelistan på distrikt och kvartersvärdsområde. Uppgifterna hämtas från Förvaltningsområden i ONECore och fylls i på befintliga ärenden efter hand.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-08-27-v361-4",
+    "date": "2026-08-27",
+    "title": "Odoo: Ny status \"Återsänd\" på ärenden",
+    "description": "Ärenden kan nu återsändas. Ärendet får ett återsändningsdatum och lämnas tillbaka till resursgruppen, så att det syns tydligt att det väntar på ny hantering i stället för att ligga kvar på en resurs.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-08-27-v361-5",
+    "date": "2026-08-27",
+    "title": "Odoo: Pinna noteringar i ärenden",
+    "description": "Viktiga noteringar kan pinnas i ärendets logg så att de ligger kvar högst upp och inte försvinner i flödet. Pinnade noteringar kan lossas igen när de inte längre är aktuella.",
+    "category": "feature"
+  },
+  {
+    "id": "rn-2026-08-27-v361-6",
+    "date": "2026-08-27",
+    "title": "Odoo: Varning när planerat utförandedatum passerar förfallodatum",
+    "description": "Om du sätter ett planerat utförandedatum som ligger efter ärendets förfallodatum får du en fråga om du vill fortsätta. Ärendet märks också med en varningsikon i ärendelistan och en varningstext i formuläret så länge datumen krockar.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-08-27-v361-7",
+    "date": "2026-08-27",
+    "title": "Odoo: Statusar och resursgrupper kan inte längre ändras av misstag",
+    "description": "Det går inte längre att lägga till, byta namn på eller ta bort statuskolumner i ärendevyn, och Radera är borttaget på resursgrupper. Resursgrupper som inte används kan fortfarande arkiveras.",
+    "category": "improvement"
+  },
+  {
+    "id": "rn-2026-08-27-v361-8",
+    "date": "2026-08-27",
+    "title": "Diverse buggfixar och förbättringar",
+    "description": "Parkeringsplatser utan platsnummer eller adress kunde inte visas. Sökning på en kund som inte är hyresgäst gav ett tekniskt fel i stället för ett tydligt svar. Ströfakturor ger nu begripliga felmeddelanden när något går fel mot Xledger, och underliggande tjänster har städats upp.",
+    "category": "fix"
+  }
+]

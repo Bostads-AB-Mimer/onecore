@@ -7,6 +7,7 @@ import {
   PropertyTypeFilters,
   usePropertyFilters,
 } from '@/features/properties'
+import { RentalObjectSearch } from '@/features/rental-object-search'
 
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -45,61 +46,71 @@ export function SearchPage() {
           <CardTitle>Sök i fastighetsbasen</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-4 mb-6">
+          <div className="mb-4">
             <PropertyTypeFilters
               searchTypeFilter={searchTypeFilter}
               setSearchTypeFilter={setSearchTypeFilter}
             />
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              <PropertySearch
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-              />
-            </div>
-
-            <Collapsible
-              open={isFiltersOpen}
-              onOpenChange={setIsFiltersOpen}
-              className="border rounded-lg bg-muted/30 opacity-60"
-            >
-              <div className="flex items-center justify-between px-4 py-3">
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="flex-1 justify-between px-0 hover:bg-transparent"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">Filter</span>
-                      <Badge variant="secondary" className="h-5 min-w-5 px-1.5">
-                        0
-                      </Badge>
-                    </div>
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${
-                        isFiltersOpen ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
-              <CollapsibleContent className="px-4 pb-4">
-                <div className="text-sm text-muted-foreground italic">
-                  Kommer snart
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
           </div>
+          {searchTypeFilter === 'rental-object' ? (
+            <RentalObjectSearch />
+          ) : (
+            <>
+              <div className="flex flex-col gap-4 mb-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <PropertySearch
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                  />
+                </div>
 
-          <PropertyFilteredResults
-            showSearchResults={showSearchResults}
-            filteredSearchResults={filteredSearchResults}
-            filteredProperties={filteredProperties}
-            searchTypeFilter={searchTypeFilter}
-            activeFilterCount={0}
-            isFiltering={isFiltering}
-            filterChips={[]}
-          />
+                <Collapsible
+                  open={isFiltersOpen}
+                  onOpenChange={setIsFiltersOpen}
+                  className="border rounded-lg bg-muted/30 opacity-60"
+                >
+                  <div className="flex items-center justify-between px-4 py-3">
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="flex-1 justify-between px-0 hover:bg-transparent"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Filter</span>
+                          <Badge
+                            variant="secondary"
+                            className="h-5 min-w-5 px-1.5"
+                          >
+                            0
+                          </Badge>
+                        </div>
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${
+                            isFiltersOpen ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                  <CollapsibleContent className="px-4 pb-4">
+                    <div className="text-sm text-muted-foreground italic">
+                      Kommer snart
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+
+              <PropertyFilteredResults
+                showSearchResults={showSearchResults}
+                filteredSearchResults={filteredSearchResults}
+                filteredProperties={filteredProperties}
+                searchTypeFilter={searchTypeFilter}
+                activeFilterCount={0}
+                isFiltering={isFiltering}
+                filterChips={[]}
+              />
+            </>
+          )}
         </CardContent>
       </Card>
     </ViewLayout>

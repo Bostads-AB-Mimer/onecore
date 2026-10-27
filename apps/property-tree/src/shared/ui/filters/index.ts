@@ -3,6 +3,7 @@ export { FilterBar } from './FilterBar'
 export { FilterChip } from './FilterChip'
 export { FilterDropdown } from './FilterDropdown'
 export { MultiSelectFilterDropdown } from './MultiSelectFilterDropdown'
+export { RemovableChip } from './RemovableChip'
 export {
   type SearchFilterOption as MultiSearchFilterOption,
   MultiSelectSearchFilterDropdown,

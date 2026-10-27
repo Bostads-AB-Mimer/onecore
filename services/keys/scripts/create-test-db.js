@@ -13,7 +13,7 @@ const RETRY_DELAY_MS = 2000
 
 console.log('Starting Docker containers...')
 try {
-  execSync('docker compose -f ../../docker-compose.yaml up -d', {
+  execSync('docker compose -f ../../docker-compose.yaml up -d sql', {
     stdio: 'inherit',
   })
 } catch (error) {

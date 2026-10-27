@@ -5,13 +5,15 @@ import config from '../../common/config'
 import { syncLeases } from './index'
 import * as factory from '../../../test/factories'
 import {
-  addEntry,
+  appendEntry,
   readQueue,
   FailedRowEntry,
 } from '../shared/failed-sync-queue'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import * as communicationAdapter from '../../adapters/communication-adapter'
+import * as contactsAdapter from '../../adapters/contacts-adapter'
+import * as economyAdapter from '../../adapters/economy-adapter'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -70,7 +72,7 @@ describe('syncLeases', () => {
       .spyOn(leasingAdapter, 'getUpdatedLeases')
       .mockResolvedValue({ ok: true, data: [lease] })
 
-    jest
+    const propertyInfoSpy = jest
       .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
       .mockResolvedValue({
         status: 200,
@@ -97,6 +99,10 @@ describe('syncLeases', () => {
     // State file advanced to lease.timestamp
     const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(lease.timestamp.toISOString())
+
+    expect(propertyInfoSpy).toHaveBeenCalledWith(lease.rentalObjectId, {
+      timeoutMs: 30_000,
+    })
   })
 
   it('case 2: first failure — row queued + one failure mail sent', async () => {
@@ -138,6 +144,38 @@ describe('syncLeases', () => {
     expect(written).toBe(lease.timestamp.toISOString())
   })
 
+  it('the give-up mail asks for the change to be made in Tenfast by hand', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T09:00:00.000Z'),
+    })
+    const monthAgo = new Date(
+      Date.now() - 31 * 24 * 60 * 60 * 1000
+    ).toISOString()
+    await appendEntry(queueFile, {
+      ...makeLeaseEntry(lease),
+      addedAt: monthAgo,
+      lastAttemptAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
+      stillFailingNotifiedAt: monthAgo,
+    })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({ status: 500, data: undefined })
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [] })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(await readQueue(queueFile)).toEqual([])
+    const body = sendEmailSpy.mock.calls[0][0].body as string
+    expect(body).toContain('i Tenfast för hand')
+    expect(body).not.toContain('Gör ändringen i Xpand på nytt')
+  })
+
   it('case 3: silent retry — queue has entry, drain fails, no mails sent', async () => {
     const lease = factory.leaseChange.build({
       action: 'terminate',
@@ -146,7 +184,7 @@ describe('syncLeases', () => {
 
     // Pre-seed the queue
     const entry = makeLeaseEntry(lease)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Drain attempt fails (propertyInfo 500)
     jest
@@ -184,7 +222,7 @@ describe('syncLeases', () => {
 
     // Pre-seed the queue
     const entry = makeLeaseEntry(lease)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Drain attempt succeeds
     jest
@@ -231,7 +269,7 @@ describe('syncLeases', () => {
 
     // Pre-seed the queue with that same lease key
     const entry = makeLeaseEntry(lease)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Drain attempt fails, then new row attempt also fails
     jest
@@ -260,5 +298,272 @@ describe('syncLeases', () => {
     // State advanced to the row's timestamp
     const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(lease.timestamp.toISOString())
+  })
+
+  it('case 6: create action with otherInvoiceRecipient — synced to economy before lease sync', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'create',
+      timestamp: new Date('2026-05-01T12:00:00.000Z'),
+    })
+
+    const otherInvoiceRecipient = {
+      contactCode: 'P999999',
+      role: 'otherInvoiceRecipient' as const,
+      fullName: 'Annan Mottagare',
+      firstName: 'Annan',
+      lastName: 'Mottagare',
+    }
+
+    const contact = factory.contactsServiceContact.build({
+      contactCode: lease.contactCode,
+      relatedContacts: [otherInvoiceRecipient],
+    })
+    const otherInvoiceRecipientContact = factory.contactsServiceContact.build({
+      contactCode: otherInvoiceRecipient.contactCode,
+    })
+
+    const getByContactCode = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, data: contact })
+      .mockResolvedValueOnce({ ok: true, data: otherInvoiceRecipientContact })
+    jest
+      .spyOn(contactsAdapter, 'makeContactsAdapter')
+      .mockReturnValue({ getByContactCode } as any)
+
+    const syncContactToEconomySpy = jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
+
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+
+    const syncLeaseSpy = jest
+      .spyOn(leasingAdapter, 'syncLease')
+      .mockResolvedValue({
+        ok: true,
+        data: { action: 'created', leaseId: lease.leaseId },
+      })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(getByContactCode).toHaveBeenCalledWith(lease.contactCode)
+    expect(syncContactToEconomySpy).toHaveBeenCalledWith(
+      otherInvoiceRecipientContact.contactCode,
+      {
+        fullName: otherInvoiceRecipientContact.personal.fullName,
+        street: otherInvoiceRecipientContact.addresses[0].street,
+        zipCode: otherInvoiceRecipientContact.addresses[0].zipCode,
+        city: otherInvoiceRecipientContact.addresses[0].city,
+        emailAddress:
+          otherInvoiceRecipientContact.communication.emailAddresses[0]
+            .emailAddress,
+      },
+      { create: true }
+    )
+    expect(syncLeaseSpy).toHaveBeenCalledWith(
+      lease.leaseId,
+      lease.contactCode,
+      'create'
+    )
+
+    // No failures
+    expect(await readQueue(queueFile)).toHaveLength(0)
+    const written = (await fs.readFile(stateFile, 'utf-8')).trim()
+    expect(written).toBe(lease.timestamp.toISOString())
+  })
+
+  it('case 7: create action without otherInvoiceRecipient — economy sync skipped', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'create',
+      timestamp: new Date('2026-05-01T13:00:00.000Z'),
+    })
+
+    const contact = factory.contactsServiceContact.build({
+      contactCode: lease.contactCode,
+      relatedContacts: [],
+    })
+
+    const getByContactCode = jest
+      .fn()
+      .mockResolvedValue({ ok: true, data: contact })
+    jest
+      .spyOn(contactsAdapter, 'makeContactsAdapter')
+      .mockReturnValue({ getByContactCode } as any)
+
+    const syncContactToEconomySpy = jest.spyOn(
+      economyAdapter,
+      'syncContactToEconomy'
+    )
+
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
+
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: true,
+      data: { action: 'created', leaseId: lease.leaseId },
+    })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(syncContactToEconomySpy).not.toHaveBeenCalled()
+    expect(await readQueue(queueFile)).toHaveLength(0)
+  })
+
+  it('case 8: terminate action — contact lookup and economy sync skipped entirely', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T14:00:00.000Z'),
+    })
+
+    const makeContactsAdapterSpy = jest.spyOn(
+      contactsAdapter,
+      'makeContactsAdapter'
+    )
+    const syncContactToEconomySpy = jest.spyOn(
+      economyAdapter,
+      'syncContactToEconomy'
+    )
+
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
+
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: true,
+      data: { action: 'terminated', leaseId: lease.leaseId },
+    })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(makeContactsAdapterSpy).not.toHaveBeenCalled()
+    expect(syncContactToEconomySpy).not.toHaveBeenCalled()
+  })
+
+  it('case 9: create action — contact lookup fails, lease queued with error', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'create',
+      timestamp: new Date('2026-05-01T15:00:00.000Z'),
+    })
+
+    const getByContactCode = jest
+      .fn()
+      .mockResolvedValue({ ok: false, err: 'not-found' })
+    jest
+      .spyOn(contactsAdapter, 'makeContactsAdapter')
+      .mockReturnValue({ getByContactCode } as any)
+
+    const syncContactToEconomySpy = jest.spyOn(
+      economyAdapter,
+      'syncContactToEconomy'
+    )
+
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
+
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(syncContactToEconomySpy).not.toHaveBeenCalled()
+
+    const queue = await readQueue(queueFile)
+    expect(queue).toHaveLength(1)
+    expect(queue[0].lastError).toMatch(
+      `Failed to get contact ${lease.contactCode} for lease ${lease.leaseId}`
+    )
+    expect(sendEmailSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('case 10: create action — economy sync fails, lease queued with error', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'create',
+      timestamp: new Date('2026-05-01T16:00:00.000Z'),
+    })
+
+    const otherInvoiceRecipient = {
+      contactCode: 'P999998',
+      role: 'otherInvoiceRecipient' as const,
+      fullName: 'Annan Mottagare',
+      firstName: 'Annan',
+      lastName: 'Mottagare',
+    }
+
+    const contact = factory.contactsServiceContact.build({
+      contactCode: lease.contactCode,
+      relatedContacts: [otherInvoiceRecipient],
+    })
+
+    const getByContactCode = jest
+      .fn()
+      .mockResolvedValue({ ok: true, data: contact })
+    jest
+      .spyOn(contactsAdapter, 'makeContactsAdapter')
+      .mockReturnValue({ getByContactCode } as any)
+
+    jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: false, err: 'sync-failed', statusCode: 500 })
+
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
+
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+
+    const syncLeaseSpy = jest.spyOn(leasingAdapter, 'syncLease')
+
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    // Lease sync never reached — economy sync failure short-circuits
+    expect(syncLeaseSpy).not.toHaveBeenCalled()
+
+    const queue = await readQueue(queueFile)
+    expect(queue).toHaveLength(1)
+    expect(queue[0].lastError).toMatch(
+      `Failed to sync other invoice recipient ${otherInvoiceRecipient.contactCode} for lease ${lease.leaseId}: sync-failed`
+    )
+    expect(sendEmailSpy).toHaveBeenCalledTimes(1)
   })
 })

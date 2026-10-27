@@ -5,10 +5,8 @@ import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../../types'
 import { z } from 'zod'
 import {
-  TenfastTenantByContactCodeResponseSchema,
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
-  TenfastInvoicesByOcrResponseSchema,
   TenfastInvoicesByExportedResponseSchema,
   TenfastTenantSchema,
   TenfastInvoiceSchema,
@@ -54,16 +52,6 @@ import {
   RentalLossRow,
   TenfastRentalObject,
 } from '@src/common/types/typesv2'
-
-const invoiceStates = [
-  'betald',
-  'ny',
-  'ej-avprickad',
-  'forsenad',
-  'delvis-betald',
-  'krediterad',
-  'anstand',
-]
 
 import { TenfastDeferralSource } from '../../invoice-deferral'
 
@@ -122,35 +110,6 @@ export const getTenantByContactCode = async (
     }
 
     return { ok: true, data: parsed.data }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
-  }
-}
-
-const getTenantById = async (
-  id: string
-): Promise<AdapterResult<TenfastTenant | null, string>> => {
-  try {
-    const tenantResponse = await makeTenfastRequest(
-      `/v1/hyresvard/hyresgaster/${id}`
-    )
-    if (tenantResponse.status !== 200) {
-      return { ok: false, err: tenantResponse.statusText }
-    }
-
-    const parsedResponse = TenfastTenantByContactCodeResponseSchema.safeParse(
-      tenantResponse.data
-    )
-    if (!parsedResponse.success) {
-      console.error(parsedResponse.error)
-      return { ok: false, err: 'schema-error' }
-    }
-
-    return {
-      ok: true,
-      data: parsedResponse.data ?? null,
-    }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
@@ -218,17 +177,20 @@ export const getInvoicesForTenant = async (
   from?: Date
 ): Promise<AdapterResult<ParsedTenfastInvoice[], string>> => {
   try {
-    const result = await makeTenfastRequest(
-      `/v1/hyresvard/hyresgaster/${tenantId}/hyror?populate=avtal`,
-      {
-        params: {
-          // these have no effect currently
-          from: from ? dateToDateString(from) : undefined,
-          to: from ? dateToDateString(new Date()) : undefined,
-        },
-      }
-    )
+    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
+      params: {
+        hyresvard: companyId,
+        hyresgast: tenantId,
+        paginate: 'false',
+        from: from ? dateToDateString(from) : undefined,
+        to: from ? dateToDateString(new Date()) : undefined,
+      },
+    })
     if (result.status !== 200) {
+      logger.warn(
+        { tenantId, status: result.status, data: result.data },
+        'Failed to fetch Tenfast invoices for tenant'
+      )
       return { ok: false, err: result.statusText }
     }
 
@@ -246,7 +208,7 @@ export const getInvoicesForTenant = async (
 
     return {
       ok: true,
-      data: parsedResponse.data
+      data: parsedResponse.data.records
         .filter(isVisibleTenfastInvoice)
         .map(transformToInvoice),
     }
@@ -313,56 +275,6 @@ export type ParsedTenfastInvoice = {
   tenfastDeferral?: TenfastDeferralSource
 }
 
-/*export const getInvoiceByOcr = async (
-  ocr: string
-): Promise<AdapterResult<Invoice | null, string>> => {
-  try {
-    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
-      params: {
-        'filter[ocrNumber]': ocr,
-        states: invoiceStates.join(','),
-      },
-    })
-    if (result.status !== 200) {
-      logger.error(
-        { error: result.statusText },
-        'Error getting invoices from Tenfast'
-      )
-      return { ok: false, err: result.statusText }
-    }
-
-    const parsedResponse = TenfastInvoicesByOcrResponseSchema.safeParse(
-      result.data
-    )
-
-    if (!parsedResponse.success) {
-      logger.error(
-        { error: parsedResponse.error },
-        'Error parsing Tenfast invoice'
-      )
-      return { ok: false, err: 'schema-error' }
-    }
-
-    const invoice = parsedResponse.data.records[0]
-      ? transformToInvoice(parsedResponse.data.records[0])
-      : null
-
-    if (invoice && parsedResponse.data.records?.[0].recipientId) {
-      const tenantResult = await getTenantById(
-        parsedResponse.data.records[0].recipientId
-      )
-    }
-
-    return {
-      ok: true,
-      data: invoice,
-    }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
-  }
-}*/
-
 export const getInvoicesByContactCode = async (
   contactCode: string,
   filters?: { from?: Date }
@@ -425,7 +337,7 @@ const transformToRentalProperty = (
   return {
     rentalPropertyId: tenfastRentalProperty.externalId,
     apartmentNumber: tenfastRentalProperty.skvNummer ?? 0, // ?
-    size: tenfastRentalProperty.kvm,
+    size: tenfastRentalProperty.kvm ?? 0,
     type: tenfastRentalProperty.typ,
     rentalPropertyType: tenfastRentalProperty.typ, // ?
     address: {
@@ -555,6 +467,7 @@ const fetchTenfastInvoiceByOcr = async (
       `/v1/hyresvard/extras/hyror/${encodeURIComponent(ocr)}`,
       {
         params: { hyresvard: companyId, populate: 'avtal' },
+        validateStatus: (status) => [200, 404].includes(status),
       }
     )
 
@@ -589,11 +502,11 @@ const fetchTenfastInvoiceByOcr = async (
 
 export const getInvoiceByOcr = async (
   ocr: string
-): Promise<AdapterResult<ParsedTenfastInvoice, string>> => {
+): Promise<AdapterResult<ParsedTenfastInvoice | null, string>> => {
   const result = await fetchTenfastInvoiceByOcr(ocr)
   if (!result.ok) {
     if (result.err === 'not-found') {
-      return { ok: false, err: `Invoice with ocr ${ocr} not found` }
+      return { ok: true, data: null }
     }
     if (result.err === 'schema-error') {
       return { ok: false, err: 'schema-error' }
@@ -603,8 +516,8 @@ export const getInvoiceByOcr = async (
 
   if (!isVisibleTenfastInvoice(result.data)) {
     return {
-      ok: false,
-      err: `Invoice with ocr ${ocr} not found`,
+      ok: true,
+      data: null,
     }
   }
 
@@ -732,12 +645,13 @@ const transformToInvoice = (
       expirationDate: new Date(tenfastInvoice.due),
       paidAmount: tenfastInvoice.amountPaid,
       remainingAmount,
-      invoiceId: tenfastInvoice.ocrNumber,
+      // ocrNumber is no longer returned for some invoices (e.g. credited ones)
+      invoiceId: tenfastInvoice.ocrNumber ?? '',
       leaseIds: tenfastInvoice.avtal.map((a) => a.externalId),
       paymentStatus:
         remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
       type: 'Regular',
-      reference: tenfastInvoice.ocrNumber,
+      reference: tenfastInvoice.ocrNumber ?? '',
       source: 'next', // ??
       invoiceRows: tenfastInvoice.hyror.map(transformToInvoiceRow),
       transactionType: InvoiceTransactionType.Rent,
@@ -1353,6 +1267,7 @@ export const listNewOutboundExports = async (): Promise<
           params: {
             hyresvard: companyId,
             status: 'NEW',
+            provider: 'stralfors',
             ...(next ? { paginate: next } : {}),
           },
         }

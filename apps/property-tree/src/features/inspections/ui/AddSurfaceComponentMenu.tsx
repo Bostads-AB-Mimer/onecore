@@ -59,8 +59,7 @@ function groupSurfaceModels(
   for (const subtypeModels of bySubtype.values()) {
     const first = subtypeModels[0]
     const typeName = first.subtype?.componentType?.typeName as
-      | SurfaceType
-      | undefined
+      SurfaceType | undefined
     const subtypeId = first.subtype?.id
     const subtypeName = first.subtype?.subTypeName
     if (!typeName || !subtypeId || !subtypeName) continue

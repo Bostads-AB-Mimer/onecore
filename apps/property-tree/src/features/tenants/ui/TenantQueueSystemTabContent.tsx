@@ -109,12 +109,10 @@ const getStatusBadge = (status: string | number) => {
 
 interface TenantQueueSystemTabContentProps {
   contactCode: string
-  tenantName: string
 }
 
 export function TenantQueueSystemTabContent({
   contactCode,
-  tenantName,
 }: TenantQueueSystemTabContentProps) {
   // Separate API calls - each loads independently
   const {

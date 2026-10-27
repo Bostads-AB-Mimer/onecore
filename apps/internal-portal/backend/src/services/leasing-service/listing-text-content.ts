@@ -2,31 +2,24 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata } from '@onecore/utilities'
 
 import * as coreAdapter from './adapters/core-adapter'
+import { getListingTextContentLookup } from './helpers/listing-text-content-lookup'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/listing-text-content/:rentalObjectCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { rentalObjectCode } = ctx.params
 
-    const result =
-      await coreAdapter.getListingTextContentByRentalObjectCode(
-        rentalObjectCode
-      )
+    const result = await getListingTextContentLookup(rentalObjectCode)
 
     if (result.ok) {
       ctx.status = 200
       ctx.body = {
-        content: result.data,
+        ...result.data,
         ...metadata,
       }
     } else {
-      if (result.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = { error: 'Listing text content not found', ...metadata }
-      } else {
-        ctx.status = result.statusCode
-        ctx.body = { error: result.err, ...metadata }
-      }
+      ctx.status = result.statusCode
+      ctx.body = { error: result.err, ...metadata }
     }
   })
 

@@ -1,19 +1,101 @@
-import { loggedAxios, PaginatedResponse } from '@onecore/utilities'
+import { logger, loggedAxios, PaginatedResponse } from '@onecore/utilities'
+import {
+  AddRelationErrorCodeSchema,
+  CreateContactErrorCodeSchema,
+  RemoveRelationErrorCodeSchema,
+} from '@onecore/contacts/schema'
 import type {
+  AddRelationErrorCode,
+  AddRelationRequestBody,
   Contact,
+  CreateContactErrorCode,
+  CreateContactErrorResponseBody,
+  CreateContactRequestBody,
+  CreateContactResponseBody,
   GetContactResponseBody,
   GetContactsResponseBody,
+  GetRelatedContactsResponseBody,
+  RelationErrorResponseBody,
+  RelationRoleType,
+  RemoveRelationErrorCode,
   SyncContactsResponseBody,
 } from '@onecore/contacts/schema'
 
 import { AdapterResult } from '@/adapters/types'
+import * as utils from '@/utils'
 import { AxiosResponse } from 'axios'
 import config from '../../common/config'
+
+/**
+ * Failures the contacts service can report when creating a contact, plus the
+ * catch-all for a response we do not recognise at all.
+ */
+export type CreateContactError =
+  CreateContactErrorCode | 'invalid-request' | 'contacts-service-error'
+
+/**
+ * Derived from the schema rather than listed here: a code added by the service
+ * must not silently fall through to the catch-all, which would drop the
+ * `detail` text the new code was created to carry.
+ */
+const KNOWN_CREATE_ERRORS: ReadonlySet<string> =
+  new Set<CreateContactErrorCode>(CreateContactErrorCodeSchema.options)
+
+/**
+ * Failures the contacts service can report when adding/removing a relation,
+ * plus the catch-alls for requests and responses we do not recognise.
+ */
+export type AddRelationError =
+  AddRelationErrorCode | 'invalid-request' | 'contacts-service-error'
+export type RemoveRelationError =
+  RemoveRelationErrorCode | 'invalid-request' | 'contacts-service-error'
+
+const KNOWN_ADD_RELATION_ERRORS: ReadonlySet<string> =
+  new Set<AddRelationErrorCode>(AddRelationErrorCodeSchema.options)
+// Route-level 400 codes (`RemoveRelationRequestErrorCodeSchema`) are folded
+// into `invalid-request` by the 400 check, so they are deliberately not
+// listed here.
+const KNOWN_REMOVE_RELATION_ERRORS: ReadonlySet<string> =
+  new Set<RemoveRelationErrorCode>(RemoveRelationErrorCodeSchema.options)
+
+/**
+ * Core-side call shape for a relation: the subject's code plus the
+ * counterpart and role.
+ */
+export type RelationRef = {
+  contactCode: string
+  relatedContactCode: string
+  roleType: RelationRoleType
+}
+
+/**
+ * Bound on every contacts call: without one a black-holed connection hangs
+ * until the OS gives up, and a caseworker waiting on a relation write never
+ * reaches the 502 or the compensating write a failure should trigger.
+ */
+const REQUEST_TIMEOUT_MS = 30_000
+
+/**
+ * A create cannot be undone, so giving up early reports a failure for a
+ * contact that exists and invites a duplicate on retry. The service's own
+ * Xpand SOAP timeout is 30s with database work around it, so this stays
+ * clearly above that while still bounding a black-holed connection.
+ */
+const CREATE_CONTACT_TIMEOUT_MS = 120_000
+
+/**
+ * A relation write is several Xpand and contacts DB queries in sequence, each
+ * bounded at 15s by the mssql driver's default. Giving up while the service is
+ * still working turns a write that lands into an unknown outcome, so this
+ * waits out the service's own worst case.
+ */
+const RELATION_WRITE_TIMEOUT_MS = 60_000
 
 export const makeContactsAdapter = (contactsServiceUrl: string) => {
   const axios = loggedAxios.create({
     baseURL: contactsServiceUrl,
     validateStatus: () => true,
+    timeout: REQUEST_TIMEOUT_MS,
   })
 
   const listResponse = (
@@ -91,19 +173,36 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       const { includePhone, includeEmail, includeAddress, includeRelations } =
         options ?? {}
 
-      const response = await axios<GetContactsResponseBody>(`/contacts/batch`, {
-        params: {
-          code: contactCodes,
-          includePhone,
-          includeEmail,
-          includeAddress,
-          includeRelations,
-        },
-        // Required: contacts microservice uses Koa's default Node querystring
-        // parser (no koa-qs), which doesn't unpack `?code[]=A` into an array.
-        paramsSerializer: { indexes: null },
-      })
-      return listResponse(response)
+      const CHUNK_SIZE = 500
+      const BATCH_CONCURRENCY = 5
+      const chunks: string[][] = []
+      for (let i = 0; i < contactCodes.length; i += CHUNK_SIZE) {
+        chunks.push(contactCodes.slice(i, i + CHUNK_SIZE))
+      }
+
+      const results = await utils.concurrency.runWithConcurrency(
+        chunks,
+        (chunk) =>
+          axios<GetContactsResponseBody>(`/contacts/batch`, {
+            params: {
+              code: chunk,
+              includePhone,
+              includeEmail,
+              includeAddress,
+              includeRelations,
+            },
+            paramsSerializer: { indexes: null },
+          }).then(listResponse),
+        BATCH_CONCURRENCY
+      )
+
+      const failed = results.find((r) => !r.ok)
+      if (failed) return failed
+
+      return {
+        ok: true,
+        data: results.flatMap((r) => (r.ok ? r.data : [])),
+      }
     },
 
     async getByTrusteeOfContactCode(
@@ -150,6 +249,9 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       const params = since ? { since: since.toISOString() } : {}
       const response = await axios<SyncContactsResponseBody>(`/contacts/sync`, {
         params,
+        // The one exception: a batch job with no user waiting, whose first
+        // run legitimately takes longer than the bound.
+        timeout: 0,
       })
 
       if (response.status === 200) {
@@ -163,6 +265,196 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       }
 
       return { ok: false, err: 'unknown', statusCode: response.status }
+    },
+
+    /**
+     * Creates a contact.
+     *
+     * NOT REVERSIBLE — a 201 means the contact exists in Xpand permanently.
+     * Callers must never retry a request that may have succeeded.
+     *
+     * The service's own error code is passed through rather than re-derived
+     * from the status, so callers can distinguish cases that share a status
+     * (a rejected request and an invalid identity number are both 422, but a
+     * caseworker needs to be told different things).
+     */
+    async createContact(
+      body: CreateContactRequestBody
+    ): Promise<
+      AdapterResult<CreateContactResponseBody['content'], CreateContactError>
+    > {
+      try {
+        const response = await axios.post<
+          CreateContactResponseBody & CreateContactErrorResponseBody
+        >('/contacts', body, { timeout: CREATE_CONTACT_TIMEOUT_MS })
+
+        if (response.status === 201) {
+          return { ok: true, data: response.data.content }
+        }
+
+        if (response.status === 400) {
+          return {
+            ok: false,
+            err: 'invalid-request',
+            statusCode: 400,
+          }
+        }
+
+        const reported = response.data?.error
+        if (reported && KNOWN_CREATE_ERRORS.has(reported)) {
+          return {
+            ok: false,
+            err: reported,
+            statusCode: response.status,
+            detail: response.data?.detail,
+          }
+        }
+
+        return {
+          ok: false,
+          err: 'contacts-service-error',
+          statusCode: response.status,
+        }
+      } catch (err) {
+        // Not the raw error: an AxiosError carries the request body, which
+        // holds the customer's national ID and address.
+        const { code, message } = (err ?? {}) as {
+          code?: string
+          message?: string
+        }
+        logger.error({ code, message }, 'contactsAdapter.createContact')
+        return { ok: false, err: 'contacts-service-error' }
+      }
+    },
+
+    /**
+     * Adds a relation (e.g. god man/förvaltare) between two contacts.
+     *
+     * The service's own error code is passed through rather than re-derived
+     * from the status, so callers can distinguish cases that share a status.
+     */
+    async addRelation(
+      params: RelationRef & { createdBy: string }
+    ): Promise<
+      AdapterResult<GetRelatedContactsResponseBody['content'], AddRelationError>
+    > {
+      const body: AddRelationRequestBody = {
+        relatedContactCode: params.relatedContactCode,
+        roleType: params.roleType,
+        createdBy: params.createdBy,
+      }
+      try {
+        const response = await axios.post<
+          GetRelatedContactsResponseBody & RelationErrorResponseBody
+        >(
+          `/contacts/${encodeURIComponent(params.contactCode)}/relations`,
+          body,
+          {
+            timeout: RELATION_WRITE_TIMEOUT_MS,
+          }
+        )
+
+        if (response.status === 201) {
+          return { ok: true, data: response.data.content }
+        }
+
+        // Recognise the code before folding on status: a named failure that
+        // arrives as a 400 keeps its code and detail rather than collapsing
+        // into the catch-all. Route-level 400s are not in the set, so those
+        // still fold, which is what the route contract says they should do.
+        const reported = response.data?.error
+        if (reported && KNOWN_ADD_RELATION_ERRORS.has(reported)) {
+          return {
+            ok: false,
+            err: reported as AddRelationErrorCode,
+            statusCode: response.status,
+            detail: response.data?.detail,
+          }
+        }
+
+        if (response.status === 400) {
+          return {
+            ok: false,
+            err: 'invalid-request',
+            statusCode: 400,
+          }
+        }
+
+        return {
+          ok: false,
+          err: 'contacts-service-error',
+          statusCode: response.status,
+        }
+      } catch (err) {
+        // Not the raw error: an AxiosError carries the request body, which
+        // holds the related contact's code.
+        const { code, message } = (err ?? {}) as {
+          code?: string
+          message?: string
+        }
+        logger.error({ code, message }, 'contactsAdapter.addRelation')
+        return { ok: false, err: 'contacts-service-error' }
+      }
+    },
+
+    /**
+     * Removes a relation (e.g. god man/förvaltare) between two contacts.
+     */
+    async removeRelation(
+      params: RelationRef & { deletedBy: string }
+    ): Promise<AdapterResult<void, RemoveRelationError>> {
+      try {
+        const response = await axios.delete<RelationErrorResponseBody>(
+          `/contacts/${encodeURIComponent(params.contactCode)}/relations/` +
+            `${encodeURIComponent(params.roleType)}/` +
+            `${encodeURIComponent(params.relatedContactCode)}`,
+          {
+            params: { deletedBy: params.deletedBy },
+            timeout: RELATION_WRITE_TIMEOUT_MS,
+          }
+        )
+
+        if (response.status === 204) {
+          return { ok: true, data: undefined }
+        }
+
+        // Recognise the code before folding on status: a named failure that
+        // arrives as a 400 keeps its code and detail rather than collapsing
+        // into the catch-all. Route-level 400s are not in the set, so those
+        // still fold, which is what the route contract says they should do.
+        const reported = response.data?.error
+        if (reported && KNOWN_REMOVE_RELATION_ERRORS.has(reported)) {
+          return {
+            ok: false,
+            err: reported as RemoveRelationErrorCode,
+            statusCode: response.status,
+            detail: response.data?.detail,
+          }
+        }
+
+        if (response.status === 400) {
+          return {
+            ok: false,
+            err: 'invalid-request',
+            statusCode: 400,
+          }
+        }
+
+        return {
+          ok: false,
+          err: 'contacts-service-error',
+          statusCode: response.status,
+        }
+      } catch (err) {
+        // Not the raw error: an AxiosError carries the request config, which
+        // holds identifying query params.
+        const { code, message } = (err ?? {}) as {
+          code?: string
+          message?: string
+        }
+        logger.error({ code, message }, 'contactsAdapter.removeRelation')
+        return { ok: false, err: 'contacts-service-error' }
+      }
     },
   }
 }

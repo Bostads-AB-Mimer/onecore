@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { match } from 'ts-pattern'
 import { logger } from '@onecore/utilities'
 import { economy } from '@onecore/types'
@@ -93,8 +94,24 @@ function isMultipleLeaseMatch(
   return 'leaseIds' in m
 }
 
-function hasTenantMoved(lease: LeaseMatch, asOf: Date): boolean {
-  return lease.leaseEndDate !== null && lease.leaseEndDate < asOf
+const IMD_BILLING_MONTH_OFFSET = 2
+
+function billingPeriodForConsumption(from: Date): { from: Date; to: Date } {
+  const billingMonth = dayjs(from).add(IMD_BILLING_MONTH_OFFSET, 'month')
+  return {
+    from: billingMonth.startOf('month').toDate(),
+    to: billingMonth.endOf('month').toDate(),
+  }
+}
+
+// Rows are billed IMD_BILLING_MONTH_OFFSET months after consumption, so a
+// lease that ends before the billing month is over will never invoice them.
+function hasTenantMoved(lease: LeaseMatch, consumptionFrom: Date): boolean {
+  const billingPeriod = billingPeriodForConsumption(consumptionFrom)
+  return (
+    lease.leaseEndDate !== null &&
+    dayjs(lease.leaseEndDate).isBefore(billingPeriod.to, 'day')
+  )
 }
 
 type EnrichResult = {
@@ -104,8 +121,7 @@ type EnrichResult = {
 
 function classifyRows(
   rows: Array<IMDRow>,
-  leaseMap: Map<string, LeaseMatch | MultipleLeaseMatch | null>,
-  today: Date
+  leaseMap: Map<string, LeaseMatch | MultipleLeaseMatch | null>
 ): EnrichResult {
   return rows.reduce<EnrichResult>(
     (acc, row) => {
@@ -124,7 +140,7 @@ function classifyRows(
           reason: 'multiple-leases',
           leaseIds: lookup.leaseIds,
         })
-      } else if (hasTenantMoved(lookup, today)) {
+      } else if (hasTenantMoved(lookup, row.from)) {
         acc.unprocessed.push({ ...row, reason: 'tenant-moved' })
       } else if (!UNIT_CONFIG[row.unit]) {
         acc.unprocessed.push({ ...row, reason: 'unsupported-unit' })
@@ -160,11 +176,7 @@ async function enrichIMDRows(
       periodEnd: period.end,
     })
 
-    const { enriched, unprocessed } = classifyRows(
-      imdRows,
-      leaseMap,
-      new Date()
-    )
+    const { enriched, unprocessed } = classifyRows(imdRows, leaseMap)
 
     return { ok: true, data: { enriched, unprocessed } }
   } catch (err) {
@@ -184,6 +196,7 @@ const UNIT_CONFIG: Record<
   VV: { articleCode: 'IMDM', description: 'Varmvatten' },
   VMM: { articleCode: 'VÄRMEENERGIM', description: 'Värmeenergi' },
   ELEC: { articleCode: 'IMDELM', description: 'El' },
+  EL: { articleCode: 'IMDELM', description: 'Elförbrukning' },
 }
 
 const SWEDISH_MONTHS = [
@@ -241,12 +254,13 @@ function toTenfastCsv(rows: Array<EnrichedIMDRow>): string {
   const lines = rows.map((row) => {
     const { articleCode, description } = getUnitConfig(row.unit)
     const yearlyRent = (row.cost * 12).toFixed(2).replace('.', ',')
+    const billingPeriod = billingPeriodForConsumption(row.from)
     return csvRow([
       row.leaseId,
       articleCode,
       buildInvoiceText(row, description),
-      formatDate(row.from),
-      formatDate(row.to),
+      formatDate(billingPeriod.from),
+      formatDate(billingPeriod.to),
       yearlyRent,
       '',
     ])
@@ -276,7 +290,7 @@ function getReasonLabel(row: UnprocessedIMDRow): string {
     .with({ reason: 'amount-too-low' }, () => 'Belopp under 15 kr')
     .with(
       { reason: 'tenant-moved' },
-      () => 'Hyresgästen har avslutat kontrakt efter perioden'
+      () => 'Kontraktet upphör före faktureringsmånadens slut'
     )
     .with(
       { reason: 'multiple-leases' },

@@ -9,13 +9,9 @@ import { formatInspectorIdentity } from '@/features/inspections/lib/inspectorIde
 
 import { useUser } from '@/entities/user/hooks/useUser'
 
-import { components } from '@/services/api/core/generated/api-types'
-
 import { useUrlPagination } from '@/shared/hooks'
 import { cn } from '@/shared/lib/utils'
-import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import {
   Command,
   CommandEmpty,
@@ -28,8 +24,6 @@ import { ViewLayout } from '@/shared/ui/layout'
 import { Pagination } from '@/shared/ui/Pagination'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
-
-type Inspection = components['schemas']['InspectionWithSource']
 
 const MY_INSPECTIONS_TAB = 'mine' as const
 

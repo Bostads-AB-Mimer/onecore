@@ -1,5 +1,6 @@
 // UI
 export { ApplicationProfileDisplay } from './ui/ApplicationProfileDisplay'
+export { CreateContactDialog } from './ui/CreateContactDialog'
 export { CurrentTenant } from './ui/CurrentTenant'
 export { InvoicesTable } from './ui/InvoicesTable'
 export { TenantsHeader } from './ui/TenantsHeader'
@@ -17,5 +18,6 @@ export { TenantsTabContent } from './ui/TenantsTabContent'
 // Hooks
 export { useApplicationProfile } from './hooks/useApplicationProfile'
 export { useContactQueuePoints } from './hooks/useContactQueuePoints'
+export { useCreateContact } from './hooks/useCreateContact'
 export { useInterestApplications } from './hooks/useInterestApplications'
 export { useInvoicePaymentEvents } from './hooks/useInvoicePaymentEvents'

@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Menu, Search, Lightbulb, Newspaper, User, LogOut } from 'lucide-react'
+import { Lightbulb, LogOut, Menu, Newspaper, Search, User } from 'lucide-react'
+
+import { ReleaseNotesModal } from '@/widgets/dashboard'
 
 import { useAuth } from '@/features/auth'
 import { GlobalSearchBar, useCommandPalette } from '@/features/search'
 
-import { ReleaseNotesModal } from '@/widgets/dashboard'
-
 import { useUser } from '@/entities/user'
 
 import onecoreLogo from '@/shared/assets/logos/full/onecore_logo_black.svg'
-import { Button } from '@/shared/ui/Button'
 import { useFeedbackModal } from '@/shared/hooks/useFeedbackModal'
+import { Button } from '@/shared/ui/Button'
 
 interface AppHeaderProps {
   onMenuClick: () => void

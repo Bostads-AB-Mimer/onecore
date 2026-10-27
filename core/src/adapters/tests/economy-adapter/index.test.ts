@@ -40,6 +40,81 @@ describe('economy-adapter', () => {
     })
   })
 
+  it('returns ok:false instead of throwing when economy responds with a non-2xx status', async () => {
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(500, { error: 'Internal server error' })
+
+    const result = await economyAdapter.getInvoicesByContactCode('P123456')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  describe(economyAdapter.getInvoiceByInvoiceId, () => {
+    it('returns the invoice on success', async () => {
+      nock(config.economyService.url)
+        .get(/invoices\/55123456/)
+        .reply(200, { content: mockedInvoices[0] })
+
+      const result = await economyAdapter.getInvoiceByInvoiceId('55123456')
+
+      expect(result).toEqual({
+        ok: true,
+        data: JSON.parse(JSON.stringify(mockedInvoices[0])),
+      })
+    })
+
+    it('returns not-found on 404', async () => {
+      nock(config.economyService.url)
+        .get(/invoices\/55123456/)
+        .reply(404)
+
+      const result = await economyAdapter.getInvoiceByInvoiceId('55123456')
+
+      expect(result).toEqual({ ok: false, err: 'not-found' })
+    })
+
+    it('returns ok:false instead of throwing on a 500', async () => {
+      nock(config.economyService.url)
+        .get(/invoices\/55123456/)
+        .reply(500, { error: 'Internal server error' })
+
+      const result = await economyAdapter.getInvoiceByInvoiceId('55123456')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+  })
+
+  describe(economyAdapter.getInvoicePaymentEvents, () => {
+    it('returns not-found on 404', async () => {
+      nock(config.economyService.url)
+        .get(/invoices\/55123456\/payment-events/)
+        .reply(404)
+
+      const result = await economyAdapter.getInvoicePaymentEvents('55123456')
+
+      expect(result).toEqual({
+        ok: false,
+        err: 'not-found',
+        statusCode: 404,
+      })
+    })
+
+    it('returns ok:false instead of throwing on a 500', async () => {
+      nock(config.economyService.url)
+        .get(/invoices\/55123456\/payment-events/)
+        .reply(500, { error: 'Internal server error' })
+
+      const result = await economyAdapter.getInvoicePaymentEvents('55123456')
+
+      expect(result).toEqual({
+        ok: false,
+        err: 'unknown',
+        statusCode: 500,
+      })
+    })
+  })
+
   describe(economyAdapter.deferInvoice, () => {
     const params = {
       invoiceId: '55123456',
@@ -126,6 +201,56 @@ describe('economy-adapter', () => {
       const result = await economyAdapter.deferInvoice(params)
 
       expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
+    })
+  })
+
+  describe(economyAdapter.submitMiscellaneousInvoice, () => {
+    const invoice = { contactCode: 'P123456' }
+
+    it('returns ok with the created items on success', async () => {
+      nock(config.economyService.url)
+        .post('/invoices/miscellaneous')
+        .reply(200, { content: [{ node: { dbId: 1 } }] })
+
+      const result = await economyAdapter.submitMiscellaneousInvoice(
+        invoice,
+        undefined
+      )
+
+      expect(result).toStrictEqual({
+        ok: true,
+        data: [{ node: { dbId: 1 } }],
+      })
+    })
+
+    it('passes through xledger-customer-not-found from economy', async () => {
+      nock(config.economyService.url)
+        .post('/invoices/miscellaneous')
+        .reply(404, { type: 'xledger-customer-not-found' })
+
+      const result = await economyAdapter.submitMiscellaneousInvoice(
+        invoice,
+        undefined
+      )
+
+      expect(result).toStrictEqual({
+        ok: false,
+        err: 'xledger-customer-not-found',
+        statusCode: 404,
+      })
+    })
+
+    it('returns unknown on other errors', async () => {
+      nock(config.economyService.url)
+        .post('/invoices/miscellaneous')
+        .reply(500, { message: 'boom' })
+
+      const result = await economyAdapter.submitMiscellaneousInvoice(
+        invoice,
+        undefined
+      )
+
+      expect(result).toStrictEqual({ ok: false, err: 'unknown' })
     })
   })
 

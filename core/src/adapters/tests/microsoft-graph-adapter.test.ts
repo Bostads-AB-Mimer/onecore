@@ -36,7 +36,6 @@ describe('microsoft-graph-adapter', () => {
       },
     }))
     jest.doMock('@onecore/utilities', () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const ax = require('axios')
       return {
         logger: { info: () => {}, error: () => {}, debug: () => {} },
@@ -45,7 +44,7 @@ describe('microsoft-graph-adapter', () => {
         generateRouteMetadata: jest.fn(),
       }
     })
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+
     listUsers = require('../microsoft-graph-adapter').listUsers
   })
   afterEach(() => mockServer.resetHandlers())

@@ -37,8 +37,7 @@ export type ScanReceiptError =
   | 'receipt-creation-failed'
 
 export type Result<T, E = string> =
-  | { ok: true; data: T }
-  | { ok: false; err: E; details?: string }
+  { ok: true; data: T } | { ok: false; err: E; details?: string }
 
 interface BatchResult {
   receiptId: string

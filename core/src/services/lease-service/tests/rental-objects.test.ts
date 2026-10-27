@@ -297,3 +297,177 @@ describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
     })
   })
 })
+
+describe('GET /rental-objects/by-code/:rentalObjectCode/rent', () => {
+  it('responds with 200 and the rent when found', async () => {
+    // Arrange
+    const rent = factory.rentalObjectRent.build()
+    jest
+      .spyOn(leasingAdapter, 'getRentalObjectRentByCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { rentalObjectCode: 'R1003', rent },
+      })
+
+    // Act
+    const res = await request(app.callback()).get(
+      '/rental-objects/by-code/R1003/rent'
+    )
+
+    // Assert
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({
+      rentalObjectCode: 'R1003',
+      rent: {
+        amount: rent.amount,
+        vat: rent.vat,
+        rows: rent.rows,
+      },
+    })
+  })
+
+  it('responds with 404 if adapter returns not-found', async () => {
+    // Arrange
+    jest
+      .spyOn(leasingAdapter, 'getRentalObjectRentByCode')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    // Act
+    const res = await request(app.callback()).get(
+      '/rental-objects/by-code/NOTFOUND/rent'
+    )
+
+    // Assert
+    expect(res.status).toBe(404)
+    expect(res.body).toMatchObject({ error: 'Rental object not found' })
+  })
+
+  it('responds with 500 if adapter fails', async () => {
+    // Arrange
+    jest
+      .spyOn(leasingAdapter, 'getRentalObjectRentByCode')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    // Act
+    const res = await request(app.callback()).get(
+      '/rental-objects/by-code/ERROR/rent'
+    )
+
+    // Assert
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({
+      error: 'Unexpected error when getting rent for ERROR',
+    })
+  })
+
+  it('responds with 500 if leasing data does not match the schema', async () => {
+    // Arrange
+    jest
+      .spyOn(leasingAdapter, 'getRentalObjectRentByCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          rentalObjectCode: 'R1003',
+          rent: { amount: 'not-a-number' },
+        } as never,
+      })
+
+    // Act
+    const res = await request(app.callback()).get(
+      '/rental-objects/by-code/R1003/rent'
+    )
+
+    // Assert
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({
+      error: 'Invalid rental object rent data',
+    })
+  })
+})
+
+describe('GET /rental-objects/by-code/:rentalObjectCode/rent-legacy', () => {
+  it('responds with 200 and the rent when found', async () => {
+    // Arrange
+    const rent = factory.rentalObjectRent.build()
+    jest
+      .spyOn(leasingAdapter, 'getRentalObjectLegacyRentByCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { rentalObjectCode: 'R1003', rent },
+      })
+
+    // Act
+    const res = await request(app.callback()).get(
+      '/rental-objects/by-code/R1003/rent-legacy'
+    )
+
+    // Assert
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({
+      rentalObjectCode: 'R1003',
+      rent: {
+        amount: rent.amount,
+        vat: rent.vat,
+        rows: rent.rows,
+      },
+    })
+  })
+
+  it('responds with 404 if adapter returns not-found', async () => {
+    // Arrange
+    jest
+      .spyOn(leasingAdapter, 'getRentalObjectLegacyRentByCode')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    // Act
+    const res = await request(app.callback()).get(
+      '/rental-objects/by-code/NOTFOUND/rent-legacy'
+    )
+
+    // Assert
+    expect(res.status).toBe(404)
+    expect(res.body).toMatchObject({ error: 'No legacy rent rows found' })
+  })
+
+  it('responds with 500 if adapter fails', async () => {
+    // Arrange
+    jest
+      .spyOn(leasingAdapter, 'getRentalObjectLegacyRentByCode')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    // Act
+    const res = await request(app.callback()).get(
+      '/rental-objects/by-code/ERROR/rent-legacy'
+    )
+
+    // Assert
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({
+      error: 'Unexpected error when getting legacy rent for ERROR',
+    })
+  })
+
+  it('responds with 500 if leasing data does not match the schema', async () => {
+    // Arrange
+    jest
+      .spyOn(leasingAdapter, 'getRentalObjectLegacyRentByCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          rentalObjectCode: 'R1003',
+          rent: { amount: 'not-a-number' },
+        } as never,
+      })
+
+    // Act
+    const res = await request(app.callback()).get(
+      '/rental-objects/by-code/R1003/rent-legacy'
+    )
+
+    // Assert
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({
+      error: 'Invalid legacy rental object rent data',
+    })
+  })
+})

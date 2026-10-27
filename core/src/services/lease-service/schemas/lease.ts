@@ -49,6 +49,33 @@ export const Contact = z.object({
   emailAddress: z.string().nullable().optional(),
   isTenant: z.boolean(),
   specialAttention: z.boolean().optional(),
+  protectedIdentity: z.boolean(),
+  // Only set for a protected identity, and only by the routes that fill in its
+  // details from the contacts service (see withProtectedIdentityDetails).
+  protectedIdentityDetails: z
+    .enum(['shown', 'withheld', 'unavailable'])
+    .optional(),
+})
+
+export const RentalObjectRentSchema = z.object({
+  amount: z.number(),
+  vat: z.number(),
+  rows: z.array(
+    z.object({
+      code: z.string().optional(),
+      description: z.string(),
+      amount: z.number(),
+      vatPercentage: z.number(),
+      fromDate: z.coerce.date().optional(),
+      toDate: z.coerce.date().optional(),
+    })
+  ),
+})
+
+/** GET /rental-objects/by-code/{code}/rent response content */
+export const RentalObjectRentInfo = z.object({
+  rentalObjectCode: z.string(),
+  rent: RentalObjectRentSchema,
 })
 
 export const Lease = z.object({
@@ -72,21 +99,18 @@ export const Lease = z.object({
     .object({
       rentalObjectCode: z.string(),
       address: z.string(),
-      rent: z
+      availabilityInfo: z
         .object({
           rentalObjectCode: z.string(),
-          amount: z.number(),
-          vat: z.number(),
-          rows: z.array(
-            z.object({
-              code: z.string(),
-              description: z.string(),
-              amount: z.number(),
-              vatPercentage: z.number(),
-              fromDate: z.coerce.date().optional(),
-              toDate: z.coerce.date().optional(),
-            })
-          ),
+          vacantFrom: z.coerce.date().optional(),
+          rent: RentalObjectRentSchema,
+          rentalTenureType: z.object({
+            id: z.string(),
+            name: z.string(),
+          }),
+          rentalTags: z
+            .array(z.object({ id: z.string(), name: z.string() }))
+            .optional(),
         })
         .optional(),
       residentialAreaCaption: z.string(),
@@ -210,6 +234,10 @@ export const Lease = z.object({
         emailAddress: z.string().nullable().optional(),
         isTenant: z.boolean(),
         specialAttention: z.boolean().optional(),
+        protectedIdentity: z.boolean(),
+        protectedIdentityDetails: z
+          .enum(['shown', 'withheld', 'unavailable'])
+          .optional(),
         // --- tenant-only additions (not part of Contact) ---
         parkingSpaceWaitingList: z
           .object({

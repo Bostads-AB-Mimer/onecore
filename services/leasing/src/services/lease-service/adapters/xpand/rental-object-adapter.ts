@@ -1,5 +1,5 @@
 import { logger } from '@onecore/utilities'
-import { RentalObject } from '@onecore/types'
+import { RentalObject, RentalObjectRent } from '@onecore/types'
 import { xpandDb } from './xpandDb'
 import { trimRow } from '../utils'
 
@@ -88,7 +88,7 @@ function transformFromXpandRentalObject(row: any): RentalObject {
     blockEndDate: row.blockenddate,
     districtCaption: district,
     districtCode: districtCode,
-    braArea: row.braarea,
+    braArea: row.braarea ?? undefined,
     isSpecialResidentialArea: isSpecialResidentialArea,
     isSpecialProperty: isSpecialProperty,
   }
@@ -100,22 +100,22 @@ const buildMainQuery = (queries: {
   rentalBlockDatesQuery?: any
   latestEndedContractPerParkingSpaceQuery?: any
 }) => {
-  let query = xpandDb
-    .from(queries.parkingSpacesQuery.as('ps'))
-    .select(
-      'ps.rentalObjectCode',
-      'ps.estatecode',
-      'ps.estatecaption',
-      'ps.vehiclespacetypecode',
-      'ps.vehiclespacetypecaption',
-      'ps.postaladdress',
-      'ps.zipcode',
-      'ps.city',
-      'ps.scegcaption',
-      'ps.scegcode',
-      'ps.residentialareacode',
-      'ps.residentialareacaption'
-    )
+  let query = xpandDb.from(queries.parkingSpacesQuery.as('ps')).select(
+    'ps.rentalObjectCode',
+    'ps.estatecode',
+    'ps.estatecaption',
+    'ps.vehiclespacetypecode',
+    'ps.vehiclespacetypecaption',
+    'ps.postaladdress',
+    'ps.zipcode',
+    'ps.city',
+    'ps.scegcaption',
+    'ps.scegcode',
+    'ps.residentialareacode',
+    'ps.residentialareacaption',
+    // Joined below for every query, not only those with a contract.
+    'cmvalbar.value as braarea'
+  )
 
   if (queries.latestEndedContractPerParkingSpaceQuery) {
     query = query
@@ -123,8 +123,7 @@ const buildMainQuery = (queries: {
         'ac.contractid',
         'ac.fromdate as contractfromdate',
         'ac.todate as contracttodate',
-        'ac.lastdebitdate',
-        'cmvalbar.value as braarea'
+        'ac.lastdebitdate'
       )
       .leftJoin(
         queries.latestEndedContractPerParkingSpaceQuery,
@@ -180,6 +179,7 @@ const buildSubQueries = () => {
     .where('babuf.cmpcode', '=', '001') //only gets parking spaces with company code 001
 
   //query that gets the block with the last block date. If there is a block without blockenddate, it will return NULL for blockenddate
+  //A block without a block reason (hyspa) still counts: the reason only describes it, as in property
   const rentalBlockDatesQuery = xpandDb.raw(`
     (
       SELECT sub.keycmobj, sub.fdate AS blockstartdate, sub.tdate AS blockenddate
@@ -193,7 +193,6 @@ const buildSubQueries = () => {
             ORDER BY CASE WHEN hyspt.tdate IS NULL THEN 1 ELSE 0 END DESC, hyspt.tdate DESC
           ) AS rn
         FROM hyspt
-        INNER JOIN hyspa ON hyspa.keyhyspa = hyspt.keyhyspa
       ) AS sub
       WHERE sub.rn = 1
     ) AS orb
@@ -353,9 +352,75 @@ const getParkingSpaces = async (
   }
 }
 
+const MONTHS_PER_YEAR = 12
+
+export type XpandDebitRow = {
+  rentalpropertyid: string
+  articleid: string | null
+  advicetext: string | null
+  debitfdate: Date | null
+  debittodate: Date | null
+  yearrent: number | null
+}
+
+export const mapXpandDebitRowsToRent = (
+  rows: XpandDebitRow[],
+  now: Date = new Date()
+): RentalObjectRent => {
+  const mapped = rows.map((row) => ({
+    code: row.articleid?.trim() ?? '',
+    description: row.advicetext?.trim() ?? '',
+    amount: (row.yearrent ?? 0) / MONTHS_PER_YEAR,
+    vatPercentage: 0,
+    fromDate: row.debitfdate ?? undefined,
+    toDate: row.debittodate ?? undefined,
+  }))
+
+  const activeTotal = mapped
+    .filter(
+      (row) =>
+        (!row.fromDate || row.fromDate <= now) &&
+        (!row.toDate || row.toDate >= now)
+    )
+    .reduce((sum, row) => sum + row.amount, 0)
+
+  return { amount: activeTotal, vat: 0, rows: mapped }
+}
+
+const getRentalObjectRentRows = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<RentalObjectRent, 'not-found' | 'unknown'>> => {
+  try {
+    const rows: XpandDebitRow[] = await xpandDb
+      .from('hy_debitrowrentalproperty_xpand_api')
+      .select(
+        'rentalpropertyid',
+        'articleid',
+        'advicetext',
+        'debitfdate',
+        'debittodate',
+        'yearrent'
+      )
+      .where({ rentalpropertyid: rentalObjectCode })
+
+    if (rows.length === 0) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: true, data: mapXpandDebitRowsToRent(rows) }
+  } catch (err) {
+    logger.error(
+      { err, rentalObjectCode },
+      'Unknown error in rentalObjectAdapter.getRentalObjectRentRows'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export {
   getAllVacantParkingSpaces,
   getParkingSpace,
   getParkingSpaces,
+  getRentalObjectRentRows,
   transformFromXpandRentalObject,
 }

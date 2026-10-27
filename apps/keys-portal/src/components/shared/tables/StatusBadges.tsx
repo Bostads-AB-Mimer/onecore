@@ -82,6 +82,8 @@ function getKeyTypeVariant(
     case 'FS':
     case 'LOK':
     case 'SOP':
+    case 'MB':
+    case 'TV':
       return 'outline'
     case 'HN':
       return 'destructive'

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-docker compose -f ../../docker-compose.yaml up -d
+docker compose -f ../../docker-compose.yaml up -d sql
 
 # Check for presence of sqlcmd in container
 if ! docker exec onecore-sql test -x /opt/mssql-tools/bin/sqlcmd; then
@@ -35,4 +35,8 @@ docker exec -i onecore-sql sh -lc '/opt/mssql-tools/bin/sqlcmd -S localhost -N -
 # Run CREATE TABLE statements
 echo "Creating tables..."
 docker exec -i onecore-sql sh -lc '/opt/mssql-tools/bin/sqlcmd -S localhost -N -C -U sa -P "$MSSQL_SA_PASSWORD" -d contacts-xpand-test' < ./.jest/sql/create.sql
+
+# Create the service's own test database (schema is applied by the jest globalSetup migration)
+echo "Creating contacts-test database..."
+docker exec -i onecore-sql sh -lc '/opt/mssql-tools/bin/sqlcmd -S localhost -N -C -U sa -P "$MSSQL_SA_PASSWORD" -b -Q "IF DB_ID(N'\''contacts-test'\'') IS NULL BEGIN CREATE DATABASE [contacts-test]; END"'
 

@@ -7,6 +7,7 @@ import {
   InvoicePaymentEvent,
   RentInvoiceRow,
   SyncContactToEconomyPayload,
+  SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
   XledgerProject,
   schemas,
@@ -50,20 +51,26 @@ export async function getInvoicePdf(
 export async function getInvoiceByInvoiceId(
   invoiceId: string
 ): Promise<AdapterResult<Invoice, 'not-found' | 'unknown'>> {
-  const response = await axios.get(
-    `${config.economyService.url}/invoices/${invoiceId}`
-  )
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/invoices/${invoiceId}`,
+      { validateStatus: () => true }
+    )
 
-  if (response.status === 404) {
-    return { ok: false, err: 'not-found' }
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'economy-adapter.getInvoiceByInvoiceId')
+    return { ok: false, err: 'unknown' }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getInvoiceByInvoiceId')
+    return { ok: false, err: 'unknown' }
   }
-
-  if (response.status === 200) {
-    return { ok: true, data: response.data.content }
-  }
-
-  logger.error(response.data, 'economy-adapter.getInvoiceByInvoiceId')
-  return { ok: false, err: 'unknown' }
 }
 
 export async function getInvoiceByOcr(
@@ -94,19 +101,25 @@ export async function getInvoiceByOcr(
 export async function getInvoicePaymentEvents(
   invoiceId: string
 ): Promise<AdapterResult<InvoicePaymentEvent[], 'unknown' | 'not-found'>> {
-  const response = await axios.get(
-    `${config.economyService.url}/invoices/${invoiceId}/payment-events`
-  )
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/invoices/${invoiceId}/payment-events`,
+      { validateStatus: () => true }
+    )
 
-  if (response.status === 200) {
-    return { ok: true, data: response.data.content }
-  }
-  if (response.status === 404) {
-    return { ok: false, err: 'not-found', statusCode: 404 }
-  }
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
 
-  logger.error(response.data, 'economy-adapter.getInvoicePaymentEvents')
-  return { ok: false, err: 'unknown', statusCode: 500 }
+    logger.error(response.data, 'economy-adapter.getInvoicePaymentEvents')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getInvoicePaymentEvents')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
 }
 
 export async function getInvoicesByContactCode(
@@ -114,19 +127,26 @@ export async function getInvoicesByContactCode(
   filters?: { from?: Date }
 ): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
   const url = `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
-  const params = filters ? { params: filters } : {}
-  const response = await axios.get(url, params)
+  try {
+    const response = await axios.get(url, {
+      params: filters,
+      validateStatus: () => true,
+    })
 
-  if (response.status === 404) {
-    return { ok: false, err: 'not-found' }
+    if (response.status === 404) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'economy-adapter.getInvoicesByContactCode')
+    return { ok: false, err: 'unknown' }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getInvoicesByContactCode')
+    return { ok: false, err: 'unknown' }
   }
-
-  if (response.status === 200) {
-    return { ok: true, data: response.data.content }
-  }
-
-  logger.error(response.data, 'economy-adapter.getInvoicesByContactCode')
-  return { ok: false, err: 'unknown' }
 }
 
 export type ImportInvoicesResult = {
@@ -167,8 +187,7 @@ export async function getInvoicesSentToDebtCollection(
 }
 
 export async function getMiscellaneousInvoiceDataForLease(
-  rentalId: string,
-  year?: string
+  rentalId: string
 ): Promise<
   AdapterResult<{ costCentre: string; propertyCode: string }, 'unknown'>
 > {
@@ -184,7 +203,12 @@ export async function getMiscellaneousInvoiceDataForLease(
 export async function submitMiscellaneousInvoice(
   invoice: any,
   attachment: any
-): Promise<AdapterResult<boolean, 'unknown'>> {
+): Promise<
+  AdapterResult<
+    Array<{ node: { dbId: number } }>,
+    SubmitMiscellaneousInvoiceErrorCodes
+  >
+> {
   // eslint-disable-next-line n/no-unsupported-features/node-builtins
   const formData = new FormData()
 
@@ -203,15 +227,37 @@ export async function submitMiscellaneousInvoice(
 
   try {
     const url = `${config.economyService.url}/invoices/miscellaneous`
-    const response = await axios.postForm(url, formData)
+    const response = await axios.postForm(url, formData, {
+      // Resolve on 4xx so error bodies from economy can be inspected. Matches
+      // the repo-wide axios default (see leasing-adapter) without depending on
+      // that module having been imported.
+      validateStatus: (status) => status >= 200 && status < 500,
+    })
 
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
     }
-    return { ok: false, err: 'unknown' }
+
+    if (
+      response.status === 404 &&
+      response.data?.type ===
+        SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
+    ) {
+      return {
+        ok: false,
+        err: SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound,
+        statusCode: 404,
+      }
+    }
+
+    logger.error(
+      { status: response.status, body: response.data },
+      'economy-adapter.submitMiscellaneousInvoice'
+    )
+    return { ok: false, err: SubmitMiscellaneousInvoiceErrorCodes.Unknown }
   } catch (err: unknown) {
-    logger.error(err, 'Error submitting miscellaneous invoice')
-    return { ok: false, err: 'unknown' }
+    logger.error({ err }, 'economy-adapter.submitMiscellaneousInvoice')
+    return { ok: false, err: SubmitMiscellaneousInvoiceErrorCodes.Unknown }
   }
 }
 
@@ -590,9 +636,16 @@ export async function recordInvoicePayment(
   }
 }
 
+/**
+ * Relation writes wait on this upsert synchronously before answering the
+ * caseworker, so it may not hang for as long as the OS allows.
+ */
+const SYNC_CONTACT_TIMEOUT_MS = 30_000
+
 export async function syncContactToEconomy(
   contactCode: string,
-  contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>
+  contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>,
+  options?: { create?: boolean }
 ): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> {
   const payload: SyncContactToEconomyPayload = {
     contactCode,
@@ -601,8 +654,9 @@ export async function syncContactToEconomy(
 
   try {
     const response = await axios.post(
-      `${config.economyService.url}/contacts/${contactCode}/sync`,
-      payload
+      `${config.economyService.url}/customers/${contactCode}/sync${options?.create ? `?create=${options.create}` : ''}`,
+      payload,
+      { timeout: SYNC_CONTACT_TIMEOUT_MS }
     )
     return { ok: true, data: { skipped: response.data?.skipped === true } }
   } catch (err) {

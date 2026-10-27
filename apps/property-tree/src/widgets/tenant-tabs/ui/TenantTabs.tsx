@@ -45,7 +45,6 @@ export const TenantTabs = ({
   rentalProperties,
   contactCode,
   nationalRegistrationNumber,
-  tenantName,
   isLoadingLeases,
   isLoadingProperties,
 }: TenantTabsProps) => {
@@ -61,7 +60,6 @@ export const TenantTabs = ({
         leases={leases}
         rentalProperties={rentalProperties}
         contactCode={contactCode}
-        tenantName={tenantName}
         nationalRegistrationNumber={nationalRegistrationNumber}
         isLoadingLeases={isLoadingLeases}
         isLoadingProperties={isLoadingProperties}
@@ -119,10 +117,7 @@ export const TenantTabs = ({
       </TabsContent>
 
       <TabsContent value="queue">
-        <TenantQueueSystemTabContent
-          contactCode={contactCode}
-          tenantName={tenantName}
-        />
+        <TenantQueueSystemTabContent contactCode={contactCode} />
       </TabsContent>
 
       <TabsContent value="work-orders">

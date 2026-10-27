@@ -3,10 +3,13 @@ import { logger } from '@onecore/utilities'
 
 export type FailedRowEntry = {
   key: string
-  type: 'lease' | 'contact'
+  type: 'lease' | 'contact' | 'rental-object-type'
   payload: unknown
   addedAt: string
   lastError: string
+  lastAttemptAt?: string
+  retriesStartedAt?: string
+  stillFailingNotifiedAt?: string
 }
 
 export const readQueue = async (path: string): Promise<FailedRowEntry[]> => {
@@ -21,21 +24,23 @@ export const readQueue = async (path: string): Promise<FailedRowEntry[]> => {
     )
     return []
   }
-  try {
-    return content
-      .split('\n')
-      .filter((line) => line.trim().length > 0)
-      .map((line) => JSON.parse(line) as FailedRowEntry)
-  } catch (err) {
-    logger.warn(
-      { err, path },
-      'failed-sync-queue: unable to parse queue file, treating as empty'
-    )
-    return []
-  }
+  return content
+    .split('\n')
+    .filter((line) => line.trim().length > 0)
+    .flatMap((line, index) => {
+      try {
+        return [JSON.parse(line) as FailedRowEntry]
+      } catch (err) {
+        logger.warn(
+          { err, path, line: index + 1 },
+          'failed-sync-queue: unable to parse line, skipping it'
+        )
+        return []
+      }
+    })
 }
 
-const writeQueueAtomic = async (
+export const writeQueue = async (
   path: string,
   queue: FailedRowEntry[]
 ): Promise<void> => {
@@ -47,22 +52,17 @@ const writeQueueAtomic = async (
   await fs.rename(tmp, path)
 }
 
-export const addEntry = async (
+export const appendEntry = async (
   path: string,
   entry: FailedRowEntry
 ): Promise<void> => {
-  const queue = await readQueue(path)
-  if (queue.some((e) => e.key === entry.key)) return
-  queue.push(entry)
-  await writeQueueAtomic(path, queue)
+  // The leading newline ends a line torn by an earlier crashed append.
+  await fs.appendFile(path, '\n' + JSON.stringify(entry) + '\n', 'utf-8')
 }
 
 export const removeEntry = async (path: string, key: string): Promise<void> => {
   const queue = await readQueue(path)
   const filtered = queue.filter((e) => e.key !== key)
   if (filtered.length === queue.length) return
-  await writeQueueAtomic(path, filtered)
+  await writeQueue(path, filtered)
 }
-
-export const hasKey = (queue: FailedRowEntry[], key: string): boolean =>
-  queue.some((e) => e.key === key)

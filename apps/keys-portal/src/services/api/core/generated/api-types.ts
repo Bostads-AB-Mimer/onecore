@@ -491,6 +491,158 @@ export interface paths {
       }
     }
   }
+  '/listing-area-text-content': {
+    /**
+     * List listing area text content
+     * @description Fetch the listing text content for all market areas.
+     */
+    get: {
+      responses: {
+        /** @description List of listing area text content objects */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create listing area text content
+     * @description Create new listing text content for a market area.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateListingAreaTextContentRequest']
+        }
+      }
+      responses: {
+        /** @description Listing area text content created successfully */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Listing area text content already exists for market area code */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/listing-area-text-content/{marketAreaCode}': {
+    /**
+     * Get listing area text content by market area code
+     * @description Fetch the listing text content for a specific market area.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The market area code to fetch text content for. */
+          marketAreaCode: string
+        }
+      }
+      responses: {
+        /** @description Listing area text content object */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update listing area text content
+     * @description Update existing listing text content for a market area.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The market area code of the listing text content to update. */
+          marketAreaCode: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateListingAreaTextContentRequest']
+        }
+      }
+      responses: {
+        /** @description Listing area text content updated successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Delete listing area text content
+     * @description Delete listing area text content.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The market area code of the listing text content to delete. */
+          marketAreaCode: string
+        }
+      }
+      responses: {
+        /** @description Listing area text content deleted successfully */
+        200: {
+          content: never
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/comments/{targetType}/thread/{targetId}/{commentId}': {
     /**
      * Update a comment in a comment thread
@@ -572,7 +724,7 @@ export interface paths {
      * Get contacts matching lease search filters
      * @description Retrieves contact information for tenants matching the given lease search filters.
      */
-    post: {
+    get: {
       parameters: {
         query?: {
           /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
@@ -618,12 +770,12 @@ export interface paths {
           buildingManager?: string[]
           /** @description Sort field */
           sortBy?:
-          | 'leaseStartDate'
-          | 'lastDebitDate'
-          | 'leaseId'
-          | 'address'
-          | 'objectType'
-          | 'rentalObjectCode'
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
           /** @description Sort direction */
           sortOrder?: 'asc' | 'desc'
         }
@@ -1167,30 +1319,6 @@ export interface paths {
           content: never
         }
         /** @description Internal server error. Failed to deny the offer. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/offers/{offerId}/expire': {
-    /**
-     * Expire an offer
-     * @description Expires an offer
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the offer to expire */
-          offerId: string
-        }
-      }
-      responses: {
-        /** @description Offer expired successful. */
-        202: {
-          content: never
-        }
-        /** @description Internal server error. Failed to expire the offer. */
         500: {
           content: never
         }
@@ -1818,7 +1946,7 @@ export interface paths {
           areaCodes?: string[]
           /** @description District names */
           districtNames?: string[]
-          /** @description Building manager names (Kvartersvärd) */
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
           buildingManager?: string[]
           /** @description Page number */
           page?: number
@@ -1826,12 +1954,12 @@ export interface paths {
           limit?: number
           /** @description Sort field */
           sortBy?:
-          | 'leaseStartDate'
-          | 'lastDebitDate'
-          | 'leaseId'
-          | 'address'
-          | 'objectType'
-          | 'rentalObjectCode'
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
           /** @description Sort direction */
           sortOrder?: 'asc' | 'desc'
         }
@@ -1992,16 +2120,16 @@ export interface paths {
           areaCodes?: string[]
           /** @description District names */
           districtNames?: string[]
-          /** @description Building manager names (Kvartersvärd) */
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
           buildingManager?: string[]
           /** @description Sort field */
           sortBy?:
-          | 'leaseStartDate'
-          | 'lastDebitDate'
-          | 'leaseId'
-          | 'address'
-          | 'objectType'
-          | 'rentalObjectCode'
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
           /** @description Sort direction */
           sortOrder?: 'asc' | 'desc'
         }
@@ -2267,6 +2395,10 @@ export interface paths {
         201: {
           content: never
         }
+        /** @description No eligible applicant found for the listing. */
+        404: {
+          content: never
+        }
         /** @description Internal server error. Failed to create the offer. */
         500: {
           content: never
@@ -2361,12 +2493,12 @@ export interface paths {
               publishedTo: string
               /** @enum {string} */
               status:
-              | 'ACTIVE'
-              | 'INACTIVE'
-              | 'CLOSED'
-              | 'ASSIGNED'
-              | 'EXPIRED'
-              | 'NO_APPLICANTS'
+                | 'ACTIVE'
+                | 'INACTIVE'
+                | 'CLOSED'
+                | 'ASSIGNED'
+                | 'EXPIRED'
+                | 'NO_APPLICANTS'
               /** @enum {string} */
               rentalRule: 'SCORED' | 'NON_SCORED'
               /** @enum {string} */
@@ -2540,6 +2672,70 @@ export interface paths {
               error?: string
             }
           }
+        }
+      }
+    }
+  }
+  '/rental-objects/by-code/{rentalObjectCode}/rent': {
+    /**
+     * Get rent for a rental object
+     * @description Fetches the rental object's configured rent from Tenfast, independent of any lease. Works for vacant objects.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to fetch rent for. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the rental object rent. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectRentInfo']
+            }
+          }
+        }
+        /** @description Not found. The specified rental object was not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. Failed to fetch rental object rent. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/by-code/{rentalObjectCode}/rent-legacy': {
+    /**
+     * Get legacy (Xpand) rent for a rental object
+     * @description Fetches the rental object's rent rows from Xpand, converted to monthly amounts. Used to compare against Tenfast during the transition.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to fetch legacy rent for. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the legacy rental object rent. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectRentInfo']
+            }
+          }
+        }
+        /** @description Not found. No rent rows exist in Xpand for the specified rental object. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. Failed to fetch legacy rental object rent. */
+        500: {
+          content: never
         }
       }
     }
@@ -3034,11 +3230,7 @@ export interface paths {
         query: {
           /** @description The type of the identifier used to fetch work order data. */
           handler:
-          | 'rentalObjectId'
-          | 'leaseId'
-          | 'pnr'
-          | 'phoneNumber'
-          | 'contactCode'
+            'rentalObjectId' | 'leaseId' | 'pnr' | 'phoneNumber' | 'contactCode'
         }
         path: {
           /** @description The identifier value for fetching work order data. */
@@ -6377,25 +6569,26 @@ export interface paths {
   }
   '/kvv-areas': {
     /**
-     * List kvv-area codes filtered by responsible Keycloak users
-     * @description Returns the codes of kvv-areas (förvaltningsområden) whose
-     * responsibleKeycloakUserId is one of the provided user ids. Repeat the
-     * responsibleUserId query param for each user id. Returns an empty list
-     * if the param is omitted.
+     * List kvv-areas (förvaltningsområden) with cost center and responsible
+     * @description Returns every kvv-area with its cost center (distrikt) and the
+     * responsible kvartersvärd hydrated from Keycloak (`null` if unset or
+     * if Keycloak is unreachable). Repeat `responsibleUserId` to restrict
+     * the list to areas whose responsible is one of the given Keycloak user
+     * ids; omit it to list all areas.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Keycloak user ids (repeatable) */
+          /** @description Keycloak user ids (repeatable). Omit to list all areas. */
           responsibleUserId?: string[]
         }
       }
       responses: {
-        /** @description List of kvv-area codes */
+        /** @description List of kvv-areas */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KvvAreaSummary'][]
+              content?: components['schemas']['KvvAreaWithResponsible'][]
             }
           }
         }
@@ -6460,7 +6653,67 @@ export interface paths {
       }
     }
   }
+  '/market-areas': {
+    /**
+     * List market areas
+     * @description Returns every market area (Xpand babya, "marknadsområde"). No
+     * filters, no pagination — there are only a few dozen rows.
+     */
+    get: {
+      responses: {
+        /** @description List of market areas */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MarketArea'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/properties/{propertyCode}/kvv-area': {
+    /**
+     * Get the KVV-area (förvaltningsområde) and district of a property
+     * @description Reverse lookup from a property code to the KVV-area it belongs to,
+     * the cost center (distrikt) of that area and the responsible
+     * kvartersvärd (hydrated from Keycloak; `null` if unset or if Keycloak
+     * is unreachable). Used by Odoo to stamp maintenance requests with
+     * their district. 404 when the property has no KVV-area link.
+     */
+    get: {
+      parameters: {
+        path: {
+          propertyCode: string
+        }
+      }
+      responses: {
+        /** @description KVV-area, cost center and responsible for the property */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /**
+         * @description Property has no KVV-area link. The body carries
+         * `code: PROPERTY_KVV_AREA_NOT_FOUND` so callers can tell this
+         * apart from a routing 404.
+         */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
     /**
      * Set the KVV-area (förvaltningsområde) of a property
      * @description Sets the KVV-area a property belongs to. Cross-cost-center moves are
@@ -6498,6 +6751,203 @@ export interface paths {
         /** @description Property or KVV-area not found */
         404: {
           content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/property-tree': {
+    /**
+     * Get the property tree for one grouping root
+     * @description Properties with their buildings, trapphus, parkeringsområden and
+     * per-type counts, beneath one grouping root. `groups` carries the
+     * intermediate level when the grouping has one (KVV-areas for
+     * costCenter); otherwise properties hang directly off the root.
+     *
+     * Only operating-company stock is returned — Xpand moves sold
+     * properties to a pseudo-company rather than delete-marking them.
+     */
+    get: {
+      parameters: {
+        query: {
+          groupBy: 'costCenter' | 'marketArea' | 'company'
+          /** @description Cost center id (uuid), market area code, or company code */
+          rootId: string
+          /** @description Pass 'false' to omit the rental-object leaves */
+          includeObjects?: 'true' | 'false'
+        }
+      }
+      responses: {
+        /** @description Property tree */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['PropertyTree']
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Root not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects': {
+    /**
+     * List rental objects of a property or building
+     * @description Returns every rental object (residence, parking space, facility,
+     * other) under one property or one building as flat structure rows
+     * with type, subtype caption, postal address and building/staircase
+     * placement. Provide exactly one of propertyCode or buildingCode.
+     */
+    get: {
+      parameters: {
+        query?: {
+          propertyCode?: string
+          buildingCode?: string
+          /** @description Object types to exclude (repeatable) */
+          exclude?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+        }
+      }
+      responses: {
+        /** @description List of rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/search': {
+    /**
+     * Search rental objects across several scopes
+     * @description Rental objects under ANY of the given scopes — cost centres,
+     * marknadsområden, properties, buildings, trapphus, parkeringsområden —
+     * narrowed by type, subtype and a free-text match on rental id, address
+     * or property name. At least one scope is required, and results are
+     * paginated since a district is thousands of objects.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+          types?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+          subtypes?: string[]
+          q?: string
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Matching rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSummary'][]
+              totalCount: number
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/details': {
+    /**
+     * Listing-only values for the objects a selection covers
+     * @description Grundhyra, BRA, "annan information av vikt" and anläggnings-ID per
+     * rental id. Separate from the objects themselves so pages that don't
+     * show these never fetch them. Takes the same scopes as the search,
+     * minus the type and subtype filters: the values are looked up by
+     * rental id, so narrowing them would only cost cache hits.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+        }
+      }
+      responses: {
+        /** @description Details per rental id */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectDetails'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-object-subtypes': {
+    /**
+     * List rental object subtype captions
+     * @description Subtype captions grouped by object type, limited to those in use by
+     * operating-company stock. Codes are unique within a type only.
+     */
+    get: {
+      responses: {
+        /** @description List of subtypes */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSubtype'][]
+            }
+          }
         }
         /** @description Internal server error */
         500: {
@@ -8826,8 +9276,8 @@ export interface paths {
           content: {
             'application/json': {
               content?:
-              | components['schemas']['KeyLoan']
-              | components['schemas']['KeyLoanWithDetails']
+                | components['schemas']['KeyLoan']
+                | components['schemas']['KeyLoanWithDetails']
             }
           }
         }
@@ -9296,6 +9746,42 @@ export interface paths {
         400: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Key system not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems/{id}/deactivate': {
+    /**
+     * Deactivate a key system and dispose all its keys
+     * @description Sets isActive=false and disposes every non-disposed key in the system in one transaction. Writes an audit log entry on the system listing all disposed key ids (the manual-rollback record).
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to deactivate */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key system deactivated and keys disposed */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DeactivateKeySystemResponse']
+            }
           }
         }
         /** @description Key system not found */
@@ -10557,6 +11043,201 @@ export interface paths {
         }
       }
     }
+    /**
+     * Create a contact
+     * @description Creates a contact, then optionally records an application profile and enrols the customer in the requested waiting lists. NOT TRANSACTIONAL. The contact is created in Xpand and cannot be removed. Once it exists this endpoint always answers 201, reporting any later step that failed under `warnings` — those steps are idempotent and should be completed on the created contact rather than by creating it again.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateContactRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                contactCode: string
+                contact:
+                  | (
+                      | {
+                          contactCode: string
+                          communication: {
+                            phoneNumbers: {
+                              phoneNumber: string
+                              /** @enum {string} */
+                              type:
+                                | 'work'
+                                | 'home'
+                                | 'mobile'
+                                | 'direct-line'
+                                | 'fax'
+                                | 'pager'
+                                | 'unspecified'
+                              comment?: string
+                              isPrimary: boolean
+                            }[]
+                            emailAddresses: {
+                              emailAddress: string
+                              type: string
+                              isPrimary: boolean
+                            }[]
+                            specialAttention: boolean
+                          }
+                          addresses: {
+                            careOf?: string
+                            street: string | null
+                            zipCode: string | null
+                            city: string | null
+                            region: string | null
+                            country: string | null
+                          }[]
+                          relatedContacts?: {
+                            contactCode: string
+                            /** @enum {string} */
+                            role:
+                              | 'trustee'
+                              | 'administrator'
+                              | 'trusteeFor'
+                              | 'administratorFor'
+                              | 'otherInvoiceRecipient'
+                              | 'otherInvoiceRecipientFor'
+                            fullName: string
+                            firstName: string
+                            lastName: string
+                          }[]
+                          /** @enum {string} */
+                          type: 'individual'
+                          personal: {
+                            nationalRegistrationNumber: string | null
+                            birthDate: string | null
+                            firstName: string | null
+                            lastName: string | null
+                            fullName: string
+                          }
+                        }
+                      | {
+                          contactCode: string
+                          communication: {
+                            phoneNumbers: {
+                              phoneNumber: string
+                              /** @enum {string} */
+                              type:
+                                | 'work'
+                                | 'home'
+                                | 'mobile'
+                                | 'direct-line'
+                                | 'fax'
+                                | 'pager'
+                                | 'unspecified'
+                              comment?: string
+                              isPrimary: boolean
+                            }[]
+                            emailAddresses: {
+                              emailAddress: string
+                              type: string
+                              isPrimary: boolean
+                            }[]
+                            specialAttention: boolean
+                          }
+                          addresses: {
+                            careOf?: string
+                            street: string | null
+                            zipCode: string | null
+                            city: string | null
+                            region: string | null
+                            country: string | null
+                          }[]
+                          relatedContacts?: {
+                            contactCode: string
+                            /** @enum {string} */
+                            role:
+                              | 'trustee'
+                              | 'administrator'
+                              | 'trusteeFor'
+                              | 'administratorFor'
+                              | 'otherInvoiceRecipient'
+                              | 'otherInvoiceRecipientFor'
+                            fullName: string
+                            firstName: string
+                            lastName: string
+                          }[]
+                          /** @enum {string} */
+                          type: 'organisation'
+                          organisation: {
+                            organisationNumber: string
+                            name: string
+                          }
+                        }
+                    )
+                  | null
+                applicationProfile: {
+                  /** @enum {string} */
+                  status: 'created' | 'skipped' | 'failed'
+                  error?: string
+                }
+                waitingLists: {
+                  /** @enum {number} */
+                  waitingListType: 1 | 2 | 3
+                  /** @enum {string} */
+                  status: 'created' | 'skipped' | 'failed'
+                  error?: string
+                }[]
+              }
+              warnings?: string[]
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Unprocessable Entity */
+        422: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Service Unavailable */
+        503: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+      }
+    }
   }
   '/v1/contacts/by-codes': {
     /**
@@ -10825,32 +11506,44 @@ export interface components {
       leaseEndDate?: string
       /** @enum {string} */
       status:
-      | 'Current'
-      | 'Upcoming'
-      | 'AboutToEnd'
-      | 'Ended'
-      | 'PreliminaryTerminated'
-      | 'PendingSignature'
-      | 'NotSent'
+        | 'Current'
+        | 'Upcoming'
+        | 'AboutToEnd'
+        | 'Ended'
+        | 'PreliminaryTerminated'
+        | 'PendingSignature'
+        | 'NotSent'
       tenantContactIds?: string[]
       subletContactId?: string
       rentalPropertyId: string
       rentalObject?: {
         rentalObjectCode: string
         address: string
-        rent?: {
+        availabilityInfo?: {
           rentalObjectCode: string
-          amount: number
-          vat: number
-          rows: {
-            code: string
-            description: string
+          /** Format: date-time */
+          vacantFrom?: string
+          rent: {
             amount: number
-            vatPercentage: number
-            /** Format: date-time */
-            fromDate?: string
-            /** Format: date-time */
-            toDate?: string
+            vat: number
+            rows: {
+              code?: string
+              description: string
+              amount: number
+              vatPercentage: number
+              /** Format: date-time */
+              fromDate?: string
+              /** Format: date-time */
+              toDate?: string
+            }[]
+          }
+          rentalTenureType: {
+            id: string
+            name: string
+          }
+          rentalTags?: {
+            id: string
+            name: string
           }[]
         }
         residentialAreaCaption: string
@@ -10971,16 +11664,16 @@ export interface components {
       objectTypeCode: string
       /** @enum {string} */
       leaseType:
-      | 'Bostadskontrakt'
-      | 'Campuskontrakt'
-      | 'Garagekontrakt'
-      | 'Kooperativ hyresrätt'
-      | 'Lokalkontrakt'
-      | 'Omförhandlingskontrakt'
-      | 'Förrådskontrakt'
-      | 'Övrigt'
-      | 'P-Platskontrakt'
-      | 'Korttidsuthyrning'
+        | 'Bostadskontrakt'
+        | 'Campuskontrakt'
+        | 'Garagekontrakt'
+        | 'Kooperativ hyresrätt'
+        | 'Lokalkontrakt'
+        | 'Omförhandlingskontrakt'
+        | 'Förrådskontrakt'
+        | 'Övrigt'
+        | 'P-Platskontrakt'
+        | 'Korttidsuthyrning'
       contacts: {
         name: string
         contactCode: string
@@ -11051,48 +11744,65 @@ export interface components {
       isTenant: boolean
       specialAttention?: boolean
     }
+    RentalObjectRentInfo: {
+      rentalObjectCode: string
+      rent: {
+        amount: number
+        vat: number
+        rows: {
+          code?: string
+          description: string
+          amount: number
+          vatPercentage: number
+          /** Format: date-time */
+          fromDate?: string
+          /** Format: date-time */
+          toDate?: string
+        }[]
+      }
+    }
     ListingTextContent: {
       /** Format: uuid */
       id: string
       rentalObjectCode: string
       contentBlocks: (
         | {
-          /** @enum {string} */
-          type: 'preamble'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'headline'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'subtitle'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'text'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'bullet_list'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'bold_text'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'link'
-          name: string
-          /** Format: uri */
-          url: string
-        }
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
       )[]
       /** Format: date-time */
       createdAt: string
@@ -11103,83 +11813,214 @@ export interface components {
       rentalObjectCode: string
       contentBlocks: (
         | {
-          /** @enum {string} */
-          type: 'preamble'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'headline'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'subtitle'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'text'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'bullet_list'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'bold_text'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'link'
-          name: string
-          /** Format: uri */
-          url: string
-        }
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
       )[]
     }
     UpdateListingTextContentRequest: {
       contentBlocks?: (
         | {
-          /** @enum {string} */
-          type: 'preamble'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'headline'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'subtitle'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'text'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'bullet_list'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'bold_text'
-          content: string
-        }
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
         | {
-          /** @enum {string} */
-          type: 'link'
-          name: string
-          /** Format: uri */
-          url: string
-        }
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+    }
+    ListingAreaTextContent: {
+      /** Format: uuid */
+      id: string
+      marketAreaCode: string
+      contentBlocks: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateListingAreaTextContentRequest: {
+      marketAreaCode: string
+      contentBlocks: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
+      )[]
+    }
+    UpdateListingAreaTextContentRequest: {
+      contentBlocks?: (
+        | {
+            /** @enum {string} */
+            type: 'preamble'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'headline'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'subtitle'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bullet_list'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'bold_text'
+            content: string
+          }
+        | {
+            /** @enum {string} */
+            type: 'link'
+            name: string
+            /** Format: uri */
+            url: string
+          }
       )[]
     }
     WorkOrder: {
@@ -11283,7 +12124,7 @@ export interface components {
       property?: {
         name: string | null
         code: string
-        id: string
+        id?: string
       } | null
     }
     Company: {
@@ -11620,25 +12461,25 @@ export interface components {
       rentalId: string
       /** @enum {string} */
       roomTypeCode:
-      | 'BAD'
-      | 'BAL'
-      | 'BRS'
-      | 'DUSCH'
-      | 'FÖR'
-      | 'GROV'
-      | 'HALL'
-      | 'KLÄD'
-      | 'KÖK'
-      | 'KOV'
-      | 'KV'
-      | 'MAT'
-      | 'PA'
-      | 'RUM'
-      | 'TRAPP'
-      | 'UP'
-      | 'VARD'
-      | 'WC'
-      | 'WC/DU1'
+        | 'BAD'
+        | 'BAL'
+        | 'BRS'
+        | 'DUSCH'
+        | 'FÖR'
+        | 'GROV'
+        | 'HALL'
+        | 'KLÄD'
+        | 'KÖK'
+        | 'KOV'
+        | 'KV'
+        | 'MAT'
+        | 'PA'
+        | 'RUM'
+        | 'TRAPP'
+        | 'UP'
+        | 'VARD'
+        | 'WC'
+        | 'WC/DU1'
       code?: string
       caption?: string
       features?: {
@@ -11667,7 +12508,7 @@ export interface components {
         propertyObjectId: string
         code: string
         name: string
-        parkingNumber: string
+        parkingNumber: string | null
         parkingSpaceType: {
           code: string
           name: string
@@ -11678,7 +12519,7 @@ export interface components {
         streetAddress2: string | null
         postalCode: string | null
         city: string | null
-      }
+      } | null
     }
     MaintenanceUnit: {
       id: string
@@ -12397,35 +13238,81 @@ export interface components {
       mobilePhone?: string
       employeeId?: string
     }
-    CostCenterTreeAddress: {
+    CostCenterTreeStaircase: {
+      code: string
+      name: string | null
+      residenceCount: number
+      parkingCount: number
+      facilityCount: number
+      otherCount: number
+    }
+    CostCenterTreeBuilding: {
       buildingCode: string
       buildingName: string | null
       buildingType: {
         code: string | null
         name: string | null
       } | null
+      staircases: {
+        code: string
+        name: string | null
+        residenceCount: number
+        parkingCount: number
+        facilityCount: number
+        otherCount: number
+      }[]
+      residenceCount: number
+      parkingCount: number
+      facilityCount: number
+      otherCount: number
+    }
+    CostCenterTreeParkingArea: {
+      code: string
+      name: string | null
+      parkingCount: number
     }
     CostCenterTreeAggregates: {
       residenceCount: number
       parkingCount: number
       entranceCount: number
+      facilityCount: number
+      otherCount: number
     }
     CostCenterTreeProperty: {
       code: string
       designation: string | null
       tract: string | null
-      addresses: {
+      buildings: {
         buildingCode: string
         buildingName: string | null
         buildingType: {
           code: string | null
           name: string | null
         } | null
+        staircases: {
+          code: string
+          name: string | null
+          residenceCount: number
+          parkingCount: number
+          facilityCount: number
+          otherCount: number
+        }[]
+        residenceCount: number
+        parkingCount: number
+        facilityCount: number
+        otherCount: number
+      }[]
+      parkingAreas: {
+        code: string
+        name: string | null
+        parkingCount: number
       }[]
       aggregates: {
         residenceCount: number
         parkingCount: number
         entranceCount: number
+        facilityCount: number
+        otherCount: number
       }
     }
     CostCenterTreeKvvArea: {
@@ -12446,18 +13333,37 @@ export interface components {
         code: string
         designation: string | null
         tract: string | null
-        addresses: {
+        buildings: {
           buildingCode: string
           buildingName: string | null
           buildingType: {
             code: string | null
             name: string | null
           } | null
+          staircases: {
+            code: string
+            name: string | null
+            residenceCount: number
+            parkingCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          residenceCount: number
+          parkingCount: number
+          facilityCount: number
+          otherCount: number
+        }[]
+        parkingAreas: {
+          code: string
+          name: string | null
+          parkingCount: number
         }[]
         aggregates: {
           residenceCount: number
           parkingCount: number
           entranceCount: number
+          facilityCount: number
+          otherCount: number
         }
       }[]
     }
@@ -12489,18 +13395,37 @@ export interface components {
           code: string
           designation: string | null
           tract: string | null
-          addresses: {
+          buildings: {
             buildingCode: string
             buildingName: string | null
             buildingType: {
               code: string | null
               name: string | null
             } | null
+            staircases: {
+              code: string
+              name: string | null
+              residenceCount: number
+              parkingCount: number
+              facilityCount: number
+              otherCount: number
+            }[]
+            residenceCount: number
+            parkingCount: number
+            facilityCount: number
+            otherCount: number
+          }[]
+          parkingAreas: {
+            code: string
+            name: string | null
+            parkingCount: number
           }[]
           aggregates: {
             residenceCount: number
             parkingCount: number
             entranceCount: number
+            facilityCount: number
+            otherCount: number
           }
         }[]
       }[]
@@ -12511,8 +13436,54 @@ export interface components {
       code: string
       name: string
     }
-    KvvAreaSummary: {
+    KvvAreaWithResponsible: {
+      /** Format: uuid */
+      id: string
       code: string
+      name: string | null
+      costCenter: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string
+      }
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
+    }
+    MarketArea: {
+      id: string
+      code: string
+      name: string | null
+    }
+    PropertyKvvAreaLookup: {
+      kvvArea: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string | null
+      }
+      costCenter: {
+        /** Format: uuid */
+        id: string
+        code: string
+        name: string
+      }
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
     }
     PutPropertyKvvAreaBody: {
       /** Format: uuid */
@@ -12540,6 +13511,198 @@ export interface components {
         employeeId?: string
       } | null
     }
+    RentalObjectSummary: {
+      rentalId: string
+      /** @enum {string} */
+      type: 'residence' | 'parkingSpace' | 'facility' | 'other'
+      code: string | null
+      name: string | null
+      subtypeCode: string | null
+      subtypeName: string | null
+      address: string | null
+      buildingCode: string | null
+      staircaseCode: string | null
+      staircaseName: string | null
+      parkingAreaCode: string | null
+      propertyCode: string | null
+      propertyName: string | null
+    }
+    RentalObjectDetails: {
+      rentalId: string
+      baseRent: number | null
+      area: number | null
+      additionalInfo: string | null
+      malarEnergiFacilityId: string | null
+    }
+    RentalObjectSubtype: {
+      /** @enum {string} */
+      type: 'residence' | 'parkingSpace' | 'facility' | 'other'
+      code: string
+      name: string
+    }
+    PropertyTreeGroup: {
+      id: string
+      code: string
+      name: string | null
+      responsible: {
+        id: string
+        username: string
+        firstName?: string
+        lastName?: string
+        email?: string
+        mobilePhone?: string
+        employeeId?: string
+      } | null
+      properties: {
+        /** @enum {string} */
+        type:
+          | 'property'
+          | 'building'
+          | 'staircase'
+          | 'parkingArea'
+          | 'residence'
+          | 'parkingSpace'
+          | 'facility'
+          | 'other'
+        code: string
+        name: string | null
+        subtypeCode: string | null
+        subtypeName: string | null
+        children?: {
+          /** @enum {string} */
+          type:
+            | 'property'
+            | 'building'
+            | 'staircase'
+            | 'parkingArea'
+            | 'residence'
+            | 'parkingSpace'
+            | 'facility'
+            | 'other'
+          code: string
+          name: string | null
+          subtypeCode: string | null
+          subtypeName: string | null
+          children?: {
+            /** @enum {string} */
+            type:
+              | 'property'
+              | 'building'
+              | 'staircase'
+              | 'parkingArea'
+              | 'residence'
+              | 'parkingSpace'
+              | 'facility'
+              | 'other'
+            code: string
+            name: string | null
+            subtypeCode: string | null
+            subtypeName: string | null
+            children?: {
+              /** @enum {string} */
+              type:
+                | 'property'
+                | 'building'
+                | 'staircase'
+                | 'parkingArea'
+                | 'residence'
+                | 'parkingSpace'
+                | 'facility'
+                | 'other'
+              code: string
+              name: string | null
+              subtypeCode: string | null
+              subtypeName: string | null
+            }[]
+          }[]
+        }[]
+      }[]
+    }
+    PropertyTree: {
+      /** @enum {string} */
+      grouping: 'costCenter' | 'marketArea' | 'company'
+      id: string
+      code: string
+      name: string | null
+      groups: {
+        id: string
+        code: string
+        name: string | null
+        responsible: {
+          id: string
+          username: string
+          firstName?: string
+          lastName?: string
+          email?: string
+          mobilePhone?: string
+          employeeId?: string
+        } | null
+        properties: {
+          /** @enum {string} */
+          type:
+            | 'property'
+            | 'building'
+            | 'staircase'
+            | 'parkingArea'
+            | 'residence'
+            | 'parkingSpace'
+            | 'facility'
+            | 'other'
+          code: string
+          name: string | null
+          subtypeCode: string | null
+          subtypeName: string | null
+          children?: {
+            /** @enum {string} */
+            type:
+              | 'property'
+              | 'building'
+              | 'staircase'
+              | 'parkingArea'
+              | 'residence'
+              | 'parkingSpace'
+              | 'facility'
+              | 'other'
+            code: string
+            name: string | null
+            subtypeCode: string | null
+            subtypeName: string | null
+            children?: {
+              /** @enum {string} */
+              type:
+                | 'property'
+                | 'building'
+                | 'staircase'
+                | 'parkingArea'
+                | 'residence'
+                | 'parkingSpace'
+                | 'facility'
+                | 'other'
+              code: string
+              name: string | null
+              subtypeCode: string | null
+              subtypeName: string | null
+              children?: {
+                /** @enum {string} */
+                type:
+                  | 'property'
+                  | 'building'
+                  | 'staircase'
+                  | 'parkingArea'
+                  | 'residence'
+                  | 'parkingSpace'
+                  | 'facility'
+                  | 'other'
+                code: string
+                name: string | null
+                subtypeCode: string | null
+                subtypeName: string | null
+              }[]
+            }[]
+          }[]
+        }[]
+      }[]
+    }
     Key: {
       /** Format: uuid */
       id: string
@@ -12549,17 +13712,19 @@ export interface components {
       rentalObjectCode?: string | null
       /** @enum {string} */
       keyType:
-      | 'HN'
-      | 'FS'
-      | 'MV'
-      | 'LGH'
-      | 'PB'
-      | 'GAR'
-      | 'LOK'
-      | 'HL'
-      | 'FÖR'
-      | 'SOP'
-      | 'ÖVR'
+        | 'HN'
+        | 'FS'
+        | 'MV'
+        | 'LGH'
+        | 'PB'
+        | 'GAR'
+        | 'LOK'
+        | 'HL'
+        | 'FÖR'
+        | 'SOP'
+        | 'MB'
+        | 'TV'
+        | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
       /** @default false */
@@ -12625,17 +13790,19 @@ export interface components {
       rentalObjectCode?: string | null
       /** @enum {string} */
       keyType:
-      | 'HN'
-      | 'FS'
-      | 'MV'
-      | 'LGH'
-      | 'PB'
-      | 'GAR'
-      | 'LOK'
-      | 'HL'
-      | 'FÖR'
-      | 'SOP'
-      | 'ÖVR'
+        | 'HN'
+        | 'FS'
+        | 'MV'
+        | 'LGH'
+        | 'PB'
+        | 'GAR'
+        | 'LOK'
+        | 'HL'
+        | 'FÖR'
+        | 'SOP'
+        | 'MB'
+        | 'TV'
+        | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
       /** @default false */
@@ -12648,21 +13815,21 @@ export interface components {
       keySystem?: components['schemas']['KeySystem'] | null
       loans?: components['schemas']['KeyLoan'][] | null
       events?:
-      | {
-        /** Format: uuid */
-        id: string
-        /** @enum {string} */
-        type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
-        /** @enum {string} */
-        status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
-        /** Format: uuid */
-        workOrderId?: string | null
-        /** Format: date-time */
-        createdAt: string
-        /** Format: date-time */
-        updatedAt: string
-      }[]
-      | null
+        | {
+            /** Format: uuid */
+            id: string
+            /** @enum {string} */
+            type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
+            /** @enum {string} */
+            status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
+            /** Format: uuid */
+            workOrderId?: string | null
+            /** Format: date-time */
+            createdAt: string
+            /** Format: date-time */
+            updatedAt: string
+          }[]
+        | null
       activeLoanContact?: string | null
     }
     KeyLoanWithDetails: {
@@ -12697,17 +13864,19 @@ export interface components {
         rentalObjectCode?: string | null
         /** @enum {string} */
         keyType:
-        | 'HN'
-        | 'FS'
-        | 'MV'
-        | 'LGH'
-        | 'PB'
-        | 'GAR'
-        | 'LOK'
-        | 'HL'
-        | 'FÖR'
-        | 'SOP'
-        | 'ÖVR'
+          | 'HN'
+          | 'FS'
+          | 'MV'
+          | 'LGH'
+          | 'PB'
+          | 'GAR'
+          | 'LOK'
+          | 'HL'
+          | 'FÖR'
+          | 'SOP'
+          | 'MB'
+          | 'TV'
+          | 'ÖVR'
         /** Format: uuid */
         keySystemId?: string | null
         /** @default false */
@@ -12740,40 +13909,40 @@ export interface components {
           updatedBy?: string | null
         } | null
         loans?:
-        | {
-          id: components['schemas']['KeyLoanWithDetails']['id']
-          loanType: components['schemas']['KeyLoanWithDetails']['loanType']
-          contact?: components['schemas']['KeyLoanWithDetails']['contact']
-          contact2?: components['schemas']['KeyLoanWithDetails']['contact2']
-          contactPerson?: components['schemas']['KeyLoanWithDetails']['contactPerson']
-          notes?: components['schemas']['KeyLoanWithDetails']['notes']
-          returnedAt?: components['schemas']['KeyLoanWithDetails']['returnedAt']
-          availableToNextTenantFrom?: components['schemas']['KeyLoanWithDetails']['availableToNextTenantFrom']
-          pickedUpAt?: components['schemas']['KeyLoanWithDetails']['pickedUpAt']
-          createdAt: components['schemas']['KeyLoanWithDetails']['createdAt']
-          updatedAt: components['schemas']['KeyLoanWithDetails']['updatedAt']
-          createdBy?: components['schemas']['KeyLoanWithDetails']['createdBy']
-          updatedBy?: components['schemas']['KeyLoanWithDetails']['updatedBy']
-          keyCount?: components['schemas']['KeyLoanWithDetails']['keyCount']
-          cardCount?: components['schemas']['KeyLoanWithDetails']['cardCount']
-        }[]
-        | null
+          | {
+              id: components['schemas']['KeyLoanWithDetails']['id']
+              loanType: components['schemas']['KeyLoanWithDetails']['loanType']
+              contact?: components['schemas']['KeyLoanWithDetails']['contact']
+              contact2?: components['schemas']['KeyLoanWithDetails']['contact2']
+              contactPerson?: components['schemas']['KeyLoanWithDetails']['contactPerson']
+              notes?: components['schemas']['KeyLoanWithDetails']['notes']
+              returnedAt?: components['schemas']['KeyLoanWithDetails']['returnedAt']
+              availableToNextTenantFrom?: components['schemas']['KeyLoanWithDetails']['availableToNextTenantFrom']
+              pickedUpAt?: components['schemas']['KeyLoanWithDetails']['pickedUpAt']
+              createdAt: components['schemas']['KeyLoanWithDetails']['createdAt']
+              updatedAt: components['schemas']['KeyLoanWithDetails']['updatedAt']
+              createdBy?: components['schemas']['KeyLoanWithDetails']['createdBy']
+              updatedBy?: components['schemas']['KeyLoanWithDetails']['updatedBy']
+              keyCount?: components['schemas']['KeyLoanWithDetails']['keyCount']
+              cardCount?: components['schemas']['KeyLoanWithDetails']['cardCount']
+            }[]
+          | null
         events?:
-        | {
-          /** Format: uuid */
-          id: string
-          /** @enum {string} */
-          type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
-          /** @enum {string} */
-          status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
-          /** Format: uuid */
-          workOrderId?: string | null
-          /** Format: date-time */
-          createdAt: string
-          /** Format: date-time */
-          updatedAt: string
-        }[]
-        | null
+          | {
+              /** Format: uuid */
+              id: string
+              /** @enum {string} */
+              type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
+              /** @enum {string} */
+              status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
+              /** Format: uuid */
+              workOrderId?: string | null
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }[]
+          | null
         activeLoanContact?: string | null
       }[]
       keyCardsArray: {
@@ -12815,14 +13984,14 @@ export interface components {
       eventType: 'creation' | 'update' | 'delete'
       /** @enum {string} */
       objectType:
-      | 'key'
-      | 'keySystem'
-      | 'keyLoan'
-      | 'keyBundle'
-      | 'receipt'
-      | 'keyEvent'
-      | 'signature'
-      | 'keyNote'
+        | 'key'
+        | 'keySystem'
+        | 'keyLoan'
+        | 'keyBundle'
+        | 'receipt'
+        | 'keyEvent'
+        | 'signature'
+        | 'keyNote'
       /** Format: uuid */
       objectId?: string | null
       /** Format: date-time */
@@ -12892,17 +14061,19 @@ export interface components {
       rentalObjectCode?: string | null
       /** @enum {string} */
       keyType:
-      | 'HN'
-      | 'FS'
-      | 'MV'
-      | 'LGH'
-      | 'PB'
-      | 'GAR'
-      | 'LOK'
-      | 'HL'
-      | 'FÖR'
-      | 'SOP'
-      | 'ÖVR'
+        | 'HN'
+        | 'FS'
+        | 'MV'
+        | 'LGH'
+        | 'PB'
+        | 'GAR'
+        | 'LOK'
+        | 'HL'
+        | 'FÖR'
+        | 'SOP'
+        | 'MB'
+        | 'TV'
+        | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
       notes?: string | null
@@ -12914,17 +14085,19 @@ export interface components {
       rentalObjectCode?: string | null
       /** @enum {string} */
       keyType?:
-      | 'HN'
-      | 'FS'
-      | 'MV'
-      | 'LGH'
-      | 'PB'
-      | 'GAR'
-      | 'LOK'
-      | 'HL'
-      | 'FÖR'
-      | 'SOP'
-      | 'ÖVR'
+        | 'HN'
+        | 'FS'
+        | 'MV'
+        | 'LGH'
+        | 'PB'
+        | 'GAR'
+        | 'LOK'
+        | 'HL'
+        | 'FÖR'
+        | 'SOP'
+        | 'MB'
+        | 'TV'
+        | 'ÖVR'
       /** Format: uuid */
       keySystemId?: string | null
       disposed?: boolean
@@ -13006,20 +14179,24 @@ export interface components {
       notes?: string | null
       schemaFileId?: string | null
     }
+    DeactivateKeySystemResponse: {
+      keySystem: components['schemas']['KeySystem']
+      disposedKeys: components['schemas']['Key'][]
+    }
     CreateLogRequest: {
       userName: string
       /** @enum {string} */
       eventType: 'creation' | 'update' | 'delete'
       /** @enum {string} */
       objectType:
-      | 'key'
-      | 'keySystem'
-      | 'keyLoan'
-      | 'keyBundle'
-      | 'receipt'
-      | 'keyEvent'
-      | 'signature'
-      | 'keyNote'
+        | 'key'
+        | 'keySystem'
+        | 'keyLoan'
+        | 'keyBundle'
+        | 'receipt'
+        | 'keyEvent'
+        | 'signature'
+        | 'keyNote'
       /** Format: uuid */
       objectId?: string | null
       description?: string | null
@@ -13080,17 +14257,19 @@ export interface components {
         rentalObjectCode?: string | null
         /** @enum {string} */
         keyType:
-        | 'HN'
-        | 'FS'
-        | 'MV'
-        | 'LGH'
-        | 'PB'
-        | 'GAR'
-        | 'LOK'
-        | 'HL'
-        | 'FÖR'
-        | 'SOP'
-        | 'ÖVR'
+          | 'HN'
+          | 'FS'
+          | 'MV'
+          | 'LGH'
+          | 'PB'
+          | 'GAR'
+          | 'LOK'
+          | 'HL'
+          | 'FÖR'
+          | 'SOP'
+          | 'MB'
+          | 'TV'
+          | 'ÖVR'
         /** Format: uuid */
         keySystemId?: string | null
         /** @default false */
@@ -13124,21 +14303,21 @@ export interface components {
         } | null
         loans?: components['schemas']['KeyLoan'][] | null
         events?:
-        | {
-          /** Format: uuid */
-          id: string
-          /** @enum {string} */
-          type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
-          /** @enum {string} */
-          status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
-          /** Format: uuid */
-          workOrderId?: string | null
-          /** Format: date-time */
-          createdAt: string
-          /** Format: date-time */
-          updatedAt: string
-        }[]
-        | null
+          | {
+              /** Format: uuid */
+              id: string
+              /** @enum {string} */
+              type: 'FLEX' | 'ORDER' | 'LOST' | 'REPLACEMENT'
+              /** @enum {string} */
+              status: 'ORDERED' | 'RECEIVED' | 'COMPLETED'
+              /** Format: uuid */
+              workOrderId?: string | null
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }[]
+          | null
         activeLoanContact?: string | null
       }[]
     }
@@ -13235,22 +14414,22 @@ export interface components {
       specificName?: string | null
       primaryOrganization?: unknown
       cards?:
-      | {
-        cardId: string
-        name?: string | null
-        owner?: unknown
-        appearanceCode?: string | null
-        classification?: string | null
-        disabled?: boolean
-        startTime?: string | null
-        stopTime?: string | null
-        createTime: string
-        pinCode?: string | null
-        state?: string | null
-        archivedAt?: string | null
-        codes?: unknown[] | null
-      }[]
-      | null
+        | {
+            cardId: string
+            name?: string | null
+            owner?: unknown
+            appearanceCode?: string | null
+            classification?: string | null
+            disabled?: boolean
+            startTime?: string | null
+            stopTime?: string | null
+            createTime: string
+            pinCode?: string | null
+            state?: string | null
+            archivedAt?: string | null
+            codes?: unknown[] | null
+          }[]
+        | null
       comment?: string | null
       folderId?: number | null
       disabled?: boolean
@@ -13294,31 +14473,31 @@ export interface components {
       archivedAt?: string | null
       codes?: unknown[] | null
       loans?:
-      | {
-        /** Format: uuid */
-        id: string
-        /** @enum {string} */
-        loanType: 'TENANT' | 'MAINTENANCE'
-        contact?: string | null
-        contact2?: string | null
-        contactPerson?: string | null
-        notes?: string | null
-        /** Format: date-time */
-        returnedAt?: string | null
-        /** Format: date-time */
-        availableToNextTenantFrom?: string | null
-        /** Format: date-time */
-        pickedUpAt?: string | null
-        /** Format: date-time */
-        createdAt: string
-        /** Format: date-time */
-        updatedAt: string
-        createdBy?: string | null
-        updatedBy?: string | null
-        keyCount?: number
-        cardCount?: number
-      }[]
-      | null
+        | {
+            /** Format: uuid */
+            id: string
+            /** @enum {string} */
+            loanType: 'TENANT' | 'MAINTENANCE'
+            contact?: string | null
+            contact2?: string | null
+            contactPerson?: string | null
+            notes?: string | null
+            /** Format: date-time */
+            returnedAt?: string | null
+            /** Format: date-time */
+            availableToNextTenantFrom?: string | null
+            /** Format: date-time */
+            pickedUpAt?: string | null
+            /** Format: date-time */
+            createdAt: string
+            /** Format: date-time */
+            updatedAt: string
+            createdBy?: string | null
+            updatedBy?: string | null
+            keyCount?: number
+            cardCount?: number
+          }[]
+        | null
     }
     QueryCardOwnersParams: {
       nameFilter?: string
@@ -13377,7 +14556,7 @@ export interface components {
       property?: {
         /** @description Property associated with the building */
         name: string | null
-        id: string
+        id?: string
         code: string
       } | null
     }
@@ -13425,153 +14604,153 @@ export interface components {
     }
     /** @description A search result that can be either a property, building, residence, parking space, maintenance unit, facility or staircase */
     SearchResult:
-    | {
-      /** @description Unique identifier for the search result */
-      id: string
-      /**
-       * @description Indicates this is a property result
-       * @enum {string}
-       */
-      type: 'property'
-      /** @description Property code */
-      code: string
-      /** @description Name or designation of the property */
-      name: string
-    }
-    | {
-      /** @description Unique identifier for the search result */
-      id: string
-      /**
-       * @description Indicates this is a building result
-       * @enum {string}
-       */
-      type: 'building'
-      /** @description Building code */
-      code: string
-      /** @description Name of the building */
-      name: string | null
-      property?: {
-        /** @description Property associated with the building */
-        name: string | null
-        id: string
-        code: string
-      } | null
-    }
-    | {
-      /** @description Unique identifier for the search result */
-      id: string
-      /**
-       * @description Indicates this is a residence result
-       * @enum {string}
-       */
-      type: 'residence'
-      /** @description Name of the residence */
-      name: string | null
-      /** @description Rental object ID of the residence */
-      rentalId: string | null
-      property: {
-        code: string | null
-        /** @description Name of property associated with the residence */
-        name: string | null
-      }
-      building: {
-        code: string | null
-        /** @description Name of building associated with the residence */
-        name: string | null
-      }
-    }
-    | {
-      /** @description Unique identifier for the search result */
-      id: string
-      /**
-       * @description Indicates this is a parking space result
-       * @enum {string}
-       */
-      type: 'parking-space'
-      /** @description Name of the parking space */
-      name: string | null
-      /** @description Rental ID of the parking space */
-      rentalId: string
-      /** @description Code of the parking space */
-      code: string
-      property: {
-        code: string | null
-        /** @description Name of property associated with the parking space */
-        name: string | null
-      }
-      building: {
-        code: string | null
-        /** @description Name of building associated with the parking space */
-        name: string | null
-      }
-    }
-    | {
-      /** @description Unique identifier for the search result */
-      id: string
-      /**
-       * @description Indicates this is a maintenance unit result
-       * @enum {string}
-       */
-      type: 'maintenance-unit'
-      /** @description Code of the maintenance unit */
-      code: string
-      /** @description Caption/name of the maintenance unit */
-      caption: string | null
-      /** @description Type of maintenance unit */
-      maintenanceType: string | null
-      /** @description Property code */
-      estateCode: string | null
-      /** @description Property name */
-      estate: string | null
-    }
-    | {
-      /** @description Unique identifier for the search result */
-      id: string
-      /**
-       * @description Indicates this is a facility result
-       * @enum {string}
-       */
-      type: 'facility'
-      /** @description Name of the facility */
-      name: string | null
-      /** @description Rental ID of the facility */
-      rentalId: string
-      /** @description Code of the facility */
-      code: string
-      property: {
-        code: string | null
-        /** @description Name of property associated with the facility */
-        name: string | null
-      }
-      building: {
-        code: string | null
-        /** @description Name of building associated with the facility */
-        name: string | null
-      }
-    }
-    | {
-      /** @description Unique identifier for the search result */
-      id: string
-      /**
-       * @description Indicates this is a staircase result
-       * @enum {string}
-       */
-      type: 'staircase'
-      /** @description Code of the staircase */
-      code: string
-      /** @description Name (caption) of the staircase */
-      name: string | null
-      property: {
-        code: string
-        /** @description Name of property associated with the staircase */
-        name: string | null
-      }
-      building: {
-        code: string
-        /** @description Name of building associated with the staircase */
-        name: string | null
-      }
-    }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a property result
+           * @enum {string}
+           */
+          type: 'property'
+          /** @description Property code */
+          code: string
+          /** @description Name or designation of the property */
+          name: string
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a building result
+           * @enum {string}
+           */
+          type: 'building'
+          /** @description Building code */
+          code: string
+          /** @description Name of the building */
+          name: string | null
+          property?: {
+            /** @description Property associated with the building */
+            name: string | null
+            id?: string
+            code: string
+          } | null
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a residence result
+           * @enum {string}
+           */
+          type: 'residence'
+          /** @description Name of the residence */
+          name: string | null
+          /** @description Rental object ID of the residence */
+          rentalId: string | null
+          property: {
+            code: string | null
+            /** @description Name of property associated with the residence */
+            name: string | null
+          }
+          building: {
+            code: string | null
+            /** @description Name of building associated with the residence */
+            name: string | null
+          }
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a parking space result
+           * @enum {string}
+           */
+          type: 'parking-space'
+          /** @description Name of the parking space */
+          name: string | null
+          /** @description Rental ID of the parking space */
+          rentalId: string
+          /** @description Code of the parking space */
+          code: string
+          property: {
+            code: string | null
+            /** @description Name of property associated with the parking space */
+            name: string | null
+          }
+          building: {
+            code: string | null
+            /** @description Name of building associated with the parking space */
+            name: string | null
+          }
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a maintenance unit result
+           * @enum {string}
+           */
+          type: 'maintenance-unit'
+          /** @description Code of the maintenance unit */
+          code: string
+          /** @description Caption/name of the maintenance unit */
+          caption: string | null
+          /** @description Type of maintenance unit */
+          maintenanceType: string | null
+          /** @description Property code */
+          estateCode: string | null
+          /** @description Property name */
+          estate: string | null
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a facility result
+           * @enum {string}
+           */
+          type: 'facility'
+          /** @description Name of the facility */
+          name: string | null
+          /** @description Rental ID of the facility */
+          rentalId: string
+          /** @description Code of the facility */
+          code: string
+          property: {
+            code: string | null
+            /** @description Name of property associated with the facility */
+            name: string | null
+          }
+          building: {
+            code: string | null
+            /** @description Name of building associated with the facility */
+            name: string | null
+          }
+        }
+      | {
+          /** @description Unique identifier for the search result */
+          id: string
+          /**
+           * @description Indicates this is a staircase result
+           * @enum {string}
+           */
+          type: 'staircase'
+          /** @description Code of the staircase */
+          code: string
+          /** @description Name (caption) of the staircase */
+          name: string | null
+          property: {
+            code: string
+            /** @description Name of property associated with the staircase */
+            name: string | null
+          }
+          building: {
+            code: string
+            /** @description Name of building associated with the staircase */
+            name: string | null
+          }
+        }
     Inspection: {
       id: string
       status: string
@@ -13592,32 +14771,44 @@ export interface components {
         leaseEndDate?: string
         /** @enum {string} */
         status:
-        | 'Current'
-        | 'Upcoming'
-        | 'AboutToEnd'
-        | 'Ended'
-        | 'PreliminaryTerminated'
-        | 'PendingSignature'
-        | 'NotSent'
+          | 'Current'
+          | 'Upcoming'
+          | 'AboutToEnd'
+          | 'Ended'
+          | 'PreliminaryTerminated'
+          | 'PendingSignature'
+          | 'NotSent'
         tenantContactIds?: string[]
         subletContactId?: string
         rentalPropertyId: string
         rentalObject?: {
           rentalObjectCode: string
           address: string
-          rent?: {
+          availabilityInfo?: {
             rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
+            /** Format: date-time */
+            vacantFrom?: string
+            rent: {
               amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
+              vat: number
+              rows: {
+                code?: string
+                description: string
+                amount: number
+                vatPercentage: number
+                /** Format: date-time */
+                fromDate?: string
+                /** Format: date-time */
+                toDate?: string
+              }[]
+            }
+            rentalTenureType: {
+              id: string
+              name: string
+            }
+            rentalTags?: {
+              id: string
+              name: string
             }[]
           }
           residentialAreaCaption: string
@@ -13730,69 +14921,69 @@ export interface components {
         }[]
       } | null
       rooms:
-      | {
-        roomId: string
-        name?: string
-        conditions: {
-          details: string
-        }
-        actions: {
-          details: string[]
-        }
-        componentNotes: {
-          details: string
-        }
-        componentCosts: {
-          /** @default 0 */
-          details?: number
-        }
-        componentPhotos: {
-          details: string[]
-        }
-        componentCostResponsibilities: {
-          /**
-           * @default null
-           * @enum {string|null}
-           */
-          details?: 'tenant' | 'landlord' | null
-        }
-        photos: string[]
-        isApproved: boolean
-        isHandled: boolean
-        /** @default [] */
-        detailComponents?: {
-          id: string
-          type: string
-          label: string
-          note: string
-          /** @default */
-          condition?: string
-          cost?: number
-          /**
-           * @default null
-           * @enum {string|null}
-           */
-          costResponsibility?: 'tenant' | 'landlord' | null
-        }[]
-        /** @default [] */
-        components?: {
-          componentId: string
-          label: string
-          condition: string
-          action: string[]
-          note: string
-          photos: string[]
-          cost?: number
-          /**
-           * @default null
-           * @enum {string|null}
-           */
-          costResponsibility?: 'tenant' | 'landlord' | null
-        }[]
-        /** @default false */
-        isAddedInThisInspection?: boolean
-      }[]
-      | null
+        | {
+            roomId: string
+            name?: string
+            conditions: {
+              details: string
+            }
+            actions: {
+              details: string[]
+            }
+            componentNotes: {
+              details: string
+            }
+            componentCosts: {
+              /** @default 0 */
+              details?: number
+            }
+            componentPhotos: {
+              details: string[]
+            }
+            componentCostResponsibilities: {
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              details?: 'tenant' | 'landlord' | null
+            }
+            photos: string[]
+            isApproved: boolean
+            isHandled: boolean
+            /** @default [] */
+            detailComponents?: {
+              id: string
+              type: string
+              label: string
+              note: string
+              /** @default */
+              condition?: string
+              cost?: number
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: 'tenant' | 'landlord' | null
+            }[]
+            /** @default [] */
+            components?: {
+              componentId: string
+              label: string
+              condition: string
+              action: string[]
+              note: string
+              photos: string[]
+              cost?: number
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: 'tenant' | 'landlord' | null
+            }[]
+            /** @default false */
+            isAddedInThisInspection?: boolean
+          }[]
+        | null
     }
     InspectionComponent: {
       componentId: string
@@ -13944,32 +15135,44 @@ export interface components {
         leaseEndDate?: string
         /** @enum {string} */
         status:
-        | 'Current'
-        | 'Upcoming'
-        | 'AboutToEnd'
-        | 'Ended'
-        | 'PreliminaryTerminated'
-        | 'PendingSignature'
-        | 'NotSent'
+          | 'Current'
+          | 'Upcoming'
+          | 'AboutToEnd'
+          | 'Ended'
+          | 'PreliminaryTerminated'
+          | 'PendingSignature'
+          | 'NotSent'
         tenantContactIds?: string[]
         subletContactId?: string
         rentalPropertyId: string
         rentalObject?: {
           rentalObjectCode: string
           address: string
-          rent?: {
+          availabilityInfo?: {
             rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
+            /** Format: date-time */
+            vacantFrom?: string
+            rent: {
               amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
+              vat: number
+              rows: {
+                code?: string
+                description: string
+                amount: number
+                vatPercentage: number
+                /** Format: date-time */
+                fromDate?: string
+                /** Format: date-time */
+                toDate?: string
+              }[]
+            }
+            rentalTenureType: {
+              id: string
+              name: string
+            }
+            rentalTags?: {
+              id: string
+              name: string
             }[]
           }
           residentialAreaCaption: string
@@ -14388,32 +15591,44 @@ export interface components {
         leaseEndDate?: string
         /** @enum {string} */
         status:
-        | 'Current'
-        | 'Upcoming'
-        | 'AboutToEnd'
-        | 'Ended'
-        | 'PreliminaryTerminated'
-        | 'PendingSignature'
-        | 'NotSent'
+          | 'Current'
+          | 'Upcoming'
+          | 'AboutToEnd'
+          | 'Ended'
+          | 'PreliminaryTerminated'
+          | 'PendingSignature'
+          | 'NotSent'
         tenantContactIds?: string[]
         subletContactId?: string
         rentalPropertyId: string
         rentalObject?: {
           rentalObjectCode: string
           address: string
-          rent?: {
+          availabilityInfo?: {
             rentalObjectCode: string
-            amount: number
-            vat: number
-            rows: {
-              code: string
-              description: string
+            /** Format: date-time */
+            vacantFrom?: string
+            rent: {
               amount: number
-              vatPercentage: number
-              /** Format: date-time */
-              fromDate?: string
-              /** Format: date-time */
-              toDate?: string
+              vat: number
+              rows: {
+                code?: string
+                description: string
+                amount: number
+                vatPercentage: number
+                /** Format: date-time */
+                fromDate?: string
+                /** Format: date-time */
+                toDate?: string
+              }[]
+            }
+            rentalTenureType: {
+              id: string
+              name: string
+            }
+            rentalTags?: {
+              id: string
+              name: string
             }[]
           }
           residentialAreaCaption: string
@@ -14568,69 +15783,69 @@ export interface components {
         electricalSystem?: boolean
       }
       rooms:
-      | {
-        roomId: string
-        name?: string
-        conditions: {
-          details: string
-        }
-        actions: {
-          details: string[]
-        }
-        componentNotes: {
-          details: string
-        }
-        componentCosts: {
-          /** @default 0 */
-          details?: number
-        }
-        componentPhotos: {
-          details: string[]
-        }
-        componentCostResponsibilities: {
-          /**
-           * @default null
-           * @enum {string|null}
-           */
-          details?: 'tenant' | 'landlord' | null
-        }
-        photos: string[]
-        isApproved: boolean
-        isHandled: boolean
-        /** @default [] */
-        detailComponents?: {
-          id: string
-          type: string
-          label: string
-          note: string
-          /** @default */
-          condition?: string
-          cost?: number
-          /**
-           * @default null
-           * @enum {string|null}
-           */
-          costResponsibility?: 'tenant' | 'landlord' | null
-        }[]
-        /** @default [] */
-        components?: {
-          componentId: string
-          label: string
-          condition: string
-          action: string[]
-          note: string
-          photos: string[]
-          cost?: number
-          /**
-           * @default null
-           * @enum {string|null}
-           */
-          costResponsibility?: 'tenant' | 'landlord' | null
-        }[]
-        /** @default false */
-        isAddedInThisInspection?: boolean
-      }[]
-      | null
+        | {
+            roomId: string
+            name?: string
+            conditions: {
+              details: string
+            }
+            actions: {
+              details: string[]
+            }
+            componentNotes: {
+              details: string
+            }
+            componentCosts: {
+              /** @default 0 */
+              details?: number
+            }
+            componentPhotos: {
+              details: string[]
+            }
+            componentCostResponsibilities: {
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              details?: 'tenant' | 'landlord' | null
+            }
+            photos: string[]
+            isApproved: boolean
+            isHandled: boolean
+            /** @default [] */
+            detailComponents?: {
+              id: string
+              type: string
+              label: string
+              note: string
+              /** @default */
+              condition?: string
+              cost?: number
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: 'tenant' | 'landlord' | null
+            }[]
+            /** @default [] */
+            components?: {
+              componentId: string
+              label: string
+              condition: string
+              action: string[]
+              note: string
+              photos: string[]
+              cost?: number
+              /**
+               * @default null
+               * @enum {string|null}
+               */
+              costResponsibility?: 'tenant' | 'landlord' | null
+            }[]
+            /** @default false */
+            isAddedInThisInspection?: boolean
+          }[]
+        | null
     }
     SaveInspectionDraftRequest: {
       inspectorName: string
@@ -14721,25 +15936,25 @@ export interface components {
     AddInspectionRoomRequest: {
       /** @enum {string} */
       roomTypeCode:
-      | 'BAD'
-      | 'BAL'
-      | 'BRS'
-      | 'DUSCH'
-      | 'FÖR'
-      | 'GROV'
-      | 'HALL'
-      | 'KLÄD'
-      | 'KÖK'
-      | 'KOV'
-      | 'KV'
-      | 'MAT'
-      | 'PA'
-      | 'RUM'
-      | 'TRAPP'
-      | 'UP'
-      | 'VARD'
-      | 'WC'
-      | 'WC/DU1'
+        | 'BAD'
+        | 'BAL'
+        | 'BRS'
+        | 'DUSCH'
+        | 'FÖR'
+        | 'GROV'
+        | 'HALL'
+        | 'KLÄD'
+        | 'KÖK'
+        | 'KOV'
+        | 'KV'
+        | 'MAT'
+        | 'PA'
+        | 'RUM'
+        | 'TRAPP'
+        | 'UP'
+        | 'VARD'
+        | 'WC'
+        | 'WC/DU1'
       caption?: string
     }
     FileListItem: {
@@ -14876,12 +16091,7 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-        | 'pending'
-        | 'sent'
-        | 'delivered'
-        | 'failed'
-        | 'bounced'
-        | 'received'
+          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -14924,12 +16134,7 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-        | 'pending'
-        | 'sent'
-        | 'delivered'
-        | 'failed'
-        | 'bounced'
-        | 'received'
+          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -14990,116 +16195,172 @@ export interface components {
         }
       }
     }
+    CreateContactRequest: {
+      nationalId: string
+      firstName: string
+      lastName: string
+      addresses: {
+        careOf?: string
+        street: string
+        zipCode: string
+        city: string
+        country?: string
+      }[]
+      emailAddresses: {
+        /** Format: email */
+        emailAddress: string
+        /**
+         * @default private
+         * @enum {string}
+         */
+        type?: 'private' | 'work' | 'unspecified'
+        /** @default true */
+        isPrimary?: boolean
+      }[]
+      /** @default [] */
+      phoneNumbers?: {
+        phoneNumber: string
+        /**
+         * @default mobile
+         * @enum {string}
+         */
+        type?: 'mobile' | 'home' | 'work'
+        /** @default false */
+        isPrimary?: boolean
+      }[]
+      applicationProfile?: {
+        /** @enum {string} */
+        housingType:
+          | 'LIVES_WITH_FAMILY'
+          | 'LODGER'
+          | 'RENTAL'
+          | 'SUB_RENTAL'
+          | 'OWNS_HOUSE'
+          | 'OWNS_FLAT'
+          | 'OWNS_ROW_HOUSE'
+          | 'OTHER'
+        landlord: string | null
+        numAdults: number
+        numChildren: number
+        housingTypeDescription: string | null
+        housingReference: {
+          email: string | null
+          phone: string | null
+        }
+      }
+      /** @default [] */
+      waitingLists?: (1 | 2 | 3)[]
+    }
     ContactV1:
-    | {
-      contactCode: string
-      communication: {
-        phoneNumbers: {
-          phoneNumber: string
+      | {
+          contactCode: string
+          communication: {
+            phoneNumbers: {
+              phoneNumber: string
+              /** @enum {string} */
+              type:
+                | 'work'
+                | 'home'
+                | 'mobile'
+                | 'direct-line'
+                | 'fax'
+                | 'pager'
+                | 'unspecified'
+              comment?: string
+              isPrimary: boolean
+            }[]
+            emailAddresses: {
+              emailAddress: string
+              type: string
+              isPrimary: boolean
+            }[]
+            specialAttention: boolean
+          }
+          addresses: {
+            careOf?: string
+            street: string | null
+            zipCode: string | null
+            city: string | null
+            region: string | null
+            country: string | null
+          }[]
+          relatedContacts?: {
+            contactCode: string
+            /** @enum {string} */
+            role:
+              | 'trustee'
+              | 'administrator'
+              | 'trusteeFor'
+              | 'administratorFor'
+              | 'otherInvoiceRecipient'
+              | 'otherInvoiceRecipientFor'
+            fullName: string
+            firstName: string
+            lastName: string
+          }[]
           /** @enum {string} */
-          type:
-          | 'work'
-          | 'home'
-          | 'mobile'
-          | 'direct-line'
-          | 'fax'
-          | 'pager'
-          | 'unspecified'
-          comment?: string
-          isPrimary: boolean
-        }[]
-        emailAddresses: {
-          emailAddress: string
-          type: string
-          isPrimary: boolean
-        }[]
-        specialAttention: boolean
-      }
-      addresses: {
-        careOf?: string
-        street: string | null
-        zipCode: string | null
-        city: string | null
-        region: string | null
-        country: string | null
-      }[]
-      relatedContacts?: {
-        contactCode: string
-        /** @enum {string} */
-        role:
-        | 'trustee'
-        | 'administrator'
-        | 'trusteeFor'
-        | 'administratorFor'
-        | 'otherInvoiceRecipient'
-        | 'otherInvoiceRecipientFor'
-        fullName: string
-        firstName: string
-        lastName: string
-      }[]
-      /** @enum {string} */
-      type: 'individual'
-      personal: {
-        nationalRegistrationNumber: string | null
-        birthDate: string | null
-        firstName: string | null
-        lastName: string | null
-        fullName: string
-      }
-    }
-    | {
-      contactCode: string
-      communication: {
-        phoneNumbers: {
-          phoneNumber: string
+          type: 'individual'
+          personal: {
+            nationalRegistrationNumber: string | null
+            birthDate: string | null
+            firstName: string | null
+            lastName: string | null
+            fullName: string
+          }
+        }
+      | {
+          contactCode: string
+          communication: {
+            phoneNumbers: {
+              phoneNumber: string
+              /** @enum {string} */
+              type:
+                | 'work'
+                | 'home'
+                | 'mobile'
+                | 'direct-line'
+                | 'fax'
+                | 'pager'
+                | 'unspecified'
+              comment?: string
+              isPrimary: boolean
+            }[]
+            emailAddresses: {
+              emailAddress: string
+              type: string
+              isPrimary: boolean
+            }[]
+            specialAttention: boolean
+          }
+          addresses: {
+            careOf?: string
+            street: string | null
+            zipCode: string | null
+            city: string | null
+            region: string | null
+            country: string | null
+          }[]
+          relatedContacts?: {
+            contactCode: string
+            /** @enum {string} */
+            role:
+              | 'trustee'
+              | 'administrator'
+              | 'trusteeFor'
+              | 'administratorFor'
+              | 'otherInvoiceRecipient'
+              | 'otherInvoiceRecipientFor'
+            fullName: string
+            firstName: string
+            lastName: string
+          }[]
           /** @enum {string} */
-          type:
-          | 'work'
-          | 'home'
-          | 'mobile'
-          | 'direct-line'
-          | 'fax'
-          | 'pager'
-          | 'unspecified'
-          comment?: string
-          isPrimary: boolean
-        }[]
-        emailAddresses: {
-          emailAddress: string
-          type: string
-          isPrimary: boolean
-        }[]
-        specialAttention: boolean
-      }
-      addresses: {
-        careOf?: string
-        street: string | null
-        zipCode: string | null
-        city: string | null
-        region: string | null
-        country: string | null
-      }[]
-      relatedContacts?: {
-        contactCode: string
-        /** @enum {string} */
-        role:
-        | 'trustee'
-        | 'administrator'
-        | 'trusteeFor'
-        | 'administratorFor'
-        | 'otherInvoiceRecipient'
-        | 'otherInvoiceRecipientFor'
-        fullName: string
-        firstName: string
-        lastName: string
-      }[]
-      /** @enum {string} */
-      type: 'organisation'
-      organisation: {
-        organisationNumber: string
-        name: string
-      }
-    }
+          type: 'organisation'
+          organisation: {
+            organisationNumber: string
+            name: string
+          }
+        }
   }
   responses: never
   parameters: never

@@ -598,7 +598,9 @@ const getPhoneNumbersForContact = async (keycmobj: string) => {
     .where({ keycmobj: keycmobj })
 
   rows = rows.map((row) => {
-    return trimRow(row)
+    const trimmed = trimRow(row)
+    // Xpand stores 'main' as a 0/1 bit — Contact.phoneNumbers declares a boolean
+    return { ...trimmed, isMainNumber: Boolean(trimmed.isMainNumber) }
   })
 
   return rows

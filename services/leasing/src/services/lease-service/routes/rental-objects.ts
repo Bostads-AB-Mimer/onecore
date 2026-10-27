@@ -8,8 +8,9 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { RentalObjectAvailabilityInfo } from '@onecore/types'
 import {
   determineVacantFrom,
-  hasNoActiveBlock,
+  hasIndefiniteActiveBlock,
 } from '../helpers/rental-object-availability-helpers'
+import { mapToOnecoreRentalObjectRent } from '../helpers/tenfast'
 
 /**
  * @swagger
@@ -67,8 +68,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     const requestBody = ctx.request.body as
-      | { includeRentalObjectCodes?: string[] }
-      | undefined
+      { includeRentalObjectCodes?: string[] } | undefined
     const includeRentalObjectCodes =
       requestBody?.includeRentalObjectCodes?.filter(Boolean) ?? []
 
@@ -323,8 +323,11 @@ export const routes = (router: KoaRouter) => {
       )
     })
 
-    // Filter out parking spaces with an active or future block (including blocks with no end date)
-    const vacantRentalObjects = rentalObjectResult.data.filter(hasNoActiveBlock)
+    // Filter out parking spaces with an indefinite (no end date) active block —
+    // a block with an end date is still listed, with vacantFrom computed below.
+    const vacantRentalObjects = rentalObjectResult.data.filter(
+      (ps) => !hasIndefiniteActiveBlock(ps)
+    )
 
     // Berika availability info med vacantFrom baserat på block end date och end date
     vacantRentalObjects.forEach((ps) => {
@@ -482,6 +485,157 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
       ctx.body = {
         error: 'An error occurred while fetching rental object availability.',
+        ...metadata,
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent:
+   *   get:
+   *     summary: Get rent for a rental object
+   *     description: Fetches the rental object's configured rent from Tenfast, independent of any lease. Works for vacant objects.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to fetch rent for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object rent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     rentalObjectCode:
+   *                       type: string
+   *                     rent:
+   *                       type: object
+   *                       properties:
+   *                         amount:
+   *                           type: number
+   *                         vat:
+   *                           type: number
+   *                         rows:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *       '404':
+   *         description: Not found. The specified rental object was not found in Tenfast.
+   *       '500':
+   *         description: Internal server error. Failed to fetch rental object rent.
+   */
+  router.get('/rental-objects/by-code/:rentalObjectCode/rent', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const rentalObjectCode = ctx.params.rentalObjectCode
+
+    const result = await tenfastAdapter.getRentalObject(rentalObjectCode)
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    if (!result.data) {
+      ctx.status = 404
+      ctx.body = {
+        error: `Rental object not found: ${rentalObjectCode}`,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: {
+        rentalObjectCode: result.data.externalId,
+        rent: mapToOnecoreRentalObjectRent(result.data),
+      },
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent-legacy:
+   *   get:
+   *     summary: Get legacy (Xpand) rent for a rental object
+   *     description: Fetches the rental object's rent rows from Xpand's debit row view, converted to monthly amounts. Used to compare against Tenfast during the transition.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to fetch legacy rent for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the legacy rental object rent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     rentalObjectCode:
+   *                       type: string
+   *                     rent:
+   *                       type: object
+   *                       properties:
+   *                         amount:
+   *                           type: number
+   *                         vat:
+   *                           type: number
+   *                         rows:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *       '404':
+   *         description: Not found. No rent rows exist in Xpand for the specified rental object.
+   *       '500':
+   *         description: Internal server error. Failed to fetch legacy rental object rent.
+   */
+  router.get(
+    '/rental-objects/by-code/:rentalObjectCode/rent-legacy',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalObjectCode = ctx.params.rentalObjectCode
+
+      const result =
+        await xpandAdapter.getRentalObjectRentRows(rentalObjectCode)
+
+      if (!result.ok && result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: `No rent rows found in Xpand for rental object: ${rentalObjectCode}`,
+          ...metadata,
+        }
+        return
+      }
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: { rentalObjectCode, rent: result.data },
         ...metadata,
       }
     }

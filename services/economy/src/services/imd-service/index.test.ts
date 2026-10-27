@@ -252,41 +252,42 @@ describe(imdService.enrichIMDRows, () => {
     )
   })
 
-  it('tags row as tenant-moved when lease ended before today', async () => {
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
+  const septemberRow = {
+    rentalObjectCode: '306-008-01-0201',
+    from: new Date('2026-09-01'),
+    to: new Date('2026-09-30'),
+    unit: 'VV',
+    volume: 7.58,
+    cost: 621.68,
+    measurementUnit: 'm3',
+  }
 
+  it.each([
+    ['before the billing month', '2026-10-31'],
+    ['during the billing month', '2026-11-15'],
+  ])('tags row as tenant-moved when lease ends %s', async (_, leaseEndDate) => {
     mockGetActiveLeases.mockResolvedValue(
       new Map<string, LeaseMatch | null>([
         [
           '306-008-01-0201',
-          { leaseId: '306-008-01-0201/02', leaseEndDate: yesterday },
+          {
+            leaseId: '306-008-01-0201/02',
+            leaseEndDate: new Date(leaseEndDate),
+          },
         ],
       ])
     )
 
-    const result = await imdService.enrichIMDRows([
-      {
-        rentalObjectCode: '306-008-01-0201',
-        from: new Date('2026-01-01'),
-        to: new Date('2026-01-31'),
-        unit: 'VV',
-        volume: 7.58,
-        cost: 621.68,
-        measurementUnit: 'm3',
-      },
-    ])
+    const result = await imdService.enrichIMDRows([septemberRow])
 
     assert(result.ok)
     expect(result.data.enriched).toHaveLength(0)
-    expect(result.data.unprocessed).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          rentalObjectCode: '306-008-01-0201',
-          reason: 'tenant-moved',
-        }),
-      ])
-    )
+    expect(result.data.unprocessed).toEqual([
+      expect.objectContaining({
+        rentalObjectCode: '306-008-01-0201',
+        reason: 'tenant-moved',
+      }),
+    ])
   })
 
   it('tags row as multiple-leases when two leases cover the period', async () => {
@@ -326,42 +327,31 @@ describe(imdService.enrichIMDRows, () => {
     )
   })
 
-  it('does not tag as tenant-moved when lease end date is in the future', async () => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
+  it.each([
+    ['on the last day of the billing month', new Date('2026-11-30')],
+    ['after the billing month', new Date('2027-03-31')],
+    ['never', null],
+  ])(
+    'does not tag as tenant-moved when lease ends %s',
+    async (_, leaseEndDate) => {
+      mockGetActiveLeases.mockResolvedValue(
+        new Map<string, LeaseMatch | null>([
+          ['306-008-01-0201', { leaseId: '306-008-01-0201/02', leaseEndDate }],
+        ])
+      )
 
-    mockGetActiveLeases.mockResolvedValue(
-      new Map<string, LeaseMatch | null>([
-        [
-          '306-008-01-0201',
-          { leaseId: '306-008-01-0201/02', leaseEndDate: tomorrow },
-        ],
-      ])
-    )
+      const result = await imdService.enrichIMDRows([septemberRow])
 
-    const result = await imdService.enrichIMDRows([
-      {
-        rentalObjectCode: '306-008-01-0201',
-        from: new Date('2026-01-01'),
-        to: new Date('2026-01-31'),
-        unit: 'VV',
-        volume: 7.58,
-        cost: 621.68,
-        measurementUnit: 'm3',
-      },
-    ])
-
-    assert(result.ok)
-    expect(result.data.unprocessed).toHaveLength(0)
-    expect(result.data.enriched).toEqual(
-      expect.arrayContaining([
+      assert(result.ok)
+      expect(result.data.unprocessed).toHaveLength(0)
+      expect(result.data.enriched).toEqual([
         expect.objectContaining({
           rentalObjectCode: '306-008-01-0201',
           leaseId: '306-008-01-0201/02',
         }),
       ])
-    )
-  })
+    }
+  )
 
   it('returns error when adapter throws', async () => {
     mockGetActiveLeases.mockRejectedValue(new Error('db connection failed'))
@@ -439,8 +429,8 @@ describe(imdService.toTenfastCsv, () => {
     expect(cols[0]).toBe('306-008-01-0201/02')
     expect(cols[1]).toBe('IMDM')
     expect(cols[2]).toBe('Varmvatten januari,7,58,m3(25% moms tillkommer)')
-    expect(cols[3]).toBe('2026-01-01')
-    expect(cols[4]).toBe('2026-01-31')
+    expect(cols[3]).toBe('2026-03-01')
+    expect(cols[4]).toBe('2026-03-31')
     expect(cols[5]).toBe('7460,16')
     expect(cols[6]).toBe('')
   })
@@ -453,6 +443,22 @@ describe(imdService.toTenfastCsv, () => {
     const cols = parseRow(csv.split('\n')[1])
     expect(cols[1]).toBe('IMDELM')
     expect(cols[2]).toBe('El januari,7,58,m3(25% moms tillkommer)')
+  })
+
+  it('maps EL to IMDELM article and builds Avitext with Elförbrukning', () => {
+    const row = makeEnrichedRow('306-008-01-0201', 'L1', {
+      cost: 26.82,
+      unit: 'EL',
+    })
+    row.from = new Date('2026-08-01')
+    row.to = new Date('2026-08-31')
+    row.volume = 15
+    row.measurementUnit = 'kWh'
+
+    const cols = parseRow(imdService.toTenfastCsv([row]).split('\n')[1])
+    expect(cols[1]).toBe('IMDELM')
+    expect(cols[2]).toBe('Elförbrukning augusti,15,kWh(25% moms tillkommer)')
+    expect(cols[5]).toBe('321,84')
   })
 
   it('maps VMM to VÄRMEENERGIM article and builds Avitext with Värmeenergi', () => {
@@ -508,6 +514,20 @@ describe(imdService.toTenfastCsv, () => {
 
     const lines = csv.split('\n')
     expect(lines).toHaveLength(3)
+  })
+
+  it('sets Fr.o.m/T.o.m to consumption period plus two months for Tenfast billing', () => {
+    const row = makeEnrichedRow('306-008-01-0201', '306-008-01-0201/06', {
+      cost: 4710.36,
+      unit: 'VV',
+    })
+    row.from = new Date('2026-09-01')
+    row.to = new Date('2026-09-30')
+
+    const cols = parseRow(imdService.toTenfastCsv([row]).split('\n')[1])
+    expect(cols[2]).toBe('Varmvatten september,7,58,m3(25% moms tillkommer)')
+    expect(cols[3]).toBe('2026-11-01')
+    expect(cols[4]).toBe('2026-11-30')
   })
 })
 

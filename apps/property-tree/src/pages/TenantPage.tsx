@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import type { RentalPropertyInfo } from '@onecore/types'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, ShieldAlert } from 'lucide-react'
 
 import { TenantTabs } from '@/widgets/tenant-tabs'
 
@@ -10,9 +10,8 @@ import { useRentalProperties } from '@/entities/rental-property'
 import { TenantCard, useRelatedContacts, useTenant } from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
-import type { Tenant } from '@/services/types'
-
 import { tenantService } from '@/services/api/core/tenantService'
+import type { Tenant } from '@/services/types'
 
 import { useSingleEmail, useSingleSms } from '@/shared/hooks'
 import { Card, CardContent } from '@/shared/ui/Card'
@@ -26,7 +25,20 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/Tooltip'
 
-// Helper component: Tenant header with name and special attention badge
+// The identity of a protected contact is only filled in for tenants and
+// invoice recipients (already anonymised in Xpand); for everyone else it is
+// withheld. A failed lookup is told apart so it is not mistaken for the rule.
+const protectedIdentityText: Record<
+  NonNullable<Tenant['protectedIdentityDetails']>,
+  string
+> = {
+  shown: 'Skyddade personuppgifter, uppgifterna är fingerade',
+  withheld: 'Skyddade personuppgifter, uppgifterna visas inte',
+  unavailable:
+    'Skyddade personuppgifter, uppgifterna kunde inte hämtas just nu',
+}
+
+// Helper component: Tenant header with name, special attention and protected identity badges
 function TenantHeader({ tenant }: { tenant: Tenant }) {
   return (
     <TooltipProvider>
@@ -45,6 +57,24 @@ function TenantHeader({ tenant }: { tenant: Tenant }) {
               <p>
                 Åk aldrig ensam till kund. Ta alltid med dig en kollega vid
                 hembesök.
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+        {tenant.protectedIdentity && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full border border-blue-200 cursor-help">
+                <ShieldAlert className="h-4 w-4 text-blue-600" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                {
+                  protectedIdentityText[
+                    tenant.protectedIdentityDetails ?? 'unavailable'
+                  ]
+                }
               </p>
             </TooltipContent>
           </Tooltip>

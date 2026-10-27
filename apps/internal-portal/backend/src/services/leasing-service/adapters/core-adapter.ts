@@ -2,6 +2,7 @@ import { AxiosError, HttpStatusCode } from 'axios'
 import {
   Contact,
   CreateNoteOfInterestErrorCodes,
+  CreateOfferErrorCodes,
   DetailedApplicant,
   GetActiveOfferByListingIdErrorCodes,
   Listing,
@@ -9,6 +10,7 @@ import {
   Offer,
   OfferWithOfferApplicants,
   ReplyToOfferErrorCodes,
+  RentalPropertyInfo,
   Tenant,
   leasing,
   schemas,
@@ -293,7 +295,7 @@ const createNoteOfInterestForInternalParkingSpace = async (params: {
 
 const createOffer = async (params: {
   listingId: string
-}): Promise<AdapterResult<unknown, unknown>> => {
+}): Promise<AdapterResult<unknown, CreateOfferErrorCodes | 'unknown'>> => {
   try {
     const response = await getFromCore<any>({
       method: 'post',
@@ -303,7 +305,18 @@ const createOffer = async (params: {
 
     return { ok: true, data: response.data.content }
   } catch (err) {
-    return { ok: false, err, statusCode: 500 }
+    const axiosError = err as AxiosError<{ error?: CreateOfferErrorCodes }>
+    if (
+      axiosError.response?.status === HttpStatusCode.NotFound &&
+      axiosError.response.data?.error === CreateOfferErrorCodes.NoApplicants
+    ) {
+      return {
+        ok: false,
+        err: CreateOfferErrorCodes.NoApplicants,
+        statusCode: 404,
+      }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
 
@@ -708,6 +721,12 @@ const createLeaseForNonScoredParkingSpace = async (params: {
     | 'external-credit-check-failed'
     | 'invalid-address'
     | 'already-has-lease'
+    | 'parking-space-not-found'
+    | 'rental-object-not-found'
+    | 'parkingspace-not-external'
+    | 'applicant-not-found'
+    | 'fetch-invoices-failed'
+    | 'create-lease-failed'
     | 'unknown'
   >
 > => {
@@ -726,24 +745,25 @@ const createLeaseForNonScoredParkingSpace = async (params: {
       const errorCode =
         err.response.data?.error || err.response.data?.content?.errorCode
 
-      // Handle both 400 BadRequest and 404 NotFound for validation errors
-      if (statusCode === HttpStatusCode.BadRequest || statusCode === 404) {
-        // Map error codes from core service
-        if (errorCode === 'internal-credit-check-failed') {
-          return { ok: false, err: 'internal-credit-check-failed', statusCode }
-        }
-        if (errorCode === 'external-credit-check-failed') {
-          return { ok: false, err: 'external-credit-check-failed', statusCode }
-        }
-        if (
-          errorCode === 'invalid-address' ||
-          errorCode === 'applicant-missing-address'
-        ) {
+      // Map known error codes from core service regardless of status code —
+      // core returns 404 for some validation errors and 500 for some
+      // technical failures, but both carry a specific, user-facing reason.
+      // `internal-error` (core's own catch-all) is intentionally excluded —
+      // it carries no more information than 'unknown' does.
+      switch (errorCode) {
+        case 'internal-credit-check-failed':
+        case 'external-credit-check-failed':
+        case 'already-has-lease':
+        case 'parking-space-not-found':
+        case 'rental-object-not-found':
+        case 'parkingspace-not-external':
+        case 'applicant-not-found':
+        case 'fetch-invoices-failed':
+        case 'create-lease-failed':
+          return { ok: false, err: errorCode, statusCode }
+        case 'invalid-address':
+        case 'applicant-missing-address':
           return { ok: false, err: 'invalid-address', statusCode }
-        }
-        if (errorCode === 'already-has-lease') {
-          return { ok: false, err: 'already-has-lease', statusCode }
-        }
       }
     }
 
@@ -832,13 +852,108 @@ const deleteListingTextContent = async (
 
 const getRentalPropertyByCode = async (
   rentalObjectCode: string
-): Promise<AdapterResult<any, 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<RentalPropertyInfo, 'not-found' | 'unknown'>> => {
   try {
-    const response = await getFromCore<{ content: any }>({
+    const response = await getFromCore<{ content: RentalPropertyInfo }>({
       method: 'get',
       url: `${coreBaseUrl}/rental-properties/by-rental-object-code/${rentalObjectCode}`,
     })
     return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+type ListingAreaTextContent = z.infer<
+  typeof leasing.v1.ListingAreaTextContentSchema
+>
+type CreateListingAreaTextContentRequest = z.infer<
+  typeof leasing.v1.CreateListingAreaTextContentRequestSchema
+>
+type UpdateListingAreaTextContentRequest = z.infer<
+  typeof leasing.v1.UpdateListingAreaTextContentRequestSchema
+>
+
+const listListingAreaTextContent = async (): Promise<
+  AdapterResult<ListingAreaTextContent[], 'unknown'>
+> => {
+  try {
+    const response = await getFromCore<{ content: ListingAreaTextContent[] }>({
+      method: 'get',
+      url: `${coreBaseUrl}/listing-area-text-content`,
+    })
+    return { ok: true, data: response.data.content }
+  } catch {
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const getListingAreaTextContentByMarketAreaCode = async (
+  marketAreaCode: string
+): Promise<AdapterResult<ListingAreaTextContent, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: ListingAreaTextContent }>({
+      method: 'get',
+      url: `${coreBaseUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const createListingAreaTextContent = async (
+  data: CreateListingAreaTextContentRequest
+): Promise<AdapterResult<ListingAreaTextContent, 'conflict' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: ListingAreaTextContent }>({
+      method: 'post',
+      url: `${coreBaseUrl}/listing-area-text-content`,
+      data,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 409) {
+      return { ok: false, err: 'conflict', statusCode: 409 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const updateListingAreaTextContent = async (
+  marketAreaCode: string,
+  data: UpdateListingAreaTextContentRequest
+): Promise<AdapterResult<ListingAreaTextContent, 'not-found' | 'unknown'>> => {
+  try {
+    const response = await getFromCore<{ content: ListingAreaTextContent }>({
+      method: 'put',
+      url: `${coreBaseUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`,
+      data,
+    })
+    return { ok: true, data: response.data.content }
+  } catch (err) {
+    if (err instanceof AxiosError && err.response?.status === 404) {
+      return { ok: false, err: 'not-found', statusCode: 404 }
+    }
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+const deleteListingAreaTextContent = async (
+  marketAreaCode: string
+): Promise<AdapterResult<null, 'not-found' | 'unknown'>> => {
+  try {
+    await getFromCore({
+      method: 'delete',
+      url: `${coreBaseUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`,
+    })
+    return { ok: true, data: null }
   } catch (err) {
     if (err instanceof AxiosError && err.response?.status === 404) {
       return { ok: false, err: 'not-found', statusCode: 404 }
@@ -882,4 +997,9 @@ export {
   updateListingTextContent,
   deleteListingTextContent,
   getRentalPropertyByCode,
+  listListingAreaTextContent,
+  getListingAreaTextContentByMarketAreaCode,
+  createListingAreaTextContent,
+  updateListingAreaTextContent,
+  deleteListingAreaTextContent,
 }

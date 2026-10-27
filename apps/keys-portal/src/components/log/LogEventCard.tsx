@@ -13,6 +13,39 @@ import { eventTypeColors, objectTypeColors } from './constants'
 import { type Log } from '@/services/types'
 import { logService } from '@/services/api/logService'
 
+const DESCRIPTION_PREVIEW_LENGTH = 300
+
+// Bulk-operation summaries put their detail list after a newline — show only the first line collapsed
+function ExpandableDescription({
+  text,
+  className = 'text-sm',
+}: {
+  text: string
+  className?: string
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const newlineIndex = text.indexOf('\n')
+  const previewEnd =
+    newlineIndex !== -1 ? newlineIndex : DESCRIPTION_PREVIEW_LENGTH
+  if (text.length <= previewEnd) {
+    return <p className={`${className} text-muted-foreground`}>{text}</p>
+  }
+  return (
+    <p
+      className={`${className} text-muted-foreground break-words whitespace-pre-line`}
+    >
+      {expanded ? text : `${text.slice(0, previewEnd)}…`}{' '}
+      <button
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+        className="underline hover:text-foreground"
+      >
+        {expanded ? 'Visa mindre' : 'Visa mer'}
+      </button>
+    </p>
+  )
+}
+
 export function LogEventCard({ log }: { log: Log }) {
   const [isOpen, setIsOpen] = useState(false)
   const [allLogs, setAllLogs] = useState<Log[]>([])
@@ -68,9 +101,7 @@ export function LogEventCard({ log }: { log: Log }) {
               </div>
 
               {log.description && (
-                <p className="text-sm text-muted-foreground">
-                  {log.description}
-                </p>
+                <ExpandableDescription text={log.description} />
               )}
 
               {log.objectId && (
@@ -124,9 +155,10 @@ export function LogEventCard({ log }: { log: Log }) {
                     </div>
 
                     {eventLog.description && (
-                      <p className="text-xs text-muted-foreground">
-                        {eventLog.description}
-                      </p>
+                      <ExpandableDescription
+                        text={eventLog.description}
+                        className="text-xs"
+                      />
                     )}
                   </div>
                 ))}

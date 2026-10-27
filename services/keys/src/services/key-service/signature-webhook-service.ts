@@ -26,8 +26,7 @@ export interface ProcessWebhookParams {
 }
 
 export type Result<T, E = string> =
-  | { ok: true; data: T }
-  | { ok: false; err: E }
+  { ok: true; data: T } | { ok: false; err: E }
 
 /**
  * Process SimpleSign webhook and update signature + receipt

@@ -12,7 +12,8 @@ export function FacilityPage() {
     facility,
     leases,
     currentLease,
-    currentRent,
+    objectRent,
+    objectRentIsLoading,
     isLoading,
     leasesIsLoading,
     error,
@@ -35,15 +36,17 @@ export function FacilityPage() {
 
             <FacilityBasicInfo
               facility={facility}
-              rent={currentRent}
+              rent={objectRent?.rent.amount}
               isRented={!!currentLease}
               isLoadingLease={leasesIsLoading}
+              isLoadingRent={objectRentIsLoading}
             />
 
             <FacilityTabs
               facility={facility}
               leases={leases}
               leasesIsLoading={leasesIsLoading}
+              currentLease={currentLease}
             />
           </>
         )}

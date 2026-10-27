@@ -5,9 +5,14 @@ import {
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 import { getLeaseChanges } from '../adapters/xpand/cmlog-lease-adapter'
+import { parseSinceQuery } from '../adapters/xpand/cmlog-rows'
 import { getLeases } from '../adapters/xpand/tenant-lease-adapter'
-import { getSignedContractPdf } from '../adapters/xpand/lease-document-adapter'
+import {
+  getSignedContractPdf,
+  getTerminationDocumentPdf,
+} from '../adapters/xpand/lease-document-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { z } from 'zod'
 
@@ -22,9 +27,9 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx, ['since'])
 
     try {
-      const since = ctx.query.since ? new Date(ctx.query.since as string) : null
+      const since = parseSinceQuery(ctx.query.since)
 
-      if (since && isNaN(since.getTime())) {
+      if (since === undefined) {
         ctx.status = 400
         ctx.body = {
           error: 'Invalid since parameter, expected ISO 8601 date',
@@ -55,6 +60,7 @@ export const routes = (router: KoaRouter) => {
 
   router.post(
     '(.*)/leases/sync',
+    boundTenfastCalls,
     parseRequestBody(SyncLeaseRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
@@ -193,6 +199,72 @@ export const routes = (router: KoaRouter) => {
           }
 
           logger.info({ leaseId }, 'Lease terminated in Tenfast')
+
+          // Best-effort attach the uppsägning PDF from xpand. Also runs when
+          // terminate returns skipped (already terminated) so a failed prior
+          // upload can be repaired on retry. A missing PDF or failed upload is
+          // logged but does not fail the terminate.
+          const tenfastLease =
+            await tenfastAdapter.getLeaseByExternalId(leaseId)
+          if (!tenfastLease.ok) {
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            return
+          }
+
+          const tenfastLeaseId = tenfastLease.data._id
+          const hasFile =
+            await tenfastAdapter.hasTerminationFile(tenfastLeaseId)
+          if (!hasFile.ok) {
+            logger.warn(
+              { leaseId, error: hasFile.err },
+              'Could not check Tenfast termination file status, skipping upload'
+            )
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            return
+          }
+          if (hasFile.data) {
+            logger.info(
+              { leaseId },
+              'Tenfast lease already has a termination file, skipping upload'
+            )
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            return
+          }
+
+          const pdf = await getTerminationDocumentPdf(leaseId)
+          if (!pdf) {
+            logger.warn(
+              { leaseId },
+              'Tenfast lease terminated but no uppsägning PDF found in xpand'
+            )
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            return
+          }
+
+          const uploadResult = await tenfastAdapter.uploadTerminationFile(
+            tenfastLeaseId,
+            pdf.content,
+            pdf.filename
+          )
+          if (!uploadResult.ok) {
+            logger.warn(
+              { leaseId, error: uploadResult.err },
+              'Tenfast lease terminated but uppsägning PDF upload failed'
+            )
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            return
+          }
+
+          logger.info(
+            { leaseId, filename: pdf.filename },
+            'Attached uppsägning PDF to Tenfast lease'
+          )
+
           ctx.status = 200
           ctx.body = makeSuccessResponseBody(result.data, metadata)
           return

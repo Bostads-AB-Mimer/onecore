@@ -855,6 +855,119 @@ describe('parking space offer email logging', () => {
   })
 })
 
+describe('/sendLeaseTerminationConfirmation', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+  const getTemplateMock = jest.spyOn(templateRender, 'getEmailTemplate')
+  let sendSpy: jest.SpyInstance
+
+  const terminationBody = {
+    to: 'tenant@example.com',
+    contactCode: 'P123456',
+    firstName: 'Anna',
+    leaseId: '307-002-11-0201/11',
+    endDate: '2026-10-31',
+    rentalType: 'Bilplats' as const,
+  }
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    getTemplateMock.mockReset()
+    getTemplateMock.mockResolvedValue({
+      subject: 'Standardämne',
+      html: '<p>Hej {{firstName}}!</p><p>Sista dag: {{endDate}}</p>',
+    })
+    sendSpy = jest.spyOn(emailAdapter, 'sendLeaseTerminationConfirmation')
+    sendSpy.mockReset()
+    sendSpy.mockResolvedValue(emailSendResult('mid-term'))
+  })
+
+  it('returns 204 and logs the confirmation with the termination messageType', async () => {
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send({ ...terminationBody, correlationId: 'tenfast-evt-1' })
+
+    expect(res.status).toBe(204)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'email',
+        messageType: 'lease_termination_confirmation',
+        audienceCriteria: {
+          correlationId: 'tenfast-evt-1',
+          leaseId: '307-002-11-0201/11',
+        },
+        subject: 'Standardämne',
+        body: expect.stringContaining('Hej Anna!'),
+        recipients: [
+          expect.objectContaining({
+            contactCode: 'P123456',
+            toAddress: 'tenant@example.com',
+            externalMessageId: 'mid-term',
+            status: 'pending',
+          }),
+        ],
+      })
+    )
+  })
+
+  it('falls back to the Swedish label when the template cannot be fetched', async () => {
+    getTemplateMock.mockResolvedValue(null)
+
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send(terminationBody)
+
+    expect(res.status).toBe(204)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: 'Bekräftelse på uppsägning',
+        body: expect.stringContaining('avtal 307-002-11-0201/11'),
+      })
+    )
+  })
+
+  it('returns 400 for an invalid body', async () => {
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send({ to: 'not-an-email' })
+
+    expect(res.status).toBe(400)
+    expect(sendSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not fail the send when communication logging throws', async () => {
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send(terminationBody)
+
+    expect(res.status).toBe(204)
+  })
+
+  it('logs triggeredByUser when the caller supplies it', async () => {
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send({ ...terminationBody, triggeredByUser: 'Tenfast' })
+
+    expect(res.status).toBe(204)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ triggeredByUser: 'Tenfast' })
+    )
+  })
+
+  it('returns 500 when the send adapter throws', async () => {
+    sendSpy.mockRejectedValueOnce(new Error('Infobip down'))
+
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send(terminationBody)
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('Infobip down')
+  })
+})
+
 describe('/sendBulkEmail logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 

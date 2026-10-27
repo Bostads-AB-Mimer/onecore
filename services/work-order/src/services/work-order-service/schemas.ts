@@ -137,7 +137,10 @@ export const TenantSchema = z.object({
       z.object({
         phoneNumber: z.string(),
         type: z.string(),
-        // This is a boolean in onecore-types, but it is actually a number
+        // TODO: Change the Odoo work-order code to accept a boolean here so this
+        // can become z.boolean() and core's number conversion (in its work-order
+        // route) can be removed. isMainNumber is a boolean in onecore-types;
+        // only Odoo still expects Xpand's 0/1.
         isMainNumber: z.number(),
       })
     )

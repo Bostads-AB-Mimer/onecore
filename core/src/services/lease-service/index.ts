@@ -6,7 +6,6 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
-import dayjs from 'dayjs'
 import {
   GetActiveOfferByListingIdErrorCodes,
   RouteErrorResponse,
@@ -17,13 +16,15 @@ import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { ProcessStatus } from '../../common/types'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
 import { createLeaseForExternalParkingSpace } from '../../processes/parkingspaces/external'
-import { makeAdminApplicationProfileRequestParams } from './helpers/application-profile'
+import {
+  makeAdminApplicationProfileRequestParams,
+  makeClientApplicationProfileRequestParams,
+} from './helpers/application-profile'
 import { schemas } from './schemas'
 import { isAllowedNumResidents } from './services/is-allowed-num-residents'
 
@@ -32,78 +33,16 @@ import { routes as listings } from './listings'
 import { routes as commentsRoutes } from './comments'
 import { routes as rentalObjectsRoutes } from './rental-objects'
 import { routes as textContentRoutes } from './text-content'
+import { routes as areaTextContentRoutes } from './area-text-content'
 import { routes as leasesRoutes } from './leases'
 import { routes as keysExportRoutes } from './keys-export'
 
 import { registerSchema } from '../../utils/openapi'
-import { Contact, Lease } from './schemas/lease'
-
-type LeaseQuery = Record<string, string | string[] | undefined>
-
-type LeaseQueryResolution =
-  | { ok: true; query: LeaseQuery; emptyResult: boolean }
-  | { ok: false; reason: string }
-
-// Sentinel kvv-area code injected when the buildingManager filter resolves to
-// zero areas. Lets downstream code (notably Excel export) hit the leasing
-// adapter and produce a properly-formatted empty result rather than having to
-// build a synthetic response path.
-const NO_MATCH_KVV_AREA_CODE = '__no_match__'
-
-/**
- * Resolves the `buildingManager` query param (Keycloak user IDs) to
- * `kvvAreaCodes` (area codes) using the property-base service. The
- * `buildingManager` key is always removed from the forwarded query because the
- * leasing service no longer accepts it.
- *
- * Note: the param is called `buildingManager` for historical reasons but now
- * carries Keycloak user IDs of property managers (kvartersvärdar). This helper
- * is the seam that translates that into the area codes the leasing service
- * actually filters on.
- *
- * - When no user IDs are present, the query is forwarded unchanged (minus the
- *   `buildingManager` key).
- * - When the property-base lookup fails, returns a 500.
- * - When the lookup returns no kvv-areas, returns `emptyResult: true` and
- *   injects a sentinel kvv-area code so callers may either short-circuit or
- *   forward the query and get an empty result back from the leasing service.
- */
-async function resolveBuildingManagerToKvvAreaCodes(
-  query: LeaseQuery
-): Promise<LeaseQueryResolution> {
-  const raw = query.buildingManager
-  const userIds: string[] = Array.isArray(raw)
-    ? raw
-    : typeof raw === 'string' && raw.length > 0
-      ? [raw]
-      : []
-
-  // Strip buildingManager from forwarded query regardless of resolution path.
-  const { buildingManager: _omit, ...rest } = query
-
-  if (userIds.length === 0) {
-    return { ok: true, query: rest, emptyResult: false }
-  }
-
-  const lookup =
-    await propertyBaseAdapter.findKvvAreaCodesByResponsibles(userIds)
-  if (!lookup.ok) {
-    return { ok: false, reason: 'Failed to resolve building managers' }
-  }
-  if (lookup.data.length === 0) {
-    return {
-      ok: true,
-      query: { ...rest, kvvAreaCodes: [NO_MATCH_KVV_AREA_CODE] },
-      emptyResult: true,
-    }
-  }
-
-  return {
-    ok: true,
-    query: { ...rest, kvvAreaCodes: lookup.data },
-    emptyResult: false,
-  }
-}
+import { Contact, Lease, RentalObjectRentInfo } from './schemas/lease'
+import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
+import { resolvePersonnummerInQuery } from '../../adapters/contacts-adapter/lease-query'
+import { contactsAdapter } from '../../adapters/contacts-adapter'
+import { withProtectedIdentityDetails } from '../../processes/contacts'
 
 /**
  * @swagger
@@ -129,6 +68,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('PaginationMeta', typesSchemas.PaginationMetaSchema)
   registerSchema('PaginationLinks', typesSchemas.PaginationLinksSchema)
   registerSchema('Contact', Contact)
+  registerSchema('RentalObjectRentInfo', RentalObjectRentInfo)
 
   // TODO: Remove this once all routes are migrated to the new application
   // profile (with housing references)
@@ -138,6 +78,7 @@ export const routes = (router: KoaRouter) => {
   commentsRoutes(router)
   rentalObjectsRoutes(router)
   textContentRoutes(router)
+  areaTextContentRoutes(router)
   keysExportRoutes(router)
 
   leasesRoutes(router)
@@ -307,7 +248,7 @@ export const routes = (router: KoaRouter) => {
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode, tenantName]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -347,7 +288,8 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await leasingAdapter.getContactsByFilters(resolved.query)
+    const contactsQuery = await resolvePersonnummerInQuery(resolved.query)
+    const result = await leasingAdapter.getContactsByFilters(contactsQuery)
 
     if (!result.ok) {
       ctx.status = 500
@@ -1158,7 +1100,7 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: res.data,
+      content: await withProtectedIdentityDetails(contactsAdapter, res.data),
       ...metadata,
     }
   })
@@ -1254,7 +1196,7 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: res.data,
+      content: await withProtectedIdentityDetails(contactsAdapter, res.data),
       ...metadata,
     }
   })
@@ -1373,46 +1315,6 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 202
     ctx.body = { message: 'Offer denied successfully', ...metadata }
-  })
-
-  /**
-   * @swagger
-   * /offers/{offerId}/expire:
-   *   get:
-   *     summary: Expire an offer
-   *     tags:
-   *       - Lease service
-   *     description: Expires an offer
-   *     parameters:
-   *       - in: path
-   *         name: offerId
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: The ID of the offer to expire
-   *     responses:
-   *       '202':
-   *         description: Offer expired successful.
-   *       '500':
-   *         description: Internal server error. Failed to expire the offer.
-   *     security:
-   *       - bearerAuth: []
-   */
-  router.get('/offers/:offerId/expire', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const result = await internalParkingSpaceProcesses.expireOffer(
-      parseInt(ctx.params.offerId)
-    )
-
-    if (result.processStatus === ProcessStatus.successful) {
-      logger.info(result)
-      ctx.status = 202
-      ctx.body = { message: 'Offer expired successfully', ...metadata }
-      return
-    }
-
-    ctx.status = 500
-    ctx.body = { error: result.error, ...metadata }
   })
 
   /**
@@ -2076,37 +1978,6 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
-  type UpdateClientApplicationProfileRequestParams = z.infer<
-    typeof schemas.client.applicationProfile.UpdateApplicationProfileRequestParams
-  >
-
-  function makeClientApplicationProfileRequestParams(
-    body: UpdateClientApplicationProfileRequestParams,
-    existingProfile?: leasingAdapter.GetApplicationProfileResponseData
-  ): leasingAdapter.CreateOrUpdateApplicationProfileRequestParams {
-    return {
-      expiresAt: dayjs(new Date()).add(6, 'months').toDate(),
-      numChildren: body.numChildren,
-      numAdults: body.numAdults,
-      housingType: body.housingType,
-      landlord: body.landlord,
-      housingTypeDescription: body.housingTypeDescription,
-      lastUpdatedAt: new Date(),
-      housingReference: {
-        comment: existingProfile?.housingReference.comment ?? null,
-        email: body.housingReference.email,
-        phone: body.housingReference.phone,
-        reviewedAt: existingProfile?.housingReference.reviewedAt ?? null,
-        reviewedBy: existingProfile?.housingReference.reviewedBy ?? null,
-        reasonRejected:
-          existingProfile?.housingReference.reasonRejected ?? null,
-        reviewStatus:
-          existingProfile?.housingReference.reviewStatus ?? 'PENDING',
-        expiresAt: existingProfile?.housingReference.expiresAt ?? null,
-      },
-    }
-  }
-
   /**
    * @swagger
    * /contacts/{contactCode}/application-profile/client:
@@ -2404,7 +2275,10 @@ export const routes = (router: KoaRouter) => {
         triggeredBy
       )
       ctx.status = result.httpStatus
-      ctx.body = { content: result.response, ...metadata }
+      ctx.body =
+        result.processStatus === ProcessStatus.successful
+          ? { content: result.response, ...metadata }
+          : { error: result.error, content: result.response, ...metadata }
     } catch (error) {
       logger.error(error, 'Error')
       ctx.status = 500

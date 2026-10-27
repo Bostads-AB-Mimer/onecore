@@ -4,6 +4,7 @@ import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
 
+import { OPERATING_COMPANY_CODES } from './company-scope'
 import { prisma } from './db'
 
 export type PropertyWithObject = Prisma.PropertyGetPayload<{
@@ -160,6 +161,11 @@ const searchProperties = (
             { designation: { contains: q.toUpperCase() } },
             { code: { contains: q.toUpperCase() } },
           ],
+          propertyObject: {
+            propertyStructures: {
+              some: { companyCode: { in: [...OPERATING_COMPANY_CODES] } },
+            },
+          },
         },
         orderBy: { code: 'asc' },
       })

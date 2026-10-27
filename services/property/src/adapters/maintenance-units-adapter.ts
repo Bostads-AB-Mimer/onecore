@@ -1,4 +1,5 @@
 import { trimStrings } from '@src/utils/data-conversion'
+import { OPERATING_COMPANY_CODES } from './company-scope'
 import { prisma } from './db'
 import { MaintenanceUnit } from '@src/types/maintenance-unit'
 
@@ -173,6 +174,9 @@ export const searchMaintenanceUnits = async (
   const maintenanceUnits = await prisma.maintenanceUnit.findMany({
     where: {
       code: { contains: q },
+      propertyStructures: {
+        some: { companyCode: { in: [...OPERATING_COMPANY_CODES] } },
+      },
     },
     select: maintenanceUnitWithPropertySelect,
     orderBy: { code: 'asc' },

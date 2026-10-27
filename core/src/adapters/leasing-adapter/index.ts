@@ -16,7 +16,14 @@ import {
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
-import type { LeaseChange } from '@onecore/types'
+import {
+  RentalObjectTypeChangesSchema,
+  SyncRentalObjectTypeResponseSchema,
+  type LeaseChange,
+  type RentalObjectTypeChanges,
+  type SyncRentalObjectTypeRequest,
+  type SyncRentalObjectTypeResponse,
+} from '@onecore/types'
 import config from '../../common/config'
 
 //todo: move to global config or handle error statuses in middleware
@@ -739,51 +746,44 @@ const getContactsByFilters = async (
   }
 }
 
-interface ExportLeasesResult {
-  data: Buffer
-  contentType: string
-  contentDisposition: string
-}
-
-const exportLeasesToExcel = async (
+const getLeasesForExport = async (
   queryParams: Record<string, string | string[] | undefined>
-): Promise<AdapterResult<ExportLeasesResult, 'unknown'>> => {
+): Promise<AdapterResult<leasing.v1.LeaseSearchResult[], 'unknown'>> => {
   try {
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/leases/export`,
       {
         params: queryParams,
-        responseType: 'arraybuffer',
         paramsSerializer: {
           indexes: null,
         },
       }
     )
 
-    return {
-      ok: true,
-      data: {
-        data: response.data,
-        contentType:
-          response.headers['content-type'] ||
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        contentDisposition:
-          response.headers['content-disposition'] ||
-          `attachment; filename="hyreskontrakt-${new Date().toISOString().split('T')[0]}.xlsx"`,
-      },
-    }
+    return { ok: true, data: response.data.content }
   } catch (err) {
-    logger.error({ err }, 'leasingAdapter.exportLeasesToExcel')
+    // Let 503s (cache warming up) bubble up so the route can detect them,
+    // same as searchLeases.
+    if (err instanceof AxiosError && err.response?.status === 503) throw err
+    logger.error({ err }, 'leasingAdapter.getLeasesForExport')
     return { ok: false, err: 'unknown' }
   }
 }
+
+/**
+ * Relation writes wait on this push synchronously, so an unbounded call would
+ * hold the caseworker's request open instead of failing into the rollback.
+ */
+const SYNC_CONTACT_TIMEOUT_MS = 30_000
 
 const syncContactToLeasing = async (
   contactCode: string
 ): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> => {
   try {
     const response = await axios.post(
-      `${tenantsLeasesServiceUrl}/contacts/${contactCode}/sync`
+      `${tenantsLeasesServiceUrl}/contacts/${contactCode}/sync`,
+      undefined,
+      { timeout: SYNC_CONTACT_TIMEOUT_MS }
     )
 
     if (response.status === 200 || response.status === 201) {
@@ -805,6 +805,12 @@ const syncContactToLeasing = async (
   }
 }
 
+// Must stay under the sync CronJobs' activeDeadlineSeconds (300s) and above
+// Leasing's own worst case (six 10s Tenfast calls plus one 60s upload).
+const SYNC_FETCH_TIMEOUT_MS = 2 * 60_000
+const SYNC_LEASE_TIMEOUT_MS = 3 * 60_000
+const SYNC_RENTAL_OBJECT_TYPE_TIMEOUT_MS = 2 * 60_000
+
 const getUpdatedLeases = async (
   since: Date | null
 ): Promise<AdapterResult<LeaseChange[], 'unknown'>> => {
@@ -812,6 +818,7 @@ const getUpdatedLeases = async (
     const params = since ? { since: since.toISOString() } : {}
     const response = await axios.get(`${tenantsLeasesServiceUrl}/leases/sync`, {
       params,
+      timeout: SYNC_FETCH_TIMEOUT_MS,
     })
 
     if (response.status === 200) {
@@ -847,7 +854,8 @@ const syncLease = async (
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/leases/sync`,
-      { leaseId, contactCode, action }
+      { leaseId, contactCode, action },
+      { timeout: SYNC_LEASE_TIMEOUT_MS }
     )
 
     if (response.status === 200 || response.status === 201) {
@@ -862,9 +870,84 @@ const syncLease = async (
   }
 }
 
+const getRentalObjectTypeChanges = async (
+  since: Date | null
+): Promise<AdapterResult<RentalObjectTypeChanges, 'unknown'>> => {
+  try {
+    const params = since ? { since: since.toISOString() } : {}
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/rental-objects/types/sync`,
+      { params, validateStatus: () => true, timeout: SYNC_FETCH_TIMEOUT_MS }
+    )
+
+    if (response.status !== 200)
+      return { ok: false, err: 'unknown', statusCode: response.status }
+
+    const parsed = RentalObjectTypeChangesSchema.safeParse(
+      response.data?.content
+    )
+    if (!parsed.success) {
+      logger.error(
+        { error: parsed.error.issues },
+        'leasing-adapter.getRentalObjectTypeChanges: invalid response'
+      )
+      return { ok: false, err: 'unknown', statusCode: response.status }
+    }
+    return { ok: true, data: parsed.data }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getRentalObjectTypeChanges')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const syncRentalObjectType = async (
+  rentalObjectCode: string,
+  code: string | null
+): Promise<
+  AdapterResult<
+    { action: SyncRentalObjectTypeResponse['action'] },
+    'unknown-type' | 'rejected' | 'sync-failed'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/rental-objects/${encodeURIComponent(rentalObjectCode)}/type/sync`,
+      { code } satisfies SyncRentalObjectTypeRequest,
+      {
+        validateStatus: () => true,
+        timeout: SYNC_RENTAL_OBJECT_TYPE_TIMEOUT_MS,
+      }
+    )
+
+    if (response.status === 200) {
+      const parsed = SyncRentalObjectTypeResponseSchema.safeParse(
+        response.data?.content
+      )
+      if (parsed.success)
+        return { ok: true, data: { action: parsed.data.action } }
+    }
+
+    if (response.status === 422) {
+      if (response.data?.error === 'unknown-rental-object-type')
+        return { ok: false, err: 'unknown-type', statusCode: 422 }
+      if (response.data?.error === 'rental-object-rejected')
+        return { ok: false, err: 'rejected', statusCode: 422 }
+    }
+
+    logger.error(
+      { rentalObjectCode, status: response.status, body: response.data },
+      'leasing-adapter.syncRentalObjectType'
+    )
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.syncRentalObjectType')
+    return { ok: false, err: 'sync-failed' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
-  exportLeasesToExcel,
+  getLeasesForExport,
   syncContactToLeasing,
   getContactsByFilters,
   getApplicationProfileByContactCode,
@@ -893,6 +976,8 @@ export {
   deleteListingTextContent,
   getUpdatedLeases,
   syncLease,
+  getRentalObjectTypeChanges,
+  syncRentalObjectType,
 }
 
 export {
@@ -962,4 +1047,14 @@ export {
   getRentalObjectRents,
   getRentalObjectAvailabilities,
   getRentalObjectAvailabilityByCode,
+  getRentalObjectLegacyRentByCode,
+  getRentalObjectRentByCode,
 } from './rental-objects'
+
+export {
+  listListingAreaTextContent,
+  getListingAreaTextContentByMarketAreaCode,
+  createListingAreaTextContent,
+  updateListingAreaTextContent,
+  deleteListingAreaTextContent,
+} from './listing-area-text-content'

@@ -88,4 +88,12 @@ export type DbListingTextContent = {
   UpdatedAt: Date
 }
 
+export type DbListingAreaTextContent = {
+  Id: string
+  MarketAreaCode: string
+  ContentBlocks: string
+  CreatedAt: Date
+  UpdatedAt: Date
+}
+
 export type AdapterResult<T, E> = { ok: true; data: T } | { ok: false; err: E }

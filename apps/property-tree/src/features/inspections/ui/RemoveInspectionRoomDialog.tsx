@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { inspectionService } from '@/services/api/core/inspectionService'
 import { ApiError } from '@/services/api/core/baseApi'
+import { inspectionService } from '@/services/api/core/inspectionService'
 
+import { toast } from '@/shared/hooks/useToast'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +14,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/shared/ui/AlertDialog'
-import { toast } from '@/shared/hooks/useToast'
 
 interface RemoveInspectionRoomDialogProps {
   inspectionId: string

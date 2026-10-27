@@ -4,10 +4,11 @@ import {
   InvoicePaymentEvent,
   XledgerProject,
 } from '@onecore/types'
+import { SubmitMiscellaneousInvoiceErrorCodes } from '@onecore/types'
 import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscellaneous-invoice'
 import { XledgerContact } from '@onecore/types/src/types'
 
-import { GET, POST, PUT } from './baseApi'
+import { ApiError, GET, POST, PUT } from './baseApi'
 import type { paths } from './generated/api-types'
 
 // TODO: Fix the @ts-expect-error by updating the OpenAPI spec
@@ -149,7 +150,7 @@ async function submitMiscellaneousInvoice(
 
   formData.append('invoice', JSON.stringify(invoiceForSubmission))
 
-  const { data, error } = await POST(
+  const { data, error, response } = await POST(
     // @ts-expect-error
     `/invoices/miscellaneous`,
     {
@@ -157,7 +158,21 @@ async function submitMiscellaneousInvoice(
     }
   )
 
-  if (error) throw error
+  // Branch on the raw status rather than `error` — a non-2xx response with an
+  // empty body yields `error: undefined` and must not be treated as success.
+  if (!response.ok) {
+    const type = (error as { type?: string } | undefined)?.type
+    if (type === SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound) {
+      throw new ApiError(
+        response.status,
+        SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
+      )
+    }
+    throw new ApiError(
+      response.status,
+      `Failed to submit miscellaneous invoice (status ${response.status})`
+    )
+  }
 
   return data
 }

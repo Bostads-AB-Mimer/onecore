@@ -5,7 +5,7 @@ import config from '../../common/config'
 import { syncContacts } from './index'
 import * as factory from '../../../test/factories'
 import {
-  addEntry,
+  appendEntry,
   readQueue,
   FailedRowEntry,
 } from '../shared/failed-sync-queue'
@@ -154,13 +154,47 @@ describe('syncContacts', () => {
     expect(written).toBe(ts.toISOString())
   })
 
+  it('a newer change for the same contact replaces a queued one', async () => {
+    const older = factory.domainContact.build({ contactCode: 'P123' })
+    const newer = factory.domainContact.build({ contactCode: 'P123' })
+    await appendEntry(
+      queueFile,
+      makeContactEntry(older, new Date('2026-05-01T09:00:00.000Z'))
+    )
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [
+          { contact: newer, timestamp: new Date('2026-05-01T10:00:00.000Z') },
+        ],
+      }),
+    } as any)
+    jest
+      .spyOn(leasingAdapter, 'syncContactToLeasing')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+    jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+    const workOrderSync = jest
+      .spyOn(workOrderAdapter, 'syncContactToWorkOrder')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+    jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncContacts({ stateFile, queueFile })
+
+    expect(workOrderSync).toHaveBeenCalledTimes(1)
+    expect(await readQueue(queueFile)).toEqual([])
+  })
+
   it('case 3: silent retry — queue has entry, drain fails, no mails sent', async () => {
     const contact = factory.domainContact.build()
     const ts = new Date('2026-05-01T09:00:00.000Z')
 
     // Pre-seed the queue
     const entry = makeContactEntry(contact, ts)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Drain attempt: leasing sync fails
     jest
@@ -207,7 +241,7 @@ describe('syncContacts', () => {
 
     // Pre-seed the queue
     const entry = makeContactEntry(contact, ts)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Drain attempt: all sync adapters succeed
     jest
@@ -255,7 +289,7 @@ describe('syncContacts', () => {
 
     // Pre-seed the queue with that key
     const entry = makeContactEntry(contact, ts)
-    await addEntry(queueFile, entry)
+    await appendEntry(queueFile, entry)
 
     // Both drain attempt and new row attempt fail (leasing fails)
     jest

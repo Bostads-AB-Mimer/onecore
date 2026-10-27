@@ -73,55 +73,32 @@ export const TenfastInvoiceFactory = Factory.define<TenfastInvoice>(
         _id: 'lease-123',
         id: 'lease-123',
         externalId: `306-008-01-0${sequence.toString().padStart(3, '0')}/01`,
-        startDate: new Date('2020-01-01'),
-        endDate: null,
-        stage: 'active' as const,
+        hyresobjekt: [
+          {
+            _id: `obj-${sequence}`,
+            nummer: '123',
+            skvNummer: null,
+            postadress: 'Test Street 123',
+            externalId: 'prop-123',
+            displayName: 'Test Property',
+            subType: 'apartment',
+            states: [],
+          },
+        ],
         hyresgaster: [
           {
+            name: { first: 'Test', last: 'Persson' },
             _id: `tenant-${sequence}`,
             externalId: `P${sequence}`,
-            name: { first: 'Test', last: 'Persson' },
+            company: '',
             isCompany: false,
             displayName: 'Test Persson',
           },
         ],
-        hyresobjekt: [
-          {
-            nummer: '123',
-            postadress: 'Test Street 123',
-            skvNummer: null,
-            displayName: 'Test Property',
-            states: [],
-            externalId: `306-008-01-0${sequence.toString().padStart(3, '0')}`,
-            hyresvard: 'hyresvard-123',
-            hyra: 5000,
-            hyraExcludingVat: 5000,
-            hyraVat: 0,
-            hyror: [],
-            postnummer: '12345',
-            stad: 'Test City',
-            stadsdel: 'Test District',
-            typ: 'apartment',
-            kvm: 50,
-            roomCount: 2,
-            bostadType: 'apartment',
-            parkeringType: null,
-            lokalType: null,
-            category: null,
-            images: [],
-            files: [],
-            comments: [],
-            tags: [],
-            useCounter: 0,
-            avtalStates: [],
-            lastStateChanged: '2024-01-01T10:00:00Z',
-            updatedAt: new Date('2024-01-01'),
-          },
-        ],
         reference: 123456,
-        invitationsToRegister: [],
+        stage: 'active',
         canDelete: false,
-        depositState: [],
+        canVoid: false,
       },
     ],
     vatEnabled: false,
@@ -253,11 +230,16 @@ export const TenfastRentArticleFactory = Factory.define<TenfastRentArticle>(
 )
 
 export const TenfastInvoicesByTenantIdResponseFactory =
-  Factory.define<TenfastInvoicesByTenantIdResponse>(() => [
-    TenfastInvoiceFactory.build({
-      hyror: [TenfastInvoiceRowFactory.build()],
-    }),
-  ])
+  Factory.define<TenfastInvoicesByTenantIdResponse>(() => ({
+    records: [
+      TenfastInvoiceFactory.build({
+        hyror: [TenfastInvoiceRowFactory.build()],
+      }),
+    ],
+    prev: null,
+    next: null,
+    totalCount: 1,
+  }))
 
 export const TenfastAutogiroConsentFactory =
   Factory.define<TenfastAutogiroConsent>(({ sequence }) => ({

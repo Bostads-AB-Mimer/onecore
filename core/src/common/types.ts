@@ -18,5 +18,4 @@ export interface ProcessError<E = any> {
 }
 
 export type ProcessResult<T = any, E = any> =
-  | ProcessSuccess<T>
-  | ProcessError<E>
+  ProcessSuccess<T> | ProcessError<E>

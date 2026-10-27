@@ -39,7 +39,7 @@ interface ContentBlockEditorProps {
   dragListeners?: Record<string, unknown>
 }
 
-const blockTypeLabels: Record<ContentBlockType, string> = {
+export const blockTypeLabels: Record<ContentBlockType, string> = {
   preamble: 'Ingress',
   headline: 'Rubrik',
   subtitle: 'Underrubrik',

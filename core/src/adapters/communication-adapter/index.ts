@@ -20,6 +20,7 @@ import {
   LinearIssue,
   LinearLabel,
   InvoiceNotificationEmail,
+  LeaseTerminationConfirmationEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../types'
@@ -475,17 +476,20 @@ export const sendBulkEmail = async (
   }
 }
 
-export const sendEmail = async ({
-  to,
-  subject,
-  body,
-  attachments,
-}: {
-  to: string
-  subject: string
-  body: string
-  attachments?: { data: Buffer; name: string }[]
-}) => {
+export const sendEmail = async (
+  {
+    to,
+    subject,
+    body,
+    attachments,
+  }: {
+    to: string
+    subject: string
+    body: string
+    attachments?: { data: Buffer; name: string }[]
+  },
+  opts: { timeoutMs?: number } = {}
+) => {
   try {
     // TODO update node version to get rid of this warning
     // eslint-disable-next-line n/no-unsupported-features/node-builtins
@@ -505,7 +509,8 @@ export const sendEmail = async ({
 
     const result = await axios.postForm(
       `${config.communicationService.url}/send-email`,
-      form
+      form,
+      { timeout: opts.timeoutMs }
     )
 
     if (result.status !== 200) {
@@ -513,7 +518,8 @@ export const sendEmail = async ({
     }
 
     return { ok: true, data: result.data.content }
-  } catch (e) {
+  } catch (err) {
+    logger.error(err)
     return { ok: false, err: 'error', statusCode: 500 }
   }
 }
@@ -573,6 +579,44 @@ export const getLinearLabels = async (): Promise<
       return { ok: false, err: 'error', statusCode: err.response.status }
     }
     return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+/** Communication validates endDate as YYYY-MM-DD; JSON.stringify(Date) emits ISO datetime. */
+const leaseTerminationConfirmationWirePayload = (
+  email: LeaseTerminationConfirmationEmail
+) => ({
+  ...email,
+  endDate: email.endDate.toISOString().slice(0, 10),
+})
+
+export const sendLeaseTerminationConfirmationEmail = async (
+  email: LeaseTerminationConfirmationEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    if (process.env.NODE_ENV !== 'production')
+      email.to = config.emailAddresses.tenantDefault
+
+    const result = await axios.post(
+      `${config.communicationService.url}/sendLeaseTerminationConfirmation`,
+      leaseTerminationConfirmationWirePayload(email)
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service when sending lease termination confirmation'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: null }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending lease termination confirmation to ${email.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
 

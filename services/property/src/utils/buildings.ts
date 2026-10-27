@@ -1,4 +1,7 @@
-import { BuildingWithRelations } from '@src/adapters/building-adapter'
+import {
+  BuildingProperty,
+  BuildingWithRelations,
+} from '@src/adapters/building-adapter'
 import { Building } from '@src/types/building'
 
 /**
@@ -12,9 +15,10 @@ import { Building } from '@src/types/building'
  *   - Building features (heating, fire rating)
  *   - Insurance details (class, value)
  *   - Deletion status
+ *   - The property (fastighet) the building belongs to, when resolved
  */
 export function transformBuildingData(
-  building: BuildingWithRelations
+  building: BuildingWithRelations & { property?: BuildingProperty | null }
 ): Building {
   return {
     id: building.id,
@@ -46,5 +50,9 @@ export function transformBuildingData(
         value: qv.value,
       })) || undefined,
     deleted: Boolean(building.deleteMark),
+    // Only the detail lookups resolve the property. The list route does not, and
+    // emitting `null` there would assert "belongs to no property" — wrong, since
+    // those buildings were fetched *by* property code. Absent = not looked up.
+    ...(building.property !== undefined ? { property: building.property } : {}),
   }
 }

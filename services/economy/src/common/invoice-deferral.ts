@@ -2,7 +2,7 @@ import { Invoice } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 export type TenfastDeferralSource = {
-  reason: string
+  reason: string | undefined
   madeBy: string
 }
 

@@ -619,7 +619,9 @@ export const transformRow = (
     postalCode: trimmedRow.postalCode || null,
     city: trimmedRow.city || null,
     startDate: trimmedRow.startDate || null,
+    endDate: null,
     lastDebitDate: trimmedRow.lastDebitDate || null,
+    signedAt: null,
     rentalObjectCode: trimmedRow.rentalObjectCode || null,
     status,
   }
@@ -713,6 +715,25 @@ export const getRentalObjectCodesByBuildingManager = async (
     .select('babuf.hyresid')
     .distinct()
     .whereIn('bafen.omrade', buildingManagers)
+    .whereNotNull('babuf.hyresid')
+    .where('babuf.hyresid', '!=', '')
+
+  return rows.map((row: { hyresid: string }) => row.hyresid.trim())
+}
+
+/**
+ * Get distinct rental object codes (hyresid) belonging to
+ * the given kvv-area code(s) (bafen.code, kvartersvärdsområde).
+ */
+export const getRentalObjectCodesByKvvAreaCodes = async (
+  kvvAreaCodes: string[]
+): Promise<string[]> => {
+  const rows = await xpandDb
+    .from('bafen')
+    .innerJoin('babuf', 'babuf.fencode', 'bafen.code')
+    .select('babuf.hyresid')
+    .distinct()
+    .whereIn('bafen.code', kvvAreaCodes)
     .whereNotNull('babuf.hyresid')
     .where('babuf.hyresid', '!=', '')
 

@@ -266,6 +266,8 @@ export interface Tenant {
   isTenant: boolean
   parkingSpaceWaitingList: WaitingListResponse
   specialAttention: boolean
+  protectedIdentity: components['schemas']['Contact']['protectedIdentity']
+  protectedIdentityDetails?: components['schemas']['Contact']['protectedIdentityDetails']
   isAboutToLeave: boolean
   currentHousingContract: ContractType
   parkingSpaceContracts: ContractType[]

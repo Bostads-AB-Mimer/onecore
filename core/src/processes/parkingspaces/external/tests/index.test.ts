@@ -48,8 +48,6 @@ describe('parkingspaces', () => {
       any
     >
     let getLeasesForContactCodeSpy: jest.SpyInstance
-    let getParkingSpaceByCodeSpy: jest.SpyInstance
-    let sendNonScoredParkingSpaceApprovedEmailSpy: jest.SpyInstance
     let sendNonScoredParkingSpaceDeniedEmailSpy: jest.SpyInstance
     let sendNotificationToRoleSpy: jest.SpyInstance<
       Promise<any>,
@@ -110,29 +108,27 @@ describe('parkingspaces', () => {
       getInvoicesSentToDebtCollectionSpy = jest
         .spyOn(economyAdapter, 'getInvoicesSentToDebtCollection')
         .mockResolvedValue({ ok: true, data: [] })
-      getParkingSpaceByCodeSpy = jest
-        .spyOn(leasingAdapter, 'getParkingSpaceByCode')
-        .mockResolvedValue({
-          ok: true,
-          data: {
-            rentalObjectCode: '705-808-00-0006',
-            address: 'Testgatan 1',
-            availabilityInfo: {
-              rent: {
-                amount: 500,
-                vat: 0.25,
-                rows: [],
-              },
-              rentalObjectCode: '705-808-00-0006',
-              rentalTenureType: { id: 'Bilplats', name: 'Bilplats' },
+      jest.spyOn(leasingAdapter, 'getParkingSpaceByCode').mockResolvedValue({
+        ok: true,
+        data: {
+          rentalObjectCode: '705-808-00-0006',
+          address: 'Testgatan 1',
+          availabilityInfo: {
+            rent: {
+              amount: 500,
+              vat: 0.25,
+              rows: [],
             },
-            objectTypeCaption: 'Bilplats',
-            objectTypeCode: 'BP',
-            residentialAreaCaption: 'Test',
-            residentialAreaCode: 'TST',
+            rentalObjectCode: '705-808-00-0006',
+            rentalTenureType: { id: 'Bilplats', name: 'Bilplats' },
           },
-        })
-      sendNonScoredParkingSpaceApprovedEmailSpy = jest
+          objectTypeCaption: 'Bilplats',
+          objectTypeCode: 'BP',
+          residentialAreaCaption: 'Test',
+          residentialAreaCode: 'TST',
+        },
+      })
+      jest
         .spyOn(communcationAdapter, 'sendNonScoredParkingSpaceApprovedEmail')
         .mockResolvedValue({ ok: true, data: null })
       sendNonScoredParkingSpaceDeniedEmailSpy = jest

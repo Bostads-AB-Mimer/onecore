@@ -19,6 +19,8 @@ export const HomeInsuranceExportRowFactory =
     nationalIdNumber: `19900101${sequence.toString().padStart(4, '0')}`,
     fullName: `Svensson Anna`,
     address: 'Storgatan 1',
+    postalCode: '12345',
+    city: 'Stockholm',
     phoneNumber: '0701234567',
     email: null,
   }))

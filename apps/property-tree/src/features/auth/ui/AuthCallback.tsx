@@ -7,9 +7,7 @@ import { POST } from '@/services/api/core/baseApi'
 import { authConfig } from '@/authConfig'
 
 type AuthCallbackState =
-  | { tag: 'loading' }
-  | { tag: 'success' }
-  | { tag: 'error'; error: string }
+  { tag: 'loading' } | { tag: 'success' } | { tag: 'error'; error: string }
 
 export function AuthCallback() {
   const navigate = useNavigate()

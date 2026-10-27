@@ -9,7 +9,7 @@ describe('economy-adapter.syncContactToEconomy', () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
     nock(config.economyService.url)
-      .post(`/contacts/${payload.contactCode}/sync`)
+      .post(`/customers/${payload.contactCode}/sync`)
       .reply(200, { content: { dbId: '12345' } })
 
     const { contactCode, ...contactData } = payload
@@ -25,7 +25,7 @@ describe('economy-adapter.syncContactToEconomy', () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
     nock(config.economyService.url)
-      .post(`/contacts/${payload.contactCode}/sync`)
+      .post(`/customers/${payload.contactCode}/sync`)
       .reply(200, { content: null, skipped: true })
 
     const { contactCode, ...contactData } = payload
@@ -41,7 +41,7 @@ describe('economy-adapter.syncContactToEconomy', () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
     nock(config.economyService.url)
-      .post(`/contacts/${payload.contactCode}/sync`)
+      .post(`/customers/${payload.contactCode}/sync`)
       .reply(400, { error: 'Bad request' })
 
     const { contactCode, ...contactData } = payload
@@ -61,7 +61,7 @@ describe('economy-adapter.syncContactToEconomy', () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
     nock(config.economyService.url)
-      .post(`/contacts/${payload.contactCode}/sync`)
+      .post(`/customers/${payload.contactCode}/sync`)
       .replyWithError('Connection refused')
 
     const { contactCode, ...contactData } = payload

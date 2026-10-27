@@ -37,18 +37,20 @@ export const TenfastRentalPropertySchema = z.object({
   hyraVat: z.number(),
   hyror: z.array(TenfastInvoiceRowSchema),
   nummer: z.string(),
-  skvNummer: z.number().nullable(),
+  // The Swedish Tax Agency's apartment number. Tenfast leaves it out for
+  // objects that have none, such as parking spaces.
+  skvNummer: z.number().nullish(),
   postnummer: z.string(),
   postadress: z.string(),
   commonName: z.string().optional(),
   stad: z.string(),
   stadsdel: z.string(),
   typ: z.string(),
-  kvm: z.number(),
-  roomCount: z.number().nullable(),
-  bostadType: z.string().nullable(),
-  parkeringType: z.string().nullable(),
-  lokalType: z.string().nullable(),
+  kvm: z.number().nullable().optional(),
+  roomCount: z.number().nullable().optional(),
+  bostadType: z.string().nullable().optional(),
+  parkeringType: z.string().nullable().optional(),
+  lokalType: z.string().nullable().optional(),
   category: z.any(), // TODO ? ska vara string
   description: z.string().optional(),
   public: z.boolean().optional(),
@@ -106,7 +108,7 @@ export const TenfastLeaseSchema = z.object({
   hyresobjekt: z.array(TenfastRentalPropertySchema).min(1),
   reference: z.number(),
   invitationsToRegister: z.array(z.any()),
-  canDelete: z.boolean(),
+  canDelete: z.boolean().optional(),
   depositState: z.array(z.any()),
 })
 
@@ -138,7 +140,6 @@ export function isVisibleTenfastInvoice(invoice: {
 
 export const TenfastGracePeriodSchema = z.object({
   endDate: z.string(),
-  // Tenfast can return a grace period without a reason
   reason: z.string().optional(),
   madeBy: z.string(),
   madeByEmail: z.string(),
@@ -151,7 +152,47 @@ export const TenfastInvoiceSchema = z.object({
   }),
   _id: z.string(),
   hyresvard: z.string(),
-  avtal: z.array(TenfastLeaseSchema),
+  avtal: z.array(
+    z.object({
+      _id: z.string(),
+      hyresobjekt: z
+        .array(
+          z.object({
+            _id: z.string(),
+            nummer: z.string(),
+            // Left out for parking spaces, see TenfastRentalPropertySchema.
+            skvNummer: z.number().nullish(),
+            postadress: z.string(),
+            externalId: z.string(),
+            displayName: z.string(),
+            subType: z.string(),
+            states: z.string().array(),
+          })
+        )
+        .min(1),
+      hyresgaster: z
+        .array(
+          z.object({
+            name: z.object({
+              first: z.string(),
+              last: z.string(),
+            }),
+            _id: z.string(),
+            externalId: z.string(),
+            company: z.string(),
+            isCompany: z.boolean(),
+            displayName: z.string(),
+          })
+        )
+        .min(1),
+      externalId: z.string(),
+      reference: z.number(),
+      stage: z.string(),
+      canDelete: z.boolean().optional(),
+      canVoid: z.boolean(),
+      id: z.string(),
+    })
+  ),
   hyror: TenfastInvoiceRowSchema.array(),
   vatEnabled: z.boolean(),
   propertyTax: z.boolean(),
@@ -160,7 +201,6 @@ export const TenfastInvoiceSchema = z.object({
   amountPaid: z.number(),
   acceptDiff: z.boolean(),
   aviseringsTyp: z.string(),
-  // Tenfast no longer returns this for some invoices (e.g. credited ones)
   expectedInvoiceDate: z.string().optional(),
   due: z.string(),
   sentAutomatically: z.boolean(),
@@ -174,13 +214,21 @@ export const TenfastInvoiceSchema = z.object({
   reference: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  ocrNumber: z.string(),
+  // no longer returned for some invoices (e.g. credited/not yet activated)
+  ocrNumber: z.string().optional(),
   late: z.boolean(),
   state: TenfastInvoiceStateSchema,
   gracePeriod: TenfastGracePeriodSchema.nullish(),
   recipientContactCode: z.string().optional(),
   recipientName: z.string().optional(),
   contractCode: z.string().optional(),
+})
+
+export const TenfastInvoicesByTenantIdResponseSchema = z.object({
+  records: z.array(TenfastInvoiceSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
 })
 
 export const TenfastTenantSchema = z.object({
@@ -492,9 +540,6 @@ export const TenfastInvoicesByOcrResponseSchema = z.object({
     }))
   ),
 })
-
-export const TenfastInvoicesByTenantIdResponseSchema =
-  z.array(TenfastInvoiceSchema)
 
 export const TenfastTenantByContactCodeResponseSchema = TenfastTenantSchema
 

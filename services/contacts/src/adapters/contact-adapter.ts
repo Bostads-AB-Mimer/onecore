@@ -122,18 +122,17 @@ export interface ContactsRepository {
   getTrusteesFor: (contactCode: ContactCode) => Promise<RelatedContact[] | null>
 
   /**
-   * Retrieves the annan fakturamottagare on the contact's current leases as
-   * RelatedContact objects with role 'otherInvoiceRecipient'. Null when the
-   * contact does not exist.
+   * Retrieves the contact's annan fakturamottagare as RelatedContact objects
+   * with role 'otherInvoiceRecipient'. Null when the contact does not exist.
    */
   getOtherInvoiceRecipients: (
     contactCode: ContactCode
   ) => Promise<RelatedContact[] | null>
 
   /**
-   * Retrieves the current lease holders this contact is the annan
-   * fakturamottagare for, as RelatedContact objects with role
-   * 'otherInvoiceRecipientFor'. Null when the contact does not exist.
+   * Retrieves the contacts this contact is the annan fakturamottagare for,
+   * as RelatedContact objects with role 'otherInvoiceRecipientFor'. Null when
+   * the contact does not exist.
    */
   getOtherInvoiceRecipientsFor: (
     contactCode: ContactCode
@@ -147,6 +146,25 @@ export interface ContactsRepository {
    * @returns A promise that resolves to an array of Contact objects
    */
   getByNationalIdNumber: (nid: NationalIdNumber) => Promise<Contact | null>
+
+  /**
+   * Checks whether a contact with the given national ID number already exists,
+   * matching on both the ten- and twelve-digit forms.
+   *
+   * Distinct from `getByNationalIdNumber`, which matches the stored value
+   * verbatim and is what the read endpoints use. This one normalises both
+   * sides, because it guards contact creation: ONECore cannot remove a contact
+   * it created, so a missed match becomes a duplicate that only manual work in
+   * Xpand can clear.
+   *
+   * @param nid - The national ID number in any common notation.
+   *
+   * @returns The existing contact code, or null when there is no match —
+   *          including when `nid` is not a valid identity number.
+   */
+  existsByNationalIdNumber: (
+    nid: NationalIdNumber
+  ) => Promise<ContactCode | null>
 
   /**
    * Retrieves contacts by their phone number.

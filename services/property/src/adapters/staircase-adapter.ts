@@ -4,6 +4,7 @@ import { logger } from '@onecore/utilities'
 import { toBoolean, trimStrings } from '../utils/data-conversion'
 import { Staircase } from '../types/staircase'
 
+import { OPERATING_COMPANY_CODES } from './company-scope'
 import { prisma } from './db'
 
 // Staircase codes '00' and '99' are placeholder/synthetic entries that aren't
@@ -157,7 +158,7 @@ async function searchStaircases(q: string): Promise<Staircase[]> {
           code: { notIn: PLACEHOLDER_STAIRCASE_CODES },
           PropertyStructure: {
             some: {
-              companyCode: '001',
+              companyCode: { in: [...OPERATING_COMPANY_CODES] },
               residenceId: null,
               localeId: null,
               buildingCode: { not: null },

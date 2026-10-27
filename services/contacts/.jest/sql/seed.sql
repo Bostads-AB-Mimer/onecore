@@ -270,6 +270,8 @@ VALUES
   ('_0J415P100     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157FF1     ', 'SE', 'Hittepåplatsen 66', NULL, '722 15', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415P101'),
 
   ('_2300MARN4LN1U0', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157GG1     ', 'SE', '', NULL, '722 09', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2007-06-01T00:00:00.000Z', NULL, '_2300MARN5'),
+  -- P000777: a fakturaadress not yet in effect — tdate NULL, fdate far future.
+  ('_2300MARN4LN1U1', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157GG1     ', 'SE', 'Framtidsvägen 1', NULL, '722 08', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2099-01-01T00:00:00.000Z', NULL, '_2300MARN6'),
 
   ('_0J415NMUT     ', 'adrpost        ', '_RQA11RNMA     ', '_0J4157HH1     ', 'SE', 'Gammal Info:s Väg 34', NULL, '722 10', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415NMUU'),
   ('_0J415P1H6     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157HH1     ', 'SE', 'Gammal Info:s Väg 34', NULL, '722 10', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, '2005-09-30T00:00:00.000Z', '1x-415P1H7'),
@@ -281,6 +283,8 @@ VALUES
   ('_0J415NO93     ', 'adrpost        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Addressgatan 54', NULL, '724 80', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415NO94'),
   ('_0J415P2VG     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Addressgatan 54', NULL, '724 80', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, '2009-08-30T00:00:00.000Z', '1x-415P2VH'),
   ('_1C40HIQBWGDHKI', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Addressgatan 54', NULL, '724 80', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2009-09-01T00:00:00.000Z', NULL, '_1C40HIQBX'),
+  -- P001000: a second fakturaadress left open-ended; the later fdate is current.
+  ('_1C40HIQBWGDHKJ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Senaste Flyttgatan 7', NULL, '722 25', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2015-01-01T00:00:00.000Z', NULL, '_1C40HIQBY'),
 
   ('_6L20Z2POR5O24F', 'adrpost        ', '_RQA11RNMA     ', '_0J4158KK1     ', 'SE', 'Finnsintegatan 20', NULL, '72480', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '_6L20Z2PB3'),
   ('_6L20Z2Q6K5O24F', 'adrfakt        ', '_RQA11RNMA     ', '_0J4158KK1     ', 'SE', 'Finnsintegatan 20', NULL, '72480', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, '2008-01-31T00:00:00.000Z', '_6L20Z2PB3'),
@@ -392,3 +396,49 @@ INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKTEN0006    ', '_OBJ000006     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900005';
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKFM00008    ', '_OBJ000006     ', keycmctc, 'ANNANFM', NULL, NULL FROM cmctc WHERE cmctckod = 'P900013';
+
+-- Conflict fixture for the relation import: P900006 holds two active leases
+-- (OBJ7, OBJ8) with two *different* ANNANFM recipients (P900014, P900015).
+-- Cannot be collapsed to contact level → must be reported, not imported.
+-- Kept out of FULL_TEST_DATA_SET like the other P9000xx contacts.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_OIRC900006    ', '_OIRO900006    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900006', 'Holder Conflict', 1053, 'OIR9000006'),
+  ('_OIRC900014    ', '_OIRO900014    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900014', 'Recipient ConflictA', 1053, 'OIR9000014'),
+  ('_OIRC900015    ', '_OIRO900015    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900015', 'Recipient ConflictB', 1053, 'OIR9000015');
+
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000007     ', '100-001-01-0007/01', NULL),
+  ('_OBJ000008     ', '100-001-01-0008/01', NULL);
+
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0007    ', '_OBJ000007     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900006';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0008    ', '_OBJ000008     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900006';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00009    ', '_OBJ000007     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900014';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00010    ', '_OBJ000008     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900015';
+
+-- Rows the relation import must ignore. Without the guards in
+-- relation-import-query.ts each of these would change the exact counts
+-- asserted in relation-import-query.test.ts.
+-- 1) Self-edges on a dedicated contact so the live Xpand-backed e2e reads
+--    (which have no self-edge guard) never see them: P900007 is INNEHAVARE
+--    and ANNANFM on their own lease OBJ9, and points keycmctc2 at themself
+--    with forvtyp = 1.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_OIRC900007    ', '_OIRO900007    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900007', 'Holder SelfEdge', 1053, 'OIR9000007');
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000009     ', '100-001-01-0009/01', NULL);
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0009    ', '_OBJ000009     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900007';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00011    ', '_OBJ000009     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900007';
+UPDATE cmctc SET keycmctc2 = keycmctc, forvtyp = 1 WHERE cmctckod = 'P900007';
+-- 2) The GDPR-erased placeholder contact: ANNANFM on P900004's lease OBJ4
+--    and a förvaltare pointer at P000444.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_GDPR0000001   ', '_GDPRO000001   ', '_0EI00000P     ', '00001          ', '00001          ', 'RENSAD_GDPR', 'Rensad GDPR', 1053, 'GDPR000001');
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00012    ', '_OBJ000004     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'RENSAD_GDPR';
+UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 2 WHERE cmctckod = 'RENSAD_GDPR';

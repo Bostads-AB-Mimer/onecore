@@ -1,7 +1,11 @@
 import { sub } from 'date-fns'
 import { LeaseStatus, LeaseType } from '@onecore/types'
 
-import { mapToOnecoreLease } from '../../helpers/tenfast'
+import {
+  mapToOnecoreLease,
+  mapToOnecoreRentalObjectRent,
+} from '../../helpers/tenfast'
+import { toYearMonthDayString } from '../../adapters/tenfast/schemas'
 import * as factory from '../factories'
 
 describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
@@ -129,5 +133,79 @@ describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
     })
 
     expect(mapToOnecoreLease(lease).type).toBe(LeaseType.OtherContract)
+  })
+})
+
+describe('mapToOnecoreRentalObjectRent', () => {
+  it('maps amounts, vat and rows from the Tenfast rental object', () => {
+    const rentalObject = factory.tenfastRentalObject.build({
+      hyraExcludingVat: 1000,
+      hyraVat: 250,
+      hyror: [
+        factory.tenfastInvoiceRow.build({
+          amount: 1000,
+          vat: 0.25,
+          article: 'article-1',
+          label: 'Hyra bostad',
+          from: toYearMonthDayString(new Date('2026-01-01')),
+          to: toYearMonthDayString(new Date('2026-12-31')),
+        }),
+      ],
+    })
+
+    expect(mapToOnecoreRentalObjectRent(rentalObject)).toEqual({
+      amount: 1000,
+      vat: 250,
+      rows: [
+        {
+          code: 'article-1',
+          description: 'Hyra bostad',
+          amount: 1000,
+          vatPercentage: 0.25,
+          fromDate: new Date('2026-01-01'),
+          toDate: new Date('2026-12-31'),
+        },
+      ],
+    })
+  })
+
+  it('falls back to empty strings and undefined dates for missing row fields', () => {
+    const rentalObject = factory.tenfastRentalObject.build({
+      hyror: [
+        factory.tenfastInvoiceRow.build({
+          amount: 115,
+          vat: 0,
+          article: null,
+          label: null,
+          from: null,
+          to: null,
+        }),
+      ],
+    })
+
+    expect(mapToOnecoreRentalObjectRent(rentalObject).rows).toEqual([
+      {
+        code: '',
+        description: '',
+        amount: 115,
+        vatPercentage: 0,
+        fromDate: undefined,
+        toDate: undefined,
+      },
+    ])
+  })
+
+  it('handles missing rent totals and rows', () => {
+    const rentalObject = factory.tenfastRentalObject.build({
+      hyraExcludingVat: undefined,
+      hyraVat: undefined,
+      hyror: undefined,
+    })
+
+    expect(mapToOnecoreRentalObjectRent(rentalObject)).toEqual({
+      amount: 0,
+      vat: 0,
+      rows: [],
+    })
   })
 })

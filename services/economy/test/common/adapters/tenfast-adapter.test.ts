@@ -12,6 +12,7 @@ import {
   getInvoicePdf,
   getAutogiroConsentByNationalRegistrationNumber,
   setGracePeriod,
+  listNewOutboundExports,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { PaymentStatus } from '@onecore/types'
 import {
@@ -24,6 +25,7 @@ import {
   TenfastInvoiceFactory,
   TenfastInvoiceRowFactory,
   TenfastAutogiroConsentFactory,
+  TenfastOutboundExportFactory,
 } from '../../factories'
 
 // Mock axios
@@ -122,6 +124,17 @@ describe('Tenfast Adapter', () => {
           params: expect.objectContaining({ hyresvard: 'test-hyresvard-id' }),
         })
       )
+    })
+
+    it('accepts a parking space without skvNummer (AVTAL-348)', async () => {
+      const { skvNummer: _, ...parkingSpace } =
+        TenfastRentalPropertyFactory.build({ typ: 'parkering' })
+      mockAxios.request.mockResolvedValue({ status: 200, data: parkingSpace })
+
+      const result = await getRentalProperty(parkingSpace.externalId)
+
+      assert(result.ok)
+      expect(result.data.apartmentNumber).toBe(0)
     })
 
     it('should return error when rental property is not found (404)', async () => {
@@ -249,6 +262,17 @@ describe('Tenfast Adapter', () => {
 
       const result = await getInvoicesForTenant('tenant-123')
 
+      expect(mockAxios.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: '/v1/hyresvard/hyror',
+          params: expect.objectContaining({
+            hyresvard: 'test-hyresvard-id',
+            hyresgast: 'tenant-123',
+            paginate: 'false',
+          }),
+        })
+      )
+
       assert(result.ok)
       expect(result.data).toHaveLength(1)
       expect(result.data[0].invoice).toMatchObject({
@@ -290,7 +314,7 @@ describe('Tenfast Adapter', () => {
       ]
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: mockInvoices,
+        data: { records: mockInvoices, prev: null, next: null, totalCount: 1 },
       })
 
       const result = await getInvoicesForTenant('tenant-123')
@@ -313,7 +337,7 @@ describe('Tenfast Adapter', () => {
 
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: paidInvoice,
+        data: { records: paidInvoice, prev: null, next: null, totalCount: 1 },
       })
 
       const result = await getInvoicesForTenant('tenant-123')
@@ -321,6 +345,26 @@ describe('Tenfast Adapter', () => {
       assert(result.ok)
       expect(result.data[0].invoice.paymentStatus).toBe(PaymentStatus.Paid)
       expect(result.data[0].invoice.remainingAmount).toBe(0)
+    })
+
+    it('falls back to empty ocr when invoice has no ocrNumber', async () => {
+      const invoices = [
+        TenfastInvoiceFactory.build({
+          ocrNumber: undefined,
+          hyror: [TenfastInvoiceRowFactory.build()],
+        }),
+      ]
+
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: { records: invoices, prev: null, next: null, totalCount: 1 },
+      })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      assert(result.ok)
+      expect(result.data[0].invoice.invoiceId).toBe('')
+      expect(result.data[0].invoice.reference).toBe('')
     })
 
     it('parses draft invoices but excludes them from results', async () => {
@@ -339,7 +383,7 @@ describe('Tenfast Adapter', () => {
 
       mockAxios.request.mockResolvedValue({
         status: 200,
-        data: invoices,
+        data: { records: invoices, prev: null, next: null, totalCount: 2 },
       })
 
       const result = await getInvoicesForTenant('tenant-123')
@@ -363,7 +407,7 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoiceByOcr(ocr)
 
       assert(result.ok)
-      expect(result.data.invoice).toMatchObject({
+      expect(result.data?.invoice).toMatchObject({
         amount: 1000,
         paidAmount: 500,
         remainingAmount: 500,
@@ -378,7 +422,7 @@ describe('Tenfast Adapter', () => {
       )
     })
 
-    it('should return error when no invoice is found', async () => {
+    it('should return null when no invoice is found', async () => {
       mockAxios.request.mockResolvedValue({
         status: 404,
         data: {},
@@ -387,8 +431,8 @@ describe('Tenfast Adapter', () => {
       const result = await getInvoiceByOcr('NONEXISTENT')
 
       expect(result).toEqual({
-        ok: false,
-        err: 'Invoice with ocr NONEXISTENT not found',
+        ok: true,
+        data: null,
       })
     })
 
@@ -858,6 +902,35 @@ describe(getInvoicePdf, () => {
     })
   })
 
+  it('returns the pdf for an invoice covering a parking space (AVTAL-348)', async () => {
+    // A co-invoiced apartment and parking space. Tenfast leaves out
+    // skvNummer for the parking space.
+    const [apartmentLease] = mockInvoice.avtal
+    const { skvNummer: _, ...parkingSpace } = apartmentLease.hyresobjekt[0]
+    const coInvoiced = {
+      ...mockInvoice,
+      avtal: [
+        apartmentLease,
+        {
+          ...apartmentLease,
+          _id: 'lease-parking',
+          hyresobjekt: [{ ...parkingSpace, externalId: '806-721-00-0018' }],
+        },
+      ],
+    }
+    mockAxios.request
+      .mockResolvedValueOnce({ status: 200, data: coInvoiced })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: Buffer.from('%PDF-1.4 mock'),
+        headers: {},
+      })
+
+    const result = await getInvoicePdf(ocr)
+
+    expect(result.ok).toBe(true)
+  })
+
   it('returns not-found when OCR lookup returns 404', async () => {
     mockAxios.request.mockResolvedValueOnce({
       status: 404,
@@ -1156,5 +1229,101 @@ describe('TenfastInvoicesByExportedResponseSchema', () => {
         recipientName: 'Lean Tenant',
       })
     }
+  })
+})
+
+describe(listNewOutboundExports, () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  const makeListResponse = (
+    records: object[],
+    opts: { next?: string | null; totalCount?: number } = {}
+  ) => ({
+    status: 200,
+    data: {
+      records,
+      prev: null,
+      next: opts.next ?? null,
+      totalCount: opts.totalCount ?? records.length,
+    },
+  })
+
+  it('requests only NEW exports from the stralfors provider', async () => {
+    mockAxios.request.mockResolvedValueOnce(makeListResponse([]))
+
+    await listNewOutboundExports()
+
+    expect(mockAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: '/v1/hyresvard/outbound-exports',
+        params: expect.objectContaining({
+          status: 'NEW',
+          provider: 'stralfors',
+          hyresvard: 'test-hyresvard-id',
+        }),
+      })
+    )
+  })
+
+  it('returns all records from a single page', async () => {
+    const exports = [
+      TenfastOutboundExportFactory.build({ _id: 'id-1' }),
+      TenfastOutboundExportFactory.build({ _id: 'id-2' }),
+    ]
+    mockAxios.request.mockResolvedValueOnce(makeListResponse(exports))
+
+    const result = await listNewOutboundExports()
+
+    expect(result).toEqual({ ok: true, data: exports })
+  })
+
+  it('follows pagination until next is null', async () => {
+    const page1 = [TenfastOutboundExportFactory.build({ _id: 'id-1' })]
+    const page2 = [TenfastOutboundExportFactory.build({ _id: 'id-2' })]
+    mockAxios.request
+      .mockResolvedValueOnce(
+        makeListResponse(page1, { next: 'cursor-abc', totalCount: 2 })
+      )
+      .mockResolvedValueOnce(makeListResponse(page2, { totalCount: 2 }))
+
+    const result = await listNewOutboundExports()
+
+    expect(mockAxios.request).toHaveBeenCalledTimes(2)
+    expect(mockAxios.request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        params: expect.objectContaining({ paginate: 'cursor-abc' }),
+      })
+    )
+    expect(result).toEqual({ ok: true, data: [...page1, ...page2] })
+  })
+
+  it('returns unknown when response status is not 200', async () => {
+    mockAxios.request.mockResolvedValueOnce({ status: 500, data: {} })
+
+    const result = await listNewOutboundExports()
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown when response fails schema validation', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { unexpected: true },
+    })
+
+    const result = await listNewOutboundExports()
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown on thrown error', async () => {
+    mockAxios.request.mockRejectedValueOnce(new Error('Network error'))
+
+    const result = await listNewOutboundExports()
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })

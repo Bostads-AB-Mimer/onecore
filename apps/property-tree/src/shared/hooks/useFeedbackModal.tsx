@@ -20,7 +20,10 @@ export function FeedbackModalProvider({
   const open = React.useCallback(() => setIsOpen(true), [])
   const close = React.useCallback(() => setIsOpen(false), [])
 
-  const value = React.useMemo(() => ({ isOpen, open, close }), [isOpen])
+  const value = React.useMemo(
+    () => ({ isOpen, open, close }),
+    [close, isOpen, open]
+  )
 
   return (
     <FeedbackModalContext.Provider value={value}>
