@@ -299,6 +299,43 @@ describe(imdService.enrichIMDRows, () => {
     ])
   })
 
+  // Tenfast refuses an import file in which a lease appears more than once.
+  it('lets the first row per lease through and tags the rest as duplicate-lease', async () => {
+    mockGetActiveLeases.mockResolvedValue(
+      new Map<string, LeaseMatch | null>([
+        [
+          '306-008-01-0201',
+          { leaseId: '306-008-01-0201/02', leaseEndDate: null, tenantIds: [] },
+        ],
+      ])
+    )
+    const row = {
+      rentalObjectCode: '306-008-01-0201',
+      from: new Date('2026-01-01'),
+      to: new Date('2026-01-31'),
+      volume: 7.58,
+      cost: 621.68,
+      measurementUnit: 'm3',
+    }
+
+    const result = await imdService.enrichIMDRows([
+      { ...row, unit: 'VV' },
+      { ...row, unit: 'EL' },
+    ])
+
+    assert(result.ok)
+    expect(result.data.enriched).toEqual([
+      expect.objectContaining({ unit: 'VV', leaseId: '306-008-01-0201/02' }),
+    ])
+    expect(result.data.unprocessed).toEqual([
+      expect.objectContaining({
+        unit: 'EL',
+        reason: 'duplicate-lease',
+        leaseId: '306-008-01-0201/02',
+      }),
+    ])
+  })
+
   it('tags row as multiple-leases when two leases cover the period', async () => {
     mockGetActiveLeases.mockResolvedValue(
       new Map<string, LeaseMatch | MultipleLeaseMatch | null>([
@@ -467,8 +504,7 @@ describe(imdService.enrichIMDRows, () => {
       }
     )
 
-    // Tenfast refuses an import file in which a lease appears more than once.
-    it('looks up each tenant once and keeps rows manual that would put the new lease in the file twice', async () => {
+    it('looks up each tenant once and moves only one row per lease', async () => {
       mockOldLease()
       mockGetLeasesByTenantId.mockResolvedValue({
         ok: true,
@@ -482,10 +518,15 @@ describe(imdService.enrichIMDRows, () => {
 
       assert(result.ok)
       expect(mockGetLeasesByTenantId).toHaveBeenCalledTimes(1)
-      expect(result.data.enriched).toHaveLength(0)
+      expect(result.data.enriched).toEqual([
+        expect.objectContaining({ unit: 'VV', leaseId: newLeaseId }),
+      ])
       expect(result.data.unprocessed).toEqual([
-        expect.objectContaining({ unit: 'VV', reason: 'tenant-moved' }),
-        expect.objectContaining({ unit: 'EL', reason: 'tenant-moved' }),
+        expect.objectContaining({
+          unit: 'EL',
+          reason: 'duplicate-lease',
+          leaseId: newLeaseId,
+        }),
       ])
     })
 
@@ -594,8 +635,8 @@ describe(imdService.enrichIMDRows, () => {
     })
 
     // With overlapping leases the new home has its own rows for the same
-    // month, and Tenfast refuses an import file with the lease in it twice.
-    it('keeps the rows as tenant-moved when the new lease already gets a row', async () => {
+    // month, and those win over rows moved to it.
+    it('leaves moved rows manual when the new home has its own row on the lease', async () => {
       mockGetActiveLeases.mockResolvedValue(
         new Map<string, LeaseMatch | null>([
           [
@@ -639,12 +680,14 @@ describe(imdService.enrichIMDRows, () => {
         expect.objectContaining({
           rentalObjectCode: '306-008-01-0501',
           unit: 'VV',
-          reason: 'tenant-moved',
+          reason: 'duplicate-lease',
+          leaseId: newLeaseId,
         }),
         expect.objectContaining({
           rentalObjectCode: '306-008-01-0501',
           unit: 'VMM',
-          reason: 'tenant-moved',
+          reason: 'duplicate-lease',
+          leaseId: newLeaseId,
         }),
       ])
     })
@@ -877,6 +920,19 @@ describe(imdService.toUnprocessedCsv, () => {
 
     const cols = parseRow(csv.split('\n')[1])
     expect(cols[7]).toBe('Enhet stöds ej: ELEC')
+  })
+
+  it('uses correct reason for duplicate-lease', () => {
+    const csv = imdService.toUnprocessedCsv([
+      {
+        ...makeUnprocessedRow('306-008-01-0201', 'unsupported-unit'),
+        reason: 'duplicate-lease',
+        leaseId: '306-008-01-0201/02',
+      },
+    ])
+
+    const cols = parseRow(csv.split('\n')[1])
+    expect(cols[7]).toBe('Flera rader för samma kontrakt: 306-008-01-0201/02')
   })
 
   it('outputs multiple rows', () => {

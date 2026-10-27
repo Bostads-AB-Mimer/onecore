@@ -86,6 +86,7 @@ type UnprocessedIMDRow = IMDRow &
     | { reason: 'tenant-moved' }
     | { reason: 'multiple-leases'; leaseIds: string[] }
     | { reason: 'unsupported-unit' }
+    | { reason: 'duplicate-lease'; leaseId: string }
   )
 
 const MIN_COST = 15
@@ -254,39 +255,49 @@ async function moveToNewLeases(
     return newLeaseId ? [{ row, oldLeaseId, newLeaseId }] : []
   })
 
-  // Tenfast refuses an import file in which a lease appears more than once,
-  // so a moved row only goes through if its new lease gets no other row.
-  const leaseCounts = new Map<string, number>()
-  for (const leaseId of [
-    ...result.enriched.map(({ leaseId }) => leaseId),
-    ...moved.map(({ newLeaseId }) => newLeaseId),
-  ]) {
-    leaseCounts.set(leaseId, (leaseCounts.get(leaseId) ?? 0) + 1)
-  }
-  const accepted = moved.filter(
-    ({ newLeaseId }) => leaseCounts.get(newLeaseId) === 1
-  )
-
-  for (const { row, oldLeaseId, newLeaseId } of accepted) {
+  for (const { row, oldLeaseId, newLeaseId } of moved) {
     logger.info(
       { rentalObjectCode: row.rentalObjectCode, oldLeaseId, newLeaseId },
       "IMD: Moved row to tenant's new lease"
     )
   }
 
-  const acceptedRows = new Set<UnprocessedIMDRow>(
-    accepted.map(({ row }) => row)
-  )
+  const movedRows = new Set<UnprocessedIMDRow>(moved.map(({ row }) => row))
   return {
     enriched: [
       ...result.enriched,
-      ...accepted.map(({ row, newLeaseId }) => {
+      ...moved.map(({ row, newLeaseId }) => {
         const { reason: _reason, ...imdRow } = row
         return { ...imdRow, leaseId: newLeaseId }
       }),
     ],
-    unprocessed: result.unprocessed.filter((row) => !acceptedRows.has(row)),
+    unprocessed: result.unprocessed.filter((row) => !movedRows.has(row)),
   }
+}
+
+// Tenfast refuses an import file in which a lease appears more than once, so
+// only the first row per lease goes through and the rest are left manual.
+// Moved rows come after the rows matched directly, so a home's own row wins
+// over one moved to it.
+function keepOneRowPerLease(result: EnrichResult): EnrichResult {
+  const seen = new Set<string>()
+  return result.enriched.reduce<EnrichResult>(
+    (acc, row) => {
+      if (seen.has(row.leaseId)) {
+        const { leaseId, ...imdRow } = row
+        logger.info(
+          { rentalObjectCode: row.rentalObjectCode, leaseId },
+          'IMD: Row left manual, lease already has a row in the file'
+        )
+        acc.unprocessed.push({ ...imdRow, reason: 'duplicate-lease', leaseId })
+      } else {
+        seen.add(row.leaseId)
+        acc.enriched.push(row)
+      }
+      return acc
+    },
+    { enriched: [], unprocessed: [...result.unprocessed] }
+  )
 }
 
 async function enrichIMDRows(
@@ -312,9 +323,8 @@ async function enrichIMDRows(
       periodEnd: period.end,
     })
 
-    const { enriched, unprocessed } = await moveToNewLeases(
-      classifyRows(imdRows, leaseMap),
-      leaseMap
+    const { enriched, unprocessed } = keepOneRowPerLease(
+      await moveToNewLeases(classifyRows(imdRows, leaseMap), leaseMap)
     )
 
     return { ok: true, data: { enriched, unprocessed } }
@@ -439,6 +449,10 @@ function getReasonLabel(row: UnprocessedIMDRow): string {
     .with(
       { reason: 'unsupported-unit' },
       ({ unit }) => `Enhet stöds ej: ${unit}`
+    )
+    .with(
+      { reason: 'duplicate-lease' },
+      ({ leaseId }) => `Flera rader för samma kontrakt: ${leaseId}`
     )
     .exhaustive()
 }
