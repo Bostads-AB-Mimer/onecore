@@ -671,6 +671,12 @@ export const createInspectionWorkOrders = async (
         // `inspectionId`; those names are not inspection-unique, so the
         // upsert below is only attempted when inspectionId is present.
         const name = `Besiktning ${inspectionId ?? rentalProperty.id} – ${group.maintenanceTeamName}`
+        // Odoo turns the ids into component rows and skips ids already on the
+        // request, so a re-submit only adds. Omitted when empty so older Odoo
+        // versions without the field still accept groups without components.
+        const componentValues = group.componentIds?.length
+          ? { onecore_component_ids: group.componentIds }
+          : {}
         try {
           if (inspectionId) {
             const existing = await odoo.searchRead<{ id: number }>(
@@ -686,6 +692,7 @@ export const createInspectionWorkOrders = async (
               // components assigned since then land on the same request.
               await odoo.update('maintenance.request', existing[0].id, {
                 description: group.descriptionHtml,
+                ...componentValues,
               })
               return {
                 maintenanceTeamId: group.maintenanceTeamId,
@@ -718,6 +725,7 @@ export const createInspectionWorkOrders = async (
             // creation_origin: 'inspection' is intentionally omitted — Odoo rejects
             // Selection values not in CREATION_ORIGINS. Re-add once the Odoo side
             // adds the 'inspection' origin (the field is nullable, so omitting is safe).
+            ...componentValues,
           })
 
           // Back-ref so the child cascade-deletes with the request (matches Save).

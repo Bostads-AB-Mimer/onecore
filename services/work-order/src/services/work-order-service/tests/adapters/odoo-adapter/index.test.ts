@@ -378,6 +378,71 @@ describe('odoo-adapter createInspectionWorkOrders', () => {
     )
   })
 
+  it('sends the component ids on create', async () => {
+    setupCreateMocks()
+    const rentalProperty = factory.rentalProperty.build()
+
+    await createInspectionWorkOrders(rentalProperty, [
+      { ...groups[0], componentIds: ['comp-a', 'comp-b'] },
+    ])
+
+    const requestCalls = odooMock.create.mock.calls.filter(
+      ([model]) => model === 'maintenance.request'
+    )
+    expect(requestCalls).toHaveLength(1)
+    expect(requestCalls[0][1]).toMatchObject({
+      onecore_component_ids: ['comp-a', 'comp-b'],
+    })
+  })
+
+  it('sends the component ids in the same update as the description on re-submit', async () => {
+    setupCreateMocks()
+    const rentalProperty = factory.rentalProperty.build()
+    odooMock.searchRead.mockResolvedValue([{ id: 555 }])
+
+    await createInspectionWorkOrders(
+      rentalProperty,
+      [{ ...groups[0], componentIds: ['comp-a', 'comp-b', 'comp-c'] }],
+      'INSP-1'
+    )
+
+    expect(odooMock.update).toHaveBeenCalledTimes(1)
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.request', 555, {
+      description: 'A',
+      onecore_component_ids: ['comp-a', 'comp-b', 'comp-c'],
+    })
+  })
+
+  it('omits the component key when the list is empty or missing', async () => {
+    setupCreateMocks()
+    const rentalProperty = factory.rentalProperty.build()
+    odooMock.searchRead.mockImplementation(
+      async (model: string, domain: unknown[][]) =>
+        model === 'maintenance.request' &&
+        domain?.[0]?.[2] === 'Besiktning INSP-1 – Snickare'
+          ? [{ id: 555 }]
+          : []
+    )
+
+    await createInspectionWorkOrders(
+      rentalProperty,
+      [
+        { ...groups[0], componentIds: [] },
+        groups[1], // no componentIds
+      ],
+      'INSP-1'
+    )
+
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.request', 555, {
+      description: 'A',
+    })
+    const requestCalls = odooMock.create.mock.calls.filter(
+      ([model]) => model === 'maintenance.request'
+    )
+    expect(requestCalls).toHaveLength(1)
+    expect(requestCalls[0][1]).not.toHaveProperty('onecore_component_ids')
+  })
+
   it('returns ok: false when the Besiktning category cannot be resolved', async () => {
     setupCreateMocks()
     odooMock.search.mockResolvedValue([])
