@@ -630,6 +630,8 @@ export const closeWorkOrder = async (
   }
 }
 
+const SYNC_CONTACT_TIMEOUT_MS = 30_000
+
 export async function syncContactToWorkOrder(
   contactCode: string,
   contactData: Omit<SyncContactToWorkOrderPayload, 'contactCode'>
@@ -643,6 +645,9 @@ export async function syncContactToWorkOrder(
     const response = await client().POST('/contacts/{contactCode}/sync', {
       params: { path: { contactCode } },
       body: { contactCode, ...contactData },
+      // TODO update node version to get rid of this warning
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      signal: AbortSignal.timeout(SYNC_CONTACT_TIMEOUT_MS),
     })
 
     if (response.error) {
@@ -686,6 +691,8 @@ export const undoContactSyncInWorkOrder = async (
     const response = await client().POST('/contacts/{contactCode}/undo-sync', {
       params: { path: { contactCode } },
       body: undo,
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      signal: AbortSignal.timeout(SYNC_CONTACT_TIMEOUT_MS),
     })
 
     if (response.error) {

@@ -1,5 +1,6 @@
 import assert from 'node:assert'
 import nock from 'nock'
+import { loggedAxios } from '@onecore/utilities'
 
 import config from '../../../common/config'
 import * as leasingAdapter from '../../leasing-adapter'
@@ -240,5 +241,41 @@ describe('syncRentalObjectType', () => {
     const result = await leasingAdapter.syncRentalObjectType('807 033', 'STD')
 
     expect(result).toEqual({ ok: true, data: { action: 'skipped' } })
+  })
+})
+
+// A hung call must fail within a few minutes so the next scheduled run can
+// start, but core may not give up while Leasing is still working: a type
+// sync is a couple of Tenfast calls in sequence, each bounded at 30s there.
+const FEW_MINUTES_MS = 5 * 60_000
+const LEASING_WORK_BOUND_MS = 2 * 30_000
+
+describe('rental object type sync call timeouts', () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  it('bounds getRentalObjectTypeChanges', async () => {
+    const getSpy = jest.spyOn(loggedAxios, 'get').mockResolvedValue({
+      status: 200,
+      data: { content: { changes: [], until: null } },
+    })
+
+    await leasingAdapter.getRentalObjectTypeChanges(null)
+
+    const timeout = getSpy.mock.calls[0][1]?.timeout
+    expect(timeout).toBeGreaterThan(0)
+    expect(timeout).toBeLessThanOrEqual(FEW_MINUTES_MS)
+  })
+
+  it('bounds syncRentalObjectType without cutting Leasing off mid-sync', async () => {
+    const postSpy = jest.spyOn(loggedAxios, 'post').mockResolvedValue({
+      status: 200,
+      data: { content: { action: 'updated', rentalObjectCode: '1' } },
+    })
+
+    await leasingAdapter.syncRentalObjectType('1', 'STD')
+
+    const timeout = postSpy.mock.calls[0][2]?.timeout
+    expect(timeout).toBeGreaterThanOrEqual(LEASING_WORK_BOUND_MS)
+    expect(timeout).toBeLessThanOrEqual(FEW_MINUTES_MS)
   })
 })

@@ -98,6 +98,7 @@ export const syncContacts = (
         contact: update.contact,
         timestamp: update.timestamp.toISOString(),
       }),
+      contentOf: (update) => toSyncPayload(update.contact),
       fromPayload: (payload) => {
         const p = payload as { contact: Contact; timestamp: string }
         return { contact: p.contact, timestamp: new Date(p.timestamp) }

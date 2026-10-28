@@ -159,6 +159,27 @@ describe('work-order-adapter.syncContactToWorkOrder', () => {
 
     expect(result).toEqual({ ok: true, data: { skipped: false } })
   })
+
+  it('bounds the call so a hung work-order service fails within a few minutes', async () => {
+    const payload = factory.syncContactToWorkOrderPayload.build()
+
+    mockServer.use(
+      http.post(
+        `${config.workOrderService.url}/contacts/${payload.contactCode}/sync`,
+        () => HttpResponse.json({ content: { updatedCount: 1 } })
+      )
+    )
+    const timeoutSpy = jest.spyOn(AbortSignal, 'timeout')
+
+    const { contactCode, ...contactData } = payload
+    await workOrderAdapter.syncContactToWorkOrder(contactCode, contactData)
+
+    expect(timeoutSpy).toHaveBeenCalledTimes(1)
+    const ms = timeoutSpy.mock.calls[0][0]
+    expect(ms).toBeGreaterThan(0)
+    expect(ms).toBeLessThanOrEqual(5 * 60_000)
+    timeoutSpy.mockRestore()
+  })
 })
 
 describe('work-order-adapter.undoContactSyncInWorkOrder', () => {
@@ -220,6 +241,23 @@ describe('work-order-adapter.undoContactSyncInWorkOrder', () => {
     expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('g@test.se')
     errorSpy.mockRestore()
+  })
+
+  it('bounds the call so a hung work-order service fails within a few minutes', async () => {
+    mockServer.use(
+      http.post(`${config.workOrderService.url}/contacts/P1/undo-sync`, () =>
+        HttpResponse.json({ content: { restored: [1], missing: [] } })
+      )
+    )
+    const timeoutSpy = jest.spyOn(AbortSignal, 'timeout')
+
+    await workOrderAdapter.undoContactSyncInWorkOrder('P1', undo)
+
+    expect(timeoutSpy).toHaveBeenCalledTimes(1)
+    const ms = timeoutSpy.mock.calls[0][0]
+    expect(ms).toBeGreaterThan(0)
+    expect(ms).toBeLessThanOrEqual(5 * 60_000)
+    timeoutSpy.mockRestore()
   })
 
   it('logs the network error message', async () => {

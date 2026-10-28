@@ -9,6 +9,7 @@ import { SyncRentalObjectTypeRequestSchema } from '@onecore/types'
 import { getRentalObjectTypeChanges } from '../adapters/xpand/cmlog-rental-object-adapter'
 import { parseSinceQuery } from '../adapters/xpand/cmlog-rows'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import { TENFAST_RENTAL_OBJECT_CATEGORIES } from '../adapters/tenfast/rental-object-categories'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
@@ -165,6 +166,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.post(
     '(.*)/rental-objects/:rentalObjectCode/type/sync',
+    boundTenfastCalls,
     parseRequestBody(SyncRentalObjectTypeRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
