@@ -31,7 +31,7 @@ export const syncInvoiceRecipientToEconomy = async (
   contactCode: string
 ): Promise<
   AdapterResult<
-    { undo: SyncContactToEconomyUndo } | null,
+    { undo: SyncContactToEconomyUndo | null } | null,
     'contact-not-found' | 'sync-failed'
   >
 > => {
@@ -86,6 +86,9 @@ export const syncInvoiceRecipientToEconomy = async (
 
   return {
     ok: true,
-    data: syncResult.data.undo ? { undo: syncResult.data.undo } : null,
+    data:
+      syncResult.data.undo === undefined
+        ? null
+        : { undo: syncResult.data.undo },
   }
 }

@@ -1,9 +1,10 @@
 import createClient from 'openapi-fetch'
 import { z } from 'zod'
-import { logger } from '@onecore/utilities'
-import type {
-  SyncContactToWorkOrderPayload,
-  SyncContactToWorkOrderUndo,
+import { errorMessage, errorName, logger } from '@onecore/utilities'
+import {
+  SyncContactToWorkOrderUndoSchema,
+  type SyncContactToWorkOrderPayload,
+  type SyncContactToWorkOrderUndo,
 } from '@onecore/types'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
@@ -656,19 +657,20 @@ export async function syncContactToWorkOrder(
       }
     }
 
+    const undo = SyncContactToWorkOrderUndoSchema.safeParse(response.data?.undo)
     return {
       ok: true,
       data: {
         skipped: response.data?.skipped === true,
-        ...(response.data?.undo && { undo: response.data.undo }),
+        ...(undo.success && { undo: undo.data }),
       },
     }
   } catch (error) {
     logger.error(
       {
         contactCode,
-        errorName: error instanceof Error ? error.name : typeof error,
-        message: error instanceof Error ? error.message : String(error),
+        errorName: errorName(error),
+        message: errorMessage(error),
       },
       'work-order-adapter.syncContactToWorkOrder'
     )
@@ -703,8 +705,8 @@ export const undoContactSyncInWorkOrder = async (
     logger.error(
       {
         contactCode,
-        errorName: error instanceof Error ? error.name : typeof error,
-        message: error instanceof Error ? error.message : String(error),
+        errorName: errorName(error),
+        message: errorMessage(error),
       },
       'work-order-adapter.undoContactSyncInWorkOrder'
     )

@@ -101,6 +101,36 @@ describe('economy-adapter.syncContactToEconomy', () => {
     expect(result).toEqual({ ok: true, data: { skipped: false, undo } })
   })
 
+  it('passes a null undo through, meaning nothing to put back', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    nock(config.economyService.url)
+      .post(`/customers/${payload.contactCode}/sync`)
+      .reply(200, { content: '1', skipped: false, undo: null })
+
+    const { contactCode, ...contactData } = payload
+    const result = await economyAdapter.syncContactToEconomy(
+      contactCode,
+      contactData
+    )
+
+    expect(result).toEqual({ ok: true, data: { skipped: false, undo: null } })
+  })
+
+  it('leaves out an undo that does not match the schema', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    nock(config.economyService.url)
+      .post(`/customers/${payload.contactCode}/sync`)
+      .reply(200, { content: '1', skipped: false, undo: { previous: 1 } })
+
+    const { contactCode, ...contactData } = payload
+    const result = await economyAdapter.syncContactToEconomy(
+      contactCode,
+      contactData
+    )
+
+    expect(result).toEqual({ ok: true, data: { skipped: false } })
+  })
+
   it('logs no contact values on failure', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
     nock(config.economyService.url)
@@ -130,5 +160,55 @@ describe('economy-adapter.syncContactToEconomy', () => {
       'economy-adapter.syncContactToEconomy'
     )
     errorSpy.mockRestore()
+  })
+})
+
+describe('economy-adapter.undoContactSyncInEconomy', () => {
+  const undo = {
+    previous: {
+      fullName: 'Gammal, Namn',
+      street: null,
+      zipCode: null,
+      city: null,
+      emailAddress: null,
+    },
+  }
+
+  it('writes the previous values back without create', async () => {
+    let body: unknown
+    nock(config.economyService.url)
+      .post('/customers/P1/sync', (b) => {
+        body = b
+        return true
+      })
+      .reply(200, { content: '1', skipped: false })
+
+    const result = await economyAdapter.undoContactSyncInEconomy('P1', undo)
+
+    expect(body).toEqual({ contactCode: 'P1', ...undo.previous })
+    expect(result).toEqual({ ok: true, data: null })
+  })
+
+  it('fails with not-found when economy skips', async () => {
+    nock(config.economyService.url)
+      .post('/customers/P1/sync')
+      .reply(200, { content: null, skipped: true })
+
+    expect(await economyAdapter.undoContactSyncInEconomy('P1', undo)).toEqual({
+      ok: false,
+      err: 'not-found',
+    })
+  })
+
+  it('passes a failure through', async () => {
+    nock(config.economyService.url)
+      .post('/customers/P1/sync')
+      .reply(500, { error: 'boom' })
+
+    expect(await economyAdapter.undoContactSyncInEconomy('P1', undo)).toEqual({
+      ok: false,
+      err: 'sync-failed',
+      statusCode: 500,
+    })
   })
 })

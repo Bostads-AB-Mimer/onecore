@@ -14,14 +14,21 @@ jest.mock('odoo-await', () => {
 
 const loggerWarnMock = jest.fn()
 
-jest.mock('@onecore/utilities', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: (...args: unknown[]) => loggerWarnMock(...args),
-  },
-  generateRouteMetadata: jest.fn(() => ({})),
-}))
+jest.mock('@onecore/utilities', () => {
+  const { errorName, errorMessage, redactedMessage } =
+    jest.requireActual('@onecore/utilities')
+  return {
+    errorName,
+    errorMessage,
+    redactedMessage,
+    logger: {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: (...args: unknown[]) => loggerWarnMock(...args),
+    },
+    generateRouteMetadata: jest.fn(() => ({})),
+  }
+})
 
 import { logger } from '@onecore/utilities'
 import {
@@ -501,12 +508,12 @@ describe('odoo-adapter restoreContact', () => {
 
     const result = await restoreContact('P1', tenants)
 
-    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', 1, {
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [1], {
       name: 'Gammal, Namn',
       email_address: false,
       phone_number: false,
     })
-    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', 2, {
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [2], {
       name: 'Annat, Namn',
       email_address: 'a@test.se',
       phone_number: '0701',
@@ -514,6 +521,32 @@ describe('odoo-adapter restoreContact', () => {
     expect(result).toEqual({
       ok: true,
       data: { restored: [1, 2], missing: [] },
+    })
+  })
+
+  it('writes tenants with the same old values in one call', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, contact_code: 'P1' },
+      { id: 3, contact_code: 'P1' },
+      { id: 2, contact_code: 'P1' },
+    ])
+    odooMock.update.mockResolvedValue(true)
+
+    const result = await restoreContact('P1', [
+      tenants[0],
+      { ...tenants[0], id: 3 },
+      tenants[1],
+    ])
+
+    expect(odooMock.update).toHaveBeenCalledTimes(2)
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [1, 3], {
+      name: 'Gammal, Namn',
+      email_address: false,
+      phone_number: false,
+    })
+    expect(result).toEqual({
+      ok: true,
+      data: { restored: [1, 3, 2], missing: [] },
     })
   })
 

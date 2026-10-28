@@ -136,6 +136,29 @@ describe('work-order-adapter.syncContactToWorkOrder', () => {
 
     expect(result).toEqual({ ok: true, data: { skipped: false, undo } })
   })
+
+  it('leaves out an undo that does not match the schema', async () => {
+    const payload = factory.syncContactToWorkOrderPayload.build()
+    mockServer.use(
+      http.post(
+        `${config.workOrderService.url}/contacts/${payload.contactCode}/sync`,
+        () =>
+          HttpResponse.json({
+            content: { updatedCount: 1 },
+            skipped: false,
+            undo: { tenants: [{ id: 'one' }] },
+          })
+      )
+    )
+
+    const { contactCode, ...contactData } = payload
+    const result = await workOrderAdapter.syncContactToWorkOrder(
+      contactCode,
+      contactData
+    )
+
+    expect(result).toEqual({ ok: true, data: { skipped: false } })
+  })
 })
 
 describe('work-order-adapter.undoContactSyncInWorkOrder', () => {

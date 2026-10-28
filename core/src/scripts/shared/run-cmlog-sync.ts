@@ -9,7 +9,7 @@ import {
 } from './failed-sync-queue'
 import { getLastTimestamp, saveLastTimestamp } from './last-timestamp'
 import { notifyXpandSync } from './notify'
-import { SyncStepsError } from '../../processes/sync-steps'
+import type { SyncStepsFailure } from '../../processes/sync-steps'
 
 const HOUR_MS = 60 * 60 * 1000
 const RETRY_EVERY_RUN_FOR_MS = 24 * HOUR_MS
@@ -29,6 +29,16 @@ const DEFAULT_GIVE_UP_ADVICE =
   'Gör ändringen i Xpand på nytt för att försöka igen.'
 
 export type SyncOutcome = void | { skipped: string }
+
+export class SyncFailedError extends Error {
+  readonly undoFailed: string[]
+
+  constructor({ message, undoFailed }: SyncStepsFailure) {
+    super(message)
+    this.name = 'SyncFailedError'
+    this.undoFailed = undoFailed
+  }
+}
 
 export type CmlogSync<T> = {
   name: string
@@ -90,8 +100,23 @@ export const runCmlogSync = async <T>(
     ])
   }
 
-  const undoFailedIn = (err: unknown): string[] =>
-    err instanceof SyncStepsError ? err.undoFailed : []
+  // A later retry's undo writes back what the failed one left, so a target
+  // stays changed until the row syncs.
+  const newUndoFailures = (
+    entry: FailedRowEntry | undefined,
+    err: unknown
+  ): string[] =>
+    err instanceof SyncFailedError
+      ? err.undoFailed.filter((t) => !entry?.undoFailedIn?.includes(t))
+      : []
+
+  const withUndoFailures = (
+    entry: FailedRowEntry,
+    targets: string[]
+  ): FailedRowEntry =>
+    targets.length
+      ? { ...entry, undoFailedIn: [...(entry.undoFailedIn ?? []), ...targets] }
+      : entry
 
   const notifyUndoFailed = (
     change: T,
@@ -115,6 +140,11 @@ export const runCmlogSync = async <T>(
     return notifyXpandSync(`${def.name}: ger upp ${subject}`, [
       `${capitalize(detail)} har misslyckats sedan ${entry.addedAt}.`,
       `Senaste fel: ${entry.lastError}`,
+      ...(entry.undoFailedIn?.length
+        ? [
+            `Ändringen kunde inte återställas i: ${entry.undoFailedIn.join(', ')}. Dessa system har kvar ändringen medan övriga inte har den.`,
+          ]
+        : []),
       ``,
       `Raden har tagits bort ur återförsökskön och försöks inte igen. ${def.giveUpAdvice ?? DEFAULT_GIVE_UP_ADVICE}`,
     ])
@@ -233,17 +263,17 @@ export const runCmlogSync = async <T>(
       const outcome = await def.sync(change)
       await notifyResolved(change, entry, outcome)
     } catch (err) {
-      const updated: FailedRowEntry = {
-        ...entry,
-        ...(retriesStartedAt !== entry.addedAt && { retriesStartedAt }),
-        lastAttemptAt: now().toISOString(),
-        lastError: errorMessage(err),
-      }
-      const undoFailed = undoFailedIn(err)
-      if (undoFailed.length && !entry.undoFailedNotifiedAt) {
-        updated.undoFailedNotifiedAt = now().toISOString()
-        await notifyUndoFailed(change, updated, undoFailed)
-      }
+      const undoFailed = newUndoFailures(entry, err)
+      const updated: FailedRowEntry = withUndoFailures(
+        {
+          ...entry,
+          ...(retriesStartedAt !== entry.addedAt && { retriesStartedAt }),
+          lastAttemptAt: now().toISOString(),
+          lastError: errorMessage(err),
+        },
+        undoFailed
+      )
+      if (undoFailed.length) await notifyUndoFailed(change, updated, undoFailed)
       if (failingFor >= GIVE_UP_AFTER_MS) {
         await notifyGiveUp(change, updated)
         logger.error(
@@ -300,26 +330,41 @@ export const runCmlogSync = async <T>(
       }
     } catch (err) {
       failed++
-      const entry: FailedRowEntry = {
-        key,
-        type: def.entryType,
-        payload: def.toPayload(change),
-        addedAt: now().toISOString(),
-        lastError: errorMessage(err),
-        lastAttemptAt: now().toISOString(),
-      }
-      const undoFailed = undoFailedIn(err)
-      if (undoFailed.length) entry.undoFailedNotifiedAt = now().toISOString()
       const sameRow =
         existing !== undefined &&
         def.timestampOf(def.fromPayload(existing.payload)).getTime() ===
           def.timestampOf(change).getTime()
       if (sameRow) {
+        const undoFailed = newUndoFailures(existing, err)
+        if (undoFailed.length) {
+          const marked = withUndoFailures(
+            { ...existing, lastError: errorMessage(err) },
+            undoFailed
+          )
+          queueForRun = queueForRun.map((e) => (e.key === key ? marked : e))
+          await writeQueue(queueFile, queueForRun)
+          await notifyUndoFailed(change, marked, undoFailed)
+        }
         logger.warn(
           { err, key },
-          `${def.name}: row failed but already in queue (crash-retry), skipping mail`
+          `${def.name}: row failed but already in queue (crash-retry), skipping failure mail`
         )
       } else {
+        const undoFailed = newUndoFailures(existing, err)
+        const entry: FailedRowEntry = withUndoFailures(
+          {
+            key,
+            type: def.entryType,
+            payload: def.toPayload(change),
+            addedAt: now().toISOString(),
+            lastError: errorMessage(err),
+            lastAttemptAt: now().toISOString(),
+            ...(existing?.undoFailedIn && {
+              undoFailedIn: existing.undoFailedIn,
+            }),
+          },
+          undoFailed
+        )
         if (existing) {
           queueForRun = [...queueForRun.filter((e) => e.key !== key), entry]
           await writeQueue(queueFile, queueForRun)

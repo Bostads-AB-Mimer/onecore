@@ -1,7 +1,11 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { redactedMessage } from './adapters/odoo-adapter/utils'
+import {
+  errorName,
+  generateRouteMetadata,
+  logger,
+  redactedMessage,
+} from '@onecore/utilities'
 import {
   SyncContactToWorkOrderSchema,
   SyncContactToWorkOrderUndoSchema,
@@ -1759,7 +1763,7 @@ export const routes = (router: KoaRouter) => {
       logger.error(
         {
           contactCode,
-          errorName: err instanceof Error ? err.name : typeof err,
+          errorName: errorName(err),
           message: redactedMessage(err, [
             body.fullName,
             body.emailAddress,

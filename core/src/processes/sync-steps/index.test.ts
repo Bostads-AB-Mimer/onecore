@@ -1,11 +1,6 @@
 import { logger } from '@onecore/utilities'
-import * as economyAdapter from '../../adapters/economy-adapter'
-import {
-  runSyncSteps,
-  syncStep,
-  SyncStepsError,
-  undoContactSyncInEconomy,
-} from './index'
+import { ProcessResult, ProcessStatus } from '../../common/types'
+import { runSyncSteps, syncStep, SyncStepsFailure } from './index'
 
 const ok =
   <U>(undo?: U) =>
@@ -19,13 +14,13 @@ const fail = (err: string, statusCode?: number) => async () => ({
   ...(statusCode && { statusCode }),
 })
 
-const caught = async (promise: Promise<void>) => {
-  try {
-    await promise
-  } catch (err) {
-    return err as SyncStepsError
-  }
-  throw new Error('expected runSyncSteps to throw')
+const caught = async (
+  promise: Promise<ProcessResult<null, SyncStepsFailure>>
+) => {
+  const result = await promise
+  if (result.processStatus !== ProcessStatus.failed)
+    throw new Error('expected runSyncSteps to fail')
+  return result.error
 }
 
 afterEach(() => jest.restoreAllMocks())
@@ -42,9 +37,13 @@ describe('runSyncSteps', () => {
         },
       })
 
-    await runSyncSteps({ subject: 'contact P1', steps: [step('a'), step('b')] })
+    const result = await runSyncSteps({
+      subject: 'contact P1',
+      steps: [step('a'), step('b')],
+    })
 
     expect(order).toEqual(['a', 'b'])
+    expect(result.processStatus).toBe(ProcessStatus.successful)
   })
 
   it('undoes finished steps newest first with the objects they returned', async () => {
@@ -72,18 +71,37 @@ describe('runSyncSteps', () => {
     expect(undone).toEqual(['b', 'a'])
     expect(undoA).toHaveBeenCalledWith({ v: 'A' })
     expect(undoB).toHaveBeenCalledWith({ v: 'B' })
-    expect(err).toBeInstanceOf(SyncStepsError)
     expect(err.message).toBe(
       'contact P1 failed to sync: c=sync-failed (500), undone: b, a'
     )
     expect(err.undoFailed).toEqual([])
   })
 
-  it('lists a finished step without an undo object as already written', async () => {
+  it('lists a finished step with a null undo, or no undo function, as already written', async () => {
     const undo = jest.fn()
     const err = await caught(
       runSyncSteps({
         subject: 'lease L1',
+        steps: [
+          syncStep({ name: 'xledger', run: ok(null), undo }),
+          syncStep({ name: 'odoo', run: ok() }),
+          syncStep({ name: 'tenfast', run: fail('sync-failed') }),
+        ],
+      })
+    )
+
+    expect(undo).not.toHaveBeenCalled()
+    expect(err.undoFailed).toEqual([])
+    expect(err.message).toBe(
+      'lease L1 failed to sync: tenfast=sync-failed, already written: xledger, odoo'
+    )
+  })
+
+  it('counts a finished step that has an undo function but returned no undo object as an undo failure', async () => {
+    const undo = jest.fn()
+    const err = await caught(
+      runSyncSteps({
+        subject: 'contact P1',
         steps: [
           syncStep({ name: 'xledger', run: ok(), undo }),
           syncStep({ name: 'tenfast', run: fail('sync-failed') }),
@@ -92,8 +110,9 @@ describe('runSyncSteps', () => {
     )
 
     expect(undo).not.toHaveBeenCalled()
+    expect(err.undoFailed).toEqual(['xledger'])
     expect(err.message).toBe(
-      'lease L1 failed to sync: tenfast=sync-failed, already written: xledger'
+      'contact P1 failed to sync: tenfast=sync-failed, undo failed: xledger=no-undo-data'
     )
   })
 
@@ -164,7 +183,7 @@ describe('runSyncSteps', () => {
     )
 
     expect(err.undoFailed).toEqual(['a'])
-    expect(err.message).toContain('undo failed: a=unknown')
+    expect(err.message).toContain('undo failed: a=unknown [Error]')
   })
 
   it('treats a step that throws as failed and still undoes the finished steps', async () => {
@@ -178,7 +197,7 @@ describe('runSyncSteps', () => {
           syncStep({
             name: 'b',
             run: async () => {
-              throw new Error('boom')
+              throw new TypeError('boom')
             },
           }),
         ],
@@ -186,9 +205,35 @@ describe('runSyncSteps', () => {
     )
 
     expect(undoA).toHaveBeenCalledWith(1)
-    expect(err).toBeInstanceOf(SyncStepsError)
     expect(err.message).toBe(
-      'contact P1 failed to sync: b=unknown, outcome unknown, undone: a'
+      'contact P1 failed to sync: b=unknown [TypeError], outcome unknown, undone: a'
+    )
+  })
+
+  it('logs why a step threw', async () => {
+    const errorSpy = jest.spyOn(logger, 'error')
+
+    await caught(
+      runSyncSteps({
+        subject: 'contact P1',
+        steps: [
+          syncStep({
+            name: 'b',
+            run: async () => {
+              throw new TypeError('boom')
+            },
+          }),
+        ],
+      })
+    )
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: 'contact P1',
+        target: 'b',
+        errorName: 'TypeError',
+      }),
+      'syncSteps.stepThrew'
     )
   })
 
@@ -228,6 +273,34 @@ describe('runSyncSteps', () => {
     )
   })
 
+  it('keeps the message of a thrown error out of the log and the result', async () => {
+    const errorSpy = jest.spyOn(logger, 'error')
+
+    const err = await caught(
+      runSyncSteps({
+        subject: 'contact P1',
+        steps: [
+          syncStep({
+            name: 'a',
+            run: ok(1),
+            undo: async () => {
+              throw new Error('could not write Hemlig, Person')
+            },
+          }),
+          syncStep({
+            name: 'b',
+            run: async () => {
+              throw new Error('rejected Hemlig, Person')
+            },
+          }),
+        ],
+      })
+    )
+
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('Hemlig')
+    expect(err.message).not.toContain('Hemlig')
+  })
+
   it('logs no undo values', async () => {
     const errorSpy = jest.spyOn(logger, 'error')
 
@@ -247,51 +320,5 @@ describe('runSyncSteps', () => {
 
     expect(errorSpy).toHaveBeenCalled()
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('Hemlig')
-  })
-})
-
-describe('undoContactSyncInEconomy', () => {
-  const undo = {
-    previous: {
-      fullName: 'Gammal, Namn',
-      street: null,
-      zipCode: null,
-      city: null,
-      emailAddress: null,
-    },
-  }
-
-  it('writes the previous values back without create', async () => {
-    const sync = jest
-      .spyOn(economyAdapter, 'syncContactToEconomy')
-      .mockResolvedValue({ ok: true, data: { skipped: false } })
-
-    const result = await undoContactSyncInEconomy('P1', undo)
-
-    expect(sync).toHaveBeenCalledWith('P1', undo.previous)
-    expect(result).toEqual({ ok: true, data: null })
-  })
-
-  it('fails with not-found when economy skips', async () => {
-    jest
-      .spyOn(economyAdapter, 'syncContactToEconomy')
-      .mockResolvedValue({ ok: true, data: { skipped: true } })
-
-    expect(await undoContactSyncInEconomy('P1', undo)).toEqual({
-      ok: false,
-      err: 'not-found',
-    })
-  })
-
-  it('passes a failure through', async () => {
-    jest
-      .spyOn(economyAdapter, 'syncContactToEconomy')
-      .mockResolvedValue({ ok: false, err: 'sync-failed', statusCode: 500 })
-
-    expect(await undoContactSyncInEconomy('P1', undo)).toEqual({
-      ok: false,
-      err: 'sync-failed',
-      statusCode: 500,
-    })
   })
 })

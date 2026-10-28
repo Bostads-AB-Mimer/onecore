@@ -68,6 +68,21 @@ describe('syncInvoiceRecipientToEconomy', () => {
     expect(result).toEqual({ ok: true, data: { undo } })
   })
 
+  it('passes a null undo through after a create', async () => {
+    const contact = factory.contactsServiceContact.build()
+    const contacts = makeContactsStub({ ok: true, data: contact })
+    jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: true, data: { skipped: false, undo: null } })
+
+    const result = await syncInvoiceRecipientToEconomy(
+      contacts,
+      contact.contactCode
+    )
+
+    expect(result).toEqual({ ok: true, data: { undo: null } })
+  })
+
   it('uses the organisation name as fullName for an organisation contact', async () => {
     const contact: Contact = {
       type: 'organisation',

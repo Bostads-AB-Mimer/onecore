@@ -1,6 +1,11 @@
 jest.mock('@onecore/utilities', () => {
   const axios = jest.requireActual('axios')
+  const { errorName, errorMessage, redactedMessage } =
+    jest.requireActual('@onecore/utilities')
   return {
+    errorName,
+    errorMessage,
+    redactedMessage,
     logger: {
       info: () => {
         return

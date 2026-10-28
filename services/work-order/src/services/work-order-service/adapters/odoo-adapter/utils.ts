@@ -102,15 +102,3 @@ export const transformMessages = (
     author: last(message.author_id[1].split(', ')) ?? '', // author name is in format "YourCompany, Mitchell Admin"
     createDate: new Date(message.create_date + ' UTC'), // Create new date as UTC (odoo db stores dates without time zone)
   }))
-
-export const redactedMessage = (
-  error: unknown,
-  values: (string | null | undefined)[]
-): string =>
-  values
-    .filter((v): v is string => !!v)
-    .sort((a, b) => b.length - a.length)
-    .reduce(
-      (message, value) => message.split(value).join('[redacted]'),
-      error instanceof Error ? error.message : String(error)
-    )

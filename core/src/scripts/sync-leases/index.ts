@@ -8,13 +8,10 @@ import {
 import { getRentalPropertyInfoFromXpand } from '../../adapters/property-management-adapter'
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
 import { syncInvoiceRecipientToEconomy } from '../../processes/contacts'
-import {
-  runSyncSteps,
-  syncStep,
-  SyncStep,
-  undoContactSyncInEconomy,
-} from '../../processes/sync-steps'
-import { runCmlogSync } from '../shared/run-cmlog-sync'
+import { undoContactSyncInEconomy } from '../../adapters/economy-adapter'
+import { runSyncSteps, syncStep, SyncStep } from '../../processes/sync-steps'
+import { ProcessStatus } from '../../common/types'
+import { runCmlogSync, SyncFailedError } from '../shared/run-cmlog-sync'
 
 const DEFAULT_STATE_FILE = '/data/last-timestamp-leases.txt'
 const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
@@ -119,7 +116,12 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
     })
   )
 
-  await runSyncSteps({ subject: `lease ${lease.leaseId}`, steps })
+  const result = await runSyncSteps({
+    subject: `lease ${lease.leaseId}`,
+    steps,
+  })
+  if (result.processStatus === ProcessStatus.failed)
+    throw new SyncFailedError(result.error)
 }
 
 export const syncLeases = (

@@ -1,6 +1,11 @@
 import fs from 'node:fs'
 import z from 'zod'
-import { loggedAxios as axios, logger } from '@onecore/utilities'
+import {
+  errorMessage,
+  errorName,
+  loggedAxios as axios,
+  logger,
+} from '@onecore/utilities'
 import {
   economy,
   Invoice,
@@ -629,7 +634,7 @@ export async function syncContactToEconomy(
   options?: { create?: boolean }
 ): Promise<
   AdapterResult<
-    { skipped: boolean; undo?: SyncContactToEconomyUndo },
+    { skipped: boolean; undo?: SyncContactToEconomyUndo | null },
     'sync-failed' | 'unknown'
   >
 > {
@@ -644,7 +649,9 @@ export async function syncContactToEconomy(
       payload,
       { timeout: SYNC_CONTACT_TIMEOUT_MS }
     )
-    const undo = SyncContactToEconomyUndoSchema.safeParse(response.data?.undo)
+    const undo = SyncContactToEconomyUndoSchema.nullable().safeParse(
+      response.data?.undo
+    )
     return {
       ok: true,
       data: {
@@ -657,8 +664,8 @@ export async function syncContactToEconomy(
       {
         contactCode,
         status: axios.isAxiosError(err) ? err.response?.status : undefined,
-        errorName: err instanceof Error ? err.name : typeof err,
-        message: err instanceof Error ? err.message : String(err),
+        errorName: errorName(err),
+        message: errorMessage(err),
       },
       'economy-adapter.syncContactToEconomy'
     )
@@ -671,4 +678,15 @@ export async function syncContactToEconomy(
     }
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
+}
+
+export const undoContactSyncInEconomy = async (
+  contactCode: string,
+  undo: SyncContactToEconomyUndo
+): Promise<AdapterResult<null, 'not-found' | 'sync-failed' | 'unknown'>> => {
+  const result = await syncContactToEconomy(contactCode, undo.previous)
+  if (!result.ok) return result
+  return result.data.skipped
+    ? { ok: false, err: 'not-found' }
+    : { ok: true, data: null }
 }

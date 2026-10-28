@@ -1,6 +1,6 @@
 import Odoo from 'odoo-await'
 import striptags from 'striptags'
-import { logger } from '@onecore/utilities'
+import { errorName, logger, redactedMessage } from '@onecore/utilities'
 import { groupBy } from 'lodash'
 import z from 'zod'
 import Config from '../../../../common/config'
@@ -8,7 +8,6 @@ import {
   transformWorkOrder,
   transformMessages,
   transformEquipmentCode,
-  redactedMessage,
 } from './utils'
 import { AdapterResult } from '../../types'
 import {
@@ -815,9 +814,6 @@ type OdooTenantValues = {
   phone_number: string | false
 }
 
-const errorName = (error: unknown) =>
-  error instanceof Error ? error.name : typeof error
-
 export const syncContact = async (
   payload: SyncContactToWorkOrderPayload
 ): Promise<
@@ -915,20 +911,29 @@ export const restoreContact = async (
     }
 
     const existingIds = new Set(existing.map((t) => t.id))
-    const restored: number[] = []
-    for (const tenant of tenants) {
-      if (!existingIds.has(tenant.id)) continue
-      await odoo.update('maintenance.tenant', tenant.id, {
-        name: tenant.fullName,
-        email_address: tenant.emailAddress ?? false,
-        phone_number: tenant.phoneNumber ?? false,
-      })
-      restored.push(tenant.id)
+    const restorable = tenants.filter((t) => existingIds.has(t.id))
+    const byValues = groupBy(restorable, (t) =>
+      JSON.stringify([t.fullName, t.emailAddress, t.phoneNumber])
+    )
+    for (const group of Object.values(byValues)) {
+      const [{ fullName, emailAddress, phoneNumber }] = group
+      await odoo.update(
+        'maintenance.tenant',
+        group.map((t) => t.id),
+        {
+          name: fullName,
+          email_address: emailAddress ?? false,
+          phone_number: phoneNumber ?? false,
+        }
+      )
     }
 
     return {
       ok: true,
-      data: { restored, missing: ids.filter((id) => !existingIds.has(id)) },
+      data: {
+        restored: restorable.map((t) => t.id),
+        missing: ids.filter((id) => !existingIds.has(id)),
+      },
     }
   } catch (error) {
     logger.error(

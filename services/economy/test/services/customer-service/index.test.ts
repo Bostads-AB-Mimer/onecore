@@ -118,7 +118,7 @@ describe('POST /customers/:contactCode/sync', () => {
     expect(res.body.content).toBe('12345')
   })
 
-  it('returns no undo after a create', async () => {
+  it('returns a null undo after a create, since nothing can be put back', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
     jest
       .spyOn(customerService, 'syncCustomer')
@@ -129,7 +129,7 @@ describe('POST /customers/:contactCode/sync', () => {
       .send(payload)
 
     expect(res.status).toBe(200)
-    expect(res.body.undo).toBeUndefined()
+    expect(res.body.undo).toBeNull()
   })
 
   it('returns no undo when skipped', async () => {

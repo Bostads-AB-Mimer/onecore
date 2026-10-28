@@ -619,17 +619,18 @@ describe('syncLeases', () => {
           emailAddress: null,
         },
       }
-      const economy = jest
+      jest
         .spyOn(economyAdapter, 'syncContactToEconomy')
-        .mockResolvedValueOnce({ ok: true, data: { skipped: false, undo } })
-        .mockResolvedValueOnce({ ok: true, data: { skipped: false } })
+        .mockResolvedValue({ ok: true, data: { skipped: false, undo } })
+      const undoEconomy = jest
+        .spyOn(economyAdapter, 'undoContactSyncInEconomy')
+        .mockResolvedValue({ ok: true, data: null })
 
       await syncLeases({ stateFile, queueFile })
 
-      expect(economy).toHaveBeenNthCalledWith(
-        2,
+      expect(undoEconomy).toHaveBeenCalledWith(
         otherInvoiceRecipient.contactCode,
-        undo.previous
+        undo
       )
       const queue = await readQueue(queueFile)
       expect(queue[0].lastError).toBe(
@@ -641,7 +642,7 @@ describe('syncLeases', () => {
       const { lease } = setupCreateWithRecipient()
       const economy = jest
         .spyOn(economyAdapter, 'syncContactToEconomy')
-        .mockResolvedValue({ ok: true, data: { skipped: false } })
+        .mockResolvedValue({ ok: true, data: { skipped: false, undo: null } })
 
       await syncLeases({ stateFile, queueFile })
 

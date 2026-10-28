@@ -1,24 +1,14 @@
 import KoaRouter from '@koa/router'
 import {
+  errorName,
   generateRouteMetadata,
   logger,
   makeSuccessResponseBody,
+  redactedMessage,
 } from '@onecore/utilities'
 import { SyncContactToEconomySchema } from '@onecore/types'
 import { SyncCustomerQueryParamsSchema } from './schema'
 import { syncCustomer, SyncCustomerPayload } from './service'
-
-const redactedMessage = (
-  error: unknown,
-  values: (string | null | undefined)[]
-): string =>
-  values
-    .filter((v): v is string => !!v)
-    .sort((a, b) => b.length - a.length)
-    .reduce(
-      (message, value) => message.split(value).join('[redacted]'),
-      error instanceof Error ? error.message : String(error)
-    )
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -113,13 +103,15 @@ export const routes = (router: KoaRouter) => {
       ctx.body = {
         ...makeSuccessResponseBody(result?.customer ?? null, metadata),
         skipped: result === null,
-        ...(result?.previous && { undo: { previous: result.previous } }),
+        ...(result && {
+          undo: result.previous ? { previous: result.previous } : null,
+        }),
       }
     } catch (err: unknown) {
       logger.error(
         {
           contactCode,
-          errorName: err instanceof Error ? err.name : typeof err,
+          errorName: errorName(err),
           message: redactedMessage(err, [
             contact.fullName,
             contact.address?.street,
