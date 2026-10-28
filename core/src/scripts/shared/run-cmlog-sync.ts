@@ -1,3 +1,5 @@
+import { createHash } from 'crypto'
+
 import { logger } from '@onecore/utilities'
 
 import {
@@ -7,10 +9,15 @@ import {
   writeQueue,
   FailedRowEntry,
 } from './failed-sync-queue'
-import { getLastTimestamp, saveLastTimestamp } from './last-timestamp'
+import { readSyncPosition, saveSyncPosition } from './last-timestamp'
 import { notifyXpandSync } from './notify'
 
-const HOUR_MS = 60 * 60 * 1000
+const SECOND_MS = 1000
+const MINUTE_MS = 60 * SECOND_MS
+const HOUR_MS = 60 * MINUTE_MS
+// Xpand stamps logtime before commit, so a row can show up this long after its logtime.
+const LATE_COMMIT_MS = 5 * MINUTE_MS
+const CLOCK_SKEW_MS = 5 * MINUTE_MS
 const RETRY_EVERY_RUN_FOR_MS = 24 * HOUR_MS
 const SLOW_RETRY_INTERVAL_MS = 6 * HOUR_MS
 const DAILY_RETRY_AFTER_MS = 7 * 24 * HOUR_MS
@@ -34,8 +41,9 @@ export type CmlogSync<T> = {
   entryType: FailedRowEntry['type']
   // 'start-now' saves the newest row on a run without a saved timestamp and syncs nothing.
   firstRun: 'sync-all' | 'start-now'
-  // `until` is the newest cmlog row read, parsed or not; it is saved as the
-  // timestamp when it is later than the last change.
+  // Returns the changes logged after `since`, oldest first. `until` is the
+  // newest cmlog row read, parsed or not; it is saved as the timestamp when it
+  // is later than the last change.
   fetchChanges: (
     since: Date | null
   ) => Promise<
@@ -50,10 +58,41 @@ export type CmlogSync<T> = {
   orderKey?: (change: T) => string
   timestampOf: (change: T) => Date
   toPayload: (change: T) => unknown
+  // What the sync sends, when that is less than the payload; hashed to spot a re-read change.
+  contentOf?: (change: T) => unknown
   fromPayload: (payload: unknown) => T
   describe: (change: T) => { subject: string; detail: string }
   giveUpAdvice?: string
 }
+
+const withSortedKeys = (value: unknown): unknown =>
+  Array.isArray(value)
+    ? value.map(withSortedKeys)
+    : value && typeof value === 'object' && !(value instanceof Date)
+      ? Object.fromEntries(
+          Object.keys(value)
+            .sort()
+            .map((k) => [
+              k,
+              withSortedKeys((value as Record<string, unknown>)[k]),
+            ])
+        )
+      : value
+
+// Services collapse rows to one change per key and second, so a re-read row
+// can share a key with a handled one and still carry new data.
+export const handledIdOf = <T>(
+  def: Pick<CmlogSync<T>, 'keyFor' | 'toPayload' | 'contentOf'>,
+  change: T
+) =>
+  `${def.keyFor(change)}#${createHash('sha1')
+    .update(
+      JSON.stringify(withSortedKeys((def.contentOf ?? def.toPayload)(change)))
+    )
+    .digest('hex')
+    .slice(0, 12)}`
+
+const floorToSecond = (time: number) => Math.floor(time / SECOND_MS) * SECOND_MS
 
 const capitalize = (text: string) =>
   text.charAt(0).toUpperCase() + text.slice(1)
@@ -165,17 +204,33 @@ export const runCmlogSync = async <T>(
       ? notifySkipped(change, entry, outcome.skipped)
       : notifyRecovery(change, entry)
 
-  const lastTimestamp = await getLastTimestamp(stateFile)
-  const skipExisting = !lastTimestamp && def.firstRun === 'start-now'
-  if (lastTimestamp) {
-    logger.info({ lastTimestamp }, 'syncing since last timestamp')
+  const position = await readSyncPosition(stateFile)
+  const handled = new Map(position?.handled)
+  let lastTimestamp = position?.timestamp ?? null
+  let readFrom = position?.readFrom.getTime() ?? -Infinity
+  const skipExisting = !position && def.firstRun === 'start-now'
+  if (position) {
+    logger.info(
+      { lastTimestamp, readFrom: position.readFrom },
+      'syncing since saved position'
+    )
   } else if (skipExisting) {
     logger.info('no saved timestamp, starting from the newest row')
   } else {
     logger.info('no saved timestamp, syncing all')
   }
-  const result = await def.fetchChanges(lastTimestamp)
-  const fetched = result.ok && !skipExisting ? result.data : []
+  const readAt = now().getTime()
+  const result = await def.fetchChanges(
+    position ? new Date(readFrom - SECOND_MS) : null
+  )
+  const ids = new Map<T, string>()
+  const idOf = (change: T) => {
+    const id = ids.get(change) ?? handledIdOf(def, change)
+    ids.set(change, id)
+    return id
+  }
+  const read = result.ok ? result.data : []
+  const fetched = skipExisting ? [] : read.filter((c) => !handled.has(idOf(c)))
 
   // 1) Retry the queue
   const queue = await readQueue(queueFile)
@@ -212,8 +267,6 @@ export const runCmlogSync = async <T>(
   const droppedWithBlocker = new Set<string>()
   const blockedOrderKeys = new Set<string>()
   const blockedKeys = new Set<string>()
-  // Rows handled here by key and timestamp, so a re-fetched copy is not synced again.
-  const handled = new Map<string, number>()
   for (const [index, entry] of queue.entries()) {
     if (entry.type !== def.entryType) {
       kept.push(entry)
@@ -227,7 +280,7 @@ export const runCmlogSync = async <T>(
     }
     const handle = () => {
       queueChanged = true
-      handled.set(entry.key, def.timestampOf(change).getTime())
+      handled.set(idOf(change), def.timestampOf(change).getTime())
     }
     if (droppedWithBlocker.has(entry.key)) {
       handle()
@@ -342,14 +395,22 @@ export const runCmlogSync = async <T>(
     logger.error({ err: result.err }, `${def.name}: failed to fetch changes`)
     throw new Error(result.err)
   }
-  const changes = fetched
+  const changes = fetched.filter((c) => !handled.has(idOf(c)))
   logger.info({ count: changes.length }, 'changes to process')
 
   let queueForRun = kept
-  let savedTimestamp = lastTimestamp
-  const saveTimestamp = async (timestamp: Date) => {
-    await saveLastTimestamp(stateFile, timestamp)
-    savedTimestamp = timestamp
+  const savePosition = async (earliestUnseen: number) => {
+    readFrom = Math.max(readFrom, floorToSecond(earliestUnseen))
+    for (const [id, at] of handled) if (at < readFrom) handled.delete(id)
+    await saveSyncPosition(stateFile, {
+      timestamp: lastTimestamp,
+      readFrom: new Date(readFrom),
+      handled,
+    })
+  }
+  const moveLastTimestamp = (timestamp: Date) => {
+    if (!lastTimestamp || timestamp.getTime() > lastTimestamp.getTime())
+      lastTimestamp = timestamp
   }
 
   const latestByOrderKey = new Map<string, FailedRowEntry>()
@@ -424,8 +485,7 @@ export const runCmlogSync = async <T>(
       }
       const sameRow =
         existing !== undefined &&
-        def.timestampOf(def.fromPayload(existing.payload)).getTime() ===
-          def.timestampOf(change).getTime()
+        handledIdOf(def, def.fromPayload(existing.payload)) === idOf(change)
       if (sameRow) {
         logger.warn(
           { err, key },
@@ -450,22 +510,19 @@ export const runCmlogSync = async <T>(
     const key = def.keyFor(change)
     const existing = queueForRun.find((e) => e.key === key)
     const blocker = existing ? undefined : blockerOf(change)
-    if (handled.get(key) === def.timestampOf(change).getTime()) {
-      logger.info({ key }, `${def.name}: row already handled from the queue`)
-    } else if (existing?.heldBehind || blockedKeys.has(key) || blocker) {
+    if (existing?.heldBehind || blockedKeys.has(key) || blocker) {
       held++
       if (blocker) await hold(change, key, blocker)
     } else {
       await syncRow(change, key, existing)
     }
-    // cmlog has whole seconds: save only once a second is done, so a crash
-    // mid-second re-reads the whole second instead of skipping its rest.
+    const time = def.timestampOf(change)
+    handled.set(idOf(change), time.getTime())
+    // The timestamp file moves only once a second is done; older code reads it.
     const next = changes[index + 1]
-    if (
-      !next ||
-      def.timestampOf(next).getTime() > def.timestampOf(change).getTime()
-    )
-      await saveTimestamp(def.timestampOf(change))
+    if (!next || def.timestampOf(next).getTime() > time.getTime())
+      moveLastTimestamp(time)
+    await savePosition(time.getTime() - LATE_COMMIT_MS)
   }
 
   const newest =
@@ -478,13 +535,18 @@ export const runCmlogSync = async <T>(
             undefined
           )
       : undefined)
-  if (
-    newest &&
-    (!savedTimestamp || newest.getTime() > savedTimestamp.getTime())
-  ) {
-    await saveTimestamp(newest)
+  if (newest) moveLastTimestamp(newest)
+  if (skipExisting) {
+    for (const change of read)
+      handled.set(idOf(change), def.timestampOf(change).getTime())
+    if (!lastTimestamp) lastTimestamp = now()
   }
-  if (skipExisting && !savedTimestamp) await saveTimestamp(now())
+  await savePosition(
+    Math.max(
+      lastTimestamp ? lastTimestamp.getTime() - LATE_COMMIT_MS : -Infinity,
+      readAt - LATE_COMMIT_MS - CLOCK_SKEW_MS
+    )
+  )
 
   logger.info(
     { total: changes.length, succeeded, skipped, failed, held },

@@ -72,7 +72,7 @@ describe('syncLeases', () => {
       .spyOn(leasingAdapter, 'getUpdatedLeases')
       .mockResolvedValue({ ok: true, data: [lease] })
 
-    jest
+    const propertyInfoSpy = jest
       .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
       .mockResolvedValue({
         status: 200,
@@ -99,6 +99,10 @@ describe('syncLeases', () => {
     // State file advanced to lease.timestamp
     const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(lease.timestamp.toISOString())
+
+    expect(propertyInfoSpy).toHaveBeenCalledWith(lease.rentalObjectId, {
+      timeoutMs: 30_000,
+    })
   })
 
   it('case 2: first failure — row queued + one failure mail sent', async () => {
