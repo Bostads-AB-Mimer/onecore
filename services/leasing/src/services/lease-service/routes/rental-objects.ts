@@ -11,6 +11,7 @@ import {
   hasIndefiniteActiveBlock,
 } from '../helpers/rental-object-availability-helpers'
 import { mapToOnecoreRentalObjectRent } from '../helpers/tenfast'
+import listingTextContentAdapter from '../adapters/listing-text-content-adapter'
 
 /**
  * @swagger
@@ -238,7 +239,11 @@ export const routes = (router: KoaRouter) => {
    * /vacant-parkingspaces:
    *   get:
    *     summary: Get all vacant parking spaces
-   *     description: Fetches a list of all vacant parking spaces available in the system.
+   *     description: |
+   *       Fetches a list of all vacant parking spaces available in the system.
+   *       Each parking space carries hasListingTextContent, telling whether
+   *       listing text content exists for it. The flag is omitted if the
+   *       text content lookup fails.
    *     tags:
    *       - Listings
    *     responses:
@@ -340,8 +345,26 @@ export const routes = (router: KoaRouter) => {
       }
     })
 
+    // The text content flag is attached here from the leasing DB. If that
+    // lookup fails the list is still returned, without the flag, since it
+    // only drives an icon.
+    const textContentCodes =
+      await listingTextContentAdapter.getRentalObjectCodesWithTextContent(
+        vacantRentalObjects.map((parkingSpace) => parkingSpace.rentalObjectCode)
+      )
+    const codesWithTextContent = textContentCodes.ok
+      ? new Set(textContentCodes.data)
+      : undefined
+    const content = codesWithTextContent
+      ? vacantRentalObjects.map((parkingSpace) => ({
+          ...parkingSpace,
+          hasListingTextContent: codesWithTextContent.has(
+            parkingSpace.rentalObjectCode
+          ),
+        }))
+      : vacantRentalObjects
     ctx.status = 200
-    ctx.body = { content: vacantRentalObjects, ...metadata }
+    ctx.body = { content, ...metadata }
   })
 
   /**

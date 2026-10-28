@@ -49,6 +49,7 @@ describe('syncInvoiceRecipientToEconomy', () => {
       type: 'organisation',
       contactCode: 'O123',
       contactKey: 'KEY-O123',
+      protectedIdentity: false,
       organisation: {
         organisationNumber: '556000-0000',
         name: 'Acme AB',

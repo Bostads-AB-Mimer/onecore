@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 
 import { mergeComment, prepareReceipt } from '@/services/loans/receiptData'
-import type { LoanObjectOption } from '@/services/loans/receiptResolution'
+import {
+  resolveManualContract,
+  type LoanObjectOption,
+} from '@/services/loans/receiptResolution'
 import type { ReceiptData } from '@/services/types'
 
 /**
@@ -88,14 +91,22 @@ export function useReceiptPreparation({
   }
 
   /** The prepared data with the chosen Avtal and the signed comment merged in. */
-  const getPrintData = (comment: string): ReceiptData | null =>
-    receiptData && {
+  const getPrintData = async (comment: string): Promise<ReceiptData | null> => {
+    if (!receiptData) return null
+    // No object option (card-only loan) → derive object from the typed Avtals-ID.
+    const contract = selectedObject
+      ? {
+          rentalPropertyId: selectedObject.rentalPropertyId,
+          address: selectedObject.address,
+          leaseDisplayId: leaseDisplayId.trim() || undefined,
+        }
+      : await resolveManualContract(leaseDisplayId)
+    return {
       ...receiptData,
-      rentalPropertyId: selectedObject?.rentalPropertyId,
-      address: selectedObject?.address ?? null,
-      leaseDisplayId: leaseDisplayId.trim() || undefined,
+      ...contract,
       comment: mergeComment(receiptData.comment, comment),
     }
+  }
 
   return {
     receiptData,

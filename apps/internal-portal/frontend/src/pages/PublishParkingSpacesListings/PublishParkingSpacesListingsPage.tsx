@@ -23,6 +23,7 @@ import {
   getParkingSpaceColumns,
   getRentalRuleActionColumn,
 } from './utils/columnUtils'
+import { getListingTextContentColumn } from '../../components'
 import * as utils from '../../utils'
 import { RentalObject } from '@onecore/types'
 
@@ -93,6 +94,7 @@ export const PublishParkingSpacesListingsPage = () => {
     () => [
       ...getParkingSpaceColumns(dateFormatter),
       getRentalRuleActionColumn(rentalRules, handleRentalRuleChange),
+      getListingTextContentColumn<RentalObjectWithListingHistory>(),
     ],
     [rentalRules, handleRentalRuleChange]
   )

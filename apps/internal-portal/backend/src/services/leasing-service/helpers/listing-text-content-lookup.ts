@@ -18,7 +18,7 @@ type ListingTextContentLookup = z.infer<
 
 export const getListingTextContentLookup = async (
   rentalObjectCode: string
-): Promise<AdapterResult<ListingTextContentLookup, 'unknown'>> => {
+): Promise<AdapterResult<ListingTextContentLookup, 'request-failed'>> => {
   // Both depend only on the rental object code, so fetch them concurrently.
   const [contentResult, rentalPropertyResult] = await Promise.all([
     leasingCoreAdapter.getListingTextContentByRentalObjectCode(
@@ -27,14 +27,16 @@ export const getListingTextContentLookup = async (
     leasingCoreAdapter.getRentalPropertyByCode(rentalObjectCode),
   ])
 
-  if (!contentResult.ok && contentResult.err === 'unknown') {
-    return { ok: false, err: 'unknown', statusCode: 500 }
+  // Missing text is a normal state (content: null); anything else is a
+  // failure the editor cannot recover from.
+  if (!contentResult.ok && contentResult.err !== 'not-found') {
+    return { ok: false, err: 'request-failed', statusCode: 500 }
   }
 
   const content = contentResult.ok ? contentResult.data : null
   const withoutMarketArea = (): AdapterResult<
     ListingTextContentLookup,
-    'unknown'
+    'request-failed'
   > => ({ ok: true, data: { content, marketArea: null, areaContent: null } })
 
   if (!rentalPropertyResult.ok) {
@@ -99,7 +101,7 @@ export const getListingTextContentLookup = async (
   let areaContent: ListingTextContentLookup['areaContent'] = null
   if (areaContentResult.ok) {
     areaContent = areaContentResult.data
-  } else if (areaContentResult.err === 'unknown') {
+  } else if (areaContentResult.err !== 'not-found') {
     logger.error(
       { rentalObjectCode, marketAreaCode: marketArea.code },
       'listing-text-content-lookup: failed to get area text content'

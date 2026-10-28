@@ -49,6 +49,12 @@ export const Contact = z.object({
   emailAddress: z.string().nullable().optional(),
   isTenant: z.boolean(),
   specialAttention: z.boolean().optional(),
+  protectedIdentity: z.boolean(),
+  // Only set for a protected identity, and only by the routes that fill in its
+  // details from the contacts service (see withProtectedIdentityDetails).
+  protectedIdentityDetails: z
+    .enum(['shown', 'withheld', 'unavailable'])
+    .optional(),
 })
 
 export const RentalObjectRentSchema = z.object({
@@ -228,6 +234,10 @@ export const Lease = z.object({
         emailAddress: z.string().nullable().optional(),
         isTenant: z.boolean(),
         specialAttention: z.boolean().optional(),
+        protectedIdentity: z.boolean(),
+        protectedIdentityDetails: z
+          .enum(['shown', 'withheld', 'unavailable'])
+          .optional(),
         // --- tenant-only additions (not part of Contact) ---
         parkingSpaceWaitingList: z
           .object({
@@ -260,6 +270,10 @@ function mapLeaseStatus(status: LeaseStatus): z.infer<typeof Lease>['status'] {
       return 'NotSent'
   }
 }
+
+export const LeaseBatchRequestBody = z.object({
+  leaseIds: z.array(z.string()).min(1),
+})
 
 export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
   return {

@@ -1,11 +1,14 @@
+import dayjs from 'dayjs'
 import { match } from 'ts-pattern'
 import { logger } from '@onecore/utilities'
 import { economy } from '@onecore/types'
 
 import {
   getActiveLeasesByRentalObjectCodes,
+  getLeasesByTenantId,
   type LeaseMatch,
   type MultipleLeaseMatch,
+  type TenantLease,
 } from '../../common/adapters/tenfast/tenfast-adapter'
 
 import z from 'zod'
@@ -83,6 +86,7 @@ type UnprocessedIMDRow = IMDRow &
     | { reason: 'tenant-moved' }
     | { reason: 'multiple-leases'; leaseIds: string[] }
     | { reason: 'unsupported-unit' }
+    | { reason: 'duplicate-lease'; leaseId: string }
   )
 
 const MIN_COST = 15
@@ -93,8 +97,24 @@ function isMultipleLeaseMatch(
   return 'leaseIds' in m
 }
 
-function hasTenantMoved(lease: LeaseMatch, asOf: Date): boolean {
-  return lease.leaseEndDate !== null && lease.leaseEndDate < asOf
+const IMD_BILLING_MONTH_OFFSET = 2
+
+function billingPeriodForConsumption(from: Date): { from: Date; to: Date } {
+  const billingMonth = dayjs(from).add(IMD_BILLING_MONTH_OFFSET, 'month')
+  return {
+    from: billingMonth.startOf('month').toDate(),
+    to: billingMonth.endOf('month').toDate(),
+  }
+}
+
+// Rows are billed IMD_BILLING_MONTH_OFFSET months after consumption, so a
+// lease that ends before the billing month is over will never invoice them.
+function hasTenantMoved(lease: LeaseMatch, consumptionFrom: Date): boolean {
+  const billingPeriod = billingPeriodForConsumption(consumptionFrom)
+  return (
+    lease.leaseEndDate !== null &&
+    dayjs(lease.leaseEndDate).isBefore(billingPeriod.to, 'day')
+  )
 }
 
 type EnrichResult = {
@@ -104,8 +124,7 @@ type EnrichResult = {
 
 function classifyRows(
   rows: Array<IMDRow>,
-  leaseMap: Map<string, LeaseMatch | MultipleLeaseMatch | null>,
-  today: Date
+  leaseMap: Map<string, LeaseMatch | MultipleLeaseMatch | null>
 ): EnrichResult {
   return rows.reduce<EnrichResult>(
     (acc, row) => {
@@ -124,7 +143,7 @@ function classifyRows(
           reason: 'multiple-leases',
           leaseIds: lookup.leaseIds,
         })
-      } else if (hasTenantMoved(lookup, today)) {
+      } else if (hasTenantMoved(lookup, row.from)) {
         acc.unprocessed.push({ ...row, reason: 'tenant-moved' })
       } else if (!UNIT_CONFIG[row.unit]) {
         acc.unprocessed.push({ ...row, reason: 'unsupported-unit' })
@@ -134,6 +153,150 @@ function classifyRows(
       return acc
     },
     { enriched: [], unprocessed: [] }
+  )
+}
+
+// Stages of a lease that will be invoiced for the billing month. Leases still
+// being signed don't count, nor do ones that are voided or over.
+const INVOICEABLE_STAGES = new Set([
+  'active',
+  'upcoming',
+  'terminationScheduled',
+  'preTermination',
+])
+
+function coversPeriod(
+  lease: TenantLease,
+  period: { from: Date; to: Date }
+): boolean {
+  return (
+    lease.startDate !== null &&
+    !dayjs(lease.startDate).isAfter(period.from, 'day') &&
+    (lease.endDate === null || !dayjs(lease.endDate).isBefore(period.to, 'day'))
+  )
+}
+
+// A tenant who moved from one residential lease to another is billed for the
+// old home on the new lease. Anything ambiguous is left for manual handling.
+function findNewLease(
+  tenantLeases: Array<TenantLease>,
+  oldLeaseId: string,
+  billingPeriod: { from: Date; to: Date }
+): string | null {
+  const oldLease = tenantLeases.find((lease) => lease.leaseId === oldLeaseId)
+  if (!oldLease?.isResidential) {
+    return null
+  }
+
+  const candidates = tenantLeases.filter(
+    (lease) =>
+      lease.leaseId !== oldLeaseId &&
+      lease.isResidential &&
+      INVOICEABLE_STAGES.has(lease.stage) &&
+      coversPeriod(lease, billingPeriod)
+  )
+  return candidates.length === 1 ? candidates[0].leaseId : null
+}
+
+const TENANT_LOOKUP_CONCURRENCY = 5
+
+async function getLeasesByTenantIds(
+  tenantIds: Array<string>
+): Promise<Map<string, Array<TenantLease> | null>> {
+  const results = new Map<string, Array<TenantLease> | null>()
+  for (let i = 0; i < tenantIds.length; i += TENANT_LOOKUP_CONCURRENCY) {
+    const batch = tenantIds.slice(i, i + TENANT_LOOKUP_CONCURRENCY)
+    const responses = await Promise.all(
+      batch.map((tenantId) => getLeasesByTenantId(tenantId))
+    )
+    batch.forEach((tenantId, j) => {
+      const response = responses[j]
+      if (!response.ok) {
+        logger.warn({ tenantId }, 'IMD: Failed to fetch leases for tenant')
+      }
+      results.set(tenantId, response.ok ? response.data : null)
+    })
+  }
+  return results
+}
+
+async function moveToNewLeases(
+  result: EnrichResult,
+  leaseMap: Map<string, LeaseMatch | MultipleLeaseMatch | null>
+): Promise<EnrichResult> {
+  // Leases shared by several tenants are left for manual handling, since the
+  // tenants may have moved to different homes.
+  const candidates = result.unprocessed.flatMap((row) => {
+    const lease = leaseMap.get(row.rentalObjectCode)
+    if (
+      row.reason !== 'tenant-moved' ||
+      !UNIT_CONFIG[row.unit] ||
+      !lease ||
+      isMultipleLeaseMatch(lease) ||
+      lease.tenantIds.length !== 1
+    ) {
+      return []
+    }
+    return [{ row, oldLeaseId: lease.leaseId, tenantId: lease.tenantIds[0] }]
+  })
+  if (candidates.length === 0) {
+    return result
+  }
+
+  const tenantLeases = await getLeasesByTenantIds([
+    ...new Set(candidates.map(({ tenantId }) => tenantId)),
+  ])
+
+  const moved = candidates.flatMap(({ row, oldLeaseId, tenantId }) => {
+    const leases = tenantLeases.get(tenantId)
+    const newLeaseId = leases
+      ? findNewLease(leases, oldLeaseId, billingPeriodForConsumption(row.from))
+      : null
+    return newLeaseId ? [{ row, oldLeaseId, newLeaseId }] : []
+  })
+
+  for (const { row, oldLeaseId, newLeaseId } of moved) {
+    logger.info(
+      { rentalObjectCode: row.rentalObjectCode, oldLeaseId, newLeaseId },
+      "IMD: Moved row to tenant's new lease"
+    )
+  }
+
+  const movedRows = new Set<UnprocessedIMDRow>(moved.map(({ row }) => row))
+  return {
+    enriched: [
+      ...result.enriched,
+      ...moved.map(({ row, newLeaseId }) => {
+        const { reason: _reason, ...imdRow } = row
+        return { ...imdRow, leaseId: newLeaseId }
+      }),
+    ],
+    unprocessed: result.unprocessed.filter((row) => !movedRows.has(row)),
+  }
+}
+
+// Tenfast refuses an import file in which a lease appears more than once, so
+// only the first row per lease goes through and the rest are left manual.
+// Moved rows come after the rows matched directly, so a home's own row wins
+// over one moved to it.
+function keepOneRowPerLease(result: EnrichResult): EnrichResult {
+  const seen = new Set<string>()
+  return result.enriched.reduce<EnrichResult>(
+    (acc, row) => {
+      if (seen.has(row.leaseId)) {
+        const { leaseId, ...imdRow } = row
+        logger.info(
+          { rentalObjectCode: row.rentalObjectCode, leaseId },
+          'IMD: Row left manual, lease already has a row in the file'
+        )
+        acc.unprocessed.push({ ...imdRow, reason: 'duplicate-lease', leaseId })
+      } else {
+        seen.add(row.leaseId)
+        acc.enriched.push(row)
+      }
+      return acc
+    },
+    { enriched: [], unprocessed: [...result.unprocessed] }
   )
 }
 
@@ -160,10 +323,8 @@ async function enrichIMDRows(
       periodEnd: period.end,
     })
 
-    const { enriched, unprocessed } = classifyRows(
-      imdRows,
-      leaseMap,
-      new Date()
+    const { enriched, unprocessed } = keepOneRowPerLease(
+      await moveToNewLeases(classifyRows(imdRows, leaseMap), leaseMap)
     )
 
     return { ok: true, data: { enriched, unprocessed } }
@@ -184,6 +345,7 @@ const UNIT_CONFIG: Record<
   VV: { articleCode: 'IMDM', description: 'Varmvatten' },
   VMM: { articleCode: 'VÄRMEENERGIM', description: 'Värmeenergi' },
   ELEC: { articleCode: 'IMDELM', description: 'El' },
+  EL: { articleCode: 'IMDELM', description: 'Elförbrukning' },
 }
 
 const SWEDISH_MONTHS = [
@@ -241,12 +403,13 @@ function toTenfastCsv(rows: Array<EnrichedIMDRow>): string {
   const lines = rows.map((row) => {
     const { articleCode, description } = getUnitConfig(row.unit)
     const yearlyRent = (row.cost * 12).toFixed(2).replace('.', ',')
+    const billingPeriod = billingPeriodForConsumption(row.from)
     return csvRow([
       row.leaseId,
       articleCode,
       buildInvoiceText(row, description),
-      formatDate(row.from),
-      formatDate(row.to),
+      formatDate(billingPeriod.from),
+      formatDate(billingPeriod.to),
       yearlyRent,
       '',
     ])
@@ -276,7 +439,7 @@ function getReasonLabel(row: UnprocessedIMDRow): string {
     .with({ reason: 'amount-too-low' }, () => 'Belopp under 15 kr')
     .with(
       { reason: 'tenant-moved' },
-      () => 'Hyresgästen har avslutat kontrakt efter perioden'
+      () => 'Kontraktet upphör före faktureringsmånadens slut'
     )
     .with(
       { reason: 'multiple-leases' },
@@ -286,6 +449,10 @@ function getReasonLabel(row: UnprocessedIMDRow): string {
     .with(
       { reason: 'unsupported-unit' },
       ({ unit }) => `Enhet stöds ej: ${unit}`
+    )
+    .with(
+      { reason: 'duplicate-lease' },
+      ({ leaseId }) => `Flera rader för samma kontrakt: ${leaseId}`
     )
     .exhaustive()
 }

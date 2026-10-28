@@ -170,7 +170,7 @@ export function KeyLoanTransferDialog({
           {loanInfo.cardsToTransfer.length > 0 && (
             <div className="space-y-2">
               <div className="text-xs text-muted-foreground">
-                Droppar som överförs:
+                Taggar som överförs:
               </div>
               {loanInfo.cardsToTransfer.map((card) => (
                 <div
@@ -264,7 +264,7 @@ export function KeyLoanTransferDialog({
       {newCards.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-semibold text-muted-foreground">
-            Nya droppar ({newCards.length})
+            Nya taggar ({newCards.length})
           </div>
           {newCards.map((card) => (
             <div
@@ -281,7 +281,7 @@ export function KeyLoanTransferDialog({
       {allTransferredCards.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-semibold text-muted-foreground">
-            Överförda droppar ({allTransferredCards.length})
+            Överförda taggar ({allTransferredCards.length})
           </div>
           {allTransferredCards.map((card) => (
             <div
@@ -307,7 +307,7 @@ export function KeyLoanTransferDialog({
     transferParts.push(`${allTransferredKeys.length} nyckel/nycklar`)
   }
   if (allTransferredCards.length > 0) {
-    transferParts.push(`${allTransferredCards.length} droppe/droppar`)
+    transferParts.push(`${allTransferredCards.length} tagg/taggar`)
   }
   const transferText =
     transferParts.length > 0
@@ -325,7 +325,7 @@ export function KeyLoanTransferDialog({
     rightTitleParts.push(`${totalNewLoanKeys} nycklar`)
   }
   if (totalNewLoanCards > 0) {
-    rightTitleParts.push(`${totalNewLoanCards} droppar`)
+    rightTitleParts.push(`${totalNewLoanCards} taggar`)
   }
   const rightTitle = `Nytt lån (${rightTitleParts.join(', ')})`
 

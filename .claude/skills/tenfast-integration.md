@@ -21,14 +21,14 @@ writing a new query or debugging a weird result.
 Every paginated endpoint hard-caps at **100 records per page**, regardless of
 a `limit` param you pass (tested up to 1000 — ignored). Pagination is
 cursor-based via a `paginate` query param and a `next` cursor in the
-response, so pages of the *same* query must be fetched sequentially — there's
+response, so pages of the _same_ query must be fetched sequentially — there's
 no way to parallelize within one query.
 
 - If a query can return thousands of records (e.g. all vacant/soon-vacant
   parking spaces), expect multiple seconds just from round-trip count. No
   workaround found on our side; this has been raised with Tenfast's developer
   to ask for a higher page-size cap.
-- **Independent queries** (different filters/endpoints) *can* run
+- **Independent queries** (different filters/endpoints) _can_ run
   concurrently via `Promise.all` — that's real savings. Don't try to broaden
   one query's filter to avoid a second query "to save a round trip"; a
   broader filter (e.g. adding `occupied` to a states filter) can mean
@@ -43,6 +43,7 @@ no way to parallelize within one query.
 ## Schema leniency is asymmetric — this has caused live 500s
 
 In `TenfastLeaseSchema`:
+
 - `hyresobjekt` uses `z.array(z.unknown()).transform(...)` with a
   `.safeParse` + flatMap-filter fallback — a single unparseable item is
   **silently dropped**, the rest of the array still parses.
@@ -88,15 +89,15 @@ inferred from our code. There are 9 states total; 7 of them (all except
 leases and are therefore also present in a separate `.avtalStates` field.
 Definitions as given:
 
-| State | Meaning |
-|---|---|
-| `vacant` | No non-terminated lease is linked, **or** a lease exists but its move-in date is in the future |
-| `reserved` | At least one unsigned lease is linked |
-| `occupied` | At least one signed lease with a move-in date today or in the past |
-| `soon-vacant` | An active lease exists that will end within a month |
-| `soon-occupied` | An active lease exists whose move-in is within a month |
-| `rental-restriction` | The rental object has a block (spärr) |
-| `public` | (definition not given) |
+| State                | Meaning                                                                                        |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| `vacant`             | No non-terminated lease is linked, **or** a lease exists but its move-in date is in the future |
+| `reserved`           | At least one unsigned lease is linked                                                          |
+| `occupied`           | At least one signed lease with a move-in date today or in the past                             |
+| `soon-vacant`        | An active lease exists that will end within a month                                            |
+| `soon-occupied`      | An active lease exists whose move-in is within a month                                         |
+| `rental-restriction` | The rental object has a block (spärr)                                                          |
+| `public`             | (definition not given)                                                                         |
 
 Only 7 states were enumerated above even though the developer said there
 are 9 total — 2 remain unaccounted for. Don't assume the list is complete;
@@ -116,14 +117,26 @@ record when both queries return the same object (it carries more complete
 rental-object data than the record synthesized from the `avtal/search`
 response).
 
-## `includeAvtal` on `/hyresvard/hyresobjekt` and `extras/hyresobjekt/batch-get`
+## The single-object GET never returns leases (by design)
 
-Documented values (confirmed from the API docs, 2026-10): `signed` = signed
-and not cancelled, `open` = all not cancelled, `all` = every avtal, including
-`archived`. The array is **sorted by reference descending and capped at 10**,
-so it is fine for "the latest lease" and wrong for full history. The
-single-object `extras/hyresobjekt/{externalId}` endpoint has no
-`includeAvtal` and never returns `avtal` — probing it tells you nothing.
+`GET /v1/hyresvard/extras/hyresobjekt/:code` returns `hyresobjektBaseSchema`
+per Tenfast's OpenAPI docs (`/docs/` on the API host). That schema has **no
+`avtal` field**, only `avtalStates`/`states`. The endpoint takes no
+`includeAvtal`; its `populate` parameter is undocumented, and `populate=avtal`
+returns no leases either (tried against test, 2026-10-14). Anything computed
+from leases, such as `vacantFrom` in `mapTenfastRentalObjectToAvailabilityInfo`,
+silently falls back to "vacant today" on that response. That was AVTAL-340:
+the parking by-code route showed every space as vacant today.
+
+`includeAvtal` exists only on `POST …/extras/hyresobjekt/batch-get` and
+`GET /hyresvard/hyresobjekt`. Use batch-get even for a single code
+(`getRentalObjectWithLeases`). It leaves unknown codes out of the response
+instead of answering 404. Documented values: `signed` (signed and not
+cancelled), `open` (all not cancelled), `all`. Leases are **sorted by
+reference descending and limited to 10** per object. `getRentalObject`
+(single GET) is still fine for callers that don't need leases, such as rent
+articles and rent rows.
+
 Migrated objects have no lease history in Tenfast, so an already-vacant
 object returns an empty `avtal` until a tenancy ends there.
 
@@ -159,38 +172,35 @@ tenant data, and don't commit it.
 
 ## Which lease is "the tenancy" of a rental object
 
-`tenfast-rental-object-helpers.ts` does not read lease `stage` for vacancy.
-It takes the **latest lease whose `startDate` is in the past** as the current
-(or last) tenancy and uses its dates:
+`tenfast-rental-object-helpers.ts` answers two different questions:
 
-- `listingHistorySince` = that lease's `startDate`. Nothing is published
-  during a tenancy, so counting closed listings from there equals counting
-  from the notice date, and it would also cover a fixed-term lease that ends
-  without a notice.
-- `vacantFrom` = the day after that lease's `endDate`, clamped to today,
-  with rental blocks applied by the callers. No `cancellation` field is
-  read: the notice is the notice, the lease's `endDate` is the lease's.
-  Assumed, not seen: that Tenfast clears `endDate` when a notice is
-  withdrawn. 0 of 800 scanned bostad leases had `cancellation.cancelled`,
-  so it could not be checked.
-
-An `upcoming` lease is never the tenancy (it has not started), nor is a
-`draft`, `signingInProgress`, `voided` or `rejected` one whatever its dates;
-the vacant list already excludes objects that have an upcoming lease.
+- **`vacantFrom`** comes from `getLeasedUntil` (AVTAL-343), which reads lease
+  `stage`. Leases in force are `active`, `terminationScheduled`,
+  `preTermination` and `upcoming`. Any of them without an `endDate`, with a
+  withdrawn notice, or with a missing or unknown stage makes the object
+  leased until further notice: `vacantFrom` is undefined (not vacant). Else
+  the object is vacant the day after the latest end date, or today without a
+  lease in force. Rental blocks are applied by the callers through
+  `determineVacantFrom` in `@onecore/utilities`.
+- **`listingHistorySince`** = the `startDate` of the latest lease that has
+  begun (`getLatestStartedLease`), whatever its stage, skipping `draft`,
+  `signingInProgress`, `voided` and `rejected`. Nothing is published during a
+  tenancy, so counting closed listings from there equals counting from the
+  notice date, and it also covers a fixed-term lease that ends without a
+  notice.
 
 Observed 2026-10-13, one page each of soon-vacant `bostad`, soon-vacant
 `parkering` and occupied `parkering`: every started lease with an end date
 was `terminationScheduled` with a notice; no started lease carried an end
-date without a notice, and no end date lay beyond 2027. So fixed-term leases
-are unobserved in our stock so far, and dropping the `requested` check
-changes nothing for current data.
+date without a notice, and no end date lay beyond 2027.
 
 ## `cancellation.requested` vs `cancellation.cancelled` — easy to get backwards
 
 On a lease's `cancellation` object:
+
 - `requested: true` — a termination notice **has been given**.
 - `cancelled: true` — the termination notice was **itself later withdrawn**
-  (i.e. the lease is *not* ending after all). This does NOT mean "the lease
+  (i.e. the lease is _not_ ending after all). This does NOT mean "the lease
   is cancelled/ended" — that reading is backwards and was an actual bug.
 
 To reliably check "this lease is genuinely still terminating," check
@@ -198,12 +208,35 @@ To reliably check "this lease is genuinely still terminating," check
 alone doesn't necessarily flip back to `false` when a notice is withdrawn, so
 checking only `requested` can produce false positives.
 
+## vacantFrom from leases: mostly the end date, not the notice flags
+
+`getLeasedUntil` (`tenfast-rental-object-helpers.ts`) looks at leases in
+force: `active`, `terminationScheduled`, `preTermination` and `upcoming`. A
+lease with a missing or unknown stage counts as in force without an end (not
+vacant), so an unreadable lease never makes an object vacant.
+
+- **No such lease:** vacant today.
+- **Any of them without `endDate`:** not vacant (`vacantFrom` undefined). That
+  covers a tenancy until further notice and a signed successor to a terminated
+  lease.
+- **Otherwise:** vacant the day after the latest end.
+
+`determineVacantFrom` keeps undefined as undefined, whatever the Xpand block
+says. Rule decided in AVTAL-343.
+
+On Tenfast test (2,229 objects, 2026-10-14), `endDate` was set exactly when
+notice had been given, both on terminating and on upcoming leases. No lease
+had a withdrawn notice. A withdrawn notice (`requested && cancelled`) still
+counts as no end, in case Tenfast leaves the date behind.
+
 ## Query syntax
 
 `/v1/hyresvard/avtal/search` supports nested bracket-notation filters, e.g.:
+
 ```
 filter[stage]=terminationScheduled&filter[hyresobjekt][typ]=parkering
 ```
+
 The `populate` param controls whether nested refs (`hyresobjekt`,
 `hyresgaster`) come back as raw ObjectId strings or fully-populated objects
 — see the schema-leniency section above for why this matters.
@@ -220,3 +253,41 @@ There's a module-level tag cache in `tenfast-adapter.ts` (5 min TTL). Tests
 that verify tag propagation must bust the cache by spying on `Date.now` —
 follow the existing `describe('tag propagation')` pattern in
 `tenfast-adapter.test.ts` rather than reinventing it.
+
+## Article cache and VAT rent rows
+
+There's also a module-level article-catalog cache in `tenfast-adapter.ts`
+(`getArticles`, 5 min TTL, same pattern as the tag cache above, but with one
+deliberate difference — see "Fails closed" below). It's used by
+`createLease` when `includeVAT` is true: a rent row's `article` is just an
+ObjectId, and the human-readable code (e.g. `HYRAG`) plus the article's own
+fixed VAT rate live on the article itself, fetched via
+`GET /hyresvard/articles`. VAT-inclusive articles are a separate article
+from their VAT-free counterpart, always named with a trailing `M` (e.g.
+`HYRAG` -> `HYRAGM`). `applyVatToRentRows` swaps a row's `article`/`vat` to
+its `M` counterpart when one exists in the catalog; rows whose article has
+no VAT counterpart are left untouched (and logged via `logger.warn`, since
+that's otherwise silent and indistinguishable from "this article genuinely
+has no VAT variant").
+
+**Fails closed, unlike the tag cache:** `getTags` swallows a fetch/parse
+failure and falls back to an empty `Map` — acceptable there since tags only
+affect optional display info. `getArticles` instead **re-throws** on
+failure (status != 200, schema parse failure, or network error) rather
+than falling back to `[]`. If it fell back silently, `createLease` would
+build a lease with `vatEnabled: true` but no row actually switched to its
+VAT article — wrong and undetectable by the caller. `createLease` catches
+this specific failure and returns `{ ok: false, err:
+'could-not-fetch-articles' }`, failing the whole lease creation rather than
+creating one with incorrect VAT. When `includeVAT` is false, rows are
+passed through exactly as configured on the rental object — deliberately
+not force-zeroed. Confirmed with product (AVTAL-326, 2026-10): existing
+VAT on a rental object's own rows must not be stripped just because a
+particular lease doesn't itself require VAT.
+
+Tests that exercise the article cache must bust it between cases — unlike
+the tag cache above, these tests use `jest.useFakeTimers()` +
+`jest.setSystemTime()` (a different time per test, `jest.useRealTimers()`
+in `afterEach`) rather than spying on `Date.now` directly; see the
+`describe('VAT rent row article swap', ...)` block in `createLease` in
+`tenfast-adapter.test.ts`.

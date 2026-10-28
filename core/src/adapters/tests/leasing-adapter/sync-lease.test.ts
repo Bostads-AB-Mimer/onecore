@@ -1,5 +1,6 @@
 import assert from 'node:assert'
 import nock from 'nock'
+import { loggedAxios } from '@onecore/utilities'
 
 import config from '../../../common/config'
 import * as leasingAdapter from '../../leasing-adapter'
@@ -136,6 +137,41 @@ describe(leasingAdapter.syncLease, () => {
     expect(result.err).toBe('unknown')
   })
 
+  it('passes the document outcome through', async () => {
+    nock(config.tenantsLeasesService.url)
+      .post('/leases/sync')
+      .reply(201, {
+        content: { action: 'created', leaseId, document: 'missing' },
+      })
+
+    const result = await leasingAdapter.syncLease(
+      leaseId,
+      contactCode,
+      'create'
+    )
+
+    expect(result).toEqual({
+      ok: true,
+      data: { action: 'created', leaseId, document: 'missing' },
+    })
+  })
+
+  it('carries the service error as detail on a failed sync', async () => {
+    nock(config.tenantsLeasesService.url)
+      .post('/leases/sync')
+      .reply(500, { error: 'termination-pdf-upload-failed' })
+
+    const result = await leasingAdapter.syncLease(
+      leaseId,
+      undefined,
+      'terminate'
+    )
+
+    assert(!result.ok)
+    expect(result.err).toBe('sync-failed')
+    expect(result.detail).toBe('termination-pdf-upload-failed')
+  })
+
   it('serializes body without contactCode when undefined', async () => {
     nock(config.tenantsLeasesService.url)
       .post('/leases/sync', { leaseId, action: 'terminate' })
@@ -151,5 +187,39 @@ describe(leasingAdapter.syncLease, () => {
       ok: true,
       data: { action: 'terminated', leaseId },
     })
+  })
+})
+
+// Must stay under the CronJob's activeDeadlineSeconds (300s) and above
+// Leasing's worst case: six Tenfast calls at 10s plus one 60s upload.
+const FEW_MINUTES_MS = 3 * 60_000
+const LEASING_WORK_BOUND_MS = 6 * 10_000 + 60_000
+
+describe('lease sync call timeouts', () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  it('bounds getUpdatedLeases', async () => {
+    const getSpy = jest
+      .spyOn(loggedAxios, 'get')
+      .mockResolvedValue({ status: 200, data: { content: [] } })
+
+    await leasingAdapter.getUpdatedLeases(null)
+
+    const timeout = getSpy.mock.calls[0][1]?.timeout
+    expect(timeout).toBeGreaterThan(0)
+    expect(timeout).toBeLessThanOrEqual(FEW_MINUTES_MS)
+  })
+
+  it('bounds syncLease without cutting Leasing off mid-sync', async () => {
+    const postSpy = jest.spyOn(loggedAxios, 'post').mockResolvedValue({
+      status: 200,
+      data: { content: { action: 'created', leaseId: '1' } },
+    })
+
+    await leasingAdapter.syncLease('1', 'P1', 'create')
+
+    const timeout = postSpy.mock.calls[0][2]?.timeout
+    expect(timeout).toBeGreaterThanOrEqual(LEASING_WORK_BOUND_MS)
+    expect(timeout).toBeLessThanOrEqual(FEW_MINUTES_MS)
   })
 })

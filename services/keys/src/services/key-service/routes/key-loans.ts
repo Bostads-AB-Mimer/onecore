@@ -5,6 +5,12 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import { db } from '../adapters/db'
 import * as keyLoansAdapter from '../adapters/key-loans-adapter'
+import * as cardsAdapter from '../adapters/cards-adapter'
+import { MirrorNotReadyError } from '../dax-card-owner-mirror'
+import {
+  MAX_BATCH_RENTAL_OBJECT_CODES,
+  parseRentalObjectCodes,
+} from '../../../utils/rental-object-codes'
 import * as keyLoanService from '../key-loan-service'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { registerSchema } from '../../../utils/openapi'
@@ -398,6 +404,114 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { content: loans satisfies KeyLoanResponse[], ...metadata }
     } catch (err) {
       logger.error(err, 'Error fetching loans by card')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /key-loans/batch/by-rental-object:
+   *   get:
+   *     summary: Get key loans (with keys and cards) for many rental objects in one call
+   *     description: |
+   *       Returns a map keyed by rentalObjectCode. A loan is listed under an object when
+   *       any of its keys or cards belongs to that object. Every requested code is present,
+   *       mapped to an empty array when it has no loans. Receipts are not included. Max 200 codes.
+   *
+   *       With `includeCards=true` the cards found in DAX are also returned as a `cards`
+   *       sidecar keyed by rentalObjectCode, and `cardsUnresolved` lists the codes whose
+   *       DAX lookup failed (their cards are unknown, not empty).
+   *     tags: [Key Loans]
+   *     parameters:
+   *       - in: query
+   *         name: rentalObjectCodes
+   *         required: true
+   *         style: form
+   *         explode: true
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Rental object codes (repeat the param or comma-separate).
+   *       - in: query
+   *         name: includeCards
+   *         required: false
+   *         schema:
+   *           type: boolean
+   *         description: When true, adds a `cards` sidecar with all DAX cards per rental object.
+   *     responses:
+   *       200:
+   *         description: Loans grouped by rental object code.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   additionalProperties:
+   *                     type: array
+   *                     items:
+   *                       $ref: '#/components/schemas/KeyLoanWithDetails'
+   *                 cards:
+   *                   type: object
+   *                   description: Present only when includeCards=true.
+   *                   additionalProperties:
+   *                     type: array
+   *                     items:
+   *                       $ref: '#/components/schemas/Card'
+   *                 cardsUnresolved:
+   *                   type: array
+   *                   description: Present only when includeCards=true. Codes whose DAX lookup failed.
+   *                   items:
+   *                     type: string
+   *       400:
+   *         description: Missing or too many rental object codes.
+   *       503:
+   *         description: The DAX card owner mirror is still syncing (after a restart). Retry later.
+   *       500:
+   *         description: Internal server error.
+   */
+  router.get('/key-loans/batch/by-rental-object', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'rentalObjectCodes',
+      'includeCards',
+    ])
+    try {
+      const codes = parseRentalObjectCodes(ctx)
+      if (codes.length === 0 || codes.length > MAX_BATCH_RENTAL_OBJECT_CODES) {
+        ctx.status = 400
+        ctx.body = {
+          reason: `rentalObjectCodes must contain 1-${MAX_BATCH_RENTAL_OBJECT_CODES} codes`,
+          ...metadata,
+        }
+        return
+      }
+      const includeCards = ctx.query.includeCards === 'true'
+
+      const { cards, unresolved } =
+        await cardsAdapter.getCardsByRentalObjects(codes)
+      const content = await keyLoansAdapter.getKeyLoansByRentalObjects(
+        codes,
+        cards,
+        db
+      )
+
+      ctx.status = 200
+      ctx.body = {
+        content,
+        ...(includeCards ? { cards, cardsUnresolved: unresolved } : {}),
+        ...metadata,
+      }
+    } catch (err) {
+      if (err instanceof MirrorNotReadyError) {
+        ctx.status = 503
+        ctx.set('Retry-After', '60')
+        ctx.body = { reason: 'DAX card owner mirror is syncing', ...metadata }
+        return
+      }
+      logger.error(err, 'Error fetching key loans batch by rental object')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
     }
