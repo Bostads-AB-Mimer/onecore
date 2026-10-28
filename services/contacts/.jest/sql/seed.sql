@@ -442,3 +442,54 @@ INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, c
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKFM00012    ', '_OBJ000004     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'RENSAD_GDPR';
 UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 2 WHERE cmctckod = 'RENSAD_GDPR';
+
+-- Login contact fixtures: several contacts per personnummer. Kept out of
+-- FULL_TEST_DATA_SET like the P9000xx contacts; login-contact tests opt in.
+-- 195001019800: P920001 is a tenant (lease under notice), P920002 a newer web
+--               registration with queue time → P920001.
+-- 196002029814: P920003 has an Xpand user, P920004 is a newer supplier-only
+--               contact without one → P920003.
+-- 197003039828: F920005 is the sole trader's company contact, P920006 the
+--               person → P920006.
+-- 198004049832: P920007 and P920008 both registered on the web with queue
+--               time → the newer P920008, flagged ambiguous.
+-- 199005059846: P920009 is stored in the ten-digit form with a hyphen.
+-- 195512129858: P920010 is a deleted tenant, P920011 the live contact → P920011.
+-- 196611119865: P920012's lease has ended, P920013 has queue time → P920013.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, persorgnr, keysyusr, createdate, deletemark, lcidcivno, timestamp) VALUES
+  ('_LGNC920001    ', '_LGNO920001    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920001', 'Login TenantOld', '195001019800', '_LGNU920001    ', '2018-03-01', 0, 1053, 'LGN9200001'),
+  ('_LGNC920002    ', '_LGNO920002    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920002', 'Login QueueNew', '195001019800', '_LGNU920002    ', '2023-03-01', 0, 1053, 'LGN9200002'),
+  ('_LGNC920003    ', '_LGNO920003    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920003', 'Login Customer', '196002029814', '_LGNU920003    ', '2019-03-01', 0, 1053, 'LGN9200003'),
+  ('_LGNC920004    ', '_LGNO920004    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920004', 'Login Supplier', '196002029814', NULL, '2024-03-01', 0, 1053, 'LGN9200004'),
+  ('_LGNC920005    ', '_LGNO920005    ', '_0EI00000F     ', '00001          ', '00001          ', 'F920005', 'Login Company', '197003039828', '_LGNU920005    ', '2024-03-01', 0, 1053, 'LGN9200005'),
+  ('_LGNC920006    ', '_LGNO920006    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920006', 'Login Person', '197003039828', NULL, '2019-03-01', 0, 1053, 'LGN9200006'),
+  ('_LGNC920007    ', '_LGNO920007    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920007', 'Login WebOld', '198004049832', '_LGNU920007    ', '2021-03-01', 0, 1053, 'LGN9200007'),
+  ('_LGNC920008    ', '_LGNO920008    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920008', 'Login WebNew', '198004049832', '_LGNU920008    ', '2024-03-01', 0, 1053, 'LGN9200008'),
+  ('_LGNC920009    ', '_LGNO920009    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920009', 'Login TenDigits', '900505-9846', NULL, '2019-03-01', 0, 1053, 'LGN9200009'),
+  ('_LGNC920010    ', '_LGNO920010    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920010', 'Login Deleted', '195512129858', '_LGNU920010    ', '2024-03-01', 1, 1053, 'LGN9200010'),
+  ('_LGNC920011    ', '_LGNO920011    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920011', 'Login Live', '195512129858', NULL, '2019-03-01', 0, 1053, 'LGN9200011'),
+  ('_LGNC920012    ', '_LGNO920012    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920012', 'Login EndedLease', '196611119865', NULL, '2018-03-01', 0, 1053, 'LGN9200012'),
+  ('_LGNC920013    ', '_LGNO920013    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920013', 'Login Queue', '196611119865', NULL, '2024-03-01', 0, 1053, 'LGN9200013');
+
+-- Leases: OBJ20 under notice (last debit far ahead), OBJ21 running, OBJ22 ended.
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000020     ', '100-001-01-0020/01', '2099-01-01'),
+  ('_OBJ000021     ', '100-001-01-0021/01', NULL),
+  ('_OBJ000022     ', '100-001-01-0022/01', '2022-01-01');
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKLGN0001    ', '_OBJ000020     ', keycmctc, 'INNEHAVARE', '2018-04-01', NULL FROM cmctc WHERE cmctckod = 'P920001';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKLGN0002    ', '_OBJ000021     ', keycmctc, 'INNEHAVARE', '2018-04-01', NULL FROM cmctc WHERE cmctckod = 'F920005';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKLGN0003    ', '_OBJ000021     ', keycmctc, 'INNEHAVARE', '2018-04-01', NULL FROM cmctc WHERE cmctckod = 'P920010';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKLGN0004    ', '_OBJ000022     ', keycmctc, 'INNEHAVARE', '2018-04-01', NULL FROM cmctc WHERE cmctckod = 'P920012';
+
+INSERT INTO bkqte (keybkqte, keybkkty, keycmctc, quetime, timestamp)
+SELECT '_QTELGN0002    ', NULL, keycmctc, '2023-03-01', 'LGNQ920002' FROM cmctc WHERE cmctckod = 'P920002';
+INSERT INTO bkqte (keybkqte, keybkkty, keycmctc, quetime, timestamp)
+SELECT '_QTELGN0007    ', NULL, keycmctc, '2021-03-01', 'LGNQ920007' FROM cmctc WHERE cmctckod = 'P920007';
+INSERT INTO bkqte (keybkqte, keybkkty, keycmctc, quetime, timestamp)
+SELECT '_QTELGN0008    ', NULL, keycmctc, '2024-03-01', 'LGNQ920008' FROM cmctc WHERE cmctckod = 'P920008';
+INSERT INTO bkqte (keybkqte, keybkkty, keycmctc, quetime, timestamp)
+SELECT '_QTELGN0013    ', NULL, keycmctc, '2024-03-01', 'LGNQ920013' FROM cmctc WHERE cmctckod = 'P920013';
