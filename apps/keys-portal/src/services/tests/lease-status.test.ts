@@ -52,4 +52,14 @@ describe('deriveDisplayStatus', () => {
       deriveDisplayStatus(makeLease({ status: 'abouttoend' as any }))
     ).toBe('active')
   })
+
+  it('treats a voided lease as ended', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-06-01'))
+
+    expect(deriveDisplayStatus(makeLease({ status: 'Voided' as any }))).toBe(
+      'ended'
+    )
+    expect(deriveDisplayStatus(makeLease({ status: 7 as any }))).toBe('ended')
+  })
 })

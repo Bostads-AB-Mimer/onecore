@@ -9,12 +9,12 @@ export const pickEndDate = (lease: Lease) => lease.lastDebitDate ?? undefined
 function normalizeBackendStatus(
   s?: string | number
 ): 'active' | 'upcoming' | 'ended' | 'abouttoend' | null {
-  // Handle numeric status codes (0 = Current, 1 = Upcoming, 2 = AboutToEnd, 3 = Ended)
+  // Numeric codes: 0 Current, 1 Upcoming, 2 AboutToEnd, 3 Ended, 7 Voided
   if (typeof s === 'number') {
     if (s === 0) return 'active'
     if (s === 1) return 'upcoming'
     if (s === 2) return 'abouttoend'
-    if (s === 3) return 'ended'
+    if (s === 3 || s === 7) return 'ended'
     return null
   }
 
@@ -22,7 +22,12 @@ function normalizeBackendStatus(
   if (!v) return null
   if (v === 'current' || v === 'active' || v === 'ongoing') return 'active'
   if (v === 'upcoming' || v === 'future' || v === 'planned') return 'upcoming'
-  if (v === 'ended' || v === 'terminated' || v === 'ended/terminated')
+  if (
+    v === 'ended' ||
+    v === 'terminated' ||
+    v === 'ended/terminated' ||
+    v === 'voided'
+  )
     return 'ended'
   if (v === 'abouttoend' || v === 'about to end') return 'abouttoend'
   return null
