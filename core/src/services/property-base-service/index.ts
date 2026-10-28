@@ -84,6 +84,11 @@ export const routes = (router: KoaRouter) => {
   registerSchema('ComponentInstallation', schemas.ComponentInstallationSchema, {
     ComponentSubtype: schemas.ComponentSubtypeSchema,
   })
+  registerSchema('ComponentEvent', schemas.ComponentEventSchema)
+  registerSchema(
+    'CreateComponentEventRequest',
+    schemas.CreateComponentEventSchema
+  )
   registerSchema(
     'CreateComponentCategoryRequest',
     schemas.CreateComponentCategorySchema

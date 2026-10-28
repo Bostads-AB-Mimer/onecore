@@ -1091,4 +1091,113 @@ describe('@onecore/property-adapter', () => {
       expect(result).toEqual({ ok: false, err: 'conflict' })
     })
   })
+
+  describe('component events', () => {
+    const componentId = '00000000-0000-0000-0004-000000000001'
+    const eventsUrl = `${config.propertyBaseService.url}/components/${componentId}/events`
+    const body = {
+      eventType: 'REPAIRED' as const,
+      occurredAt: '2026-10-28',
+      sourceType: 'WORK_ORDER' as const,
+      sourceId: 'od-1',
+      actor: 'jdoe',
+    }
+
+    it.each([201, 200])(
+      'passes on status %i from property with the event',
+      async (status) => {
+        const event = factory.componentEvent.build()
+        mockServer.use(
+          http.post(eventsUrl, () =>
+            HttpResponse.json({ content: event }, { status })
+          )
+        )
+
+        const result = await propertyBaseAdapter.createComponentEvent(
+          componentId,
+          body
+        )
+        expect(result).toEqual({ ok: true, data: event, statusCode: status })
+      }
+    )
+
+    it('returns not_found when the component does not exist', async () => {
+      mockServer.use(
+        http.post(eventsUrl, () =>
+          HttpResponse.json({ error: 'Component not found' }, { status: 404 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.createComponentEvent(
+        componentId,
+        body
+      )
+      expect(result).toEqual({ ok: false, err: 'not_found' })
+    })
+
+    it("returns property's message when it refuses the event", async () => {
+      const reason = 'Invalid relatedComponentId: component does not exist'
+      mockServer.use(
+        http.post(eventsUrl, () =>
+          HttpResponse.json({ error: reason }, { status: 400 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.createComponentEvent(
+        componentId,
+        body
+      )
+      expect(result).toEqual({
+        ok: false,
+        err: 'bad_request',
+        message: reason,
+      })
+    })
+
+    it('returns upstream_error when property fails', async () => {
+      mockServer.use(
+        http.post(eventsUrl, () =>
+          HttpResponse.json({ error: 'boom' }, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.createComponentEvent(
+        componentId,
+        body
+      )
+      expect(result).toEqual({ ok: false, err: 'upstream_error' })
+    })
+
+    it("returns the component's events", async () => {
+      const events = factory.componentEvent.buildList(2)
+      mockServer.use(
+        http.get(eventsUrl, () => HttpResponse.json({ content: events }))
+      )
+
+      const result = await propertyBaseAdapter.getComponentEvents(componentId)
+      expect(result).toEqual({ ok: true, data: events })
+    })
+
+    it('forwards sourceType and sourceId when listing by source', async () => {
+      const events = factory.componentEvent.buildList(1)
+      let query: URLSearchParams | undefined
+      mockServer.use(
+        http.get(
+          `${config.propertyBaseService.url}/component-events`,
+          ({ request }) => {
+            query = new URL(request.url).searchParams
+            return HttpResponse.json({ content: events })
+          }
+        )
+      )
+
+      const result = await propertyBaseAdapter.getComponentEventsBySource(
+        'INSPECTION',
+        'abc-123'
+      )
+      expect(result).toEqual({ ok: true, data: events })
+      expect(query?.get('sourceType')).toBe('INSPECTION')
+      expect(query?.get('sourceId')).toBe('abc-123')
+    })
+  })
 })

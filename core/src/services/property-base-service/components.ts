@@ -53,6 +53,12 @@ const componentErrorResponse = {
   upstream_error: [500, 'Internal server error'],
 } as const
 
+const componentEventErrorResponse = {
+  bad_request: [400, 'Invalid component event'],
+  not_found: [404, 'Component not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
 const componentInstallationErrorResponse = {
   conflict: [409, 'The component already has an active installation'],
   not_found: [404, 'Component installation not found'],
@@ -2216,6 +2222,246 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: schemas.ComponentSchema.parse(result.data),
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  // ==================== COMPONENT EVENTS ====================
+
+  /**
+   * @swagger
+   * /components/{id}/events:
+   *   post:
+   *     summary: Record an event on a component
+   *     description: |
+   *       Stores what happened to a component (repaired, replaced, inspected, ...).
+   *       Idempotent on (sourceType, sourceId, componentId, eventType) when sourceId is set:
+   *       a repeated request returns the stored event unchanged with 200 instead of 201.
+   *       sourceId is required unless sourceType is MANUAL.
+   *     tags:
+   *       - Property-base/Components
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateComponentEventRequest'
+   *     responses:
+   *       201:
+   *         description: Event created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentEvent'
+   *       200:
+   *         description: The event already existed and is returned unchanged
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentEvent'
+   *       400:
+   *         description: Invalid request, or relatedComponentId does not exist
+   *       404:
+   *         description: Component not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/components/:id/events', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { id } = ctx.params
+
+    const idValidation = z.string().uuid().safeParse(id)
+    if (!idValidation.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+
+    const body = schemas.CreateComponentEventSchema.safeParse(ctx.request.body)
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createComponentEvent(
+        id,
+        body.data
+      )
+
+      if (!result.ok) {
+        const [status, error] = componentEventErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error: result.message ?? error, ...metadata }
+        return
+      }
+
+      ctx.status = result.statusCode === 201 ? 201 : 200
+      ctx.body = {
+        content: schemas.ComponentEventSchema.parse(result.data),
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components/{id}/events:
+   *   get:
+   *     summary: List a component's events
+   *     description: All events recorded on the component, newest first.
+   *     tags:
+   *       - Property-base/Components
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: The component's events
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentEvent'
+   *       400:
+   *         description: Invalid UUID format
+   *       404:
+   *         description: Component not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/components/:id/events', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { id } = ctx.params
+
+    const idValidation = z.string().uuid().safeParse(id)
+    if (!idValidation.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentEvents(id)
+
+      if (!result.ok) {
+        const [status, error] = componentEventErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: schemas.ComponentEventSchema.array().parse(result.data),
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-events:
+   *   get:
+   *     summary: List the component events of one work order or inspection
+   *     description: All events with the given source, newest first. An unknown source gives an empty list.
+   *     tags:
+   *       - Property-base/Components
+   *     parameters:
+   *       - in: query
+   *         name: sourceType
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [WORK_ORDER, INSPECTION, MANUAL]
+   *       - in: query
+   *         name: sourceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Work order id (e.g. od-123) or inspection id
+   *     responses:
+   *       200:
+   *         description: The events
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentEvent'
+   *       400:
+   *         description: Invalid query parameters
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-events', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.ComponentEventsBySourceQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentEventsBySource(
+        params.data.sourceType,
+        params.data.sourceId
+      )
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: schemas.ComponentEventSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {

@@ -821,6 +821,125 @@ export interface paths {
       }
     }
   }
+  '/components/{id}/events': {
+    /**
+     * List a component's events
+     * @description All events recorded on the component, newest first.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
+          id: string
+        }
+      }
+      responses: {
+        /** @description The component's events */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentEvent'][]
+            }
+          }
+        }
+        /** @description Invalid UUID format */
+        400: {
+          content: never
+        }
+        /** @description Component not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Record an event on a component
+     * @description Stores what happened to a component (repaired, replaced, inspected, ...).
+     * Idempotent on (sourceType, sourceId, componentId, eventType) when sourceId is set:
+     * a repeated request returns the stored event unchanged with 200 instead of 201.
+     * sourceId is required unless sourceType is MANUAL.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Component instance ID */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateComponentEventRequest']
+        }
+      }
+      responses: {
+        /** @description The event already existed and is returned unchanged */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentEvent']
+            }
+          }
+        }
+        /** @description Event created */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentEvent']
+            }
+          }
+        }
+        /** @description Invalid request, or relatedComponentId does not exist */
+        400: {
+          content: never
+        }
+        /** @description Component not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/component-events': {
+    /**
+     * List the component events of one work order or inspection
+     * @description All events with the given source, newest first. An unknown source gives an empty list.
+     */
+    get: {
+      parameters: {
+        query: {
+          sourceType: 'WORK_ORDER' | 'INSPECTION' | 'MANUAL'
+          /** @description Work order id (e.g. od-123) or inspection id */
+          sourceId: string
+        }
+      }
+      responses: {
+        /** @description The events */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentEvent'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/components/by-room/{roomId}': {
     /**
      * Get components installed in a specific room
@@ -4477,6 +4596,48 @@ export interface components {
           } | null
         }[]
       }
+    }
+    ComponentEvent: {
+      /** Format: uuid */
+      id: string
+      /** Format: uuid */
+      componentId: string
+      /** @enum {string} */
+      eventType:
+        | 'INSTALLED'
+        | 'DEINSTALLED'
+        | 'REPAIRED'
+        | 'REPLACED'
+        | 'NO_ACTION'
+        | 'INSPECTED'
+      occurredAt: string
+      /** @enum {string} */
+      sourceType: 'WORK_ORDER' | 'INSPECTION' | 'MANUAL'
+      sourceId: string | null
+      /** Format: uuid */
+      relatedComponentId: string | null
+      actor: string
+      note: string | null
+      createdAt: string
+    }
+    CreateComponentEventRequest: {
+      /** @enum {string} */
+      eventType:
+        | 'INSTALLED'
+        | 'DEINSTALLED'
+        | 'REPAIRED'
+        | 'REPLACED'
+        | 'NO_ACTION'
+        | 'INSPECTED'
+      /** Format: date */
+      occurredAt: string
+      /** @enum {string} */
+      sourceType: 'WORK_ORDER' | 'INSPECTION' | 'MANUAL'
+      sourceId?: string | null
+      /** Format: uuid */
+      relatedComponentId?: string | null
+      actor: string
+      note?: string | null
     }
     CreateComponentTypeRequest: {
       typeName: string

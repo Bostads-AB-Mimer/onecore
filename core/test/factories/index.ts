@@ -56,6 +56,7 @@ export { ComponentSubtypeFactory as componentSubtype } from './component-subtype
 export { ComponentModelFactory as componentModel } from './component-model'
 export { ComponentFactory as component } from './component'
 export { ComponentInstallationFactory as componentInstallation } from './component-installation'
+export { ComponentEventFactory as componentEvent } from './component-event'
 // Keyfactories
 export { KeyFactory as key } from './key'
 export {

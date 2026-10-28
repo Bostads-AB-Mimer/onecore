@@ -855,6 +855,126 @@ async function updateComponentInspectionState(
   }
 }
 
+// ==================== COMPONENT EVENTS ====================
+
+type ComponentEventResponse = components['schemas']['ComponentEvent']
+
+// statusCode tells a new event (201) from one that already existed (200)
+async function createComponentEvent(
+  componentId: string,
+  data: components['schemas']['CreateComponentEventRequest']
+): Promise<
+  AdapterResult<
+    ComponentEventResponse,
+    'upstream_error' | 'not_found' | 'bad_request'
+  >
+> {
+  try {
+    const response = await client().POST('/components/{id}/events', {
+      params: { path: { id: componentId } },
+      body: data,
+    })
+
+    if (response.data?.content) {
+      return {
+        ok: true,
+        data: response.data.content,
+        statusCode: response.response.status,
+      }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return {
+        ok: false,
+        err: 'bad_request',
+        message: upstreamErrorMessage(response.error),
+      }
+    }
+
+    logger.error(
+      {
+        status: response.response?.status,
+        error: response.error,
+        componentId,
+      },
+      'property-base-adapter.createComponentEvent failed'
+    )
+
+    return { ok: false, err: 'upstream_error' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createComponentEvent')
+    return { ok: false, err: 'upstream_error' }
+  }
+}
+
+async function getComponentEvents(
+  componentId: string
+): Promise<
+  AdapterResult<ComponentEventResponse[], 'upstream_error' | 'not_found'>
+> {
+  try {
+    const response = await client().GET('/components/{id}/events', {
+      params: { path: { id: componentId } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    logger.error(
+      {
+        status: response.response?.status,
+        error: response.error,
+        componentId,
+      },
+      'property-base-adapter.getComponentEvents failed'
+    )
+
+    return { ok: false, err: 'upstream_error' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentEvents')
+    return { ok: false, err: 'upstream_error' }
+  }
+}
+
+async function getComponentEventsBySource(
+  sourceType: property.ComponentEventSourceType,
+  sourceId: string
+): Promise<AdapterResult<ComponentEventResponse[], 'upstream_error'>> {
+  try {
+    const response = await client().GET('/component-events', {
+      params: { query: { sourceType, sourceId } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(
+      {
+        status: response.response?.status,
+        error: response.error,
+        sourceType,
+        sourceId,
+      },
+      'property-base-adapter.getComponentEventsBySource failed'
+    )
+
+    return { ok: false, err: 'upstream_error' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentEventsBySource')
+    return { ok: false, err: 'upstream_error' }
+  }
+}
+
 // ==================== COMPONENT INSTALLATIONS ====================
 
 type GetComponentInstallationsResponse =
@@ -1497,6 +1617,10 @@ export {
   updateComponent,
   deleteComponent,
   updateComponentInspectionState,
+  // Component Events
+  createComponentEvent,
+  getComponentEvents,
+  getComponentEventsBySource,
   // Component Installations
   getComponentInstallations,
   getComponentInstallationById,

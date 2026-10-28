@@ -23,6 +23,7 @@ model Components {
   subtype                ComponentSubtypes         @relation(fields: [subtypeId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_components_subtype")
   model                  ComponentModels?          @relation(fields: [modelId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_components_model")
   componentInstallations ComponentInstallations[]
+  componentEvents        ComponentEvents[]
   documents              Documents[]
 
   @@index([subtypeId], map: "idx_components_subtype")
