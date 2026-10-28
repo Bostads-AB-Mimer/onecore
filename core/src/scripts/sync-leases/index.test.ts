@@ -566,4 +566,41 @@ describe('syncLeases', () => {
     )
     expect(sendEmailSpy).toHaveBeenCalledTimes(1)
   })
+
+  it('case 11: terminate for a lease whose create is queued — held, not synced, no mail', async () => {
+    const create = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'create',
+      timestamp: new Date('2026-05-01T10:00:00.000Z'),
+    })
+    const terminate = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T11:00:00.000Z'),
+    })
+    await appendEntry(queueFile, makeLeaseEntry(create))
+
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [terminate] })
+    // The queued create still fails on its property lookup
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({ status: 500, data: undefined })
+    const syncLeaseSpy = jest.spyOn(leasingAdapter, 'syncLease')
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(syncLeaseSpy).not.toHaveBeenCalled()
+    const queue = await readQueue(queueFile)
+    expect(queue.map((e) => e.key)).toEqual([
+      'L-1:create:2026-05-01T10:00:00.000Z',
+      'L-1:terminate:2026-05-01T11:00:00.000Z',
+    ])
+    expect(queue[1].heldBehind).toBe('L-1:create:2026-05-01T10:00:00.000Z')
+    expect(sendEmailSpy).not.toHaveBeenCalled()
+  })
 })
