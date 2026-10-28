@@ -25,9 +25,7 @@ export function emptyInspectionComponent(
  */
 export function getFetchedComponentLabel(component: FetchedComponent): string {
   return (
-    component.model?.subtype?.subTypeName ||
-    component.model?.modelName ||
-    component.id
+    component.subtype?.subTypeName || component.model?.modelName || component.id
   )
 }
 

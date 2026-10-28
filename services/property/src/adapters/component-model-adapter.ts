@@ -1,6 +1,8 @@
+import { Prisma } from '@prisma/client'
 import { trimStrings } from '@src/utils/data-conversion'
 import { property } from '@onecore/types'
 import { prisma } from './db'
+import { retryOnDeadlock } from './transaction'
 import type {
   CreateComponentModel,
   UpdateComponentModel,
@@ -41,7 +43,7 @@ export const getComponentModels = async (
       where,
       skip,
       take: limit,
-      orderBy: { modelName: 'asc' },
+      orderBy: [{ modelName: 'asc' }, { id: 'asc' }],
       include: {
         subtype: {
           include: {
@@ -52,13 +54,17 @@ export const getComponentModels = async (
             },
           },
         },
+        _count: { select: { components: true } },
       },
     }),
     prisma.componentModels.count({ where }),
   ])
 
   return {
-    models: models.map(trimStrings),
+    models: models.map(({ _count, ...model }) => ({
+      ...trimStrings(model),
+      componentCount: _count.components,
+    })),
     pagination: {
       page,
       limit,
@@ -83,14 +89,20 @@ export const getComponentModelById = async (id: string) => {
 /**
  * Find a component model by exact model name match (case-insensitive).
  * Used by the add-component process to check if a model already exists.
+ * Scoped to a subtype when `subtypeId` is given.
  */
-export const findModelByExactName = async (modelName: string) => {
+export const findModelByExactName = async (
+  modelName: string,
+  subtypeId?: string
+) => {
   const model = await prisma.componentModels.findFirst({
     where: {
       modelName: {
         equals: modelName,
       },
+      ...(subtypeId ? { componentSubtypeId: subtypeId } : {}),
     },
+    orderBy: { createdAt: 'asc' },
     include: {
       subtype: {
         include: {
@@ -107,24 +119,179 @@ export const findModelByExactName = async (modelName: string) => {
   return model ? trimStrings(model) : null
 }
 
-export const createComponentModel = async (data: CreateComponentModel) => {
-  const model = await prisma.componentModels.create({
+export const createComponentModel = async (
+  data: CreateComponentModel,
+  db: Prisma.TransactionClient = prisma
+) => {
+  const model = await db.componentModels.create({
     data,
   })
 
   return trimStrings(model)
 }
 
+// Components carry their own subtypeId, which must match their model's, so a
+// model that moves takes its components with it.
 export const updateComponentModel = async (
   id: string,
-  data: UpdateComponentModel
+  data: UpdateComponentModel,
+  db?: Prisma.TransactionClient
 ) => {
-  const model = await prisma.componentModels.update({
-    where: { id },
-    data,
-  })
+  const update = async (tx: Prisma.TransactionClient) => {
+    const updated = await tx.componentModels.update({
+      where: { id },
+      data,
+    })
+    if (data.componentSubtypeId) {
+      await tx.components.updateMany({
+        where: { modelId: id, subtypeId: { not: data.componentSubtypeId } },
+        data: { subtypeId: data.componentSubtypeId },
+      })
+    }
+    return updated
+  }
+  const model = await (db ? update(db) : prisma.$transaction(update))
 
   return trimStrings(model)
+}
+
+export type ComponentModelSubtypeProblem =
+  'subtype_not_found' | 'surface_subtype'
+
+type HierarchyRow =
+  { categoryId: string } | { typeId: string } | { subtypeId: string }
+
+const lockQuery = (row: HierarchyRow): Prisma.Sql => {
+  if ('categoryId' in row) {
+    return Prisma.sql`SELECT c.id FROM component_categories c WITH (UPDLOCK, HOLDLOCK)
+      WHERE c.id = ${row.categoryId}`
+  }
+  if ('typeId' in row) {
+    return Prisma.sql`SELECT t.id FROM component_types t WITH (UPDLOCK, HOLDLOCK)
+      JOIN component_categories c WITH (UPDLOCK, HOLDLOCK) ON c.id = t.categoryId
+      WHERE t.id = ${row.typeId}`
+  }
+  return Prisma.sql`SELECT s.id FROM component_subtypes s WITH (UPDLOCK, HOLDLOCK)
+    JOIN component_types t WITH (UPDLOCK, HOLDLOCK) ON t.id = s.typeId
+    JOIN component_categories c WITH (UPDLOCK, HOLDLOCK) ON c.id = t.categoryId
+    WHERE s.id = ${row.subtypeId}`
+}
+
+// Update locks on the row and its parents, held until the transaction ends:
+// moves and model writes that touch the same rows wait for each other.
+const lockHierarchy = async (
+  tx: Prisma.TransactionClient,
+  row: HierarchyRow
+) => {
+  await tx.$queryRaw(lockQuery(row))
+}
+
+export const findModelSubtypeProblem = async (
+  subtypeId: string,
+  tx: Prisma.TransactionClient
+): Promise<ComponentModelSubtypeProblem | null> => {
+  await lockHierarchy(tx, { subtypeId })
+  const subtype = await tx.componentSubtypes.findUnique({
+    where: { id: subtypeId },
+    select: {
+      componentType: { select: { category: { select: { type: true } } } },
+    },
+  })
+  if (!subtype) return 'subtype_not_found'
+  return subtype.componentType.category.type ===
+    property.ComponentCategoryTypeSchema.enum.SURFACE
+    ? 'surface_subtype'
+    : null
+}
+
+const { SURFACE } = property.ComponentCategoryTypeSchema.enum
+
+export type HierarchyMove =
+  | { categoryId: string; toType: string }
+  | { typeId: string; toCategoryId: string }
+  | { subtypeId: string; toTypeId: string }
+
+type MoveCategoryTypes = { current: string | null; target: string | null }
+
+const readMoveCategoryTypes = async (
+  tx: Prisma.TransactionClient,
+  move: HierarchyMove
+): Promise<MoveCategoryTypes> => {
+  if ('categoryId' in move) {
+    await lockHierarchy(tx, { categoryId: move.categoryId })
+    const category = await tx.componentCategories.findUnique({
+      where: { id: move.categoryId },
+      select: { type: true },
+    })
+    return category
+      ? { current: category.type, target: move.toType }
+      : { current: null, target: null }
+  }
+  if ('typeId' in move) {
+    await lockHierarchy(tx, { typeId: move.typeId })
+    await lockHierarchy(tx, { categoryId: move.toCategoryId })
+    const type = await tx.componentTypes.findUnique({
+      where: { id: move.typeId },
+      select: { category: { select: { type: true } } },
+    })
+    const target = await tx.componentCategories.findUnique({
+      where: { id: move.toCategoryId },
+      select: { type: true },
+    })
+    return {
+      current: type?.category.type ?? null,
+      target: target?.type ?? null,
+    }
+  }
+  await lockHierarchy(tx, { subtypeId: move.subtypeId })
+  await lockHierarchy(tx, { typeId: move.toTypeId })
+  const subtype = await tx.componentSubtypes.findUnique({
+    where: { id: move.subtypeId },
+    select: {
+      componentType: { select: { category: { select: { type: true } } } },
+    },
+  })
+  const target = await tx.componentTypes.findUnique({
+    where: { id: move.toTypeId },
+    select: { category: { select: { type: true } } },
+  })
+  return {
+    current: subtype?.componentType.category.type ?? null,
+    target: target?.category.type ?? null,
+  }
+}
+
+const modelsUnder = (move: HierarchyMove): Prisma.ComponentModelsWhereInput => {
+  if ('categoryId' in move) {
+    return { subtype: { componentType: { categoryId: move.categoryId } } }
+  }
+  if ('typeId' in move) return { subtype: { typeId: move.typeId } }
+  return { componentSubtypeId: move.subtypeId }
+}
+
+export type HierarchyMoveResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; err: 'target_not_found' }
+  | { ok: false; err: 'models_under_surface'; models: number }
+
+export const updateUnlessModelsUnder = async <T>(
+  move: HierarchyMove | null,
+  update: (db: Prisma.TransactionClient) => Promise<T>
+): Promise<HierarchyMoveResult<T>> => {
+  if (!move) return { ok: true, data: await update(prisma) }
+
+  return retryOnDeadlock(async (tx): Promise<HierarchyMoveResult<T>> => {
+    const { current, target } = await readMoveCategoryTypes(tx, move)
+    if (!target) return { ok: false, err: 'target_not_found' }
+
+    if (target === SURFACE && current !== SURFACE) {
+      const models = await tx.componentModels.count({
+        where: modelsUnder(move),
+      })
+      if (models > 0) return { ok: false, err: 'models_under_surface', models }
+    }
+    return { ok: true, data: await update(tx) }
+  })
 }
 
 export const deleteComponentModel = async (id: string) => {
@@ -142,7 +309,9 @@ export const getSurfaceModels = async () => {
     where: {
       subtype: {
         componentType: {
-          category: { categoryName: property.SURFACE_CATEGORY_NAME },
+          category: {
+            type: property.ComponentCategoryTypeSchema.enum.SURFACE,
+          },
         },
       },
     },

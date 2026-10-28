@@ -15,6 +15,10 @@ import {
   updateComponentInstallation,
   deleteComponentInstallation,
 } from '../adapters/component-adapter'
+import { prismaErrorCode } from '../utils/prisma-errors'
+
+const activeInstallationExists =
+  'The component already has an active installation'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -188,6 +192,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentInstallation'
+   *       409:
+   *         description: The component already has an active installation
    */
   router.post(
     '(.*)/component-installations',
@@ -207,19 +213,18 @@ export const routes = (router: KoaRouter) => {
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'
-        // Check for foreign key constraint violation (Prisma P2003)
-        const isPrismaFKError =
-          err &&
-          typeof err === 'object' &&
-          'code' in err &&
-          (err as { code: string }).code === 'P2003'
-        if (isPrismaFKError) {
-          ctx.status = 400
-          ctx.body = {
-            error: 'Invalid componentId: component does not exist',
-            ...metadata,
-          }
-          return
+        switch (prismaErrorCode(err)) {
+          case 'P2002':
+            ctx.status = 409
+            ctx.body = { error: activeInstallationExists, ...metadata }
+            return
+          case 'P2003':
+            ctx.status = 400
+            ctx.body = {
+              error: 'Invalid componentId: component does not exist',
+              ...metadata,
+            }
+            return
         }
         ctx.status = 500
         ctx.body = { error: errorMessage, ...metadata }
@@ -257,6 +262,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentInstallation'
+   *       409:
+   *         description: The change would give a component a second active installation
    */
   router.put(
     '(.*)/component-installations/:id',
@@ -304,6 +311,11 @@ export const routes = (router: KoaRouter) => {
           ...metadata,
         }
       } catch (err) {
+        if (prismaErrorCode(err) === 'P2002') {
+          ctx.status = 409
+          ctx.body = { error: activeInstallationExists, ...metadata }
+          return
+        }
         ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'Unknown error'

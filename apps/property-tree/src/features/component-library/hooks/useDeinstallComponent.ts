@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { invalidateComponentQueries } from '@/entities/component'
+
 import { componentService } from '@/services/api/core/componentService'
 
 interface DeinstallComponentData {
@@ -17,12 +19,6 @@ export const useDeinstallComponent = (spaceId: string) => {
         data.deinstallationDate
       )
     },
-    onSuccess: () => {
-      // Invalidate space components query to refetch
-      queryClient.invalidateQueries({ queryKey: ['components', spaceId] })
-      // Invalidate uninstalled instances queries so deinstalled instances show up in dropdowns
-      queryClient.invalidateQueries({ queryKey: ['instances', 'uninstalled'] })
-      queryClient.invalidateQueries({ queryKey: ['instances'] })
-    },
+    onSuccess: () => invalidateComponentQueries(queryClient, spaceId),
   })
 }

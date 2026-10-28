@@ -469,6 +469,7 @@ const createMaintenanceUnitRecord = async (
       caption: caption || maintenanceUnit.caption,
       type: maintenanceUnit.type,
       code: code || maintenanceUnit.code,
+      property_object_id: maintenanceUnit.id,
     })
   } catch (err) {
     logger.error({ err }, 'odoo-adapter.createMaintenanceUnitRecord')
