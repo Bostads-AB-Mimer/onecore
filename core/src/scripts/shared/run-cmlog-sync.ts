@@ -63,6 +63,8 @@ export type CmlogSync<T> = {
   fromPayload: (payload: unknown) => T
   describe: (change: T) => { subject: string; detail: string }
   giveUpAdvice?: string | ((change: T, entry: FailedRowEntry) => string)
+  // Shown in the failure and still-failing mails.
+  failureAdvice?: (change: T, entry: FailedRowEntry) => string | undefined
 }
 
 const withSortedKeys = (value: unknown): unknown =>
@@ -107,11 +109,17 @@ export const runCmlogSync = async <T>(
   const { stateFile, queueFile } = opts
   const now = opts.now ?? (() => new Date())
 
+  const adviceLines = (change: T, entry: FailedRowEntry) => {
+    const advice = def.failureAdvice?.(change, entry)
+    return advice ? [``, advice] : []
+  }
+
   const notifyFailure = (change: T, entry: FailedRowEntry) => {
     const { subject, detail } = def.describe(change)
     return notifyXpandSync(`${def.name}: nytt fel på ${subject}`, [
       `Misslyckades på ${detail} vid ${def.timestampOf(change).toISOString()}.`,
       `Fel: ${entry.lastError}`,
+      ...adviceLines(change, entry),
       ``,
       `Raden ligger nu i återförsökskön på PVC (/data/failed-rows.jsonl). Den försöks igen varje minut i ett dygn, var sjätte timme resten av första veckan och sedan en gång om dygnet i upp till 30 dagar. Du får ett bekräftelsemail när den lyckas synkas.`,
     ])
@@ -126,6 +134,7 @@ export const runCmlogSync = async <T>(
     return notifyXpandSync(`${def.name}: ${subject} misslyckas fortfarande`, [
       `${capitalize(detail)} har misslyckats sedan ${entry.addedAt}.`,
       `Senaste fel: ${entry.lastError}`,
+      ...adviceLines(change, entry),
       ``,
       `Raden försöks nu igen var sjätte timme resten av första veckan och sedan en gång om dygnet till ${giveUpAt}, och tas sedan bort ur återförsökskön.`,
     ])

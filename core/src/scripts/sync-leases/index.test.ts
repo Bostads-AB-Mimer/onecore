@@ -142,6 +142,44 @@ describe('syncLeases', () => {
     // State advanced to that row's timestamp
     const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(lease.timestamp.toISOString())
+
+    expect(sendEmailSpy.mock.calls[0][0].body).not.toContain(
+      'Rätta slutdatumet'
+    )
+  })
+
+  it('the first failure mail for a mismatched end date tells staff to set it in Tenfast', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T11:00:00.000Z'),
+    })
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: false,
+      err: 'sync-failed',
+      statusCode: 500,
+      detail: 'end-date-mismatch',
+    })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(sendEmailSpy.mock.calls[0][0].subject).toMatch(
+      `sync-leases: nytt fel på avtal ${lease.leaseId}`
+    )
+    const body = sendEmailSpy.mock.calls[0][0].body as string
+    expect(body).toContain('Rätta slutdatumet i Tenfast')
+    expect(body).toContain('Nästa återförsök bekräftar ändringen.')
   })
 
   it('the give-up mail asks for the change to be made in Tenfast by hand', async () => {
@@ -764,6 +802,49 @@ describe('syncLeases', () => {
     const body = sendEmailSpy.mock.calls[0][0].body as string
     expect(body).toContain('är uppsagt i Tenfast')
     expect(body).toContain('Bifoga det i Tenfast för hand.')
+    expect(body).not.toContain('Ändringen har inte nått Tenfast')
+  })
+
+  it('the give-up mail for a mismatched end date tells staff to set it in Tenfast', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T09:00:00.000Z'),
+    })
+    const monthAgo = new Date(
+      Date.now() - 31 * 24 * 60 * 60 * 1000
+    ).toISOString()
+    await appendEntry(queueFile, {
+      ...makeLeaseEntry(
+        lease,
+        `Failed to sync lease ${lease.leaseId}: sync-failed (end-date-mismatch)`
+      ),
+      addedAt: monthAgo,
+      lastAttemptAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
+      stillFailingNotifiedAt: monthAgo,
+    })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: false,
+      err: 'sync-failed',
+      statusCode: 500,
+      detail: 'end-date-mismatch',
+    })
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [] })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    const body = sendEmailSpy.mock.calls[0][0].body as string
+    expect(body).toContain('sista debiteringsdag i Xpand')
     expect(body).not.toContain('Ändringen har inte nått Tenfast')
   })
 
