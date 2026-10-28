@@ -8,6 +8,7 @@ import {
   runWithConcurrency,
 } from '@onecore/utilities'
 import { z } from 'zod'
+import axios from 'axios'
 import { keys, leasing } from '@onecore/types'
 
 import { KeysApi, KeyLoansApi, KeyNotesApi } from '../../adapters/keys-adapter'
@@ -549,7 +550,7 @@ export const routes = (router: KoaRouter) => {
    *       400:
    *         description: Invalid query parameters
    *       503:
-   *         description: Keys service is syncing its DAX card owner mirror; retry later
+   *         description: Keys service is syncing its DAX card owner mirror, or the lease search cache is warming up. Retry after the seconds given in Retry-After.
    *       500:
    *         description: Server error
    *         content:
@@ -616,6 +617,16 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           reason:
             'Nyckeltjänsten synkroniserar taggar från DAX, försök igen om några minuter',
+          ...metadata,
+        }
+        return
+      }
+      // Leasing answers 503 + Retry-After while its lease cache warms up.
+      if (axios.isAxiosError(err) && err.response?.status === 503) {
+        ctx.status = 503
+        ctx.set('Retry-After', err.response.headers['retry-after'] ?? '30')
+        ctx.body = {
+          reason: 'Avtalssökningen värmer upp sin cache, försök igen strax',
           ...metadata,
         }
         return
