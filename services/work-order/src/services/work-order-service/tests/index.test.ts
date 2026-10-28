@@ -633,12 +633,10 @@ describe('work-order-service index', () => {
           phoneNumber: null,
         },
       ]
-      jest
-        .spyOn(odooAdapter, 'syncContact')
-        .mockResolvedValueOnce({
-          ok: true,
-          data: { updatedCount: 1, previous },
-        })
+      jest.spyOn(odooAdapter, 'syncContact').mockResolvedValueOnce({
+        ok: true,
+        data: { updatedCount: 1, previous },
+      })
 
       const res = await request(app.callback())
         .post(`/contacts/${payload.contactCode}/sync`)
