@@ -7,6 +7,8 @@ import {
   InvoicePaymentEvent,
   RentInvoiceRow,
   SyncContactToEconomyPayload,
+  SyncContactToEconomyUndoSchema,
+  type SyncContactToEconomyUndo,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
   XledgerProject,
@@ -625,7 +627,12 @@ export async function syncContactToEconomy(
   contactCode: string,
   contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>,
   options?: { create?: boolean }
-): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> {
+): Promise<
+  AdapterResult<
+    { skipped: boolean; undo?: SyncContactToEconomyUndo },
+    'sync-failed' | 'unknown'
+  >
+> {
   const payload: SyncContactToEconomyPayload = {
     contactCode,
     ...contactData,
@@ -637,9 +644,23 @@ export async function syncContactToEconomy(
       payload,
       { timeout: SYNC_CONTACT_TIMEOUT_MS }
     )
-    return { ok: true, data: { skipped: response.data?.skipped === true } }
+    const undo = SyncContactToEconomyUndoSchema.safeParse(response.data?.undo)
+    return {
+      ok: true,
+      data: {
+        skipped: response.data?.skipped === true,
+        ...(undo.success && { undo: undo.data }),
+      },
+    }
   } catch (err) {
-    logger.error(err, 'economy-adapter.syncContactToEconomy')
+    logger.error(
+      {
+        contactCode,
+        status: axios.isAxiosError(err) ? err.response?.status : undefined,
+        errorName: err instanceof Error ? err.name : typeof err,
+      },
+      'economy-adapter.syncContactToEconomy'
+    )
     if (axios.isAxiosError(err) && err.response) {
       return {
         ok: false,
