@@ -9,6 +9,7 @@ import {
 } from './failed-sync-queue'
 import { getLastTimestamp, saveLastTimestamp } from './last-timestamp'
 import { notifyXpandSync } from './notify'
+import { SyncStepsError } from '../../processes/sync-steps'
 
 const HOUR_MS = 60 * 60 * 1000
 const RETRY_EVERY_RUN_FOR_MS = 24 * HOUR_MS
@@ -87,6 +88,26 @@ export const runCmlogSync = async <T>(
       ``,
       `Raden försöks nu igen var sjätte timme resten av första veckan och sedan en gång om dygnet till ${giveUpAt}, och tas sedan bort ur återförsökskön.`,
     ])
+  }
+
+  const undoFailedIn = (err: unknown): string[] =>
+    err instanceof SyncStepsError ? err.undoFailed : []
+
+  const notifyUndoFailed = (
+    change: T,
+    entry: FailedRowEntry,
+    targets: string[]
+  ) => {
+    const { subject, detail } = def.describe(change)
+    return notifyXpandSync(
+      `${def.name}: återställning misslyckades för ${subject}`,
+      [
+        `${capitalize(detail)} synkades bara delvis, och ändringen kunde inte återställas i: ${targets.join(', ')}.`,
+        `Fel: ${entry.lastError}`,
+        ``,
+        `Dessa system har kvar ändringen medan övriga inte har den. Kräver manuell kontroll.`,
+      ]
+    )
   }
 
   const notifyGiveUp = (change: T, entry: FailedRowEntry) => {
@@ -218,6 +239,11 @@ export const runCmlogSync = async <T>(
         lastAttemptAt: now().toISOString(),
         lastError: errorMessage(err),
       }
+      const undoFailed = undoFailedIn(err)
+      if (undoFailed.length && !entry.undoFailedNotifiedAt) {
+        updated.undoFailedNotifiedAt = now().toISOString()
+        await notifyUndoFailed(change, updated, undoFailed)
+      }
       if (failingFor >= GIVE_UP_AFTER_MS) {
         await notifyGiveUp(change, updated)
         logger.error(
@@ -282,6 +308,8 @@ export const runCmlogSync = async <T>(
         lastError: errorMessage(err),
         lastAttemptAt: now().toISOString(),
       }
+      const undoFailed = undoFailedIn(err)
+      if (undoFailed.length) entry.undoFailedNotifiedAt = now().toISOString()
       const sameRow =
         existing !== undefined &&
         def.timestampOf(def.fromPayload(existing.payload)).getTime() ===
@@ -300,6 +328,7 @@ export const runCmlogSync = async <T>(
           await appendEntry(queueFile, entry)
         }
         await notifyFailure(change, entry)
+        if (undoFailed.length) await notifyUndoFailed(change, entry, undoFailed)
         logger.error({ err, key }, `${def.name}: queued for retry, mail sent`)
       }
     }

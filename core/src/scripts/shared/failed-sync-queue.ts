@@ -10,6 +10,7 @@ export type FailedRowEntry = {
   lastAttemptAt?: string
   retriesStartedAt?: string
   stillFailingNotifiedAt?: string
+  undoFailedNotifiedAt?: string
 }
 
 export const readQueue = async (path: string): Promise<FailedRowEntry[]> => {
