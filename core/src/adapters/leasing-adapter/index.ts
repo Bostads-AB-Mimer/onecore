@@ -842,12 +842,15 @@ const syncLeaseFailure = (
   statusCode: number,
   body: unknown
 ): { ok: false; err: 'sync-failed'; statusCode: number; detail?: string } => {
-  const error = (body as { error?: unknown } | undefined)?.error
+  const { error, detail } =
+    (body as { error?: unknown; detail?: unknown } | undefined) ?? {}
   return {
     ok: false,
     err: 'sync-failed',
     statusCode,
-    ...(typeof error === 'string' && { detail: error }),
+    ...(typeof error === 'string' && {
+      detail: typeof detail === 'string' ? `${error}: ${detail}` : error,
+    }),
   }
 }
 

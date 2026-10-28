@@ -621,6 +621,8 @@ describe('POST /leases/sync', () => {
       terminateLease.mockResolvedValueOnce({
         ok: false,
         err: 'end-date-mismatch',
+        tenfastEndDate: '2026-04-30',
+        endDate: '2026-12-31',
       })
 
       const res = await request(app.callback()).post('/leases/sync').send({
@@ -628,8 +630,9 @@ describe('POST /leases/sync', () => {
         action: 'terminate',
       })
 
-      expect(res.status).toBe(500)
+      expect(res.status).toBe(409)
       expect(res.body.error).toBe('end-date-mismatch')
+      expect(res.body.detail).toBe('Tenfast 2026-04-30, Xpand 2026-12-31')
       expect(hasTerminationFile).not.toHaveBeenCalled()
     })
 

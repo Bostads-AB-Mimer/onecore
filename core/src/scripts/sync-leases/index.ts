@@ -166,8 +166,12 @@ export const syncLeases = (
         entry.lastError.includes('termination-pdf-')
           ? 'Avtalet är uppsagt i Tenfast, men uppsägningsdokumentet från Xpand kunde inte bifogas. Bifoga det i Tenfast för hand.'
           : entry.lastError.includes('end-date-mismatch')
-            ? 'Tenfast säger att avtalet löper ut inom uppsägningstiden och inte behöver sägas upp, men slutdatumet i Tenfast är ett annat än sista debiteringsdag i Xpand. Rätta slutdatumet i Tenfast för hand.'
+            ? 'Avtalet slutar på ett annat datum i Tenfast än sista debiteringsdag i Xpand, och Tenfast kan inte säga upp det på nytt. Rätta slutdatumet i Tenfast för hand.'
             : 'Ändringen har inte nått Tenfast. Gör den i Tenfast för hand.',
+      failureAdvice: (_lease, entry) =>
+        entry.lastError.includes('end-date-mismatch')
+          ? 'Rätta slutdatumet i Tenfast till sista debiteringsdag i Xpand. Nästa återförsök bekräftar ändringen.'
+          : undefined,
     },
     {
       stateFile: opts.stateFile ?? DEFAULT_STATE_FILE,

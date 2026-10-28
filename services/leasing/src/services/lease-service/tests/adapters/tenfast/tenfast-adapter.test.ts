@@ -2743,6 +2743,7 @@ describe(tenfastAdapter.terminateLease, () => {
 
   it('skips the POST when the Tenfast lease already has a handled termination', async () => {
     const lease = factory.tenfastLease.build({
+      endDate: new Date('2026-04-30'),
       cancellation: {
         ...factory.tenfastLease.build().cancellation,
         requested: true,
@@ -2770,6 +2771,48 @@ describe(tenfastAdapter.terminateLease, () => {
     expect(request).not.toHaveBeenCalled()
   })
 
+  it('fails with end-date-mismatch when the handled termination ends on another date', async () => {
+    const lease = factory.tenfastLease.build({
+      endDate: new Date('2026-05-31'),
+      cancellation: {
+        ...factory.tenfastLease.build().cancellation,
+        requested: true,
+        handledAt: new Date('2026-04-01'),
+      },
+    })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      terminateBody
+    )
+
+    expect(result).toEqual({
+      ok: false,
+      err: 'end-date-mismatch',
+      tenfastEndDate: '2026-05-31',
+      endDate: '2026-04-30',
+    })
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('returns ok:false err:unknown when the end date is invalid', async () => {
+    const lease = factory.tenfastLease.build()
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+
+    const result = await tenfastAdapter.terminateLease(lease.externalId, {
+      ...terminateBody,
+      endDate: new Date('not a date'),
+    })
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+    expect(request).not.toHaveBeenCalled()
+  })
+
   it('still POSTs terminate when the tenant has only requested termination', async () => {
     const lease = factory.tenfastLease.build({
       cancellation: {
@@ -2792,16 +2835,17 @@ describe(tenfastAdapter.terminateLease, () => {
   })
 
   it.each([
-    ['Avtalet kan inte sägas upp', 'already-terminated', null],
+    ['Avtalet kan inte sägas upp', 'already-terminated'],
     [
       'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
       'not-required',
-      new Date('2026-04-30'),
     ],
   ])(
     'returns ok:true with action:skipped when Tenfast returns 400: %s',
-    async (error, skipReason, endDate) => {
-      const lease = factory.tenfastLease.build({ endDate })
+    async (error, skipReason) => {
+      const lease = factory.tenfastLease.build({
+        endDate: new Date('2026-04-30'),
+      })
       jest
         .spyOn(tenfastAdapter, 'getLeaseByExternalId')
         .mockResolvedValueOnce({ ok: true, data: lease })
@@ -2827,23 +2871,64 @@ describe(tenfastAdapter.terminateLease, () => {
     }
   )
 
+  it('treats a Tenfast end date at Swedish midnight as the same day', async () => {
+    const lease = factory.tenfastLease.build({
+      endDate: new Date('2026-04-29T22:00:00.000Z'),
+    })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: {
+        error:
+          'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
+      },
+    })
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      terminateBody
+    )
+
+    expect(result.ok && result.data.skipReason).toBe('not-required')
+  })
+
   it.each([
-    ['ends later in Tenfast', new Date('2026-05-31')],
-    ['ends earlier in Tenfast', new Date('2026-03-31')],
-    ['has no end date in Tenfast', null],
+    [
+      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
+      'ends later in Tenfast',
+      new Date('2026-05-31'),
+      '2026-05-31',
+    ],
+    [
+      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
+      'ends earlier in Tenfast',
+      new Date('2026-03-31'),
+      '2026-03-31',
+    ],
+    [
+      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
+      'has no end date in Tenfast',
+      null,
+      null,
+    ],
+    [
+      'Avtalet kan inte sägas upp',
+      'ends later in Tenfast',
+      new Date('2026-05-31'),
+      '2026-05-31',
+    ],
   ])(
-    'fails with end-date-mismatch when no termination is required but the lease %s',
-    async (_case, endDate) => {
+    'fails with end-date-mismatch when Tenfast answers "%s" but the lease %s',
+    async (error, _case, endDate, tenfastEndDate) => {
       const lease = factory.tenfastLease.build({ endDate })
       jest
         .spyOn(tenfastAdapter, 'getLeaseByExternalId')
         .mockResolvedValueOnce({ ok: true, data: lease })
       ;(request as jest.Mock).mockResolvedValueOnce({
         status: 400,
-        data: {
-          error:
-            'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
-        },
+        data: { error },
       })
 
       const result = await tenfastAdapter.terminateLease(
@@ -2851,7 +2936,12 @@ describe(tenfastAdapter.terminateLease, () => {
         terminateBody
       )
 
-      expect(result).toEqual({ ok: false, err: 'end-date-mismatch' })
+      expect(result).toEqual({
+        ok: false,
+        err: 'end-date-mismatch',
+        tenfastEndDate,
+        endDate: '2026-04-30',
+      })
     }
   )
 

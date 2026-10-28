@@ -1556,19 +1556,31 @@ export type TerminateLeaseBody = {
   handled: boolean
 }
 
+// Swedish day, so UTC midnight and Swedish midnight give the same date.
+const toSwedishDay = (date: Date) =>
+  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(
+    date
+  )
+
 export const terminateLease = async (
   leaseId: string,
   body: TerminateLeaseBody
 ): Promise<
-  AdapterResult<
-    {
-      action: 'terminated' | 'skipped'
-      leaseId: string
-      tenfastLeaseId: string
-      skipReason?: 'already-terminated' | 'not-required'
-    },
-    'lease-not-found' | 'terminate-failed' | 'end-date-mismatch' | 'unknown'
-  >
+  | AdapterResult<
+      {
+        action: 'terminated' | 'skipped'
+        leaseId: string
+        tenfastLeaseId: string
+        skipReason?: 'already-terminated' | 'not-required'
+      },
+      'lease-not-found' | 'terminate-failed' | 'unknown'
+    >
+  | {
+      ok: false
+      err: 'end-date-mismatch'
+      tenfastEndDate: string | null
+      endDate: string
+    }
 > => {
   const existing = await getLeaseByExternalId(leaseId)
   if (!existing.ok) {
@@ -1579,33 +1591,48 @@ export const terminateLease = async (
   }
   const tenfastLeaseId = existing.data._id
 
-  const { cancellation } = existing.data
-  if (
-    cancellation.requested &&
-    !cancellation.cancelled &&
-    cancellation.handledAt
-  ) {
-    logger.info(
-      { leaseId },
-      'Tenfast terminate skipped — lease already has a handled termination'
-    )
-    return {
-      ok: true,
-      data: {
-        action: 'skipped',
-        leaseId,
-        tenfastLeaseId,
-        skipReason: 'already-terminated',
-      },
-    }
-  }
-
-  const data = { ...body, endDate: body.endDate.toISOString().split('T')[0] }
   try {
+    const endDate = toSwedishDay(body.endDate)
+    const tenfastEndDate = existing.data.endDate
+      ? toSwedishDay(existing.data.endDate)
+      : null
+
+    const skip = (skipReason: 'already-terminated' | 'not-required') => {
+      if (tenfastEndDate !== endDate) {
+        logger.error(
+          { leaseId, tenfastEndDate, endDate, skipReason },
+          'Tenfast terminate skipped — lease ends on another date in Tenfast'
+        )
+        return {
+          ok: false,
+          err: 'end-date-mismatch',
+          tenfastEndDate,
+          endDate,
+        } as const
+      }
+      logger.info(
+        { leaseId, skipReason },
+        'Tenfast terminate skipped — lease already terminated or termination not required'
+      )
+      return {
+        ok: true,
+        data: { action: 'skipped', leaseId, tenfastLeaseId, skipReason },
+      } as const
+    }
+
+    const { cancellation } = existing.data
+    if (
+      cancellation.requested &&
+      !cancellation.cancelled &&
+      cancellation.handledAt
+    ) {
+      return skip('already-terminated')
+    }
+
     const response = await tenfastApi.request({
       method: 'post',
       url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/terminate?hyresvard=${tenfastCompanyId}`,
-      data,
+      data: { ...body, endDate },
     })
 
     if (response.status === 200) {
@@ -1622,27 +1649,8 @@ export const terminateLease = async (
     }
     const skipReason =
       response.status === 400 ? skipReasons[response.data?.error] : undefined
-    if (skipReason === 'not-required') {
-      const tenfastEndDate = existing.data.endDate
-        ? new Date(existing.data.endDate).toISOString().split('T')[0]
-        : null
-      if (tenfastEndDate !== data.endDate) {
-        logger.error(
-          { leaseId, tenfastEndDate, endDate: data.endDate },
-          'Tenfast terminate refused — lease ends within the notice period on another date'
-        )
-        return { ok: false, err: 'end-date-mismatch' }
-      }
-    }
     if (skipReason) {
-      logger.info(
-        { leaseId, error: response.data?.error },
-        'Tenfast terminate skipped — lease already handled or termination not required'
-      )
-      return {
-        ok: true,
-        data: { action: 'skipped', leaseId, tenfastLeaseId, skipReason },
-      }
+      return skip(skipReason)
     }
 
     logger.error(

@@ -237,6 +237,15 @@ export const routes = (router: KoaRouter) => {
               )
               return
             }
+            if (result.err === 'end-date-mismatch') {
+              ctx.status = 409
+              ctx.body = {
+                error: result.err,
+                detail: `Tenfast ${result.tenfastEndDate ?? 'none'}, Xpand ${result.endDate}`,
+                ...metadata,
+              }
+              return
+            }
             logger.error(
               { action, error: result.err, leaseId },
               'Failed to terminate lease in Tenfast'

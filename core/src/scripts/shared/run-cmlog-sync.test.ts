@@ -478,6 +478,52 @@ describe('runCmlogSync', () => {
       expect(body).not.toContain('Gör ändringen i Xpand på nytt')
     })
 
+    it('the first failure mail includes the definition’s failure advice', async () => {
+      fetchChanges.mockResolvedValue({ ok: true, data: [change()] })
+      sync.mockRejectedValue(new Error('tenfast down'))
+      const failureAdvice = jest.fn().mockReturnValue('Rätta det i Tenfast.')
+
+      await run({ failureAdvice })
+
+      expect(failureAdvice).toHaveBeenCalledWith(
+        change(),
+        expect.objectContaining({ lastError: 'tenfast down' })
+      )
+      const body = sendEmailSpy.mock.calls[0][0].body as string
+      expect(body).toContain('Rätta det i Tenfast.')
+    })
+
+    it('the still-failing mail includes the definition’s failure advice', async () => {
+      await appendEntry(
+        queueFile,
+        failedFor(30, { lastAttemptAt: hoursBefore(NOW, 6) })
+      )
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run({ failureAdvice: () => 'Rätta det i Tenfast.' })
+
+      expect(subjects()).toEqual([
+        'sync-things: sak A-1 misslyckas fortfarande',
+      ])
+      const body = sendEmailSpy.mock.calls[0][0].body as string
+      expect(body).toContain('Rätta det i Tenfast.')
+    })
+
+    it('the failure mail has no advice line when the definition returns none', async () => {
+      fetchChanges.mockResolvedValue({ ok: true, data: [change()] })
+      sync.mockRejectedValue(new Error('tenfast down'))
+
+      await run({ failureAdvice: () => undefined })
+
+      const body = sendEmailSpy.mock.calls[0][0].body as string
+      expect(body.split('\n')).toEqual([
+        `Misslyckades på sak A-1 vid ${change().timestamp.toISOString()}.`,
+        'Fel: tenfast down',
+        '',
+        expect.stringContaining('återförsökskön'),
+      ])
+    })
+
     it('a newer change for the same key starts a fresh clock', async () => {
       await appendEntry(
         queueFile,
