@@ -315,4 +315,9 @@ export const GetLeasesOptionsSchema = leasing.v1.GetLeasesOptionsSchema.merge(
   IncludeContactsQueryParamSchema
 ).merge(IncludeNonTenantContactsQueryParamSchema)
 
+export const GetLeasesByContactCodeOptionsSchema =
+  leasing.v1.GetLeasesByContactCodeOptionsSchema.merge(
+    IncludeContactsQueryParamSchema
+  ).merge(IncludeNonTenantContactsQueryParamSchema)
+
 export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema

@@ -31,12 +31,16 @@ export const getLease = async (leaseId: string): Promise<Lease | null> => {
 
 export const getLeasesByContactCode = async (
   contactCode: string,
-  options: GetLeasesOptions
+  options: GetLeasesOptions & { includeSubletLeases?: boolean }
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams()
 
   if (options.status) {
     queryParams.set('status', options.status.join(','))
+  }
+
+  if (options.includeSubletLeases) {
+    queryParams.set('includeSubletLeases', 'true')
   }
 
   const leasesResponse = await axios.get(

@@ -229,6 +229,86 @@ describe('leases routes', () => {
       expect(res.status).toBe(500)
       expect(res.body).toMatchObject({ error: 'Invalid lease data' })
     })
+
+    it('passes includeSubletLeases on to leasing', async () => {
+      const { contactCode } = factory.contact.build()
+      const getLeasesByContactCodeSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
+        .mockResolvedValue([])
+
+      const res = await request(app.callback()).get(
+        `/leases/by-contact-code/${contactCode}?includeSubletLeases=true`
+      )
+
+      expect(res.status).toBe(200)
+      expect(getLeasesByContactCodeSpy).toHaveBeenCalledWith(
+        contactCode,
+        expect.objectContaining({ includeSubletLeases: true })
+      )
+    })
+
+    describe('with a sublet tenant', () => {
+      const firstHand = factory.contact.build()
+      const sublet = factory.contact.build()
+      const subletLease = factory.lease.build({
+        tenantContactIds: [firstHand.contactCode],
+        subletContactId: sublet.contactCode,
+      })
+      const url = `/leases/by-contact-code/${sublet.contactCode}?includeContacts=true`
+
+      beforeEach(() => {
+        jest
+          .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
+          .mockResolvedValue([subletLease])
+      })
+
+      it('adds the sublet contact tagged as subletTenant', async () => {
+        jest
+          .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+          .mockResolvedValueOnce({ ok: true, data: firstHand })
+          .mockResolvedValueOnce({ ok: true, data: sublet })
+
+        const res = await request(app.callback()).get(url)
+
+        expect(res.status).toBe(200)
+        expect(res.body.content[0].tenants).toEqual([
+          expect.objectContaining({ contactCode: firstHand.contactCode }),
+          expect.objectContaining({
+            contactCode: sublet.contactCode,
+            leaseContactType: 'subletTenant',
+          }),
+        ])
+      })
+
+      it.each(['not-found', 'unknown'] as const)(
+        'returns the lease without the sublet contact when the lookup fails with %s',
+        async (err) => {
+          jest
+            .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+            .mockResolvedValueOnce({ ok: true, data: firstHand })
+            .mockResolvedValueOnce({ ok: false, err })
+
+          const res = await request(app.callback()).get(url)
+
+          expect(res.status).toBe(200)
+          expect(res.body.content[0].tenants).toEqual([
+            expect.objectContaining({ contactCode: firstHand.contactCode }),
+          ])
+          expect(res.body.content[0].subletContactId).toBe(sublet.contactCode)
+        }
+      )
+
+      it('still fails when a first-hand tenant cannot be found', async () => {
+        jest
+          .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+          .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+        const res = await request(app.callback()).get(url)
+
+        expect(res.status).toBe(500)
+        expect(res.body.error).toBe('no-contact')
+      })
+    })
   })
 
   describe('GET /leases/by-pnr/:pnr', () => {
