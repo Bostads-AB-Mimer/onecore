@@ -184,6 +184,13 @@ export async function fetchAllLeasesForExport(
   return sorted
 }
 
+// Stages the cache never holds. Voided (makulerat) is not archived in Tenfast,
+// so filter[isArchived] does not exclude it and we drop it client-side. The
+// full sync still relies on filter[isArchived]=false; the archived half here
+// only matters for the delta sync, whose list endpoint cannot filter.
+const isOutOfCache = (l: TenfastLease) =>
+  l.stage === 'archived' || l.stage === 'voided'
+
 /**
  * Fetches all leases for the in-memory cache using full cursor pagination.
  * Uses getAllLeases() which follows the `next` cursor across all pages.
@@ -197,7 +204,9 @@ export async function fetchAllLeasesForCache(): Promise<
       `fetchAllLeasesForCache: failed to fetch leases — ${result.err}`
     )
   }
-  return result.data.map((l) => mapTenfastLeaseToSearchResult(l))
+  return result.data
+    .filter((l) => !isOutOfCache(l))
+    .map((l) => mapTenfastLeaseToSearchResult(l))
 }
 
 /**
@@ -215,15 +224,14 @@ export async function fetchLeasesUpdatedSinceForCache(
     )
   }
 
-  // The list endpoint (unlike search) can't filter isArchived, so a lease
-  // that got archived since the last sync comes back here rather than
-  // being excluded like it would be from a full sync — remove it instead.
-  const archived = result.data.filter((l) => l.stage === 'archived')
-  const rest = result.data.filter((l) => l.stage !== 'archived')
+  // The list endpoint can't filter on stage, so a lease archived or voided
+  // since the last sync comes back here — remove it from the cache instead.
+  const removed = result.data.filter(isOutOfCache)
+  const rest = result.data.filter((l) => !isOutOfCache(l))
 
   return {
     changed: rest.map((l) => mapTenfastLeaseToSearchResult(l)),
-    removedLeaseIds: archived.map((l) => l.externalId),
+    removedLeaseIds: removed.map((l) => l.externalId),
   }
 }
 

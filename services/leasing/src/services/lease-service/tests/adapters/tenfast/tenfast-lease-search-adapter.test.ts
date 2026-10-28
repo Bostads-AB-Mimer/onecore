@@ -784,6 +784,32 @@ describe('tenfast-lease-search-adapter', () => {
     })
   })
 
+  describe('fetchAllLeasesForCache', () => {
+    it('excludes voided and archived leases from the full sync', async () => {
+      const active = factory.tenfastLease.build({
+        externalId: 'lease-active',
+        stage: 'active',
+      })
+      const voided = factory.tenfastLease.build({
+        externalId: 'lease-voided',
+        stage: 'voided',
+      })
+      const archived = factory.tenfastLease.build({
+        externalId: 'lease-archived',
+        stage: 'archived',
+      })
+
+      jest.spyOn(tenfastAdapter, 'getAllLeases').mockResolvedValue({
+        ok: true,
+        data: [active, voided, archived],
+      })
+
+      const result = await tenfastLeaseSearchAdapter.fetchAllLeasesForCache()
+
+      expect(result.map((l) => l.leaseId)).toEqual(['lease-active'])
+    })
+  })
+
   describe('fetchLeasesUpdatedSinceForCache', () => {
     it('puts archived leases in removedLeaseIds instead of changed', async () => {
       const active = factory.tenfastLease.build({
@@ -807,6 +833,30 @@ describe('tenfast-lease-search-adapter', () => {
 
       expect(result.changed.map((l) => l.leaseId)).toEqual(['lease-active'])
       expect(result.removedLeaseIds).toEqual(['lease-archived'])
+    })
+
+    it('puts voided leases in removedLeaseIds instead of changed', async () => {
+      const upcoming = factory.tenfastLease.build({
+        externalId: 'lease-upcoming',
+        stage: 'upcoming',
+      })
+      const voided = factory.tenfastLease.build({
+        externalId: 'lease-voided',
+        stage: 'voided',
+      })
+
+      jest.spyOn(tenfastAdapter, 'getLeasesUpdatedSince').mockResolvedValue({
+        ok: true,
+        data: [upcoming, voided],
+      })
+
+      const result =
+        await tenfastLeaseSearchAdapter.fetchLeasesUpdatedSinceForCache(
+          new Date('2024-01-01')
+        )
+
+      expect(result.changed.map((l) => l.leaseId)).toEqual(['lease-upcoming'])
+      expect(result.removedLeaseIds).toEqual(['lease-voided'])
     })
 
     it('throws when the adapter call fails', async () => {

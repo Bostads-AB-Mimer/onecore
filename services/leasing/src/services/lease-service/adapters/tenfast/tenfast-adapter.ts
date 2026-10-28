@@ -1329,6 +1329,8 @@ export const preliminaryTerminateLease = async (
     return { ok: false, err: error.err }
   }
 }
+
+// 'voided' (makulerat) is left out: annulled leases are hidden unless asked for.
 const defaultFilters: GetLeasesFilters = {
   status: [
     'current',

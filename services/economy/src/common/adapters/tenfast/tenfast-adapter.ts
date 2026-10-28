@@ -324,8 +324,9 @@ const stageToLeaseStatus = (stage: TenfastLease['stage']): LeaseStatus => {
       return LeaseStatus.PendingSignature
     case 'terminated':
     case 'archived':
-    case 'voided':
       return LeaseStatus.Ended
+    case 'voided':
+      return LeaseStatus.Voided
     case 'draft':
       return LeaseStatus.NotSent
   }

@@ -75,9 +75,15 @@ group as "probably real, unconfirmed," not settled fact.
 `helpers/tenfast.ts:calculateLeaseStatus` and
 `adapters/tenfast/filters.ts:stageToStatus`): `active`, `upcoming`,
 `terminationScheduled`, `archived`, `terminated`, `preTermination`,
-`signingInProgress`, `draft`. Unconfirmed (no switch case, mapping, or test
-references them — if Tenfast sends these, current code silently falls
-through to `default`/"Unknown Tenfast stage"): `voided`, `rejected`.
+`signingInProgress`, `draft`, `voided` (→ `LeaseStatus.Voided`, excluded
+from the lease list routes unless `status=voided` is requested, and never
+held by the lease search cache: the full sync drops it client-side since
+`filter[isArchived]` does not cover it, and the delta sync removes it like
+`archived`; seen in the test environment 2026-10, `filter[stage]=voided`
+on `avtal/search` works).
+Unconfirmed (no switch case, mapping, or test references it — if Tenfast
+sends it, current code falls through to `default`/"Unknown Tenfast stage"):
+`rejected`.
 
 **Rental object (hyresobjekt) `states`** — confirmed directly by Tenfast's
 own developer (2026-09), so treat this as authoritative rather than

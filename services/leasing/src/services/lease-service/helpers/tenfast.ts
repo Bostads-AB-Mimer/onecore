@@ -54,6 +54,8 @@ export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
       return LeaseStatus.Ended
     case 'draft':
       return LeaseStatus.NotSent
+    case 'voided':
+      return LeaseStatus.Voided
     default:
       logger.warn(
         { stage, leaseId: lease.externalId },
