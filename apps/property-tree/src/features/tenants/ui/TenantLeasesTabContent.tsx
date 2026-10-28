@@ -12,6 +12,7 @@ import {
   LeaseStatusBadge,
   sortLeasesByStatus,
 } from '@/entities/lease'
+import { hasSubletTenant } from '@/entities/tenant'
 
 import { Lease } from '@/services/api/core/leaseService'
 
@@ -19,6 +20,7 @@ import { getRentalObjectPath, paths } from '@/shared/routes'
 import { Button } from '@/shared/ui/Button'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
+import { SecondaryRentalBadge } from '@/shared/ui/StatusBadges'
 import {
   Tooltip,
   TooltipContent,
@@ -205,7 +207,12 @@ export function TenantLeasesTabContent({
     {
       key: 'status',
       label: 'Status',
-      render: (lease: Lease) => <LeaseStatusBadge status={lease.status} />,
+      render: (lease: Lease) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LeaseStatusBadge status={lease.status} />
+          {hasSubletTenant(lease) && <SecondaryRentalBadge />}
+        </div>
+      ),
     },
   ]
 
@@ -217,6 +224,11 @@ export function TenantLeasesTabContent({
     return (
       <LeaseMobileCard lease={lease}>
         <div className="space-y-2 text-sm">
+          {hasSubletTenant(lease) && (
+            <div className="flex justify-end">
+              <SecondaryRentalBadge />
+            </div>
+          )}
           {isMissing ? (
             <div className="flex items-center gap-2 text-muted-foreground">
               <InfoIcon className="h-3 w-3" />

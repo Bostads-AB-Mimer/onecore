@@ -31,9 +31,12 @@ async function getByRentalPropertyId(
   return data?.content || []
 }
 
-async function getByContactCode(contactCode: string): Promise<Array<Lease>> {
+async function getByContactCode(
+  contactCode: string,
+  { includeSubletLeases = false }: { includeSubletLeases?: boolean } = {}
+): Promise<Array<Lease>> {
   const { data, error } = await GET('/leases/by-contact-code/{contactCode}', {
-    params: { path: { contactCode } },
+    params: { path: { contactCode }, query: { includeSubletLeases } },
   })
 
   if (error) throw error
