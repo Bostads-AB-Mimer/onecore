@@ -681,4 +681,131 @@ describe('syncLeases', () => {
       'Bifoga kontraktet i Tenfast för hand.'
     )
   })
+
+  it('the give-up mail for a failed uppsägning PDF says the lease is already terminated', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T09:00:00.000Z'),
+    })
+    const monthAgo = new Date(
+      Date.now() - 31 * 24 * 60 * 60 * 1000
+    ).toISOString()
+    await appendEntry(queueFile, {
+      ...makeLeaseEntry(
+        lease,
+        `Failed to sync lease ${lease.leaseId}: sync-failed (termination-pdf-upload-failed)`
+      ),
+      addedAt: monthAgo,
+      lastAttemptAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
+      stillFailingNotifiedAt: monthAgo,
+    })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: false,
+      err: 'sync-failed',
+      statusCode: 500,
+      detail: 'termination-pdf-upload-failed',
+    })
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [] })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    const body = sendEmailSpy.mock.calls[0][0].body as string
+    expect(body).toContain('är uppsagt i Tenfast')
+    expect(body).toContain('Bifoga det i Tenfast för hand.')
+    expect(body).not.toContain('Ändringen har inte nått Tenfast')
+  })
+
+  it('a later void replaces a queued terminate for the same lease', async () => {
+    const terminate = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T09:00:00.000Z'),
+    })
+    const voidChange = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'void',
+      timestamp: new Date('2026-05-01T10:00:00.000Z'),
+    })
+    await appendEntry(queueFile, makeLeaseEntry(terminate))
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [voidChange] })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+    const syncLease = jest
+      .spyOn(leasingAdapter, 'syncLease')
+      .mockResolvedValue({
+        ok: true,
+        data: { action: 'voided', leaseId: 'L-1' },
+      })
+    jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(syncLease).toHaveBeenCalledTimes(1)
+    expect(syncLease).toHaveBeenCalledWith('L-1', undefined, 'void')
+    expect(await readQueue(queueFile)).toEqual([])
+  })
+
+  it('a later terminate does not replace a queued create for the same lease', async () => {
+    const create = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'create',
+      timestamp: new Date('2026-05-01T09:00:00.000Z'),
+    })
+    const terminate = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T10:00:00.000Z'),
+    })
+    await appendEntry(queueFile, makeLeaseEntry(create))
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [terminate] })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+    jest.spyOn(contactsAdapter, 'makeContactsAdapter').mockReturnValue({
+      getByContactCode: jest.fn().mockResolvedValue({
+        ok: true,
+        data: factory.contactsServiceContact.build({ relatedContacts: [] }),
+      }),
+    } as any)
+    const syncLease = jest
+      .spyOn(leasingAdapter, 'syncLease')
+      .mockResolvedValue({
+        ok: true,
+        data: { action: 'created', leaseId: 'L-1' },
+      })
+    jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(syncLease.mock.calls.map((call) => call[2])).toEqual([
+      'create',
+      'terminate',
+    ])
+  })
 })
