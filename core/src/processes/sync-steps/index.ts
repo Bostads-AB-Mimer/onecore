@@ -40,7 +40,12 @@ export const runSyncSteps = async ({
   const finished: { step: SyncStep; skipped: boolean; undo?: unknown }[] = []
 
   for (const [i, step] of steps.entries()) {
-    const result = await step.run()
+    let result: AdapterResult<{ skipped: boolean; undo?: unknown }, string>
+    try {
+      result = await step.run()
+    } catch {
+      result = { ok: false, err: 'unknown' }
+    }
     if (result.ok) {
       finished.push({ step, ...result.data })
       continue

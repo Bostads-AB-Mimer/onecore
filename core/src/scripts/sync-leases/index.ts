@@ -76,7 +76,12 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
               contactsAdapter,
               otherInvoiceRecipient.contactCode
             )
-            if (!synced.ok) return synced
+            if (!synced.ok) {
+              return {
+                ...synced,
+                detail: `recipient ${otherInvoiceRecipient.contactCode}${synced.detail ? `: ${synced.detail}` : ''}`,
+              }
+            }
             return {
               ok: true,
               data: { skipped: false, undo: synced.data?.undo },
