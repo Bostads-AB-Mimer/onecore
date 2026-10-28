@@ -611,6 +611,28 @@ describe('POST /leases/sync', () => {
       )
     })
 
+    it('fails when Tenfast says no termination is required but ends the lease on another date', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          lastDebitDate: new Date('2026-12-31'),
+        }),
+      ])
+      terminateLease.mockResolvedValueOnce({
+        ok: false,
+        err: 'end-date-mismatch',
+      })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        action: 'terminate',
+      })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('end-date-mismatch')
+      expect(hasTerminationFile).not.toHaveBeenCalled()
+    })
+
     it('skips the uppsägning document when Tenfast says no termination is required', async () => {
       getLeases.mockResolvedValueOnce([
         factory.lease.build({
