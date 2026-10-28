@@ -6,6 +6,7 @@ import { GET } from './core/base-api'
 export function rentalObjectFromLeaseId(leaseId: string): string {
   return leaseId.split('/')[0].trim()
 }
+
 export function dedupeLeases(leases: Lease[]): Lease[] {
   const seen = new Set<string>()
   return (leases ?? []).filter((l) => {
