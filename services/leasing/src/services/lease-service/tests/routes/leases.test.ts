@@ -626,6 +626,10 @@ describe('POST /leases', () => {
 })
 
 describe('POST /leases/batch', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   it('returns leases from Tenfast mapped like GET /leases/:leaseId', async () => {
     const current = factory.tenfastLease.build({
       externalId: '216-704-00-0022/02',
@@ -695,14 +699,22 @@ describe('POST /leases/batch', () => {
     expect(res.body.content).toHaveLength(1)
   })
 
-  it('fetches every lease when there are more ids than one chunk', async () => {
+  it('fetches every lease, at most 10 at a time', async () => {
     const leaseIds = Array.from({ length: 25 }, (_, i) => `lease-${i}/01`)
+    let inFlight = 0
+    let maxInFlight = 0
     const getLeaseSpy = jest
       .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
-      .mockImplementation(async (leaseId) => ({
-        ok: true,
-        data: factory.tenfastLease.build({ externalId: leaseId }),
-      }))
+      .mockImplementation(async (leaseId) => {
+        inFlight++
+        maxInFlight = Math.max(maxInFlight, inFlight)
+        await new Promise((resolve) => setImmediate(resolve))
+        inFlight--
+        return {
+          ok: true,
+          data: factory.tenfastLease.build({ externalId: leaseId }),
+        }
+      })
 
     const res = await request(app.callback())
       .post('/leases/batch')
@@ -710,9 +722,62 @@ describe('POST /leases/batch', () => {
 
     expect(res.status).toBe(200)
     expect(getLeaseSpy).toHaveBeenCalledTimes(25)
+    expect(maxInFlight).toBe(10)
     expect(res.body.content.map((l: { leaseId: string }) => l.leaseId)).toEqual(
       leaseIds
     )
+  })
+
+  it('returns 500 when no lease came back and a lookup failed', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback())
+      .post('/leases/batch')
+      .send({ leaseIds: ['missing/01', 'broken/01'] })
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('Could not get leases from Tenfast')
+  })
+
+  it('returns 200 with an empty list when no lease is found', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+      .mockResolvedValue({ ok: false, err: 'not-found' })
+
+    const res = await request(app.callback())
+      .post('/leases/batch')
+      .send({ leaseIds: ['missing/01', 'missing/02'] })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([])
+  })
+
+  it('returns 500 when a lookup throws', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+      .mockRejectedValueOnce(new Error('boom'))
+
+    const res = await request(app.callback())
+      .post('/leases/batch')
+      .send({ leaseIds: ['216-704-00-0022/02'] })
+
+    expect(res.status).toBe(500)
+  })
+
+  it.each([
+    ['a string', { leaseIds: '216-704-00-0022/02' }],
+    ['a number', { leaseIds: 5 }],
+    ['missing', {}],
+  ])('returns 400 when leaseIds is %s', async (_, body) => {
+    const getLeaseSpy = jest.spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+
+    const res = await request(app.callback()).post('/leases/batch').send(body)
+
+    expect(res.status).toBe(400)
+    expect(getLeaseSpy).not.toHaveBeenCalled()
   })
 })
 
