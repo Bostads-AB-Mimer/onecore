@@ -1490,9 +1490,17 @@ export const getLeaseByExternalId = async (
 const toStockholmDate = (date: Date) =>
   date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })
 
-const hasSubletEnded = (lease: TenfastLease, now: Date) =>
-  !!lease.andraHandHG?.endDate &&
-  toStockholmDate(lease.andraHandHG.endDate) < toStockholmDate(now)
+const hasEnded = (endDate: Date | null | undefined, now: Date) =>
+  !!endDate && toStockholmDate(endDate) < toStockholmDate(now)
+
+const isCurrentSubletOf = (
+  lease: TenfastLease,
+  contactCode: string,
+  now: Date
+) =>
+  lease.andraHandHG?.externalId === contactCode &&
+  !hasEnded(lease.andraHandHG.endDate, now) &&
+  !hasEnded(lease.endDate, now)
 
 export const getSubletLeases = async (
   contactCode: string,
@@ -1529,12 +1537,13 @@ export const getSubletLeases = async (
       }
     }
 
+    const leaseIds = relations.data.relationsTo.andraHandHyresgast.flatMap(
+      ({ avtal }) => (avtal.externalId ? [avtal.externalId] : [])
+    )
+
     const results = await Promise.all(
-      relations.data.relationsTo.andraHandHyresgast.map(({ avtal }) =>
-        getLeaseByExternalId(avtal.externalId).then((result) => ({
-          leaseId: avtal.externalId,
-          result,
-        }))
+      leaseIds.map((leaseId) =>
+        getLeaseByExternalId(leaseId).then((result) => ({ leaseId, result }))
       )
     )
 
@@ -1542,13 +1551,22 @@ export const getSubletLeases = async (
     const leases: TenfastLease[] = []
     for (const { leaseId, result } of results) {
       if (!result.ok) {
+        if (result.err === 'not-found') {
+          logger.warn(
+            { leaseId, contactCode },
+            'getSubletLeases: Sublet lease not found, skipping it'
+          )
+          continue
+        }
         logger.error(
           { error: result.err, leaseId, contactCode },
-          'getSubletLeases: Failed to fetch sublet lease, skipping it'
+          'getSubletLeases: Failed to fetch sublet lease'
         )
-        continue
+        return { ok: false, err: 'unknown' }
       }
-      if (!hasSubletEnded(result.data, now)) leases.push(result.data)
+      if (isCurrentSubletOf(result.data, contactCode, now)) {
+        leases.push(result.data)
+      }
     }
 
     return { ok: true, data: filterByStatus(leases, filters.status) }

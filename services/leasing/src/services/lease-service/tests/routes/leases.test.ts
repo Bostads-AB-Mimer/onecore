@@ -180,22 +180,21 @@ describe('GET /leases/by-contact-code/:contactCode', () => {
       })
     })
 
-    it('returns the first-hand leases when the sublet lookup fails', async () => {
-      const own = factory.tenfastLease.build()
+    it('returns 500 when the sublet lookup fails', async () => {
       jest
         .spyOn(tenfastAdapter, 'getTenantByContactCode')
         .mockResolvedValueOnce({ ok: true, data: tenant })
       jest
         .spyOn(tenfastAdapter, 'getLeasesByTenantId')
-        .mockResolvedValueOnce({ ok: true, data: [own] })
+        .mockResolvedValueOnce({ ok: true, data: [factory.tenfastLease.build()] })
       jest
         .spyOn(tenfastAdapter, 'getSubletLeases')
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })
 
       const res = await request(app.callback()).get(url())
 
-      expect(res.status).toBe(200)
-      expect(leaseIds(res)).toEqual([own.externalId])
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('unknown')
     })
   })
 })

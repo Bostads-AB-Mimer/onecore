@@ -837,6 +837,14 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const filters = queryParams.data?.status
+      ? { status: queryParams.data.status }
+      : undefined
+
+    const subletLeasesPromise = queryParams.data.includeSubletLeases
+      ? tenfastAdapter.getSubletLeases(ctx.params.contactCode, filters)
+      : undefined
+
     // TODO: NON-TENANT-CONTACTS/LEASE
     const contact = await tenfastAdapter.getTenantByContactCode(
       ctx.params.contactCode
@@ -855,10 +863,6 @@ export const routes = (router: KoaRouter) => {
 
       return
     }
-
-    const filters = queryParams.data?.status
-      ? { status: queryParams.data.status }
-      : undefined
 
     let leases: TenfastLease[] = []
 
@@ -889,25 +893,26 @@ export const routes = (router: KoaRouter) => {
       )
     }
 
-    if (queryParams.data.includeSubletLeases) {
-      const getSubletLeases = await tenfastAdapter.getSubletLeases(
-        ctx.params.contactCode,
-        filters
-      )
+    if (subletLeasesPromise) {
+      const getSubletLeases = await subletLeasesPromise
 
-      if (getSubletLeases.ok) {
-        const leaseIds = new Set(leases.map((lease) => lease.externalId))
-        leases = leases.concat(
-          getSubletLeases.data.filter(
-            (lease) => !leaseIds.has(lease.externalId)
-          )
-        )
-      } else {
+      if (!getSubletLeases.ok) {
         logger.error(
           { error: getSubletLeases.err, metadata },
-          'Error fetching sublet leases by contact code, returning first-hand leases only'
+          'Error fetching sublet leases by contact code'
         )
+        ctx.status = 500
+        ctx.body = {
+          error: getSubletLeases.err,
+          ...metadata,
+        }
+        return
       }
+
+      const leaseIds = new Set(leases.map((lease) => lease.externalId))
+      leases = leases.concat(
+        getSubletLeases.data.filter((lease) => !leaseIds.has(lease.externalId))
+      )
     }
 
     const onecoreLeases = leases.map((lease) =>

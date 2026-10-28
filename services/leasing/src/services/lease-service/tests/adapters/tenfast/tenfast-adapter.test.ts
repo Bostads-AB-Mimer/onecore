@@ -3239,11 +3239,10 @@ describe(tenfastAdapter.getSubletLeases, () => {
     })
   })
 
-  it('skips a sublet lease that cannot be fetched', async () => {
-    const failing = subletLease(new Date('2100-01-01'))
+  it('skips a sublet lease that Tenfast no longer has', async () => {
+    const missing = subletLease(new Date('2100-01-01'))
     const working = subletLease(new Date('2100-01-01'))
-    mockTenfast(relationsResponse([failing.externalId, working.externalId]), {
-      [failing.externalId]: { status: 500, data: { error: 'boom' } },
+    mockTenfast(relationsResponse([missing.externalId, working.externalId]), {
       [working.externalId]: leaseResponse(working),
     })
 
@@ -3251,6 +3250,68 @@ describe(tenfastAdapter.getSubletLeases, () => {
 
     assert(result.ok)
     expect(result.data.map((l) => l.externalId)).toEqual([working.externalId])
+  })
+
+  it('fails when a sublet lease cannot be fetched', async () => {
+    const failing = subletLease(new Date('2100-01-01'))
+    const working = subletLease(new Date('2100-01-01'))
+    mockTenfast(relationsResponse([failing.externalId, working.externalId]), {
+      [failing.externalId]: { status: 500, data: { error: 'boom' } },
+      [working.externalId]: leaseResponse(working),
+    })
+
+    expect(await tenfastAdapter.getSubletLeases(contactCode)).toEqual({
+      ok: false,
+      err: 'unknown',
+    })
+  })
+
+  it('skips relations whose lease has no external id', async () => {
+    const lease = subletLease(new Date('2100-01-01'))
+    const relations = relationsResponse([lease.externalId])
+    relations.data.relationsTo.andraHandHyresgast.push({
+      avtal: { _id: 'draft-id', externalId: null, reference: 2 },
+      andraHandHG: { contactId: contactCode },
+      hyresgaster: [],
+    } as never)
+    mockTenfast(relations, { [lease.externalId]: leaseResponse(lease) })
+
+    const result = await tenfastAdapter.getSubletLeases(contactCode)
+
+    assert(result.ok)
+    expect(result.data.map((l) => l.externalId)).toEqual([lease.externalId])
+  })
+
+  it('leaves out a lease whose sublet now names another contact', async () => {
+    const lease = factory.tenfastLease.build({
+      andraHandHG: {
+        externalId: `${contactCode}-other`,
+        startDate: new Date('2026-01-01'),
+        endDate: new Date('2100-01-01'),
+      },
+    })
+    mockTenfast(relationsResponse([lease.externalId]), {
+      [lease.externalId]: leaseResponse(lease),
+    })
+
+    expect(await tenfastAdapter.getSubletLeases(contactCode)).toEqual({
+      ok: true,
+      data: [],
+    })
+  })
+
+  it('leaves out a sublet on a lease that has itself ended', async () => {
+    const lease = subletLease(new Date('2100-01-01'), {
+      endDate: new Date('2025-06-30'),
+    })
+    mockTenfast(relationsResponse([lease.externalId]), {
+      [lease.externalId]: leaseResponse(lease),
+    })
+
+    expect(await tenfastAdapter.getSubletLeases(contactCode)).toEqual({
+      ok: true,
+      data: [],
+    })
   })
 
   it('applies the status filter to sublet leases', async () => {

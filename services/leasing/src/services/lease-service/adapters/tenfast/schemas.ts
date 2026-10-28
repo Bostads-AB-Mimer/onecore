@@ -132,7 +132,9 @@ export type TenfastSubletTenant = z.infer<typeof TenfastSubletTenantSchema>
 export const TenfastContactRelationsSchema = z.object({
   relationsTo: z.object({
     andraHandHyresgast: z.array(
-      z.object({ avtal: z.object({ externalId: z.string() }) })
+      z.object({
+        avtal: z.object({ externalId: z.string().nullable().optional() }),
+      })
     ),
   }),
 })
