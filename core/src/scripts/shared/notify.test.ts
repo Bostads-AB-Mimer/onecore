@@ -24,11 +24,14 @@ describe('notifyXpandSync', () => {
   it('sends the body lines joined by newlines to the xpandSync address', async () => {
     await notifyXpandSync('subject', ['one', 'two'])
 
-    expect(sendEmailSpy).toHaveBeenCalledWith({
-      to: 'sync@example.com',
-      subject: 'subject',
-      body: 'one\ntwo',
-    })
+    expect(sendEmailSpy).toHaveBeenCalledWith(
+      {
+        to: 'sync@example.com',
+        subject: 'subject',
+        body: 'one\ntwo',
+      },
+      { timeoutMs: 30_000 }
+    )
   })
 
   it('sends nothing when no address is configured', async () => {

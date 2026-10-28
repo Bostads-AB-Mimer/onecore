@@ -20,19 +20,23 @@ D --> |Yes| F{Avtal Hittat<br/>i Tenfast?}
 F --> |No| G[Räknas som Lyckat —<br/>Inget att Avsluta]
 F --> |Yes| H{Uppsägning i Tenfast?}
 H --> |Oväntat Fel| E
-H --> |Redan Avslutat<br/>eller Lyckades| J{Uppsägnings-PDF Redan<br/>Bifogad, eller Kontroll<br/>Misslyckas?}
-J --> |Ja| I[Avtal Avslutat i Tenfast]
+H --> |Ingen Uppsägning<br/>Krävs| I[Avtal Avslutat i Tenfast]
+H --> |Redan Avslutat<br/>eller Lyckades| J{Uppsägnings-PDF<br/>Redan Bifogad?}
+J --> |Kontroll Misslyckas| E
+J --> |Ja| I
 J --> |Nej| K{PDF Hittas<br/>i Xpand?}
-K --> |Nej| I
+K --> |Uppslag Misslyckas| E
+K --> |Nej| N[Avtal Avslutat,<br/>Mejl: Bifoga PDF<br/>för Hand]
 K --> |Ja| L(Ladda Upp PDF<br/>till Tenfast)
 L --> Lo{Lyckades?}
-Lo --> |Nej| I
+Lo --> |Nej| E
 Lo --> |Ja| M[Avtal Avslutat,<br/>PDF Bifogad]
 P --> O
 E --> O
 G --> O
 I --> O
 M --> O
+N --> O
 ```
 
 ## Sekvensdiagram
@@ -74,40 +78,30 @@ sequenceDiagram
         alt Avtal ej Hittat i Tenfast
             Leasing-->>SyncScript: 200 { action: "skipped" }
         else Avtal Hittat
-            Leasing ->> Tenfast: POST /avtal/{id}/terminate<br/>(endDate, reason: "Synced from xpand",<br/>notifyHg: false, handled: true)
+            opt Uppsägningen Inte Redan Hanterad i Tenfast
+                Leasing ->> Tenfast: POST /avtal/{id}/terminate<br/>(endDate, reason: "Synced from xpand",<br/>notifyHg: false, handled: true)
+            end
             alt Oväntat Fel
                 Tenfast-->>Leasing: 4xx/5xx
                 Leasing-->>SyncScript: 500
                 SyncScript ->> SyncScript: Köas för återförsök,<br/>felmejl skickas
-            else Redan Avslutat ("Avtalet kan inte<br/>sägas upp") eller Lyckades
-                Tenfast-->>Leasing: 400 eller 200
-
-                note over Leasing: Bästa-försök: bifoga uppsägnings-PDF från<br/>Xpand. Körs även när avtalet redan var<br/>avslutat, så en tidigare misslyckad<br/>uppladdning kan repareras vid omkörning.<br/>Varje steg nedan misslyckas tyst (loggas,<br/>men avslutar inte hela raden).
-
-                Leasing ->> Tenfast: Slå upp Avtal Igen (by externalId)
-
-                break when Uppslag Misslyckas
-                    Leasing-->>SyncScript: 200 (utan PDF-bifogning)
-                end
+            else Ingen Uppsägning Krävs ("Avtalet kommer löpa ut<br/>inom uppsägningstiden")
+                Leasing-->>SyncScript: 200 { action: "skipped" } (utan PDF-steg)
+            else Redan Avslutat eller Lyckades
+                note over Leasing: Bifoga uppsägnings-PDF från Xpand. Körs<br/>även när avtalet redan var avslutat, så<br/>ett återförsök laddar upp en PDF som<br/>misslyckades förra gången.
 
                 Leasing ->> Tenfast: Har Avtalet Redan en<br/>Uppsägnings-PDF? (hasTerminationFile)
-
-                break when Kontrollen Misslyckas,<br/>eller PDF Redan Finns
-                    Leasing-->>SyncScript: 200 (utan PDF-bifogning)
-                end
-
                 Leasing ->> Xpand: Hämta Uppsägnings-PDF (dokop)
-
-                break when Ingen PDF Hittas i Xpand
-                    Leasing-->>SyncScript: 200 (utan PDF-bifogning)
-                end
-
                 Leasing ->> Tenfast: POST /avtal/{id}/upload-termination-file
 
-                alt Uppladdning Misslyckas
-                    Leasing-->>SyncScript: 200 (utan PDF-bifogning)
-                else Uppladdning Lyckas
-                    Leasing-->>SyncScript: 200 { action: "terminated" eller "skipped" }
+                alt Kontroll, Uppslag eller Uppladdning Misslyckas
+                    Leasing-->>SyncScript: 500 { error: "termination-pdf-…-failed" }
+                    SyncScript ->> SyncScript: Köas för återförsök,<br/>felmejl skickas
+                else Ingen PDF i Xpand
+                    Leasing-->>SyncScript: 200 { document: "missing" }
+                    SyncScript ->> SyncScript: Mejl: bifoga PDF för hand
+                else PDF Redan Bifogad eller Uppladdad
+                    Leasing-->>SyncScript: 200 { document: "already-attached" | "attached" }
                 end
             end
         end
@@ -120,8 +114,9 @@ sequenceDiagram
 ## Att känna till
 
 - **Bilplatser (Garagekontrakt) synkas aldrig här.** `cmlog`-adaptern klassificerar Garagekontrakt-rader precis som Bostads-/Lokalkontrakt, men filtret `isResidenceOrStorage` i `sync-leases` släpper bara igenom lägenhet eller lokal+förråd. En bilplats som sägs upp direkt i Xpand loggas som "not in scope" och synkas aldrig till Tenfast via det här flödet.
-- **Idempotent.** Om avtalet redan är avslutat i Tenfast (Tenfast svarar "Avtalet kan inte sägas upp") räknas raden ändå som lyckad — bra för omkörningar, men jämför med [Synka Makulering](./DOCS_Void_Lease_via_Xpand_Sync.md), som saknar motsvarande skydd.
-- **"Ingen uppsägning krävs" räknas också som lyckat — och då tappas Xpands slutdatum.** Svaret "Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs." betyder inte att avtalet redan är uppsagt. Det kan komma redan första gången, för ett avtal som ändå tar slut inom uppsägningstiden. Raden räknas som lyckad utan mejl, och är Xpands sista debiteringsdatum tidigare än Tenfasts slutdatum aviserar Tenfast för länge.
-- **Positionen flyttas fram oavsett utfall — inte bara vid lyckad synk.** En misslyckad rad flyttar den sparade positionen förbi sig precis som en lyckad; återförsök sker i stället via felkön, med glesare försök ju längre raden misslyckats och ett sista mejl efter 30 dagar. Positionen sparas först när alla rader inom samma sekund är behandlade, så en krasch mitt i en sekund gör att nästa körning läser om den sekunden. Se [Synk från Xpand](../../scripts/DOCS_Sync_Overview.md#gemensam-mekanik) för detaljer.
+- **Idempotent.** Om avtalet redan är avslutat i Tenfast (Tenfast svarar med felmeddelandet "Avtalet kan inte sägas upp") räknas raden ändå som lyckad — bra för omkörningar, men jämför med [Synka Makulering](./DOCS_Void_Lease_via_Xpand_Sync.md), som saknar motsvarande skydd.
+- **Ingen uppsägning krävs → inget PDF-steg, och Xpands slutdatum tappas.** Svarar Tenfast "Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs." räknas raden som lyckad utan PDF-steg och utan mejl. Svaret betyder inte att avtalet redan är uppsagt: det kan komma redan första gången, för ett avtal som ändå tar slut inom uppsägningstiden. Är Xpands sista debiteringsdatum tidigare än Tenfasts slutdatum aviserar Tenfast då för länge.
+- **Positionen sparas per rad, oavsett utfall — inte bara vid lyckad synk.** `saveSyncPosition` körs utanför try/catch:en, så en misslyckad rad räknas som hanterad precis som en lyckad. Återförsök sker istället via en separat JSONL-kö som dräneras i början av nästa körning, innan nya cmlog-rader hämtas. Varje körning läser om de senaste fem minuterna av cmlog (rader kan bli synliga en stund efter sin logtime) och hoppar över de rader som redan hanterats, så en krasch mitt i en körning gör inte om rader som redan är klara. Se [Synk från Xpand](../../scripts/DOCS_Sync_Overview.md#gemensam-mekanik) för detaljer.
 - En preliminär xpand-uppsägning (fältet "Preliminärt uppsagt") triggar **inte** det här flödet — bara när "Uppsagt datum" faktiskt sätts.
-- **Bästa-försök-bifogning av uppsägnings-PDF.** Efter en lyckad (eller redan-avslutad) uppsägning i Tenfast försöker Leasing separat bifoga den operativa uppsägningshandlingen från Xpand via `upload-termination-file`. Det här är ett eget, tyst best-effort-steg: hittas ingen PDF, finns redan en, eller misslyckas uppladdningen, påverkar det inte huruvida raden räknas som lyckad. Raden köas inte heller, så ingen senare körning försöker igen — PDF:en saknas i Tenfast tills någon laddar upp den för hand, eller tills samma rad råkar spelas upp igen.
+- **Uppsägnings-PDF:en återförsöks.** Efter en lyckad (eller redan-avslutad) uppsägning bifogar Leasing uppsägningshandlingen från Xpand via `upload-termination-file`. Misslyckas kontrollen, uppslaget i Xpand eller uppladdningen svarar Leasing 500, så raden köas och försöks igen. Vid återförsöket hoppar Leasing över `POST /terminate` när Tenfast redan har en hanterad uppsägning (`cancellation.handledAt` satt) och kör bara PDF-steget. Saknar Xpand PDF:en räknas raden som lyckad och teamet får ett mejl om att bifoga den för hand. Ger kön upp efter 30 dagar säger mejlet att avtalet redan är uppsagt och att bara PDF:en saknas.
+- **En senare makulering ersätter en köad uppsägning.** Ligger uppsägningen kvar i kön när en makulering av samma avtal kommer, tas uppsägningen bort ur kön (mejl: "ersatt av en senare ändring") i stället för att försökas mot ett makulerat avtal. En köad skapanderad ersätts aldrig.

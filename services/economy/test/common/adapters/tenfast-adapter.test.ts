@@ -13,6 +13,7 @@ import {
   getAutogiroConsentByNationalRegistrationNumber,
   setGracePeriod,
   listNewOutboundExports,
+  getLeasesByTenantId,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { PaymentStatus } from '@onecore/types'
 import {
@@ -691,6 +692,179 @@ describe('Tenfast Adapter', () => {
         leaseId: '306-008-01-0201/01',
         leaseEndDate,
       })
+    })
+
+    it('returns the tenant ids of the matched lease', async () => {
+      makeBatchResponse([
+        {
+          _id: 'obj-1',
+          externalId: '306-008-01-0201',
+          avtal: [
+            TenfastLeaseFactory.build({
+              externalId: '306-008-01-0201/01',
+              startDate: new Date('2025-01-01'),
+              endDate: null,
+              stage: 'active',
+              hyresgaster: ['tenant-1', { _id: 'tenant-2' }] as any,
+              hyresobjekt: [],
+            }),
+          ],
+        },
+      ])
+
+      const result = await getActiveLeasesByRentalObjectCodes({
+        rentalObjectCodes: ['306-008-01-0201'],
+        periodStart,
+        periodEnd,
+      })
+
+      expect(result.get('306-008-01-0201')).toMatchObject({
+        tenantIds: ['tenant-1', 'tenant-2'],
+      })
+    })
+  })
+
+  describe(getLeasesByTenantId, () => {
+    const makeLease = (overrides: object = {}) => ({
+      externalId: '306-008-01-0302/12',
+      stage: 'upcoming',
+      startDate: '2026-11-01',
+      endDate: null,
+      hyresobjekt: [{ _id: 'obj-1', typ: 'bostad' }],
+      ...overrides,
+    })
+
+    const makePage = (records: object[], next: string | null = null) => ({
+      status: 200,
+      data: { records, prev: null, next, totalCount: records.length },
+    })
+
+    it('fetches the leases of the tenant with rental objects populated', async () => {
+      mockAxios.request.mockResolvedValueOnce(makePage([makeLease()]))
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      expect(mockAxios.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: '/v1/hyresvard/avtal',
+          params: expect.objectContaining({
+            hyresgast: 'tenant-1',
+            populate: 'hyresobjekt',
+          }),
+        })
+      )
+      expect(result).toEqual({
+        ok: true,
+        data: [
+          {
+            leaseId: '306-008-01-0302/12',
+            stage: 'upcoming',
+            startDate: new Date('2026-11-01'),
+            endDate: null,
+            isResidential: true,
+          },
+        ],
+      })
+    })
+
+    it.each([
+      ['a parking space', [{ _id: 'obj-1', typ: 'parkering' }], false],
+      ['an unpopulated rental object', ['obj-1'], false],
+      ['a rental object without type', [{ _id: 'obj-1' }], false],
+      [
+        'a residential and a storage object',
+        [
+          { _id: 'obj-1', typ: 'forrad' },
+          { _id: 'obj-2', typ: 'Bostad' },
+        ],
+        true,
+      ],
+    ])(
+      'tells whether a lease on %s is residential',
+      async (_, hyresobjekt, isResidential) => {
+        mockAxios.request.mockResolvedValueOnce(
+          makePage([makeLease({ hyresobjekt })])
+        )
+
+        const result = await getLeasesByTenantId('tenant-1')
+
+        assert(result.ok)
+        expect(result.data[0].isResidential).toBe(isResidential)
+      }
+    )
+
+    it('follows pagination', async () => {
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: [makeLease({ externalId: 'a/01' })],
+            prev: null,
+            next: 'cursor-1',
+            totalCount: 2,
+          },
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: [makeLease({ externalId: 'b/01' })],
+            prev: 'cursor-1',
+            next: null,
+            totalCount: 2,
+          },
+        })
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      assert(result.ok)
+      expect(result.data.map((lease) => lease.leaseId)).toEqual([
+        'a/01',
+        'b/01',
+      ])
+      expect(mockAxios.request).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          params: expect.objectContaining({ paginate: 'cursor-1' }),
+        })
+      )
+    })
+
+    it('stops when a page has no records', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: { records: [], prev: null, next: 'cursor-1', totalCount: 5 },
+      })
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      expect(result).toEqual({ ok: true, data: [] })
+      expect(mockAxios.request).toHaveBeenCalledTimes(1)
+    })
+
+    it('returns an error on unexpected status', async () => {
+      mockAxios.request.mockResolvedValueOnce({ status: 500, data: {} })
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns an error when the response does not parse', async () => {
+      mockAxios.request.mockResolvedValueOnce({
+        status: 200,
+        data: { records: [{ stage: 'active' }] },
+      })
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns an error when the request throws', async () => {
+      mockAxios.request.mockRejectedValueOnce(new Error('network'))
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
     })
   })
 })

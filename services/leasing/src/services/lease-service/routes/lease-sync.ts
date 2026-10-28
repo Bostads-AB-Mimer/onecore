@@ -10,9 +10,12 @@ import { getLeases } from '../adapters/xpand/tenant-lease-adapter'
 import {
   getSignedContractPdf,
   getTerminationDocumentPdf,
+  LeaseDocumentLookup,
 } from '../adapters/xpand/lease-document-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { AdapterResult } from '../adapters/types'
 import { z } from 'zod'
 
 const SyncLeaseRequestSchema = z.object({
@@ -20,6 +23,66 @@ const SyncLeaseRequestSchema = z.object({
   contactCode: z.string().optional(),
   action: z.enum(['create', 'terminate', 'void']),
 })
+
+type DocumentKind = 'contract' | 'termination'
+
+type DocumentResult<K extends DocumentKind> = AdapterResult<
+  'attached' | 'already-attached' | 'missing',
+  `${K}-pdf-${'check' | 'lookup' | 'upload'}-failed`
+>
+
+/**
+ * Attaches a PDF from Xpand to a Tenfast lease, unless the lease has one.
+ */
+const attachDocument = async <K extends DocumentKind>(
+  kind: K,
+  leaseId: string,
+  steps: {
+    hasFile: () => Promise<AdapterResult<boolean, unknown>>
+    fetchPdf: (leaseId: string) => Promise<LeaseDocumentLookup>
+    upload: (
+      content: Buffer,
+      filename: string
+    ) => Promise<AdapterResult<unknown, unknown>>
+  }
+): Promise<DocumentResult<K>> => {
+  const hasFile = await steps.hasFile()
+  if (!hasFile.ok) {
+    logger.error(
+      { leaseId, kind, error: hasFile.err },
+      'Could not check whether the Tenfast lease has the document'
+    )
+    return { ok: false, err: `${kind}-pdf-check-failed` as const }
+  }
+  if (hasFile.data) {
+    logger.info(
+      { leaseId, kind },
+      'Tenfast lease already has the document, skipping upload'
+    )
+    return { ok: true, data: 'already-attached' }
+  }
+
+  const pdf = await steps.fetchPdf(leaseId)
+  if (!pdf.ok) return { ok: false, err: `${kind}-pdf-lookup-failed` as const }
+  if (!pdf.data) {
+    logger.warn({ leaseId, kind }, 'No document for the lease found in xpand')
+    return { ok: true, data: 'missing' }
+  }
+
+  const upload = await steps.upload(pdf.data.content, pdf.data.filename)
+  if (!upload.ok) {
+    logger.error(
+      { leaseId, kind, error: upload.err },
+      'Document upload to Tenfast lease failed'
+    )
+    return { ok: false, err: `${kind}-pdf-upload-failed` as const }
+  }
+  logger.info(
+    { leaseId, kind, filename: pdf.data.filename },
+    'Attached document to Tenfast lease'
+  )
+  return { ok: true, data: 'attached' }
+}
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/leases/sync', async (ctx) => {
@@ -59,6 +122,7 @@ export const routes = (router: KoaRouter) => {
 
   router.post(
     '(.*)/leases/sync',
+    boundTenfastCalls,
     parseRequestBody(SyncLeaseRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
@@ -114,37 +178,23 @@ export const routes = (router: KoaRouter) => {
 
           logger.info({ leaseId }, 'Lease created in Tenfast')
 
-          // Best-effort attach the signed PDF from xpand. A missing PDF or
-          // failed upload is logged but does not fail the create — the lease
-          // already exists in Tenfast either way.
-          const pdf = await getSignedContractPdf(leaseId)
-          if (pdf) {
-            const uploadResult = await tenfastAdapter.uploadLeaseFile(
-              createResult.data._id,
-              pdf.content,
-              pdf.filename
-            )
-            if (uploadResult.ok) {
-              logger.info(
-                { leaseId, filename: pdf.filename },
-                'Attached signed PDF to Tenfast lease'
-              )
-            } else {
-              logger.warn(
-                { leaseId, error: uploadResult.err },
-                'Tenfast lease created but PDF upload failed'
-              )
-            }
-          } else {
-            logger.warn(
-              { leaseId },
-              'Tenfast lease created but no signed PDF found in xpand'
-            )
-          }
-
+          const { _id: tenfastLeaseId, hasContractFile } = createResult.data
+          const document = await attachDocument('contract', leaseId, {
+            hasFile: async () => ({ ok: true, data: hasContractFile }),
+            fetchPdf: getSignedContractPdf,
+            upload: (content, filename) =>
+              tenfastAdapter.uploadLeaseFile(tenfastLeaseId, content, filename),
+          })
           ctx.status = 201
           ctx.body = makeSuccessResponseBody(
-            { action: 'created', leaseId },
+            document.ok
+              ? { action: 'created', leaseId, document: document.data }
+              : {
+                  action: 'created',
+                  leaseId,
+                  document: 'failed',
+                  documentError: document.err,
+                },
             metadata
           )
           return
@@ -198,73 +248,41 @@ export const routes = (router: KoaRouter) => {
 
           logger.info({ leaseId }, 'Lease terminated in Tenfast')
 
-          // Best-effort attach the uppsägning PDF from xpand. Also runs when
-          // terminate returns skipped (already terminated) so a failed prior
-          // upload can be repaired on retry. A missing PDF or failed upload is
-          // logged but does not fail the terminate.
-          const tenfastLease =
-            await tenfastAdapter.getLeaseByExternalId(leaseId)
-          if (!tenfastLease.ok) {
-            ctx.status = 200
-            ctx.body = makeSuccessResponseBody(result.data, metadata)
-            return
-          }
-
-          const tenfastLeaseId = tenfastLease.data._id
-          const hasFile =
-            await tenfastAdapter.hasTerminationFile(tenfastLeaseId)
-          if (!hasFile.ok) {
-            logger.warn(
-              { leaseId, error: hasFile.err },
-              'Could not check Tenfast termination file status, skipping upload'
-            )
-            ctx.status = 200
-            ctx.body = makeSuccessResponseBody(result.data, metadata)
-            return
-          }
-          if (hasFile.data) {
-            logger.info(
-              { leaseId },
-              'Tenfast lease already has a termination file, skipping upload'
-            )
-            ctx.status = 200
-            ctx.body = makeSuccessResponseBody(result.data, metadata)
-            return
-          }
-
-          const pdf = await getTerminationDocumentPdf(leaseId)
-          if (!pdf) {
-            logger.warn(
-              { leaseId },
-              'Tenfast lease terminated but no uppsägning PDF found in xpand'
-            )
-            ctx.status = 200
-            ctx.body = makeSuccessResponseBody(result.data, metadata)
-            return
-          }
-
-          const uploadResult = await tenfastAdapter.uploadTerminationFile(
+          const {
+            action: terminateAction,
             tenfastLeaseId,
-            pdf.content,
-            pdf.filename
-          )
-          if (!uploadResult.ok) {
-            logger.warn(
-              { leaseId, error: uploadResult.err },
-              'Tenfast lease terminated but uppsägning PDF upload failed'
-            )
+            skipReason,
+          } = result.data
+          if (skipReason === 'not-required') {
             ctx.status = 200
-            ctx.body = makeSuccessResponseBody(result.data, metadata)
+            ctx.body = makeSuccessResponseBody(
+              { action: terminateAction, leaseId },
+              metadata
+            )
             return
           }
 
-          logger.info(
-            { leaseId, filename: pdf.filename },
-            'Attached uppsägning PDF to Tenfast lease'
-          )
+          const document = await attachDocument('termination', leaseId, {
+            hasFile: () => tenfastAdapter.hasTerminationFile(tenfastLeaseId),
+            fetchPdf: getTerminationDocumentPdf,
+            upload: (content, filename) =>
+              tenfastAdapter.uploadTerminationFile(
+                tenfastLeaseId,
+                content,
+                filename
+              ),
+          })
+          if (!document.ok) {
+            ctx.status = 500
+            ctx.body = { error: document.err, ...metadata }
+            return
+          }
 
           ctx.status = 200
-          ctx.body = makeSuccessResponseBody(result.data, metadata)
+          ctx.body = makeSuccessResponseBody(
+            { action: terminateAction, leaseId, document: document.data },
+            metadata
+          )
           return
         }
 

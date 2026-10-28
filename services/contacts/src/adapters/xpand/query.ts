@@ -4,6 +4,7 @@ import { ContactCode, NationalIdNumber } from '@src/domain'
 import { ContactTypeFilter, ObjectKey } from '@src/domain/contact'
 
 import { currentInvoiceAddress } from './address-sql'
+import { isLeaseHolderColumn, LEASE_HOLDER } from './relation-sql'
 import { DbContactRow } from './db-model'
 
 const CONTACT_CODE = 'cmctc.cmctckod'
@@ -577,8 +578,14 @@ export const contactsQuery = () => {
             .offset(pgn.page * pgn.pageSize)
             .limit(pgn.pageSize)
         })
+        .with(LEASE_HOLDER, (lh) => {
+          lh.select('cmctc.keycmctc', isLeaseHolderColumn(db, new Date()))
+            .from('page')
+            .join('cmctc', 'cmctc.keycmobj', 'page.keycmobj')
+        })
         .from('page')
         .join('cmctc', 'cmctc.keycmobj', 'page.keycmobj')
+        .join(LEASE_HOLDER, `${LEASE_HOLDER}.keycmctc`, 'cmctc.keycmctc')
         .leftJoin('cmadr', (join) => {
           join
             .on('cmadr.keycode', 'cmctc.keycmobj')
@@ -596,6 +603,7 @@ export const contactsQuery = () => {
           'cmctc.keycmobj as objectKey',
           'cmctc.keycmctc as contactKey',
           'cmctc.lagsokt as protectedIdentity',
+          `${LEASE_HOLDER}.isLeaseHolder`,
           'cmctc.utslag as specialAttention',
           'cmadr.keycmadr as addressId',
           'cmadr.region',

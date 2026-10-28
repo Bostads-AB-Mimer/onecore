@@ -29,6 +29,7 @@ import {
   relatedContactsForMany,
   relatedContactsInRole,
 } from '@src/adapters/related-contacts'
+import { invoiceRecipientCodes } from '@src/adapters/contact-relations'
 
 /**
  * Creates a ContactsRepository that reads contact data from the Xpand
@@ -44,6 +45,26 @@ export const xpandContactsRepository = (
   db: Resource<knex.Knex>,
   contactsDb: Resource<knex.Knex>
 ): ContactsRepository => {
+  /**
+   * Transforms rows to contacts, first looking up which protected identities
+   * are an annan fakturamottagare and so exempt from redaction. The lookup
+   * runs only when a protected identity is not already exempt as a tenant.
+   */
+  const toContacts = async (rows: DbContactRow[]): Promise<Contact[]> => {
+    const candidates = [
+      ...new Set(
+        rows
+          .filter((r) => r.protectedIdentity !== null && r.isLeaseHolder !== 1)
+          .map((r) => r.contactCode)
+      ),
+    ]
+    const invoiceRecipients =
+      candidates.length > 0
+        ? await invoiceRecipientCodes(contactsDb.get(), candidates)
+        : new Set<string>()
+    return transformDbContactRows(rows, invoiceRecipients)
+  }
+
   /**
    * Populates `relatedContacts` on a batch of contacts using a single grouped
    * relation query (not N+1). Contacts with no relations get an empty array.
@@ -111,7 +132,7 @@ export const xpandContactsRepository = (
       ])
 
       return {
-        content: transformDbContactRows(rows),
+        content: await toContacts(rows),
         totalRecords,
       }
     },
@@ -129,7 +150,7 @@ export const xpandContactsRepository = (
         .hasContactCode(contactCode)
         .getOne(db.get())
 
-      const contact = transformDbContactRows(dbContactRows)[0]
+      const [contact] = await toContacts(dbContactRows)
       if (!contact) return null
       contact.relatedContacts = await relatedContactsFor(
         db.get(),
@@ -159,7 +180,7 @@ export const xpandContactsRepository = (
         allRows.push(...rows)
       }
 
-      const contacts = transformDbContactRows(allRows)
+      const contacts = await toContacts(allRows)
 
       return options?.includeRelations
         ? withRelatedContacts(contacts)
@@ -203,7 +224,7 @@ export const xpandContactsRepository = (
         .hasNationalId(candidates)
         .getOne(db.get())
 
-      const contact = transformDbContactRows(dbContactRows)[0]
+      const [contact] = await toContacts(dbContactRows)
       if (!contact) return null
       contact.relatedContacts = await relatedContactsFor(
         db.get(),
@@ -254,7 +275,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return withRelatedContacts(transformDbContactRows(rows))
+        return withRelatedContacts(await toContacts(rows))
       }
 
       return []
@@ -284,7 +305,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return withRelatedContacts(transformDbContactRows(rows))
+        return withRelatedContacts(await toContacts(rows))
       }
 
       return []
@@ -304,7 +325,7 @@ export const xpandContactsRepository = (
       const rows = await contactsQuery()
         .withContactCodeIn(codes)
         .getPage(db.get(), { page: 0, pageSize: codes.length })
-      const contacts = transformDbContactRows(rows)
+      const contacts = await toContacts(rows)
       return options?.includeRelations
         ? withRelatedContacts(contacts)
         : contacts

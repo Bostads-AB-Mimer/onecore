@@ -3,11 +3,12 @@ import type { Contact } from '@onecore/contacts/domain'
 
 type IndividualContact = Extract<Contact, { type: 'individual' }>
 
-export const ContactsServiceContactFactory =
-  Factory.define<IndividualContact>(({ sequence }) => ({
+export const ContactsServiceContactFactory = Factory.define<IndividualContact>(
+  ({ sequence }) => ({
     type: 'individual',
     contactCode: `P${158769 + sequence}`,
     contactKey: `KEY${sequence}`,
+    protectedIdentity: false,
     personal: {
       nationalId: '199001011234',
       birthDate: '1990-01-01',
@@ -34,4 +35,5 @@ export const ContactsServiceContactFactory =
         full: 'Testgatan 1, 72345 Västerås',
       },
     ],
-  }))
+  })
+)

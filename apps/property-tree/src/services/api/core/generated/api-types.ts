@@ -11069,6 +11069,7 @@ export interface paths {
                   | (
                       | {
                           contactCode: string
+                          protectedIdentity: boolean
                           communication: {
                             phoneNumbers: {
                               phoneNumber: string
@@ -11125,6 +11126,7 @@ export interface paths {
                         }
                       | {
                           contactCode: string
+                          protectedIdentity: boolean
                           communication: {
                             phoneNumbers: {
                               phoneNumber: string
@@ -11721,6 +11723,60 @@ export interface paths {
       }
     }
   }
+  '/v1/tenant-notifications/lease-termination-confirmation': {
+    /**
+     * Send a lease termination confirmation email
+     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking lease is terminated. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['SendLeaseTerminationConfirmationRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                /** @enum {boolean} */
+                sent: true
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>
@@ -11905,6 +11961,9 @@ export interface components {
         emailAddress?: string | null
         isTenant: boolean
         specialAttention?: boolean
+        protectedIdentity: boolean
+        /** @enum {string} */
+        protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
         parkingSpaceWaitingList?: {
           /** Format: date-time */
           queueTime: string
@@ -12006,6 +12065,9 @@ export interface components {
       emailAddress?: string | null
       isTenant: boolean
       specialAttention?: boolean
+      protectedIdentity: boolean
+      /** @enum {string} */
+      protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
     }
     RentalObjectRentInfo: {
       rentalObjectCode: string
@@ -15174,6 +15236,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -15538,6 +15603,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -15994,6 +16062,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -16519,9 +16590,22 @@ export interface components {
       /** @enum {string} */
       roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
     }
+    SendLeaseTerminationConfirmationRequest: {
+      /** Format: email */
+      to: string
+      contactCode: string
+      firstName: string
+      leaseId: string
+      /** Format: date */
+      endDate: string
+      /** @enum {string} */
+      rentalType: 'Bilplats'
+      correlationId?: string
+    }
     ContactV1:
       | {
           contactCode: string
+          protectedIdentity: boolean
           communication: {
             phoneNumbers: {
               phoneNumber: string
@@ -16578,6 +16662,7 @@ export interface components {
         }
       | {
           contactCode: string
+          protectedIdentity: boolean
           communication: {
             phoneNumbers: {
               phoneNumber: string
