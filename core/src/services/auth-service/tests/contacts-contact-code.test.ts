@@ -30,7 +30,7 @@ jest.mock('@onecore/utilities', () => ({
 jest.mock('../../../adapters/contacts-adapter', () => ({
   contactsAdapter: {
     getByContactCode: jest.fn(),
-    getByNationalId: jest.fn(),
+    getLoginContactByNationalId: jest.fn(),
   },
 }))
 
@@ -95,12 +95,12 @@ describe('ensureContactCode', () => {
     const original = tokens({ contact_code: 'P100' })
 
     await expect(ensureContactCode(original)).resolves.toBe(original)
-    expect(contacts.getByNationalId).not.toHaveBeenCalled()
+    expect(contacts.getLoginContactByNationalId).not.toHaveBeenCalled()
     expect(refresh).not.toHaveBeenCalled()
   })
 
   it('sets contact_code from the personnummer and returns refreshed tokens', async () => {
-    contacts.getByNationalId.mockResolvedValue(contact('P200'))
+    contacts.getLoginContactByNationalId.mockResolvedValue(contact('P200'))
     refresh.mockResolvedValue(refreshed)
 
     let putBody: Record<string, any> | undefined
@@ -129,7 +129,9 @@ describe('ensureContactCode', () => {
       .reply(204)
 
     await expect(ensureContactCode(tokens({}))).resolves.toBe(refreshed)
-    expect(contacts.getByNationalId).toHaveBeenCalledWith('199001011239')
+    expect(contacts.getLoginContactByNationalId).toHaveBeenCalledWith(
+      '199001011239'
+    )
     expect(putBody).toEqual({
       id: 'user-1',
       username: '199001011239',
@@ -142,7 +144,7 @@ describe('ensureContactCode', () => {
 
   it('repairs a contact_code whose contact no longer exists', async () => {
     contacts.getByContactCode.mockResolvedValue(notFound)
-    contacts.getByNationalId.mockResolvedValue(contact('P200'))
+    contacts.getLoginContactByNationalId.mockResolvedValue(contact('P200'))
     refresh.mockResolvedValue(refreshed)
     nock('http://keycloak.test')
       .post(tokenPath)
@@ -158,7 +160,7 @@ describe('ensureContactCode', () => {
   })
 
   it('returns the tokens unchanged when the personnummer has no contact', async () => {
-    contacts.getByNationalId.mockResolvedValue(notFound)
+    contacts.getLoginContactByNationalId.mockResolvedValue(notFound)
     nock('http://keycloak.test')
       .post(tokenPath)
       .reply(200, { access_token: 'admin-token' })
@@ -172,7 +174,7 @@ describe('ensureContactCode', () => {
   })
 
   it('treats a thrown 404 from the contacts service as no contact', async () => {
-    contacts.getByNationalId.mockRejectedValue(
+    contacts.getLoginContactByNationalId.mockRejectedValue(
       Object.assign(new AxiosError('Not Found'), {
         response: { status: 404 },
       })
@@ -193,7 +195,7 @@ describe('ensureContactCode', () => {
     await expect(ensureContactCode(tokens({}))).rejects.toMatchObject({
       reason: 'provisioning_not_configured',
     })
-    expect(contacts.getByNationalId).not.toHaveBeenCalled()
+    expect(contacts.getLoginContactByNationalId).not.toHaveBeenCalled()
   })
 
   it('does not need the provisioning client when the contact_code resolves', async () => {
@@ -218,11 +220,11 @@ describe('ensureContactCode', () => {
 
     await expect(ensureContactCode(original)).resolves.toBe(original)
     expect(contacts.getByContactCode).toHaveBeenCalledWith('P100')
-    expect(contacts.getByNationalId).not.toHaveBeenCalled()
+    expect(contacts.getLoginContactByNationalId).not.toHaveBeenCalled()
   })
 
   it('looks up a ten-digit username with separator as twelve digits', async () => {
-    contacts.getByNationalId.mockResolvedValue(notFound)
+    contacts.getLoginContactByNationalId.mockResolvedValue(notFound)
     nock('http://keycloak.test')
       .post(tokenPath)
       .reply(200, { access_token: 'admin-token' })
@@ -231,7 +233,9 @@ describe('ensureContactCode', () => {
 
     await ensureContactCode(tokens({}))
 
-    expect(contacts.getByNationalId).toHaveBeenCalledWith('199001011239')
+    expect(contacts.getLoginContactByNationalId).toHaveBeenCalledWith(
+      '199001011239'
+    )
   })
 
   it.each(['admin', '199001011234', ''])(
@@ -245,12 +249,12 @@ describe('ensureContactCode', () => {
       const original = tokens({})
 
       await expect(ensureContactCode(original)).resolves.toBe(original)
-      expect(contacts.getByNationalId).not.toHaveBeenCalled()
+      expect(contacts.getLoginContactByNationalId).not.toHaveBeenCalled()
     }
   )
 
   it('throws and does not refresh when the PUT fails', async () => {
-    contacts.getByNationalId.mockResolvedValue(contact('P200'))
+    contacts.getLoginContactByNationalId.mockResolvedValue(contact('P200'))
     nock('http://keycloak.test')
       .post(tokenPath)
       .reply(200, { access_token: 'admin-token' })
@@ -267,7 +271,7 @@ describe('ensureContactCode', () => {
 
   describe('when the refresh after the PUT fails', () => {
     beforeEach(() => {
-      contacts.getByNationalId.mockResolvedValue(contact('P200'))
+      contacts.getLoginContactByNationalId.mockResolvedValue(contact('P200'))
       nock('http://keycloak.test')
         .post(tokenPath)
         .reply(200, { access_token: 'admin-token' })

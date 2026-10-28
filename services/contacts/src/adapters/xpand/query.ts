@@ -192,7 +192,7 @@ export const contactObjectKeysForEmailAddress = async (
  * SQL Server has no REGEXP_REPLACE in the versions we target, hence the nested
  * REPLACE calls.
  */
-const NORMALISED_NATIONAL_ID_SQL = `REPLACE(REPLACE(REPLACE(${NATIONAL_ID_NUMBER}, '-', ''), '+', ''), ' ', '')`
+export const NORMALISED_NATIONAL_ID_SQL = `REPLACE(REPLACE(REPLACE(${NATIONAL_ID_NUMBER}, '-', ''), '+', ''), ' ', '')`
 
 /**
  * Finds the contact code of an existing contact with the given national ID

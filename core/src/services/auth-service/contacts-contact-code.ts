@@ -76,9 +76,9 @@ function readContactCodeClaim(value: unknown): string | undefined {
 /**
  * The Keycloak username as a twelve-digit personnummer, or null when it is not one.
  *
- * The contacts service's by-nid lookup matches anything for an input without digits, so only a
- * valid personnummer (or samordningsnummer) is ever looked up. Twelve digits is the form Xpand
- * stores for nearly all private individuals.
+ * Only a valid personnummer (or samordningsnummer) is ever looked up, so a username that is
+ * something else costs no call to the contacts service. Twelve digits is the form Xpand stores
+ * for nearly all private individuals.
  */
 function personnummerFromUsername(username: string): string | null {
   const options = { allowCoordinationNumber: true, allowInterimNumber: false }
@@ -191,7 +191,7 @@ async function setContactCode(
     return tokens
   }
   const contact = await findContact(() =>
-    contactsAdapter.getByNationalId(personnummer)
+    contactsAdapter.getLoginContactByNationalId(personnummer)
   )
   if (!contact) {
     logger.info({ sub: claims.sub }, 'No contact for mimer-contacts user')
@@ -228,10 +228,12 @@ async function setContactCode(
 /**
  * Makes sure a customer's token names a contact that exists, before webapi gets it.
  *
- * A personnummer can belong to several contacts and the contacts service picks which one a
- * lookup returns, so a contact_code that still resolves is never replaced; only a missing or
- * deleted one is set from the personnummer (the Keycloak username). Without a contact for the
- * personnummer the tokens go back without contact_code, and webapi answers no_active_account.
+ * A contact_code that still resolves is never replaced. A missing one is set from the
+ * personnummer (the Keycloak username) with the contacts service's login-contact rule: a
+ * personnummer can belong to several contacts (a second registration, a supplier contact for
+ * payouts, a sole trader's company), and that rule picks the one the person uses. Without a
+ * contact for the personnummer the tokens go back without contact_code, and webapi answers
+ * no_active_account.
  *
  * @throws ContactCodeError when the contacts service or Keycloak fails, the provisioning client
  *   is not configured, or the step runs past budgetMs, so none of these is ever reported as a
