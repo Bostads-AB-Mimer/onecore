@@ -9,6 +9,9 @@ const HIGHLIGHTED_ROW = 'bg-info/10 hover:bg-info/15'
 interface Column<T> {
   key: string
   label: string
+  /** Replaces the label in the desktop header, e.g. with a sort button. */
+  header?: ReactNode
+  ariaSort?: 'ascending' | 'descending' | 'none'
   render: (item: T) => ReactNode
   className?: string
   /** Any column with a width switches the table to a fixed layout. */
@@ -106,13 +109,14 @@ export function ResponsiveTableComponents<T>({
               {columns.map((column) => (
                 <th
                   key={column.key}
+                  aria-sort={column.ariaSort}
                   style={column.width ? { width: column.width } : undefined}
                   className={cn(
                     'text-left py-3 px-4 text-sm font-medium text-muted-foreground',
                     column.className
                   )}
                 >
-                  {column.label}
+                  {column.header ?? column.label}
                 </th>
               ))}
             </tr>

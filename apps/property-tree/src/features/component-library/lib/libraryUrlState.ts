@@ -1,12 +1,23 @@
+import { property } from '@onecore/types'
+
 import type {
   ComponentCategory,
   ComponentSubtype,
   ComponentType,
 } from '@/services/types'
 
+import type { TableSort } from '@/shared/ui/dataTableSort'
+
 import type { CategoryType } from './componentRows'
 
 export const COMPONENT_PAGE_SIZE = 25
+
+export const COMPONENT_DEFAULT_SORT: TableSort = {
+  key: 'installed',
+  order: 'desc',
+}
+export const NAME_DEFAULT_SORT: TableSort = { key: 'name', order: 'asc' }
+export const MODEL_DEFAULT_SORT: TableSort = { key: 'modelName', order: 'asc' }
 
 // The model filter's URL value for components without a model.
 export const NO_MODEL = 'none'
@@ -205,4 +216,69 @@ export const withFreshNames = (
     names.subtypes?.find((s) => s.id === state.subtypeId)?.subTypeName ??
     state.subtypeName
   return { ...state, categoryName, typeName, subtypeName }
+}
+
+export const fallbackSortFor = (state: ViewState): TableSort => {
+  if (state.level !== 'subtype') return NAME_DEFAULT_SORT
+  return state.tab === 'components'
+    ? COMPONENT_DEFAULT_SORT
+    : MODEL_DEFAULT_SORT
+}
+
+export const parseSort = (
+  params: URLSearchParams,
+  allowedKeys?: readonly string[]
+): TableSort | undefined => {
+  const key = params.get('sortBy')
+  if (!key || (allowedKeys && !allowedKeys.includes(key))) return undefined
+  return { key, order: params.get('sortOrder') === 'desc' ? 'desc' : 'asc' }
+}
+
+export const sortUrlParams = (sort: TableSort, fallback: TableSort) =>
+  sort.key === fallback.key && sort.order === fallback.order
+    ? { sortBy: undefined, sortOrder: undefined }
+    : { sortBy: sort.key, sortOrder: sort.order }
+
+export interface ComponentFilters {
+  installation?: property.ComponentInstallationFilter
+  installedBefore?: number
+}
+
+export interface ComponentFilterControl {
+  value: ComponentFilters
+  onInstallationChange: (
+    installation: property.ComponentInstallationFilter | undefined
+  ) => void
+  onInstalledBeforeChange: (year: number | undefined) => void
+}
+
+/** Not installed and an unknown date both rule out an installation year. */
+export const allowsInstalledBefore = (
+  installation: property.ComponentInstallationFilter | undefined
+) => installation !== 'notInstalled' && installation !== 'unknownDate'
+
+/** A four-digit year after the placeholder year, or undefined. */
+export const parseInstalledBeforeYear = (text: string): number | undefined => {
+  const trimmed = text.trim()
+  if (!/^\d{4}$/.test(trimmed)) return undefined
+  const year = Number(trimmed)
+  return year > property.FIRST_KNOWN_INSTALLATION_YEAR ? year : undefined
+}
+
+export const parseComponentFilters = (
+  params: URLSearchParams
+): ComponentFilters => {
+  const installation = property.ComponentInstallationFilterSchema.safeParse(
+    params.get('installation')
+  )
+  const installedBefore = parseInstalledBeforeYear(
+    params.get('installedBefore') ?? ''
+  )
+
+  const filters: ComponentFilters = {}
+  if (installation.success) filters.installation = installation.data
+  if (installedBefore && allowsInstalledBefore(filters.installation)) {
+    filters.installedBefore = installedBefore
+  }
+  return filters
 }

@@ -1,11 +1,13 @@
 import type { ComponentPage } from '@/services/api/core/componentLibraryService'
 import type { Component, ComponentModel } from '@/services/types'
 
+import type { SortControl } from '@/shared/ui/dataTableSort'
 import { TableToolbar } from '@/shared/ui/TableToolbar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/Tabs'
 
 import type { CategoryType } from '../lib/componentRows'
 import {
+  type ComponentFilterControl,
   levelSearch,
   type SubtypeTab,
   type SubtypeViewState,
@@ -25,6 +27,7 @@ interface SubtypeViewProps {
   searchInput: string
   onSearchChange: (value: string) => void
   onTabChange: (tab: SubtypeTab) => void
+  sort: SortControl
   // Modeller
   models: ComponentModel[] | undefined
   modelsLoading: boolean
@@ -46,6 +49,7 @@ interface SubtypeViewProps {
   page: number
   onPageChange: (page: number, options?: { replace?: boolean }) => void
   onModelFilterChange: (modelId: string | undefined) => void
+  componentFilters: ComponentFilterControl
   onClearFilters: () => void
   onCreateComponent: () => void
   markedComponent: Component | undefined
@@ -88,6 +92,8 @@ export const SubtypeView = (props: SubtypeViewProps) => {
       onSearchChange={onSearchChange}
       onPageChange={props.onPageChange}
       onModelFilterChange={props.onModelFilterChange}
+      filters={props.componentFilters}
+      sort={props.sort}
       onClearFilters={props.onClearFilters}
       onCreate={props.onCreateComponent}
       markedComponent={props.markedComponent}
@@ -137,6 +143,7 @@ export const SubtypeView = (props: SubtypeViewProps) => {
           onEdit={props.onEditModel}
           onDelete={props.onDeleteModel}
           onNavigate={props.onOpenModelComponents}
+          sort={props.sort}
           getHref={(model) =>
             levelSearch({ ...viewState, tab: 'components', modelId: model.id })
           }

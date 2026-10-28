@@ -108,6 +108,80 @@ describe('componentLibraryService.getComponentPage', () => {
     })
   })
 
+  it('forwards the sort and the installation filters', async () => {
+    mockGet.mockResolvedValue({
+      data: { content: [] },
+      error: undefined,
+    } as never)
+
+    await componentLibraryService.getComponentPage({
+      subtypeId: 'sub-1',
+      sort: { key: 'model', order: 'desc' },
+      installation: 'installed',
+      installedBefore: 2010,
+      page: 1,
+      limit: 25,
+    })
+
+    expect(mockGet.mock.calls[0][1]).toEqual({
+      params: {
+        query: {
+          subtypeId: 'sub-1',
+          sortBy: 'model',
+          sortOrder: 'desc',
+          installation: 'installed',
+          installedBefore: 2010,
+          page: 1,
+          limit: 25,
+        },
+      },
+    })
+  })
+
+  it('searches the specification text instead of the serial number for surfaces', async () => {
+    mockGet.mockResolvedValue({
+      data: { content: [] },
+      error: undefined,
+    } as never)
+
+    await componentLibraryService.getComponentPage({
+      subtypeId: 'sub-1',
+      search: ' Decorama ',
+      searchField: 'specifications',
+      page: 1,
+      limit: 25,
+    })
+
+    expect(mockGet.mock.calls[0][1]).toEqual({
+      params: {
+        query: {
+          subtypeId: 'sub-1',
+          specifications: 'Decorama',
+          page: 1,
+          limit: 25,
+        },
+      },
+    })
+  })
+
+  it('leaves out a sort the server does not know', async () => {
+    mockGet.mockResolvedValue({
+      data: { content: [] },
+      error: undefined,
+    } as never)
+
+    await componentLibraryService.getComponentPage({
+      subtypeId: 'sub-1',
+      sort: { key: 'location', order: 'asc' },
+      page: 1,
+      limit: 25,
+    })
+
+    expect(mockGet.mock.calls[0][1]).toEqual({
+      params: { query: { subtypeId: 'sub-1', page: 1, limit: 25 } },
+    })
+  })
+
   it('asks for components without a model', async () => {
     mockGet.mockResolvedValue({
       data: { content: [] },

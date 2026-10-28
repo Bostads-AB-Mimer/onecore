@@ -40,6 +40,7 @@ export const ComponentSubtypeSchema = z.object({
     .union([z.string(), z.date()])
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
   componentType: ComponentTypeSchema.optional(),
+  componentCount: z.number().int().min(0).optional(),
 })
 
 // Create schema

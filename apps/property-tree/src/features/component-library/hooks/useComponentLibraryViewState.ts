@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { property } from '@onecore/types'
 import { useQuery } from '@tanstack/react-query'
 
 import {
@@ -24,13 +25,20 @@ import {
 } from '@/shared/hooks'
 import { useDebounce } from '@/shared/hooks/useDebounce'
 import { useUrlPagination } from '@/shared/hooks/useUrlPagination'
+import type { SortControl, TableSort } from '@/shared/ui/dataTableSort'
 
 import type { CategoryType } from '../lib/componentRows'
 import {
+  allowsInstalledBefore,
   COMPONENT_PAGE_SIZE,
+  type ComponentFilterControl,
+  fallbackSortFor,
   isLegacyLibraryUrl,
   NO_MODEL,
+  parseComponentFilters,
+  parseSort,
   parseViewState,
+  sortUrlParams,
   type SubtypeTab,
   toSearchParams,
   toViewKey,
@@ -49,6 +57,12 @@ export interface ComponentLibraryDialogStates {
   deinstallDialog: UseSimpleDialogStateReturn<Component>
   imageGalleryDialog: UseSimpleDialogStateReturn<Component>
 }
+
+// A model filter hides the Modell column, so it cannot be sorted on.
+const componentSortKeys = (modelFiltered: boolean) =>
+  property.ComponentSortKeySchema.options.filter(
+    (key) => !(modelFiltered && key === 'model')
+  )
 
 // Stable reference: the instance dialog's fields are memoized on this list.
 const NO_MODELS: ComponentModel[] = []
@@ -159,17 +173,67 @@ export const useComponentLibraryViewState = () => {
   }
 
   const setModelFilter = (modelId: string | undefined) => {
-    updateUrlParams({ modelId, page: undefined, componentId: undefined })
+    updateUrlParams({
+      modelId,
+      ...(modelId && searchParams.get('sortBy') === 'model'
+        ? { sortBy: undefined, sortOrder: undefined }
+        : {}),
+      page: undefined,
+      componentId: undefined,
+    })
   }
 
   const clearFilters = () => {
     updateUrlParams({
       modelId: undefined,
       search: undefined,
+      installation: undefined,
+      installedBefore: undefined,
       page: undefined,
       componentId: undefined,
     })
     setSearchInput('')
+  }
+
+  const onComponentList = subtypeState?.tab === 'components'
+  const fallbackSort = fallbackSortFor(viewState)
+  const sort: SortControl = {
+    value:
+      parseSort(
+        searchParams,
+        onComponentList
+          ? componentSortKeys(subtypeState.modelId !== undefined)
+          : undefined
+      ) ?? fallbackSort,
+    fallback: fallbackSort,
+    onChange: (next: TableSort) =>
+      updateUrlParams({
+        ...sortUrlParams(next, fallbackSort),
+        page: undefined,
+      }),
+  }
+
+  const componentFilterValue = useMemo(
+    () => parseComponentFilters(searchParams),
+    [searchParams]
+  )
+  const componentFilters: ComponentFilterControl = {
+    value: componentFilterValue,
+    onInstallationChange: (installation) =>
+      updateUrlParams({
+        installation,
+        ...(allowsInstalledBefore(installation)
+          ? {}
+          : { installedBefore: undefined }),
+        page: undefined,
+        componentId: undefined,
+      }),
+    onInstalledBeforeChange: (year) =>
+      updateUrlParams({
+        installedBefore: year,
+        page: undefined,
+        componentId: undefined,
+      }),
   }
 
   const dialogs: ComponentLibraryDialogStates = {
@@ -207,6 +271,10 @@ export const useComponentLibraryViewState = () => {
               : subtypeState.modelId,
           withoutModel: subtypeState.modelId === NO_MODEL,
           search: activeSearch,
+          searchField:
+            categoryType === 'SURFACE' ? 'specifications' : 'serialNumber',
+          ...componentFilterValue,
+          sort: sort.value,
           page,
           limit: COMPONENT_PAGE_SIZE,
         }
@@ -238,6 +306,8 @@ export const useComponentLibraryViewState = () => {
     setTab,
     setModelFilter,
     clearFilters,
+    sort,
+    componentFilters,
     page,
     setPage,
     searchInput,

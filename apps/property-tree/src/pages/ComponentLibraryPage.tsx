@@ -26,6 +26,8 @@ const ComponentLibraryPage = () => {
     setTab,
     setModelFilter,
     clearFilters,
+    sort,
+    componentFilters,
     page,
     setPage,
     searchInput,
@@ -173,6 +175,7 @@ const ComponentLibraryPage = () => {
           searchInput={searchInput}
           onSearchChange={setSearchInput}
           onTabChange={setTab}
+          sort={sort}
           models={data.models}
           modelsLoading={data.modelsLoading}
           modelsError={data.modelsError}
@@ -192,6 +195,7 @@ const ComponentLibraryPage = () => {
           page={page}
           onPageChange={setPage}
           onModelFilterChange={setModelFilter}
+          componentFilters={componentFilters}
           onClearFilters={clearFilters}
           onCreateComponent={handlers.handleCreateInstanceFromTable}
           markedComponent={markedComponent}
@@ -207,6 +211,7 @@ const ComponentLibraryPage = () => {
           viewState={viewState}
           searchInput={searchInput}
           onSearchChange={setSearchInput}
+          sort={sort}
           categories={data.categories}
           categoriesLoading={data.categoriesLoading}
           categoriesError={data.categoriesError}

@@ -1670,12 +1670,11 @@ export const routes = (router: KoaRouter) => {
 
     try {
       // Check for child components before deleting
-      const childComponents = await propertyBaseAdapter.getComponents(
-        id.data,
-        undefined,
-        1,
-        1
-      )
+      const childComponents = await propertyBaseAdapter.getComponents({
+        modelId: id.data,
+        page: 1,
+        limit: 1,
+      })
       if (!childComponents.ok) {
         ctx.status = 500
         ctx.body = { error: 'Internal server error', ...metadata }
@@ -1722,7 +1721,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   get:
    *     summary: Get all components
-   *     description: Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+   *     description: Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), serialNumber, specifications, installation or installedBefore, and sort with sortBy and sortOrder.
    *     tags:
    *       - Property-base/Components
    *     parameters:
@@ -1757,6 +1756,35 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Search by serial number (case-insensitive partial match)
+   *       - in: query
+   *         name: specifications
+   *         schema:
+   *           type: string
+   *         description: Search the specification text (case-insensitive partial match, 2 characters minimum)
+   *       - in: query
+   *         name: installation
+   *         schema:
+   *           type: string
+   *           enum: [installed, notInstalled, unknownDate]
+   *         description: Filter on the active installation. unknownDate means installed with no date or the 1900 placeholder. Cannot be combined with notInstalled=true.
+   *       - in: query
+   *         name: installedBefore
+   *         schema:
+   *           type: integer
+   *           minimum: 1902
+   *         description: Only components whose known installation date falls before 1 January of this year
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [installed, model, serialNumber, specifications, quantity]
+   *         description: Sort column. Blank and unknown values always sort last. Without it, newest installation first.
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: asc
    *       - in: query
    *         name: page
    *         schema:
@@ -1803,16 +1831,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.getComponents(
-        params.data.modelId,
-        params.data.status,
-        params.data.page,
-        params.data.limit,
-        params.data.serialNumber,
-        params.data.subtypeId,
-        params.data.withoutModel,
-        params.data.notInstalled
-      )
+      const result = await propertyBaseAdapter.getComponents(params.data)
 
       if (!result.ok) {
         ctx.status = 500
