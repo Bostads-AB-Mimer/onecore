@@ -219,7 +219,69 @@ describe('syncContacts', () => {
     const queue = await readQueue(queueFile)
     expect(queue).toHaveLength(1)
     expect(queue[0].lastError).toBe(
-      `contact ${contact.contactCode} failed to sync: xledger=sync-failed, not attempted: odoo, tenfast`
+      `contact ${contact.contactCode} failed to sync: xledger=sync-failed (400), not attempted: odoo, tenfast`
+    )
+  })
+
+  it('writes nothing when the payload fails validation', async () => {
+    const contact = factory.domainContact.build()
+    ;(contact.personal as { fullName: string | null }).fullName = null
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [{ contact, timestamp: new Date('2026-05-01T10:00:00.000Z') }],
+      }),
+    } as any)
+    const xledger = jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+    const odoo = jest
+      .spyOn(workOrderAdapter, 'syncContactToWorkOrder')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+    const tenfast = jest
+      .spyOn(leasingAdapter, 'syncContactToLeasing')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+    jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncContacts({ stateFile, queueFile })
+
+    expect(xledger).not.toHaveBeenCalled()
+    expect(odoo).not.toHaveBeenCalled()
+    expect(tenfast).not.toHaveBeenCalled()
+    const queue = await readQueue(queueFile)
+    expect(queue[0].lastError).toBe(
+      `contact ${contact.contactCode} failed to sync: invalid payload (fullName), not attempted: xledger, odoo, tenfast`
+    )
+  })
+
+  it('does not count a skipped target as written', async () => {
+    const contact = factory.domainContact.build()
+    jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+      getUpdatedContacts: jest.fn().mockResolvedValue({
+        ok: true,
+        data: [{ contact, timestamp: new Date('2026-05-01T10:00:00.000Z') }],
+      }),
+    } as any)
+    jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: true, data: { skipped: true } })
+    jest
+      .spyOn(workOrderAdapter, 'syncContactToWorkOrder')
+      .mockResolvedValue({ ok: true, data: { skipped: false } })
+    jest
+      .spyOn(leasingAdapter, 'syncContactToLeasing')
+      .mockResolvedValue({ ok: false, err: 'sync-failed', statusCode: 500 })
+    jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncContacts({ stateFile, queueFile })
+
+    const queue = await readQueue(queueFile)
+    expect(queue[0].lastError).toBe(
+      `contact ${contact.contactCode} failed to sync: tenfast=sync-failed (500), already written: odoo, skipped: xledger`
     )
   })
 
