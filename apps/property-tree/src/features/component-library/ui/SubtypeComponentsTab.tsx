@@ -198,7 +198,7 @@ export const SubtypeComponentsTab = ({
           instances={instances}
           categoryType={categoryType}
           isLoading={isLoading}
-          pageSize={COMPONENT_PAGE_SIZE}
+          pageSize={Math.max(instances.length, COMPONENT_PAGE_SIZE)}
           hideModel={Boolean(modelId)}
           highlightedId={markedComponent?.id}
           {...rowHandlers}

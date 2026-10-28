@@ -132,7 +132,11 @@ export const useComponentLibraryViewState = () => {
     const newSearch = debouncedSearch.trim()
     if (currentSearch !== newSearch) {
       updateUrlParams(
-        { search: newSearch || undefined, page: undefined },
+        {
+          search: newSearch || undefined,
+          page: undefined,
+          componentId: undefined,
+        },
         { replace: true }
       )
     }
@@ -155,11 +159,16 @@ export const useComponentLibraryViewState = () => {
   }
 
   const setModelFilter = (modelId: string | undefined) => {
-    updateUrlParams({ modelId, page: undefined })
+    updateUrlParams({ modelId, page: undefined, componentId: undefined })
   }
 
   const clearFilters = () => {
-    updateUrlParams({ modelId: undefined, search: undefined, page: undefined })
+    updateUrlParams({
+      modelId: undefined,
+      search: undefined,
+      page: undefined,
+      componentId: undefined,
+    })
     setSearchInput('')
   }
 
