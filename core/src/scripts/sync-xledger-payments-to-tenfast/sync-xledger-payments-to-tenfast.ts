@@ -1,6 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { logger } from '@onecore/utilities'
+import { PaymentSyncEvent } from '@onecore/types'
 import {
   getLatestPaymentCursor,
   getPaymentsSince,
@@ -67,104 +68,109 @@ async function notifySyncFailure(err: unknown) {
   }
 }
 
-async function syncPayments(store: CursorStore = fileCursorStore) {
-  let lastCursor = await store.read()
-
-  if (!lastCursor) {
-    logger.info('no saved cursor, fetching latest cursor from Xledger')
-    const latestResult = await getLatestPaymentCursor()
-    if (!latestResult.ok) {
-      throw new Error('Failed to fetch latest cursor from Xledger')
-    }
-    if (!latestResult.data) {
-      throw new Error('No cursor found in Xledger — ledger may be empty')
-    }
-    lastCursor = latestResult.data
-    await store.save(lastCursor)
-    logger.info(
-      { lastCursor },
-      'latest cursor saved, starting from here on next run'
-    )
-    return
+// First run: start from Xledger's latest payment. Earlier payments are not
+// synced.
+async function startFromLatestCursor(store: CursorStore) {
+  logger.info('no saved cursor, fetching latest cursor from Xledger')
+  const latest = await getLatestPaymentCursor()
+  if (!latest.ok) {
+    throw new Error('Failed to fetch latest cursor from Xledger')
   }
-
-  logger.info({ lastCursor }, 'syncing Xledger payments after cursor')
-
-  const paymentsResult = await getPaymentsSince(lastCursor)
-  if (!paymentsResult.ok) {
-    throw new Error(
-      `Failed to fetch payments from Xledger: ${paymentsResult.err}`
-    )
+  if (!latest.data) {
+    throw new Error('No cursor found in Xledger — ledger may be empty')
   }
+  await store.save(latest.data)
+  logger.info(
+    { lastCursor: latest.data },
+    'latest cursor saved, starting from here on next run'
+  )
+}
 
-  const { events: payments, lastCursor: newCursor } = paymentsResult.data
-  logger.info({ count: payments.length }, 'payments fetched from Xledger')
-
-  if (payments.length > 0 && !newCursor) {
+async function fetchPaymentsAfter(cursor: string) {
+  logger.info({ lastCursor: cursor }, 'syncing Xledger payments after cursor')
+  const result = await getPaymentsSince(cursor)
+  if (!result.ok) {
+    throw new Error(`Failed to fetch payments from Xledger: ${result.err}`)
+  }
+  const { events, lastCursor } = result.data
+  if (events.length > 0 && !lastCursor) {
     throw new Error(
       'Xledger returned payments but no cursor — cannot advance state safely'
     )
   }
+  logger.info({ count: events.length }, 'payments fetched from Xledger')
+  return { events, lastCursor }
+}
 
-  if (payments.length === 0) {
-    logger.info('no new payments')
-    if (newCursor) {
-      await store.save(newCursor)
-      logger.info({ newCursor }, 'cursor advanced')
-    }
-    return
+// Records one payment in Tenfast. Takes and returns the invoices known to be
+// missing from Tenfast, so later payments to them are skipped without asking
+// again.
+async function recordPayment(
+  notInTenfast: ReadonlySet<string>,
+  event: PaymentSyncEvent
+): Promise<ReadonlySet<string>> {
+  if (notInTenfast.has(event.invoiceId)) {
+    return notInTenfast
   }
+
+  const result = await recordInvoicePayment(event.invoiceId, {
+    amount: event.amount,
+    dateTime: event.paymentDate,
+    method: event.transactionSourceCode,
+  })
+
+  if (result.ok) {
+    logger.info(
+      { invoiceId: event.invoiceId, amount: event.amount },
+      'payment recorded in Tenfast'
+    )
+    return notInTenfast
+  }
+
+  // Expected — ströfakturor and procurement invoices won't exist in Tenfast
+  if (result.err === 'not-found') {
+    logger.info(
+      { invoiceId: event.invoiceId },
+      'invoice not found in Tenfast, skipping'
+    )
+    return new Set(notInTenfast).add(event.invoiceId)
+  }
+
+  throw new Error(
+    `Failed to record payment for invoice ${event.invoiceId} in Tenfast: ${result.err}`
+  )
+}
+
+async function syncPayments(store: CursorStore = fileCursorStore) {
+  const cursor = await store.read()
+  if (!cursor) {
+    return startFromLatestCursor(store)
+  }
+
+  const { events, lastCursor } = await fetchPaymentsAfter(cursor)
 
   // Payments are recorded in Xledger order and the cursor is saved after each
   // one, so a run that fails part-way resumes after the last recorded payment
   // instead of posting the earlier ones to Tenfast again.
-  const notInTenfast = new Set<string>()
-  let recorded = 0
-  let skipped = 0
-
-  for (const event of payments) {
-    if (notInTenfast.has(event.invoiceId)) {
-      skipped++
-    } else {
-      const result = await recordInvoicePayment(event.invoiceId, {
-        amount: event.amount,
-        dateTime: event.paymentDate,
-        method: event.transactionSourceCode,
-      })
-
-      if (result.ok) {
-        logger.info(
-          { invoiceId: event.invoiceId, amount: event.amount },
-          'payment recorded in Tenfast'
-        )
-        recorded++
-      } else if (result.err === 'not-found') {
-        // Expected — ströfakturor and procurement invoices won't exist in Tenfast
-        logger.info(
-          { invoiceId: event.invoiceId },
-          'invoice not found in Tenfast, skipping'
-        )
-        notInTenfast.add(event.invoiceId)
-        skipped++
-      } else {
-        throw new Error(
-          `Failed to record payment for invoice ${event.invoiceId} in Tenfast: ${result.err}`
-        )
-      }
-    }
-
+  let notInTenfast: ReadonlySet<string> = new Set()
+  for (const event of events) {
+    notInTenfast = await recordPayment(notInTenfast, event)
     await store.save(event.cursor)
   }
 
-  // Covers rows after the last payment that Xledger returned but that had no
-  // invoice reference to sync.
-  if (newCursor) {
-    await store.save(newCursor)
+  // Also covers rows after the last payment that Xledger returned but that
+  // had no invoice reference to sync.
+  if (lastCursor) {
+    await store.save(lastCursor)
   }
 
   logger.info(
-    { recorded, skipped, cursor: newCursor },
-    'all payments processed'
+    {
+      payments: events.length,
+      notInTenfast: [...notInTenfast],
+      cursor: lastCursor ?? cursor,
+    },
+    'payment sync done'
   )
 }
 
