@@ -442,3 +442,85 @@ INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, c
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKFM00012    ', '_OBJ000004     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'RENSAD_GDPR';
 UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 2 WHERE cmctckod = 'RENSAD_GDPR';
+
+-- C/o-adressat scenarios (hyrep → hyfak.keycmctc3). A c/o addressee counts as
+-- an annan fakturamottagare for the hyfak.keycmctc contact. P90002x are kept
+-- out of the other suites' data sets so their counts don't move.
+--   P900020: c/o P900021 on active lease OBJ10 (current invoice period) — the
+--            happy path. Also holds OBJ11, whose c/o P900022 sits on an
+--            expired period and whose current period has no c/o.
+--   P900023: c/o P900021 on OBJ12, which also has a *different* ANNANFM
+--            (P900024) — two recipients on one lease, i.e. a conflict. The
+--            period has NULL fdate (unbounded start).
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_OIRC900020    ', '_OIRO900020    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900020', 'Holder CoAddressee', 1053, 'OIR9000020'),
+  ('_OIRC900021    ', '_OIRO900021    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900021', 'CoAddressee Normal', 1053, 'OIR9000021'),
+  ('_OIRC900022    ', '_OIRO900022    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900022', 'CoAddressee ExpiredOnly', 1053, 'OIR9000022'),
+  ('_OIRC900023    ', '_OIRO900023    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900023', 'Holder CoConflict', 1053, 'OIR9000023'),
+  ('_OIRC900024    ', '_OIRO900024    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900024', 'Recipient CoConflict', 1053, 'OIR9000024');
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000010     ', '100-001-01-0010/01', NULL),
+  ('_OBJ000011     ', '100-001-01-0011/01', NULL),
+  ('_OBJ000012     ', '100-001-01-0012/01', NULL);
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0010    ', '_OBJ000010     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900020';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0011    ', '_OBJ000011     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900020';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0012    ', '_OBJ000012     ', keycmctc, 'INNEHAVARE', '2018-01-01', NULL FROM cmctc WHERE cmctckod = 'P900023';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00013    ', '_OBJ000012     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900024';
+
+INSERT INTO hyrep (keyhyrep, keyhyobj, fdate, tdate) VALUES
+  ('_REP000001     ', '_OBJ000001     ', '2020-01-01', NULL),
+  ('_REP000002     ', '_OBJ000002     ', '2020-01-01', NULL),
+  ('_REP000009     ', '_OBJ000009     ', '2020-01-01', NULL),
+  ('_REP000010     ', '_OBJ000010     ', '2020-01-01', NULL),
+  ('_REP000011A    ', '_OBJ000011     ', '2020-01-01', '2021-01-01'),
+  ('_REP000011B    ', '_OBJ000011     ', '2021-01-02', NULL),
+  ('_REP000012     ', '_OBJ000012     ', NULL, NULL);
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000010     ', '_REP000010     ', h.keycmctc, c.keycmctc, h.keycmctc
+FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900020' AND c.cmctckod = 'P900021';
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000011A    ', '_REP000011A    ', h.keycmctc, c.keycmctc, h.keycmctc
+FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900020' AND c.cmctckod = 'P900022';
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000011B    ', '_REP000011B    ', keycmctc, NULL, keycmctc FROM cmctc WHERE cmctckod = 'P900020';
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000012     ', '_REP000012     ', h.keycmctc, c.keycmctc, h.keycmctc
+FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900023' AND c.cmctckod = 'P900021';
+-- Rows the c/o import must ignore or dedupe, on the existing ANNANFM fixtures:
+-- P900001's c/o equals their ANNANFM recipient P900010 (dedupes to the same
+-- edge); P900002's lease OBJ2 is terminated; P900007 is their own c/o.
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000001     ', '_REP000001     ', h.keycmctc, c.keycmctc, h.keycmctc
+FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900001' AND c.cmctckod = 'P900010';
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000002     ', '_REP000002     ', h.keycmctc, c.keycmctc, h.keycmctc
+FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900002' AND c.cmctckod = 'P900021';
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000009     ', '_REP000009     ', keycmctc, keycmctc, keycmctc FROM cmctc WHERE cmctckod = 'P900007';
+-- Invoice rows whose c/o is not the holder's to import:
+--   P900025 once held OBJ10 (INNEHAVARE ended) but still has an invoice row
+--           there with c/o P900021.
+--   P900026 holds OBJ13, but the invoice goes to third party P900027
+--           (keycmctc4), so the c/o P900021 is on P900027's address.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_OIRC900025    ', '_OIRO900025    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900025', 'Former Holder', 1053, 'OIR9000025'),
+  ('_OIRC900026    ', '_OIRO900026    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900026', 'Holder ThirdPartyPayer', 1053, 'OIR9000026'),
+  ('_OIRC900027    ', '_OIRO900027    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900027', 'Payer ThirdParty', 1053, 'OIR9000027');
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000013     ', '100-001-01-0013/01', NULL);
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0013    ', '_OBJ000010     ', keycmctc, 'INNEHAVARE', '2018-01-01', '2019-12-31' FROM cmctc WHERE cmctckod = 'P900025';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0014    ', '_OBJ000013     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900026';
+INSERT INTO hyrep (keyhyrep, keyhyobj, fdate, tdate) VALUES
+  ('_REP000013     ', '_OBJ000013     ', '2020-01-01', NULL);
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000010B    ', '_REP000010     ', h.keycmctc, c.keycmctc, h.keycmctc
+FROM cmctc h, cmctc c WHERE h.cmctckod = 'P900025' AND c.cmctckod = 'P900021';
+INSERT INTO hyfak (keyhyfak, keyhyrep, keycmctc, keycmctc3, keycmctc4)
+SELECT '_FAK000013     ', '_REP000013     ', h.keycmctc, c.keycmctc, p.keycmctc
+FROM cmctc h, cmctc c, cmctc p WHERE h.cmctckod = 'P900026' AND c.cmctckod = 'P900021' AND p.cmctckod = 'P900027';
