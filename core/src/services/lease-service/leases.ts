@@ -22,6 +22,7 @@ import z from 'zod'
 
 import {
   GetLeaseOptionsSchema,
+  GetLeasesByContactCodeOptionsSchema,
   GetLeasesOptionsSchema,
   mapLease,
   Lease as LeaseSchema,
@@ -796,6 +797,12 @@ export const routes = (router: KoaRouter) => {
    *           type: boolean
    *           default: false
    *         description: Whether to include contact information in the response
+   *       - in: query
+   *         name: includeSubletLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Also return leases where the contact is the current sublet tenant (andrahandshyresgäst).
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -814,7 +821,9 @@ export const routes = (router: KoaRouter) => {
   router.get('/leases/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
+      const queryParams = GetLeasesByContactCodeOptionsSchema.safeParse(
+        ctx.query
+      )
 
       if (!queryParams.success) {
         ctx.status = 400
@@ -902,11 +911,25 @@ export const routes = (router: KoaRouter) => {
         const contact = await leasingAdapter.getContactByContactCode(
           lease.subletContactId
         )
-        if (!contact.ok || !contact.data) {
+        if (contact.ok) {
+          const leaseContactType: leasing.v1.LeaseContactType = 'subletTenant'
+          contacts.push({ ...contact.data, leaseContactType })
+        } else if (contact.err === 'not-found') {
+          logger.warn(
+            { contactCode: lease.subletContactId, leaseId: lease.leaseId },
+            'Sublet contact not found, returning lease without it'
+          )
+        } else {
+          logger.error(
+            {
+              error: contact.err,
+              contactCode: lease.subletContactId,
+              leaseId: lease.leaseId,
+            },
+            'Failed to fetch sublet contact'
+          )
           return { ok: false, err: 'no-contact' }
         }
-        const leaseContactType: leasing.v1.LeaseContactType = 'subletTenant'
-        contacts.push({ ...contact.data, leaseContactType })
       }
 
       lease.tenants = contacts

@@ -1365,6 +1365,8 @@ export interface paths {
           status?: string
           /** @description Whether to include contact information in the response */
           includeContacts?: boolean
+          /** @description Also return leases where the contact is the current sublet tenant (andrahandshyresgäst). */
+          includeSubletLeases?: boolean
         }
         path: {
           /** @description Contact code of the individual to fetch leases for. */

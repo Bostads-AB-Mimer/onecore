@@ -4,12 +4,14 @@ import { Loader2 } from 'lucide-react'
 
 import { formatDate, LeaseMobileCard, LeaseStatusBadge } from '@/entities/lease'
 import { useLeasesByRentalProperty } from '@/entities/lease/hooks/useLeasesByRentalProperty'
+import { isSubletTenant } from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
 
 import { paths } from '@/shared/routes'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
+import { SecondaryRentalBadge } from '@/shared/ui/StatusBadges'
 
 interface LeasesTabContentProps {
   rentalPropertyId: string
@@ -38,37 +40,53 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
     )
   }
 
+  const unresolvedSubletContactId = (lease: Lease) =>
+    lease.subletContactId && !lease.tenants?.some(isSubletTenant)
+      ? lease.subletContactId
+      : undefined
+
   // Helper to render tenant names
   const renderTenantNames = (lease: Lease): ReactNode => {
-    if (!lease.tenants || lease.tenants.length === 0) {
+    const unresolved = unresolvedSubletContactId(lease)
+
+    if ((!lease.tenants || lease.tenants.length === 0) && !unresolved) {
       return <span className="text-muted-foreground">Ingen hyresgäst</span>
     }
 
     return (
       <div className="space-y-1">
-        {lease.tenants.map((tenant) => {
+        {lease.tenants?.map((tenant) => {
           const isValidContact =
             tenant.contactCode.startsWith('P') ||
             tenant.contactCode.startsWith('F')
 
           return (
             <div key={tenant.contactCode}>
-              {isValidContact ? (
-                <Link
-                  to={paths.tenant(tenant.contactCode)}
-                  className="font-medium text-primary hover:underline"
-                >
-                  {tenant.fullName}
-                </Link>
-              ) : (
-                <span className="font-medium">{tenant.fullName}</span>
-              )}
+              <div className="flex items-center gap-1.5">
+                {isValidContact ? (
+                  <Link
+                    to={paths.tenant(tenant.contactCode)}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    {tenant.fullName}
+                  </Link>
+                ) : (
+                  <span className="font-medium">{tenant.fullName}</span>
+                )}
+                {isSubletTenant(tenant) && <SecondaryRentalBadge />}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {tenant.contactCode}
               </div>
             </div>
           )
         })}
+        {unresolved && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">{unresolved}</span>
+            <SecondaryRentalBadge />
+          </div>
+        )}
       </div>
     )
   }
@@ -138,6 +156,7 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
   // Mobile card renderer
   const mobileCardRenderer = (lease: Lease) => {
     const hasTenants = lease.tenants && lease.tenants.length > 0
+    const unresolved = unresolvedSubletContactId(lease)
 
     return (
       <LeaseMobileCard
@@ -172,6 +191,11 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
                     <span className="text-muted-foreground">Kundnummer:</span>
                     <span>{tenant.contactCode}</span>
                   </div>
+                  {isSubletTenant(tenant) && (
+                    <div className="flex justify-end">
+                      <SecondaryRentalBadge />
+                    </div>
+                  )}
                   {tenant.emailAddress && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">E-post:</span>
@@ -191,6 +215,12 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Hyresgäst:</span>
               <span className="text-muted-foreground">Ingen hyresgäst</span>
+            </div>
+          )}
+          {unresolved && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{unresolved}</span>
+              <SecondaryRentalBadge />
             </div>
           )}
         </div>

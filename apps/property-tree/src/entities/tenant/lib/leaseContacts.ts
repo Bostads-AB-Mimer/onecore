@@ -15,3 +15,16 @@ export function sortLeaseContacts<T extends LeaseContact>(tenants: T[]) {
     (a, b) => Number(isSubletTenant(a)) - Number(isSubletTenant(b))
   )
 }
+
+type SubletLease = { subletContactId?: string }
+
+export function hasSubletTenant(lease: SubletLease) {
+  return !!lease.subletContactId
+}
+
+export function isSubletTenantOnLeases(
+  leases: SubletLease[],
+  contactCode: string
+) {
+  return leases.some((lease) => lease.subletContactId === contactCode)
+}
