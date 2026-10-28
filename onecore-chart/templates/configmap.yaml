@@ -1,0 +1,23 @@
+{{/*
+Copyright Bostads AB Mimer.
+SPDX-License-Identifier: AGPL-3.0-only
+*/}}
+
+{{- range $name, $config := $.Values.components }}
+{{- if and (kindIs "map" $config) ($config.enabled) ($config.env) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "onecore.componentName" (dict "root" $ "name" $name) }}-env
+  namespace: {{ $.Values.global.namespace | default $.Release.Namespace }}
+  labels:
+{{ include "onecore.labels" (dict "root" $ "name" $name) | indent 4 }}
+data:
+{{- range $key, $value := $config.env }}
+{{- if kindIs "string" $value }}
+  {{ $key }}: {{ $value | quote }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

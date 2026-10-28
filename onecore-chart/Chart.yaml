@@ -1,0 +1,23 @@
+apiVersion: v2
+name: onecore
+description: ONECore - Holistic property management platform
+type: application
+version: 0.1.0
+appVersion: '1.5.0'
+
+keywords:
+  - onecore
+  - property-management
+  - housing
+
+maintainers:
+  - name: Bostads AB Mimer
+    email: dev@mimer.nu
+
+dependencies:
+  - name: common
+    repository: https://charts.bitnami.com/bitnami
+    version: 2.38.0
+    tags:
+      - bitnami-common
+    condition: global.common.enabled
