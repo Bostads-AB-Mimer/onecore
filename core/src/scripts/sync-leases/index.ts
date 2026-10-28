@@ -8,6 +8,12 @@ import {
 import { getRentalPropertyInfoFromXpand } from '../../adapters/property-management-adapter'
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
 import { syncInvoiceRecipientToEconomy } from '../../processes/contacts'
+import {
+  runSyncSteps,
+  syncStep,
+  SyncStep,
+  undoContactSyncInEconomy,
+} from '../../processes/sync-steps'
 import { runCmlogSync } from '../shared/run-cmlog-sync'
 
 const DEFAULT_STATE_FILE = '/data/last-timestamp-leases.txt'
@@ -41,6 +47,8 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
     return
   }
 
+  const steps: SyncStep[] = []
+
   if (lease.action === 'create') {
     const contactsAdapter = makeContactsAdapter(config.contactsService.url)
     const contactResult = await contactsAdapter.getByContactCode(
@@ -56,38 +64,57 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
       (r) => r.role === 'otherInvoiceRecipient'
     )
     if (otherInvoiceRecipient) {
-      logger.info(
-        { leaseId: lease.leaseId, action: lease.action },
-        'syncing other invoice recipient'
+      steps.push(
+        syncStep({
+          name: 'xledger',
+          run: async () => {
+            logger.info(
+              { leaseId: lease.leaseId, action: lease.action },
+              'syncing other invoice recipient'
+            )
+            const synced = await syncInvoiceRecipientToEconomy(
+              contactsAdapter,
+              otherInvoiceRecipient.contactCode
+            )
+            if (!synced.ok) return synced
+            return {
+              ok: true,
+              data: { skipped: false, undo: synced.data?.undo },
+            }
+          },
+          undo: (undo) =>
+            undoContactSyncInEconomy(otherInvoiceRecipient.contactCode, undo),
+        })
       )
-
-      const synced = await syncInvoiceRecipientToEconomy(
-        contactsAdapter,
-        otherInvoiceRecipient.contactCode
-      )
-      if (!synced.ok) {
-        throw new Error(
-          `Failed to sync other invoice recipient ${otherInvoiceRecipient.contactCode} for lease ${lease.leaseId}: ${synced.err}${synced.detail ? ` (${synced.detail})` : ''}`
-        )
-      }
     }
   }
 
   const contactCode = lease.action === 'create' ? lease.contactCode : undefined
 
-  logger.info({ leaseId: lease.leaseId, action: lease.action }, 'syncing lease')
-  const syncResult = await syncLeaseToTenfast(
-    lease.leaseId,
-    contactCode,
-    lease.action
+  steps.push(
+    syncStep({
+      name: 'tenfast',
+      run: async () => {
+        logger.info(
+          { leaseId: lease.leaseId, action: lease.action },
+          'syncing lease'
+        )
+        const syncResult = await syncLeaseToTenfast(
+          lease.leaseId,
+          contactCode,
+          lease.action
+        )
+        if (!syncResult.ok) return syncResult
+        logger.info(
+          { leaseId: lease.leaseId, action: syncResult.data.action },
+          'lease synced'
+        )
+        return { ok: true, data: { skipped: false } }
+      },
+    })
   )
-  if (!syncResult.ok) {
-    throw new Error(`Failed to sync lease ${lease.leaseId}: ${syncResult.err}`)
-  }
-  logger.info(
-    { leaseId: lease.leaseId, action: syncResult.data.action },
-    'lease synced'
-  )
+
+  await runSyncSteps({ subject: `lease ${lease.leaseId}`, steps })
 }
 
 export const syncLeases = (
