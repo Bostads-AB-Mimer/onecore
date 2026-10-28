@@ -626,7 +626,7 @@ const convertToAggregateCsvRows = (aggregateRows: AggregatedRow[]) => {
       row.toDate
     )
     csvRows.push(
-      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${row.counterPartCode || ''};${periodInfo.periodStart};${periodInfo.periodStart};${''};${''};${''};${''};${''};${''};${row.taxRule ?? ''};${row.amount}`
+      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${row.counterPartCode || ''};${periodInfo.periodStart};${periodInfo.periods};${''};${''};${''};${''};${''};${''};${row.taxRule ?? ''};${row.amount}`
     )
   })
 

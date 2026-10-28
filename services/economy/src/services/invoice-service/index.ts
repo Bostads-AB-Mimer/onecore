@@ -18,10 +18,6 @@ import {
 } from '../common/adapters/xledger-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
-  getInvoiceRows,
-  getInvoicesByContactCode as getXpandInvoicesByContactCode,
-} from './adapters/xpand-db-adapter'
-import {
   createAccounting,
   createRentalLossAccounting,
   DEFAULT_ACCEPTED_SUM_DIFFERENCE,

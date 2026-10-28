@@ -846,3 +846,87 @@ describe(adapter.submitMiscellaneousInvoice, () => {
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })
+
+describe(adapter.getPeriodInformationFromDateStrings, () => {
+  it('returns empty values for a single-month period invoiced in the same month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-01',
+      '2026-03-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '' })
+  })
+
+  it('uses fromDate as invoice date when invoiceDate is null', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      null,
+      '2026-03-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '' })
+  })
+
+  it('returns number of periods for a multi-month period starting in the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-01-15',
+      '2026-01-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '3' })
+  })
+
+  it('returns offset to period start when the period starts after the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-20',
+      '2026-04-01',
+      '2026-04-30'
+    )
+
+    expect(result).toEqual({ periodStart: '1', periods: '1' })
+  })
+
+  it('returns offset and number of periods for a multi-month period starting after the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-20',
+      '2026-05-01',
+      '2026-07-31'
+    )
+
+    expect(result).toEqual({ periodStart: '2', periods: '3' })
+  })
+
+  it('returns a negative offset when the period starts before the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-05-10',
+      '2026-04-01',
+      '2026-04-30'
+    )
+
+    expect(result).toEqual({ periodStart: '-1', periods: '1' })
+  })
+
+  // Only the month part of the dates is compared, so year boundaries are not
+  // handled. These tests pin the current behaviour.
+  it('ignores the year when the period starts in the next year', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2025-12-20',
+      '2026-01-01',
+      '2026-01-31'
+    )
+
+    expect(result).toEqual({ periodStart: '-11', periods: '1' })
+  })
+
+  it('ignores the year when the period spans a year boundary', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2025-12-01',
+      '2025-12-01',
+      '2026-02-28'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '-9' })
+  })
+})

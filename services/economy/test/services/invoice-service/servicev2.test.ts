@@ -75,7 +75,10 @@ import {
   enrichInvoiceWithAccounting,
   getActiveRentalBlocksWithAccounting,
 } from '@src/services/invoice-service/adapters/xpand-db-adapter'
-import { uploadFile } from '@src/services/common/adapters/xledger-adapter'
+import {
+  getPeriodInformationFromDateStrings,
+  uploadFile,
+} from '@src/services/common/adapters/xledger-adapter'
 
 const mockGetInvoicesNotExported = getInvoicesNotExported as jest.Mock
 const mockGetRentalLosses = getRentalLosses as jest.Mock
@@ -85,6 +88,8 @@ const mockGetRoundOffInformation = getRoundOffInformation as jest.Mock
 const mockGetActiveRentalBlocksWithAccounting =
   getActiveRentalBlocksWithAccounting as jest.Mock
 const mockUploadFile = uploadFile as jest.Mock
+const mockGetPeriodInformationFromDateStrings =
+  getPeriodInformationFromDateStrings as jest.Mock
 
 const buildInvoice = (
   overrides: Partial<InvoiceWithAccounting> = {}
@@ -122,6 +127,10 @@ beforeEach(() => {
   mockGetRoundOffInformation.mockResolvedValue({
     account: '3999',
     costCode: '123',
+  })
+  mockGetPeriodInformationFromDateStrings.mockReturnValue({
+    periodStart: '',
+    periods: '',
   })
 })
 
@@ -247,6 +256,32 @@ describe('servicev2', () => {
       expect(result.ledgerAccountingCsv[0]).toContain('Voucher Type')
       expect(result.aggregateAccountingCsv.length).toBeGreaterThan(1)
       expect(result.errors).toEqual([])
+    })
+
+    it('writes period start and number of periods to their own columns', async () => {
+      mockGetPeriodInformationFromDateStrings.mockReturnValue({
+        periodStart: '1',
+        periods: '3',
+      })
+      const invoice = buildInvoice({
+        totalAccount: '2970',
+        ledgerAccount: '1530',
+      })
+
+      const result = await createAccounting([invoice])
+
+      const header = result.aggregateAccountingCsv[0].split(';')
+      const periodStartIndex = header.indexOf('Period Start')
+      const periodsIndex = header.indexOf('No of Periods')
+      const dataRows = result.aggregateAccountingCsv
+        .slice(1)
+        .map((row) => row.split(';'))
+
+      expect(dataRows.length).toBeGreaterThan(0)
+      dataRows.forEach((columns) => {
+        expect(columns[periodStartIndex]).toBe('1')
+        expect(columns[periodsIndex]).toBe('3')
+      })
     })
 
     it('includes a round off row when roundoff is non-zero', async () => {

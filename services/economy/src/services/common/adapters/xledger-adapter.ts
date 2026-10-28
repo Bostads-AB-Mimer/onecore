@@ -1227,48 +1227,6 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
   }
 }
 
-export const createCustomerLedgerRow = (
-  invoiceDataRows: InvoiceDataRow[],
-  batchId: string,
-  chunkNumber: number,
-  counterPartCode: string
-): InvoiceDataRow => {
-  let customerInvoiceAmount = 0
-
-  invoiceDataRows.forEach((row) => {
-    customerInvoiceAmount += row.TotalAmount as number
-  })
-
-  customerInvoiceAmount = +customerInvoiceAmount.toFixed(2)
-
-  return {
-    voucherType: 'AR',
-    voucherNo:
-      '2' +
-      batchId.toString().padStart(5, '0') +
-      chunkNumber.toString().padStart(3, '0'),
-    voucherDate: invoiceDataRows[0].InvoiceDate as string,
-    account: invoiceDataRows[0].LedgerAccount,
-    posting1: '',
-    posting2: '',
-    posting3: '',
-    posting4: '',
-    posting5: counterPartCode,
-    periodStart: '',
-    noOfPeriods: '',
-    subledgerNo: invoiceDataRows[0].ContactCode as string,
-    invoiceDate: invoiceDataRows[0].InvoiceDate as string,
-    invoiceNo: invoiceDataRows[0].InvoiceNumber,
-    ocr: invoiceDataRows[0].OCR,
-    dueDate: invoiceDataRows[0].InvoiceDueDate as string,
-    text: '',
-    taxRule: '',
-    amount: customerInvoiceAmount,
-    ledgerAccount: invoiceDataRows[0].LedgerAccount,
-    totalAccount: invoiceDataRows[0].TotalAccount,
-  }
-}
-
 export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
   return {
     code: contact.ContactCode,
@@ -1281,22 +1239,6 @@ export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
     invoiceDeliveryMethod: contact.InvoiceDeliveryMethod,
     counterPart: contact.CounterPart ?? '',
     group: contact.CustomerGroup,
-  }
-}
-
-const getTaxRule = (totalAmount: number, totalVat: number, account: string) => {
-  const vatRate = Math.round((totalVat * 100) / (totalAmount - totalVat))
-  const accounts208 = ['3012', '3014', '3016']
-
-  switch (vatRate) {
-    case 25:
-      return accounts208.includes(account) ? '208' : '2'
-    case 12:
-      return '21'
-    case 6:
-      return '22'
-    default:
-      return ''
   }
 }
 
@@ -1346,72 +1288,6 @@ export const getPeriodInformationFromDateStrings = (
   }
 
   return periodInformation
-}
-
-export const getPeriodInformation = (
-  invoiceDate: Date | null,
-  fromDate: Date,
-  toDate: Date
-): { periodStart: string; periods: string } => {
-  if (!invoiceDate) {
-    invoiceDate = fromDate
-  }
-
-  const toStart = fromDate.getMonth() - invoiceDate.getMonth()
-  const invoiceInterval = toDate.getMonth() - fromDate.getMonth()
-
-  const periodInformation = {
-    periodStart: toStart == 0 ? '' : toStart.toString(),
-    periods:
-      invoiceInterval == 0 && toStart == 0
-        ? ''
-        : (invoiceInterval + 1).toString(),
-  }
-
-  return periodInformation
-}
-
-export const transformAggregatedInvoiceRow = (
-  invoiceRow: InvoiceDataRow,
-  chunkNumber: number
-): InvoiceDataRow => {
-  const periodInformation = getPeriodInformation(
-    null,
-    dateFromXledgerDateString(invoiceRow.InvoiceFromDate as string),
-    dateFromXledgerDateString(invoiceRow.InvoiceToDate as string)
-  )
-
-  const transformedRow = {
-    voucherType: 'AR',
-    voucherNo:
-      '1' +
-      invoiceRow.BatchId.toString().padStart(5, '0') +
-      chunkNumber.toString().padStart(3, '0'),
-    voucherDate: invoiceRow.InvoiceFromDate,
-    account: invoiceRow.Account,
-    posting1: invoiceRow.CostCode,
-    posting2: invoiceRow.ProjectCode,
-    posting3: invoiceRow.Property,
-    posting4: invoiceRow.FreeCode,
-    posting5: invoiceRow.CounterPart,
-    periodStart: periodInformation.periodStart,
-    noOfPeriods: periodInformation.periods,
-    subledgerNo: '',
-    invoiceDate: '',
-    invoiceNo: '',
-    ocr: '',
-    dueDate: '',
-    text: '',
-    taxRule: getTaxRule(
-      invoiceRow.totalAmount as number,
-      invoiceRow.totalVat as number,
-      invoiceRow.Account as string
-    ).toString(),
-    amount: -invoiceRow.totalAmount,
-    totalAccount: invoiceRow.TotalAccount,
-  }
-
-  return transformedRow
 }
 
 export const uploadFile = async (filename: string, csvFile: string) => {
