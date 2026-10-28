@@ -146,7 +146,11 @@ export const useComponentLibraryViewState = () => {
     const newSearch = debouncedSearch.trim()
     if (currentSearch !== newSearch) {
       updateUrlParams(
-        { search: newSearch || undefined, page: undefined },
+        {
+          search: newSearch || undefined,
+          page: undefined,
+          componentId: undefined,
+        },
         { replace: true }
       )
     }
@@ -175,6 +179,7 @@ export const useComponentLibraryViewState = () => {
         ? { sortBy: undefined, sortOrder: undefined }
         : {}),
       page: undefined,
+      componentId: undefined,
     })
   }
 
@@ -185,6 +190,7 @@ export const useComponentLibraryViewState = () => {
       installation: undefined,
       installedBefore: undefined,
       page: undefined,
+      componentId: undefined,
     })
     setSearchInput('')
   }
@@ -220,9 +226,14 @@ export const useComponentLibraryViewState = () => {
           ? {}
           : { installedBefore: undefined }),
         page: undefined,
+        componentId: undefined,
       }),
     onInstalledBeforeChange: (year) =>
-      updateUrlParams({ installedBefore: year, page: undefined }),
+      updateUrlParams({
+        installedBefore: year,
+        page: undefined,
+        componentId: undefined,
+      }),
   }
 
   const dialogs: ComponentLibraryDialogStates = {
