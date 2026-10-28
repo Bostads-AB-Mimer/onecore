@@ -314,6 +314,131 @@ describe('syncContacts', () => {
     )
   })
 
+  describe('undo', () => {
+    const economyUndo = {
+      previous: {
+        fullName: 'Gammal, Namn',
+        street: 'Gamla gatan 1',
+        zipCode: '22222',
+        city: 'Västerås',
+        emailAddress: null,
+      },
+    }
+    const odooUndo = {
+      tenants: [
+        {
+          id: 7,
+          fullName: 'Gammal, Namn',
+          emailAddress: null,
+          phoneNumber: null,
+        },
+      ],
+    }
+
+    const setup = (contact: ReturnType<typeof factory.domainContact.build>) => {
+      jest.spyOn(contactsAdapterModule, 'makeContactsAdapter').mockReturnValue({
+        getUpdatedContacts: jest.fn().mockResolvedValue({
+          ok: true,
+          data: [{ contact, timestamp: new Date('2026-05-01T10:00:00.000Z') }],
+        }),
+      } as any)
+      jest
+        .spyOn(communicationAdapter, 'sendEmail')
+        .mockResolvedValue({ ok: true, data: null })
+      jest
+        .spyOn(leasingAdapter, 'syncContactToLeasing')
+        .mockResolvedValue({ ok: false, err: 'sync-failed', statusCode: 500 })
+      jest.spyOn(workOrderAdapter, 'syncContactToWorkOrder').mockResolvedValue({
+        ok: true,
+        data: { skipped: false, undo: odooUndo },
+      })
+    }
+
+    it('undoes Odoo, then Xledger, with the objects their syncs returned when Tenfast fails', async () => {
+      const contact = factory.domainContact.build()
+      setup(contact)
+      const economy = jest
+        .spyOn(economyAdapter, 'syncContactToEconomy')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { skipped: false, undo: economyUndo },
+        })
+        .mockResolvedValueOnce({ ok: true, data: { skipped: false } })
+      const undoOdoo = jest
+        .spyOn(workOrderAdapter, 'undoContactSyncInWorkOrder')
+        .mockResolvedValue({ ok: true, data: null })
+
+      await syncContacts({ stateFile, queueFile })
+
+      expect(undoOdoo).toHaveBeenCalledWith(contact.contactCode, odooUndo)
+      expect(economy).toHaveBeenNthCalledWith(
+        2,
+        contact.contactCode,
+        economyUndo.previous
+      )
+      expect(undoOdoo.mock.invocationCallOrder[0]).toBeLessThan(
+        economy.mock.invocationCallOrder[1]
+      )
+      const queue = await readQueue(queueFile)
+      expect(queue[0].lastError).toBe(
+        `contact ${contact.contactCode} failed to sync: tenfast=sync-failed (500), undone: odoo, xledger`
+      )
+    })
+
+    it('mails once and keeps the row queued when an undo fails', async () => {
+      const contact = factory.domainContact.build()
+      setup(contact)
+      jest
+        .spyOn(economyAdapter, 'syncContactToEconomy')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { skipped: false, undo: economyUndo },
+        })
+        .mockResolvedValueOnce({ ok: true, data: { skipped: false } })
+      jest
+        .spyOn(workOrderAdapter, 'undoContactSyncInWorkOrder')
+        .mockResolvedValue({ ok: false, err: 'undo-failed', statusCode: 500 })
+      const sendEmail = communicationAdapter.sendEmail as jest.Mock
+
+      await syncContacts({ stateFile, queueFile })
+
+      const queue = await readQueue(queueFile)
+      expect(queue).toHaveLength(1)
+      expect(queue[0].lastError).toBe(
+        `contact ${contact.contactCode} failed to sync: tenfast=sync-failed (500), undone: xledger, undo failed: odoo=undo-failed (500)`
+      )
+      const undoMails = sendEmail.mock.calls.filter(([e]) =>
+        e.subject.startsWith('sync-contacts: återställning')
+      )
+      expect(undoMails).toHaveLength(1)
+      expect(undoMails[0][0].subject).toBe(
+        `sync-contacts: återställning misslyckades för kontakt ${contact.contactCode}`
+      )
+      expect(undoMails[0][0].body).not.toContain('Gammal, Namn')
+      expect(undoMails[0][0].body).not.toContain('Gamla gatan 1')
+    })
+
+    it('counts an Xledger undo that finds no customer as failed', async () => {
+      const contact = factory.domainContact.build()
+      setup(contact)
+      jest
+        .spyOn(economyAdapter, 'syncContactToEconomy')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { skipped: false, undo: economyUndo },
+        })
+        .mockResolvedValueOnce({ ok: true, data: { skipped: true } })
+      jest
+        .spyOn(workOrderAdapter, 'undoContactSyncInWorkOrder')
+        .mockResolvedValue({ ok: true, data: null })
+
+      await syncContacts({ stateFile, queueFile })
+
+      const queue = await readQueue(queueFile)
+      expect(queue[0].lastError).toContain('undo failed: xledger=not-found')
+    })
+  })
+
   it('a newer change for the same contact replaces a queued one', async () => {
     const older = factory.domainContact.build({ contactCode: 'P123' })
     const newer = factory.domainContact.build({ contactCode: 'P123' })
