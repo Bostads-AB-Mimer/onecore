@@ -1567,7 +1567,7 @@ export const terminateLease = async (
       tenfastLeaseId: string
       skipReason?: 'already-terminated' | 'not-required'
     },
-    'lease-not-found' | 'terminate-failed' | 'unknown'
+    'lease-not-found' | 'terminate-failed' | 'end-date-mismatch' | 'unknown'
   >
 > => {
   const existing = await getLeaseByExternalId(leaseId)
@@ -1600,14 +1600,12 @@ export const terminateLease = async (
     }
   }
 
+  const data = { ...body, endDate: body.endDate.toISOString().split('T')[0] }
   try {
     const response = await tenfastApi.request({
       method: 'post',
       url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/terminate?hyresvard=${tenfastCompanyId}`,
-      data: {
-        ...body,
-        endDate: body.endDate.toISOString().split('T')[0],
-      },
+      data,
     })
 
     if (response.status === 200) {
@@ -1624,6 +1622,18 @@ export const terminateLease = async (
     }
     const skipReason =
       response.status === 400 ? skipReasons[response.data?.error] : undefined
+    if (skipReason === 'not-required') {
+      const tenfastEndDate = existing.data.endDate
+        ? new Date(existing.data.endDate).toISOString().split('T')[0]
+        : null
+      if (tenfastEndDate !== data.endDate) {
+        logger.error(
+          { leaseId, tenfastEndDate, endDate: data.endDate },
+          'Tenfast terminate refused — lease ends within the notice period on another date'
+        )
+        return { ok: false, err: 'end-date-mismatch' }
+      }
+    }
     if (skipReason) {
       logger.info(
         { leaseId, error: response.data?.error },

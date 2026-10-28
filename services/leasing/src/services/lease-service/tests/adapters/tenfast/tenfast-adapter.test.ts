@@ -2796,7 +2796,7 @@ describe(tenfastAdapter.terminateLease, () => {
     [
       'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
       'not-required',
-      '2026-04-30',
+      new Date('2026-04-30'),
     ],
   ])(
     'returns ok:true with action:skipped when Tenfast returns 400: %s',
@@ -2828,8 +2828,8 @@ describe(tenfastAdapter.terminateLease, () => {
   )
 
   it.each([
-    ['ends later in Tenfast', '2026-05-31'],
-    ['ends earlier in Tenfast', '2026-03-31'],
+    ['ends later in Tenfast', new Date('2026-05-31')],
+    ['ends earlier in Tenfast', new Date('2026-03-31')],
     ['has no end date in Tenfast', null],
   ])(
     'fails with end-date-mismatch when no termination is required but the lease %s',

@@ -85,8 +85,11 @@ sequenceDiagram
                 Tenfast-->>Leasing: 4xx/5xx
                 Leasing-->>SyncScript: 500
                 SyncScript ->> SyncScript: Köas för återförsök,<br/>felmejl skickas
-            else Ingen Uppsägning Krävs ("Avtalet kommer löpa ut<br/>inom uppsägningstiden")
+            else Ingen Uppsägning Krävs ("Avtalet kommer löpa ut<br/>inom uppsägningstiden"), Samma Slutdatum
                 Leasing-->>SyncScript: 200 { action: "skipped" } (utan PDF-steg)
+            else Ingen Uppsägning Krävs, Annat Slutdatum i Tenfast
+                Leasing-->>SyncScript: 500 { error: "end-date-mismatch" }
+                SyncScript ->> SyncScript: Köas för återförsök,<br/>felmejl skickas
             else Redan Avslutat eller Lyckades
                 note over Leasing: Bifoga uppsägnings-PDF från Xpand. Körs<br/>även när avtalet redan var avslutat, så<br/>ett återförsök laddar upp en PDF som<br/>misslyckades förra gången.
 
@@ -118,5 +121,5 @@ sequenceDiagram
 - **Positionen sparas per rad, oavsett utfall — inte bara vid lyckad synk.** `saveSyncPosition` körs utanför try/catch:en, så en misslyckad rad räknas som hanterad precis som en lyckad. Återförsök sker istället via en separat JSONL-kö som dräneras i början av nästa körning, innan nya cmlog-rader hämtas. Varje körning läser om de senaste fem minuterna av cmlog (rader kan bli synliga en stund efter sin logtime) och hoppar över de rader som redan hanterats, så en krasch mitt i en körning gör inte om rader som redan är klara.
 - En preliminär xpand-uppsägning (fältet "Preliminärt uppsagt") triggar **inte** det här flödet — bara när "Uppsagt datum" faktiskt sätts.
 - **Uppsägnings-PDF:en återförsöks.** Efter en lyckad (eller redan-avslutad) uppsägning bifogar Leasing uppsägningshandlingen från Xpand via `upload-termination-file`. Misslyckas kontrollen, uppslaget i Xpand eller uppladdningen svarar Leasing 500, så raden köas och försöks igen. Vid återförsöket hoppar Leasing över `POST /terminate` när Tenfast redan har en hanterad uppsägning (`cancellation.handledAt` satt) och kör bara PDF-steget. Saknar Xpand PDF:en räknas raden som lyckad och teamet får ett mejl om att bifoga den för hand. Ger kön upp efter 30 dagar säger mejlet att avtalet redan är uppsagt och att bara PDF:en saknas.
-- **Ingen uppsägning krävs → inget PDF-steg.** Svarar Tenfast "Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs." räknas raden som lyckad utan PDF-steg och utan mejl.
+- **Ingen uppsägning krävs räknas bara som lyckad när slutdatumen stämmer.** Svarar Tenfast "Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs." jämför Leasing avtalets slutdatum i Tenfast med sista debiteringsdag i Xpand. Är de samma räknas raden som lyckad utan PDF-steg och utan mejl. Skiljer de sig, eller saknar avtalet slutdatum i Tenfast, svarar Leasing 500 `end-date-mismatch`: raden köas och teamet får ett felmejl, eftersom Tenfast annars fortsätter debitera till sitt eget slutdatum. Tenfasts API kan inte flytta slutdatumet på ett signerat avtal, så det rättas för hand i Tenfast. Stämmer datumen vid nästa återförsök räknas raden som lyckad. Ger kön upp efter 30 dagar säger mejlet att slutdatumet ska rättas i Tenfast.
 - **En senare makulering ersätter en köad uppsägning.** Ligger uppsägningen kvar i kön när en makulering av samma avtal kommer, tas uppsägningen bort ur kön (mejl: "ersatt av en senare ändring") i stället för att försökas mot ett makulerat avtal. En köad skapanderad ersätts aldrig.
