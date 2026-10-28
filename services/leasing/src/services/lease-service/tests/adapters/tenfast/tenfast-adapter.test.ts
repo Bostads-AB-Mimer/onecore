@@ -7,7 +7,10 @@ import { logger } from '@onecore/utilities'
 import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
-import { toYearMonthDayString } from '../../../adapters/tenfast/schemas'
+import {
+  TenfastLease,
+  toYearMonthDayString,
+} from '../../../adapters/tenfast/schemas'
 
 // Shared clock offset used to bust the module-level tag cache (TTL: 5 min) between tests.
 // Each test that needs a fresh tag fetch increments this by 1 hour before mocking Date.now.
@@ -3078,5 +3081,218 @@ describe(tenfastAdapter.updateRentalObjectCategory, () => {
     )
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('secret')
     errorSpy.mockRestore()
+  })
+})
+
+describe(tenfastAdapter.getSubletLeases, () => {
+  const contactCode = factory.tenfastTenant.build().externalId
+
+  const relationsResponse = (leaseIds: string[]) => ({
+    status: 200,
+    data: {
+      contactId: contactCode,
+      hyresgast: null,
+      relationsFrom: {
+        fakturaMottagare: [],
+        trustee: [],
+        andraHandHyresgast: [],
+      },
+      relationsTo: {
+        fakturaMottagare: [],
+        trustee: [],
+        andraHandHyresgast: leaseIds.map((externalId) => ({
+          avtal: { _id: 'avtal-id', externalId, reference: 1 },
+          andraHandHG: { contactId: contactCode },
+          hyresgaster: [],
+        })),
+      },
+    },
+  })
+
+  const leaseResponse = (lease: TenfastLease) => ({ status: 200, data: lease })
+
+  const mockTenfast = (
+    relations: { status: number; data: unknown },
+    leases: Record<string, { status: number; data: unknown }> = {}
+  ) => {
+    ;(request as jest.Mock).mockImplementation(({ url }: { url: string }) => {
+      if (url.includes('/relations')) return Promise.resolve(relations)
+      const match = Object.keys(leases).find((id) =>
+        url.includes(encodeURIComponent(id))
+      )
+      return Promise.resolve(
+        match ? leases[match] : { status: 404, data: { error: 'Not found' } }
+      )
+    })
+  }
+
+  const subletLease = (endDate: Date, overrides: Partial<TenfastLease> = {}) =>
+    factory.tenfastLease.build({
+      andraHandHG: {
+        externalId: contactCode,
+        startDate: new Date('2026-01-01'),
+        endDate,
+      },
+      ...overrides,
+    })
+
+  beforeEach(() => {
+    ;(request as jest.Mock).mockReset()
+  })
+
+  it('calls the relations endpoint for the contact code', async () => {
+    mockTenfast(relationsResponse([]))
+
+    await tenfastAdapter.getSubletLeases(contactCode)
+
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'get',
+        url: expect.stringContaining(
+          `/v1/hyresvard/extras/contacts/${contactCode}/relations?hyresvard=`
+        ),
+      })
+    )
+  })
+
+  it('returns the leases where the contact is the sublet tenant', async () => {
+    const lease = subletLease(new Date('2100-01-01'))
+    mockTenfast(relationsResponse([lease.externalId]), {
+      [lease.externalId]: leaseResponse(lease),
+    })
+
+    const result = await tenfastAdapter.getSubletLeases(contactCode)
+
+    assert(result.ok)
+    expect(result.data.map((l) => l.externalId)).toEqual([lease.externalId])
+  })
+
+  it('leaves out sublets whose end date has passed', async () => {
+    const ended = subletLease(new Date('2025-06-30'))
+    const running = subletLease(new Date('2100-01-01'))
+    mockTenfast(relationsResponse([ended.externalId, running.externalId]), {
+      [ended.externalId]: leaseResponse(ended),
+      [running.externalId]: leaseResponse(running),
+    })
+
+    const result = await tenfastAdapter.getSubletLeases(contactCode)
+
+    assert(result.ok)
+    expect(result.data.map((l) => l.externalId)).toEqual([running.externalId])
+  })
+
+  describe('on the last day of a sublet, in Stockholm time', () => {
+    beforeEach(() => {
+      jest.useFakeTimers({
+        now: new Date('2026-10-28T09:00:00+01:00'),
+        doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+      })
+    })
+
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it.each([
+      ['UTC midnight', '2026-10-28T00:00:00.000Z'],
+      ['Stockholm midnight', '2026-10-27T23:00:00.000Z'],
+    ])('keeps a sublet ending today (%s)', async (_, endDate) => {
+      const lease = subletLease(new Date(endDate))
+      mockTenfast(relationsResponse([lease.externalId]), {
+        [lease.externalId]: leaseResponse(lease),
+      })
+
+      const result = await tenfastAdapter.getSubletLeases(contactCode)
+
+      assert(result.ok)
+      expect(result.data.map((l) => l.externalId)).toEqual([lease.externalId])
+    })
+
+    it('drops a sublet that ended yesterday', async () => {
+      const lease = subletLease(new Date('2026-10-27T00:00:00.000Z'))
+      mockTenfast(relationsResponse([lease.externalId]), {
+        [lease.externalId]: leaseResponse(lease),
+      })
+
+      expect(await tenfastAdapter.getSubletLeases(contactCode)).toEqual({
+        ok: true,
+        data: [],
+      })
+    })
+  })
+
+  it('returns an empty list when the contact has no sublets', async () => {
+    mockTenfast(relationsResponse([]))
+
+    expect(await tenfastAdapter.getSubletLeases(contactCode)).toEqual({
+      ok: true,
+      data: [],
+    })
+  })
+
+  it('returns an empty list when Tenfast does not know the contact', async () => {
+    mockTenfast({ status: 404, data: { error: 'Not found' } })
+
+    expect(await tenfastAdapter.getSubletLeases(contactCode)).toEqual({
+      ok: true,
+      data: [],
+    })
+  })
+
+  it('skips a sublet lease that cannot be fetched', async () => {
+    const failing = subletLease(new Date('2100-01-01'))
+    const working = subletLease(new Date('2100-01-01'))
+    mockTenfast(relationsResponse([failing.externalId, working.externalId]), {
+      [failing.externalId]: { status: 500, data: { error: 'boom' } },
+      [working.externalId]: leaseResponse(working),
+    })
+
+    const result = await tenfastAdapter.getSubletLeases(contactCode)
+
+    assert(result.ok)
+    expect(result.data.map((l) => l.externalId)).toEqual([working.externalId])
+  })
+
+  it('applies the status filter to sublet leases', async () => {
+    const archived = subletLease(new Date('2100-01-01'), { stage: 'archived' })
+    mockTenfast(relationsResponse([archived.externalId]), {
+      [archived.externalId]: leaseResponse(archived),
+    })
+
+    const result = await tenfastAdapter.getSubletLeases(contactCode, {
+      status: ['current'],
+    })
+
+    expect(result).toEqual({ ok: true, data: [] })
+  })
+
+  it('returns "unknown" on an unexpected status', async () => {
+    mockTenfast({ status: 500, data: { error: 'boom' } })
+
+    expect(await tenfastAdapter.getSubletLeases(contactCode)).toEqual({
+      ok: false,
+      err: 'unknown',
+    })
+  })
+
+  it('returns a schema error when the response has an unexpected shape', async () => {
+    mockTenfast({
+      status: 200,
+      data: { relationsTo: { andraHandHyresgast: 'nope' } },
+    })
+
+    const result = await tenfastAdapter.getSubletLeases(contactCode)
+
+    assert(!result.ok)
+    expect(result.err).toMatchObject({ tag: 'schema-error' })
+  })
+
+  it('returns "unknown" when the request throws', async () => {
+    ;(request as jest.Mock).mockRejectedValue(new Error('ECONNRESET'))
+
+    expect(await tenfastAdapter.getSubletLeases(contactCode)).toEqual({
+      ok: false,
+      err: 'unknown',
+    })
   })
 })

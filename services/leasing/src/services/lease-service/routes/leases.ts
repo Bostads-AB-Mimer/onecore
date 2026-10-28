@@ -21,7 +21,7 @@ import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-se
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
 import config from '../../../common/config'
-import { toYearMonthDayString } from '../adapters/tenfast/schemas'
+import { TenfastLease, toYearMonthDayString } from '../adapters/tenfast/schemas'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
@@ -796,6 +796,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
+   *       - in: query
+   *         name: includeSubletLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Also return leases where the contact is the current sublet tenant (andrahandshyresgäst).
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.
@@ -813,9 +819,13 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
   router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['status'])
+    const metadata = generateRouteMetadata(ctx, [
+      'status',
+      'includeSubletLeases',
+    ])
 
-    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
+    const queryParams =
+      leasing.v1.GetLeasesByContactCodeOptionsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
       logger.error(
@@ -846,41 +856,61 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    if (!contact.data) {
-      logger.info(
-        { contactCode: ctx.params.contactCode },
-        'No contact found by contact code'
-      )
-
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody([], metadata)
-
-      return
-    }
-
     const filters = queryParams.data?.status
       ? { status: queryParams.data.status }
       : undefined
 
-    const getLeases = await tenfastAdapter.getLeasesByTenantId(
-      contact.data._id,
-      filters
-    )
+    let leases: TenfastLease[] = []
 
-    if (!getLeases.ok) {
-      logger.error(
-        { error: getLeases.err, metadata },
-        'Error fetching leases by tenant ID'
+    if (contact.data) {
+      const getLeases = await tenfastAdapter.getLeasesByTenantId(
+        contact.data._id,
+        filters
       )
-      ctx.status = 500
-      ctx.body = {
-        error: getLeases.err,
-        ...metadata,
+
+      if (!getLeases.ok) {
+        logger.error(
+          { error: getLeases.err, metadata },
+          'Error fetching leases by tenant ID'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: getLeases.err,
+          ...metadata,
+        }
+        return
       }
-      return
+
+      leases = getLeases.data
+    } else {
+      logger.info(
+        { contactCode: ctx.params.contactCode },
+        'No contact found by contact code'
+      )
     }
 
-    const onecoreLeases = getLeases.data.map((lease) =>
+    if (queryParams.data.includeSubletLeases) {
+      const getSubletLeases = await tenfastAdapter.getSubletLeases(
+        ctx.params.contactCode,
+        filters
+      )
+
+      if (getSubletLeases.ok) {
+        const leaseIds = new Set(leases.map((lease) => lease.externalId))
+        leases = leases.concat(
+          getSubletLeases.data.filter(
+            (lease) => !leaseIds.has(lease.externalId)
+          )
+        )
+      } else {
+        logger.error(
+          { error: getSubletLeases.err, metadata },
+          'Error fetching sublet leases by contact code, returning first-hand leases only'
+        )
+      }
+    }
+
+    const onecoreLeases = leases.map((lease) =>
       tenfastHelpers.mapToOnecoreLease(lease)
     )
 

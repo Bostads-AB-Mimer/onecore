@@ -19,6 +19,7 @@ import {
   TenfastTag,
   TenfastArticleSchema,
   TenfastArticle,
+  TenfastContactRelationsSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -1481,6 +1482,78 @@ export const getLeaseByExternalId = async (
     }
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.getLeaseByExternalId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// Tenfast end dates arrive as UTC or Stockholm midnight; compare Stockholm calendar dates.
+const toStockholmDate = (date: Date) =>
+  date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })
+
+const hasSubletEnded = (lease: TenfastLease, now: Date) =>
+  !!lease.andraHandHG?.endDate &&
+  toStockholmDate(lease.andraHandHG.endDate) < toStockholmDate(now)
+
+export const getSubletLeases = async (
+  contactCode: string,
+  filters: GetLeasesFilters = defaultFilters
+): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> => {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/contacts/${encodeURIComponent(contactCode)}/relations?hyresvard=${tenfastCompanyId}`,
+    })
+
+    if (res.status === 404) {
+      return { ok: true, data: [] }
+    }
+
+    if (res.status !== 200) {
+      logger.error(
+        { error: mapHttpError(res.data), contactCode },
+        'getSubletLeases: Unknown error'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    const relations = TenfastContactRelationsSchema.safeParse(res.data)
+
+    if (!relations.success) {
+      logger.error(
+        { error: JSON.stringify(relations.error, null, 2) },
+        'getSubletLeases: Failed to parse Tenfast response'
+      )
+      return {
+        ok: false,
+        err: { tag: 'schema-error', error: relations.error },
+      }
+    }
+
+    const results = await Promise.all(
+      relations.data.relationsTo.andraHandHyresgast.map(({ avtal }) =>
+        getLeaseByExternalId(avtal.externalId).then((result) => ({
+          leaseId: avtal.externalId,
+          result,
+        }))
+      )
+    )
+
+    const now = new Date()
+    const leases: TenfastLease[] = []
+    for (const { leaseId, result } of results) {
+      if (!result.ok) {
+        logger.error(
+          { error: result.err, leaseId, contactCode },
+          'getSubletLeases: Failed to fetch sublet lease, skipping it'
+        )
+        continue
+      }
+      if (!hasSubletEnded(result.data, now)) leases.push(result.data)
+    }
+
+    return { ok: true, data: filterByStatus(leases, filters.status) }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getSubletLeases')
     return { ok: false, err: 'unknown' }
   }
 }
