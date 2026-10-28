@@ -1234,7 +1234,10 @@ describe(tenfastAdapter.importLease, () => {
       fromDate
     )
 
-    expect(result).toEqual({ ok: true, data: { _id: 'existing-lease-id' } })
+    expect(result).toEqual({
+      ok: true,
+      data: { _id: 'existing-lease-id', hasContractFile: true },
+    })
     expect(request).not.toHaveBeenCalled()
     expect(getTenantSpy).not.toHaveBeenCalled()
     expect(getRentalObjectSpy).not.toHaveBeenCalled()
@@ -1280,7 +1283,10 @@ describe(tenfastAdapter.importLease, () => {
       fromDate
     )
 
-    expect(result).toEqual({ ok: true, data: { _id: 'created-lease-id' } })
+    expect(result).toEqual({
+      ok: true,
+      data: { _id: 'created-lease-id', hasContractFile: false },
+    })
 
     expect(request).toHaveBeenCalledTimes(1)
     const call = (request as jest.Mock).mock.calls[0][0]
@@ -1350,7 +1356,10 @@ describe(tenfastAdapter.importLease, () => {
       fromDate
     )
 
-    expect(result).toEqual({ ok: true, data: { _id: 'created-lease-id' } })
+    expect(result).toEqual({
+      ok: true,
+      data: { _id: 'created-lease-id', hasContractFile: false },
+    })
     expect(tenfastAdapter.importContact).toHaveBeenCalledWith('P12345')
     const leaseCall = (request as jest.Mock).mock.calls.at(-1)![0]
     expect(leaseCall.data.hyresgaster).toEqual(['imported-tenant-id'])
@@ -2701,7 +2710,11 @@ describe(tenfastAdapter.terminateLease, () => {
 
     expect(result).toEqual({
       ok: true,
-      data: { action: 'terminated', leaseId: lease.externalId },
+      data: {
+        action: 'terminated',
+        leaseId: lease.externalId,
+        tenfastLeaseId: lease._id,
+      },
     })
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -2728,12 +2741,65 @@ describe(tenfastAdapter.terminateLease, () => {
     expect(result).toEqual({ ok: false, err: 'lease-not-found' })
   })
 
+  it('skips the POST when the Tenfast lease already has a handled termination', async () => {
+    const lease = factory.tenfastLease.build({
+      cancellation: {
+        ...factory.tenfastLease.build().cancellation,
+        requested: true,
+        handledAt: new Date('2026-04-01'),
+      },
+    })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      terminateBody
+    )
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        action: 'skipped',
+        leaseId: lease.externalId,
+        tenfastLeaseId: lease._id,
+        skipReason: 'already-terminated',
+      },
+    })
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('still POSTs terminate when the tenant has only requested termination', async () => {
+    const lease = factory.tenfastLease.build({
+      cancellation: {
+        ...factory.tenfastLease.build().cancellation,
+        requested: true,
+      },
+    })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: lease })
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 200, data: {} })
+
+    const result = await tenfastAdapter.terminateLease(
+      lease.externalId,
+      terminateBody
+    )
+
+    expect(result.ok && result.data.action).toBe('terminated')
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
   it.each([
-    'Avtalet kan inte sägas upp',
-    'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
+    ['Avtalet kan inte sägas upp', 'already-terminated'],
+    [
+      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
+      'not-required',
+    ],
   ])(
     'returns ok:true with action:skipped when Tenfast returns 400: %s',
-    async (error) => {
+    async (error, skipReason) => {
       const lease = factory.tenfastLease.build()
       jest
         .spyOn(tenfastAdapter, 'getLeaseByExternalId')
@@ -2750,7 +2816,12 @@ describe(tenfastAdapter.terminateLease, () => {
 
       expect(result).toEqual({
         ok: true,
-        data: { action: 'skipped', leaseId: lease.externalId },
+        data: {
+          action: 'skipped',
+          leaseId: lease.externalId,
+          tenfastLeaseId: lease._id,
+          skipReason,
+        },
       })
     }
   )

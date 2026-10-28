@@ -838,6 +838,19 @@ const getUpdatedLeases = async (
   }
 }
 
+const syncLeaseFailure = (
+  statusCode: number,
+  body: unknown
+): { ok: false; err: 'sync-failed'; statusCode: number; detail?: string } => {
+  const error = (body as { error?: unknown } | undefined)?.error
+  return {
+    ok: false,
+    err: 'sync-failed',
+    statusCode,
+    ...(typeof error === 'string' && { detail: error }),
+  }
+}
+
 const syncLease = async (
   leaseId: string,
   contactCode: string | undefined,
@@ -847,6 +860,10 @@ const syncLease = async (
     {
       action: 'created' | 'terminated' | 'voided' | 'skipped'
       leaseId: string
+      // Set on create and terminate: whether the PDF from Xpand is on the Tenfast lease.
+      // 'failed' only on create, with documentError naming the failed step.
+      document?: 'attached' | 'already-attached' | 'missing' | 'failed'
+      documentError?: string
     },
     'sync-failed' | 'unknown'
   >
@@ -863,8 +880,15 @@ const syncLease = async (
     }
 
     logger.error(response.data, 'leasing-adapter.syncLease')
-    return { ok: false, err: 'sync-failed', statusCode: response.status }
+    return syncLeaseFailure(response.status, response.data)
   } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      logger.error(
+        { status: err.response.status, data: err.response.data },
+        'leasing-adapter.syncLease'
+      )
+      return syncLeaseFailure(err.response.status, err.response.data)
+    }
     logger.error({ err }, 'leasing-adapter.syncLease')
     return { ok: false, err: 'unknown' }
   }
