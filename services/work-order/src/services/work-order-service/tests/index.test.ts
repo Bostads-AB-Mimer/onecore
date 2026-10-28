@@ -2,6 +2,7 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
+import { logger } from '@onecore/utilities'
 import * as odooAdapter from '../adapters/odoo-adapter'
 import * as xpandAdapter from '../adapters/xpand-adapter'
 import { routes } from '../index'
@@ -564,7 +565,7 @@ describe('work-order-service index', () => {
 
       jest.spyOn(odooAdapter, 'syncContact').mockResolvedValueOnce({
         ok: true,
-        data: { updatedCount: 2 },
+        data: { updatedCount: 2, previous: [] },
       })
 
       const res = await request(app.callback())
@@ -611,7 +612,7 @@ describe('work-order-service index', () => {
 
       jest.spyOn(odooAdapter, 'syncContact').mockResolvedValueOnce({
         ok: true,
-        data: { updatedCount: 1 },
+        data: { updatedCount: 1, previous: [] },
       })
 
       const res = await request(app.callback())
@@ -622,6 +623,31 @@ describe('work-order-service index', () => {
       expect(res.body.skipped).toBe(false)
     })
 
+    it('returns undo with the tenants old values', async () => {
+      const payload = factory.syncContactToWorkOrderPayload.build()
+      const previous = [
+        {
+          id: 1,
+          fullName: 'Gammal, Namn',
+          emailAddress: null,
+          phoneNumber: null,
+        },
+      ]
+      jest
+        .spyOn(odooAdapter, 'syncContact')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { updatedCount: 1, previous },
+        })
+
+      const res = await request(app.callback())
+        .post(`/contacts/${payload.contactCode}/sync`)
+        .send(payload)
+
+      expect(res.body.undo).toEqual({ tenants: previous })
+      expect(res.body.content).toEqual({ updatedCount: 1 })
+    })
+
     it('responds with 400 when request body is invalid', async () => {
       const res = await request(app.callback())
         .post('/contacts/P12345/sync')
@@ -629,6 +655,71 @@ describe('work-order-service index', () => {
 
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Invalid request body')
+    })
+  })
+
+  describe('POST /contacts/:contactCode/undo-sync', () => {
+    const tenants = [
+      {
+        id: 1,
+        fullName: 'Gammal, Namn',
+        emailAddress: 'gammal@test.se',
+        phoneNumber: null,
+      },
+    ]
+
+    it('restores and answers 200', async () => {
+      const restore = jest
+        .spyOn(odooAdapter, 'restoreContact')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: { restored: [1], missing: [] },
+        })
+
+      const res = await request(app.callback())
+        .post('/contacts/P1/undo-sync')
+        .send({ tenants })
+
+      expect(res.status).toBe(200)
+      expect(restore).toHaveBeenCalledWith('P1', tenants)
+      expect(res.body.content).toEqual({ restored: [1], missing: [] })
+    })
+
+    it('answers 400 for a tenant of another contact', async () => {
+      jest
+        .spyOn(odooAdapter, 'restoreContact')
+        .mockResolvedValueOnce({ ok: false, err: 'foreign-tenant' })
+
+      const res = await request(app.callback())
+        .post('/contacts/P1/undo-sync')
+        .send({ tenants })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('answers 400 for a bad body', async () => {
+      const res = await request(app.callback())
+        .post('/contacts/P1/undo-sync')
+        .send({ tenants: [{ id: 'x' }] })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('answers 500 and logs no contact values when Odoo fails', async () => {
+      jest
+        .spyOn(odooAdapter, 'restoreContact')
+        .mockResolvedValueOnce({ ok: false, err: 'could-not-restore-contact' })
+      const errorSpy = jest.spyOn(logger, 'error')
+
+      const res = await request(app.callback())
+        .post('/contacts/P1/undo-sync')
+        .send({ tenants })
+
+      expect(res.status).toBe(500)
+      expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(
+        'gammal@test.se'
+      )
+      expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('Gammal, Namn')
     })
   })
 })
