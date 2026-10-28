@@ -5,7 +5,8 @@ import { syncContactToLeasing } from '../../adapters/leasing-adapter'
 import { syncContactToEconomy } from '../../adapters/economy-adapter'
 import { syncContactToWorkOrder } from '../../adapters/work-order-adapter'
 import type { Contact } from '@onecore/contacts/schema'
-import { toSyncPayload } from './payload'
+import type { AdapterResult } from '../../adapters/types'
+import { ContactSyncPayloadSchema, toSyncPayload } from './payload'
 import { runCmlogSync } from '../shared/run-cmlog-sync'
 
 const DEFAULT_STATE_FILE = '/data/last-timestamp.txt'
@@ -13,11 +14,26 @@ const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
 
 type ContactUpdate = { contact: Contact; timestamp: Date }
 
-// Written in order, stopping at the first failure. Xledger goes first because
-// it is the target that rejects payloads.
+type SyncResult = AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>
+
+const syncError = (
+  contactCode: string,
+  reason: string,
+  written: string[],
+  skipped: string[],
+  rest: string[]
+) =>
+  new Error(
+    `contact ${contactCode} failed to sync: ${reason}` +
+      (written.length ? `, already written: ${written.join(', ')}` : '') +
+      (skipped.length ? `, skipped: ${skipped.join(', ')}` : '') +
+      (rest.length ? `, not attempted: ${rest.join(', ')}` : '')
+  )
+
+// Written in order, stopping at the first failure.
 const syncContact = async (update: ContactUpdate): Promise<void> => {
   const payload = toSyncPayload(update.contact)
-  const steps: [string, () => Promise<{ ok: boolean; err?: string }>][] = [
+  const steps: [string, () => Promise<SyncResult>][] = [
     [
       'xledger',
       () =>
@@ -45,20 +61,35 @@ const syncContact = async (update: ContactUpdate): Promise<void> => {
     ['tenfast', () => syncContactToLeasing(payload.contactCode)],
   ]
 
-  const done: string[] = []
-  for (const [target, run] of steps) {
+  const names = steps.map(([name]) => name)
+
+  const parsed = ContactSyncPayloadSchema.safeParse(payload)
+  if (!parsed.success) {
+    const fields = parsed.error.issues.map((i) => i.path.join('.')).join(', ')
+    throw syncError(
+      payload.contactCode,
+      `invalid payload (${fields})`,
+      [],
+      [],
+      names
+    )
+  }
+
+  const written: string[] = []
+  const skipped: string[] = []
+  for (const [i, [target, run]] of steps.entries()) {
     const result = await run()
     if (!result.ok) {
-      const rest = steps
-        .map(([name]) => name)
-        .filter((name) => name !== target && !done.includes(name))
-      throw new Error(
-        `contact ${payload.contactCode} failed to sync: ${target}=${result.err}` +
-          (done.length ? `, already written: ${done.join(', ')}` : '') +
-          (rest.length ? `, not attempted: ${rest.join(', ')}` : '')
+      const status = result.statusCode ? ` (${result.statusCode})` : ''
+      throw syncError(
+        payload.contactCode,
+        `${target}=${result.err}${status}`,
+        written,
+        skipped,
+        names.slice(i + 1)
       )
     }
-    done.push(target)
+    ;(result.data.skipped ? skipped : written).push(target)
   }
   logger.info({ contactCode: payload.contactCode }, 'contact synced')
 }
