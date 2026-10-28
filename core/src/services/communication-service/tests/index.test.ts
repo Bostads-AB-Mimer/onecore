@@ -26,6 +26,7 @@ import { routes } from '../index'
 // non-configurable and cannot be redefined by jest.spyOn. The barrel reads the
 // live binding, so spying here still intercepts the route's call.
 import * as deliveryReports from '../../../adapters/communication-adapter/delivery-reports'
+import * as communicationAdapter from '../../../adapters/communication-adapter'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -80,6 +81,48 @@ describe('communication-service index', () => {
         .send(report)
 
       expect(res.status).toBe(500)
+    })
+  })
+
+  describe('POST /sendBulkEmail', () => {
+    it('forwards attachments to the communication service', async () => {
+      const sendSpy = jest
+        .spyOn(communicationAdapter, 'sendBulkEmail')
+        .mockResolvedValue({
+          ok: true,
+          data: {
+            content: {
+              successful: ['tenant@example.com'],
+              invalid: [],
+              totalSent: 1,
+              totalInvalid: 0,
+            },
+          },
+        })
+
+      const attachments = [
+        {
+          filename: 'hyresavtal.pdf',
+          content: Buffer.from('pdf').toString('base64'),
+          contentType: 'application/pdf',
+        },
+      ]
+
+      const res = await request(app.callback())
+        .post('/sendBulkEmail')
+        .send({
+          recipients: [
+            { contactCode: 'P1', emailAddress: 'tenant@example.com' },
+          ],
+          subject: 'Hej',
+          text: 'Se bifogad fil',
+          attachments,
+        })
+
+      expect(res.status).toBe(200)
+      expect(sendSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ attachments })
+      )
     })
   })
 })

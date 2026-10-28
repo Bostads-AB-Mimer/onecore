@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import type { EmailAttachment } from '@onecore/types'
 
 import { useToast } from '@/shared/hooks/useToast'
 import { getIdRange } from '@/shared/lib/selectRange'
@@ -35,7 +36,8 @@ export interface UseBulkMessagingOptions<TItem> {
   sendBulkEmail: (
     recipients: { contactCode: string; emailAddress: string }[],
     subject: string,
-    body: string
+    body: string,
+    attachments?: EmailAttachment[]
   ) => Promise<{
     content: { totalSent: number; totalInvalid: number }
     warnings?: string[]
@@ -73,7 +75,8 @@ export interface UseBulkMessagingReturn {
   handleSendEmail: (
     subject: string,
     body: string,
-    recipients: EmailRecipient[]
+    recipients: EmailRecipient[],
+    attachments?: EmailAttachment[]
   ) => Promise<void>
 
   // Loading state
@@ -330,7 +333,8 @@ export function useBulkMessaging<TItem>({
     async (
       subject: string,
       body: string,
-      validRecipients: EmailRecipient[]
+      validRecipients: EmailRecipient[],
+      attachments?: EmailAttachment[]
     ) => {
       try {
         const recipients = validRecipients
@@ -339,7 +343,12 @@ export function useBulkMessaging<TItem>({
           )
           .map((r) => ({ contactCode: r.id, emailAddress: r.email }))
 
-        const result = await sendBulkEmail(recipients, subject, body)
+        const result = await sendBulkEmail(
+          recipients,
+          subject,
+          body,
+          attachments
+        )
 
         toast({
           title: 'E-post skickat',

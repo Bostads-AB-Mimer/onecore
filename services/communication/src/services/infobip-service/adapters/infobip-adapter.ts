@@ -1,5 +1,5 @@
 import { Infobip, AuthType } from '@infobip-api/sdk'
-import { InspectionProtocolEmail } from '@onecore/types'
+import { EmailAttachment, InspectionProtocolEmail } from '@onecore/types'
 import config from '../../../common/config'
 import { logger } from '@onecore/utilities'
 
@@ -48,6 +48,70 @@ export const sendEmailInfobipSdk = async (
   }
 
   return result
+}
+
+export type EmailWithAttachmentsResult = {
+  emailAddress: string
+  // Set when Infobip accepted the message; used to link delivery reports.
+  messageId?: string
+  error?: string
+}
+
+// Sends a free-text email with attachments to each recipient individually via
+// the SDK (multipart /email/3/send). The v4 JSON API used by sendBulkEmail has
+// no attachment support. One request per recipient so recipients never see
+// each other's addresses, and so one rejected address doesn't stop the rest.
+export const sendEmailWithAttachments = async (email: {
+  emails: string[]
+  subject: string
+  text: string
+  attachments: EmailAttachment[]
+}): Promise<EmailWithAttachmentsResult[]> => {
+  logger.info(
+    {
+      recipientCount: email.emails.length,
+      attachmentCount: email.attachments.length,
+    },
+    'Sending email with attachments'
+  )
+
+  const results: EmailWithAttachmentsResult[] = []
+
+  for (const to of email.emails) {
+    try {
+      // The SDK mutates its input (e.g. wraps `to` in an array) and consumes
+      // the attachment buffers, so build a fresh payload for every recipient.
+      const response = await infobip.channels.email.send({
+        to,
+        from: EMAIL_SENDER,
+        subject: email.subject,
+        text: email.text,
+        attachment: email.attachments.map((att) => ({
+          data: Buffer.from(att.content, 'base64'),
+          name: att.filename,
+        })),
+      })
+
+      if (response.status !== 200) {
+        logger.error(
+          { status: response.status, body: response.body, to },
+          'Error sending email with attachments'
+        )
+        results.push({ emailAddress: to, error: `${response.status}` })
+        continue
+      }
+
+      results.push({
+        emailAddress: to,
+        messageId: response.data?.messages?.[0]?.messageId,
+      })
+    } catch (error: any) {
+      logger.error({ err: error, to }, 'Error sending email with attachments')
+      results.push({ emailAddress: to, error: error?.message ?? 'error' })
+    }
+  }
+
+  return results
 }
 
 export const sendInspectionProtocolEmail = async (
