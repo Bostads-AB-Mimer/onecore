@@ -668,6 +668,7 @@ export async function syncContactToWorkOrder(
       {
         contactCode,
         errorName: error instanceof Error ? error.name : typeof error,
+        message: error instanceof Error ? error.message : String(error),
       },
       'work-order-adapter.syncContactToWorkOrder'
     )
@@ -703,6 +704,7 @@ export const undoContactSyncInWorkOrder = async (
       {
         contactCode,
         errorName: error instanceof Error ? error.name : typeof error,
+        message: error instanceof Error ? error.message : String(error),
       },
       'work-order-adapter.undoContactSyncInWorkOrder'
     )

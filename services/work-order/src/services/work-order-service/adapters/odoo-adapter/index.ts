@@ -8,6 +8,7 @@ import {
   transformWorkOrder,
   transformMessages,
   transformEquipmentCode,
+  redactedMessage,
 } from './utils'
 import { AdapterResult } from '../../types'
 import {
@@ -877,7 +878,15 @@ export const syncContact = async (
     }
   } catch (error) {
     logger.error(
-      { contactCode: payload.contactCode, errorName: errorName(error) },
+      {
+        contactCode: payload.contactCode,
+        errorName: errorName(error),
+        message: redactedMessage(error, [
+          payload.fullName,
+          payload.emailAddress,
+          payload.phoneNumber,
+        ]),
+      },
       'Error syncing contact to Odoo'
     )
     return { ok: false, err: 'could-not-update-contact' }
@@ -923,7 +932,14 @@ export const restoreContact = async (
     }
   } catch (error) {
     logger.error(
-      { contactCode, errorName: errorName(error) },
+      {
+        contactCode,
+        errorName: errorName(error),
+        message: redactedMessage(
+          error,
+          tenants.flatMap((t) => [t.fullName, t.emailAddress, t.phoneNumber])
+        ),
+      },
       'Error restoring contact in Odoo'
     )
     return { ok: false, err: 'could-not-restore-contact' }

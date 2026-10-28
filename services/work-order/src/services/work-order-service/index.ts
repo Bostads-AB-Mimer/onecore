@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import { redactedMessage } from './adapters/odoo-adapter/utils'
 import {
   SyncContactToWorkOrderSchema,
   SyncContactToWorkOrderUndoSchema,
@@ -1759,6 +1760,11 @@ export const routes = (router: KoaRouter) => {
         {
           contactCode,
           errorName: err instanceof Error ? err.name : typeof err,
+          message: redactedMessage(err, [
+            body.fullName,
+            body.emailAddress,
+            body.phoneNumber,
+          ]),
         },
         'Error syncing contact to Odoo'
       )

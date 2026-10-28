@@ -658,6 +658,7 @@ export async function syncContactToEconomy(
         contactCode,
         status: axios.isAxiosError(err) ? err.response?.status : undefined,
         errorName: err instanceof Error ? err.name : typeof err,
+        message: err instanceof Error ? err.message : String(err),
       },
       'economy-adapter.syncContactToEconomy'
     )

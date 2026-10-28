@@ -8,6 +8,18 @@ import { SyncContactToEconomySchema } from '@onecore/types'
 import { SyncCustomerQueryParamsSchema } from './schema'
 import { syncCustomer, SyncCustomerPayload } from './service'
 
+const redactedMessage = (
+  error: unknown,
+  values: (string | null | undefined)[]
+): string =>
+  values
+    .filter((v): v is string => !!v)
+    .sort((a, b) => b.length - a.length)
+    .reduce(
+      (message, value) => message.split(value).join('[redacted]'),
+      error instanceof Error ? error.message : String(error)
+    )
+
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
@@ -108,6 +120,13 @@ export const routes = (router: KoaRouter) => {
         {
           contactCode,
           errorName: err instanceof Error ? err.name : typeof err,
+          message: redactedMessage(err, [
+            contact.fullName,
+            contact.address?.street,
+            contact.address?.postalCode,
+            contact.address?.city,
+            contact.emailAddress,
+          ]),
         },
         'Error syncing contact to Xledger'
       )
