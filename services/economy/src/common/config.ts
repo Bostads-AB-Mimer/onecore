@@ -35,6 +35,13 @@ export interface Config {
     url: string
     apiToken: string
     sftp: SftpConfig
+    requestPolicy: {
+      maxAttempts: number
+      baseDelayMs: number
+      maxDelayMs: number
+      timeoutMs: number
+      maxConcurrency: number
+    }
   }
   stralfors: {
     baseUrl: string
@@ -161,6 +168,15 @@ const config = configPackage({
         glDirectory: '/GL',
         arDirectory: '/AR',
         useSshDss: true,
+      },
+      // Xledger bills per invoice fetched (we believe), so retries and concurrency are capped.
+      // Timeout is generous: the invoices tab can take >15 s for tenants with many leases.
+      requestPolicy: {
+        maxAttempts: 5,
+        baseDelayMs: 1000,
+        maxDelayMs: 10_000,
+        timeoutMs: 60_000,
+        maxConcurrency: 5,
       },
     },
     infobip: {

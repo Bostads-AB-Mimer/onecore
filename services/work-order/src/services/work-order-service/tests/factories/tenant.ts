@@ -14,7 +14,7 @@ export const TenantFactory = Factory.define<Tenant>(({ sequence }) => ({
   firstName: 'Test',
   lastName: 'Testsson',
   fullName: 'Test Testsson',
-  nationalRegistrationNumber: '199404084924',
+  nationalRegistrationNumber: '191212121212',
   phoneNumbers: [
     {
       phoneNumber: '070000000',

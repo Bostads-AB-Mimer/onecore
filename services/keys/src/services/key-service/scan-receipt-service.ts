@@ -13,6 +13,7 @@
  * File storage and loan activation are handled by core.
  */
 
+import path from 'path'
 import { Knex } from 'knex'
 import { Jimp } from 'jimp'
 import { PDFDocument } from 'pdf-lib'
@@ -103,7 +104,16 @@ async function extractPdfFrames(buffer: Buffer): Promise<Frame[]> {
   const { createCanvas } = await import('@napi-rs/canvas')
   const data = new Uint8Array(buffer)
   const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  const doc = await pdfjsLib.getDocument({ data, useSystemFonts: true }).promise
+  // pdfjs >=5.7 loads JBIG2/CCITT (scanner) decoders as wasm from this dir
+  const wasmUrl =
+    path
+      .join(path.dirname(require.resolve('pdfjs-dist/package.json')), 'wasm')
+      .replace(/\\/g, '/') + '/'
+  const doc = await pdfjsLib.getDocument({
+    data,
+    useSystemFonts: true,
+    wasmUrl,
+  }).promise
   const frames: Frame[] = []
 
   for (let i = 1; i <= doc.numPages; i++) {

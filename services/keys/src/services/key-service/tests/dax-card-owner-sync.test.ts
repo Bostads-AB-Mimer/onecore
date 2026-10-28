@@ -1,0 +1,220 @@
+import type { CardOwner } from 'dax-client'
+import * as cardsAdapter from '../adapters/cards-adapter'
+import * as daxAdapter from '../adapters/dax-adapter'
+import * as mirror from '../dax-card-owner-mirror'
+import { isRentalObjectOwnerName, toOwnerRows } from '../dax-card-owner-mirror'
+import * as sync from '../dax-card-owner-sync'
+
+const owner = (
+  cardOwnerId: string,
+  name: string,
+  overrides: Partial<CardOwner> = {}
+): CardOwner =>
+  ({
+    cardOwnerId,
+    familyName: name,
+    specificName: '',
+    state: 'Active',
+    cards: [],
+    ...overrides,
+  }) as CardOwner
+
+const card = (cardId: string) => ({ cardId, createTime: '2024-01-01' })
+
+beforeEach(jest.restoreAllMocks)
+
+describe('isRentalObjectOwnerName', () => {
+  it.each([
+    ['806-007-09-0103', true],
+    ['806-007-09-0103a', true],
+    ['807-033-99-P23', true],
+    ['104-012-01-210A', true],
+    ['Bring Citymail', false],
+    ['Blomkvist', false],
+    ['', false],
+  ])('%s -> %s', (name, expected) => {
+    expect(isRentalObjectOwnerName(name)).toBe(expected)
+  })
+})
+
+describe('toOwnerRows', () => {
+  it('keeps active owners named by object, using specificName as fallback', () => {
+    const rows = toOwnerRows([
+      owner('1', '806-007-09-0103'),
+      owner('2', '806-007-01-0401', { state: 'Archived' }),
+      owner('3', '', { specificName: '806-007-01-0401' }),
+      owner('4', 'AB Kone'),
+    ])
+    expect(rows).toEqual([
+      { cardOwnerId: '1', name: '806-007-09-0103' },
+      { cardOwnerId: '3', name: '806-007-01-0401' },
+    ])
+  })
+})
+
+describe('getCardsByRentalObjects', () => {
+  afterEach(mirror.reset)
+
+  it('fetches mirrored owners with idfilter and re-resolves suspects by name', async () => {
+    mirror.replaceAll([
+      { cardOwnerId: 'o1', name: '101-001-01-0001' },
+      { cardOwnerId: 'o1a', name: '101-001-01-0001a' },
+      { cardOwnerId: 'o2', name: '101-001-01-0002' },
+      { cardOwnerId: 'o3', name: '101-001-01-0003' },
+    ])
+    const replaceSpy = jest.spyOn(mirror, 'replaceForRentalObject')
+    const searchSpy = jest
+      .spyOn(daxAdapter, 'searchCardOwners')
+      .mockImplementation(async (params) => {
+        if (params.idfilter) {
+          // o2 missing, o3 archived -> both suspects
+          return [
+            owner('o1', '101-001-01-0001', { cards: [card('c1')] as never }),
+            owner('o1a', '101-001-01-0001a', { cards: [card('c1a')] as never }),
+            owner('o3', '101-001-01-0003', {
+              state: 'Archived',
+              cards: [card('old')] as never,
+            }),
+          ]
+        }
+        if (params.nameFilter === '101-001-01-0002') {
+          return [
+            owner('o2-new', '101-001-01-0002', {
+              cards: [card('c2')] as never,
+            }),
+          ]
+        }
+        if (params.nameFilter === '101-001-01-0003') return []
+        return []
+      })
+
+    const { cards: result, unresolved } =
+      await cardsAdapter.getCardsByRentalObjects([
+        '101-001-01-0001',
+        '101-001-01-0002',
+        '101-001-01-0003',
+        '101-001-01-0004',
+      ])
+
+    expect(result['101-001-01-0001'].map((c) => c.cardId).sort()).toEqual([
+      'c1',
+      'c1a',
+    ])
+    expect(result['101-001-01-0002'].map((c) => c.cardId)).toEqual(['c2'])
+    expect(result['101-001-01-0003']).toEqual([])
+    // Not in the mirror: no tags, and no DAX lookup
+    expect(result['101-001-01-0004']).toEqual([])
+    expect(unresolved).toEqual([])
+    expect(
+      searchSpy.mock.calls.some(([p]) => p.nameFilter === '101-001-01-0004')
+    ).toBe(false)
+
+    const idCalls = searchSpy.mock.calls.filter(([p]) => p.idfilter)
+    expect(idCalls).toHaveLength(1)
+    expect(idCalls[0][0].idfilter!.split(',').sort()).toEqual([
+      'o1',
+      'o1a',
+      'o2',
+      'o3',
+    ])
+
+    const refreshed = replaceSpy.mock.calls.map(([code]) => code).sort()
+    expect(refreshed).toEqual(['101-001-01-0002', '101-001-01-0003'])
+    expect(replaceSpy).toHaveBeenCalledWith('101-001-01-0002', [
+      { cardOwnerId: 'o2-new', name: '101-001-01-0002' },
+    ])
+  })
+})
+
+describe('getCardsByRentalObjects failures', () => {
+  afterEach(mirror.reset)
+
+  it('reports objects as unresolved when the idfilter chunk fails, without fan-out', async () => {
+    mirror.replaceAll([
+      { cardOwnerId: 'o1', name: '101-001-01-0001' },
+      { cardOwnerId: 'o2', name: '101-001-01-0002' },
+    ])
+    const searchSpy = jest
+      .spyOn(daxAdapter, 'searchCardOwners')
+      .mockRejectedValue(new Error('DAX down'))
+
+    const { cards, unresolved } = await cardsAdapter.getCardsByRentalObjects([
+      '101-001-01-0001',
+      '101-001-01-0002',
+      '101-001-01-0003',
+    ])
+
+    expect(unresolved.sort()).toEqual(['101-001-01-0001', '101-001-01-0002'])
+    expect(cards['101-001-01-0003']).toEqual([])
+    expect(searchSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps only owners named by exactly the code when re-resolving by name', async () => {
+    mirror.replaceAll([{ cardOwnerId: 'old', name: '807-033-99-P22' }])
+    jest.spyOn(daxAdapter, 'searchCardOwners').mockImplementation(async (p) => {
+      if (p.idfilter) return []
+      return [
+        owner('p22', '807-033-99-P22', { cards: [card('c22')] as never }),
+        owner('p221', '807-033-99-P221', { cards: [card('c221')] as never }),
+        owner('p22a', '807-033-99-p22a', { cards: [card('c22a')] as never }),
+      ]
+    })
+
+    const { cards } = await cardsAdapter.getCardsByRentalObjects([
+      '807-033-99-P22',
+    ])
+
+    expect(cards['807-033-99-P22'].map((c) => c.cardId).sort()).toEqual([
+      'c22',
+      'c22a',
+    ])
+  })
+
+  it('throws MirrorNotReadyError before the first sync and kicks a sync off', async () => {
+    // Stub the sync start: a real one would reach for DAX after the test ends
+    const startSpy = jest
+      .spyOn(sync, 'ensureSyncStarted')
+      .mockImplementation(() => undefined)
+
+    await expect(cardsAdapter.getCardsByRentalObjects(['A'])).rejects.toThrow(
+      mirror.MirrorNotReadyError
+    )
+    expect(startSpy).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('dax-card-owner-mirror', () => {
+  beforeEach(mirror.reset)
+
+  it('throws until the first sync has completed', () => {
+    expect(() => mirror.getOwnersForRentalObjects(['A'])).toThrow(
+      mirror.MirrorNotReadyError
+    )
+  })
+
+  it('matches by exact code or one trailing letter, per object', () => {
+    mirror.replaceAll([
+      { cardOwnerId: 'p', name: '806-007-09-0103' },
+      { cardOwnerId: 'a', name: '806-007-09-0103a' },
+      { cardOwnerId: 'x', name: '806-007-09-01030' },
+      { cardOwnerId: 'q', name: '104-012-01-210A' },
+    ])
+    const m = mirror.getOwnersForRentalObjects([
+      '806-007-09-0103',
+      '104-012-01-210A',
+      'ZZZ',
+    ])
+    expect(
+      m.map((r) => `${r.rentalObjectCode}:${r.cardOwnerId}`).sort()
+    ).toEqual(['104-012-01-210A:q', '806-007-09-0103:a', '806-007-09-0103:p'])
+    mirror.replaceForRentalObject('806-007-09-0103', [
+      { cardOwnerId: 'n', name: '806-007-09-0103' },
+    ])
+    expect(
+      mirror
+        .getOwnersForRentalObjects(['806-007-09-0103'])
+        .map((r) => r.cardOwnerId)
+    ).toEqual(['n'])
+    expect(mirror.getState().count).toBe(3)
+  })
+})

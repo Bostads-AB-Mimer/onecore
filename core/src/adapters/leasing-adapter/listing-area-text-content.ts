@@ -4,14 +4,16 @@ import { z } from 'zod'
 
 import { AdapterResult } from '../types'
 import config from '../../common/config'
-
-// The response.status === 404/409 branches below rely on
-// axios.defaults.validateStatus being set process-wide in
-// leasing-adapter/index.ts (status < 500 resolves instead of throwing), so
-// this file must be imported via the leasing-adapter folder index for that
-// side effect to run.
+import { mapLeasingResponse } from './map-leasing-response'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
+
+// Error codes:
+//   'bad-request'    leasing rejected the request body (400)
+//   'not-found'      no text content for the market area (404)
+//   'conflict'       text content already exists for the market area (409)
+//   'request-failed' leasing answered with an unexpected status, or the
+//                    request itself failed (5xx, network error)
 
 type ListingAreaTextContent = z.infer<
   typeof leasing.v1.ListingAreaTextContentSchema
@@ -24,27 +26,25 @@ type UpdateListingAreaTextContentRequest = z.infer<
 >
 
 const listListingAreaTextContent = async (): Promise<
-  AdapterResult<ListingAreaTextContent[], 'unknown'>
+  AdapterResult<ListingAreaTextContent[], 'request-failed'>
 > => {
   try {
     const response = await axios.get<{
       content: ListingAreaTextContent[]
     }>(`${tenantsLeasesServiceUrl}/listing-area-text-content`)
 
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    return { ok: false, err: 'unknown' }
+    return mapLeasingResponse(response, 200, {}, (body) => body.content)
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.listListingAreaTextContent')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'request-failed' }
   }
 }
 
 const getListingAreaTextContentByMarketAreaCode = async (
   marketAreaCode: string
-): Promise<AdapterResult<ListingAreaTextContent, 'not-found' | 'unknown'>> => {
+): Promise<
+  AdapterResult<ListingAreaTextContent, 'not-found' | 'request-failed'>
+> => {
   try {
     const response = await axios.get<{
       content: ListingAreaTextContent
@@ -52,51 +52,55 @@ const getListingAreaTextContentByMarketAreaCode = async (
       `${tenantsLeasesServiceUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`
     )
 
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'unknown' }
+    return mapLeasingResponse(
+      response,
+      200,
+      { 404: 'not-found' },
+      (body) => body.content
+    )
   } catch (err) {
     logger.error(
       { err },
       'leasing-adapter.getListingAreaTextContentByMarketAreaCode'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'request-failed' }
   }
 }
 
 const createListingAreaTextContent = async (
   data: CreateListingAreaTextContentRequest
-): Promise<AdapterResult<ListingAreaTextContent, 'conflict' | 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    ListingAreaTextContent,
+    'bad-request' | 'conflict' | 'request-failed'
+  >
+> => {
   try {
     const response = await axios.post<{
       content: ListingAreaTextContent
     }>(`${tenantsLeasesServiceUrl}/listing-area-text-content`, data)
 
-    if (response.status === 201) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 409) {
-      return { ok: false, err: 'conflict' }
-    }
-
-    return { ok: false, err: 'unknown' }
+    return mapLeasingResponse(
+      response,
+      201,
+      { 400: 'bad-request', 409: 'conflict' },
+      (body) => body.content
+    )
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.createListingAreaTextContent')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'request-failed' }
   }
 }
 
 const updateListingAreaTextContent = async (
   marketAreaCode: string,
   data: UpdateListingAreaTextContentRequest
-): Promise<AdapterResult<ListingAreaTextContent, 'not-found' | 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    ListingAreaTextContent,
+    'bad-request' | 'not-found' | 'request-failed'
+  >
+> => {
   try {
     const response = await axios.put<{
       content: ListingAreaTextContent
@@ -105,41 +109,35 @@ const updateListingAreaTextContent = async (
       data
     )
 
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'unknown' }
+    return mapLeasingResponse(
+      response,
+      200,
+      { 400: 'bad-request', 404: 'not-found' },
+      (body) => body.content
+    )
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.updateListingAreaTextContent')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'request-failed' }
   }
 }
 
 const deleteListingAreaTextContent = async (
   marketAreaCode: string
-): Promise<AdapterResult<void, 'not-found' | 'unknown'>> => {
+): Promise<AdapterResult<void, 'not-found' | 'request-failed'>> => {
   try {
     const response = await axios.delete(
       `${tenantsLeasesServiceUrl}/listing-area-text-content/${encodeURIComponent(marketAreaCode)}`
     )
 
-    if (response.status === 200) {
-      return { ok: true, data: undefined }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'unknown' }
+    return mapLeasingResponse(
+      response,
+      200,
+      { 404: 'not-found' },
+      () => undefined
+    )
   } catch (err) {
     logger.error({ err }, 'leasing-adapter.deleteListingAreaTextContent')
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'request-failed' }
   }
 }
 

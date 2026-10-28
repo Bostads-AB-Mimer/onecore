@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { useToast } from '@/shared/hooks/useToast'
+import { getIdRange } from '@/shared/lib/selectRange'
 import type { EmailRecipient } from '@/shared/ui/EmailModal'
 import type { SmsRecipient } from '@/shared/ui/SmsModal'
 
@@ -49,6 +50,8 @@ export interface UseBulkMessagingReturn {
 
   // Selection actions
   toggleSelection: (id: string) => void
+  /** Select every item between the last clicked item and `id` (shift-click) */
+  selectRange: (id: string) => void
   toggleSelectAll: () => void
   clearSelection: () => void
   isSelected: (id: string) => boolean
@@ -91,6 +94,8 @@ export function useBulkMessaging<TItem>({
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [allResultsSelected, setAllResultsSelected] = useState(false)
+  // Anchor for shift-click range selection: the last individually clicked item
+  const lastClickedIdRef = useRef<string | null>(null)
 
   // Modal state
   const [showSmsModal, setShowSmsModal] = useState(false)
@@ -110,14 +115,32 @@ export function useBulkMessaging<TItem>({
 
   // Toggle single item selection
   const toggleSelection = useCallback((id: string) => {
+    lastClickedIdRef.current = id
     setAllResultsSelected(false)
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     )
   }, [])
 
+  // Select the range between the last clicked item and `id` on the current
+  // page. Always selects (never deselects), like shift-click in Gmail/Finder.
+  const selectRange = useCallback(
+    (id: string) => {
+      const range = getIdRange(
+        items.map(getItemId),
+        lastClickedIdRef.current,
+        id
+      )
+      lastClickedIdRef.current = id
+      setAllResultsSelected(false)
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...range])))
+    },
+    [items, getItemId]
+  )
+
   // Toggle select all (selects ALL results, not just current page)
   const toggleSelectAll = useCallback(() => {
+    lastClickedIdRef.current = null
     if (allResultsSelected || selectedIds.length > 0) {
       setSelectedIds([])
       setAllResultsSelected(false)
@@ -129,6 +152,7 @@ export function useBulkMessaging<TItem>({
 
   // Clear all selection
   const clearSelection = useCallback(() => {
+    lastClickedIdRef.current = null
     setSelectedIds([])
     setAllResultsSelected(false)
   }, [])
@@ -358,6 +382,7 @@ export function useBulkMessaging<TItem>({
 
     // Selection actions
     toggleSelection,
+    selectRange,
     toggleSelectAll,
     clearSelection,
     isSelected,

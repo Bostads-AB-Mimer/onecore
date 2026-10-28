@@ -4,7 +4,11 @@
 
 export { useRentalObjectSubtypes } from './hooks/useRentalObjectSubtypes'
 export { useTreeSelectionState } from './hooks/useTreeSelectionState'
-export { LEVEL_LABELS, RENTAL_OBJECT_TYPE_LABELS } from './model/labels'
+export {
+  LEVEL_LABELS,
+  RENTAL_OBJECT_TYPE_LABELS,
+  SHARE_LABELS,
+} from './model/labels'
 export type {
   PropertyTreeLevel,
   PropertyTreeNode,

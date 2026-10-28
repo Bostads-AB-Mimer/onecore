@@ -23,6 +23,7 @@ import z from 'zod'
 import {
   GetLeaseOptionsSchema,
   GetLeasesOptionsSchema,
+  LeaseBatchRequestBody,
   mapLease,
   Lease as LeaseSchema,
 } from './schemas/lease'
@@ -1268,6 +1269,74 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  /**
+   * @swagger
+   * /leases/batch:
+   *   post:
+   *     summary: Get multiple leases by id
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves leases for a batch of lease ids in a single call.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - leaseIds
+   *             properties:
+   *               leaseIds:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 minItems: 1
+   *     responses:
+   *       '200':
+   *         description: Successful response with the requested leases
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Lease'
+   *       '400':
+   *         description: Invalid request body
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/leases/batch',
+    parseRequestBody(LeaseBatchRequestBody),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { leaseIds } = ctx.request.body as z.infer<
+        typeof LeaseBatchRequestBody
+      >
+
+      try {
+        const leases = await leasingAdapter.getLeasesBatch(leaseIds)
+
+        ctx.status = 200
+        ctx.body = {
+          content: leases.map(mapLease),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(
+          { err, metadata },
+          'Error fetching lease batch from leasing'
+        )
+        ctx.status = 500
+      }
+    }
+  )
 
   /**
    * @swagger

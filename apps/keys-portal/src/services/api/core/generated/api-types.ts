@@ -127,8 +127,12 @@ export interface paths {
         200: {
           content: never
         }
-        /** @description Unauthorized */
+        /** @description Unauthorized, or the token is expired or can't be verified */
         401: {
+          content: never
+        }
+        /** @description Keycloak's signing keys can't be fetched, so the token can't be verified */
+        503: {
           content: never
         }
       }
@@ -177,7 +181,7 @@ export interface paths {
         401: {
           content: never
         }
-        /** @description Forbidden — insufficient permissions to query role members */
+        /** @description Forbidden — the user lacks the api-access role */
         403: {
           content: never
         }
@@ -189,14 +193,180 @@ export interface paths {
         500: {
           content: never
         }
-        /** @description Keycloak unreachable */
+        /** @description Keycloak's admin API is unreachable, so the users can't be listed */
         502: {
+          content: never
+        }
+        /** @description Keycloak's signing keys can't be fetched, so the token can't be verified */
+        503: {
           content: never
         }
       }
     }
   }
   openapi: {}
+  '/release-notes': {
+    /**
+     * List release notes
+     * @description Pinned notes first, then newest. Open to every authenticated user.
+     * `includeDrafts` is honoured only for callers holding the
+     * `release-notes:write` realm role; it is ignored otherwise.
+     * `capabilities.canManage` tells the client whether to show admin UI.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Only notes concerning this app */
+          app?:
+            | 'general'
+            | 'property-tree'
+            | 'keys-portal'
+            | 'internal-portal'
+            | 'mina-sidor'
+            | 'sok-ledigt'
+            | 'odoo'
+            | 'core'
+            | 'leasing'
+            | 'property'
+            | 'work-order'
+            | 'keys'
+            | 'communication'
+            | 'contacts'
+            | 'inspection'
+            | 'economy'
+          /** @description Include drafts and scheduled notes (requires release-notes:write) */
+          includeDrafts?: boolean
+        }
+      }
+      responses: {
+        /** @description List of release notes */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['ReleaseNote'][]
+              capabilities: components['schemas']['ReleaseNoteCapabilities']
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create a release note
+     * @description Requires the `release-notes:write` realm role. Omit `publishedAt`
+     * (or pass null) to save a draft. `createdBy` is taken from the token.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateReleaseNote']
+        }
+      }
+      responses: {
+        /** @description The created release note */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ReleaseNote']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Caller lacks the `release-notes:write` role */
+        403: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/release-notes/{id}': {
+    /**
+     * Update a release note
+     * @description Requires the `release-notes:write` realm role. Only the supplied
+     * fields change. Pass `publishedAt: null` to unpublish.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateReleaseNote']
+        }
+      }
+      responses: {
+        /** @description The updated release note */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ReleaseNote']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Caller lacks the `release-notes:write` role */
+        403: {
+          content: never
+        }
+        /** @description Release note not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Delete a release note
+     * @description Requires the `release-notes:write` realm role.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Release note deleted */
+        204: {
+          content: never
+        }
+        /** @description Caller lacks the `release-notes:write` role */
+        403: {
+          content: never
+        }
+        /** @description Release note not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   security: {}
   '/sendBulkSms': {
     /**
@@ -491,20 +661,30 @@ export interface paths {
       }
     }
   }
-  '/listing-area-text-content': {
+  '/listing-text-content/{rentalObjectCode}': {
     /**
-     * List listing area text content
-     * @description Fetch the listing text content for all market areas.
+     * Get listing text content by rental object code
+     * @description Fetch the listing text content for a specific rental object.
      */
     get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to fetch text content for. */
+          rentalObjectCode: string
+        }
+      }
       responses: {
-        /** @description List of listing area text content objects */
+        /** @description Listing text content object */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['ListingAreaTextContent'][]
+              content?: components['schemas']['ListingTextContent']
             }
           }
+        }
+        /** @description Listing text content not found */
+        404: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -513,21 +693,27 @@ export interface paths {
       }
     }
     /**
-     * Create listing area text content
-     * @description Create new listing text content for a market area.
+     * Update listing text content
+     * @description Update existing listing text content.
      */
-    post: {
+    put: {
+      parameters: {
+        path: {
+          /** @description The rental object code of the listing text content to update. */
+          rentalObjectCode: string
+        }
+      }
       requestBody: {
         content: {
-          'application/json': components['schemas']['CreateListingAreaTextContentRequest']
+          'application/json': components['schemas']['UpdateListingTextContentRequest']
         }
       }
       responses: {
-        /** @description Listing area text content created successfully */
-        201: {
+        /** @description Listing text content updated successfully */
+        200: {
           content: {
             'application/json': {
-              content?: components['schemas']['ListingAreaTextContent']
+              content?: components['schemas']['ListingTextContent']
             }
           }
         }
@@ -535,7 +721,68 @@ export interface paths {
         400: {
           content: never
         }
-        /** @description Listing area text content already exists for market area code */
+        /** @description Listing text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Delete listing text content
+     * @description Delete listing text content.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The rental object code of the listing text content to delete. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Listing text content deleted successfully */
+        200: {
+          content: never
+        }
+        /** @description Listing text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/listing-text-content': {
+    /**
+     * Create listing text content
+     * @description Create new listing text content for a rental object.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateListingTextContentRequest']
+        }
+      }
+      responses: {
+        /** @description Listing text content created successfully */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingTextContent']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Listing text content already exists for rental object code */
         409: {
           content: never
         }
@@ -546,94 +793,579 @@ export interface paths {
       }
     }
   }
-  '/listing-area-text-content/{marketAreaCode}': {
+  '/vacant-parkingspaces': {
     /**
-     * Get listing area text content by market area code
-     * @description Fetch the listing text content for a specific market area.
+     * Get all vacant parking spaces
+     * @description Retrieves a list of all vacant parking spaces.
+     */
+    get: {
+      responses: {
+        /** @description A list of vacant parking spaces. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                rentalObjectCode?: string
+                address?: string
+                rent?: {
+                  amount?: number
+                }
+                propertyCaption?: string
+                propertyCode?: string
+                residentialAreaCode?: string
+                residentialAreaCaption?: string
+                objectTypeCaption?: string
+                objectTypeCode?: string
+                /** Format: date-time */
+                vacantFrom?: string
+                districtCaption?: string
+                districtCode?: string
+                braArea?: number
+                /**
+                 * @description Whether listing text content exists for the
+                 * parking space. Omitted if the text content
+                 * lookup in leasing failed.
+                 */
+                hasListingTextContent?: boolean
+              }[]
+            }
+          }
+        }
+        /** @description Internal server error. Failed to retrieve vacant parking spaces. */
+        500: {
+          content: {
+            'application/json': {
+              /** @description Error message. */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/rental-objects/by-code/{rentalObjectCode}': {
+    /**
+     * Get a rental object by code
+     * @description Fetches a rental object by Rental Object Code.
      */
     get: {
       parameters: {
         path: {
-          /** @description The market area code to fetch text content for. */
-          marketAreaCode: string
+          /** @description The code of the rental object to fetch. */
+          rentalObjectCode: string
         }
       }
       responses: {
-        /** @description Listing area text content object */
+        /** @description Successfully retrieved the rental object. */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['ListingAreaTextContent']
+              content?: {
+                rentalObjectCode?: string
+                address?: string
+                rent?: {
+                  amount?: number
+                }
+                propertyCaption?: string
+                propertyCode?: string
+                residentialAreaCode?: string
+                residentialAreaCaption?: string
+                objectTypeCaption?: string
+                objectTypeCode?: string
+                /** Format: date-time */
+                vacantFrom?: string
+                districtCaption?: string
+                districtCode?: string
+                braArea?: number
+              }[]
             }
           }
         }
-        /** @description Listing area text content not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
+        /** @description Internal server error. Failed to fetch rental object. */
         500: {
-          content: never
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
         }
       }
     }
+  }
+  '/rental-objects/by-code/{rentalObjectCode}/availability': {
     /**
-     * Update listing area text content
-     * @description Update existing listing text content for a market area.
+     * Get availability for a rental object
+     * @description Fetches availability for a rental object by Rental Object Code.
      */
-    put: {
+    get: {
       parameters: {
         path: {
-          /** @description The market area code of the listing text content to update. */
-          marketAreaCode: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['UpdateListingAreaTextContentRequest']
+          /** @description The rental object code of the availability to fetch. */
+          rentalObjectCode: string
         }
       }
       responses: {
-        /** @description Listing area text content updated successfully */
+        /** @description Successfully retrieved the rental object availability. */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['ListingAreaTextContent']
+              content?: {
+                rentalObjectCode?: string
+                /** Format: date-time */
+                vacantFrom?: string | null
+                rent?: {
+                  amount?: number
+                  vat?: number
+                  rows?: Record<string, never>[]
+                }
+              }
             }
           }
         }
-        /** @description Invalid request body */
-        400: {
-          content: never
+        /** @description Not found. The availability of the specified rental object was not found. */
+        404: {
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
         }
-        /** @description Listing area text content not found */
+        /** @description Internal server error. Failed to fetch rental object availability. */
+        500: {
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/rental-objects/by-code/{rentalObjectCode}/rent': {
+    /**
+     * Get rent for a rental object
+     * @description Fetches the rental object's configured rent from Tenfast, independent of any lease. Works for vacant objects.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to fetch rent for. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the rental object rent. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectRentInfo']
+            }
+          }
+        }
+        /** @description Not found. The specified rental object was not found. */
         404: {
           content: never
         }
-        /** @description Internal server error */
+        /** @description Internal server error. Failed to fetch rental object rent. */
         500: {
           content: never
         }
       }
     }
+  }
+  '/rental-objects/by-code/{rentalObjectCode}/rent-legacy': {
     /**
-     * Delete listing area text content
-     * @description Delete listing area text content.
+     * Get legacy (Xpand) rent for a rental object
+     * @description Fetches the rental object's rent rows from Xpand, converted to monthly amounts. Used to compare against Tenfast during the transition.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to fetch legacy rent for. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the legacy rental object rent. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectRentInfo']
+            }
+          }
+        }
+        /** @description Not found. No rent rows exist in Xpand for the specified rental object. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. Failed to fetch legacy rental object rent. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/availabilities': {
+    /**
+     * Get availabilities for rental objects
+     * @description Fetches availabilities for rental objects by Rental Object Codes.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @description Array of rental object codes to include.
+             * @example [
+             *   "ABC123",
+             *   "DEF456",
+             *   "GHI789"
+             * ]
+             */
+            rentalObjectCodes?: string[]
+          }
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the rental object availabilities. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                rentalObjectCode?: string
+                /** Format: date-time */
+                vacantFrom?: string | null
+                rent?: {
+                  amount?: number
+                  vat?: number
+                  rows?: Record<string, never>[]
+                }
+              }[]
+            }
+          }
+        }
+        /** @description Not found. The availability of the specified rental object was not found. */
+        404: {
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error. Failed to fetch rental object availabilities. */
+        500: {
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/listings': {
+    /**
+     * Get listings
+     * @description Retrieves a list of listings.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The listing category, either PARKING_SPACE, APARTMENT or STORAGE. */
+          listingCategory?: string
+          /** @description true for published listings, false for unpublished listings. */
+          published?: boolean
+          /** @description The rental rule for the listings, either SCORED or NON_SCORED. */
+          rentalRule?: string
+          /** @description A contact code to filter out listings that are not valid to rent for the contact. */
+          validToRentForContactCode?: string
+          /** @description A Rental Object Code to filter the listings. */
+          rentalObjectCode?: string
+        }
+      }
+      responses: {
+        /** @description Successful response with the requested list of listings. */
+        200: {
+          content: {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/listings/{listingId}': {
+    /**
+     * Delete a Listing by ID
+     * @description Deletes a listing by it's ID.
      */
     delete: {
       parameters: {
         path: {
-          /** @description The market area code of the listing text content to delete. */
-          marketAreaCode: string
+          /** @description ID of the listing to delete. */
+          listingId: number
         }
       }
       responses: {
-        /** @description Listing area text content deleted successfully */
+        /** @description Successfully deleted listing. */
         200: {
           content: never
         }
-        /** @description Listing area text content not found */
+        /** @description Conflict. */
+        409: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/listings/{listingId}/status': {
+    /**
+     * Update a listings status by ID
+     * @description Updates a listing status by it's ID.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description ID of the listing to delete. */
+          listingId: number
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': Record<string, never>
+        }
+      }
+      responses: {
+        /** @description Successfully updated listing. */
+        200: {
+          content: never
+        }
+        /** @description Listing not found. */
         404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/listings/{listingId}/offers': {
+    /**
+     * Create an offer for a listing
+     * @description Creates an offer for the specified listing.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the listing to create an offer for. */
+          listingId: string
+        }
+      }
+      responses: {
+        /** @description Offer creation successful. */
+        201: {
+          content: never
+        }
+        /** @description No eligible applicant found for the listing. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. Failed to create the offer. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/listings/{listingId}/applicants/details': {
+    /**
+     * Get listing by ID with detailed applicants
+     * @description Retrieves a listing by ID along with detailed information about its applicants.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the listing to fetch along with detailed applicant information. */
+          listingId: string
+        }
+      }
+      responses: {
+        /** @description Successful retrieval of the listing with detailed applicant information. */
+        200: {
+          content: {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/listings/{id}': {
+    /**
+     * Get listing by ID
+     * @description Retrieves details of a listing based on the provided ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the listing to retrieve. */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Successful response with the requested listing details. */
+        200: {
+          content: {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/listings-with-applicants': {
+    /**
+     * Get listings with applicants
+     * @description Retrieves a list of listings along with their associated applicants.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filters listings by one of the above types. Must be one of the specified values. */
+          type?: 'published' | 'ready-for-offer' | 'offered' | 'historical'
+        }
+      }
+      responses: {
+        /** @description Successful response with listings and their applicants. */
+        200: {
+          content: {
+            'application/json': Record<string, never>[]
+          }
+        }
+        /** @description Internal server error. Failed to retrieve listings with applicants. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/listings/batch': {
+    /**
+     * Create multiple listings
+     * @description Create multiple listings in a single request.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            listings: {
+              rentalObjectCode: string
+              /** Format: date-time */
+              publishedFrom: string
+              /** Format: date-time */
+              publishedTo: string
+              /** @enum {string} */
+              status:
+                | 'ACTIVE'
+                | 'INACTIVE'
+                | 'CLOSED'
+                | 'ASSIGNED'
+                | 'EXPIRED'
+                | 'NO_APPLICANTS'
+              /** @enum {string} */
+              rentalRule: 'SCORED' | 'NON_SCORED'
+              /** @enum {string} */
+              listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+            }[]
+          }
+        }
+      }
+      responses: {
+        /** @description All listings created successfully. */
+        201: {
+          content: {
+            'application/json': {
+              content?: Record<string, never>[]
+            }
+          }
+        }
+        /** @description Partial success. Some listings created, some failed. */
+        207: {
+          content: never
+        }
+        /** @description Bad request. Invalid input data. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. Failed to create listings. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/building-managers': {
+    /**
+     * Get all building managers
+     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
+     */
+    get: {
+      responses: {
+        /** @description List of building managers */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                code?: string
+                name?: string
+                district?: string
+              }[]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/for-csc': {
+    /**
+     * Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
+     * @description Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
+     */
+    get: {
+      responses: {
+        /** @description Successfully retrieved upcoming move-ins */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CustomerScoreCardInfoSchema'][]
+              _meta?: Record<string, never>
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
           content: never
         }
         /** @description Internal server error */
@@ -643,39 +1375,304 @@ export interface paths {
       }
     }
   }
-  '/comments/{targetType}/thread/{targetId}/{commentId}': {
+  '/leases/search': {
     /**
-     * Update a comment in a comment thread
-     * @description Update the text and/or type of an existing comment in the comment
-     * thread identified by targetType/targetId and the comment id.
+     * Search and filter leases
+     * @description Search leases with comprehensive filtering options.
      */
-    put: {
+    get: {
       parameters: {
-        path: {
-          /** @description The object type that the comment thread belongs to. */
-          targetType: string
-          /** @description The object id that the comment thread belongs to. */
-          targetId: number
-          /** @description The unique ID of the comment to update. */
-          commentId: number
+        query?: {
+          /** @description Free-text search (contract ID, PNR, contact code) */
+          q?: string
+          /** @description Search by tenant name */
+          name?: string
+          /** @description Search by rental object address */
+          address?: string
+          /** @description Object types (bostad, parkering, lokal, ovrigt) */
+          objectType?: string[]
+          /** @description Contract status filter */
+          status?: (
+            | 'current'
+            | 'active'
+            | 'upcoming'
+            | 'abouttoend'
+            | 'ended'
+            | 'pendingsignature'
+            | 'preliminaryterminated'
+            | 'notsent'
+          )[]
+          /** @description Lease type filter */
+          leaseType?: string[]
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[]
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string
+          /** @description Property/estate names */
+          property?: string[]
+          /** @description Building codes */
+          buildingCodes?: string[]
+          /** @description Area codes (Område) */
+          areaCodes?: string[]
+          /** @description District names */
+          districtNames?: string[]
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
+          buildingManager?: string[]
+          /** @description Page number */
+          page?: number
+          /** @description Items per page */
+          limit?: number
+          /** @description Sort field */
+          sortBy?:
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
+            | 'tenantName'
+          /** @description Sort direction */
+          sortOrder?: 'asc' | 'desc'
         }
       }
+      responses: {
+        /** @description Successfully retrieved lease search results with pagination */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['LeaseSearchResult'][]
+              _meta?: components['schemas']['PaginationMeta']
+              _links?: components['schemas']['PaginationLinks'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/by-rental-object-code/{rentalObjectCode}': {
+    /**
+     * Get leases with related entities for a specific rental object code.
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
+          status?: string
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean
+        }
+        path: {
+          /** @description Rental object code of the building/residence to fetch leases for. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/leases/by-pnr/{pnr}': {
+    /**
+     * Get leases with related entities for a specific Personal Number (PNR)
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
+          status?: string
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean
+        }
+        path: {
+          /** @description Personal Number (PNR) of the individual to fetch leases for. */
+          pnr: string
+        }
+      }
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/leases/by-contact-code/{contactCode}': {
+    /**
+     * Get leases with related entities for a specific contact code
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
+          status?: string
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean
+        }
+        path: {
+          /** @description Contact code of the individual to fetch leases for. */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/leases/export': {
+    /**
+     * Export leases to Excel
+     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string
+          /** @description Search by tenant name */
+          name?: string
+          /** @description Search by rental object address */
+          address?: string
+          /** @description Object types (e.g., residence, parking) */
+          objectType?: string[]
+          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
+          status?: string[]
+          /** @description Lease type filter */
+          leaseType?: string[]
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[]
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string
+          /** @description Property/estate names */
+          property?: string[]
+          /** @description Building codes */
+          buildingCodes?: string[]
+          /** @description Area codes (Område) */
+          areaCodes?: string[]
+          /** @description District names */
+          districtNames?: string[]
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
+          buildingManager?: string[]
+          /** @description Sort field */
+          sortBy?:
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
+            | 'tenantName'
+          /** @description Sort direction */
+          sortOrder?: 'asc' | 'desc'
+        }
+      }
+      responses: {
+        /** @description Excel file download */
+        200: {
+          content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/{id}': {
+    /**
+     * Get lease by ID
+     * @description Retrieves lease details along with related entities based on the provided ID.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean
+        }
+        path: {
+          /** @description The ID of the lease to retrieve. */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Successful response with the requested lease and related entities */
+        200: {
+          content: {
+            'application/json': {
+              data?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/leases/batch': {
+    /**
+     * Get multiple leases by id
+     * @description Retrieves leases for a batch of lease ids in a single call.
+     */
+    post: {
       requestBody: {
         content: {
           'application/json': {
-            /** @enum {string} */
-            type: 'COMMENT' | 'WARNING' | 'STOP'
-            comment: string
+            leaseIds: string[]
           }
         }
       }
       responses: {
-        /** @description The updated comment */
+        /** @description Successful response with the requested leases */
         200: {
           content: {
             'application/json': {
-              /** @description The updated comment */
-              content?: Record<string, never>
+              content?: components['schemas']['Lease'][]
             }
           }
         }
@@ -683,11 +1680,141 @@ export interface paths {
         400: {
           content: never
         }
-        /** @description The comment was not found in the given thread */
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/{leaseId}/home-insurance': {
+    /** Get home insurance for a lease */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string
+        }
+      }
+      responses: {
+        /** @description Home insurance retrieved. */
+        200: {
+          content: never
+        }
+        /** @description Lease or home insurance not found. */
         404: {
           content: never
         }
-        /** @description Internal server error */
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+    /** Add home insurance to a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string
+        }
+      }
+      responses: {
+        /** @description Successfully added home insurance. */
+        201: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/{leaseId}/home-insurance/offer': {
+    /** Get home insurance offer for a lease */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string
+        }
+      }
+      responses: {
+        /** @description Home insurance offer retrieved. */
+        200: {
+          content: never
+        }
+        /** @description Lease or rental object not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/{leaseId}/home-insurance/cancel': {
+    /** Cancel home insurance for a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /**
+             * Format: date-time
+             * @description Desired end date for home insurance.
+             */
+            endDate: string
+          }
+        }
+      }
+      responses: {
+        /** @description Home insurance cancelled. */
+        200: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/keys-export': {
+    /**
+     * Export all leases for a property as Excel, enriched with key name(s)
+     * @description Returns an .xlsx file with one row per lease matching the property filter,
+     * enriched with the key name(s) from the keys service.
+     * Optional buildingCode filter narrows to a single building.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Property designation (fastighetsbeteckning), e.g. "ALLMOGEKULTUREN 1" */
+          property: string
+          buildingCode?: string
+        }
+      }
+      responses: {
+        /** @description Excel file */
+        200: {
+          content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Server error */
         500: {
           content: never
         }
@@ -776,6 +1903,7 @@ export interface paths {
             | 'address'
             | 'objectType'
             | 'rentalObjectCode'
+            | 'tenantName'
           /** @description Sort direction */
           sortOrder?: 'asc' | 'desc'
         }
@@ -1813,1046 +2941,39 @@ export interface paths {
       }
     }
   }
-  '/leases/keys-export': {
+  '/comments/{targetType}/thread/{targetId}/{commentId}': {
     /**
-     * Export all leases for a property as Excel, enriched with key name(s)
-     * @description Returns an .xlsx file with one row per lease matching the property filter,
-     * enriched with the key name(s) from the keys service.
-     * Optional buildingCode filter narrows to a single building.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description Property designation (fastighetsbeteckning), e.g. "ALLMOGEKULTUREN 1" */
-          property: string
-          buildingCode?: string
-        }
-      }
-      responses: {
-        /** @description Excel file */
-        200: {
-          content: {
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/building-managers': {
-    /**
-     * Get all building managers
-     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
-     */
-    get: {
-      responses: {
-        /** @description List of building managers */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                code?: string
-                name?: string
-                district?: string
-              }[]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/for-csc': {
-    /**
-     * Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
-     * @description Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
-     */
-    get: {
-      responses: {
-        /** @description Successfully retrieved upcoming move-ins */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['CustomerScoreCardInfoSchema'][]
-              _meta?: Record<string, never>
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/search': {
-    /**
-     * Search and filter leases
-     * @description Search leases with comprehensive filtering options.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, PNR, contact code) */
-          q?: string
-          /** @description Search by tenant name */
-          name?: string
-          /** @description Search by rental object address */
-          address?: string
-          /** @description Object types (bostad, parkering, lokal, ovrigt) */
-          objectType?: string[]
-          /** @description Contract status filter */
-          status?: (
-            | 'current'
-            | 'active'
-            | 'upcoming'
-            | 'abouttoend'
-            | 'ended'
-            | 'pendingsignature'
-            | 'preliminaryterminated'
-            | 'notsent'
-          )[]
-          /** @description Lease type filter */
-          leaseType?: string[]
-          /** @description Parking space type filter */
-          parkingSpaceType?: string[]
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string
-          /** @description Property/estate names */
-          property?: string[]
-          /** @description Building codes */
-          buildingCodes?: string[]
-          /** @description Area codes (Område) */
-          areaCodes?: string[]
-          /** @description District names */
-          districtNames?: string[]
-          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
-          buildingManager?: string[]
-          /** @description Page number */
-          page?: number
-          /** @description Items per page */
-          limit?: number
-          /** @description Sort field */
-          sortBy?:
-            | 'leaseStartDate'
-            | 'lastDebitDate'
-            | 'leaseId'
-            | 'address'
-            | 'objectType'
-            | 'rentalObjectCode'
-          /** @description Sort direction */
-          sortOrder?: 'asc' | 'desc'
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved lease search results with pagination */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['LeaseSearchResult'][]
-              _meta?: components['schemas']['PaginationMeta']
-              _links?: components['schemas']['PaginationLinks'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/by-rental-object-code/{rentalObjectCode}': {
-    /**
-     * Get leases with related entities for a specific rental object code.
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
-          status?: string
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean
-        }
-        path: {
-          /** @description Rental object code of the building/residence to fetch leases for. */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Lease'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: {
-            'application/json': Record<string, never>
-          }
-        }
-      }
-    }
-  }
-  '/leases/by-pnr/{pnr}': {
-    /**
-     * Get leases with related entities for a specific Personal Number (PNR)
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
-          status?: string
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean
-        }
-        path: {
-          /** @description Personal Number (PNR) of the individual to fetch leases for. */
-          pnr: string
-        }
-      }
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Lease'][]
-            }
-          }
-        }
-      }
-    }
-  }
-  '/leases/by-contact-code/{contactCode}': {
-    /**
-     * Get leases with related entities for a specific contact code
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
-          status?: string
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean
-        }
-        path: {
-          /** @description Contact code of the individual to fetch leases for. */
-          contactCode: string
-        }
-      }
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Lease'][]
-            }
-          }
-        }
-      }
-    }
-  }
-  '/leases/export': {
-    /**
-     * Export leases to Excel
-     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          q?: string
-          /** @description Search by tenant name */
-          name?: string
-          /** @description Search by rental object address */
-          address?: string
-          /** @description Object types (e.g., residence, parking) */
-          objectType?: string[]
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: string[]
-          /** @description Lease type filter */
-          leaseType?: string[]
-          /** @description Parking space type filter */
-          parkingSpaceType?: string[]
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string
-          /** @description Property/estate names */
-          property?: string[]
-          /** @description Building codes */
-          buildingCodes?: string[]
-          /** @description Area codes (Område) */
-          areaCodes?: string[]
-          /** @description District names */
-          districtNames?: string[]
-          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
-          buildingManager?: string[]
-          /** @description Sort field */
-          sortBy?:
-            | 'leaseStartDate'
-            | 'lastDebitDate'
-            | 'leaseId'
-            | 'address'
-            | 'objectType'
-            | 'rentalObjectCode'
-          /** @description Sort direction */
-          sortOrder?: 'asc' | 'desc'
-        }
-      }
-      responses: {
-        /** @description Excel file download */
-        200: {
-          content: {
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/{id}': {
-    /**
-     * Get lease by ID
-     * @description Retrieves lease details along with related entities based on the provided ID.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean
-        }
-        path: {
-          /** @description The ID of the lease to retrieve. */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Successful response with the requested lease and related entities */
-        200: {
-          content: {
-            'application/json': {
-              data?: Record<string, never>
-            }
-          }
-        }
-      }
-    }
-  }
-  '/leases/{leaseId}/home-insurance': {
-    /** Get home insurance for a lease */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease. */
-          leaseId: string
-        }
-      }
-      responses: {
-        /** @description Home insurance retrieved. */
-        200: {
-          content: never
-        }
-        /** @description Lease or home insurance not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-    /** Add home insurance to a lease */
-    post: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease. */
-          leaseId: string
-        }
-      }
-      responses: {
-        /** @description Successfully added home insurance. */
-        201: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/{leaseId}/home-insurance/offer': {
-    /** Get home insurance offer for a lease */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease. */
-          leaseId: string
-        }
-      }
-      responses: {
-        /** @description Home insurance offer retrieved. */
-        200: {
-          content: never
-        }
-        /** @description Lease or rental object not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/leases/{leaseId}/home-insurance/cancel': {
-    /** Cancel home insurance for a lease */
-    post: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease. */
-          leaseId: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': {
-            /**
-             * Format: date-time
-             * @description Desired end date for home insurance.
-             */
-            endDate: string
-          }
-        }
-      }
-      responses: {
-        /** @description Home insurance cancelled. */
-        200: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/listings': {
-    /**
-     * Get listings
-     * @description Retrieves a list of listings.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description The listing category, either PARKING_SPACE, APARTMENT or STORAGE. */
-          listingCategory?: string
-          /** @description true for published listings, false for unpublished listings. */
-          published?: boolean
-          /** @description The rental rule for the listings, either SCORED or NON_SCORED. */
-          rentalRule?: string
-          /** @description A contact code to filter out listings that are not valid to rent for the contact. */
-          validToRentForContactCode?: string
-          /** @description A Rental Object Code to filter the listings. */
-          rentalObjectCode?: string
-        }
-      }
-      responses: {
-        /** @description Successful response with the requested list of listings. */
-        200: {
-          content: {
-            'application/json': Record<string, never>
-          }
-        }
-      }
-    }
-  }
-  '/listings/{listingId}': {
-    /**
-     * Delete a Listing by ID
-     * @description Deletes a listing by it's ID.
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description ID of the listing to delete. */
-          listingId: number
-        }
-      }
-      responses: {
-        /** @description Successfully deleted listing. */
-        200: {
-          content: never
-        }
-        /** @description Conflict. */
-        409: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/listings/{listingId}/status': {
-    /**
-     * Update a listings status by ID
-     * @description Updates a listing status by it's ID.
+     * Update a comment in a comment thread
+     * @description Update the text and/or type of an existing comment in the comment
+     * thread identified by targetType/targetId and the comment id.
      */
     put: {
       parameters: {
         path: {
-          /** @description ID of the listing to delete. */
-          listingId: number
+          /** @description The object type that the comment thread belongs to. */
+          targetType: string
+          /** @description The object id that the comment thread belongs to. */
+          targetId: number
+          /** @description The unique ID of the comment to update. */
+          commentId: number
         }
       }
-      requestBody: {
-        content: {
-          'application/json': Record<string, never>
-        }
-      }
-      responses: {
-        /** @description Successfully updated listing. */
-        200: {
-          content: never
-        }
-        /** @description Listing not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/listings/{listingId}/offers': {
-    /**
-     * Create an offer for a listing
-     * @description Creates an offer for the specified listing.
-     */
-    post: {
-      parameters: {
-        path: {
-          /** @description The ID of the listing to create an offer for. */
-          listingId: string
-        }
-      }
-      responses: {
-        /** @description Offer creation successful. */
-        201: {
-          content: never
-        }
-        /** @description No eligible applicant found for the listing. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. Failed to create the offer. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/listings/{listingId}/applicants/details': {
-    /**
-     * Get listing by ID with detailed applicants
-     * @description Retrieves a listing by ID along with detailed information about its applicants.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the listing to fetch along with detailed applicant information. */
-          listingId: string
-        }
-      }
-      responses: {
-        /** @description Successful retrieval of the listing with detailed applicant information. */
-        200: {
-          content: {
-            'application/json': Record<string, never>
-          }
-        }
-      }
-    }
-  }
-  '/listings/{id}': {
-    /**
-     * Get listing by ID
-     * @description Retrieves details of a listing based on the provided ID.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the listing to retrieve. */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Successful response with the requested listing details. */
-        200: {
-          content: {
-            'application/json': Record<string, never>
-          }
-        }
-      }
-    }
-  }
-  '/listings-with-applicants': {
-    /**
-     * Get listings with applicants
-     * @description Retrieves a list of listings along with their associated applicants.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filters listings by one of the above types. Must be one of the specified values. */
-          type?: 'published' | 'ready-for-offer' | 'offered' | 'historical'
-        }
-      }
-      responses: {
-        /** @description Successful response with listings and their applicants. */
-        200: {
-          content: {
-            'application/json': Record<string, never>[]
-          }
-        }
-        /** @description Internal server error. Failed to retrieve listings with applicants. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/listings/batch': {
-    /**
-     * Create multiple listings
-     * @description Create multiple listings in a single request.
-     */
-    post: {
       requestBody: {
         content: {
           'application/json': {
-            listings: {
-              rentalObjectCode: string
-              /** Format: date-time */
-              publishedFrom: string
-              /** Format: date-time */
-              publishedTo: string
-              /** @enum {string} */
-              status:
-                | 'ACTIVE'
-                | 'INACTIVE'
-                | 'CLOSED'
-                | 'ASSIGNED'
-                | 'EXPIRED'
-                | 'NO_APPLICANTS'
-              /** @enum {string} */
-              rentalRule: 'SCORED' | 'NON_SCORED'
-              /** @enum {string} */
-              listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
-            }[]
+            /** @enum {string} */
+            type: 'COMMENT' | 'WARNING' | 'STOP'
+            comment: string
           }
         }
       }
       responses: {
-        /** @description All listings created successfully. */
-        201: {
-          content: {
-            'application/json': {
-              content?: Record<string, never>[]
-            }
-          }
-        }
-        /** @description Partial success. Some listings created, some failed. */
-        207: {
-          content: never
-        }
-        /** @description Bad request. Invalid input data. */
-        400: {
-          content: never
-        }
-        /** @description Internal server error. Failed to create listings. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/vacant-parkingspaces': {
-    /**
-     * Get all vacant parking spaces
-     * @description Retrieves a list of all vacant parking spaces.
-     */
-    get: {
-      responses: {
-        /** @description A list of vacant parking spaces. */
+        /** @description The updated comment */
         200: {
           content: {
             'application/json': {
-              content?: {
-                rentalObjectCode?: string
-                address?: string
-                rent?: {
-                  amount?: number
-                }
-                propertyCaption?: string
-                propertyCode?: string
-                residentialAreaCode?: string
-                residentialAreaCaption?: string
-                objectTypeCaption?: string
-                objectTypeCode?: string
-                /** Format: date-time */
-                vacantFrom?: string
-                districtCaption?: string
-                districtCode?: string
-                braArea?: number
-              }[]
-            }
-          }
-        }
-        /** @description Internal server error. Failed to retrieve vacant parking spaces. */
-        500: {
-          content: {
-            'application/json': {
-              /** @description Error message. */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/rental-objects/by-code/{rentalObjectCode}': {
-    /**
-     * Get a rental object by code
-     * @description Fetches a rental object by Rental Object Code.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the rental object to fetch. */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the rental object. */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                rentalObjectCode?: string
-                address?: string
-                rent?: {
-                  amount?: number
-                }
-                propertyCaption?: string
-                propertyCode?: string
-                residentialAreaCode?: string
-                residentialAreaCaption?: string
-                objectTypeCaption?: string
-                objectTypeCode?: string
-                /** Format: date-time */
-                vacantFrom?: string
-                districtCaption?: string
-                districtCode?: string
-                braArea?: number
-              }[]
-            }
-          }
-        }
-        /** @description Internal server error. Failed to fetch rental object. */
-        500: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/rental-objects/by-code/{rentalObjectCode}/availability': {
-    /**
-     * Get availability for a rental object
-     * @description Fetches availability for a rental object by Rental Object Code.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The rental object code of the availability to fetch. */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the rental object availability. */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                rentalObjectCode?: string
-                /** Format: date-time */
-                vacantFrom?: string | null
-                rent?: {
-                  amount?: number
-                  vat?: number
-                  rows?: Record<string, never>[]
-                }
-              }
-            }
-          }
-        }
-        /** @description Not found. The availability of the specified rental object was not found. */
-        404: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error. Failed to fetch rental object availability. */
-        500: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/rental-objects/by-code/{rentalObjectCode}/rent': {
-    /**
-     * Get rent for a rental object
-     * @description Fetches the rental object's configured rent from Tenfast, independent of any lease. Works for vacant objects.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The rental object code to fetch rent for. */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the rental object rent. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['RentalObjectRentInfo']
-            }
-          }
-        }
-        /** @description Not found. The specified rental object was not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. Failed to fetch rental object rent. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/rental-objects/by-code/{rentalObjectCode}/rent-legacy': {
-    /**
-     * Get legacy (Xpand) rent for a rental object
-     * @description Fetches the rental object's rent rows from Xpand, converted to monthly amounts. Used to compare against Tenfast during the transition.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The rental object code to fetch legacy rent for. */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the legacy rental object rent. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['RentalObjectRentInfo']
-            }
-          }
-        }
-        /** @description Not found. No rent rows exist in Xpand for the specified rental object. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. Failed to fetch legacy rental object rent. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/rental-objects/availabilities': {
-    /**
-     * Get availabilities for rental objects
-     * @description Fetches availabilities for rental objects by Rental Object Codes.
-     */
-    post: {
-      requestBody?: {
-        content: {
-          'application/json': {
-            /**
-             * @description Array of rental object codes to include.
-             * @example [
-             *   "ABC123",
-             *   "DEF456",
-             *   "GHI789"
-             * ]
-             */
-            rentalObjectCodes?: string[]
-          }
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the rental object availabilities. */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                rentalObjectCode?: string
-                /** Format: date-time */
-                vacantFrom?: string | null
-                rent?: {
-                  amount?: number
-                  vat?: number
-                  rows?: Record<string, never>[]
-                }
-              }[]
-            }
-          }
-        }
-        /** @description Not found. The availability of the specified rental object was not found. */
-        404: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error. Failed to fetch rental object availabilities. */
-        500: {
-          content: {
-            'application/json': {
-              /** @description The error message. */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/listing-text-content/{rentalObjectCode}': {
-    /**
-     * Get listing text content by rental object code
-     * @description Fetch the listing text content for a specific rental object.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The rental object code to fetch text content for. */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Listing text content object */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['ListingTextContent']
-            }
-          }
-        }
-        /** @description Listing text content not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-    /**
-     * Update listing text content
-     * @description Update existing listing text content.
-     */
-    put: {
-      parameters: {
-        path: {
-          /** @description The rental object code of the listing text content to update. */
-          rentalObjectCode: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['UpdateListingTextContentRequest']
-        }
-      }
-      responses: {
-        /** @description Listing text content updated successfully */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['ListingTextContent']
+              /** @description The updated comment */
+              content?: Record<string, never>
             }
           }
         }
@@ -2860,33 +2981,7 @@ export interface paths {
         400: {
           content: never
         }
-        /** @description Listing text content not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-    /**
-     * Delete listing text content
-     * @description Delete listing text content.
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description The rental object code of the listing text content to delete. */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Listing text content deleted successfully */
-        200: {
-          content: never
-        }
-        /** @description Listing text content not found */
+        /** @description The comment was not found in the given thread */
         404: {
           content: never
         }
@@ -2897,23 +2992,43 @@ export interface paths {
       }
     }
   }
-  '/listing-text-content': {
+  '/listing-area-text-content': {
     /**
-     * Create listing text content
-     * @description Create new listing text content for a rental object.
+     * List listing area text content
+     * @description Fetch the listing text content for all market areas.
+     */
+    get: {
+      responses: {
+        /** @description List of listing area text content objects */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create listing area text content
+     * @description Create new listing text content for a market area.
      */
     post: {
       requestBody: {
         content: {
-          'application/json': components['schemas']['CreateListingTextContentRequest']
+          'application/json': components['schemas']['CreateListingAreaTextContentRequest']
         }
       }
       responses: {
-        /** @description Listing text content created successfully */
+        /** @description Listing area text content created successfully */
         201: {
           content: {
             'application/json': {
-              content?: components['schemas']['ListingTextContent']
+              content?: components['schemas']['ListingAreaTextContent']
             }
           }
         }
@@ -2921,8 +3036,105 @@ export interface paths {
         400: {
           content: never
         }
-        /** @description Listing text content already exists for rental object code */
+        /** @description Listing area text content already exists for market area code */
         409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/listing-area-text-content/{marketAreaCode}': {
+    /**
+     * Get listing area text content by market area code
+     * @description Fetch the listing text content for a specific market area.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The market area code to fetch text content for. */
+          marketAreaCode: string
+        }
+      }
+      responses: {
+        /** @description Listing area text content object */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update listing area text content
+     * @description Update existing listing text content for a market area.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The market area code of the listing text content to update. */
+          marketAreaCode: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateListingAreaTextContentRequest']
+        }
+      }
+      responses: {
+        /** @description Listing area text content updated successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ListingAreaTextContent']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Listing area text content not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Delete listing area text content
+     * @description Delete listing area text content.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The market area code of the listing text content to delete. */
+          marketAreaCode: string
+        }
+      }
+      responses: {
+        /** @description Listing area text content deleted successfully */
+        200: {
+          content: never
+        }
+        /** @description Listing area text content not found */
+        404: {
           content: never
         }
         /** @description Internal server error */
@@ -3940,6 +4152,68 @@ export interface paths {
       }
     }
   }
+  '/work-orders/{workOrderId}/close-request': {
+    /**
+     * Request, on the tenant's behalf, that a work order be closed
+     * @description Asks for the Odoo work order to be closed. The handler of the case
+     * decides in Odoo; nothing is closed here. Used by Mina sidor via the
+     * .NET API. Staff close with /work-orders/{workOrderId}/close.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The Odoo id of the work order. */
+          workOrderId: string
+        }
+      }
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @description Optional reason from the tenant, shown to the handler. */
+            reason?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Close request recorded. */
+        200: {
+          content: {
+            'application/json': {
+              /** @example Close requested for work order with ID {workOrderId} */
+              message?: string
+            }
+          }
+        }
+        /** @description The request body is malformed, or the reason is longer than 1000 characters. */
+        400: {
+          content: never
+        }
+        /** @description Refused. A request is already pending, or the work order is closed or hidden from Mina sidor. */
+        409: {
+          content: {
+            'application/json': {
+              /** @example close-request-conflict */
+              error?: string
+              /**
+               * @description Why Odoo refused, so the caller can tell the tenant.
+               * @enum {string}
+               */
+              reason?: 'already_pending' | 'closed' | 'hidden'
+            }
+          }
+        }
+        /** @description Internal server error. The work-order service or Odoo failed. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Failed to request close of work order with ID {workOrderId} */
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/work-orders/send-sms': {
     /**
      * Send SMS for a work order
@@ -3953,6 +4227,8 @@ export interface paths {
             phoneNumber?: string
             /** @description The message to be sent via SMS. */
             text?: string
+            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand. */
+            workOrderCode?: string
           }
         }
       }
@@ -4002,6 +4278,8 @@ export interface paths {
             subject?: string
             /** @description The message to be sent in the email. */
             text?: string
+            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand. */
+            workOrderCode?: string
           }
         }
       }
@@ -4032,6 +4310,1926 @@ export interface paths {
               text?: string
             }
           }
+        }
+      }
+    }
+  }
+  '/work-orders/log-my-pages-message': {
+    /**
+     * Log a message published to a tenant's Mina sidor
+     * @description Records a work-order message that was published to Mina sidor without an SMS or email notification. Nothing is sent — the message is already visible to the tenant by existing in Odoo; this only writes the communication log entry. Called by Odoo.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description od-<odoo id> of the errand, e.g. od-12345. */
+            workOrderCode: string
+            /** @description The tenant the message was published to. */
+            contactCode: string
+            /** @description The message body. */
+            text: string
+            /** @description The Odoo user who published the message. */
+            triggeredByUser?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Log entry written. */
+        200: {
+          content: never
+        }
+        /** @description Bad request. Missing or invalid parameters. */
+        400: {
+          content: never
+        }
+        /** @description Failed to write the log entry. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects': {
+    /**
+     * List rental objects of a property or building
+     * @description Returns every rental object (residence, parking space, facility,
+     * other) under one property or one building as flat structure rows
+     * with type, subtype caption, postal address and building/staircase
+     * placement. Provide exactly one of propertyCode or buildingCode.
+     */
+    get: {
+      parameters: {
+        query?: {
+          propertyCode?: string
+          buildingCode?: string
+          /** @description Object types to exclude (repeatable) */
+          exclude?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+        }
+      }
+      responses: {
+        /** @description List of rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/search': {
+    /**
+     * Search rental objects across several scopes
+     * @description Rental objects under ANY of the given scopes — cost centres,
+     * marknadsområden, properties, buildings, trapphus, parkeringsområden —
+     * narrowed by type, subtype and a free-text match on rental id, address
+     * or property name. At least one scope is required, and results are
+     * paginated since a district is thousands of objects.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+          types?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+          subtypes?: string[]
+          q?: string
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Matching rental objects */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSummary'][]
+              totalCount: number
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/details': {
+    /**
+     * Listing-only values for the objects a selection covers
+     * @description Grundhyra, BRA, "annan information av vikt" and anläggnings-ID per
+     * rental id. Separate from the objects themselves so pages that don't
+     * show these never fetch them. Takes the same scopes as the search,
+     * minus the type and subtype filters: the values are looked up by
+     * rental id, so narrowing them would only cost cache hits.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+        }
+      }
+      responses: {
+        /** @description Details per rental id */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectDetails'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-object-subtypes': {
+    /**
+     * List rental object subtype captions
+     * @description Subtype captions grouped by object type, limited to those in use by
+     * operating-company stock. Codes are unique within a type only.
+     */
+    get: {
+      responses: {
+        /** @description List of subtypes */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['RentalObjectSubtype'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/search/export': {
+    /**
+     * Export a rental-object search as Excel
+     * @description Every rental object the search would return, across all pages, as an
+     * .xlsx with the listing values (grundhyra, BRA, annan information,
+     * anläggnings-ID) filled in. Takes the search's scopes and filters;
+     * page and limit are ignored.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+          types?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+          subtypes?: string[]
+          q?: string
+        }
+      }
+      responses: {
+        /** @description Excel file */
+        200: {
+          content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/property-tree': {
+    /**
+     * Get the property tree for one grouping root
+     * @description Properties with their buildings, trapphus, parkeringsområden and
+     * per-type counts, beneath one grouping root. `groups` carries the
+     * intermediate level when the grouping has one (KVV-areas for
+     * costCenter); otherwise properties hang directly off the root.
+     *
+     * Only operating-company stock is returned — Xpand moves sold
+     * properties to a pseudo-company rather than delete-marking them.
+     */
+    get: {
+      parameters: {
+        query: {
+          groupBy: 'costCenter' | 'marketArea' | 'company'
+          /** @description Cost center id (uuid), market area code, or company code */
+          rootId: string
+          /** @description Pass 'false' to omit the rental-object leaves */
+          includeObjects?: 'true' | 'false'
+        }
+      }
+      responses: {
+        /** @description Property tree */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['PropertyTree']
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Root not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/properties/{propertyCode}/kvv-area': {
+    /**
+     * Get the KVV-area (förvaltningsområde) and district of a property
+     * @deprecated
+     * @description Reverse lookup from a property code to the KVV-area it belongs to,
+     * the cost center (distrikt) of that area and the responsible
+     * kvartersvärd (hydrated from Keycloak; `null` if unset or if Keycloak
+     * is unreachable). Used by Odoo to stamp maintenance requests with
+     * their district. 404 when the property has no KVV-area link.
+     *
+     * **Deprecated.** Answers the property default only and ignores
+     * building-level exceptions on split properties. Use
+     * `GET /kvv-areas/resolve` instead. Kept until Odoo has moved over.
+     */
+    get: {
+      parameters: {
+        path: {
+          propertyCode: string
+        }
+      }
+      responses: {
+        /** @description KVV-area, cost center and responsible for the property */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /**
+         * @description Property has no KVV-area link. The body carries
+         * `code: PROPERTY_KVV_AREA_NOT_FOUND` so callers can tell this
+         * apart from a routing 404.
+         */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Set the KVV-area (förvaltningsområde) of a property
+     * @description Sets the KVV-area a property belongs to. Cross-cost-center moves are
+     * allowed without validation. Requires the `property-areas:write` realm
+     * role (see MIM-1788).
+     */
+    put: {
+      parameters: {
+        path: {
+          propertyCode: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['PutPropertyKvvAreaBody']
+        }
+      }
+      responses: {
+        /** @description Property → KVV-area link upserted */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLink']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Missing `property-areas:write` role */
+        403: {
+          content: never
+        }
+        /** @description Property or KVV-area not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/kvv-areas/resolve': {
+    /**
+     * Resolve the KVV-area (förvaltningsområde) and district of a location
+     * @description Location-level lookup for split properties: if the location's
+     * building carries a KVV-area exception, that area wins over the
+     * property's link. Give exactly one of `rentalId` (lägenhet, bilplats,
+     * lokal), `buildingCode` (facilities and building-level errands) or
+     * `propertyCode` (markyta objects and property-level errands). Send
+     * the most specific key you have; the keys are not combined since they
+     * may disagree. The responsible kvartersvärd is hydrated from Keycloak
+     * (`null` if unset or unreachable). This is the per-errand lookup Odoo
+     * should use; `GET /properties/{code}/kvv-area` answers the property
+     * default only.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Rental object id. */
+          rentalId?: string
+          /** @description Building code. */
+          buildingCode?: string
+          /** @description Property code. */
+          propertyCode?: string
+        }
+      }
+      responses: {
+        /** @description KVV-area, cost center and responsible for the location */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /** @description Not exactly one of rentalId, buildingCode or propertyCode was given */
+        400: {
+          content: never
+        }
+        /**
+         * @description Unknown location or no KVV-area resolves. The body carries
+         * `code: KVV_AREA_NOT_FOUND` so callers can tell this apart from
+         * a routing 404.
+         */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/market-areas': {
+    /**
+     * List market areas
+     * @description Returns every market area (Xpand babya, "marknadsområde"). No
+     * filters, no pagination — there are only a few dozen rows.
+     */
+    get: {
+      responses: {
+        /** @description List of market areas */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MarketArea'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/kvv-areas': {
+    /**
+     * List kvv-areas (förvaltningsområden) with cost center and responsible
+     * @description Returns every kvv-area with its cost center (distrikt) and the
+     * responsible kvartersvärd hydrated from Keycloak (`null` if unset or
+     * if Keycloak is unreachable). Repeat `responsibleUserId` to restrict
+     * the list to areas whose responsible is one of the given Keycloak user
+     * ids; omit it to list all areas.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Keycloak user ids (repeatable). Omit to list all areas. */
+          responsibleUserId?: string[]
+        }
+      }
+      responses: {
+        /** @description List of kvv-areas */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KvvAreaWithResponsible'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/kvv-areas/{id}/responsible': {
+    /**
+     * Update the responsible kvartersvärd for a KVV area
+     * @description Requires the `property-areas:write` realm role. The target user (by
+     * `keycloakUserId`) must hold the `property-manager` role in Keycloak;
+     * a 400 is returned otherwise. On success the updated area is returned
+     * with the new responsible user hydrated.
+     */
+    patch: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: uuid */
+            keycloakUserId: string
+          }
+        }
+      }
+      responses: {
+        /** @description Updated KVV area with hydrated responsible user */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PatchedKvvArea']
+            }
+          }
+        }
+        /** @description Invalid body or target user is not a property manager */
+        400: {
+          content: never
+        }
+        /** @description Caller lacks the `property-areas:write` role */
+        403: {
+          content: never
+        }
+        /** @description KVV area not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/buildings': {
+    /**
+     * Get all buildings for a specific property
+     * @description Retrieves all buildings associated with a given property code.
+     * Returns detailed information about each building including its code, name,
+     * construction details, and associated property information.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The code of the property. */
+          propertyCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the buildings. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Building'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/buildings/{id}': {
+    /**
+     * Get detailed information about a specific building
+     * @description Retrieves comprehensive information about a building using its unique building id.
+     * Returns details including construction year, renovation history, insurance information,
+     * and associated property data.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique id of the building */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved building information */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Building']
+            }
+          }
+        }
+        /** @description Building not found */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Building not found */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/buildings/by-building-code/{buildingCode}': {
+    /**
+     * Get building by building code
+     * @description Retrieves building data by building code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the building */
+          buildingCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved building */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Building']
+            }
+          }
+        }
+        /** @description Building not found */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Building not found */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/buildings/by-property-code/{propertyCode}': {
+    /**
+     * Get buildings by property code
+     * @description Retrieves buildings by property code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property to fetch buildings for */
+          propertyCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved buildings */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Building'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/companies': {
+    /**
+     * Get all companies
+     * @description Retrieves companies from property base
+     */
+    get: {
+      responses: {
+        /** @description Successfully retrieved companies */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Company'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/companies/{organizationNumber}': {
+    /**
+     * Get detailed information about a specific company
+     * @description Retrieves comprehensive information about a company using its organization number.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The organization number of the company. */
+          organizationNumber: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved company information */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CompanyDetails']
+            }
+          }
+        }
+        /** @description Company not found */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Company not found */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/residences': {
+    /**
+     * Get residences by building code and (optional) staircase code
+     * @description Retrieves residences by building code and (optional) staircase code
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Code for the building to fetch residences from */
+          buildingCode: string
+          /** @description Code for the staircase to fetch residences from */
+          staircaseCode?: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved residences */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Residence'][]
+            }
+          }
+        }
+        /** @description Missing building code or invalid query parameters */
+        400: {
+          content: {
+            'application/json': {
+              error?: Record<string, never>
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/properties': {
+    /**
+     * Get properties by company code and (optional) tract
+     * @description Retrieves properties by company code and (optional) tract
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The code of the company that owns the properties. */
+          companyCode: string
+          /** @description Optional filter to get properties in a specific tract. */
+          tract?: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved properties */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Property'][]
+            }
+          }
+        }
+        /** @description Missing company code or invalid query parameters */
+        400: {
+          content: {
+            'application/json': {
+              error?: Record<string, never>
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/properties/search': {
+    /**
+     * Search properties
+     * @description Retrieves a list of all real estate properties by name.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The search query. */
+          q?: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved list of properties. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Property'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/properties/{propertyCode}': {
+    /**
+     * Get property by property code
+     * @description Retrieves property by property code
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property */
+          propertyCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved property */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Property']
+            }
+          }
+        }
+        /** @description Property not found */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Property not found */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/residences/by-rental-id/{rentalId}': {
+    /**
+     * Get residence data by residence rental id
+     * @description Retrieves residence data by residence rental id
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Rental id for the residence to fetch */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved residence. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ResidenceDetails']
+            }
+          }
+        }
+        /** @description Residence not found */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Residence not found */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error. Failed to retrieve residence data. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/residences/by-rental-id/{rentalId}/malar-energi-facility-id': {
+    /**
+     * Update or add a residence's Mälarenergi facility id.
+     * @description Forwards to property-base-service which upserts the "Anläggnings ID
+     * Mälarenergi" comment row (cmtex) in Xpand for the residence.
+     */
+    put: {
+      parameters: {
+        path: {
+          rentalId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            malarEnergiFacilityId: string
+          }
+        }
+      }
+      responses: {
+        /** @description The updated Mälarenergi facility id. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                malarEnergiFacilityId?: string
+              }
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: never
+        }
+        /** @description Residence not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/rental-blocks/by-rental-id/{rentalId}': {
+    /**
+     * Get rental blocks by rental ID
+     * @description Retrieves rental blocks by rental ID
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks. */
+          active?: boolean
+        }
+        path: {
+          /** @description Rental id to fetch rental blocks for */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved rental blocks. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalBlock'][]
+            }
+          }
+        }
+        /** @description Rental ID not found */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Rental ID not found */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error. Failed to retrieve rental blocks. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/residences/rental-blocks/export': {
+    /**
+     * Export rental blocks to Excel
+     * @description Generates and downloads an Excel file with all rental blocks matching the filters
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Search term */
+          q?: string
+          /** @description Filter by category (supports multiple values) */
+          kategori?: string[]
+          /** @description Filter by district (supports multiple values) */
+          distrikt?: string[]
+          /** @description Filter by block reason (supports multiple values) */
+          blockReason?: string[]
+          /** @description Filter by property (supports multiple values) */
+          fastighet?: string[]
+          /** @description Filter by start date */
+          fromDateGte?: string
+          /** @description Filter by end date */
+          toDateLte?: string
+          /** @description Filter by active status. true = currently active blocks, false = ended blocks. If omitted, all blocks. */
+          active?: boolean
+        }
+      }
+      responses: {
+        /** @description Excel file download */
+        200: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/rental-blocks/search': {
+    /**
+     * Search rental blocks with server-side filtering
+     * @description Search and filter rental blocks. Searches by rentalId and address.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Search term (searches rentalId, address) */
+          q?: string
+          /** @description Comma-separated fields to search (default rentalId,address,propertyName,blockReason) */
+          fields?: string
+          /** @description Filter by category (Bostad, Bilplats, Lokal, Förråd) - supports multiple values */
+          kategori?: string[]
+          /** @description Filter by district (supports multiple values) */
+          distrikt?: string[]
+          /** @description Filter by block reason (supports multiple values) */
+          blockReason?: string[]
+          /** @description Filter by property code/name (supports multiple values) */
+          fastighet?: string[]
+          /** @description Filter blocks starting on or after this date */
+          fromDateGte?: string
+          /** @description Filter blocks ending on or before this date */
+          toDateLte?: string
+          /** @description Filter by active status. true = currently active blocks, false = ended blocks. If omitted, all blocks. */
+          active?: boolean
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Successfully searched rental blocks */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalBlockWithRentalObject'][]
+              _meta?: {
+                totalRecords?: number
+                page?: number
+                limit?: number
+                count?: number
+              }
+              _links?: {
+                href?: string
+                /** @enum {string} */
+                rel?: 'self' | 'first' | 'last' | 'prev' | 'next'
+              }[]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/rental-blocks/all': {
+    /**
+     * Get all rental blocks (paginated)
+     * @description Retrieves all rental blocks for residences across the system with pagination support
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks. */
+          active?: boolean
+          /** @description Page number (1-indexed) */
+          page?: number
+          /** @description Number of items per page */
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved all rental blocks. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalBlockWithRentalObject'][]
+              _meta?: {
+                totalRecords?: number
+                page?: number
+                limit?: number
+                count?: number
+              }
+              _links?: {
+                href?: string
+                /** @enum {string} */
+                rel?: 'self' | 'first' | 'last' | 'prev' | 'next'
+              }[]
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/residences/rental-blocks/rental-ids': {
+    /**
+     * Rental ids carrying a matching rental block
+     * @description Lean bulk lookup - distinct rental ids only, no pagination or enrichment. Used by Odoo to render the "Spärr skadedjur" badge on every kanban card from a single call.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by block reason caption (supports multiple values) */
+          blockReason?: string[]
+          /** @description true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, all blocks. */
+          active?: boolean
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved rental ids */
+        200: {
+          content: {
+            'application/json': components['schemas']['RentalIdsWithBlockResponse']
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/block-reasons': {
+    /**
+     * Get all block reasons
+     * @description Returns all available block reasons for rental blocks. Used for filtering dropdowns.
+     */
+    get: {
+      responses: {
+        /** @description Successfully retrieved block reasons */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                id?: string
+                caption?: string
+              }[]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/search': {
+    /**
+     * Search residences
+     * @description Searches for residences by rental object id.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (rental object id). */
+          q: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved residences matching the search query. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ResidenceSearchResult'][]
+            }
+          }
+        }
+        /** @description Invalid query provided */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/summary/by-building-code/{buildingCode}': {
+    /**
+     * Get residences by building code, optionally filtered by staircase code.
+     * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description The code of the staircase (optional). */
+          staircaseCode?: string
+        }
+        path: {
+          /** @description The building code of the building. */
+          buildingCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the residences. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ResidenceSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/staircases': {
+    /**
+     * Get staircases for a building
+     * @description Retrieves staircases for a building
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Code for the building to fetch staircases for */
+          buildingCode: string
+          /** @description The code of the staircase (optional). */
+          staircaseCode?: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved staircases. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Staircase'][]
+            }
+          }
+        }
+        /** @description Missing buildingCode */
+        400: {
+          content: {
+            'application/json': {
+              /** @example Missing buildingCode */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/rooms': {
+    /**
+     * Get rooms by rental id.
+     * @description Returns all rooms belonging to a residence.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The rental id of the residence. */
+          rentalId: string
+          /** @description The code of the room (optional). */
+          roomCode?: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the rooms. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Room'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create a room for a residence.
+     * @description Forwards to property-base-service which performs a transactional
+     * 3-table Xpand write (cmobj, barum, babuf). Returns the created
+     * Room in the same shape as GET /rooms.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateRoomRequest']
+        }
+      }
+      responses: {
+        /** @description Room created. */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Room']
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: never
+        }
+        /** @description Residence not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rooms/by-facility-id/{facilityId}': {
+    /**
+     * Get rooms by facility id.
+     * @description Returns all rooms belonging to a facility.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The id of the facility. */
+          facilityId: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the rooms. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Room'][]
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/parking-spaces/by-rental-id/{rentalId}': {
+    /**
+     * Get parking space data by rentalId
+     * @description Retrieves parking space data by rentalId
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Rental id to fetch parking space for */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved parking space. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ParkingSpace']
+            }
+          }
+        }
+        /** @description Parking space not found */
+        404: {
+          content: {
+            'application/json': {
+              /** @example Parking space not found */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error. Failed to retrieve parking space data. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-rental-id/{rentalId}': {
+    /**
+     * Get maintenance units by rental id.
+     * @description Returns all maintenance units belonging to a rental property.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the rental property for which to retrieve maintenance units. */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-building-code/{buildingCode}': {
+    /**
+     * Get maintenance units by building code.
+     * @description Returns all maintenance units belonging to a building.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the building for which to retrieve maintenance units. */
+          buildingCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/facilities/by-rental-id/{rentalId}': {
+    /**
+     * Get facility by rental id.
+     * @description Returns facility.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental id of the facility. */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the facility. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['FacilityDetails']
+            }
+          }
+        }
+        /** @description Not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-property-code/{code}': {
+    /**
+     * Get maintenance units by property code.
+     * @description Returns all maintenance units belonging to a property.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property for which to retrieve maintenance units. */
+          code: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the maintenance units. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/maintenance-units/by-code/{code}': {
+    /**
+     * Get a maintenance unit by its code
+     * @description Returns a single maintenance unit by its unique code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the maintenance unit to retrieve. */
+          code: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the maintenance unit. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit']
+            }
+          }
+        }
+        /** @description Maintenance unit not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/maintenance-units/search': {
+    /**
+     * Search maintenance units
+     * @description Searches for maintenance units by code.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (maintenance unit code). */
+          q: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved maintenance units matching the search query. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['MaintenanceUnit'][]
+            }
+          }
+        }
+        /** @description Invalid query provided */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/facilities/by-property-code/{propertyCode}': {
+    /**
+     * Get facilities by property code.
+     * @description Returns all facilities belonging to a property.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the property for which to retrieve facilities. */
+          propertyCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the facilities. */
+        200: {
+          content: {
+            'application/json': {
+              content?: Record<string, never>[]
+            }
+          }
+        }
+        /** @description Facilities not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/facilities/by-building-code/{buildingCode}': {
+    /**
+     * Get facilities by building code.
+     * @description Returns all facilities belonging to a building.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The code of the building for which to retrieve facilities. */
+          buildingCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the facilities. */
+        200: {
+          content: {
+            'application/json': {
+              content?: Record<string, never>[]
+            }
+          }
+        }
+        /** @description Facilities not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/facilities/search': {
+    /**
+     * Search facilities
+     * @description Searches for facilities by rental id.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (rental id). */
+          q: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved facilities matching the search query. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['FacilitySearchResult'][]
+            }
+          }
+        }
+        /** @description Invalid query provided */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/parking-spaces/search': {
+    /**
+     * Search parking spaces
+     * @description Searches for parking spaces by rental id.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description The search query (rental id). */
+          q: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved parking spaces matching the search query. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ParkingSpaceSearchResult'][]
+            }
+          }
+        }
+        /** @description Invalid query provided */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/apartments/{objectNumber}/temperatures': {
+    /**
+     * Get indoor temperatures for an apartment
+     * @description Fetches indoor temperature time series for an apartment by its object
+     * number, sourced from the EcoGuard "Curves" platform. Each series entry
+     * corresponds to one sub-node (sensor) under the apartment node, with
+     * avg/min/max merged per time bucket. Defaults to the last 24 hours at
+     * hourly intervals.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Unix timestamp (seconds) for range start. Defaults to `to - 86400`. */
+          from?: number
+          /** @description Unix timestamp (seconds) for range end. Defaults to now. */
+          to?: number
+          /** @description Aggregation bucket size. Defaults to "H" (hourly). */
+          interval?: 'H' | 'D'
+        }
+        path: {
+          /** @description Apartment object number (e.g. "806-032-01-0101"). */
+          objectNumber: string
+        }
+      }
+      responses: {
+        /** @description Temperature series successfully retrieved. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ApartmentTemperaturesResponse']
+            }
+          }
+        }
+        /** @description Invalid query parameters. */
+        400: {
+          content: never
+        }
+        /** @description No apartment node found for the given object number. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/cost-centers': {
+    /**
+     * List all cost centers
+     * @description Returns all OneCore cost centers in a minimal shape suitable for select lists.
+     */
+    get: {
+      responses: {
+        /** @description List of cost centers */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CostCenterSummary'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/cost-centers/{id}/tree': {
+    /**
+     * Get a cost center management tree
+     * @description Returns the cost center with KVV areas, properties (buildings,
+     * parkeringsområden + aggregates)
+     * and Keycloak-expanded lead, deputy and responsible users. If Keycloak is
+     * unreachable, the tree is returned with user fields set to null.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Cost center tree */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CostCenterTree']
+            }
+          }
+        }
+        /** @description Cost center not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
         }
       }
     }
@@ -5210,1752 +7408,6 @@ export interface paths {
       }
     }
   }
-  '/cost-centers': {
-    /**
-     * List all cost centers
-     * @description Returns all OneCore cost centers in a minimal shape suitable for select lists.
-     */
-    get: {
-      responses: {
-        /** @description List of cost centers */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['CostCenterSummary'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/cost-centers/{id}/tree': {
-    /**
-     * Get a cost center management tree
-     * @description Returns the cost center with KVV areas, properties (addresses + aggregates)
-     * and Keycloak-expanded lead, deputy and responsible users. If Keycloak is
-     * unreachable, the tree is returned with user fields set to null.
-     */
-    get: {
-      parameters: {
-        path: {
-          id: string
-        }
-      }
-      responses: {
-        /** @description Cost center tree */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['CostCenterTree']
-            }
-          }
-        }
-        /** @description Cost center not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/buildings': {
-    /**
-     * Get all buildings for a specific property
-     * @description Retrieves all buildings associated with a given property code.
-     * Returns detailed information about each building including its code, name,
-     * construction details, and associated property information.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The code of the property. */
-          propertyCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the buildings. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Building'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/buildings/{id}': {
-    /**
-     * Get detailed information about a specific building
-     * @description Retrieves comprehensive information about a building using its unique building id.
-     * Returns details including construction year, renovation history, insurance information,
-     * and associated property data.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The unique id of the building */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved building information */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Building']
-            }
-          }
-        }
-        /** @description Building not found */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Building not found */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/buildings/by-building-code/{buildingCode}': {
-    /**
-     * Get building by building code
-     * @description Retrieves building data by building code
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the building */
-          buildingCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved building */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Building']
-            }
-          }
-        }
-        /** @description Building not found */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Building not found */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/buildings/by-property-code/{propertyCode}': {
-    /**
-     * Get buildings by property code
-     * @description Retrieves buildings by property code
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the property to fetch buildings for */
-          propertyCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved buildings */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Building'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/companies': {
-    /**
-     * Get all companies
-     * @description Retrieves companies from property base
-     */
-    get: {
-      responses: {
-        /** @description Successfully retrieved companies */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Company'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/companies/{organizationNumber}': {
-    /**
-     * Get detailed information about a specific company
-     * @description Retrieves comprehensive information about a company using its organization number.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The organization number of the company. */
-          organizationNumber: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved company information */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['CompanyDetails']
-            }
-          }
-        }
-        /** @description Company not found */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Company not found */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/residences': {
-    /**
-     * Get residences by building code and (optional) staircase code
-     * @description Retrieves residences by building code and (optional) staircase code
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description Code for the building to fetch residences from */
-          buildingCode: string
-          /** @description Code for the staircase to fetch residences from */
-          staircaseCode?: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved residences */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Residence'][]
-            }
-          }
-        }
-        /** @description Missing building code or invalid query parameters */
-        400: {
-          content: {
-            'application/json': {
-              error?: Record<string, never>
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/properties': {
-    /**
-     * Get properties by company code and (optional) tract
-     * @description Retrieves properties by company code and (optional) tract
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The code of the company that owns the properties. */
-          companyCode: string
-          /** @description Optional filter to get properties in a specific tract. */
-          tract?: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved properties */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Property'][]
-            }
-          }
-        }
-        /** @description Missing company code or invalid query parameters */
-        400: {
-          content: {
-            'application/json': {
-              error?: Record<string, never>
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/properties/search': {
-    /**
-     * Search properties
-     * @description Retrieves a list of all real estate properties by name.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description The search query. */
-          q?: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved list of properties. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Property'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/properties/{propertyCode}': {
-    /**
-     * Get property by property code
-     * @description Retrieves property by property code
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the property */
-          propertyCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved property */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Property']
-            }
-          }
-        }
-        /** @description Property not found */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Property not found */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/residences/by-rental-id/{rentalId}': {
-    /**
-     * Get residence data by residence rental id
-     * @description Retrieves residence data by residence rental id
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description Rental id for the residence to fetch */
-          rentalId: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved residence. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['ResidenceDetails']
-            }
-          }
-        }
-        /** @description Residence not found */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Residence not found */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error. Failed to retrieve residence data. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/residences/by-rental-id/{rentalId}/malar-energi-facility-id': {
-    /**
-     * Update or add a residence's Mälarenergi facility id.
-     * @description Forwards to property-base-service which upserts the "Anläggnings ID
-     * Mälarenergi" comment row (cmtex) in Xpand for the residence.
-     */
-    put: {
-      parameters: {
-        path: {
-          rentalId: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': {
-            malarEnergiFacilityId: string
-          }
-        }
-      }
-      responses: {
-        /** @description The updated Mälarenergi facility id. */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                malarEnergiFacilityId?: string
-              }
-            }
-          }
-        }
-        /** @description Invalid request body. */
-        400: {
-          content: never
-        }
-        /** @description Residence not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/residences/rental-blocks/by-rental-id/{rentalId}': {
-    /**
-     * Get rental blocks by rental ID
-     * @description Retrieves rental blocks by rental ID
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks. */
-          active?: boolean
-        }
-        path: {
-          /** @description Rental id to fetch rental blocks for */
-          rentalId: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved rental blocks. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['RentalBlock'][]
-            }
-          }
-        }
-        /** @description Rental ID not found */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Rental ID not found */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error. Failed to retrieve rental blocks. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/residences/rental-blocks/export': {
-    /**
-     * Export rental blocks to Excel
-     * @description Generates and downloads an Excel file with all rental blocks matching the filters
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Search term */
-          q?: string
-          /** @description Filter by category (supports multiple values) */
-          kategori?: string[]
-          /** @description Filter by district (supports multiple values) */
-          distrikt?: string[]
-          /** @description Filter by block reason (supports multiple values) */
-          blockReason?: string[]
-          /** @description Filter by property (supports multiple values) */
-          fastighet?: string[]
-          /** @description Filter by start date */
-          fromDateGte?: string
-          /** @description Filter by end date */
-          toDateLte?: string
-          /** @description Filter by active status. true = currently active blocks, false = ended blocks. If omitted, all blocks. */
-          active?: boolean
-        }
-      }
-      responses: {
-        /** @description Excel file download */
-        200: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/residences/rental-blocks/search': {
-    /**
-     * Search rental blocks with server-side filtering
-     * @description Search and filter rental blocks. Searches by rentalId and address.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Search term (searches rentalId, address) */
-          q?: string
-          /** @description Comma-separated fields to search (default rentalId,address,propertyName,blockReason) */
-          fields?: string
-          /** @description Filter by category (Bostad, Bilplats, Lokal, Förråd) - supports multiple values */
-          kategori?: string[]
-          /** @description Filter by district (supports multiple values) */
-          distrikt?: string[]
-          /** @description Filter by block reason (supports multiple values) */
-          blockReason?: string[]
-          /** @description Filter by property code/name (supports multiple values) */
-          fastighet?: string[]
-          /** @description Filter blocks starting on or after this date */
-          fromDateGte?: string
-          /** @description Filter blocks ending on or before this date */
-          toDateLte?: string
-          /** @description Filter by active status. true = currently active blocks, false = ended blocks. If omitted, all blocks. */
-          active?: boolean
-          page?: number
-          limit?: number
-        }
-      }
-      responses: {
-        /** @description Successfully searched rental blocks */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['RentalBlockWithRentalObject'][]
-              _meta?: {
-                totalRecords?: number
-                page?: number
-                limit?: number
-                count?: number
-              }
-              _links?: {
-                href?: string
-                /** @enum {string} */
-                rel?: 'self' | 'first' | 'last' | 'prev' | 'next'
-              }[]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/residences/rental-blocks/all': {
-    /**
-     * Get all rental blocks (paginated)
-     * @description Retrieves all rental blocks for residences across the system with pagination support
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Filter rental blocks by active status. true = currently active blocks, false = ended blocks. If omitted, include all blocks. */
-          active?: boolean
-          /** @description Page number (1-indexed) */
-          page?: number
-          /** @description Number of items per page */
-          limit?: number
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved all rental blocks. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['RentalBlockWithRentalObject'][]
-              _meta?: {
-                totalRecords?: number
-                page?: number
-                limit?: number
-                count?: number
-              }
-              _links?: {
-                href?: string
-                /** @enum {string} */
-                rel?: 'self' | 'first' | 'last' | 'prev' | 'next'
-              }[]
-            }
-          }
-        }
-        /** @description Internal server error. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/residences/block-reasons': {
-    /**
-     * Get all block reasons
-     * @description Returns all available block reasons for rental blocks. Used for filtering dropdowns.
-     */
-    get: {
-      responses: {
-        /** @description Successfully retrieved block reasons */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                id?: string
-                caption?: string
-              }[]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/residences/search': {
-    /**
-     * Search residences
-     * @description Searches for residences by rental object id.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The search query (rental object id). */
-          q: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved residences matching the search query. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['ResidenceSearchResult'][]
-            }
-          }
-        }
-        /** @description Invalid query provided */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/residences/summary/by-building-code/{buildingCode}': {
-    /**
-     * Get residences by building code, optionally filtered by staircase code.
-     * @description Returns all residences belonging to a specific building, optionally filtered by staircase code.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description The code of the staircase (optional). */
-          staircaseCode?: string
-        }
-        path: {
-          /** @description The building code of the building. */
-          buildingCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the residences. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['ResidenceSummary'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/staircases': {
-    /**
-     * Get staircases for a building
-     * @description Retrieves staircases for a building
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description Code for the building to fetch staircases for */
-          buildingCode: string
-          /** @description The code of the staircase (optional). */
-          staircaseCode?: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved staircases. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Staircase'][]
-            }
-          }
-        }
-        /** @description Missing buildingCode */
-        400: {
-          content: {
-            'application/json': {
-              /** @example Missing buildingCode */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/rooms': {
-    /**
-     * Get rooms by rental id.
-     * @description Returns all rooms belonging to a residence.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The rental id of the residence. */
-          rentalId: string
-          /** @description The code of the room (optional). */
-          roomCode?: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the rooms. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Room'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-    /**
-     * Create a room for a residence.
-     * @description Forwards to property-base-service which performs a transactional
-     * 3-table Xpand write (cmobj, barum, babuf). Returns the created
-     * Room in the same shape as GET /rooms.
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['CreateRoomRequest']
-        }
-      }
-      responses: {
-        /** @description Room created. */
-        201: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Room']
-            }
-          }
-        }
-        /** @description Invalid request body. */
-        400: {
-          content: never
-        }
-        /** @description Residence not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/rooms/by-facility-id/{facilityId}': {
-    /**
-     * Get rooms by facility id.
-     * @description Returns all rooms belonging to a facility.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The id of the facility. */
-          facilityId: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the rooms. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Room'][]
-            }
-          }
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/parking-spaces/by-rental-id/{rentalId}': {
-    /**
-     * Get parking space data by rentalId
-     * @description Retrieves parking space data by rentalId
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description Rental id to fetch parking space for */
-          rentalId: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved parking space. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['ParkingSpace']
-            }
-          }
-        }
-        /** @description Parking space not found */
-        404: {
-          content: {
-            'application/json': {
-              /** @example Parking space not found */
-              error?: string
-            }
-          }
-        }
-        /** @description Internal server error. Failed to retrieve parking space data. */
-        500: {
-          content: {
-            'application/json': {
-              /** @example Internal server error */
-              error?: string
-            }
-          }
-        }
-      }
-    }
-  }
-  '/maintenance-units/by-rental-id/{rentalId}': {
-    /**
-     * Get maintenance units by rental id.
-     * @description Returns all maintenance units belonging to a rental property.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the rental property for which to retrieve maintenance units. */
-          rentalId: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the maintenance units. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['MaintenanceUnit'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/maintenance-units/by-building-code/{buildingCode}': {
-    /**
-     * Get maintenance units by building code.
-     * @description Returns all maintenance units belonging to a building.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the building for which to retrieve maintenance units. */
-          buildingCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the maintenance units. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['MaintenanceUnit'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/facilities/by-rental-id/{rentalId}': {
-    /**
-     * Get facility by rental id.
-     * @description Returns facility.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The rental id of the facility. */
-          rentalId: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the facility. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['FacilityDetails']
-            }
-          }
-        }
-        /** @description Not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/maintenance-units/by-property-code/{code}': {
-    /**
-     * Get maintenance units by property code.
-     * @description Returns all maintenance units belonging to a property.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the property for which to retrieve maintenance units. */
-          code: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the maintenance units. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['MaintenanceUnit'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/maintenance-units/by-code/{code}': {
-    /**
-     * Get a maintenance unit by its code
-     * @description Returns a single maintenance unit by its unique code.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the maintenance unit to retrieve. */
-          code: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the maintenance unit. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['MaintenanceUnit']
-            }
-          }
-        }
-        /** @description Maintenance unit not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/maintenance-units/search': {
-    /**
-     * Search maintenance units
-     * @description Searches for maintenance units by code.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The search query (maintenance unit code). */
-          q: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved maintenance units matching the search query. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['MaintenanceUnit'][]
-            }
-          }
-        }
-        /** @description Invalid query provided */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/facilities/by-property-code/{propertyCode}': {
-    /**
-     * Get facilities by property code.
-     * @description Returns all facilities belonging to a property.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the property for which to retrieve facilities. */
-          propertyCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the facilities. */
-        200: {
-          content: {
-            'application/json': {
-              content?: Record<string, never>[]
-            }
-          }
-        }
-        /** @description Facilities not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/facilities/by-building-code/{buildingCode}': {
-    /**
-     * Get facilities by building code.
-     * @description Returns all facilities belonging to a building.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The code of the building for which to retrieve facilities. */
-          buildingCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved the facilities. */
-        200: {
-          content: {
-            'application/json': {
-              content?: Record<string, never>[]
-            }
-          }
-        }
-        /** @description Facilities not found. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/facilities/search': {
-    /**
-     * Search facilities
-     * @description Searches for facilities by rental id.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The search query (rental id). */
-          q: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved facilities matching the search query. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['FacilitySearchResult'][]
-            }
-          }
-        }
-        /** @description Invalid query provided */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/parking-spaces/search': {
-    /**
-     * Search parking spaces
-     * @description Searches for parking spaces by rental id.
-     */
-    get: {
-      parameters: {
-        query: {
-          /** @description The search query (rental id). */
-          q: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved parking spaces matching the search query. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['ParkingSpaceSearchResult'][]
-            }
-          }
-        }
-        /** @description Invalid query provided */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/apartments/{objectNumber}/temperatures': {
-    /**
-     * Get indoor temperatures for an apartment
-     * @description Fetches indoor temperature time series for an apartment by its object
-     * number, sourced from the EcoGuard "Curves" platform. Each series entry
-     * corresponds to one sub-node (sensor) under the apartment node, with
-     * avg/min/max merged per time bucket. Defaults to the last 24 hours at
-     * hourly intervals.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Unix timestamp (seconds) for range start. Defaults to `to - 86400`. */
-          from?: number
-          /** @description Unix timestamp (seconds) for range end. Defaults to now. */
-          to?: number
-          /** @description Aggregation bucket size. Defaults to "H" (hourly). */
-          interval?: 'H' | 'D'
-        }
-        path: {
-          /** @description Apartment object number (e.g. "806-032-01-0101"). */
-          objectNumber: string
-        }
-      }
-      responses: {
-        /** @description Temperature series successfully retrieved. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['ApartmentTemperaturesResponse']
-            }
-          }
-        }
-        /** @description Invalid query parameters. */
-        400: {
-          content: never
-        }
-        /** @description No apartment node found for the given object number. */
-        404: {
-          content: never
-        }
-        /** @description Internal server error. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/kvv-areas': {
-    /**
-     * List kvv-areas (förvaltningsområden) with cost center and responsible
-     * @description Returns every kvv-area with its cost center (distrikt) and the
-     * responsible kvartersvärd hydrated from Keycloak (`null` if unset or
-     * if Keycloak is unreachable). Repeat `responsibleUserId` to restrict
-     * the list to areas whose responsible is one of the given Keycloak user
-     * ids; omit it to list all areas.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Keycloak user ids (repeatable). Omit to list all areas. */
-          responsibleUserId?: string[]
-        }
-      }
-      responses: {
-        /** @description List of kvv-areas */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KvvAreaWithResponsible'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/kvv-areas/{id}/responsible': {
-    /**
-     * Update the responsible kvartersvärd for a KVV area
-     * @description Requires the `property-areas:write` realm role. The target user (by
-     * `keycloakUserId`) must hold the `property-manager` role in Keycloak;
-     * a 400 is returned otherwise. On success the updated area is returned
-     * with the new responsible user hydrated.
-     */
-    patch: {
-      parameters: {
-        path: {
-          id: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': {
-            /** Format: uuid */
-            keycloakUserId: string
-          }
-        }
-      }
-      responses: {
-        /** @description Updated KVV area with hydrated responsible user */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['PatchedKvvArea']
-            }
-          }
-        }
-        /** @description Invalid body or target user is not a property manager */
-        400: {
-          content: never
-        }
-        /** @description Caller lacks the `property-areas:write` role */
-        403: {
-          content: never
-        }
-        /** @description KVV area not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/market-areas': {
-    /**
-     * List market areas
-     * @description Returns every market area (Xpand babya, "marknadsområde"). No
-     * filters, no pagination — there are only a few dozen rows.
-     */
-    get: {
-      responses: {
-        /** @description List of market areas */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['MarketArea'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/properties/{propertyCode}/kvv-area': {
-    /**
-     * Get the KVV-area (förvaltningsområde) and district of a property
-     * @description Reverse lookup from a property code to the KVV-area it belongs to,
-     * the cost center (distrikt) of that area and the responsible
-     * kvartersvärd (hydrated from Keycloak; `null` if unset or if Keycloak
-     * is unreachable). Used by Odoo to stamp maintenance requests with
-     * their district. 404 when the property has no KVV-area link.
-     */
-    get: {
-      parameters: {
-        path: {
-          propertyCode: string
-        }
-      }
-      responses: {
-        /** @description KVV-area, cost center and responsible for the property */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['PropertyKvvAreaLookup']
-            }
-          }
-        }
-        /**
-         * @description Property has no KVV-area link. The body carries
-         * `code: PROPERTY_KVV_AREA_NOT_FOUND` so callers can tell this
-         * apart from a routing 404.
-         */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-    /**
-     * Set the KVV-area (förvaltningsområde) of a property
-     * @description Sets the KVV-area a property belongs to. Cross-cost-center moves are
-     * allowed without validation. Requires the `property-areas:write` realm
-     * role (see MIM-1788).
-     */
-    put: {
-      parameters: {
-        path: {
-          propertyCode: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['PutPropertyKvvAreaBody']
-        }
-      }
-      responses: {
-        /** @description Property → KVV-area link upserted */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['PropertyKvvAreaLink']
-            }
-          }
-        }
-        /** @description Invalid request body */
-        400: {
-          content: never
-        }
-        /** @description Missing `property-areas:write` role */
-        403: {
-          content: never
-        }
-        /** @description Property or KVV-area not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/property-tree': {
-    /**
-     * Get the property tree for one grouping root
-     * @description Properties with their buildings, trapphus, parkeringsområden and
-     * per-type counts, beneath one grouping root. `groups` carries the
-     * intermediate level when the grouping has one (KVV-areas for
-     * costCenter); otherwise properties hang directly off the root.
-     *
-     * Only operating-company stock is returned — Xpand moves sold
-     * properties to a pseudo-company rather than delete-marking them.
-     */
-    get: {
-      parameters: {
-        query: {
-          groupBy: 'costCenter' | 'marketArea' | 'company'
-          /** @description Cost center id (uuid), market area code, or company code */
-          rootId: string
-          /** @description Pass 'false' to omit the rental-object leaves */
-          includeObjects?: 'true' | 'false'
-        }
-      }
-      responses: {
-        /** @description Property tree */
-        200: {
-          content: {
-            'application/json': {
-              content: components['schemas']['PropertyTree']
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Root not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/rental-objects': {
-    /**
-     * List rental objects of a property or building
-     * @description Returns every rental object (residence, parking space, facility,
-     * other) under one property or one building as flat structure rows
-     * with type, subtype caption, postal address and building/staircase
-     * placement. Provide exactly one of propertyCode or buildingCode.
-     */
-    get: {
-      parameters: {
-        query?: {
-          propertyCode?: string
-          buildingCode?: string
-          /** @description Object types to exclude (repeatable) */
-          exclude?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
-        }
-      }
-      responses: {
-        /** @description List of rental objects */
-        200: {
-          content: {
-            'application/json': {
-              content: components['schemas']['RentalObjectSummary'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/rental-objects/search': {
-    /**
-     * Search rental objects across several scopes
-     * @description Rental objects under ANY of the given scopes — cost centres,
-     * marknadsområden, properties, buildings, trapphus, parkeringsområden —
-     * narrowed by type, subtype and a free-text match on rental id, address
-     * or property name. At least one scope is required, and results are
-     * paginated since a district is thousands of objects.
-     */
-    get: {
-      parameters: {
-        query?: {
-          costCenterIds?: string[]
-          kvvAreaIds?: string[]
-          marketAreaCodes?: string[]
-          propertyCodes?: string[]
-          buildingCodes?: string[]
-          staircaseCodes?: string[]
-          parkingAreaCodes?: string[]
-          /** @description Individually picked objects, max 200 */
-          rentalIds?: string[]
-          types?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
-          subtypes?: string[]
-          q?: string
-          page?: number
-          limit?: number
-        }
-      }
-      responses: {
-        /** @description Matching rental objects */
-        200: {
-          content: {
-            'application/json': {
-              content: components['schemas']['RentalObjectSummary'][]
-              totalCount: number
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/rental-objects/details': {
-    /**
-     * Listing-only values for the objects a selection covers
-     * @description Grundhyra, BRA, "annan information av vikt" and anläggnings-ID per
-     * rental id. Separate from the objects themselves so pages that don't
-     * show these never fetch them. Takes the same scopes as the search,
-     * minus the type and subtype filters: the values are looked up by
-     * rental id, so narrowing them would only cost cache hits.
-     */
-    get: {
-      parameters: {
-        query?: {
-          costCenterIds?: string[]
-          kvvAreaIds?: string[]
-          marketAreaCodes?: string[]
-          propertyCodes?: string[]
-          buildingCodes?: string[]
-          staircaseCodes?: string[]
-          parkingAreaCodes?: string[]
-          /** @description Individually picked objects, max 200 */
-          rentalIds?: string[]
-        }
-      }
-      responses: {
-        /** @description Details per rental id */
-        200: {
-          content: {
-            'application/json': {
-              content: components['schemas']['RentalObjectDetails'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/rental-object-subtypes': {
-    /**
-     * List rental object subtype captions
-     * @description Subtype captions grouped by object type, limited to those in use by
-     * operating-company stock. Codes are unique within a type only.
-     */
-    get: {
-      responses: {
-        /** @description List of subtypes */
-        200: {
-          content: {
-            'application/json': {
-              content: components['schemas']['RentalObjectSubtype'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
   '/search': {
     /**
      * Omni-search for different entities
@@ -8021,7 +8473,7 @@ export interface paths {
   '/invoice-channels': {
     /**
      * Look up invoice channels for recipients
-     * @description Returns the invoice delivery channel for each provided recipient.
+     * @description Returns the invoice delivery channels for each provided recipient.
      */
     post: {
       requestBody: {
@@ -8149,6 +8601,10 @@ export interface paths {
         400: {
           content: never
         }
+        /** @description Guide image prefix — use the /guides routes. Guide images are also omitted from every other listing. */
+        403: {
+          content: never
+        }
         /** @description Server error */
         500: {
           content: never
@@ -8175,6 +8631,10 @@ export interface paths {
         }
         /** @description Invalid request */
         400: {
+          content: never
+        }
+        /** @description Guide image key — use the /guides routes */
+        403: {
           content: never
         }
         /** @description Server error */
@@ -8210,6 +8670,10 @@ export interface paths {
         400: {
           content: never
         }
+        /** @description Guide image — use the /guides routes */
+        403: {
+          content: never
+        }
         /** @description File not found */
         404: {
           content: never
@@ -8239,6 +8703,10 @@ export interface paths {
             }
           }
         }
+        /** @description Guide image — use the /guides routes */
+        403: {
+          content: never
+        }
         /** @description File not found */
         404: {
           content: never
@@ -8262,6 +8730,10 @@ export interface paths {
       responses: {
         /** @description File deleted successfully */
         204: {
+          content: never
+        }
+        /** @description Guide image — use the /guides routes */
+        403: {
           content: never
         }
         /** @description File not found */
@@ -8293,6 +8765,10 @@ export interface paths {
             }
           }
         }
+        /** @description Guide image — use the /guides routes */
+        403: {
+          content: never
+        }
         /** @description Server error */
         500: {
           content: never
@@ -8300,136 +8776,450 @@ export interface paths {
       }
     }
   }
-  '/dax/card-owners': {
+  '/signatures/send': {
     /**
-     * Search card owners from DAX
-     * @description Search for card owners in the DAX access control system
+     * Send a document for digital signature via SimpleSign
+     * @description Send a PDF document to SimpleSign for digital signature
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @enum {string} */
+            resourceType: 'receipt'
+            /** Format: uuid */
+            resourceId: string
+            /** Format: email */
+            recipientEmail: string
+            recipientName?: string
+            pdfBase64: string
+          }
+        }
+      }
+      responses: {
+        /** @description Signature request sent successfully */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Signature']
+            }
+          }
+        }
+        /** @description Invalid request data */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Resource not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/signatures/{id}': {
+    /**
+     * Get a signature by ID
+     * @description Retrieve a specific signature by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Signature details */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Signature']
+            }
+          }
+        }
+        /** @description Signature not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/signatures/resource/{resourceType}/{resourceId}': {
+    /**
+     * Get all signatures for a resource
+     * @description Retrieve all signatures associated with a specific resource
+     */
+    get: {
+      parameters: {
+        path: {
+          resourceType: 'receipt'
+          resourceId: string
+        }
+      }
+      responses: {
+        /** @description List of signatures */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Signature'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/webhooks/simplesign': {
+    /**
+     * Webhook endpoint for SimpleSign status updates
+     * @description Receives webhook notifications from SimpleSign when document status changes (e.g., signed, declined)
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['SimpleSignWebhookPayload']
+        }
+      }
+      responses: {
+        /** @description Webhook processed successfully */
+        200: {
+          content: never
+        }
+        /** @description Signature not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/receipts': {
+    /**
+     * Create a receipt
+     * @description Create a new receipt record for a key loan
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateReceiptRequest']
+        }
+      }
+      responses: {
+        /** @description Key note created successfully */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Receipt']
+            }
+          }
+        }
+        /** @description Invalid request data */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/receipts/{id}': {
+    /**
+     * Get a receipt by ID
+     * @description Retrieve a specific receipt by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The receipt ID */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved receipt */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Receipt']
+            }
+          }
+        }
+        /** @description Receipt not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Delete a receipt
+     * @description Delete a receipt by ID (and associated file from file storage)
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt to delete */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Receipt deleted successfully */
+        204: {
+          content: never
+        }
+        /** @description Receipt not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Update a receipt
+     * @description Update a receipt (e.g., set fileId after upload)
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The ID of the receipt to update */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateReceiptRequest']
+        }
+      }
+      responses: {
+        /** @description Receipt updated successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Receipt']
+            }
+          }
+        }
+        /** @description Invalid request data */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Receipt not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/receipts/by-key-loan/{keyLoanId}': {
+    /** Get receipts by key loan ID */
+    get: {
+      parameters: {
+        path: {
+          keyLoanId: string
+        }
+      }
+      responses: {
+        /** @description Receipts for the key loan */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Receipt'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/receipts/{id}/upload': {
+    /** Upload a file for a receipt */
+    post: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description Base64 encoded file data */
+            fileData: string
+            fileContentType?: string
+          }
+        }
+      }
+      responses: {
+        /** @description File uploaded successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                fileId?: string
+              }
+            }
+          }
+        }
+        /** @description Missing fileData */
+        400: {
+          content: never
+        }
+        /** @description Receipt not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/receipts/{id}/download': {
+    /** Get presigned download URL for a receipt file */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Presigned download URL */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                url?: string
+                expiresIn?: number
+                fileId?: string
+              }
+            }
+          }
+        }
+        /** @description Receipt or file not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/keys/move-in-out': {
+    /**
+     * Move-in / move-out key status per rental object (paginated)
+     * @description Finds leases ending (lastDebitDate) and/or starting in the given ranges, then
+     * returns one row per rental object with the outgoing and incoming tenant,
+     * key/card counts, loan return and handout dates, and a derived status.
+     * Give endDateFrom+endDateTo for move-outs, startDateFrom+startDateTo for
+     * move-ins, or both for the union. Search and sort apply to the whole result;
+     * key and card data (DAX) is fetched only for the requested page.
      */
     get: {
       parameters: {
         query?: {
-          /** @description Filter by name (rental object ID / object code) */
-          nameFilter?: string
-          /** @description Comma-separated list of fields to expand (e.g., "cards") */
-          expand?: string
-          /** @description Filter by ID */
-          idfilter?: string
-          /** @description Filter by attribute */
-          attributeFilter?: string
-          /** @description Select specific attributes to return */
-          selectedAttributes?: string
-          /** @description Filter by folder */
-          folderFilter?: string
-          /** @description Filter by organisation */
-          organisationFilter?: string
-          /** @description Pagination offset */
-          offset?: number
-          /** @description Maximum number of results */
+          endDateFrom?: string
+          endDateTo?: string
+          startDateFrom?: string
+          startDateTo?: string
+          /** @description Matches rental object code, address, tenant name or contact code. */
+          q?: string
+          sortBy?: 'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
+          sortOrder?: 'asc' | 'desc'
+          /** @description When true, adds a `timings` block with per-phase durations. */
+          debug?: boolean
+          page?: number
           limit?: number
         }
       }
       responses: {
-        /** @description Card owners retrieved successfully */
+        /** @description One page of rows */
         200: {
           content: {
-            'application/json': {
-              cardOwners?: Record<string, never>[]
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['MoveInOutRow'][]
             }
           }
         }
-        /** @description Failed to fetch card owners */
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Server error */
         500: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
-      }
-    }
-  }
-  '/dax/card-owners/{cardOwnerId}': {
-    /**
-     * Get a specific card owner from DAX
-     * @description Retrieve a card owner by ID from the DAX access control system
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Comma-separated list of fields to expand (e.g., "cards") */
-          expand?: string
-        }
-        path: {
-          /** @description The card owner ID */
-          cardOwnerId: string
-        }
-      }
-      responses: {
-        /** @description Card owner retrieved successfully */
-        200: {
-          content: {
-            'application/json': {
-              cardOwner?: components['schemas']['CardOwner']
-            }
-          }
-        }
-        /** @description Card owner not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Failed to fetch card owner */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
+        /** @description Keys service is syncing its DAX card owner mirror; retry later */
+        503: {
+          content: never
         }
       }
     }
   }
-  '/dax/cards/{cardId}': {
+  '/logs': {
     /**
-     * Get a specific card from DAX
-     * @description Retrieve a card by ID from the DAX access control system
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Comma-separated list of fields to expand (e.g., "codes") */
-          expand?: string
-        }
-        path: {
-          /** @description The card ID */
-          cardId: string
-        }
-      }
-      responses: {
-        /** @description Card retrieved successfully */
-        200: {
-          content: {
-            'application/json': {
-              card?: components['schemas']['Card']
-            }
-          }
-        }
-        /** @description Card not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Failed to fetch card */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/key-bundles': {
-    /**
-     * List key bundles with pagination
-     * @description Fetches a paginated list of all key bundles ordered by name.
+     * List logs with pagination
+     * @description Returns paginated logs (most recent per objectId) ordered by eventTime (desc).
      */
     get: {
       parameters: {
@@ -8441,15 +9231,15 @@ export interface paths {
         }
       }
       responses: {
-        /** @description A paginated list of key bundles. */
+        /** @description Paginated list of logs */
         200: {
           content: {
             'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeyBundle'][]
+              content?: components['schemas']['Log'][]
             }
           }
         }
-        /** @description An error occurred while listing key bundles. */
+        /** @description Server error */
         500: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -8457,40 +9247,45 @@ export interface paths {
         }
       }
     }
-    /**
-     * Create a new key bundle
-     * @description Create a new key bundle record.
-     */
+    /** Create a log */
     post: {
       requestBody: {
         content: {
-          'application/json': components['schemas']['CreateKeyBundleRequest']
+          'application/json': components['schemas']['CreateLogRequest']
         }
       }
       responses: {
-        /** @description Key bundle created successfully. */
+        /** @description Created */
         201: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyBundle']
+              content?: components['schemas']['Log']
             }
           }
         }
-        /** @description Invalid request body */
+        /** @description Invalid or missing fields */
         400: {
-          content: never
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
         }
-        /** @description An error occurred while creating the key bundle. */
+        /** @description Server error */
         500: {
-          content: never
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
         }
       }
     }
   }
-  '/key-bundles/search': {
+  '/logs/search': {
     /**
-     * Search key bundles with pagination
-     * @description Search key bundles with flexible filtering and pagination.
+     * Search logs with pagination
+     * @description Search logs with flexible filtering and pagination.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any Log field parameter for filtering
+     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - Only one OR group is supported, but you can combine it with multiple AND filters
      */
     get: {
       parameters: {
@@ -8500,182 +9295,229 @@ export interface paths {
           /** @description Number of records per page */
           limit?: number
           q?: string
-          /** @description Comma-separated list of fields for OR search. */
+          /** @description Comma-separated list of fields for OR search. Defaults to objectId. */
           fields?: string
+          id?: string
+          userName?: string
+          eventType?: string
+          eventTime?: string
+          objectType?: string
+          objectId?: string
+          description?: string
         }
       }
       responses: {
-        /** @description Paginated search results */
+        /** @description Successfully retrieved paginated search results */
         200: {
           content: {
             'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeyBundle'][]
+              content?: components['schemas']['Log'][]
             }
           }
         }
-        /** @description Invalid search parameters */
+        /** @description Bad request */
         400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/key-bundles/by-key/{keyId}': {
-    /**
-     * Get all bundles containing a specific key
-     * @description Returns all bundle records containing the specified key ID
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The key ID to search for */
-          keyId: string
-        }
-      }
-      responses: {
-        /** @description Array of bundles containing this key */
-        200: {
           content: {
-            'application/json': {
-              content?: components['schemas']['KeyBundle'][]
-            }
+            'application/json': components['schemas']['ErrorResponse']
           }
         }
         /** @description Internal server error */
         500: {
-          content: never
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
         }
       }
     }
   }
-  '/key-bundles/{id}': {
+  '/logs/object/{objectId}': {
     /**
-     * Get key bundle by ID
-     * @description Fetch a specific key bundle by its ID.
+     * Get all logs for a specific objectId
+     * @description Returns all log entries for a given objectId, ordered by most recent first
      */
     get: {
       parameters: {
         path: {
-          /** @description The unique ID of the key bundle to retrieve. */
-          id: string
+          objectId: string
         }
       }
       responses: {
-        /** @description A key bundle object. */
+        /** @description List of logs for the objectId */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyBundle']
+              content?: components['schemas']['Log'][]
             }
           }
         }
-        /** @description Key bundle not found. */
-        404: {
-          content: never
-        }
-        /** @description An error occurred while fetching the key bundle. */
+        /** @description Server error */
         500: {
-          content: never
-        }
-      }
-    }
-    /**
-     * Delete a key bundle
-     * @description Delete a key bundle by ID.
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the key bundle to delete. */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Key bundle deleted successfully. */
-        204: {
-          content: never
-        }
-        /** @description Key bundle not found. */
-        404: {
-          content: never
-        }
-        /** @description An error occurred while deleting the key bundle. */
-        500: {
-          content: never
-        }
-      }
-    }
-    /**
-     * Update a key bundle
-     * @description Partially update an existing key bundle.
-     */
-    patch: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the key bundle to update. */
-          id: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['UpdateKeyBundleRequest']
-        }
-      }
-      responses: {
-        /** @description Key bundle updated successfully. */
-        200: {
           content: {
-            'application/json': {
-              content?: components['schemas']['KeyBundle']
-            }
+            'application/json': components['schemas']['ErrorResponse']
           }
-        }
-        /** @description Invalid request body */
-        400: {
-          content: never
-        }
-        /** @description Key bundle not found. */
-        404: {
-          content: never
-        }
-        /** @description An error occurred while updating the key bundle. */
-        500: {
-          content: never
         }
       }
     }
   }
-  '/key-bundles/{id}/keys-with-loan-status': {
+  '/logs/{id}': {
+    /** Get log by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Log found */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Log']
+            }
+          }
+        }
+        /** @description Not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/rental-object/{rentalObjectCode}': {
     /**
-     * Get keys in bundle with maintenance loan status
-     * @description Fetches all keys in a key bundle along with their active maintenance loan information
+     * Get all logs for a specific rental object
+     * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
+     *
+     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, signatures
+     *
+     * Excluded: keySystem logs (infrastructure-level, not property-specific)
+     *
+     * Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
+     *
+     * Results ordered by most recent first
      */
     get: {
       parameters: {
         query?: {
-          /**
-           * @description When true, batch-fetches contacts referenced by the keys' loans
-           * and attaches them as a `contacts` sidecar keyed by contactCode.
-           * Soft fails — if the contacts service errors, the response is
-           * returned without the sidecar.
-           */
-          includeContacts?: boolean
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+          /** @description Filter by event type (creation, update, delete) */
+          eventType?: string
+          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
+          objectType?: string
+          /** @description Filter by user name */
+          userName?: string
         }
         path: {
-          /** @description The key bundle ID */
-          id: string
+          /** @description The rental object code (e.g., "705-011-03-0102") */
+          rentalObjectCode: string
         }
       }
       responses: {
-        /** @description Bundle information and keys with loan status */
+        /** @description Paginated list of logs for the rental object */
         200: {
           content: {
-            'application/json': {
-              content?: components['schemas']['KeyBundleDetailsResponse']
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['Log'][]
+            }
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/logs/contact/{contactId}': {
+    /**
+     * Get all logs for a specific contact
+     * @description Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
+     *
+     * Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
+     *
+     * Excluded: keyEvents, keyBundles, keyNotes, keySystem (no contact relationship)
+     *
+     * Note: Matches both contact and contact2 fields (co-tenants supported)
+     *
+     * Results ordered by most recent first
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+          /** @description Filter by event type (creation, update, delete) */
+          eventType?: string
+          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
+          objectType?: string
+          /** @description Filter by user name */
+          userName?: string
+        }
+        path: {
+          /** @description The contact code (e.g., "P079586", "F123456") */
+          contactId: string
+        }
+      }
+      responses: {
+        /** @description Paginated list of logs for the contact */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['Log'][]
+            }
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys': {
+    /**
+     * List keys with pagination
+     * @description Returns paginated keys ordered by createdAt (desc).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+          /**
+           * @description When true, batch-fetches contacts referenced by the keys'
+           * `activeLoanContact` field and attaches them as a `contacts`
+           * sidecar keyed by contactCode. Soft fails — if the contacts
+           * service errors, keys are still returned without the sidecar.
+           */
+          includeContacts?: boolean
+        }
+      }
+      responses: {
+        /** @description Paginated list of keys */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['KeyDetails'][]
               /** @description Present only when `includeContacts=true` and the fetch succeeded. */
               contacts?: {
                 [key: string]: components['schemas']['ContactV1']
@@ -8683,7 +9525,714 @@ export interface paths {
             }
           }
         }
-        /** @description Key bundle not found */
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /** Create a key */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateKeyRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Key']
+            }
+          }
+        }
+        /** @description Invalid key_type */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys/search': {
+    /**
+     * Search keys
+     * @description Search keys with flexible filtering.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any Key field parameter for filtering
+     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - Only one OR group is supported, but you can combine it with multiple AND filters
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+          q?: string
+          /** @description Comma-separated list of fields for OR search. Defaults to keyName. */
+          fields?: string
+          id?: string
+          keyName?: string
+          keySequenceNumber?: string
+          flexNumber?: string
+          rentalObjectCode?: string
+          keyType?: string
+          keySystemId?: string
+          createdAt?: string
+          updatedAt?: string
+          /**
+           * @description When true, batch-fetches contacts referenced by the keys'
+           * `activeLoanContact` field and attaches them as a `contacts`
+           * sidecar keyed by contactCode. Soft fails — if the contacts
+           * service errors, keys are still returned without the sidecar.
+           */
+          includeContacts?: boolean
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved paginated search results */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['KeyDetails'][]
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components['schemas']['ContactV1']
+              }
+            }
+          }
+        }
+        /** @description Bad request */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys/by-rental-object/{rentalObjectCode}': {
+    /**
+     * Get all keys by rental object code
+     * @description Returns all keys associated with a specific rental object code without pagination
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to filter keys by */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved keys */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Key'][]
+            }
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/cards/by-rental-object/{rentalObjectCode}': {
+    /** Get cards by rental object code */
+    get: {
+      parameters: {
+        query?: {
+          includeLoans?: boolean
+        }
+        path: {
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Cards for the rental object */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CardDetails'][]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/cards/{cardId}': {
+    /** Get card by ID */
+    get: {
+      parameters: {
+        path: {
+          cardId: string
+        }
+      }
+      responses: {
+        /** @description Card found */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Card']
+            }
+          }
+        }
+        /** @description Card not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys/{id}': {
+    /** Get key by ID */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key found */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Key']
+            }
+          }
+        }
+        /** @description Not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /** Delete a key */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Deleted */
+        200: {
+          content: never
+        }
+        /** @description Not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /** Update a key (partial) */
+    patch: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateKeyRequest']
+        }
+      }
+      responses: {
+        /** @description Updated */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Key']
+            }
+          }
+        }
+        /** @description Invalid key_type */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys/bulk-update': {
+    /**
+     * Bulk update keys
+     * @description Update multiple keys with the same values. Maximum 100 keys per request.
+     */
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['BulkUpdateKeysRequest']
+        }
+      }
+      responses: {
+        /** @description Keys updated successfully */
+        200: {
+          content: {
+            'application/json': {
+              /** @description Number of keys updated */
+              content?: number
+            }
+          }
+        }
+        /** @description Invalid request data */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys/bulk-update-flex': {
+    /**
+     * Bulk update flex number for all keys on a rental object
+     * @description Update the flex number for all keys associated with a specific rental object code. Flex numbers range from 1-3.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['BulkUpdateFlexRequest']
+        }
+      }
+      responses: {
+        /** @description Flex numbers updated successfully */
+        200: {
+          content: {
+            'application/json': {
+              /** @description Number of keys updated */
+              content?: number
+            }
+          }
+        }
+        /** @description Invalid request data */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/keys/bulk-delete': {
+    /**
+     * Bulk delete keys
+     * @description Delete multiple keys by their IDs. Maximum 100 keys per request.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            keyIds: string[]
+          }
+        }
+      }
+      responses: {
+        /** @description Keys deleted successfully */
+        200: {
+          content: {
+            'application/json': {
+              /** @description Number of keys deleted */
+              content?: number
+            }
+          }
+        }
+        /** @description Invalid request data */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems': {
+    /**
+     * List all key systems with pagination
+     * @description Retrieve a paginated list of all key systems
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved paginated key systems */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['KeySystem'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Create a new key system
+     * @description Create a new key system
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateKeySystemRequest']
+        }
+      }
+      responses: {
+        /** @description Key system created successfully */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeySystem']
+            }
+          }
+        }
+        /** @description Invalid type or duplicate system code */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems/search': {
+    /**
+     * Search key systems
+     * @description Search key systems with flexible filtering.
+     * - **OR search**: Use `q` with `fields` for multiple field search
+     * - **AND search**: Use any KeySystem field parameter for filtering
+     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
+     * - Only one OR group is supported, but you can combine it with multiple AND filters
+     *
+     * Examples:
+     * - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
+     * - `?manufacturer=assa&createdAt=<2024-12-31` - Manufacturer contains "assa" AND created before Dec 31, 2024
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Page number (starts from 1) */
+          page?: number
+          /** @description Number of records per page */
+          limit?: number
+          /** @description Search query for OR search across fields specified in 'fields' parameter */
+          q?: string
+          /** @description Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode. */
+          fields?: string
+          id?: string
+          systemCode?: string
+          name?: string
+          manufacturer?: string
+          managingSupplier?: string
+          type?: string
+          propertyIds?: string
+          installationDate?: string
+          isActive?: string
+          notes?: string
+          createdAt?: string
+          updatedAt?: string
+          createdBy?: string
+          updatedBy?: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved paginated search results */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['KeySystem'][]
+            }
+          }
+        }
+        /** @description Bad request. Invalid parameters or field names */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems/{id}': {
+    /**
+     * Get key system by ID
+     * @description Retrieve a specific key system by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved key system */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeySystem']
+            }
+          }
+        }
+        /** @description Key system not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Delete a key system
+     * @description Delete a key system by ID
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to delete */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key system deleted successfully */
+        200: {
+          content: never
+        }
+        /** @description Key system not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Update a key system
+     * @description Partially update a key system
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to update */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateKeySystemRequest']
+        }
+      }
+      responses: {
+        /** @description Key system updated successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeySystem']
+            }
+          }
+        }
+        /** @description Invalid type or duplicate system code */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Key system not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems/{id}/deactivate': {
+    /**
+     * Deactivate a key system and dispose all its keys
+     * @description Sets isActive=false and disposes every non-disposed key in the system in one transaction. Writes an audit log entry on the system listing all disposed key ids (the manual-rollback record).
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the key system to deactivate */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Key system deactivated and keys disposed */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DeactivateKeySystemResponse']
+            }
+          }
+        }
+        /** @description Key system not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-systems/{id}/upload-schema': {
+    /** Upload a schema file for a key system */
+    post: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description Base64 encoded file data */
+            fileData: string
+            fileContentType?: string
+            fileName?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Schema file uploaded successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                fileId?: string
+              }
+            }
+          }
+        }
+        /** @description Missing fileData */
+        400: {
+          content: never
+        }
+        /** @description Key system not found */
         404: {
           content: never
         }
@@ -8694,164 +10243,84 @@ export interface paths {
       }
     }
   }
-  '/key-bundles/by-contact/{contactCode}/with-loaned-keys': {
-    /**
-     * Get key bundles with keys loaned to a contact
-     * @description Fetches all key bundles that have keys currently loaned to a specific contact.
-     */
+  '/key-systems/{id}/download-schema': {
+    /** Get presigned download URL for a key system schema file */
     get: {
       parameters: {
         path: {
-          /** @description The contact code (F-number) to find bundles for */
-          contactCode: string
-        }
-      }
-      responses: {
-        /** @description A list of bundles with loaned keys info. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['BundleWithLoanedKeysInfo'][]
-            }
-          }
-        }
-        /** @description An error occurred while fetching bundles. */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/key-events': {
-    /**
-     * Get all key events
-     * @description Returns all key events ordered by creation date.
-     */
-    get: {
-      responses: {
-        /** @description List of key events. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeyEvent'][]
-            }
-          }
-        }
-        /** @description An error occurred while fetching key events. */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-    /**
-     * Create a key event
-     * @description Create a new key event record. Will fail with 409 if any of the keys have an incomplete event (status not COMPLETED).
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['CreateKeyEventRequest']
-        }
-      }
-      responses: {
-        /** @description Key event created successfully. */
-        201: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeyEvent']
-            }
-          }
-        }
-        /** @description Invalid request body. */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Conflict - one or more keys have incomplete events. */
-        409: {
-          content: {
-            'application/json': {
-              reason?: string
-              conflictingKeys?: string[]
-            }
-          }
-        }
-        /** @description An error occurred while creating the key event. */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/key-events/by-key/{keyId}': {
-    /**
-     * Get all key events for a specific key
-     * @description Returns all key events associated with a specific key ID. Optionally limit results to get only the latest event(s).
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Optional limit on number of results (e.g., 1 for latest event only). */
-          limit?: number
-        }
-        path: {
-          /** @description The key ID to filter events by. */
-          keyId: string
-        }
-      }
-      responses: {
-        /** @description List of key events for the key. */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeyEvent'][]
-            }
-          }
-        }
-        /** @description An error occurred while fetching key events. */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/key-events/{id}': {
-    /**
-     * Get key event by ID
-     * @description Fetch a specific key event by its ID.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The unique ID of the key event to retrieve. */
           id: string
         }
       }
       responses: {
-        /** @description A key event object. */
+        /** @description Presigned download URL */
+        200: {
+          content: {
+            'application/json': components['schemas']['SchemaDownloadUrlResponse']
+          }
+        }
+        /** @description Key system or schema file not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-systems/{id}/schema': {
+    /** Delete the schema file for a key system */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Schema deleted successfully */
+        204: {
+          content: never
+        }
+        /** @description Key system not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-notes/{id}': {
+    /**
+     * Get key note by ID
+     * @description Retrieve a specific key note by its ID
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the key note */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved key note */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyEvent']
+              content?: components['schemas']['KeyNote']
             }
           }
         }
-        /** @description Key event not found. */
+        /** @description Key note not found */
         404: {
           content: {
             'application/json': components['schemas']['NotFoundResponse']
           }
         }
-        /** @description An error occurred while fetching the key event. */
+        /** @description Internal server error */
         500: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -8860,43 +10329,114 @@ export interface paths {
       }
     }
     /**
-     * Update a key event
-     * @description Update an existing key event.
+     * Update a key note
+     * @description Update the description of an existing key note
      */
     patch: {
       parameters: {
         path: {
-          /** @description The unique ID of the key event to update. */
+          /** @description The ID of the key note to update */
           id: string
         }
       }
       requestBody: {
         content: {
-          'application/json': components['schemas']['UpdateKeyEventRequest']
+          'application/json': components['schemas']['UpdateKeyNoteRequest']
         }
       }
       responses: {
-        /** @description Key event updated successfully. */
+        /** @description Key note updated successfully */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyEvent']
+              content?: components['schemas']['KeyNote']
             }
           }
         }
-        /** @description Invalid request body. */
+        /** @description Invalid request data */
         400: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
-        /** @description Key event not found. */
+        /** @description Key note not found */
         404: {
           content: {
             'application/json': components['schemas']['NotFoundResponse']
           }
         }
-        /** @description An error occurred while updating the key event. */
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-notes/by-rental-object/{rentalObjectCode}': {
+    /**
+     * Get key note by rental object code
+     * @description Retrieve the key note for a specific rental object
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved key note */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
+        /** @description Key note not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-notes': {
+    /**
+     * Create a new key note
+     * @description Create a new key note for a rental object
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateKeyNoteRequest']
+        }
+      }
+      responses: {
+        /** @description Key note created successfully */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyNote']
+            }
+          }
+        }
+        /** @description Invalid request data */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
         500: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -9371,34 +10911,22 @@ export interface paths {
       }
     }
   }
-  '/key-notes/{id}': {
+  '/key-events': {
     /**
-     * Get key note by ID
-     * @description Retrieve a specific key note by its ID
+     * Get all key events
+     * @description Returns all key events ordered by creation date.
      */
     get: {
-      parameters: {
-        path: {
-          /** @description The ID of the key note */
-          id: string
-        }
-      }
       responses: {
-        /** @description Successfully retrieved key note */
+        /** @description List of key events. */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyNote']
+              content?: components['schemas']['KeyEvent'][]
             }
           }
         }
-        /** @description Key note not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Internal server error */
+        /** @description An error occurred while fetching key events. */
         500: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -9407,43 +10935,155 @@ export interface paths {
       }
     }
     /**
-     * Update a key note
-     * @description Update the description of an existing key note
+     * Create a key event
+     * @description Create a new key event record. Will fail with 409 if any of the keys have an incomplete event (status not COMPLETED).
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateKeyEventRequest']
+        }
+      }
+      responses: {
+        /** @description Key event created successfully. */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyEvent']
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Conflict - one or more keys have incomplete events. */
+        409: {
+          content: {
+            'application/json': {
+              reason?: string
+              conflictingKeys?: string[]
+            }
+          }
+        }
+        /** @description An error occurred while creating the key event. */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-events/by-key/{keyId}': {
+    /**
+     * Get all key events for a specific key
+     * @description Returns all key events associated with a specific key ID. Optionally limit results to get only the latest event(s).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Optional limit on number of results (e.g., 1 for latest event only). */
+          limit?: number
+        }
+        path: {
+          /** @description The key ID to filter events by. */
+          keyId: string
+        }
+      }
+      responses: {
+        /** @description List of key events for the key. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyEvent'][]
+            }
+          }
+        }
+        /** @description An error occurred while fetching key events. */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/key-events/{id}': {
+    /**
+     * Get key event by ID
+     * @description Fetch a specific key event by its ID.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key event to retrieve. */
+          id: string
+        }
+      }
+      responses: {
+        /** @description A key event object. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyEvent']
+            }
+          }
+        }
+        /** @description Key event not found. */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description An error occurred while fetching the key event. */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Update a key event
+     * @description Update an existing key event.
      */
     patch: {
       parameters: {
         path: {
-          /** @description The ID of the key note to update */
+          /** @description The unique ID of the key event to update. */
           id: string
         }
       }
       requestBody: {
         content: {
-          'application/json': components['schemas']['UpdateKeyNoteRequest']
+          'application/json': components['schemas']['UpdateKeyEventRequest']
         }
       }
       responses: {
-        /** @description Key note updated successfully */
+        /** @description Key event updated successfully. */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeyNote']
+              content?: components['schemas']['KeyEvent']
             }
           }
         }
-        /** @description Invalid request data */
+        /** @description Invalid request body. */
         400: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
-        /** @description Key note not found */
+        /** @description Key event not found. */
         404: {
           content: {
             'application/json': components['schemas']['NotFoundResponse']
           }
         }
-        /** @description Internal server error */
+        /** @description An error occurred while updating the key event. */
         500: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -9452,81 +11092,10 @@ export interface paths {
       }
     }
   }
-  '/key-notes/by-rental-object/{rentalObjectCode}': {
+  '/key-bundles': {
     /**
-     * Get key note by rental object code
-     * @description Retrieve the key note for a specific rental object
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The rental object code */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved key note */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeyNote']
-            }
-          }
-        }
-        /** @description Key note not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/key-notes': {
-    /**
-     * Create a new key note
-     * @description Create a new key note for a rental object
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['CreateKeyNoteRequest']
-        }
-      }
-      responses: {
-        /** @description Key note created successfully */
-        201: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeyNote']
-            }
-          }
-        }
-        /** @description Invalid request data */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/key-systems': {
-    /**
-     * List all key systems with pagination
-     * @description Retrieve a paginated list of all key systems
+     * List key bundles with pagination
+     * @description Fetches a paginated list of all key bundles ordered by name.
      */
     get: {
       parameters: {
@@ -9538,15 +11107,15 @@ export interface paths {
         }
       }
       responses: {
-        /** @description Successfully retrieved paginated key systems */
+        /** @description A paginated list of key bundles. */
         200: {
           content: {
             'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeySystem'][]
+              content?: components['schemas']['KeyBundle'][]
             }
           }
         }
-        /** @description Internal server error */
+        /** @description An error occurred while listing key bundles. */
         500: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -9555,51 +11124,39 @@ export interface paths {
       }
     }
     /**
-     * Create a new key system
-     * @description Create a new key system
+     * Create a new key bundle
+     * @description Create a new key bundle record.
      */
     post: {
       requestBody: {
         content: {
-          'application/json': components['schemas']['CreateKeySystemRequest']
+          'application/json': components['schemas']['CreateKeyBundleRequest']
         }
       }
       responses: {
-        /** @description Key system created successfully */
+        /** @description Key bundle created successfully. */
         201: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeySystem']
+              content?: components['schemas']['KeyBundle']
             }
           }
         }
-        /** @description Invalid type or duplicate system code */
+        /** @description Invalid request body */
         400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
+          content: never
         }
-        /** @description Internal server error */
+        /** @description An error occurred while creating the key bundle. */
         500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
+          content: never
         }
       }
     }
   }
-  '/key-systems/search': {
+  '/key-bundles/search': {
     /**
-     * Search key systems
-     * @description Search key systems with flexible filtering.
-     * - **OR search**: Use `q` with `fields` for multiple field search
-     * - **AND search**: Use any KeySystem field parameter for filtering
-     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
-     * - Only one OR group is supported, but you can combine it with multiple AND filters
-     *
-     * Examples:
-     * - `?createdAt=>2024-01-01` - Created after Jan 1, 2024
-     * - `?manufacturer=assa&createdAt=<2024-12-31` - Manufacturer contains "assa" AND created before Dec 31, 2024
+     * Search key bundles with pagination
+     * @description Search key bundles with flexible filtering and pagination.
      */
     get: {
       parameters: {
@@ -9608,233 +11165,51 @@ export interface paths {
           page?: number
           /** @description Number of records per page */
           limit?: number
-          /** @description Search query for OR search across fields specified in 'fields' parameter */
           q?: string
-          /** @description Comma-separated list of fields for OR search (e.g., "systemCode,manufacturer"). Defaults to systemCode. */
+          /** @description Comma-separated list of fields for OR search. */
           fields?: string
-          id?: string
-          systemCode?: string
-          name?: string
-          manufacturer?: string
-          managingSupplier?: string
-          type?: string
-          propertyIds?: string
-          installationDate?: string
-          isActive?: string
-          notes?: string
-          createdAt?: string
-          updatedAt?: string
-          createdBy?: string
-          updatedBy?: string
         }
       }
       responses: {
-        /** @description Successfully retrieved paginated search results */
+        /** @description Paginated search results */
         200: {
           content: {
             'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeySystem'][]
+              content?: components['schemas']['KeyBundle'][]
             }
           }
         }
-        /** @description Bad request. Invalid parameters or field names */
+        /** @description Invalid search parameters */
         400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
+          content: never
         }
         /** @description Internal server error */
         500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
+          content: never
         }
       }
     }
   }
-  '/key-systems/{id}': {
+  '/key-bundles/by-key/{keyId}': {
     /**
-     * Get key system by ID
-     * @description Retrieve a specific key system by its ID
+     * Get all bundles containing a specific key
+     * @description Returns all bundle records containing the specified key ID
      */
     get: {
       parameters: {
         path: {
-          /** @description The ID of the key system */
-          id: string
+          /** @description The key ID to search for */
+          keyId: string
         }
       }
       responses: {
-        /** @description Successfully retrieved key system */
+        /** @description Array of bundles containing this key */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['KeySystem']
+              content?: components['schemas']['KeyBundle'][]
             }
           }
-        }
-        /** @description Key system not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-    /**
-     * Delete a key system
-     * @description Delete a key system by ID
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description The ID of the key system to delete */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Key system deleted successfully */
-        200: {
-          content: never
-        }
-        /** @description Key system not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-    /**
-     * Update a key system
-     * @description Partially update a key system
-     */
-    patch: {
-      parameters: {
-        path: {
-          /** @description The ID of the key system to update */
-          id: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['UpdateKeySystemRequest']
-        }
-      }
-      responses: {
-        /** @description Key system updated successfully */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['KeySystem']
-            }
-          }
-        }
-        /** @description Invalid type or duplicate system code */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Key system not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/key-systems/{id}/deactivate': {
-    /**
-     * Deactivate a key system and dispose all its keys
-     * @description Sets isActive=false and disposes every non-disposed key in the system in one transaction. Writes an audit log entry on the system listing all disposed key ids (the manual-rollback record).
-     */
-    post: {
-      parameters: {
-        path: {
-          /** @description The ID of the key system to deactivate */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Key system deactivated and keys disposed */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['DeactivateKeySystemResponse']
-            }
-          }
-        }
-        /** @description Key system not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/key-systems/{id}/upload-schema': {
-    /** Upload a schema file for a key system */
-    post: {
-      parameters: {
-        path: {
-          id: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': {
-            /** @description Base64 encoded file data */
-            fileData: string
-            fileContentType?: string
-            fileName?: string
-          }
-        }
-      }
-      responses: {
-        /** @description Schema file uploaded successfully */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                fileId?: string
-              }
-            }
-          }
-        }
-        /** @description Missing fileData */
-        400: {
-          content: never
-        }
-        /** @description Key system not found */
-        404: {
-          content: never
         }
         /** @description Internal server error */
         500: {
@@ -9843,46 +11218,138 @@ export interface paths {
       }
     }
   }
-  '/key-systems/{id}/download-schema': {
-    /** Get presigned download URL for a key system schema file */
+  '/key-bundles/{id}': {
+    /**
+     * Get key bundle by ID
+     * @description Fetch a specific key bundle by its ID.
+     */
     get: {
       parameters: {
         path: {
+          /** @description The unique ID of the key bundle to retrieve. */
           id: string
         }
       }
       responses: {
-        /** @description Presigned download URL */
+        /** @description A key bundle object. */
         200: {
           content: {
-            'application/json': components['schemas']['SchemaDownloadUrlResponse']
+            'application/json': {
+              content?: components['schemas']['KeyBundle']
+            }
           }
         }
-        /** @description Key system or schema file not found */
+        /** @description Key bundle not found. */
         404: {
           content: never
         }
-        /** @description Internal server error */
+        /** @description An error occurred while fetching the key bundle. */
         500: {
           content: never
         }
       }
     }
-  }
-  '/key-systems/{id}/schema': {
-    /** Delete the schema file for a key system */
+    /**
+     * Delete a key bundle
+     * @description Delete a key bundle by ID.
+     */
     delete: {
       parameters: {
         path: {
+          /** @description The unique ID of the key bundle to delete. */
           id: string
         }
       }
       responses: {
-        /** @description Schema deleted successfully */
+        /** @description Key bundle deleted successfully. */
         204: {
           content: never
         }
-        /** @description Key system not found */
+        /** @description Key bundle not found. */
+        404: {
+          content: never
+        }
+        /** @description An error occurred while deleting the key bundle. */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update a key bundle
+     * @description Partially update an existing key bundle.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The unique ID of the key bundle to update. */
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateKeyBundleRequest']
+        }
+      }
+      responses: {
+        /** @description Key bundle updated successfully. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyBundle']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Key bundle not found. */
+        404: {
+          content: never
+        }
+        /** @description An error occurred while updating the key bundle. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/key-bundles/{id}/keys-with-loan-status': {
+    /**
+     * Get keys in bundle with maintenance loan status
+     * @description Fetches all keys in a key bundle along with their active maintenance loan information
+     */
+    get: {
+      parameters: {
+        query?: {
+          /**
+           * @description When true, batch-fetches contacts referenced by the keys' loans
+           * and attaches them as a `contacts` sidecar keyed by contactCode.
+           * Soft fails — if the contacts service errors, the response is
+           * returned without the sidecar.
+           */
+          includeContacts?: boolean
+        }
+        path: {
+          /** @description The key bundle ID */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Bundle information and keys with loan status */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['KeyBundleDetailsResponse']
+              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
+              contacts?: {
+                [key: string]: components['schemas']['ContactV1']
+              }
+            }
+          }
+        }
+        /** @description Key bundle not found */
         404: {
           content: never
         }
@@ -9893,71 +11360,74 @@ export interface paths {
       }
     }
   }
-  '/keys': {
+  '/key-bundles/by-contact/{contactCode}/with-loaned-keys': {
     /**
-     * List keys with pagination
-     * @description Returns paginated keys ordered by createdAt (desc).
+     * Get key bundles with keys loaned to a contact
+     * @description Fetches all key bundles that have keys currently loaned to a specific contact.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The contact code (F-number) to find bundles for */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description A list of bundles with loaned keys info. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['BundleWithLoanedKeysInfo'][]
+            }
+          }
+        }
+        /** @description An error occurred while fetching bundles. */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/dax/card-owners': {
+    /**
+     * Search card owners from DAX
+     * @description Search for card owners in the DAX access control system
      */
     get: {
       parameters: {
         query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
+          /** @description Filter by name (rental object ID / object code) */
+          nameFilter?: string
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string
+          /** @description Filter by ID */
+          idfilter?: string
+          /** @description Filter by attribute */
+          attributeFilter?: string
+          /** @description Select specific attributes to return */
+          selectedAttributes?: string
+          /** @description Filter by folder */
+          folderFilter?: string
+          /** @description Filter by organisation */
+          organisationFilter?: string
+          /** @description Pagination offset */
+          offset?: number
+          /** @description Maximum number of results */
           limit?: number
-          /**
-           * @description When true, batch-fetches contacts referenced by the keys'
-           * `activeLoanContact` field and attaches them as a `contacts`
-           * sidecar keyed by contactCode. Soft fails — if the contacts
-           * service errors, keys are still returned without the sidecar.
-           */
-          includeContacts?: boolean
         }
       }
       responses: {
-        /** @description Paginated list of keys */
+        /** @description Card owners retrieved successfully */
         200: {
           content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeyDetails'][]
-              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
-              contacts?: {
-                [key: string]: components['schemas']['ContactV1']
-              }
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-    /** Create a key */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['CreateKeyRequest']
-        }
-      }
-      responses: {
-        /** @description Created */
-        201: {
-          content: {
             'application/json': {
-              content?: components['schemas']['Key']
+              cardOwners?: Record<string, never>[]
             }
           }
         }
-        /** @description Invalid key_type */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Server error */
+        /** @description Failed to fetch card owners */
         500: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -9966,63 +11436,38 @@ export interface paths {
       }
     }
   }
-  '/keys/search': {
+  '/dax/card-owners/{cardOwnerId}': {
     /**
-     * Search keys
-     * @description Search keys with flexible filtering.
-     * - **OR search**: Use `q` with `fields` for multiple field search
-     * - **AND search**: Use any Key field parameter for filtering
-     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
-     * - Only one OR group is supported, but you can combine it with multiple AND filters
+     * Get a specific card owner from DAX
+     * @description Retrieve a card owner by ID from the DAX access control system
      */
     get: {
       parameters: {
         query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-          q?: string
-          /** @description Comma-separated list of fields for OR search. Defaults to keyName. */
-          fields?: string
-          id?: string
-          keyName?: string
-          keySequenceNumber?: string
-          flexNumber?: string
-          rentalObjectCode?: string
-          keyType?: string
-          keySystemId?: string
-          createdAt?: string
-          updatedAt?: string
-          /**
-           * @description When true, batch-fetches contacts referenced by the keys'
-           * `activeLoanContact` field and attaches them as a `contacts`
-           * sidecar keyed by contactCode. Soft fails — if the contacts
-           * service errors, keys are still returned without the sidecar.
-           */
-          includeContacts?: boolean
+          /** @description Comma-separated list of fields to expand (e.g., "cards") */
+          expand?: string
+        }
+        path: {
+          /** @description The card owner ID */
+          cardOwnerId: string
         }
       }
       responses: {
-        /** @description Successfully retrieved paginated search results */
+        /** @description Card owner retrieved successfully */
         200: {
           content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['KeyDetails'][]
-              /** @description Present only when `includeContacts=true` and the fetch succeeded. */
-              contacts?: {
-                [key: string]: components['schemas']['ContactV1']
-              }
+            'application/json': {
+              cardOwner?: components['schemas']['CardOwner']
             }
           }
         }
-        /** @description Bad request */
-        400: {
+        /** @description Card owner not found */
+        404: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
-        /** @description Internal server error */
+        /** @description Failed to fetch card owner */
         500: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -10031,73 +11476,28 @@ export interface paths {
       }
     }
   }
-  '/keys/by-rental-object/{rentalObjectCode}': {
+  '/dax/cards/{cardId}': {
     /**
-     * Get all keys by rental object code
-     * @description Returns all keys associated with a specific rental object code without pagination
+     * Get a specific card from DAX
+     * @description Retrieve a card by ID from the DAX access control system
      */
     get: {
       parameters: {
-        path: {
-          /** @description The rental object code to filter keys by */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved keys */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Key'][]
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/cards/by-rental-object/{rentalObjectCode}': {
-    /** Get cards by rental object code */
-    get: {
-      parameters: {
         query?: {
-          includeLoans?: boolean
+          /** @description Comma-separated list of fields to expand (e.g., "codes") */
+          expand?: string
         }
         path: {
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Cards for the rental object */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['CardDetails'][]
-            }
-          }
-        }
-      }
-    }
-  }
-  '/cards/{cardId}': {
-    /** Get card by ID */
-    get: {
-      parameters: {
-        path: {
+          /** @description The card ID */
           cardId: string
         }
       }
       responses: {
-        /** @description Card found */
+        /** @description Card retrieved successfully */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['Card']
+              card?: components['schemas']['Card']
             }
           }
         }
@@ -10107,6 +11507,53 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
+        /** @description Failed to fetch card */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/{id}/steps/{stepId}/images': {
+    /**
+     * Upload an image to a guide step
+     * @description Requires the guides-admin role. Accepts PNG, JPEG or WEBP up to 5 MB as base64, stores the file under guide/{guideId}/ and appends the image last on the step. A published guide only accepts images with a non-blank altText, since the image is visible to readers at once. The upload bumps the guide's updatedAt; the new value is returned as guideUpdatedAt and must be sent as expectedUpdatedAt on the next save.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string
+          stepId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['GuideImageUploadRequest']
+        }
+      }
+      responses: {
+        /** @description The stored image with a presigned url, and the guide's new updatedAt */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideImageUploadResponse']
+            }
+          }
+        }
+        /** @description Rejected upload: invalid-file-type (unsupported content type or magic bytes that do not match it), invalid-file-size, invalid-file-data (not plain base64), or the error code proxied from the communication service (alt-text-required when the guide is published and altText is missing or blank) */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Guide or step not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
         /** @description Internal server error */
         500: {
           content: {
@@ -10116,30 +11563,34 @@ export interface paths {
       }
     }
   }
-  '/keys/{id}': {
-    /** Get key by ID */
-    get: {
+  '/guides/{id}/images/{imageId}': {
+    /**
+     * Delete a guide step image
+     * @description Requires the guides-admin role. Removes the image row and the stored file. The delete bumps the guide's updatedAt; the new value is returned as guideUpdatedAt and must be sent as expectedUpdatedAt on the next save.
+     */
+    delete: {
       parameters: {
         path: {
           id: string
+          imageId: string
         }
       }
       responses: {
-        /** @description Key found */
+        /** @description Image deleted, with the guide's new updatedAt */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['Key']
+              content?: components['schemas']['GuideImageDeleteResponse']
             }
           }
         }
-        /** @description Not found */
+        /** @description Image not found */
         404: {
           content: {
             'application/json': components['schemas']['NotFoundResponse']
           }
         }
-        /** @description Server error */
+        /** @description Internal server error */
         500: {
           content: {
             'application/json': components['schemas']['ErrorResponse']
@@ -10147,7 +11598,246 @@ export interface paths {
         }
       }
     }
-    /** Delete a key */
+  }
+  '/guides': {
+    /**
+     * List guides
+     * @description Published guides ordered by category and title. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Pass the string 'true' to include drafts; ignored without the guides-admin role. */
+          includeDrafts?: 'true' | 'false'
+        }
+      }
+      responses: {
+        /** @description Guide summaries */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Create a guide
+     * @description Requires the guides-admin role. Images are added afterwards through the image upload endpoint.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateGuideRequest']
+        }
+      }
+      responses: {
+        /** @description The created guide */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideWithUrls']
+            }
+          }
+        }
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        400: {
+          content: {
+            'application/json': {
+              error?: string
+              issues?: {
+                path?: (string | number)[]
+                message?: string
+              }[]
+            }
+          }
+        }
+        /** @description Slug already taken */
+        409: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/categories': {
+    /** List guide categories */
+    get: {
+      responses: {
+        /** @description Categories ordered by name */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideCategory'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/by-slug/{slug}': {
+    /**
+     * Get a guide by slug
+     * @description Resolves the current slug only; a slug a guide had before a rename, or a malformed slug, gives 404. A draft is returned in full to guides-admin users and as an UnpublishedGuide notice to everyone else.
+     */
+    get: {
+      parameters: {
+        path: {
+          slug: string
+        }
+      }
+      responses: {
+        /** @description The guide with presigned image urls, or an unpublished notice */
+        200: {
+          content: {
+            'application/json': {
+              content?:
+                | components['schemas']['GuideWithUrls']
+                | components['schemas']['UnpublishedGuide']
+            }
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/{id}': {
+    /**
+     * Get a guide by id
+     * @description Used by the editor. Drafts are only returned to guides-admin users.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The guide with presigned image urls */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideWithUrls']
+            }
+          }
+        }
+        /** @description Draft requested without the guides-admin role */
+        403: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Update a guide
+     * @description Requires the guides-admin role. Replaces metadata and steps; steps missing from the payload are deleted together with their images, and the files are removed from storage. expectedUpdatedAt must be the guide's updatedAt as last read by the client (from the guide, a previous save, or an image upload/delete response); a stale value is rejected with 409 guide-modified so a save from outdated state cannot delete newer images.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateGuideRequest']
+        }
+      }
+      responses: {
+        /** @description The updated guide */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideWithUrls']
+            }
+          }
+        }
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        400: {
+          content: {
+            'application/json': {
+              error?: string
+              issues?: {
+                path?: (string | number)[]
+                message?: string
+              }[]
+            }
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Conflict proxied from the communication service: slug-taken, or guide-modified when expectedUpdatedAt is stale (the guide was saved or its images changed since the client loaded it) */
+        409: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Delete a guide
+     * @description Requires the guides-admin role. Removes the guide, its steps, image rows and image files.
+     */
     delete: {
       parameters: {
         path: {
@@ -10155,735 +11845,20 @@ export interface paths {
         }
       }
       responses: {
-        /** @description Deleted */
-        200: {
-          content: never
-        }
-        /** @description Not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-    /** Update a key (partial) */
-    patch: {
-      parameters: {
-        path: {
-          id: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['UpdateKeyRequest']
-        }
-      }
-      responses: {
-        /** @description Updated */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Key']
-            }
-          }
-        }
-        /** @description Invalid key_type */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/keys/bulk-update': {
-    /**
-     * Bulk update keys
-     * @description Update multiple keys with the same values. Maximum 100 keys per request.
-     */
-    patch: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['BulkUpdateKeysRequest']
-        }
-      }
-      responses: {
-        /** @description Keys updated successfully */
-        200: {
-          content: {
-            'application/json': {
-              /** @description Number of keys updated */
-              content?: number
-            }
-          }
-        }
-        /** @description Invalid request data */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/keys/bulk-update-flex': {
-    /**
-     * Bulk update flex number for all keys on a rental object
-     * @description Update the flex number for all keys associated with a specific rental object code. Flex numbers range from 1-3.
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['BulkUpdateFlexRequest']
-        }
-      }
-      responses: {
-        /** @description Flex numbers updated successfully */
-        200: {
-          content: {
-            'application/json': {
-              /** @description Number of keys updated */
-              content?: number
-            }
-          }
-        }
-        /** @description Invalid request data */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/keys/bulk-delete': {
-    /**
-     * Bulk delete keys
-     * @description Delete multiple keys by their IDs. Maximum 100 keys per request.
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': {
-            keyIds: string[]
-          }
-        }
-      }
-      responses: {
-        /** @description Keys deleted successfully */
-        200: {
-          content: {
-            'application/json': {
-              /** @description Number of keys deleted */
-              content?: number
-            }
-          }
-        }
-        /** @description Invalid request data */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs': {
-    /**
-     * List logs with pagination
-     * @description Returns paginated logs (most recent per objectId) ordered by eventTime (desc).
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-        }
-      }
-      responses: {
-        /** @description Paginated list of logs */
-        200: {
-          content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['Log'][]
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-    /** Create a log */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['CreateLogRequest']
-        }
-      }
-      responses: {
-        /** @description Created */
-        201: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Log']
-            }
-          }
-        }
-        /** @description Invalid or missing fields */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/search': {
-    /**
-     * Search logs with pagination
-     * @description Search logs with flexible filtering and pagination.
-     * - **OR search**: Use `q` with `fields` for multiple field search
-     * - **AND search**: Use any Log field parameter for filtering
-     * - **Comparison operators**: Prefix values with `>`, `<`, `>=`, `<=` for date/number comparisons
-     * - Only one OR group is supported, but you can combine it with multiple AND filters
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-          q?: string
-          /** @description Comma-separated list of fields for OR search. Defaults to objectId. */
-          fields?: string
-          id?: string
-          userName?: string
-          eventType?: string
-          eventTime?: string
-          objectType?: string
-          objectId?: string
-          description?: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved paginated search results */
-        200: {
-          content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['Log'][]
-            }
-          }
-        }
-        /** @description Bad request */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/object/{objectId}': {
-    /**
-     * Get all logs for a specific objectId
-     * @description Returns all log entries for a given objectId, ordered by most recent first
-     */
-    get: {
-      parameters: {
-        path: {
-          objectId: string
-        }
-      }
-      responses: {
-        /** @description List of logs for the objectId */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Log'][]
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/{id}': {
-    /** Get log by ID */
-    get: {
-      parameters: {
-        path: {
-          id: string
-        }
-      }
-      responses: {
-        /** @description Log found */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Log']
-            }
-          }
-        }
-        /** @description Not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/rental-object/{rentalObjectCode}': {
-    /**
-     * Get all logs for a specific rental object
-     * @description Returns all log entries for a given rental object code by JOINing across multiple tables.
-     *
-     * Included objectTypes: keys, keyLoans, receipts, keyEvents, keyNotes, keyBundles, signatures
-     *
-     * Excluded: keySystem logs (infrastructure-level, not property-specific)
-     *
-     * Note: Uses current state via JOINs - if a key moved between properties, historical logs reflect current property assignment
-     *
-     * Results ordered by most recent first
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-          /** @description Filter by event type (creation, update, delete) */
-          eventType?: string
-          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
-          objectType?: string
-          /** @description Filter by user name */
-          userName?: string
-        }
-        path: {
-          /** @description The rental object code (e.g., "705-011-03-0102") */
-          rentalObjectCode: string
-        }
-      }
-      responses: {
-        /** @description Paginated list of logs for the rental object */
-        200: {
-          content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['Log'][]
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/logs/contact/{contactId}': {
-    /**
-     * Get all logs for a specific contact
-     * @description Returns all log entries for a given contact code by JOINing across keyLoans and receipts.
-     *
-     * Included objectTypes: keyLoans, receipts, signatures, keys (if in active loan)
-     *
-     * Excluded: keyEvents, keyBundles, keyNotes, keySystem (no contact relationship)
-     *
-     * Note: Matches both contact and contact2 fields (co-tenants supported)
-     *
-     * Results ordered by most recent first
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number (starts from 1) */
-          page?: number
-          /** @description Number of records per page */
-          limit?: number
-          /** @description Filter by event type (creation, update, delete) */
-          eventType?: string
-          /** @description Filter by object type (key, keyLoan, receipt, etc.) */
-          objectType?: string
-          /** @description Filter by user name */
-          userName?: string
-        }
-        path: {
-          /** @description The contact code (e.g., "P079586", "F123456") */
-          contactId: string
-        }
-      }
-      responses: {
-        /** @description Paginated list of logs for the contact */
-        200: {
-          content: {
-            'application/json': components['schemas']['PaginatedResponse'] & {
-              content?: components['schemas']['Log'][]
-            }
-          }
-        }
-        /** @description Server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/receipts': {
-    /**
-     * Create a receipt
-     * @description Create a new receipt record for a key loan
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['CreateReceiptRequest']
-        }
-      }
-      responses: {
-        /** @description Key note created successfully */
-        201: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Receipt']
-            }
-          }
-        }
-        /** @description Invalid request data */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/receipts/{id}': {
-    /**
-     * Get a receipt by ID
-     * @description Retrieve a specific receipt by its ID
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The receipt ID */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved receipt */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Receipt']
-            }
-          }
-        }
-        /** @description Receipt not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-    /**
-     * Delete a receipt
-     * @description Delete a receipt by ID (and associated file from MinIO)
-     */
-    delete: {
-      parameters: {
-        path: {
-          /** @description The ID of the receipt to delete */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Receipt deleted successfully */
-        204: {
-          content: never
-        }
-        /** @description Receipt not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-    /**
-     * Update a receipt
-     * @description Update a receipt (e.g., set fileId after upload)
-     */
-    patch: {
-      parameters: {
-        path: {
-          /** @description The ID of the receipt to update */
-          id: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['UpdateReceiptRequest']
-        }
-      }
-      responses: {
-        /** @description Receipt updated successfully */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Receipt']
-            }
-          }
-        }
-        /** @description Invalid request data */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Receipt not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['NotFoundResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/receipts/by-key-loan/{keyLoanId}': {
-    /** Get receipts by key loan ID */
-    get: {
-      parameters: {
-        path: {
-          keyLoanId: string
-        }
-      }
-      responses: {
-        /** @description Receipts for the key loan */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Receipt'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/receipts/{id}/upload': {
-    /** Upload a file for a receipt */
-    post: {
-      parameters: {
-        path: {
-          id: string
-        }
-      }
-      requestBody: {
-        content: {
-          'application/json': {
-            /** @description Base64 encoded file data */
-            fileData: string
-            fileContentType?: string
-          }
-        }
-      }
-      responses: {
-        /** @description File uploaded successfully */
+        /** @description Guide deleted */
         200: {
           content: {
             'application/json': {
               content?: {
-                fileId?: string
+                deleted?: boolean
               }
             }
           }
         }
-        /** @description Missing fileData */
-        400: {
-          content: never
-        }
-        /** @description Receipt not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/receipts/{id}/download': {
-    /** Get presigned download URL for a receipt file */
-    get: {
-      parameters: {
-        path: {
-          id: string
-        }
-      }
-      responses: {
-        /** @description Presigned download URL */
-        200: {
-          content: {
-            'application/json': {
-              content?: {
-                url?: string
-                expiresIn?: number
-                fileId?: string
-              }
-            }
-          }
-        }
-        /** @description Receipt or file not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/signatures/send': {
-    /**
-     * Send a document for digital signature via SimpleSign
-     * @description Send a PDF document to SimpleSign for digital signature
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': {
-            /** @enum {string} */
-            resourceType: 'receipt'
-            /** Format: uuid */
-            resourceId: string
-            /** Format: email */
-            recipientEmail: string
-            recipientName?: string
-            pdfBase64: string
-          }
-        }
-      }
-      responses: {
-        /** @description Signature request sent successfully */
-        201: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Signature']
-            }
-          }
-        }
-        /** @description Invalid request data */
-        400: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Resource not found */
+        /** @description Guide not found */
         404: {
           content: {
-            'application/json': components['schemas']['ErrorResponse']
+            'application/json': components['schemas']['NotFoundResponse']
           }
         }
         /** @description Internal server error */
@@ -10891,98 +11866,6 @@ export interface paths {
           content: {
             'application/json': components['schemas']['ErrorResponse']
           }
-        }
-      }
-    }
-  }
-  '/signatures/{id}': {
-    /**
-     * Get a signature by ID
-     * @description Retrieve a specific signature by its ID
-     */
-    get: {
-      parameters: {
-        path: {
-          id: string
-        }
-      }
-      responses: {
-        /** @description Signature details */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Signature']
-            }
-          }
-        }
-        /** @description Signature not found */
-        404: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/signatures/resource/{resourceType}/{resourceId}': {
-    /**
-     * Get all signatures for a resource
-     * @description Retrieve all signatures associated with a specific resource
-     */
-    get: {
-      parameters: {
-        path: {
-          resourceType: 'receipt'
-          resourceId: string
-        }
-      }
-      responses: {
-        /** @description List of signatures */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Signature'][]
-            }
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: {
-            'application/json': components['schemas']['ErrorResponse']
-          }
-        }
-      }
-    }
-  }
-  '/webhooks/simplesign': {
-    /**
-     * Webhook endpoint for SimpleSign status updates
-     * @description Receives webhook notifications from SimpleSign when document status changes (e.g., signed, declined)
-     */
-    post: {
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['SimpleSignWebhookPayload']
-        }
-      }
-      responses: {
-        /** @description Webhook processed successfully */
-        200: {
-          content: never
-        }
-        /** @description Signature not found */
-        404: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
         }
       }
     }
@@ -11065,6 +11948,7 @@ export interface paths {
                   | (
                       | {
                           contactCode: string
+                          protectedIdentity: boolean
                           communication: {
                             phoneNumbers: {
                               phoneNumber: string
@@ -11121,6 +12005,7 @@ export interface paths {
                         }
                       | {
                           contactCode: string
+                          protectedIdentity: boolean
                           communication: {
                             phoneNumbers: {
                               phoneNumber: string
@@ -11372,6 +12257,261 @@ export interface paths {
       }
     }
   }
+  '/v1/contacts/{contactCode}/relations': {
+    /**
+     * Add a related contact (god man, förvaltare, annan fakturamottagare)
+     * @description Adds a relation from the contact to another contact. A contact has at most one god man or förvaltare (409 guardian-exists, detail = the existing guardian's contact code). The acting user is recorded from the token. Returns the contact's relations after the change. 502 propagation-failed means the relation was not saved because Tenfast or Xledger could not be updated; detail is `economy` or `tenfast` — an internal stage name for diagnostics only, never to be shown to a caseworker verbatim. 502 rollback-failed is the opposite and must not be retried: the relation was saved, Tenfast was not told, and undoing the write failed too — it is flagged for manual repair. 502 outcome-unknown means the contacts service never answered, so whether the relation was saved is unknown; it is flagged for manual checking and must not be retried blindly.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Contact Code */
+          contactCode: string
+        }
+      }
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['AddRelationRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                relations: {
+                  contactCode: string
+                  /** @enum {string} */
+                  role:
+                    | 'trustee'
+                    | 'administrator'
+                    | 'trusteeFor'
+                    | 'administratorFor'
+                    | 'otherInvoiceRecipient'
+                    | 'otherInvoiceRecipientFor'
+                  fullName: string
+                  firstName: string
+                  lastName: string
+                }[]
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Unprocessable Entity */
+        422: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/contacts/{contactCode}/relations/{roleType}/{relatedContactCode}': {
+    /**
+     * Remove a related contact
+     * @description Ends the relation from the contact to the related contact in the given role. History is kept in the contacts service. The acting user is recorded from the token. 502 propagation-failed means the relation could not be removed because Tenfast could not be updated; detail is always `tenfast` here (there is no economy stage on removal) — an internal stage name for diagnostics only, never to be shown to a caseworker verbatim. 502 rollback-failed is the opposite and must not be retried: the relation was removed, Tenfast was not told, and putting it back failed too — it is flagged for manual repair. 502 outcome-unknown means the contacts service never answered, so whether the relation was removed is unknown; it is flagged for manual checking and must not be retried blindly.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Contact Code */
+          contactCode: string
+          /** @description Relation role */
+          roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
+          /** @description Related Contact Code */
+          relatedContactCode: string
+        }
+      }
+      responses: {
+        /** @description No Content */
+        204: {
+          content: {
+            'application/json': unknown
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/v1/contacts/by-phone-number/{phoneNumber}': {
     /** List contacts by phone number */
     get: {
@@ -11456,6 +12596,60 @@ export interface paths {
           content: {
             'application/json': {
               _links?: unknown
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/tenant-notifications/lease-termination-confirmation': {
+    /**
+     * Send a lease termination confirmation email
+     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking lease is terminated. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['SendLeaseTerminationConfirmationRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                /** @enum {boolean} */
+                sent: true
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
             }
           }
         }
@@ -11646,6 +12840,9 @@ export interface components {
         emailAddress?: string | null
         isTenant: boolean
         specialAttention?: boolean
+        protectedIdentity: boolean
+        /** @enum {string} */
+        protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
         parkingSpaceWaitingList?: {
           /** Format: date-time */
           queueTime: string
@@ -11688,7 +12885,11 @@ export interface components {
       /** Format: date-time */
       startDate: string | null
       /** Format: date-time */
+      endDate: string | null
+      /** Format: date-time */
       lastDebitDate: string | null
+      /** Format: date-time */
+      signedAt: string | null
       /** @enum {number} */
       status: 0 | 1 | 2 | 3 | 4 | 5 | 6
       rentalObjectCode: string | null
@@ -11743,6 +12944,9 @@ export interface components {
       emailAddress?: string | null
       isTenant: boolean
       specialAttention?: boolean
+      protectedIdentity: boolean
+      /** @enum {string} */
+      protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
     }
     RentalObjectRentInfo: {
       rentalObjectCode: string
@@ -12040,7 +13244,9 @@ export interface components {
       dueDate: ('null' | null) | string
       rentalObjectCode: string
       status: string
+      maintenanceTeam?: string | null
       hiddenFromMyPages?: boolean
+      closeRequestPending: boolean
       workOrderRows: {
         description: string | null
         locationCode: string | null
@@ -12601,6 +13807,9 @@ export interface components {
         code: string | null
         name: string | null
       }
+    }
+    RentalIdsWithBlockResponse: {
+      content: string[]
     }
     FacilitySearchResult: {
       /** @description Unique identifier for the search result */
@@ -13314,6 +14523,8 @@ export interface components {
         facilityCount: number
         otherCount: number
       }
+      /** @enum {string} */
+      share?: 'default' | 'exception'
     }
     CostCenterTreeKvvArea: {
       /** Format: uuid */
@@ -13365,6 +14576,8 @@ export interface components {
           facilityCount: number
           otherCount: number
         }
+        /** @enum {string} */
+        share?: 'default' | 'exception'
       }[]
     }
     CostCenterTree: {
@@ -13427,6 +14640,8 @@ export interface components {
             facilityCount: number
             otherCount: number
           }
+          /** @enum {string} */
+          share?: 'default' | 'exception'
         }[]
       }[]
     }
@@ -13616,6 +14831,8 @@ export interface components {
             }[]
           }[]
         }[]
+        /** @enum {string} */
+        share?: 'default' | 'exception'
       }[]
     }
     PropertyTree: {
@@ -13700,6 +14917,8 @@ export interface components {
               }[]
             }[]
           }[]
+          /** @enum {string} */
+          share?: 'default' | 'exception'
         }[]
       }[]
     }
@@ -14510,6 +15729,42 @@ export interface components {
       offset?: number
       limit?: number
     }
+    MoveInOutRow: {
+      rentalObjectCode: string
+      address: string | null
+      objectTypeCode: string | null
+      outgoing: {
+        leaseId: string
+        names: string[]
+        contactCodes: string[]
+        /** Format: date-time */
+        leaseStartDate: string | null
+        /** Format: date-time */
+        lastDebitDate: string | null
+      } | null
+      incoming: components['schemas']['MoveInOutRow']['outgoing'] | null
+      keyCount: number
+      cardCount: number
+      outgoingAllReturned: boolean | null
+      /** Format: date-time */
+      outgoingReturnedAt: string | null
+      /** Format: date-time */
+      incomingLoanCreatedAt: string | null
+      /** Format: date-time */
+      incomingLoanPickedUpAt: string | null
+      /** @enum {string} */
+      status:
+        | 'UNKNOWN'
+        | 'NOT_RETURNED'
+        | 'LOANED_TO_OTHER'
+        | 'CREATED'
+        | 'HANDED_OUT'
+        | 'RETURNED_VACANT'
+        | 'NO_KEYS'
+        | 'NO_LOANS'
+        | 'PARTIAL'
+      notes: string[]
+    }
     PaginatedResponse: {
       content: unknown[]
       _meta: {
@@ -14911,6 +16166,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -15275,6 +16533,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -15731,6 +16992,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -16064,7 +17328,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'my-pages'
         fromAddress: string
         subject: string | null
         body: string
@@ -16079,6 +17343,7 @@ export interface components {
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
       }
@@ -16107,7 +17372,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'my-pages'
         fromAddress: string
         subject: string | null
         body: string
@@ -16122,6 +17387,7 @@ export interface components {
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
       }
@@ -16143,24 +17409,339 @@ export interface components {
         createdAt: string
       }[]
     }
+    ReleaseNote: {
+      /** Format: uuid */
+      id: string
+      /** @enum {string} */
+      app:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title: string
+      description: string
+      /** @enum {string} */
+      category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned: boolean
+      /** Format: date-time */
+      publishedAt: string | null
+      createdBy: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateReleaseNote: {
+      /** @enum {string} */
+      app:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title: string
+      description: string
+      /** @enum {string} */
+      category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned?: boolean
+      /** Format: date-time */
+      publishedAt?: string | null
+    }
+    UpdateReleaseNote: {
+      /** @enum {string} */
+      app?:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title?: string
+      description?: string
+      /** @enum {string} */
+      category?: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned?: boolean
+      /** Format: date-time */
+      publishedAt?: string | null
+    }
+    ReleaseNoteCapabilities: {
+      canManage: boolean
+    }
+    GuideCategory: {
+      /** Format: uuid */
+      id: string
+      name: string
+      /** Format: uuid */
+      parentId: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    GuideSummary: {
+      /** Format: uuid */
+      id: string
+      slug: string
+      title: string
+      description: string
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      category: {
+        /** Format: uuid */
+        id: string
+        name: string
+        /** Format: uuid */
+        parentId: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }
+      stepCount: number
+      createdBy: string
+      updatedBy: string
+      /** Format: date-time */
+      publishedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    GuideStepImageWithUrl: {
+      /** Format: uuid */
+      id: string
+      /** Format: uuid */
+      stepId: string
+      sortOrder: number
+      storageKey: string
+      filename: string
+      contentType: string
+      altText: string
+      caption: string | null
+      /** Format: date-time */
+      createdAt: string
+      url: string
+    }
+    GuideWithUrls: {
+      /** Format: uuid */
+      id: string
+      slug: string
+      title: string
+      description: string
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      category: {
+        /** Format: uuid */
+        id: string
+        name: string
+        /** Format: uuid */
+        parentId: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }
+      stepCount: number
+      createdBy: string
+      updatedBy: string
+      /** Format: date-time */
+      publishedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      steps: {
+        /** Format: uuid */
+        id: string
+        /** Format: uuid */
+        guideId: string
+        sortOrder: number
+        title: string
+        body: string
+        /** @enum {string|null} */
+        calloutType: 'tip' | 'note' | 'warning' | null
+        calloutText: string | null
+        images: {
+          /** Format: uuid */
+          id: string
+          /** Format: uuid */
+          stepId: string
+          sortOrder: number
+          storageKey: string
+          filename: string
+          contentType: string
+          altText: string
+          caption: string | null
+          /** Format: date-time */
+          createdAt: string
+          url: string
+        }[]
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+    }
+    UnpublishedGuide: {
+      slug: string
+      title: string
+      /** @enum {boolean} */
+      unpublished: true
+    }
+    CreateGuideRequest: {
+      title: string
+      /** @default */
+      description?: string
+      slug: string
+      category:
+        | {
+            /** Format: uuid */
+            id: string
+          }
+        | {
+            name: string
+            /** Format: uuid */
+            parentId?: string
+          }
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      steps: {
+        /** Format: uuid */
+        id: string
+        title: string
+        body: string
+        /** @enum {string|null} */
+        calloutType?: 'tip' | 'note' | 'warning' | null
+        calloutText?: string | null
+        /** @default [] */
+        images?: {
+          /** Format: uuid */
+          id: string
+          sortOrder: number
+          altText: string
+          caption: string | null
+        }[]
+      }[]
+    }
+    UpdateGuideRequest: {
+      title: string
+      /** @default */
+      description?: string
+      slug: string
+      category:
+        | {
+            /** Format: uuid */
+            id: string
+          }
+        | {
+            name: string
+            /** Format: uuid */
+            parentId?: string
+          }
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      steps: {
+        /** Format: uuid */
+        id: string
+        title: string
+        body: string
+        /** @enum {string|null} */
+        calloutType?: 'tip' | 'note' | 'warning' | null
+        calloutText?: string | null
+        /** @default [] */
+        images?: {
+          /** Format: uuid */
+          id: string
+          sortOrder: number
+          altText: string
+          caption: string | null
+        }[]
+      }[]
+      /** Format: date-time */
+      expectedUpdatedAt: string
+    }
+    GuideImageUploadRequest: {
+      /** @description Original file name, kept as image metadata */
+      fileName: string
+      /** @description Base64 encoded file content */
+      fileData: string
+      /**
+       * @description MIME type of the image
+       * @enum {string}
+       */
+      contentType: 'image/png' | 'image/jpeg' | 'image/webp'
+      altText?: string
+      caption?: string | null
+    }
+    GuideImageUploadResponse: {
+      image: {
+        /** Format: uuid */
+        id: string
+        /** Format: uuid */
+        stepId: string
+        sortOrder: number
+        storageKey: string
+        filename: string
+        contentType: string
+        altText: string
+        caption: string | null
+        /** Format: date-time */
+        createdAt: string
+        url: string
+      }
+      /** Format: date-time */
+      guideUpdatedAt: string
+    }
+    GuideImageDeleteResponse: {
+      /** @enum {boolean} */
+      deleted: true
+      /** Format: date-time */
+      guideUpdatedAt: string
+    }
+    /** @description The parts of a Keycloak user that clients need to show and pick users. */
     KeycloakUser: {
       id: string
       username: string
       firstName?: string
       lastName?: string
-      email?: string
-      emailVerified?: boolean
-      /** @description Open-ended map of custom user attributes. Keys are realm-configurable; each value is an array of strings. */
+      /** @description The user attributes employeeId and mobilePhone, when set. Each value is an array of strings. */
       attributes?: {
-        [key: string]: string[]
+        employeeId?: string[]
+        mobilePhone?: string[]
       }
-      /** Format: int64 */
-      createdTimestamp?: number
-      enabled?: boolean
-      totp?: boolean
-      disableableCredentialTypes?: string[]
-      requiredActions?: string[]
-      notBefore?: number
     }
     RentalPropertyResponse: {
       content?: {
@@ -16174,6 +17755,7 @@ export interface components {
           number?: string
           type?: string
           roomTypeCode?: string
+          roomCount?: number | null
           entrance?: string
           floor?: string
           hasElevator?: boolean
@@ -16251,9 +17833,27 @@ export interface components {
       /** @default [] */
       waitingLists?: (1 | 2 | 3)[]
     }
+    AddRelationRequest: {
+      relatedContactCode: string
+      /** @enum {string} */
+      roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
+    }
+    SendLeaseTerminationConfirmationRequest: {
+      /** Format: email */
+      to: string
+      contactCode: string
+      firstName: string
+      leaseId: string
+      /** Format: date */
+      endDate: string
+      /** @enum {string} */
+      rentalType: 'Bilplats'
+      correlationId?: string
+    }
     ContactV1:
       | {
           contactCode: string
+          protectedIdentity: boolean
           communication: {
             phoneNumbers: {
               phoneNumber: string
@@ -16310,6 +17910,7 @@ export interface components {
         }
       | {
           contactCode: string
+          protectedIdentity: boolean
           communication: {
             phoneNumbers: {
               phoneNumber: string

@@ -27,6 +27,8 @@ import { AdapterResult } from '../types'
 
 export * from './log-reads'
 export * from './delivery-reports'
+export * as guides from './guides'
+export * from './release-notes'
 
 export const sendNotificationToContact = async (
   recipientContact: Contact,
@@ -272,6 +274,7 @@ export const sendWorkOrderSms = async ({
   externalContractorName,
   contactCode,
   triggeredByUser,
+  workOrderCode,
 }: WorkOrderSms): Promise<AdapterResult<any, 'error'>> => {
   try {
     const axiosOptions = {
@@ -291,6 +294,7 @@ export const sendWorkOrderSms = async ({
           externalContractorName,
           contactCode,
           triggeredByUser,
+          workOrderCode,
         },
       }
     )
@@ -312,6 +316,7 @@ export const sendWorkOrderEmail = async ({
   externalContractorName,
   contactCode,
   triggeredByUser,
+  workOrderCode,
 }: WorkOrderEmail): Promise<AdapterResult<any, 'error'>> => {
   try {
     const axiosOptions = {
@@ -332,6 +337,7 @@ export const sendWorkOrderEmail = async ({
           externalContractorName,
           contactCode,
           triggeredByUser,
+          workOrderCode,
         },
       }
     )
@@ -491,8 +497,6 @@ export const sendEmail = async (
   opts: { timeoutMs?: number } = {}
 ) => {
   try {
-    // TODO update node version to get rid of this warning
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins
     const form = new FormData()
 
     form.append('to', to)
@@ -501,8 +505,6 @@ export const sendEmail = async (
 
     if (attachments) {
       attachments.forEach((a) => {
-        // TODO update node version to get rid of this warning
-        // eslint-disable-next-line n/no-unsupported-features/node-builtins
         form.append('attachments', new Blob([a.data]), a.name)
       })
     }
