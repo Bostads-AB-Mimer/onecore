@@ -10,7 +10,8 @@ export type FailedRowEntry = {
   lastAttemptAt?: string
   retriesStartedAt?: string
   stillFailingNotifiedAt?: string
-  // Key of a queued entry this one waits for; not retried while that one is queued.
+  // Set while the entry waits, never tried, behind an earlier one with its order
+  // key; holds the key of the entry it was queued behind.
   heldBehind?: string
 }
 

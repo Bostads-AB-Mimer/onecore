@@ -661,11 +661,10 @@ describe('runCmlogSync', () => {
     expect(await readQueue(queueFile)).toEqual([])
   })
 
-  describe('heldBehind', () => {
+  describe('orderKey', () => {
     const ordered: Partial<CmlogSync<Change>> = {
       keyFor: (c) => `thing:${c.id}:${c.value}`,
-      heldBehind: (c, queued) =>
-        queued.value === 'create' && c.value !== 'create' && queued.id === c.id,
+      orderKey: (c) => c.id,
       describe: (c) => ({
         subject: `sak ${c.id}`,
         detail: `sak ${c.id} (${c.value})`,
@@ -735,6 +734,27 @@ describe('runCmlogSync', () => {
       expect(subjects()).toEqual(['sync-things: nytt fel på sak L-1'])
     })
 
+    it('holds a new row behind a queued row for the same thing that is not a create', async () => {
+      await appendEntry(
+        queueFile,
+        entryFor(terminate, { key: 'thing:L-1:terminate' })
+      )
+      fetchChanges.mockResolvedValue({ ok: true, data: [voided] })
+      failOn('terminate')
+
+      await run(ordered)
+
+      expect(sync.mock.calls.map(([c]) => (c as Change).value)).toEqual([
+        'terminate',
+      ])
+      const queue = await readQueue(queueFile)
+      expect(queue.map((e) => e.key)).toEqual([
+        'thing:L-1:terminate',
+        'thing:L-1:void',
+      ])
+      expect(queue[1].heldBehind).toBe('thing:L-1:terminate')
+    })
+
     it('does not hold a row behind a create for another thing', async () => {
       await appendEntry(queueFile, queuedCreate)
       const other = change({ id: 'L-2', value: 'terminate' })
@@ -793,9 +813,9 @@ describe('runCmlogSync', () => {
       expect(queue).toHaveLength(1)
       expect(queue[0]).toMatchObject({
         key: 'thing:L-1:terminate',
+        addedAt: NOW.toISOString(),
         lastError: 'boom',
         lastAttemptAt: NOW.toISOString(),
-        retriesStartedAt: NOW.toISOString(),
       })
       expect(queue[0].heldBehind).toBeUndefined()
       expect(subjects()).toEqual([
@@ -821,7 +841,93 @@ describe('runCmlogSync', () => {
         'thing:L-1:terminate',
         'thing:L-1:void',
       ])
-      expect(queue[1].heldBehind).toBe('thing:L-1:terminate')
+      expect(queue[1]).toEqual(heldEntry(voided))
+    })
+
+    it('mails when a released held row is skipped', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      await appendEntry(queueFile, heldEntry(terminate))
+      sync.mockImplementation(async (c: Change) =>
+        c.value === 'terminate' ? { skipped: 'lease not found' } : undefined
+      )
+
+      await run(ordered)
+
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual([
+        'sync-things: tidigare felande sak L-1 är nu synkat',
+        'sync-things: sak L-1 synkades inte',
+      ])
+      expect(sendEmailSpy.mock.calls[1][0].body).toContain('lease not found')
+    })
+
+    it('keeps a queued row ahead of its held rows when it fails again on a newer change', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      await appendEntry(queueFile, heldEntry(terminate))
+      const newerCreate = change({
+        id: 'L-1',
+        value: 'create',
+        timestamp: new Date('2026-10-15T08:20:00.000Z'),
+      })
+      fetchChanges.mockResolvedValue({ ok: true, data: [newerCreate] })
+      failOn('create')
+
+      await run(ordered)
+
+      expect((await readQueue(queueFile)).map((e) => e.key)).toEqual([
+        'thing:L-1:create',
+        'thing:L-1:terminate',
+      ])
+    })
+
+    it('does not sync a re-fetched row dropped with a given-up create', async () => {
+      await appendEntry(
+        queueFile,
+        entryFor(create, {
+          key: 'thing:L-1:create',
+          retriesStartedAt: hoursBefore(NOW, 31 * 24),
+          lastAttemptAt: hoursBefore(NOW, 25),
+        })
+      )
+      await appendEntry(queueFile, heldEntry(terminate))
+      fetchChanges.mockResolvedValue({ ok: true, data: [terminate] })
+      failOn('create')
+
+      await run(ordered)
+
+      expect(sync.mock.calls.map(([c]) => (c as Change).value)).toEqual([
+        'create',
+      ])
+      expect(await readQueue(queueFile)).toEqual([])
+    })
+
+    it('does not sync a re-fetched held row twice once released', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      await appendEntry(queueFile, heldEntry(terminate))
+      fetchChanges.mockResolvedValue({ ok: true, data: [terminate] })
+
+      await run(ordered)
+
+      expect(sync.mock.calls.map(([c]) => (c as Change).value)).toEqual([
+        'create',
+        'terminate',
+      ])
+    })
+
+    it('drops held rows replaced by a newer change instead of releasing them', async () => {
+      await appendEntry(queueFile, queuedCreate)
+      await appendEntry(queueFile, heldEntry(terminate))
+      fetchChanges.mockResolvedValue({ ok: true, data: [voided] })
+
+      await run({ ...ordered, supersedeKey: (c) => c.id })
+
+      expect(sync.mock.calls.map(([c]) => (c as Change).value)).toEqual([
+        'void',
+      ])
+      expect(await readQueue(queueFile)).toEqual([])
+      expect(subjects()).toEqual([
+        'sync-things: tidigare felande sak L-1 ersatt av en senare ändring',
+      ])
     })
 
     it('drops held rows when the create is given up and names them in the mail', async () => {

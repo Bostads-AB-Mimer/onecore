@@ -102,12 +102,9 @@ export const syncLeases = (
       sync: syncLease,
       keyFor: (lease) =>
         `${lease.leaseId}:${lease.action}:${lease.timestamp.toISOString()}`,
-      // Tenfast answers "nothing to do" to a terminate or void of a lease it
-      // does not hold yet, so they must wait for a create that is still queued.
-      heldBehind: (lease, queued) =>
-        queued.action === 'create' &&
-        lease.action !== 'create' &&
-        queued.leaseId === lease.leaseId,
+      // Tenfast answers "nothing to do" to a change to a lease it does not
+      // hold yet, so a lease's changes must not overtake a queued one.
+      orderKey: (lease) => lease.leaseId,
       timestampOf: (lease) => lease.timestamp,
       toPayload: (lease) => ({
         ...lease,
