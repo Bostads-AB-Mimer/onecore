@@ -829,4 +829,39 @@ export const routes = (
       }
     }
   )
+
+  router.get(
+    '/contacts/by-nid/:nid/login-contact',
+    {
+      summary: 'Get the contact a person logs in to mimer.nu as',
+      description:
+        'A personnummer can have several contacts. Only private individuals that are not deleted are considered, ranked by current lease, then queue time, then an Xpand user, then newest. 404 when there is none or nid is not a valid personnummer or samordningsnummer.',
+      tags: ['Contacts'],
+      params: {
+        nid: z.string(),
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx, ctx.queryParameterNames ?? [])
+      const result = await contactsRepository.getLoginContactByNationalIdNumber(
+        ctx.params.nid
+      )
+
+      if (!result) {
+        ctx.status = 404
+        ctx.body = {
+          ...metadata,
+        }
+      } else {
+        ctx.body = {
+          ...metadata,
+          content: result,
+        }
+      }
+    }
+  )
 }

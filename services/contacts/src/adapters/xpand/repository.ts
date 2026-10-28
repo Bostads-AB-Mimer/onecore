@@ -24,6 +24,8 @@ import { contactsByCodesQuery, ContactIncludeOptions } from './batch-query'
 import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
 import { contactExists } from './contact-lookup-query'
+import { loginContactCandidates } from './login-contact-query'
+import { pickLoginContact } from '@src/domain/login-contact'
 import {
   relatedContactsFor,
   relatedContactsForMany,
@@ -83,6 +85,21 @@ export const xpandContactsRepository = (
     return exists ? related : null
   }
 
+  const getByContactCode = async (contactCode: ContactCode) => {
+    const dbContactRows = await contactsQuery()
+      .hasContactCode(contactCode)
+      .getOne(db.get())
+
+    const contact = transformDbContactRows(dbContactRows)[0]
+    if (!contact) return null
+    contact.relatedContacts = await relatedContactsFor(
+      db.get(),
+      contactsDb.get(),
+      contact.contactCode
+    )
+    return contact
+  }
+
   return {
     /**
      * Retrieve a paginated and, optionally, filtered list of contacts
@@ -124,20 +141,7 @@ export const xpandContactsRepository = (
      *
      * @returns A promise that resolves to the Contact object if found,
      */
-    getByContactCode: async (contactCode: ContactCode) => {
-      const dbContactRows = await contactsQuery()
-        .hasContactCode(contactCode)
-        .getOne(db.get())
-
-      const contact = transformDbContactRows(dbContactRows)[0]
-      if (!contact) return null
-      contact.relatedContacts = await relatedContactsFor(
-        db.get(),
-        contactsDb.get(),
-        contact.contactCode
-      )
-      return contact
-    },
+    getByContactCode,
 
     /**
      * Batch lookup of contacts by their contact codes. Uses the lean
@@ -210,6 +214,29 @@ export const xpandContactsRepository = (
         logger.error({ err }, 'contactsRepository.existsByNationalIdNumber')
         throw err
       }
+    },
+
+    getLoginContactByNationalIdNumber: async (nid: NationalIdNumber) => {
+      const forms = parseNationalId(nid)
+      if (!forms) return null
+
+      const choice = pickLoginContact(
+        await loginContactCandidates(db.get(), forms, new Date())
+      )
+      if (!choice) return null
+
+      if (choice.ambiguous) {
+        // Codes only: the personnummer stays out of the logs.
+        logger.warn(
+          {
+            contactCode: choice.contactCode,
+            candidates: choice.candidates,
+          },
+          'contactsRepository.getLoginContactByNationalIdNumber: several contacts qualify, picked the newest'
+        )
+      }
+
+      return getByContactCode(choice.contactCode)
     },
 
     /**

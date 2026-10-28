@@ -167,6 +167,24 @@ export interface ContactsRepository {
   ) => Promise<ContactCode | null>
 
   /**
+   * The contact a person logs in to mimer.nu as.
+   *
+   * Distinct from `getByNationalIdNumber`, which returns whichever contact
+   * comes first. A personnummer can have several contacts (a second
+   * registration, a supplier contact for payouts, a sole trader's company),
+   * so this one only considers private individuals that are not deleted and
+   * ranks them as `pickLoginContact` describes.
+   *
+   * @param nid - The national ID number in any common notation.
+   *
+   * @returns The chosen contact, or null when there is none — including when
+   *          `nid` is not a valid identity number.
+   */
+  getLoginContactByNationalIdNumber: (
+    nid: NationalIdNumber
+  ) => Promise<Contact | null>
+
+  /**
    * Retrieves contacts by their phone number.
    *
    * Phone numbers are not unique, and may result in multiple matches.

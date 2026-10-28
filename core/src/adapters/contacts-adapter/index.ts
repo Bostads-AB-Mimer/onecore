@@ -205,6 +205,20 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       return singleResponse(response)
     },
 
+    /**
+     * The contact a person logs in to mimer.nu as. Unlike getByNationalId, which returns
+     * whichever contact comes first, the contacts service skips deleted, company and
+     * supplier-only contacts and prefers a tenant, then queue time.
+     */
+    async getLoginContactByNationalId(
+      nid: string
+    ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {
+      const response = await axios<GetContactResponseBody>(
+        `/contacts/by-nid/${encodeURIComponent(nid)}/login-contact`
+      )
+      return singleResponse(response)
+    },
+
     async listByPhoneNumber(
       phoneNumber: string
     ): Promise<AdapterResult<Contact[], 'unknown'>> {
