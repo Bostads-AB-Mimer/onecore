@@ -6,6 +6,7 @@ import {
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
 import {
+  BookOpen,
   ChevronRight,
   ClipboardList,
   Contact,
@@ -13,6 +14,7 @@ import {
   Gauge,
   Home,
   LayoutGrid,
+  ListOrdered,
   Receipt,
   Settings,
   ShieldX,
@@ -168,9 +170,20 @@ function SidebarNavigationContent() {
           label="Skapa ströfaktura"
         />
         <SidebarNavLink
+          to={routes.miscellaneousInvoices}
+          icon={ListOrdered}
+          label="Ströfakturor"
+        />
+        <SidebarNavLink
           to={routes.components}
           icon={Settings}
           label="Administrera Komponenter"
+        />
+        <SidebarNavLink
+          to={routes.guides}
+          icon={BookOpen}
+          label="Guider"
+          matchPrefix
         />
         {/* Temporarily hidden from the nav while the feature is finalized.
             The route still works, so the page is reachable via /forvaltningsomraden. */}

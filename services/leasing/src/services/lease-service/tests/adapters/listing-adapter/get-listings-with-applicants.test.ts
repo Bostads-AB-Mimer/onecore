@@ -2,6 +2,7 @@ import assert from 'node:assert'
 import { ListingStatus, OfferStatus } from '@onecore/types'
 
 import * as listingAdapter from '../../../adapters/listing-adapter'
+import listingTextContentAdapter from '../../../adapters/listing-text-content-adapter'
 import * as offerAdapter from '../../../adapters/offer-adapter'
 import * as factory from './../../factories'
 import { withContext } from '../../testUtils'
@@ -36,6 +37,40 @@ describe(listingAdapter.getListingsWithApplicants, () => {
 
       expect(snd.applicants).toHaveLength(1)
       expect(snd.applicants?.[0]?.listingId).toBe(snd.id)
+    }))
+
+  it('flags which listings have listing text content', () =>
+    withContext(async (ctx) => {
+      const withText = await listingAdapter.createListing(
+        factory.listing.build({ rentalObjectCode: '1' }),
+        ctx.db
+      )
+      const withoutText = await listingAdapter.createListing(
+        factory.listing.build({ rentalObjectCode: '2' }),
+        ctx.db
+      )
+      assert(withText.ok)
+      assert(withoutText.ok)
+
+      const textContent = await listingTextContentAdapter.create(
+        factory.listingTextContent.build({ rentalObjectCode: '1' }),
+        ctx.db
+      )
+      assert(textContent.ok)
+
+      const listings = await listingAdapter.getListingsWithApplicants(ctx.db)
+      assert(listings.ok)
+
+      expect(listings.data).toEqual([
+        expect.objectContaining({
+          id: withText.data.id,
+          hasListingTextContent: true,
+        }),
+        expect.objectContaining({
+          id: withoutText.data.id,
+          hasListingTextContent: false,
+        }),
+      ])
     }))
 
   describe('filtering', () => {

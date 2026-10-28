@@ -271,6 +271,10 @@ function mapLeaseStatus(status: LeaseStatus): z.infer<typeof Lease>['status'] {
   }
 }
 
+export const LeaseBatchRequestBody = z.object({
+  leaseIds: z.array(z.string()).min(1),
+})
+
 export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
   return {
     leaseId: lease.leaseId,

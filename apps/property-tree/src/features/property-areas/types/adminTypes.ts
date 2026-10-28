@@ -1,3 +1,5 @@
+import type { property } from '@onecore/types'
+
 // Ändring av ansvarig kvartersvärd för ett KVV-område
 export interface AreaReassignment {
   kvvArea: string
@@ -48,6 +50,9 @@ export interface PropertyForAdmin {
   residenceCount?: number
   parkingCount?: number
   entranceCount?: number
+  // A split property (building-level KVV-area exception): this card is only
+  // this area's share, so it must not be dragged as a whole property.
+  share?: property.PropertyShareKind
 }
 
 // A pending drag-and-drop move of a property between KVV areas, kept locally

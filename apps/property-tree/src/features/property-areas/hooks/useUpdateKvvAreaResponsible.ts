@@ -57,7 +57,6 @@ export function useUpdateKvvAreaResponsible() {
                       username: newResponsibleUser.username,
                       firstName: newResponsibleUser.firstName,
                       lastName: newResponsibleUser.lastName,
-                      email: newResponsibleUser.email,
                       mobilePhone:
                         newResponsibleUser.attributes?.mobilePhone?.[0],
                       employeeId:

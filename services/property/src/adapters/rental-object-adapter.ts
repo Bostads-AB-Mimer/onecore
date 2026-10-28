@@ -9,6 +9,7 @@ import type {
   RentalObjectScopeParams,
   RentalObjectSummary,
   RentalObjectType,
+  ResolvedScope,
   SearchRentalObjectsQueryParams,
 } from '@src/types/rental-object'
 import { RENTAL_OBJECT_TYPES } from '@src/types/rental-object'
@@ -165,6 +166,37 @@ const rentalObjectWhere = (
 /** Property-code scope, the input both root-scoped queries take. */
 const propertyCodeScope = (propertyCodes: string[]) =>
   Prisma.sql`b.fstcode IN ${openJsonList(propertyCodes)}`
+
+/**
+ * The grouping levels as SQL, OR-ed, after resolution to what babuf carries.
+ * A split property's default side is the property minus its excepted
+ * buildings; building-less rows (markyta stock) stay with it. Building codes
+ * are unique across properties, so the excluded set is pooled.
+ */
+const resolvedScopes = (resolved: ResolvedScope): Prisma.Sql[] => {
+  const scopes: Prisma.Sql[] = []
+
+  if (resolved.propertyCodes.length) {
+    scopes.push(propertyCodeScope(resolved.propertyCodes))
+  }
+  if (resolved.partialProperties.length) {
+    const excluded = resolved.partialProperties.flatMap(
+      (p) => p.excludedBuildingCodes
+    )
+    scopes.push(
+      Prisma.sql`(${propertyCodeScope(
+        resolved.partialProperties.map((p) => p.propertyCode)
+      )} AND (b.bygcode IS NULL OR b.bygcode NOT IN ${openJsonList(excluded)}))`
+    )
+  }
+  if (resolved.buildingCodes.length) {
+    scopes.push(
+      Prisma.sql`b.bygcode IN ${openJsonList(resolved.buildingCodes)}`
+    )
+  }
+
+  return scopes
+}
 
 /** Composite '504-017-01' = buildingCode '504-017' + staircase '01'. */
 const staircasePairs = (composites: string[]) =>
@@ -520,13 +552,9 @@ export const getRentalObjectsByPropertyCodes = async (
  */
 export const searchRentalObjects = async (
   params: SearchRentalObjectsQueryParams,
-  resolvedPropertyCodes: string[]
+  resolved: ResolvedScope
 ): Promise<{ rows: RentalObjectSummary[]; totalCount: number }> => {
-  const scopes = structureScopes(params)
-
-  if (resolvedPropertyCodes.length > 0) {
-    scopes.unshift(propertyCodeScope(resolvedPropertyCodes))
-  }
+  const scopes = [...resolvedScopes(resolved), ...structureScopes(params)]
 
   if (scopes.length === 0) return { rows: [], totalCount: 0 }
 

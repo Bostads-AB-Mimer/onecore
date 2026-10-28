@@ -8,7 +8,9 @@ import {
   Invoice,
   InvoicePaymentEvent,
   InvoiceTransactionType,
+  MiscellaneousInvoice,
   MiscellaneousInvoiceArticle,
+  MiscellaneousInvoiceBaseItem,
   PaymentStatus,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
@@ -59,23 +61,81 @@ const getCallerFromError = (error: Error) => {
 const stringifyGraphQlQuery = (query: XledgerGraphQlQuery) =>
   `Query: ${query.query}${query.variables ? `\nVariables: ${JSON.stringify(query.variables, null, 2)}` : ''}`
 
+// Bounds retry storms. Capped attempts, jittered backoff, a request timeout and a concurrency cap.
+export const xledgerRequestPolicy = { ...config.xledger.requestPolicy }
+
+// Test-only override; production values come from config.
+export const setXledgerRequestPolicy = (
+  policy: Partial<typeof xledgerRequestPolicy>
+) => Object.assign(xledgerRequestPolicy, policy)
+
+// Exponential backoff capped at maxDelayMs, then scaled by a random factor
+// in [0.5, 1.5) so the effective ceiling is 1.5 * maxDelayMs.
+export const retryDelayMs = (attempt: number, random = Math.random) => {
+  const { baseDelayMs, maxDelayMs } = xledgerRequestPolicy
+  const exponential = Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1))
+  return Math.round(exponential * (0.5 + random()))
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+let inFlight = 0
+const waiting: Array<() => void> = []
+
+const acquireSlot = async () => {
+  if (inFlight < xledgerRequestPolicy.maxConcurrency) {
+    inFlight++
+    return
+  }
+  await new Promise<void>((resolve) => waiting.push(resolve))
+}
+
+// Hands the slot straight to the next waiter so inFlight never overshoots.
+const releaseSlot = () => {
+  const next = waiting.shift()
+  if (next) next()
+  else inFlight--
+}
+
 const makeXledgerRequest = async (
   query: XledgerGraphQlQuery,
   attachment?: any // TODO formidable file PersistentFileStorage
 ): Promise<any> => {
-  function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms))
-  }
+  const { maxAttempts } = xledgerRequestPolicy
 
-  const result = await makeXledgerHttpRequest(query, attachment)
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    await acquireSlot()
+    let result: XledgerResponse
+    try {
+      result = await makeXledgerHttpRequest(query, attachment)
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.code === 'ECONNABORTED') {
+        logger.warn(
+          { attempt, timeoutMs: xledgerRequestPolicy.timeoutMs, inFlight },
+          `Xledger request timed out\n${stringifyGraphQlQuery(query)}`
+        )
+      }
+      throw err
+    } finally {
+      releaseSlot()
+    }
 
-  if (result.status === 'ok') {
-    return result.data
-  } else if (result.status === 'retry') {
-    logger.warn('Rate limit exceeded, waiting and retrying')
-    await sleep(3000)
-    return await makeXledgerRequest(query, attachment)
-  } else {
+    if (result.status === 'ok') {
+      return result.data
+    }
+
+    if (result.status === 'retry') {
+      const isLast = attempt === maxAttempts
+      logger.warn(
+        { attempt, maxAttempts, inFlight, queueLength: waiting.length },
+        isLast
+          ? 'Xledger rate limit exceeded, giving up'
+          : 'Xledger rate limit exceeded, waiting and retrying'
+      )
+      if (!isLast) await sleep(retryDelayMs(attempt))
+      continue
+    }
+
     const error = new Error(
       result.data.map((error: any) => error.message).join('\n')
     )
@@ -85,6 +145,8 @@ const makeXledgerRequest = async (
     )
     throw error
   }
+
+  throw new Error(`Xledger rate limit exceeded after ${maxAttempts} attempts`)
 }
 
 const makeXledgerHttpRequest = async (
@@ -94,13 +156,11 @@ const makeXledgerHttpRequest = async (
   let result: axios.AxiosResponse
 
   if (attachment) {
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins
     const formData = new FormData()
 
     const fileBuffer = fs.readFileSync(attachment.filepath)
     formData.append(
       attachment.originalFilename,
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins
       new Blob([fileBuffer]),
       attachment.originalFilename
     )
@@ -110,11 +170,13 @@ const makeXledgerHttpRequest = async (
       headers: {
         ...XledgerAuthHeader,
       },
+      timeout: xledgerRequestPolicy.timeoutMs,
     })
   } else {
     result = await axios(`${config.xledger.url}`, {
       data: query,
       ...axiosOptions,
+      timeout: xledgerRequestPolicy.timeoutMs,
     })
   }
 
@@ -1032,6 +1094,78 @@ export const getInvoicesByContactCode = async (
   return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
 }
 
+/*
+ * Fetches invoices by invoice number, regardless of which customer they are
+ * billed to. Used to enrich invoices that were found via a shared lease in
+ * Xpand (MIM-1160) — those belong to another paying contact, so the
+ * contact-scoped lookup above cannot reach them. The headerTransactionSourceDbId
+ * filter is required: without it the same invoice number also matches payment
+ * and credit transaction rows.
+ */
+export const getInvoicesByInvoiceNumbers = async (
+  invoiceNumbers: string[]
+): Promise<Invoice[]> => {
+  const CHUNK_SIZE = 50
+  // One invoice number can match several transaction rows (e.g. a regular row
+  // plus a loss row on account 1529), so the page size must be well above the
+  // chunk size — Xledger truncates at `first` without reporting it.
+  const PAGE_SIZE = 10000
+  const invoices: Invoice[] = []
+
+  for (let i = 0; i < invoiceNumbers.length; i += CHUNK_SIZE) {
+    const chunk = invoiceNumbers.slice(i, i + CHUNK_SIZE)
+
+    // Invoice numbers are passed as GraphQL variables, never interpolated
+    // into the query document.
+    const query = {
+      query: gql`
+        query($filter: ARTransaction_Filter, $first: Int) {
+          arTransactions(first: $first, filter: $filter) {
+            edges {
+              node {
+                ${invoiceNodeFragment}
+              }
+            }
+          }
+        }
+      `,
+      variables: {
+        first: PAGE_SIZE,
+        filter: {
+          invoiceNumber_in: chunk,
+          headerTransactionSourceDbId_in: [
+            TransactionSourceDbId.SO,
+            TransactionSourceDbId.AR,
+            TransactionSourceDbId.OS,
+          ],
+        },
+      },
+    }
+
+    try {
+      const result = await makeXledgerRequest(query)
+      const edges = result.data?.arTransactions?.edges ?? []
+
+      if (edges.length >= PAGE_SIZE) {
+        logger.warn(
+          { invoiceNumbers: chunk.length, returnedRows: edges.length },
+          'Xledger invoice-number lookup hit the page size, results may be truncated'
+        )
+      }
+
+      invoices.push(...edges.map(transformToInvoice))
+    } catch (err) {
+      logger.error(
+        { err, invoiceNumbers: chunk.length },
+        'adapter.getInvoicesByInvoiceNumbers'
+      )
+      throw err
+    }
+  }
+
+  return invoices
+}
+
 export const getInvoices = async (from?: Date, to?: Date) => {
   const query = {
     query: gql`
@@ -1226,6 +1360,135 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
   }
 }
 
+export const getMiscellaneousInvoices = async ({
+  from,
+  to,
+  after,
+  pageSize = 100,
+}: {
+  from?: Date
+  to?: Date
+  after?: string
+  pageSize?: number
+}): Promise<
+  AdapterResult<
+    {
+      content: MiscellaneousInvoice[]
+      pageInfo: { hasNextPage: boolean; endCursor?: string }
+    },
+    'unknown'
+  >
+> => {
+  try {
+    const query = {
+      query: gql`
+        query (
+          $after: String
+          $first: Int
+          $filter: SalesOrder_Filter
+          $orderDirection: OrderDirection = DESC
+        ) {
+          salesOrders(
+            first: $first
+            after: $after
+            filter: $filter
+            orderBy: { field: CREATED_AT, direction: $orderDirection }
+          ) {
+            edges {
+              cursor
+              node {
+                invoiceDate
+                invoiceNumber
+                ourRef {
+                  name
+                }
+                subledger {
+                  code
+                }
+                invoiceAmount
+                headerInfo
+                invoiceFile {
+                  url
+                }
+                invoiceBaseItems(first: 100) {
+                  edges {
+                    node {
+                      text
+                      amount
+                      quantity
+                      unitPrice
+                      glObject1 {
+                        code
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            pageInfo {
+              hasNextPage
+            }
+          }
+        }
+      `,
+      variables: {
+        after: after ?? null,
+        first: pageSize,
+        filter: {
+          invoiceDate_gte: from ? dateToGraphQlDateString(from) : undefined,
+          invoiceDate_lte: to ? dateToGraphQlDateString(to) : undefined,
+        },
+      },
+    }
+
+    const result = await makeXledgerRequest(query)
+
+    if (!result.data?.salesOrders?.edges) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    const content = result.data.salesOrders.edges.map((e: any) =>
+      transformToMiscellaneousInvoice(e.node)
+    )
+    const lastEdge = result.data.salesOrders.edges.at(-1)
+    const pageInfo = {
+      hasNextPage: result.data.salesOrders.pageInfo.hasNextPage,
+      endCursor: lastEdge?.cursor,
+    }
+
+    return { ok: true, data: { content, pageInfo } }
+  } catch (err) {
+    logger.error(err, 'Error getting sales orders from Xledger')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const transformToMiscellaneousInvoice = (node: any): MiscellaneousInvoice => {
+  return {
+    invoiceId: node.invoiceNumber,
+    amount: node.invoiceAmount,
+    invoiceBaseItems: node.invoiceBaseItems?.edges?.map((e: any) =>
+      transformToMiscellaneousInvoiceBaseItem(e.node)
+    ),
+    invoiceDate: new Date(node.invoiceDate),
+    reference: node.subledger.code,
+    ourReference: node.ourRef?.name,
+    description: node.headerInfo,
+    invoiceFileUrl: node.invoiceFile?.url,
+  }
+}
+
+const transformToMiscellaneousInvoiceBaseItem = (
+  node: any
+): MiscellaneousInvoiceBaseItem => {
+  return {
+    text: node.text,
+    amount: node.amount,
+    quantity: node.quantity,
+    unitPrice: node.unitPrice,
+    costCentre: node.glObject1?.code ?? null,
+  }
+}
 export const createCustomerLedgerRow = (
   invoiceDataRows: InvoiceDataRow[],
   batchId: string,

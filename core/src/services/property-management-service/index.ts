@@ -53,6 +53,9 @@ import { getFloorPlanStream } from './adapters/document-adapter'
  *                   type: string
  *                 roomTypeCode:
  *                   type: string
+ *                 roomCount:
+ *                   type: integer
+ *                   nullable: true
  *                 entrance:
  *                   type: string
  *                 floor:

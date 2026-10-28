@@ -1,7 +1,7 @@
 import { logger } from '@onecore/utilities'
 import { RentalObject, RentalObjectRent } from '@onecore/types'
 import { xpandDb } from './xpandDb'
-import { trimRow } from '../utils'
+import { chunkArray, trimRow } from '../utils'
 
 const districts = {
   Mitt: ['Centrum', 'Gryta', 'Skallberget', 'Nordanby', 'Vega', 'Hökåsen'],
@@ -266,17 +266,6 @@ const getParkingSpace = async (
     return { ok: false, err: 'unknown' }
   }
 }
-/**
- * Helper to split array into batches
- */
-function chunkArray<T>(array: T[], size: number): T[][] {
-  const result: T[][] = []
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size))
-  }
-  return result
-}
-
 const getParkingSpaces = async (
   includeRentalObjectCodes?: string[]
 ): Promise<

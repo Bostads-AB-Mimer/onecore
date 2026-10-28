@@ -68,6 +68,7 @@ lib-cov
 
 CLAUDE.md
 REVIEW.md
+local.claude.md
 
 # --- Private Keys ---
 *.pem

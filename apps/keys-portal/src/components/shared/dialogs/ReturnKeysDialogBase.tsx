@@ -167,7 +167,7 @@ export function ReturnKeysDialogBase({
                   <div className="font-medium flex items-center gap-1">
                     {card.name || card.cardId}
                     {card.isOrphan && (
-                      <OrphanIcon label="Droppen är inte kopplad till hyresobjektet" />
+                      <OrphanIcon label="Taggen är inte kopplad till hyresobjektet" />
                     )}
                   </div>
                 </div>
@@ -185,7 +185,7 @@ export function ReturnKeysDialogBase({
       onOpenChange={onOpenChange}
       title={title}
       description={description}
-      leftTitle="Nycklar och droppar som återlämnas"
+      leftTitle="Nycklar och taggar som återlämnas"
       rightTitle="Detaljer"
       leftContent={leftContent}
       rightContent={rightContent}

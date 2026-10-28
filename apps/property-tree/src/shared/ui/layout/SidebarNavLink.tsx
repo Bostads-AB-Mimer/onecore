@@ -12,11 +12,21 @@ interface SidebarNavLinkProps {
   to: string
   icon: LucideIcon
   label: string
+  /** Also highlight on sub-routes, e.g. /guider/:slug under /guider. */
+  matchPrefix?: boolean
 }
 
-export function SidebarNavLink({ to, icon: Icon, label }: SidebarNavLinkProps) {
+export function SidebarNavLink({
+  to,
+  icon: Icon,
+  label,
+  matchPrefix = false,
+}: SidebarNavLinkProps) {
   const { pathname } = useLocation()
-  const isActive = pathname === to || (to === '/' && pathname === '/sv')
+  const isActive =
+    pathname === to ||
+    (to === '/' && pathname === '/sv') ||
+    (matchPrefix && pathname.startsWith(`${to}/`))
 
   return (
     <SidebarGroup>
