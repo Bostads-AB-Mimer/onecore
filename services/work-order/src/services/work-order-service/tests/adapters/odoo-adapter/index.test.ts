@@ -14,20 +14,30 @@ jest.mock('odoo-await', () => {
 
 const loggerWarnMock = jest.fn()
 
-jest.mock('@onecore/utilities', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: (...args: unknown[]) => loggerWarnMock(...args),
-  },
-  generateRouteMetadata: jest.fn(() => ({})),
-}))
+jest.mock('@onecore/utilities', () => {
+  const { errorName, errorMessage, redactedMessage } =
+    jest.requireActual('@onecore/utilities')
+  return {
+    errorName,
+    errorMessage,
+    redactedMessage,
+    logger: {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: (...args: unknown[]) => loggerWarnMock(...args),
+    },
+    generateRouteMetadata: jest.fn(() => ({})),
+  }
+})
 
+import { logger } from '@onecore/utilities'
 import {
   createInspectionWorkOrders,
   createWorkOrder,
   getMaintenanceTeams,
   getWorkOrderById,
+  restoreContact,
+  syncContact,
 } from '../../../adapters/odoo-adapter'
 
 describe('odoo-adapter createWorkOrder', () => {
@@ -384,5 +394,202 @@ describe('odoo-adapter createInspectionWorkOrders', () => {
 
     expect(result.ok).toBe(false)
     expect(odooMock.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('odoo-adapter syncContact', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('writes every tenant in one update and returns their old values', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: 'Gammal, Namn',
+        email_address: 'gammal@test.se',
+        phone_number: false,
+      },
+      {
+        id: 2,
+        name: 'Annat, Namn',
+        email_address: false,
+        phone_number: '0701',
+      },
+    ])
+    odooMock.update.mockResolvedValueOnce(true)
+
+    const result = await syncContact({
+      contactCode: 'P1',
+      fullName: 'Ny, Namn',
+      emailAddress: 'ny@test.se',
+      phoneNumber: null,
+    })
+
+    expect(odooMock.update).toHaveBeenCalledTimes(1)
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [1, 2], {
+      name: 'Ny, Namn',
+      email_address: 'ny@test.se',
+    })
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        updatedCount: 2,
+        previous: [
+          {
+            id: 1,
+            fullName: 'Gammal, Namn',
+            emailAddress: 'gammal@test.se',
+            phoneNumber: null,
+          },
+          {
+            id: 2,
+            fullName: 'Annat, Namn',
+            emailAddress: null,
+            phoneNumber: '0701',
+          },
+        ],
+      },
+    })
+  })
+
+  it('logs why Odoo refused, without the contact values', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, name: 'Gammal', email_address: false, phone_number: false },
+    ])
+    odooMock.update.mockRejectedValueOnce(
+      new Error('Invalid value Ny, Namn for ny@test.se on 0709')
+    )
+
+    const result = await syncContact({
+      contactCode: 'P1',
+      fullName: 'Ny, Namn',
+      emailAddress: 'ny@test.se',
+      phoneNumber: '0709',
+    })
+
+    expect(result).toEqual({ ok: false, err: 'could-not-update-contact' })
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: 'P1',
+        message: 'Invalid value [redacted] for [redacted] on [redacted]',
+      }),
+      'Error syncing contact to Odoo'
+    )
+  })
+
+  it('skips when no tenant has the contact code', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([])
+
+    const result = await syncContact({ contactCode: 'P1', fullName: 'X' })
+
+    expect(result).toEqual({ ok: true, data: null })
+    expect(odooMock.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('odoo-adapter restoreContact', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  const tenants = [
+    { id: 1, fullName: 'Gammal, Namn', emailAddress: null, phoneNumber: null },
+    {
+      id: 2,
+      fullName: 'Annat, Namn',
+      emailAddress: 'a@test.se',
+      phoneNumber: '0701',
+    },
+  ]
+
+  it('writes each tenant its own old values and clears empty fields', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, contact_code: 'P1' },
+      { id: 2, contact_code: 'P1' },
+    ])
+    odooMock.update.mockResolvedValue(true)
+
+    const result = await restoreContact('P1', tenants)
+
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [1], {
+      name: 'Gammal, Namn',
+      email_address: false,
+      phone_number: false,
+    })
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [2], {
+      name: 'Annat, Namn',
+      email_address: 'a@test.se',
+      phone_number: '0701',
+    })
+    expect(result).toEqual({
+      ok: true,
+      data: { restored: [1, 2], missing: [] },
+    })
+  })
+
+  it('writes tenants with the same old values in one call', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, contact_code: 'P1' },
+      { id: 3, contact_code: 'P1' },
+      { id: 2, contact_code: 'P1' },
+    ])
+    odooMock.update.mockResolvedValue(true)
+
+    const result = await restoreContact('P1', [
+      tenants[0],
+      { ...tenants[0], id: 3 },
+      tenants[1],
+    ])
+
+    expect(odooMock.update).toHaveBeenCalledTimes(2)
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [1, 3], {
+      name: 'Gammal, Namn',
+      email_address: false,
+      phone_number: false,
+    })
+    expect(result).toEqual({
+      ok: true,
+      data: { restored: [1, 3, 2], missing: [] },
+    })
+  })
+
+  it('logs why Odoo refused, without the restored values', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, contact_code: 'P1' },
+      { id: 2, contact_code: 'P1' },
+    ])
+    odooMock.update.mockRejectedValueOnce(
+      new Error('Access denied writing Gammal, Namn')
+    )
+
+    const result = await restoreContact('P1', tenants)
+
+    expect(result).toEqual({ ok: false, err: 'could-not-restore-contact' })
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: 'P1',
+        message: 'Access denied writing [redacted]',
+      }),
+      'Error restoring contact in Odoo'
+    )
+  })
+
+  it('skips a tenant that no longer exists', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([{ id: 2, contact_code: 'P1' }])
+    odooMock.update.mockResolvedValue(true)
+
+    const result = await restoreContact('P1', tenants)
+
+    expect(odooMock.update).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ ok: true, data: { restored: [2], missing: [1] } })
+  })
+
+  it('refuses and writes nothing when a tenant belongs to another contact', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, contact_code: 'P1' },
+      { id: 2, contact_code: 'P2' },
+    ])
+
+    const result = await restoreContact('P1', tenants)
+
+    expect(result).toEqual({ ok: false, err: 'foreign-tenant' })
+    expect(odooMock.update).not.toHaveBeenCalled()
   })
 })

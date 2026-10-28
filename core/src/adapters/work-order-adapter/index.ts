@@ -1,7 +1,11 @@
 import createClient from 'openapi-fetch'
 import { z } from 'zod'
-import { logger } from '@onecore/utilities'
-import type { SyncContactToWorkOrderPayload } from '@onecore/types'
+import { errorMessage, errorName, logger } from '@onecore/utilities'
+import {
+  SyncContactToWorkOrderUndoSchema,
+  type SyncContactToWorkOrderPayload,
+  type SyncContactToWorkOrderUndo,
+} from '@onecore/types'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 import {
@@ -32,6 +36,7 @@ type SyncContactPaths = paths & {
             'application/json': {
               content: unknown
               skipped: boolean
+              undo?: SyncContactToWorkOrderUndo
             }
           }
         }
@@ -41,6 +46,25 @@ type SyncContactPaths = paths & {
         500: {
           content: { 'application/json': { error: string } }
         }
+      }
+    }
+  }
+  '/contacts/{contactCode}/undo-sync': {
+    post: {
+      parameters: { path: { contactCode: string } }
+      requestBody: {
+        content: { 'application/json': SyncContactToWorkOrderUndo }
+      }
+      responses: {
+        200: {
+          content: {
+            'application/json': {
+              content: { restored: number[]; missing: number[] }
+            }
+          }
+        }
+        400: { content: { 'application/json': { error: string } } }
+        500: { content: { 'application/json': { error: string } } }
       }
     }
   }
@@ -611,7 +635,12 @@ const SYNC_CONTACT_TIMEOUT_MS = 30_000
 export async function syncContactToWorkOrder(
   contactCode: string,
   contactData: Omit<SyncContactToWorkOrderPayload, 'contactCode'>
-): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> {
+): Promise<
+  AdapterResult<
+    { skipped: boolean; undo?: SyncContactToWorkOrderUndo },
+    'sync-failed' | 'unknown'
+  >
+> {
   try {
     const response = await client().POST('/contacts/{contactCode}/sync', {
       params: { path: { contactCode } },
@@ -623,7 +652,7 @@ export async function syncContactToWorkOrder(
 
     if (response.error) {
       logger.error(
-        { error: response.error },
+        { contactCode, status: response.response.status },
         'work-order-adapter.syncContactToWorkOrder'
       )
       return {
@@ -633,12 +662,61 @@ export async function syncContactToWorkOrder(
       }
     }
 
+    const undo = SyncContactToWorkOrderUndoSchema.safeParse(response.data?.undo)
     return {
       ok: true,
-      data: { skipped: response.data?.skipped === true },
+      data: {
+        skipped: response.data?.skipped === true,
+        ...(undo.success && { undo: undo.data }),
+      },
     }
   } catch (error) {
-    logger.error({ error }, 'work-order-adapter.syncContactToWorkOrder')
+    logger.error(
+      {
+        contactCode,
+        errorName: errorName(error),
+        message: errorMessage(error),
+      },
+      'work-order-adapter.syncContactToWorkOrder'
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const undoContactSyncInWorkOrder = async (
+  contactCode: string,
+  undo: SyncContactToWorkOrderUndo
+): Promise<AdapterResult<null, 'undo-failed' | 'unknown'>> => {
+  try {
+    const response = await client().POST('/contacts/{contactCode}/undo-sync', {
+      params: { path: { contactCode } },
+      body: undo,
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      signal: AbortSignal.timeout(SYNC_CONTACT_TIMEOUT_MS),
+    })
+
+    if (response.error) {
+      logger.error(
+        { contactCode, status: response.response.status },
+        'work-order-adapter.undoContactSyncInWorkOrder'
+      )
+      return {
+        ok: false,
+        err: 'undo-failed',
+        statusCode: response.response.status,
+      }
+    }
+
+    return { ok: true, data: null }
+  } catch (error) {
+    logger.error(
+      {
+        contactCode,
+        errorName: errorName(error),
+        message: errorMessage(error),
+      },
+      'work-order-adapter.undoContactSyncInWorkOrder'
+    )
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }

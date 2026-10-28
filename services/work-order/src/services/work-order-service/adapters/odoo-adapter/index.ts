@@ -1,6 +1,6 @@
 import Odoo from 'odoo-await'
 import striptags from 'striptags'
-import { logger } from '@onecore/utilities'
+import { errorName, logger, redactedMessage } from '@onecore/utilities'
 import { groupBy } from 'lodash'
 import z from 'zod'
 import Config from '../../../../common/config'
@@ -25,7 +25,10 @@ import {
   WorkOrder,
   WorkOrderMessage,
 } from '../../schemas'
-import type { SyncContactToWorkOrderPayload } from '@onecore/types'
+import type {
+  SyncContactToWorkOrderPayload,
+  SyncContactToWorkOrderUndo,
+} from '@onecore/types'
 
 // Inspection-origin work orders all use this category + space; resolved by name
 // at runtime because Odoo ids differ per environment.
@@ -804,22 +807,34 @@ export const addMessageToWorkOrder = async (
   }
 }
 
+type OdooTenantValues = {
+  id: number
+  name: string
+  email_address: string | false
+  phone_number: string | false
+}
+
 export const syncContact = async (
   payload: SyncContactToWorkOrderPayload
 ): Promise<
   AdapterResult<
-    { updatedCount: number } | null,
+    {
+      updatedCount: number
+      previous: SyncContactToWorkOrderUndo['tenants']
+    } | null,
     'could-not-update-contact' | 'unknown'
   >
 > => {
   try {
     await odoo.connect()
 
-    const tenantIds: number[] = await odoo.search('maintenance.tenant', {
-      contact_code: payload.contactCode,
-    })
+    const tenants = await odoo.searchRead<OdooTenantValues>(
+      'maintenance.tenant',
+      { contact_code: payload.contactCode },
+      ['name', 'email_address', 'phone_number']
+    )
 
-    if (tenantIds.length === 0) {
+    if (tenants.length === 0) {
       logger.warn(
         { contactCode: payload.contactCode },
         'No tenant found in Odoo, skipping'
@@ -839,14 +854,100 @@ export const syncContact = async (
       updateData.phone_number = payload.phoneNumber
     }
 
-    for (const tenantId of tenantIds) {
-      await odoo.update('maintenance.tenant', tenantId, updateData)
+    await odoo.update(
+      'maintenance.tenant',
+      tenants.map((t) => t.id),
+      updateData
+    )
+
+    return {
+      ok: true,
+      data: {
+        updatedCount: tenants.length,
+        previous: tenants.map((t) => ({
+          id: t.id,
+          fullName: t.name,
+          emailAddress: t.email_address || null,
+          phoneNumber: t.phone_number || null,
+        })),
+      },
+    }
+  } catch (error) {
+    logger.error(
+      {
+        contactCode: payload.contactCode,
+        errorName: errorName(error),
+        message: redactedMessage(error, [
+          payload.fullName,
+          payload.emailAddress,
+          payload.phoneNumber,
+        ]),
+      },
+      'Error syncing contact to Odoo'
+    )
+    return { ok: false, err: 'could-not-update-contact' }
+  }
+}
+
+export const restoreContact = async (
+  contactCode: string,
+  tenants: SyncContactToWorkOrderUndo['tenants']
+): Promise<
+  AdapterResult<
+    { restored: number[]; missing: number[] },
+    'foreign-tenant' | 'could-not-restore-contact'
+  >
+> => {
+  try {
+    await odoo.connect()
+
+    const ids = tenants.map((t) => t.id)
+    const existing = await odoo.searchRead<{
+      id: number
+      contact_code: string
+    }>('maintenance.tenant', [['id', 'in', ids]], ['contact_code'])
+    if (existing.some((t) => t.contact_code !== contactCode)) {
+      return { ok: false, err: 'foreign-tenant' }
     }
 
-    return { ok: true, data: { updatedCount: tenantIds.length } }
+    const existingIds = new Set(existing.map((t) => t.id))
+    const restorable = tenants.filter((t) => existingIds.has(t.id))
+    const byValues = groupBy(restorable, (t) =>
+      JSON.stringify([t.fullName, t.emailAddress, t.phoneNumber])
+    )
+    for (const group of Object.values(byValues)) {
+      const [{ fullName, emailAddress, phoneNumber }] = group
+      await odoo.update(
+        'maintenance.tenant',
+        group.map((t) => t.id),
+        {
+          name: fullName,
+          email_address: emailAddress ?? false,
+          phone_number: phoneNumber ?? false,
+        }
+      )
+    }
+
+    return {
+      ok: true,
+      data: {
+        restored: restorable.map((t) => t.id),
+        missing: ids.filter((id) => !existingIds.has(id)),
+      },
+    }
   } catch (error) {
-    logger.error(error, 'Error syncing contact to Odoo')
-    return { ok: false, err: 'could-not-update-contact' }
+    logger.error(
+      {
+        contactCode,
+        errorName: errorName(error),
+        message: redactedMessage(
+          error,
+          tenants.flatMap((t) => [t.fullName, t.emailAddress, t.phoneNumber])
+        ),
+      },
+      'Error restoring contact in Odoo'
+    )
+    return { ok: false, err: 'could-not-restore-contact' }
   }
 }
 

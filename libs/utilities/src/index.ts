@@ -14,6 +14,11 @@ export * from './health-check'
 export * from './pagination'
 export * from './search'
 export * from './resource'
+export {
+  errorName,
+  errorMessage,
+  redactedMessage,
+} from './logging/error-fields'
 
 export {
   logger,

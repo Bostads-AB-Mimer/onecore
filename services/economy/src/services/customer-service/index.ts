@@ -1,8 +1,10 @@
 import KoaRouter from '@koa/router'
 import {
+  errorName,
   generateRouteMetadata,
   logger,
   makeSuccessResponseBody,
+  redactedMessage,
 } from '@onecore/utilities'
 import { SyncContactToEconomySchema } from '@onecore/types'
 import { SyncCustomerQueryParamsSchema } from './schema'
@@ -99,11 +101,27 @@ export const routes = (router: KoaRouter) => {
       const result = await syncCustomer(contact, queryParamsResult.data?.create)
       ctx.status = 200
       ctx.body = {
-        ...makeSuccessResponseBody(result, metadata),
+        ...makeSuccessResponseBody(result?.customer ?? null, metadata),
         skipped: result === null,
+        ...(result && {
+          undo: result.previous ? { previous: result.previous } : null,
+        }),
       }
     } catch (err: unknown) {
-      logger.error(err, 'Error syncing contact to Xledger')
+      logger.error(
+        {
+          contactCode,
+          errorName: errorName(err),
+          message: redactedMessage(err, [
+            contact.fullName,
+            contact.address?.street,
+            contact.address?.postalCode,
+            contact.address?.city,
+            contact.emailAddress,
+          ]),
+        },
+        'Error syncing contact to Xledger'
+      )
       ctx.status = 500
       ctx.body = {
         error: 'Internal server error',

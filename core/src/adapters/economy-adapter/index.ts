@@ -1,12 +1,19 @@
 import fs from 'node:fs'
 import z from 'zod'
-import { loggedAxios as axios, logger } from '@onecore/utilities'
+import {
+  errorMessage,
+  errorName,
+  loggedAxios as axios,
+  logger,
+} from '@onecore/utilities'
 import {
   economy,
   Invoice,
   InvoicePaymentEvent,
   RentInvoiceRow,
   SyncContactToEconomyPayload,
+  SyncContactToEconomyUndoSchema,
+  type SyncContactToEconomyUndo,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
   XledgerProject,
@@ -625,7 +632,12 @@ export async function syncContactToEconomy(
   contactCode: string,
   contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>,
   options?: { create?: boolean }
-): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> {
+): Promise<
+  AdapterResult<
+    { skipped: boolean; undo?: SyncContactToEconomyUndo | null },
+    'sync-failed' | 'unknown'
+  >
+> {
   const payload: SyncContactToEconomyPayload = {
     contactCode,
     ...contactData,
@@ -637,9 +649,26 @@ export async function syncContactToEconomy(
       payload,
       { timeout: SYNC_CONTACT_TIMEOUT_MS }
     )
-    return { ok: true, data: { skipped: response.data?.skipped === true } }
+    const undo = SyncContactToEconomyUndoSchema.nullable().safeParse(
+      response.data?.undo
+    )
+    return {
+      ok: true,
+      data: {
+        skipped: response.data?.skipped === true,
+        ...(undo.success && { undo: undo.data }),
+      },
+    }
   } catch (err) {
-    logger.error(err, 'economy-adapter.syncContactToEconomy')
+    logger.error(
+      {
+        contactCode,
+        status: axios.isAxiosError(err) ? err.response?.status : undefined,
+        errorName: errorName(err),
+        message: errorMessage(err),
+      },
+      'economy-adapter.syncContactToEconomy'
+    )
     if (axios.isAxiosError(err) && err.response) {
       return {
         ok: false,
@@ -649,4 +678,15 @@ export async function syncContactToEconomy(
     }
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
+}
+
+export const undoContactSyncInEconomy = async (
+  contactCode: string,
+  undo: SyncContactToEconomyUndo
+): Promise<AdapterResult<null, 'not-found' | 'sync-failed' | 'unknown'>> => {
+  const result = await syncContactToEconomy(contactCode, undo.previous)
+  if (!result.ok) return result
+  return result.data.skipped
+    ? { ok: false, err: 'not-found' }
+    : { ok: true, data: null }
 }
