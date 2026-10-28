@@ -167,6 +167,31 @@ describe('runSyncSteps', () => {
     expect(err.message).toContain('undo failed: a=unknown')
   })
 
+  it('treats a step that throws as failed and still undoes the finished steps', async () => {
+    const undoA = jest.fn(async () => ({ ok: true as const, data: null }))
+
+    const err = await caught(
+      runSyncSteps({
+        subject: 'contact P1',
+        steps: [
+          syncStep({ name: 'a', run: ok(1), undo: undoA }),
+          syncStep({
+            name: 'b',
+            run: async () => {
+              throw new Error('boom')
+            },
+          }),
+        ],
+      })
+    )
+
+    expect(undoA).toHaveBeenCalledWith(1)
+    expect(err).toBeInstanceOf(SyncStepsError)
+    expect(err.message).toBe(
+      'contact P1 failed to sync: b=unknown, outcome unknown, undone: a'
+    )
+  })
+
   it('says outcome unknown when the failing step got no answer', async () => {
     const err = await caught(
       runSyncSteps({

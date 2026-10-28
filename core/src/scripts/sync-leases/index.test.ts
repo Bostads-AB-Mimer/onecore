@@ -558,7 +558,7 @@ describe('syncLeases', () => {
     const queue = await readQueue(queueFile)
     expect(queue).toHaveLength(1)
     expect(queue[0].lastError).toBe(
-      `lease ${lease.leaseId} failed to sync: xledger=sync-failed [sync-failed], not attempted: tenfast`
+      `lease ${lease.leaseId} failed to sync: xledger=sync-failed [recipient ${otherInvoiceRecipient.contactCode}: sync-failed], not attempted: tenfast`
     )
     expect(sendEmailSpy).toHaveBeenCalledTimes(1)
   })
