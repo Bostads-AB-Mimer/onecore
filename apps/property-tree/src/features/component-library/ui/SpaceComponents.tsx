@@ -3,10 +3,8 @@ import { Plus } from 'lucide-react'
 
 import { useComponents } from '@/entities/component'
 
-import { Button } from '@/shared/ui/Button'
-
 import { ComponentDetailsPanel } from './ComponentDetailsPanel'
-import { ManageComponentsDialog } from './ManageComponentsDialog'
+import { ComponentInstallationDialog } from './ComponentInstallationDialog'
 
 interface SpaceComponentsProps {
   spaceId: string
@@ -17,7 +15,7 @@ export const SpaceComponents = ({
   spaceId,
   spaceName,
 }: SpaceComponentsProps) => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isInstallOpen, setIsInstallOpen] = useState(false)
   const { components, isLoading, error } = useComponents(spaceId)
 
   if (isLoading) {
@@ -38,43 +36,41 @@ export const SpaceComponents = ({
     )
   }
 
-  const hasComponents = components.length > 0
-
   return (
     <>
-      <div className="pt-4 border-t">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-medium text-muted-foreground">
-            Komponenter
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Lägg till/Ta bort komponent
-          </Button>
-        </div>
-        {hasComponents ? (
-          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-            {components.map((component) => (
-              <ComponentDetailsPanel key={component.id} component={component} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-muted-foreground text-sm">
+      <div>
+        <p className="mb-2 text-sm font-medium text-muted-foreground">
+          Komponenter
+          {components.length > 0 && ` (${components.length})`}
+        </p>
+        <ul className="divide-y border-y">
+          {components.length === 0 && (
+            <li className="px-3 py-3 text-sm text-muted-foreground">
               Inga komponenter installerade ännu
-            </p>
-          </div>
-        )}
+            </li>
+          )}
+          {components.map((component) => (
+            <li key={component.id}>
+              <ComponentDetailsPanel component={component} spaceId={spaceId} />
+            </li>
+          ))}
+          <li>
+            <button
+              type="button"
+              onClick={() => setIsInstallOpen(true)}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-3 text-left text-sm font-medium text-primary transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Plus className="h-4 w-4 shrink-0" aria-hidden />
+              Installera komponent
+            </button>
+          </li>
+        </ul>
       </div>
 
-      <ManageComponentsDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        spaceId={spaceId}
+      <ComponentInstallationDialog
+        isOpen={isInstallOpen}
+        onClose={() => setIsInstallOpen(false)}
+        propertyObjectId={spaceId}
         spaceName={spaceName}
       />
     </>

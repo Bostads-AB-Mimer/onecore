@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
-import { useComponentEntity, useSubtypeComponents } from '@/entities/component'
+import {
+  QUERY_KEY_ROOTS,
+  useComponentEntity,
+  useSubtypeComponents,
+} from '@/entities/component'
 
+import { componentLibraryService } from '@/services/api/core/componentLibraryService'
 import type {
   Component,
   ComponentCategory,
@@ -126,7 +132,11 @@ export const useComponentLibraryViewState = () => {
     const newSearch = debouncedSearch.trim()
     if (currentSearch !== newSearch) {
       updateUrlParams(
-        { search: newSearch || undefined, page: undefined },
+        {
+          search: newSearch || undefined,
+          page: undefined,
+          componentId: undefined,
+        },
         { replace: true }
       )
     }
@@ -149,11 +159,16 @@ export const useComponentLibraryViewState = () => {
   }
 
   const setModelFilter = (modelId: string | undefined) => {
-    updateUrlParams({ modelId, page: undefined })
+    updateUrlParams({ modelId, page: undefined, componentId: undefined })
   }
 
   const clearFilters = () => {
-    updateUrlParams({ modelId: undefined, search: undefined, page: undefined })
+    updateUrlParams({
+      modelId: undefined,
+      search: undefined,
+      page: undefined,
+      componentId: undefined,
+    })
     setSearchInput('')
   }
 
@@ -198,8 +213,27 @@ export const useComponentLibraryViewState = () => {
       : undefined
   )
 
+  const markedComponentId =
+    subtypeState?.tab === 'components'
+      ? (searchParams.get('componentId') ?? undefined)
+      : undefined
+  const markedComponent = useQuery({
+    queryKey: [QUERY_KEY_ROOTS.instance, 'by-id', markedComponentId],
+    queryFn: () => componentLibraryService.getInstanceById(markedComponentId!),
+    enabled: markedComponentId !== undefined,
+  })
+
+  const unmarkComponent = () => {
+    updateUrlParams({ componentId: undefined }, { replace: true })
+  }
+
   return {
     viewState,
+    markedComponent:
+      markedComponentId && !markedComponent.isError
+        ? markedComponent.data
+        : undefined,
+    unmarkComponent,
     navigateTo,
     setTab,
     setModelFilter,

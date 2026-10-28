@@ -33,6 +33,8 @@ const ComponentLibraryPage = () => {
     categoryType,
     dialogs,
     data,
+    markedComponent,
+    unmarkComponent,
   } = useComponentLibraryViewState()
 
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
@@ -192,6 +194,8 @@ const ComponentLibraryPage = () => {
           onModelFilterChange={setModelFilter}
           onClearFilters={clearFilters}
           onCreateComponent={handlers.handleCreateInstanceFromTable}
+          markedComponent={markedComponent}
+          onUnmarkComponent={unmarkComponent}
           onEditInstance={handlers.handleEditInstance}
           onDeleteInstance={handlers.handleDeleteInstance}
           onViewHistory={handlers.handleViewHistory}

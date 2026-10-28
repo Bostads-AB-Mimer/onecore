@@ -48,6 +48,8 @@ interface SubtypeViewProps {
   onModelFilterChange: (modelId: string | undefined) => void
   onClearFilters: () => void
   onCreateComponent: () => void
+  markedComponent: Component | undefined
+  onUnmarkComponent: () => void
   onEditInstance: (instance: Component) => void
   onDeleteInstance: (instance: Component) => void
   onViewHistory: (instance: Component) => void
@@ -88,6 +90,8 @@ export const SubtypeView = (props: SubtypeViewProps) => {
       onModelFilterChange={props.onModelFilterChange}
       onClearFilters={props.onClearFilters}
       onCreate={props.onCreateComponent}
+      markedComponent={props.markedComponent}
+      onUnmark={props.onUnmarkComponent}
       onEdit={props.onEditInstance}
       onDelete={props.onDeleteInstance}
       onViewHistory={props.onViewHistory}
