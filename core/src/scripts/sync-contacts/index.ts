@@ -3,9 +3,16 @@ import config from '../../common/config'
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
 import { syncContactToLeasing } from '../../adapters/leasing-adapter'
 import { syncContactToEconomy } from '../../adapters/economy-adapter'
-import { syncContactToWorkOrder } from '../../adapters/work-order-adapter'
+import {
+  syncContactToWorkOrder,
+  undoContactSyncInWorkOrder,
+} from '../../adapters/work-order-adapter'
 import type { Contact } from '@onecore/contacts/schema'
-import type { AdapterResult } from '../../adapters/types'
+import {
+  runSyncSteps,
+  syncStep,
+  undoContactSyncInEconomy,
+} from '../../processes/sync-steps'
 import { ContactSyncPayloadSchema, toSyncPayload } from './payload'
 import { runCmlogSync } from '../shared/run-cmlog-sync'
 
@@ -14,83 +21,53 @@ const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
 
 type ContactUpdate = { contact: Contact; timestamp: Date }
 
-type SyncResult = AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>
-
-const syncError = (
-  contactCode: string,
-  reason: string,
-  written: string[],
-  skipped: string[],
-  rest: string[]
-) =>
-  new Error(
-    `contact ${contactCode} failed to sync: ${reason}` +
-      (written.length ? `, already written: ${written.join(', ')}` : '') +
-      (skipped.length ? `, skipped: ${skipped.join(', ')}` : '') +
-      (rest.length ? `, not attempted: ${rest.join(', ')}` : '')
-  )
-
-// Written in order, stopping at the first failure.
 const syncContact = async (update: ContactUpdate): Promise<void> => {
   const payload = toSyncPayload(update.contact)
-  const steps: [string, () => Promise<SyncResult>][] = [
-    [
-      'xledger',
-      () =>
-        syncContactToEconomy(
-          payload.contactCode,
-          {
-            fullName: payload.fullName,
-            street: payload.street,
-            zipCode: payload.zipCode,
-            city: payload.city,
-            emailAddress: payload.emailAddress,
-          },
-          { create: false } // Do not create new contact in economy when syncing contacts, only update existing
-        ),
-    ],
-    [
-      'odoo',
-      () =>
-        syncContactToWorkOrder(payload.contactCode, {
-          fullName: payload.fullName,
-          emailAddress: payload.emailAddress,
-          phoneNumber: payload.phoneNumber,
-        }),
-    ],
-    ['tenfast', () => syncContactToLeasing(payload.contactCode)],
-  ]
-
-  const names = steps.map(([name]) => name)
+  const subject = `contact ${payload.contactCode}`
 
   const parsed = ContactSyncPayloadSchema.safeParse(payload)
   if (!parsed.success) {
     const fields = parsed.error.issues.map((i) => i.path.join('.')).join(', ')
-    throw syncError(
-      payload.contactCode,
-      `invalid payload (${fields})`,
-      [],
-      [],
-      names
+    throw new Error(
+      `${subject} failed to sync: invalid payload (${fields}), not attempted: xledger, odoo, tenfast`
     )
   }
 
-  const written: string[] = []
-  const skipped: string[] = []
-  for (const [i, [target, run]] of steps.entries()) {
-    const result = await run()
-    if (!result.ok) {
-      const status = result.statusCode ? ` (${result.statusCode})` : ''
-      throw syncError(
-        payload.contactCode,
-        `${target}=${result.err}${status}`,
-        written,
-        skipped,
-        names.slice(i + 1)
-      )
-    }
-    ;(result.data.skipped ? skipped : written).push(target)
-  }
+  await runSyncSteps({
+    subject,
+    steps: [
+      syncStep({
+        name: 'xledger',
+        run: () =>
+          syncContactToEconomy(
+            payload.contactCode,
+            {
+              fullName: payload.fullName,
+              street: payload.street,
+              zipCode: payload.zipCode,
+              city: payload.city,
+              emailAddress: payload.emailAddress,
+            },
+            { create: false } // Do not create new contact in economy when syncing contacts, only update existing
+          ),
+        undo: (undo) => undoContactSyncInEconomy(payload.contactCode, undo),
+      }),
+      syncStep({
+        name: 'odoo',
+        run: () =>
+          syncContactToWorkOrder(payload.contactCode, {
+            fullName: payload.fullName,
+            emailAddress: payload.emailAddress,
+            phoneNumber: payload.phoneNumber,
+          }),
+        undo: (undo) => undoContactSyncInWorkOrder(payload.contactCode, undo),
+      }),
+      syncStep({
+        name: 'tenfast',
+        run: () => syncContactToLeasing(payload.contactCode),
+      }),
+    ],
+  })
   logger.info({ contactCode: payload.contactCode }, 'contact synced')
 }
 
