@@ -99,11 +99,18 @@ export const routes = (router: KoaRouter) => {
       const result = await syncCustomer(contact, queryParamsResult.data?.create)
       ctx.status = 200
       ctx.body = {
-        ...makeSuccessResponseBody(result, metadata),
+        ...makeSuccessResponseBody(result?.customer ?? null, metadata),
         skipped: result === null,
+        ...(result?.previous && { undo: { previous: result.previous } }),
       }
     } catch (err: unknown) {
-      logger.error(err, 'Error syncing contact to Xledger')
+      logger.error(
+        {
+          contactCode,
+          errorName: err instanceof Error ? err.name : typeof err,
+        },
+        'Error syncing contact to Xledger'
+      )
       ctx.status = 500
       ctx.body = {
         error: 'Internal server error',
