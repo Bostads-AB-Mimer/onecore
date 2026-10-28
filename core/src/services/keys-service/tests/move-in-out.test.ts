@@ -608,7 +608,7 @@ describe('GET /keys/move-in-out', () => {
       {
         status: 503,
         statusText: 'Service Unavailable',
-        headers: new AxiosHeaders({ 'retry-after': '30' }),
+        headers: new AxiosHeaders({ 'retry-after': '45' }),
         config: { headers: new AxiosHeaders() },
         data: 'Lease cache is warming up — retry shortly',
       }
@@ -621,7 +621,7 @@ describe('GET /keys/move-in-out', () => {
     )
 
     expect(res.status).toBe(503)
-    expect(res.headers['retry-after']).toBe('30')
+    expect(res.headers['retry-after']).toBe('45')
     expect(res.body.reason).toMatch(/värmer upp/)
     expect(keysBatch).not.toHaveBeenCalled()
   })
