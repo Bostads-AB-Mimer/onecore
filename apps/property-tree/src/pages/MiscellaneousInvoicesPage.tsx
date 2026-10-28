@@ -10,7 +10,7 @@ import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 import { DateRangeFilterDropdown, FilterBar } from '@/shared/ui/filters'
 import { ViewLayout } from '@/shared/ui/layout'
-import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
+import { ResponsiveTable } from '@onecore/ui'
 
 const columns = [
   {

@@ -174,14 +174,8 @@ tenant data, and don't commit it.
 
 `tenfast-rental-object-helpers.ts` answers two different questions:
 
-- **`vacantFrom`** comes from `getLeasedUntil` (AVTAL-343), which reads lease
-  `stage`. Leases in force are `active`, `terminationScheduled`,
-  `preTermination` and `upcoming`. Any of them without an `endDate`, with a
-  withdrawn notice, or with a missing or unknown stage makes the object
-  leased until further notice: `vacantFrom` is undefined (not vacant). Else
-  the object is vacant the day after the latest end date, or today without a
-  lease in force. Rental blocks are applied by the callers through
-  `determineVacantFrom` in `@onecore/utilities`.
+- **`vacantFrom`** comes from `getLeasedUntil`, which reads lease `stage`;
+  see "vacantFrom from leases" below.
 - **`listingHistorySince`** = the `startDate` of the latest lease that has
   begun (`getLatestStartedLease`), whatever its stage, skipping `draft`,
   `signingInProgress`, `voided` and `rejected`. Nothing is published during a
@@ -221,8 +215,10 @@ vacant), so an unreadable lease never makes an object vacant.
   lease.
 - **Otherwise:** vacant the day after the latest end.
 
-`determineVacantFrom` keeps undefined as undefined, whatever the Xpand block
-says. Rule decided in AVTAL-343.
+`determineVacantFrom` (`@onecore/utilities`, shared by leasing and core)
+keeps undefined as undefined, whatever the Xpand block says, and callers
+treat undefined as not vacant (core's vacant-apartments list drops the row).
+Rule decided in AVTAL-343.
 
 On Tenfast test (2,229 objects, 2026-10-14), `endDate` was set exactly when
 notice had been given, both on terminating and on upcoming leases. No lease

@@ -176,6 +176,21 @@ describe(toVacantApartment, () => {
     expect(row).toBeNull()
   })
 
+  it('drops an apartment that the leases hold until further notice', () => {
+    const row = toVacantApartment({
+      availability: factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'apt-1',
+        vacantFrom: undefined,
+        rent: factory.rentalObjectRent.build({ amount: 14200 }),
+      }),
+      residence: residence(),
+      blocks: [],
+      summary: summary(),
+    })
+
+    expect(row).toBeNull()
+  })
+
   it.each([
     ['started', day(-2)],
     ['future', day(5)],
