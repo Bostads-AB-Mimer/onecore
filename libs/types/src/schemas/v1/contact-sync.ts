@@ -23,3 +23,26 @@ export const SyncContactToWorkOrderSchema = z.object({
 export type SyncContactToWorkOrderPayload = z.infer<
   typeof SyncContactToWorkOrderSchema
 >
+
+export const SyncContactToEconomyUndoSchema = z.object({
+  previous: SyncContactToEconomySchema.omit({ contactCode: true }),
+})
+
+export type SyncContactToEconomyUndo = z.infer<
+  typeof SyncContactToEconomyUndoSchema
+>
+
+export const SyncContactToWorkOrderUndoSchema = z.object({
+  tenants: z.array(
+    z.object({
+      id: z.number(),
+      fullName: z.string(),
+      emailAddress: z.string().nullable(),
+      phoneNumber: z.string().nullable(),
+    })
+  ),
+})
+
+export type SyncContactToWorkOrderUndo = z.infer<
+  typeof SyncContactToWorkOrderUndoSchema
+>

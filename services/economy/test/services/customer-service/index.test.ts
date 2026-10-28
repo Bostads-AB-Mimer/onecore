@@ -20,7 +20,7 @@ describe('POST /customers/:contactCode/sync', () => {
 
     jest
       .spyOn(customerService, 'syncCustomer')
-      .mockResolvedValueOnce({ dbId: '12345' })
+      .mockResolvedValueOnce({ customer: { dbId: '12345' }, previous: null })
 
     const res = await request(app.callback())
       .post(`/customers/${payload.contactCode}/sync`)
@@ -62,7 +62,7 @@ describe('POST /customers/:contactCode/sync', () => {
 
     jest
       .spyOn(customerService, 'syncCustomer')
-      .mockResolvedValueOnce({ dbId: '12345' })
+      .mockResolvedValueOnce({ customer: { dbId: '12345' }, previous: null })
 
     const res = await request(app.callback())
       .post(`/customers/${payload.contactCode}/sync`)
@@ -70,6 +70,54 @@ describe('POST /customers/:contactCode/sync', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.skipped).toBe(false)
+  })
+
+  it('returns undo with the previous values after an update', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    const previous = {
+      fullName: 'Gammal, Namn',
+      street: 'Gamla gatan 1',
+      zipCode: '22222',
+      city: 'Västerås',
+      emailAddress: 'gammal@test.se',
+    }
+    jest
+      .spyOn(customerService, 'syncCustomer')
+      .mockResolvedValueOnce({ customer: '12345', previous })
+
+    const res = await request(app.callback())
+      .post(`/customers/${payload.contactCode}/sync`)
+      .send(payload)
+
+    expect(res.status).toBe(200)
+    expect(res.body.undo).toEqual({ previous })
+    expect(res.body.content).toBe('12345')
+  })
+
+  it('returns no undo after a create', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    jest
+      .spyOn(customerService, 'syncCustomer')
+      .mockResolvedValueOnce({ customer: { dbId: '1' }, previous: null })
+
+    const res = await request(app.callback())
+      .post(`/customers/${payload.contactCode}/sync?create=true`)
+      .send(payload)
+
+    expect(res.status).toBe(200)
+    expect(res.body.undo).toBeUndefined()
+  })
+
+  it('returns no undo when skipped', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    jest.spyOn(customerService, 'syncCustomer').mockResolvedValueOnce(null)
+
+    const res = await request(app.callback())
+      .post(`/customers/${payload.contactCode}/sync`)
+      .send(payload)
+
+    expect(res.body.skipped).toBe(true)
+    expect(res.body.undo).toBeUndefined()
   })
 
   it('responds with 400 when request body is invalid', async () => {
