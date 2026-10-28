@@ -2430,6 +2430,35 @@ describe(tenfastAdapter.getLeaseByExternalId, () => {
 })
 
 describe(tenfastAdapter.getLeasesByTenantId, () => {
+  it('excludes voided leases unless the status filter asks for them', async () => {
+    const activeLease = factory.tenfastLease.build({ stage: 'active' })
+    const voidedLease = factory.tenfastLease.build({ stage: 'voided' })
+    const page = {
+      status: 200,
+      data: {
+        records: [activeLease, voidedLease],
+        next: null,
+        prev: null,
+        totalCount: 2,
+      },
+    }
+    ;(request as jest.Mock).mockResolvedValue(page)
+
+    const byDefault = await tenfastAdapter.getLeasesByTenantId('tenant-1')
+    expect(byDefault).toEqual({
+      ok: true,
+      data: [expect.objectContaining({ externalId: activeLease.externalId })],
+    })
+
+    const voidedOnly = await tenfastAdapter.getLeasesByTenantId('tenant-1', {
+      status: ['voided'],
+    })
+    expect(voidedOnly).toEqual({
+      ok: true,
+      data: [expect.objectContaining({ externalId: voidedLease.externalId })],
+    })
+  })
+
   it('should return leases when response is valid', async () => {
     const mockLease = factory.tenfastLease.build()
     ;(request as jest.Mock).mockResolvedValue({

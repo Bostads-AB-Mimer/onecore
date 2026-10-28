@@ -11,6 +11,7 @@ export type GetLeasesFilters = {
     | 'preliminary-terminated'
     | 'pending-signature'
     | 'not-sent'
+    | 'voided'
   )[]
 }
 
@@ -23,6 +24,7 @@ const stageToStatus: Record<string, GetLeasesFilters['status'][number]> = {
   preTermination: 'preliminary-terminated',
   signingInProgress: 'pending-signature',
   draft: 'not-sent',
+  voided: 'voided',
 }
 
 export const filterByStatus = (
