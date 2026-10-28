@@ -47,12 +47,12 @@ De tre scripten delar samma kärna, [`shared/run-cmlog-sync.ts`](./shared/run-cm
 
 Xpand loggar varje ändring som en rad i tabellen `cmlog`, med ett fritextfält `logmemo` och en tidsstämpel `logtime`. Det finns ingen händelsekö och inga webhooks — synken läser nya rader och tolkar texten. Läsningen sker i respektive tjänst: Contacts för kontakter, Leasing för avtal och hyresobjektstyper.
 
-`logtime` är en `datetime` utan tidszon, som Xpand fyller med svensk lokaltid och hela sekunder. Synken läser och jämför den som den är, utan att räkna om tidszon — poddens tidszon spelar ingen roll. Nya rader läses med villkoret `logtime > sparad position`.
+`logtime` är en `datetime` utan tidszon, som Xpand fyller med svensk lokaltid och hela sekunder. Synken läser och jämför den som den är, utan att räkna om tidszon — poddens tidszon spelar ingen roll. Varje körning läser om ett fönster några minuter bakåt från sparad position och hoppar över de rader den redan hanterat (se [Sparad position](#sparad-position)). Det fångar en rad som syns i `cmlog` först en stund efter sin `logtime`, eftersom Xpand sätter tiden innan raden sparas.
 
-Det villkoret har två luckor där rader kan tappas utan fel och utan mejl:
+Två luckor finns kvar där rader kan tappas utan fel och utan mejl:
 
-- **När klockan ställs tillbaka** (sista söndagen i oktober) går Xpands klocka 02:00–02:59 två gånger. När positionen nått första varvets 02:59 läses inga rader från andra varvet, eftersom de har en lägre eller samma tid.
-- **Inom samma sekund.** Läser synken en rad som loggats 10:00:07, och en annan rad med samma sekund sparas i Xpand strax efter, läses den andra aldrig — nästa körning frågar efter rader efter 10:00:07.
+- **När klockan ställs tillbaka** (sista söndagen i oktober) går Xpands klocka 02:00–02:59 två gånger. När positionen nått första varvets 02:59 läses inga rader från andra varvet, eftersom de har en lägre tid än fönstret.
+- **En rad som syns mer än fem minuter efter sin `logtime`.** Fönstret täcker fem minuter (`LATE_COMMIT_MS` i `run-cmlog-sync.ts`). Marginalen är inte uppmätt mot Xpand. Samma sak gäller om poddens klocka går mer än fem minuter före Xpands.
 
 ### Sparad position
 
@@ -64,7 +64,7 @@ Varje script sparar tidsstämpeln för den senast behandlade raden i en fil på 
 | sync-leases              | `/data/last-timestamp-leases.txt`              | `sync-leases-state`              |
 | sync-rental-object-types | `/data/last-timestamp-rental-object-types.txt` | `sync-rental-object-types-state` |
 
-Positionen skrivs under körningens gång, inte i slutet — men först när alla rader inom samma sekund är behandlade. Kraschar jobbet mitt i en sekund läser nästa körning om hela den sekunden, i stället för att hoppa över resten av den. Filen skrivs till `.tmp` och döps sedan om, så den blir aldrig halvskriven.
+Positionen sparas efter varje rad. Bredvid tidsstämpelfilen ligger `<positionsfil>.position.json` med två saker: `readFrom`, varifrån nästa körning läser, och vilka rader i fönstret som redan hanterats (radens nyckel plus en hash av innehållet). `readFrom` flyttas bara framåt, till det senare av senaste ändringen minus fem minuter och körningens start minus tio minuter, så ett jobb utan nya ändringar slutar läsa om efter tio minuter. Tidsstämpelfilen flyttas fortfarande först när en hel sekund är behandlad, för äldre kod som bara läser den. Båda filerna skrivs till `.tmp` och döps sedan om, så de blir aldrig halvskrivna. Kraschar jobbet mitt i en körning läser nästa körning om fönstret och hoppar över raderna som redan är klara.
 
 Positionen flyttas fram även när en rad misslyckas. Det är felkön nedan, inte positionen, som ser till att en rad som läst men misslyckats inte tappas bort. Rader som aldrig läses — se luckorna ovan — fångas inte av kön.
 
@@ -84,7 +84,7 @@ En rad som misslyckas läggs i `/data/failed-rows.jsonl` på jobbets PVC, med fe
 | Dag 8–30          | En gång per dygn               |
 | Efter 30 dagar    | Aldrig — raden tas bort ur kön |
 
-**Senare ändringar ersätter köade.** För kontakter och hyresobjektstyper är bara den senaste ändringen intressant, eftersom hela kontakten respektive den nya typen skickas varje gång. Finns en nyare ändring för samma kontakt eller hyresobjekt — i kön eller bland de nya raderna — stryks den äldre ur kön utan nytt försök. Annars skulle en gammal ändring som till slut lyckas kunna skriva över en nyare. För avtal gäller inte det här: varje händelse spelas upp för sig, och en senare händelse väntar inte på en tidigare som ligger i kön — se [Synka Avtal](./sync-leases/DOCS_Sync_Leases.md#vilka-händelser-som-plockas-upp).
+**Senare ändringar ersätter köade.** För kontakter och hyresobjektstyper är bara den senaste ändringen intressant, eftersom hela kontakten respektive den nya typen skickas varje gång. Finns en nyare ändring för samma kontakt eller hyresobjekt — i kön eller bland de nya raderna — stryks den äldre ur kön utan nytt försök. Annars skulle en gammal ändring som till slut lyckas kunna skriva över en nyare. För avtal gäller inte det här: varje händelse spelas upp för sig. I stället **väntar en senare händelse på en tidigare** av samma avtal som ligger i kön, och de synkas i tur och ordning. Undantaget är makulering: kommer en makulering medan en uppsägning av samma avtal ligger i kön stryks uppsägningen. Se [Synka Avtal](./sync-leases/DOCS_Sync_Leases.md#ordning-per-avtal).
 
 **Positionsfilen ska raderas, inte tömmas.** Bara en saknad fil räknas som första körning. En tom fil, eller en fil som inte innehåller ett datum, stoppar jobbet helt: varje körning misslyckas innan något läses eller köas, och inget mejl skickas. Ska synken spelas om från ett visst datum skrivs det i ISO-format, t.ex. `2026-10-01T00:00:00.000Z`.
 
@@ -101,7 +101,7 @@ Allt mejlas till adressen i `EMAIL_ADDRESSES__XPAND_SYNC` (`config.emailAddresse
 | `<script>: tidigare felande … synkades inte`               | En köad rad behövde inte synkas till slut (t.ex. hyresobjektet finns inte i Tenfast)              |
 | `<script>: tidigare felande … ersatt av en senare ändring` | En köad rad stryks för att en nyare ändring kommit                                                |
 
-Misslyckas samma rad igen utan att ha ändrats — t.ex. efter en krasch mitt i en sekund — skickas inget nytt mejl. Är adressen inte satt loggas en varning och mejlet hoppas över. Svarar Communication med fel loggas det inte som ett misslyckat utskick.
+Misslyckas samma rad igen med samma innehåll — t.ex. när den läses om efter en krasch — skickas inget nytt mejl. Har en ny rad samma nyckel men annat innehåll än den köade ersätter den den köade raden, och ett nytt mejl skickas. Är adressen inte satt loggas en varning och mejlet hoppas över. Svarar Communication med fel loggas det inte som ett misslyckat utskick.
 
 Det finns inget mejl för fel som stoppar hela körningen — Xpand eller tjänsten framför den nere, en trasig positionsfil eller ett jobb som hängt sig. De syns bara i loggarna och som misslyckade Kubernetes-Jobs.
 

@@ -106,7 +106,7 @@ sequenceDiagram
             end
         end
 
-        SyncScript ->> SyncScript: Spara position när sekunden är klar<br/>(oavsett utfall för raden)
+        SyncScript ->> SyncScript: Spara position efter raden<br/>(oavsett utfall för raden)
     end
 
 ```
