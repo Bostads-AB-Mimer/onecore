@@ -13,6 +13,9 @@
     "url": "https://github.com/Bostads-AB-Mimer/onecore-utilities/issues"
   },
   "author": "Anders Norrback Bornholm",
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

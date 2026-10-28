@@ -13,6 +13,8 @@ import {
   getContactByPhoneNumber,
 } from '../adapters/xpand/tenant-lease-adapter'
 
+import { syncTenant } from '../adapters/tenfast/tenfast-adapter'
+import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import {
   addApplicantToToWaitingList,
   removeApplicantFromWaitingList,
@@ -647,6 +649,12 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      if (!res.ok && res.err == 'waiting-list-type-not-found') {
+        ctx.status = 500
+        ctx.body = { error: 'Waiting list type does not exist in Xpand' }
+        return
+      }
+
       ctx.status = 201
       ctx.body = {
         message: 'Applicant successfully added to waiting list',
@@ -717,21 +725,39 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      if (!res.ok && res.err == 'waiting-list-type-not-found') {
+        ctx.status = 500
+        ctx.body = { error: 'Waiting list type does not exist in Xpand' }
+        return
+      }
+
       //add to waitinglist
-      await addApplicantToToWaitingList(
+      const addResult = await addApplicantToToWaitingList(
         ctx.params.contactCode,
         request.waitingListType as WaitingListType
       )
 
-      if (!res.ok && res.err == 'unknown') {
+      // Note: these check `addResult`, not `res`. They previously re-tested the
+      // remove result, so a failed add reported success and left the contact
+      // removed from the queue without being re-added.
+      if (!addResult.ok && addResult.err == 'unknown') {
         ctx.status = 500
         ctx.body = { error: 'Unknown error' }
         return
       }
 
-      if (!res.ok && res.err == 'waiting-list-type-not-implemented') {
+      if (
+        !addResult.ok &&
+        addResult.err == 'waiting-list-type-not-implemented'
+      ) {
         ctx.status = 404
         ctx.body = { error: 'Waiting List Type not Implemented' }
+        return
+      }
+
+      if (!addResult.ok && addResult.err == 'waiting-list-type-not-found') {
+        ctx.status = 500
+        ctx.body = { error: 'Waiting list type does not exist in Xpand' }
         return
       }
 
@@ -1130,6 +1156,55 @@ export const routes = (router: KoaRouter) => {
       ctx.status = result.data.operation === 'created' ? 201 : 200
       ctx.body = {
         content: result.data.comment,
+        ...metadata,
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/sync:
+   *   post:
+   *     summary: Sync a contact to tenFAST
+   *     description: Triggers tenFAST to pull the latest contact data from ONECore and update the matching hyresgast (and any relations referencing the externalId).
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to sync
+   *     responses:
+   *       200:
+   *         description: Contact synced successfully to tenFAST
+   *       500:
+   *         description: Failed to sync contact to tenFAST
+   */
+  router.post(
+    '(.*)/contacts/:contactCode/sync',
+    boundTenfastCalls,
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { contactCode } = ctx.params
+
+      const result = await syncTenant(contactCode)
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          type: 'tenfast-error',
+          title: `Could not sync tenant to tenFAST: ${result.err}`,
+          status: 500,
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: result.data,
+        skipped: result.data === null,
         ...metadata,
       }
     }

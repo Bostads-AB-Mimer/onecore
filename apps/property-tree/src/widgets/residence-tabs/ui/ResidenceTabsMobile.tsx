@@ -7,6 +7,7 @@ import {
   Lock,
   Map,
   MessageSquare,
+  Receipt,
   Users,
   Wrench,
 } from 'lucide-react'
@@ -16,6 +17,7 @@ import { InspectionsTabContent } from '@/features/inspections'
 import { LeasesTabContent } from '@/features/leases'
 import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
 import { RentalBlocksTabContent } from '@/features/rental-blocks'
+import { RentRowsTabContent } from '@/features/rent-rows'
 import { ResidenceFloorplanTabsContent } from '@/features/residences'
 import { TenantsTabContent } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
@@ -91,6 +93,14 @@ export const ResidenceTabsMobile = ({
       icon: FileText,
       title: 'Kontrakt',
       content: <LeasesTabContent rentalPropertyId={rentalId} />,
+    },
+    {
+      id: 'rent-rows',
+      icon: Receipt,
+      title: 'Hyresrader',
+      content: rentalId ? (
+        <RentRowsTabContent rentalObjectCode={rentalId} lease={currentLease} />
+      ) : null,
     },
     {
       id: 'keys',

@@ -2,7 +2,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
-import { keys } from '@onecore/types'
+import { keys, leasing, LeaseStatus, LeaseType } from '@onecore/types'
 
 import { clearObjectCache, routes } from '../move-in-out'
 import {
@@ -326,17 +326,21 @@ describe('GET /keys/move-in-out', () => {
     contactCode: string,
     startDate: string,
     lastDebitDate: string | null
-  ) => ({
+  ): leasing.v1.LeaseSearchResult => ({
     leaseId,
     objectTypeCode: 'BOSTAD',
-    leaseType: 'Bostadskontrakt',
+    leaseType: LeaseType.HousingContract,
     contacts: [
       { name: `Name ${contactCode}`, contactCode, email: null, phone: null },
     ],
     address: 'Gatan 1',
+    postalCode: null,
+    city: null,
     startDate: d(startDate),
+    endDate: null,
     lastDebitDate: lastDebitDate ? d(lastDebitDate) : null,
-    status: 2,
+    signedAt: null,
+    status: LeaseStatus.AboutToEnd,
     rentalObjectCode,
   })
 

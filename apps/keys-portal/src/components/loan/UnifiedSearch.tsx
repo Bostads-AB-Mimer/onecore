@@ -84,11 +84,7 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
             return
           }
           setSearchValue(rentalId)
-          const contracts = await fetchLeasesByRentalPropertyId(rentalId, {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: true,
-            includeContacts: true,
-          })
+          const contracts = await fetchLeasesByRentalPropertyId(rentalId)
           const tenant = pickPrimaryTenant(contracts)
           onResultFound(tenant, contracts, rentalId, 'object')
         }
@@ -194,11 +190,7 @@ export function useUnifiedSearch({ onResultFound }: UnifiedSearchProps) {
   const handleSearchByObjectId = async (id: string) => {
     setLoading(true)
     try {
-      const contracts = await fetchLeasesByRentalPropertyId(id, {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: true,
-        includeContacts: true,
-      })
+      const contracts = await fetchLeasesByRentalPropertyId(id)
 
       const tenant = pickPrimaryTenant(contracts)
       onResultFound(tenant, contracts, id, 'object')

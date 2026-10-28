@@ -11,6 +11,10 @@ import {
   BulkEmail,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
+  InvoiceNotificationEmail,
+  LeaseTerminationConfirmationEmail,
+  LeaseTerminationConfirmationEmailSchema,
+  LeaseTerminationConfirmationMessageType,
 } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import z from 'zod'
@@ -24,6 +28,8 @@ import {
   sendBulkEmail,
   sendNonScoredParkingSpaceApproved,
   sendNonScoredParkingSpaceDenied,
+  sendInvoiceNotificationEmail,
+  sendLeaseTerminationConfirmation,
 } from '../adapters/email-adapter'
 import {
   getEmailTemplate,
@@ -35,6 +41,7 @@ import {
   AcceptParkingSpaceOfferTemplateId,
   NonScoredParkingSpaceApprovedTemplateId,
   NonScoredParkingSpaceDeniedTemplateId,
+  LeaseTerminationConfirmationTemplateId,
 } from '../adapters/infobip-template-ids'
 import {
   sendEmailInfobipSdk,
@@ -66,6 +73,7 @@ const logParkingSpaceEmail = async (params: {
   // The admin who initiated the send, if any; falls back to the automatic
   // dispatch label for flows with no human initiator.
   triggeredBy?: string
+  audienceCriteria?: Record<string, unknown>
   sendResult: { messages?: Array<{ messageId: string }> }
 }) => {
   try {
@@ -77,6 +85,7 @@ const logParkingSpaceEmail = async (params: {
       messageType: params.messageType,
       provider: EMAIL_PROVIDER,
       triggeredByUser: params.triggeredBy ?? AUTOMATIC_DISPATCH_USER,
+      audienceCriteria: params.audienceCriteria,
       recipients: [
         {
           contactCode: params.contactCode,
@@ -388,6 +397,53 @@ export const routes = (router: KoaRouter) => {
     }
   )
 
+  const LEASE_TERMINATION_CONFIRMATION_SUBJECT = 'Bekräftelse på uppsägning'
+
+  router.post(
+    '(.*)/sendLeaseTerminationConfirmation',
+    parseRequestBody(LeaseTerminationConfirmationEmailSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as LeaseTerminationConfirmationEmail
+
+      try {
+        const result = await sendLeaseTerminationConfirmation(body)
+        const template = await getEmailTemplate(
+          LeaseTerminationConfirmationTemplateId
+        )
+        const rendered = template
+          ? renderTemplate(template, { ...body, type: body.rentalType })
+          : null
+        await logParkingSpaceEmail({
+          messageType: LeaseTerminationConfirmationMessageType,
+          to: body.to,
+          contactCode: body.contactCode,
+          triggeredBy: body.triggeredByUser,
+          audienceCriteria: body.correlationId
+            ? { correlationId: body.correlationId, leaseId: body.leaseId }
+            : { leaseId: body.leaseId },
+          subject: rendered?.subject || LEASE_TERMINATION_CONFIRMATION_SUBJECT,
+          body:
+            rendered?.body ||
+            `${LEASE_TERMINATION_CONFIRMATION_SUBJECT} av ${body.rentalType}, avtal ${body.leaseId}.`,
+          sendResult: result.data,
+        })
+        ctx.status = 204
+        ctx.body = { content: result.data, ...metadata }
+      } catch (error: any) {
+        logger.error(
+          { error: error.message },
+          'Error in sendLeaseTerminationConfirmation'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: error.message,
+          ...metadata,
+        }
+      }
+    }
+  )
+
   router.post('(.*)/sendNotification', async (ctx) => {
     const { applicants } = ctx.request.body as {
       applicants: ParkingSpaceNotificationEmail[]
@@ -653,6 +709,49 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 500
         ctx.body = {
           message: error.message,
+          ...metadata,
+        }
+      }
+    }
+  )
+
+  const InvoiceNotificationEmailSchema = z.object({
+    to: z.string().email(),
+    firstName: z.string(),
+    address: z.string(),
+    invoiceNumber: z.string(),
+    dueDate: z.string(),
+    totalAmount: z.string(),
+    attachments: z
+      .array(
+        z.object({
+          filename: z.string(),
+          content: z.string(),
+          contentType: z.string(),
+        })
+      )
+      .optional(),
+  })
+
+  router.post(
+    '(.*)/send-invoice-notification-email',
+    parseRequestBody(InvoiceNotificationEmailSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as InvoiceNotificationEmail
+
+      try {
+        const result = await sendInvoiceNotificationEmail(body)
+        ctx.status = 204
+        ctx.body = { content: result.data, ...metadata }
+      } catch (error: any) {
+        logger.error(
+          { error: error.message },
+          'Error in sendInvoiceNotificationEmail'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: error.message,
           ...metadata,
         }
       }

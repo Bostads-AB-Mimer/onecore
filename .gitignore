@@ -66,6 +66,7 @@ lib-cov
 !.claude/skills/
 !.claude/skills/*
 
+REVIEW.md
 local.claude.md
 
 # --- Private Keys ---
@@ -77,4 +78,5 @@ docs/
 examples/
 .envrc
 
+data
 runcommands.md

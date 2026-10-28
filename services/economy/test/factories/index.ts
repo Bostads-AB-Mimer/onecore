@@ -5,3 +5,6 @@ export {
   MiscellaneousInvoiceFactory as miscellaneousInvoice,
   MiscellaneousInvoiceBaseItemFactory as miscellaneousInvoiceBaseItem,
 } from './invoice'
+
+export * from './tenfast'
+export { SyncContactToEconomyPayloadFactory as syncContactToEconomyPayload } from './sync-contact'

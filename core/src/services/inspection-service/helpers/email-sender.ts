@@ -1,6 +1,7 @@
 import {
   Lease,
   LeaseStatus,
+  LeaseType,
   EmailAttachment,
   InspectionProtocolEmail,
 } from '@onecore/types'
@@ -27,8 +28,8 @@ export const identifyTenantContracts = (
   const housingContracts = leases
     .filter(
       (lease) =>
-        lease.type.includes('Bostadskontrakt') ||
-        lease.type.includes('Kooperativ hyresrätt')
+        lease.type === LeaseType.HousingContract ||
+        lease.type === LeaseType.CooperativeTenancyContract
     )
     .sort((a, b) => {
       // Sort by leaseStartDate ascending (oldest first)

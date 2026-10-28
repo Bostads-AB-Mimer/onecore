@@ -266,10 +266,28 @@ export interface Tenant {
   isTenant: boolean
   parkingSpaceWaitingList: WaitingListResponse
   specialAttention: boolean
+  protectedIdentity: components['schemas']['Contact']['protectedIdentity']
+  protectedIdentityDetails?: components['schemas']['Contact']['protectedIdentityDetails']
   isAboutToLeave: boolean
   currentHousingContract: ContractType
   parkingSpaceContracts: ContractType[]
   housingContracts: ContractType[]
+}
+
+export type RelatedContactRole =
+  | 'trustee'
+  | 'administrator'
+  | 'trusteeFor'
+  | 'administratorFor'
+  | 'otherInvoiceRecipient'
+  | 'otherInvoiceRecipientFor'
+
+export interface RelatedContact {
+  contactCode: string
+  role: RelatedContactRole
+  fullName: string
+  firstName: string
+  lastName: string
 }
 
 // Queue System Types

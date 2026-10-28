@@ -46,7 +46,9 @@ describe('GET /listing/:listingId/applicants/details', () => {
 
     const rentalObject = factory.rentalObject
       .params({
-        vacantFrom: new Date(),
+        availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+          vacantFrom: new Date(),
+        }),
       })
       .build()
 

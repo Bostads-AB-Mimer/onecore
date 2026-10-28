@@ -63,6 +63,16 @@ const housingRentalProperty: RentalPropertyInfo = {
     buildingCode: 'BLD-1',
     building: 'Building 1',
   },
+  districtCode: '',
+  district: '',
+  marketAreaCode: '',
+  marketArea: '',
+  building: {
+    buildingCode: '',
+    building: '',
+    buildingTypeCode: '',
+    buildingTypeCaption: ''
+  }
 }
 
 const parkingSpaceRentalProperty: RentalPropertyInfo = {
@@ -74,6 +84,16 @@ const parkingSpaceRentalProperty: RentalPropertyInfo = {
     address: 'Street 2',
     code: 'P1',
   },
+  districtCode: '',
+  district: '',
+  marketAreaCode: '',
+  marketArea: '',
+  building: {
+    buildingCode: '',
+    building: '',
+    buildingTypeCode: '',
+    buildingTypeCaption: ''
+  }
 }
 
 const housingRentalPropertyWithEmptyEstateCode: RentalPropertyInfo = {

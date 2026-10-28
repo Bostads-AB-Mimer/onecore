@@ -1,5 +1,5 @@
-import { GET } from './baseApi'
-import type { components, paths } from './generated/api-types'
+import { ApiError, GET } from './baseApi'
+import type { components } from './generated/api-types'
 
 export type LeaseSearchResult = components['schemas']['LeaseSearchResult']
 export type PaginationMeta = components['schemas']['PaginationMeta']
@@ -11,11 +11,41 @@ export type PaginatedResponse<T> = {
   _links: PaginationLinks[]
 }
 
-// Derived from generated types — single source of truth
-type SearchQuery = NonNullable<
-  paths['/leases/search']['get']['parameters']['query']
->
-export type LeaseSearchQueryParams = Omit<SearchQuery, 'page' | 'limit'>
+export type LeaseStatusFilter =
+  | 'current'
+  | 'upcoming'
+  | 'abouttoend'
+  | 'ended'
+  | 'preliminaryterminated'
+  | 'pendingsignature'
+  | 'notsent'
+
+export type LeaseSearchQueryParams = {
+  q?: string
+  name?: string
+  objectType?: string[]
+  status?: LeaseStatusFilter[]
+  leaseType?: string[]
+  parkingSpaceType?: string[]
+  startDateFrom?: string
+  startDateTo?: string
+  endDateFrom?: string
+  endDateTo?: string
+  property?: string[]
+  buildingCodes?: string[]
+  areaCodes?: string[]
+  districtNames?: string[]
+  buildingManager?: string[]
+  sortBy?:
+    | 'leaseStartDate'
+    | 'lastDebitDate'
+    | 'leaseId'
+    | 'address'
+    | 'objectType'
+    | 'rentalObjectCode'
+    | 'tenantName'
+  sortOrder?: 'asc' | 'desc'
+}
 
 export type ContactInfo = {
   contactCode: string
@@ -29,7 +59,7 @@ async function search(
   page = 1,
   limit = 50
 ): Promise<PaginatedResponse<LeaseSearchResult>> {
-  const { data, error } = await GET('/leases/search', {
+  const { data, error, response } = await GET('/leases/search', {
     params: {
       query: {
         ...params,
@@ -39,18 +69,13 @@ async function search(
     },
   })
 
-  if (error) throw error
-
-  const response = data as {
-    content?: LeaseSearchResult[]
-    _meta?: PaginationMeta
-    _links?: PaginationLinks[]
-  }
+  if (error)
+    throw new ApiError((response as Response).status, 'lease search failed')
 
   return {
-    content: response.content ?? [],
-    _meta: response._meta!,
-    _links: response._links ?? [],
+    content: data.content ?? [],
+    _meta: data._meta!,
+    _links: data._links ?? [],
   }
 }
 
@@ -88,12 +113,17 @@ async function exportLeasesToExcel(
   params: LeaseSearchQueryParams
 ): Promise<Blob> {
   const { data, error } = await GET('/leases/export', {
-    params: { query: params },
+    params: {
+      query: params,
+    },
     parseAs: 'blob',
   })
 
   if (error) throw error
-  return data as Blob
+
+  // openapi-typescript types binary responses as `string`, but parseAs:'blob'
+  // makes openapi-fetch return an actual Blob at runtime.
+  return data as unknown as Blob
 }
 
 export const leaseSearchService = {

@@ -1,6 +1,6 @@
 import { msInterval, type Unit } from './interval'
 import { makeHealStrategy, type HealOptions } from './heal-strategy'
-import { ResourceError, ResourceNotReady } from './error'
+import { ResourceNotReady } from './error'
 
 /**
  * The status of a Resource.

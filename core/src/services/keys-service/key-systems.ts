@@ -2,7 +2,7 @@ import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { KeySystemsApi } from '../../adapters/keys-adapter'
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
-import { createLogEntry, getUserName } from './helpers'
+import { createLogEntry } from './helpers'
 
 export const routes = (router: KoaRouter) => {
   /**

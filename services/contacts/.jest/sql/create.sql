@@ -152,3 +152,22 @@ CREATE TABLE cmadr (
   timestamp CHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
   CONSTRAINT pkcmadr PRIMARY KEY CLUSTERED (keycmadr)
 )
+GO
+
+IF OBJECT_ID(N'hyobj', N'U') IS NULL
+CREATE TABLE hyobj (
+  keyhyobj CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+  hyobjben VARCHAR(60) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+  sistadeb DATETIME NULL
+)
+GO
+
+IF OBJECT_ID(N'hyavk', N'U') IS NULL
+CREATE TABLE hyavk (
+  keyhyavk CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+  keyhyobj CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+  keycmctc CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  keyhyakt CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  fdate DATETIME NULL,
+  tdate DATETIME NULL
+)

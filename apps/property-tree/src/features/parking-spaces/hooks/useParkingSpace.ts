@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { leaseService, parkingSpaceService } from '@/services/api/core'
+import {
+  leaseService,
+  parkingSpaceService,
+  rentalObjectService,
+} from '@/services/api/core'
 
 export function useParkingSpace(rentalId: string | undefined) {
   const parkingSpaceQuery = useQuery({
@@ -23,7 +27,14 @@ export function useParkingSpace(rentalId: string | undefined) {
   const currentLease =
     leasesQuery.data?.find((lease) => lease.status === 'Current') ??
     leasesQuery.data?.find((lease) => lease.status === 'AboutToEnd')
-  const currentRent = currentLease?.rentInfo?.currentRent?.currentRent
+
+  // The rental object's configured rent from Tenfast — independent of leases,
+  // so it is available for vacant objects too
+  const objectRentQuery = useQuery({
+    queryKey: ['rentalObjectRent', rentalId],
+    queryFn: () => rentalObjectService.getRentByRentalObjectCode(rentalId!),
+    enabled: !!rentalId,
+  })
 
   return {
     data: parkingSpace,
@@ -31,6 +42,8 @@ export function useParkingSpace(rentalId: string | undefined) {
     error: parkingSpaceQuery.error,
     leases: leasesQuery.data,
     leasesIsLoading: leasesQuery.isLoading,
-    currentRent,
+    currentLease,
+    objectRent: objectRentQuery.data,
+    objectRentIsLoading: objectRentQuery.isLoading,
   }
 }

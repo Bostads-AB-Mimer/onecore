@@ -1,10 +1,16 @@
 import KoaRouter from '@koa/router'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
+import * as xpandAdapter from '../adapters/xpand/rental-object-adapter'
+
+import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import z from 'zod'
+import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { RentalObjectAvailabilityInfo } from '@onecore/types'
 import {
-  getAllVacantParkingSpaces,
-  getParkingSpace,
-  getParkingSpaces,
-} from '../adapters/xpand/rental-object-adapter'
+  determineVacantFrom,
+  hasIndefiniteActiveBlock,
+} from '../helpers/rental-object-availability-helpers'
+import { mapToOnecoreRentalObjectRent } from '../helpers/tenfast'
 import listingTextContentAdapter from '../adapters/listing-text-content-adapter'
 
 /**
@@ -65,32 +71,76 @@ export const routes = (router: KoaRouter) => {
     const requestBody = ctx.request.body as
       { includeRentalObjectCodes?: string[] } | undefined
     const includeRentalObjectCodes =
-      requestBody?.includeRentalObjectCodes?.filter(Boolean)
+      requestBody?.includeRentalObjectCodes?.filter(Boolean) ?? []
 
-    const result = await getParkingSpaces(includeRentalObjectCodes)
+    // Get both parking space info from xpand and availability info from tenfast in parallel
+    const [parkingSpaceResult, rentalObjectAvailabilitiesResponse] =
+      await Promise.all([
+        xpandAdapter.getParkingSpaces(includeRentalObjectCodes),
+        tenfastAdapter.getRentalObjectAvailabilityInfo(
+          includeRentalObjectCodes,
+          false
+        ),
+      ])
 
-    if (result.ok) {
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
-      return
-    }
+    if (!parkingSpaceResult.ok) {
+      logger.error(
+        { err: parkingSpaceResult.err },
+        'Error fetching parking spaces:'
+      )
 
-    if (result.err == 'parking-spaces-not-found') {
-      ctx.status = 404
-      ctx.body = {
-        error: `No parking spaces found for rental object codes: ${includeRentalObjectCodes}`,
-        ...metadata,
+      if (parkingSpaceResult.err == 'parking-spaces-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: `No parking spaces found for rental object codes: ${includeRentalObjectCodes}`,
+          ...metadata,
+        }
+        return
       }
-      return
-    }
 
-    if (result.err == 'unknown') {
       ctx.status = 500
       ctx.body = {
         error: 'An error occurred while fetching parking spaces.',
         ...metadata,
       }
+      return
     }
+
+    if (!rentalObjectAvailabilitiesResponse.ok) {
+      logger.error(
+        { err: rentalObjectAvailabilitiesResponse.err },
+        'Error fetching availability for parking spaces:'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error:
+          'An error occurred while fetching availability for parking spaces.',
+        ...metadata,
+      }
+      return
+    }
+
+    parkingSpaceResult.data.forEach((ps) => {
+      const availability = rentalObjectAvailabilitiesResponse.data.find(
+        (availability) => availability.rentalObjectCode === ps.rentalObjectCode
+      )
+
+      // Match availability info to rental object and enrich availability info with
+      // vacantFrom based on block end date and end date of last active lease
+      if (availability) {
+        ps.availabilityInfo = availability
+
+        ps.availabilityInfo.vacantFrom = determineVacantFrom(
+          ps.availabilityInfo.vacantFrom,
+          ps.blockStartDate,
+          ps.blockEndDate
+        )
+      }
+    })
+
+    ctx.status = 200
+    ctx.body = { content: parkingSpaceResult.data, ...metadata }
+    return
   })
 
   /**
@@ -128,9 +178,41 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const rentalObjectCode = ctx.params.rentalObjectCode
 
-    const result = await getParkingSpace(rentalObjectCode)
+    //Get parking space by rental object code from xpand
+    const result = await xpandAdapter.getParkingSpace(rentalObjectCode)
 
     if (result.ok) {
+      //Get availability info for the parking space from tenfast
+      const availabilityResult =
+        await tenfastAdapter.getAvailabilityForRentalObject(
+          rentalObjectCode,
+          false
+        )
+
+      if (availabilityResult.ok) {
+        //Enrich availability info with vacantFrom based on block end date and end date of last active lease
+        availabilityResult.data.vacantFrom = determineVacantFrom(
+          availabilityResult.data.vacantFrom,
+          result.data.blockStartDate,
+          result.data.blockEndDate
+        )
+
+        ctx.status = 200
+        ctx.body = {
+          content: {
+            ...result.data,
+            availabilityInfo: availabilityResult.data,
+          },
+          ...metadata,
+        }
+        return
+      }
+
+      logger.error(
+        { err: availabilityResult.err, rentalObjectCode: rentalObjectCode },
+        `Could not get rent from Tenfast`
+      )
+
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
       return
@@ -191,43 +273,525 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     logger.info(metadata, 'Fetching all vacant parking spaces')
 
-    const vacantParkingSpaces = await getAllVacantParkingSpaces()
+    //Get all vacant rental objects of type parking space from tenfast
+    let availabilityResult =
+      await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+        tenfastAdapter.RentalObjectType.ParkingSpace
+      )
 
-    if (!vacantParkingSpaces.ok) {
+    if (!availabilityResult.ok) {
       logger.error(
-        { err: vacantParkingSpaces.err },
-        'Error fetching vacant parking spaces:'
+        { err: availabilityResult.err },
+        'Error fetching availability for vacant rental objects from tenfast:'
       )
       ctx.status = 500
       ctx.body = {
-        error: 'An error occurred while fetching vacant parking spaces.',
+        error:
+          'An error occurred while fetching availability for vacant rental objects from tenfast.',
         ...metadata,
       }
       return
     }
 
-    // The parking spaces come from Xpand, so the text content flag is
-    // attached here from the leasing DB. If that lookup fails the list is
-    // still returned, without the flag, since it only drives an icon.
+    if (!availabilityResult.data || availabilityResult.data.length === 0) {
+      logger.info('No vacant rental objects found in tenfast')
+      ctx.status = 200
+      ctx.body = { content: [], ...metadata }
+      return
+    }
+
+    //Get parking spaces for the available rental objects from xpand
+    const rentalObjectResult = await xpandAdapter.getParkingSpaces(
+      availabilityResult.data.map(
+        (availability) => availability.rentalObjectCode
+      )
+    )
+
+    if (!rentalObjectResult.ok) {
+      logger.error(
+        { err: rentalObjectResult.err },
+        'Error fetching rental objects from xpand:'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: 'An error occurred while fetching rental objects from xpand.',
+        ...metadata,
+      }
+      return
+    }
+
+    // Match availability info to rental objects
+    rentalObjectResult.data.forEach((ps) => {
+      ps.availabilityInfo = availabilityResult.data?.find(
+        (availability: RentalObjectAvailabilityInfo) =>
+          availability.rentalObjectCode === ps.rentalObjectCode
+      )
+    })
+
+    // Filter out parking spaces with an indefinite (no end date) active block —
+    // a block with an end date is still listed, with vacantFrom computed below.
+    const vacantRentalObjects = rentalObjectResult.data.filter(
+      (ps) => !hasIndefiniteActiveBlock(ps)
+    )
+
+    // Berika availability info med vacantFrom baserat på block end date och end date
+    vacantRentalObjects.forEach((ps) => {
+      if (ps.availabilityInfo) {
+        ps.availabilityInfo.vacantFrom = determineVacantFrom(
+          ps.availabilityInfo.vacantFrom,
+          ps.blockStartDate,
+          ps.blockEndDate
+        )
+      }
+    })
+
+    // The text content flag is attached here from the leasing DB. If that
+    // lookup fails the list is still returned, without the flag, since it
+    // only drives an icon.
     const textContentCodes =
       await listingTextContentAdapter.getRentalObjectCodesWithTextContent(
-        vacantParkingSpaces.data.map(
-          (parkingSpace) => parkingSpace.rentalObjectCode
-        )
+        vacantRentalObjects.map((parkingSpace) => parkingSpace.rentalObjectCode)
       )
     const codesWithTextContent = textContentCodes.ok
       ? new Set(textContentCodes.data)
       : undefined
     const content = codesWithTextContent
-      ? vacantParkingSpaces.data.map((parkingSpace) => ({
+      ? vacantRentalObjects.map((parkingSpace) => ({
           ...parkingSpace,
           hasListingTextContent: codesWithTextContent.has(
             parkingSpace.rentalObjectCode
           ),
         }))
-      : vacantParkingSpaces.data
-
+      : vacantRentalObjects
     ctx.status = 200
     ctx.body = { content, ...metadata }
   })
+
+  /**
+   * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/availability:
+   *   get:
+   *     summary: Get a rental object availability by code
+   *     description: Fetches a rental object availability by Rental Object Code.
+   *     tags:
+   *       - RentalObject
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object availability.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     rentalObjectCode:
+   *                       type: string
+   *                     vacantFrom:
+   *                       type: string
+   *                       format: date-time
+   *                       nullable: true
+   *                     rent:
+   *                       type: object
+   *                       properties:
+   *                         amount:
+   *                           type: number
+   *                         vat:
+   *                           type: number
+   *                         rows:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *                             properties:
+   *                               code:
+   *                                 type: string
+   *                               description:
+   *                                 type: string
+   *                               amount:
+   *                                 type: number
+   *                               vatPercentage:
+   *                                 type: number
+   *                               fromDate:
+   *                                 type: string
+   *                                 format: date-time
+   *                                 nullable: true
+   *                               toDate:
+   *                                 type: string
+   *                                 format: date-time
+   *                                 nullable: true
+   *       '500':
+   *         description: Internal server error. Failed to fetch rental object availability.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   *       '404':
+   *         description: Not found. The availability of the specified rental object was not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   */
+  router.get(
+    '/rental-objects/by-code/:rentalObjectCode/availability',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalObjectCode = ctx.params.rentalObjectCode
+
+      // Get parking space by rental object code from xpand to be able to determine
+      // vacantFrom based on block end date and end date of last active lease
+      const parkingSpaceResult =
+        await xpandAdapter.getParkingSpace(rentalObjectCode)
+
+      if (
+        !parkingSpaceResult.ok &&
+        parkingSpaceResult.err != 'parking-space-not-found'
+      ) {
+        ctx.status = 500
+        ctx.body = {
+          error: `An error occurred while fetching parking space by rental object code: ${rentalObjectCode}`,
+          ...metadata,
+        }
+        return
+      }
+
+      const parkingSpace = parkingSpaceResult.ok
+        ? parkingSpaceResult.data
+        : null
+
+      // Get availability info for the parking space from tenfast
+      const availabilityResult =
+        await tenfastAdapter.getAvailabilityForRentalObject(
+          rentalObjectCode,
+          false
+        )
+
+      if (availabilityResult.ok) {
+        if (availabilityResult.data) {
+          if (parkingSpace) {
+            // Enrich availability info with vacantFrom based on block end date and end date of last active lease
+            availabilityResult.data.vacantFrom = determineVacantFrom(
+              availabilityResult.data.vacantFrom,
+              parkingSpace?.blockStartDate,
+              parkingSpace?.blockEndDate
+            )
+          } //Set VacantFrom to undefined for rental objects that is not parking spaces sincewe don't have block info for those rental objects to be able to determine vacantFrom
+          else availabilityResult.data.vacantFrom = undefined
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          content: availabilityResult.data,
+          ...metadata,
+        }
+        return
+      }
+
+      if (availabilityResult.err == 'could-not-find-rental-object') {
+        ctx.status = 404
+        ctx.body = {
+          error: `Availability not found for rental object code: ${rentalObjectCode}`,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 500
+      ctx.body = {
+        error: 'An error occurred while fetching rental object availability.',
+        ...metadata,
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent:
+   *   get:
+   *     summary: Get rent for a rental object
+   *     description: Fetches the rental object's configured rent from Tenfast, independent of any lease. Works for vacant objects.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to fetch rent for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object rent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     rentalObjectCode:
+   *                       type: string
+   *                     rent:
+   *                       type: object
+   *                       properties:
+   *                         amount:
+   *                           type: number
+   *                         vat:
+   *                           type: number
+   *                         rows:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *       '404':
+   *         description: Not found. The specified rental object was not found in Tenfast.
+   *       '500':
+   *         description: Internal server error. Failed to fetch rental object rent.
+   */
+  router.get('/rental-objects/by-code/:rentalObjectCode/rent', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const rentalObjectCode = ctx.params.rentalObjectCode
+
+    const result = await tenfastAdapter.getRentalObject(rentalObjectCode)
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    if (!result.data) {
+      ctx.status = 404
+      ctx.body = {
+        error: `Rental object not found: ${rentalObjectCode}`,
+        ...metadata,
+      }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = {
+      content: {
+        rentalObjectCode: result.data.externalId,
+        rent: mapToOnecoreRentalObjectRent(result.data),
+      },
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /rental-objects/by-code/{rentalObjectCode}/rent-legacy:
+   *   get:
+   *     summary: Get legacy (Xpand) rent for a rental object
+   *     description: Fetches the rental object's rent rows from Xpand's debit row view, converted to monthly amounts. Used to compare against Tenfast during the transition.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to fetch legacy rent for.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the legacy rental object rent.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     rentalObjectCode:
+   *                       type: string
+   *                     rent:
+   *                       type: object
+   *                       properties:
+   *                         amount:
+   *                           type: number
+   *                         vat:
+   *                           type: number
+   *                         rows:
+   *                           type: array
+   *                           items:
+   *                             type: object
+   *       '404':
+   *         description: Not found. No rent rows exist in Xpand for the specified rental object.
+   *       '500':
+   *         description: Internal server error. Failed to fetch legacy rental object rent.
+   */
+  router.get(
+    '/rental-objects/by-code/:rentalObjectCode/rent-legacy',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const rentalObjectCode = ctx.params.rentalObjectCode
+
+      const result =
+        await xpandAdapter.getRentalObjectRentRows(rentalObjectCode)
+
+      if (!result.ok && result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: `No rent rows found in Xpand for rental object: ${rentalObjectCode}`,
+          ...metadata,
+        }
+        return
+      }
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: { rentalObjectCode, rent: result.data },
+        ...metadata,
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /rental-objects/availability:
+   *   post:
+   *     summary: Get availability for rental objects
+   *     description: Fetches availability for rental objects by Rental Object Codes.
+   *     tags:
+   *       - Lease service
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               rentalObjectCodes:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array of rental object codes to include.
+   *                 example: ["ABC123", "DEF456", "GHI789"]
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved the rental object availability.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 availability:
+   *                   type: number
+   *       '500':
+   *         description: Internal server error. Failed to fetch rental object.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   *       '404':
+   *         description: Not found. The rent of the specified rental object was not found.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   description: The error message.
+   *     security:
+   *       - bearerAuth: []
+   */
+  const RentalObjectsRentRequestSchema = z.object({
+    rentalObjectCodes: z.array(z.string()).optional(),
+  })
+  router.post(
+    '/rental-objects/availabilities',
+    parseRequestBody(RentalObjectsRentRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const body = ctx.request
+        .body as typeof RentalObjectsRentRequestSchema._type
+
+      const includeRentalObjectCodes = body.rentalObjectCodes ?? []
+
+      // Get both parking space info from xpand and availability info from tenfast in parallel
+      const [parkingSpaceResult, rentalObjectAvailabilitiesResponse] =
+        await Promise.all([
+          xpandAdapter.getParkingSpaces(includeRentalObjectCodes),
+          tenfastAdapter.getRentalObjectAvailabilityInfo(
+            includeRentalObjectCodes,
+            false
+          ),
+        ])
+
+      if (
+        !parkingSpaceResult.ok &&
+        parkingSpaceResult.err !== 'parking-spaces-not-found'
+      ) {
+        ctx.status = 500
+        ctx.body = {
+          error: 'An error occurred while fetching parking spaces.',
+          ...metadata,
+        }
+        return
+      }
+
+      if (!rentalObjectAvailabilitiesResponse.ok) {
+        logger.error(
+          { err: rentalObjectAvailabilitiesResponse.err },
+          'Error fetching availability for rental objects:'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error:
+            'An error occurred while fetching availability for rental objects.',
+          ...metadata,
+        }
+        return
+      }
+
+      rentalObjectAvailabilitiesResponse.data.forEach((availabilityInfo) => {
+        const parkingSpace =
+          parkingSpaceResult.ok &&
+          parkingSpaceResult.data.find(
+            (ps) => ps.rentalObjectCode === availabilityInfo.rentalObjectCode
+          )
+
+        // Match availability info to rental object and enrich availability info with
+        // vacantFrom based on block end date and end date of last active lease
+        if (parkingSpace) {
+          availabilityInfo.vacantFrom = determineVacantFrom(
+            availabilityInfo.vacantFrom,
+            parkingSpace.blockStartDate,
+            parkingSpace.blockEndDate
+          )
+        } // Set VacantFrom to undefined for rental objects that is not parking spaces since we don't have block info for those rental objects to be able to determine vacantFrom
+        else availabilityInfo.vacantFrom = undefined
+      })
+
+      ctx.status = 200
+      ctx.body = {
+        content: rentalObjectAvailabilitiesResponse.data,
+        ...metadata,
+      }
+    }
+  )
 }

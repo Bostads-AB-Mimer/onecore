@@ -5,6 +5,7 @@ import bodyParser from 'koa-bodyparser'
 import { leasing, WaitingListType } from '@onecore/types'
 
 import { routes } from '../../routes/contacts'
+import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
 import * as xPandSoapAdapter from '../../adapters/xpand/xpand-soap-adapter'
 import * as applicationProfileAdapter from '../../adapters/application-profile-adapter'
@@ -88,24 +89,6 @@ describe('GET /contacts/search', () => {
           message: 'Waiting List time successfullt reset for applicant',
         },
       })
-    })
-
-    it('returns status 200 upon not-in-waiting-list error from removeApplicantFromWaitingList', async () => {
-      jest
-        .spyOn(xPandSoapAdapter, 'removeApplicantFromWaitingList')
-        .mockResolvedValue({ ok: false, err: 'not-in-waiting-list' })
-      jest
-        .spyOn(xPandSoapAdapter, 'addApplicantToToWaitingList')
-        .mockResolvedValue({ ok: true, data: undefined })
-
-      const res = await request(app.callback())
-        .post('/contacts/1234567890/waitingLists/reset')
-        .send({
-          contactCode: '123',
-          waitingListType: WaitingListType.ParkingSpace,
-        })
-
-      expect(res.status).toBe(200)
     })
 
     it('returns status 404 upon waiting-list-type-not-implemented error from removeApplicantFromWaitingList', async () => {
@@ -435,5 +418,45 @@ describe('GET /contacts/:contactCode/tenant', () => {
     const res = await request(app.callback()).get('/contacts/1231234/tenant')
 
     expect(res.status).toBe(500)
+  })
+})
+
+describe('POST /contacts/:contactCode/sync', () => {
+  it('responds with 200 and skipped:false on successful sync', async () => {
+    const syncResult = { updatedCount: 1 }
+    const syncTenantSpy = jest
+      .spyOn(tenfastAdapter, 'syncTenant')
+      .mockResolvedValueOnce({ ok: true, data: syncResult })
+
+    const res = await request(app.callback()).post('/contacts/P12345/sync')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual(syncResult)
+    expect(res.body.skipped).toBe(false)
+    expect(syncTenantSpy).toHaveBeenCalledWith('P12345')
+  })
+
+  it('responds with 200 and skipped:true when tenant does not exist', async () => {
+    jest.spyOn(tenfastAdapter, 'syncTenant').mockResolvedValueOnce({
+      ok: true,
+      data: null,
+    })
+
+    const res = await request(app.callback()).post('/contacts/P12345/sync')
+
+    expect(res.status).toBe(200)
+    expect(res.body.skipped).toBe(true)
+  })
+
+  it('responds with 500 when sync fails', async () => {
+    jest.spyOn(tenfastAdapter, 'syncTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'could-not-update-tenant',
+    })
+
+    const res = await request(app.callback()).post('/contacts/P12345/sync')
+
+    expect(res.status).toBe(500)
+    expect(res.body.type).toBe('tenfast-error')
   })
 })

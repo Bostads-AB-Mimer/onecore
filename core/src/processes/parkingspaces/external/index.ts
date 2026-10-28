@@ -10,29 +10,18 @@ import {
   getContactByContactCode,
   getCreditInformation,
   getActiveListingByRentalObjectCode,
+  getTenantByContactCode,
   getLeasesForContactCode,
   getParkingSpaceByCode,
   updateListingStatus,
 } from '../../../adapters/leasing-adapter'
+import { isTenantAllowedToRentAParkingSpaceInThisResidentialArea } from '../../../services/lease-service/helpers/lease'
 import { logger } from '@onecore/utilities'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
 import dayjs from 'dayjs'
 
-//
 // PROCESS (Create lease for external parking space)
-//
-// Description: Applicant books parking space marked as external, automatic check is performed, contract is created in Xpand
-// Steps:
-// 1. Get parking space from mimer.nu API
-// 2. Get applicant from onecore-leasing
-// 3a. If applicant has no current or upcoming contracts, perform external credit check in onecore-leasing
-// 3b. If applicant has current or upcoming contracts, perform internal credit check by fetching payment history from onecore-leasing
-// 4. If credit check is approved, create contract by calling Xpand soap service
-// 5a. If contract is created successfully, notify applicant and role uthyrning using onecore-communication
-// 5b. If contract could not be created, notify applicant and role uthyrning using onecore-communication
-// 6. If credit check is rejected, notify applicant and role uthyrning using onecore-communication
-// 7. If a technical error occurs, return error code.
-//
+// See DOCS_Create_Lease_for_None_Scored_Parking_Space.md for the full flow.
 export const createLeaseForExternalParkingSpace = async (
   parkingSpaceId: string,
   contactId: string,
@@ -188,11 +177,25 @@ export const createLeaseForExternalParkingSpace = async (
 
     if (creditCheck) {
       // Step 4A. Create lease
+      const tenantResult = await getTenantByContactCode(
+        applicantContact.contactCode
+      )
+      const includeVAT =
+        !tenantResult.ok ||
+        !isTenantAllowedToRentAParkingSpaceInThisResidentialArea(
+          rentalObject.residentialAreaCode,
+          tenantResult.data
+        )
+
+      log.push(
+        `Momsbedömning: ${includeVAT ? 'Moms inkluderas (inget bostadsavtal i samma område)' : 'Ingen moms (bostadsavtal finns i samma område)'}`
+      )
       const createLeaseResult = await createLease(
         listing.rentalObjectCode,
         applicantContact.contactCode,
         startDate != undefined ? startDate : new Date().toISOString(),
-        '001'
+        '001',
+        includeVAT
       )
 
       if (!createLeaseResult.ok) {
@@ -220,10 +223,6 @@ export const createLeaseForExternalParkingSpace = async (
       const leaseId = createLeaseResult.data
 
       log.push(`Kontrakt skapat: ${leaseId}`)
-
-      log.push(
-        'Kontrollera om moms ska läggas på kontraktet. Detta måste göras manuellt innan det skickas för påskrift.'
-      )
 
       //update listing status
       const updateListingResult = await updateListingStatus(
@@ -262,7 +261,7 @@ export const createLeaseForExternalParkingSpace = async (
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
           type: rentalObject.objectTypeCaption ?? 'Bilplats',
-          rent: String(rentalObject.monthlyRent ?? ''),
+          rent: String(rentalObject.availabilityInfo?.rent?.amount ?? ''),
         })
       }
       await sendNotificationToRole(
@@ -298,7 +297,7 @@ export const createLeaseForExternalParkingSpace = async (
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
           type: rentalObject.objectTypeCaption ?? 'Bilplats',
-          rent: String(rentalObject.monthlyRent ?? ''),
+          rent: String(rentalObject.availabilityInfo?.rent?.amount ?? ''),
         })
       }
       await sendNotificationToRole(

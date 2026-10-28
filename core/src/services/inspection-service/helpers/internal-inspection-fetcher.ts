@@ -50,11 +50,8 @@ export const fetchEnrichedInternalInspection = async (
   let lease = null
   if (rawInspection.leaseId) {
     try {
-      const rawLease = await leasingAdapter.getLease(
-        rawInspection.leaseId,
-        'true'
-      )
-      lease = mapLease(rawLease)
+      const rawLease = await leasingAdapter.getLease(rawInspection.leaseId)
+      lease = rawLease ? mapLease(rawLease) : null
     } catch (err) {
       logger.error(
         { err, leaseId: rawInspection.leaseId },

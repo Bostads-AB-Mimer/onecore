@@ -7,6 +7,7 @@ import {
   OfferStatus,
   OfferWithRentalObjectCode,
   ParkingSpaceAcceptOfferEmail,
+  CreateOfferErrorCodes,
   RentalObject,
   ReplyToOfferErrorCodes,
   WaitingListType,
@@ -75,6 +76,7 @@ describe('replyToOffer', () => {
         contactId: string,
         fromDate: string,
         companyCode: string,
+        includeVAT: boolean,
       ],
       any
     >,
@@ -134,7 +136,7 @@ describe('replyToOffer', () => {
     )
     getLeasesForContactCode = jest.spyOn(
       leasingAdapter,
-      'getLeasesForContactCode'
+      'getLeasesByContactCode'
     )
     validatePropertyRentalRules = jest.spyOn(
       leasingAdapter,
@@ -637,6 +639,82 @@ describe('replyToOffer', () => {
       expect(denyOfferSpy).toHaveBeenCalledTimes(2)
     })
 
+    it('logs the ids of other offers that failed to be denied', async () => {
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: offer,
+      })
+
+      const listing = factory.listing.build()
+      getListingByListingIdSpy.mockResolvedValue(listing)
+
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace
+          .params({
+            rentalObjectCode: listing.rentalObjectCode,
+          })
+          .build(),
+      })
+
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      closeOfferByAcceptSpy.mockResolvedValueOnce({ ok: true, data: null })
+      createLeaseSpy.mockResolvedValueOnce({
+        ok: true,
+        data: '123-123-123-123/1',
+      })
+
+      const otherOffer1 = factory.offerWithRentalObjectCode.build({
+        id: offer.id + 1,
+        status: OfferStatus.Active,
+        offeredApplicant: { id: offer.offeredApplicant.id },
+      })
+      const otherOffer2 = factory.offerWithRentalObjectCode.build({
+        id: offer.id + 2,
+        status: OfferStatus.Active,
+        offeredApplicant: { id: offer.offeredApplicant.id },
+      })
+      getOffersForContactSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [otherOffer1, otherOffer2],
+      })
+      resetWaitingListSpy.mockResolvedValue({ ok: true, data: undefined })
+
+      denyOfferSpy
+        .mockResolvedValueOnce({
+          processStatus: ProcessStatus.failed,
+        } as ProcessResult)
+        .mockResolvedValueOnce({
+          processStatus: ProcessStatus.successful,
+        } as ProcessResult)
+
+      getContactByContactCodeSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.contact.build(),
+      })
+      sendParkingSpaceAcceptOfferEmail.mockResolvedValueOnce({
+        ok: true,
+        data: null,
+      })
+
+      await replyProcesses.acceptOffer(123)
+
+      const notificationLog = sendNotificationToRoleSpy.mock.calls[0][2]
+      expect(notificationLog).toContain(
+        `Kunde inte neka följande andra erbjudanden för kunden: ${otherOffer1.id}`
+      )
+      expect(notificationLog).not.toContain('[object Object]')
+    })
+
     it('closes accepted offers listing', async () => {
       const offer = factory.detailedOffer.build()
       getOfferByIdSpy.mockResolvedValueOnce({
@@ -732,7 +810,9 @@ describe('replyToOffer', () => {
         data: factory.vacantParkingSpace
           .params({
             rentalObjectCode: listing.rentalObjectCode,
-            vacantFrom: undefined,
+            availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+              vacantFrom: undefined,
+            }),
           })
           .build(),
       })
@@ -782,7 +862,9 @@ describe('replyToOffer', () => {
         data: factory.vacantParkingSpace
           .params({
             rentalObjectCode: listing.rentalObjectCode,
-            vacantFrom: oneMonthFromNow,
+            availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+              vacantFrom: oneMonthFromNow,
+            }),
           })
           .build(),
       })
@@ -832,7 +914,9 @@ describe('replyToOffer', () => {
         data: factory.vacantParkingSpace
           .params({
             rentalObjectCode: listing.rentalObjectCode,
-            vacantFrom: new Date('2023-01-01'),
+            availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+              vacantFrom: new Date('2023-01-01'),
+            }),
           })
           .build(),
       })
@@ -885,7 +969,9 @@ describe('replyToOffer', () => {
         data: factory.vacantParkingSpace
           .params({
             rentalObjectCode: listing.rentalObjectCode,
-            vacantFrom: undefined,
+            availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+              vacantFrom: undefined,
+            }),
           })
           .build(),
       })
@@ -951,7 +1037,9 @@ describe('replyToOffer', () => {
         data: factory.vacantParkingSpace
           .params({
             rentalObjectCode: listing.rentalObjectCode,
-            vacantFrom: vacantFrom,
+            availabilityInfo: factory.rentalObjectAvailabilityInfo.build({
+              vacantFrom: vacantFrom,
+            }),
           })
           .build(),
       })
@@ -1387,24 +1475,31 @@ describe('replyToOffer', () => {
       })
     })
 
-    it('returns a process error if no listing found', async () => {
+    it('records the deny even if the listing no longer exists', async () => {
       const offer = factory.detailedOffer.build()
       getOfferByIdSpy.mockResolvedValueOnce({
         ok: true,
         data: offer,
       })
-      getListingByListingIdSpy.mockResolvedValueOnce(undefined)
+      closeOfferByDenySpy.mockResolvedValueOnce({ ok: true, data: null })
+
+      const createOffer = jest
+        .spyOn(createOfferProcesses, 'createOfferForInternalParkingSpace')
+        .mockResolvedValueOnce({
+          processStatus: ProcessStatus.failed,
+          error: CreateOfferErrorCodes.NoListing,
+          httpStatus: 500,
+          response: { message: 'Listing not found' },
+        })
 
       const result = await replyProcesses.denyOffer(123)
 
+      expect(closeOfferByDenySpy).toHaveBeenCalledWith(offer.id)
+      expect(createOffer).toHaveBeenCalledTimes(1)
       expect(result).toEqual({
-        processStatus: ProcessStatus.failed,
-        error: ReplyToOfferErrorCodes.NoListing,
-        httpStatus: 404,
-        response: {
-          message: `The listing ${offer.listingId} cannot be found.`,
-          errorCode: ReplyToOfferErrorCodes.NoListing,
-        },
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: { listingId: offer.listingId },
       })
     })
 
@@ -1446,44 +1541,45 @@ describe('replyToOffer', () => {
       })
       expect(createOffer).toHaveBeenCalledTimes(1)
     })
-  })
 
-  describe('expireOffer', () => {
-    it('returns a process error if no offer found', async () => {
-      getOfferByIdSpy.mockResolvedValueOnce({ ok: false, err: 'not-found' })
-
-      const result = await replyProcesses.expireOffer(123)
-
-      expect(result).toEqual({
-        processStatus: ProcessStatus.failed,
-        error: ReplyToOfferErrorCodes.NoOffer,
-        httpStatus: 404,
-        response: {
-          message: 'The offer 123 does not exist or could not be retrieved.',
-          errorCode: ReplyToOfferErrorCodes.NoOffer,
-        },
-      })
-    })
-
-    it('returns a process error if no listing found', async () => {
+    it('succeeds even if the rental object has no residentialAreaCode', async () => {
       const offer = factory.detailedOffer.build()
       getOfferByIdSpy.mockResolvedValueOnce({
         ok: true,
         data: offer,
       })
-      getListingByListingIdSpy.mockResolvedValueOnce(undefined)
 
-      const result = await replyProcesses.expireOffer(123)
+      closeOfferByDenySpy.mockResolvedValueOnce({ ok: true, data: null })
+
+      const listing = factory.listing.build()
+      getListingByListingIdSpy.mockResolvedValue(listing)
+
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace
+          .params({
+            rentalObjectCode: listing.rentalObjectCode,
+            residentialAreaCode: undefined,
+          })
+          .build(),
+      })
+
+      const createOffer = jest
+        .spyOn(createOfferProcesses, 'createOfferForInternalParkingSpace')
+        .mockResolvedValueOnce({
+          data: null,
+          processStatus: ProcessStatus.successful,
+          httpStatus: 200,
+        })
+
+      const result = await replyProcesses.denyOffer(123)
 
       expect(result).toEqual({
-        processStatus: ProcessStatus.failed,
-        error: ReplyToOfferErrorCodes.NoListing,
-        httpStatus: 404,
-        response: {
-          message: `The listing ${offer.listingId} does not exist or is no longer available.`,
-          errorCode: ReplyToOfferErrorCodes.NoListing,
-        },
+        processStatus: ProcessStatus.successful,
+        httpStatus: 202,
+        data: { listingId: expect.any(Number) },
       })
+      expect(createOffer).toHaveBeenCalledTimes(1)
     })
   })
 })

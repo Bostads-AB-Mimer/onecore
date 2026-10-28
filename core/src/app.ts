@@ -18,6 +18,7 @@ import { GUIDES_ADMIN_ROLE } from './services/guides-service/constants'
 import { routes as apiRoutes } from './api/index'
 import { routes as swaggerRoutes } from './services/swagger'
 import { extractToken } from './middlewares/extract-token'
+import { requiredRolesFor } from './middlewares/route-roles'
 
 const app = new Koa()
 
@@ -76,24 +77,11 @@ app.use(extractToken)
 // Authentication — verifies the extracted token
 app.use(requireAuth)
 
-// Role-based authorization
-app.use(async (ctx, next) => {
-  if (ctx.path.startsWith('/scan-receipt')) {
-    return requireRole('scanner-upload')(ctx, next)
-  }
-
-  // Infobip email delivery-report webhook — authenticated via a Keycloak
-  // service account (client_credentials) holding the infobip-webhook role.
-  if (ctx.path.startsWith('/webhooks/infobip')) {
-    return requireRole('infobip-webhook')(ctx, next)
-  }
-
-  if (ctx.path.startsWith('/v1/contacts') && ctx.method === 'GET') {
-    return requireRole(['api-access', 'contacts:read'])(ctx, next)
-  }
-
-  return requireRole('api-access')(ctx, next)
-})
+// Role-based authorization. Path/method → roles lives in route-roles.ts so
+// it can be unit-tested.
+app.use(async (ctx, next) =>
+  requireRole(requiredRolesFor(ctx.path, ctx.method))(ctx, next)
+)
 
 // @koa/router matches paths case-insensitively, so these gates compare against
 // a lower-cased path — otherwise /GUIDES would route but skip the role check.
@@ -107,6 +95,11 @@ app.use(async (ctx, next) => {
   ) {
     return requireRole('keys-admin')(ctx, next)
   }
+
+  if (ctx.method === 'PUT' && /^\/invoices\/[^/]+\/deferral$/.test(path)) {
+    return requireRole('invoice-deferral')(ctx, next)
+  }
+
   return next()
 })
 

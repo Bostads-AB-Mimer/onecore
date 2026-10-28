@@ -6,95 +6,29 @@ import {
 } from '@onecore/utilities'
 import {
   economy,
-  Invoice,
   RouteErrorResponse,
   SubmitMiscellaneousInvoiceErrorCodes,
 } from '@onecore/types'
 
 import {
   getAllInvoicesWithMatchIds,
-  getInvoiceByInvoiceNumber,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
-  getInvoicesByContactCode as getXledgerInvoicesByContactCode,
-  getInvoicesByInvoiceNumbers as getXledgerInvoicesByInvoiceNumbers,
   getMiscellaneousInvoices,
   submitMiscellaneousInvoice,
 } from '../common/adapters/xledger-adapter'
-import {
-  getInvoiceRows,
-  getInvoicesByContactCode as getXpandInvoicesByContactCode,
-} from './adapters/xpand-db-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
+  getInvoicesByContactCode,
   fetchInvoiceRows,
   fetchPaymentEvents,
   getLeaseDetails,
+  stralforsPostChannelLookup,
+  getAutogiroConsent,
+  getPublicInvoiceByOcr,
 } from './service'
-
-// A loss is recorded in Xledger as a transaction on this account.
-const LOSS_ACCOUNT_CODE = '1529'
-
-const normalizeContactCode = (contactCode: string) =>
-  contactCode.trim().toUpperCase()
-
-/*
- * Replaces Xpand invoices with their Xledger counterpart, looked up by invoice
- * number. Xledger owns payment status, debt collection, remaining amount and
- * the invoice PDF, but its transform carries no lease context — leaseId is
- * hardcoded to 'missing' and transactionTypeName generated — so those values
- * are kept from the Xpand invoice.
- *
- * Mirrors the contact-scoped merge in the route: one Xledger invoice yields
- * exactly one result, even if several Xpand rows share its invoice number.
- */
-const enrichFromXledgerByNumber = (
-  xpandInvoices: Invoice[],
-  xledgerInvoices: Invoice[]
-): Invoice[] => {
-  const lossInvoiceIds = new Set<string>()
-  const regularById = new Map<string, Invoice>()
-  for (const invoice of xledgerInvoices) {
-    if (invoice.accountCode === LOSS_ACCOUNT_CODE) {
-      lossInvoiceIds.add(invoice.invoiceId)
-    } else if (!regularById.has(invoice.invoiceId)) {
-      regularById.set(invoice.invoiceId, invoice)
-    }
-  }
-
-  const enrichedInvoiceIds = new Set<string>()
-  const result: Invoice[] = []
-  for (const xpandInvoice of xpandInvoices) {
-    const xledgerInvoice = regularById.get(xpandInvoice.invoiceId)
-    const isExpectedLoss = lossInvoiceIds.has(xpandInvoice.invoiceId)
-
-    if (!xledgerInvoice) {
-      // An invoice can be recorded in Xledger as a loss only, with no
-      // regular transaction row to enrich from.
-      result.push(
-        isExpectedLoss ? { ...xpandInvoice, expectedLoss: true } : xpandInvoice
-      )
-      continue
-    }
-
-    if (enrichedInvoiceIds.has(xpandInvoice.invoiceId)) {
-      continue
-    }
-    enrichedInvoiceIds.add(xpandInvoice.invoiceId)
-
-    result.push({
-      ...xledgerInvoice,
-      leaseId: xpandInvoice.leaseId,
-      transactionType: xpandInvoice.transactionType,
-      transactionTypeName: xpandInvoice.transactionTypeName,
-      fromDate: xpandInvoice.fromDate ?? xledgerInvoice.fromDate,
-      toDate: xpandInvoice.toDate ?? xledgerInvoice.toDate,
-      ...(isExpectedLoss ? { expectedLoss: true } : {}),
-    })
-  }
-
-  return result
-}
+import * as invoiceService from './service'
+import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
 
 export const routes = (router: KoaRouter) => {
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
@@ -111,106 +45,10 @@ export const routes = (router: KoaRouter) => {
     const from = queryParams.data?.from
     const contactCode = ctx.params.contactCode
     try {
-      const xledgerInvoices =
-        (await getXledgerInvoicesByContactCode(contactCode, { from: from })) ??
-        []
-      const xpandInvoices =
-        (await getXpandInvoicesByContactCode(contactCode, { from: from })) ?? []
-
-      const xledgerInvoiceIds = xledgerInvoices.map(
-        (invoice) => invoice.invoiceId
-      )
-
-      const regularInvoices: Invoice[] = []
-      const losses: Invoice[] = []
-
-      xledgerInvoices.forEach((i) => {
-        if (i.accountCode === LOSS_ACCOUNT_CODE) {
-          losses.push(i)
-        } else {
-          regularInvoices.push(i)
-        }
-      })
-
-      // An invoice is marked as an expected loss if there is a recorded loss with the same invoice number
-      regularInvoices.forEach((i) => {
-        const lossForInvoice = losses.find((l) => l.invoiceId === i.invoiceId)
-        if (lossForInvoice) {
-          i.expectedLoss = true
-        }
-      })
-
-      const xpandOnlyInvoices = xpandInvoices.filter(
-        (invoice) => !xledgerInvoiceIds.includes(invoice.invoiceId)
-      )
-
-      // Invoices for a shared lease billed to the other lease holder
-      // (MIM-1160) are missed by the contact-scoped Xledger lookup above, so
-      // their Xledger data is fetched by invoice number instead. The contact's
-      // own Xpand-only invoices are left alone: they predate Xledger, and a
-      // lookup would only add round trips that return nothing.
-      const isBilledToOtherContact = (invoice: Invoice) =>
-        normalizeContactCode(invoice.reference) !==
-        normalizeContactCode(contactCode)
-      const ownXpandOnlyInvoices = xpandOnlyInvoices.filter(
-        (invoice) => !isBilledToOtherContact(invoice)
-      )
-      let householdInvoices = xpandOnlyInvoices.filter(isBilledToOtherContact)
-
-      if (householdInvoices.length > 0) {
-        try {
-          const xledgerByNumber = await getXledgerInvoicesByInvoiceNumbers(
-            householdInvoices.map((invoice) => invoice.invoiceId)
-          )
-          householdInvoices = enrichFromXledgerByNumber(
-            householdInvoices,
-            xledgerByNumber
-          )
-        } catch (error) {
-          // Enrichment is best-effort: fall back to the plain Xpand invoices
-          // rather than failing the whole invoice list.
-          logger.error(
-            { err: error, contactCode },
-            'Failed to enrich Xpand invoices from Xledger by invoice number'
-          )
-        }
-      }
-
-      // If invoice exists in xpand, use period (fromDate, toDate) from xpand invoice
-      // Otherwise use period from xledger invoice
-      const invoices = regularInvoices
-        .map((invoice) => {
-          const xpandInvoice = xpandInvoices.find(
-            (v) => v.invoiceId === invoice.invoiceId
-          )
-
-          if (xpandInvoice?.fromDate && xpandInvoice.toDate) {
-            return {
-              ...invoice,
-              fromDate: xpandInvoice.fromDate,
-              toDate: xpandInvoice.toDate,
-            }
-          } else {
-            return invoice
-          }
-        })
-        .concat(ownXpandOnlyInvoices, householdInvoices)
-
-      const invoiceRows = await getInvoiceRows(
-        '001', // Mimer company id.
-        invoices.map((v) => v.invoiceId)
-      )
-
-      const invoicesWithRows = invoices.map((invoice) => {
-        const rows = invoiceRows.filter(
-          (row) => row.invoiceNumber === invoice.invoiceId
-        )
-
-        return { ...invoice, invoiceRows: rows }
-      })
+      const invoices = await getInvoicesByContactCode(contactCode, { from })
 
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(invoicesWithRows, metadata)
+      ctx.body = makeSuccessResponseBody(invoices, metadata)
     } catch (error: any) {
       logger.error(
         { err: error, contactCode: contactCode },
@@ -223,8 +61,43 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  // TODO: This route doesn't take xpand into account
-  // Also doesn't get invoice rows
+  router.get('(.*)/invoices/:ocr/pdf', async (ctx) => {
+    const result = await getInvoicePdf(ctx.params.ocr)
+
+    if (!result.ok) {
+      ctx.status = result.err === 'not-found' ? 404 : 500
+      return
+    }
+
+    ctx.status = 200
+    ctx.set('Content-Type', 'application/pdf')
+    ctx.set(
+      'Content-Disposition',
+      (
+        result.data.contentDisposition || 'attachment; filename="invoice.pdf"'
+      ).replace(/[\r\n]/g, '')
+    )
+    ctx.body = result.data.data
+  })
+
+  router.get('(.*)/invoices/by-ocr/:ocr', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await getPublicInvoiceByOcr(ctx.params.ocr)
+
+    if (!result.ok) {
+      ctx.status = 500
+      return
+    }
+
+    if (result.data === null) {
+      ctx.status = 404
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody(result.data, metadata)
+  })
+
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -236,7 +109,9 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await getInvoiceByInvoiceNumber(ctx.params.invoiceNumber)
+      const result = await invoiceService.getInvoiceDetails(
+        ctx.params.invoiceNumber
+      )
       if (!result) {
         ctx.status = 404
         return
@@ -318,10 +193,10 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
-  /* 
+  /*
     Gets property information required to create a miscellaneous invoice for a lease.
     We could instead get the required information by making several queries to the leasing- and
-    property-services, but since it is only required in one place at the moment 
+    property-services, but since it is only required in one place at the moment
     (creating miscellaneous invoices from the onecore web application) I decided to keep it
     isolated here.
   */
@@ -436,6 +311,43 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  router.put('(.*)/invoices/:invoiceNumber/deferral', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const body = economy.TenfastGracePeriodRequestSchema.safeParse(
+      ctx.request.body
+    )
+
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = {
+        message: body.error.issues[0]?.message ?? 'Invalid request',
+      }
+      return
+    }
+
+    const result = await invoiceService.deferInvoice({
+      invoiceOcr: ctx.params.invoiceNumber,
+      endDate: body.data.endDate,
+      madeByEmail: body.data.madeByEmail,
+      reason: body.data.reason,
+    })
+
+    if (!result.ok) {
+      if (result.err === 'invoice-not-found') {
+        ctx.status = 404
+      } else if (result.err === 'invoice-not-eligible') {
+        ctx.status = 422
+      } else {
+        ctx.status = 500
+      }
+      ctx.body = { code: result.err }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
+  })
+
   router.post('(.*)/rent-invoice-rows/batch', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const invoiceIds = ctx.request.body.invoiceIds as string[] // TODO schema
@@ -489,4 +401,51 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  router.post('(.*)/invoice-channels', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { recipients } = ctx.request.body
+
+    try {
+      const results = await stralforsPostChannelLookup(recipients)
+
+      ctx.status = 200
+      ctx.body = {
+        ...metadata,
+        content: results,
+      }
+    } catch (error: any) {
+      logger.error(error, 'Invoice channels lookup error')
+      ctx.status = 500
+      ctx.body = { ...metadata, message: error.message }
+    }
+  })
+
+  router.get(
+    '(.*)/autogiro-consent/:nationalRegistrationNumber',
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { nationalRegistrationNumber } = ctx.params
+
+      try {
+        const results = await getAutogiroConsent(nationalRegistrationNumber)
+
+        if (results === null) {
+          ctx.status = 404
+          ctx.body = { ...metadata, message: 'No autogiro consent found' }
+          return
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          ...metadata,
+          content: results,
+        }
+      } catch (error: any) {
+        logger.error(error, 'Error getting autogiro consent')
+        ctx.status = 500
+        ctx.body = { ...metadata, message: error.message }
+      }
+    }
+  )
 }

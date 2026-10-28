@@ -1,4 +1,8 @@
-import { Lease as OnecoreTypesLease } from '@onecore/types'
+import {
+  LeaseStatus,
+  leasing,
+  Lease as OnecoreTypesLease,
+} from '@onecore/types'
 import { z } from 'zod'
 
 /**
@@ -45,6 +49,33 @@ export const Contact = z.object({
   emailAddress: z.string().nullable().optional(),
   isTenant: z.boolean(),
   specialAttention: z.boolean().optional(),
+  protectedIdentity: z.boolean(),
+  // Only set for a protected identity, and only by the routes that fill in its
+  // details from the contacts service (see withProtectedIdentityDetails).
+  protectedIdentityDetails: z
+    .enum(['shown', 'withheld', 'unavailable'])
+    .optional(),
+})
+
+export const RentalObjectRentSchema = z.object({
+  amount: z.number(),
+  vat: z.number(),
+  rows: z.array(
+    z.object({
+      code: z.string().optional(),
+      description: z.string(),
+      amount: z.number(),
+      vatPercentage: z.number(),
+      fromDate: z.coerce.date().optional(),
+      toDate: z.coerce.date().optional(),
+    })
+  ),
+})
+
+/** GET /rental-objects/by-code/{code}/rent response content */
+export const RentalObjectRentInfo = z.object({
+  rentalObjectCode: z.string(),
+  rent: RentalObjectRentSchema,
 })
 
 export const Lease = z.object({
@@ -52,9 +83,44 @@ export const Lease = z.object({
   leaseNumber: z.string(),
   leaseStartDate: z.coerce.date(),
   leaseEndDate: z.coerce.date().optional(),
-  status: z.enum(['Current', 'Upcoming', 'AboutToEnd', 'Ended']),
+  status: z.enum([
+    'Current',
+    'Upcoming',
+    'AboutToEnd',
+    'Ended',
+    'PreliminaryTerminated',
+    'PendingSignature',
+    'NotSent',
+  ]),
   tenantContactIds: z.array(z.string()).optional(),
+  subletContactId: z.string().optional(),
   rentalPropertyId: z.string(),
+  rentalObject: z
+    .object({
+      rentalObjectCode: z.string(),
+      address: z.string(),
+      availabilityInfo: z
+        .object({
+          rentalObjectCode: z.string(),
+          vacantFrom: z.coerce.date().optional(),
+          rent: RentalObjectRentSchema,
+          rentalTenureType: z.object({
+            id: z.string(),
+            name: z.string(),
+          }),
+          rentalTags: z
+            .array(z.object({ id: z.string(), name: z.string() }))
+            .optional(),
+        })
+        .optional(),
+      residentialAreaCaption: z.string(),
+      residentialAreaCode: z.string(),
+      objectTypeCaption: z.string(),
+      objectTypeCode: z.string(),
+      boaArea: z.number().optional(),
+      braArea: z.number().optional(),
+    })
+    .optional(),
   rentalProperty: z
     .object({
       rentalPropertyId: z.string(),
@@ -120,6 +186,19 @@ export const Lease = z.object({
       caption: z.string(),
     })
     .optional(),
+  rentRows: z
+    .array(
+      z.object({
+        id: z.string(),
+        amount: z.number(),
+        articleId: z.string(),
+        label: z.string(),
+        vat: z.number(),
+        from: z.string().optional(),
+        to: z.string().optional(),
+      })
+    )
+    .optional(),
   // KEEP IN SYNC WITH `Contact` above (all tenants are contacts): carry every Contact
   // field, here adding parkingSpaceWaitingList + leaseContactType. Inline copy avoids
   // a shared $ref. Enforced by tests/contact-tenant-sync.test.ts.
@@ -155,6 +234,10 @@ export const Lease = z.object({
         emailAddress: z.string().nullable().optional(),
         isTenant: z.boolean(),
         specialAttention: z.boolean().optional(),
+        protectedIdentity: z.boolean(),
+        protectedIdentityDetails: z
+          .enum(['shown', 'withheld', 'unavailable'])
+          .optional(),
         // --- tenant-only additions (not part of Contact) ---
         parkingSpaceWaitingList: z
           .object({
@@ -169,27 +252,27 @@ export const Lease = z.object({
     .optional(),
 })
 
+function mapLeaseStatus(status: LeaseStatus): z.infer<typeof Lease>['status'] {
+  switch (status) {
+    case LeaseStatus.Current:
+      return 'Current'
+    case LeaseStatus.Upcoming:
+      return 'Upcoming'
+    case LeaseStatus.AboutToEnd:
+      return 'AboutToEnd'
+    case LeaseStatus.Ended:
+      return 'Ended'
+    case LeaseStatus.PreliminaryTerminated:
+      return 'PreliminaryTerminated'
+    case LeaseStatus.PendingSignature:
+      return 'PendingSignature'
+    case LeaseStatus.NotSent:
+      return 'NotSent'
+  }
+}
+
 export const LeaseBatchRequestBody = z.object({
   leaseIds: z.array(z.string()).min(1),
-})
-
-export const GetLeasesByRentalPropertyIdQueryParams = z.object({
-  includeUpcomingLeases: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
-  includeTerminatedLeases: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
-  includeContacts: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value === 'true'),
-  includeRentInfo: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((value) => value !== 'false'), // defaults to true
 })
 
 export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
@@ -198,20 +281,12 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
     leaseNumber: lease.leaseNumber,
     leaseStartDate: lease.leaseStartDate,
     leaseEndDate: lease.leaseEndDate,
-    status:
-      lease.status === 0
-        ? 'Current'
-        : lease.status === 1
-          ? 'Upcoming'
-          : lease.status === 2
-            ? 'AboutToEnd'
-            : 'Ended',
+    status: mapLeaseStatus(lease.status),
     tenantContactIds: lease.tenantContactIds,
+    subletContactId: lease.subletContactId,
     rentalPropertyId: lease.rentalPropertyId,
-    rentalProperty: lease.rentalProperty,
+    rentalObject: lease.rentalObject,
     type: lease.type,
-    rentInfo: lease.rentInfo,
-    address: lease.address,
     noticeGivenBy: lease.noticeGivenBy,
     noticeDate: lease.noticeDate,
     noticeTimeTenant: lease.noticeTimeTenant,
@@ -221,6 +296,27 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
     lastDebitDate: lease.lastDebitDate,
     approvalDate: lease.approvalDate,
     residentialArea: lease.residentialArea,
+    rentRows: lease.rentRows,
     tenants: lease.tenants,
   }
 }
+
+const IncludeContactsQueryParamSchema = z.object({
+  includeContacts: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+})
+
+const IncludeNonTenantContactsQueryParamSchema = z.object({
+  includeNonTenantContacts: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+})
+
+export const GetLeasesOptionsSchema = leasing.v1.GetLeasesOptionsSchema.merge(
+  IncludeContactsQueryParamSchema
+).merge(IncludeNonTenantContactsQueryParamSchema)
+
+export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema

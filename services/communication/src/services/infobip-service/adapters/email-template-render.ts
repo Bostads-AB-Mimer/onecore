@@ -67,7 +67,7 @@ type ParkingSpaceEmailLike = Partial<
     | 'objectId'
     | 'offerURL'
     | 'leaseId'
-  >
+  > & { endDate?: string | Date }
 >
 
 // Rebuilds the sent placeholders (same formatting as the send path). Superset of
@@ -98,6 +98,9 @@ export const buildParkingSpacePlaceholders = (
   }
   if (email.parkingSpaceId !== undefined) {
     set('parkingSpaceImage', getParkingSpaceImageUrl(email.parkingSpaceId))
+  }
+  if (email.endDate !== undefined) {
+    set('endDate', dateFormatter.format(new Date(email.endDate)))
   }
 
   return placeholders

@@ -3,8 +3,10 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import * as rentalObjectAdapter from '../../adapters/xpand/rental-object-adapter'
+import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import listingTextContentAdapter from '../../adapters/listing-text-content-adapter'
 import { routes } from '../../routes/rental-objects'
+import { toYearMonthDayString } from '../../adapters/tenfast/schemas'
 import * as factory from '../factories'
 
 const app = new Koa()
@@ -14,54 +16,330 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('parking spaces', () => {
-  describe('GET /parking-spaces', () => {
-    it('Gets and returns a list of parking spaces', async () => {
-      const parkingSpace = factory.rentalObject.build({
-        rentalObjectCode: '123-456-789',
+  afterEach(() => jest.clearAllMocks())
+
+  describe('POST /parking-spaces', () => {
+    it('should respond with 404 if parking spaces are not found', async () => {
+      // Arrange
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpaces').mockResolvedValue({
+        ok: false,
+        err: 'parking-spaces-not-found',
       })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValue({ ok: true, data: [] })
 
-      const getParkingSpacesSpy = jest
-        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
-        .mockResolvedValue({ ok: true, data: [parkingSpace] })
+      // Act
+      const res = await request(app.callback())
+        .post('/parking-spaces')
+        .send({
+          includeRentalObjectCodes: ['notfound-1', 'notfound-2'],
+        })
 
-      const res = await request(app.callback()).post('/parking-spaces')
-
-      expect(res.status).toBe(200)
-      expect(getParkingSpacesSpy).toHaveBeenCalled()
-      expect(res.body.content).toStrictEqual(
-        JSON.parse(JSON.stringify([parkingSpace]))
+      // Assert
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe(
+        'No parking spaces found for rental object codes: notfound-1,notfound-2'
       )
     })
-    it('Gets and returns a list of parking spaces filtering on includeRentalObjectCodes', async () => {
-      const parkingSpace1 = factory.rentalObject.build({
+
+    it('should respond with 500 if fetching rents fails', async () => {
+      // Arrange
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValue({ ok: true, data: [factory.rentalObject.build()] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValue({ ok: false, err: 'could-not-find-rental-objects' })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/parking-spaces')
+        .send({
+          includeRentalObjectCodes: ['code-1'],
+        })
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        'An error occurred while fetching availability for parking spaces.'
+      )
+    })
+
+    it('should set availability on parking spaces if availability is found', async () => {
+      // Arrange
+      const parkingSpace = factory.rentalObject.build({
         rentalObjectCode: 'code-1',
       })
-      const parkingSpace2 = factory.rentalObject.build({
-        rentalObjectCode: 'code-2',
+      const rent = factory.rentalObjectRent.build({
+        amount: 999,
       })
-
-      const getParkingSpacesSpy = jest
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+        rent,
+      })
+      jest
         .spyOn(rentalObjectAdapter, 'getParkingSpaces')
-        .mockResolvedValue({ ok: true, data: [parkingSpace1, parkingSpace2] })
+        .mockResolvedValue({ ok: true, data: [parkingSpace] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValue({ ok: true, data: [availability] })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/parking-spaces')
+        .send({
+          includeRentalObjectCodes: ['code-1'],
+        })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].availabilityInfo.rent.amount).toBe(999)
+    })
+
+    it('should set vacantFrom based on blockEndDate from the parking space', async () => {
+      // Arrange - future block: starts tomorrow, ends next week — has an end date, so included
+      const tomorrow = new Date()
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+      tomorrow.setUTCHours(0, 0, 0, 0)
+      const nextWeek = new Date()
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+      nextWeek.setUTCHours(0, 0, 0, 0)
+      const expectedVacantFrom = new Date(nextWeek)
+      expectedVacantFrom.setUTCDate(expectedVacantFrom.getUTCDate() + 1)
+
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+        blockStartDate: tomorrow,
+        blockEndDate: nextWeek,
+      })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+        vacantFrom: new Date('2020-01-01'),
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValue({ ok: true, data: [parkingSpace] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValue({ ok: true, data: [availability] })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/parking-spaces')
+        .send({ includeRentalObjectCodes: ['code-1'] })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(new Date(res.body.content[0].availabilityInfo.vacantFrom)).toEqual(
+        expectedVacantFrom
+      )
+    })
+
+    it('leaves vacantFrom unset for a space leased until further notice, whatever the block', async () => {
+      // A bounded future block would otherwise give the day after it ends.
+      const nextWeek = new Date()
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+        blockStartDate: new Date(),
+        blockEndDate: nextWeek,
+      })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+        vacantFrom: undefined,
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValue({ ok: true, data: [parkingSpace] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValue({ ok: true, data: [availability] })
 
       const res = await request(app.callback())
         .post('/parking-spaces')
-        .send({ includeRentalObjectCodes: ['code-1', 'code-2'] })
+        .send({ includeRentalObjectCodes: ['code-1'] })
 
       expect(res.status).toBe(200)
-      expect(getParkingSpacesSpy).toHaveBeenCalledWith(['code-1', 'code-2'])
-      expect(res.body.content).toStrictEqual(
-        JSON.parse(JSON.stringify([parkingSpace1, parkingSpace2]))
+      expect(res.body.content[0].availabilityInfo.vacantFrom).toBeUndefined()
+    })
+
+    it('should not set availability if availability is not found for parking space', async () => {
+      // Arrange
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+        availabilityInfo: undefined,
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValue({ ok: true, data: [parkingSpace] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValue({ ok: true, data: [] })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/parking-spaces')
+        .send({
+          includeRentalObjectCodes: ['code-1'],
+        })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].availabilityInfo).toBeUndefined()
+    })
+  })
+
+  describe('GET /parking-spaces/by-code/:rentalObjectCode', () => {
+    it('should respond with 200 and include availability if availability is found', async () => {
+      // Arrange
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+      })
+      const rent = factory.rentalObjectRent.build({ amount: 1234 })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+        rent,
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpace')
+        .mockResolvedValue({ ok: true, data: parkingSpace })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValue({ ok: true, data: availability })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/parking-spaces/by-code/code-1'
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content.availabilityInfo.rent.amount).toBe(1234)
+    })
+
+    it('should set vacantFrom based on blockEndDate from the parking space', async () => {
+      // Arrange - future block: starts tomorrow, ends next week
+      const tomorrow = new Date()
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+      tomorrow.setUTCHours(0, 0, 0, 0)
+      const nextWeek = new Date()
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+      nextWeek.setUTCHours(0, 0, 0, 0)
+      const expectedVacantFrom = new Date(nextWeek)
+      expectedVacantFrom.setUTCDate(expectedVacantFrom.getUTCDate() + 1)
+
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+        blockStartDate: tomorrow,
+        blockEndDate: nextWeek,
+      })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+        vacantFrom: new Date('2020-01-01'),
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpace')
+        .mockResolvedValue({ ok: true, data: parkingSpace })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValue({ ok: true, data: availability })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/parking-spaces/by-code/code-1'
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(new Date(res.body.content.availabilityInfo.vacantFrom)).toEqual(
+        expectedVacantFrom
       )
     })
-    it('Handles errors gracefully when fetching parking spaces', async () => {
-      jest.spyOn(rentalObjectAdapter, 'getParkingSpaces').mockResolvedValue({
-        ok: false,
-        err: 'unknown',
+
+    it('leaves vacantFrom unset for a space leased until further notice, whatever the block', async () => {
+      const nextWeek = new Date()
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+        blockStartDate: new Date(),
+        blockEndDate: nextWeek,
       })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+        vacantFrom: undefined,
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpace')
+        .mockResolvedValue({ ok: true, data: parkingSpace })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValue({ ok: true, data: availability })
 
-      const res = await request(app.callback()).post('/parking-spaces')
+      const res = await request(app.callback()).get(
+        '/parking-spaces/by-code/code-1'
+      )
 
+      expect(res.status).toBe(200)
+      expect(res.body.content.availabilityInfo.vacantFrom).toBeUndefined()
+    })
+
+    it('should respond with 200 and not include availability if availability is not found', async () => {
+      // Arrange
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+        availabilityInfo: undefined,
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpace')
+        .mockResolvedValue({ ok: true, data: parkingSpace })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValue({
+          ok: false,
+          err: 'could-not-find-rental-object',
+        })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/parking-spaces/by-code/code-1'
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content.availabilityInfo).toBeUndefined()
+    })
+
+    it('should respond with 404 if parking space is not found', async () => {
+      // Arrange
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpace')
+        .mockResolvedValue({ ok: false, err: 'parking-space-not-found' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/parking-spaces/by-code/notfound'
+      )
+
+      // Assert
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe(
+        'An error occurred while fetching parking space by Rental Object Code: notfound'
+      )
+    })
+
+    it('should respond with 500 if an unknown error occurs', async () => {
+      // Arrange
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpace')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/parking-spaces/by-code/err'
+      )
+
+      // Assert
       expect(res.status).toBe(500)
       expect(res.body.error).toBe(
         'An error occurred while fetching parking spaces.'
@@ -69,45 +347,9 @@ describe('parking spaces', () => {
     })
   })
 
-  describe('GET /parking-spaces/by-code/:rentalObjectCode', () => {
-    it('Gets and returns a parking space by rental object code', async () => {
-      const parkingSpace = factory.rentalObject.build({
-        rentalObjectCode: 'code-123',
-      })
-
-      const getParkingSpacesSpy = jest
-        .spyOn(rentalObjectAdapter, 'getParkingSpace')
-        .mockResolvedValue({ ok: true, data: parkingSpace })
-
-      const res = await request(app.callback()).get(
-        `/parking-spaces/by-code/code-123`
-      )
-
-      expect(res.status).toBe(200)
-      expect(getParkingSpacesSpy).toHaveBeenCalledWith('code-123')
-      expect(res.body.content).toStrictEqual(
-        JSON.parse(JSON.stringify(parkingSpace))
-      )
-    })
-    it('Handles errors gracefully when fetching parking space by rental object code', async () => {
-      jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValue({
-        ok: false,
-        err: 'parking-space-not-found',
-      })
-
-      const res = await request(app.callback()).get(
-        '/parking-spaces/by-code/code-404'
-      )
-
-      expect(res.status).toBe(404)
-      expect(res.body.error).toBe(
-        'An error occurred while fetching parking space by Rental Object Code: code-404'
-      )
-    })
-  })
-
   describe('GET /vacant-parkingspaces', () => {
-    it('should return a list of vacant parking spaces', async () => {
+    it('should return a list of vacant parking spaces with availability with rent if found', async () => {
+      // Arrange
       const mockedVacantParkingSpaces = [
         {
           rentalObjectCode: '924-004-99-0008',
@@ -118,33 +360,105 @@ describe('parking spaces', () => {
           vehicleSpaceCode: '0008',
           districtCaption: 'Distrikt Norr',
           districtCode: '2',
-          monthlyRent: 0,
+          availabilityInfo: undefined,
           residentialAreaCaption: 'Centrum',
           residentialAreaCode: 'CTR',
           vacantFrom: new Date('2023-10-01'),
         },
       ]
-
-      const getAllVacantParkingSpacesSpy = jest
-        .spyOn(rentalObjectAdapter, 'getAllVacantParkingSpaces')
+      const mockedAvailabilities = [
+        factory.rentalObjectAvailabilityInfo.build({
+          rentalObjectCode: '924-004-99-0008',
+          rent: factory.rentalObjectRent.build({
+            amount: 1234,
+          }),
+        }),
+      ]
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValue({ ok: true, data: mockedAvailabilities })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
         .mockResolvedValue({ ok: true, data: mockedVacantParkingSpaces })
       jest
         .spyOn(listingTextContentAdapter, 'getRentalObjectCodesWithTextContent')
         .mockResolvedValue({ ok: true, data: [] })
 
+      // Act
       const res = await request(app.callback()).get('/vacant-parkingspaces')
 
+      // Assert
       expect(res.status).toBe(200)
-      expect(getAllVacantParkingSpacesSpy).toHaveBeenCalled()
+      expect(res.body.content[0].availabilityInfo.rent.amount).toBe(1234)
+    })
 
-      expect(res.body.content).toStrictEqual(
-        JSON.parse(JSON.stringify(mockedVacantParkingSpaces)).map(
-          (parkingSpace: object) => ({
-            ...parkingSpace,
-            hasListingTextContent: false,
-          })
-        )
+    it('should set vacantFrom based on blockEndDate from the parking space', async () => {
+      // Arrange - future block: starts tomorrow, ends next week — has an end date, so included
+      const tomorrow = new Date()
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+      tomorrow.setUTCHours(0, 0, 0, 0)
+      const nextWeek = new Date()
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+      nextWeek.setUTCHours(0, 0, 0, 0)
+      const expectedVacantFrom = new Date(nextWeek)
+      expectedVacantFrom.setUTCDate(expectedVacantFrom.getUTCDate() + 1)
+
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+        blockStartDate: tomorrow,
+        blockEndDate: nextWeek,
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'code-1',
+              vacantFrom: new Date('2020-01-01'),
+            }),
+          ],
+        })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
+
+      // Act
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(new Date(res.body.content[0].availabilityInfo.vacantFrom)).toEqual(
+        expectedVacantFrom
       )
+    })
+
+    it('should return a list of vacant parking spaces without availability if availability is not found', async () => {
+      // Arrange
+      const mockedVacantParkingSpaces = factory.rentalObject.buildList(1, {
+        rentalObjectCode: 'PS-CODE',
+        availabilityInfo: undefined,
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'AVAIL-CODE',
+            }),
+          ],
+        })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: mockedVacantParkingSpaces })
+
+      // Act
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].availabilityInfo).toBeUndefined()
     })
 
     it('flags parking spaces that have listing text content', async () => {
@@ -153,11 +467,21 @@ describe('parking spaces', () => {
         factory.rentalObject.build({ rentalObjectCode: '123-456-789-0002' }),
       ]
       jest
-        .spyOn(rentalObjectAdapter, 'getAllVacantParkingSpaces')
-        .mockResolvedValue({ ok: true, data: [withText, withoutText] })
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [withText, withoutText].map((ps) =>
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: ps.rentalObjectCode,
+            })
+          ),
+        })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [withText, withoutText] })
       const getCodesWithTextContentSpy = jest
         .spyOn(listingTextContentAdapter, 'getRentalObjectCodesWithTextContent')
-        .mockResolvedValue({ ok: true, data: [withText.rentalObjectCode] })
+        .mockResolvedValueOnce({ ok: true, data: [withText.rentalObjectCode] })
 
       const res = await request(app.callback()).get('/vacant-parkingspaces')
 
@@ -183,11 +507,21 @@ describe('parking spaces', () => {
         rentalObjectCode: '123-456-789-0001',
       })
       jest
-        .spyOn(rentalObjectAdapter, 'getAllVacantParkingSpaces')
-        .mockResolvedValue({ ok: true, data: [parkingSpace] })
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: parkingSpace.rentalObjectCode,
+            }),
+          ],
+        })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
       jest
         .spyOn(listingTextContentAdapter, 'getRentalObjectCodesWithTextContent')
-        .mockResolvedValue({ ok: false, err: 'database-error' })
+        .mockResolvedValueOnce({ ok: false, err: 'database-error' })
 
       const res = await request(app.callback()).get('/vacant-parkingspaces')
 
@@ -196,21 +530,642 @@ describe('parking spaces', () => {
       expect(res.body.content[0]).not.toHaveProperty('hasListingTextContent')
     })
 
-    it('should handle errors gracefully', async () => {
-      const getAllVacantParkingSpacesSpy = jest
-        .spyOn(rentalObjectAdapter, 'getAllVacantParkingSpaces')
-        .mockResolvedValue({
-          ok: false,
-          err: 'get-all-vacant-parking-spaces-failed',
-        })
+    it('should respond with 500 if fetching rents for vacant parking spaces fails', async () => {
+      // Arrange
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValue({ ok: false, err: 'could-not-find-rental-object' })
 
+      // Act
       const res = await request(app.callback()).get('/vacant-parkingspaces')
 
+      // Assert
       expect(res.status).toBe(500)
-      expect(getAllVacantParkingSpacesSpy).toHaveBeenCalled()
       expect(res.body.error).toBe(
-        'An error occurred while fetching vacant parking spaces.'
+        'An error occurred while fetching availability for vacant rental objects from tenfast.'
       )
+    })
+
+    it('should respond with 500 if fetching parking spaces from xpand fails', async () => {
+      // Arrange
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [factory.rentalObjectAvailabilityInfo.build()],
+        })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: false, err: 'parking-spaces-not-found' })
+
+      // Act
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        'An error occurred while fetching rental objects from xpand.'
+      )
+    })
+
+    it('should include parking spaces with a bounded active block, with vacantFrom the day after it ends', async () => {
+      // Arrange
+      const today = new Date()
+      const yesterday = new Date(today)
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+      const tomorrow = new Date(today)
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+      tomorrow.setUTCHours(0, 0, 0, 0)
+      const expectedVacantFrom = new Date(tomorrow)
+      expectedVacantFrom.setUTCDate(expectedVacantFrom.getUTCDate() + 1)
+
+      const blockedParkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'blocked-code',
+        blockStartDate: yesterday,
+        blockEndDate: tomorrow,
+      })
+      const vacantParkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'vacant-code',
+      })
+
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'blocked-code',
+            }),
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'vacant-code',
+            }),
+          ],
+        })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [blockedParkingSpace, vacantParkingSpace],
+        })
+
+      // Act
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+      const blocked = res.body.content.find(
+        (ps: any) => ps.rentalObjectCode === 'blocked-code'
+      )
+      expect(new Date(blocked.availabilityInfo.vacantFrom)).toEqual(
+        expectedVacantFrom
+      )
+    })
+
+    it('should filter out parking spaces with an indefinite (no end date) active block', async () => {
+      // Arrange
+      const today = new Date()
+      const yesterday = new Date(today)
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+
+      const blockedParkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'blocked-code',
+        blockStartDate: yesterday,
+        blockEndDate: undefined,
+      })
+      const vacantParkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'vacant-code',
+      })
+
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'blocked-code',
+            }),
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'vacant-code',
+            }),
+          ],
+        })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [blockedParkingSpace, vacantParkingSpace],
+        })
+
+      // Act
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0].rentalObjectCode).toBe('vacant-code')
+    })
+  })
+
+  describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
+    it('should respond with 200 and the availability when found', async () => {
+      // Arrange
+      const rentalObjectCode = 'R1003'
+      const rent = factory.rentalObjectRent.build({ amount: 1234 })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode,
+        rent,
+      })
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValueOnce({
+        ok: true,
+        data: factory.rentalObject.build({ rentalObjectCode }),
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValueOnce({ ok: true, data: availability })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content.rent).toEqual(rent)
+    })
+
+    it('should set vacantFrom based on blockEndDate from the parking space', async () => {
+      // Arrange - future block: starts tomorrow, ends next week
+      const rentalObjectCode = 'R1003'
+      const tomorrow = new Date()
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+      tomorrow.setUTCHours(0, 0, 0, 0)
+      const nextWeek = new Date()
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+      nextWeek.setUTCHours(0, 0, 0, 0)
+      const expectedVacantFrom = new Date(nextWeek)
+      expectedVacantFrom.setUTCDate(expectedVacantFrom.getUTCDate() + 1)
+
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValueOnce({
+        ok: true,
+        data: factory.rentalObject.build({
+          rentalObjectCode,
+          blockStartDate: tomorrow,
+          blockEndDate: nextWeek,
+        }),
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.rentalObjectAvailabilityInfo.build({
+            rentalObjectCode,
+            vacantFrom: new Date('2020-01-01'),
+          }),
+        })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(new Date(res.body.content.vacantFrom)).toEqual(expectedVacantFrom)
+    })
+
+    it('should respond with 404 if availability is not found', async () => {
+      // Arrange
+      const rentalObjectCode = 'NOTFOUND'
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValueOnce({
+        ok: true,
+        data: factory.rentalObject.build({ rentalObjectCode }),
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: 'could-not-find-rental-object',
+        })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe(
+        `Availability not found for rental object code: ${rentalObjectCode}`
+      )
+    })
+
+    it('should respond with 500 if another error occurs', async () => {
+      // Arrange
+      const rentalObjectCode = 'ERROR'
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValueOnce({
+        ok: true,
+        data: factory.rentalObject.build({ rentalObjectCode }),
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: 'could-not-parse-rental-object',
+        })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        'An error occurred while fetching rental object availability.'
+      )
+    })
+
+    it('should call tenfastAdapter.getAvailabilityForRentalObject with the correct rentalObjectCode', async () => {
+      // Arrange
+      const rentalObjectCode = 'R1003'
+      const rent = factory.rentalObjectRent.build({ amount: 1234 })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode,
+        rent,
+      })
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValueOnce({
+        ok: true,
+        data: factory.rentalObject.build({ rentalObjectCode }),
+      })
+      const spy = jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: availability,
+        })
+
+      // Act
+      await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(spy).toHaveBeenCalledWith(rentalObjectCode, false)
+    })
+
+    it('should respond with 404 if parking space is not found', async () => {
+      // Arrange
+      const rentalObjectCode = 'NOTFOUND'
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpace')
+        .mockResolvedValueOnce({ ok: false, err: 'parking-space-not-found' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe(
+        `Availability not found for rental object code: ${rentalObjectCode}`
+      )
+    })
+
+    it('should respond with 500 if fetching parking space fails', async () => {
+      // Arrange
+      const rentalObjectCode = 'ERROR'
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpace')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability`
+      )
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        `An error occurred while fetching parking space by rental object code: ${rentalObjectCode}`
+      )
+    })
+  })
+
+  describe('POST /rental-objects/availabilities', () => {
+    it('should respond with 200 and availability data when both adapters succeed', async () => {
+      // Arrange
+      const rentalObjectCodes = ['code-1', 'code-2']
+      const availabilities = rentalObjectCodes.map((code) =>
+        factory.rentalObjectAvailabilityInfo.build({ rentalObjectCode: code })
+      )
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({ ok: true, data: availabilities })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+    })
+
+    it('should respond with 500 if getRentalObjectAvailabilityInfo fails', async () => {
+      // Arrange
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: 'could-not-find-rental-objects',
+        })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes: ['code-1'] })
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        'An error occurred while fetching availability for rental objects.'
+      )
+    })
+
+    it('should respond with 500 if getParkingSpaces fails with an unexpected error', async () => {
+      // Arrange
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes: ['code-1'] })
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe(
+        'An error occurred while fetching parking spaces.'
+      )
+    })
+
+    it('should return 200 when getParkingSpaces returns parking-spaces-not-found', async () => {
+      // Arrange
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: false, err: 'parking-spaces-not-found' })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({ ok: true, data: [availability] })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes: ['code-1'] })
+
+      // Assert
+      expect(res.status).toBe(200)
+      // vacantFrom set to undefined since no parking space matched
+      expect(res.body.content[0].vacantFrom).toBeUndefined()
+    })
+
+    it('should set vacantFrom based on blockEndDate when parking space is matched', async () => {
+      // Arrange
+      const tomorrow = new Date()
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+      tomorrow.setUTCHours(0, 0, 0, 0)
+      const nextWeek = new Date()
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7)
+      nextWeek.setUTCHours(0, 0, 0, 0)
+      const expectedVacantFrom = new Date(nextWeek)
+      expectedVacantFrom.setUTCDate(expectedVacantFrom.getUTCDate() + 1)
+
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'code-1',
+        blockStartDate: tomorrow,
+        blockEndDate: nextWeek,
+      })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+        vacantFrom: new Date('2020-01-01'),
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({ ok: true, data: [availability] })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes: ['code-1'] })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(new Date(res.body.content[0].vacantFrom)).toEqual(
+        expectedVacantFrom
+      )
+    })
+
+    it('should set vacantFrom to undefined when no matching parking space is found', async () => {
+      // Arrange
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'other-code',
+      })
+      const availability = factory.rentalObjectAvailabilityInfo.build({
+        rentalObjectCode: 'code-1',
+        vacantFrom: new Date('2026-06-01'),
+      })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [parkingSpace] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({ ok: true, data: [availability] })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes: ['code-1'] })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].vacantFrom).toBeUndefined()
+    })
+
+    it('should call getRentalObjectAvailabilityInfo with the provided rentalObjectCodes', async () => {
+      // Arrange
+      const rentalObjectCodes = ['code-1', 'code-2']
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+      const spy = jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+
+      // Act
+      await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes })
+
+      // Assert
+      expect(spy).toHaveBeenCalledWith(rentalObjectCodes, false)
+    })
+  })
+
+  describe('GET /rental-objects/by-code/:rentalObjectCode/rent', () => {
+    it('responds with 200 and the mapped rent when the rental object is found', async () => {
+      // Arrange
+      const rentalObject = factory.tenfastRentalObject.build({
+        externalId: 'code-1',
+        hyraExcludingVat: 1000,
+        hyraVat: 0,
+        hyror: [
+          factory.tenfastInvoiceRow.build({
+            amount: 1000,
+            vat: 0,
+            article: 'article-1',
+            label: 'Hyra bostad',
+            from: toYearMonthDayString(new Date('2026-01-01')),
+            to: undefined,
+          }),
+        ],
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValueOnce({ ok: true, data: rentalObject })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/code-1/rent'
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        rentalObjectCode: 'code-1',
+        rent: {
+          amount: 1000,
+          vat: 0,
+          rows: [
+            {
+              code: 'article-1',
+              description: 'Hyra bostad',
+              amount: 1000,
+              vatPercentage: 0,
+              fromDate: new Date('2026-01-01').toISOString(),
+            },
+          ],
+        },
+      })
+    })
+
+    it('responds with 404 when the rental object is not found', async () => {
+      // Arrange
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValueOnce({ ok: true, data: null })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/missing-1/rent'
+      )
+
+      // Assert
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Rental object not found: missing-1')
+    })
+
+    it('responds with 500 when the adapter call fails', async () => {
+      // Arrange
+      jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValueOnce({
+        ok: false,
+        err: 'could-not-parse-rental-object',
+      })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/code-1/rent'
+      )
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('could-not-parse-rental-object')
+    })
+  })
+
+  describe('GET /rental-objects/by-code/:rentalObjectCode/rent-legacy', () => {
+    it('responds with 200 and the rent when Xpand has rent rows', async () => {
+      // Arrange
+      const rent = factory.rentalObjectRent.build()
+      jest
+        .spyOn(rentalObjectAdapter, 'getRentalObjectRentRows')
+        .mockResolvedValueOnce({ ok: true, data: rent })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/code-1/rent-legacy'
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content.rentalObjectCode).toBe('code-1')
+      expect(res.body.content.rent).toMatchObject({
+        amount: rent.amount,
+        vat: rent.vat,
+        rows: rent.rows,
+      })
+    })
+
+    it('responds with 404 when Xpand has no rent rows for the rental object', async () => {
+      // Arrange
+      jest
+        .spyOn(rentalObjectAdapter, 'getRentalObjectRentRows')
+        .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/missing-1/rent-legacy'
+      )
+
+      // Assert
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe(
+        'No rent rows found in Xpand for rental object: missing-1'
+      )
+    })
+
+    it('responds with 500 when the adapter call fails', async () => {
+      // Arrange
+      jest
+        .spyOn(rentalObjectAdapter, 'getRentalObjectRentRows')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/code-1/rent-legacy'
+      )
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('unknown')
     })
   })
 })

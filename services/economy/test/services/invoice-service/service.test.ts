@@ -1,7 +1,10 @@
 import {
+  processInvoiceRows,
+  getInvoiceDetails,
+  getPublicInvoiceByOcr,
   getBatchContactsCsv,
   getBatchLedgerRowsCsv,
-  processInvoiceRows,
+  getAutogiroConsent,
 } from '@src/services/invoice-service/service'
 
 let mockInvoiceDataRows = [
@@ -41,6 +44,21 @@ jest.mock('@src/services/invoice-service/adapters/xpand-db-adapter', () =>
   require('./__mocks__/invoice-service-xpand-db-adapter')
 )
 
+// Mock the additional adapters used by getInvoiceDetails
+jest.mock('@src/services/common/adapters/xledger-adapter', () => ({
+  ...jest.requireActual('@src/services/common/adapters/xledger-adapter'),
+  getInvoiceByInvoiceNumber: jest.fn(),
+  uploadFile: jest.fn(),
+  createCustomerLedgerRow: jest.fn(),
+  transformAggregatedInvoiceRow: jest.fn(),
+}))
+
+jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
+  getInvoiceByOcr: jest.fn(),
+  getInvoiceArticle: jest.fn(),
+  getAutogiroConsentByNationalRegistrationNumber: jest.fn(),
+}))
+
 import {
   getCounterPartCustomers,
   saveInvoiceRows,
@@ -56,6 +74,22 @@ import {
   resetMocks as resetXpandDbMocks,
   setupDefaultMocks as setupDefaultXpandDbMocks,
 } from './__mocks__/invoice-service-xpand-db-adapter'
+
+// Import the actual modules to get proper typing
+import { getInvoiceByInvoiceNumber } from '@src/services/common/adapters/xledger-adapter'
+import {
+  getInvoiceByOcr,
+  getInvoiceArticle,
+  getAutogiroConsentByNationalRegistrationNumber,
+} from '@src/common/adapters/tenfast/tenfast-adapter'
+import { TenfastAutogiroConsentFactory } from '@test/factories'
+
+// Assign the mocked functions
+const mockGetInvoiceByInvoiceNumber = getInvoiceByInvoiceNumber as jest.Mock
+const mockGetInvoiceByOcr = getInvoiceByOcr as jest.Mock
+const mockGetInvoiceArticle = getInvoiceArticle as jest.Mock
+const mockGetAutogiroConsent =
+  getAutogiroConsentByNationalRegistrationNumber as jest.Mock
 
 describe('Rental Invoice Service', () => {
   describe('processInvoiceRows', () => {
@@ -139,6 +173,331 @@ describe('Rental Invoice Service', () => {
     })
   })
 
+  describe('getInvoiceDetails', () => {
+    const mockXledgerInvoice = {
+      invoice: {
+        invoiceId: 'test-invoice-id',
+        invoiceNumber: '55123456',
+        customerCode: 'P999999',
+        amount: 1000,
+        invoiceRows: [],
+      },
+    }
+
+    const mockTenfastInvoiceResult = {
+      ok: true,
+      data: {
+        invoice: {
+          invoiceRows: [
+            {
+              rentArticle: 'HYRAB',
+              amount: 999.57,
+              vat: 0,
+              invoiceRowText: null,
+            },
+            {
+              rentArticle: 'PARK',
+              amount: 50,
+              vat: 0,
+              invoiceRowText: null,
+            },
+          ],
+        },
+      },
+    }
+
+    const mockArticles = [
+      {
+        _id: 'HYRAB',
+        label: 'Hyra bostad',
+      },
+      {
+        _id: 'PARK',
+        label: 'Parkering',
+      },
+    ]
+
+    beforeEach(() => {
+      mockGetInvoiceByInvoiceNumber.mockReset()
+      mockGetInvoiceByOcr.mockReset()
+      mockGetInvoiceArticle.mockReset()
+    })
+
+    it('should return invoice details with enriched invoice rows when all data is available', async () => {
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue(mockXledgerInvoice)
+      mockGetInvoiceByOcr.mockResolvedValue(mockTenfastInvoiceResult)
+      mockGetInvoiceArticle
+        .mockResolvedValueOnce({ ok: true, data: mockArticles[0] })
+        .mockResolvedValueOnce({ ok: true, data: mockArticles[1] })
+
+      const result = await getInvoiceDetails('55123456')
+
+      expect(getInvoiceByInvoiceNumber).toHaveBeenCalledWith('55123456')
+      expect(getInvoiceByOcr).toHaveBeenCalledWith('test-invoice-id')
+      expect(getInvoiceArticle).toHaveBeenCalledWith('HYRAB')
+      expect(getInvoiceArticle).toHaveBeenCalledWith('PARK')
+
+      expect(result).toEqual({
+        ...mockXledgerInvoice.invoice,
+        invoiceRows: [
+          {
+            rentArticle: 'HYRAB',
+            amount: 999.57,
+            vat: 0,
+            invoiceRowText: 'Hyra bostad',
+          },
+          {
+            rentArticle: 'PARK',
+            amount: 50,
+            vat: 0,
+            invoiceRowText: 'Parkering',
+          },
+        ],
+      })
+    })
+
+    it('should return null when invoice is not found in xledger', async () => {
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue(null)
+
+      const result = await getInvoiceDetails('nonexistent')
+
+      expect(getInvoiceByInvoiceNumber).toHaveBeenCalledWith('nonexistent')
+      expect(getInvoiceByOcr).not.toHaveBeenCalled()
+      expect(result).toBeNull()
+    })
+
+    it('should throw error when Tenfast API returns an error', async () => {
+      const mockTenfastError = 'Tenfast API error'
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue(mockXledgerInvoice)
+      mockGetInvoiceByOcr.mockResolvedValue({
+        ok: false,
+        err: mockTenfastError,
+      })
+
+      await expect(getInvoiceDetails('55123456')).rejects.toMatchObject({
+        message: mockTenfastError,
+      })
+
+      expect(getInvoiceByInvoiceNumber).toHaveBeenCalledWith('55123456')
+      expect(getInvoiceByOcr).toHaveBeenCalledWith('test-invoice-id')
+    })
+
+    it('should return invoice without invoice rows when Tenfast data is null', async () => {
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue(mockXledgerInvoice)
+      mockGetInvoiceByOcr.mockResolvedValue({ ok: true, data: null })
+
+      const result = await getInvoiceDetails('55123456')
+
+      expect(getInvoiceByInvoiceNumber).toHaveBeenCalledWith('55123456')
+      expect(getInvoiceByOcr).toHaveBeenCalledWith('test-invoice-id')
+      expect(getInvoiceArticle).not.toHaveBeenCalled()
+      expect(result).toEqual(mockXledgerInvoice.invoice)
+    })
+
+    it('should handle invoice rows without rent articles', async () => {
+      const mockTenfastResultWithoutArticles = {
+        ok: true,
+        data: {
+          invoice: {
+            invoiceRows: [
+              {
+                rentArticle: null,
+                amount: 50,
+                vat: 0,
+                invoiceRowText: null,
+              },
+              {
+                rentArticle: 'HYRAB',
+                amount: 999.57,
+                vat: 0,
+                invoiceRowText: null,
+              },
+            ],
+          },
+        },
+      }
+
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue(mockXledgerInvoice)
+      mockGetInvoiceByOcr.mockResolvedValue(mockTenfastResultWithoutArticles)
+      mockGetInvoiceArticle.mockResolvedValue({
+        ok: true,
+        data: mockArticles[0],
+      })
+
+      const result = await getInvoiceDetails('55123456')
+
+      expect(mockGetInvoiceArticle).toHaveBeenCalledTimes(1)
+      expect(mockGetInvoiceArticle).toHaveBeenCalledWith('HYRAB')
+
+      expect(result).toEqual({
+        ...mockXledgerInvoice.invoice,
+        invoiceRows: [
+          {
+            rentArticle: null,
+            amount: 50,
+            vat: 0,
+            invoiceRowText: null,
+          },
+          {
+            rentArticle: 'HYRAB',
+            amount: 999.57,
+            vat: 0,
+            invoiceRowText: 'Hyra bostad',
+          },
+        ],
+      })
+    })
+
+    it('should handle failed article lookups gracefully', async () => {
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue(mockXledgerInvoice)
+      mockGetInvoiceByOcr.mockResolvedValue(mockTenfastInvoiceResult)
+      mockGetInvoiceArticle
+        .mockResolvedValueOnce({ ok: false, err: 'Article not found' })
+        .mockResolvedValueOnce({ ok: true, data: mockArticles[1] })
+
+      const result = await getInvoiceDetails('55123456')
+
+      expect(getInvoiceArticle).toHaveBeenCalledTimes(2)
+
+      expect(result).toEqual({
+        ...mockXledgerInvoice.invoice,
+        invoiceRows: [
+          {
+            rentArticle: 'HYRAB',
+            amount: 999.57,
+            vat: 0,
+            invoiceRowText: null,
+          },
+          {
+            rentArticle: 'PARK',
+            amount: 50,
+            vat: 0,
+            invoiceRowText: 'Parkering',
+          },
+        ],
+      })
+    })
+
+    it('should handle duplicate rent articles correctly', async () => {
+      const mockTenfastResultWithDuplicates = {
+        ok: true,
+        data: {
+          invoice: {
+            invoiceRows: [
+              {
+                rentArticle: 'HYRAB',
+                amount: 500,
+                vat: 0,
+                invoiceRowText: null,
+              },
+              {
+                rentArticle: 'HYRAB',
+                amount: 499.57,
+                vat: 0,
+                invoiceRowText: null,
+              },
+            ],
+          },
+        },
+      }
+
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue(mockXledgerInvoice)
+      mockGetInvoiceByOcr.mockResolvedValue(mockTenfastResultWithDuplicates)
+      mockGetInvoiceArticle
+        .mockResolvedValueOnce({ ok: true, data: mockArticles[0] })
+        .mockResolvedValueOnce({ ok: true, data: mockArticles[0] })
+
+      const result = await getInvoiceDetails('55123456')
+
+      // Should call getInvoiceArticle for each unique article ID
+      expect(mockGetInvoiceArticle).toHaveBeenCalledTimes(2)
+      expect(mockGetInvoiceArticle).toHaveBeenCalledWith('HYRAB')
+
+      expect(result).toEqual({
+        ...mockXledgerInvoice.invoice,
+        invoiceRows: [
+          {
+            rentArticle: 'HYRAB',
+            amount: 500,
+            vat: 0,
+            invoiceRowText: 'Hyra bostad',
+          },
+          {
+            rentArticle: 'HYRAB',
+            amount: 499.57,
+            vat: 0,
+            invoiceRowText: 'Hyra bostad',
+          },
+        ],
+      })
+    })
+  })
+
+  describe('getPublicInvoiceByOcr', () => {
+    beforeEach(() => {
+      mockGetInvoiceByInvoiceNumber.mockReset()
+      mockGetInvoiceByOcr.mockReset()
+    })
+
+    it('returns a public invoice with deferral when xledger has deferment', async () => {
+      mockGetInvoiceByOcr.mockResolvedValue({
+        ok: true,
+        data: {
+          invoice: { invoiceId: '55123456', invoiceRows: [] },
+          tenfastDeferral: {
+            reason: 'Betalningsplan',
+            madeBy: 'admin@mimer.nu',
+          },
+        },
+      })
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue({
+        invoice: { invoiceId: '55123456', invoiceRows: [] },
+        defermentEndDate: new Date('2026-07-15'),
+      })
+
+      const result = await getPublicInvoiceByOcr('55123456')
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          invoiceId: '55123456',
+          invoiceRows: [],
+          deferral: {
+            endDate: new Date('2026-07-15'),
+            reason: 'Betalningsplan',
+            madeBy: 'admin@mimer.nu',
+          },
+        },
+      })
+    })
+
+    it('returns invoice without deferral when xledger has no deferment', async () => {
+      mockGetInvoiceByOcr.mockResolvedValue({
+        ok: true,
+        data: {
+          invoice: { invoiceId: '55123456', invoiceRows: [] },
+          tenfastDeferral: {
+            reason: 'Betalningsplan',
+            madeBy: 'admin@mimer.nu',
+          },
+        },
+      })
+      mockGetInvoiceByInvoiceNumber.mockResolvedValue({
+        invoice: { invoiceId: '55123456', invoiceRows: [] },
+      })
+
+      const result = await getPublicInvoiceByOcr('55123456')
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          invoiceId: '55123456',
+          invoiceRows: [],
+        },
+      })
+    })
+  })
+
   describe('getBatchContactsCsv', () => {
     beforeEach(() => {
       setupDefaultInvoiceDbMocks()
@@ -209,6 +568,44 @@ describe('Rental Invoice Service', () => {
       const result = await getBatchLedgerRowsCsv('1337')
 
       expect(result).toBeNull()
+    })
+  })
+
+  describe('getAutogiroConsent', () => {
+    beforeEach(() => {
+      mockGetAutogiroConsent.mockReset()
+    })
+
+    it('returns consent data when tenfast returns ok result', async () => {
+      const mockConsent = TenfastAutogiroConsentFactory.build()
+      mockGetAutogiroConsent.mockResolvedValue({
+        ok: true,
+        data: mockConsent,
+      })
+
+      const result = await getAutogiroConsent('198001011234')
+
+      expect(mockGetAutogiroConsent).toHaveBeenCalledWith('198001011234')
+      expect(result).toEqual(mockConsent)
+    })
+
+    it('returns null when no consent found', async () => {
+      mockGetAutogiroConsent.mockResolvedValue({ ok: true, data: null })
+
+      const result = await getAutogiroConsent('198001011234')
+
+      expect(result).toBeNull()
+    })
+
+    it('throws when tenfast returns error', async () => {
+      mockGetAutogiroConsent.mockResolvedValue({
+        ok: false,
+        err: 'API error',
+      })
+
+      await expect(getAutogiroConsent('198001011234')).rejects.toMatchObject({
+        message: 'API error',
+      })
     })
   })
 })

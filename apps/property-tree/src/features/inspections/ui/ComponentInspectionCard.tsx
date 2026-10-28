@@ -14,7 +14,7 @@ import {
   getConditionConfig,
 } from '../constants'
 import { CostResponsibilitySelect } from './CostResponsibilitySelect'
-import { PhotoCapture, type InspectionPhotoUploadContext } from './PhotoCapture'
+import { type InspectionPhotoUploadContext, PhotoCapture } from './PhotoCapture'
 
 interface ComponentInspectionCardProps {
   label: string

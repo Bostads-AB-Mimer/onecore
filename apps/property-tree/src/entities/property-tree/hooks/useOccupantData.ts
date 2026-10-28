@@ -41,7 +41,7 @@ async function fetchPropertyTenants(
     // there until the lease ends, so the object is occupied, not vakant.
     // Kommande (1) hasn't moved in and upphört (3) has already left.
     const result = await leaseSearchService.search(
-      { property: [designation], status: ['0', '2'] },
+      { property: [designation], status: ['current', 'ended'] },
       page,
       PAGE_SIZE
     )

@@ -5,10 +5,12 @@ import {
   InvoiceTransactionType,
   Lease,
   LeaseStatus,
+  LeaseType,
   ParkingSpace,
   ParkingSpaceApplicationCategory,
   ParkingSpaceType,
   PaymentStatus,
+  Tenant,
 } from '@onecore/types'
 
 export const mockedParkingSpace: ParkingSpace = {
@@ -52,6 +54,10 @@ export const mockedApplicantWithoutLeases: Contact = {
   phoneNumbers: [],
   emailAddress: 'test@mimer.nu',
   isTenant: true,
+  protectedIdentity: false,
+  deceased: false,
+  emigrated: false,
+  noAdvertising: false,
 }
 
 export const mockedApplicantWithoutAddress: any = {
@@ -71,6 +77,10 @@ export const mockedApplicantWithoutAddress: any = {
   phoneNumbers: [],
   emailAddress: 'test@mimer.nu',
   isTenant: true,
+  protectedIdentity: false,
+  deceased: false,
+  emigrated: false,
+  noAdvertising: false,
 }
 
 export const mockedApplicantWithLeases: Contact = {
@@ -110,12 +120,6 @@ export const failedConsumerReport: ConsumerReport = {
 
 export const mockedLease: Lease = {
   leaseId: '123-456-789/0',
-  address: {
-    street: 'Gatustigen',
-    number: '123',
-    city: 'Västerås',
-    postalCode: '12345',
-  },
   approvalDate: undefined,
   contractDate: undefined,
   lastDebitDate: undefined,
@@ -126,29 +130,18 @@ export const mockedLease: Lease = {
   noticeGivenBy: 'tenant',
   noticeTimeTenant: '',
   preferredMoveOutDate: undefined,
-  rentalProperty: undefined,
   rentalPropertyId: '123-456-789',
-  rentInfo: {
-    currentRent: {
-      currentRent: 123,
-      additionalChargeAmount: undefined,
-      additionalChargeDescription: undefined,
-      rentEndDate: undefined,
-      rentStartDate: undefined,
-      vat: 0,
-    },
-    futureRents: undefined,
-  },
   status: LeaseStatus.Current,
   tenantContactIds: ['P12345'],
   tenants: undefined,
   terminationDate: undefined,
-  type: '',
+  type: LeaseType.OtherContract,
+  rentRows: [],
 }
 
 export const mockedPaidInvoice: Invoice = {
   invoiceId: 'INV-001',
-  leaseId: '123-456-789/0',
+  leaseIds: ['123-456-789/0'],
   amount: 1000,
   reference: 'REF-001',
   fromDate: new Date(),
@@ -169,9 +162,53 @@ export const mockedPaidInvoice: Invoice = {
   credit: null,
 }
 
+const housingContractInSameArea: Lease = {
+  ...mockedLease,
+  type: LeaseType.HousingContract,
+  residentialArea: { code: 'TST', caption: 'Test' },
+}
+
+const housingContractInDifferentArea: Lease = {
+  ...mockedLease,
+  type: LeaseType.HousingContract,
+  residentialArea: { code: 'OTHER', caption: 'Annan' },
+}
+
+export const mockedTenantWithHousingContractInSameArea: Tenant = {
+  contactCode: 'P12345',
+  contactKey: 'ABC',
+  leaseIds: ['123-456-789/01', '789-456-123/02'],
+  address: {
+    street: 'Gata',
+    number: '2',
+    postalCode: '54321',
+    city: 'Västerås',
+  },
+  birthDate: new Date(),
+  firstName: 'Foo',
+  lastName: 'Bar',
+  fullName: 'Foo Bar',
+  nationalRegistrationNumber: '1212121212',
+  phoneNumbers: [],
+  emailAddress: 'test@mimer.nu',
+  protectedIdentity: false,
+  deceased: false,
+  emigrated: false,
+  noAdvertising: false,
+  housingContracts: [housingContractInSameArea],
+  isAboutToLeave: false,
+  currentHousingContract: housingContractInSameArea,
+}
+
+export const mockedTenantWithHousingContractInDifferentArea: Tenant = {
+  ...mockedTenantWithHousingContractInSameArea,
+  housingContracts: [housingContractInDifferentArea],
+  currentHousingContract: housingContractInDifferentArea,
+}
+
 export const mockedUnpaidInvoice: Invoice = {
   invoiceId: 'INV-002',
-  leaseId: '123-456-789/0',
+  leaseIds: ['123-456-789/0'],
   amount: 1000,
   reference: 'REF-001',
   fromDate: new Date(),

@@ -14,9 +14,36 @@ export * as economy from './economy'
 export * as inspection from './inspection'
 export * as property from './property'
 export * as communication from './communication'
+export {
+  TenantNotificationRole,
+  LeaseTerminationConfirmationRequestSchema,
+  LeaseTerminationConfirmationEmailSchema,
+  LeaseTerminationConfirmationMessageType,
+  LeaseTerminationRentalTypeSchema,
+  type LeaseTerminationRentalType,
+  type LeaseTerminationConfirmationRequest,
+  type LeaseTerminationConfirmationEmail,
+} from './communication/tenant-notification'
 export * as guides from './guides'
 export * from './room'
 
 export * as schemas from './schemas'
+export {
+  SyncContactToEconomySchema,
+  type SyncContactToEconomyPayload,
+  SyncContactToWorkOrderSchema,
+  type SyncContactToWorkOrderPayload,
+} from './schemas/v1/contact-sync'
+export { LeaseChangeSchema, type LeaseChange } from './schemas/v1/lease-sync'
+export {
+  RentalObjectTypeChangeSchema,
+  type RentalObjectTypeChange,
+  RentalObjectTypeChangesSchema,
+  type RentalObjectTypeChanges,
+  SyncRentalObjectTypeRequestSchema,
+  type SyncRentalObjectTypeRequest,
+  SyncRentalObjectTypeResponseSchema,
+  type SyncRentalObjectTypeResponse,
+} from './schemas/v1/rental-object-type-sync'
 export { paginatedResponseSchema } from './schemas/pagination'
 export * as fileStorageSchemas from './schemas/file-storage'

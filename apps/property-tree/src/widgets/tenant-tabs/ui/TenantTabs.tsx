@@ -7,6 +7,7 @@ import {
   MessageSquare,
   Receipt,
   StickyNote,
+  Users,
 } from 'lucide-react'
 import { parseAsString, useQueryState } from 'nuqs'
 
@@ -17,6 +18,7 @@ import {
   TenantLedgerTabContent,
   TenantNotesTabContent,
   TenantQueueSystemTabContent,
+  TenantRelatedContactsTabContent,
 } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
@@ -33,6 +35,7 @@ interface TenantTabsProps {
   rentalProperties: Record<string, RentalPropertyInfo | null>
   contactCode: string
   tenantName: string
+  nationalRegistrationNumber: string
   isLoadingLeases: boolean
   isLoadingProperties: boolean
 }
@@ -41,7 +44,7 @@ export const TenantTabs = ({
   leases,
   rentalProperties,
   contactCode,
-  tenantName,
+  nationalRegistrationNumber,
   isLoadingLeases,
   isLoadingProperties,
 }: TenantTabsProps) => {
@@ -57,7 +60,7 @@ export const TenantTabs = ({
         leases={leases}
         rentalProperties={rentalProperties}
         contactCode={contactCode}
-        tenantName={tenantName}
+        nationalRegistrationNumber={nationalRegistrationNumber}
         isLoadingLeases={isLoadingLeases}
         isLoadingProperties={isLoadingProperties}
       />
@@ -98,6 +101,10 @@ export const TenantTabs = ({
           <Key className="h-4 w-4" />
           <span className="hidden sm:inline">Nyckellån</span>
         </TabsTrigger>
+        <TabsTrigger value="related" className="flex items-center gap-1.5">
+          <Users className="h-4 w-4" />
+          <span className="hidden sm:inline">Relaterade kontakter</span>
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="contracts">
@@ -110,10 +117,7 @@ export const TenantTabs = ({
       </TabsContent>
 
       <TabsContent value="queue">
-        <TenantQueueSystemTabContent
-          contactCode={contactCode}
-          tenantName={tenantName}
-        />
+        <TenantQueueSystemTabContent contactCode={contactCode} />
       </TabsContent>
 
       <TabsContent value="work-orders">
@@ -124,7 +128,10 @@ export const TenantTabs = ({
       </TabsContent>
 
       <TabsContent value="ledger">
-        <TenantLedgerTabContent contactCode={contactCode} />
+        <TenantLedgerTabContent
+          contactCode={contactCode}
+          nationalRegistrationNumber={nationalRegistrationNumber}
+        />
       </TabsContent>
 
       <TabsContent value="notes">
@@ -137,6 +144,10 @@ export const TenantTabs = ({
 
       <TabsContent value="keys">
         <TenantKeyLoans contactCode={contactCode} leases={leases} />
+      </TabsContent>
+
+      <TabsContent value="related">
+        <TenantRelatedContactsTabContent contactCode={contactCode} />
       </TabsContent>
     </Tabs>
   )

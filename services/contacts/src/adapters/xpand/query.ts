@@ -3,6 +3,8 @@ import { Pagination } from '@src/adapters'
 import { ContactCode, NationalIdNumber } from '@src/domain'
 import { ContactTypeFilter, ObjectKey } from '@src/domain/contact'
 
+import { currentInvoiceAddress } from './address-sql'
+import { isLeaseHolderColumn, LEASE_HOLDER } from './relation-sql'
 import { DbContactRow } from './db-model'
 
 const CONTACT_CODE = 'cmctc.cmctckod'
@@ -179,6 +181,76 @@ export const contactObjectKeysForEmailAddress = async (
 }
 
 /**
+ * Strips the separators Xpand allows inside `persorgnr` so a stored value can
+ * be compared against a digit-only identity number.
+ *
+ * Measured against the test database: of ~115 000 rows, most private
+ * individuals are stored as twelve unseparated digits, but ~7 000 rows hold ten
+ * digits, 77 carry a hyphen, and a handful of private individuals are stored in
+ * the ten-digit form. Comparing raw values would silently miss every one of
+ * those.
+ *
+ * SQL Server has no REGEXP_REPLACE in the versions we target, hence the nested
+ * REPLACE calls.
+ */
+const NORMALISED_NATIONAL_ID_SQL = `REPLACE(REPLACE(REPLACE(${NATIONAL_ID_NUMBER}, '-', ''), '+', ''), ' ', '')`
+
+/**
+ * Finds the contact code of an existing contact with the given national ID
+ * number, in either its ten- or twelve-digit form.
+ *
+ * This exists for the duplicate check performed before creating a contact.
+ * Creating a contact in Xpand cannot be undone, so a false negative here
+ * produces a permanent duplicate — which is why both sides of the comparison
+ * are normalised rather than trusting the stored format.
+ *
+ * Deliberately does not filter on `deletemark`: the rest of this service reads
+ * deleted contacts too, and for a duplicate check the conservative choice is to
+ * report a match rather than let a second contact be created.
+ *
+ * @param db - The Knex database connection to use
+ * @param forms - The ten- and twelve-digit forms to match against
+ * @returns The contact code of the first match, or null when there is none
+ */
+export const contactCodeForNationalId = async (
+  db: knex.Knex,
+  forms: { tenDigits: string; twelveDigits: string }
+): Promise<ContactCode | null> => {
+  const row = await db('cmctc')
+    .select({ contactCode: CONTACT_CODE })
+    .whereRaw(`${NORMALISED_NATIONAL_ID_SQL} IN (?, ?)`, [
+      forms.twelveDigits,
+      forms.tenDigits,
+    ])
+    .first()
+
+  return row?.contactCode ?? null
+}
+
+/**
+ * Retrieves cmlog rows for contact changes recorded since the given timestamp.
+ *
+ * Only rows whose logmemo starts with "Kontakt " are returned, as these
+ * represent changes to contacts. If no timestamp is provided, returns all
+ * matching rows.
+ *
+ * @param db - The Knex database connection to use
+ * @param since - The timestamp to query changes from, or null for all rows
+ * @returns A promise that resolves to an array of cmlog rows
+ */
+export const cmlogContactChanges = (
+  db: knex.Knex,
+  since: Date | null
+): Promise<Record<string, unknown>[]> => {
+  const base = db
+    .from('cmlog')
+    .whereLike('logmemo', 'Kontakt %')
+    .orderBy('logtime', 'asc')
+
+  return since ? base.andWhere('logtime', '>', since) : base
+}
+
+/**
  * Fluent query builder for contacts, tailored to the requirements
  * of the Contacts repository, and thus supports those and absolutely
  * nothing else.
@@ -208,6 +280,7 @@ export const contactsQuery = () => {
   let wildcards: string[] = []
   let contactType: ContactTypeFilter = 'any'
   let objectKeyFilter: ContactCode[] = []
+  let contactCodeFilter: ContactCode[] = []
 
   /**
    * Applies the base cmctc-only criteria/filters to a knex
@@ -238,14 +311,17 @@ export const contactsQuery = () => {
       qb.andWhereRaw(...trimInCriteria('cmctc.keycmobj', objectKeyFilter))
     }
 
+    if (contactCodeFilter.length) {
+      qb.andWhereRaw(...trimInCriteria('cmctc.cmctckod', contactCodeFilter))
+    }
+
     Object.keys(wheres).forEach((key) => {
       if (key === NATIONAL_ID_NUMBER) {
-        qb.andWhere((b) => {
-          b.where(key, wheres[key]).orWhereRaw(
-            `REPLACE(TRANSLATE(${NATIONAL_ID_NUMBER}, '0123456789', '##########'), '#', '') = ?`,
-            [wheres[key]]
-          )
-        })
+        const candidates: string[] = wheres[key]
+        qb.andWhereRaw(
+          `${NORMALISED_NATIONAL_ID_SQL} IN (${candidates.map(() => '?').join(', ')})`,
+          candidates
+        )
       } else {
         qb.andWhere(key, wheres[key])
       }
@@ -283,7 +359,8 @@ export const contactsQuery = () => {
       .from('cmadr')
       .join('cmctc', 'cmadr.keycode', 'cmctc.keycmobj')
       .modify(baseFilters)
-      .whereNull('cmadr.tdate')
+      // Search only the rows the contact is returned with.
+      .andWhere(currentInvoiceAddress(db))
       .andWhere((b) =>
         b
           .whereRaw(...wildcard('cmadr.adress1', wc))
@@ -319,10 +396,19 @@ export const contactsQuery = () => {
     },
 
     /**
-     * Adds a WHERE-criteria for single national ID number.
+     * Adds a WHERE-criteria for multiple contact codes.
      */
-    hasNationalId(nid: NationalIdNumber) {
-      wheres[NATIONAL_ID_NUMBER] = nid
+    withContactCodeIn(codes: ContactCode[]) {
+      contactCodeFilter = codes
+      return this
+    },
+
+    /**
+     * Adds a WHERE-criteria for a national ID number. Accepts multiple
+     * candidate forms (e.g. ten- and twelve-digit) to match any of them.
+     */
+    hasNationalId(nid: NationalIdNumber | NationalIdNumber[]) {
+      wheres[NATIONAL_ID_NUMBER] = Array.isArray(nid) ? nid : [nid]
       return this
     },
 
@@ -492,11 +578,18 @@ export const contactsQuery = () => {
             .offset(pgn.page * pgn.pageSize)
             .limit(pgn.pageSize)
         })
+        .with(LEASE_HOLDER, (lh) => {
+          lh.select('cmctc.keycmctc', isLeaseHolderColumn(db, new Date()))
+            .from('page')
+            .join('cmctc', 'cmctc.keycmobj', 'page.keycmobj')
+        })
         .from('page')
         .join('cmctc', 'cmctc.keycmobj', 'page.keycmobj')
-        .leftJoin('cmctc as trustee', 'cmctc.keycmctc2', 'trustee.keycmctc')
+        .join(LEASE_HOLDER, `${LEASE_HOLDER}.keycmctc`, 'cmctc.keycmctc')
         .leftJoin('cmadr', (join) => {
-          join.on('cmadr.keycode', 'cmctc.keycmobj').andOnNull('cmadr.tdate')
+          join
+            .on('cmadr.keycode', 'cmctc.keycmobj')
+            .andOn(currentInvoiceAddress(db))
         })
         .leftJoin('cmeml', 'cmeml.keycmobj', 'cmctc.keycmobj')
         .leftJoin('cmtel', 'cmtel.keycmobj', 'cmctc.keycmobj')
@@ -510,9 +603,8 @@ export const contactsQuery = () => {
           'cmctc.keycmobj as objectKey',
           'cmctc.keycmctc as contactKey',
           'cmctc.lagsokt as protectedIdentity',
+          `${LEASE_HOLDER}.isLeaseHolder`,
           'cmctc.utslag as specialAttention',
-          'trustee.cmctcben as trusteeName',
-          'trustee.cmctckod as trusteeId',
           'cmadr.keycmadr as addressId',
           'cmadr.region',
           'cmadr.adress1',

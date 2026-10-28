@@ -1,6 +1,13 @@
-import { ClipboardList, FileText, MessageSquare, Users } from 'lucide-react'
+import {
+  ClipboardList,
+  FileText,
+  MessageSquare,
+  Receipt,
+  Users,
+} from 'lucide-react'
 
 import { LeasesTabContent } from '@/features/leases'
+import { RentRowsTabContent } from '@/features/rent-rows'
 import { CurrentTenant } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
@@ -19,12 +26,14 @@ interface ParkingSpaceTabsMobileProps {
   parkingSpace: ParkingSpace
   leases?: Lease[]
   leasesIsLoading: boolean
+  currentLease?: Lease
 }
 
 export function ParkingSpaceTabsMobile({
   parkingSpace,
   leases,
   leasesIsLoading,
+  currentLease,
 }: ParkingSpaceTabsMobileProps) {
   const accordionItems: MobileAccordionItem[] = [
     {
@@ -44,6 +53,17 @@ export function ParkingSpaceTabsMobile({
       icon: FileText,
       title: 'Kontrakt',
       content: <LeasesTabContent rentalPropertyId={parkingSpace.rentalId} />,
+    },
+    {
+      id: 'rent-rows',
+      icon: Receipt,
+      title: 'Hyresrader',
+      content: (
+        <RentRowsTabContent
+          rentalObjectCode={parkingSpace.rentalId}
+          lease={currentLease}
+        />
+      ),
     },
     {
       id: 'inspections',

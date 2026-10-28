@@ -1,4 +1,6 @@
 import KoaRouter from '@koa/router'
+import { ApartmentInfo, Lease, RentalPropertyInfo } from '@onecore/types'
+import { logger, generateRouteMetadata } from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -8,9 +10,6 @@ import * as communicationAdapter from '../../adapters/communication-adapter'
 import { logOutboundDispatch } from '../../adapters/communication-adapter/log-writes'
 import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
-
-import { ApartmentInfo, Lease, RentalPropertyInfo } from '@onecore/types'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
@@ -153,13 +152,9 @@ export const routes = (router: KoaRouter) => {
 
     const handlers: { [key: string]: () => Promise<void> } = {
       rentalObjectId: async () => {
-        const leases = await leasingAdapter.getLeasesForPropertyId(
+        const leases = await leasingAdapter.getLeasesByRentalObjectCode(
           ctx.params.identifier,
-          {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: false,
-            includeContacts: true,
-          }
+          { status: ['current', 'upcoming'] }
         )
         if (leases && leases.length > 0) {
           await getRentalPropertyInfoWithLeases(leases)
@@ -178,21 +173,19 @@ export const routes = (router: KoaRouter) => {
       },
       leaseId: async () => {
         const lease = await leasingAdapter.getLease(
-          encodeURIComponent(ctx.params.identifier),
-          'true'
+          encodeURIComponent(ctx.params.identifier)
         )
         if (lease) {
           await getRentalPropertyInfoWithLeases([lease])
         }
       },
       pnr: async () => {
-        const leases = await leasingAdapter.getLeasesForPnr(
-          ctx.params.identifier,
-          {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: false,
-            includeContacts: true,
-          }
+        const contact = await leasingAdapter.getContactForPnr(
+          ctx.params.identifier
+        )
+        const leases = await leasingAdapter.getLeasesByContactCode(
+          contact.contactCode,
+          { status: ['current', 'upcoming'] }
         )
         if (leases) {
           await getRentalPropertyInfoWithLeases(leases)
@@ -203,13 +196,9 @@ export const routes = (router: KoaRouter) => {
           ctx.params.identifier
         )
         if (contact) {
-          const leases = await leasingAdapter.getLeasesForContactCode(
+          const leases = await leasingAdapter.getLeasesByContactCode(
             contact.contactCode,
-            {
-              includeUpcomingLeases: true,
-              includeTerminatedLeases: false,
-              includeContacts: false,
-            }
+            { status: ['current', 'upcoming'] }
           )
           if (leases) {
             await getRentalPropertyInfoWithLeases(leases)
@@ -217,13 +206,9 @@ export const routes = (router: KoaRouter) => {
         }
       },
       contactCode: async () => {
-        const leases = await leasingAdapter.getLeasesForContactCode(
+        const leases = await leasingAdapter.getLeasesByContactCode(
           ctx.params.identifier,
-          {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: false,
-            includeContacts: true,
-          }
+          { status: ['current', 'upcoming'] }
         )
         if (leases) {
           await getRentalPropertyInfoWithLeases(leases)
@@ -1741,10 +1726,19 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      // Work-order API expects Xpand's 0/1 for isMainNumber (external consumers
+      // depend on it) — convert from the boolean our contact endpoints now return
+      const tenantForWorkOrder = {
+        ...tenant.data,
+        phoneNumbers: tenant.data.phoneNumbers?.map((p) => ({
+          ...p,
+          isMainNumber: Number(p.isMainNumber),
+        })),
+      }
+
       const result = await workOrderAdapter.createWorkOrder({
         rentalProperty: rentalPropertyInfo,
-        // @ts-expect-error phoneNumbers.isMainNumber is typed as boolean, but it is actually a number
-        tenant: tenant.data,
+        tenant: tenantForWorkOrder,
         // @ts-expect-error leaseStartDate and other dates are typed as Date, but they are actually strings
         lease,
         details: {

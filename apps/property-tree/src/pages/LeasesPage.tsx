@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
@@ -7,6 +7,7 @@ import { useCostCenters } from '@/features/property-areas'
 
 import { useLeaseFilters } from '@/entities/lease'
 
+import { ApiError } from '@/services/api/core/baseApi'
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 import { leaseSearchService } from '@/services/api/core/leaseSearchService'
 import { tenantService } from '@/services/api/core/tenantService'
@@ -22,7 +23,7 @@ import {
   FilterBar,
   MultiSelectFilterDropdown,
   MultiSelectSearchFilterDropdown,
-  type SearchFilterOption,
+  SearchFilterDropdown,
 } from '@/shared/ui/filters'
 import { ObjectTypeFilter } from '@/shared/ui/filters/ObjectTypeFilter'
 import { ViewLayout } from '@/shared/ui/layout'
@@ -34,26 +35,29 @@ const objectTypeOptions = [
   { label: 'Bostad', value: 'bostad' },
   { label: 'Bilplats', value: 'parkering' },
   { label: 'Lokal', value: 'lokal' },
-  { label: 'Övrigt', value: 'ovrigt' },
 ] as const
 
-const leaseTypeOptions = [
-  { label: 'Bostadskontrakt', value: 'Bostadskontrakt' },
-  { label: 'Campuskontrakt', value: 'Campuskontrakt' },
-  { label: 'Garagekontrakt', value: 'Garagekontrakt' },
-  { label: 'Kooperativ hyresrätt', value: 'Kooperativ hyresrätt' },
-  { label: 'Korttidsuthyrning', value: 'Korttidsuthyrning' },
-  { label: 'Lokalkontrakt', value: 'Lokalkontrakt' },
-  { label: 'Omförhandlingskontrakt', value: 'Omförhandlingskontrakt' },
-  { label: 'Övrigt', value: 'Övrigt' },
-  { label: 'P-Platskontrakt', value: 'P-Platskontrakt' },
-] as const
+// TODO: Enable when leaseType filtering is supported by the search API
+// const leaseTypeOptions = [
+//   { label: 'Bostadskontrakt', value: 'Bostadskontrakt' },
+//   { label: 'Campuskontrakt', value: 'Campuskontrakt' },
+//   { label: 'Garagekontrakt', value: 'Garagekontrakt' },
+//   { label: 'Kooperativ hyresrätt', value: 'Kooperativ hyresrätt' },
+//   { label: 'Korttidsuthyrning', value: 'Korttidsuthyrning' },
+//   { label: 'Lokalkontrakt', value: 'Lokalkontrakt' },
+//   { label: 'Omförhandlingskontrakt', value: 'Omförhandlingskontrakt' },
+//   { label: 'Övrigt', value: 'Övrigt' },
+//   { label: 'P-Platskontrakt', value: 'P-Platskontrakt' },
+// ] as const
 
 const statusOptions = [
-  { label: 'Gällande', value: '0' },
-  { label: 'Kommande', value: '1' },
-  { label: 'Uppsagd', value: '2' },
-  { label: 'Upphörd', value: '3' },
+  { label: 'Gällande', value: 'current' },
+  { label: 'Kommande', value: 'upcoming' },
+  { label: 'Uppsagd', value: 'abouttoend' },
+  { label: 'Upphört', value: 'ended' },
+  { label: 'Prel. uppsagt', value: 'preliminaryterminated' },
+  { label: 'Signering', value: 'pendingsignature' },
+  { label: 'Ej skickat', value: 'notsent' },
 ] as const
 
 const LeasesPage = () => {
@@ -63,17 +67,16 @@ const LeasesPage = () => {
   const searchProperties = usePropertySearch()
   const { data: costCenters } = useCostCenters()
 
-  // Client-side search over the static leaseTypeOptions list for the
-  // MultiSelectSearchFilterDropdown pattern (no backend call needed)
-  const searchLeaseTypes = useCallback(
-    async (query: string): Promise<SearchFilterOption[]> => {
-      const q = query.toLowerCase()
-      return leaseTypeOptions
-        .filter((opt) => opt.label.toLowerCase().includes(q))
-        .map((opt) => ({ label: opt.label, value: opt.value }))
-    },
-    []
-  )
+  // TODO: Enable when leaseType filtering is supported by the search API
+  // const searchLeaseTypes = useCallback(
+  //   async (query: string): Promise<SearchFilterOption[]> => {
+  //     const q = query.toLowerCase()
+  //     return leaseTypeOptions
+  //       .filter((opt) => opt.label.toLowerCase().includes(q))
+  //       .map((opt) => ({ label: opt.label, value: opt.value }))
+  //   },
+  //   []
+  // )
 
   const handlePageChange = (newPage: number) => {
     filters.setPage(newPage)
@@ -193,8 +196,17 @@ const LeasesPage = () => {
               onClick={handleExport}
               disabled={isExporting || (filters.meta?.totalRecords ?? 0) === 0}
             >
-              <Download className="h-4 w-4 mr-2" />
-              {isExporting ? 'Exporterar...' : 'Exportera Excel'}
+              {isExporting ? (
+                <>
+                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Exporterar...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportera Excel
+                </>
+              )}
             </Button>
           </div>
         </CardHeader>
@@ -203,9 +215,17 @@ const LeasesPage = () => {
             <FilterBar
               searchValue={filters.searchInput}
               onSearchChange={filters.setSearchInput}
-              searchPlaceholder="Sök på kontraktsnummer, hyresgäst, personnummer, adress..."
+              searchPlaceholder="Sök på kontraktsnummer, kundnummer, personnummer, adress..."
               hasActiveFilters={filters.hasActiveFilters}
               onClearFilters={filters.clearFilters}
+              hint={
+                /^\d+$/.test(filters.searchInput) &&
+                filters.searchInput.length >= 4 &&
+                filters.searchInput.length !== 10 &&
+                filters.searchInput.length !== 12
+                  ? 'Ange hela personnumret (10 eller 12 siffror) för att söka på personnummer.'
+                  : undefined
+              }
             >
               <ObjectTypeFilter
                 objectTypeOptions={objectTypeOptions.map((o) => ({
@@ -215,12 +235,6 @@ const LeasesPage = () => {
                 selectedObjectTypes={filters.selectedObjectTypes}
                 onObjectTypeChange={(vals) =>
                   filters.setFilterValues('objectType', vals)
-                }
-                parkingOptionValue="parkering"
-                loadParkingSpaceTypes={filters.loadParkingSpaceTypes}
-                selectedParkingSpaceTypes={filters.selectedParkingSpaceTypes}
-                onParkingSpaceTypeChange={(vals) =>
-                  filters.setFilterValues('parkingSpaceType', vals)
                 }
                 placeholder="Objekttyp"
               />
@@ -237,6 +251,22 @@ const LeasesPage = () => {
                 placeholder="Status"
               />
 
+              <SearchFilterDropdown
+                searchFn={async (query) =>
+                  query.trim()
+                    ? [{ label: query.trim(), value: query.trim() }]
+                    : []
+                }
+                minSearchLength={2}
+                selectedValue={filters.selectedTenantName || null}
+                onSelectionChange={(val) =>
+                  filters.setFilterValue('tenantName', val)
+                }
+                placeholder="Hyresgäst"
+                searchPlaceholder="Sök hyresgästnamn"
+              />
+
+              {/* TODO: Enable when leaseType filtering is supported by the search API
               <MultiSelectSearchFilterDropdown
                 searchFn={searchLeaseTypes}
                 minSearchLength={0}
@@ -247,6 +277,7 @@ const LeasesPage = () => {
                 placeholder="Kontraktstyp"
                 searchPlaceholder="Sök kontraktstyp"
               />
+              */}
 
               <MultiSelectSearchFilterDropdown
                 searchFn={searchProperties}
@@ -306,28 +337,54 @@ const LeasesPage = () => {
             </FilterBar>
           </div>
 
-          {filters.isLoading ? (
+          {filters.failureCount > 0 &&
+          filters.failureReason instanceof ApiError &&
+          filters.failureReason.status === 503 &&
+          !filters.error ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Systemet startar upp, försöker igen automatiskt...
+            </div>
+          ) : filters.isLoading ? (
             <div className="text-center py-8 text-muted-foreground">
               Laddar hyreskontrakt...
             </div>
           ) : filters.error ? (
             <div className="text-center py-8 text-destructive">
-              Ett fel uppstod vid hämtning av hyreskontrakt
+              {filters.error instanceof ApiError && filters.error.status === 503
+                ? 'Systemet tar längre tid än väntat att starta — försök igen om en stund'
+                : 'Ett fel uppstod vid hämtning av hyreskontrakt'}
+            </div>
+          ) : filters.isFetching && filters.leases.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="flex items-center justify-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <span>Söker...</span>
+              </div>
             </div>
           ) : filters.leases.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Inga hyreskontrakt hittades
             </div>
           ) : (
-            <ResponsiveTable
-              data={filters.leases}
-              columns={[selectColumn, ...leaseColumns]}
-              keyExtractor={(lease) => lease.leaseId}
-              mobileCardRenderer={LeaseMobileCard}
-              sortBy={filters.sortBy}
-              sortOrder={filters.sortOrder}
-              onSort={filters.handleSort}
-            />
+            <div className="relative">
+              {filters.isFetching && (
+                <div className="absolute inset-0 bg-background/60 flex items-center justify-center z-10 rounded-md">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    <span>Söker...</span>
+                  </div>
+                </div>
+              )}
+              <ResponsiveTable
+                data={filters.leases}
+                columns={[selectColumn, ...leaseColumns]}
+                keyExtractor={(lease) => lease.leaseId}
+                mobileCardRenderer={LeaseMobileCard}
+                sortBy={filters.sortBy}
+                sortOrder={filters.sortOrder}
+                onSort={filters.handleSort}
+              />
+            </div>
           )}
 
           <Pagination
