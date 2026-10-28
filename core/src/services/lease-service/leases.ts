@@ -926,8 +926,9 @@ export const routes = (router: KoaRouter) => {
               contactCode: lease.subletContactId,
               leaseId: lease.leaseId,
             },
-            'Failed to fetch sublet contact, returning lease without it'
+            'Failed to fetch sublet contact'
           )
+          return { ok: false, err: 'no-contact' }
         }
       }
 

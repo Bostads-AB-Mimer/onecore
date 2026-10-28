@@ -12,6 +12,9 @@ import config from '../../common/config'
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
 type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
+type GetLeasesByContactCodeOptions = z.infer<
+  typeof leasing.v1.GetLeasesByContactCodeOptionsSchema
+>
 type LeaseHomeInsurance = z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
 type HomeInsuranceExportRow = z.infer<
   typeof schemas.v1.HomeInsuranceExportRowSchema
@@ -31,7 +34,7 @@ export const getLease = async (leaseId: string): Promise<Lease | null> => {
 
 export const getLeasesByContactCode = async (
   contactCode: string,
-  options: GetLeasesOptions & { includeSubletLeases?: boolean }
+  options: Partial<GetLeasesByContactCodeOptions>
 ): Promise<Lease[]> => {
   const queryParams = new URLSearchParams()
 
