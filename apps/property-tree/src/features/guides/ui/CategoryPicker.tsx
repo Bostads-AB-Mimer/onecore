@@ -50,6 +50,9 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
   // such a value is shown as empty until the list knows it.
   const knownParent =
     parentId === NEW_CATEGORY || topLevel.some(({ id }) => id === parentId)
+  // A new guide has no category yet ('' here); only an id the list is still
+  // missing keeps the select closed.
+  const pendingParent = parentId !== '' && !knownParent
   const knownSub =
     subValue === NO_SUBCATEGORY ||
     subValue === NEW_CATEGORY ||
@@ -70,7 +73,7 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
           if (next === '') return
           onChange(next === NEW_CATEGORY ? { name: '' } : { id: next })
         }}
-        disabled={unavailable || !knownParent}
+        disabled={unavailable || pendingParent}
       >
         <SelectTrigger id="guide-category">
           <SelectValue
