@@ -6,15 +6,19 @@ const toMs = (d?: string) => (d ? new Date(d).getTime() : undefined)
 // ——— CHANGED: only use lastDebitDate ———
 export const pickEndDate = (lease: Lease) => lease.lastDebitDate ?? undefined
 
+// Voided (makulerat) is dead regardless of its dates: numeric 7 or 'Voided'.
+const isVoided = (s?: string | number) =>
+  s === 7 || (typeof s === 'string' && s.trim().toLowerCase() === 'voided')
+
 function normalizeBackendStatus(
   s?: string | number
 ): 'active' | 'upcoming' | 'ended' | 'abouttoend' | null {
-  // Numeric codes: 0 Current, 1 Upcoming, 2 AboutToEnd, 3 Ended, 7 Voided
+  // Handle numeric status codes (0 = Current, 1 = Upcoming, 2 = AboutToEnd, 3 = Ended)
   if (typeof s === 'number') {
     if (s === 0) return 'active'
     if (s === 1) return 'upcoming'
     if (s === 2) return 'abouttoend'
-    if (s === 3 || s === 7) return 'ended'
+    if (s === 3) return 'ended'
     return null
   }
 
@@ -22,12 +26,7 @@ function normalizeBackendStatus(
   if (!v) return null
   if (v === 'current' || v === 'active' || v === 'ongoing') return 'active'
   if (v === 'upcoming' || v === 'future' || v === 'planned') return 'upcoming'
-  if (
-    v === 'ended' ||
-    v === 'terminated' ||
-    v === 'ended/terminated' ||
-    v === 'voided'
-  )
+  if (v === 'ended' || v === 'terminated' || v === 'ended/terminated')
     return 'ended'
   if (v === 'abouttoend' || v === 'about to end') return 'abouttoend'
   return null
@@ -36,6 +35,8 @@ function normalizeBackendStatus(
 export function deriveDisplayStatus(
   lease: Lease
 ): 'active' | 'upcoming' | 'ended' {
+  if (isVoided(lease.status)) return 'ended'
+
   const now = Date.now()
   const start = toMs(lease.leaseStartDate)
   const end = toMs(pickEndDate(lease)) // ← lastDebitDate-only

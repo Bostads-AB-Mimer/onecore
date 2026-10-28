@@ -53,13 +53,16 @@ describe('deriveDisplayStatus', () => {
     ).toBe('active')
   })
 
-  it('treats a voided lease as ended', () => {
+  it('treats a voided lease as ended even when its start date is in the future', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-06-01'))
 
-    expect(deriveDisplayStatus(makeLease({ status: 'Voided' as any }))).toBe(
-      'ended'
-    )
-    expect(deriveDisplayStatus(makeLease({ status: 7 as any }))).toBe('ended')
+    const voided = { leaseStartDate: '2025-12-01', lastDebitDate: undefined }
+    expect(
+      deriveDisplayStatus(makeLease({ ...voided, status: 'Voided' as any }))
+    ).toBe('ended')
+    expect(
+      deriveDisplayStatus(makeLease({ ...voided, status: 7 as any }))
+    ).toBe('ended')
   })
 })

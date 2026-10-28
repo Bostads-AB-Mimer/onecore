@@ -185,7 +185,9 @@ export async function fetchAllLeasesForExport(
 }
 
 // Stages the cache never holds. Voided (makulerat) is not archived in Tenfast,
-// so filter[isArchived] does not exclude it and we drop it client-side.
+// so filter[isArchived] does not exclude it and we drop it client-side. The
+// full sync still relies on filter[isArchived]=false; the archived half here
+// only matters for the delta sync, whose list endpoint cannot filter.
 const isOutOfCache = (l: TenfastLease) =>
   l.stage === 'archived' || l.stage === 'voided'
 
