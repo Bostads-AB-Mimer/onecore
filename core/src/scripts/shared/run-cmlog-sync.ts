@@ -49,7 +49,7 @@ export type CmlogSync<T> = {
   toPayload: (change: T) => unknown
   fromPayload: (payload: unknown) => T
   describe: (change: T) => { subject: string; detail: string }
-  giveUpAdvice?: string
+  giveUpAdvice?: string | ((change: T, entry: FailedRowEntry) => string)
 }
 
 const capitalize = (text: string) =>
@@ -91,11 +91,15 @@ export const runCmlogSync = async <T>(
 
   const notifyGiveUp = (change: T, entry: FailedRowEntry) => {
     const { subject, detail } = def.describe(change)
+    const advice =
+      typeof def.giveUpAdvice === 'function'
+        ? def.giveUpAdvice(change, entry)
+        : (def.giveUpAdvice ?? DEFAULT_GIVE_UP_ADVICE)
     return notifyXpandSync(`${def.name}: ger upp ${subject}`, [
       `${capitalize(detail)} har misslyckats sedan ${entry.addedAt}.`,
       `Senaste fel: ${entry.lastError}`,
       ``,
-      `Raden har tagits bort ur återförsökskön och försöks inte igen. ${def.giveUpAdvice ?? DEFAULT_GIVE_UP_ADVICE}`,
+      `Raden har tagits bort ur återförsökskön och försöks inte igen. ${advice}`,
     ])
   }
 

@@ -137,6 +137,11 @@ export const syncLeases = (
       sync: syncLease,
       keyFor: (lease) =>
         `${lease.leaseId}:${lease.action}:${lease.timestamp.toISOString()}`,
+      // Only terminate and void share a key, so a queued create is never dropped.
+      supersedeKey: (lease) =>
+        lease.action === 'create'
+          ? `${lease.leaseId}:create:${lease.timestamp.toISOString()}`
+          : `${lease.leaseId}:end`,
       timestampOf: (lease) => lease.timestamp,
       toPayload: (lease) => ({
         ...lease,
@@ -152,8 +157,10 @@ export const syncLeases = (
         subject: `avtal ${lease.leaseId}`,
         detail: `avtal ${lease.leaseId} (action ${lease.action})`,
       }),
-      giveUpAdvice:
-        'Ändringen har inte nått Tenfast. Gör den i Tenfast för hand.',
+      giveUpAdvice: (_lease, entry) =>
+        entry.lastError.includes('termination-pdf-')
+          ? 'Avtalet är uppsagt i Tenfast, men uppsägningsdokumentet från Xpand kunde inte bifogas. Bifoga det i Tenfast för hand.'
+          : 'Ändringen har inte nått Tenfast. Gör den i Tenfast för hand.',
     },
     {
       stateFile: opts.stateFile ?? DEFAULT_STATE_FILE,

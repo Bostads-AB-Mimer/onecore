@@ -831,7 +831,6 @@ const getUpdatedLeases = async (
   }
 }
 
-// Leasing names the failed step in `error`; it goes into the retry queue and mails.
 const syncLeaseFailure = (
   statusCode: number,
   body: unknown
