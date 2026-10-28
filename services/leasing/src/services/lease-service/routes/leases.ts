@@ -1,9 +1,8 @@
 import KoaRouter from '@koa/router'
-import { leasing, schemas } from '@onecore/types'
+import { Lease, leasing, schemas } from '@onecore/types'
 import { mapLeasesToLfExportRows } from '../services/lf-export'
 import { z } from 'zod'
 import {
-  getLeases,
   getContacts,
   getContactByContactCode,
 } from '../adapters/xpand/tenant-lease-adapter'
@@ -19,6 +18,7 @@ import {
 
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import * as tenfastHelpers from '../helpers/tenfast'
 import config from '../../../common/config'
 import { toYearMonthDayString } from '../adapters/tenfast/schemas'
@@ -1222,12 +1222,36 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/leases/batch', async (ctx) => {
+  router.post('(.*)/leases/batch', boundTenfastCalls, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const leaseIds = (ctx.request.body as any).leaseIds as string[] // TODO schema
+    const leaseIds = [
+      ...new Set((ctx.request.body as any).leaseIds as string[]), // TODO schema
+    ]
 
     try {
-      const leases = await getLeases(leaseIds)
+      // Tenfast has no batch lookup, so fetch each lease the same way
+      // GET /leases/:leaseId does, a few at a time. A lease that fails is
+      // left out rather than failing the whole batch.
+      const concurrency = 10
+      const leases: Lease[] = []
+
+      for (let i = 0; i < leaseIds.length; i += concurrency) {
+        const chunk = leaseIds.slice(i, i + concurrency)
+        const results = await Promise.all(
+          chunk.map((leaseId) => tenfastAdapter.getLeaseByLeaseId(leaseId))
+        )
+
+        results.forEach((result, index) => {
+          if (result.ok) {
+            leases.push(tenfastHelpers.mapToOnecoreLease(result.data))
+          } else if (result.err !== 'not-found') {
+            logger.error(
+              { leaseId: chunk[index], err: result.err },
+              'POST /leases/batch: could not get lease from Tenfast'
+            )
+          }
+        })
+      }
 
       ctx.status = 200
       ctx.body = {

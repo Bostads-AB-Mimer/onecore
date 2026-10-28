@@ -624,6 +624,98 @@ describe('POST /leases', () => {
     expect(res.body.error).toBe('Unexpected error')
   })
 })
+
+describe('POST /leases/batch', () => {
+  it('returns leases from Tenfast mapped like GET /leases/:leaseId', async () => {
+    const current = factory.tenfastLease.build({
+      externalId: '216-704-00-0022/02',
+      stage: 'active',
+    })
+    const pending = factory.tenfastLease.build({
+      externalId: '306-001-01-0101/01',
+      stage: 'signingInProgress',
+    })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+      .mockResolvedValueOnce({ ok: true, data: current })
+      .mockResolvedValueOnce({ ok: true, data: pending })
+    const xpandSpy = jest.spyOn(tenantLeaseAdapter, 'getLeases')
+
+    const res = await request(app.callback())
+      .post('/leases/batch')
+      .send({ leaseIds: [current.externalId, pending.externalId] })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([
+      expect.objectContaining({
+        leaseId: '216-704-00-0022/02',
+        status: LeaseStatus.Current,
+      }),
+      expect.objectContaining({
+        leaseId: '306-001-01-0101/01',
+        status: LeaseStatus.PendingSignature,
+      }),
+    ])
+    expect(xpandSpy).not.toHaveBeenCalled()
+  })
+
+  it('leaves out leases Tenfast cannot find or fails to fetch', async () => {
+    const lease = factory.tenfastLease.build({
+      externalId: '216-704-00-0022/02',
+    })
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+      .mockResolvedValueOnce({ ok: true, data: lease })
+
+    const res = await request(app.callback())
+      .post('/leases/batch')
+      .send({ leaseIds: ['missing/01', 'broken/01', lease.externalId] })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(1)
+    expect(res.body.content[0].leaseId).toBe('216-704-00-0022/02')
+  })
+
+  it('returns a repeated lease id once', async () => {
+    const lease = factory.tenfastLease.build({
+      externalId: '216-704-00-0022/02',
+    })
+    const getLeaseSpy = jest
+      .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+      .mockResolvedValue({ ok: true, data: lease })
+
+    const res = await request(app.callback())
+      .post('/leases/batch')
+      .send({ leaseIds: [lease.externalId, lease.externalId] })
+
+    expect(res.status).toBe(200)
+    expect(getLeaseSpy).toHaveBeenCalledTimes(1)
+    expect(res.body.content).toHaveLength(1)
+  })
+
+  it('fetches every lease when there are more ids than one chunk', async () => {
+    const leaseIds = Array.from({ length: 25 }, (_, i) => `lease-${i}/01`)
+    const getLeaseSpy = jest
+      .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+      .mockImplementation(async (leaseId) => ({
+        ok: true,
+        data: factory.tenfastLease.build({ externalId: leaseId }),
+      }))
+
+    const res = await request(app.callback())
+      .post('/leases/batch')
+      .send({ leaseIds })
+
+    expect(res.status).toBe(200)
+    expect(getLeaseSpy).toHaveBeenCalledTimes(25)
+    expect(res.body.content.map((l: { leaseId: string }) => l.leaseId)).toEqual(
+      leaseIds
+    )
+  })
+})
+
 describe('GET /leases/search', () => {
   it('should return 400 for invalid query parameters', async () => {
     const res = await request(app.callback()).get(
