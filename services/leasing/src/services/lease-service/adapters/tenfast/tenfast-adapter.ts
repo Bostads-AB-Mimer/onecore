@@ -316,6 +316,8 @@ export const hasTerminationFile = async (
   }
 }
 
+const UPLOAD_TIMEOUT_MS = 60_000
+
 export const uploadTerminationFile = async (
   tenfastLeaseId: string,
   content: Buffer,
@@ -335,6 +337,7 @@ export const uploadTerminationFile = async (
         method: 'post',
         url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-termination-file?hyresvard=${tenfastCompanyId}`,
         data: form,
+        timeout: UPLOAD_TIMEOUT_MS,
       },
       { contentType: false }
     )
@@ -379,6 +382,7 @@ export const uploadLeaseFile = async (
         method: 'post',
         url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/upload-file?hyresvard=${tenfastCompanyId}`,
         data: form,
+        timeout: UPLOAD_TIMEOUT_MS,
       },
       { contentType: false }
     )

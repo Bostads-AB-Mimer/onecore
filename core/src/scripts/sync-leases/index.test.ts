@@ -72,7 +72,7 @@ describe('syncLeases', () => {
       .spyOn(leasingAdapter, 'getUpdatedLeases')
       .mockResolvedValue({ ok: true, data: [lease] })
 
-    jest
+    const propertyInfoSpy = jest
       .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
       .mockResolvedValue({
         status: 200,
@@ -99,6 +99,10 @@ describe('syncLeases', () => {
     // State file advanced to lease.timestamp
     const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(lease.timestamp.toISOString())
+
+    expect(propertyInfoSpy).toHaveBeenCalledWith(lease.rentalObjectId, {
+      timeoutMs: 30_000,
+    })
   })
 
   it('case 2: first failure — row queued + one failure mail sent', async () => {
@@ -563,7 +567,44 @@ describe('syncLeases', () => {
     expect(sendEmailSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('case 11: terminate synced but Xpand has no uppsägning PDF — one mail, row not queued', async () => {
+  it('case 11: terminate for a lease whose create is queued — held, not synced, no mail', async () => {
+    const create = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'create',
+      timestamp: new Date('2026-05-01T10:00:00.000Z'),
+    })
+    const terminate = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T11:00:00.000Z'),
+    })
+    await appendEntry(queueFile, makeLeaseEntry(create))
+
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [terminate] })
+    // The queued create still fails on its property lookup
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({ status: 500, data: undefined })
+    const syncLeaseSpy = jest.spyOn(leasingAdapter, 'syncLease')
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(syncLeaseSpy).not.toHaveBeenCalled()
+    const queue = await readQueue(queueFile)
+    expect(queue.map((e) => e.key)).toEqual([
+      'L-1:create:2026-05-01T10:00:00.000Z',
+      'L-1:terminate:2026-05-01T11:00:00.000Z',
+    ])
+    expect(queue[1].heldBehind).toBe('L-1:create:2026-05-01T10:00:00.000Z')
+    expect(sendEmailSpy).not.toHaveBeenCalled()
+  })
+
+  it('case 12: terminate synced but Xpand has no uppsägning PDF — one mail, row not queued', async () => {
     const lease = factory.leaseChange.build({
       leaseId: 'L-1',
       action: 'terminate',
@@ -598,7 +639,7 @@ describe('syncLeases', () => {
     )
   })
 
-  it('case 12: a failed uppsägning PDF step fails the row with the service error in the queue', async () => {
+  it('case 13: a failed uppsägning PDF step fails the row with the service error in the queue', async () => {
     const lease = factory.leaseChange.build({
       leaseId: 'L-1',
       action: 'terminate',
@@ -632,7 +673,7 @@ describe('syncLeases', () => {
     )
   })
 
-  it('case 13: create synced but the contract PDF failed — one mail, row not queued', async () => {
+  it('case 14: create synced but the contract PDF failed — one mail, row not queued', async () => {
     const lease = factory.leaseChange.build({
       leaseId: 'L-1',
       action: 'create',
@@ -807,5 +848,47 @@ describe('syncLeases', () => {
       'create',
       'terminate',
     ])
+  })
+
+  it('a void already held behind a queued terminate replaces it and is synced', async () => {
+    const terminate = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T09:00:00.000Z'),
+    })
+    const voidChange = factory.leaseChange.build({
+      leaseId: 'L-1',
+      action: 'void',
+      timestamp: new Date('2026-05-01T10:00:00.000Z'),
+    })
+    const terminateEntry = makeLeaseEntry(terminate)
+    await appendEntry(queueFile, terminateEntry)
+    await appendEntry(queueFile, {
+      ...makeLeaseEntry(voidChange),
+      heldBehind: terminateEntry.key,
+    })
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [] })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+    const syncLease = jest
+      .spyOn(leasingAdapter, 'syncLease')
+      .mockResolvedValue({
+        ok: true,
+        data: { action: 'voided', leaseId: 'L-1' },
+      })
+    jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(syncLease.mock.calls.map((call) => call[2])).toEqual(['void'])
+    expect(await readQueue(queueFile)).toEqual([])
   })
 })

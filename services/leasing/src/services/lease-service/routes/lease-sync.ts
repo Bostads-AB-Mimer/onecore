@@ -13,6 +13,7 @@ import {
   LeaseDocumentLookup,
 } from '../adapters/xpand/lease-document-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { AdapterResult } from '../adapters/types'
 import { z } from 'zod'
@@ -121,6 +122,7 @@ export const routes = (router: KoaRouter) => {
 
   router.post(
     '(.*)/leases/sync',
+    boundTenfastCalls,
     parseRequestBody(SyncLeaseRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)

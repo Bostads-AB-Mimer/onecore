@@ -14,6 +14,7 @@ import {
 } from '../adapters/xpand/tenant-lease-adapter'
 
 import { syncTenant } from '../adapters/tenfast/tenfast-adapter'
+import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import {
   addApplicantToToWaitingList,
   removeApplicantFromWaitingList,
@@ -1180,28 +1181,32 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Failed to sync contact to tenFAST
    */
-  router.post('(.*)/contacts/:contactCode/sync', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { contactCode } = ctx.params
+  router.post(
+    '(.*)/contacts/:contactCode/sync',
+    boundTenfastCalls,
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { contactCode } = ctx.params
 
-    const result = await syncTenant(contactCode)
+      const result = await syncTenant(contactCode)
 
-    if (!result.ok) {
-      ctx.status = 500
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          type: 'tenfast-error',
+          title: `Could not sync tenant to tenFAST: ${result.err}`,
+          status: 500,
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      ctx.status = 200
       ctx.body = {
-        type: 'tenfast-error',
-        title: `Could not sync tenant to tenFAST: ${result.err}`,
-        status: 500,
+        content: result.data,
+        skipped: result.data === null,
         ...metadata,
-      } satisfies RouteErrorResponse
-      return
+      }
     }
-
-    ctx.status = 200
-    ctx.body = {
-      content: result.data,
-      skipped: result.data === null,
-      ...metadata,
-    }
-  })
+  )
 }

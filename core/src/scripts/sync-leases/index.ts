@@ -13,6 +13,7 @@ import { notifyXpandSync } from '../shared/notify'
 
 const DEFAULT_STATE_FILE = '/data/last-timestamp-leases.txt'
 const DEFAULT_QUEUE_FILE = '/data/failed-rows.jsonl'
+const PROPERTY_INFO_TIMEOUT_MS = 30_000
 
 const isResidenceOrStorage = (info: RentalPropertyInfo): boolean => {
   if (info.type.toLowerCase() === 'lägenhet') return true
@@ -27,7 +28,8 @@ const isResidenceOrStorage = (info: RentalPropertyInfo): boolean => {
 
 const syncLease = async (lease: LeaseChange): Promise<void> => {
   const propertyInfo = await getRentalPropertyInfoFromXpand(
-    lease.rentalObjectId
+    lease.rentalObjectId,
+    { timeoutMs: PROPERTY_INFO_TIMEOUT_MS }
   )
   if (propertyInfo.status !== 200 || !propertyInfo.data) {
     throw new Error(
@@ -142,6 +144,9 @@ export const syncLeases = (
         lease.action === 'create'
           ? `${lease.leaseId}:create:${lease.timestamp.toISOString()}`
           : `${lease.leaseId}:end`,
+      // Tenfast answers "nothing to do" to a change to a lease it does not
+      // hold yet, so a lease's changes must not overtake a queued one.
+      orderKey: (lease) => lease.leaseId,
       timestampOf: (lease) => lease.timestamp,
       toPayload: (lease) => ({
         ...lease,
