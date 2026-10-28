@@ -6,6 +6,7 @@ import config from '../../common/config'
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { appendEntry, readQueue, FailedRowEntry } from './failed-sync-queue'
 import { CmlogSync, runCmlogSync } from './run-cmlog-sync'
+import { SyncStepsError } from '../../processes/sync-steps'
 
 type Change = { id: string; value: string; timestamp: Date }
 
@@ -240,6 +241,71 @@ describe('runCmlogSync', () => {
 
     expect(await readQueue(queueFile)).toHaveLength(1)
     expect(await readState()).toBe(c.timestamp.toISOString())
+  })
+
+  describe('undo failures', () => {
+    const undoFailure = () =>
+      new SyncStepsError(
+        'sak A-1 failed to sync: b=sync-failed, undo failed: a=unknown',
+        ['a']
+      )
+
+    it('a new row whose undo fails gets one undo mail, and its retry sends no second one', async () => {
+      const c = change()
+      fetchChanges
+        .mockResolvedValueOnce({ ok: true, data: [c] })
+        .mockResolvedValue({ ok: true, data: [] })
+      sync.mockRejectedValue(undoFailure())
+
+      await run()
+
+      expect(subjects()).toEqual([
+        'sync-things: nytt fel på sak A-1',
+        'sync-things: återställning misslyckades för sak A-1',
+      ])
+      expect((await readQueue(queueFile))[0].undoFailedNotifiedAt).toBe(
+        NOW.toISOString()
+      )
+
+      sendEmailSpy.mockClear()
+      await run({}, new Date(NOW.getTime() + 2 * 60 * 1000))
+
+      expect(sync).toHaveBeenCalledTimes(2)
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+    })
+
+    it('a queued row whose retry fails an undo mails once and keeps the marker', async () => {
+      await appendEntry(queueFile, entryFor(change()))
+      sync.mockRejectedValue(undoFailure())
+
+      await run()
+
+      expect(subjects()).toEqual([
+        'sync-things: återställning misslyckades för sak A-1',
+      ])
+      const [entry] = await readQueue(queueFile)
+      expect(entry.undoFailedNotifiedAt).toBe(NOW.toISOString())
+    })
+
+    it('the undo mail names the targets left changed', async () => {
+      await appendEntry(queueFile, entryFor(change()))
+      sync.mockRejectedValue(undoFailure())
+
+      await run()
+
+      const body = sendEmailSpy.mock.calls[0][0].body as string
+      expect(body).toContain('återställas i: a.')
+      expect(body).toContain('Kräver manuell kontroll')
+    })
+
+    it('a plain error sends no undo mail', async () => {
+      await appendEntry(queueFile, entryFor(change()))
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run()
+
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+    })
   })
 
   describe('retry schedule', () => {
