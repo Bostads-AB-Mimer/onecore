@@ -1,4 +1,5 @@
 import request from 'supertest'
+import { logger } from '@onecore/utilities'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
@@ -42,6 +43,29 @@ describe('POST /customers/:contactCode/sync', () => {
 
     expect(res.status).toBe(500)
     expect(res.body.error).toBe('Internal server error')
+  })
+
+  it('logs why the sync failed, without the contact values', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    jest
+      .spyOn(customerService, 'syncCustomer')
+      .mockRejectedValueOnce(
+        new Error(`Xledger refused ${payload.fullName} at ${payload.street}`)
+      )
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation()
+
+    await request(app.callback())
+      .post(`/customers/${payload.contactCode}/sync`)
+      .send(payload)
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: payload.contactCode,
+        message: 'Xledger refused [redacted] at [redacted]',
+      }),
+      'Error syncing contact to Xledger'
+    )
+    errorSpy.mockRestore()
   })
 
   it('responds with 200 and skipped:true when contact does not exist and create not requested', async () => {

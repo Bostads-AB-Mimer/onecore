@@ -23,6 +23,7 @@ jest.mock('@onecore/utilities', () => ({
   generateRouteMetadata: jest.fn(() => ({})),
 }))
 
+import { logger } from '@onecore/utilities'
 import {
   createInspectionWorkOrders,
   createWorkOrder,
@@ -443,6 +444,31 @@ describe('odoo-adapter syncContact', () => {
     })
   })
 
+  it('logs why Odoo refused, without the contact values', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, name: 'Gammal', email_address: false, phone_number: false },
+    ])
+    odooMock.update.mockRejectedValueOnce(
+      new Error('Invalid value Ny, Namn for ny@test.se on 0709')
+    )
+
+    const result = await syncContact({
+      contactCode: 'P1',
+      fullName: 'Ny, Namn',
+      emailAddress: 'ny@test.se',
+      phoneNumber: '0709',
+    })
+
+    expect(result).toEqual({ ok: false, err: 'could-not-update-contact' })
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: 'P1',
+        message: 'Invalid value [redacted] for [redacted] on [redacted]',
+      }),
+      'Error syncing contact to Odoo'
+    )
+  })
+
   it('skips when no tenant has the contact code', async () => {
     odooMock.searchRead.mockResolvedValueOnce([])
 
@@ -489,6 +515,27 @@ describe('odoo-adapter restoreContact', () => {
       ok: true,
       data: { restored: [1, 2], missing: [] },
     })
+  })
+
+  it('logs why Odoo refused, without the restored values', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, contact_code: 'P1' },
+      { id: 2, contact_code: 'P1' },
+    ])
+    odooMock.update.mockRejectedValueOnce(
+      new Error('Access denied writing Gammal, Namn')
+    )
+
+    const result = await restoreContact('P1', tenants)
+
+    expect(result).toEqual({ ok: false, err: 'could-not-restore-contact' })
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: 'P1',
+        message: 'Access denied writing [redacted]',
+      }),
+      'Error restoring contact in Odoo'
+    )
   })
 
   it('skips a tenant that no longer exists', async () => {

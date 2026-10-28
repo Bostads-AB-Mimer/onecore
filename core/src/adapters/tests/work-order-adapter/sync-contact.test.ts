@@ -198,4 +198,24 @@ describe('work-order-adapter.undoContactSyncInWorkOrder', () => {
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('g@test.se')
     errorSpy.mockRestore()
   })
+
+  it('logs the network error message', async () => {
+    mockServer.use(
+      http.post(`${config.workOrderService.url}/contacts/P1/undo-sync`, () =>
+        HttpResponse.error()
+      )
+    )
+    const errorSpy = jest.spyOn(logger, 'error')
+
+    await workOrderAdapter.undoContactSyncInWorkOrder('P1', undo)
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: 'P1',
+        message: expect.stringMatching(/\S/),
+      }),
+      'work-order-adapter.undoContactSyncInWorkOrder'
+    )
+    errorSpy.mockRestore()
+  })
 })

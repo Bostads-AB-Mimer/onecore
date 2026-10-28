@@ -114,4 +114,21 @@ describe('economy-adapter.syncContactToEconomy', () => {
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(payload.fullName)
     errorSpy.mockRestore()
   })
+
+  it('logs the network error message', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    nock(config.economyService.url)
+      .post(`/customers/${payload.contactCode}/sync`)
+      .replyWithError('socket hang up')
+    const errorSpy = jest.spyOn(logger, 'error')
+
+    const { contactCode, ...contactData } = payload
+    await economyAdapter.syncContactToEconomy(contactCode, contactData)
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ contactCode, message: 'socket hang up' }),
+      'economy-adapter.syncContactToEconomy'
+    )
+    errorSpy.mockRestore()
+  })
 })

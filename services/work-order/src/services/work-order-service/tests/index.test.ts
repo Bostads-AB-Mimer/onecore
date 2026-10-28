@@ -646,6 +646,24 @@ describe('work-order-service index', () => {
       expect(res.body.content).toEqual({ updatedCount: 1 })
     })
 
+    it('logs why the sync threw, without the contact values', async () => {
+      const payload = factory.syncContactToWorkOrderPayload.build()
+      jest
+        .spyOn(odooAdapter, 'syncContact')
+        .mockRejectedValueOnce(new Error(`Unexpected ${payload.fullName}`))
+      const errorSpy = jest.spyOn(logger, 'error')
+
+      const res = await request(app.callback())
+        .post(`/contacts/${payload.contactCode}/sync`)
+        .send(payload)
+
+      expect(res.status).toBe(500)
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Unexpected [redacted]' }),
+        'Error syncing contact to Odoo'
+      )
+    })
+
     it('responds with 400 when request body is invalid', async () => {
       const res = await request(app.callback())
         .post('/contacts/P12345/sync')
