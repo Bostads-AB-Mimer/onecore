@@ -156,6 +156,7 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
   // Mobile card renderer
   const mobileCardRenderer = (lease: Lease) => {
     const hasTenants = lease.tenants && lease.tenants.length > 0
+    const unresolved = unresolvedSubletContactId(lease)
 
     return (
       <LeaseMobileCard
@@ -216,11 +217,9 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
               <span className="text-muted-foreground">Ingen hyresgäst</span>
             </div>
           )}
-          {unresolvedSubletContactId(lease) && (
+          {unresolved && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">
-                {unresolvedSubletContactId(lease)}
-              </span>
+              <span className="text-muted-foreground">{unresolved}</span>
               <SecondaryRentalBadge />
             </div>
           )}

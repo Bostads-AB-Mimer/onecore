@@ -186,7 +186,10 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
       (l) =>
         Number(l.status) !== LeaseStatus.Ended &&
         l.status !== 'Ended' &&
-        l.subletContactId !== contactCode
+        !(
+          l.subletContactId === contactCode &&
+          !l.tenantContactIds?.includes(contactCode)
+        )
     )
   }, [leases, contactCode])
 
