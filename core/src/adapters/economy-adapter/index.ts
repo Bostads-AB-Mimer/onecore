@@ -536,7 +536,7 @@ export async function getAutogiroConsent(
 }
 
 const PaymentsSinceResultSchema = z.object({
-  events: schemas.v1.InvoicePaymentEventSchema.array(),
+  events: schemas.v1.PaymentSyncEventSchema.array(),
   lastCursor: z.string().nullable(),
 })
 
