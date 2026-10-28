@@ -25,7 +25,10 @@ import {
   WorkOrder,
   WorkOrderMessage,
 } from '../../schemas'
-import type { SyncContactToWorkOrderPayload } from '@onecore/types'
+import type {
+  SyncContactToWorkOrderPayload,
+  SyncContactToWorkOrderUndo,
+} from '@onecore/types'
 
 // Inspection-origin work orders all use this category + space; resolved by name
 // at runtime because Odoo ids differ per environment.
@@ -804,22 +807,37 @@ export const addMessageToWorkOrder = async (
   }
 }
 
+type OdooTenantValues = {
+  id: number
+  name: string
+  email_address: string | false
+  phone_number: string | false
+}
+
+const errorName = (error: unknown) =>
+  error instanceof Error ? error.name : typeof error
+
 export const syncContact = async (
   payload: SyncContactToWorkOrderPayload
 ): Promise<
   AdapterResult<
-    { updatedCount: number } | null,
+    {
+      updatedCount: number
+      previous: SyncContactToWorkOrderUndo['tenants']
+    } | null,
     'could-not-update-contact' | 'unknown'
   >
 > => {
   try {
     await odoo.connect()
 
-    const tenantIds: number[] = await odoo.search('maintenance.tenant', {
-      contact_code: payload.contactCode,
-    })
+    const tenants = await odoo.searchRead<OdooTenantValues>(
+      'maintenance.tenant',
+      { contact_code: payload.contactCode },
+      ['name', 'email_address', 'phone_number']
+    )
 
-    if (tenantIds.length === 0) {
+    if (tenants.length === 0) {
       logger.warn(
         { contactCode: payload.contactCode },
         'No tenant found in Odoo, skipping'
@@ -839,14 +857,76 @@ export const syncContact = async (
       updateData.phone_number = payload.phoneNumber
     }
 
-    for (const tenantId of tenantIds) {
-      await odoo.update('maintenance.tenant', tenantId, updateData)
+    await odoo.update(
+      'maintenance.tenant',
+      tenants.map((t) => t.id),
+      updateData
+    )
+
+    return {
+      ok: true,
+      data: {
+        updatedCount: tenants.length,
+        previous: tenants.map((t) => ({
+          id: t.id,
+          fullName: t.name,
+          emailAddress: t.email_address || null,
+          phoneNumber: t.phone_number || null,
+        })),
+      },
+    }
+  } catch (error) {
+    logger.error(
+      { contactCode: payload.contactCode, errorName: errorName(error) },
+      'Error syncing contact to Odoo'
+    )
+    return { ok: false, err: 'could-not-update-contact' }
+  }
+}
+
+export const restoreContact = async (
+  contactCode: string,
+  tenants: SyncContactToWorkOrderUndo['tenants']
+): Promise<
+  AdapterResult<
+    { restored: number[]; missing: number[] },
+    'foreign-tenant' | 'could-not-restore-contact'
+  >
+> => {
+  try {
+    await odoo.connect()
+
+    const ids = tenants.map((t) => t.id)
+    const existing = await odoo.searchRead<{
+      id: number
+      contact_code: string
+    }>('maintenance.tenant', [['id', 'in', ids]], ['contact_code'])
+    if (existing.some((t) => t.contact_code !== contactCode)) {
+      return { ok: false, err: 'foreign-tenant' }
     }
 
-    return { ok: true, data: { updatedCount: tenantIds.length } }
+    const existingIds = new Set(existing.map((t) => t.id))
+    const restored: number[] = []
+    for (const tenant of tenants) {
+      if (!existingIds.has(tenant.id)) continue
+      await odoo.update('maintenance.tenant', tenant.id, {
+        name: tenant.fullName,
+        email_address: tenant.emailAddress ?? false,
+        phone_number: tenant.phoneNumber ?? false,
+      })
+      restored.push(tenant.id)
+    }
+
+    return {
+      ok: true,
+      data: { restored, missing: ids.filter((id) => !existingIds.has(id)) },
+    }
   } catch (error) {
-    logger.error(error, 'Error syncing contact to Odoo')
-    return { ok: false, err: 'could-not-update-contact' }
+    logger.error(
+      { contactCode, errorName: errorName(error) },
+      'Error restoring contact in Odoo'
+    )
+    return { ok: false, err: 'could-not-restore-contact' }
   }
 }
 

@@ -1,7 +1,10 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
-import { SyncContactToWorkOrderSchema } from '@onecore/types'
+import {
+  SyncContactToWorkOrderSchema,
+  SyncContactToWorkOrderUndoSchema,
+} from '@onecore/types'
 import * as odooAdapter from './adapters/odoo-adapter'
 import {
   CreateInspectionWorkOrdersBodySchema,
@@ -1746,17 +1749,102 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = {
-        content: result.data,
+        content: result.data && { updatedCount: result.data.updatedCount },
         skipped: result.data === null,
+        ...(result.data && { undo: { tenants: result.data.previous } }),
         ...metadata,
       }
     } catch (err: unknown) {
-      logger.error(err, 'Error syncing contact to Odoo')
+      logger.error(
+        {
+          contactCode,
+          errorName: err instanceof Error ? err.name : typeof err,
+        },
+        'Error syncing contact to Odoo'
+      )
       ctx.status = 500
       ctx.body = {
         error: 'Internal server error',
         ...metadata,
       }
     }
+  })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/undo-sync:
+   *   post:
+   *     summary: Restore tenant values in Odoo after a failed contact sync
+   *     description: Writes back the values a contact sync replaced, as returned in its undo object. Tenants that no longer exist are skipped.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - tenants
+   *             properties:
+   *               tenants:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required: [id, fullName, emailAddress, phoneNumber]
+   *                   properties:
+   *                     id:
+   *                       type: integer
+   *                     fullName:
+   *                       type: string
+   *                     emailAddress:
+   *                       type: string
+   *                       nullable: true
+   *                     phoneNumber:
+   *                       type: string
+   *                       nullable: true
+   *     responses:
+   *       200:
+   *         description: Tenants restored
+   *       400:
+   *         description: Invalid request body, or a tenant belongs to another contact
+   *       500:
+   *         description: Failed to restore tenants in Odoo
+   */
+  router.post('(.*)/contacts/:contactCode/undo-sync', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { contactCode } = ctx.params as { contactCode: string }
+    const parseResult = SyncContactToWorkOrderUndoSchema.safeParse(
+      ctx.request.body
+    )
+
+    if (!parseResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid request body', ...metadata }
+      return
+    }
+
+    const result = await odooAdapter.restoreContact(
+      contactCode,
+      parseResult.data.tenants
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { contactCode, err: result.err },
+        'Error undoing contact sync'
+      )
+      ctx.status = result.err === 'foreign-tenant' ? 400 : 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
   })
 }
