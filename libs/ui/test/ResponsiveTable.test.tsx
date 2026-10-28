@@ -135,4 +135,75 @@ describe('ResponsiveTable', () => {
     expect(screen.getByText('Anna')).toBeTruthy()
     expect(screen.queryByText('Västerås')).toBeNull()
   })
+
+  describe('expandableContent', () => {
+    // Only Anna has details; Bo gets no expand button.
+    const details = (r: Row) => (r.id === '1' ? `Detaljer för ${r.name}` : null)
+
+    it('toggles the details row under a row that has content', async () => {
+      const onRowClick = vi.fn()
+      render(
+        <ResponsiveTable
+          data={rows}
+          columns={columns}
+          keyExtractor={getId}
+          expandableContent={details}
+          onRowClick={onRowClick}
+        />
+      )
+      expect(
+        screen.getAllByRole('button', { name: 'Visa detaljer' })
+      ).toHaveLength(1)
+      expect(screen.queryByText('Detaljer för Anna')).toBeNull()
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Visa detaljer' })
+      )
+      expect(screen.getByText('Detaljer för Anna')).toBeTruthy()
+      expect(onRowClick).not.toHaveBeenCalled()
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Dölj detaljer' })
+      )
+      expect(screen.queryByText('Detaljer för Anna')).toBeNull()
+    })
+
+    it('spans the details cell over the expand, checkbox and data columns', async () => {
+      function SelectableExpandable() {
+        const selection = useRowSelection(rows, getId)
+        return (
+          <ResponsiveTable
+            data={rows}
+            columns={columns}
+            keyExtractor={getId}
+            selection={selection}
+            expandableContent={details}
+          />
+        )
+      }
+      render(<SelectableExpandable />)
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Visa detaljer' })
+      )
+
+      const cell = screen.getByText('Detaljer för Anna').closest('td')
+      expect(cell?.getAttribute('colspan')).toBe(String(columns.length + 2))
+    })
+
+    it('shows the details under the card on mobile', async () => {
+      setMobile(true)
+      render(
+        <ResponsiveTable
+          data={rows}
+          columns={columns}
+          keyExtractor={getId}
+          expandableContent={details}
+        />
+      )
+      await userEvent.click(
+        screen.getByRole('button', { name: /Visa detaljer/ })
+      )
+      expect(screen.getByText('Detaljer för Anna')).toBeTruthy()
+    })
+  })
 })

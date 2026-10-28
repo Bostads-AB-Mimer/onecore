@@ -126,7 +126,7 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('/invoices/miscellaneous', async (ctx) => {
+  router.post('/miscellaneous-invoices', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const result = await economyAdapter.submitMiscellaneousInvoice(
       JSON.parse(ctx.request.body.invoice),
@@ -369,6 +369,39 @@ export const routes = (router: KoaRouter) => {
       ctx.body = makeSuccessResponseBody({ ok: true }, metadata)
     }
   )
+
+  router.get('/miscellaneous-invoices', async (ctx) => {
+    const queryParams = economy.GetMiscellaneousInvoicesQueryParams.safeParse(
+      ctx.query
+    )
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      return
+    }
+
+    const metadata = generateRouteMetadata(ctx)
+    const result = await economyAdapter.getMiscellaneousInvoices({
+      from: queryParams.data?.from,
+      to: queryParams.data?.to,
+      after: queryParams.data?.after,
+      pageSize: queryParams.data?.pageSize,
+    })
+
+    if (!result.ok) {
+      ctx.status = 500
+      ctx.body = {
+        error: 'Unknown error',
+      }
+      return
+    } else {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(
+        { content: result.data.content, pageInfo: result.data.pageInfo },
+        metadata
+      )
+    }
+  })
 
   router.get('/xledger-contacts', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

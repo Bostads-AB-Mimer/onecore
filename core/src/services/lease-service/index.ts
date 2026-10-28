@@ -41,6 +41,9 @@ import { routes as vacantApartmentsRoutes } from './vacant-apartments'
 import { registerSchema } from '../../utils/openapi'
 import { Contact, Lease, RentalObjectRentInfo } from './schemas/lease'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
+import { resolvePersonnummerInQuery } from '../../adapters/contacts-adapter/lease-query'
+import { contactsAdapter } from '../../adapters/contacts-adapter'
+import { withProtectedIdentityDetails } from '../../processes/contacts'
 
 /**
  * @swagger
@@ -246,7 +249,7 @@ export const routes = (router: KoaRouter) => {
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode, tenantName]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -286,7 +289,8 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await leasingAdapter.getContactsByFilters(resolved.query)
+    const contactsQuery = await resolvePersonnummerInQuery(resolved.query)
+    const result = await leasingAdapter.getContactsByFilters(contactsQuery)
 
     if (!result.ok) {
       ctx.status = 500
@@ -1097,7 +1101,7 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: res.data,
+      content: await withProtectedIdentityDetails(contactsAdapter, res.data),
       ...metadata,
     }
   })
@@ -1193,7 +1197,7 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: res.data,
+      content: await withProtectedIdentityDetails(contactsAdapter, res.data),
       ...metadata,
     }
   })

@@ -24,6 +24,7 @@ export {
   type LeaseTerminationConfirmationRequest,
   type LeaseTerminationConfirmationEmail,
 } from './communication/tenant-notification'
+export * as guides from './guides'
 export * from './room'
 
 export * as schemas from './schemas'
@@ -34,6 +35,16 @@ export {
   type SyncContactToWorkOrderPayload,
 } from './schemas/v1/contact-sync'
 export { LeaseChangeSchema, type LeaseChange } from './schemas/v1/lease-sync'
+export {
+  RentalObjectTypeChangeSchema,
+  type RentalObjectTypeChange,
+  RentalObjectTypeChangesSchema,
+  type RentalObjectTypeChanges,
+  SyncRentalObjectTypeRequestSchema,
+  type SyncRentalObjectTypeRequest,
+  SyncRentalObjectTypeResponseSchema,
+  type SyncRentalObjectTypeResponse,
+} from './schemas/v1/rental-object-type-sync'
 export { paginatedResponseSchema } from './schemas/pagination'
 export { KeycloakUserSchema, type KeycloakUser } from './schemas/keycloak-user'
 export * as fileStorageSchemas from './schemas/file-storage'

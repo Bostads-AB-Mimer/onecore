@@ -1,6 +1,7 @@
 {
   "type": "individual",
   "contactCode": "P184660",
+  "protectedIdentity": false,
   "personal": {
     "firstName": "Bellatrix",
     "lastName": "Julaftonsson",

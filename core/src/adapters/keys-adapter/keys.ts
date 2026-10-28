@@ -69,6 +69,27 @@ export const KeysApi = {
     }
   },
 
+  getBatchByRentalObject: async (
+    rentalObjectCodes: string[]
+  ): Promise<
+    AdapterResult<Record<string, KeyDetails[]>, 'bad-request' | CommonErr>
+  > => {
+    try {
+      const { data, error, response } = await client().GET(
+        '/keys/batch/by-rental-object',
+        { params: { query: { rentalObjectCodes } } }
+      )
+      if (error || !response.ok) return fail(mapFetchError(response))
+      return ok(z.record(z.array(KeyDetailsSchema)).parse(data.content))
+    } catch (e) {
+      logger.error(
+        { err: e },
+        'keys-adapter: GET /keys/batch/by-rental-object failed'
+      )
+      return fail('unknown')
+    }
+  },
+
   get: async (
     id: string
   ): Promise<AdapterResult<Key, 'not-found' | CommonErr>> => {

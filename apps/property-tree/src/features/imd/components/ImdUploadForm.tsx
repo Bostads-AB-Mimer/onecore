@@ -10,6 +10,8 @@ import {
   X,
 } from 'lucide-react'
 
+import { buildImdOutputFilename } from '@/features/imd/lib/imdOutputFilename'
+
 import { type IMDProcessError, imdService } from '@/services/api/core'
 
 import { cn } from '@/shared/lib/utils'
@@ -39,6 +41,7 @@ export function ImdUploadForm() {
   const [result, setResult] = useState<Awaited<
     ReturnType<typeof imdService.processIMD>
   > | null>(null)
+  const [processedAt, setProcessedAt] = useState<Date | null>(null)
 
   const mutation = useMutation<
     Awaited<ReturnType<typeof imdService.processIMD>>,
@@ -47,6 +50,7 @@ export function ImdUploadForm() {
   >({
     mutationFn: (csv: string) => imdService.processIMD(csv),
     onSuccess: (data) => {
+      setProcessedAt(new Date())
       setResult(data)
       toast({
         title: 'Bearbetning klar',
@@ -75,6 +79,7 @@ export function ImdUploadForm() {
   const acceptFile = (file: File) => {
     setSelectedFile(file)
     setResult(null)
+    setProcessedAt(null)
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,6 +123,7 @@ export function ImdUploadForm() {
   const handleRemoveFile = () => {
     setSelectedFile(null)
     setResult(null)
+    setProcessedAt(null)
   }
 
   const handleSubmit = async () => {
@@ -127,15 +133,19 @@ export function ImdUploadForm() {
   }
 
   const handleDownloadEnriched = () => {
-    if (!result) return
-    const baseName = selectedFile?.name?.replace(/\.csv$/i, '') ?? 'imd'
-    downloadCsv(result.enrichedCsv, `${baseName}-tenfast.csv`)
+    if (!result || !processedAt) return
+    downloadCsv(
+      result.enrichedCsv,
+      buildImdOutputFilename(selectedFile?.name, 'tenfast', processedAt)
+    )
   }
 
   const handleDownloadUnprocessed = () => {
-    if (!result) return
-    const baseName = selectedFile?.name?.replace(/\.csv$/i, '') ?? 'imd'
-    downloadCsv(result.unprocessedCsv, `${baseName}-ej-bearbetade.csv`)
+    if (!result || !processedAt) return
+    downloadCsv(
+      result.unprocessedCsv,
+      buildImdOutputFilename(selectedFile?.name, 'ej-bearbetade', processedAt)
+    )
   }
 
   const numEnriched = result?.numEnriched ?? 0

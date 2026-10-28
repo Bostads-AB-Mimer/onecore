@@ -5,9 +5,9 @@ import { logger } from '@onecore/utilities'
 import hash from './hash'
 import { createToken } from './jwt'
 import auth from './keycloak'
-import { getUsersByRole } from './keycloak-admin-adapter'
+import { getUsersByRole, KeycloakUser } from './keycloak-admin-adapter'
 import { extractToken } from '../../middlewares/extract-token'
-import { requireAuth } from '../../middlewares/keycloak-auth'
+import { requireAuth, requireRole } from '../../middlewares/keycloak-auth'
 
 /**
  * @swagger
@@ -22,6 +22,7 @@ import { requireAuth } from '../../middlewares/keycloak-auth'
  *   schemas:
  *     KeycloakUser:
  *       type: object
+ *       description: The parts of a Keycloak user that clients need to show and pick users.
  *       required:
  *         - id
  *         - username
@@ -34,35 +35,35 @@ import { requireAuth } from '../../middlewares/keycloak-auth'
  *           type: string
  *         lastName:
  *           type: string
- *         email:
- *           type: string
- *         emailVerified:
- *           type: boolean
  *         attributes:
  *           type: object
- *           description: Open-ended map of custom user attributes. Keys are realm-configurable; each value is an array of strings.
- *           additionalProperties:
- *             type: array
- *             items:
- *               type: string
- *         createdTimestamp:
- *           type: integer
- *           format: int64
- *         enabled:
- *           type: boolean
- *         totp:
- *           type: boolean
- *         disableableCredentialTypes:
- *           type: array
- *           items:
- *             type: string
- *         requiredActions:
- *           type: array
- *           items:
- *             type: string
- *         notBefore:
- *           type: integer
+ *           description: The user attributes employeeId and mobilePhone, when set. Each value is an array of strings.
+ *           properties:
+ *             employeeId:
+ *               type: array
+ *               items:
+ *                 type: string
+ *             mobilePhone:
+ *               type: array
+ *               items:
+ *                 type: string
  */
+
+// Only what clients use (property-tree lists users to pick from): no email,
+// credentials or account state.
+const SHARED_ATTRIBUTES = ['employeeId', 'mobilePhone']
+
+const toSharedUser = (user: KeycloakUser) => ({
+  id: user.id,
+  username: user.username,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  attributes: Object.fromEntries(
+    Object.entries(user.attributes ?? {}).filter(([name]) =>
+      SHARED_ATTRIBUTES.includes(name)
+    )
+  ),
+})
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
@@ -283,7 +284,9 @@ export const routes = (router: KoaRouter) => {
    *       '200':
    *         description: User profile information
    *       '401':
-   *         description: Unauthorized
+   *         description: Unauthorized, or the token is expired or can't be verified
+   *       '503':
+   *         description: Keycloak's signing keys can't be fetched, so the token can't be verified
    */
   router.get('(.*)/auth/profile', extractToken, requireAuth, async (ctx) => {
     ctx.body = ctx.state.user
@@ -358,11 +361,13 @@ export const routes = (router: KoaRouter) => {
    *       '401':
    *         description: Unauthorized
    *       '403':
-   *         description: Forbidden — insufficient permissions to query role members
+   *         description: Forbidden — the user lacks the api-access role
    *       '404':
    *         description: Role not found
    *       '502':
-   *         description: Keycloak unreachable
+   *         description: Keycloak's admin API is unreachable, so the users can't be listed
+   *       '503':
+   *         description: Keycloak's signing keys can't be fetched, so the token can't be verified
    *       '500':
    *         description: Internal server error
    */
@@ -370,6 +375,7 @@ export const routes = (router: KoaRouter) => {
     '(.*)/auth/roles/:roleName/users',
     extractToken,
     requireAuth,
+    requireRole('api-access'),
     async (ctx) => {
       const { roleName } = ctx.params
       const result = await getUsersByRole(roleName)
@@ -381,7 +387,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.status = 200
-      ctx.body = { content: result.data }
+      ctx.body = { content: result.data.map(toSharedUser) }
     }
   )
 }

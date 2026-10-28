@@ -14,14 +14,9 @@ import {
 import {
   logger,
   generateRouteMetadata,
-  setExcelDownloadHeaders,
-  createExcelExport,
-  joinField,
-  formatDateForExcel,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 
-import { LeaseStatusLabel } from '@onecore/types'
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import * as tenfastHelpers from '../helpers/tenfast'
@@ -35,6 +30,21 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
  *   - name: Leases
  *     description: Endpoints related to lease operations
  */
+
+type KoaHttpErrorLike = {
+  status: number
+  message: string
+  headers?: Record<string, string>
+}
+
+function isKoaHttpError(error: unknown): error is KoaHttpErrorLike {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    typeof (error as { status: unknown }).status === 'number'
+  )
+}
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -279,8 +289,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /leases/export:
    *   get:
-   *     summary: Export leases to Excel
-   *     description: Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+   *     summary: Get all leases matching search filters, for export
+   *     description: Returns the full (unpaginated) set of leases matching the same filters as /leases/search. Raw data only — contact enrichment and Excel generation happen in core.
    *     tags: [Leases]
    *     parameters:
    *       - in: query
@@ -340,16 +350,9 @@ export const routes = (router: KoaRouter) => {
    *           items:
    *             type: string
    *         description: District names
-   *     produces:
-   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
    *     responses:
    *       200:
-   *         description: Excel file download
-   *         content:
-   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-   *             schema:
-   *               type: string
-   *               format: binary
+   *         description: Successfully retrieved leases.
    *       400:
    *         description: Invalid query parameters
    *       500:
@@ -390,61 +393,23 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      // Fetch all matching leases using cursor-based pagination (O(n) API calls)
-      const allLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+      const rawLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
         queryParams.data,
         ctx
       )
 
-      // Create Excel from the complete dataset
-      const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({
-        sheetName: 'Hyreskontrakt',
-        columns: [
-          { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
-          { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
-          { header: 'Hyresgäst', key: 'tenantName', width: 30 },
-          { header: 'Kundnummer', key: 'contactCode', width: 18 },
-          { header: 'E-post', key: 'email', width: 30 },
-          { header: 'Telefon', key: 'phone', width: 15 },
-          { header: 'Objekttyp', key: 'objectType', width: 12 },
-          { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
-          { header: 'Adress', key: 'address', width: 35 },
-          { header: 'Fastighet', key: 'property', width: 20 },
-          { header: 'Distrikt', key: 'district', width: 15 },
-          { header: 'Startdatum', key: 'startDate', width: 12 },
-          { header: 'Slutdatum', key: 'endDate', width: 12 },
-          { header: 'Status', key: 'status', width: 15 },
-        ],
-        data: allLeases,
-        rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
-          leaseId: lease.leaseId,
-          rentalObjectCode: lease.rentalObjectCode || '',
-          tenantName: joinField(lease.contacts, (c) =>
-            c.contactType === 'subletTenant' ? `${c.name} (andrahand)` : c.name
-          ),
-          contactCode: joinField(lease.contacts, (c) =>
-            c.contactType === 'subletTenant'
-              ? `${c.contactCode} (andrahand)`
-              : c.contactCode
-          ),
-          email: joinField(lease.contacts, (c) => c.email),
-          phone: joinField(lease.contacts, (c) => c.phone),
-          objectType: lease.parkingSpaceType || lease.objectTypeCode,
-          leaseType: lease.leaseType,
-          address: lease.address || '',
-          property: lease.property || '',
-          district: lease.districtName || '',
-          startDate: formatDateForExcel(lease.startDate),
-          endDate: formatDateForExcel(lease.lastDebitDate),
-          status: LeaseStatusLabel[lease.status] ?? String(lease.status),
-        }),
-      })
-
-      // 3. Set headers and return
-      setExcelDownloadHeaders(ctx, 'hyreskontrakt')
-      ctx.body = buffer
+      ctx.status = 200
+      ctx.body = { content: rawLeases, ...metadata }
     } catch (error: unknown) {
-      logger.error({ error, metadata }, 'Error exporting leases to Excel')
+      // Set by hand — a re-thrown error hits errorHandler(), which always
+      // forces status 500 regardless of the error's own status.
+      if (isKoaHttpError(error)) {
+        if (error.headers) ctx.set(error.headers)
+        ctx.status = error.status
+        ctx.body = { error: error.message, ...metadata }
+        return
+      }
+      logger.error({ error, metadata }, 'Error fetching leases for export')
       ctx.status = 500
       ctx.body = {
         error: error instanceof Error ? error.message : 'Export failed',
@@ -628,6 +593,13 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = result
     } catch (error: unknown) {
+      if (isKoaHttpError(error)) {
+        if (error.headers) ctx.set(error.headers)
+        ctx.status = error.status
+        ctx.body = { error: error.message, ...metadata }
+        return
+      }
+
       ctx.status = 500
 
       if (error instanceof Error) {

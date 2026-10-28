@@ -1,5 +1,3 @@
-// fetch is stable in Node.js 20 LTS but eslint-plugin-n still flags it as experimental
-/* eslint-disable n/no-unsupported-features/node-builtins */
 import config from '../../../common/config'
 import { ParkingSpaceOfferSms, WorkOrderSms } from '@onecore/types'
 import { logger } from '@onecore/utilities'

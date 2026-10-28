@@ -37,18 +37,20 @@ export const TenfastRentalPropertySchema = z.object({
   hyraVat: z.number(),
   hyror: z.array(TenfastInvoiceRowSchema),
   nummer: z.string(),
-  skvNummer: z.number().nullable(),
+  // The Swedish Tax Agency's apartment number. Tenfast leaves it out for
+  // objects that have none, such as parking spaces.
+  skvNummer: z.number().nullish(),
   postnummer: z.string(),
   postadress: z.string(),
   commonName: z.string().optional(),
   stad: z.string(),
   stadsdel: z.string(),
   typ: z.string(),
-  kvm: z.number().nullable(),
-  roomCount: z.number().nullable(),
-  bostadType: z.string().nullable(),
-  parkeringType: z.string().nullable(),
-  lokalType: z.string().nullable(),
+  kvm: z.number().nullable().optional(),
+  roomCount: z.number().nullable().optional(),
+  bostadType: z.string().nullable().optional(),
+  parkeringType: z.string().nullable().optional(),
+  lokalType: z.string().nullable().optional(),
   category: z.any(), // TODO ? ska vara string
   description: z.string().optional(),
   public: z.boolean().optional(),
@@ -156,7 +158,8 @@ export const TenfastInvoiceSchema = z.object({
           z.object({
             _id: z.string(),
             nummer: z.string(),
-            skvNummer: z.number().nullable(),
+            // Left out for parking spaces, see TenfastRentalPropertySchema.
+            skvNummer: z.number().nullish(),
             postadress: z.string(),
             externalId: z.string(),
             displayName: z.string(),
@@ -315,6 +318,28 @@ export const TenfastBatchGetLeaseSchema = TenfastLeaseSchema.extend({
   ),
 })
 
+// Lean lease schema for looking up a tenant's leases, parsing only what the
+// IMD enrichment needs so unrelated fields can't fail the lookup.
+export const TenfastTenantLeaseSchema = z.object({
+  externalId: z.string(),
+  stage: z.string(),
+  startDate: optionalDateField,
+  endDate: optionalDateField,
+  hyresobjekt: z.array(
+    z.union([
+      z.string(),
+      z.object({ typ: z.string().optional() }).passthrough(),
+    ])
+  ),
+})
+
+export const TenfastTenantLeasesResponseSchema = z.object({
+  records: z.array(TenfastTenantLeaseSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
 export const TenfastBatchGetRentalObjectSchema = z
   .object({
     _id: z.string(),
@@ -362,6 +387,7 @@ export type TenfastTenant = z.infer<typeof TenfastTenantSchema>
 export type TenfastLease = z.infer<typeof TenfastLeaseSchema>
 export type TenfastRentArticle = z.infer<typeof TenfastRentArticleSchema>
 export type TenfastBatchGetLease = z.infer<typeof TenfastBatchGetLeaseSchema>
+export type TenfastTenantLease = z.infer<typeof TenfastTenantLeaseSchema>
 export type TenfastBatchGetRentalObject = z.infer<
   typeof TenfastBatchGetRentalObjectSchema
 >

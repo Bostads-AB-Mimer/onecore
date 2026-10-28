@@ -54,6 +54,8 @@ export const TenfastRentalObjectSchema = z.object({
   hyror: z.array(TenfastInvoiceRowSchema).optional(),
   contractTemplate: z.string().optional().nullable(),
   postadress: z.string().nullish(),
+  postnummer: z.string().nullish(),
+  stad: z.string().nullish(),
   stadsdel: z.string().nullish(),
   typ: z.string().optional(), // 'parkering', 'bostad', 'lokal'
   subType: z.string().optional(),
@@ -104,6 +106,14 @@ export const TenfastTagSchema = z.object({
 })
 
 export type TenfastTag = z.infer<typeof TenfastTagSchema>
+
+export const TenfastArticleSchema = z.object({
+  _id: z.string(),
+  code: z.string(),
+  vat: z.number(),
+})
+
+export type TenfastArticle = z.infer<typeof TenfastArticleSchema>
 export type TenfastRentalObject = z.infer<typeof TenfastRentalObjectSchema>
 
 export const TenfastSubletTenantSchema = z.object({

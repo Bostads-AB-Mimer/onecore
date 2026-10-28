@@ -4,6 +4,7 @@ import { ContactCode, NationalIdNumber } from '@src/domain'
 import { ContactTypeFilter, ObjectKey } from '@src/domain/contact'
 
 import { currentInvoiceAddress } from './address-sql'
+import { isLeaseHolderColumn, LEASE_HOLDER } from './relation-sql'
 import { DbContactRow } from './db-model'
 
 const CONTACT_CODE = 'cmctc.cmctckod'
@@ -316,12 +317,11 @@ export const contactsQuery = () => {
 
     Object.keys(wheres).forEach((key) => {
       if (key === NATIONAL_ID_NUMBER) {
-        qb.andWhere((b) => {
-          b.where(key, wheres[key]).orWhereRaw(
-            `REPLACE(TRANSLATE(${NATIONAL_ID_NUMBER}, '0123456789', '##########'), '#', '') = ?`,
-            [wheres[key]]
-          )
-        })
+        const candidates: string[] = wheres[key]
+        qb.andWhereRaw(
+          `${NORMALISED_NATIONAL_ID_SQL} IN (${candidates.map(() => '?').join(', ')})`,
+          candidates
+        )
       } else {
         qb.andWhere(key, wheres[key])
       }
@@ -404,10 +404,11 @@ export const contactsQuery = () => {
     },
 
     /**
-     * Adds a WHERE-criteria for single national ID number.
+     * Adds a WHERE-criteria for a national ID number. Accepts multiple
+     * candidate forms (e.g. ten- and twelve-digit) to match any of them.
      */
-    hasNationalId(nid: NationalIdNumber) {
-      wheres[NATIONAL_ID_NUMBER] = nid
+    hasNationalId(nid: NationalIdNumber | NationalIdNumber[]) {
+      wheres[NATIONAL_ID_NUMBER] = Array.isArray(nid) ? nid : [nid]
       return this
     },
 
@@ -577,8 +578,14 @@ export const contactsQuery = () => {
             .offset(pgn.page * pgn.pageSize)
             .limit(pgn.pageSize)
         })
+        .with(LEASE_HOLDER, (lh) => {
+          lh.select('cmctc.keycmctc', isLeaseHolderColumn(db, new Date()))
+            .from('page')
+            .join('cmctc', 'cmctc.keycmobj', 'page.keycmobj')
+        })
         .from('page')
         .join('cmctc', 'cmctc.keycmobj', 'page.keycmobj')
+        .join(LEASE_HOLDER, `${LEASE_HOLDER}.keycmctc`, 'cmctc.keycmctc')
         .leftJoin('cmadr', (join) => {
           join
             .on('cmadr.keycode', 'cmctc.keycmobj')
@@ -596,6 +603,7 @@ export const contactsQuery = () => {
           'cmctc.keycmobj as objectKey',
           'cmctc.keycmctc as contactKey',
           'cmctc.lagsokt as protectedIdentity',
+          `${LEASE_HOLDER}.isLeaseHolder`,
           'cmctc.utslag as specialAttention',
           'cmadr.keycmadr as addressId',
           'cmadr.region',
