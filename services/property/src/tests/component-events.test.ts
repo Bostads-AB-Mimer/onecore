@@ -17,7 +17,7 @@ import bodyParser from 'koa-body'
 import request from 'supertest'
 import { logger } from '@onecore/utilities'
 import { prisma } from '../adapters/db'
-import { routes as componentRoutes } from '../routes/component-instances'
+import { routes as componentEventRoutes } from '../routes/component-events'
 
 const componentId = 'aaaaaaaa-1111-4111-8111-111111111111'
 const otherComponentId = 'bbbbbbbb-2222-4222-8222-222222222222'
@@ -47,7 +47,7 @@ const validBody = {
 
 const app = new Koa()
 const router = new KoaRouter()
-componentRoutes(router)
+componentEventRoutes(router)
 app.use(bodyParser())
 app.use(router.routes())
 

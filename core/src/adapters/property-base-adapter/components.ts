@@ -914,7 +914,10 @@ async function createComponentEvent(
 async function getComponentEvents(
   componentId: string
 ): Promise<
-  AdapterResult<ComponentEventResponse[], 'upstream_error' | 'not_found'>
+  AdapterResult<
+    ComponentEventResponse[],
+    'upstream_error' | 'not_found' | 'bad_request'
+  >
 > {
   try {
     const response = await client().GET('/components/{id}/events', {
@@ -927,6 +930,14 @@ async function getComponentEvents(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return {
+        ok: false,
+        err: 'bad_request',
+        message: upstreamErrorMessage(response.error),
+      }
     }
 
     logger.error(
@@ -948,7 +959,9 @@ async function getComponentEvents(
 async function getComponentEventsBySource(
   sourceType: property.ComponentEventSourceType,
   sourceId: string
-): Promise<AdapterResult<ComponentEventResponse[], 'upstream_error'>> {
+): Promise<
+  AdapterResult<ComponentEventResponse[], 'upstream_error' | 'bad_request'>
+> {
   try {
     const response = await client().GET('/component-events', {
       params: { query: { sourceType, sourceId } },
@@ -956,6 +969,14 @@ async function getComponentEventsBySource(
 
     if (response.data?.content) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 400) {
+      return {
+        ok: false,
+        err: 'bad_request',
+        message: upstreamErrorMessage(response.error),
+      }
     }
 
     logger.error(

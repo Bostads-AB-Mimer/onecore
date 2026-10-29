@@ -1178,6 +1178,69 @@ describe('@onecore/property-adapter', () => {
       expect(result).toEqual({ ok: true, data: events })
     })
 
+    it('returns not_found when listing events of an unknown component', async () => {
+      mockServer.use(
+        http.get(eventsUrl, () =>
+          HttpResponse.json({ error: 'Component not found' }, { status: 404 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getComponentEvents(componentId)
+      expect(result).toEqual({ ok: false, err: 'not_found' })
+    })
+
+    it('returns upstream_error when listing events fails', async () => {
+      mockServer.use(
+        http.get(eventsUrl, () =>
+          HttpResponse.json({ error: 'boom' }, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getComponentEvents(componentId)
+      expect(result).toEqual({ ok: false, err: 'upstream_error' })
+    })
+
+    it("returns property's message when it refuses to list events", async () => {
+      const reason = 'Invalid UUID format'
+      mockServer.use(
+        http.get(eventsUrl, () =>
+          HttpResponse.json({ error: reason }, { status: 400 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getComponentEvents(componentId)
+      expect(result).toEqual({ ok: false, err: 'bad_request', message: reason })
+    })
+
+    it("returns property's message when it refuses a source query", async () => {
+      const reason = 'Invalid query'
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/component-events`, () =>
+          HttpResponse.json({ error: reason }, { status: 400 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getComponentEventsBySource(
+        'WORK_ORDER',
+        'od-1'
+      )
+      expect(result).toEqual({ ok: false, err: 'bad_request', message: reason })
+    })
+
+    it('returns upstream_error when listing by source fails', async () => {
+      mockServer.use(
+        http.get(`${config.propertyBaseService.url}/component-events`, () =>
+          HttpResponse.json({ error: 'boom' }, { status: 500 })
+        )
+      )
+
+      const result = await propertyBaseAdapter.getComponentEventsBySource(
+        'WORK_ORDER',
+        'od-1'
+      )
+      expect(result).toEqual({ ok: false, err: 'upstream_error' })
+    })
+
     it('forwards sourceType and sourceId when listing by source', async () => {
       const events = factory.componentEvent.buildList(1)
       let query: URLSearchParams | undefined

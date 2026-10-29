@@ -14,8 +14,14 @@ const newestFirst: Prisma.ComponentEventsOrderByWithRelationInput[] = [
 const sameId = (a?: string | null, b?: string | null) =>
   (a ?? '').toLowerCase() === (b ?? '').toLowerCase()
 
-export const componentExists = async (id: string) =>
-  (await prisma.components.count({ where: { id } })) > 0
+export const componentExists = async (id: string) => {
+  try {
+    return (await prisma.components.count({ where: { id } })) > 0
+  } catch (err) {
+    logger.error({ err }, 'component-event-adapter.componentExists')
+    throw err
+  }
+}
 
 // The idempotency key is the filtered unique index
 // UX_component_events_source_component_event. Prisma cannot model it, so no
@@ -27,29 +33,34 @@ export const findRepeatedComponentEvent = async (
 ): Promise<ComponentEvents | null> => {
   if (!data.sourceId) return null
 
-  const existing = await prisma.componentEvents.findFirst({
-    where: {
-      componentId,
-      eventType: data.eventType,
-      sourceType: data.sourceType,
-      sourceId: data.sourceId,
-    },
-  })
+  try {
+    const existing = await prisma.componentEvents.findFirst({
+      where: {
+        componentId,
+        eventType: data.eventType,
+        sourceType: data.sourceType,
+        sourceId: data.sourceId,
+      },
+    })
 
-  if (
-    existing &&
-    (existing.occurredAt.toISOString().slice(0, 10) !== data.occurredAt ||
-      existing.actor !== data.actor ||
-      (existing.note ?? null) !== (data.note ?? null) ||
-      !sameId(existing.relatedComponentId, data.relatedComponentId))
-  ) {
-    logger.warn(
-      { eventId: existing.id, sourceId: data.sourceId },
-      'component-event-adapter.findRepeatedComponentEvent: repeated event differs from the stored one, keeping the stored one'
-    )
+    if (
+      existing &&
+      (existing.occurredAt.toISOString().slice(0, 10) !== data.occurredAt ||
+        existing.actor !== data.actor ||
+        (existing.note ?? null) !== (data.note ?? null) ||
+        !sameId(existing.relatedComponentId, data.relatedComponentId))
+    ) {
+      logger.warn(
+        { eventId: existing.id, sourceId: data.sourceId },
+        'component-event-adapter.findRepeatedComponentEvent: repeated event differs from the stored one, keeping the stored one'
+      )
+    }
+
+    return existing
+  } catch (err) {
+    logger.error({ err }, 'component-event-adapter.findRepeatedComponentEvent')
+    throw err
   }
-
-  return existing
 }
 
 export const createComponentEvent = async (
@@ -80,17 +91,29 @@ export const createComponentEvent = async (
   }
 }
 
-export const getComponentEvents = (componentId: string) =>
-  prisma.componentEvents.findMany({
-    where: { componentId },
-    orderBy: newestFirst,
-  })
+export const getComponentEvents = async (componentId: string) => {
+  try {
+    return await prisma.componentEvents.findMany({
+      where: { componentId },
+      orderBy: newestFirst,
+    })
+  } catch (err) {
+    logger.error({ err }, 'component-event-adapter.getComponentEvents')
+    throw err
+  }
+}
 
-export const getComponentEventsBySource = (
+export const getComponentEventsBySource = async (
   sourceType: property.ComponentEventSourceType,
   sourceId: string
-) =>
-  prisma.componentEvents.findMany({
-    where: { sourceType, sourceId },
-    orderBy: newestFirst,
-  })
+) => {
+  try {
+    return await prisma.componentEvents.findMany({
+      where: { sourceType, sourceId },
+      orderBy: newestFirst,
+    })
+  } catch (err) {
+    logger.error({ err }, 'component-event-adapter.getComponentEventsBySource')
+    throw err
+  }
+}

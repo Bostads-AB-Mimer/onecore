@@ -2382,7 +2382,7 @@ export const routes = (router: KoaRouter) => {
       if (!result.ok) {
         const [status, error] = componentEventErrorResponse[result.err]
         ctx.status = status
-        ctx.body = { error, ...metadata }
+        ctx.body = { error: result.message ?? error, ...metadata }
         return
       }
 
@@ -2455,8 +2455,9 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
+        const [status, error] = componentEventErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error: result.message ?? error, ...metadata }
         return
       }
 

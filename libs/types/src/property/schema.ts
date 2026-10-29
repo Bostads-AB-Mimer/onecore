@@ -38,8 +38,6 @@ export const COMPONENT_EVENT_TYPES = [
 
 export const ComponentEventTypeSchema = z.enum(COMPONENT_EVENT_TYPES)
 
-export type ComponentEventType = z.infer<typeof ComponentEventTypeSchema>
-
 export const COMPONENT_EVENT_SOURCE_TYPES = [
   'WORK_ORDER',
   'INSPECTION',
@@ -49,10 +47,6 @@ export const COMPONENT_EVENT_SOURCE_TYPES = [
 export const ComponentEventSourceTypeSchema = z.enum(
   COMPONENT_EVENT_SOURCE_TYPES
 )
-
-export type ComponentEventSourceType = z.infer<
-  typeof ComponentEventSourceTypeSchema
->
 
 // Accepts the Prisma row (Date objects) as well as its JSON form (strings).
 export const ComponentEventSchema = z.object({
@@ -75,8 +69,6 @@ export const ComponentEventSchema = z.object({
     .transform((val) => (val instanceof Date ? val.toISOString() : val)),
 })
 
-export type ComponentEvent = z.infer<typeof ComponentEventSchema>
-
 export const CreateComponentEventSchema = z
   .object({
     eventType: ComponentEventTypeSchema,
@@ -94,16 +86,10 @@ export const CreateComponentEventSchema = z
     path: ['sourceId'],
   })
 
-export type CreateComponentEvent = z.infer<typeof CreateComponentEventSchema>
-
 export const ComponentEventsBySourceQuerySchema = z.object({
   sourceType: ComponentEventSourceTypeSchema,
   sourceId: z.string().trim().min(1).max(100),
 })
-
-export type ComponentEventsBySourceQuery = z.infer<
-  typeof ComponentEventsBySourceQuerySchema
->
 
 // ---- Residence: Mälarenergi facility id ("Anläggnings ID Mälarenergi") ----
 // Upsert request/response shared by the property service and the core proxy.

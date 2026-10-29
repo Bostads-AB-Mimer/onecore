@@ -6,6 +6,7 @@ import { routes as componentSubtypesRoutes } from './routes/component-subtypes'
 import { routes as componentModelsRoutes } from './routes/component-models'
 import { routes as componentInstancesRoutes } from './routes/component-instances'
 import { routes as componentInstallationsRoutes } from './routes/component-installations'
+import { routes as componentEventsRoutes } from './routes/component-events'
 import { routes as residencesRoutes } from './routes/residences'
 import { routes as buildingsRoutes } from './routes/buildings'
 import { routes as propertiesRoutes } from './routes/properties'
@@ -36,6 +37,7 @@ componentSubtypesRoutes(router)
 componentModelsRoutes(router)
 componentInstancesRoutes(router)
 componentInstallationsRoutes(router)
+componentEventsRoutes(router)
 residencesRoutes(router)
 buildingsRoutes(router)
 propertiesRoutes(router)
