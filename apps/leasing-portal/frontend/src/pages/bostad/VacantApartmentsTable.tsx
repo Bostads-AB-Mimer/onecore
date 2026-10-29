@@ -97,20 +97,19 @@ const buildColumns = (
   {
     key: 'tenure',
     label: 'Hyresobjektstyp',
-    render: (a) => (
-      <>
-        <TenureBadge tenure={a.rentalTenureType} />
-        {a.rentalTags.length > 0 && (
-          <span className="mt-1 flex flex-wrap gap-1">
-            {a.rentalTags.map((tag) => (
-              <Badge key={tag.id} variant="outline">
-                {tag.name}
-              </Badge>
-            ))}
-          </span>
-        )}
-      </>
-    ),
+    render: (a) => <TenureBadge tenure={a.rentalTenureType} />,
+  },
+  {
+    key: 'rentalMethod',
+    label: 'Senaste uthyrningsmetod',
+    // A separate Tenfast fact from rentalTenureType, not another value for
+    // the same column — e.g. "Poängfri" alongside a "Student" tenure type.
+    render: (a) =>
+      a.rentalTags.length > 0 ? (
+        <Badge variant="secondary">{a.rentalTags[0].name}</Badge>
+      ) : (
+        '–'
+      ),
   },
   {
     key: 'vacantFrom',

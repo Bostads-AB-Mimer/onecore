@@ -208,15 +208,17 @@ export function EditListingDialog({
                       label="Hyra/månad"
                       value={`${Math.round(apartment.rent).toLocaleString('sv-SE')}kr/mån`}
                     />
-                    {/* No backing field yet — confirm with team whether this
-                        belongs on Listing (new migration) or comes from
-                        property/Tenfast. */}
-                    <Field label="Byggnadsår" />
+                    <Field
+                      label="Byggnadsår"
+                      value={apartment.constructionYear ?? undefined}
+                    />
                     <Field
                       label="Objektsnummer"
                       value={apartment.rentalObjectCode}
                     />
-                    {/* No backing field yet, see Byggnadsår above. */}
+                    {/* No backing field yet — which inspection concept this
+                        means (Fastighet-level Xpand date, or the per-residence
+                        inspection-service protocol) still needs confirming. */}
                     <Field label="Besiktning genomförd" />
                   </CardContent>
                 </Card>
@@ -332,7 +334,7 @@ export function EditListingDialog({
                     )}
                   />
                   {/* No computed fallback — an unconfirmed earlier move-out
-                      date, see Byggnadsår above for the other open fields. */}
+                      date. */}
                   <FormField
                     control={form.control}
                     name="tentativeAvailableFrom"

@@ -53,6 +53,7 @@ export const toVacantApartment = ({
     propertyCode: residence.property?.code ?? null,
     propertyName: residence.property?.name ?? null,
     buildingCode: residence.building?.code ?? null,
+    constructionYear: residence.building?.constructionYear ?? null,
     marketAreaCode: residence.marketArea?.code ?? null,
     marketAreaName: residence.marketArea?.name ?? null,
     residenceTypeName: residence.residenceType?.name ?? null,

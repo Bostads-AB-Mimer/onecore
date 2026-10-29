@@ -72,6 +72,7 @@ export interface paths {
                 propertyCode: string | null
                 propertyName: string | null
                 buildingCode: string | null
+                constructionYear: number | null
                 marketAreaCode: string | null
                 marketAreaName: string | null
                 residenceTypeName: string | null

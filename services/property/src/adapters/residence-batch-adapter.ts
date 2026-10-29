@@ -21,6 +21,7 @@ type Row = {
   propertyName: string | null
   buildingCode: string | null
   buildingName: string | null
+  buildingConstructionYear: number | null
   marketAreaCode: string | null
   marketAreaName: string | null
   residenceTypeCode: string | null
@@ -48,7 +49,13 @@ const toItem = (row: Row): ResidenceBatchItem => ({
       }
     : null,
   property: codeAndName(row.propertyCode, row.propertyName),
-  building: codeAndName(row.buildingCode, row.buildingName),
+  building: row.buildingCode
+    ? {
+        code: row.buildingCode,
+        name: row.buildingName,
+        constructionYear: row.buildingConstructionYear,
+      }
+    : null,
   marketArea: codeAndName(row.marketAreaCode, row.marketAreaName),
   residenceType: row.residenceTypeCode
     ? {
@@ -90,6 +97,7 @@ export const getResidencesByRentalIds = async (
             b.fstcaption AS propertyName,
             b.bygcode    AS buildingCode,
             b.bygcaption AS buildingName,
+            byg.byggnadsar AS buildingConstructionYear,
             ya.code      AS marketAreaCode,
             ya.caption   AS marketAreaName,
             gt.code      AS residenceTypeCode,
@@ -104,6 +112,7 @@ export const getResidencesByRentalIds = async (
           LEFT JOIN dbo.hyinf hi ON hi.keycmobj = b.keycmobj
           LEFT JOIN dbo.bafst fst ON fst.keycmobj = b.keyobjfst
           LEFT JOIN dbo.babya ya ON ya.keybabya = fst.keybabya
+          LEFT JOIN dbo.babyg byg ON byg.code = b.bygcode
           OUTER APPLY (
             SELECT TOP 1 adr.adress1, adr.adress2, adr.adress3, adr.adress4
             FROM dbo.cmadr adr
