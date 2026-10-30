@@ -140,7 +140,12 @@ export const routes = (
       tags: ['Contacts'],
       query: {
         q: {
-          description: 'Wildcard search string',
+          description:
+            'Search string. Every word must match the contact code or a name ' +
+            'field (substring), or the whole string must match an ' +
+            'invoice address line. A word of six or more digits also matches ' +
+            'the national id by prefix, in ten- or twelve-digit form. ' +
+            'Repeat the parameter to require several strings to match.',
           schema: z.optional(z.array(z.string())),
         },
         type: {
