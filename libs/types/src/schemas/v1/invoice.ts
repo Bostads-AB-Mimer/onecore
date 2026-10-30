@@ -71,6 +71,7 @@ export const InvoiceSchema = z.object({
   credit: z.object({ originalInvoiceId: z.string() }).nullable(),
   accountCode: z.string().optional(),
   expectedLoss: z.boolean().optional(),
+  writtenOffAmount: z.number().optional(), // Sum of kundförlust (KF) rows matched to the invoice
   matchId: z.number().optional(), // TODO ska denna finnas i Invoice?
   costCentre: z.string().optional(), // TODO ska denna finnas i Invoice?
 })

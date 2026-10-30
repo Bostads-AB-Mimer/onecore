@@ -55,6 +55,7 @@ enum PaymentStatus {
   Unpaid = 2,
   PartlyPaid = 3,
   Overdue = 4,
+  WrittenOff = 5, // Booked as kundförlust in Xledger; the debt is not settled
 }
 
 enum ListingStatus {
