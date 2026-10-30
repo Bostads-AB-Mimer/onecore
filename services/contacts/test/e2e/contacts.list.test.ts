@@ -297,8 +297,12 @@ describe('/contacts', () => {
   })
 
   describe('Search (q)', () => {
+    // Repeat the key for arrays (q=a&q=b), which is what Koa reads back as
+    // an array. Axios' default would send q[]=a&q[]=b, which Koa ignores.
     const search = async (q: string | string[]) => {
-      const response = await httpClient.get('/contacts', { params: { q } })
+      const params = new URLSearchParams()
+      for (const value of Array.isArray(q) ? q : [q]) params.append('q', value)
+      const response = await httpClient.get(`/contacts?${params}`)
       expect(response.status).toBe(200)
       return response.data
     }
