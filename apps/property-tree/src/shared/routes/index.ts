@@ -48,7 +48,7 @@ export type RoutePath = (typeof routes)[keyof typeof routes]
  *   paths.property('123')            →  '/fastigheter/123'
  *   paths.building('B01')            →  '/byggnader/B01'
  *   paths.staircase('B01-S1')        →  '/uppgangar/B01-S1'
- *   paths.room('rentalId', 'RM1')     →  '/bostader/rentalId/rum/RM1'
+ *   paths.room('rentalId', 'RM1')     →  '/bostader/rentalId?room=RM1'
  */
 export const paths = {
   property: (propertyCode: string) =>
@@ -59,7 +59,7 @@ export const paths = {
     generatePath(routes.staircase, { staircaseId }),
   residence: (rentalId: string) => generatePath(routes.residence, { rentalId }),
   room: (rentalId: string, roomCode: string) =>
-    generatePath(routes.room, { rentalId, roomCode }),
+    `${generatePath(routes.residence, { rentalId })}?room=${encodeURIComponent(roomCode)}`,
   parkingSpace: (rentalId: string) =>
     generatePath(routes.parkingSpace, { rentalId }),
   maintenanceUnit: (code: string) =>

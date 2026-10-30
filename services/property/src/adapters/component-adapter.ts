@@ -11,6 +11,7 @@
  * - component-model-adapter.ts: ComponentModel CRUD + document management
  * - component-instance-adapter.ts: Component instance CRUD + file management + by-room queries
  * - component-installation-adapter.ts: ComponentInstallation CRUD operations
+ * - component-event-adapter.ts: ComponentEvent create (idempotent) + reads
  */
 
 export * from './component-category-adapter'
@@ -19,3 +20,4 @@ export * from './component-subtype-adapter'
 export * from './component-model-adapter'
 export * from './component-instance-adapter'
 export * from './component-installation-adapter'
+export * from './component-event-adapter'

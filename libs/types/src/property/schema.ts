@@ -23,6 +23,74 @@ export type UpdateComponentInspectionState = z.infer<
   typeof UpdateComponentInspectionStateSchema
 >
 
+// ---- Component events ----
+// One row per thing that happened to a component (component_events). Shared by
+// the property service and the core proxy. Outcome codes are generic; the
+// category decides the label (Reparerad vs Åtgärdad) when shown.
+export const COMPONENT_EVENT_TYPES = [
+  'INSTALLED',
+  'DEINSTALLED',
+  'REPAIRED',
+  'REPLACED',
+  'NO_ACTION',
+  'INSPECTED',
+] as const
+
+export const ComponentEventTypeSchema = z.enum(COMPONENT_EVENT_TYPES)
+
+export const COMPONENT_EVENT_SOURCE_TYPES = [
+  'WORK_ORDER',
+  'INSPECTION',
+  'MANUAL',
+] as const
+
+export const ComponentEventSourceTypeSchema = z.enum(
+  COMPONENT_EVENT_SOURCE_TYPES
+)
+
+// Accepts the Prisma row (Date objects) as well as its JSON form (strings).
+export const ComponentEventSchema = z.object({
+  id: z.string().uuid(),
+  componentId: z.string().uuid(),
+  eventType: ComponentEventTypeSchema,
+  occurredAt: z
+    .union([z.string(), z.date()])
+    // DATE column: always 'YYYY-MM-DD', never a timestamp that can shift a day
+    .transform((val) =>
+      val instanceof Date ? val.toISOString().slice(0, 10) : val
+    ),
+  sourceType: ComponentEventSourceTypeSchema,
+  sourceId: z.string().nullable(),
+  relatedComponentId: z.string().uuid().nullable(),
+  actor: z.string(),
+  note: z.string().nullable(),
+  createdAt: z
+    .union([z.string(), z.date()])
+    .transform((val) => (val instanceof Date ? val.toISOString() : val)),
+})
+
+export const CreateComponentEventSchema = z
+  .object({
+    eventType: ComponentEventTypeSchema,
+    occurredAt: z.string().date(),
+    sourceType: ComponentEventSourceTypeSchema,
+    sourceId: z.string().trim().min(1).max(100).nullable().optional(),
+    relatedComponentId: z.string().uuid().nullable().optional(),
+    actor: z.string().trim().min(1).max(255),
+    note: z.string().nullable().optional(),
+  })
+  // Without a sourceId the idempotency key does not apply, so a retried
+  // work-order or inspection event would be stored twice.
+  .refine((body) => body.sourceType === 'MANUAL' || body.sourceId, {
+    message: 'sourceId is required unless sourceType is MANUAL',
+    path: ['sourceId'],
+  })
+
+export const ComponentEventsBySourceQuerySchema = z.object({
+  sourceType: ComponentEventSourceTypeSchema,
+  sourceId: z.string().trim().min(1).max(100),
+})
+
 // ---- Residence: Mälarenergi facility id ("Anläggnings ID Mälarenergi") ----
 // Upsert request/response shared by the property service and the core proxy.
 export const UpdateMalarEnergiFacilityIdRequestSchema = z.object({

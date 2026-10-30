@@ -1,5 +1,7 @@
 import type { ComponentCategory } from '@/services/types'
 
+import { COMPONENT_CATEGORY_TYPE_LABELS } from '@/shared/lib/componentLabels'
+import { sortBySwedishName } from '@/shared/lib/sortByName'
 import { type Column, DataTable } from '@/shared/ui/DataTable'
 
 interface CategoriesTableProps {
@@ -8,6 +10,7 @@ interface CategoriesTableProps {
   onEdit: (category: ComponentCategory) => void
   onDelete: (category: ComponentCategory) => void
   onNavigate: (category: ComponentCategory) => void
+  getHref: (category: ComponentCategory) => string
 }
 
 export const CategoriesTable = ({
@@ -16,6 +19,7 @@ export const CategoriesTable = ({
   onEdit,
   onDelete,
   onNavigate,
+  getHref,
 }: CategoriesTableProps) => {
   const columns: Column<ComponentCategory>[] = [
     {
@@ -26,21 +30,35 @@ export const CategoriesTable = ({
     {
       key: 'description',
       label: 'Beskrivning',
+      isEmpty: (item) =>
+        !item.description || item.description === item.categoryName,
       render: (item) => (
         <span className="text-muted-foreground">{item.description || '-'}</span>
+      ),
+    },
+    {
+      key: 'type',
+      label: 'Kategorityp',
+      render: (item) => (
+        <span className="text-muted-foreground">
+          {item.type ? COMPONENT_CATEGORY_TYPE_LABELS[item.type] : '-'}
+        </span>
       ),
     },
   ]
 
   return (
     <DataTable
-      data={categories}
+      data={sortBySwedishName(categories, (item) => item.categoryName)}
       columns={columns}
       isLoading={isLoading}
       onEdit={onEdit}
       onDelete={onDelete}
       onRowClick={onNavigate}
-      emptyMessage="Inga kategorier ännu"
+      getRowHref={getHref}
+      pageSize={50}
+      emptyMessage="Inga kategorier"
+      getRowLabel={(item) => item.categoryName}
     />
   )
 }

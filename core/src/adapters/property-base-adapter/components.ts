@@ -1,3 +1,4 @@
+import { property } from '@onecore/types'
 import { logger, loggedAxios as axios } from '@onecore/utilities'
 import createClient from 'openapi-fetch'
 
@@ -15,6 +16,14 @@ const client = () =>
   })
 
 type DocumentWithUrl = components['schemas']['DocumentWithUrl']
+
+const upstreamErrorMessage = (body: unknown): string | undefined =>
+  body &&
+  typeof body === 'object' &&
+  'error' in body &&
+  typeof body.error === 'string'
+    ? body.error
+    : undefined
 
 // ==================== COMPONENT CATEGORIES ====================
 
@@ -91,7 +100,10 @@ async function updateComponentCategory(
   id: string,
   data: components['schemas']['UpdateComponentCategoryRequest']
 ): Promise<
-  AdapterResult<GetComponentCategoryResponse, 'upstream_error' | 'not_found'>
+  AdapterResult<
+    GetComponentCategoryResponse,
+    'upstream_error' | 'not_found' | 'conflict'
+  >
 > {
   try {
     const response = await client().PUT('/component-categories/{id}', {
@@ -105,6 +117,14 @@ async function updateComponentCategory(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 409) {
+      return {
+        ok: false,
+        err: 'conflict',
+        message: upstreamErrorMessage(response.error),
+      }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -191,7 +211,12 @@ async function getComponentTypeById(
 
 async function createComponentType(
   data: components['schemas']['CreateComponentTypeRequest']
-): Promise<AdapterResult<GetComponentTypeResponse, 'upstream_error'>> {
+): Promise<
+  AdapterResult<
+    GetComponentTypeResponse,
+    'upstream_error' | 'bad_request' | 'conflict'
+  >
+> {
   try {
     const response = await client().POST('/component-types', {
       body: data,
@@ -199,6 +224,14 @@ async function createComponentType(
 
     if (response.data?.content) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
+    }
+
+    if (response.response.status === 409) {
+      return { ok: false, err: 'conflict' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -212,7 +245,10 @@ async function updateComponentType(
   id: string,
   data: components['schemas']['UpdateComponentTypeRequest']
 ): Promise<
-  AdapterResult<GetComponentTypeResponse, 'upstream_error' | 'not_found'>
+  AdapterResult<
+    GetComponentTypeResponse,
+    'upstream_error' | 'not_found' | 'bad_request' | 'conflict'
+  >
 > {
   try {
     const response = await client().PUT('/component-types/{id}', {
@@ -226,6 +262,22 @@ async function updateComponentType(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return {
+        ok: false,
+        err: 'bad_request',
+        message: upstreamErrorMessage(response.error),
+      }
+    }
+
+    if (response.response.status === 409) {
+      return {
+        ok: false,
+        err: 'conflict',
+        message: upstreamErrorMessage(response.error),
+      }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -260,21 +312,34 @@ async function deleteComponentType(
 
 // ==================== COMPONENT SUBTYPES ====================
 
-type GetComponentSubtypesResponse = components['schemas']['ComponentSubtype'][]
+type ComponentSubtypesPage =
+  paths['/component-subtypes']['get']['responses'][200]['content']['application/json']
+
+type GetComponentSubtypesResponse = {
+  content: components['schemas']['ComponentSubtype'][]
+  pagination?: ComponentSubtypesPage['pagination']
+}
 
 async function getComponentSubtypes(
   typeId?: string,
   page?: number,
   limit?: number,
-  subtypeName?: string
+  subtypeName?: string,
+  categoryType?: property.ComponentCategoryType
 ): Promise<AdapterResult<GetComponentSubtypesResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/component-subtypes', {
-      params: { query: { typeId, page, limit, subtypeName } },
+      params: { query: { typeId, page, limit, subtypeName, categoryType } },
     })
 
     if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+      return {
+        ok: true,
+        data: {
+          content: response.data.content,
+          pagination: response.data.pagination,
+        },
+      }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -334,7 +399,10 @@ async function updateComponentSubtype(
   id: string,
   data: components['schemas']['UpdateComponentSubtypeRequest']
 ): Promise<
-  AdapterResult<GetComponentSubtypeResponse, 'upstream_error' | 'not_found'>
+  AdapterResult<
+    GetComponentSubtypeResponse,
+    'upstream_error' | 'not_found' | 'bad_request' | 'conflict'
+  >
 > {
   try {
     const response = await client().PUT('/component-subtypes/{id}', {
@@ -348,6 +416,22 @@ async function updateComponentSubtype(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return {
+        ok: false,
+        err: 'bad_request',
+        message: upstreamErrorMessage(response.error),
+      }
+    }
+
+    if (response.response.status === 409) {
+      return {
+        ok: false,
+        err: 'conflict',
+        message: upstreamErrorMessage(response.error),
+      }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -449,7 +533,8 @@ async function getComponentModelById(
  * Used by the add-component process to check if a model already exists.
  */
 async function findModelByExactName(
-  modelName: string
+  modelName: string,
+  subtypeId?: string
 ): Promise<
   AdapterResult<GetComponentModelResponse, 'upstream_error' | 'not_found'>
 > {
@@ -457,7 +542,7 @@ async function findModelByExactName(
     const response = await client().GET(
       '/component-models/by-name/{modelName}',
       {
-        params: { path: { modelName } },
+        params: { path: { modelName }, query: { subtypeId } },
       }
     )
 
@@ -478,7 +563,9 @@ async function findModelByExactName(
 
 async function createComponentModel(
   data: components['schemas']['CreateComponentModelRequest']
-): Promise<AdapterResult<GetComponentModelResponse, 'upstream_error'>> {
+): Promise<
+  AdapterResult<GetComponentModelResponse, 'upstream_error' | 'bad_request'>
+> {
   try {
     const response = await client().POST('/component-models', {
       body: data,
@@ -486,6 +573,10 @@ async function createComponentModel(
 
     if (response.data?.content) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -499,7 +590,10 @@ async function updateComponentModel(
   id: string,
   data: components['schemas']['UpdateComponentModelRequest']
 ): Promise<
-  AdapterResult<GetComponentModelResponse, 'upstream_error' | 'not_found'>
+  AdapterResult<
+    GetComponentModelResponse,
+    'upstream_error' | 'not_found' | 'bad_request'
+  >
 > {
   try {
     const response = await client().PUT('/component-models/{id}', {
@@ -513,6 +607,10 @@ async function updateComponentModel(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -568,22 +666,34 @@ async function getSurfaceModels(): Promise<
 
 // ==================== COMPONENTS ====================
 
-type GetComponentsResponse = components['schemas']['Component'][]
+type ComponentsPage =
+  paths['/components']['get']['responses'][200]['content']['application/json']
+
+type GetComponentsResponse = {
+  content: components['schemas']['Component'][]
+  pagination?: ComponentsPage['pagination']
+}
+
+type GetComponentsQuery = NonNullable<
+  paths['/components']['get']['parameters']['query']
+>
 
 async function getComponents(
-  modelId?: string,
-  status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED',
-  page?: number,
-  limit?: number,
-  serialNumber?: string
+  query: GetComponentsQuery
 ): Promise<AdapterResult<GetComponentsResponse, 'upstream_error'>> {
   try {
     const response = await client().GET('/components', {
-      params: { query: { modelId, status, page, limit, serialNumber } },
+      params: { query },
     })
 
     if (response.data?.content) {
-      return { ok: true, data: response.data.content }
+      return {
+        ok: true,
+        data: {
+          content: response.data.content,
+          pagination: response.data.pagination,
+        },
+      }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -622,7 +732,9 @@ async function getComponentById(
 
 async function createComponent(
   data: components['schemas']['CreateComponentRequest']
-): Promise<AdapterResult<GetComponentResponse, 'upstream_error'>> {
+): Promise<
+  AdapterResult<GetComponentResponse, 'upstream_error' | 'bad_request'>
+> {
   try {
     const response = await client().POST('/components', {
       body: data,
@@ -630,6 +742,10 @@ async function createComponent(
 
     if (response.data?.content) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
     }
 
     // Log error details from microservice response
@@ -656,7 +772,10 @@ async function updateComponent(
   id: string,
   data: components['schemas']['UpdateComponentRequest']
 ): Promise<
-  AdapterResult<GetComponentResponse, 'upstream_error' | 'not_found'>
+  AdapterResult<
+    GetComponentResponse,
+    'upstream_error' | 'not_found' | 'bad_request'
+  >
 > {
   try {
     const response = await client().PUT('/components/{id}', {
@@ -670,6 +789,10 @@ async function updateComponent(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return { ok: false, err: 'bad_request' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -728,6 +851,147 @@ async function updateComponentInspectionState(
       { err },
       'property-base-adapter.updateComponentInspectionState'
     )
+    return { ok: false, err: 'upstream_error' }
+  }
+}
+
+// ==================== COMPONENT EVENTS ====================
+
+type ComponentEventResponse = components['schemas']['ComponentEvent']
+
+// statusCode tells a new event (201) from one that already existed (200)
+async function createComponentEvent(
+  componentId: string,
+  data: components['schemas']['CreateComponentEventRequest']
+): Promise<
+  AdapterResult<
+    ComponentEventResponse,
+    'upstream_error' | 'not_found' | 'bad_request'
+  >
+> {
+  try {
+    const response = await client().POST('/components/{id}/events', {
+      params: { path: { id: componentId } },
+      body: data,
+    })
+
+    if (response.data?.content) {
+      return {
+        ok: true,
+        data: response.data.content,
+        statusCode: response.response.status,
+      }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return {
+        ok: false,
+        err: 'bad_request',
+        message: upstreamErrorMessage(response.error),
+      }
+    }
+
+    logger.error(
+      {
+        status: response.response?.status,
+        error: response.error,
+        componentId,
+      },
+      'property-base-adapter.createComponentEvent failed'
+    )
+
+    return { ok: false, err: 'upstream_error' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.createComponentEvent')
+    return { ok: false, err: 'upstream_error' }
+  }
+}
+
+async function getComponentEvents(
+  componentId: string
+): Promise<
+  AdapterResult<
+    ComponentEventResponse[],
+    'upstream_error' | 'not_found' | 'bad_request'
+  >
+> {
+  try {
+    const response = await client().GET('/components/{id}/events', {
+      params: { path: { id: componentId } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 404) {
+      return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 400) {
+      return {
+        ok: false,
+        err: 'bad_request',
+        message: upstreamErrorMessage(response.error),
+      }
+    }
+
+    logger.error(
+      {
+        status: response.response?.status,
+        error: response.error,
+        componentId,
+      },
+      'property-base-adapter.getComponentEvents failed'
+    )
+
+    return { ok: false, err: 'upstream_error' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentEvents')
+    return { ok: false, err: 'upstream_error' }
+  }
+}
+
+async function getComponentEventsBySource(
+  sourceType: property.ComponentEventSourceType,
+  sourceId: string
+): Promise<
+  AdapterResult<ComponentEventResponse[], 'upstream_error' | 'bad_request'>
+> {
+  try {
+    const response = await client().GET('/component-events', {
+      params: { query: { sourceType, sourceId } },
+    })
+
+    if (response.data?.content) {
+      return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 400) {
+      return {
+        ok: false,
+        err: 'bad_request',
+        message: upstreamErrorMessage(response.error),
+      }
+    }
+
+    logger.error(
+      {
+        status: response.response?.status,
+        error: response.error,
+        sourceType,
+        sourceId,
+      },
+      'property-base-adapter.getComponentEventsBySource failed'
+    )
+
+    return { ok: false, err: 'upstream_error' }
+  } catch (err) {
+    logger.error({ err }, 'property-base-adapter.getComponentEventsBySource')
     return { ok: false, err: 'upstream_error' }
   }
 }
@@ -793,7 +1057,9 @@ async function getComponentInstallationById(
 
 async function createComponentInstallation(
   data: components['schemas']['CreateComponentInstallationRequest']
-): Promise<AdapterResult<GetComponentInstallationResponse, 'upstream_error'>> {
+): Promise<
+  AdapterResult<GetComponentInstallationResponse, 'upstream_error' | 'conflict'>
+> {
   try {
     const response = await client().POST('/component-installations', {
       body: data,
@@ -801,6 +1067,10 @@ async function createComponentInstallation(
 
     if (response.data?.content) {
       return { ok: true, data: response.data.content }
+    }
+
+    if (response.response.status === 409) {
+      return { ok: false, err: 'conflict' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -816,7 +1086,7 @@ async function updateComponentInstallation(
 ): Promise<
   AdapterResult<
     GetComponentInstallationResponse,
-    'upstream_error' | 'not_found'
+    'upstream_error' | 'not_found' | 'conflict'
   >
 > {
   try {
@@ -831,6 +1101,10 @@ async function updateComponentInstallation(
 
     if (response.response.status === 404) {
       return { ok: false, err: 'not_found' }
+    }
+
+    if (response.response.status === 409) {
+      return { ok: false, err: 'conflict' }
     }
 
     return { ok: false, err: 'upstream_error' }
@@ -1364,6 +1638,10 @@ export {
   updateComponent,
   deleteComponent,
   updateComponentInspectionState,
+  // Component Events
+  createComponentEvent,
+  getComponentEvents,
+  getComponentEventsBySource,
   // Component Installations
   getComponentInstallations,
   getComponentInstallationById,

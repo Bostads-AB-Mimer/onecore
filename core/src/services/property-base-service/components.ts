@@ -9,6 +9,62 @@ import * as schemas from './schemas'
 import { addComponent } from '../../processes/components'
 import { ProcessStatus } from '../../common/types'
 
+const componentCategoryErrorResponse = {
+  conflict: [
+    409,
+    'Category has component types with a surface code, or models under it that a SURFACE category cannot have',
+  ],
+  not_found: [404, 'Component category not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
+const componentTypeErrorResponse = {
+  bad_request: [400, 'Invalid categoryId or code'],
+  conflict: [
+    409,
+    'Another component type already has this code, or the type has models that a SURFACE category cannot have',
+  ],
+  not_found: [404, 'Component type not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
+const componentSubtypeErrorResponse = {
+  bad_request: [400, 'Invalid typeId'],
+  conflict: [409, 'The subtype has models that a SURFACE category cannot have'],
+  not_found: [404, 'Component subtype not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
+const componentModelErrorResponse = {
+  bad_request: [
+    400,
+    'Invalid componentSubtypeId or a model on a SURFACE subtype',
+  ],
+  not_found: [404, 'Component model not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
+const componentErrorResponse = {
+  bad_request: [
+    400,
+    'Invalid subtypeId or modelId, model under another subtype, or a model on a SURFACE component',
+  ],
+  not_found: [404, 'Component not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
+const componentEventErrorResponse = {
+  bad_request: [400, 'Invalid component event'],
+  not_found: [404, 'Component not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
+const componentInstallationErrorResponse = {
+  conflict: [409, 'The component already has an active installation'],
+  not_found: [404, 'Component installation not found'],
+  upstream_error: [500, 'Internal server error'],
+} as const
+
 export const routes = (router: KoaRouter) => {
   /**
    * @swagger
@@ -319,6 +375,10 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentCategory'
+   *       404:
+   *         description: Component category not found
+   *       409:
+   *         description: Category has component types with a surface code, or is being made SURFACE while models exist under it. The error names the reason.
    *     security:
    *       - bearerAuth: []
    */
@@ -347,14 +407,9 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component category not found'
-              : 'Internal server error',
-          ...metadata,
-        }
+        const [status, error] = componentCategoryErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error: result.message ?? error, ...metadata }
         return
       }
 
@@ -598,6 +653,10 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentType'
+   *       400:
+   *         description: Invalid categoryId, or a surface code on a category that is not of type SURFACE
+   *       409:
+   *         description: Another component type already has this code
    *     security:
    *       - bearerAuth: []
    */
@@ -614,8 +673,9 @@ export const routes = (router: KoaRouter) => {
       const result = await propertyBaseAdapter.createComponentType(body.data)
 
       if (!result.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
+        const [status, error] = componentTypeErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -661,6 +721,12 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentType'
+   *       400:
+   *         description: Invalid categoryId, or a surface code on a category that is not of type SURFACE
+   *       404:
+   *         description: Component type not found
+   *       409:
+   *         description: Another component type already has this code, or the type is being moved into a SURFACE category while models exist under it. The error names the reason.
    *     security:
    *       - bearerAuth: []
    */
@@ -687,14 +753,9 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component type not found'
-              : 'Internal server error',
-          ...metadata,
-        }
+        const [status, error] = componentTypeErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error: result.message ?? error, ...metadata }
         return
       }
 
@@ -744,10 +805,10 @@ export const routes = (router: KoaRouter) => {
       const childSubtypes = await propertyBaseAdapter.getComponentSubtypes(
         id.data
       )
-      if (childSubtypes.ok && childSubtypes.data.length > 0) {
+      if (childSubtypes.ok && childSubtypes.data.content.length > 0) {
         ctx.status = 409
         ctx.body = {
-          error: `Kan inte ta bort: typen har ${childSubtypes.data.length} undertyper`,
+          error: `Kan inte ta bort: typen har ${childSubtypes.data.content.length} undertyper`,
           ...metadata,
         }
         return
@@ -782,7 +843,7 @@ export const routes = (router: KoaRouter) => {
    * /component-subtypes:
    *   get:
    *     summary: Get all component subtypes
-   *     description: "Variants of a type with lifecycle data including depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId or subtypeName."
+   *     description: "Variants of a type with lifecycle data including depreciation price, technical/economic lifespan, and replacement interval. Filter by typeId, subtypeName or categoryType."
    *     tags:
    *       - Property-base/Components
    *     parameters:
@@ -799,6 +860,13 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Search subtypes by name (case-insensitive)
+   *       - in: query
+   *         name: categoryType
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [EQUIPMENT, SURFACE]
+   *         description: Only subtypes whose category has this type
    *       - in: query
    *         name: page
    *         schema:
@@ -851,7 +919,8 @@ export const routes = (router: KoaRouter) => {
         params.data.typeId,
         params.data.page,
         params.data.limit,
-        params.data.subtypeName
+        params.data.subtypeName,
+        params.data.categoryType
       )
 
       if (!result.ok) {
@@ -861,7 +930,10 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: schemas.ComponentSubtypeSchema.array().parse(result.data),
+        content: schemas.ComponentSubtypeSchema.array().parse(
+          result.data.content
+        ),
+        pagination: result.data.pagination,
         ...metadata,
       }
     } catch (error) {
@@ -1025,8 +1097,12 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentSubtype'
+   *       400:
+   *         description: Invalid typeId
    *       404:
    *         description: Component subtype not found
+   *       409:
+   *         description: The subtype is being moved under a SURFACE category while it has models. The error gives the model count.
    *     security:
    *       - bearerAuth: []
    */
@@ -1055,14 +1131,9 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component subtype not found'
-              : 'Internal server error',
-          ...metadata,
-        }
+        const [status, error] = componentSubtypeErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error: result.message ?? error, ...metadata }
         return
       }
 
@@ -1352,8 +1423,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /component-models/surface:
    *   get:
-   *     summary: Get surface component models (Ytskikt hierarchy)
-   *     description: Returns all ComponentModels under the Ytskikt category with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
+   *     summary: Get surface component models
+   *     description: Returns all ComponentModels under categories of type SURFACE with full Subtype → Type → Category hierarchy populated. Subtypes whose name starts with "Ospecificera" sort first within each Type.
    *     tags:
    *       - Property-base/Components
    *     responses:
@@ -1458,6 +1529,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentModel'
+   *       400:
+   *         description: Invalid componentSubtypeId, or the subtype is in a SURFACE category
    *     security:
    *       - bearerAuth: []
    */
@@ -1474,8 +1547,9 @@ export const routes = (router: KoaRouter) => {
       const result = await propertyBaseAdapter.createComponentModel(body.data)
 
       if (!result.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
+        const [status, error] = componentModelErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -1521,6 +1595,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentModel'
+   *       400:
+   *         description: Invalid componentSubtypeId, or the subtype is in a SURFACE category
    *       404:
    *         description: Component model not found
    *     security:
@@ -1549,14 +1625,9 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component model not found'
-              : 'Internal server error',
-          ...metadata,
-        }
+        const [status, error] = componentModelErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -1605,11 +1676,23 @@ export const routes = (router: KoaRouter) => {
 
     try {
       // Check for child components before deleting
-      const childComponents = await propertyBaseAdapter.getComponents(id.data)
-      if (childComponents.ok && childComponents.data.length > 0) {
+      const childComponents = await propertyBaseAdapter.getComponents({
+        modelId: id.data,
+        page: 1,
+        limit: 1,
+      })
+      if (!childComponents.ok) {
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+      const childCount =
+        childComponents.data.pagination?.total ??
+        childComponents.data.content.length
+      if (childCount > 0) {
         ctx.status = 409
         ctx.body = {
-          error: `Kan inte ta bort: modellen har ${childComponents.data.length} komponenter`,
+          error: `Kan inte ta bort: modellen har ${childCount} komponenter`,
           ...metadata,
         }
         return
@@ -1644,7 +1727,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   get:
    *     summary: Get all components
-   *     description: Physical units with serial numbers and status. Filter by modelId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+   *     description: Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), serialNumber, specifications, installation or installedBefore, and sort with sortBy and sortOrder.
    *     tags:
    *       - Property-base/Components
    *     parameters:
@@ -1652,6 +1735,23 @@ export const routes = (router: KoaRouter) => {
    *         name: modelId
    *         schema:
    *           type: string
+   *       - in: query
+   *         name: withoutModel
+   *         schema:
+   *           type: boolean
+   *         description: Only components that have no model. Cannot be combined with modelId.
+   *       - in: query
+   *         name: notInstalled
+   *         schema:
+   *           type: boolean
+   *         description: Only components without an active installation
+   *       - in: query
+   *         name: subtypeId
+   *         required: false
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Filter by subtype
    *       - in: query
    *         name: status
    *         schema:
@@ -1662,6 +1762,35 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Search by serial number (case-insensitive partial match)
+   *       - in: query
+   *         name: specifications
+   *         schema:
+   *           type: string
+   *         description: Search the specification text (case-insensitive partial match, 2 characters minimum)
+   *       - in: query
+   *         name: installation
+   *         schema:
+   *           type: string
+   *           enum: [installed, notInstalled, unknownDate]
+   *         description: Filter on the active installation. unknownDate means installed with no date or the 1900 placeholder. Cannot be combined with notInstalled=true.
+   *       - in: query
+   *         name: installedBefore
+   *         schema:
+   *           type: integer
+   *           minimum: 1902
+   *         description: Only components whose known installation date falls before 1 January of this year
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [installed, model, serialNumber, specifications, quantity]
+   *         description: Sort column. Blank and unknown values always sort last. Without it, newest installation first.
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: asc
    *       - in: query
    *         name: page
    *         schema:
@@ -1708,13 +1837,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await propertyBaseAdapter.getComponents(
-        params.data.modelId,
-        params.data.status,
-        params.data.page,
-        params.data.limit,
-        params.data.serialNumber
-      )
+      const result = await propertyBaseAdapter.getComponents(params.data)
 
       if (!result.ok) {
         ctx.status = 500
@@ -1723,7 +1846,8 @@ export const routes = (router: KoaRouter) => {
       }
 
       ctx.body = {
-        content: schemas.ComponentSchema.array().parse(result.data),
+        content: schemas.ComponentSchema.array().parse(result.data.content),
+        pagination: result.data.pagination,
         ...metadata,
       }
     } catch (error) {
@@ -1803,7 +1927,7 @@ export const routes = (router: KoaRouter) => {
    * /components:
    *   post:
    *     summary: Create a new component
-   *     description: Registers a new physical unit. Requires modelId and serialNumber.
+   *     description: Registers a new physical unit. Requires subtypeId; modelId is optional and must belong to the same subtype, and components in a SURFACE category take no model.
    *     tags:
    *       - Property-base/Components
    *     requestBody:
@@ -1822,6 +1946,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Component'
+   *       400:
+   *         description: Invalid subtypeId or modelId, model under another subtype, or a model on a SURFACE component
    *     security:
    *       - bearerAuth: []
    */
@@ -1841,8 +1967,9 @@ export const routes = (router: KoaRouter) => {
       })
 
       if (!result.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
+        const [status, error] = componentErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -1889,6 +2016,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/Component'
+   *       400:
+   *         description: Invalid subtypeId or modelId, model under another subtype, or a model on a SURFACE component
    *       404:
    *         description: Component not found
    *     security:
@@ -1921,14 +2050,9 @@ export const routes = (router: KoaRouter) => {
       })
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component not found'
-              : 'Internal server error',
-          ...metadata,
-        }
+        const [status, error] = componentErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -2098,6 +2222,247 @@ export const routes = (router: KoaRouter) => {
 
       ctx.body = {
         content: schemas.ComponentSchema.parse(result.data),
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  // ==================== COMPONENT EVENTS ====================
+
+  /**
+   * @swagger
+   * /components/{id}/events:
+   *   post:
+   *     summary: Record an event on a component
+   *     description: |
+   *       Stores what happened to a component (repaired, replaced, inspected, ...).
+   *       Idempotent on (sourceType, sourceId, componentId, eventType) when sourceId is set:
+   *       a repeated request returns the stored event unchanged with 200 instead of 201.
+   *       sourceId is required unless sourceType is MANUAL.
+   *     tags:
+   *       - Property-base/Components
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateComponentEventRequest'
+   *     responses:
+   *       201:
+   *         description: Event created
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentEvent'
+   *       200:
+   *         description: The event already existed and is returned unchanged
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ComponentEvent'
+   *       400:
+   *         description: Invalid request, or relatedComponentId does not exist
+   *       404:
+   *         description: Component not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/components/:id/events', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { id } = ctx.params
+
+    const idValidation = z.string().uuid().safeParse(id)
+    if (!idValidation.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+
+    const body = schemas.CreateComponentEventSchema.safeParse(ctx.request.body)
+    if (!body.success) {
+      ctx.status = 400
+      ctx.body = { error: body.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.createComponentEvent(
+        id,
+        body.data
+      )
+
+      if (!result.ok) {
+        const [status, error] = componentEventErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error: result.message ?? error, ...metadata }
+        return
+      }
+
+      ctx.status = result.statusCode === 201 ? 201 : 200
+      ctx.body = {
+        content: schemas.ComponentEventSchema.parse(result.data),
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /components/{id}/events:
+   *   get:
+   *     summary: List a component's events
+   *     description: All events recorded on the component, newest first.
+   *     tags:
+   *       - Property-base/Components
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *     responses:
+   *       200:
+   *         description: The component's events
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentEvent'
+   *       400:
+   *         description: Invalid UUID format
+   *       404:
+   *         description: Component not found
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/components/:id/events', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { id } = ctx.params
+
+    const idValidation = z.string().uuid().safeParse(id)
+    if (!idValidation.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid UUID format', ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentEvents(id)
+
+      if (!result.ok) {
+        const [status, error] = componentEventErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error: result.message ?? error, ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: schemas.ComponentEventSchema.array().parse(result.data),
+        ...metadata,
+      }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /component-events:
+   *   get:
+   *     summary: List the component events of one work order or inspection
+   *     description: All events with the given source, newest first. An unknown source gives an empty list.
+   *     tags:
+   *       - Property-base/Components
+   *     parameters:
+   *       - in: query
+   *         name: sourceType
+   *         required: true
+   *         schema:
+   *           type: string
+   *           enum: [WORK_ORDER, INSPECTION, MANUAL]
+   *       - in: query
+   *         name: sourceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Work order id (e.g. od-123) or inspection id
+   *     responses:
+   *       200:
+   *         description: The events
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/ComponentEvent'
+   *       400:
+   *         description: Invalid query parameters
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/component-events', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const params = schemas.ComponentEventsBySourceQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!params.success) {
+      ctx.status = 400
+      ctx.body = { error: params.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getComponentEventsBySource(
+        params.data.sourceType,
+        params.data.sourceId
+      )
+
+      if (!result.ok) {
+        const [status, error] = componentEventErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error: result.message ?? error, ...metadata }
+        return
+      }
+
+      ctx.body = {
+        content: schemas.ComponentEventSchema.array().parse(result.data),
         ...metadata,
       }
     } catch (error) {
@@ -2297,6 +2662,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 content:
    *                   $ref: '#/components/schemas/ComponentInstallation'
+   *       409:
+   *         description: The component already has an active installation
    *     security:
    *       - bearerAuth: []
    */
@@ -2338,8 +2705,9 @@ export const routes = (router: KoaRouter) => {
       })
 
       if (!result.ok) {
-        ctx.status = 500
-        ctx.body = { error: 'Internal server error', ...metadata }
+        const [status, error] = componentInstallationErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -2388,6 +2756,8 @@ export const routes = (router: KoaRouter) => {
    *                   $ref: '#/components/schemas/ComponentInstallation'
    *       404:
    *         description: Component installation not found
+   *       409:
+   *         description: The change would give the component a second active installation
    *     security:
    *       - bearerAuth: []
    */
@@ -2420,14 +2790,9 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!result.ok) {
-        ctx.status = result.err === 'not_found' ? 404 : 500
-        ctx.body = {
-          error:
-            result.err === 'not_found'
-              ? 'Component installation not found'
-              : 'Internal server error',
-          ...metadata,
-        }
+        const [status, error] = componentInstallationErrorResponse[result.err]
+        ctx.status = status
+        ctx.body = { error, ...metadata }
         return
       }
 
@@ -2911,12 +3276,13 @@ export const routes = (router: KoaRouter) => {
    *       - Property-base/Components
    *     description: |
    *       Unified process to add a component. This handles:
-   *       1. Finding or creating a component model (by exact modelName match)
+   *       1. Resolving the component model
    *       2. Creating a component instance
    *       3. Creating a component installation
    *
-   *       If the model doesn't exist, it will be created. In this case, the model fields
-   *       (manufacturer, currentPrice, currentInstallPrice, modelWarrantyMonths) are required.
+   *       For appliances the model is found by exact name within the subtype, or created
+   *       when the model fields are given. Surfaces (subtypes in a SURFACE category) take
+   *       no model; omit modelName.
    *
    *       Categories, types, and subtypes must be created manually beforehand.
    *     requestBody:
@@ -2926,13 +3292,7 @@ export const routes = (router: KoaRouter) => {
    *           schema:
    *             type: object
    *             required:
-   *               - modelName
    *               - componentSubtypeId
-   *               - serialNumber
-   *               - componentWarrantyMonths
-   *               - priceAtPurchase
-   *               - depreciationPriceAtPurchase
-   *               - economicLifespan
    *               - spaceId
    *               - spaceType
    *               - installationDate
@@ -2940,7 +3300,7 @@ export const routes = (router: KoaRouter) => {
    *             properties:
    *               modelName:
    *                 type: string
-   *                 description: Model name (used to find existing model or create new one)
+   *                 description: Model name. Omit for surfaces.
    *               componentSubtypeId:
    *                 type: string
    *                 format: uuid
@@ -3023,6 +3383,7 @@ export const routes = (router: KoaRouter) => {
    *                       type: boolean
    *                     model:
    *                       type: object
+   *                       nullable: true
    *                       properties:
    *                         id:
    *                           type: string
@@ -3037,6 +3398,7 @@ export const routes = (router: KoaRouter) => {
    *                           type: string
    *                         serialNumber:
    *                           type: string
+   *                           nullable: true
    *                         status:
    *                           type: string
    *                     installation:
@@ -3049,7 +3411,7 @@ export const routes = (router: KoaRouter) => {
    *                         installationDate:
    *                           type: string
    *       400:
-   *         description: Validation error or missing required model fields
+   *         description: Subtype not found, model on a surface subtype, missing model fields, or component rejected by the property service
    *       500:
    *         description: Internal server error
    *     security:

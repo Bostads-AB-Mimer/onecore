@@ -1450,6 +1450,10 @@ export {
   updateComponent,
   deleteComponent,
   updateComponentInspectionState,
+  // Component Events
+  createComponentEvent,
+  getComponentEvents,
+  getComponentEventsBySource,
   // Component Installations
   getComponentInstallations,
   getComponentInstallationById,

@@ -9,6 +9,7 @@ export function useComponentImages(componentId: string) {
     images: docs.documents,
     isLoading: docs.isLoading,
     error: docs.error,
+    refetch: docs.refetch,
     upload: (file: File) => docs.uploadFile(file),
     uploadAsync: docs.uploadFileAsync,
     isUploading: docs.isUploading,

@@ -151,6 +151,16 @@ const schemas = {
     target: 'openApi3',
     $refStrategy: 'none',
   }).definitions,
+  ...zodToJsonSchema(types.ComponentEventSchema, {
+    name: 'ComponentEvent',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
+  ...zodToJsonSchema(types.CreateComponentEventSchema, {
+    name: 'CreateComponentEventRequest',
+    target: 'openApi3',
+    $refStrategy: 'none',
+  }).definitions,
   ...zodToJsonSchema(types.CreateComponentTypeSchema, {
     name: 'CreateComponentTypeRequest',
     target: 'openApi3',
