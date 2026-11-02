@@ -100,11 +100,14 @@ Only 7 states were enumerated above even though the developer said there
 are 9 total — 2 remain unaccounted for. Don't assume the list is complete;
 ask if it matters for what you're building.
 
-**Don't rely on `reserved` to find unsigned leases** (tested against test,
-2026-11, AVTAL-274). `draft` leases don't set it, some leases out for
-signing lack it, and a `voided` lease can leave it behind. The `!reserved`
-exclusion syntax Tenfast announced was rejected with 400. Go by lease stage
-instead: `avtal/search` takes a comma-separated list
+**Don't rely on `reserved` to find unsigned leases** (AVTAL-274). By design
+it marks an object with a `draft` or `signingInProgress` lease. Tested
+against test on 2026-11-02, drafts didn't set it, some leases out for
+signing lacked it, and a `voided` lease left it behind. Tenfast confirmed
+both as bugs the same day and opened tickets: the state isn't always
+recomputed when a lease changes, and voided leases count as reserved. The
+`!reserved` exclusion syntax returned 400 because it wasn't deployed yet.
+Go by lease stage instead, which doesn't depend on those fixes: `avtal/search` takes a comma-separated list
 (`filter[stage]=upcoming,draft,signingInProgress`, `CLAIMING_STAGES` in
 `tenfast-rental-object-helpers.ts`). `getAvailabilityForVacantRentalObjects`
 uses that search to keep objects with a next tenant's lease, signed or not,

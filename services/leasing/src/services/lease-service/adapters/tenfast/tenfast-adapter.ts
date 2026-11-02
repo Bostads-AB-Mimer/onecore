@@ -762,8 +762,9 @@ export const getAvailabilityForVacantRentalObjects = async (
   // be published as available. Searched for directly rather than read from
   // each object's own leases: a terminationScheduled lease's record has no
   // visibility into other leases on the object, and includeAvtal only returns
-  // an object's 10 latest. Tenfast's `reserved` state isn't used: in test
-  // (2026-11) drafts don't set it and a voided lease can leave it behind.
+  // an object's 10 latest. Tenfast's `reserved` state isn't used: it isn't
+  // always recomputed when a lease changes, and voided leases count as
+  // reserved (both confirmed by Tenfast as bugs, 2026-11).
   // filter[stage] takes a comma-separated list.
   const fetchClaimedRentalObjectIds =
     async (): Promise<ClaimedRentalObjectIdsResult> => {
