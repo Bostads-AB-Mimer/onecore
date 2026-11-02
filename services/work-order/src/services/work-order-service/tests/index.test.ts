@@ -28,24 +28,62 @@ app.use(bodyParser())
 app.use(router.routes())
 
 describe('work-order-service index', () => {
-  describe('GET /workOrders/residenceId/{residenceId}', () => {
+  describe('GET /workOrders/rentalId/{rentalId}', () => {
+    it.each([
+      ['Lägenhet', '306-001-01-0101'],
+      ['Lokal', '705-022-99-0002'],
+      ['Bilplats', '216-704-00-0017'],
+    ])(
+      'should return work orders for a %s rental id',
+      async (_kind, rentalId) => {
+        const workOrderMock = factory.workOrder.buildList(2)
+        const getWorkOrdersSpy = jest
+          .spyOn(odooAdapter, 'getWorkOrdersByRentalId')
+          .mockResolvedValue(workOrderMock)
+
+        const res = await request(app.callback()).get(
+          `/workOrders/rentalId/${rentalId}`
+        )
+
+        expect(res.status).toBe(200)
+        expect(getWorkOrdersSpy).toHaveBeenCalledWith(rentalId)
+        expect(JSON.stringify(res.body.content.workOrders)).toEqual(
+          JSON.stringify(workOrderMock)
+        )
+      }
+    )
+
+    it('should return 500 if there is an error', async () => {
+      jest
+        .spyOn(odooAdapter, 'getWorkOrdersByRentalId')
+        .mockRejectedValue(new Error('Internal server error'))
+
+      const res = await request(app.callback()).get(
+        '/workOrders/rentalId/306-001-01-0101'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
+    })
+  })
+
+  describe('GET /workOrders/residenceId/{residenceId} (deprecated alias)', () => {
     const residenceId = '123-123-123'
     const workOrderMock = factory.workOrder.buildList(4, {
       RentalObjectCode: residenceId,
     })
 
-    beforeEach(() => {
-      jest
-        .spyOn(odooAdapter, 'getWorkOrdersByResidenceId')
+    it('should return work orders through the rental id lookup', async () => {
+      const getWorkOrdersSpy = jest
+        .spyOn(odooAdapter, 'getWorkOrdersByRentalId')
         .mockResolvedValue(workOrderMock)
-    })
 
-    it('should return work orders for the given residence id', async () => {
       const res = await request(app.callback()).get(
         `/workOrders/residenceId/${residenceId}`
       )
 
       expect(res.status).toBe(200)
+      expect(getWorkOrdersSpy).toHaveBeenCalledWith(residenceId)
       expect(JSON.stringify(res.body.content.workOrders)).toEqual(
         JSON.stringify(workOrderMock)
       )
@@ -53,7 +91,7 @@ describe('work-order-service index', () => {
 
     it('should return 500 if there is an error', async () => {
       jest
-        .spyOn(odooAdapter, 'getWorkOrdersByResidenceId')
+        .spyOn(odooAdapter, 'getWorkOrdersByRentalId')
         .mockRejectedValue(new Error('Internal server error'))
 
       const res = await request(app.callback()).get(
