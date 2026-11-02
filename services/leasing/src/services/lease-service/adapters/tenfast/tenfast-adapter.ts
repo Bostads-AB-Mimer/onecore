@@ -682,9 +682,9 @@ export const getAvailabilityForVacantRentalObjects = async (
         const rentalObjectResponse = await tenfastApi.request({
           method: 'get',
           // includeAvtal must be signed|open|all — Tenfast rejects the legacy `true`.
-          // `all` is required here: the upcoming-lease filter below has to see leases
-          // regardless of signature status, or an object with an unsigned upcoming
-          // lease would wrongly be listed as vacant.
+          // `all` is required here: the claimed-lease filter below has to see
+          // unsigned leases too, or an object with a draft or a lease out for
+          // signing would wrongly be listed as vacant.
           url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt?hyresvard=${tenfastCompanyId}&states=vacant,soon-vacant&typ=${type}&includeAvtal=all&paginate=${page}`,
         })
         if (rentalObjectResponse.status === 400)
@@ -748,21 +748,24 @@ export const getAvailabilityForVacantRentalObjects = async (
     }
   }
 
-  type UpcomingRentalObjectIdsResult =
+  type ClaimedRentalObjectIdsResult =
     | { ok: true; ids: Set<string> }
     | { ok: false; err: 'could-not-find-upcoming-leases' }
 
   // A terminationScheduled lease's own record has no visibility into other
-  // leases on the same rental object — if a new tenant has already signed an
-  // upcoming lease for it before the current tenant has left, that object is
-  // already re-let and must not be published as available. populate must
-  // include hyresgaster here too, for the same schema reason as above.
-  const fetchUpcomingRentalObjectIds =
-    async (): Promise<UpcomingRentalObjectIdsResult> => {
+  // leases on the same rental object — if a next tenant already has a lease
+  // for it (signed and upcoming, or still a draft or out for signing), that
+  // object is already taken and must not be published as available.
+  // filter[stage] takes a comma-separated list. Tenfast's `reserved` state
+  // isn't used for this: in test (2026-11) drafts don't set it and a voided
+  // lease can leave it behind. populate must include hyresgaster here too,
+  // for the same schema reason as above.
+  const fetchClaimedRentalObjectIds =
+    async (): Promise<ClaimedRentalObjectIdsResult> => {
       try {
         const leases = await fetchAllPages(
           (paginate) =>
-            `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=upcoming&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt,hyresgaster&paginate=${paginate}`,
+            `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=upcoming,draft,signingInProgress&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt,hyresgaster&paginate=${paginate}`,
           TenfastPaginatedLeaseResponseSchema
         )
         return {
@@ -783,21 +786,29 @@ export const getAvailabilityForVacantRentalObjects = async (
       tagsById,
       vacantOrSoonVacantResult,
       terminatingLeasesResult,
-      upcomingRentalObjectIdsResult,
+      claimedRentalObjectIdsResult,
     ] = await Promise.all([
       getTags(),
       fetchVacantOrSoonVacant(),
       fetchTerminatingLeases(),
-      fetchUpcomingRentalObjectIds(),
+      fetchClaimedRentalObjectIds(),
     ])
 
     if (!vacantOrSoonVacantResult.ok) return vacantOrSoonVacantResult
     if (!terminatingLeasesResult.ok) return terminatingLeasesResult
-    if (!upcomingRentalObjectIdsResult.ok) return upcomingRentalObjectIdsResult
+    if (!claimedRentalObjectIdsResult.ok) return claimedRentalObjectIdsResult
 
-    // Exclude records with an upcoming lease (someone's already moving in soon).
+    // Exclude records already claimed by a next tenant: a signed upcoming
+    // lease, or one not yet signed (draft or out for signing). Hidden rather
+    // than flagged, as decided with the product owner (AVTAL-215): leasing
+    // watches the leases it sends out.
     const availableRecords = vacantOrSoonVacantResult.records.filter(
-      (record) => filterByStatus(record.avtal ?? [], ['upcoming']).length === 0
+      (record) =>
+        filterByStatus(record.avtal ?? [], [
+          'upcoming',
+          'pending-signature',
+          'not-sent',
+        ]).length === 0
     )
 
     const recordsFromTerminatingLeases = terminatingLeasesResult.leases.flatMap(
@@ -805,7 +816,7 @@ export const getAvailabilityForVacantRentalObjects = async (
         (lease.hyresobjekt ?? [])
           .filter(
             (rentalObject) =>
-              !upcomingRentalObjectIdsResult.ids.has(rentalObject.externalId)
+              !claimedRentalObjectIdsResult.ids.has(rentalObject.externalId)
           )
           .map((rentalObject) => ({
             ...rentalObject,

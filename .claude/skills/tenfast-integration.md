@@ -100,6 +100,16 @@ Only 7 states were enumerated above even though the developer said there
 are 9 total — 2 remain unaccounted for. Don't assume the list is complete;
 ask if it matters for what you're building.
 
+**Don't rely on `reserved` to find unsigned leases** (tested against test,
+2026-11, AVTAL-274). `draft` leases don't set it, some leases out for
+signing lack it, and a `voided` lease can leave it behind. The `!reserved`
+exclusion syntax Tenfast announced was rejected with 400. Go by lease stage
+instead: `includeAvtal=all` returns unsigned leases on each object, and
+`avtal/search` takes a comma-separated list
+(`filter[stage]=upcoming,draft,signingInProgress`).
+`getAvailabilityForVacantRentalObjects` does both to keep objects with a
+next tenant's lease, signed or not, out of the publish list.
+
 Important interaction (confirmed, not hypothetical): **`soon-vacant`
 already includes a rental object whose current lease is
 `terminationScheduled`, as long as that lease ends within about a month.**
