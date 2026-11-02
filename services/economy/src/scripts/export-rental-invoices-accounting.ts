@@ -1,4 +1,4 @@
-import { exportRentalInvoicesAccounting } from '@src/services/invoice-service/servicev2'
+import { exportRentalInvoicesAccounting } from '@src/services/invoice-service/service'
 
 /**
  * Exports rental invoices from the rental system (Tenfast), enriches

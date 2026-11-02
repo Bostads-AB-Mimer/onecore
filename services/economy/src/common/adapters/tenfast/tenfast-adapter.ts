@@ -49,6 +49,7 @@ import {
   InvoiceWithAccounting,
   MimerCompany,
   RentalLoss,
+  RentalLossError,
   RentalLossRow,
   TenfastRentalObject,
 } from '@src/common/types/typesv2'
@@ -532,8 +533,15 @@ export const getInvoiceArticle = async (
 ): Promise<AdapterResult<TenfastRentArticle, string>> => {
   try {
     const result = await makeTenfastRequest(
-      `/v1/hyresvard/articles/${articleId}`
+      `/v1/hyresvard/articles/${articleId}`,
+      { validateStatus: (status) => [200, 404].includes(status) }
     )
+
+    if (result.status === 404) {
+      logger.warn({ articleId }, 'tenfast-adapter.getInvoiceArticle: not found')
+      return { ok: false, err: 'not-found' }
+    }
+
     if (result.status !== 200) {
       return { ok: false, err: result.statusText }
     }
@@ -989,17 +997,17 @@ const enrichInvoiceRowsWithAccounting = async (
               accountConfiguration.accountNr.toString()
             invoiceRowWithAccounting.costCode =
               accountConfiguration.costCenter &&
-                accountConfiguration.costCenter !== ''
+              accountConfiguration.costCenter !== ''
                 ? accountConfiguration.costCenter
                 : undefined
             invoiceRowWithAccounting.property =
               accountConfiguration.property &&
-                accountConfiguration.property !== ''
+              accountConfiguration.property !== ''
                 ? accountConfiguration.property
                 : undefined
             invoiceRowWithAccounting.projectCode =
               accountConfiguration.projectCode &&
-                accountConfiguration.projectCode !== ''
+              accountConfiguration.projectCode !== ''
                 ? accountConfiguration.projectCode
                 : undefined
 
@@ -1027,7 +1035,10 @@ const enrichInvoiceRowsWithAccounting = async (
           continue
         }
       } else {
-        logger.error({ article: invoiceRow.rentArticle, articleResult }, 'Could not get article information')
+        logger.error(
+          { article: invoiceRow.rentArticle, articleResult },
+          'Could not get article information'
+        )
       }
     }
 
@@ -1041,7 +1052,10 @@ const enrichInvoiceRowsWithAccounting = async (
       )
     ) {
       logger.error(
-        { invoiceId: invoice.invoiceId, article: invoiceRowWithAccounting.rentArticleName },
+        {
+          invoiceId: invoice.invoiceId,
+          article: invoiceRowWithAccounting.rentArticleName,
+        },
         'Minst en hyresrad på avin saknar hyresobjekt'
       )
       errors.push({
@@ -1511,9 +1525,9 @@ export const mapToRentalLoss = async (
   tenfastRentalLoss: TenfastRentalLoss
 ): Promise<{
   rentalLosses: RentalLoss[]
-  errors: { invoiceNumber: string; error: string }[]
+  errors: RentalLossError[]
 }> => {
-  const errors: { invoiceNumber: string; error: string }[] = []
+  const errors: RentalLossError[] = []
   // Accounting and article data per rent row, without amounts. Amounts depend
   // on the interval and are calculated per split rental loss below.
   const rentalLossRowTemplates: {
@@ -1529,7 +1543,7 @@ export const mapToRentalLoss = async (
         'Rental loss row is missing rent article'
       )
       errors.push({
-        invoiceNumber: rentalObjectExternalId,
+        rentalObject: rentalObjectExternalId,
         error: `Hyresraden ${hyra.label} saknar hyresartikel`,
       })
       continue
@@ -1538,10 +1552,9 @@ export const mapToRentalLoss = async (
     const articleResult = await getInvoiceArticle(hyra.article)
     if (!articleResult.ok) {
       errors.push({
-        invoiceNumber: rentalObjectExternalId,
+        rentalObject: rentalObjectExternalId,
         error: `Kunde inte hämta hyresartikel ${hyra.article}`,
       })
-      console.log('Kunde inte hämta hyresartikel')
       continue
     }
 
@@ -1572,7 +1585,7 @@ export const mapToRentalLoss = async (
         'Rent article is missing rental loss account configuration'
       )
       errors.push({
-        invoiceNumber: rentalObjectExternalId,
+        rentalObject: rentalObjectExternalId,
         error: `Hyresartikeln ${article.code} saknar konton för hyresbortfall (Intäkter och/eller Kostnad/Inköp)`,
       })
       continue
@@ -1609,7 +1622,7 @@ export const mapToRentalLoss = async (
       'Rental loss has no uncontracted intervals'
     )
     errors.push({
-      invoiceNumber: rentalObjectExternalId,
+      rentalObject: rentalObjectExternalId,
       error: `Hyresbortfallet för ${rentalObjectExternalId} ${tenfastRentalLoss.month} saknar avtalslösa perioder`,
     })
 
@@ -1653,12 +1666,15 @@ export const getRentalLosses = async (
   AdapterResult<
     {
       rentalLosses: RentalLoss[]
-      errors: { invoiceNumber: string; error: string }[] | undefined
+      errors: RentalLossError[]
+      // External ids of uncontracted rental objects that have no rent rows
+      // in Tenfast, so there is no rental loss to account for.
+      rentalObjectsWithoutRentRows: string[]
     },
     string
   >
 > => {
-  const reportId = '6a3276034ce55cc308bb2beb'
+  const reportId = '6ae49a9a86cfe96e81e8a9c5'
   const result = await makeTenfastRequest(
     `/v1/hyresvard/reports/${reportId}/download`,
     {
@@ -1689,7 +1705,8 @@ export const getRentalLosses = async (
   console.log('Got report', parsedResponse.data.length)
 
   const rentalLosses: RentalLoss[] = []
-  const errors: { invoiceNumber: string; error: string }[] = []
+  const errors: RentalLossError[] = []
+  const rentalObjectsWithoutRentRows: string[] = []
 
   const rentalLossResults = parsedResponse.data.filter((rentalLoss) => {
     return rentalLoss.days.uncontracted > 0
@@ -1704,7 +1721,8 @@ export const getRentalLosses = async (
       ok: true,
       data: {
         rentalLosses: [],
-        errors: undefined,
+        errors: [],
+        rentalObjectsWithoutRentRows: [],
       },
     }
   }
@@ -1712,10 +1730,27 @@ export const getRentalLosses = async (
   console.log('Actual rental losses', rentalLossResults.length)
 
   for (const tenfastRentalLoss of rentalLossResults) {
+    if (tenfastRentalLoss.hyresobjekt.hyror.length === 0) {
+      rentalObjectsWithoutRentRows.push(
+        tenfastRentalLoss.hyresobjekt.externalId
+      )
+      continue
+    }
+
     const { rentalLosses: mappedRentalLosses, errors: rentalLossErrors } =
       await mapToRentalLoss(tenfastRentalLoss)
     rentalLosses.push(...mappedRentalLosses)
     errors.push(...rentalLossErrors)
+  }
+
+  if (rentalObjectsWithoutRentRows.length > 0) {
+    logger.warn(
+      {
+        hyresvard: company.tenfastId,
+        count: rentalObjectsWithoutRentRows.length,
+      },
+      'Uncontracted rental objects without rent rows'
+    )
   }
 
   console.log('Without errors', rentalLosses.length)
@@ -1723,8 +1758,9 @@ export const getRentalLosses = async (
   return {
     ok: true,
     data: {
-      rentalLosses: rentalLosses.slice(0, 10),
-      errors: errors.length ? errors : undefined,
+      rentalLosses,
+      errors,
+      rentalObjectsWithoutRentRows,
     },
   }
 }

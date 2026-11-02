@@ -68,6 +68,11 @@ export type RentalLoss = {
   uncontractedInterval: RentalLossInterval
 }
 
+export type RentalLossError = {
+  rentalObject: string
+  error: string
+}
+
 export type RentalLossRow = {
   amount: number
   totalAmount: number

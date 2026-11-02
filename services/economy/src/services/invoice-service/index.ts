@@ -25,11 +25,10 @@ import {
   exportRentalInvoicesAccountingByOcr,
   exportRentalLosses,
   handleRentalBlocks,
+  enrichRentalLossesWithAccounting,
   markInvoicesAsExported,
   uploadCsvFiles,
   uploadRentalLossCsvFile,
-} from './servicev2'
-import {
   getInvoiceDetails,
   getInvoicesByContactCode,
   fetchInvoiceRows,
@@ -93,7 +92,9 @@ export const routes = (router: KoaRouter) => {
           aggregateAccountingCsv,
           ledgerAccountingCsv
         )
-        await markInvoicesAsExported(invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices))
+        await markInvoicesAsExported(
+          invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices)
+        )
       }
 
       ctx.status = 200
@@ -104,7 +105,7 @@ export const routes = (router: KoaRouter) => {
         ),
         skippedInvoices: invoicesResult.skippedInvoices.map(
           (invoice) => invoice.invoiceId
-        )
+        ),
       }
     } catch (error) {
       ctx.status = 500
@@ -210,18 +211,48 @@ export const routes = (router: KoaRouter) => {
       if (!companyId) {
         ctx.status = 400
         ctx.body = 'Company with specified ID could not be found'
+        return
       }
 
-      let rentalLosses = await exportRentalLosses(companyId)
-      console.table(rentalLosses)
-      rentalLosses = await handleRentalBlocks(rentalLosses)
-      const { aggregateRentalLossAccountingCsv, errors } = await createRentalLossAccounting(rentalLosses)
+      try {
+        const {
+          rentalLosses: exportedRentalLosses,
+          errors: exportErrors,
+          rentalObjectsWithoutRentRows,
+        } = await exportRentalLosses(companyId)
+        const rentalLossesWithBlocks =
+          await handleRentalBlocks(exportedRentalLosses)
+        const { rentalLosses, errors: enrichmentErrors } =
+          await enrichRentalLossesWithAccounting(rentalLossesWithBlocks)
+        const { aggregateRentalLossAccountingCsv, errors: accountingErrors } =
+          await createRentalLossAccounting(rentalLosses)
 
-      await uploadRentalLossCsvFile(
-        companyId,
-        aggregateRentalLossAccountingCsv
-      )
-      ctx.status = 200
+        // The first csv row is the header
+        const accountingRowCount = aggregateRentalLossAccountingCsv.length - 1
+        if (accountingRowCount > 0) {
+          await uploadRentalLossCsvFile(
+            companyId,
+            aggregateRentalLossAccountingCsv
+          )
+        } else {
+          logger.warn(
+            { companyId },
+            'No rental loss accounting rows created, nothing uploaded'
+          )
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          errors: [...exportErrors, ...enrichmentErrors, ...accountingErrors],
+          rentalLosses: rentalLosses.length,
+          uploadedRows: Math.max(accountingRowCount, 0),
+          rentalObjectsWithoutRentRows,
+        }
+      } catch (error) {
+        logger.error({ error, companyId }, 'Could not import rental loss')
+        ctx.status = 500
+        ctx.body = 'Could not import rental loss ' + (error as any).message
+      }
     }
   )
 

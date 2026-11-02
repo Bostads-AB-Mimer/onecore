@@ -160,3 +160,81 @@ describe(adapter.enrichInvoiceWithAccounting, () => {
     )
   })
 })
+
+describe(adapter.getActiveRentalBlocksWithAccounting, () => {
+  it('selects and maps all posting columns p1-p5 of the block', async () => {
+    mockRaw.mockResolvedValue([
+      {
+        p1: '6100 ',
+        p2: '0061 ',
+        p3: '26001 ',
+        p4: 'PROJ ',
+        p5: '20006 ',
+        fromDate: new Date('2026-07-01T00:00:00.000Z'),
+        toDate: null,
+        caption: 'Renovering ',
+      },
+    ])
+
+    const result = await adapter.getActiveRentalBlocksWithAccounting(
+      'RO1',
+      new Date('2026-07-01T00:00:00.000Z'),
+      new Date('2026-07-31T00:00:00.000Z')
+    )
+
+    expect(mockRaw.mock.calls[0][0]).toMatch(/select p1, p2, p3, p4, p5,/)
+    expect(result).toEqual([
+      {
+        account: '6100',
+        costCode: '0061',
+        property: '26001',
+        projectCode: 'PROJ',
+        freeCode: '20006',
+        description: 'Renovering',
+        fromDate: new Date('2026-07-01T00:00:00.000Z'),
+        toDate: null,
+      },
+    ])
+  })
+
+  it('maps blank or null posting columns to undefined so rental object rules can fill them', async () => {
+    mockRaw.mockResolvedValue([
+      {
+        p1: '3086 ',
+        p2: '      ',
+        p3: '',
+        p4: null,
+        p5: '   ',
+        fromDate: new Date('2026-07-01T00:00:00.000Z'),
+        toDate: null,
+        caption: 'Spärr ',
+      },
+    ])
+
+    const [block] = await adapter.getActiveRentalBlocksWithAccounting(
+      'RO1',
+      new Date('2026-07-01T00:00:00.000Z'),
+      new Date('2026-07-31T00:00:00.000Z')
+    )
+
+    expect(block.account).toBe('3086')
+    expect(block.costCode).toBeUndefined()
+    expect(block.property).toBeUndefined()
+    expect(block.projectCode).toBeUndefined()
+    expect(block.freeCode).toBeUndefined()
+  })
+
+  it('queries for blocks overlapping the range, including blocks starting or ending inside it', async () => {
+    mockRaw.mockResolvedValue([])
+    const from = new Date('2026-07-01T00:00:00.000Z')
+    const to = new Date('2026-07-31T00:00:00.000Z')
+
+    await adapter.getActiveRentalBlocksWithAccounting('RO1', from, to)
+
+    const [sql, bindings] = mockRaw.mock.calls[0]
+    expect(sql).toMatch(/hyspt\.fdate <= \?/)
+    expect(sql).toMatch(/hyspt\.tdate >= \? or hyspt\.tdate is null/)
+    // fdate is compared with the end of the range, tdate with the start
+    expect(bindings).toEqual(['RO1', to, from, '2026'])
+  })
+})

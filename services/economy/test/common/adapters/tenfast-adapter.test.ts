@@ -13,6 +13,7 @@ import {
   getAutogiroConsentByNationalRegistrationNumber,
   setGracePeriod,
   listNewOutboundExports,
+  getRentalLosses,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { PaymentStatus } from '@onecore/types'
 import {
@@ -526,7 +527,7 @@ describe('Tenfast Adapter', () => {
 
       expect(result).toEqual({
         ok: false,
-        err: 'Not Found',
+        err: 'not-found',
       })
     })
 
@@ -1325,5 +1326,116 @@ describe(listNewOutboundExports, () => {
     const result = await listNewOutboundExports()
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(getRentalLosses, () => {
+  const company = {
+    tenfastId: 'test-hyresvard-id',
+    xpandId: '001',
+  } as any
+
+  const buildRentalLoss = (externalId: string, hyror: any[]) => ({
+    month: '2026-11',
+    hyresvard: { id: 'test-hyresvard-id', name: 'Mimer' },
+    hyresobjekt: {
+      id: `id-${externalId}`,
+      externalId,
+      fastighetId: 'fastighet',
+      postadress: 'Gatan 1',
+      postnummer: '722 11',
+      stad: 'VÄSTERÅS',
+      skvNummer: null,
+      objektnummer: '0201',
+      typ: 'Bostad',
+      hyror,
+    },
+    days: { month: 30, contracted: 0, uncontracted: 30 },
+    uncontractedIntervals: [{ from: '2026-11-01', to: '2026-11-30' }],
+    avtalIds: [],
+    relatedAvtalCoverage: [],
+  })
+
+  const rentRow = {
+    _id: 'hyra-1',
+    label: 'Hyra',
+    amount: 3000,
+    vat: 0,
+    hyresobjekt: 'id-RO1',
+    article: 'article-1',
+    includeInContract: true,
+  }
+
+  const article = {
+    ...TenfastRentArticleFactory.build(),
+    code: 'HYRA',
+    accountConfigurations: [
+      {
+        accountNr: 3015,
+        categoryCode: 'Intäkter',
+        debitType: 'HYRESBORTFALL',
+        costCenter: '',
+        property: '',
+        freeText: '',
+        projectCode: '',
+      },
+      {
+        accountNr: 3085,
+        categoryCode: 'Kostnad/Inköp',
+        debitType: 'HYRESBORTFALL',
+        costCenter: '',
+        property: '',
+        freeText: '',
+        projectCode: '',
+      },
+    ],
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('returns every rental loss and lists objects without rent rows separately', async () => {
+    const rentalLosses = [
+      buildRentalLoss('EMPTY1', []),
+      ...Array.from({ length: 11 }, (_, i) =>
+        buildRentalLoss(`RO${i}`, [rentRow])
+      ),
+      buildRentalLoss('EMPTY2', []),
+    ]
+    mockAxios.request.mockImplementation(async (config: any) =>
+      config.url.includes('/reports/')
+        ? { status: 200, data: rentalLosses }
+        : { status: 200, data: article }
+    )
+
+    const result = await getRentalLosses(company)
+
+    assert(result.ok)
+    expect(result.data.rentalLosses).toHaveLength(11)
+    expect(result.data.rentalLosses[0].rentalLossRows).toHaveLength(1)
+    expect(result.data.rentalObjectsWithoutRentRows).toEqual([
+      'EMPTY1',
+      'EMPTY2',
+    ])
+    expect(result.data.errors).toEqual([])
+  })
+
+  it('reports rent rows whose article cannot be retrieved', async () => {
+    mockAxios.request.mockImplementation(async (config: any) =>
+      config.url.includes('/reports/')
+        ? { status: 200, data: [buildRentalLoss('RO1', [rentRow])] }
+        : { status: 404, data: {} }
+    )
+
+    const result = await getRentalLosses(company)
+
+    assert(result.ok)
+    expect(result.data.errors).toEqual([
+      {
+        rentalObject: 'RO1',
+        error: 'Kunde inte hämta hyresartikel article-1',
+      },
+    ])
   })
 })

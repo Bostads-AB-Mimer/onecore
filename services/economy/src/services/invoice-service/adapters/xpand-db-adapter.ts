@@ -306,13 +306,20 @@ export const getContacts = async (
   return contacts
 }
 
+// Xpand stores unset posting columns as blank padded strings. Map them to
+// undefined so the rental object's own rules can fill them in later.
+const blankToUndefined = (value: unknown): string | undefined => {
+  const trimmed = value?.toString().trim()
+  return trimmed ? trimmed : undefined
+}
+
 const transformRentalBlockWithAccounting = (dbRow: any): RentalBlockWithAccounting => {
   return {
     account: dbRow.p1.trim(),
-    costCode: dbRow.p2?.toString().trimEnd(),
-    property: dbRow.p3?.toString().trimEnd(),
-    projectCode: dbRow.p4?.toString().trimEnd(),
-    freeCode: dbRow.p5?.toString().trimEnd(),
+    costCode: blankToUndefined(dbRow.p2),
+    property: blankToUndefined(dbRow.p3),
+    projectCode: blankToUndefined(dbRow.p4),
+    freeCode: blankToUndefined(dbRow.p5),
     description: dbRow.caption?.toString().trimEnd(),
     fromDate: dbRow.fromDate,
     toDate: dbRow.toDate
@@ -323,19 +330,21 @@ const transformRentalBlockWithAccounting = (dbRow: any): RentalBlockWithAccounti
  * Returns an active rental block with accounting information for a given rental object, if the 
  * block is active within the date range and has accounting information. Rental blocks without
  * accounting information are not returned even if they are active within the date range.
+ * A block is active if it overlaps the date range on at least one day, so blocks that start
+ * or end inside the range are included. The caller truncates them to the range.
  */
 export const getActiveRentalBlocksWithAccounting = async (rentalId: string, from: Date, to: Date) => {
   const year = from.toISOString().substring(0, 4)
 
-  const blockWithAccounting = await db.raw(`select p1, p5, hyspt.fdate as fromDate, hyspt.tdate as toDate, hyspa.caption as caption from hyspt 
+  const blockWithAccounting = await db.raw(`select p1, p2, p3, p4, p5, hyspt.fdate as fromDate, hyspt.tdate as toDate, hyspa.caption as caption from hyspt 
   inner join hyspa on hyspt.keyhyspa = hyspa.keyhyspa
   inner join repsk on hyspa.keyhyspa = repsk.keycode
   inner join babuf ON hyspt.keycmobj = babuf.keycmobj
   inner join cmobj on hyspt.keycmobj = cmobj.keycmobj
   where babuf.hyresid = ?
-  and hyspt.fdate < ? 
-  and (hyspt.tdate > ? or hyspt.tdate is null)
-  and repsk.year = ?`, [rentalId, from, to, year])
+  and hyspt.fdate <= ?
+  and (hyspt.tdate >= ? or hyspt.tdate is null)
+  and repsk.year = ?`, [rentalId, to, from, year])
 
   return blockWithAccounting.map(transformRentalBlockWithAccounting)
 }
