@@ -584,3 +584,42 @@ describe('POST /listings/summaries', () => {
     expect(res.status).toBe(500)
   })
 })
+
+describe('PATCH /listings/:listingId', () => {
+  it('responds with 200 on success', async () => {
+    const listing = factory.listing.build({ id: 1337 })
+    const spy = jest
+      .spyOn(listingAdapter, 'updateListing')
+      .mockResolvedValueOnce({ ok: true, data: listing })
+
+    const res = await request(app.callback())
+      .patch('/listings/1337')
+      .send({ reviewedAt: new Date().toISOString() })
+
+    expect(spy).toHaveBeenCalled()
+    expect(res.status).toBe(200)
+  })
+
+  it('responds with 400 when the body has no recognized fields', async () => {
+    const spy = jest
+      .spyOn(listingAdapter, 'updateListing')
+      .mockResolvedValueOnce({ ok: false, err: 'no-fields' })
+
+    const res = await request(app.callback()).patch('/listings/1337').send({})
+
+    expect(spy).toHaveBeenCalled()
+    expect(res.status).toBe(400)
+  })
+
+  it('responds with 404 when the listing does not exist', async () => {
+    jest
+      .spyOn(listingAdapter, 'updateListing')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const res = await request(app.callback())
+      .patch('/listings/1337')
+      .send({ reviewedAt: new Date().toISOString() })
+
+    expect(res.status).toBe(404)
+  })
+})

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   BulkActionBar,
@@ -191,32 +191,35 @@ export function VacantApartmentsTable() {
   useEffect(() => clear(), [data, clear])
 
   const [editing, setEditing] = useState<VacantApartment | null>(null)
-  const createListing = useCreateListing()
   // Per-row in-flight tracking — createListing is one shared mutation, so its
   // own isPending/variables only ever reflect the most recently started call
   // and would incorrectly re-enable an earlier row's menu item.
+  const { mutate: createListing } = useCreateListing()
   const [creatingFor, setCreatingFor] = useState<Set<string>>(new Set())
 
-  const handleEdit = (apartment: VacantApartment) => {
-    if (apartment.listing) {
-      setEditing(apartment)
-      return
-    }
-    setCreatingFor((prev) => new Set(prev).add(apartment.rentalObjectCode))
-    createListing.mutate(apartment.rentalObjectCode, {
-      onSuccess: (listing) => setEditing({ ...apartment, listing }),
-      onSettled: () =>
-        setCreatingFor((prev) => {
-          const next = new Set(prev)
-          next.delete(apartment.rentalObjectCode)
-          return next
-        }),
-    })
-  }
+  const handleEdit = useCallback(
+    (apartment: VacantApartment) => {
+      if (apartment.listing) {
+        setEditing(apartment)
+        return
+      }
+      setCreatingFor((prev) => new Set(prev).add(apartment.rentalObjectCode))
+      createListing(apartment.rentalObjectCode, {
+        onSuccess: (listing) => setEditing({ ...apartment, listing }),
+        onSettled: () =>
+          setCreatingFor((prev) => {
+            const next = new Set(prev)
+            next.delete(apartment.rentalObjectCode)
+            return next
+          }),
+      })
+    },
+    [createListing]
+  )
 
   const columns = useMemo(
     () => buildColumns(handleEdit, creatingFor),
-    [creatingFor]
+    [handleEdit, creatingFor]
   )
 
   if (isError) return <QueryError error={error} />

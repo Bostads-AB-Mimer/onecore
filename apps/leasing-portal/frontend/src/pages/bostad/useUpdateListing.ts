@@ -39,7 +39,9 @@ export function useUpdateListing() {
       queryClient.setQueryData<VacantApartment[]>(
         vacantApartmentsQueryKey,
         (old) =>
-          old?.map((a) => (a.listing?.id === listing.id ? { ...a, listing } : a))
+          old?.map((a) =>
+            a.listing?.id === listing.id ? { ...a, listing } : a
+          )
       )
     },
     onError: (error) => {

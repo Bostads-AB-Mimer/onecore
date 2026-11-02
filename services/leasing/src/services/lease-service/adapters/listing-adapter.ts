@@ -668,7 +668,10 @@ const updateListing = async (
   data: leasing.UpdateListing,
   dbConnection: Knex = db
 ): Promise<
-  AdapterResult<ListingWithoutRentalObject, 'not-found' | 'no-fields' | 'unknown'>
+  AdapterResult<
+    ListingWithoutRentalObject,
+    'not-found' | 'no-fields' | 'unknown'
+  >
 > => {
   try {
     const updateFields: Partial<DbListing> = {}

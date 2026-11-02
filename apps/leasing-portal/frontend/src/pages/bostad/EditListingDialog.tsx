@@ -135,14 +135,14 @@ export function EditListingDialog({
         ...(!alreadyPublished && {
           publishedTo: values.publishUntilFurtherNotice
             ? null
-            : (values.publishedTo
-                ? toDateOnlyString(values.publishedTo)
-                : null),
+            : values.publishedTo
+              ? toDateOnlyString(values.publishedTo)
+              : null,
         }),
         availableFrom: availableFromChanged
-          ? (values.availableFrom
-              ? toDateOnlyString(values.availableFrom)
-              : null)
+          ? values.availableFrom
+            ? toDateOnlyString(values.availableFrom)
+            : null
           : null,
         tentativeAvailableFrom: values.tentativeAvailableFrom
           ? toDateOnlyString(values.tentativeAvailableFrom)
