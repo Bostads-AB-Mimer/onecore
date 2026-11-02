@@ -13,6 +13,7 @@ import { routes as keyEventRoutes } from './key-events'
 import { routes as keyBundleRoutes } from './key-bundles'
 import { routes as daxRoutes } from './dax'
 import { routes as scanReceiptRoutes } from './scan-receipt'
+import { routes as moveInOutRoutes } from './move-in-out'
 
 const {
   KeySchema,
@@ -63,6 +64,7 @@ const {
   NotFoundResponseSchema,
   BadRequestResponseSchema,
   SchemaDownloadUrlResponseSchema,
+  MoveInOutRowSchema,
 } = keys
 
 /**
@@ -149,13 +151,15 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Card', CardSchema)
   registerSchema('CardDetails', CardDetailsSchema)
   registerSchema('QueryCardOwnersParams', QueryCardOwnersParamsSchema)
+  registerSchema('MoveInOutRow', MoveInOutRowSchema)
 
   // Register pagination schemas
   registerSchema('PaginationMeta', PaginationMetaSchema)
   registerSchema('PaginationLinks', PaginationLinksSchema)
   registerSchema('PaginatedResponse', PaginatedResponseSchema)
 
-  // Mount sub-routers
+  // Mount sub-routers (move-in-out before keys so /keys/:id does not swallow it)
+  moveInOutRoutes(router)
   keyLoanRoutes(router)
   keyRoutes(router)
   keySystemRoutes(router)

@@ -5,6 +5,7 @@ import currency from 'currency.js'
 import { useParkingSpaceListing } from '../hooks/useParkingSpaceListing'
 import { printVacantFrom } from '../../../common/formattingUtils'
 import { ListingStatus } from '@onecore/types'
+import { ListingTextContentIconLink } from '../../../components'
 
 export const ParkingSpaceInfo = (props: { listingId: number }) => {
   const { data: parkingSpaceListing } = useParkingSpaceListing({
@@ -61,6 +62,18 @@ export const ParkingSpaceInfo = (props: { listingId: number }) => {
                 </Box>
               </a>
             </Box>
+          </Box>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            flex="1"
+          >
+            <Typography>Annonsinnehåll</Typography>
+            <ListingTextContentIconLink
+              rentalObjectCode={parkingSpaceListing.rentalObjectCode}
+              hasTextContent={parkingSpaceListing.hasListingTextContent}
+            />
           </Box>
           <Box height="50px" />
           <Box display="flex" justifyContent="space-between" flex="1">

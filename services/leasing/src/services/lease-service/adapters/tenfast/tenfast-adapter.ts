@@ -196,7 +196,7 @@ export const importLease = async (
   fromDate: Date
 ): Promise<
   AdapterResult<
-    { _id: string },
+    { _id: string; hasContractFile: boolean },
     | 'could-not-retrieve-tenant'
     | 'could-not-create-tenant'
     | 'could-not-find-rental-object'
@@ -216,7 +216,10 @@ export const importLease = async (
       { leaseId },
       'tenfast-adapter.importLease: lease already exists, skipping import'
     )
-    return { ok: true, data: { _id: existing.data._id } }
+    return {
+      ok: true,
+      data: { _id: existing.data._id, hasContractFile: !!existing.data.file },
+    }
   }
   if (existing.err !== 'not-found') {
     logger.error(
@@ -268,7 +271,10 @@ export const importLease = async (
     })
 
     if (response.status === 200 || response.status === 201) {
-      return { ok: true, data: { _id: response.data?._id } }
+      return {
+        ok: true,
+        data: { _id: response.data?._id, hasContractFile: false },
+      }
     }
 
     logger.error(
@@ -1555,7 +1561,12 @@ export const terminateLease = async (
   body: TerminateLeaseBody
 ): Promise<
   AdapterResult<
-    { action: 'terminated' | 'skipped'; leaseId: string },
+    {
+      action: 'terminated' | 'skipped'
+      leaseId: string
+      tenfastLeaseId: string
+      skipReason?: 'already-terminated' | 'not-required'
+    },
     'lease-not-found' | 'terminate-failed' | 'unknown'
   >
 > => {
@@ -1566,11 +1577,33 @@ export const terminateLease = async (
     }
     return { ok: false, err: 'unknown' }
   }
+  const tenfastLeaseId = existing.data._id
+
+  const { cancellation } = existing.data
+  if (
+    cancellation.requested &&
+    !cancellation.cancelled &&
+    cancellation.handledAt
+  ) {
+    logger.info(
+      { leaseId },
+      'Tenfast terminate skipped — lease already has a handled termination'
+    )
+    return {
+      ok: true,
+      data: {
+        action: 'skipped',
+        leaseId,
+        tenfastLeaseId,
+        skipReason: 'already-terminated',
+      },
+    }
+  }
 
   try {
     const response = await tenfastApi.request({
       method: 'post',
-      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${existing.data._id}/terminate?hyresvard=${tenfastCompanyId}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/terminate?hyresvard=${tenfastCompanyId}`,
       data: {
         ...body,
         endDate: body.endDate.toISOString().split('T')[0],
@@ -1578,19 +1611,28 @@ export const terminateLease = async (
     })
 
     if (response.status === 200) {
-      return { ok: true, data: { action: 'terminated', leaseId } }
+      return {
+        ok: true,
+        data: { action: 'terminated', leaseId, tenfastLeaseId },
+      }
     }
 
-    const skipErrors = new Set([
-      'Avtalet kan inte sägas upp',
-      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
-    ])
-    if (response.status === 400 && skipErrors.has(response.data?.error)) {
+    const skipReasons: Record<string, 'already-terminated' | 'not-required'> = {
+      'Avtalet kan inte sägas upp': 'already-terminated',
+      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.':
+        'not-required',
+    }
+    const skipReason =
+      response.status === 400 ? skipReasons[response.data?.error] : undefined
+    if (skipReason) {
       logger.info(
         { leaseId, error: response.data?.error },
         'Tenfast terminate skipped — lease already handled or termination not required'
       )
-      return { ok: true, data: { action: 'skipped', leaseId } }
+      return {
+        ok: true,
+        data: { action: 'skipped', leaseId, tenfastLeaseId, skipReason },
+      }
     }
 
     logger.error(

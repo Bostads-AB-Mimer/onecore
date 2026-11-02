@@ -1,7 +1,7 @@
 # ==========================
 # Build stage
 # ==========================
-FROM node:23-slim AS builder
+FROM node:24-slim AS builder
 
 ENV CI=true
 

@@ -2,41 +2,94 @@ const mockRaw = jest.fn()
 
 // Per-table query results for the chainable query-builder mock (db('table')...).
 // Tests set entries here to control what `await db('repsk').innerJoin(...).where(...)` resolves to.
+// Two modes:
+// - static: an array of row objects — every query for the table resolves to it
+// - queue: an array of arrays — each query for the table consumes the next
+//   result set, so two queries against the same table can get different rows
 const mockTableQueries: Record<string, unknown[]> = {}
 
-const createChainable = (resolveValue: unknown[]) => {
-  const chain: Record<string, unknown> = {
-    then: (resolve: (value: unknown[]) => unknown) => resolve(resolveValue),
-    catch: () => chain,
+const resolveTableResult = (table: string | undefined): unknown[] => {
+  const entry = mockTableQueries[table ?? '']
+  if (!entry) {
+    return []
   }
-  for (const method of [
-    'innerJoin',
-    'leftJoin',
-    'where',
-    'andWhere',
-    'andWhereLike',
-    'whereIn',
-    'orWhere',
-    'orWhereLike',
-    'whereLike',
-    'distinct',
-    'select',
-    'from',
-    'orderBy',
-    'limit',
-    'offset',
-  ]) {
+  if (entry.length > 0 && Array.isArray(entry[0])) {
+    return (entry.shift() as unknown[]) ?? []
+  }
+  return entry
+}
+
+const chainMethods = [
+  'innerJoin',
+  'leftJoin',
+  'where',
+  'andWhere',
+  'andWhereLike',
+  'whereIn',
+  'orWhere',
+  'orWhereLike',
+  'whereLike',
+  'distinct',
+  'select',
+  'orderBy',
+  'limit',
+  'offset',
+] as const
+
+type MockChain = {
+  [M in (typeof chainMethods)[number]]: jest.Mock
+} & {
+  then: (resolve: (value: unknown[]) => unknown) => unknown
+  catch: () => MockChain
+  from: jest.Mock
+}
+
+// Chainables recorded per table, in creation order, so tests can assert on the
+// jest.fn query methods of a specific query (e.g. which args `whereIn` got).
+const mockTableChains: Record<string, MockChain[]> = {}
+
+// Resolves lazily via the table name so both `db('krfkh')` and
+// `db.select(...).from('krfkh')` pick their result set from mockTableQueries.
+const createChainable = (table?: string): MockChain => {
+  let resolveTable = table
+  const chain = {} as MockChain
+  chain.then = (resolve) => resolve(resolveTableResult(resolveTable))
+  chain.catch = () => chain
+  const register = (t: string) => {
+    resolveTable = t
+    mockTableChains[t] = mockTableChains[t] ?? []
+    mockTableChains[t].push(chain)
+  }
+  for (const method of chainMethods) {
     chain[method] = jest.fn().mockReturnValue(chain)
   }
+  chain.from = jest.fn((t: string) => {
+    register(t)
+    return chain
+  })
+  if (table) register(table)
   return chain
 }
 
-const mockDb: any = jest.fn((table: string) =>
-  createChainable(mockTableQueries[table] ?? [])
-)
+const mockDb: any = jest.fn((table: string) => createChainable(table))
 mockDb.raw = mockRaw
+mockDb.select = jest.fn((...args: unknown[]) => {
+  const chain = createChainable()
+  chain.select(...args)
+  return chain
+})
+mockDb.from = jest.fn((table: string) => createChainable(table))
 
 jest.mock('knex', () => () => mockDb)
+
+const clearTableMocks = () => {
+  for (const key of Object.keys(mockTableQueries)) {
+    delete mockTableQueries[key]
+  }
+  for (const key of Object.keys(mockTableChains)) {
+    delete mockTableChains[key]
+  }
+}
 
 import { schemas } from '@onecore/types'
 
@@ -179,11 +232,7 @@ describe(adapter.getInvoiceRows, () => {
 })
 
 describe(adapter.enrichInvoiceRows, () => {
-  beforeEach(() => {
-    for (const key of Object.keys(mockTableQueries)) {
-      delete mockTableQueries[key]
-    }
-  })
+  beforeEach(clearTableMocks)
 
   const xpandInvoice = {
     invdate: '20250115',
