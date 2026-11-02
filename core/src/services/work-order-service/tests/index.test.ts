@@ -11,6 +11,13 @@ import bodyParser from 'koa-bodyparser'
 import * as factory from '../../../../test/factories'
 import * as schemas from '../schemas'
 
+// The shared mock in .jest/common.ts lacks makeSuccessResponseBody
+jest.mock('@onecore/utilities', () => ({
+  ...jest.requireActual('@onecore/utilities'),
+  logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
+  generateRouteMetadata: jest.fn(),
+}))
+
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
@@ -662,7 +669,7 @@ describe('work-order-service index', () => {
   })
 
   describe('POST /work-orders/:workOrderId/close', () => {
-    it('should close work order', async () => {
+    it('responds 200 with the message in content when the work order is closed', async () => {
       const closeWorkOrderSpy = jest
         .spyOn(workOrderAdapter, 'closeWorkOrder')
         .mockResolvedValue({ ok: true, data: 'Work order closed successfully' })
@@ -670,9 +677,39 @@ describe('work-order-service index', () => {
       const res = await request(app.callback()).post('/work-orders/13/close')
 
       expect(res.status).toBe(200)
-      expect(res.body.message).toBeDefined()
-      expect(closeWorkOrderSpy).toHaveBeenCalled()
+      expect(res.body.content.message).toBe(
+        'Work order with ID 13 updated successfully'
+      )
+      expect(closeWorkOrderSpy).toHaveBeenCalledWith('13')
     })
+
+    it('responds 409 refused with the reason when the close is refused', async () => {
+      jest.spyOn(workOrderAdapter, 'closeWorkOrder').mockResolvedValue({
+        ok: false,
+        err: 'refused',
+        message: 'Vägrad',
+      })
+
+      const res = await request(app.callback()).post('/work-orders/13/close')
+
+      expect(res.status).toBe(409)
+      expect(res.body.error).toBe('refused')
+      expect(res.body.reason).toBe('Vägrad')
+    })
+
+    it.each(['request-failed', 'request-error'] as const)(
+      'responds 500 close-failed when the adapter returns %s',
+      async (err) => {
+        jest
+          .spyOn(workOrderAdapter, 'closeWorkOrder')
+          .mockResolvedValue({ ok: false, err })
+
+        const res = await request(app.callback()).post('/work-orders/13/close')
+
+        expect(res.status).toBe(500)
+        expect(res.body.error).toBe('close-failed')
+      }
+    )
   })
 
   describe('POST /work-orders/:workOrderId/update', () => {

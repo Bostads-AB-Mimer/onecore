@@ -38,6 +38,7 @@ export function InspectionWorkOrdersConfirmFlow({
       groups={workOrders.groups}
       unassignedCount={workOrders.unassignedCount}
       groupStatus={workOrders.groupStatus}
+      staleCloseIssues={workOrders.staleCloseIssues}
       teamsUnavailable={workOrders.teamsError && workOrders.damaged.length > 0}
       isCreating={workOrders.isCreating}
       onConfirm={async () => {
@@ -59,6 +60,9 @@ interface CreateInspectionWorkOrdersDialogProps {
   groupStatus: (
     group: InspectionWorkOrderGroup
   ) => InspectionWorkOrderGroupStatus
+  // Teams whose earlier work order was refused or failed to close in the last
+  // submit
+  staleCloseIssues: { refusedTeamNames: string[]; failedTeamNames: string[] }
   // True when the resursgrupp list failed to load while there are damaged
   // components — completing would silently skip creating any work orders.
   teamsUnavailable: boolean
@@ -90,6 +94,7 @@ export function CreateInspectionWorkOrdersDialog({
   groups,
   unassignedCount,
   groupStatus,
+  staleCloseIssues: { refusedTeamNames, failedTeamNames },
   teamsUnavailable,
   isCreating,
   onConfirm,
@@ -133,6 +138,21 @@ export function CreateInspectionWorkOrdersDialog({
             {unassignedCount} skadad komponent
             {unassignedCount === 1 ? '' : 'er'} utan resursgrupp – inget ärende
             skapas för {unassignedCount === 1 ? 'den' : 'dem'}.
+          </p>
+        )}
+
+        {refusedTeamNames.length > 0 && (
+          <p className="text-sm text-warning">
+            Ärendet för {refusedTeamNames.join(', ')} hanteras redan i Odoo och
+            stängdes inte. Kontakta handläggaren. Välj Skapa och slutför för att
+            slutföra besiktningen ändå.
+          </p>
+        )}
+
+        {failedTeamNames.length > 0 && (
+          <p className="text-sm text-destructive">
+            Ärendet för {failedTeamNames.join(', ')} kunde inte stängas i Odoo.
+            Försök igen.
           </p>
         )}
 

@@ -102,3 +102,27 @@ export const transformMessages = (
     author: last(message.author_id[1].split(', ')) ?? '', // author name is in format "YourCompany, Mitchell Admin"
     createDate: new Date(message.create_date + ' UTC'), // Create new date as UTC (odoo db stores dates without time zone)
   }))
+
+// Odoo's /xmlrpc/2 endpoints send UserError and its subclasses (ValidationError,
+// MissingError, …) as a fault with this code — RPC_FAULT_CODE_WARNING in Odoo's
+// addons/rpc/controllers/xmlrpc.py. Odoo raises a UserError when a business
+// rule refuses the call, e.g. closing an ärende whose components lack outcomes.
+const ODOO_FAULT_CODE_USER_ERROR = 2
+
+/**
+ * The message of an Odoo UserError fault, or undefined for any other error.
+ * The xmlrpc client keeps the fault's faultCode and faultString on the error.
+ */
+export const odooUserErrorMessage = (err: unknown): string | undefined => {
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'faultCode' in err &&
+    err.faultCode === ODOO_FAULT_CODE_USER_ERROR &&
+    'faultString' in err &&
+    typeof err.faultString === 'string'
+  ) {
+    return err.faultString
+  }
+  return undefined
+}

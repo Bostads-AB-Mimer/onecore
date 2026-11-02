@@ -807,14 +807,23 @@ export interface paths {
             }
           }
         }
+        /** @description Odoo refused to close the work order with a business rule, e.g. a component on the work order has no outcome. A work order that no longer exists in Odoo is also refused. */
+        409: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error: 'refused'
+              /** @description The refusal message from Odoo. */
+              reason: string
+            }
+          }
+        }
         /** @description Internal server error. Failed to close work order. */
         500: {
           content: {
             'application/json': {
-              /** @example Failed to update work order with ID {workOrderId} */
-              message?: string
-              /** @description Route metadata */
-              metadata?: Record<string, never>
+              /** @enum {string} */
+              error: 'odoo-error'
             }
           }
         }

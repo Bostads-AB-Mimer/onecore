@@ -8,6 +8,7 @@ import {
   transformWorkOrder,
   transformMessages,
   transformEquipmentCode,
+  odooUserErrorMessage,
 } from './utils'
 import { AdapterResult } from '../../types'
 import {
@@ -755,7 +756,12 @@ export const createInspectionWorkOrders = async (
   }
 }
 
-export const closeWorkOrder = async (workOrderId: number): Promise<boolean> => {
+export type CloseWorkOrderError =
+  { code: 'refused'; reason: string } | { code: 'odoo-error' }
+
+export const closeWorkOrder = async (
+  workOrderId: number
+): Promise<AdapterResult<void, CloseWorkOrderError>> => {
   try {
     await odoo.connect()
 
@@ -774,12 +780,24 @@ export const closeWorkOrder = async (workOrderId: number): Promise<boolean> => {
       throw new Error('No done maintenance stages found')
     }
 
-    return await odoo.update('maintenance.request', workOrderId, {
+    await odoo.update('maintenance.request', workOrderId, {
       stage_id: doneMaintenanceStages[0].id,
     })
+    return { ok: true, data: undefined }
   } catch (err) {
+    // A refusal is an expected outcome (e.g. a component without an
+    // outcome), not a failure of this service
+    const reason = odooUserErrorMessage(err)
+    if (reason !== undefined) {
+      logger.warn(
+        { workOrderId, reason },
+        'odoo-adapter.closeWorkOrder.refused'
+      )
+      return { ok: false, err: { code: 'refused', reason } }
+    }
+
     logger.error({ err }, 'odoo-adapter.closeWorkOrder')
-    throw err
+    return { ok: false, err: { code: 'odoo-error' } }
   }
 }
 

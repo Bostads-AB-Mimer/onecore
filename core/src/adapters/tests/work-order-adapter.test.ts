@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
+import { logger } from '@onecore/utilities'
 
 import config from '../../common/config'
 import * as workOrderAdapter from '../work-order-adapter'
@@ -311,21 +312,7 @@ describe('work-order-adapter', () => {
   })
 
   describe(workOrderAdapter.closeWorkOrder, () => {
-    it('returns err if request fails', async () => {
-      mockServer.use(
-        http.post(
-          `${config.workOrderService.url}/workOrders/1/close`,
-          () => new HttpResponse(null, { status: 500 })
-        )
-      )
-
-      const result = await workOrderAdapter.closeWorkOrder('1')
-
-      expect(result.ok).toBe(false)
-      if (!result.ok) expect(result.err).toBe('unknown')
-    })
-
-    it('returns closed work order data', async () => {
+    it('returns the message when the work order is closed', async () => {
       mockServer.use(
         http.post(`${config.workOrderService.url}/workOrders/1/close`, () =>
           HttpResponse.json(
@@ -339,9 +326,98 @@ describe('work-order-adapter', () => {
 
       const result = await workOrderAdapter.closeWorkOrder('1')
 
+      expect(result).toEqual({
+        ok: true,
+        data: 'Work order with ID 1 updated successfully',
+      })
+    })
+
+    it('treats any 2xx as closed, also a service still answering a top-level message', async () => {
+      mockServer.use(
+        http.post(`${config.workOrderService.url}/workOrders/1/close`, () =>
+          HttpResponse.json(
+            { message: 'Work order with ID 1 updated successfully' },
+            { status: 200 }
+          )
+        )
+      )
+
+      const result = await workOrderAdapter.closeWorkOrder('1')
+
       expect(result.ok).toBe(true)
-      if (result.ok)
-        expect(result.data).toEqual('Work order with ID 1 updated successfully')
+    })
+
+    it('returns refused with the reason when the service answers 409', async () => {
+      mockServer.use(
+        http.post(`${config.workOrderService.url}/workOrders/1/close`, () =>
+          HttpResponse.json(
+            { error: 'refused', reason: 'Vägrad' },
+            { status: 409 }
+          )
+        )
+      )
+
+      const result = await workOrderAdapter.closeWorkOrder('1')
+
+      expect(result).toEqual({ ok: false, err: 'refused', message: 'Vägrad' })
+    })
+
+    it('returns request-failed when the service answers 500', async () => {
+      mockServer.use(
+        http.post(
+          `${config.workOrderService.url}/workOrders/1/close`,
+          () => new HttpResponse(null, { status: 500 })
+        )
+      )
+
+      const result = await workOrderAdapter.closeWorkOrder('1')
+
+      expect(result).toEqual({ ok: false, err: 'request-failed' })
+    })
+
+    it('logs a failure the work-order service has not logged', async () => {
+      const loggerErrorSpy = jest.spyOn(logger, 'error')
+      mockServer.use(
+        http.post(
+          `${config.workOrderService.url}/workOrders/1/close`,
+          () => new HttpResponse(null, { status: 503 })
+        )
+      )
+
+      const result = await workOrderAdapter.closeWorkOrder('1')
+
+      expect(result).toEqual({ ok: false, err: 'request-failed' })
+      expect(loggerErrorSpy).toHaveBeenCalledWith(
+        { status: 503 },
+        'work-order-adapter.closeWorkOrder'
+      )
+      loggerErrorSpy.mockRestore()
+    })
+
+    it('does not log the service own 500 a second time', async () => {
+      const loggerErrorSpy = jest.spyOn(logger, 'error')
+      mockServer.use(
+        http.post(`${config.workOrderService.url}/workOrders/1/close`, () =>
+          HttpResponse.json({ error: 'odoo-error' }, { status: 500 })
+        )
+      )
+
+      await workOrderAdapter.closeWorkOrder('1')
+
+      expect(loggerErrorSpy).not.toHaveBeenCalled()
+      loggerErrorSpy.mockRestore()
+    })
+
+    it('returns request-error when the service cannot be reached', async () => {
+      mockServer.use(
+        http.post(`${config.workOrderService.url}/workOrders/1/close`, () =>
+          HttpResponse.error()
+        )
+      )
+
+      const result = await workOrderAdapter.closeWorkOrder('1')
+
+      expect(result).toEqual({ ok: false, err: 'request-error' })
     })
   })
 
