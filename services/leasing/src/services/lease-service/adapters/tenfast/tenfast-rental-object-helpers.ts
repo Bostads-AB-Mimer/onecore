@@ -21,6 +21,33 @@ const NOT_IN_FORCE_STAGES = new Set([
   'signingInProgress',
 ])
 
+// Lease stages through which a next tenant has claimed the object: signed to
+// start later, or not signed yet (a draft, or out for signing).
+export const CLAIMING_STAGES = ['upcoming', 'draft', 'signingInProgress']
+
+/**
+ * Whether the lease claims the rental object for a next tenant, so the object
+ * must not be offered again. A lease whose stage is missing or unknown counts
+ * as claiming, so an object is never offered on a lease we can't read.
+ */
+export const isClaimingLease = (lease: {
+  stage?: string
+  externalId?: string
+}): boolean => {
+  if (lease.stage && CLAIMING_STAGES.includes(lease.stage)) return true
+  if (
+    lease.stage &&
+    (IN_FORCE_STAGES.has(lease.stage) || NOT_IN_FORCE_STAGES.has(lease.stage))
+  )
+    return false
+
+  logger.warn(
+    { stage: lease.stage, leaseId: lease.externalId },
+    'isClaimingLease: unknown lease stage, rental object counted as claimed'
+  )
+  return true
+}
+
 /**
  * When the leases in force (IN_FORCE_STAGES) leave the rental object: the
  * latest end date among them, null if there are none, or 'indefinite' if any

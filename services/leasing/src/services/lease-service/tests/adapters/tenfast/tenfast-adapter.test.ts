@@ -211,21 +211,25 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
   // depend on whether the module-level tags cache happens to be warm from an
   // earlier test (which would change how many calls are made, and in what
   // order).
+  // The stages an avtal/search request filters on, in any order.
+  const searchedStages = (url: string) =>
+    url.match(/filter\[stage\]=([^&]*)/)?.[1].split(',') ?? []
+
   const mockTenfastResponses = (opts: {
     vacantOrSoonVacant?: object[]
     givenNotice?: object[]
-    alreadyReLet?: object[]
+    claimed?: object[]
     tags?: object[]
   }) => {
     ;(request as jest.Mock).mockImplementation(({ url }: { url: string }) => {
       if (url.includes('/hyresvard/tags')) {
         return Promise.resolve({ status: 200, data: opts.tags ?? [] })
       }
-      if (url.includes('filter[stage]=terminationScheduled')) {
+      if (searchedStages(url).includes('terminationScheduled')) {
         return Promise.resolve(mockPagedResponse(opts.givenNotice ?? []))
       }
-      if (url.includes('filter[stage]=upcoming')) {
-        return Promise.resolve(mockPagedResponse(opts.alreadyReLet ?? []))
+      if (searchedStages(url).includes('upcoming')) {
+        return Promise.resolve(mockPagedResponse(opts.claimed ?? []))
       }
       return Promise.resolve(mockPagedResponse(opts.vacantOrSoonVacant ?? []))
     })
@@ -439,7 +443,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     })
     mockTenfastResponses({
       givenNotice: [terminatingLease],
-      alreadyReLet: [upcomingLease],
+      claimed: [upcomingLease],
     })
 
     // Act
@@ -453,31 +457,57 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     expect(result.data).toHaveLength(0)
   })
 
-  it('excludes a rental object given notice if a next tenant has an unsigned lease for it', async () => {
-    // Arrange
-    const terminatingLease = factory.tenfastLease.build({
-      externalId: '110-707-00-0004/07',
-      stage: 'terminationScheduled',
-      hyresobjekt: [
-        factory.tenfastRentalObject.build({
-          externalId: 'R2005',
-          avtal: undefined,
-        }),
-      ],
-    })
-    const draftLease = factory.tenfastLease.build({
-      externalId: '110-707-00-0004/08',
-      stage: 'draft',
-      hyresobjekt: [
-        factory.tenfastRentalObject.build({
-          externalId: 'R2005',
-          avtal: undefined,
-        }),
-      ],
+  it.each(['draft', 'signingInProgress'])(
+    'excludes a rental object given notice if a next tenant has a %s lease for it',
+    async (stage) => {
+      // Arrange
+      const terminatingLease = factory.tenfastLease.build({
+        externalId: '110-707-00-0004/07',
+        stage: 'terminationScheduled',
+        hyresobjekt: [
+          factory.tenfastRentalObject.build({
+            externalId: 'R2005',
+            avtal: undefined,
+          }),
+        ],
+      })
+      const unsignedLease = factory.tenfastLease.build({
+        externalId: '110-707-00-0004/08',
+        stage,
+        hyresobjekt: [
+          factory.tenfastRentalObject.build({
+            externalId: 'R2005',
+            avtal: undefined,
+          }),
+        ],
+      })
+      mockTenfastResponses({
+        givenNotice: [terminatingLease],
+        claimed: [unsignedLease],
+      })
+
+      // Act
+      const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+        tenfastAdapter.RentalObjectType.ParkingSpace
+      )
+
+      // Assert
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.data).toHaveLength(0)
+    }
+  )
+
+  it('excludes a vacant rental object claimed in the lease search even if its own leases miss it', async () => {
+    // Arrange — includeAvtal only returns an object's 10 latest leases, so
+    // an older lease out for signing may be missing from record.avtal.
+    const rentalObject = factory.tenfastRentalObject.build({
+      externalId: 'R2006',
+      avtal: [],
     })
     mockTenfastResponses({
-      givenNotice: [terminatingLease],
-      alreadyReLet: [draftLease],
+      vacantOrSoonVacant: [rentalObject],
+      claimed: [{ hyresobjekt: [{ externalId: 'R2006' }] }],
     })
 
     // Act
@@ -489,6 +519,48 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.data).toHaveLength(0)
+  })
+
+  it('excludes a vacant rental object with a lease whose stage is unknown', async () => {
+    // Arrange
+    const rentalObject = factory.tenfastRentalObject.build({
+      externalId: 'R2007',
+      avtal: [factory.tenfastLease.build({ stage: 'someNewStage' })],
+    })
+    mockTenfastResponses({ vacantOrSoonVacant: [rentalObject] })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(0)
+  })
+
+  it('does not fail the list on an incomplete draft in the lease search', async () => {
+    // Arrange — drafts can lack fields a full lease has; only the rental
+    // object codes are read from the search.
+    const rentalObject = factory.tenfastRentalObject.build({
+      externalId: 'R2008',
+      avtal: [],
+    })
+    mockTenfastResponses({
+      vacantOrSoonVacant: [rentalObject],
+      claimed: [{ stage: 'draft', hyresobjekt: [{ externalId: 'R2009' }] }],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data!.map((r) => r.rentalObjectCode)).toEqual(['R2008'])
   })
 
   it('deduplicates a rental object returned by both the states query and the given-notice query', async () => {
@@ -559,10 +631,10 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     expect(result.err).toBe('could-not-find-terminating-leases')
   })
 
-  it('returns a distinct error code when fetching already-re-let leases fails', async () => {
+  it('returns a distinct error code when fetching claimed leases fails', async () => {
     // Arrange
     ;(request as jest.Mock).mockImplementation(({ url }: { url: string }) => {
-      if (url.includes('filter[stage]=upcoming')) {
+      if (searchedStages(url).includes('upcoming')) {
         return Promise.resolve({ status: 500, data: { error: 'boom' } })
       }
       if (url.includes('/hyresvard/tags')) {
@@ -579,7 +651,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     // Assert
     expect(result.ok).toBe(false)
     if (result.ok) return
-    expect(result.err).toBe('could-not-find-upcoming-leases')
+    expect(result.err).toBe('could-not-find-claimed-leases')
   })
 
   describe('tag propagation', () => {

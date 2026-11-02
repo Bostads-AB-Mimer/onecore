@@ -15,6 +15,7 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObjectSchema,
   TenfastPaginatedLeaseResponseSchema,
+  TenfastPaginatedLeaseRentalObjectsResponseSchema,
   TenfastTagSchema,
   TenfastTag,
   TenfastArticleSchema,
@@ -24,7 +25,11 @@ import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
-import { mapTenfastRentalObjectToAvailabilityInfo } from './tenfast-rental-object-helpers'
+import {
+  CLAIMING_STAGES,
+  isClaimingLease,
+  mapTenfastRentalObjectToAvailabilityInfo,
+} from './tenfast-rental-object-helpers'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
@@ -650,7 +655,7 @@ export const getAvailabilityForVacantRentalObjects = async (
     | 'could-not-parse-rental-object'
     | 'get-rental-object-bad-request'
     | 'could-not-find-terminating-leases'
-    | 'could-not-find-upcoming-leases'
+    | 'could-not-find-claimed-leases'
   >
 > => {
   type VacantOrSoonVacantResult =
@@ -750,34 +755,36 @@ export const getAvailabilityForVacantRentalObjects = async (
 
   type ClaimedRentalObjectIdsResult =
     | { ok: true; ids: Set<string> }
-    | { ok: false; err: 'could-not-find-upcoming-leases' }
+    | { ok: false; err: 'could-not-find-claimed-leases' }
 
-  // A terminationScheduled lease's own record has no visibility into other
-  // leases on the same rental object — if a next tenant already has a lease
-  // for it (signed and upcoming, or still a draft or out for signing), that
-  // object is already taken and must not be published as available.
-  // filter[stage] takes a comma-separated list. Tenfast's `reserved` state
-  // isn't used for this: in test (2026-11) drafts don't set it and a voided
-  // lease can leave it behind. populate must include hyresgaster here too,
-  // for the same schema reason as above.
+  // Rental objects a next tenant already has a lease for (CLAIMING_STAGES:
+  // signed and upcoming, or still a draft or out for signing), which must not
+  // be published as available. Searched for directly rather than read from
+  // each object's own leases: a terminationScheduled lease's record has no
+  // visibility into other leases on the object, and includeAvtal only returns
+  // an object's 10 latest. Tenfast's `reserved` state isn't used: in test
+  // (2026-11) drafts don't set it and a voided lease can leave it behind.
+  // filter[stage] takes a comma-separated list.
   const fetchClaimedRentalObjectIds =
     async (): Promise<ClaimedRentalObjectIdsResult> => {
       try {
         const leases = await fetchAllPages(
           (paginate) =>
-            `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=upcoming,draft,signingInProgress&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt,hyresgaster&paginate=${paginate}`,
-          TenfastPaginatedLeaseResponseSchema
+            `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=${CLAIMING_STAGES.join(',')}&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt&paginate=${paginate}`,
+          TenfastPaginatedLeaseRentalObjectsResponseSchema
         )
         return {
           ok: true,
           ids: new Set(
             leases.flatMap((lease) =>
-              (lease.hyresobjekt ?? []).map((ro) => ro.externalId)
+              (lease.hyresobjekt ?? []).flatMap((ro) =>
+                ro.externalId ? [ro.externalId] : []
+              )
             )
           ),
         }
       } catch (err) {
-        return handleTenfastError(err, 'could-not-find-upcoming-leases')
+        return handleTenfastError(err, 'could-not-find-claimed-leases')
       }
     }
 
@@ -798,17 +805,14 @@ export const getAvailabilityForVacantRentalObjects = async (
     if (!terminatingLeasesResult.ok) return terminatingLeasesResult
     if (!claimedRentalObjectIdsResult.ok) return claimedRentalObjectIdsResult
 
-    // Exclude records already claimed by a next tenant: a signed upcoming
-    // lease, or one not yet signed (draft or out for signing). Hidden rather
-    // than flagged, as decided with the product owner (AVTAL-215): leasing
-    // watches the leases it sends out.
+    // Exclude records already claimed by a next tenant. Hidden rather than
+    // flagged, as decided with the product owner (AVTAL-215): leasing watches
+    // the leases it sends out. The object's own leases are checked as well,
+    // so one with a lease we can't read is never offered (isClaimingLease).
     const availableRecords = vacantOrSoonVacantResult.records.filter(
       (record) =>
-        filterByStatus(record.avtal ?? [], [
-          'upcoming',
-          'pending-signature',
-          'not-sent',
-        ]).length === 0
+        !claimedRentalObjectIdsResult.ids.has(record.externalId) &&
+        !(record.avtal ?? []).some(isClaimingLease)
     )
 
     const recordsFromTerminatingLeases = terminatingLeasesResult.leases.flatMap(

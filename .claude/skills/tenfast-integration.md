@@ -104,11 +104,15 @@ ask if it matters for what you're building.
 2026-11, AVTAL-274). `draft` leases don't set it, some leases out for
 signing lack it, and a `voided` lease can leave it behind. The `!reserved`
 exclusion syntax Tenfast announced was rejected with 400. Go by lease stage
-instead: `includeAvtal=all` returns unsigned leases on each object, and
-`avtal/search` takes a comma-separated list
-(`filter[stage]=upcoming,draft,signingInProgress`).
-`getAvailabilityForVacantRentalObjects` does both to keep objects with a
-next tenant's lease, signed or not, out of the publish list.
+instead: `avtal/search` takes a comma-separated list
+(`filter[stage]=upcoming,draft,signingInProgress`, `CLAIMING_STAGES` in
+`tenfast-rental-object-helpers.ts`). `getAvailabilityForVacantRentalObjects`
+uses that search to keep objects with a next tenant's lease, signed or not,
+out of the publish list. Don't rely only on `includeAvtal` for this, because
+it returns an object's 10 latest leases. The search is parsed with a lenient
+schema (`hyresobjekt[].externalId` only), because drafts can lack fields
+`TenfastLeaseSchema` requires. The object's own leases are also checked with
+`isClaimingLease`, which counts an unknown or missing stage as claiming.
 
 Important interaction (confirmed, not hypothetical): **`soon-vacant`
 already includes a rental object whose current lease is
