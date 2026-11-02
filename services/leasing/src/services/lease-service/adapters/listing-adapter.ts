@@ -668,7 +668,7 @@ const updateListing = async (
   data: leasing.UpdateListing,
   dbConnection: Knex = db
 ): Promise<
-  AdapterResult<ListingWithoutRentalObject, 'not-found' | 'unknown'>
+  AdapterResult<ListingWithoutRentalObject, 'not-found' | 'no-fields' | 'unknown'>
 > => {
   try {
     const updateFields: Partial<DbListing> = {}
@@ -682,6 +682,12 @@ const updateListing = async (
       updateFields.AvailableFrom = data.availableFrom ?? null
     if ('tentativeAvailableFrom' in data)
       updateFields.TentativeAvailableFrom = data.tentativeAvailableFrom ?? null
+
+    // knex throws on an empty .update({}) — a request with no recognized
+    // fields is a client error, not a server error.
+    if (Object.keys(updateFields).length === 0) {
+      return { ok: false, err: 'no-fields' }
+    }
 
     const updatedRows = await dbConnection<DbListing>('Listing')
       .where('Id', listingId)

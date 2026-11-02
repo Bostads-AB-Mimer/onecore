@@ -1099,6 +1099,8 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '200':
    *         description: Successfully updated listing.
+   *       '400':
+   *         description: No recognized fields present in the request body.
    *       '404':
    *         description: Listing not found.
    *       '500':
@@ -1118,6 +1120,12 @@ export const routes = (router: KoaRouter) => {
         if (result.err === 'not-found') {
           ctx.status = 404
           ctx.body = { error: UpdateListingErrorCodes.NotFound, ...metadata }
+          return
+        }
+
+        if (result.err === 'no-fields') {
+          ctx.status = 400
+          ctx.body = { error: UpdateListingErrorCodes.NoFields, ...metadata }
           return
         }
 

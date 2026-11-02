@@ -203,8 +203,12 @@ async function updateListing(
       data
     )
 
-    if (res.status !== 200) {
-      if (res.status === 404) {
+    return { ok: true, data: res.data.content }
+  } catch (err) {
+    // axios rejects on any non-2xx response, so 404/400 land here rather
+    // than in a `res.status !== 200` check after the await.
+    if (axios.isAxiosError(err) && err.response) {
+      if (err.response.status === 404) {
         return {
           ok: false,
           err: UpdateListingErrorCodes.NotFound,
@@ -212,15 +216,15 @@ async function updateListing(
         }
       }
 
-      return {
-        ok: false,
-        err: UpdateListingErrorCodes.Unknown,
-        statusCode: 500,
+      if (err.response.status === 400) {
+        return {
+          ok: false,
+          err: UpdateListingErrorCodes.NoFields,
+          statusCode: 400,
+        }
       }
     }
 
-    return { ok: true, data: res.data.content }
-  } catch (err) {
     logger.error({ err }, 'leasingAdapter.updateListing')
     return {
       ok: false,
