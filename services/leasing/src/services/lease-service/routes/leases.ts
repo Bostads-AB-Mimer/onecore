@@ -1153,6 +1153,11 @@ export const routes = (router: KoaRouter) => {
    *                 LeaseId:
    *                   type: string
    *                   description: The ID of the newly created lease.
+   *       409:
+   *         description: >
+   *           The rental object is not available from fromDate: it is leased
+   *           then, or a next tenant has a lease on it that is signed or
+   *           not yet signed. error is rental-object-not-available.
    *       500:
    *         description: Internal server error. Failed to create lease.
    */
@@ -1196,6 +1201,15 @@ export const routes = (router: KoaRouter) => {
         )
         ctx.body = {
           content: createLeaseTenfastResult.data,
+          ...metadata,
+        }
+        return
+      }
+
+      if (createLeaseTenfastResult.err === 'rental-object-not-available') {
+        ctx.status = 409
+        ctx.body = {
+          error: createLeaseTenfastResult.err,
           ...metadata,
         }
         return

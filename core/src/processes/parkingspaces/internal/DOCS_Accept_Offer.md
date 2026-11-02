@@ -124,6 +124,14 @@ sequenceDiagram
         Core-->User: show error message
     end
 
+    Leasing ->> Tenfast: Search Leases on Rental Object
+    Tenfast -->> Leasing: Leases
+
+    break when Rental Object is not Available from Start Date<br/>(leased then, or a next tenant's lease:<br/>draft, out for signing or signed)
+        Leasing -->> Core: 409 rental-object-not-available
+        Core-->User: 409, offer stays open
+    end
+
     Leasing ->> Tenfast: Create Lease
     Tenfast -->> Leasing: Lease
     Leasing -->> Core: Lease

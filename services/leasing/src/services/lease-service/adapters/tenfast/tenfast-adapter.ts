@@ -16,6 +16,7 @@ import {
   TenfastRentalObjectSchema,
   TenfastPaginatedLeaseResponseSchema,
   TenfastPaginatedLeaseRentalObjectsResponseSchema,
+  TenfastPaginatedLeaseStagesResponseSchema,
   TenfastTagSchema,
   TenfastTag,
   TenfastArticleSchema,
@@ -27,7 +28,9 @@ import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
 import {
   CLAIMING_STAGES,
+  getVacantFrom,
   isClaimingLease,
+  LeaseStageInfo,
   mapTenfastRentalObjectToAvailabilityInfo,
 } from './tenfast-rental-object-helpers'
 
@@ -110,9 +113,26 @@ export const createLease = async (
     | 'rent-article-is-missing'
     | 'could-not-parse-lease'
     | 'could-not-fetch-articles'
+    | 'rental-object-not-available'
+    | 'could-not-find-leases'
     | 'unknown'
   >
 > => {
+  // Checked first so nothing is written (such as importing the tenant) for a
+  // lease that won't be created. Not atomic with the create below: Tenfast
+  // has no conditional create, so two leases started at the same moment can
+  // both pass.
+  const leasesResult = await getLeaseStagesForRentalObject(rentalObjectCode)
+  if (!leasesResult.ok) return leasesResult
+  const vacantFrom = getVacantFrom(leasesResult.data)
+  if (!vacantFrom || fromDate < vacantFrom) {
+    logger.warn(
+      { rentalObjectCode, fromDate, vacantFrom },
+      'tenfast-adapter.createLease: rental object is not available from the lease start date'
+    )
+    return { ok: false, err: 'rental-object-not-available' }
+  }
+
   const tenantResult = await getOrImportContact(contact.contactCode)
   if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
 
@@ -854,6 +874,26 @@ export const getAvailabilityForVacantRentalObjects = async (
 }
 
 /**
+ * Every lease on a rental object, whatever its stage, read only for what
+ * decides whether the object is vacant (see getVacantFrom). Searched rather
+ * than included on the rental object, which only carries its 10 latest leases.
+ */
+export const getLeaseStagesForRentalObject = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<LeaseStageInfo[], 'could-not-find-leases'>> => {
+  try {
+    const leases = await fetchAllPages(
+      (paginate) =>
+        `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[hyresobjekt][externalId]=${encodeURIComponent(rentalObjectCode)}&paginate=${paginate ?? ''}`,
+      TenfastPaginatedLeaseStagesResponseSchema
+    )
+    return { ok: true, data: leases }
+  } catch (err) {
+    return handleTenfastError(err, 'could-not-find-leases')
+  }
+}
+
+/**
  * A rental object with its signed leases, which vacantFrom is computed from.
  * Goes through batch-get: per Tenfast's API docs only batch-get and the list
  * endpoint take includeAvtal, and the single-object GET has no leases in its
@@ -906,11 +946,14 @@ export const getAvailabilityForRentalObject = async (
 ): Promise<
   AdapterResult<
     RentalObjectAvailabilityInfo,
-    'could-not-find-rental-object' | 'could-not-parse-rental-object'
+    | 'could-not-find-rental-object'
+    | 'could-not-parse-rental-object'
+    | 'could-not-find-leases'
   >
 > => {
-  const [rentalObjectResult, tagsById] = await Promise.all([
+  const [rentalObjectResult, leasesResult, tagsById] = await Promise.all([
     getRentalObjectWithLeases(rentalObjectCode),
+    getLeaseStagesForRentalObject(rentalObjectCode),
     getTags(),
   ])
 
@@ -920,6 +963,7 @@ export const getAvailabilityForRentalObject = async (
       err: rentalObjectResult.err,
     }
   }
+  if (!leasesResult.ok) return leasesResult
 
   if (!rentalObjectResult.data) {
     return {
@@ -931,7 +975,10 @@ export const getAvailabilityForRentalObject = async (
   const availability: RentalObjectAvailabilityInfo =
     mapTenfastRentalObjectToAvailabilityInfo(
       includeVAT,
-      rentalObjectResult.data,
+      // Every lease, not just the signed ones batch-get includes: a draft or a
+      // lease out for signing claims the object, and batch-get only carries
+      // the 10 latest leases.
+      { ...rentalObjectResult.data, avtal: leasesResult.data },
       tagsById
     )
 

@@ -4,7 +4,7 @@ import {
   sendNonScoredParkingSpaceDeniedEmail,
 } from '../../../adapters/communication-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
-import { ListingStatus } from '@onecore/types'
+import { ListingStatus, ReplyToOfferErrorCodes } from '@onecore/types'
 import {
   createLease,
   getContactByContactCode,
@@ -197,6 +197,31 @@ export const createLeaseForExternalParkingSpace = async (
         '001',
         includeVAT
       )
+
+      if (
+        !createLeaseResult.ok &&
+        createLeaseResult.err ===
+          ReplyToOfferErrorCodes.RentalObjectNotAvailable
+      ) {
+        log.push(
+          `Bilplats ${listing.rentalObjectCode} är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt för nästa hyresgäst (utkast, skickat för påskrift eller signerat). Inget kontrakt skapades.`
+        )
+        logger.warn(
+          {
+            rentalObjectCode: listing.rentalObjectCode,
+            contactCode: applicantContact.contactCode,
+          },
+          'Rental object is not available from the lease start date'
+        )
+        return {
+          processStatus: ProcessStatus.failed,
+          error: ReplyToOfferErrorCodes.RentalObjectNotAvailable,
+          httpStatus: 409,
+          response: {
+            message: `Rental object is not available from the lease start date.`,
+          },
+        }
+      }
 
       if (!createLeaseResult.ok) {
         log.push(

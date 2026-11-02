@@ -117,6 +117,14 @@ sequenceDiagram
         note over Core: Determine VAT rate from tenant<br/>and residential area rules.
 
         Core ->> Leasing: Create Lease
+        Leasing ->> Tenfast: Search Leases on Rental Object
+        Tenfast -->> Leasing: Leases
+
+        break when Rental Object is not Available from Start Date<br/>(leased then, or a next tenant's lease:<br/>draft, out for signing or signed)
+            Leasing -->> Core: 409 rental-object-not-available
+            Core-->User: 409, listing status unchanged
+        end
+
         Leasing ->> Tenfast: Create Lease
         Tenfast -->> Leasing: Create Lease Result
         Leasing -->> Core: Create Lease Result

@@ -7,6 +7,7 @@ enum ReplyToOfferErrorCodes {
   Unknown = 'unknown',
   ApplicantNotTenant = 'applicant-not-tenant',
   NotEligibleToRent = 'not-eligible-to-rent',
+  RentalObjectNotAvailable = 'rental-object-not-available',
 }
 
 export { ReplyToOfferErrorCodes }

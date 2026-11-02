@@ -21,6 +21,17 @@ const NOT_IN_FORCE_STAGES = new Set([
   'signingInProgress',
 ])
 
+// The lease fields that decide whether a rental object is vacant. Leases are
+// often parsed partially (on a rental object, or from a search without
+// populate), so every field may be missing.
+export type LeaseStageInfo = Partial<
+  Pick<TenfastLease, 'externalId' | 'stage' | 'endDate'> & {
+    cancellation: Partial<
+      Pick<TenfastLease['cancellation'], 'requested' | 'cancelled'>
+    >
+  }
+>
+
 // Lease stages through which a next tenant has claimed the object: signed to
 // start later, or not signed yet (a draft, or out for signing).
 export const CLAIMING_STAGES = ['upcoming', 'draft', 'signingInProgress']
@@ -63,12 +74,12 @@ export const isClaimingLease = (lease: {
  * shown as vacant on a lease we can't read.
  */
 export const getLeasedUntil = (
-  leases: TenfastLease[]
+  leases: LeaseStageInfo[]
 ): Date | null | 'indefinite' => {
   const endDates: Date[] = []
   for (const lease of leases) {
-    if (NOT_IN_FORCE_STAGES.has(lease.stage)) continue
-    if (!IN_FORCE_STAGES.has(lease.stage)) {
+    if (lease.stage && NOT_IN_FORCE_STAGES.has(lease.stage)) continue
+    if (!lease.stage || !IN_FORCE_STAGES.has(lease.stage)) {
       logger.warn(
         { stage: lease.stage, leaseId: lease.externalId },
         'getLeasedUntil: unknown lease stage, rental object counted as not vacant'
@@ -86,27 +97,37 @@ export const getLeasedUntil = (
   return new Date(Math.max(...endDates.map((date) => date.getTime())))
 }
 
+/**
+ * The first day the rental object is free for a new lease (UTC midnight), or
+ * undefined if it is not vacant at all: leased until further notice, or
+ * claimed by a next tenant (see isClaimingLease).
+ */
+export const getVacantFrom = (leases: LeaseStageInfo[]): Date | undefined => {
+  if (leases.some(isClaimingLease)) return undefined
+
+  const leasedUntil = getLeasedUntil(leases)
+  if (leasedUntil === 'indefinite') return undefined
+
+  if (leasedUntil) {
+    // Vacant the day after the last lease ends.
+    const vacantFrom = new Date(leasedUntil)
+    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
+    vacantFrom.setUTCHours(0, 0, 0, 0)
+    return vacantFrom
+  }
+
+  // No lease running or to come: vacant as of today.
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
+  return today
+}
+
 export const mapTenfastRentalObjectToAvailabilityInfo = (
   includeVAT: boolean,
   tenfastRentalObject: TenfastRentalObject,
   tagsById: Map<string, TenfastTag> = new Map()
 ): RentalObjectAvailabilityInfo => {
-  const leasedUntil = getLeasedUntil(tenfastRentalObject.avtal ?? [])
-
-  // undefined: leased until further notice, so not vacant at all.
-  let vacantFrom: Date | undefined
-  if (leasedUntil === 'indefinite') {
-    vacantFrom = undefined
-  } else if (leasedUntil) {
-    // Vacant the day after the last lease ends.
-    vacantFrom = new Date(leasedUntil)
-    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
-    vacantFrom.setUTCHours(0, 0, 0, 0)
-  } else {
-    // No lease running or to come: vacant as of today.
-    vacantFrom = new Date()
-    vacantFrom.setUTCHours(0, 0, 0, 0)
-  }
+  const vacantFrom = getVacantFrom(tenfastRentalObject.avtal ?? [])
 
   return {
     rentalObjectCode: tenfastRentalObject.externalId,

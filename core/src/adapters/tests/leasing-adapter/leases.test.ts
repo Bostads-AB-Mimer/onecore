@@ -71,10 +71,10 @@ describe(leasingAdapter.createLease, () => {
     expect(result).toEqual({ ok: true, data: 'lease-123' })
   })
 
-  it('returns create-lease-failed when the rental object cannot have a lease', async () => {
+  it('returns rental-object-not-available on a 409 with that error code', async () => {
     nock(serviceUrl)
       .post('/leases')
-      .reply(404, { error: 'Lease cannot be created on this rental object' })
+      .reply(409, { error: 'rental-object-not-available' })
 
     const result = await leasingAdapter.createLease(
       params.objectId,
@@ -84,7 +84,7 @@ describe(leasingAdapter.createLease, () => {
       params.includeVAT
     )
 
-    expect(result).toEqual({ ok: false, err: 'create-lease-failed' })
+    expect(result).toEqual({ ok: false, err: 'rental-object-not-available' })
   })
 
   it('returns ok:false instead of throwing on a 500', async () => {

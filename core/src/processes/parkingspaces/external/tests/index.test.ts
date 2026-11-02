@@ -4,6 +4,7 @@ import {
   Listing,
   ListingStatus,
   Invoice,
+  ReplyToOfferErrorCodes,
   Tenant,
 } from '@onecore/types'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
@@ -387,6 +388,29 @@ describe('parkingspaces', () => {
         '001',
         true
       )
+    })
+
+    it('returns 409 rental-object-not-available without updating the listing when the parking space is not available', async () => {
+      createContractSpy.mockResolvedValueOnce({
+        ok: false,
+        err: ReplyToOfferErrorCodes.RentalObjectNotAvailable,
+      })
+      updateListingStatusSpy.mockReset()
+
+      const result = await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          processStatus: ProcessStatus.failed,
+          httpStatus: 409,
+          error: 'rental-object-not-available',
+        })
+      )
+      expect(updateListingStatusSpy).not.toHaveBeenCalled()
     })
 
     it('should update listing status if create lease succeeds', async () => {

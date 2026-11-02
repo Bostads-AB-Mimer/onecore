@@ -763,6 +763,125 @@ describe(tenfastAdapter.importContact, () => {
 })
 
 describe(tenfastAdapter.createLease, () => {
+  let leaseStagesSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    leaseStagesSpy = jest
+      .spyOn(tenfastAdapter, 'getLeaseStagesForRentalObject')
+      .mockResolvedValue({ ok: true, data: [] })
+  })
+
+  afterEach(() => {
+    leaseStagesSpy.mockRestore()
+  })
+
+  describe('availability check', () => {
+    beforeEach(() => {
+      ;(request as jest.Mock).mockReset()
+    })
+
+    const fromDate = new Date('2099-11-01T00:00:00.000Z')
+
+    const createLeaseFrom = (date: Date) =>
+      tenfastAdapter.createLease(factory.contact.build(), 'R1001', date, false)
+
+    it.each(['upcoming', 'draft', 'signingInProgress'])(
+      'returns "rental-object-not-available" without writing anything when a next tenant has a %s lease',
+      async (stage) => {
+        const tenantSpy = jest.spyOn(tenfastAdapter, 'getTenantByContactCode')
+        leaseStagesSpy.mockResolvedValueOnce({
+          ok: true,
+          data: [{ externalId: 'R1001/02', stage, endDate: null }],
+        })
+
+        const result = await createLeaseFrom(fromDate)
+
+        expect(result).toEqual({
+          ok: false,
+          err: 'rental-object-not-available',
+        })
+        expect(tenantSpy).not.toHaveBeenCalled()
+        expect(request).not.toHaveBeenCalledWith(
+          expect.objectContaining({ method: 'post' })
+        )
+        tenantSpy.mockRestore()
+      }
+    )
+
+    it('returns "rental-object-not-available" when a lease runs until further notice', async () => {
+      leaseStagesSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [{ externalId: 'R1001/01', stage: 'active', endDate: null }],
+      })
+
+      expect(await createLeaseFrom(fromDate)).toEqual({
+        ok: false,
+        err: 'rental-object-not-available',
+      })
+    })
+
+    it('returns "rental-object-not-available" when the lease starts on the last day of the running lease', async () => {
+      leaseStagesSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            externalId: 'R1001/01',
+            stage: 'terminationScheduled',
+            endDate: new Date('2099-10-31'),
+          },
+        ],
+      })
+
+      expect(await createLeaseFrom(new Date('2099-10-31'))).toEqual({
+        ok: false,
+        err: 'rental-object-not-available',
+      })
+    })
+
+    it('creates the lease when it starts the day after the running lease ends', async () => {
+      leaseStagesSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [
+          {
+            externalId: 'R1001/01',
+            stage: 'terminationScheduled',
+            endDate: new Date('2099-10-31'),
+          },
+          { externalId: 'R1001/00', stage: 'voided', endDate: null },
+        ],
+      })
+      jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
+        ok: true,
+        data: factory.tenfastTenant.build(),
+      })
+      jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
+        ok: true,
+        data: factory.tenfastRentalObject.build(),
+      })
+      ;(request as jest.Mock).mockResolvedValueOnce({
+        status: 200,
+        data: factory.tenfastLease.build({ externalId: 'R1001/02' }),
+      })
+
+      expect(await createLeaseFrom(fromDate)).toEqual({
+        ok: true,
+        data: 'R1001/02',
+      })
+    })
+
+    it('returns "could-not-find-leases" when the lease search fails', async () => {
+      leaseStagesSpy.mockResolvedValueOnce({
+        ok: false,
+        err: 'could-not-find-leases',
+      })
+
+      expect(await createLeaseFrom(fromDate)).toEqual({
+        ok: false,
+        err: 'could-not-find-leases',
+      })
+    })
+  })
+
   it('should return lease when all dependencies succeed and status is 200', async () => {
     // Arrange
     const mockTenant = factory.tenfastTenant.build()
@@ -1920,6 +2039,50 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
   })
 })
 
+describe(tenfastAdapter.getLeaseStagesForRentalObject, () => {
+  beforeEach(() => {
+    ;(request as jest.Mock).mockReset()
+  })
+
+  it('searches every lease on the one rental object, whatever its stage', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 200,
+      data: { records: [], prev: null, next: null, totalCount: 0 },
+    })
+
+    await tenfastAdapter.getLeaseStagesForRentalObject('216-701-00-0014')
+
+    const [{ url }] = (request as jest.Mock).mock.calls[0]
+    expect(url).toContain('/avtal/search?')
+    expect(url).toContain('filter[hyresobjekt][externalId]=216-701-00-0014')
+    expect(url).not.toContain('filter[stage]')
+  })
+
+  it('does not fail on an incomplete draft', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [{ stage: 'draft' }],
+        prev: null,
+        next: null,
+        totalCount: 1,
+      },
+    })
+
+    expect(await tenfastAdapter.getLeaseStagesForRentalObject('R1001')).toEqual(
+      { ok: true, data: [{ stage: 'draft', endDate: null }] }
+    )
+  })
+
+  it('returns "could-not-find-leases" on an error status', async () => {
+    ;(request as jest.Mock).mockResolvedValueOnce({ status: 500, data: {} })
+
+    expect(await tenfastAdapter.getLeaseStagesForRentalObject('R1001')).toEqual(
+      { ok: false, err: 'could-not-find-leases' }
+    )
+  })
+})
+
 describe(tenfastAdapter.getRentalObjectWithLeases, () => {
   it('asks batch-get for the one code with its signed leases', async () => {
     const rentalObject = factory.tenfastRentalObject.build({
@@ -1975,6 +2138,18 @@ describe(tenfastAdapter.getRentalObjectWithLeases, () => {
 })
 
 describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
+  let leaseStagesSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    leaseStagesSpy = jest
+      .spyOn(tenfastAdapter, 'getLeaseStagesForRentalObject')
+      .mockResolvedValue({ ok: true, data: [] })
+  })
+
+  afterEach(() => {
+    leaseStagesSpy.mockRestore()
+  })
+
   it('should return rent when rental object is found and parsed', async () => {
     // Arrange
     const mockRentalObject = factory.tenfastRentalObject.build({
@@ -2036,8 +2211,6 @@ describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
   })
 
   it('is vacant the day after a terminated lease ends, not today', async () => {
-    // The leases have to come back from Tenfast for this: the single-object
-    // GET has none, batch-get with includeAvtal does.
     const lease = factory.tenfastLease.build({
       startDate: new Date('2026-01-01'),
       endDate: new Date('2099-10-31'),
@@ -2053,25 +2226,89 @@ describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
         cancelledByType: null,
       },
     })
-    const rentalObject = factory.tenfastRentalObject.build({
-      externalId: 'R1001',
-      avtal: [lease],
-    })
-    ;(request as jest.Mock).mockImplementation(async ({ url }) =>
-      url.includes('/hyresobjekt/batch-get?') &&
-      url.includes('includeAvtal=signed')
-        ? { status: 200, data: [rentalObject] }
-        : { status: 200, data: [] }
-    )
+    jest
+      .spyOn(tenfastAdapter, 'getRentalObjectWithLeases')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenfastRentalObject.build({ externalId: 'R1001' }),
+      })
+    leaseStagesSpy.mockResolvedValueOnce({ ok: true, data: [lease] })
 
     const result = await tenfastAdapter.getAvailabilityForRentalObject(
       'R1001',
       false
     )
 
-    ;(request as jest.Mock).mockReset()
     assert(result.ok)
     expect(result.data.vacantFrom).toEqual(new Date('2099-11-01T00:00:00.000Z'))
+  })
+
+  it.each(['draft', 'signingInProgress'])(
+    'is not vacant when a next tenant has a %s lease',
+    async (stage) => {
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectWithLeases')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.tenfastRentalObject.build({ avtal: [] }),
+        })
+      leaseStagesSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [{ externalId: 'R1001/02', stage, endDate: null }],
+      })
+
+      const result = await tenfastAdapter.getAvailabilityForRentalObject(
+        'R1001',
+        false
+      )
+
+      assert(result.ok)
+      expect(result.data.vacantFrom).toBeUndefined()
+    }
+  )
+
+  it('reads the leases from the lease search, not the ones on the rental object', async () => {
+    // batch-get only carries the 10 latest signed leases, so a running lease
+    // can be missing there.
+    jest
+      .spyOn(tenfastAdapter, 'getRentalObjectWithLeases')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenfastRentalObject.build({ avtal: [] }),
+      })
+    leaseStagesSpy.mockResolvedValueOnce({
+      ok: true,
+      data: [{ externalId: 'R1001/01', stage: 'active', endDate: null }],
+    })
+
+    const result = await tenfastAdapter.getAvailabilityForRentalObject(
+      'R1001',
+      false
+    )
+
+    assert(result.ok)
+    expect(result.data.vacantFrom).toBeUndefined()
+  })
+
+  it('returns "could-not-find-leases" when the lease search fails', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getRentalObjectWithLeases')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenfastRentalObject.build(),
+      })
+    leaseStagesSpy.mockResolvedValueOnce({
+      ok: false,
+      err: 'could-not-find-leases',
+    })
+
+    const result = await tenfastAdapter.getAvailabilityForRentalObject(
+      'R1001',
+      false
+    )
+
+    assert(!result.ok)
+    expect(result.err).toBe('could-not-find-leases')
   })
 
   it('is not vacant when a terminated lease has a signed successor', async () => {
@@ -2088,10 +2325,12 @@ describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
       .spyOn(tenfastAdapter, 'getRentalObjectWithLeases')
       .mockResolvedValueOnce({
         ok: true,
-        data: factory.tenfastRentalObject.build({
-          avtal: [terminated, successor],
-        }),
+        data: factory.tenfastRentalObject.build(),
       })
+    leaseStagesSpy.mockResolvedValueOnce({
+      ok: true,
+      data: [terminated, successor],
+    })
 
     const result = await tenfastAdapter.getAvailabilityForRentalObject(
       'R1001',
@@ -2109,10 +2348,12 @@ describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
       .spyOn(tenfastAdapter, 'getRentalObjectWithLeases')
       .mockResolvedValueOnce({
         ok: true,
-        data: factory.tenfastRentalObject.build({
-          avtal: [leaseWithoutCancellation],
-        }),
+        data: factory.tenfastRentalObject.build(),
       })
+    leaseStagesSpy.mockResolvedValueOnce({
+      ok: true,
+      data: [leaseWithoutCancellation],
+    })
 
     const result = await tenfastAdapter.getAvailabilityForRentalObject(
       'R1001',
