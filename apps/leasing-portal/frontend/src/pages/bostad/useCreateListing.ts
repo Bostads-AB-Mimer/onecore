@@ -1,10 +1,13 @@
 import { toast } from '@onecore/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { BffRequestError } from '../../api/errors'
+import { BffRequestError, describeBffError } from '../../api/errors'
 import { useLeasingHost } from '../../host/useLeasingHost'
 
-import { vacantApartmentsQueryKey } from './useVacantApartments'
+import {
+  vacantApartmentsQueryKey,
+  type VacantApartment,
+} from './useVacantApartments'
 
 export function useCreateListing() {
   const { api } = useLeasingHost()
@@ -18,11 +21,24 @@ export function useCreateListing() {
       if (!data) throw new BffRequestError(response.status)
       return data.content
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: vacantApartmentsQueryKey })
+    onSuccess: (listing, rentalObjectCode) => {
+      // Patch the single row instead of invalidating — this endpoint is
+      // deliberately cached for 5 minutes (slow upstream Tenfast paging),
+      // and a full refetch here would also reset the table's row selection.
+      queryClient.setQueryData<VacantApartment[]>(
+        vacantApartmentsQueryKey,
+        (old) =>
+          old?.map((a) =>
+            a.rentalObjectCode === rentalObjectCode ? { ...a, listing } : a
+          )
+      )
     },
-    onError: () => {
-      toast({ title: 'Kunde inte skapa annonsen', variant: 'destructive' })
+    onError: (error) => {
+      toast({
+        title: 'Kunde inte skapa annonsen',
+        description: describeBffError(error),
+        variant: 'destructive',
+      })
     },
   })
 }

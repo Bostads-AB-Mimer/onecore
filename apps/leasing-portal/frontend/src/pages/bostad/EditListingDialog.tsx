@@ -52,14 +52,22 @@ const formatAddress = (address: VacantApartment['address']) =>
   address?.street ?? '–'
 
 const formatDate = (value: string | null | undefined) =>
-  value ? new Date(value).toLocaleDateString('sv-SE') : '–'
+  value ? format(new Date(value), 'd MMMM yyyy', { locale: sv }) : '–'
+
+// Date-only (no time-of-day), so z.coerce.date() parses it as UTC midnight for
+// the picked calendar day — toISOString() would instead shift the day back by
+// the local UTC offset (e.g. a day earlier in Swedish timezones).
+const toDateOnlyString = (date: Date) => format(date, 'yyyy-MM-dd')
 
 const defaultValues = (apartment: VacantApartment): ListingFormValues => ({
   publishedTo: apartment.listing?.publishedTo
     ? new Date(apartment.listing.publishedTo)
     : undefined,
-  publishUntilFurtherNotice:
-    !!apartment.listing?.publishedFrom && !apartment.listing?.publishedTo,
+  // No publishedTo means "no end date" — same meaning as NON_SCORED parking
+  // space listings elsewhere in the app (see useCreateMultipleListings.ts),
+  // regardless of whether that's because the officer chose "tillsvidare" or
+  // because the listing hasn't had an end date set at all yet.
+  publishUntilFurtherNotice: !apartment.listing?.publishedTo,
   // availableFrom overrides the computed vacantFrom when set; prefill with
   // the override if one exists, otherwise the computed value (as before).
   availableFrom: apartment.listing?.availableFrom
@@ -85,13 +93,10 @@ export function EditListingDialog({
   const { user } = useLeasingHost()
   const updateListing = useUpdateListing()
   const form = useForm<ListingFormValues>({
-    defaultValues: apartment
-      ? defaultValues(apartment)
-      : {
-          publishedTo: undefined,
-          publishUntilFurtherNotice: false,
-          reviewed: false,
-        },
+    // apartment is only ever null before the early `return null` below, so
+    // this initializer never actually needs a no-apartment fallback — the
+    // mount-time useEffect reset() is what populates the form for real.
+    defaultValues: apartment ? defaultValues(apartment) : undefined,
   })
 
   useEffect(() => {
@@ -130,18 +135,24 @@ export function EditListingDialog({
         ...(!alreadyPublished && {
           publishedTo: values.publishUntilFurtherNotice
             ? null
-            : (values.publishedTo?.toISOString() ?? null),
+            : (values.publishedTo
+                ? toDateOnlyString(values.publishedTo)
+                : null),
         }),
         availableFrom: availableFromChanged
-          ? (values.availableFrom?.toISOString() ?? null)
+          ? (values.availableFrom
+              ? toDateOnlyString(values.availableFrom)
+              : null)
           : null,
-        tentativeAvailableFrom:
-          values.tentativeAvailableFrom?.toISOString() ?? null,
+        tentativeAvailableFrom: values.tentativeAvailableFrom
+          ? toDateOnlyString(values.tentativeAvailableFrom)
+          : null,
         reviewedAt: values.reviewed
           ? (apartment.listing.reviewedAt ?? new Date().toISOString())
           : null,
         reviewedBy: values.reviewed
-          ? (apartment.listing.reviewedBy ?? user.email ?? user.name ?? user.id)
+          ? (apartment.listing.reviewedBy ??
+            [user.email, user.name, user.id].find(Boolean))
           : null,
       },
       { onSuccess: onClose }

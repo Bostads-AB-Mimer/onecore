@@ -71,7 +71,7 @@ function TenureBadge({
 
 const buildColumns = (
   onEdit: (apartment: VacantApartment) => void,
-  creatingFor: string | null
+  creatingFor: Set<string>
 ): ResponsiveTableColumn<VacantApartment>[] => [
   {
     key: 'address',
@@ -104,9 +104,16 @@ const buildColumns = (
     label: 'Senaste uthyrningsmetod',
     // A separate Tenfast fact from rentalTenureType, not another value for
     // the same column — e.g. "Poängfri" alongside a "Student" tenure type.
+    // An apartment can carry more than one tag, so render all of them.
     render: (a) =>
       a.rentalTags.length > 0 ? (
-        <Badge variant="secondary">{a.rentalTags[0].name}</Badge>
+        <span className="flex flex-wrap gap-1">
+          {a.rentalTags.map((tag) => (
+            <Badge key={tag.id} variant="secondary">
+              {tag.name}
+            </Badge>
+          ))}
+        </span>
       ) : (
         '–'
       ),
@@ -158,7 +165,7 @@ const buildColumns = (
           <DropdownMenuItem disabled>Publicera</DropdownMenuItem>
           {/* Creates a draft listing first if the apartment doesn't have one yet. */}
           <DropdownMenuItem
-            disabled={creatingFor === a.rentalObjectCode}
+            disabled={creatingFor.has(a.rentalObjectCode)}
             onClick={() => onEdit(a)}
           >
             Redigera annons
@@ -185,24 +192,31 @@ export function VacantApartmentsTable() {
 
   const [editing, setEditing] = useState<VacantApartment | null>(null)
   const createListing = useCreateListing()
+  // Per-row in-flight tracking — createListing is one shared mutation, so its
+  // own isPending/variables only ever reflect the most recently started call
+  // and would incorrectly re-enable an earlier row's menu item.
+  const [creatingFor, setCreatingFor] = useState<Set<string>>(new Set())
 
   const handleEdit = (apartment: VacantApartment) => {
     if (apartment.listing) {
       setEditing(apartment)
       return
     }
+    setCreatingFor((prev) => new Set(prev).add(apartment.rentalObjectCode))
     createListing.mutate(apartment.rentalObjectCode, {
       onSuccess: (listing) => setEditing({ ...apartment, listing }),
+      onSettled: () =>
+        setCreatingFor((prev) => {
+          const next = new Set(prev)
+          next.delete(apartment.rentalObjectCode)
+          return next
+        }),
     })
   }
 
   const columns = useMemo(
-    () =>
-      buildColumns(
-        handleEdit,
-        createListing.isPending ? createListing.variables : null
-      ),
-    [createListing.isPending, createListing.variables]
+    () => buildColumns(handleEdit, creatingFor),
+    [creatingFor]
   )
 
   if (isError) return <QueryError error={error} />
