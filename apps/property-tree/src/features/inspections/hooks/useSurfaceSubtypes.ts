@@ -4,10 +4,10 @@ import { componentService } from '@/services/api/core/componentService'
 
 const STALE_TIME = Infinity
 
-export function useSurfaceModels() {
+export function useSurfaceSubtypes() {
   return useQuery({
-    queryKey: ['components', 'surface-models'],
-    queryFn: () => componentService.getSurfaceModels(),
+    queryKey: ['component-subtypes', 'surface'],
+    queryFn: () => componentService.getSurfaceSubtypes(),
     staleTime: STALE_TIME,
   })
 }

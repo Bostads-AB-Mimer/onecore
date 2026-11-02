@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Info } from 'lucide-react'
 
 import { useComponentEntity } from '@/entities/component'
 
-import type { EntityType } from '@/services/types'
+import type { ComponentCategory, EntityType } from '@/services/types'
 
+import { Alert, AlertDescription } from '@/shared/ui/Alert'
 import {
   Collapsible,
   CollapsibleContent,
@@ -19,19 +20,26 @@ import {
   SelectValue,
 } from '@/shared/ui/Select'
 
+import { formatSek, formatWithUnit } from '../lib/componentRows'
+
 export interface HierarchyData {
   categoryId?: string
   typeId?: string
   subtypeId?: string
-  modelId?: string
 }
 
-export type ParentEntityType = 'category' | 'type' | 'subtype' | 'model'
+export type ParentEntityType = 'category' | 'type' | 'subtype'
 
 interface ParentHierarchySelectorProps {
   entityType: Exclude<EntityType, 'category'>
   initialHierarchy: HierarchyData
-  onParentChange: (parentId: string | undefined) => void
+  /** The model an instance loses when it moves to another subtype. */
+  currentModelName?: string
+  onParentChange: (
+    parentId: string | undefined,
+    subtypeId: string | undefined,
+    categoryType: ComponentCategory['type'] | undefined
+  ) => void
 }
 
 // Map entity type to the parent ID field name used in the API
@@ -39,7 +47,7 @@ const parentIdFieldMap: Record<Exclude<EntityType, 'category'>, string> = {
   type: 'categoryId',
   subtype: 'typeId',
   model: 'componentSubtypeId',
-  instance: 'modelId',
+  instance: 'subtypeId',
 }
 
 // Define which parent levels to show for each entity type
@@ -50,12 +58,13 @@ const parentLevelsMap: Record<
   type: ['category'],
   subtype: ['category', 'type'],
   model: ['category', 'type', 'subtype'],
-  instance: ['category', 'type', 'subtype', 'model'],
+  instance: ['category', 'type', 'subtype'],
 }
 
 export function ParentHierarchySelector({
   entityType,
   initialHierarchy,
+  currentModelName,
   onParentChange,
 }: ParentHierarchySelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -68,9 +77,6 @@ export function ParentHierarchySelector({
   const [selectedSubtypeId, setSelectedSubtypeId] = useState<
     string | undefined
   >(initialHierarchy.subtypeId)
-  const [selectedModelId, setSelectedModelId] = useState<string | undefined>(
-    initialHierarchy.modelId
-  )
 
   const parentLevels = parentLevelsMap[entityType]
 
@@ -78,31 +84,30 @@ export function ParentHierarchySelector({
   const { data: categories, isLoading: categoriesLoading } =
     useComponentEntity('category')
 
-  // Fetch types when category is selected
+  const typesParentId = parentLevels.includes('type')
+    ? selectedCategoryId
+    : undefined
   const { data: types, isLoading: typesLoading } = useComponentEntity(
     'type',
-    parentLevels.includes('type') && selectedCategoryId
-      ? selectedCategoryId
-      : ''
+    typesParentId,
+    undefined,
+    { enabled: Boolean(typesParentId) }
   )
 
-  // Fetch subtypes when type is selected
+  const subtypesParentId = parentLevels.includes('subtype')
+    ? selectedTypeId
+    : undefined
   const { data: subtypes, isLoading: subtypesLoading } = useComponentEntity(
     'subtype',
-    parentLevels.includes('subtype') && selectedTypeId ? selectedTypeId : ''
-  )
-
-  // Fetch models when subtype is selected
-  const { data: models, isLoading: modelsLoading } = useComponentEntity(
-    'model',
-    parentLevels.includes('model') && selectedSubtypeId ? selectedSubtypeId : ''
+    subtypesParentId,
+    undefined,
+    { enabled: Boolean(subtypesParentId) }
   )
 
   // Get current selected entities for displaying info
   const selectedCategory = categories?.find((c) => c.id === selectedCategoryId)
   const selectedType = types?.find((t) => t.id === selectedTypeId)
   const selectedSubtype = subtypes?.find((s) => s.id === selectedSubtypeId)
-  const selectedModel = models?.find((m) => m.id === selectedModelId)
 
   // Get the direct parent ID based on entity type
   const getDirectParentId = (): string | undefined => {
@@ -114,7 +119,7 @@ export function ParentHierarchySelector({
       case 'model':
         return selectedSubtypeId
       case 'instance':
-        return selectedModelId
+        return selectedSubtypeId
       default:
         return undefined
     }
@@ -123,33 +128,28 @@ export function ParentHierarchySelector({
   // Notify parent component when the direct parent changes
   useEffect(() => {
     const directParentId = getDirectParentId()
-    onParentChange(directParentId)
-  }, [selectedCategoryId, selectedTypeId, selectedSubtypeId, selectedModelId])
+    onParentChange(
+      directParentId,
+      selectedSubtypeId,
+      categories?.find((c) => c.id === selectedCategoryId)?.type
+    )
+  }, [selectedCategoryId, selectedTypeId, selectedSubtypeId, categories])
 
   // Handle category change - reset all child selections
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategoryId(categoryId)
     setSelectedTypeId(undefined)
     setSelectedSubtypeId(undefined)
-    setSelectedModelId(undefined)
   }
 
-  // Handle type change - reset subtype and model
+  // Handle type change - reset subtype
   const handleTypeChange = (typeId: string) => {
     setSelectedTypeId(typeId)
     setSelectedSubtypeId(undefined)
-    setSelectedModelId(undefined)
   }
 
-  // Handle subtype change - reset model
   const handleSubtypeChange = (subtypeId: string) => {
     setSelectedSubtypeId(subtypeId)
-    setSelectedModelId(undefined)
-  }
-
-  // Handle model change
-  const handleModelChange = (modelId: string) => {
-    setSelectedModelId(modelId)
   }
 
   // Check if parent has changed from initial
@@ -162,7 +162,7 @@ export function ParentHierarchySelector({
       case 'model':
         return selectedSubtypeId !== initialHierarchy.subtypeId
       case 'instance':
-        return selectedModelId !== initialHierarchy.modelId
+        return selectedSubtypeId !== initialHierarchy.subtypeId
       default:
         return false
     }
@@ -276,57 +276,30 @@ export function ParentHierarchySelector({
                 ))}
               </SelectContent>
             </Select>
-            {selectedSubtype && (
-              <p className="text-xs text-muted-foreground">
-                Livslängd: {selectedSubtype.technicalLifespan} år | Avskrivning:{' '}
-                {selectedSubtype.depreciationPrice} kr
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Model selector */}
-        {parentLevels.includes('model') && (
-          <div className="space-y-2">
-            <Label htmlFor="model-select">Modell</Label>
-            <Select
-              value={selectedModelId || ''}
-              onValueChange={handleModelChange}
-              disabled={!selectedSubtypeId || modelsLoading}
-            >
-              <SelectTrigger id="model-select">
-                <SelectValue
-                  placeholder={
-                    !selectedSubtypeId
-                      ? 'Välj undertyp först'
-                      : modelsLoading
-                        ? 'Laddar...'
-                        : 'Välj modell'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {models?.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    {model.manufacturer} - {model.modelName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedModel && (
-              <p className="text-xs text-muted-foreground">
-                Pris: {selectedModel.currentPrice} kr | Garanti:{' '}
-                {selectedModel.warrantyMonths} mån
-              </p>
-            )}
+            {selectedSubtype &&
+              (selectedSubtype.technicalLifespan > 0 ||
+                selectedSubtype.depreciationPrice > 0) && (
+                <p className="text-xs text-muted-foreground">
+                  Livslängd:{' '}
+                  {formatWithUnit(selectedSubtype.technicalLifespan, 'år')} ·
+                  Avskrivning: {formatSek(selectedSubtype.depreciationPrice)}
+                </p>
+              )}
           </div>
         )}
 
         {/* Warning message when parent has changed */}
         {hasParentChanged() && (
-          <p className="text-sm text-amber-600 dark:text-amber-500">
-            Obs: Alla underliggande objekt kommer att flyttas med!
-          </p>
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              {entityType !== 'instance'
+                ? 'Allt som ligger under flyttas med.'
+                : currentModelName
+                  ? `Modellen ${currentModelName} hör till den tidigare undertypen och tas bort. Välj en modell för den nya undertypen nedan om den är känd.`
+                  : 'Komponenten flyttas till den valda undertypen.'}
+            </AlertDescription>
+          </Alert>
         )}
       </CollapsibleContent>
     </Collapsible>

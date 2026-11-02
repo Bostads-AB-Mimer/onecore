@@ -14,6 +14,7 @@ model ComponentSubtypes {
   // Relations
   componentType   ComponentTypes    @relation(fields: [typeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   componentModels ComponentModels[]
+  components      Components[]
 
   @@index([typeId])
   @@map("component_subtypes")

@@ -115,6 +115,7 @@ export function useDocuments(contextType: ContextType, id: string | undefined) {
     documents: documentsQuery.data || [],
     isLoading: documentsQuery.isLoading,
     error: documentsQuery.error,
+    refetch: () => void documentsQuery.refetch(),
     uploadFile: uploadMutation.mutate,
     uploadFileAsync: uploadMutation.mutateAsync,
     isUploading: uploadMutation.isPending,

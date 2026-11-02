@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { property } from '@onecore/types'
+import { useQuery } from '@tanstack/react-query'
 
-import { useComponentEntity } from '@/entities/component'
+import {
+  QUERY_KEY_ROOTS,
+  useComponentEntity,
+  useSubtypeComponents,
+} from '@/entities/component'
 
+import { componentLibraryService } from '@/services/api/core/componentLibraryService'
 import type {
   Component,
   ComponentCategory,
@@ -18,129 +25,27 @@ import {
 } from '@/shared/hooks'
 import { useDebounce } from '@/shared/hooks/useDebounce'
 import { useUrlPagination } from '@/shared/hooks/useUrlPagination'
+import type { SortControl, TableSort } from '@/shared/ui/dataTableSort'
 
-import type { ViewState } from './useComponentLibraryHandlers'
-
-// Helper function to derive ViewState from URL search params
-function deriveViewStateFromParams(searchParams: URLSearchParams): ViewState {
-  const level = searchParams.get('level') || 'categories'
-
-  if (level === 'types') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    if (categoryId && categoryName) {
-      return { level: 'types', categoryId, categoryName }
-    }
-  }
-
-  if (level === 'subtypes') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    const typeId = searchParams.get('typeId')
-    const typeName = searchParams.get('typeName')
-    if (categoryId && categoryName && typeId && typeName) {
-      return { level: 'subtypes', categoryId, categoryName, typeId, typeName }
-    }
-  }
-
-  if (level === 'models') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    const typeId = searchParams.get('typeId')
-    const typeName = searchParams.get('typeName')
-    const subtypeId = searchParams.get('subtypeId')
-    const subtypeName = searchParams.get('subtypeName')
-    if (
-      categoryId &&
-      categoryName &&
-      typeId &&
-      typeName &&
-      subtypeId &&
-      subtypeName
-    ) {
-      return {
-        level: 'models',
-        categoryId,
-        categoryName,
-        typeId,
-        typeName,
-        subtypeId,
-        subtypeName,
-      }
-    }
-  }
-
-  if (level === 'instances') {
-    const categoryId = searchParams.get('categoryId')
-    const categoryName = searchParams.get('categoryName')
-    const typeId = searchParams.get('typeId')
-    const typeName = searchParams.get('typeName')
-    const subtypeId = searchParams.get('subtypeId')
-    const subtypeName = searchParams.get('subtypeName')
-    const modelId = searchParams.get('modelId')
-    const modelName = searchParams.get('modelName')
-    if (
-      categoryId &&
-      categoryName &&
-      typeId &&
-      typeName &&
-      subtypeId &&
-      subtypeName &&
-      modelId &&
-      modelName
-    ) {
-      return {
-        level: 'instances',
-        categoryId,
-        categoryName,
-        typeId,
-        typeName,
-        subtypeId,
-        subtypeName,
-        modelId,
-        modelName,
-      }
-    }
-  }
-
-  // Default to categories
-  return { level: 'categories' }
-}
-
-// Helper function to create URL params from ViewState
-function createParamsFromViewState(state: ViewState): URLSearchParams {
-  const params = new URLSearchParams()
-
-  if (state.level === 'categories') {
-    // No params needed for categories
-    return params
-  }
-
-  params.set('level', state.level)
-  params.set('categoryId', state.categoryId)
-  params.set('categoryName', state.categoryName)
-
-  if (
-    state.level === 'subtypes' ||
-    state.level === 'models' ||
-    state.level === 'instances'
-  ) {
-    params.set('typeId', state.typeId)
-    params.set('typeName', state.typeName)
-  }
-
-  if (state.level === 'models' || state.level === 'instances') {
-    params.set('subtypeId', state.subtypeId)
-    params.set('subtypeName', state.subtypeName)
-  }
-
-  if (state.level === 'instances') {
-    params.set('modelId', state.modelId)
-    params.set('modelName', state.modelName)
-  }
-
-  return params
-}
+import type { CategoryType } from '../lib/componentRows'
+import {
+  allowsInstalledBefore,
+  COMPONENT_PAGE_SIZE,
+  type ComponentFilterControl,
+  fallbackSortFor,
+  isLegacyLibraryUrl,
+  NO_MODEL,
+  parseComponentFilters,
+  parseSort,
+  parseViewState,
+  sortUrlParams,
+  type SubtypeTab,
+  toSearchParams,
+  toViewKey,
+  type ViewState,
+  withCategoryType,
+  withFreshNames,
+} from '../lib/libraryUrlState'
 
 export interface ComponentLibraryDialogStates {
   categoryDialog: UseDialogStateReturn<ComponentCategory>
@@ -153,202 +58,289 @@ export interface ComponentLibraryDialogStates {
   imageGalleryDialog: UseSimpleDialogStateReturn<Component>
 }
 
-export interface ComponentLibraryDataState {
-  categories: ComponentCategory[] | undefined
-  categoriesLoading: boolean
-  categoriesError: Error | null
-  types: ComponentType[] | undefined
-  typesLoading: boolean
-  typesError: Error | null
-  subtypes: ComponentSubtype[] | undefined
-  subtypesLoading: boolean
-  subtypesError: Error | null
-  models: ComponentModel[] | undefined
-  modelsLoading: boolean
-  modelsError: Error | null
-  instances: Component[] | undefined
-  instancesLoading: boolean
-  instancesError: Error | null
-}
+// A model filter hides the Modell column, so it cannot be sorted on.
+const componentSortKeys = (modelFiltered: boolean) =>
+  property.ComponentSortKeySchema.options.filter(
+    (key) => !(modelFiltered && key === 'model')
+  )
 
-export interface UseComponentLibraryViewStateReturn {
-  // View state
-  viewState: ViewState
-  navigateTo: (newState: ViewState) => void
+// Stable reference: the instance dialog's fields are memoized on this list.
+const NO_MODELS: ComponentModel[] = []
 
-  // Search state
-  searchInput: string
-  setSearchInput: (value: string) => void
-  debouncedSearch: string
+export const useComponentLibraryViewState = () => {
+  const { searchParams, setSearchParams, updateUrlParams, page, setPage } =
+    useUrlPagination({ defaultLimit: COMPONENT_PAGE_SIZE })
 
-  // Dialog states
-  dialogs: ComponentLibraryDialogStates
-
-  // Data state
-  data: ComponentLibraryDataState
-}
-
-export function useComponentLibraryViewState(): UseComponentLibraryViewStateReturn {
-  const { searchParams, setSearchParams, updateUrlParams } = useUrlPagination()
-
-  // Derive viewState from URL params
-  const viewState = useMemo(
-    () => deriveViewStateFromParams(searchParams),
+  const urlViewState = useMemo(
+    () => parseViewState(searchParams),
     [searchParams]
   )
 
-  // Local search input state for immediate feedback
+  // Read from the URL, which receives the search and the page reset together.
+  const urlSearch = searchParams.get('search')?.trim() ?? ''
+  const activeSearch = urlSearch.length >= 2 ? urlSearch : undefined
+
+  const categories = useComponentEntity('category')
+
+  const types = useComponentEntity(
+    'type',
+    urlViewState.level !== 'categories' ? urlViewState.categoryId : undefined
+  )
+
+  const onSubtypeLevel =
+    urlViewState.level === 'subtypes' || urlViewState.level === 'subtype'
+  const subtypes = useComponentEntity(
+    'subtype',
+    onSubtypeLevel ? urlViewState.typeId : undefined,
+    { search: urlViewState.level === 'subtypes' ? activeSearch : undefined },
+    { enabled: onSubtypeLevel }
+  )
+
+  // The database defaults a category's type to EQUIPMENT; undefined only while loading.
+  const categoryType: CategoryType | undefined =
+    urlViewState.level === 'categories' || !categories.data
+      ? undefined
+      : (categories.data.find((c) => c.id === urlViewState.categoryId)?.type ??
+        'EQUIPMENT')
+
+  const viewState = useMemo(
+    () =>
+      withFreshNames(withCategoryType(urlViewState, categoryType), {
+        categories: categories.data,
+        types: types.data,
+        subtypes: subtypes.data,
+      }),
+    [urlViewState, categoryType, categories.data, types.data, subtypes.data]
+  )
+  const subtypeState = viewState.level === 'subtype' ? viewState : undefined
+
+  useEffect(() => {
+    if (isLegacyLibraryUrl(searchParams)) {
+      setSearchParams(toSearchParams(urlViewState), { replace: true })
+    }
+  }, [searchParams, setSearchParams, urlViewState])
+
   const [searchInput, setSearchInput] = useState(
     searchParams.get('search') || ''
   )
 
-  // Sync search input when URL changes (e.g., browser back/forward)
   useEffect(() => {
-    const urlSearch = searchParams.get('search') || ''
-    setSearchInput(urlSearch)
+    setSearchInput(searchParams.get('search') || '')
   }, [searchParams])
 
-  // Debounced search for API calls
   const debouncedSearch = useDebounce(searchInput, 300)
 
-  // Track previous level to detect navigation
-  const prevLevelRef = useRef(viewState.level)
+  // Search resets on navigation, so skip the first run after a view change.
+  const viewKey = toViewKey(viewState)
+  const prevViewKeyRef = useRef(viewKey)
 
-  // Update URL when debounced search changes (only for levels that support search)
   useEffect(() => {
-    // Skip if level just changed - search should be reset
-    if (prevLevelRef.current !== viewState.level) {
-      prevLevelRef.current = viewState.level
+    if (prevViewKeyRef.current !== viewKey) {
+      prevViewKeyRef.current = viewKey
       return
     }
+    if (viewState.level !== 'subtypes' && viewState.level !== 'subtype') return
+    if (debouncedSearch !== searchInput) return
 
-    if (
-      viewState.level === 'subtypes' ||
-      viewState.level === 'models' ||
-      viewState.level === 'instances'
-    ) {
-      const currentSearch = searchParams.get('search') || ''
-      const newSearch = debouncedSearch.trim()
-
-      if (currentSearch !== newSearch) {
-        updateUrlParams({ search: newSearch || undefined }, { replace: true })
-      }
+    const currentSearch = searchParams.get('search') || ''
+    const newSearch = debouncedSearch.trim()
+    if (currentSearch !== newSearch) {
+      updateUrlParams(
+        {
+          search: newSearch || undefined,
+          page: undefined,
+          componentId: undefined,
+        },
+        { replace: true }
+      )
     }
-  }, [debouncedSearch, viewState, searchParams, updateUrlParams])
+  }, [
+    debouncedSearch,
+    searchInput,
+    viewKey,
+    viewState.level,
+    searchParams,
+    updateUrlParams,
+  ])
 
-  // Navigation helper that updates URL (replaces all params for level changes)
   const navigateTo = (newState: ViewState) => {
-    const params = createParamsFromViewState(newState)
-    setSearchParams(params)
-    setSearchInput('') // Reset search when navigating
+    setSearchParams(toSearchParams(newState))
+    setSearchInput('')
   }
 
-  // Dialog states
-  const categoryDialog = useDialogState<ComponentCategory>()
-  const typeDialog = useDialogState<ComponentType>()
-  const subtypeDialog = useDialogState<ComponentSubtype>()
-  const modelDialog = useDialogState<ComponentModel>()
-  const instanceDialog = useDialogState<Component>()
+  const setTab = (tab: SubtypeTab) => {
+    if (subtypeState) navigateTo({ ...subtypeState, tab })
+  }
 
-  const instanceDetailsDialog = useSimpleDialogState<Component>()
-  const deinstallDialog = useSimpleDialogState<Component>()
-  const imageGalleryDialog = useSimpleDialogState<Component>()
+  const setModelFilter = (modelId: string | undefined) => {
+    updateUrlParams({
+      modelId,
+      ...(modelId && searchParams.get('sortBy') === 'model'
+        ? { sortBy: undefined, sortOrder: undefined }
+        : {}),
+      page: undefined,
+      componentId: undefined,
+    })
+  }
 
-  // Data fetching
-  const {
-    data: categories,
-    isLoading: categoriesLoading,
-    error: categoriesError,
-  } = useComponentEntity('category')
+  const clearFilters = () => {
+    updateUrlParams({
+      modelId: undefined,
+      search: undefined,
+      installation: undefined,
+      installedBefore: undefined,
+      page: undefined,
+      componentId: undefined,
+    })
+    setSearchInput('')
+  }
 
-  const {
-    data: types,
-    isLoading: typesLoading,
-    error: typesError,
-  } = useComponentEntity(
-    'type',
-    viewState.level !== 'categories' ? viewState.categoryId : undefined
+  const onComponentList = subtypeState?.tab === 'components'
+  const fallbackSort = fallbackSortFor(viewState)
+  const sort: SortControl = {
+    value:
+      parseSort(
+        searchParams,
+        onComponentList
+          ? componentSortKeys(subtypeState.modelId !== undefined)
+          : undefined
+      ) ?? fallbackSort,
+    fallback: fallbackSort,
+    onChange: (next: TableSort) =>
+      updateUrlParams({
+        ...sortUrlParams(next, fallbackSort),
+        page: undefined,
+      }),
+  }
+
+  const componentFilterValue = useMemo(
+    () => parseComponentFilters(searchParams),
+    [searchParams]
   )
+  const componentFilters: ComponentFilterControl = {
+    value: componentFilterValue,
+    onInstallationChange: (installation) =>
+      updateUrlParams({
+        installation,
+        ...(allowsInstalledBefore(installation)
+          ? {}
+          : { installedBefore: undefined }),
+        page: undefined,
+        componentId: undefined,
+      }),
+    onInstalledBeforeChange: (year) =>
+      updateUrlParams({
+        installedBefore: year,
+        page: undefined,
+        componentId: undefined,
+      }),
+  }
 
-  const {
-    data: subtypes,
-    isLoading: subtypesLoading,
-    error: subtypesError,
-  } = useComponentEntity(
-    'subtype',
-    viewState.level === 'subtypes' || viewState.level === 'models'
-      ? viewState.typeId
-      : undefined,
-    {
-      search:
-        viewState.level === 'subtypes' && debouncedSearch.trim().length >= 2
-          ? debouncedSearch
-          : undefined,
-    }
-  )
+  const dialogs: ComponentLibraryDialogStates = {
+    categoryDialog: useDialogState<ComponentCategory>(),
+    typeDialog: useDialogState<ComponentType>(),
+    subtypeDialog: useDialogState<ComponentSubtype>(),
+    modelDialog: useDialogState<ComponentModel>(),
+    instanceDialog: useDialogState<Component>(),
+    instanceDetailsDialog: useSimpleDialogState<Component>(),
+    deinstallDialog: useSimpleDialogState<Component>(),
+    imageGalleryDialog: useSimpleDialogState<Component>(),
+  }
 
-  const {
-    data: models,
-    isLoading: modelsLoading,
-    error: modelsError,
-  } = useComponentEntity(
+  const modelOptions = useComponentEntity(
     'model',
-    viewState.level === 'models' ? viewState.subtypeId : undefined,
-    {
-      search:
-        viewState.level === 'models' && debouncedSearch.trim().length >= 2
-          ? debouncedSearch
-          : undefined,
-    }
+    subtypeState?.subtypeId,
+    undefined,
+    { enabled: subtypeState !== undefined && categoryType === 'EQUIPMENT' }
   )
 
-  const {
-    data: instances,
-    isLoading: instancesLoading,
-    error: instancesError,
-  } = useComponentEntity(
-    'instance',
-    viewState.level === 'instances' ? viewState.modelId : undefined,
-    {
-      search:
-        viewState.level === 'instances' && debouncedSearch.trim().length >= 2
-          ? debouncedSearch
-          : undefined,
-    }
+  const models = useComponentEntity(
+    'model',
+    subtypeState?.subtypeId,
+    { search: subtypeState?.tab === 'models' ? activeSearch : undefined },
+    { enabled: subtypeState?.tab === 'models' }
   )
+
+  const componentPage = useSubtypeComponents(
+    subtypeState?.tab === 'components' && categoryType
+      ? {
+          subtypeId: subtypeState.subtypeId,
+          modelId:
+            subtypeState.modelId === NO_MODEL
+              ? undefined
+              : subtypeState.modelId,
+          withoutModel: subtypeState.modelId === NO_MODEL,
+          search: activeSearch,
+          searchField:
+            categoryType === 'SURFACE' ? 'specifications' : 'serialNumber',
+          ...componentFilterValue,
+          sort: sort.value,
+          page,
+          limit: COMPONENT_PAGE_SIZE,
+        }
+      : undefined
+  )
+
+  const markedComponentId =
+    subtypeState?.tab === 'components'
+      ? (searchParams.get('componentId') ?? undefined)
+      : undefined
+  const markedComponent = useQuery({
+    queryKey: [QUERY_KEY_ROOTS.instance, 'by-id', markedComponentId],
+    queryFn: () => componentLibraryService.getInstanceById(markedComponentId!),
+    enabled: markedComponentId !== undefined,
+  })
+
+  const unmarkComponent = () => {
+    updateUrlParams({ componentId: undefined }, { replace: true })
+  }
 
   return {
     viewState,
+    markedComponent:
+      markedComponentId && !markedComponent.isError
+        ? markedComponent.data
+        : undefined,
+    unmarkComponent,
     navigateTo,
+    setTab,
+    setModelFilter,
+    clearFilters,
+    sort,
+    componentFilters,
+    page,
+    setPage,
     searchInput,
     setSearchInput,
-    debouncedSearch,
-    dialogs: {
-      categoryDialog,
-      typeDialog,
-      subtypeDialog,
-      modelDialog,
-      instanceDialog,
-      instanceDetailsDialog,
-      deinstallDialog,
-      imageGalleryDialog,
-    },
+    categoryType,
+    dialogs,
     data: {
-      categories,
-      categoriesLoading,
-      categoriesError,
-      types,
-      typesLoading,
-      typesError,
-      subtypes,
-      subtypesLoading,
-      subtypesError,
-      models,
-      modelsLoading,
-      modelsError,
-      instances,
-      instancesLoading,
-      instancesError,
+      categories: categories.data,
+      categoriesLoading: categories.isLoading,
+      categoriesError: categories.error,
+      refetchCategories: () => void categories.refetch(),
+      types: types.data,
+      typesLoading: types.isLoading,
+      typesError: types.error,
+      refetchTypes: () => void types.refetch(),
+      subtypes: subtypes.data,
+      subtypesLoading: subtypes.isLoading,
+      subtypesError: subtypes.error,
+      refetchSubtypes: () => void subtypes.refetch(),
+      modelOptions: modelOptions.data ?? NO_MODELS,
+      models: models.data,
+      modelsLoading: models.isLoading,
+      modelsError: models.error,
+      refetchModels: () => void models.refetch(),
+      componentPage: componentPage.data,
+      componentsLoading: componentPage.isLoading,
+      componentsFetching: componentPage.isFetching,
+      componentsError: componentPage.error,
+      refetchComponents: () => void componentPage.refetch(),
     },
   }
 }
+
+export type UseComponentLibraryViewStateReturn = ReturnType<
+  typeof useComponentLibraryViewState
+>

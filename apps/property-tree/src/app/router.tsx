@@ -88,7 +88,7 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
           {
             path: routes.components,
             element: <ComponentLibraryPage />,
-            handle: { title: 'Komponenter' },
+            handle: { title: 'Komponentbibliotek', ownsDocumentTitle: true },
           },
           {
             path: routes.staircase,
@@ -103,7 +103,6 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
           {
             path: routes.room,
             element: <RoomPage />,
-            handle: { title: 'Rum' },
           },
           {
             path: routes.parkingSpace,

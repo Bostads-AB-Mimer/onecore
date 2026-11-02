@@ -30,11 +30,8 @@ export const getComponentInstallations = async (
       include: {
         component: {
           include: {
-            model: {
-              include: {
-                subtype: true,
-              },
-            },
+            subtype: true,
+            model: true,
           },
         },
       },
@@ -59,11 +56,8 @@ export const getComponentInstallationById = async (id: string) => {
     include: {
       component: {
         include: {
-          model: {
-            include: {
-              subtype: true,
-            },
-          },
+          subtype: true,
+          model: true,
         },
       },
     },

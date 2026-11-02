@@ -55,7 +55,7 @@ export function useComponentEntity<T extends EntityType>(
       case 'model':
         return componentLibraryService.getModels(parentId, searchOptions)
       case 'instance':
-        return componentLibraryService.getInstances(parentId, searchOptions)
+        throw new Error('Component lists are paged: use useSubtypeComponents')
       default:
         throw new Error(`Unknown entity type: ${entityType}`)
     }

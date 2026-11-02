@@ -1,3 +1,5 @@
+import type { Prisma } from '@prisma/client'
+import { property } from '@onecore/types'
 import { trimStrings } from '@src/utils/data-conversion'
 import { prisma } from './db'
 import type {
@@ -71,9 +73,10 @@ export const createComponentType = async (data: CreateComponentType) => {
 
 export const updateComponentType = async (
   id: string,
-  data: UpdateComponentType
+  data: UpdateComponentType,
+  db: Prisma.TransactionClient = prisma
 ) => {
-  const type = await prisma.componentTypes.update({
+  const type = await db.componentTypes.update({
     where: { id },
     data,
   })
@@ -85,4 +88,40 @@ export const deleteComponentType = async (id: string) => {
   await prisma.componentTypes.delete({
     where: { id },
   })
+}
+
+export type ComponentTypeCodeProblem =
+  'category_not_found' | 'category_not_surface' | 'code_taken'
+
+export const getComponentCategoryType = async (categoryId: string) =>
+  prisma.componentCategories.findUnique({
+    where: { id: categoryId },
+    select: { type: true },
+  })
+
+export const findComponentTypeCodeProblem = async (params: {
+  code: string | null | undefined
+  categoryId: string
+  category?: { type: string } | null
+  excludeTypeId?: string
+}): Promise<ComponentTypeCodeProblem | null> => {
+  if (!params.code) return null
+
+  const category =
+    params.category === undefined
+      ? await getComponentCategoryType(params.categoryId)
+      : params.category
+  if (!category) return 'category_not_found'
+  if (category.type !== property.ComponentCategoryTypeSchema.enum.SURFACE) {
+    return 'category_not_surface'
+  }
+
+  const taken = await prisma.componentTypes.findFirst({
+    where: {
+      code: params.code,
+      ...(params.excludeTypeId ? { id: { not: params.excludeTypeId } } : {}),
+    },
+    select: { id: true },
+  })
+  return taken ? 'code_taken' : null
 }

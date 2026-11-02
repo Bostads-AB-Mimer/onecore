@@ -14,12 +14,4 @@ export const { GET, POST, PUT, DELETE, PATCH } = createClient<paths>({
   credentials: 'include',
 })
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string
-  ) {
-    super(message)
-    this.name = 'ApiError'
-  }
-}
+export { ApiError, toApiError } from './apiError'

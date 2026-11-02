@@ -68,7 +68,7 @@ export const Pagination = ({
           variant="outline"
           size="sm"
           onClick={() => onPageChange(1)}
-          disabled={currentPage === 1 || isFetching}
+          disabled={currentPage === 1}
           className="h-8 w-8 p-0"
           title="Första sidan"
         >
@@ -79,7 +79,7 @@ export const Pagination = ({
           variant="outline"
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1 || isFetching}
+          disabled={currentPage === 1}
           className="h-8 w-8 p-0"
           title="Föregående sida"
         >
@@ -99,8 +99,9 @@ export const Pagination = ({
               key={page}
               variant={currentPage === page ? 'default' : 'outline'}
               size="sm"
+              aria-current={currentPage === page ? 'page' : undefined}
+              aria-label={`Sida ${page}`}
               onClick={() => onPageChange(page)}
-              disabled={isFetching}
               className="h-8 w-8 p-0"
             >
               {page}
@@ -112,7 +113,7 @@ export const Pagination = ({
           variant="outline"
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages || isFetching}
+          disabled={currentPage === totalPages}
           className="h-8 w-8 p-0"
           title="Nästa sida"
         >
@@ -123,7 +124,7 @@ export const Pagination = ({
           variant="outline"
           size="sm"
           onClick={() => onPageChange(totalPages)}
-          disabled={currentPage === totalPages || isFetching}
+          disabled={currentPage === totalPages}
           className="h-8 w-8 p-0"
           title="Sista sidan"
         >

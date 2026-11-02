@@ -8,15 +8,20 @@ import { useDebounce } from '@/shared/hooks/useDebounce'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
 
+import {
+  instanceOptionDetails,
+  instanceOptionTitle,
+} from '../lib/instanceOption'
+
 interface InstanceSelectorProps {
-  modelId: string
+  subtypeId: string
   value: string // Selected instance ID
   onChange: (instanceId: string, instance: Component | undefined) => void
   error?: string
 }
 
 export const InstanceSelector = ({
-  modelId,
+  subtypeId,
   value,
   onChange,
   error,
@@ -24,21 +29,21 @@ export const InstanceSelector = ({
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
 
-  // Minimum search length to trigger query
+  // Minimum search length before the serial number narrows the list
   const MIN_SEARCH_LENGTH = 2
-  const shouldSearch = debouncedSearch.trim().length >= MIN_SEARCH_LENGTH
+  const serialSearch =
+    debouncedSearch.trim().length >= MIN_SEARCH_LENGTH
+      ? debouncedSearch.trim()
+      : undefined
 
-  // Query with backend search - only enabled when search meets minimum length
-  const {
-    data: instances = [],
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ['instances', 'uninstalled', modelId, debouncedSearch],
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['instances', 'uninstalled', subtypeId, serialSearch ?? ''],
     queryFn: () =>
-      componentService.getUninstalledInstances(modelId, debouncedSearch),
-    enabled: !!modelId && shouldSearch,
+      componentService.getUninstalledInstances(subtypeId, serialSearch),
+    enabled: !!subtypeId,
   })
+  const instances = data?.content ?? []
+  const total = data?.total ?? 0
 
   const selectedInstance = instances.find((inst) => inst.id === value)
 
@@ -50,7 +55,7 @@ export const InstanceSelector = ({
         <Input
           id="instance-search"
           type="text"
-          placeholder="Sök efter serienummer..."
+          placeholder="Sök på serienummer..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="mb-2"
@@ -69,14 +74,11 @@ export const InstanceSelector = ({
       )}
 
       <div className="border rounded-md max-h-60 overflow-y-auto">
-        {!shouldSearch ? (
+        {instances.length === 0 && !isLoading ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
-            Skriv minst {MIN_SEARCH_LENGTH} tecken för att söka efter
-            serienummer
-          </div>
-        ) : instances.length === 0 && !isLoading ? (
-          <div className="p-4 text-center text-muted-foreground text-sm">
-            Inga komponenter hittades för "{debouncedSearch}"
+            {serialSearch
+              ? `Inga oinstallerade komponenter hittades för "${serialSearch}"`
+              : 'Det finns inga oinstallerade komponenter av den här undertypen'}
           </div>
         ) : (
           <div className="divide-y">
@@ -93,11 +95,10 @@ export const InstanceSelector = ({
                 }`}
               >
                 <div className="text-sm font-medium">
-                  {instance.serialNumber}
+                  {instanceOptionTitle(instance)}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Garanti: {instance.warrantyMonths} mån | Pris:{' '}
-                  {instance.priceAtPurchase} kr
+                  {instanceOptionDetails(instance)}
                 </div>
               </button>
             ))}
@@ -105,11 +106,18 @@ export const InstanceSelector = ({
         )}
       </div>
 
+      {total > instances.length && (
+        <p className="text-xs text-muted-foreground">
+          Visar {instances.length} av {total}. Sök på serienummer för att hitta
+          fler.
+        </p>
+      )}
+
       {selectedInstance && (
         <div className="mt-2 p-3 bg-accent rounded-md">
           <p className="text-sm font-medium">Vald komponent:</p>
           <p className="text-sm text-muted-foreground">
-            {selectedInstance.serialNumber}
+            {instanceOptionTitle(selectedInstance)}
           </p>
         </div>
       )}

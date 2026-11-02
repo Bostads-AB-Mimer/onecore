@@ -1,15 +1,18 @@
-import { useState } from 'react'
-import { Eye, FileText } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { FileText } from 'lucide-react'
 
 import type { ComponentModel } from '@/services/types'
 
+import { sortModelsByName } from '@/shared/lib/componentLabels'
 import { Button } from '@/shared/ui/Button'
-import {
-  type Column,
-  DataTable,
-  type DataTableAction,
-} from '@/shared/ui/DataTable'
+import { type Column, DataTable } from '@/shared/ui/DataTable'
+import type { SortControl } from '@/shared/ui/dataTableSort'
 
+import {
+  formatComponentCount,
+  formatSek,
+  knownNumber,
+} from '../lib/componentRows'
 import { ComponentModelDocuments } from './ComponentModelDocuments'
 
 interface ModelsTableProps {
@@ -18,7 +21,8 @@ interface ModelsTableProps {
   onEdit: (model: ComponentModel) => void
   onDelete: (model: ComponentModel) => void
   onNavigate: (model: ComponentModel) => void
-  onCreateInstance: (model: ComponentModel) => void
+  getHref: (model: ComponentModel) => string
+  sort: SortControl
 }
 
 export const ModelsTable = ({
@@ -27,106 +31,142 @@ export const ModelsTable = ({
   onEdit,
   onDelete,
   onNavigate,
+  getHref,
+  sort,
 }: ModelsTableProps) => {
   const [documentsModelId, setDocumentsModelId] = useState<string | null>(null)
+  const sortedModels = useMemo(
+    () => sortModelsByName(models, (model) => model.modelName),
+    [models]
+  )
 
-  const columns: Column<ComponentModel>[] = [
-    {
-      key: 'modelName',
-      label: 'Modellnamn',
-      render: (item) => <div className="font-medium">{item.modelName}</div>,
-    },
-    {
-      key: 'manufacturer',
-      label: 'Tillverkare',
-      render: (item) => (
-        <span className={!item.manufacturer ? 'text-muted-foreground' : ''}>
-          {item.manufacturer || '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'currentPrice',
-      label: 'Pris',
-      render: (item) => (
-        <span className={!item.currentPrice ? 'text-muted-foreground' : ''}>
-          {item.currentPrice
-            ? item.currentPrice.toLocaleString('sv-SE', {
-                style: 'currency',
-                currency: 'SEK',
-                maximumFractionDigits: 0,
-              })
-            : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'currentInstallPrice',
-      label: 'Installationspris',
-      render: (item) => (
-        <span
-          className={!item.currentInstallPrice ? 'text-muted-foreground' : ''}
-        >
-          {item.currentInstallPrice
-            ? item.currentInstallPrice.toLocaleString('sv-SE', {
-                style: 'currency',
-                currency: 'SEK',
-                maximumFractionDigits: 0,
-              })
-            : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'warrantyMonths',
-      label: 'Garanti',
-      render: (item) => (
-        <span className={!item.warrantyMonths ? 'text-muted-foreground' : ''}>
-          {item.warrantyMonths ? `${item.warrantyMonths} mån` : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'dimensions',
-      label: 'Dimensioner',
-      render: (item) => (
-        <span className="text-muted-foreground">{item.dimensions || '-'}</span>
-      ),
-    },
-    {
-      key: 'coclassCode',
-      label: 'CoClass',
-      render: (item) => (
-        <span className="text-muted-foreground">{item.coclassCode || '-'}</span>
-      ),
-    },
-    {
-      key: 'documents',
-      label: 'Dok.',
-      render: (item) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={(e) => {
-            e.stopPropagation()
-            setDocumentsModelId(item.id)
-          }}
-          title="Visa dokument"
-        >
-          <FileText className="h-4 w-4" />
-        </Button>
-      ),
-    },
-  ]
-
-  const actions: DataTableAction<ComponentModel>[] = [
-    {
-      label: 'Visa komponenter',
-      onClick: onNavigate,
-      icon: <Eye className="h-4 w-4 mr-2" />,
-    },
-  ]
+  const columns = useMemo<Column<ComponentModel>[]>(
+    () => [
+      {
+        key: 'modelName',
+        label: 'Modellnamn',
+        render: (item) => <div className="font-medium">{item.modelName}</div>,
+        sort: { value: (item) => item.modelName, kind: 'text' },
+      },
+      {
+        key: 'componentCount',
+        label: 'Komponenter',
+        className: 'tabular-nums',
+        render: (item) => formatComponentCount(item.componentCount),
+        sort: {
+          value: (item) => item.componentCount,
+          kind: 'number',
+          firstOrder: 'desc',
+        },
+      },
+      {
+        key: 'manufacturer',
+        label: 'Tillverkare',
+        sort: {
+          value: (item) =>
+            item.manufacturer === 'Unknown' ? null : item.manufacturer,
+          kind: 'text',
+        },
+        render: (item) => (
+          <span
+            className={
+              !item.manufacturer || item.manufacturer === 'Unknown'
+                ? 'text-muted-foreground'
+                : ''
+            }
+          >
+            {item.manufacturer && item.manufacturer !== 'Unknown'
+              ? item.manufacturer
+              : '-'}
+          </span>
+        ),
+      },
+      {
+        key: 'currentPrice',
+        sort: {
+          value: (item) => knownNumber(item.currentPrice),
+          kind: 'number',
+        },
+        label: 'Pris',
+        isEmpty: (item) => !item.currentPrice,
+        render: (item) => (
+          <span className={!item.currentPrice ? 'text-muted-foreground' : ''}>
+            {formatSek(item.currentPrice)}
+          </span>
+        ),
+      },
+      {
+        key: 'currentInstallPrice',
+        sort: {
+          value: (item) => knownNumber(item.currentInstallPrice),
+          kind: 'number',
+        },
+        label: 'Installationspris',
+        isEmpty: (item) => !item.currentInstallPrice,
+        render: (item) => (
+          <span
+            className={!item.currentInstallPrice ? 'text-muted-foreground' : ''}
+          >
+            {formatSek(item.currentInstallPrice)}
+          </span>
+        ),
+      },
+      {
+        key: 'warrantyMonths',
+        sort: {
+          value: (item) => knownNumber(item.warrantyMonths),
+          kind: 'number',
+        },
+        label: 'Garanti',
+        isEmpty: (item) => !item.warrantyMonths,
+        render: (item) => (
+          <span className={!item.warrantyMonths ? 'text-muted-foreground' : ''}>
+            {item.warrantyMonths ? `${item.warrantyMonths} mån` : '-'}
+          </span>
+        ),
+      },
+      {
+        key: 'dimensions',
+        label: 'Dimensioner',
+        isEmpty: (item) => !item.dimensions,
+        render: (item) => (
+          <span className="text-muted-foreground">
+            {item.dimensions || '-'}
+          </span>
+        ),
+      },
+      {
+        key: 'coclassCode',
+        label: 'CoClass',
+        isEmpty: (item) => !item.coclassCode,
+        render: (item) => (
+          <span className="text-muted-foreground">
+            {item.coclassCode || '-'}
+          </span>
+        ),
+      },
+      {
+        key: 'documents',
+        label: 'Dok.',
+        render: (item) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              setDocumentsModelId(item.id)
+            }}
+            title="Visa dokument"
+            aria-label={`Visa dokument för ${item.modelName}`}
+          >
+            <FileText className="h-4 w-4" />
+          </Button>
+        ),
+      },
+    ],
+    []
+  )
 
   // Expandable content for technical specification and installation instructions
   const expandableContent = (model: ComponentModel) => {
@@ -166,15 +206,20 @@ export const ModelsTable = ({
   return (
     <>
       <DataTable
-        data={models}
+        data={sortedModels}
         columns={columns}
         isLoading={isLoading}
         onEdit={onEdit}
         onDelete={onDelete}
         onRowClick={onNavigate}
-        actions={actions}
-        emptyMessage="Inga modeller ännu"
+        getRowHref={getHref}
+        pageSize={50}
+        emptyMessage="Inga modeller"
+        getRowLabel={(item) => item.modelName}
         expandableContent={expandableContent}
+        sort={sort.value}
+        defaultSort={sort.fallback}
+        onSortChange={sort.onChange}
       />
 
       {documentsModelId && (

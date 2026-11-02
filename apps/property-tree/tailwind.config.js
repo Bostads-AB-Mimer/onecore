@@ -28,6 +28,8 @@ export default {
           DEFAULT: 'hsl(var(--success))',
           foreground: 'hsl(var(--success-foreground))',
         },
+        warning: 'hsl(var(--warning) / <alpha-value>)',
+        info: 'hsl(var(--info) / <alpha-value>)',
         muted: {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
