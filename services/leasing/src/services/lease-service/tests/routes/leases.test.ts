@@ -592,6 +592,19 @@ describe('POST /leases', () => {
     expect(res.body.error).toBe('lease-could-not-be-created')
   })
 
+  it('returns 400 without creating a lease when fromDate is not a valid date', async () => {
+    const createLeaseSpy = jest.spyOn(tenfastAdapter, 'createLease')
+
+    const res = await request(app.callback())
+      .post('/leases')
+      .send({ ...validRequestBody, fromDate: 'not-a-date' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('invalid-from-date')
+    expect(createLeaseSpy).not.toHaveBeenCalled()
+    createLeaseSpy.mockRestore()
+  })
+
   it('returns 409 when the rental object is not available', async () => {
     jest
       .spyOn(tenantLeaseAdapter, 'getContactByContactCode')

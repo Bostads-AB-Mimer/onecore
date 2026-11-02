@@ -116,6 +116,7 @@ sequenceDiagram
         Leasing -->> Core: Tenant
         note over Core: Determine VAT rate from tenant<br/>and residential area rules.
 
+        note over Core: Start date: the one given, otherwise the day<br/>the parking space is free (vacantFrom, or today).
         Core ->> Leasing: Create Lease
         Leasing ->> Tenfast: Search Leases on Rental Object
         Tenfast -->> Leasing: Leases

@@ -1153,6 +1153,8 @@ export const routes = (router: KoaRouter) => {
    *                 LeaseId:
    *                   type: string
    *                   description: The ID of the newly created lease.
+   *       400:
+   *         description: fromDate is not a valid date (error invalid-from-date).
    *       409:
    *         description: >
    *           The rental object is not available from fromDate: it is leased
@@ -1165,6 +1167,18 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const request = <CreateLeaseRequest>ctx.request.body
+
+      // An invalid date compares as neither before nor after any date, so it
+      // would slip past the availability check in createLease.
+      const fromDate = new Date(request.fromDate)
+      if (isNaN(fromDate.getTime())) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'invalid-from-date',
+          ...metadata,
+        }
+        return
+      }
 
       const contactResult = await getContactByContactCode(
         request.contactCode,
@@ -1190,7 +1204,7 @@ export const routes = (router: KoaRouter) => {
       const createLeaseTenfastResult = await tenfastAdapter.createLease(
         contactResult.data,
         request.parkingSpaceId,
-        new Date(request.fromDate),
+        fromDate,
         request.includeVAT
       )
 

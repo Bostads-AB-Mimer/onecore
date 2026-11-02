@@ -16,6 +16,7 @@ import {
   updateListingStatus,
 } from '../../../adapters/leasing-adapter'
 import { isTenantAllowedToRentAParkingSpaceInThisResidentialArea } from '../../../services/lease-service/helpers/lease'
+import { calculateVacantFrom } from '../../../common/helpers'
 import { logger } from '@onecore/utilities'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
 import dayjs from 'dayjs'
@@ -69,6 +70,13 @@ export const createLeaseForExternalParkingSpace = async (
     }
 
     const rentalObject = parkingSpaceResult.data
+
+    // Without a start date the lease starts when the parking space is free,
+    // as in the internal flow, not today: a lease from today on a space that
+    // is still leased would be refused.
+    const leaseStartDate =
+      startDate ??
+      calculateVacantFrom({ ...listing, rentalObject }).toISOString()
 
     if (listing.rentalRule != 'NON_SCORED') {
       return {
@@ -193,7 +201,7 @@ export const createLeaseForExternalParkingSpace = async (
       const createLeaseResult = await createLease(
         listing.rentalObjectCode,
         applicantContact.contactCode,
-        startDate != undefined ? startDate : new Date().toISOString(),
+        leaseStartDate,
         '001',
         includeVAT
       )
@@ -204,7 +212,7 @@ export const createLeaseForExternalParkingSpace = async (
           ReplyToOfferErrorCodes.RentalObjectNotAvailable
       ) {
         log.push(
-          `Bilplats ${listing.rentalObjectCode} är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt för nästa hyresgäst (utkast, skickat för påskrift eller signerat). Inget kontrakt skapades.`
+          `Bilplats ${listing.rentalObjectCode} är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt på den (utkast, skickat för påskrift eller signerat), kanske för samma sökande om ett tidigare försök skapade kontraktet. Inget nytt kontrakt skapades.`
         )
         logger.warn(
           {
@@ -282,7 +290,7 @@ export const createLeaseForExternalParkingSpace = async (
           text: 'Din ansökan om bilplats har godkänts.',
           leaseId: leaseId,
           address: rentalObject.address,
-          availableFrom: startDate ?? new Date().toISOString(),
+          availableFrom: leaseStartDate,
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
           type: rentalObject.objectTypeCaption ?? 'Bilplats',
@@ -318,7 +326,7 @@ export const createLeaseForExternalParkingSpace = async (
           subject: 'Nekad ansökan om bilplats',
           text: 'Din ansökan om bilplats kunde inte godkännas.',
           address: rentalObject.address,
-          availableFrom: startDate ?? new Date().toISOString(),
+          availableFrom: leaseStartDate,
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
           type: rentalObject.objectTypeCaption ?? 'Bilplats',

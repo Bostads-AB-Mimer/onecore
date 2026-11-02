@@ -183,7 +183,7 @@ export const acceptOffer = async (
           log,
           ReplyToOfferErrorCodes.RentalObjectNotAvailable,
           409,
-          `Bilplats ${listingWithoutRentalObject.rentalObjectCode} är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt för nästa hyresgäst (utkast, skickat för påskrift eller signerat). Inget kontrakt skapades.`
+          `Bilplats ${listingWithoutRentalObject.rentalObjectCode} är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt på den (utkast, skickat för påskrift eller signerat), kanske för samma sökande om ett tidigare försök skapade kontraktet. Inget nytt kontrakt skapades.`
         )
       }
 

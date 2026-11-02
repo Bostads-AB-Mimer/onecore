@@ -727,6 +727,7 @@ const createLeaseForNonScoredParkingSpace = async (params: {
     | 'applicant-not-found'
     | 'fetch-invoices-failed'
     | 'create-lease-failed'
+    | 'rental-object-not-available'
     | 'unknown'
   >
 > => {
@@ -760,6 +761,7 @@ const createLeaseForNonScoredParkingSpace = async (params: {
         case 'applicant-not-found':
         case 'fetch-invoices-failed':
         case 'create-lease-failed':
+        case 'rental-object-not-available':
           return { ok: false, err: errorCode, statusCode }
         case 'invalid-address':
         case 'applicant-missing-address':

@@ -800,10 +800,10 @@ describe(tenfastAdapter.createLease, () => {
           ok: false,
           err: 'rental-object-not-available',
         })
+        // The lease search is stubbed, so any Tenfast request at all would
+        // be a write (tenant import, lease create) or a lookup for one.
         expect(tenantSpy).not.toHaveBeenCalled()
-        expect(request).not.toHaveBeenCalledWith(
-          expect.objectContaining({ method: 'post' })
-        )
+        expect(request).not.toHaveBeenCalled()
         tenantSpy.mockRestore()
       }
     )
@@ -850,23 +850,25 @@ describe(tenfastAdapter.createLease, () => {
           { externalId: 'R1001/00', stage: 'voided', endDate: null },
         ],
       })
-      jest.spyOn(tenfastAdapter, 'getTenantByContactCode').mockResolvedValue({
-        ok: true,
-        data: factory.tenfastTenant.build(),
-      })
-      jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
-        ok: true,
-        data: factory.tenfastRentalObject.build(),
-      })
+      const tenantSpy = jest
+        .spyOn(tenfastAdapter, 'getTenantByContactCode')
+        .mockResolvedValue({ ok: true, data: factory.tenfastTenant.build() })
+      const rentalObjectSpy = jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValue({
+          ok: true,
+          data: factory.tenfastRentalObject.build(),
+        })
       ;(request as jest.Mock).mockResolvedValueOnce({
         status: 200,
         data: factory.tenfastLease.build({ externalId: 'R1001/02' }),
       })
 
-      expect(await createLeaseFrom(fromDate)).toEqual({
-        ok: true,
-        data: 'R1001/02',
-      })
+      const result = await createLeaseFrom(fromDate)
+
+      tenantSpy.mockRestore()
+      rentalObjectSpy.mockRestore()
+      expect(result).toEqual({ ok: true, data: 'R1001/02' })
     })
 
     it('returns "could-not-find-leases" when the lease search fails', async () => {

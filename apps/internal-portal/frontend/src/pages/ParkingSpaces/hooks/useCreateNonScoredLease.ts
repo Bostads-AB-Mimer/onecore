@@ -23,6 +23,7 @@ export enum CreateNonScoredLeaseErrorCodes {
   ApplicantNotFound = 'applicant-not-found',
   FetchInvoicesFailed = 'fetch-invoices-failed',
   CreateLeaseFailed = 'create-lease-failed',
+  RentalObjectNotAvailable = 'rental-object-not-available',
   Unknown = 'unknown',
 }
 
@@ -147,6 +148,14 @@ export const useCreateNonScoredLease = (listingId: number) => {
           errorHeading: 'Kunde inte skapa kontrakt',
           errorMessage:
             'Ett tekniskt fel inträffade när kontraktet skulle skapas i Tenfast. Försök igen eller kontakta support.',
+        }
+      case CreateNonScoredLeaseErrorCodes.RentalObjectNotAvailable:
+        return {
+          status: 409,
+          errorCode: CreateNonScoredLeaseErrorCodes.RentalObjectNotAvailable,
+          errorHeading: 'Ej ledig',
+          errorMessage:
+            'Bilplatsen är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt på den (utkast, skickat för påskrift eller signerat), kanske för samma sökande. Inget nytt kontrakt skapades.',
         }
       default: {
         return defaultError
