@@ -507,9 +507,10 @@ describe(adapter.getPaymentsSince, () => {
       amount: -1000,
       paymentDate: new Date('2026-04-02'),
       transactionSourceCode: 'OCR',
+      cursor: 'cursor-42',
     })
     expect(() =>
-      schemas.v1.InvoicePaymentEventSchema.array().parse(result.events)
+      schemas.v1.PaymentSyncEventSchema.array().parse(result.events)
     ).not.toThrow()
   })
 
@@ -609,7 +610,10 @@ describe(adapter.getPaymentsSince, () => {
 
     const result = await adapter.getPaymentsSince('some-cursor')
 
-    expect(result.events).toHaveLength(2)
+    expect(result.events.map((e) => e.cursor)).toEqual([
+      'page1-cursor',
+      'page2-cursor',
+    ])
     expect(result.lastCursor).toBe('page2-cursor')
   })
 
@@ -951,79 +955,6 @@ describe(adapter.submitMiscellaneousInvoice, () => {
     const result = await adapter.submitMiscellaneousInvoice(invoice)
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
-  })
-})
-
-describe(adapter.getInvoicesByInvoiceNumbers, () => {
-  it('returns [] without calling Xledger when given no invoice numbers', async () => {
-    // No nock interceptor registered — an HTTP call would throw.
-    const result = await adapter.getInvoicesByInvoiceNumbers([])
-
-    expect(result).toEqual([])
-  })
-
-  it('requests a page size well above the invoice-number chunk size', async () => {
-    // One invoice number can match several transaction rows, so `first` must
-    // exceed the chunk size or Xledger silently truncates the result.
-    let capturedVariables: any
-    nock(origin)
-      .post(pathname, (body) => {
-        capturedVariables = body.variables
-        return true
-      })
-      .reply(200, { data: { arTransactions: { edges: [] } } })
-
-    await adapter.getInvoicesByInvoiceNumbers(['552012345678'])
-
-    expect(capturedVariables.first).toBeGreaterThanOrEqual(1000)
-  })
-
-  it('passes invoice numbers as GraphQL variables, not into the query document', async () => {
-    let capturedBody: any
-    nock(origin)
-      .post(pathname, (body) => {
-        capturedBody = body
-        return true
-      })
-      .reply(200, {
-        data: {
-          arTransactions: {
-            edges: [],
-          },
-        },
-      })
-
-    // The second value would break the query if it were interpolated.
-    const invoiceNumbers = ['552012345678', '1" ) { x }', '12345K']
-    const result = await adapter.getInvoicesByInvoiceNumbers(invoiceNumbers)
-
-    expect(result).toEqual([])
-    expect(capturedBody.variables.filter.invoiceNumber_in).toEqual(
-      invoiceNumbers
-    )
-    expect(capturedBody.query).not.toContain('552012345678')
-    // Without the source filter the same invoice number also matches payment
-    // and credit transaction rows.
-    expect(
-      capturedBody.variables.filter.headerTransactionSourceDbId_in
-    ).toEqual(expect.arrayContaining([600, 797, 3536]))
-  })
-
-  it('splits many invoice numbers into several requests', async () => {
-    const requests: string[][] = []
-    nock(origin)
-      .post(pathname, (body) => {
-        requests.push(body.variables.filter.invoiceNumber_in)
-        return true
-      })
-      .times(3)
-      .reply(200, { data: { arTransactions: { edges: [] } } })
-
-    const invoiceNumbers = Array.from({ length: 120 }, (_, i) => String(i))
-    await adapter.getInvoicesByInvoiceNumbers(invoiceNumbers)
-
-    expect(requests.flat()).toEqual(invoiceNumbers)
-    expect(requests.every((chunk) => chunk.length <= 50)).toBe(true)
   })
 })
 

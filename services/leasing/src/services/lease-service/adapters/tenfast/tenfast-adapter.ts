@@ -19,6 +19,7 @@ import {
   TenfastTag,
   TenfastArticleSchema,
   TenfastArticle,
+  TenfastContactRelationsSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -196,7 +197,7 @@ export const importLease = async (
   fromDate: Date
 ): Promise<
   AdapterResult<
-    { _id: string },
+    { _id: string; hasContractFile: boolean },
     | 'could-not-retrieve-tenant'
     | 'could-not-create-tenant'
     | 'could-not-find-rental-object'
@@ -216,7 +217,10 @@ export const importLease = async (
       { leaseId },
       'tenfast-adapter.importLease: lease already exists, skipping import'
     )
-    return { ok: true, data: { _id: existing.data._id } }
+    return {
+      ok: true,
+      data: { _id: existing.data._id, hasContractFile: !!existing.data.file },
+    }
   }
   if (existing.err !== 'not-found') {
     logger.error(
@@ -268,7 +272,10 @@ export const importLease = async (
     })
 
     if (response.status === 200 || response.status === 201) {
-      return { ok: true, data: { _id: response.data?._id } }
+      return {
+        ok: true,
+        data: { _id: response.data?._id, hasContractFile: false },
+      }
     }
 
     logger.error(
@@ -1487,6 +1494,96 @@ export const getLeaseByExternalId = async (
   }
 }
 
+// Tenfast end dates arrive as UTC or Stockholm midnight; compare Stockholm calendar dates.
+const toStockholmDate = (date: Date) =>
+  date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })
+
+const hasEnded = (endDate: Date | null | undefined, now: Date) =>
+  !!endDate && toStockholmDate(endDate) < toStockholmDate(now)
+
+const isCurrentSubletOf = (
+  lease: TenfastLease,
+  contactCode: string,
+  now: Date
+) =>
+  lease.andraHandHG?.externalId === contactCode &&
+  !hasEnded(lease.andraHandHG.endDate, now) &&
+  !hasEnded(lease.endDate, now)
+
+export const getSubletLeases = async (
+  contactCode: string,
+  filters: GetLeasesFilters = defaultFilters
+): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> => {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/contacts/${encodeURIComponent(contactCode)}/relations?hyresvard=${tenfastCompanyId}`,
+    })
+
+    if (res.status === 404) {
+      return { ok: true, data: [] }
+    }
+
+    if (res.status !== 200) {
+      logger.error(
+        { error: mapHttpError(res.data), contactCode },
+        'getSubletLeases: Unknown error'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    const relations = TenfastContactRelationsSchema.safeParse(res.data)
+
+    if (!relations.success) {
+      logger.error(
+        { error: JSON.stringify(relations.error, null, 2) },
+        'getSubletLeases: Failed to parse Tenfast response'
+      )
+      return {
+        ok: false,
+        err: { tag: 'schema-error', error: relations.error },
+      }
+    }
+
+    const leaseIds = relations.data.relationsTo.andraHandHyresgast.flatMap(
+      ({ avtal }) => (avtal.externalId ? [avtal.externalId] : [])
+    )
+
+    const results = await Promise.all(
+      leaseIds.map((leaseId) =>
+        getLeaseByExternalId(leaseId).then((result) => ({ leaseId, result }))
+      )
+    )
+
+    const now = new Date()
+    const leases: TenfastLease[] = []
+    for (const { leaseId, result } of results) {
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          logger.warn(
+            { leaseId, contactCode },
+            'getSubletLeases: Sublet lease not found, skipping it'
+          )
+          continue
+        }
+        logger.error(
+          { error: result.err, leaseId, contactCode },
+          'getSubletLeases: Failed to fetch sublet lease'
+        )
+        return { ok: false, err: 'unknown' }
+      }
+      if (isCurrentSubletOf(result.data, contactCode, now)) {
+        leases.push(result.data)
+      }
+    }
+
+    return { ok: true, data: filterByStatus(leases, filters.status) }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getSubletLeases')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function updateLeaseInvoiceRows(params: {
   leaseId: string
   rowsToDelete: string[]
@@ -1557,7 +1654,12 @@ export const terminateLease = async (
   body: TerminateLeaseBody
 ): Promise<
   AdapterResult<
-    { action: 'terminated' | 'skipped'; leaseId: string },
+    {
+      action: 'terminated' | 'skipped'
+      leaseId: string
+      tenfastLeaseId: string
+      skipReason?: 'already-terminated' | 'not-required'
+    },
     'lease-not-found' | 'terminate-failed' | 'unknown'
   >
 > => {
@@ -1568,11 +1670,33 @@ export const terminateLease = async (
     }
     return { ok: false, err: 'unknown' }
   }
+  const tenfastLeaseId = existing.data._id
+
+  const { cancellation } = existing.data
+  if (
+    cancellation.requested &&
+    !cancellation.cancelled &&
+    cancellation.handledAt
+  ) {
+    logger.info(
+      { leaseId },
+      'Tenfast terminate skipped — lease already has a handled termination'
+    )
+    return {
+      ok: true,
+      data: {
+        action: 'skipped',
+        leaseId,
+        tenfastLeaseId,
+        skipReason: 'already-terminated',
+      },
+    }
+  }
 
   try {
     const response = await tenfastApi.request({
       method: 'post',
-      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${existing.data._id}/terminate?hyresvard=${tenfastCompanyId}`,
+      url: `${tenfastBaseUrl}/v1/hyresvard/avtal/${tenfastLeaseId}/terminate?hyresvard=${tenfastCompanyId}`,
       data: {
         ...body,
         endDate: body.endDate.toISOString().split('T')[0],
@@ -1580,19 +1704,28 @@ export const terminateLease = async (
     })
 
     if (response.status === 200) {
-      return { ok: true, data: { action: 'terminated', leaseId } }
+      return {
+        ok: true,
+        data: { action: 'terminated', leaseId, tenfastLeaseId },
+      }
     }
 
-    const skipErrors = new Set([
-      'Avtalet kan inte sägas upp',
-      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.',
-    ])
-    if (response.status === 400 && skipErrors.has(response.data?.error)) {
+    const skipReasons: Record<string, 'already-terminated' | 'not-required'> = {
+      'Avtalet kan inte sägas upp': 'already-terminated',
+      'Avtalet kommer löpa ut inom uppsägningstiden. Ingen uppsägning krävs.':
+        'not-required',
+    }
+    const skipReason =
+      response.status === 400 ? skipReasons[response.data?.error] : undefined
+    if (skipReason) {
       logger.info(
         { leaseId, error: response.data?.error },
         'Tenfast terminate skipped — lease already handled or termination not required'
       )
-      return { ok: true, data: { action: 'skipped', leaseId } }
+      return {
+        ok: true,
+        data: { action: 'skipped', leaseId, tenfastLeaseId, skipReason },
+      }
     }
 
     logger.error(

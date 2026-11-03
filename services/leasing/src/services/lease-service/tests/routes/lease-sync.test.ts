@@ -19,8 +19,10 @@ jest.mock('../../adapters/xpand/tenant-lease-adapter', () => ({
 }))
 
 jest.mock('../../adapters/xpand/lease-document-adapter', () => ({
-  getSignedContractPdf: jest.fn().mockResolvedValue(null),
-  getTerminationDocumentPdf: jest.fn().mockResolvedValue(null),
+  getSignedContractPdf: jest.fn().mockResolvedValue({ ok: true, data: null }),
+  getTerminationDocumentPdf: jest
+    .fn()
+    .mockResolvedValue({ ok: true, data: null }),
 }))
 
 const app = new Koa()
@@ -44,6 +46,11 @@ const getTerminationDocumentPdf = jest.spyOn(
   leaseDocumentAdapter,
   'getTerminationDocumentPdf'
 )
+const getSignedContractPdf = jest.spyOn(
+  leaseDocumentAdapter,
+  'getSignedContractPdf'
+)
+const uploadLeaseFile = jest.spyOn(tenfastAdapter, 'uploadLeaseFile')
 
 beforeEach(() => {
   jest.clearAllMocks()
@@ -136,7 +143,7 @@ describe('POST /leases/sync', () => {
       ])
       importLease.mockResolvedValueOnce({
         ok: true,
-        data: { _id: 'tenfast-id' },
+        data: { _id: 'tenfast-id', hasContractFile: false },
       })
 
       const res = await request(app.callback()).post('/leases/sync').send({
@@ -149,7 +156,124 @@ describe('POST /leases/sync', () => {
       expect(res.body.content).toEqual({
         action: 'created',
         leaseId: '123-456/01',
+        document: 'missing',
       })
+      expect(uploadLeaseFile).not.toHaveBeenCalled()
+    })
+
+    it('attaches the signed contract from xpand and answers document "attached"', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          leaseStartDate: new Date('2026-01-01'),
+        }),
+      ])
+      importLease.mockResolvedValueOnce({
+        ok: true,
+        data: { _id: 'tenfast-id', hasContractFile: false },
+      })
+      getSignedContractPdf.mockResolvedValueOnce({
+        ok: true,
+        data: { filename: 'kontrakt.pdf', content: Buffer.from('pdf') },
+      })
+      uploadLeaseFile.mockResolvedValueOnce({ ok: true, data: undefined })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contactCode: 'P12345',
+        action: 'create',
+      })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content.document).toBe('attached')
+      expect(getLeaseByExternalId).not.toHaveBeenCalled()
+      expect(uploadLeaseFile).toHaveBeenCalledWith(
+        'tenfast-id',
+        Buffer.from('pdf'),
+        'kontrakt.pdf'
+      )
+    })
+
+    it('does not upload the signed contract again when the Tenfast lease already has one', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          leaseStartDate: new Date('2026-01-01'),
+        }),
+      ])
+      importLease.mockResolvedValueOnce({
+        ok: true,
+        data: { _id: 'tenfast-id', hasContractFile: true },
+      })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contactCode: 'P12345',
+        action: 'create',
+      })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content.document).toBe('already-attached')
+      expect(getSignedContractPdf).not.toHaveBeenCalled()
+      expect(uploadLeaseFile).not.toHaveBeenCalled()
+    })
+
+    it('answers 201 with document "failed" when the contract PDF upload fails', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          leaseStartDate: new Date('2026-01-01'),
+        }),
+      ])
+      importLease.mockResolvedValueOnce({
+        ok: true,
+        data: { _id: 'tenfast-id', hasContractFile: false },
+      })
+      getSignedContractPdf.mockResolvedValueOnce({
+        ok: true,
+        data: { filename: 'kontrakt.pdf', content: Buffer.from('pdf') },
+      })
+      uploadLeaseFile.mockResolvedValueOnce({ ok: false, err: 'upload-failed' })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contactCode: 'P12345',
+        action: 'create',
+      })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content).toMatchObject({
+        action: 'created',
+        document: 'failed',
+        documentError: 'contract-pdf-upload-failed',
+      })
+    })
+
+    it('answers 201 with document "failed" when the xpand contract lookup fails', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          leaseStartDate: new Date('2026-01-01'),
+        }),
+      ])
+      importLease.mockResolvedValueOnce({
+        ok: true,
+        data: { _id: 'tenfast-id', hasContractFile: false },
+      })
+      getSignedContractPdf.mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        contactCode: 'P12345',
+        action: 'create',
+      })
+
+      expect(res.status).toBe(201)
+      expect(res.body.content).toMatchObject({
+        document: 'failed',
+        documentError: 'contract-pdf-lookup-failed',
+      })
+      expect(uploadLeaseFile).not.toHaveBeenCalled()
     })
 
     it('returns 404 when xpand lease not found on create', async () => {
@@ -216,8 +340,13 @@ describe('POST /leases/sync', () => {
       ])
       terminateLease.mockResolvedValueOnce({
         ok: true,
-        data: { action: 'terminated', leaseId: '123-456/01' },
+        data: {
+          action: 'terminated',
+          leaseId: '123-456/01',
+          tenfastLeaseId: 'tenfast-id',
+        },
       })
+      hasTerminationFile.mockResolvedValueOnce({ ok: true, data: true })
 
       const res = await request(app.callback())
         .post('/leases/sync')
@@ -235,8 +364,13 @@ describe('POST /leases/sync', () => {
       ])
       terminateLease.mockResolvedValueOnce({
         ok: true,
-        data: { action: 'terminated', leaseId: '123-456/01' },
+        data: {
+          action: 'terminated',
+          leaseId: '123-456/01',
+          tenfastLeaseId: 'tenfast-id',
+        },
       })
+      hasTerminationFile.mockResolvedValueOnce({ ok: true, data: true })
 
       const res = await request(app.callback()).post('/leases/sync').send({
         leaseId: '123-456/01',
@@ -248,7 +382,100 @@ describe('POST /leases/sync', () => {
       expect(res.body.content).toEqual({
         action: 'terminated',
         leaseId: '123-456/01',
+        document: 'already-attached',
       })
+    })
+
+    it('answers document "missing" when xpand has no uppsägning PDF', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          lastDebitDate: new Date('2026-04-30'),
+        }),
+      ])
+      terminateLease.mockResolvedValueOnce({
+        ok: true,
+        data: {
+          action: 'terminated',
+          leaseId: '123-456/01',
+          tenfastLeaseId: 'tenfast-id',
+        },
+      })
+      hasTerminationFile.mockResolvedValueOnce({ ok: true, data: false })
+      getTerminationDocumentPdf.mockResolvedValueOnce({ ok: true, data: null })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        action: 'terminate',
+      })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.document).toBe('missing')
+      expect(uploadTerminationFile).not.toHaveBeenCalled()
+    })
+
+    it('returns 500 when the uppsägning PDF upload fails, so core queues the row', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          lastDebitDate: new Date('2026-04-30'),
+        }),
+      ])
+      terminateLease.mockResolvedValueOnce({
+        ok: true,
+        data: {
+          action: 'terminated',
+          leaseId: '123-456/01',
+          tenfastLeaseId: 'tenfast-id',
+        },
+      })
+      hasTerminationFile.mockResolvedValueOnce({ ok: true, data: false })
+      getTerminationDocumentPdf.mockResolvedValueOnce({
+        ok: true,
+        data: { filename: 'Uppsägning.pdf', content: Buffer.from('pdf') },
+      })
+      uploadTerminationFile.mockResolvedValueOnce({
+        ok: false,
+        err: 'upload-failed',
+      })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        action: 'terminate',
+      })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('termination-pdf-upload-failed')
+    })
+
+    it('returns 500 when the Tenfast termination file check fails', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          lastDebitDate: new Date('2026-04-30'),
+        }),
+      ])
+      terminateLease.mockResolvedValueOnce({
+        ok: true,
+        data: {
+          action: 'terminated',
+          leaseId: '123-456/01',
+          tenfastLeaseId: 'tenfast-id',
+        },
+      })
+      hasTerminationFile.mockResolvedValueOnce({
+        ok: false,
+        err: 'lookup-failed',
+      })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        action: 'terminate',
+      })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('termination-pdf-check-failed')
+      expect(getTerminationDocumentPdf).not.toHaveBeenCalled()
     })
 
     it('returns 404 when xpand lease not found', async () => {
@@ -316,11 +543,12 @@ describe('POST /leases/sync', () => {
       ])
       terminateLease.mockResolvedValueOnce({
         ok: true,
-        data: { action: 'skipped', leaseId: '123-456/01' },
-      })
-      getLeaseByExternalId.mockResolvedValueOnce({
-        ok: true,
-        data: { _id: 'tenfast-id' } as never,
+        data: {
+          action: 'skipped',
+          leaseId: '123-456/01',
+          tenfastLeaseId: 'tenfast-id',
+          skipReason: 'already-terminated',
+        },
       })
       hasTerminationFile.mockResolvedValueOnce({ ok: true, data: true })
 
@@ -334,6 +562,7 @@ describe('POST /leases/sync', () => {
       expect(res.body.content).toEqual({
         action: 'skipped',
         leaseId: '123-456/01',
+        document: 'already-attached',
       })
       expect(hasTerminationFile).toHaveBeenCalled()
     })
@@ -347,16 +576,20 @@ describe('POST /leases/sync', () => {
       ])
       terminateLease.mockResolvedValueOnce({
         ok: true,
-        data: { action: 'skipped', leaseId: '123-456/01' },
-      })
-      getLeaseByExternalId.mockResolvedValueOnce({
-        ok: true,
-        data: { _id: 'tenfast-id' } as never,
+        data: {
+          action: 'skipped',
+          leaseId: '123-456/01',
+          tenfastLeaseId: 'tenfast-id',
+          skipReason: 'already-terminated',
+        },
       })
       hasTerminationFile.mockResolvedValueOnce({ ok: true, data: false })
       getTerminationDocumentPdf.mockResolvedValueOnce({
-        filename: 'Uppsägning av bostad.pdf',
-        content: Buffer.from('pdf'),
+        ok: true,
+        data: {
+          filename: 'Uppsägning av bostad.pdf',
+          content: Buffer.from('pdf'),
+        },
       })
       uploadTerminationFile.mockResolvedValueOnce({ ok: true, data: undefined })
 
@@ -369,12 +602,44 @@ describe('POST /leases/sync', () => {
       expect(res.body.content).toEqual({
         action: 'skipped',
         leaseId: '123-456/01',
+        document: 'attached',
       })
       expect(uploadTerminationFile).toHaveBeenCalledWith(
         'tenfast-id',
         Buffer.from('pdf'),
         'Uppsägning av bostad.pdf'
       )
+    })
+
+    it('skips the uppsägning document when Tenfast says no termination is required', async () => {
+      getLeases.mockResolvedValueOnce([
+        factory.lease.build({
+          leaseId: '123-456/01',
+          lastDebitDate: new Date('2026-04-30'),
+        }),
+      ])
+      terminateLease.mockResolvedValueOnce({
+        ok: true,
+        data: {
+          action: 'skipped',
+          leaseId: '123-456/01',
+          tenfastLeaseId: 'tenfast-id',
+          skipReason: 'not-required',
+        },
+      })
+
+      const res = await request(app.callback()).post('/leases/sync').send({
+        leaseId: '123-456/01',
+        action: 'terminate',
+      })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual({
+        action: 'skipped',
+        leaseId: '123-456/01',
+      })
+      expect(hasTerminationFile).not.toHaveBeenCalled()
+      expect(getTerminationDocumentPdf).not.toHaveBeenCalled()
     })
 
     it('uploads uppsägning PDF after successful terminate', async () => {
@@ -386,16 +651,19 @@ describe('POST /leases/sync', () => {
       ])
       terminateLease.mockResolvedValueOnce({
         ok: true,
-        data: { action: 'terminated', leaseId: '123-456/01' },
-      })
-      getLeaseByExternalId.mockResolvedValueOnce({
-        ok: true,
-        data: { _id: 'tenfast-id' } as never,
+        data: {
+          action: 'terminated',
+          leaseId: '123-456/01',
+          tenfastLeaseId: 'tenfast-id',
+        },
       })
       hasTerminationFile.mockResolvedValueOnce({ ok: true, data: false })
       getTerminationDocumentPdf.mockResolvedValueOnce({
-        filename: 'Uppsägning av bostad.pdf',
-        content: Buffer.from('pdf'),
+        ok: true,
+        data: {
+          filename: 'Uppsägning av bostad.pdf',
+          content: Buffer.from('pdf'),
+        },
       })
       uploadTerminationFile.mockResolvedValueOnce({ ok: true, data: undefined })
 
@@ -405,6 +673,7 @@ describe('POST /leases/sync', () => {
       })
 
       expect(res.status).toBe(200)
+      expect(res.body.content.document).toBe('attached')
       expect(uploadTerminationFile).toHaveBeenCalledWith(
         'tenfast-id',
         Buffer.from('pdf'),
@@ -421,11 +690,11 @@ describe('POST /leases/sync', () => {
       ])
       terminateLease.mockResolvedValueOnce({
         ok: true,
-        data: { action: 'terminated', leaseId: '123-456/01' },
-      })
-      getLeaseByExternalId.mockResolvedValueOnce({
-        ok: true,
-        data: { _id: 'tenfast-id' } as never,
+        data: {
+          action: 'terminated',
+          leaseId: '123-456/01',
+          tenfastLeaseId: 'tenfast-id',
+        },
       })
       hasTerminationFile.mockResolvedValueOnce({ ok: true, data: true })
 
