@@ -3,9 +3,6 @@
   "version": "1.5.0",
   "type": "module",
   "private": true,
-  "engines": {
-    "node": ">=20"
-  },
   "scripts": {
     "build": "tsc && vite build",
     "dev": "vite",

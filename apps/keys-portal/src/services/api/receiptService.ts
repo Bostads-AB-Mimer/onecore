@@ -58,7 +58,7 @@ export const receiptService = {
   },
 
   /**
-   * Delete a receipt (also deletes associated file from MinIO if it exists)
+   * Delete a receipt (also deletes associated file from file storage if it exists)
    */
   async remove(id: string): Promise<void> {
     const { error } = await DELETE('/receipts/{id}', {

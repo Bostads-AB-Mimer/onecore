@@ -14,7 +14,8 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import * as priorityListService from '../priority-list-service'
 import * as listingAdapter from '../adapters/listing-adapter'
 import * as rentalObjectAdapter from '../adapters/xpand/rental-object-adapter'
-import { getTenant } from '../get-tenant'
+import * as tenantLeaseAdapter from '../adapters/xpand/tenant-lease-adapter'
+import { getTenant, isNotTenantError } from '../get-tenant'
 import { db } from '../adapters/db'
 
 /**
@@ -777,9 +778,41 @@ export const routes = (router: KoaRouter) => {
           })
 
           if (!tenant.ok) {
-            throw new Error(
-              'Err when getting detailed applicant information: ' + tenant.err
+            if (!isNotTenantError(tenant.err)) {
+              throw new Error(
+                'Err when getting detailed applicant information: ' + tenant.err
+              )
+            }
+
+            // Applicant has moved out since applying (common on historical
+            // listings). Keep them in the list with contact data only.
+            const contact = await tenantLeaseAdapter.getContactByContactCode(
+              applicant.contactCode,
+              false
             )
+
+            if (!contact.ok) {
+              throw new Error(
+                'Err when getting contact for former tenant applicant: ' +
+                  applicant.contactCode
+              )
+            }
+
+            // Prefer Xpand over the applicant row so protected identity is
+            // respected, same as the tenant branch. Fall back only if no contact.
+            applicants.push({
+              ...applicant,
+              name: contact.data ? contact.data.fullName : applicant.name,
+              nationalRegistrationNumber: contact.data
+                ? contact.data.nationalRegistrationNumber
+                : applicant.nationalRegistrationNumber,
+              queuePoints:
+                contact.data?.parkingSpaceWaitingList?.queuePoints ?? 0,
+              address: contact.data?.address,
+              parkingSpaceContracts: [],
+              priority: null,
+            })
+            continue
           }
 
           applicants.push({

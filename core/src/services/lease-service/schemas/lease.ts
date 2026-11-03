@@ -271,6 +271,10 @@ function mapLeaseStatus(status: LeaseStatus): z.infer<typeof Lease>['status'] {
   }
 }
 
+export const LeaseBatchRequestBody = z.object({
+  leaseIds: z.array(z.string()).min(1),
+})
+
 export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
   return {
     leaseId: lease.leaseId,
@@ -314,5 +318,10 @@ const IncludeNonTenantContactsQueryParamSchema = z.object({
 export const GetLeasesOptionsSchema = leasing.v1.GetLeasesOptionsSchema.merge(
   IncludeContactsQueryParamSchema
 ).merge(IncludeNonTenantContactsQueryParamSchema)
+
+export const GetLeasesByContactCodeOptionsSchema =
+  leasing.v1.GetLeasesByContactCodeOptionsSchema.merge(
+    IncludeContactsQueryParamSchema
+  ).merge(IncludeNonTenantContactsQueryParamSchema)
 
 export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema

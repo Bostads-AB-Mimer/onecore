@@ -324,6 +324,76 @@ describe('work-order-service index', () => {
     })
   })
 
+  describe('POST /workOrders/:workOrderId/close-request', () => {
+    const workOrderId = 13
+    let requestCloseSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      requestCloseSpy = jest
+        .spyOn(odooAdapter, 'requestCloseWorkOrder')
+        .mockResolvedValue(undefined)
+      requestCloseSpy.mockClear()
+    })
+
+    it('forwards a close request without a reason', async () => {
+      const res = await request(app.callback()).post(
+        `/api/workOrders/${workOrderId}/close-request`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.message).toBeDefined()
+      expect(requestCloseSpy).toHaveBeenCalledWith(workOrderId, undefined)
+    })
+
+    it('forwards the reason the tenant gave', async () => {
+      const res = await request(app.callback())
+        .post(`/api/workOrders/${workOrderId}/close-request`)
+        .send({ reason: 'Felet har försvunnit' })
+
+      expect(res.status).toBe(200)
+      expect(requestCloseSpy).toHaveBeenCalledWith(
+        workOrderId,
+        'Felet har försvunnit'
+      )
+    })
+
+    it('returns 409 with the reason when Odoo refuses the request', async () => {
+      requestCloseSpy.mockRejectedValue(
+        new odooAdapter.CloseRequestConflictError('already_pending')
+      )
+
+      const res = await request(app.callback()).post(
+        `/api/workOrders/${workOrderId}/close-request`
+      )
+
+      expect(res.status).toBe(409)
+      expect(res.body).toMatchObject({
+        error: 'close-request-conflict',
+        reason: 'already_pending',
+      })
+    })
+
+    it('returns 500 when the request fails for any other reason', async () => {
+      requestCloseSpy.mockRejectedValue(new Error('Odoo unreachable'))
+
+      const res = await request(app.callback()).post(
+        `/api/workOrders/${workOrderId}/close-request`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Odoo unreachable')
+    })
+
+    it('returns 400 when the reason is not a string', async () => {
+      const res = await request(app.callback())
+        .post(`/api/workOrders/${workOrderId}/close-request`)
+        .send({ reason: 42 })
+
+      expect(res.status).toBe(400)
+      expect(requestCloseSpy).not.toHaveBeenCalled()
+    })
+  })
+
   describe('GET /workOrders/propertyId/{propertyId}', () => {
     const propertyId = '123-456'
     const workOrderMock = factory.workOrder.buildList(4)

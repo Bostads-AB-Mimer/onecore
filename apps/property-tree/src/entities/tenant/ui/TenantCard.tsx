@@ -11,6 +11,7 @@ interface TenantCardProps {
   relatedContacts: RelatedContact[]
   onSendSms?: (phoneNumber: string) => void
   onSendEmail?: (emailAddress: string) => void
+  isSubletTenant?: boolean
 }
 
 export function TenantCard({
@@ -18,6 +19,7 @@ export function TenantCard({
   relatedContacts,
   onSendSms,
   onSendEmail,
+  isSubletTenant,
 }: TenantCardProps) {
   return (
     <Card>
@@ -30,6 +32,7 @@ export function TenantCard({
           <TenantPersonalInfo
             tenant={tenant}
             relatedContacts={relatedContacts}
+            isSubletTenant={isSubletTenant}
           />
           <TenantContactActions
             phoneNumbers={tenant.phoneNumbers}

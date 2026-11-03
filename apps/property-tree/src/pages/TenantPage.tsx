@@ -7,7 +7,12 @@ import { TenantTabs } from '@/widgets/tenant-tabs'
 
 import { useLeasesByContactCode } from '@/entities/lease'
 import { useRentalProperties } from '@/entities/rental-property'
-import { TenantCard, useRelatedContacts, useTenant } from '@/entities/tenant'
+import {
+  isSubletTenantOnLeases,
+  TenantCard,
+  useRelatedContacts,
+  useTenant,
+} from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
 import { tenantService } from '@/services/api/core/tenantService'
@@ -148,7 +153,13 @@ export function TenantPage() {
     data: leases,
     isLoading: leasesLoading,
     error: leasesError,
-  } = useLeasesByContactCode(contactCode)
+  } = useLeasesByContactCode(contactCode, { includeSubletLeases: true })
+
+  const isSubletTenant = useMemo(
+    () =>
+      contactCode ? isSubletTenantOnLeases(leases ?? [], contactCode) : false,
+    [leases, contactCode]
+  )
 
   // Extract unique rental property IDs from leases
   const rentalPropertyIds = useMemo(() => {
@@ -176,6 +187,7 @@ export function TenantPage() {
               <TenantCard
                 tenant={tenant}
                 relatedContacts={relatedContacts ?? []}
+                isSubletTenant={isSubletTenant}
                 onSendSms={(phone) =>
                   sms.openSmsModal({
                     name: `${tenant.firstName} ${tenant.lastName}`,

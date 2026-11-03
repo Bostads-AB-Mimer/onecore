@@ -276,6 +276,11 @@ export const routes = (router: KoaRouter) => {
    *       `onecore_property_kvv_area`, the cost center (distrikt) that area
    *       belongs to, and the responsible kvartersvärd (as a Keycloak user id).
    *       Returns 404 when the property has no KVV-area link.
+   *
+   *       **Deprecated.** Answers the property default only and ignores
+   *       building-level exceptions on split properties. Use
+   *       `GET /kvv-areas/resolve` instead. Kept until Odoo has moved over.
+   *     deprecated: true
    *     tags:
    *       - Properties
    *     parameters:
@@ -300,6 +305,8 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error.
    */
+  // Deprecated: property default only, blind to split-property exceptions.
+  // Remove once Odoo calls GET /kvv-areas/resolve (its only caller).
   router.get('(.*)/properties/:code/kvv-area', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const propertyCode = ctx.params.code

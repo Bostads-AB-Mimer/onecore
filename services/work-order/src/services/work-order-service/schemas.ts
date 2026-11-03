@@ -25,7 +25,10 @@ export const WorkOrderSchema = z.object({
   RentalObjectCode: z.string(),
   Status: z.string(),
   UseMasterKey: z.boolean(),
+  MaintenanceTeam: z.string().nullable().optional(),
   HiddenFromMyPages: z.boolean().optional(),
+  // True while the tenant's request to close the case awaits a decision in Odoo.
+  CloseRequestPending: z.boolean(),
   WorkOrderRows: z.array(
     z.object({
       Description: z.string().nullable(),
@@ -49,6 +52,7 @@ export const OdooWorkOrderSchema = z.object({
   call_between: z.string(),
   hidden_from_my_pages: z.boolean().optional(),
   master_key: z.boolean().optional(),
+  close_request_pending: z.boolean().optional(),
   space_code: z.string(),
   equipment_code: z.string(),
   rental_property_id: z.string(),
@@ -56,6 +60,9 @@ export const OdooWorkOrderSchema = z.object({
   due_date: z.coerce.string().nullable(),
   write_date: z.coerce.string(),
   stage_id: z.tuple([z.number(), z.string()]),
+  maintenance_team_id: z
+    .union([z.tuple([z.number(), z.string()]), z.literal(false)])
+    .nullish(),
 })
 
 export const OdooWorkOrderMessageSchema = z.object({
@@ -64,6 +71,10 @@ export const OdooWorkOrderMessageSchema = z.object({
   body: z.string(),
   message_type: z.string(),
   author_id: z.tuple([z.number(), z.string()]),
+  // The sender the tenant is shown, decided and stored by Odoo.
+  // `false` is Odoo's empty Char: the tenant's own messages carry no sender,
+  // and so does anything written before the addon started setting it.
+  onecore_tenant_author_name: z.union([z.string(), z.literal(false)]),
   create_date: z.coerce.string(),
 })
 
@@ -72,6 +83,8 @@ export const XpandWorkOrderDetailsSchema = WorkOrderSchema.omit({
   ExternalResource: true,
   UseMasterKey: true,
   HiddenFromMyPages: true,
+  CloseRequestPending: true, // Xpand work orders cannot carry a close request
+  MaintenanceTeam: true,
   Messages: true,
   Url: true,
 }).extend({
@@ -196,6 +209,7 @@ export {
   CreateInspectionWorkOrderGroupSchema,
   CreateInspectionWorkOrderResultSchema,
   CreateInspectionWorkOrdersResponseSchema,
+  CloseWorkOrderRequestSchema,
 } from '@onecore/types'
 
 export const CreateInspectionWorkOrdersBodySchema = z.object({
@@ -237,4 +251,5 @@ export type {
   MaintenanceTeam,
   CreateInspectionWorkOrderGroup,
   CreateInspectionWorkOrderResult,
+  CloseWorkOrderRequest,
 } from '@onecore/types'

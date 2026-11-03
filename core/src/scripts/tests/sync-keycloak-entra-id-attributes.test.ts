@@ -21,6 +21,7 @@ function graphUser(over: Partial<GraphUser>): GraphUser {
     jobTitle: null,
     officeLocation: null,
     ...over,
+    managerUpn: over.managerUpn ?? null,
   }
 }
 
@@ -189,5 +190,154 @@ describe('syncKeycloakEntraIdAttributes', () => {
       mobilePhone: ['+46123'],
       employeeId: ['E1'],
     })
+  })
+
+  it('sets managerUpn and resolves managerId from the Keycloak user list', async () => {
+    const updates: KeycloakUser[] = []
+    const result = await syncKeycloakEntraIdAttributes({
+      listKeycloakUsers: async () => ({
+        ok: true,
+        data: [
+          kcUser({ id: 'u1', username: 'alice@x.se' }),
+          kcUser({ id: 'boss-kc-id', username: 'bob@x.se', email: 'bob@x.se' }),
+        ],
+      }),
+      listGraphUsers: async () => ({
+        ok: true,
+        data: [
+          graphUser({
+            userPrincipalName: 'alice@x.se',
+            employeeId: null,
+            managerUpn: 'bob@x.se',
+          }),
+        ],
+      }),
+      updateKeycloakUser: async (u) => {
+        updates.push(u)
+        return { ok: true, data: undefined }
+      },
+    })
+    expect(result).toMatchObject({ updated: 1 })
+    const alice = updates.find((u) => u.id === 'u1')
+    expect(alice?.attributes?.managerUpn).toEqual(['bob@x.se'])
+    expect(alice?.attributes?.managerId).toEqual(['boss-kc-id'])
+  })
+
+  it('resolves managerId case-insensitively on the manager UPN', async () => {
+    const updates: KeycloakUser[] = []
+    await syncKeycloakEntraIdAttributes({
+      listKeycloakUsers: async () => ({
+        ok: true,
+        data: [
+          kcUser({ id: 'u1', username: 'alice@x.se' }),
+          kcUser({ id: 'boss-kc-id', username: 'Bob@X.se', email: 'Bob@X.se' }),
+        ],
+      }),
+      listGraphUsers: async () => ({
+        ok: true,
+        data: [
+          graphUser({
+            userPrincipalName: 'alice@x.se',
+            employeeId: null,
+            managerUpn: 'BOB@x.SE',
+          }),
+        ],
+      }),
+      updateKeycloakUser: async (u) => {
+        updates.push(u)
+        return { ok: true, data: undefined }
+      },
+    })
+    const alice = updates.find((u) => u.id === 'u1')
+    expect(alice?.attributes?.managerId).toEqual(['boss-kc-id'])
+    expect(alice?.attributes?.managerUpn).toEqual(['BOB@x.SE'])
+  })
+
+  it('sets managerUpn but leaves managerId unset when the manager is not in Keycloak', async () => {
+    const updates: KeycloakUser[] = []
+    await syncKeycloakEntraIdAttributes({
+      listKeycloakUsers: async () => ({
+        ok: true,
+        data: [kcUser({ id: 'u1', username: 'alice@x.se' })],
+      }),
+      listGraphUsers: async () => ({
+        ok: true,
+        data: [
+          graphUser({
+            userPrincipalName: 'alice@x.se',
+            employeeId: null,
+            managerUpn: 'ghostboss@x.se',
+          }),
+        ],
+      }),
+      updateKeycloakUser: async (u) => {
+        updates.push(u)
+        return { ok: true, data: undefined }
+      },
+    })
+    expect(updates[0].attributes?.managerUpn).toEqual(['ghostboss@x.se'])
+    expect(updates[0].attributes?.managerId).toBeUndefined()
+  })
+
+  it('sets no manager attributes when Graph has no manager', async () => {
+    const updates: KeycloakUser[] = []
+    await syncKeycloakEntraIdAttributes({
+      listKeycloakUsers: async () => ({
+        ok: true,
+        data: [kcUser({ id: 'u1', username: 'alice@x.se' })],
+      }),
+      listGraphUsers: async () => ({
+        ok: true,
+        data: [
+          graphUser({
+            userPrincipalName: 'alice@x.se',
+            employeeId: 'E1',
+            managerUpn: null,
+          }),
+        ],
+      }),
+      updateKeycloakUser: async (u) => {
+        updates.push(u)
+        return { ok: true, data: undefined }
+      },
+    })
+    expect(updates[0].attributes?.managerUpn).toBeUndefined()
+    expect(updates[0].attributes?.managerId).toBeUndefined()
+  })
+
+  it('skips a user whose manager attributes already match', async () => {
+    const updates: KeycloakUser[] = []
+    const result = await syncKeycloakEntraIdAttributes({
+      listKeycloakUsers: async () => ({
+        ok: true,
+        data: [
+          kcUser({
+            id: 'u1',
+            username: 'alice@x.se',
+            attributes: {
+              managerUpn: ['bob@x.se'],
+              managerId: ['boss-kc-id'],
+            },
+          }),
+          kcUser({ id: 'boss-kc-id', username: 'bob@x.se', email: 'bob@x.se' }),
+        ],
+      }),
+      listGraphUsers: async () => ({
+        ok: true,
+        data: [
+          graphUser({
+            userPrincipalName: 'alice@x.se',
+            employeeId: null,
+            managerUpn: 'bob@x.se',
+          }),
+        ],
+      }),
+      updateKeycloakUser: async (u) => {
+        updates.push(u)
+        return { ok: true, data: undefined }
+      },
+    })
+    expect(result).toMatchObject({ updated: 0, skipped: 1 })
+    expect(updates).toHaveLength(0)
   })
 })
