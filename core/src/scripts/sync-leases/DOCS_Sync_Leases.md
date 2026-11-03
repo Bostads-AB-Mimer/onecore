@@ -38,7 +38,7 @@ Går objektinformationen inte att hämta räknas raden som ett **fel** och hamna
 
 ## Annan fakturamottagare
 
-Vid `create` hämtas hyresgästen från Contacts, med relationer. Har hen en **annan fakturamottagare** hämtas den kontakten i sin helhet och synkas till Xledger — **skapas** om kunden saknas. Mottagaren måste finnas som kund innan avtalet börjar aviseras, även om hen aldrig varit hyresgäst. Misslyckas det avbryts hela avtalssynken och raden köas. Avvisar Economy mottagaren (4xx) skapas avtalet inte förrän mottagaren rättats i Xpand; varje återförsök hämtar mottagaren på nytt.
+Vid `create` hämtas hyresgästen från Contacts, med relationer. Har hen en **annan fakturamottagare** hämtas den kontakten i sin helhet och synkas till Xledger — **skapas** om kunden saknas. Mottagaren måste finnas som kund innan avtalet börjar aviseras, även om hen aldrig varit hyresgäst. Misslyckas det avbryts hela avtalssynken och raden köas. Misslyckas i stället Tenfast-steget efteråt återställs en uppdaterad kund till sina gamla värden; en nyskapad kund får vara kvar (se [Steg och återställning](../DOCS_Sync_Overview.md#steg-och-återställning)). Avvisar Economy mottagaren (4xx) skapas avtalet inte förrän mottagaren rättats i Xpand; varje återförsök hämtar mottagaren på nytt.
 
 God man och förvaltare läses men används inte av scriptet. De når Tenfast när hyresgästen importeras (se nedan), eftersom Tenfast då hämtar kontakten med relationer från ONECore.
 
@@ -55,7 +55,7 @@ God man och förvaltare läses men används inte av scriptet. De når Tenfast n�
    - startdatum från Xpand,
    - hyresrader kopierade från hyresobjektet i Tenfast,
    - månadsavisering, två veckor i förskott.
-6. Det signerade kontraktet hämtas som PDF ur Xpands dokumentarkiv och laddas upp på avtalet, om avtalet inte redan har en fil i Tenfast. **Steget kan inte fälla synken**: saknas PDF:en eller misslyckas uppladdningen räknas avtalet som skapat och teamet får ett mejl om att bifoga den för hand. Raden köas inte, eftersom en köad `create` håller tillbaka avtalets senare händelser.
+6. Det signerade kontraktet hämtas som PDF ur Xpands dokumentarkiv och laddas upp på avtalet, om avtalet inte redan har en fil i Tenfast. **Steget kan inte fälla synken**: saknas PDF:en eller misslyckas uppladdningen räknas avtalet som skapat och teamet får ett mejl om att bifoga den för hand, när alla steg för raden lyckats. Raden köas inte, eftersom en köad `create` håller tillbaka avtalets senare händelser.
 
 ### terminate — avtalet sägs upp
 
@@ -68,7 +68,7 @@ God man och förvaltare läses men används inte av scriptet. De når Tenfast n�
 5. Uppsägningshandlingen bifogas. Det görs både efter en lyckad uppsägning och när avtalet redan var uppsagt:
    - Har avtalet redan en uppsägningsfil i Tenfast händer inget mer.
    - Annars hämtas den senaste uppsägnings-PDF:en ur Xpands dokumentarkiv och laddas upp.
-   - Saknar Xpand PDF:en räknas raden som lyckad och teamet får ett mejl om att bifoga den för hand.
+   - Saknar Xpand PDF:en räknas raden som lyckad och teamet får ett mejl om att bifoga den för hand, när alla steg för raden lyckats.
    - **Misslyckas kontrollen, uppslaget eller uppladdningen fälls raden.** Den köas och försöks igen; vid återförsöket görs bara PDF-steget (se steg 3). Ger kön upp efter 30 dagar säger mejlet att avtalet redan är uppsagt och att bara PDF:en saknas.
 
 ### void — avtalet makuleras
@@ -116,9 +116,12 @@ Eq --> |No| G
 F --> Fq{OK?}
 Fq --> |No| Q
 Fq --> |Yes| G(Create Lease in Tenfast<br/>unless it Exists,<br/>Attach Signed PDF)
+G --> Gq{Failed after<br/>Recipient Updated?}
+Gq --> |Yes| Ux[Undo Recipient<br/>in Xledger]
+Ux --> Q
 D --> |terminate| H(Terminate Lease in Tenfast,<br/>Attach Termination PDF)
 D --> |void| I(Void Lease in Tenfast)
-G --> R{Synced?}
+Gq --> |No| R{Synced?}
 H --> R
 I --> R
 R --> |No| Q
@@ -217,6 +220,11 @@ sequenceDiagram
             end
 
             Leasing -->> Core: created / terminated / voided / skipped
+
+            opt Tenfast failed after the recipient was updated
+                Core ->> Economy: POST /customers/{code}/sync (previous values)
+                Economy ->> Xledger: Write previous values back
+            end
         end
 
         opt Any step failed

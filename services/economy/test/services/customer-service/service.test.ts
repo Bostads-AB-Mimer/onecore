@@ -1,3 +1,4 @@
+import { SyncContactToEconomySchema } from '@onecore/types'
 import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import {
   syncCustomer,
@@ -46,7 +47,7 @@ describe('syncCustomer', () => {
       address: payload.address,
       emailAddress: payload.emailAddress,
     })
-    expect(result).toEqual({ dbId: '12345' })
+    expect(result).toEqual({ customer: { dbId: '12345' }, previous: null })
   })
 
   it('updates customer when customer already exists', async () => {
@@ -68,7 +69,74 @@ describe('syncCustomer', () => {
       emailAddress: payload.emailAddress,
     })
     expect(addSpy).not.toHaveBeenCalled()
-    expect(result).toEqual({ dbId: '12345', updated: true })
+    expect(result).toEqual({
+      customer: { dbId: '12345', updated: true },
+      previous: {
+        fullName: '',
+        street: null,
+        zipCode: null,
+        city: null,
+        emailAddress: null,
+      },
+    })
+  })
+
+  it('returns the values it replaced as previous when it updates', async () => {
+    jest.spyOn(xledgerAdapter, 'getCustomer').mockResolvedValueOnce({
+      dbId: '12345',
+      description: 'Gammal, Namn',
+      address: {
+        streetAddress: 'Gamla gatan 1',
+        streetNumber: null,
+        zipCode: '22222',
+        place: 'Västerås',
+      },
+      email: 'gammal@test.se',
+    } as any)
+    jest
+      .spyOn(xledgerAdapter, 'updateCustomer')
+      .mockResolvedValueOnce('12345' as any)
+
+    const result = await syncCustomer(payload)
+
+    expect(result).toEqual({
+      customer: '12345',
+      previous: {
+        fullName: 'Gammal, Namn',
+        street: 'Gamla gatan 1',
+        zipCode: '22222',
+        city: 'Västerås',
+        emailAddress: 'gammal@test.se',
+      },
+    })
+  })
+
+  it('maps a customer without address or email to nulls that pass the sync schema', async () => {
+    jest.spyOn(xledgerAdapter, 'getCustomer').mockResolvedValueOnce({
+      dbId: '1',
+      description: 'Utan Adress',
+      address: null,
+      email: null,
+    } as any)
+    jest
+      .spyOn(xledgerAdapter, 'updateCustomer')
+      .mockResolvedValueOnce('1' as any)
+
+    const result = await syncCustomer(payload)
+
+    expect(result?.previous).toEqual({
+      fullName: 'Utan Adress',
+      street: null,
+      zipCode: null,
+      city: null,
+      emailAddress: null,
+    })
+    expect(
+      SyncContactToEconomySchema.safeParse({
+        contactCode: 'P1',
+        ...result?.previous,
+      }).success
+    ).toBe(true)
   })
 
   it('defaults missing address fields to empty strings', async () => {

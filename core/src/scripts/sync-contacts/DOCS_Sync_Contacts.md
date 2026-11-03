@@ -36,7 +36,7 @@ Ingen av de tre skapar något nytt i det här flödet — de uppdaterar bara det
 
 - **Tenfast** — en kontakt som inte finns som hyresgäst ger 404, vilket räknas som lyckat (hoppas över).
 - **Xledger** — kunden slås upp på kontaktkod. Finns den uppdateras namn, gatuadress, postnummer, ort och e-post. Saknas den händer ingenting: scriptet skapar medvetet inga kunder. En helt ny kontakt når Xledger först när den behövs, som annan fakturamottagare på ett nytt avtal i [sync-leases](../sync-leases/DOCS_Sync_Leases.md#annan-fakturamottagare) eller när en relation läggs till på kundkortet. En tom adress eller e-post skrivs som tom i Xledger — även när den bara saknas för att Contacts döljer en skyddad identitet (se ovan). Uppdateringen görs varje gång, även om inget har ändrats.
-- **Odoo** — `maintenance.tenant` söks upp på `contact_code`. Hittas ingen räknas raden som lyckad. Hittas flera uppdateras alla. Namnet skrivs alltid; e-post och telefon bara om kontakten har en sådan.
+- **Odoo** — `maintenance.tenant` söks upp på `contact_code`. Hittas ingen räknas raden som lyckad. Hittas flera uppdateras alla i ett anrop. Namnet skrivs alltid; e-post och telefon bara om kontakten har en sådan.
 
 ## Relationer
 
@@ -51,11 +51,11 @@ Relationerna själva hanteras utanför den här synken:
 
 ## Felhantering
 
-De tre anropen görs parallellt och **alla tre måste lyckas** för att raden ska räknas som synkad. Misslyckas något hamnar hela raden i felkön, med status per mål i felmeddelandet (`tenfast=… xledger=… odoo=…`).
+Målen skrivs i ordning, Xledger → Odoo → Tenfast, och **alla tre måste lyckas** för att raden ska räknas som synkad. Misslyckas ett steg körs inte de följande, och Xledger och Odoo får tillbaka sina gamla värden — se [Steg och återställning](../DOCS_Sync_Overview.md#steg-och-återställning). Odoo återställer varje hyresgäst till sina egna gamla värden, tömmer fält som var tomma, och hoppar över hyresgäster som tagits bort sedan.
 
 Avvisar Economy kunden (4xx) lyckas den köade raden aldrig, eftersom den skickar samma uppgifter igen; rättelsen i Xpand ger en ny `cmlog`-rad som ersätter den.
 
-Ett återförsök kör om alla tre, även de som redan lyckats. Det är ofarligt eftersom alla tre bara uppdaterar befintlig data. Ger synken upp efter 30 dagar är rådet i mejlet att göra ändringen i Xpand på nytt.
+Ett återförsök kör om alla tre från början. Ger synken upp efter 30 dagar är rådet i mejlet att göra ändringen i Xpand på nytt.
 
 ## Flödesdiagram
 
@@ -64,24 +64,15 @@ Processens beslutslogik för en kontakt. Kö och sparad position finns i [proces
 ```mermaid
 flowchart LR
 A[Start: Changed Contact<br/>from cmlog] --> B[Build Sync Payload]
-B --> C(Sync to Tenfast, Xledger<br/>and Odoo in Parallel)
-C --> T{Tenfast:<br/>Tenant Exists?}
-T --> |No| Ts[Skipped]
-T --> |Yes| Tu[Tenfast Pulls Fresh Data<br/>from ONECore]
-C --> X{Xledger:<br/>Customer Exists?}
-X --> |No| Xs[Skipped,<br/>Nothing Created]
-X --> |Yes| Xu[Update Customer]
-C --> O{Odoo:<br/>Tenants Found?}
-O --> |No| Os[Skipped]
-O --> |Yes| Ou[Update Every Match]
-Ts --> G{All Three OK?}
-Tu --> G
-Xs --> G
-Xu --> G
-Os --> G
-Ou --> G
-G --> |No| H[Queue for Retry,<br/>Send Failure Mail]
-G --> |Yes| I[Count as Synced]
+B --> X{Xledger:<br/>Update Customer<br/>if it Exists}
+X --> |Failed| H[Queue for Retry,<br/>Send Failure Mail]
+X --> |OK or Skipped| O{Odoo:<br/>Update Every Tenant<br/>with the Code}
+O --> |Failed| Ux[Undo Xledger]
+O --> |OK or Skipped| T{Tenfast:<br/>Pull Fresh Data<br/>if Tenant Exists}
+T --> |Failed| Uo[Undo Odoo,<br/>then Xledger]
+T --> |OK or Skipped| I[Count as Synced]
+Ux --> H
+Uo --> H
 H --> Z[End]
 I --> Z
 ```
@@ -124,33 +115,42 @@ sequenceDiagram
     loop For each changed contact
         Core ->> Core: Build sync payload
 
-        par Tenfast
-            Core ->> Leasing: POST /contacts/{code}/sync
-            Leasing ->> Tenfast: POST /v1/hyresvard/extras/contacts/{code}
-            note over Tenfast: Tenfast pulls the contact from ONECore<br/>and updates the hyresgäst and every<br/>relation pointing to it. 404 = skipped.
-            Tenfast -->> Leasing: Updated count (or 404)
-            Leasing -->> Core: OK / skipped
-        and Xledger
-            Core ->> Economy: POST /customers/{code}/sync (no create)
-            Economy ->> Xledger: Find customer by code
-            Xledger -->> Economy: Customer (or none)
-            opt Customer exists
-                Economy ->> Xledger: Update name, address, email
+        Core ->> Economy: POST /customers/{code}/sync (no create)
+        Economy ->> Xledger: Find customer by code
+        Xledger -->> Economy: Customer (or none)
+        opt Customer exists
+            Economy ->> Xledger: Update name, address, email
+        end
+        Economy -->> Core: OK + previous values / skipped
+
+        Core ->> WorkOrder: POST /contacts/{code}/sync
+        WorkOrder ->> Odoo: Search maintenance.tenant by contact_code
+        Odoo -->> WorkOrder: Tenants with current values (possibly none)
+        opt Any match
+            WorkOrder ->> Odoo: Write name, email, phone to all matches
+        end
+        WorkOrder -->> Core: OK + previous values / skipped
+
+        Core ->> Leasing: POST /contacts/{code}/sync
+        Leasing ->> Tenfast: POST /v1/hyresvard/extras/contacts/{code}
+        note over Tenfast: Tenfast pulls the contact from ONECore<br/>and updates the hyresgäst and every<br/>relation pointing to it. 404 = skipped.
+        Leasing -->> Core: OK / skipped
+
+        opt A step failed
+            note over Core: Later steps are not attempted
+            opt Odoo was written
+                Core ->> WorkOrder: POST /contacts/{code}/undo-sync
+                WorkOrder ->> Odoo: Write previous values back
             end
-            Economy -->> Core: OK / skipped
-        and Odoo
-            Core ->> WorkOrder: POST /contacts/{code}/sync
-            WorkOrder ->> Odoo: Search maintenance.tenant by contact_code
-            Odoo -->> WorkOrder: Tenant ids (possibly none)
-            loop For each match
-                WorkOrder ->> Odoo: Write name, email, phone
+            opt Xledger was written
+                Core ->> Economy: POST /customers/{code}/sync (previous values)
+                Economy ->> Xledger: Write previous values back
             end
-            WorkOrder -->> Core: OK / skipped
         end
 
-        opt Any of the three failed
+        opt A step failed
             Core ->> PVC: Append to failed-rows.jsonl
-            Core ->> Communication: Failure mail
+            Core ->> Communication: Failure mail (and undo-failed mail per system)
         end
 
         Core ->> PVC: Save position after the row
