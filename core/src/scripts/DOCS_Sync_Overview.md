@@ -47,12 +47,12 @@ De tre scripten delar samma kärna, [`shared/run-cmlog-sync.ts`](./shared/run-cm
 
 Xpand loggar varje ändring som en rad i tabellen `cmlog`, med ett fritextfält `logmemo` och en tidsstämpel `logtime`. Det finns ingen händelsekö och inga webhooks — synken läser nya rader och tolkar texten. Läsningen sker i respektive tjänst: Contacts för kontakter, Leasing för avtal och hyresobjektstyper.
 
-`logtime` är en `datetime` utan tidszon, som Xpand fyller med svensk lokaltid och hela sekunder. Synken läser och jämför den som den är, utan att räkna om tidszon — poddens tidszon spelar ingen roll. Varje körning läser om ett fönster några minuter bakåt från sparad position och hoppar över de rader den redan hanterat (se [Sparad position](#sparad-position)). Det fångar en rad som syns i `cmlog` först en stund efter sin `logtime`, eftersom Xpand sätter tiden innan raden sparas.
+`logtime` är en `datetime` utan tidszon, som Xpand fyller med svensk lokaltid och hela sekunder. Den når Core som svensk lokaltid märkt som UTC, så Core räknar om sin egen klocka till svensk lokaltid på samma sätt innan de jämförs (`onXpandClock` i `run-cmlog-sync.ts`) — poddens tidszon spelar ingen roll. Varje körning läser om ett fönster några minuter bakåt från sparad position och hoppar över de rader den redan hanterat (se [Sparad position](#sparad-position)). Det fångar en rad som syns i `cmlog` först en stund efter sin `logtime`, eftersom Xpand sätter tiden innan raden sparas.
 
 Två luckor finns kvar där rader kan tappas utan fel och utan mejl:
 
 - **När klockan ställs tillbaka** (sista söndagen i oktober) går Xpands klocka 02:00–02:59 två gånger. När positionen nått första varvets 02:59 läses inga rader från andra varvet, eftersom de har en lägre tid än fönstret.
-- **En rad som syns mer än fem minuter efter sin `logtime`.** Fönstret täcker fem minuter (`LATE_COMMIT_MS` i `run-cmlog-sync.ts`). Marginalen är inte uppmätt mot Xpand.
+- **En rad som syns mer än fem minuter efter sin `logtime`.** Fönstret täcker fem minuter (`LATE_COMMIT_MS` i `run-cmlog-sync.ts`). Marginalen är inte uppmätt mot Xpand. Samma sak gäller om poddens klocka går mer än fem minuter före Xpands.
 
 ### Sparad position
 
@@ -64,7 +64,7 @@ Varje script sparar tidsstämpeln för den senast behandlade raden i en fil på 
 | sync-leases              | `/data/last-timestamp-leases.txt`              | `sync-leases-state`              |
 | sync-rental-object-types | `/data/last-timestamp-rental-object-types.txt` | `sync-rental-object-types-state` |
 
-Positionen sparas efter varje rad. Bredvid tidsstämpelfilen ligger `<positionsfil>.position.json` med två saker: `readFrom`, varifrån nästa körning läser, och vilka rader i fönstret som redan hanterats (radens nyckel plus en hash av innehållet). `readFrom` flyttas bara framåt, till det senare av senaste ändringen minus fem minuter och körningens start minus tio minuter. `logtime` når Core som svensk lokaltid märkt som UTC, så körningens start ligger en timme (vintertid) eller två (sommartid) efter. I praktiken styr senaste ändringen, och ett jobb utan nya ändringar läser om den senaste i ungefär 70 respektive 130 minuter. Tidsstämpelfilen flyttas fortfarande först när en hel sekund är behandlad, för äldre kod som bara läser den. Båda filerna skrivs till `.tmp` och döps sedan om, så de blir aldrig halvskrivna. Kraschar jobbet mitt i en körning läser nästa körning om fönstret och hoppar över raderna som redan är klara.
+Positionen sparas efter varje rad. Bredvid tidsstämpelfilen ligger `<positionsfil>.position.json` med två saker: `readFrom`, varifrån nästa körning läser, och vilka rader i fönstret som redan hanterats (radens nyckel plus en hash av innehållet). `readFrom` flyttas bara framåt, till det senare av senaste ändringen minus fem minuter och körningens start minus tio minuter, så ett jobb utan nya ändringar slutar läsa om efter tio minuter. Tidsstämpelfilen flyttas fortfarande först när en hel sekund är behandlad, för äldre kod som bara läser den. Båda filerna skrivs till `.tmp` och döps sedan om, så de blir aldrig halvskrivna. Kraschar jobbet mitt i en körning läser nästa körning om fönstret och hoppar över raderna som redan är klara.
 
 Positionen flyttas fram även när en rad misslyckas. Det är felkön nedan, inte positionen, som ser till att en rad som läst men misslyckats inte tappas bort. Rader som aldrig läses — se luckorna ovan — fångas inte av kön.
 
