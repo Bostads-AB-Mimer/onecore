@@ -154,9 +154,13 @@ async function setContactCode(
   const claims = decodeJwt(tokens.access_token)
   const current = readContactCodeClaim(claims[CONTACT_CODE_ATTRIBUTE])
 
+  // A contact deleted in Xpand, e.g. merged into the person's other contact by customer
+  // service, counts as gone, so the rule below moves the login to a live one.
   if (
     current &&
-    (await findContact(() => contactsAdapter.getByContactCode(current)))
+    (await findContact(() =>
+      contactsAdapter.getByContactCode(current, { excludeDeleted: true })
+    ))
   ) {
     return tokens
   }
@@ -228,12 +232,12 @@ async function setContactCode(
 /**
  * Makes sure a customer's token names a contact that exists, before webapi gets it.
  *
- * A contact_code that still resolves is never replaced. A missing one is set from the
- * personnummer (the Keycloak username) with the contacts service's login-contact rule: a
- * personnummer can belong to several contacts (a second registration, a supplier contact for
- * payouts, a sole trader's company), and that rule picks the one the person uses. Without a
- * contact for the personnummer the tokens go back without contact_code, and webapi answers
- * no_active_account.
+ * A contact_code that names a live contact is never replaced. One that is missing, or names a
+ * contact that no longer exists or is marked as deleted, is set from the personnummer (the
+ * Keycloak username) with the contacts service's login-contact rule: a personnummer can belong
+ * to several contacts (a second registration, a supplier contact for payouts, a sole trader's
+ * company), and that rule picks the one the person uses. Without a contact for the personnummer
+ * the tokens go back without contact_code, and webapi answers no_active_account.
  *
  * @throws ContactCodeError when the contacts service or Keycloak fails, the provisioning client
  *   is not configured, or the step runs past budgetMs, so none of these is ever reported as a

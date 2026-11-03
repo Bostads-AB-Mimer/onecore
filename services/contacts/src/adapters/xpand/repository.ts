@@ -106,9 +106,13 @@ export const xpandContactsRepository = (
     return exists ? related : null
   }
 
-  const getByContactCode = async (contactCode: ContactCode) => {
+  const getByContactCode = async (
+    contactCode: ContactCode,
+    options?: { excludeDeleted?: boolean }
+  ) => {
     const dbContactRows = await contactsQuery()
       .hasContactCode(contactCode)
+      .notDeleted(options?.excludeDeleted ?? false)
       .getOne(db.get())
 
     const [contact] = await toContacts(dbContactRows)

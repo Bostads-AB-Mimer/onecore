@@ -98,6 +98,26 @@ describe('GET /contacts/by-nid/:nid/login-contact', () => {
     })
   })
 
+  it('GET /contacts/:contactCode returns a deleted contact unless excludeDeleted is set', async () => {
+    const status = async (query: string) =>
+      (
+        await httpClient.get(`/contacts/P920010${query}`, {
+          validateStatus: () => true,
+        })
+      ).status
+
+    expect(await status('')).toBe(200)
+    expect(await status('?excludeDeleted=false')).toBe(200)
+    expect(await status('?excludeDeleted=true')).toBe(404)
+    expect(
+      (
+        await httpClient.get('/contacts/P920011?excludeDeleted=true', {
+          validateStatus: () => true,
+        })
+      ).status
+    ).toBe(200)
+  })
+
   it('is 404 for a personnummer without contacts', async () => {
     expect(await loginContactCode('196408233234')).toBe(404)
   })

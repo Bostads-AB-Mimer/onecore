@@ -381,10 +381,17 @@ export const routes = (
     '/contacts/:contactCode',
     {
       summary: 'Get a single contact by their canonical ID.',
-      description: `Get a single contact by their Contact Code.`,
+      description:
+        'Get a single contact by their Contact Code. Contacts marked as deleted in Xpand are returned unless excludeDeleted is true, in which case they are 404.',
       tags: ['Contacts'],
       params: {
         contactCode: z.string(),
+      },
+      query: {
+        excludeDeleted: {
+          description: 'Answer 404 for a contact marked as deleted.',
+          schema: z.optional(z.boolean()),
+        },
       },
       response: {
         200: GetContactResponseBodySchema,
@@ -394,7 +401,9 @@ export const routes = (
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const { contactCode } = ctx.params
-      const result = await contactsRepository.getByContactCode(contactCode)
+      const result = await contactsRepository.getByContactCode(contactCode, {
+        excludeDeleted: isTrue(ctx.query.excludeDeleted),
+      })
 
       if (result) {
         ctx.status = 200

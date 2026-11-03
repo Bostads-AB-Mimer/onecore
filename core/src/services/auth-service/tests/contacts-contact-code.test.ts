@@ -159,6 +159,27 @@ describe('ensureContactCode', () => {
     ).resolves.toBe(refreshed)
   })
 
+  it('repairs a contact_code whose contact is marked as deleted', async () => {
+    // The adapter answers not-found for a deleted contact when asked to exclude them.
+    contacts.getByContactCode.mockResolvedValue(notFound)
+    contacts.getLoginContactByNationalId.mockResolvedValue(contact('P200'))
+    refresh.mockResolvedValue(refreshed)
+    nock('http://keycloak.test')
+      .post(tokenPath)
+      .reply(200, { access_token: 'admin-token' })
+      .get(userPath)
+      .reply(200, { id: 'user-1', username: '199001011239' })
+      .put(userPath)
+      .reply(204)
+
+    await expect(
+      ensureContactCode(tokens({ contact_code: 'P-MERGED' }))
+    ).resolves.toBe(refreshed)
+    expect(contacts.getByContactCode).toHaveBeenCalledWith('P-MERGED', {
+      excludeDeleted: true,
+    })
+  })
+
   it('returns the tokens unchanged when the personnummer has no contact', async () => {
     contacts.getLoginContactByNationalId.mockResolvedValue(notFound)
     nock('http://keycloak.test')
@@ -219,7 +240,9 @@ describe('ensureContactCode', () => {
     const original = tokens({ contact_code: ['P100'] })
 
     await expect(ensureContactCode(original)).resolves.toBe(original)
-    expect(contacts.getByContactCode).toHaveBeenCalledWith('P100')
+    expect(contacts.getByContactCode).toHaveBeenCalledWith('P100', {
+      excludeDeleted: true,
+    })
     expect(contacts.getLoginContactByNationalId).not.toHaveBeenCalled()
   })
 

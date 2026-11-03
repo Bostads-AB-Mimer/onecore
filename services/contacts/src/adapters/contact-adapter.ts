@@ -60,10 +60,15 @@ export interface ContactsRepository {
    * Retrieves a contact by its unique contact code.
    *
    * @param contactCode - The unique code of the contact to retrieve.
+   * @param options.excludeDeleted - Treat a contact marked as deleted in
+   *        Xpand as missing. Deleted contacts are returned by default.
    *
    * @returns A promise that resolves to the Contact object if found,
    */
-  getByContactCode: (contactCode: ContactCode) => Promise<Contact | null>
+  getByContactCode: (
+    contactCode: ContactCode,
+    options?: { excludeDeleted?: boolean }
+  ) => Promise<Contact | null>
 
   /**
    * Batch lookup of contacts by their contact codes. Lean by default —

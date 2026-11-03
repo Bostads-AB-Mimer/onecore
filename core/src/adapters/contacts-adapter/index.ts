@@ -150,11 +150,16 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       return listResponse(response)
     },
 
+    /**
+     * With excludeDeleted, a contact marked as deleted in Xpand is not-found.
+     */
     async getByContactCode(
-      contactCode: string
+      contactCode: string,
+      options?: { excludeDeleted?: boolean }
     ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {
       const response = await axios<GetContactResponseBody>(
-        `/contacts/${contactCode}`
+        `/contacts/${contactCode}`,
+        options?.excludeDeleted ? { params: { excludeDeleted: true } } : {}
       )
       return singleResponse(response)
     },
