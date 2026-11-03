@@ -47,11 +47,13 @@ export function ReleaseNoteItem({
           </Badge>
           {note.pinned && <Pin className="h-3 w-3 text-muted-foreground" />}
           <span className="text-sm text-muted-foreground">
-            {formatReleaseNoteDate(note.date)}
+            {note.publishedAt
+              ? formatReleaseNoteDate(note.publishedAt)
+              : 'Utkast'}
           </span>
         </div>
         <p className="font-semibold">{note.title}</p>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
           {note.description}
         </p>
       </div>

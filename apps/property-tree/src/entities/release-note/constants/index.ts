@@ -1,20 +1,6 @@
 import { AlertTriangle, Bug, Info, Sparkles, Zap } from 'lucide-react'
 
-import type { ReleaseNote, ReleaseNoteCategory } from '../model/types'
-
-/**
- * Auto-import all release note JSON files from the data folder.
- * To add a new release, just create a new JSON file: YYYY-MM-DD-vX.X.X.json
- * No need to update this file!
- */
-const releaseModules = import.meta.glob<ReleaseNote[]>('../data/*.json', {
-  eager: true,
-  import: 'default',
-})
-
-export const RELEASE_NOTES: ReleaseNote[] = Object.values(releaseModules)
-  .flat()
-  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+import type { ReleaseNoteApp, ReleaseNoteCategory } from '../model/types'
 
 /**
  * Swedish labels for release note categories
@@ -67,3 +53,60 @@ export const RELEASE_NOTE_ICON_STYLES: Record<ReleaseNoteCategory, string> = {
   warning:
     'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
 }
+
+export const RELEASE_NOTE_CATEGORIES = Object.keys(
+  RELEASE_NOTE_CATEGORY_LABELS
+) as ReleaseNoteCategory[]
+
+// Which part of ONECore a note concerns.
+export const RELEASE_NOTE_APP_LABELS: Record<ReleaseNoteApp, string> = {
+  general: 'Allmänt',
+  'property-tree': 'ONECore-portalen',
+  'keys-portal': 'Nyckelportalen',
+  'internal-portal': 'Bilplatsportalen',
+  'mina-sidor': 'Mina sidor',
+  'sok-ledigt': 'Sök ledigt',
+  odoo: 'Odoo',
+  core: 'Core',
+  leasing: 'Uthyrning',
+  property: 'Fastighetsdata',
+  'work-order': 'Ärenden',
+  keys: 'Nycklar',
+  communication: 'Kommunikation',
+  contacts: 'Kontakter',
+  inspection: 'Besiktning',
+  economy: 'Ekonomi',
+}
+
+// Grouping for the admin form's select. Every app must be in one group.
+export const RELEASE_NOTE_APP_GROUPS: {
+  label: string
+  apps: ReleaseNoteApp[]
+}[] = [
+  { label: 'Allmänt', apps: ['general'] },
+  {
+    label: 'Appar',
+    apps: [
+      'property-tree',
+      'keys-portal',
+      'internal-portal',
+      'mina-sidor',
+      'sok-ledigt',
+      'odoo',
+    ],
+  },
+  {
+    label: 'Tjänster',
+    apps: [
+      'core',
+      'leasing',
+      'property',
+      'work-order',
+      'keys',
+      'communication',
+      'contacts',
+      'inspection',
+      'economy',
+    ],
+  },
+]

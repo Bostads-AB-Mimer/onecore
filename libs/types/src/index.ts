@@ -24,6 +24,7 @@ export {
   type LeaseTerminationConfirmationRequest,
   type LeaseTerminationConfirmationEmail,
 } from './communication/tenant-notification'
+export * as guides from './guides'
 export * from './room'
 
 export * as schemas from './schemas'

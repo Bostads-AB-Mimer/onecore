@@ -115,6 +115,7 @@ const logWorkOrderTenantEmail = async (params: {
   subject: string
   body: string
   triggeredByUser?: string
+  workOrderCode?: string
   sendResult: { messages?: Array<{ messageId: string }> }
 }): Promise<string[]> => {
   try {
@@ -126,6 +127,7 @@ const logWorkOrderTenantEmail = async (params: {
       messageType: 'work_order_tenant_mail',
       provider: EMAIL_PROVIDER,
       triggeredByUser: params.triggeredByUser,
+      workOrderCode: params.workOrderCode,
       recipients: [
         {
           contactCode: params.contactCode,
@@ -486,6 +488,7 @@ export const routes = (router: KoaRouter) => {
             subject: emailData.subject,
             body: emailData.text,
             triggeredByUser: emailData.triggeredByUser,
+            workOrderCode: emailData.workOrderCode,
             sendResult: result.data,
           })
         : []

@@ -127,8 +127,12 @@ export interface paths {
         200: {
           content: never
         }
-        /** @description Unauthorized */
+        /** @description Unauthorized, or the token is expired or can't be verified */
         401: {
+          content: never
+        }
+        /** @description Keycloak's signing keys can't be fetched, so the token can't be verified */
+        503: {
           content: never
         }
       }
@@ -177,7 +181,7 @@ export interface paths {
         401: {
           content: never
         }
-        /** @description Forbidden — insufficient permissions to query role members */
+        /** @description Forbidden — the user lacks the api-access role */
         403: {
           content: never
         }
@@ -189,14 +193,180 @@ export interface paths {
         500: {
           content: never
         }
-        /** @description Keycloak unreachable */
+        /** @description Keycloak's admin API is unreachable, so the users can't be listed */
         502: {
+          content: never
+        }
+        /** @description Keycloak's signing keys can't be fetched, so the token can't be verified */
+        503: {
           content: never
         }
       }
     }
   }
   openapi: {}
+  '/release-notes': {
+    /**
+     * List release notes
+     * @description Pinned notes first, then newest. Open to every authenticated user.
+     * `includeDrafts` is honoured only for callers holding the
+     * `release-notes:write` realm role; it is ignored otherwise.
+     * `capabilities.canManage` tells the client whether to show admin UI.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Only notes concerning this app */
+          app?:
+            | 'general'
+            | 'property-tree'
+            | 'keys-portal'
+            | 'internal-portal'
+            | 'mina-sidor'
+            | 'sok-ledigt'
+            | 'odoo'
+            | 'core'
+            | 'leasing'
+            | 'property'
+            | 'work-order'
+            | 'keys'
+            | 'communication'
+            | 'contacts'
+            | 'inspection'
+            | 'economy'
+          /** @description Include drafts and scheduled notes (requires release-notes:write) */
+          includeDrafts?: boolean
+        }
+      }
+      responses: {
+        /** @description List of release notes */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['ReleaseNote'][]
+              capabilities: components['schemas']['ReleaseNoteCapabilities']
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create a release note
+     * @description Requires the `release-notes:write` realm role. Omit `publishedAt`
+     * (or pass null) to save a draft. `createdBy` is taken from the token.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateReleaseNote']
+        }
+      }
+      responses: {
+        /** @description The created release note */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ReleaseNote']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Caller lacks the `release-notes:write` role */
+        403: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/release-notes/{id}': {
+    /**
+     * Update a release note
+     * @description Requires the `release-notes:write` realm role. Only the supplied
+     * fields change. Pass `publishedAt: null` to unpublish.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateReleaseNote']
+        }
+      }
+      responses: {
+        /** @description The updated release note */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ReleaseNote']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Caller lacks the `release-notes:write` role */
+        403: {
+          content: never
+        }
+        /** @description Release note not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Delete a release note
+     * @description Requires the `release-notes:write` realm role.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Release note deleted */
+        204: {
+          content: never
+        }
+        /** @description Caller lacks the `release-notes:write` role */
+        403: {
+          content: never
+        }
+        /** @description Release note not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   security: {}
   '/sendBulkSms': {
     /**
@@ -651,6 +821,12 @@ export interface paths {
                 districtCaption?: string
                 districtCode?: string
                 braArea?: number
+                /**
+                 * @description Whether listing text content exists for the
+                 * parking space. Omitted if the text content
+                 * lookup in leasing failed.
+                 */
+                hasListingTextContent?: boolean
               }[]
             }
           }
@@ -1474,6 +1650,39 @@ export interface paths {
               data?: Record<string, never>
             }
           }
+        }
+      }
+    }
+  }
+  '/leases/batch': {
+    /**
+     * Get multiple leases by id
+     * @description Retrieves leases for a batch of lease ids in a single call.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            leaseIds: string[]
+          }
+        }
+      }
+      responses: {
+        /** @description Successful response with the requested leases */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
         }
       }
     }
@@ -3943,6 +4152,68 @@ export interface paths {
       }
     }
   }
+  '/work-orders/{workOrderId}/close-request': {
+    /**
+     * Request, on the tenant's behalf, that a work order be closed
+     * @description Asks for the Odoo work order to be closed. The handler of the case
+     * decides in Odoo; nothing is closed here. Used by Mina sidor via the
+     * .NET API. Staff close with /work-orders/{workOrderId}/close.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The Odoo id of the work order. */
+          workOrderId: string
+        }
+      }
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @description Optional reason from the tenant, shown to the handler. */
+            reason?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Close request recorded. */
+        200: {
+          content: {
+            'application/json': {
+              /** @example Close requested for work order with ID {workOrderId} */
+              message?: string
+            }
+          }
+        }
+        /** @description The request body is malformed, or the reason is longer than 1000 characters. */
+        400: {
+          content: never
+        }
+        /** @description Refused. A request is already pending, or the work order is closed or hidden from Mina sidor. */
+        409: {
+          content: {
+            'application/json': {
+              /** @example close-request-conflict */
+              error?: string
+              /**
+               * @description Why Odoo refused, so the caller can tell the tenant.
+               * @enum {string}
+               */
+              reason?: 'already_pending' | 'closed' | 'hidden'
+            }
+          }
+        }
+        /** @description Internal server error. The work-order service or Odoo failed. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Failed to request close of work order with ID {workOrderId} */
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/work-orders/send-sms': {
     /**
      * Send SMS for a work order
@@ -3956,6 +4227,8 @@ export interface paths {
             phoneNumber?: string
             /** @description The message to be sent via SMS. */
             text?: string
+            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand. */
+            workOrderCode?: string
           }
         }
       }
@@ -4005,6 +4278,8 @@ export interface paths {
             subject?: string
             /** @description The message to be sent in the email. */
             text?: string
+            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand. */
+            workOrderCode?: string
           }
         }
       }
@@ -4035,6 +4310,42 @@ export interface paths {
               text?: string
             }
           }
+        }
+      }
+    }
+  }
+  '/work-orders/log-my-pages-message': {
+    /**
+     * Log a message published to a tenant's Mina sidor
+     * @description Records a work-order message that was published to Mina sidor without an SMS or email notification. Nothing is sent — the message is already visible to the tenant by existing in Odoo; this only writes the communication log entry. Called by Odoo.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description od-<odoo id> of the errand, e.g. od-12345. */
+            workOrderCode: string
+            /** @description The tenant the message was published to. */
+            contactCode: string
+            /** @description The message body. */
+            text: string
+            /** @description The Odoo user who published the message. */
+            triggeredByUser?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Log entry written. */
+        200: {
+          content: never
+        }
+        /** @description Bad request. Missing or invalid parameters. */
+        400: {
+          content: never
+        }
+        /** @description Failed to write the log entry. */
+        500: {
+          content: never
         }
       }
     }
@@ -4092,6 +4403,8 @@ export interface paths {
           kvvAreaIds?: string[]
           marketAreaCodes?: string[]
           propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
           buildingCodes?: string[]
           staircaseCodes?: string[]
           parkingAreaCodes?: string[]
@@ -4141,6 +4454,8 @@ export interface paths {
           kvvAreaIds?: string[]
           marketAreaCodes?: string[]
           propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
           buildingCodes?: string[]
           staircaseCodes?: string[]
           parkingAreaCodes?: string[]
@@ -4183,6 +4498,49 @@ export interface paths {
               content: components['schemas']['RentalObjectSubtype'][]
             }
           }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/search/export': {
+    /**
+     * Export a rental-object search as Excel
+     * @description Every rental object the search would return, across all pages, as an
+     * .xlsx with the listing values (grundhyra, BRA, annan information,
+     * anläggnings-ID) filled in. Takes the search's scopes and filters;
+     * page and limit are ignored.
+     */
+    get: {
+      parameters: {
+        query?: {
+          costCenterIds?: string[]
+          kvvAreaIds?: string[]
+          marketAreaCodes?: string[]
+          propertyCodes?: string[]
+          buildingCodes?: string[]
+          staircaseCodes?: string[]
+          parkingAreaCodes?: string[]
+          /** @description Individually picked objects, max 200 */
+          rentalIds?: string[]
+          types?: ('residence' | 'parkingSpace' | 'facility' | 'other')[]
+          subtypes?: string[]
+          q?: string
+        }
+      }
+      responses: {
+        /** @description Excel file */
+        200: {
+          content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -4239,11 +4597,16 @@ export interface paths {
   '/properties/{propertyCode}/kvv-area': {
     /**
      * Get the KVV-area (förvaltningsområde) and district of a property
+     * @deprecated
      * @description Reverse lookup from a property code to the KVV-area it belongs to,
      * the cost center (distrikt) of that area and the responsible
      * kvartersvärd (hydrated from Keycloak; `null` if unset or if Keycloak
      * is unreachable). Used by Odoo to stamp maintenance requests with
      * their district. 404 when the property has no KVV-area link.
+     *
+     * **Deprecated.** Answers the property default only and ignores
+     * building-level exceptions on split properties. Use
+     * `GET /kvv-areas/resolve` instead. Kept until Odoo has moved over.
      */
     get: {
       parameters: {
@@ -4309,6 +4672,59 @@ export interface paths {
           content: never
         }
         /** @description Property or KVV-area not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/kvv-areas/resolve': {
+    /**
+     * Resolve the KVV-area (förvaltningsområde) and district of a location
+     * @description Location-level lookup for split properties: if the location's
+     * building carries a KVV-area exception, that area wins over the
+     * property's link. Give exactly one of `rentalId` (lägenhet, bilplats,
+     * lokal), `buildingCode` (facilities and building-level errands) or
+     * `propertyCode` (markyta objects and property-level errands). Send
+     * the most specific key you have; the keys are not combined since they
+     * may disagree. The responsible kvartersvärd is hydrated from Keycloak
+     * (`null` if unset or unreachable). This is the per-errand lookup Odoo
+     * should use; `GET /properties/{code}/kvv-area` answers the property
+     * default only.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Rental object id. */
+          rentalId?: string
+          /** @description Building code. */
+          buildingCode?: string
+          /** @description Property code. */
+          propertyCode?: string
+        }
+      }
+      responses: {
+        /** @description KVV-area, cost center and responsible for the location */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /** @description Not exactly one of rentalId, buildingCode or propertyCode was given */
+        400: {
+          content: never
+        }
+        /**
+         * @description Unknown location or no KVV-area resolves. The body carries
+         * `code: KVV_AREA_NOT_FOUND` so callers can tell this apart from
+         * a routing 404.
+         */
         404: {
           content: never
         }
@@ -5082,6 +5498,38 @@ export interface paths {
               error?: string
             }
           }
+        }
+      }
+    }
+  }
+  '/residences/rental-blocks/rental-ids': {
+    /**
+     * Rental ids carrying a matching rental block
+     * @description Lean bulk lookup - distinct rental ids only, no pagination or enrichment. Used by Odoo to render the "Spärr skadedjur" badge on every kanban card from a single call.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by block reason caption (supports multiple values) */
+          blockReason?: string[]
+          /** @description true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, all blocks. */
+          active?: boolean
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved rental ids */
+        200: {
+          content: {
+            'application/json': components['schemas']['RentalIdsWithBlockResponse']
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
         }
       }
     }
@@ -8153,6 +8601,10 @@ export interface paths {
         400: {
           content: never
         }
+        /** @description Guide image prefix — use the /guides routes. Guide images are also omitted from every other listing. */
+        403: {
+          content: never
+        }
         /** @description Server error */
         500: {
           content: never
@@ -8179,6 +8631,10 @@ export interface paths {
         }
         /** @description Invalid request */
         400: {
+          content: never
+        }
+        /** @description Guide image key — use the /guides routes */
+        403: {
           content: never
         }
         /** @description Server error */
@@ -8214,6 +8670,10 @@ export interface paths {
         400: {
           content: never
         }
+        /** @description Guide image — use the /guides routes */
+        403: {
+          content: never
+        }
         /** @description File not found */
         404: {
           content: never
@@ -8243,6 +8703,10 @@ export interface paths {
             }
           }
         }
+        /** @description Guide image — use the /guides routes */
+        403: {
+          content: never
+        }
         /** @description File not found */
         404: {
           content: never
@@ -8266,6 +8730,10 @@ export interface paths {
       responses: {
         /** @description File deleted successfully */
         204: {
+          content: never
+        }
+        /** @description Guide image — use the /guides routes */
+        403: {
           content: never
         }
         /** @description File not found */
@@ -8296,6 +8764,10 @@ export interface paths {
               content?: components['schemas']['FileExistsResponse']
             }
           }
+        }
+        /** @description Guide image — use the /guides routes */
+        403: {
+          content: never
         }
         /** @description Server error */
         500: {
@@ -8518,7 +8990,7 @@ export interface paths {
     }
     /**
      * Delete a receipt
-     * @description Delete a receipt by ID (and associated file from MinIO)
+     * @description Delete a receipt by ID (and associated file from file storage)
      */
     delete: {
       parameters: {
@@ -8686,6 +9158,59 @@ export interface paths {
         }
         /** @description Internal server error */
         500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/keys/move-in-out': {
+    /**
+     * Move-in / move-out key status per rental object (paginated)
+     * @description Finds leases ending (lastDebitDate) and/or starting in the given ranges, then
+     * returns one row per rental object with the outgoing and incoming tenant,
+     * key/card counts, loan return and handout dates, and a derived status.
+     * Give endDateFrom+endDateTo for move-outs, startDateFrom+startDateTo for
+     * move-ins, or both for the union. Search and sort apply to the whole result;
+     * key and card data (DAX) is fetched only for the requested page.
+     */
+    get: {
+      parameters: {
+        query?: {
+          endDateFrom?: string
+          endDateTo?: string
+          startDateFrom?: string
+          startDateTo?: string
+          /** @description Matches rental object code, address, tenant name or contact code. */
+          q?: string
+          sortBy?: 'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
+          sortOrder?: 'asc' | 'desc'
+          /** @description When true, adds a `timings` block with per-phase durations. */
+          debug?: boolean
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description One page of rows */
+        200: {
+          content: {
+            'application/json': components['schemas']['PaginatedResponse'] & {
+              content?: components['schemas']['MoveInOutRow'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Keys service is syncing its DAX card owner mirror; retry later */
+        503: {
           content: never
         }
       }
@@ -10991,6 +11516,360 @@ export interface paths {
       }
     }
   }
+  '/guides/{id}/steps/{stepId}/images': {
+    /**
+     * Upload an image to a guide step
+     * @description Requires the guides-admin role. Accepts PNG, JPEG or WEBP up to 5 MB as base64, stores the file under guide/{guideId}/ and appends the image last on the step. A published guide only accepts images with a non-blank altText, since the image is visible to readers at once. The upload bumps the guide's updatedAt; the new value is returned as guideUpdatedAt and must be sent as expectedUpdatedAt on the next save.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string
+          stepId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['GuideImageUploadRequest']
+        }
+      }
+      responses: {
+        /** @description The stored image with a presigned url, and the guide's new updatedAt */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideImageUploadResponse']
+            }
+          }
+        }
+        /** @description Rejected upload: invalid-file-type (unsupported content type or magic bytes that do not match it), invalid-file-size, invalid-file-data (not plain base64), or the error code proxied from the communication service (alt-text-required when the guide is published and altText is missing or blank) */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Guide or step not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/{id}/images/{imageId}': {
+    /**
+     * Delete a guide step image
+     * @description Requires the guides-admin role. Removes the image row and the stored file. The delete bumps the guide's updatedAt; the new value is returned as guideUpdatedAt and must be sent as expectedUpdatedAt on the next save.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+          imageId: string
+        }
+      }
+      responses: {
+        /** @description Image deleted, with the guide's new updatedAt */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideImageDeleteResponse']
+            }
+          }
+        }
+        /** @description Image not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides': {
+    /**
+     * List guides
+     * @description Published guides ordered by category and title. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Pass the string 'true' to include drafts; ignored without the guides-admin role. */
+          includeDrafts?: 'true' | 'false'
+        }
+      }
+      responses: {
+        /** @description Guide summaries */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideSummary'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Create a guide
+     * @description Requires the guides-admin role. Images are added afterwards through the image upload endpoint.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateGuideRequest']
+        }
+      }
+      responses: {
+        /** @description The created guide */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideWithUrls']
+            }
+          }
+        }
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        400: {
+          content: {
+            'application/json': {
+              error?: string
+              issues?: {
+                path?: (string | number)[]
+                message?: string
+              }[]
+            }
+          }
+        }
+        /** @description Slug already taken */
+        409: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/categories': {
+    /** List guide categories */
+    get: {
+      responses: {
+        /** @description Categories ordered by name */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideCategory'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/by-slug/{slug}': {
+    /**
+     * Get a guide by slug
+     * @description Resolves the current slug only; a slug a guide had before a rename, or a malformed slug, gives 404. A draft is returned in full to guides-admin users and as an UnpublishedGuide notice to everyone else.
+     */
+    get: {
+      parameters: {
+        path: {
+          slug: string
+        }
+      }
+      responses: {
+        /** @description The guide with presigned image urls, or an unpublished notice */
+        200: {
+          content: {
+            'application/json': {
+              content?:
+                | components['schemas']['GuideWithUrls']
+                | components['schemas']['UnpublishedGuide']
+            }
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/guides/{id}': {
+    /**
+     * Get a guide by id
+     * @description Used by the editor. Drafts are only returned to guides-admin users.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The guide with presigned image urls */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideWithUrls']
+            }
+          }
+        }
+        /** @description Draft requested without the guides-admin role */
+        403: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Update a guide
+     * @description Requires the guides-admin role. Replaces metadata and steps; steps missing from the payload are deleted together with their images, and the files are removed from storage. expectedUpdatedAt must be the guide's updatedAt as last read by the client (from the guide, a previous save, or an image upload/delete response); a stale value is rejected with 409 guide-modified so a save from outdated state cannot delete newer images.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateGuideRequest']
+        }
+      }
+      responses: {
+        /** @description The updated guide */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['GuideWithUrls']
+            }
+          }
+        }
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        400: {
+          content: {
+            'application/json': {
+              error?: string
+              issues?: {
+                path?: (string | number)[]
+                message?: string
+              }[]
+            }
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Conflict proxied from the communication service: slug-taken, or guide-modified when expectedUpdatedAt is stale (the guide was saved or its images changed since the client loaded it) */
+        409: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+    /**
+     * Delete a guide
+     * @description Requires the guides-admin role. Removes the guide, its steps, image rows and image files.
+     */
+    delete: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description Guide deleted */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                deleted?: boolean
+              }
+            }
+          }
+        }
+        /** @description Guide not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['NotFoundResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
   '/v1/contacts': {
     /**
      * List and filter(search) for contact information
@@ -12365,7 +13244,9 @@ export interface components {
       dueDate: ('null' | null) | string
       rentalObjectCode: string
       status: string
+      maintenanceTeam?: string | null
       hiddenFromMyPages?: boolean
+      closeRequestPending: boolean
       workOrderRows: {
         description: string | null
         locationCode: string | null
@@ -12926,6 +13807,9 @@ export interface components {
         code: string | null
         name: string | null
       }
+    }
+    RentalIdsWithBlockResponse: {
+      content: string[]
     }
     FacilitySearchResult: {
       /** @description Unique identifier for the search result */
@@ -13639,6 +14523,8 @@ export interface components {
         facilityCount: number
         otherCount: number
       }
+      /** @enum {string} */
+      share?: 'default' | 'exception'
     }
     CostCenterTreeKvvArea: {
       /** Format: uuid */
@@ -13690,6 +14576,8 @@ export interface components {
           facilityCount: number
           otherCount: number
         }
+        /** @enum {string} */
+        share?: 'default' | 'exception'
       }[]
     }
     CostCenterTree: {
@@ -13752,6 +14640,8 @@ export interface components {
             facilityCount: number
             otherCount: number
           }
+          /** @enum {string} */
+          share?: 'default' | 'exception'
         }[]
       }[]
     }
@@ -13941,6 +14831,8 @@ export interface components {
             }[]
           }[]
         }[]
+        /** @enum {string} */
+        share?: 'default' | 'exception'
       }[]
     }
     PropertyTree: {
@@ -14025,6 +14917,8 @@ export interface components {
               }[]
             }[]
           }[]
+          /** @enum {string} */
+          share?: 'default' | 'exception'
         }[]
       }[]
     }
@@ -14834,6 +15728,42 @@ export interface components {
       organisationFilter?: string
       offset?: number
       limit?: number
+    }
+    MoveInOutRow: {
+      rentalObjectCode: string
+      address: string | null
+      objectTypeCode: string | null
+      outgoing: {
+        leaseId: string
+        names: string[]
+        contactCodes: string[]
+        /** Format: date-time */
+        leaseStartDate: string | null
+        /** Format: date-time */
+        lastDebitDate: string | null
+      } | null
+      incoming: components['schemas']['MoveInOutRow']['outgoing'] | null
+      keyCount: number
+      cardCount: number
+      outgoingAllReturned: boolean | null
+      /** Format: date-time */
+      outgoingReturnedAt: string | null
+      /** Format: date-time */
+      incomingLoanCreatedAt: string | null
+      /** Format: date-time */
+      incomingLoanPickedUpAt: string | null
+      /** @enum {string} */
+      status:
+        | 'UNKNOWN'
+        | 'NOT_RETURNED'
+        | 'LOANED_TO_OTHER'
+        | 'CREATED'
+        | 'HANDED_OUT'
+        | 'RETURNED_VACANT'
+        | 'NO_KEYS'
+        | 'NO_LOANS'
+        | 'PARTIAL'
+      notes: string[]
     }
     PaginatedResponse: {
       content: unknown[]
@@ -16398,7 +17328,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'my-pages'
         fromAddress: string
         subject: string | null
         body: string
@@ -16413,6 +17343,7 @@ export interface components {
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
       }
@@ -16441,7 +17372,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'my-pages'
         fromAddress: string
         subject: string | null
         body: string
@@ -16456,6 +17387,7 @@ export interface components {
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
       }
@@ -16477,24 +17409,339 @@ export interface components {
         createdAt: string
       }[]
     }
+    ReleaseNote: {
+      /** Format: uuid */
+      id: string
+      /** @enum {string} */
+      app:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title: string
+      description: string
+      /** @enum {string} */
+      category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned: boolean
+      /** Format: date-time */
+      publishedAt: string | null
+      createdBy: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateReleaseNote: {
+      /** @enum {string} */
+      app:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title: string
+      description: string
+      /** @enum {string} */
+      category: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned?: boolean
+      /** Format: date-time */
+      publishedAt?: string | null
+    }
+    UpdateReleaseNote: {
+      /** @enum {string} */
+      app?:
+        | 'general'
+        | 'property-tree'
+        | 'keys-portal'
+        | 'internal-portal'
+        | 'mina-sidor'
+        | 'sok-ledigt'
+        | 'odoo'
+        | 'core'
+        | 'leasing'
+        | 'property'
+        | 'work-order'
+        | 'keys'
+        | 'communication'
+        | 'contacts'
+        | 'inspection'
+        | 'economy'
+      title?: string
+      description?: string
+      /** @enum {string} */
+      category?: 'feature' | 'fix' | 'improvement' | 'info' | 'warning'
+      pinned?: boolean
+      /** Format: date-time */
+      publishedAt?: string | null
+    }
+    ReleaseNoteCapabilities: {
+      canManage: boolean
+    }
+    GuideCategory: {
+      /** Format: uuid */
+      id: string
+      name: string
+      /** Format: uuid */
+      parentId: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    GuideSummary: {
+      /** Format: uuid */
+      id: string
+      slug: string
+      title: string
+      description: string
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      category: {
+        /** Format: uuid */
+        id: string
+        name: string
+        /** Format: uuid */
+        parentId: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }
+      stepCount: number
+      createdBy: string
+      updatedBy: string
+      /** Format: date-time */
+      publishedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    GuideStepImageWithUrl: {
+      /** Format: uuid */
+      id: string
+      /** Format: uuid */
+      stepId: string
+      sortOrder: number
+      storageKey: string
+      filename: string
+      contentType: string
+      altText: string
+      caption: string | null
+      /** Format: date-time */
+      createdAt: string
+      url: string
+    }
+    GuideWithUrls: {
+      /** Format: uuid */
+      id: string
+      slug: string
+      title: string
+      description: string
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      category: {
+        /** Format: uuid */
+        id: string
+        name: string
+        /** Format: uuid */
+        parentId: string | null
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }
+      stepCount: number
+      createdBy: string
+      updatedBy: string
+      /** Format: date-time */
+      publishedAt: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+      steps: {
+        /** Format: uuid */
+        id: string
+        /** Format: uuid */
+        guideId: string
+        sortOrder: number
+        title: string
+        body: string
+        /** @enum {string|null} */
+        calloutType: 'tip' | 'note' | 'warning' | null
+        calloutText: string | null
+        images: {
+          /** Format: uuid */
+          id: string
+          /** Format: uuid */
+          stepId: string
+          sortOrder: number
+          storageKey: string
+          filename: string
+          contentType: string
+          altText: string
+          caption: string | null
+          /** Format: date-time */
+          createdAt: string
+          url: string
+        }[]
+        /** Format: date-time */
+        createdAt: string
+        /** Format: date-time */
+        updatedAt: string
+      }[]
+    }
+    UnpublishedGuide: {
+      slug: string
+      title: string
+      /** @enum {boolean} */
+      unpublished: true
+    }
+    CreateGuideRequest: {
+      title: string
+      /** @default */
+      description?: string
+      slug: string
+      category:
+        | {
+            /** Format: uuid */
+            id: string
+          }
+        | {
+            name: string
+            /** Format: uuid */
+            parentId?: string
+          }
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      steps: {
+        /** Format: uuid */
+        id: string
+        title: string
+        body: string
+        /** @enum {string|null} */
+        calloutType?: 'tip' | 'note' | 'warning' | null
+        calloutText?: string | null
+        /** @default [] */
+        images?: {
+          /** Format: uuid */
+          id: string
+          sortOrder: number
+          altText: string
+          caption: string | null
+        }[]
+      }[]
+    }
+    UpdateGuideRequest: {
+      title: string
+      /** @default */
+      description?: string
+      slug: string
+      category:
+        | {
+            /** Format: uuid */
+            id: string
+          }
+        | {
+            name: string
+            /** Format: uuid */
+            parentId?: string
+          }
+      /** @enum {string} */
+      status: 'draft' | 'published'
+      steps: {
+        /** Format: uuid */
+        id: string
+        title: string
+        body: string
+        /** @enum {string|null} */
+        calloutType?: 'tip' | 'note' | 'warning' | null
+        calloutText?: string | null
+        /** @default [] */
+        images?: {
+          /** Format: uuid */
+          id: string
+          sortOrder: number
+          altText: string
+          caption: string | null
+        }[]
+      }[]
+      /** Format: date-time */
+      expectedUpdatedAt: string
+    }
+    GuideImageUploadRequest: {
+      /** @description Original file name, kept as image metadata */
+      fileName: string
+      /** @description Base64 encoded file content */
+      fileData: string
+      /**
+       * @description MIME type of the image
+       * @enum {string}
+       */
+      contentType: 'image/png' | 'image/jpeg' | 'image/webp'
+      altText?: string
+      caption?: string | null
+    }
+    GuideImageUploadResponse: {
+      image: {
+        /** Format: uuid */
+        id: string
+        /** Format: uuid */
+        stepId: string
+        sortOrder: number
+        storageKey: string
+        filename: string
+        contentType: string
+        altText: string
+        caption: string | null
+        /** Format: date-time */
+        createdAt: string
+        url: string
+      }
+      /** Format: date-time */
+      guideUpdatedAt: string
+    }
+    GuideImageDeleteResponse: {
+      /** @enum {boolean} */
+      deleted: true
+      /** Format: date-time */
+      guideUpdatedAt: string
+    }
+    /** @description The parts of a Keycloak user that clients need to show and pick users. */
     KeycloakUser: {
       id: string
       username: string
       firstName?: string
       lastName?: string
-      email?: string
-      emailVerified?: boolean
-      /** @description Open-ended map of custom user attributes. Keys are realm-configurable; each value is an array of strings. */
+      /** @description The user attributes employeeId and mobilePhone, when set. Each value is an array of strings. */
       attributes?: {
-        [key: string]: string[]
+        employeeId?: string[]
+        mobilePhone?: string[]
       }
-      /** Format: int64 */
-      createdTimestamp?: number
-      enabled?: boolean
-      totp?: boolean
-      disableableCredentialTypes?: string[]
-      requiredActions?: string[]
-      notBefore?: number
     }
     RentalPropertyResponse: {
       content?: {
@@ -16508,6 +17755,7 @@ export interface components {
           number?: string
           type?: string
           roomTypeCode?: string
+          roomCount?: number | null
           entrance?: string
           floor?: string
           hasElevator?: boolean

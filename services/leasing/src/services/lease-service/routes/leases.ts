@@ -1,9 +1,8 @@
 import KoaRouter from '@koa/router'
-import { leasing, schemas } from '@onecore/types'
+import { Lease, leasing, schemas } from '@onecore/types'
 import { mapLeasesToLfExportRows } from '../services/lf-export'
 import { z } from 'zod'
 import {
-  getLeases,
   getContacts,
   getContactByContactCode,
 } from '../adapters/xpand/tenant-lease-adapter'
@@ -19,6 +18,7 @@ import {
 
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import * as tenfastHelpers from '../helpers/tenfast'
 import config from '../../../common/config'
 import { toYearMonthDayString } from '../adapters/tenfast/schemas'
@@ -1222,12 +1222,75 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/leases/batch', async (ctx) => {
+  router.post('(.*)/leases/batch', boundTenfastCalls, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const leaseIds = (ctx.request.body as any).leaseIds as string[] // TODO schema
+    const body = (ctx.request.body ?? {}) as { leaseIds?: unknown }
+
+    if (!Array.isArray(body.leaseIds)) {
+      ctx.status = 400
+      ctx.body = { error: 'leaseIds must be an array', ...metadata }
+      return
+    }
+
+    const leaseIds = [...new Set(body.leaseIds as string[])]
 
     try {
-      const leases = await getLeases(leaseIds)
+      // Tenfast has no batch lookup, so fetch each lease the same way
+      // GET /leases/:leaseId does, a few at a time. A lease that fails is
+      // left out rather than failing the whole batch.
+      const concurrency = 10
+      const leases: Lease[] = []
+      const notFoundLeaseIds: string[] = []
+      const failedLeaseIds: string[] = []
+
+      for (let i = 0; i < leaseIds.length; i += concurrency) {
+        const chunk = leaseIds.slice(i, i + concurrency)
+        const results = await Promise.all(
+          chunk.map((leaseId) => tenfastAdapter.getLeaseByLeaseId(leaseId))
+        )
+
+        results.forEach((result, index) => {
+          if (result.ok) {
+            leases.push(tenfastHelpers.mapToOnecoreLease(result.data))
+          } else if (result.err === 'not-found') {
+            notFoundLeaseIds.push(chunk[index])
+          } else {
+            failedLeaseIds.push(chunk[index])
+          }
+        })
+      }
+
+      const summary = {
+        requested: leaseIds.length,
+        returned: leases.length,
+        notFound: notFoundLeaseIds.length,
+        failed: failedLeaseIds.length,
+      }
+
+      // Nothing came back and at least one lookup failed: most likely Tenfast
+      // is down or rejecting us, so say so instead of answering with an
+      // empty list that looks like "no leases".
+      if (leases.length === 0 && failedLeaseIds.length > 0) {
+        logger.error(
+          { ...summary, failedLeaseIds },
+          'POST /leases/batch: every Tenfast lookup failed'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Could not get leases from Tenfast', ...metadata }
+        return
+      }
+
+      if (failedLeaseIds.length > 0) {
+        logger.error(
+          { ...summary, failedLeaseIds },
+          'POST /leases/batch: some leases could not be fetched from Tenfast'
+        )
+      } else if (notFoundLeaseIds.length > 0) {
+        logger.info(
+          { ...summary, notFoundLeaseIds },
+          'POST /leases/batch: some leases were not found in Tenfast'
+        )
+      }
 
       ctx.status = 200
       ctx.body = {
@@ -1235,6 +1298,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error: any) {
+      logger.error(error, 'Error when getting lease batch')
       ctx.status = 500
       ctx.body = {
         message: error.message,

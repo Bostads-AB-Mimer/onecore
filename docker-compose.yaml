@@ -11,7 +11,7 @@ services:
     networks:
       - onecore
     ports:
-      - "1438:1433"
+      - '1438:1433'
     volumes:
       - sql:/var/opt/mssql
 
@@ -19,7 +19,7 @@ services:
     container_name: onecore-elasticsearch
     environment:
       - xpack.security.enabled=false
-      - "discovery.type=single-node"
+      - 'discovery.type=single-node'
     image: docker.elastic.co/elasticsearch/elasticsearch:8.4.1
     networks:
       - onecore
@@ -44,19 +44,17 @@ services:
     ports:
       - 5608:5601
 
-  minio:
-    # Last published community image; Docker Hub repo is gone. To be replaced.
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: onecore-minio
-    command: server /data --console-address ":9001"
+  seaweedfs:
+    # Keep in sync with the SeaweedFS version deployed via Helm (DEV-109)
+    image: chrislusf/seaweedfs:4.47
+    container_name: onecore-seaweedfs
+    # Single-container mode: master, volume, filer and S3 gateway in one process
+    command: server -dir=/data -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json
     ports:
       - 9000:9000
-      - 9001:9001
-    environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
     volumes:
-      - minio:/usr/share/minio-data
+      - seaweedfs:/data
+      - ./docker/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
 
 networks:
   onecore:
@@ -65,4 +63,4 @@ networks:
 volumes:
   sql:
   elasticsearch:
-  minio:
+  seaweedfs:

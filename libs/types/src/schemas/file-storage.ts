@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 /**
  * Basic file info returned by /files endpoint (list files)
- * Aligned with MinIO's BucketItem type (after JSON serialization)
+ * Shape of a listed S3 object (after JSON serialization)
  */
 export const FileListItemSchema = z.object({
   name: z.string().describe('Full file path/name'),
@@ -13,7 +13,7 @@ export const FileListItemSchema = z.object({
 
 /**
  * Full file metadata from /files/{fileName}/metadata endpoint
- * Aligned with MinIO's BucketItemStat type (after JSON serialization)
+ * Shape of S3 object metadata (after JSON serialization)
  */
 export const FileMetadataSchema = FileListItemSchema.extend({
   metaData: z

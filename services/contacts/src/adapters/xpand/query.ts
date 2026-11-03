@@ -3,6 +3,8 @@ import { Pagination } from '@src/adapters'
 import { ContactCode, NationalIdNumber } from '@src/domain'
 import { ContactTypeFilter, ObjectKey } from '@src/domain/contact'
 
+import { nationalIdPrefixes } from '@src/domain/search-term'
+
 import { currentInvoiceAddress } from './address-sql'
 import { isLeaseHolderColumn, LEASE_HOLDER } from './relation-sql'
 import { DbContactRow } from './db-model'
@@ -27,7 +29,6 @@ const wildcard = (column: string, wc: string): [string, string[]] => [
   `${column} COLLATE Latin1_General_100_CI_AI LIKE ?`,
   [`%${wc}%`],
 ]
-
 /**
  * Utility-function that generates the arguments for knex.whereRaw
  * for WHERE-criteria of the type `<column> IN (...)` where both
@@ -334,6 +335,10 @@ export const contactsQuery = () => {
    *
    * Queries that use multiple wildcards will call this function
    * once for each wildcard.
+   *
+   * Every word must hit the contact row (code, a name field, or the national
+   * id by prefix when the word is digit-like), or the whole string must hit
+   * an address line.
    */
   const wildcardUnion = (db: knex.Knex, wc: string) => {
     const words = wc.split(/\s+/).filter(Boolean)
@@ -344,13 +349,18 @@ export const contactsQuery = () => {
       .modify(baseFilters)
       .modify((qb) => {
         for (const word of words) {
-          qb.andWhere((b) =>
-            b
-              .whereRaw(...wildcard('cmctckod', word))
+          const nidPrefixes = nationalIdPrefixes(word)
+          qb.andWhere((b) => {
+            b.whereRaw(...wildcard('cmctckod', word))
               .orWhereRaw(...wildcard('fnamn', word))
               .orWhereRaw(...wildcard('enamn', word))
               .orWhereRaw(...wildcard('cmctcben', word))
-          )
+            for (const nidPrefix of nidPrefixes) {
+              b.orWhereRaw(`${NORMALISED_NATIONAL_ID_SQL} LIKE ?`, [
+                `${nidPrefix}%`,
+              ])
+            }
+          })
         }
       })
 
