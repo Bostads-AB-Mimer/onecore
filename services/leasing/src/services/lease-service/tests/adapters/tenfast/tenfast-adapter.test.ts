@@ -371,7 +371,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     const terminatingLease = factory.tenfastLease.build({
       externalId: '110-707-00-0004/07',
       startDate: new Date('2025-01-01'),
-      endDate: new Date('2026-10-31'),
+      endDate: new Date('2099-10-31'),
       stage: 'terminationScheduled',
       cancellation: {
         cancelled: false,
@@ -381,7 +381,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
         notifiedAt: null,
         handledAt: new Date('2026-07-23'),
         handledBy: null,
-        preferredMoveOutDate: new Date('2026-10-31'),
+        preferredMoveOutDate: new Date('2099-10-31'),
         cancelledByType: null,
       },
       hyresobjekt: [
@@ -404,7 +404,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     expect(result.data).toHaveLength(1)
     expect(result.data![0].rentalObjectCode).toBe('R2002')
     expect(result.data![0].vacantFrom).toEqual(
-      new Date('2026-11-01T00:00:00.000Z')
+      new Date('2099-11-01T00:00:00.000Z')
     )
   })
 

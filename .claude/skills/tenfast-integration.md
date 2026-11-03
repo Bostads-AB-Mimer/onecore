@@ -188,7 +188,9 @@ vacant), so an unreadable lease never makes an object vacant.
 - **Any of them without `endDate`:** not vacant (`vacantFrom` undefined). That
   covers a tenancy until further notice and a signed successor to a terminated
   lease.
-- **Otherwise:** vacant the day after the latest end.
+- **Otherwise:** vacant the day after the latest end, but never before today.
+  A lease past its end date can stay in force until Tenfast moves it to
+  `terminated` (AVTAL-408).
 
 `determineVacantFrom` keeps undefined as undefined, whatever the Xpand block
 says. Rule decided in AVTAL-343.

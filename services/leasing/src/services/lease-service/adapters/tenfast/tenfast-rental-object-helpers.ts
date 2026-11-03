@@ -108,17 +108,19 @@ export const getVacantFrom = (leases: LeaseStageInfo[]): Date | undefined => {
   const leasedUntil = getLeasedUntil(leases)
   if (leasedUntil === 'indefinite') return undefined
 
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
+
   if (leasedUntil) {
-    // Vacant the day after the last lease ends.
+    // Vacant the day after the last lease ends, but never before today: a
+    // lease past its end date can stay in force until Tenfast moves it on.
     const vacantFrom = new Date(leasedUntil)
     vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
     vacantFrom.setUTCHours(0, 0, 0, 0)
-    return vacantFrom
+    return vacantFrom > today ? vacantFrom : today
   }
 
   // No lease running or to come: vacant as of today.
-  const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
   return today
 }
 
