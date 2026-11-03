@@ -17,6 +17,8 @@ const LOGIN_CONTACT_DATA_SET = [
   'P920011',
   'P920012',
   'P920013',
+  'P920014',
+  'P920015',
 ]
 
 describe('GET /contacts/by-nid/:nid/login-contact', () => {
@@ -54,6 +56,10 @@ describe('GET /contacts/by-nid/:nid/login-contact', () => {
 
   it('picks the customer over a newer supplier contact', async () => {
     expect(await loginContactCode('196002029814')).toBe('P920003')
+  })
+
+  it('picks a customer without any signal over a newer supplier contact', async () => {
+    expect(await loginContactCode('197707079872')).toBe('P920014')
   })
 
   it("ignores the sole trader's company contact, even with a lease", async () => {

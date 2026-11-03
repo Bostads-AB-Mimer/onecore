@@ -449,6 +449,8 @@ UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 2 WHERE cmctckod = 'RE
 --               registration with queue time → P920001.
 -- 196002029814: P920003 has an Xpand user, P920004 is a newer supplier-only
 --               contact without one → P920003.
+-- 197707079872: P920014 is a former customer with no lease, queue time or
+--               Xpand user, P920015 a newer supplier-only contact → P920014.
 -- 197003039828: F920005 is the sole trader's company contact, P920006 the
 --               person → P920006.
 -- 198004049832: P920007 and P920008 both registered on the web with queue
@@ -469,7 +471,20 @@ INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, c
   ('_LGNC920010    ', '_LGNO920010    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920010', 'Login Deleted', '195512129858', '_LGNU920010    ', '2024-03-01', 1, 1053, 'LGN9200010'),
   ('_LGNC920011    ', '_LGNO920011    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920011', 'Login Live', '195512129858', NULL, '2019-03-01', 0, 1053, 'LGN9200011'),
   ('_LGNC920012    ', '_LGNO920012    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920012', 'Login EndedLease', '196611119865', NULL, '2018-03-01', 0, 1053, 'LGN9200012'),
-  ('_LGNC920013    ', '_LGNO920013    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920013', 'Login Queue', '196611119865', NULL, '2024-03-01', 0, 1053, 'LGN9200013');
+  ('_LGNC920013    ', '_LGNO920013    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920013', 'Login Queue', '196611119865', NULL, '2024-03-01', 0, 1053, 'LGN9200013'),
+  ('_LGNC920014    ', '_LGNO920014    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920014', 'Login FormerCustomer', '197707079872', NULL, '2015-03-01', 0, 1053, 'LGN9200014'),
+  ('_LGNC920015    ', '_LGNO920015    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920015', 'Login Refund', '197707079872', NULL, '2024-03-01', 0, 1053, 'LGN9200015');
+
+-- Roles: Sökande (_0DE0O2500) on the customers, Leverantör (_0DE0O1STV) alone
+-- on the supplier contacts.
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol)
+SELECT '_CROLGN0003    ', keycmctc, '_0DE0O2500     ' FROM cmctc WHERE cmctckod = 'P920003';
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol)
+SELECT '_CROLGN0004    ', keycmctc, '_0DE0O1STV     ' FROM cmctc WHERE cmctckod = 'P920004';
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol)
+SELECT '_CROLGN0014    ', keycmctc, '_0DE0O2500     ' FROM cmctc WHERE cmctckod = 'P920014';
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol)
+SELECT '_CROLGN0015    ', keycmctc, '_0DE0O1STV     ' FROM cmctc WHERE cmctckod = 'P920015';
 
 -- Leases: OBJ20 under notice (last debit far ahead), OBJ21 running, OBJ22 ended.
 INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES

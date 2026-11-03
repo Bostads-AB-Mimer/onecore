@@ -225,8 +225,8 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
 
     /**
      * The contact a person logs in to mimer.nu as. Unlike getByNationalId, which returns
-     * whichever contact comes first, the contacts service skips deleted, company and
-     * supplier-only contacts and prefers a tenant, then queue time.
+     * whichever contact comes first, the contacts service skips deleted and company
+     * contacts, ranks supplier-only contacts last and prefers a tenant, then queue time.
      */
     async getLoginContactByNationalId(
       nid: string

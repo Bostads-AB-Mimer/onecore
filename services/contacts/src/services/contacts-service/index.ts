@@ -840,7 +840,7 @@ export const routes = (
     {
       summary: 'Get the contact a person logs in to mimer.nu as',
       description:
-        'A personnummer can have several contacts. Only private individuals that are not deleted are considered, ranked by current lease, then queue time, then an Xpand user, then newest. 404 when there is none or nid is not a valid personnummer or samordningsnummer.',
+        'A personnummer can have several contacts. Only private individuals that are not deleted are considered, ranked with supplier-only contacts last, then by current lease, then queue time, then an Xpand user, then newest. 404 when there is none or nid is not a valid personnummer or samordningsnummer.',
       tags: ['Contacts'],
       params: {
         nid: z.string(),

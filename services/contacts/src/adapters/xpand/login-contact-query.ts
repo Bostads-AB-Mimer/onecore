@@ -4,8 +4,12 @@ import { NationalIdForms } from '@src/domain/national-id'
 import { NORMALISED_NATIONAL_ID_SQL } from './query'
 import { INNEHAVARE, RENSAD_GDPR } from './relation-sql'
 
+/** cmrol key of the role captioned Leverantör (supplier). */
+export const SUPPLIER_ROLE = '_0DE0O1STV'
+
 type CandidateRow = {
   contactCode: string
+  supplierOnly: number
   currentTenant: number
   queueTime: number
   xpandUser: number
@@ -18,6 +22,10 @@ type CandidateRow = {
  *
  * A sole trader's company contact carries the same number but is a separate
  * customer, so only P codes are candidates.
+ *
+ * A contact whose only role is Leverantör is one staff created to pay money
+ * out to the person. It is still a candidate, so a person with nothing else
+ * can log in, but it ranks last.
  *
  * A lease counts while it is still running, also when notice has been given
  * (`sistadeb` in the future): that tenant still lives there. This is wider
@@ -39,6 +47,16 @@ export const loginContactCandidates = async (
     .select(
       'cmctc.cmctckod as contactCode',
       'cmctc.createdate as createdAt',
+      db.raw(
+        `CASE WHEN EXISTS (
+           SELECT 1 FROM cmcro r
+           WHERE r.keycmctc = cmctc.keycmctc AND TRIM(r.keycmrol) = ?
+         ) AND NOT EXISTS (
+           SELECT 1 FROM cmcro r
+           WHERE r.keycmctc = cmctc.keycmctc AND TRIM(r.keycmrol) <> ?
+         ) THEN 1 ELSE 0 END AS supplierOnly`,
+        [SUPPLIER_ROLE, SUPPLIER_ROLE]
+      ),
       db.raw(
         `CASE WHEN EXISTS (
            SELECT 1 FROM hyavk a
@@ -64,6 +82,7 @@ export const loginContactCandidates = async (
 
   return rows.map((r) => ({
     contactCode: r.contactCode.trim(),
+    supplierOnly: r.supplierOnly === 1,
     currentTenant: r.currentTenant === 1,
     queueTime: r.queueTime === 1,
     xpandUser: r.xpandUser === 1,

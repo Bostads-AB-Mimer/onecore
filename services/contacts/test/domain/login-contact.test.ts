@@ -6,6 +6,7 @@ import {
 const candidate = (
   overrides: Partial<LoginContactCandidate> & { contactCode: string }
 ): LoginContactCandidate => ({
+  supplierOnly: false,
   currentTenant: false,
   queueTime: false,
   xpandUser: false,
@@ -53,7 +54,7 @@ describe('pickLoginContact', () => {
     expect(choice?.contactCode).toBe('P2')
   })
 
-  it('prefers a contact with an Xpand user over a newer one without (a supplier contact)', () => {
+  it('prefers a contact with an Xpand user over a newer one without', () => {
     const choice = pickLoginContact([
       candidate({ contactCode: 'P2', createdAt: new Date('2024-01-01') }),
       candidate({
@@ -64,6 +65,27 @@ describe('pickLoginContact', () => {
     ])
 
     expect(choice).toMatchObject({ contactCode: 'P1', ambiguous: false })
+  })
+
+  it('ranks a supplier-only contact last, even when it is newer', () => {
+    const choice = pickLoginContact([
+      candidate({
+        contactCode: 'P2',
+        supplierOnly: true,
+        createdAt: new Date('2024-01-01'),
+      }),
+      candidate({ contactCode: 'P1', createdAt: new Date('2015-01-01') }),
+    ])
+
+    expect(choice).toMatchObject({ contactCode: 'P1', ambiguous: false })
+  })
+
+  it('still picks a supplier-only contact when it is the only one', () => {
+    const choice = pickLoginContact([
+      candidate({ contactCode: 'P1', supplierOnly: true }),
+    ])
+
+    expect(choice?.contactCode).toBe('P1')
   })
 
   it('picks the newest when the signals tie, and flags it ambiguous', () => {

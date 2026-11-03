@@ -10,6 +10,11 @@ import { ContactCode } from './contact'
  */
 export type LoginContactCandidate = {
   contactCode: ContactCode
+  /**
+   * Its only role is Leverantör: a contact staff create to pay money out to
+   * the person, never the one they use.
+   */
+  supplierOnly: boolean
   /** Holds a lease today (INNEHAVARE), including one under notice. */
   currentTenant: boolean
   /** Has queue time (bkqte). */
@@ -31,7 +36,7 @@ export type LoginContactChoice = {
 }
 
 const signals = (c: LoginContactCandidate) =>
-  [c.currentTenant, c.queueTime, c.xpandUser].map(Number)
+  [!c.supplierOnly, c.currentTenant, c.queueTime, c.xpandUser].map(Number)
 
 const compareSignals = (a: LoginContactCandidate, b: LoginContactCandidate) => {
   const sa = signals(a)
@@ -53,9 +58,10 @@ const compareAge = (a: LoginContactCandidate, b: LoginContactCandidate) => {
 
 /**
  * Picks the contact a person logs in as among the contacts for their
- * personnummer: a current tenant first, then one with queue time, then one
- * with an Xpand user. When those tie, the newest wins, since a second
- * registration is made because the older one no longer works.
+ * personnummer: anything but a supplier-only contact first, then a current
+ * tenant, then one with queue time, then one with an Xpand user. When those
+ * tie, the newest wins, since a second registration is made because the older
+ * one no longer works.
  *
  * @returns null when there are no candidates.
  */
