@@ -16,12 +16,14 @@ interface TenantPersonalInfoProps {
   tenant: Tenant | LeaseTenant
   relatedContacts?: RelatedContact[]
   variant?: 'compact' | 'full'
+  isSubletTenant?: boolean
 }
 
 export function TenantPersonalInfo({
   tenant,
   relatedContacts = [],
   variant = 'full',
+  isSubletTenant = false,
 }: TenantPersonalInfoProps) {
   const displayName = formatTenantName(tenant)
   const relationSummary = getIncomingRelationSummary(relatedContacts)
@@ -61,7 +63,10 @@ export function TenantPersonalInfo({
         )}
         <CopyableField label="Kundnummer" value={tenant.contactCode} />
         {variant === 'full' && (
-          <CopyableField label="Typ/roll" value={getTenantRoles(tenant)} />
+          <CopyableField
+            label="Typ/roll"
+            value={getTenantRoles(tenant, { isSubletTenant })}
+          />
         )}
         {variant === 'full' && relationSummary && (
           <CopyableField label="Relaterade kontakter" value={relationSummary} />

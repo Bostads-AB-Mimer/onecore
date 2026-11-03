@@ -36,6 +36,17 @@ export const FilterLeasesQueryParamsSchema = z.object({
 
 export const GetLeasesOptionsSchema = FilterLeasesQueryParamsSchema
 
+export const GetLeasesByContactCodeOptionsSchema =
+  GetLeasesOptionsSchema.extend({
+    includeSubletLeases: z
+      .enum(['true', 'false'])
+      .default('false')
+      .describe(
+        'Also return leases where the contact is the current sublet tenant (andrahandshyresgäst).'
+      )
+      .transform((value) => value === 'true'),
+  })
+
 export const PreliminaryTerminateLeaseRequestSchema = z.object({
   contactCode: z.string(),
   lastDebitDate: z.string().datetime(),
