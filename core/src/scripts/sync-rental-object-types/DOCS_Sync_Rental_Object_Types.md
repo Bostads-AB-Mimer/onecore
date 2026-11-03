@@ -21,7 +21,7 @@ Hyresobjekt 807-033-01-0101
 - Har samma hyresobjekt ändrats flera gånger sedan förra körningen synkas bara den senaste ändringen.
 - Rader som inte går att tolka hoppas över med en varning i loggen.
 
-Leasing svarar också med tidpunkten för den senaste rad den läst, även om raden inte gick att tolka. Den sparas som position, så en rad som inte går att tolka läses om, och dess varning loggas, bara tills fönstret passerat den — ungefär tio körningar. Samma luckor som för de andra synkarna gäller: rader från timmen som upprepas när klockan ställs tillbaka, och rader som syns i `cmlog` mer än fem minuter efter sin `logtime`, kan tappas — se [processöversikten](../DOCS_Sync_Overview.md#cmlog-som-ändringskälla).
+Leasing svarar också med tidpunkten för den senaste rad den läst, även om raden inte gick att tolka. Den sparas som position, så en rad som inte går att tolka läses om, och dess varning loggas, bara tills fönstret passerat den — som längst ungefär 70 körningar på vintertid och 130 på sommartid (se [Sparad position](../DOCS_Sync_Overview.md#sparad-position)). Samma luckor som för de andra synkarna gäller: rader från timmen som upprepas när klockan ställs tillbaka, och rader som syns i `cmlog` mer än fem minuter efter sin `logtime`, kan tappas — se [processöversikten](../DOCS_Sync_Overview.md#cmlog-som-ändringskälla).
 
 ## Vilka objekt som är i scope
 
@@ -127,7 +127,7 @@ sequenceDiagram
                 Core ->> Communication: Failure mail
             end
 
-            Core ->> PVC: Save position once the second is done
+            Core ->> PVC: Save position after the row
         end
         Core ->> PVC: Save until, if later
     end

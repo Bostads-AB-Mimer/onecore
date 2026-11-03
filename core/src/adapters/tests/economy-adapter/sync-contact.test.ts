@@ -1,3 +1,4 @@
+import axios from 'axios'
 import nock from 'nock'
 
 import config from '../../../common/config'
@@ -57,11 +58,20 @@ describe('economy-adapter.syncContactToEconomy', () => {
     }
   })
 
-  it.each([400, 404])(
-    'returns sync-failed on %i when 4xx resolves process-wide',
-    async (status) => {
+  describe('when 4xx resolves process-wide', () => {
+    let originalValidateStatus: typeof axios.defaults.validateStatus
+
+    beforeAll(async () => {
+      originalValidateStatus = axios.defaults.validateStatus
       // Sets axios.defaults.validateStatus to accept < 500 on the shared instance
       await import('../../leasing-adapter')
+    })
+
+    afterAll(() => {
+      axios.defaults.validateStatus = originalValidateStatus
+    })
+
+    it.each([400, 404])('returns sync-failed on %i', async (status) => {
       const payload = factory.syncContactToEconomyPayload.build()
 
       nock(config.economyService.url)
@@ -81,8 +91,8 @@ describe('economy-adapter.syncContactToEconomy', () => {
         err: 'sync-failed',
         statusCode: status,
       })
-    }
-  )
+    })
+  })
 
   it('returns unknown on network error', async () => {
     const payload = factory.syncContactToEconomyPayload.build()

@@ -55,7 +55,7 @@ Relationerna själva hanteras utanför den här synken:
 
 De tre anropen görs parallellt och **alla tre måste lyckas** för att raden ska räknas som synkad. Misslyckas något hamnar hela raden i felkön, med status per mål i felmeddelandet (`tenfast=… xledger=… odoo=…`).
 
-Det gäller även när Economy avvisar kunden med ett 4xx-svar, t.ex. för att kontakten saknar namn i Xpand. Ett återförsök lyckas först när uppgiften rättats i Xpand; rättelsen skriver en ny `cmlog`-rad som ersätter den köade.
+Det gäller även när Economy avvisar kunden med ett 4xx-svar, t.ex. för att kontakten saknar namn i Xpand. Den köade raden skickar samma uppgifter vid varje återförsök och lyckas därför aldrig. Det som löser det är rättelsen i Xpand: den skriver en ny `cmlog`-rad som ersätter den köade.
 
 Ett återförsök kör om alla tre, även de som redan lyckats. Det är ofarligt eftersom alla tre bara uppdaterar befintlig data.
 
@@ -157,7 +157,7 @@ sequenceDiagram
             Core ->> Communication: Failure mail
         end
 
-        Core ->> PVC: Save position once the second is done
+        Core ->> PVC: Save position after the row
     end
 
     Core -->> CronJob: Done

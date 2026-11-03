@@ -24,7 +24,7 @@ Leasing-tjänsten (`GET /leases/sync`) läser `cmlog`-rader som börjar med `Hyr
 
 **Makulerade avtal byter nummer i Xpand.** Kontraktsnumret får ett M-suffix i samma ändring (t.ex. `…/10` → `…/10M`), medan Tenfast känner avtalet under det gamla numret. Därför läses det ursprungliga numret ur raden `Värdet i fältet 'Kontraktsnummer' ändrat från … till …` i samma logg-post. Saknas den raden går makuleringen inte att koppla till rätt avtal: den loggas som varning och hoppas över helt.
 
-**Händelser slås inte ihop.** Varje händelse spelas upp i ordning, så att ett avtal som både tecknats och sagts upp sedan förra körningen hamnar rätt i Tenfast — så länge varje steg lyckas. Av samma skäl stryker en nyare händelse inte en äldre som ligger i felkön — utom en makulering, som stryker en köad uppsägning av samma avtal.
+**Händelser slås inte ihop.** Varje händelse spelas upp i ordning, så att ett avtal som både tecknats och sagts upp sedan förra körningen hamnar rätt i Tenfast — så länge varje steg lyckas. Av samma skäl stryker en nyare händelse inte en äldre som ligger i felkön — utom bland uppsägningar och makuleringar, där den nyaste stryker en köad av samma avtal.
 
 **En senare händelse väntar på en köad.** Misslyckas tecknandet av ett avtal hamnar det i felkön, och avtalets senare uppsägning eller makulering väntar bakom det i stället för att skickas till ett avtal som inte finns i Tenfast än — se [Ordning per avtal](#ordning-per-avtal).
 
@@ -86,7 +86,7 @@ God man och förvaltare läses men används inte av scriptet. De når Tenfast n�
 Händelser för samma avtal synkas i den ordning de hände. Ligger en händelse för ett avtal i felkön läggs varje senare händelse för samma avtal i kön bakom den, utan försök och utan mejl. Den försöks först när händelsen före den har synkats eller strukits.
 
 - En `create` som misslyckas håller alltså tillbaka avtalets `terminate` och `void`, så Tenfast aldrig får en uppsägning innan avtalet finns.
-- **En makulering ersätter en köad uppsägning** av samma avtal: uppsägningen stryks ur kön med mejlet "ersatt av en senare ändring", i stället för att försökas mot ett makulerat avtal. En köad `create` ersätts aldrig.
+- **En makulering ersätter en köad uppsägning** av samma avtal: uppsägningen stryks ur kön med mejlet "ersatt av en senare ändring", i stället för att försökas mot ett makulerat avtal. Samma sak gäller varje nyare uppsägning eller makulering mot en köad uppsägning eller makulering. En köad `create` ersätts aldrig.
 - Ges den första händelsen upp efter 30 dagar stryks även händelserna bakom den, och ger upp-mejlet listar dem. Avtalet får då rättas för hand i Tenfast.
 - Avvägningen är medveten: en händelse som fortsätter att misslyckas håller tillbaka alla senare händelser för samma avtal i upp till 30 dagar.
 
@@ -228,7 +228,7 @@ sequenceDiagram
             Core ->> Communication: Failure mail
         end
 
-        Core ->> PVC: Save position once the second is done
+        Core ->> PVC: Save position after the row
     end
 
     Core -->> CronJob: Done
