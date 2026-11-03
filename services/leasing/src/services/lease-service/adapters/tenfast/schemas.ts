@@ -130,13 +130,19 @@ export const TenfastSubletTenantSchema = z.object({
 export type TenfastSubletTenant = z.infer<typeof TenfastSubletTenantSchema>
 
 export const TenfastContactRelationsSchema = z.object({
-  relationsTo: z.object({
-    andraHandHyresgast: z.array(
-      z.object({
-        avtal: z.object({ externalId: z.string().nullable().optional() }),
-      })
-    ),
-  }),
+  relationsTo: z
+    .object({
+      andraHandHyresgast: z
+        .array(
+          z.object({
+            avtal: z.object({ externalId: z.string().nullable().optional() }),
+          })
+        )
+        .optional()
+        .default([]),
+    })
+    .optional()
+    .default({}),
 })
 
 // TODO byt namn

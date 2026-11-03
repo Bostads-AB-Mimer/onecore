@@ -915,7 +915,7 @@ export const routes = (router: KoaRouter) => {
           const leaseContactType: leasing.v1.LeaseContactType = 'subletTenant'
           contacts.push({ ...contact.data, leaseContactType })
         } else if (contact.err === 'not-found') {
-          logger.warn(
+          logger.error(
             { contactCode: lease.subletContactId, leaseId: lease.leaseId },
             'Sublet contact not found, returning lease without it'
           )

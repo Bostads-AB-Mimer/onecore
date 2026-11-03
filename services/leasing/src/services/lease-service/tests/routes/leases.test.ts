@@ -184,9 +184,10 @@ describe('GET /leases/by-contact-code/:contactCode', () => {
       jest
         .spyOn(tenfastAdapter, 'getTenantByContactCode')
         .mockResolvedValueOnce({ ok: true, data: tenant })
-      jest
-        .spyOn(tenfastAdapter, 'getLeasesByTenantId')
-        .mockResolvedValueOnce({ ok: true, data: [factory.tenfastLease.build()] })
+      jest.spyOn(tenfastAdapter, 'getLeasesByTenantId').mockResolvedValueOnce({
+        ok: true,
+        data: [factory.tenfastLease.build()],
+      })
       jest
         .spyOn(tenfastAdapter, 'getSubletLeases')
         .mockResolvedValueOnce({ ok: false, err: 'unknown' })

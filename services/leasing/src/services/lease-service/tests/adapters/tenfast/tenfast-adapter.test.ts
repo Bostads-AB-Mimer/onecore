@@ -3266,6 +3266,28 @@ describe(tenfastAdapter.getSubletLeases, () => {
     })
   })
 
+  it('returns no leases when the response has no sublet relations', async () => {
+    mockTenfast({
+      status: 200,
+      data: { contactId: contactCode, hyresgast: null, relationsTo: {} },
+    })
+
+    const result = await tenfastAdapter.getSubletLeases(contactCode)
+
+    expect(result).toEqual({ ok: true, data: [] })
+  })
+
+  it('returns no leases when the response has no relationsTo', async () => {
+    mockTenfast({
+      status: 200,
+      data: { contactId: contactCode, hyresgast: null },
+    })
+
+    const result = await tenfastAdapter.getSubletLeases(contactCode)
+
+    expect(result).toEqual({ ok: true, data: [] })
+  })
+
   it('skips relations whose lease has no external id', async () => {
     const lease = subletLease(new Date('2100-01-01'))
     const relations = relationsResponse([lease.externalId])
