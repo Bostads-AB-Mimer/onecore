@@ -1570,7 +1570,8 @@ export const routes = (router: KoaRouter) => {
       }
 
       // On transition to "Genomförd" (completed), write each component's
-      // condition + lastInspectionDate back to property-base. Best-effort:
+      // condition + lastInspectionDate back to property-base and record an
+      // INSPECTED component event. Best-effort:
       // per-component failures are aggregated and returned alongside the
       // inspection so the UI can surface them — the inspection itself still
       // completes.
