@@ -68,6 +68,8 @@ export type DbListing = {
   ListingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
   ReviewedAt: Date | null
   ReviewedBy: string | null
+  AvailableFrom: Date | null
+  TentativeAvailableFrom: Date | null
 }
 
 export type DbComment = {

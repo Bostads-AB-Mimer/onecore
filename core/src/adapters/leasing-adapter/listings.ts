@@ -4,6 +4,7 @@ import {
   Applicant,
   Listing,
   ListingStatus,
+  UpdateListingErrorCodes,
   UpdateListingStatusErrorCodes,
   leasing,
 } from '@onecore/types'
@@ -48,8 +49,8 @@ const getListingsWithApplicants = async (
 }
 
 const createNewListing = async (
-  listingData: Listing
-): Promise<AdapterResult<Listing, 'conflict' | 'unknown'>> => {
+  listingData: Omit<leasing.ListingRecord, 'id'>
+): Promise<AdapterResult<leasing.ListingRecord, 'conflict' | 'unknown'>> => {
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/listings`,
@@ -187,6 +188,47 @@ async function updateListingStatus(
     return {
       ok: false,
       err: UpdateListingStatusErrorCodes.Unknown,
+      statusCode: 500,
+    }
+  }
+}
+
+async function updateListing(
+  listingId: number,
+  data: leasing.UpdateListing
+): Promise<AdapterResult<leasing.ListingRecord, UpdateListingErrorCodes>> {
+  try {
+    const res = await axios.patch(
+      `${tenantsLeasesServiceUrl}/listings/${listingId}`,
+      data
+    )
+
+    return { ok: true, data: res.data.content }
+  } catch (err) {
+    // axios rejects on any non-2xx response, so 404/400 land here rather
+    // than in a `res.status !== 200` check after the await.
+    if (axios.isAxiosError(err) && err.response) {
+      if (err.response.status === 404) {
+        return {
+          ok: false,
+          err: UpdateListingErrorCodes.NotFound,
+          statusCode: 404,
+        }
+      }
+
+      if (err.response.status === 400) {
+        return {
+          ok: false,
+          err: UpdateListingErrorCodes.NoFields,
+          statusCode: 400,
+        }
+      }
+    }
+
+    logger.error({ err }, 'leasingAdapter.updateListing')
+    return {
+      ok: false,
+      err: UpdateListingErrorCodes.Unknown,
       statusCode: 500,
     }
   }
@@ -338,6 +380,7 @@ export {
   getListingByListingId,
   deleteListing,
   updateListingStatus,
+  updateListing,
   getExpiredListingsWithNoOffers,
   getListings,
 }

@@ -13,6 +13,7 @@ const apartment = {
   propertyCode: '123-456',
   propertyName: 'LINDAREN 2',
   buildingCode: '123-456-01',
+  constructionYear: null,
   marketAreaCode: 'VAS',
   marketAreaName: 'Vasastan',
   residenceTypeName: '4 rum och kök',

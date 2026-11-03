@@ -13,11 +13,13 @@ import {
   GetActiveOfferByListingIdErrorCodes,
   Listing,
   ListingStatus,
+  leasing,
 } from '@onecore/types'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 import {
   getRentalObjectForListing,
   getRentalObjectsForListings,
@@ -194,6 +196,83 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
     }
   })
+
+  /**
+   * @swagger
+   * /listings:
+   *   post:
+   *     summary: Create a draft listing
+   *     tags:
+   *       - Lease service
+   *     description: Creates a new Draft listing for a rental object, ready to be edited and reviewed before publishing.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [rentalObjectCode, listingCategory]
+   *             properties:
+   *               rentalObjectCode:
+   *                 type: string
+   *               listingCategory:
+   *                 type: string
+   *                 enum: [PARKING_SPACE, APARTMENT, STORAGE]
+   *     responses:
+   *       '201':
+   *         description: Listing created successfully.
+   *       '409':
+   *         description: An active listing already exists for this rental object.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/listings',
+    parseRequestBody(
+      z.object({
+        rentalObjectCode: z.string(),
+        listingCategory: z.enum(['PARKING_SPACE', 'APARTMENT', 'STORAGE']),
+      })
+    ),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as {
+        rentalObjectCode: string
+        listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+      }
+
+      const result = await leasingAdapter.createNewListing({
+        rentalObjectCode: body.rentalObjectCode,
+        listingCategory: body.listingCategory,
+        status: ListingStatus.Draft,
+        // No rentalRule derivation rule exists for apartments yet — parking
+        // spaces default it from area/history but still let a human override
+        // it before publishing (see internal-portal's useRentalRules). This
+        // is a placeholder default pending that same design for apartments.
+        rentalRule: 'SCORED',
+      })
+
+      if (!result.ok) {
+        if (result.err === 'conflict') {
+          ctx.status = 409
+          ctx.body = {
+            error: 'Active listing already exists for this rental object',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = { error: 'Failed to create listing', ...metadata }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 
   /**
    * @swagger
@@ -381,6 +460,86 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = { ...metadata }
   })
+
+  /**
+   * @swagger
+   * /listings/{listingId}:
+   *   patch:
+   *     summary: Update listing publish/review fields
+   *     tags:
+   *       - Lease service
+   *     description: Partially updates a listing's publishedFrom, publishedTo, reviewedAt, reviewedBy, availableFrom and tentativeAvailableFrom fields.
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: ID of the listing to update.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               publishedFrom:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               publishedTo:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               reviewedAt:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               reviewedBy:
+   *                 type: string
+   *                 nullable: true
+   *               availableFrom:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               tentativeAvailableFrom:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *     responses:
+   *       '200':
+   *         description: Successfully updated listing.
+   *       '404':
+   *         description: Listing not found.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.patch(
+    '/listings/:listingId',
+    parseRequestBody(leasing.UpdateListingSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as z.infer<
+        typeof leasing.UpdateListingSchema
+      >
+
+      const result = await leasingAdapter.updateListing(
+        Number(ctx.params.listingId),
+        body
+      )
+
+      if (!result.ok) {
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { ...metadata, error: result.err }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 
   /**
    * @swagger

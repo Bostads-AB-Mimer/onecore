@@ -947,6 +947,35 @@ export interface paths {
         }
       }
     }
+    /**
+     * Create a draft listing
+     * @description Creates a new Draft listing for a rental object, ready to be edited and reviewed before publishing.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            rentalObjectCode: string
+            /** @enum {string} */
+            listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+          }
+        }
+      }
+      responses: {
+        /** @description Listing created successfully. */
+        201: {
+          content: never
+        }
+        /** @description An active listing already exists for this rental object. */
+        409: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
   }
   '/listings/{listingId}': {
     /**
@@ -977,6 +1006,49 @@ export interface paths {
               error?: string
             }
           }
+        }
+      }
+    }
+    /**
+     * Update listing publish/review fields
+     * @description Partially updates a listing's publishedFrom, publishedTo, reviewedAt, reviewedBy, availableFrom and tentativeAvailableFrom fields.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description ID of the listing to update. */
+          listingId: number
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** Format: date-time */
+            publishedFrom?: string | null
+            /** Format: date-time */
+            publishedTo?: string | null
+            /** Format: date-time */
+            reviewedAt?: string | null
+            reviewedBy?: string | null
+            /** Format: date-time */
+            availableFrom?: string | null
+            /** Format: date-time */
+            tentativeAvailableFrom?: string | null
+          }
+        }
+      }
+      responses: {
+        /** @description Successfully updated listing. */
+        200: {
+          content: never
+        }
+        /** @description Listing not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
         }
       }
     }
@@ -12371,6 +12443,7 @@ export interface components {
       propertyCode: string | null
       propertyName: string | null
       buildingCode: string | null
+      constructionYear: number | null
       marketAreaCode: string | null
       marketAreaName: string | null
       residenceTypeName: string | null
@@ -12409,6 +12482,10 @@ export interface components {
         /** Format: date-time */
         reviewedAt?: string | null
         reviewedBy?: string | null
+        /** Format: date-time */
+        availableFrom?: string | null
+        /** Format: date-time */
+        tentativeAvailableFrom?: string | null
       } | null
       closedListingsSinceLastLease: number
     }

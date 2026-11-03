@@ -34,7 +34,7 @@ const residence = (
     city: 'Västerås',
   },
   property: { code: '123-456', name: 'LINDAREN 2' },
-  building: { code: '123-456-01', name: null },
+  building: { code: '123-456-01', name: null, constructionYear: null },
   marketArea: { code: 'VAS', name: 'Vasastan' },
   residenceType: { code: '4RK', name: '4 rum och kök', roomCount: 4 },
   floor: '4',

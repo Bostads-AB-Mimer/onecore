@@ -32,7 +32,7 @@ describe(propertyBaseAdapter.getResidencesBatch, () => {
                 city: 'Västerås',
               },
               property: { code: '1', name: 'P' },
-              building: { code: '1-1', name: null },
+              building: { code: '1-1', name: null, constructionYear: null },
               marketArea: { code: 'VAS', name: 'Vasastan' },
               residenceType: {
                 code: '2RK',
