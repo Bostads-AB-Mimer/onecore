@@ -44,11 +44,51 @@ describe('syncInvoiceRecipientToEconomy', () => {
     )
   })
 
+  it('passes the economy undo through', async () => {
+    const contact = factory.contactsServiceContact.build()
+    const contacts = makeContactsStub({ ok: true, data: contact })
+    const undo = {
+      previous: {
+        fullName: 'Gammal',
+        street: null,
+        zipCode: null,
+        city: null,
+        emailAddress: null,
+      },
+    }
+    jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: true, data: { skipped: false, undo } })
+
+    const result = await syncInvoiceRecipientToEconomy(
+      contacts,
+      contact.contactCode
+    )
+
+    expect(result).toEqual({ ok: true, data: { undo } })
+  })
+
+  it('passes a null undo through after a create', async () => {
+    const contact = factory.contactsServiceContact.build()
+    const contacts = makeContactsStub({ ok: true, data: contact })
+    jest
+      .spyOn(economyAdapter, 'syncContactToEconomy')
+      .mockResolvedValue({ ok: true, data: { skipped: false, undo: null } })
+
+    const result = await syncInvoiceRecipientToEconomy(
+      contacts,
+      contact.contactCode
+    )
+
+    expect(result).toEqual({ ok: true, data: { undo: null } })
+  })
+
   it('uses the organisation name as fullName for an organisation contact', async () => {
     const contact: Contact = {
       type: 'organisation',
       contactCode: 'O123',
       contactKey: 'KEY-O123',
+      protectedIdentity: false,
       organisation: {
         organisationNumber: '556000-0000',
         name: 'Acme AB',

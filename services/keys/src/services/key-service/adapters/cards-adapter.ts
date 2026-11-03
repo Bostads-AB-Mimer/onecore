@@ -2,7 +2,17 @@ import { Knex } from 'knex'
 import { db } from './db'
 import { keys } from '@onecore/types'
 import type { Card } from 'dax-client'
+import type { CardOwner } from 'dax-client'
 import * as daxAdapter from './dax-adapter'
+import * as mirror from '../dax-card-owner-mirror'
+import {
+  MirrorNotReadyError,
+  isActiveOwner,
+  ownerBelongsTo,
+  toOwnerRows,
+} from '../dax-card-owner-mirror'
+import { ensureSyncStarted } from '../dax-card-owner-sync'
+import { chunk, logger, runWithConcurrency } from '@onecore/utilities'
 
 type CardDetails = keys.CardDetails
 type KeyLoan = keys.KeyLoan
@@ -131,4 +141,114 @@ export async function getCardById(cardId: string): Promise<Card | null> {
     console.error('Failed to fetch card from DAX:', error)
     return null
   }
+}
+
+const DAX_CONCURRENCY = 5
+const ID_FILTER_CHUNK = 200
+
+export interface CardsBatchResult {
+  cards: Record<string, Card[]>
+  /** Objects whose cards could not be fetched from DAX; their status is unknown */
+  unresolved: string[]
+}
+
+const withOwnerRef = (owner: CardOwner): Card[] =>
+  (owner.cards || []).map((card) => ({
+    ...card,
+    owner: { cardOwnerId: owner.cardOwnerId },
+  }))
+
+/** nameFilter lookup for one object; active owners named by exactly that code. */
+async function fetchOwnersByName(
+  rentalObjectCode: string
+): Promise<CardOwner[]> {
+  const owners = await daxAdapter.searchCardOwners({
+    nameFilter: rentalObjectCode,
+    expand: 'cards',
+    limit: ID_FILTER_CHUNK,
+  })
+  // nameFilter is a substring match: "...-P22" also returns "...-P221"
+  return owners.filter(
+    (o) => isActiveOwner(o) && ownerBelongsTo(o, rentalObjectCode)
+  )
+}
+
+/**
+ * Cards for many rental objects. Owner ids come from the in-memory
+ * card-owner mirror and are fetched with DAX idfilter in chunks of 200.
+ * An owner missing or archived in the response is re-resolved by name and
+ * the mirror is updated for it. Objects whose DAX lookups fail are reported
+ * in `unresolved` rather than guessed as having no cards.
+ * Throws MirrorNotReadyError until the first sync has run.
+ */
+export async function getCardsByRentalObjects(
+  rentalObjectCodes: string[]
+): Promise<CardsBatchResult> {
+  const cards: Record<string, Card[]> = {}
+  for (const code of rentalObjectCodes) cards[code] = []
+  const unresolved = new Set<string>()
+  if (rentalObjectCodes.length === 0) return { cards, unresolved: [] }
+
+  if (!mirror.isReady()) {
+    // Boot sync failed or has not run: kick it off (no-op if running) and refuse
+    ensureSyncStarted()
+    throw new MirrorNotReadyError()
+  }
+  const mirrored = mirror.getOwnersForRentalObjects(rentalObjectCodes)
+  const codeByOwnerId = new Map(
+    mirrored.map((m) => [m.cardOwnerId, m.rentalObjectCode])
+  )
+  // No mirrored owner means no tags; the daily sync picks up new owners.
+  // Suspects are only ids that DAX no longer returns or returns archived.
+  const suspects = new Set<string>()
+
+  await runWithConcurrency(
+    chunk([...codeByOwnerId.keys()], ID_FILTER_CHUNK),
+    async (ids) => {
+      let owners: CardOwner[]
+      try {
+        owners = await daxAdapter.searchCardOwners({
+          idfilter: ids.join(','),
+          expand: 'cards',
+          limit: ID_FILTER_CHUNK,
+        })
+      } catch (error) {
+        logger.error({ error }, 'Failed to fetch card owners by id from DAX')
+        ids.forEach((id) => unresolved.add(codeByOwnerId.get(id)!))
+        return
+      }
+      const returned = new Map(owners.map((o) => [o.cardOwnerId, o]))
+      for (const id of ids) {
+        const code = codeByOwnerId.get(id)!
+        const owner = returned.get(id)
+        if (!owner || !isActiveOwner(owner)) {
+          suspects.add(code)
+          continue
+        }
+        cards[code].push(...withOwnerRef(owner))
+      }
+    },
+    DAX_CONCURRENCY
+  )
+
+  await runWithConcurrency(
+    [...suspects].filter((code) => !unresolved.has(code)),
+    async (code) => {
+      try {
+        const owners = await fetchOwnersByName(code)
+        cards[code] = owners.flatMap(withOwnerRef)
+        mirror.replaceForRentalObject(code, toOwnerRows(owners))
+      } catch (error) {
+        logger.error(
+          { error, rentalObjectCode: code },
+          'Failed to refresh cards from DAX'
+        )
+        unresolved.add(code)
+      }
+    },
+    DAX_CONCURRENCY
+  )
+
+  for (const code of unresolved) cards[code] = []
+  return { cards, unresolved: [...unresolved] }
 }

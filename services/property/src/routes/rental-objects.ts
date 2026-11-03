@@ -3,7 +3,7 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 
 import {
   resolveDetailsPropertyCodes,
-  resolveSearchPropertyCodes,
+  resolveSearchScope,
 } from '@src/adapters/property-grouping-adapter'
 import {
   buildRentalObjectDetails,
@@ -111,7 +111,9 @@ export const routes = (router: KoaRouter) => {
    *       are paginated.
    *
    *       Cost centres and marknadsområden are resolved to property codes
-   *       first, since the structure table carries neither.
+   *       first, since the structure table carries neither. A split property
+   *       (building-level KVV-area exception) resolves to only the side the
+   *       scope covers.
    *     tags:
    *       - Rental objects
    *     parameters:
@@ -119,6 +121,7 @@ export const routes = (router: KoaRouter) => {
    *       - { in: query, name: kvvAreaIds, schema: { type: array, items: { type: string, format: uuid } } }
    *       - { in: query, name: marketAreaCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: propertyCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: propertyShares, schema: { type: array, items: { type: string } }, description: 'One KVV-area''s share of a split property, as kvvAreaId:propertyCode' }
    *       - { in: query, name: buildingCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: staircaseCodes, schema: { type: array, items: { type: string } }, description: 'Composite buildingCode-staircaseCode' }
    *       - { in: query, name: parkingAreaCodes, schema: { type: array, items: { type: string } } }
@@ -155,11 +158,8 @@ export const routes = (router: KoaRouter) => {
       const params = ctx.request.parsedQuery
 
       try {
-        const propertyCodes = await resolveSearchPropertyCodes(params)
-        const { rows, totalCount } = await searchRentalObjects(
-          params,
-          propertyCodes
-        )
+        const scope = await resolveSearchScope(params)
+        const { rows, totalCount } = await searchRentalObjects(params, scope)
         ctx.status = 200
         ctx.body = { content: rows, totalCount, ...metadata }
       } catch (err) {
@@ -197,6 +197,7 @@ export const routes = (router: KoaRouter) => {
    *       - { in: query, name: kvvAreaIds, schema: { type: array, items: { type: string, format: uuid } } }
    *       - { in: query, name: marketAreaCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: propertyCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: propertyShares, schema: { type: array, items: { type: string } }, description: 'One KVV-area''s share of a split property, as kvvAreaId:propertyCode' }
    *       - { in: query, name: buildingCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: staircaseCodes, schema: { type: array, items: { type: string } }, description: 'Composite buildingCode-staircaseCode' }
    *       - { in: query, name: parkingAreaCodes, schema: { type: array, items: { type: string } } }

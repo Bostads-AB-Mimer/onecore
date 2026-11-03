@@ -3,7 +3,10 @@ import { Pagination } from '@src/adapters'
 import { ContactCode, NationalIdNumber } from '@src/domain'
 import { ContactTypeFilter, ObjectKey } from '@src/domain/contact'
 
+import { nationalIdPrefixes } from '@src/domain/search-term'
+
 import { currentInvoiceAddress } from './address-sql'
+import { isLeaseHolderColumn, LEASE_HOLDER } from './relation-sql'
 import { DbContactRow } from './db-model'
 
 const CONTACT_CODE = 'cmctc.cmctckod'
@@ -26,7 +29,6 @@ const wildcard = (column: string, wc: string): [string, string[]] => [
   `${column} COLLATE Latin1_General_100_CI_AI LIKE ?`,
   [`%${wc}%`],
 ]
-
 /**
  * Utility-function that generates the arguments for knex.whereRaw
  * for WHERE-criteria of the type `<column> IN (...)` where both
@@ -316,12 +318,11 @@ export const contactsQuery = () => {
 
     Object.keys(wheres).forEach((key) => {
       if (key === NATIONAL_ID_NUMBER) {
-        qb.andWhere((b) => {
-          b.where(key, wheres[key]).orWhereRaw(
-            `REPLACE(TRANSLATE(${NATIONAL_ID_NUMBER}, '0123456789', '##########'), '#', '') = ?`,
-            [wheres[key]]
-          )
-        })
+        const candidates: string[] = wheres[key]
+        qb.andWhereRaw(
+          `${NORMALISED_NATIONAL_ID_SQL} IN (${candidates.map(() => '?').join(', ')})`,
+          candidates
+        )
       } else {
         qb.andWhere(key, wheres[key])
       }
@@ -334,6 +335,10 @@ export const contactsQuery = () => {
    *
    * Queries that use multiple wildcards will call this function
    * once for each wildcard.
+   *
+   * Every word must hit the contact row (code, a name field, or the national
+   * id by prefix when the word is digit-like), or the whole string must hit
+   * an address line.
    */
   const wildcardUnion = (db: knex.Knex, wc: string) => {
     const words = wc.split(/\s+/).filter(Boolean)
@@ -344,13 +349,18 @@ export const contactsQuery = () => {
       .modify(baseFilters)
       .modify((qb) => {
         for (const word of words) {
-          qb.andWhere((b) =>
-            b
-              .whereRaw(...wildcard('cmctckod', word))
+          const nidPrefixes = nationalIdPrefixes(word)
+          qb.andWhere((b) => {
+            b.whereRaw(...wildcard('cmctckod', word))
               .orWhereRaw(...wildcard('fnamn', word))
               .orWhereRaw(...wildcard('enamn', word))
               .orWhereRaw(...wildcard('cmctcben', word))
-          )
+            for (const nidPrefix of nidPrefixes) {
+              b.orWhereRaw(`${NORMALISED_NATIONAL_ID_SQL} LIKE ?`, [
+                `${nidPrefix}%`,
+              ])
+            }
+          })
         }
       })
 
@@ -404,10 +414,11 @@ export const contactsQuery = () => {
     },
 
     /**
-     * Adds a WHERE-criteria for single national ID number.
+     * Adds a WHERE-criteria for a national ID number. Accepts multiple
+     * candidate forms (e.g. ten- and twelve-digit) to match any of them.
      */
-    hasNationalId(nid: NationalIdNumber) {
-      wheres[NATIONAL_ID_NUMBER] = nid
+    hasNationalId(nid: NationalIdNumber | NationalIdNumber[]) {
+      wheres[NATIONAL_ID_NUMBER] = Array.isArray(nid) ? nid : [nid]
       return this
     },
 
@@ -577,8 +588,14 @@ export const contactsQuery = () => {
             .offset(pgn.page * pgn.pageSize)
             .limit(pgn.pageSize)
         })
+        .with(LEASE_HOLDER, (lh) => {
+          lh.select('cmctc.keycmctc', isLeaseHolderColumn(db, new Date()))
+            .from('page')
+            .join('cmctc', 'cmctc.keycmobj', 'page.keycmobj')
+        })
         .from('page')
         .join('cmctc', 'cmctc.keycmobj', 'page.keycmobj')
+        .join(LEASE_HOLDER, `${LEASE_HOLDER}.keycmctc`, 'cmctc.keycmctc')
         .leftJoin('cmadr', (join) => {
           join
             .on('cmadr.keycode', 'cmctc.keycmobj')
@@ -596,6 +613,7 @@ export const contactsQuery = () => {
           'cmctc.keycmobj as objectKey',
           'cmctc.keycmctc as contactKey',
           'cmctc.lagsokt as protectedIdentity',
+          `${LEASE_HOLDER}.isLeaseHolder`,
           'cmctc.utslag as specialAttention',
           'cmadr.keycmadr as addressId',
           'cmadr.region',

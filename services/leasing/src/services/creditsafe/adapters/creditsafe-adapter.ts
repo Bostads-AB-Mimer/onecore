@@ -4,7 +4,7 @@ import { XMLParser } from 'fast-xml-parser'
 import { format } from '../../../helpers/personnummer'
 import { ConsumerReport, ConsumerReportError } from '@onecore/types'
 import config from '../../../common/config'
-import { logger } from '@onecore/utilities'
+import { logger, redactHeaders } from '@onecore/utilities'
 import axios from 'axios'
 
 const CASXML = (pnr: string) => dedent`
@@ -39,7 +39,7 @@ const getConsumerReport = async (pnr: string): Promise<ConsumerReport> => {
       xml: xml,
     })
     logger.info(
-      { headers: response.headers },
+      { headers: redactHeaders(response.headers) },
       'Outgoing request to Creditsafe completed'
     )
 

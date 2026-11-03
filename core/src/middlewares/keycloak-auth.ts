@@ -1,6 +1,7 @@
 import assert from 'node:assert'
 import { Context, Next } from 'koa'
 import jwt from 'jsonwebtoken'
+import axios from 'axios'
 import { errors as joseErrors } from 'jose'
 import auth from '../services/auth-service/keycloak'
 import config from '../common/config'
@@ -8,8 +9,9 @@ import { logger } from '@onecore/utilities'
 
 /**
  * Try Keycloak JWKS verification.
- * Sets ctx.state.user on success, rejects expired/invalid Keycloak tokens,
- * and passes through to next middleware if the token isn't a Keycloak token.
+ * Sets ctx.state.user on success. Answers 401 for a token that is expired or
+ * can't be verified, and 503 when Keycloak's signing keys can't be fetched, so
+ * a request never continues without a user.
  */
 async function verifyKeycloakToken(ctx: Context, next: Next) {
   if (ctx.state.user) return next()
@@ -48,17 +50,41 @@ async function verifyKeycloakToken(ctx: Context, next: Next) {
       return
     }
 
+    // Fetching the signing keys failed: Keycloak is down or unreachable.
+    // jose throws its base JOSEError (ERR_JOSE_GENERIC) when the key set
+    // response isn't 200 or isn't JSON. Every other JOSEError is about the
+    // token, which we can't trust.
     if (
-      error instanceof joseErrors.JWKSNoMatchingKey ||
-      error instanceof joseErrors.JWSSignatureVerificationFailed
+      !(error instanceof joseErrors.JOSEError) ||
+      error.code === joseErrors.JOSEError.code ||
+      error instanceof joseErrors.JWKSTimeout ||
+      error instanceof joseErrors.JWKSInvalid
     ) {
-      // Not a Keycloak token, fall through to legacy JWT without logging an error
-    } else {
+      // Not the raw error: fetching the keys can fail with an AxiosError.
       logger.warn(
-        error,
-        'Keycloak verification failed, service may be down, falling through to legacy JWT'
+        {
+          status: axios.isAxiosError(error)
+            ? error.response?.status
+            : undefined,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'Keycloak verification failed, service may be down'
       )
+      ctx.status = 503
+      ctx.body = { message: 'Authentication service unavailable' }
+      return
     }
+
+    // Legacy tokens never get here (see requireAuth), so this is a token signed
+    // by a key Keycloak no longer has (e.g. after a key rotation), signed
+    // elsewhere, or malformed.
+    logger.info(
+      { code: error.code, path: ctx.path },
+      'Keycloak token could not be verified'
+    )
+    ctx.status = 401
+    ctx.body = { message: 'Invalid token' }
+    return
   }
 
   return next()

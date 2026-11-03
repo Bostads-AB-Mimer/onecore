@@ -3,6 +3,7 @@ import * as factory from '../../factories'
 const odooMock = {
   connect: jest.fn(),
   create: jest.fn(),
+  execute_kw: jest.fn(),
   search: jest.fn(),
   searchRead: jest.fn(),
   update: jest.fn(),
@@ -14,20 +15,33 @@ jest.mock('odoo-await', () => {
 
 const loggerWarnMock = jest.fn()
 
-jest.mock('@onecore/utilities', () => ({
-  logger: {
-    info: jest.fn(),
-    error: jest.fn(),
-    warn: (...args: unknown[]) => loggerWarnMock(...args),
-  },
-  generateRouteMetadata: jest.fn(() => ({})),
-}))
+jest.mock('@onecore/utilities', () => {
+  const { errorName, errorMessage, redactedMessage } =
+    jest.requireActual('@onecore/utilities')
+  return {
+    errorName,
+    errorMessage,
+    redactedMessage,
+    logger: {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: (...args: unknown[]) => loggerWarnMock(...args),
+    },
+    generateRouteMetadata: jest.fn(() => ({})),
+  }
+})
 
+import { logger } from '@onecore/utilities'
 import {
+  CloseRequestConflictError,
   createInspectionWorkOrders,
   createWorkOrder,
   getMaintenanceTeams,
   getWorkOrderById,
+  getWorkOrdersByContactCode,
+  requestCloseWorkOrder,
+  restoreContact,
+  syncContact,
 } from '../../../adapters/odoo-adapter'
 
 describe('odoo-adapter createWorkOrder', () => {
@@ -198,6 +212,25 @@ describe('odoo-adapter getWorkOrderById', () => {
     expect(result).toBeUndefined()
     // Should not query messages when there is no work order
     expect(odooMock.searchRead).toHaveBeenCalledTimes(1)
+  })
+
+  it('includes receipt_to_tenant in the message_type allowlist so Mina sidor sees handler/contractor acknowledgement receipts (MIM-1960)', async () => {
+    const odooWorkOrder = factory.odooWorkOrder.build({ id: 12345 })
+    const odooMessage = factory.odooWorkOrderMessage.build({ res_id: 12345 })
+
+    odooMock.searchRead
+      .mockResolvedValueOnce([odooWorkOrder]) // maintenance.request
+      .mockResolvedValueOnce([odooMessage]) // mail.message
+
+    await getWorkOrderById(12345)
+
+    // mail.message queried with the tenant-visible message_type allowlist
+    expect(odooMock.searchRead.mock.calls[1][0]).toBe('mail.message')
+    const messageDomain = odooMock.searchRead.mock.calls[1][1]
+    const messageTypeFilter = messageDomain.find(
+      (clause: unknown[]) => clause[0] === 'message_type'
+    )
+    expect(messageTypeFilter[2]).toContain('receipt_to_tenant')
   })
 })
 
@@ -384,5 +417,386 @@ describe('odoo-adapter createInspectionWorkOrders', () => {
 
     expect(result.ok).toBe(false)
     expect(odooMock.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('odoo-adapter syncContact', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  it('writes every tenant in one update and returns their old values', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: 'Gammal, Namn',
+        email_address: 'gammal@test.se',
+        phone_number: false,
+      },
+      {
+        id: 2,
+        name: 'Annat, Namn',
+        email_address: false,
+        phone_number: '0701',
+      },
+    ])
+    odooMock.update.mockResolvedValueOnce(true)
+
+    const result = await syncContact({
+      contactCode: 'P1',
+      fullName: 'Ny, Namn',
+      emailAddress: 'ny@test.se',
+      phoneNumber: null,
+    })
+
+    expect(odooMock.update).toHaveBeenCalledTimes(1)
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [1, 2], {
+      name: 'Ny, Namn',
+      email_address: 'ny@test.se',
+    })
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        updatedCount: 2,
+        previous: [
+          {
+            id: 1,
+            fullName: 'Gammal, Namn',
+            emailAddress: 'gammal@test.se',
+            phoneNumber: null,
+          },
+          {
+            id: 2,
+            fullName: 'Annat, Namn',
+            emailAddress: null,
+            phoneNumber: '0701',
+          },
+        ],
+      },
+    })
+  })
+
+  it('logs why Odoo refused, without the contact values', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, name: 'Gammal', email_address: false, phone_number: false },
+    ])
+    odooMock.update.mockRejectedValueOnce(
+      new Error('Invalid value Ny, Namn for ny@test.se on 0709')
+    )
+
+    const result = await syncContact({
+      contactCode: 'P1',
+      fullName: 'Ny, Namn',
+      emailAddress: 'ny@test.se',
+      phoneNumber: '0709',
+    })
+
+    expect(result).toEqual({ ok: false, err: 'could-not-update-contact' })
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: 'P1',
+        message: 'Invalid value [redacted] for [redacted] on [redacted]',
+      }),
+      'Error syncing contact to Odoo'
+    )
+  })
+
+  it('skips when no tenant has the contact code', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([])
+
+    const result = await syncContact({ contactCode: 'P1', fullName: 'X' })
+
+    expect(result).toEqual({ ok: true, data: null })
+    expect(odooMock.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('odoo-adapter restoreContact', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  const tenants = [
+    { id: 1, fullName: 'Gammal, Namn', emailAddress: null, phoneNumber: null },
+    {
+      id: 2,
+      fullName: 'Annat, Namn',
+      emailAddress: 'a@test.se',
+      phoneNumber: '0701',
+    },
+  ]
+
+  it('writes each tenant its own old values and clears empty fields', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, contact_code: 'P1' },
+      { id: 2, contact_code: 'P1' },
+    ])
+    odooMock.update.mockResolvedValue(true)
+
+    const result = await restoreContact('P1', tenants)
+
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [1], {
+      name: 'Gammal, Namn',
+      email_address: false,
+      phone_number: false,
+    })
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [2], {
+      name: 'Annat, Namn',
+      email_address: 'a@test.se',
+      phone_number: '0701',
+    })
+    expect(result).toEqual({
+      ok: true,
+      data: { restored: [1, 2], missing: [] },
+    })
+  })
+
+  it('writes tenants with the same old values in one call', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, contact_code: 'P1' },
+      { id: 3, contact_code: 'P1' },
+      { id: 2, contact_code: 'P1' },
+    ])
+    odooMock.update.mockResolvedValue(true)
+
+    const result = await restoreContact('P1', [
+      tenants[0],
+      { ...tenants[0], id: 3 },
+      tenants[1],
+    ])
+
+    expect(odooMock.update).toHaveBeenCalledTimes(2)
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.tenant', [1, 3], {
+      name: 'Gammal, Namn',
+      email_address: false,
+      phone_number: false,
+    })
+    expect(result).toEqual({
+      ok: true,
+      data: { restored: [1, 3, 2], missing: [] },
+    })
+  })
+
+  it('logs why Odoo refused, without the restored values', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, contact_code: 'P1' },
+      { id: 2, contact_code: 'P1' },
+    ])
+    odooMock.update.mockRejectedValueOnce(
+      new Error('Access denied writing Gammal, Namn')
+    )
+
+    const result = await restoreContact('P1', tenants)
+
+    expect(result).toEqual({ ok: false, err: 'could-not-restore-contact' })
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: 'P1',
+        message: 'Access denied writing [redacted]',
+      }),
+      'Error restoring contact in Odoo'
+    )
+  })
+
+  it('skips a tenant that no longer exists', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([{ id: 2, contact_code: 'P1' }])
+    odooMock.update.mockResolvedValue(true)
+
+    const result = await restoreContact('P1', tenants)
+
+    expect(odooMock.update).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ ok: true, data: { restored: [2], missing: [1] } })
+  })
+
+  it('refuses and writes nothing when a tenant belongs to another contact', async () => {
+    odooMock.searchRead.mockResolvedValueOnce([
+      { id: 1, contact_code: 'P1' },
+      { id: 2, contact_code: 'P2' },
+    ])
+
+    const result = await restoreContact('P1', tenants)
+
+    expect(result).toEqual({ ok: false, err: 'foreign-tenant' })
+    expect(odooMock.update).not.toHaveBeenCalled()
+  })
+})
+
+describe('odoo-adapter message domain', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    odooMock.connect.mockResolvedValue(undefined)
+  })
+
+  // The Mina sidor feed only returns message types named in MESSAGE_DOMAIN, so a
+  // missing type is invisible to the tenant even though the message exists in
+  // Odoo. tenant_my_pages is the MIM-1957 "publish without SMS/e-post" type.
+  it('includes tenant_my_pages so Mina sidor-only messages reach the tenant', async () => {
+    odooMock.searchRead
+      .mockResolvedValueOnce([]) // maintenance.request
+      .mockResolvedValueOnce([]) // mail.message
+
+    await getWorkOrdersByContactCode('P123456')
+
+    const messageCall = odooMock.searchRead.mock.calls.find(
+      (call: unknown[]) => call[0] === 'mail.message'
+    )
+    expect(messageCall).toBeDefined()
+    const domain = messageCall![1] as unknown[][]
+    const messageTypeClause = domain.find(
+      (clause) => clause[0] === 'message_type'
+    )
+    expect(messageTypeClause).toBeDefined()
+    expect(messageTypeClause![2] as string[]).toContain('tenant_my_pages')
+  })
+
+  // Odoo stores the sender the tenant is shown on the message itself.
+  // Leave it out of the read and every outbound message falls back to "Mimer",
+  // silently losing the supplier's resource group.
+  it('reads the tenant-facing sender Odoo stores on the message', async () => {
+    odooMock.searchRead
+      .mockResolvedValueOnce([]) // maintenance.request
+      .mockResolvedValueOnce([]) // mail.message
+
+    await getWorkOrdersByContactCode('P123456')
+
+    const messageCall = odooMock.searchRead.mock.calls.find(
+      (call: unknown[]) => call[0] === 'mail.message'
+    )
+    expect(messageCall).toBeDefined()
+    expect(messageCall![2] as string[]).toContain('onecore_tenant_author_name')
+  })
+
+  // Both halves of a close request belong in the tenant's thread: their own
+  // request echoed back, and the handler's reason when it is declined.
+  it('includes both close-request message types in the Mina sidor allowlist', async () => {
+    odooMock.searchRead
+      .mockResolvedValueOnce([]) // maintenance.request
+      .mockResolvedValueOnce([]) // mail.message
+
+    await getWorkOrdersByContactCode('P123456')
+
+    const messageCall = odooMock.searchRead.mock.calls.find(
+      (call: unknown[]) => call[0] === 'mail.message'
+    )
+    expect(messageCall).toBeDefined()
+    const domain = messageCall![1] as unknown[][]
+    const messageTypeClause = domain.find(
+      (clause) => clause[0] === 'message_type'
+    )
+    expect(messageTypeClause![2] as string[]).toEqual(
+      expect.arrayContaining([
+        'close_request_from_tenant',
+        'close_request_declined',
+      ])
+    )
+  })
+
+  it('reads close_request_pending from maintenance.request', async () => {
+    odooMock.searchRead
+      .mockResolvedValueOnce([]) // maintenance.request
+      .mockResolvedValueOnce([]) // mail.message
+
+    await getWorkOrdersByContactCode('P123456')
+
+    const workOrderCall = odooMock.searchRead.mock.calls.find(
+      (call: unknown[]) => call[0] === 'maintenance.request'
+    )
+    expect(workOrderCall).toBeDefined()
+    expect(workOrderCall![2] as string[]).toContain('close_request_pending')
+  })
+})
+
+describe('odoo-adapter requestCloseWorkOrder', () => {
+  // What the xmlrpc client rejects with when Odoo answers with a fault. On
+  // /xmlrpc/2, Odoo sends a UserError as fault code 2 with str(e) as faultString.
+  const xmlRpcFault = (faultString: string) =>
+    Object.assign(new Error(`XML-RPC fault: ${faultString}`), {
+      faultCode: 2,
+      faultString,
+    })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    odooMock.connect.mockResolvedValue(undefined)
+    odooMock.execute_kw.mockResolvedValue(true)
+  })
+
+  it('asks Odoo without a reason when the tenant gave none', async () => {
+    await requestCloseWorkOrder(13)
+
+    expect(odooMock.execute_kw).toHaveBeenCalledWith(
+      'maintenance.request',
+      'request_close_from_tenant',
+      [[13], {}]
+    )
+  })
+
+  it('passes the tenant reason as a keyword argument', async () => {
+    await requestCloseWorkOrder(13, 'Tvättmaskinen fungerar igen')
+
+    expect(odooMock.execute_kw).toHaveBeenCalledWith(
+      'maintenance.request',
+      'request_close_from_tenant',
+      [[13], { reason: 'Tvättmaskinen fungerar igen' }]
+    )
+  })
+
+  it('does not send an empty reason', async () => {
+    await requestCloseWorkOrder(13, '')
+
+    expect(odooMock.execute_kw).toHaveBeenCalledWith(
+      'maintenance.request',
+      'request_close_from_tenant',
+      [[13], {}]
+    )
+  })
+
+  it.each(['already_pending', 'closed', 'hidden'] as const)(
+    'throws CloseRequestConflictError when Odoo refuses with %s',
+    async (reason) => {
+      odooMock.execute_kw.mockRejectedValue(
+        xmlRpcFault(`close_request_conflict:${reason}`)
+      )
+
+      await expect(requestCloseWorkOrder(13)).rejects.toThrow(
+        CloseRequestConflictError
+      )
+      await expect(requestCloseWorkOrder(13)).rejects.toMatchObject({
+        reason,
+      })
+    }
+  )
+
+  // Only the prefix and the reason code are the contract with Odoo. Whatever
+  // text follows them is for people and may change.
+  it('recognises the refusal when Odoo appends human-readable text', async () => {
+    odooMock.execute_kw.mockRejectedValue(
+      xmlRpcFault('close_request_conflict:closed Ärendet är redan avslutat.')
+    )
+
+    await expect(requestCloseWorkOrder(13)).rejects.toMatchObject({
+      name: 'CloseRequestConflictError',
+      reason: 'closed',
+    })
+  })
+
+  it('rethrows any other Odoo fault unchanged', async () => {
+    const fault = xmlRpcFault(
+      'Traceback (most recent call last):\npsycopg2.errors.SerializationFailure'
+    )
+    odooMock.execute_kw.mockRejectedValue(fault)
+
+    await expect(requestCloseWorkOrder(13)).rejects.toBe(fault)
+  })
+
+  it('rethrows a conflict prefix with a reason it does not know', async () => {
+    const fault = xmlRpcFault('close_request_conflict:archived')
+    odooMock.execute_kw.mockRejectedValue(fault)
+
+    await expect(requestCloseWorkOrder(13)).rejects.toBe(fault)
+  })
+
+  it('rethrows when Odoo cannot be reached', async () => {
+    const connectionError = new Error('connect ECONNREFUSED 127.0.0.1:8069')
+    odooMock.connect.mockRejectedValue(connectionError)
+
+    await expect(requestCloseWorkOrder(13)).rejects.toBe(connectionError)
+    expect(odooMock.execute_kw).not.toHaveBeenCalled()
   })
 })

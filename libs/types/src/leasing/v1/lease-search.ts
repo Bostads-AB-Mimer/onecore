@@ -112,7 +112,6 @@ export const LeaseSearchQueryParamsSchema = z.object({
     .transform((val) => val === true || val === 'true')
     .optional(),
 
-  // Sorting (tenantName removed since contacts are fetched separately)
   sortBy: z
     .enum([
       'leaseStartDate',
@@ -121,6 +120,7 @@ export const LeaseSearchQueryParamsSchema = z.object({
       'address',
       'objectType',
       'rentalObjectCode',
+      'tenantName',
     ])
     .optional(),
   sortOrder: z.enum(['asc', 'desc']).optional(),
@@ -141,6 +141,8 @@ export type LeaseSearchQueryParamsInput = z.input<
 export const LeaseSearchResultSchema = z.object({
   // Core lease fields (always returned)
   leaseId: z.string(),
+  // Link to the lease in the source leasing system's web UI, when available
+  externalUrl: z.string().url().optional(),
   objectTypeCode: z.string(),
   leaseType: z.nativeEnum(LeaseType),
   contacts: z.array(ContactInfoSchema),
@@ -148,7 +150,9 @@ export const LeaseSearchResultSchema = z.object({
   postalCode: z.string().nullable(),
   city: z.string().nullable(),
   startDate: z.date().nullable(),
+  endDate: z.date().nullable(),
   lastDebitDate: z.date().nullable(),
+  signedAt: z.date().nullable(),
   status: z.nativeEnum(LeaseStatus),
 
   // Rental object code (objektnummer) - always included

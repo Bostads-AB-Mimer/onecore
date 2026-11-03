@@ -2,6 +2,7 @@ import { ApplicantStatus, ListingStatus } from '@onecore/types'
 import assert from 'node:assert'
 
 import * as listingAdapter from '../../../adapters/listing-adapter'
+import listingTextContentAdapter from '../../../adapters/listing-text-content-adapter'
 import * as factory from './../../factories'
 import { withContext } from '../../testUtils'
 
@@ -138,6 +139,28 @@ describe('listing-adapter', () => {
         )
         expect(listingFromDatabase?.id).toBeDefined()
         expect(listingFromDatabase?.id).toEqual(insertedListing.data.id)
+        expect(listingFromDatabase?.hasListingTextContent).toBe(false)
+      }))
+
+    it('flags the listing when listing text content exists', () =>
+      withContext(async (ctx) => {
+        const insertedListing = await listingAdapter.createListing(
+          factory.listingWithoutRentalObject.build({ rentalObjectCode: '1' }),
+          ctx.db
+        )
+        assert(insertedListing.ok)
+
+        const textContent = await listingTextContentAdapter.create(
+          factory.listingTextContent.build({ rentalObjectCode: '1' }),
+          ctx.db
+        )
+        assert(textContent.ok)
+
+        const listingFromDatabase = await listingAdapter.getListingById(
+          insertedListing.data.id,
+          ctx.db
+        )
+        expect(listingFromDatabase?.hasListingTextContent).toBe(true)
       }))
   })
 

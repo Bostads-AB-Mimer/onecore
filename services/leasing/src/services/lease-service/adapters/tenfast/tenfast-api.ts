@@ -1,5 +1,7 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import config from '../../../../common/config'
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
+import { Next } from 'koa'
 
 //todo: move to global config or handle error statuses in middleware
 axios.defaults.validateStatus = function (status) {
@@ -27,6 +29,13 @@ export const createHeaders = (
   return headers
 }
 
+const SYNC_TIMEOUT_MS = 10_000
+const syncTimeout = new AsyncLocalStorage<number>()
+
+/** Route middleware: every Tenfast call made while handling the request times out after 10s. */
+export const boundTenfastCalls = (_ctx: unknown, next: Next) =>
+  syncTimeout.run(SYNC_TIMEOUT_MS, next)
+
 export const request = async <T = any>(
   config: AxiosRequestConfig<any>,
   options?: TenfastRequestOptions
@@ -35,6 +44,7 @@ export const request = async <T = any>(
     ...createHeaders(options),
     ...config.headers,
   }
+  config.timeout ??= syncTimeout.getStore()
 
   return await axios(config)
 }

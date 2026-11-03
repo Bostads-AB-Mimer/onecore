@@ -11,6 +11,7 @@ import {
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
+import { contactsAdapter } from '../../../adapters/contacts-adapter'
 import * as replyToOffer from '../../../processes/parkingspaces/internal/reply-to-offer'
 import * as externalParkingSpaceProcess from '../../../processes/parkingspaces/external'
 
@@ -58,6 +59,27 @@ describe('lease-service', () => {
       expect(res.status).toBe(200)
       expect(getContactSpy).toHaveBeenCalled()
       expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(contact))
+    })
+  })
+
+  describe('GET /contacts/from-lease-search', () => {
+    it('resolves a personnummer in q to a contact code before calling leasing', async () => {
+      jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
+        ok: true,
+        data: factory.contactsServiceContact.build({ contactCode: 'P158770' }),
+      })
+      const filtersSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactsByFilters')
+        .mockResolvedValue({ ok: true, data: { content: [] } })
+
+      const res = await request(app.callback()).get(
+        '/contacts/from-lease-search?q=198001011234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(filtersSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'P158770' })
+      )
     })
   })
 

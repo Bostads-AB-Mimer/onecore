@@ -425,3 +425,29 @@ export function getKeysSearchQuery(
       .as('activeLoanContact')
   )
 }
+
+/**
+ * Batch variant of getKeyDetailsByRentalObject (non-disposed keys only).
+ * Returns a map keyed by rentalObjectCode; codes with no keys map to [].
+ */
+export async function getKeyDetailsByRentalObjects(
+  rentalObjectCodes: string[],
+  dbConnection: Knex | Knex.Transaction = db,
+  options: KeyIncludeOptions = {}
+): Promise<Record<string, KeyDetails[]>> {
+  const result: Record<string, KeyDetails[]> = {}
+  for (const code of rentalObjectCodes) result[code] = []
+  if (rentalObjectCodes.length === 0) return result
+
+  const keys: Key[] = await dbConnection(TABLE)
+    .whereIn('rentalObjectCode', rentalObjectCodes)
+    .where({ disposed: 0 })
+    .select('*')
+    .orderBy(['rentalObjectCode', 'keyType', 'keySequenceNumber'])
+
+  const details = await getKeyDetails(keys, dbConnection, options)
+  for (const key of details) {
+    if (key.rentalObjectCode) result[key.rentalObjectCode]?.push(key)
+  }
+  return result
+}

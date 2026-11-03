@@ -23,6 +23,7 @@ export function mapFetchError(response: { status: number }): CommonErr {
   if (status === 403) return 'forbidden'
   if (status === 404) return 'not-found'
   if (status === 409) return 'conflict'
+  if (status === 503) return 'unavailable'
   return 'unknown'
 }
 

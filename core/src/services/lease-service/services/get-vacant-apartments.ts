@@ -46,6 +46,16 @@ export const toVacantApartment = ({
   const block = governingBlock(blocks)
   if (block && block.toDate === null) return null
 
+  // Same rule as parking spaces and the listing page: the day after the
+  // block ends, or the leases' date if later. None means the leases hold the
+  // apartment until further notice (or can't be read), so it isn't vacant.
+  const vacantFrom = determineVacantFrom(
+    availability.vacantFrom,
+    block?.fromDate,
+    block?.toDate
+  )
+  if (!vacantFrom) return null
+
   return {
     rentalObjectCode: availability.rentalObjectCode,
     address: residence.address,
@@ -63,14 +73,7 @@ export const toVacantApartment = ({
     rent: availability.rent.amount,
     rentalTenureType: availability.rentalTenureType ?? null,
     rentalTags: availability.rentalTags ?? [],
-    // Same rule as parking spaces and the listing page: the day after the
-    // block ends, or the leases' date if later.
-    vacantFrom:
-      determineVacantFrom(
-        availability.vacantFrom,
-        block?.fromDate,
-        block?.toDate
-      ) ?? null,
+    vacantFrom,
     block: block
       ? {
           fromDate: block.fromDate,

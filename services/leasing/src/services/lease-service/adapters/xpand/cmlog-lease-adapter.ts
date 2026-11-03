@@ -3,6 +3,7 @@ import { logger } from '@onecore/utilities'
 import type { LeaseChange } from '@onecore/types'
 
 import { xpandDb } from './xpandDb'
+import { cmlogRowsSince } from './cmlog-rows'
 
 // `LeaseChange.timestamp` is sourced from cmlog.logtime — used by
 // sync-leases to checkpoint after each successful sync so the next run
@@ -33,25 +34,9 @@ const RELEVANT_CONTRACT_TYPES = [
  *
  * Only rows whose logmemo starts with "Hyreskontrakt " are returned.
  * If no timestamp is provided, returns all matching rows.
- *
- * Note: cmlog.logtime is a naive SQL Server `datetime` populated by xpand
- * with Swedish local time. Knex/mssql passes our JS Date as UTC; the driver
- * converts to the SQL Server session's local time for comparison. On a
- * machine running in Sweden this matches the column's wall clock, so the
- * `since` threshold lands where it reads.
  */
-export const cmlogLeaseChanges = (
-  db: Knex,
-  since: Date | null
-): Promise<{ logmemo: string; logtime: Date }[]> => {
-  const base = db
-    .from('cmlog')
-    .whereLike('logmemo', 'Hyreskontrakt %')
-    .orderBy('logtime', 'asc')
-    .select('logmemo', 'logtime')
-
-  return since ? base.andWhere('logtime', '>', since) : base
-}
+export const cmlogLeaseChanges = (db: Knex, since: Date | null) =>
+  cmlogRowsSince(db, since, ['Hyreskontrakt %'])
 
 /**
  * Parses cmlog rows into LeaseChange entries, one per matching row.

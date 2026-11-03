@@ -1,4 +1,9 @@
-import { Invoice, InvoiceTransactionType, PaymentStatus } from '@onecore/types'
+import {
+  Invoice,
+  InvoiceTransactionType,
+  MiscellaneousInvoice,
+  PaymentStatus,
+} from '@onecore/types'
 
 const oneDayMs = 24 * 60 * 60 * 1000
 const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000
@@ -75,5 +80,26 @@ export const mockedInvoices: Invoice[] = [
     source: 'legacy',
     invoiceRows: [],
     credit: null,
+  },
+]
+
+export const mockedMiscellaneousInvoices: MiscellaneousInvoice[] = [
+  {
+    invoiceId: '552303315030452',
+    invoiceDate: new Date('2023-02-15T00:00:00.000Z'),
+    amount: 500,
+    reference: 'P123456',
+    ourReference: 'Jane Doe',
+    description: 'Skadedjursbekämpning',
+    invoiceBaseItems: [
+      {
+        text: 'Skadedjursbekämpning',
+        amount: 500,
+        quantity: 1,
+        unitPrice: 500,
+        costCentre: '12345',
+      },
+    ],
+    invoiceFileUrl: 'https://xledger.example.com/files/1',
   },
 ]

@@ -13,6 +13,8 @@ import {
   TenfastRentArticle,
   TenfastBatchGetRentalObjectsResponseSchema,
   type TenfastBatchGetLease,
+  TenfastTenantLeasesResponseSchema,
+  type TenfastTenantLease,
   TenfastLease,
   TenfastLeaseSchema,
   TenfastRentalPropertySchema,
@@ -663,6 +665,7 @@ export const updateLeaseInvoiceRows = async (params: {
 export type LeaseMatch = {
   leaseId: string
   leaseEndDate: Date | null
+  tenantIds: string[]
 }
 
 export type MultipleLeaseMatch = {
@@ -746,6 +749,9 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
         batchMap.set(record.externalId, {
           leaseId: matches[0].externalId,
           leaseEndDate: matches[0].endDate ?? null,
+          tenantIds: matches[0].hyresgaster.map((tenant) =>
+            typeof tenant === 'string' ? tenant : tenant._id
+          ),
         })
       } else if (matches.length > 1) {
         batchMap.set(record.externalId, {
@@ -773,6 +779,75 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
   }
 
   return results
+}
+
+export type TenantLease = {
+  leaseId: string
+  stage: string
+  startDate: Date | null
+  endDate: Date | null
+  isResidential: boolean
+}
+
+const toTenantLease = (lease: TenfastTenantLease): TenantLease => ({
+  leaseId: lease.externalId,
+  stage: lease.stage,
+  startDate: lease.startDate,
+  endDate: lease.endDate,
+  isResidential: lease.hyresobjekt.some(
+    (rentalObject) =>
+      typeof rentalObject !== 'string' &&
+      rentalObject.typ?.toLowerCase() === 'bostad'
+  ),
+})
+
+export const getLeasesByTenantId = async (
+  tenantId: string
+): Promise<AdapterResult<TenantLease[], 'unknown'>> => {
+  try {
+    const records: TenfastTenantLease[] = []
+    let next: string | null = ''
+    let totalCount = Infinity
+
+    while (next !== null && records.length < totalCount) {
+      const response = await makeTenfastRequest('/v1/hyresvard/avtal', {
+        params: {
+          hyresvard: companyId,
+          hyresgast: tenantId,
+          populate: 'hyresobjekt',
+          ...(next ? { paginate: next } : {}),
+        },
+      })
+
+      if (response.status !== 200) {
+        logger.error(
+          { tenantId, status: response.status },
+          'getLeasesByTenantId: unexpected status'
+        )
+        return { ok: false, err: 'unknown' }
+      }
+
+      const parsed = TenfastTenantLeasesResponseSchema.safeParse(response.data)
+      if (!parsed.success) {
+        logger.error(
+          { tenantId, error: parsed.error },
+          'getLeasesByTenantId: response parse failed'
+        )
+        return { ok: false, err: 'unknown' }
+      }
+
+      if (parsed.data.records.length === 0) break
+
+      records.push(...parsed.data.records)
+      next = parsed.data.next
+      totalCount = parsed.data.totalCount
+    }
+
+    return { ok: true, data: records.map(toTenantLease) }
+  } catch (err) {
+    logger.error({ err, tenantId }, 'getLeasesByTenantId: failed')
+    return { ok: false, err: 'unknown' }
+  }
 }
 
 const transformToInvoiceRow = (

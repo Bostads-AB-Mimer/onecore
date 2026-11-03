@@ -5,7 +5,7 @@ export const DetailedApplicantFactory = Factory.define<DetailedApplicant>(
   ({ sequence }) => ({
     id: sequence,
     name: 'Test Testsson',
-    nationalRegistrationNumber: '199404084924',
+    nationalRegistrationNumber: '191212121212',
     contactCode: `P${158769 + sequence}`,
     applicationDate: new Date(),
     applicationType: 'Additional',

@@ -1,11 +1,14 @@
 import axios, { AxiosError } from 'axios'
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
+import type { RentalPropertyInfo } from '@onecore/types'
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL || '/api'
 
 const DEBOUNCE_DELAY = 300 // ms
 
+// Resolves the rental object for a (debounced) object code. `data` is the
+// object when it exists, `null` when the code is unknown.
 export const useValidateRentalObject = (rentalObjectCode: string | null) => {
   const [debouncedCode, setDebouncedCode] = useState(rentalObjectCode)
 
@@ -17,12 +20,12 @@ export const useValidateRentalObject = (rentalObjectCode: string | null) => {
     return () => clearTimeout(timer)
   }, [rentalObjectCode])
 
-  const query = useQuery<boolean, AxiosError>({
+  const query = useQuery<RentalPropertyInfo | null, AxiosError>({
     queryKey: ['validate-rental-object', debouncedCode],
     enabled: Boolean(debouncedCode && debouncedCode.trim().length > 0),
     queryFn: async () => {
       try {
-        await axios.get(
+        const response = await axios.get<{ content: RentalPropertyInfo }>(
           `${backendUrl}/rental-objects/by-code/${debouncedCode}`,
           {
             headers: {
@@ -32,10 +35,10 @@ export const useValidateRentalObject = (rentalObjectCode: string | null) => {
             withCredentials: true,
           }
         )
-        return true
+        return response.data.content
       } catch (err) {
         if (err instanceof AxiosError && err.response?.status === 404) {
-          return false
+          return null
         }
         throw err
       }

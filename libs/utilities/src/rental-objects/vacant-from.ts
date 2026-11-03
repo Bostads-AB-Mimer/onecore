@@ -1,7 +1,8 @@
 /**
- * Determines the date from which a rental object is vacant,
- * based on the last debit date, block start date, and block end date.
- * The last debit date comes from the leases, the block from Xpand.
+ * Determines the date from which a rental object is vacant, from the date the
+ * leases give (worked out in leasing) and the block.
+ * Without a date from the leases the object is leased until further notice,
+ * so it is not vacant whatever the block says. The block comes from Xpand.
  */
 export function determineVacantFrom(
   vacantFromDate?: Date | null,
@@ -13,9 +14,11 @@ export function determineVacantFrom(
 
   const lastBlockStartDate = toDate(blockStartDate)
   const lastBlockEndDate = toDate(blockEndDate)
-  const lastDebit = toDate(vacantFromDate)
+  const leaseVacantFrom = toDate(vacantFromDate)
   const today = new Date()
   today.setUTCHours(0, 0, 0, 0)
+
+  if (!leaseVacantFrom) return undefined
 
   let vacantFrom: Date | undefined
 
@@ -24,13 +27,11 @@ export function determineVacantFrom(
     dayAfterBlock.setUTCDate(dayAfterBlock.getUTCDate() + 1)
     dayAfterBlock.setUTCHours(0, 0, 0, 0)
     vacantFrom =
-      lastDebit && lastDebit > dayAfterBlock ? lastDebit : dayAfterBlock
+      leaseVacantFrom > dayAfterBlock ? leaseVacantFrom : dayAfterBlock
   } else if (lastBlockStartDate && !lastBlockEndDate) {
     vacantFrom = undefined
-  } else if (lastDebit) {
-    vacantFrom = lastDebit
   } else {
-    vacantFrom = today
+    vacantFrom = leaseVacantFrom
   }
 
   return vacantFrom

@@ -1,9 +1,8 @@
 import KoaRouter from '@koa/router'
-import { leasing, schemas } from '@onecore/types'
+import { Lease, leasing, schemas } from '@onecore/types'
 import { mapLeasesToLfExportRows } from '../services/lf-export'
 import { z } from 'zod'
 import {
-  getLeases,
   getContacts,
   getContactByContactCode,
 } from '../adapters/xpand/tenant-lease-adapter'
@@ -14,19 +13,15 @@ import {
 import {
   logger,
   generateRouteMetadata,
-  setExcelDownloadHeaders,
-  createExcelExport,
-  joinField,
-  formatDateForExcel,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
 
-import { LeaseStatusLabel } from '@onecore/types'
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import * as tenfastHelpers from '../helpers/tenfast'
 import config from '../../../common/config'
-import { toYearMonthDayString } from '../adapters/tenfast/schemas'
+import { TenfastLease, toYearMonthDayString } from '../adapters/tenfast/schemas'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 
 /**
@@ -35,6 +30,21 @@ import { parseRequestBody } from '../../../middlewares/parse-request-body'
  *   - name: Leases
  *     description: Endpoints related to lease operations
  */
+
+type KoaHttpErrorLike = {
+  status: number
+  message: string
+  headers?: Record<string, string>
+}
+
+function isKoaHttpError(error: unknown): error is KoaHttpErrorLike {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    typeof (error as { status: unknown }).status === 'number'
+  )
+}
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -279,8 +289,8 @@ export const routes = (router: KoaRouter) => {
    * @swagger
    * /leases/export:
    *   get:
-   *     summary: Export leases to Excel
-   *     description: Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+   *     summary: Get all leases matching search filters, for export
+   *     description: Returns the full (unpaginated) set of leases matching the same filters as /leases/search. Raw data only — contact enrichment and Excel generation happen in core.
    *     tags: [Leases]
    *     parameters:
    *       - in: query
@@ -340,16 +350,9 @@ export const routes = (router: KoaRouter) => {
    *           items:
    *             type: string
    *         description: District names
-   *     produces:
-   *       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
    *     responses:
    *       200:
-   *         description: Excel file download
-   *         content:
-   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-   *             schema:
-   *               type: string
-   *               format: binary
+   *         description: Successfully retrieved leases.
    *       400:
    *         description: Invalid query parameters
    *       500:
@@ -390,61 +393,23 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      // Fetch all matching leases using cursor-based pagination (O(n) API calls)
-      const allLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+      const rawLeases = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
         queryParams.data,
         ctx
       )
 
-      // Create Excel from the complete dataset
-      const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({
-        sheetName: 'Hyreskontrakt',
-        columns: [
-          { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
-          { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
-          { header: 'Hyresgäst', key: 'tenantName', width: 30 },
-          { header: 'Kundnummer', key: 'contactCode', width: 18 },
-          { header: 'E-post', key: 'email', width: 30 },
-          { header: 'Telefon', key: 'phone', width: 15 },
-          { header: 'Objekttyp', key: 'objectType', width: 12 },
-          { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
-          { header: 'Adress', key: 'address', width: 35 },
-          { header: 'Fastighet', key: 'property', width: 20 },
-          { header: 'Distrikt', key: 'district', width: 15 },
-          { header: 'Startdatum', key: 'startDate', width: 12 },
-          { header: 'Slutdatum', key: 'endDate', width: 12 },
-          { header: 'Status', key: 'status', width: 15 },
-        ],
-        data: allLeases,
-        rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
-          leaseId: lease.leaseId,
-          rentalObjectCode: lease.rentalObjectCode || '',
-          tenantName: joinField(lease.contacts, (c) =>
-            c.contactType === 'subletTenant' ? `${c.name} (andrahand)` : c.name
-          ),
-          contactCode: joinField(lease.contacts, (c) =>
-            c.contactType === 'subletTenant'
-              ? `${c.contactCode} (andrahand)`
-              : c.contactCode
-          ),
-          email: joinField(lease.contacts, (c) => c.email),
-          phone: joinField(lease.contacts, (c) => c.phone),
-          objectType: lease.parkingSpaceType || lease.objectTypeCode,
-          leaseType: lease.leaseType,
-          address: lease.address || '',
-          property: lease.property || '',
-          district: lease.districtName || '',
-          startDate: formatDateForExcel(lease.startDate),
-          endDate: formatDateForExcel(lease.lastDebitDate),
-          status: LeaseStatusLabel[lease.status] ?? String(lease.status),
-        }),
-      })
-
-      // 3. Set headers and return
-      setExcelDownloadHeaders(ctx, 'hyreskontrakt')
-      ctx.body = buffer
+      ctx.status = 200
+      ctx.body = { content: rawLeases, ...metadata }
     } catch (error: unknown) {
-      logger.error({ error, metadata }, 'Error exporting leases to Excel')
+      // Set by hand — a re-thrown error hits errorHandler(), which always
+      // forces status 500 regardless of the error's own status.
+      if (isKoaHttpError(error)) {
+        if (error.headers) ctx.set(error.headers)
+        ctx.status = error.status
+        ctx.body = { error: error.message, ...metadata }
+        return
+      }
+      logger.error({ error, metadata }, 'Error fetching leases for export')
       ctx.status = 500
       ctx.body = {
         error: error instanceof Error ? error.message : 'Export failed',
@@ -628,6 +593,13 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = result
     } catch (error: unknown) {
+      if (isKoaHttpError(error)) {
+        if (error.headers) ctx.set(error.headers)
+        ctx.status = error.status
+        ctx.body = { error: error.message, ...metadata }
+        return
+      }
+
       ctx.status = 500
 
       if (error instanceof Error) {
@@ -824,6 +796,12 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
+   *       - in: query
+   *         name: includeSubletLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Also return leases where the contact is the current sublet tenant (andrahandshyresgäst).
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.
@@ -841,9 +819,13 @@ export const routes = (router: KoaRouter) => {
    *         description: Internal server error. Failed to retrieve leases.
    */
   router.get('(.*)/leases/by-contact-code/:contactCode', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx, ['status'])
+    const metadata = generateRouteMetadata(ctx, [
+      'status',
+      'includeSubletLeases',
+    ])
 
-    const queryParams = leasing.v1.GetLeasesOptionsSchema.safeParse(ctx.query)
+    const queryParams =
+      leasing.v1.GetLeasesByContactCodeOptionsSchema.safeParse(ctx.query)
 
     if (!queryParams.success) {
       logger.error(
@@ -854,6 +836,14 @@ export const routes = (router: KoaRouter) => {
       ctx.body = { error: queryParams.error.issues, ...metadata }
       return
     }
+
+    const filters = queryParams.data?.status
+      ? { status: queryParams.data.status }
+      : undefined
+
+    const subletLeasesPromise = queryParams.data.includeSubletLeases
+      ? tenfastAdapter.getSubletLeases(ctx.params.contactCode, filters)
+      : undefined
 
     // TODO: NON-TENANT-CONTACTS/LEASE
     const contact = await tenfastAdapter.getTenantByContactCode(
@@ -874,41 +864,58 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    if (!contact.data) {
+    let leases: TenfastLease[] = []
+
+    if (contact.data) {
+      const getLeases = await tenfastAdapter.getLeasesByTenantId(
+        contact.data._id,
+        filters
+      )
+
+      if (!getLeases.ok) {
+        logger.error(
+          { error: getLeases.err, metadata },
+          'Error fetching leases by tenant ID'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: getLeases.err,
+          ...metadata,
+        }
+        return
+      }
+
+      leases = getLeases.data
+    } else {
       logger.info(
         { contactCode: ctx.params.contactCode },
         'No contact found by contact code'
       )
-
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody([], metadata)
-
-      return
     }
 
-    const filters = queryParams.data?.status
-      ? { status: queryParams.data.status }
-      : undefined
+    if (subletLeasesPromise) {
+      const getSubletLeases = await subletLeasesPromise
 
-    const getLeases = await tenfastAdapter.getLeasesByTenantId(
-      contact.data._id,
-      filters
-    )
-
-    if (!getLeases.ok) {
-      logger.error(
-        { error: getLeases.err, metadata },
-        'Error fetching leases by tenant ID'
-      )
-      ctx.status = 500
-      ctx.body = {
-        error: getLeases.err,
-        ...metadata,
+      if (!getSubletLeases.ok) {
+        logger.error(
+          { error: getSubletLeases.err, metadata },
+          'Error fetching sublet leases by contact code'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: getSubletLeases.err,
+          ...metadata,
+        }
+        return
       }
-      return
+
+      const leaseIds = new Set(leases.map((lease) => lease.externalId))
+      leases = leases.concat(
+        getSubletLeases.data.filter((lease) => !leaseIds.has(lease.externalId))
+      )
     }
 
-    const onecoreLeases = getLeases.data.map((lease) =>
+    const onecoreLeases = leases.map((lease) =>
       tenfastHelpers.mapToOnecoreLease(lease)
     )
 
@@ -1250,12 +1257,75 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
-  router.post('(.*)/leases/batch', async (ctx) => {
+  router.post('(.*)/leases/batch', boundTenfastCalls, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const leaseIds = (ctx.request.body as any).leaseIds as string[] // TODO schema
+    const body = (ctx.request.body ?? {}) as { leaseIds?: unknown }
+
+    if (!Array.isArray(body.leaseIds)) {
+      ctx.status = 400
+      ctx.body = { error: 'leaseIds must be an array', ...metadata }
+      return
+    }
+
+    const leaseIds = [...new Set(body.leaseIds as string[])]
 
     try {
-      const leases = await getLeases(leaseIds)
+      // Tenfast has no batch lookup, so fetch each lease the same way
+      // GET /leases/:leaseId does, a few at a time. A lease that fails is
+      // left out rather than failing the whole batch.
+      const concurrency = 10
+      const leases: Lease[] = []
+      const notFoundLeaseIds: string[] = []
+      const failedLeaseIds: string[] = []
+
+      for (let i = 0; i < leaseIds.length; i += concurrency) {
+        const chunk = leaseIds.slice(i, i + concurrency)
+        const results = await Promise.all(
+          chunk.map((leaseId) => tenfastAdapter.getLeaseByLeaseId(leaseId))
+        )
+
+        results.forEach((result, index) => {
+          if (result.ok) {
+            leases.push(tenfastHelpers.mapToOnecoreLease(result.data))
+          } else if (result.err === 'not-found') {
+            notFoundLeaseIds.push(chunk[index])
+          } else {
+            failedLeaseIds.push(chunk[index])
+          }
+        })
+      }
+
+      const summary = {
+        requested: leaseIds.length,
+        returned: leases.length,
+        notFound: notFoundLeaseIds.length,
+        failed: failedLeaseIds.length,
+      }
+
+      // Nothing came back and at least one lookup failed: most likely Tenfast
+      // is down or rejecting us, so say so instead of answering with an
+      // empty list that looks like "no leases".
+      if (leases.length === 0 && failedLeaseIds.length > 0) {
+        logger.error(
+          { ...summary, failedLeaseIds },
+          'POST /leases/batch: every Tenfast lookup failed'
+        )
+        ctx.status = 500
+        ctx.body = { error: 'Could not get leases from Tenfast', ...metadata }
+        return
+      }
+
+      if (failedLeaseIds.length > 0) {
+        logger.error(
+          { ...summary, failedLeaseIds },
+          'POST /leases/batch: some leases could not be fetched from Tenfast'
+        )
+      } else if (notFoundLeaseIds.length > 0) {
+        logger.info(
+          { ...summary, notFoundLeaseIds },
+          'POST /leases/batch: some leases were not found in Tenfast'
+        )
+      }
 
       ctx.status = 200
       ctx.body = {
@@ -1263,6 +1333,7 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error: any) {
+      logger.error(error, 'Error when getting lease batch')
       ctx.status = 500
       ctx.body = {
         message: error.message,

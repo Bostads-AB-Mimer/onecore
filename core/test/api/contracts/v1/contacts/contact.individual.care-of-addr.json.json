@@ -1,6 +1,7 @@
 {
   "type": "individual",
   "contactCode": "P000338",
+  "protectedIdentity": false,
   "personal": {
     "firstName": "Jonny",
     "lastName": "Hare",
