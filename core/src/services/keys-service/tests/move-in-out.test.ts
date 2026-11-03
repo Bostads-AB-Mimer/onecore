@@ -1,4 +1,5 @@
 import request from 'supertest'
+import { AxiosError, AxiosHeaders } from 'axios'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
@@ -596,6 +597,33 @@ describe('GET /keys/move-in-out', () => {
     expect(b.body._meta.totalRecords).toBe(1)
     // One ending + one starting search, not two of each
     expect(searchSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('passes on 503 and Retry-After while the lease search cache warms up', async () => {
+    const warmingUp = new AxiosError(
+      'Request failed with status code 503',
+      '503',
+      undefined,
+      undefined,
+      {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: new AxiosHeaders({ 'retry-after': '45' }),
+        config: { headers: new AxiosHeaders() },
+        data: 'Lease cache is warming up — retry shortly',
+      }
+    )
+    jest.spyOn(leasingAdapter, 'searchLeases').mockRejectedValue(warmingUp)
+    const keysBatch = jest.spyOn(keysAdapter.KeysApi, 'getBatchByRentalObject')
+
+    const res = await request(app.callback()).get(
+      '/keys/move-in-out?endDateFrom=2026-10-01&endDateTo=2026-11-01'
+    )
+
+    expect(res.status).toBe(503)
+    expect(res.headers['retry-after']).toBe('45')
+    expect(res.body.reason).toMatch(/värmer upp/)
+    expect(keysBatch).not.toHaveBeenCalled()
   })
 
   it('responds with 500 when the keys batch fails', async () => {

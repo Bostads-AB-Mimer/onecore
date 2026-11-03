@@ -10,7 +10,9 @@ export { formatTenantAddress, formatTenantName } from './lib/formatting'
 // Lease contact utilities
 export {
   getLeaseContactTitle,
+  hasSubletTenant,
   isSubletTenant,
+  isSubletTenantOnLeases,
   sortLeaseContacts,
 } from './lib/leaseContacts'
 

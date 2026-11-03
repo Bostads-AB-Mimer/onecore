@@ -692,7 +692,11 @@ export async function syncContactToEconomy(
     const response = await axios.post(
       `${config.economyService.url}/customers/${contactCode}/sync${options?.create ? `?create=${options.create}` : ''}`,
       payload,
-      { timeout: SYNC_CONTACT_TIMEOUT_MS }
+      {
+        timeout: SYNC_CONTACT_TIMEOUT_MS,
+        // leasing-adapter makes every 4xx resolve on the shared axios instance
+        validateStatus: (status) => status >= 200 && status < 300,
+      }
     )
     const undo = SyncContactToEconomyUndoSchema.nullable().safeParse(
       response.data?.undo

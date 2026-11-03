@@ -25,6 +25,38 @@ const DAILY_RETRY_AFTER_MS = 7 * 24 * HOUR_MS
 const DAILY_RETRY_INTERVAL_MS = 24 * HOUR_MS
 const GIVE_UP_AFTER_MS = 30 * 24 * HOUR_MS
 
+const stockholmTime = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Europe/Stockholm',
+  hourCycle: 'h23',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric',
+  second: 'numeric',
+})
+
+// logtime is Swedish wall time that reaches core labelled UTC (tedious useUTC),
+// so a real instant must be read the same way before the two are compared.
+export const onXpandClock = (date: Date) => {
+  const part = Object.fromEntries(
+    stockholmTime
+      .formatToParts(date)
+      .map(({ type, value }) => [type, Number(value)])
+  )
+  return new Date(
+    Date.UTC(
+      part.year,
+      part.month - 1,
+      part.day,
+      part.hour,
+      part.minute,
+      part.second,
+      date.getUTCMilliseconds()
+    )
+  )
+}
+
 const retryIntervalFor = (failingFor: number) =>
   failingFor < RETRY_EVERY_RUN_FOR_MS
     ? 0
@@ -274,7 +306,7 @@ export const runCmlogSync = async <T>(
   } else {
     logger.info('no saved timestamp, syncing all')
   }
-  const readAt = now().getTime()
+  const readAt = onXpandClock(now()).getTime()
   const result = await def.fetchChanges(
     position ? new Date(readFrom - SECOND_MS) : null
   )
@@ -617,7 +649,7 @@ export const runCmlogSync = async <T>(
   if (skipExisting) {
     for (const change of read)
       handled.set(idOf(change), def.timestampOf(change).getTime())
-    if (!lastTimestamp) lastTimestamp = now()
+    if (!lastTimestamp) lastTimestamp = onXpandClock(now())
   }
   await savePosition(
     Math.max(
