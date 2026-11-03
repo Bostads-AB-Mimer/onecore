@@ -81,6 +81,8 @@ interface PhoneNumber {
 interface Lease {
   leaseId: string
   leaseNumber: string
+  // Link to the lease in the source leasing system's web UI, when available
+  externalUrl?: string
   leaseStartDate: Date
   leaseEndDate: Date | undefined
   status: LeaseStatus

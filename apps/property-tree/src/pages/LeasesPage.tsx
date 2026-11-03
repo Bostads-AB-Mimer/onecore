@@ -56,7 +56,7 @@ const statusOptions = [
   { label: 'Uppsagd', value: 'abouttoend' },
   { label: 'Upphört', value: 'ended' },
   { label: 'Prel. uppsagt', value: 'preliminaryterminated' },
-  { label: 'Signering', value: 'pendingsignature' },
+  { label: 'Inväntar signering', value: 'pendingsignature' },
   { label: 'Ej skickat', value: 'notsent' },
 ] as const
 

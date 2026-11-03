@@ -9,6 +9,7 @@ import {
   formatRentalType,
   getPropertyIdentifier,
   LeaseMobileCard,
+  LeaseNumber,
   LeaseStatusBadge,
   sortLeasesByStatus,
 } from '@/entities/lease'
@@ -97,7 +98,11 @@ export function TenantLeasesTabContent({
     {
       key: 'leaseNumber',
       label: 'Kontraktsnummer',
-      render: (lease: Lease) => lease.leaseNumber,
+      render: (lease: Lease) => (
+        <LeaseNumber externalUrl={lease.externalUrl}>
+          {lease.leaseNumber}
+        </LeaseNumber>
+      ),
     },
     {
       key: 'property',
