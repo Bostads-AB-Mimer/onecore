@@ -18,6 +18,10 @@ jest.mock('@onecore/utilities', () => {
       },
     },
     generateRouteMetadata: jest.fn(() => ({})),
+    makeSuccessResponseBody: <T>(data: T, metadata: object) => ({
+      content: data,
+      ...metadata,
+    }),
   }
 })
 
@@ -310,17 +314,50 @@ describe('work-order-service index', () => {
 
   describe('POST /workOrders/:workOrderId/close', () => {
     const workOrderId = 13
-    it('should close work order', async () => {
+
+    it('responds 200 with the message in content when Odoo closes it', async () => {
       const closeWorkOrderSpy = jest
         .spyOn(odooAdapter, 'closeWorkOrder')
-        .mockResolvedValue(Promise.resolve(true))
+        .mockResolvedValue({ ok: true, data: undefined })
+
       const res = await request(app.callback()).post(
         `/api/workOrders/${workOrderId}/close`
       )
 
       expect(res.status).toBe(200)
-      expect(res.body.message).toBeDefined()
-      expect(closeWorkOrderSpy).toHaveBeenCalled()
+      expect(res.body.content.message).toBe(
+        'Work order with ID 13 updated successfully'
+      )
+      expect(closeWorkOrderSpy).toHaveBeenCalledWith(workOrderId)
+    })
+
+    it('responds 409 refused with the reason when Odoo refuses', async () => {
+      jest.spyOn(odooAdapter, 'closeWorkOrder').mockResolvedValue({
+        ok: false,
+        err: { code: 'refused', reason: 'Vägrad' },
+      })
+
+      const res = await request(app.callback()).post(
+        `/api/workOrders/${workOrderId}/close`
+      )
+
+      expect(res.status).toBe(409)
+      expect(res.body.error).toBe('refused')
+      expect(res.body.reason).toBe('Vägrad')
+    })
+
+    it('responds 500 odoo-error without a reason when Odoo fails', async () => {
+      jest
+        .spyOn(odooAdapter, 'closeWorkOrder')
+        .mockResolvedValue({ ok: false, err: { code: 'odoo-error' } })
+
+      const res = await request(app.callback()).post(
+        `/api/workOrders/${workOrderId}/close`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('odoo-error')
+      expect(res.body.reason).toBeUndefined()
     })
   })
 

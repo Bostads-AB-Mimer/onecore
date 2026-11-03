@@ -3664,8 +3664,21 @@ export interface paths {
         200: {
           content: {
             'application/json': {
-              /** @example Work order with ID {workOrderId} updated successfully */
-              message?: string
+              content?: {
+                /** @example Work order with ID {workOrderId} updated successfully */
+                message?: string
+              }
+            }
+          }
+        }
+        /** @description The work order system refused to close the work order with a business rule, e.g. a component on the work order has no outcome. A work order that no longer exists is also refused. */
+        409: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error: 'refused'
+              /** @description Why the close was refused. */
+              reason?: string
             }
           }
         }
@@ -3673,8 +3686,8 @@ export interface paths {
         500: {
           content: {
             'application/json': {
-              /** @example Failed to update work order with ID {workOrderId} */
-              message?: string
+              /** @enum {string} */
+              error: 'close-failed'
             }
           }
         }

@@ -9,7 +9,11 @@ import * as schemas from './schemas'
 import { registerSchema } from '../../utils/openapi'
 
 import { ApartmentInfo, Lease, RentalPropertyInfo } from '@onecore/types'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import {
+  logger,
+  generateRouteMetadata,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 
 interface RentalPropertyInfoWithLeases extends RentalPropertyInfo {
   leases: Lease[]
@@ -2019,19 +2023,42 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: object
    *               properties:
-   *                 message:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     message:
+   *                       type: string
+   *                       example: Work order with ID {workOrderId} updated successfully
+   *       '409':
+   *         description: >
+   *           The work order system refused to close the work order with a
+   *           business rule, e.g. a component on the work order has no outcome.
+   *           A work order that no longer exists is also refused.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - error
+   *               properties:
+   *                 error:
    *                   type: string
-   *                   example: Work order with ID {workOrderId} updated successfully
+   *                   enum: [refused]
+   *                 reason:
+   *                   type: string
+   *                   description: Why the close was refused.
    *       '500':
    *         description: Internal server error. Failed to close the work order.
    *         content:
    *           application/json:
    *             schema:
    *               type: object
+   *               required:
+   *                 - error
    *               properties:
-   *                 message:
+   *                 error:
    *                   type: string
-   *                   example: Failed to update work order with ID {workOrderId}
+   *                   enum: [close-failed]
    *     security:
    *       - bearerAuth: []
    */
@@ -2039,21 +2066,25 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { workOrderId } = ctx.params
 
-    const success = await workOrderAdapter.closeWorkOrder(workOrderId)
+    const result = await workOrderAdapter.closeWorkOrder(workOrderId)
 
-    if (success) {
+    if (result.ok) {
       ctx.status = 200
-      ctx.body = {
-        message: `Work order with ID ${workOrderId} updated successfully`,
-        ...metadata,
-      }
-    } else {
-      ctx.status = 500
-      ctx.body = {
-        message: `Failed to update work order with ID ${workOrderId}`,
-        ...metadata,
-      }
+      ctx.body = makeSuccessResponseBody(
+        { message: `Work order with ID ${workOrderId} updated successfully` },
+        metadata
+      )
+      return
     }
+
+    if (result.err === 'refused') {
+      ctx.status = 409
+      ctx.body = { error: 'refused', reason: result.message, ...metadata }
+      return
+    }
+
+    ctx.status = 500
+    ctx.body = { error: 'close-failed', ...metadata }
   })
 
   /**

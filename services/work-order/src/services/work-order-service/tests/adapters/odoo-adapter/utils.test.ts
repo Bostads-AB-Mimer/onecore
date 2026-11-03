@@ -1,6 +1,7 @@
 import {
   transformWorkOrder,
   transformMessages,
+  odooUserErrorMessage,
 } from '../../../adapters/odoo-adapter/utils'
 import * as factory from '../../factories'
 
@@ -61,6 +62,35 @@ describe('odoo-adapter utils', () => {
       expect(result[0].body).toBe('Hej, här är ett meddelande från kunden')
       expect(result[0].messageType).toBe('from_tenant')
       expect(result[0].author).toBe('Kund')
+    })
+  })
+
+  describe('odooUserErrorMessage', () => {
+    it('returns the message of a fault Odoo raised as a UserError', () => {
+      expect(
+        odooUserErrorMessage({
+          faultCode: 2,
+          faultString: 'Alla komponenter behöver ett utfall',
+        })
+      ).toBe('Alla komponenter behöver ett utfall')
+    })
+
+    it('returns undefined for an application error fault', () => {
+      expect(
+        odooUserErrorMessage({ faultCode: 1, faultString: 'Traceback …' })
+      ).toBeUndefined()
+    })
+
+    it('returns undefined for an access error fault', () => {
+      expect(
+        odooUserErrorMessage({ faultCode: 4, faultString: 'x' })
+      ).toBeUndefined()
+    })
+
+    it('returns undefined for errors that are not faults', () => {
+      expect(odooUserErrorMessage(new Error('ECONNREFUSED'))).toBeUndefined()
+      expect(odooUserErrorMessage('string')).toBeUndefined()
+      expect(odooUserErrorMessage(null)).toBeUndefined()
     })
   })
 })

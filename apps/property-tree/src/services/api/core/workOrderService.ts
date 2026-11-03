@@ -1,4 +1,4 @@
-import { GET, POST } from './baseApi'
+import { GET, POST, toApiError } from './baseApi'
 import { components } from './generated/api-types'
 
 export type InternalWorkOrder = {
@@ -231,12 +231,13 @@ export const workOrderService = {
     return response.data.content
   },
 
-  // Moves the work order to its done stage in Odoo.
+  // Moves the work order to its done stage in Odoo. Throws an ApiError that
+  // keeps the status: 409 when Odoo refuses the close.
   async closeWorkOrder(workOrderId: number): Promise<void> {
     const response = await POST('/work-orders/{workOrderId}/close', {
       params: { path: { workOrderId: String(workOrderId) } },
     })
 
-    if (response.error) throw new Error('Failed to close work order')
+    if (response.error) throw toApiError(response.error, response.response)
   },
 }

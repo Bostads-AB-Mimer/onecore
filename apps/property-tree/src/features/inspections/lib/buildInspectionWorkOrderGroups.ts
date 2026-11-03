@@ -111,6 +111,11 @@ const formatLine = (component: DamagedComponent): string => {
   return `- ${line}`
 }
 
+export const maintenanceTeamName = (
+  teams: MaintenanceTeam[],
+  id: number
+): string => teams.find((team) => team.id === id)?.name ?? `Resursgrupp ${id}`
+
 /**
  * Groups the damaged components the inspector assigned to a resursgrupp into one
  * work order per team. The description is HTML (`<br>`-joined — Odoo's field is
@@ -122,8 +127,7 @@ export const buildInspectionWorkOrderGroups = (
   teams: MaintenanceTeam[],
   meta: { id: string; address?: string }
 ): InspectionWorkOrderGroup[] => {
-  const teamName = (id: number) =>
-    teams.find((team) => team.id === id)?.name ?? `Resursgrupp ${id}`
+  const teamName = (id: number) => maintenanceTeamName(teams, id)
 
   const byTeam = new Map<number, DamagedComponent[]>()
   for (const component of damaged) {

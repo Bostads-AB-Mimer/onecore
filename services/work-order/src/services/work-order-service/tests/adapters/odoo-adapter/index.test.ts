@@ -13,17 +13,19 @@ jest.mock('odoo-await', () => {
 })
 
 const loggerWarnMock = jest.fn()
+const loggerErrorMock = jest.fn()
 
 jest.mock('@onecore/utilities', () => ({
   logger: {
     info: jest.fn(),
-    error: jest.fn(),
+    error: (...args: unknown[]) => loggerErrorMock(...args),
     warn: (...args: unknown[]) => loggerWarnMock(...args),
   },
   generateRouteMetadata: jest.fn(() => ({})),
 }))
 
 import {
+  closeWorkOrder,
   createInspectionWorkOrders,
   createWorkOrder,
   getMaintenanceTeams,
@@ -387,5 +389,62 @@ describe('odoo-adapter createInspectionWorkOrders', () => {
 
     expect(result.ok).toBe(false)
     expect(odooMock.create).not.toHaveBeenCalled()
+  })
+})
+
+describe('odoo-adapter closeWorkOrder', () => {
+  // A fault as the xmlrpc client builds it from an Odoo error response
+  const fault = (faultCode: number, faultString: string) =>
+    Object.assign(new Error(`XML-RPC fault: ${faultString}`), {
+      faultCode,
+      faultString,
+    })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    odooMock.connect.mockResolvedValue(undefined)
+    odooMock.searchRead.mockResolvedValue([{ id: 6 }])
+  })
+
+  it('moves the work order to the done stage', async () => {
+    odooMock.update.mockResolvedValue(true)
+
+    const result = await closeWorkOrder(13)
+
+    expect(result).toEqual({ ok: true, data: undefined })
+    expect(odooMock.update).toHaveBeenCalledWith('maintenance.request', 13, {
+      stage_id: 6,
+    })
+  })
+
+  it('returns refused with the reason when Odoo refuses the move', async () => {
+    odooMock.update.mockRejectedValue(fault(2, 'Vägrad'))
+
+    const result = await closeWorkOrder(13)
+
+    expect(result).toEqual({
+      ok: false,
+      err: { code: 'refused', reason: 'Vägrad' },
+    })
+    expect(loggerWarnMock).toHaveBeenCalledTimes(1)
+    expect(loggerErrorMock).not.toHaveBeenCalled()
+  })
+
+  it('returns odoo-error when Odoo fails with an application error', async () => {
+    odooMock.update.mockRejectedValue(fault(1, 'Traceback …'))
+
+    const result = await closeWorkOrder(13)
+
+    expect(result).toEqual({ ok: false, err: { code: 'odoo-error' } })
+    expect(loggerErrorMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns odoo-error when no done stage exists', async () => {
+    odooMock.searchRead.mockResolvedValue([])
+
+    const result = await closeWorkOrder(13)
+
+    expect(result).toEqual({ ok: false, err: { code: 'odoo-error' } })
+    expect(odooMock.update).not.toHaveBeenCalled()
   })
 })

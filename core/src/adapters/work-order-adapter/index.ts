@@ -555,7 +555,9 @@ export const updateWorkOrder = async (
 
 export const closeWorkOrder = async (
   workOrderId: string
-): Promise<AdapterResult<string, string>> => {
+): Promise<
+  AdapterResult<string, 'refused' | 'request-failed' | 'request-error'>
+> => {
   try {
     const fetchResponse = await client().POST(
       '/workOrders/{workOrderId}/close',
@@ -563,17 +565,35 @@ export const closeWorkOrder = async (
         params: { path: { workOrderId } },
       }
     )
-    if (fetchResponse.data?.content?.message) {
+    // Decided by status, not body shape, so a rolling deploy against an older
+    // service (top-level message) still counts a close as done
+    if (fetchResponse.response.ok) {
       return {
         ok: true,
-        data: fetchResponse.data.content.message,
+        data: fetchResponse.data?.content?.message ?? '',
       }
     }
 
-    return { ok: false, err: 'unknown' }
-  } catch (error) {
-    logger.error({ error }, 'work-order-adapter.closeWorkOrder')
-    const errorMessage = error instanceof Error ? error.message : 'unknown'
-    return { ok: false, err: errorMessage }
+    // The work-order service has already logged a refusal and its own
+    // odoo-error; log anything else (e.g. a 503 from the ingress)
+    const { error } = fetchResponse
+    if (fetchResponse.response.status === 409) {
+      return {
+        ok: false,
+        err: 'refused',
+        message: error && 'reason' in error ? error.reason : undefined,
+      }
+    }
+
+    if (!(error && 'error' in error && error.error === 'odoo-error')) {
+      logger.error(
+        { status: fetchResponse.response.status },
+        'work-order-adapter.closeWorkOrder'
+      )
+    }
+    return { ok: false, err: 'request-failed' }
+  } catch (err) {
+    logger.error({ err }, 'work-order-adapter.closeWorkOrder')
+    return { ok: false, err: 'request-error' }
   }
 }

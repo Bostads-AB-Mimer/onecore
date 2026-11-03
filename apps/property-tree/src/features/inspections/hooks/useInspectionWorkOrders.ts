@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 
 import { workOrderService } from '@/services/api/core'
@@ -10,11 +10,26 @@ import { useToast } from '@/shared/hooks/useToast'
 import {
   buildInspectionWorkOrderGroups,
   getDamagedComponents,
+  maintenanceTeamName,
   type InspectionWorkOrderGroup,
 } from '../lib/buildInspectionWorkOrderGroups'
+import {
+  staleCloseResult,
+  summarizeStaleCloses,
+  type StaleCloseResult,
+} from '../lib/staleWorkOrderCloses'
 import { useMaintenanceTeams } from './useMaintenanceTeams'
 
 type InspectionRoom = components['schemas']['InspectionRoom']
+
+type StaleCloseIssues = {
+  refusedTeamNames: string[]
+  failedTeamNames: string[]
+}
+const NO_STALE_CLOSE_ISSUES: StaleCloseIssues = {
+  refusedTeamNames: [],
+  failedTeamNames: [],
+}
 
 /**
  * Submission state of a group relative to what has already been created in
@@ -59,6 +74,18 @@ export const useInspectionWorkOrders = ({
   const [submittedByTeam, setSubmittedByTeam] = useState<
     Map<number, { descriptionHtml: string; workOrderId?: number }>
   >(new Map())
+  // Teams whose stale work order was refused or failed to close in the latest
+  // submit, shown in the confirm dialog — a toast would be replaced by the
+  // "Ärenden skapade" toast of the same submit.
+  const [staleCloseIssues, setStaleCloseIssues] = useState<StaleCloseIssues>(
+    NO_STALE_CLOSE_ISSUES
+  )
+  // Covers the whole submit (closes + creates), not just the create mutation:
+  // a second click during the closes would close the same work orders again
+  // from the same snapshot, and the repeat close is refused. The ref blocks
+  // re-entry before the re-render disables the button.
+  const submittingRef = useRef(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const assignTeam = (key: string, teamId: number | null) =>
     setAssignments((prev) => {
@@ -146,43 +173,48 @@ export const useInspectionWorkOrders = ({
    * Closes work orders created earlier this session for teams that no longer
    * have any assigned components — the inspector reassigned them, so leaving
    * the request open would dispatch two resursgrupper to the same damage.
-   * Returns false if any close failed (the team stays in the map for retry).
+   * Returns false if any close failed (the team stays in the map for retry)
+   * or was refused. Odoo refuses when someone is already handling the ärende
+   * (e.g. a component without an outcome): the team is released, so the next
+   * submit completes. Both are listed in the dialog.
    */
   const closeStaleWorkOrders = async (staleTeamIds: number[]) => {
-    const results = await Promise.all(
-      staleTeamIds.map(async (teamId) => {
-        const workOrderId = submittedByTeam.get(teamId)?.workOrderId
-        // Without an id there is nothing we can close — drop the team rather
-        // than blocking the inspector behind a retry that can never succeed.
-        if (workOrderId === undefined) return { teamId, ok: true }
-        try {
-          await workOrderService.closeWorkOrder(workOrderId)
-          return { teamId, ok: true }
-        } catch {
-          return { teamId, ok: false }
+    const outcomes = await Promise.all(
+      staleTeamIds.map(
+        async (
+          teamId
+        ): Promise<{ teamId: number; result: StaleCloseResult }> => {
+          const workOrderId = submittedByTeam.get(teamId)?.workOrderId
+          // Without an id there is nothing we can close — drop the team rather
+          // than blocking the inspector behind a retry that can never succeed.
+          if (workOrderId === undefined) return { teamId, result: 'closed' }
+          try {
+            await workOrderService.closeWorkOrder(workOrderId)
+            return { teamId, result: 'closed' }
+          } catch (err: unknown) {
+            return { teamId, result: staleCloseResult(err) }
+          }
         }
-      })
+      )
     )
 
-    const closedTeamIds = results.filter((r) => r.ok).map((r) => r.teamId)
-    if (closedTeamIds.length > 0) {
+    const { releasedTeamIds, refusedTeamIds, failedTeamIds } =
+      summarizeStaleCloses(outcomes)
+    if (releasedTeamIds.length > 0) {
       setSubmittedByTeam((prev) => {
         const next = new Map(prev)
-        for (const teamId of closedTeamIds) next.delete(teamId)
+        for (const teamId of releasedTeamIds) next.delete(teamId)
         return next
       })
     }
+    const teamNames = (teamIds: number[]) =>
+      teamIds.map((teamId) => maintenanceTeamName(teams, teamId))
+    setStaleCloseIssues({
+      refusedTeamNames: teamNames(refusedTeamIds),
+      failedTeamNames: teamNames(failedTeamIds),
+    })
 
-    const ok = results.every((r) => r.ok)
-    if (!ok) {
-      toast({
-        title: 'Fel',
-        description:
-          'Ett tidigare skapat ärende kunde inte stängas i Odoo. Försök igen.',
-        variant: 'destructive',
-      })
-    }
-    return ok
+    return failedTeamIds.length === 0 && refusedTeamIds.length === 0
   }
 
   /**
@@ -192,9 +224,22 @@ export const useInspectionWorkOrders = ({
    * created with unchanged content are skipped; changed groups are re-sent
    * and upserted server-side (keyed on inspection + team); teams whose
    * components were all reassigned since a previous submit get their Odoo
-   * request closed.
+   * request closed (a refused or failed close is listed in `staleCloseIssues`).
    */
   const createWorkOrders = async (): Promise<boolean> => {
+    if (submittingRef.current) return false
+    submittingRef.current = true
+    setIsSubmitting(true)
+    try {
+      return await submitWorkOrders()
+    } finally {
+      submittingRef.current = false
+      setIsSubmitting(false)
+    }
+  }
+
+  const submitWorkOrders = async (): Promise<boolean> => {
+    setStaleCloseIssues(NO_STALE_CLOSE_ISSUES)
     const pendingGroups = groups.filter(
       (group) => groupStatus(group) !== 'created'
     )
@@ -250,10 +295,16 @@ export const useInspectionWorkOrders = ({
     groups,
     unassignedCount,
     groupStatus,
+    staleCloseIssues,
     isConfirmOpen,
     openConfirm: () => setIsConfirmOpen(true),
-    closeConfirm: () => setIsConfirmOpen(false),
-    isCreating: createMutation.isPending,
+    closeConfirm: () => {
+      setIsConfirmOpen(false)
+      // Messages belong to the last submit; after Avbryt the assignments may
+      // change, so a reopened dialog must not show them
+      setStaleCloseIssues(NO_STALE_CLOSE_ISSUES)
+    },
+    isCreating: isSubmitting,
     createWorkOrders,
   }
 }

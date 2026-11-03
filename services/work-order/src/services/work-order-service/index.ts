@@ -1,6 +1,10 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import {
+  generateRouteMetadata,
+  logger,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import * as odooAdapter from './adapters/odoo-adapter'
 import {
   CreateInspectionWorkOrdersBodySchema,
@@ -1622,43 +1626,62 @@ export const routes = (router: KoaRouter) => {
    *                 metadata:
    *                   type: object
    *                   description: Route metadata
+   *       '409':
+   *         description: >
+   *           Odoo refused to close the work order with a business rule, e.g. a
+   *           component on the work order has no outcome. A work order that no
+   *           longer exists in Odoo is also refused.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - error
+   *                 - reason
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   enum: [refused]
+   *                 reason:
+   *                   type: string
+   *                   description: The refusal message from Odoo.
    *       '500':
    *         description: Internal server error. Failed to close work order.
    *         content:
    *           application/json:
    *             schema:
    *               type: object
+   *               required:
+   *                 - error
    *               properties:
-   *                 message:
+   *                 error:
    *                   type: string
-   *                   example: Failed to update work order with ID {workOrderId}
-   *                 metadata:
-   *                   type: object
-   *                   description: Route metadata
+   *                   enum: [odoo-error]
    *     security:
    *       - bearerAuth: []
    */
   router.post('(.*)/workOrders/:workOrderId/close', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    try {
-      const { workOrderId } = ctx.params
+    const { workOrderId } = ctx.params
 
-      await odooAdapter.closeWorkOrder(parseInt(workOrderId, 10))
+    const result = await odooAdapter.closeWorkOrder(parseInt(workOrderId, 10))
 
+    if (result.ok) {
       ctx.status = 200
-      ctx.body = {
-        message: `Work order with ID ${workOrderId} updated successfully`,
-        ...metadata,
-      }
-    } catch (error: unknown) {
-      ctx.status = 500
-
-      if (error instanceof Error) {
-        ctx.body = {
-          error: error.message,
-          ...metadata,
-        }
-      }
+      ctx.body = makeSuccessResponseBody(
+        { message: `Work order with ID ${workOrderId} updated successfully` },
+        metadata
+      )
+      return
     }
+
+    if (result.err.code === 'refused') {
+      ctx.status = 409
+      ctx.body = { error: 'refused', reason: result.err.reason, ...metadata }
+      return
+    }
+
+    ctx.status = 500
+    ctx.body = { error: 'odoo-error', ...metadata }
   })
 }
