@@ -1,0 +1,21 @@
+model ComponentEvents {
+  id                 String   @id @default(uuid()) @db.UniqueIdentifier
+  componentId        String   @map("component_id") @db.UniqueIdentifier
+  eventType          String   @map("event_type") @db.NVarChar(30)
+  occurredAt         DateTime @map("occurred_at") @db.Date
+  sourceType         String   @map("source_type") @db.NVarChar(20)
+  sourceId           String?  @map("source_id") @db.NVarChar(100)
+  relatedComponentId String?  @map("related_component_id") @db.UniqueIdentifier
+  actor              String   @db.NVarChar(255)
+  note               String?  @db.NVarChar(Max)
+  createdAt          DateTime @default(now()) @map("created_at") @db.DateTime
+
+  // Relations
+  // related_component_id is deliberately not a relation: a second cascade path to components is not allowed.
+  component Components @relation(fields: [componentId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_component_events_component")
+
+  // The DB also has CHECK constraints on event_type and source_type, and a filtered unique index UX_component_events_source_component_event on (source_type, source_id, component_id, event_type) WHERE source_id IS NOT NULL. Prisma cannot express it; see migrations/20261028_create_component_events.sql.
+  @@index([componentId], map: "IX_component_events_component_id")
+  @@index([sourceType, sourceId], map: "IX_component_events_source")
+  @@map("component_events")
+}
