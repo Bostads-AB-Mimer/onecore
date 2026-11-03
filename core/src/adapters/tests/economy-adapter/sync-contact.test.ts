@@ -1,3 +1,4 @@
+import axios from 'axios'
 import nock from 'nock'
 
 import config from '../../../common/config'
@@ -55,6 +56,42 @@ describe('economy-adapter.syncContactToEconomy', () => {
       expect(result.err).toBe('sync-failed')
       expect(result.statusCode).toBe(400)
     }
+  })
+
+  describe('when 4xx resolves process-wide', () => {
+    let originalValidateStatus: typeof axios.defaults.validateStatus
+
+    beforeAll(async () => {
+      originalValidateStatus = axios.defaults.validateStatus
+      // Sets axios.defaults.validateStatus to accept < 500 on the shared instance
+      await import('../../leasing-adapter')
+    })
+
+    afterAll(() => {
+      axios.defaults.validateStatus = originalValidateStatus
+    })
+
+    it.each([400, 404])('returns sync-failed on %i', async (status) => {
+      const payload = factory.syncContactToEconomyPayload.build()
+
+      nock(config.economyService.url)
+        .post(`/customers/${payload.contactCode}/sync`)
+        .query({ create: 'true' })
+        .reply(status, { error: 'Invalid request body' })
+
+      const { contactCode, ...contactData } = payload
+      const result = await economyAdapter.syncContactToEconomy(
+        contactCode,
+        contactData,
+        { create: true }
+      )
+
+      expect(result).toEqual({
+        ok: false,
+        err: 'sync-failed',
+        statusCode: status,
+      })
+    })
   })
 
   it('returns unknown on network error', async () => {
