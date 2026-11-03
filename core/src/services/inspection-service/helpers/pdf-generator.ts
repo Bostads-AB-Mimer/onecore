@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit'
 import type { DetailedInspection } from '../schemas'
 import path from 'path'
+import { formatSwedishDate, SWEDISH_TIME_ZONE } from '../../../utils/date'
 
 // ============================================================================
 // CONSTANTS
@@ -85,25 +86,6 @@ const LOGO_PATH = path.join(
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-// Formatting is pinned to Europe/Stockholm — the server may run in UTC, and
-// an inspection scheduled around local midnight would otherwise render as the
-// previous calendar day.
-const SWEDISH_TIME_ZONE = 'Europe/Stockholm'
-
-/**
- * Formats a date string to Swedish locale format (YYYY-MM-DD)
- */
-function formatSwedishDate(date: string | Date | undefined | null): string {
-  if (!date) return ''
-  try {
-    return new Date(date).toLocaleDateString('sv-SE', {
-      timeZone: SWEDISH_TIME_ZONE,
-    })
-  } catch {
-    return ''
-  }
-}
 
 /**
  * Formats current date and time to Swedish locale format

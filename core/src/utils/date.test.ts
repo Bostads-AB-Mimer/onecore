@@ -33,3 +33,28 @@ describe(utils.date.addBusinessDays, () => {
     expect(result.toISOString()).toEqual(expected.toISOString())
   })
 })
+
+describe(utils.date.formatSwedishDate, () => {
+  it('uses the Swedish date for a winter timestamp just after local midnight', () => {
+    expect(utils.date.formatSwedishDate('2026-01-14T23:30:00.000Z')).toEqual(
+      '2026-01-15'
+    )
+  })
+
+  it('uses the Swedish date for a summer timestamp just after local midnight', () => {
+    expect(utils.date.formatSwedishDate('2026-06-14T22:30:00.000Z')).toEqual(
+      '2026-06-15'
+    )
+  })
+
+  it('formats a daytime timestamp as the same date', () => {
+    expect(utils.date.formatSwedishDate('2026-06-14T10:00:00.000Z')).toEqual(
+      '2026-06-14'
+    )
+  })
+
+  it('returns an empty string for null and undefined', () => {
+    expect(utils.date.formatSwedishDate(null)).toEqual('')
+    expect(utils.date.formatSwedishDate(undefined)).toEqual('')
+  })
+})

@@ -6208,7 +6208,7 @@ export interface paths {
   '/components': {
     /**
      * Get all components
-     * @description Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), or serialNumber.
+     * @description Physical units with serial numbers and status. Filter by modelId, withoutModel, notInstalled, subtypeId, status (ACTIVE/INACTIVE/MAINTENANCE/DECOMMISSIONED), serialNumber, specifications, installation or installedBefore, and sort with sortBy and sortOrder.
      */
     get: {
       parameters: {
@@ -6223,6 +6223,20 @@ export interface paths {
           status?: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE' | 'DECOMMISSIONED'
           /** @description Search by serial number (case-insensitive partial match) */
           serialNumber?: string
+          /** @description Search the specification text (case-insensitive partial match, 2 characters minimum) */
+          specifications?: string
+          /** @description Filter on the active installation. unknownDate means installed with no date or the 1900 placeholder. Cannot be combined with notInstalled=true. */
+          installation?: 'installed' | 'notInstalled' | 'unknownDate'
+          /** @description Only components whose known installation date falls before 1 January of this year */
+          installedBefore?: number
+          /** @description Sort column. Blank and unknown values always sort last. Without it, newest installation first. */
+          sortBy?:
+            | 'installed'
+            | 'model'
+            | 'serialNumber'
+            | 'specifications'
+            | 'quantity'
+          sortOrder?: 'asc' | 'desc'
           page?: number
           limit?: number
         }
@@ -6386,6 +6400,123 @@ export interface paths {
         }
         /** @description Component not found */
         404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/components/{id}/events': {
+    /**
+     * List a component's events
+     * @description All events recorded on the component, newest first.
+     */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The component's events */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentEvent'][]
+            }
+          }
+        }
+        /** @description Invalid UUID format */
+        400: {
+          content: never
+        }
+        /** @description Component not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Record an event on a component
+     * @description Stores what happened to a component (repaired, replaced, inspected, ...).
+     * Idempotent on (sourceType, sourceId, componentId, eventType) when sourceId is set:
+     * a repeated request returns the stored event unchanged with 200 instead of 201.
+     * sourceId is required unless sourceType is MANUAL.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateComponentEventRequest']
+        }
+      }
+      responses: {
+        /** @description The event already existed and is returned unchanged */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentEvent']
+            }
+          }
+        }
+        /** @description Event created */
+        201: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentEvent']
+            }
+          }
+        }
+        /** @description Invalid request, or relatedComponentId does not exist */
+        400: {
+          content: never
+        }
+        /** @description Component not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/component-events': {
+    /**
+     * List the component events of one work order or inspection
+     * @description All events with the given source, newest first. An unknown source gives an empty list.
+     */
+    get: {
+      parameters: {
+        query: {
+          sourceType: 'WORK_ORDER' | 'INSPECTION' | 'MANUAL'
+          /** @description Work order id (e.g. od-123) or inspection id */
+          sourceId: string
+        }
+      }
+      responses: {
+        /** @description The events */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ComponentEvent'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
           content: never
         }
         /** @description Internal server error */
@@ -12332,6 +12463,7 @@ export interface components {
           updatedAt: string
         }
       }
+      componentCount?: number
     }
     Component: {
       /** Format: uuid */
@@ -12375,6 +12507,7 @@ export interface components {
         createdAt: string
         updatedAt: string
         subtype?: components['schemas']['ComponentSubtype']
+        componentCount?: number
       } | null
       componentInstallations?: {
         /** Format: uuid */
@@ -12467,6 +12600,7 @@ export interface components {
       createdAt: string
       updatedAt: string
       subtype?: components['schemas']['ComponentSubtype']
+      componentCount?: number
     }
     ComponentInstallation: {
       /** Format: uuid */
@@ -12524,6 +12658,7 @@ export interface components {
           createdAt: string
           updatedAt: string
           subtype?: components['schemas']['ComponentSubtype']
+          componentCount?: number
         } | null
         componentInstallations?: {
           /** Format: uuid */
@@ -12557,6 +12692,48 @@ export interface components {
           } | null
         }[]
       }
+    }
+    ComponentEvent: {
+      /** Format: uuid */
+      id: string
+      /** Format: uuid */
+      componentId: string
+      /** @enum {string} */
+      eventType:
+        | 'INSTALLED'
+        | 'DEINSTALLED'
+        | 'REPAIRED'
+        | 'REPLACED'
+        | 'NO_ACTION'
+        | 'INSPECTED'
+      occurredAt: string
+      /** @enum {string} */
+      sourceType: 'WORK_ORDER' | 'INSPECTION' | 'MANUAL'
+      sourceId: string | null
+      /** Format: uuid */
+      relatedComponentId: string | null
+      actor: string
+      note: string | null
+      createdAt: string
+    }
+    CreateComponentEventRequest: {
+      /** @enum {string} */
+      eventType:
+        | 'INSTALLED'
+        | 'DEINSTALLED'
+        | 'REPAIRED'
+        | 'REPLACED'
+        | 'NO_ACTION'
+        | 'INSPECTED'
+      /** Format: date */
+      occurredAt: string
+      /** @enum {string} */
+      sourceType: 'WORK_ORDER' | 'INSPECTION' | 'MANUAL'
+      sourceId?: string | null
+      /** Format: uuid */
+      relatedComponentId?: string | null
+      actor: string
+      note?: string | null
     }
     CreateComponentCategoryRequest: {
       categoryName: string
