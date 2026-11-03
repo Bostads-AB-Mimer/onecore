@@ -18,6 +18,7 @@ import {
   CommentThreadSchema,
   InvoiceRowSchema,
   InvoicePaymentEventSchema,
+  PaymentSyncEventSchema,
   InvoiceSchema,
   XledgerContactSchema,
   RentInvoiceRowSchema,
@@ -463,6 +464,7 @@ type MiscellaneousInvoiceBaseItem = z.infer<
   typeof MiscellaneousInvoiceBaseItemSchema
 >
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
+type PaymentSyncEvent = z.infer<typeof PaymentSyncEventSchema>
 type RentInvoiceRow = z.infer<typeof RentInvoiceRowSchema>
 type XledgerContact = z.infer<typeof XledgerContactSchema>
 type XledgerProject = z.infer<typeof XledgerProjectSchema>
@@ -489,6 +491,7 @@ export type {
   MiscellaneousInvoice,
   MiscellaneousInvoiceBaseItem,
   InvoicePaymentEvent,
+  PaymentSyncEvent,
   RentInvoiceRow,
   XledgerContact,
   XledgerProject,
