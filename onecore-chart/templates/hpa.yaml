@@ -1,0 +1,48 @@
+{{/*
+Copyright Bostads AB Mimer.
+SPDX-License-Identifier: AGPL-3.0-only
+*/}}
+
+# Horizontal Pod Autoscaler
+{{- range $name, $config := $.Values.components }}
+{{- if kindIs "map" $config }}
+{{- if $config.enabled }}
+{{- if $config.autoscaling }}
+{{- if $config.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "onecore.componentName" (dict "root" $ "name" $name) }}
+  namespace: {{ $.Values.global.namespace | default $.Release.Namespace }}
+  labels:
+{{ include "onecore.labels" (dict "root" $ "name" $name) | indent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "onecore.componentName" (dict "root" $ "name" $name) }}
+  minReplicas: {{ $config.autoscaling.minReplicas | default 1 }}
+  maxReplicas: {{ $config.autoscaling.maxReplicas | default 10 }}
+  metrics:
+    {{- if $config.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $config.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $config.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $config.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

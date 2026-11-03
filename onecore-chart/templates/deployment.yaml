@@ -1,0 +1,65 @@
+{{/*
+Copyright Bostads AB Mimer.
+SPDX-License-Identifier: AGPL-3.0-only
+*/}}
+
+{{- range $name, $config := $.Values.components }}
+{{- if and (kindIs "map" $config) ($config.enabled) }}
+{{- $port := int (include "onecore.envPort" (dict "env" $config.env)) }}
+{{- $componentName := include "onecore.componentName" (dict "root" $ "name" $name) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $componentName }}
+  namespace: {{ $.Values.global.namespace | default $.Release.Namespace }}
+  labels:
+{{ include "onecore.labels" (dict "root" $ "name" $name) | indent 4 }}
+spec:
+  replicas: {{ $config.replicas | default 1 }}
+  selector:
+    matchLabels:
+{{ include "onecore.selectorLabels" (dict "root" $ "name" $name) | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "onecore.selectorLabels" (dict "root" $ "name" $name) | indent 8 }}
+    spec:
+      {{- if $.Values.global.imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ $.Values.global.imagePullSecret }}
+      {{- end }}
+      containers:
+        - name: app
+          image: {{ $config.image }}
+          imagePullPolicy: {{ $config.imagePullPolicy | default "IfNotPresent" }}
+          {{- if $config.env }}
+          env:
+            - name: PORT
+              value: {{ $port | quote }}
+          {{- range $key, $value := $config.env }}
+          {{- if ne $key "PORT" }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- if $config.secrets }}
+            {{- range $secret := $config.secrets }}
+            - name: {{ $secret.envName | default (upper (replace "-" "_" $secret.name)) | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $componentName }}-secrets
+                  key: {{ $secret.name }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ $port }}
+              protocol: TCP
+          {{- if $config.resources }}
+          resources:
+            {{- toYaml $config.resources | nindent 12 }}
+          {{- end }}
+{{- end }}
+{{- end }}

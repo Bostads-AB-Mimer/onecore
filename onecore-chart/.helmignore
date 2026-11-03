@@ -1,0 +1,57 @@
+# Patterns to ignore when building packages.
+# This supports shell glob matching, relative path matching, and
+# negation (prefixed with !). Only one pattern per line.
+.DS_Store
+# Common VCS dirs
+.git/
+.gitignore
+.bzr/
+.bzrignore
+.hg/
+.hgignore
+.svn/
+# Common backup files
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+# Various IDEs
+.project
+.idea/
+*.tmproj
+.vscode/
+*/.vscode/
+# Owncloud
+.sync_*
+.kubeconfig
+# Helm configuration files
+.gitlab-ci.yml
+# Test files
+*.test
+tests/
+# CI/CD
+.github/
+# Build artifacts
+dist/
+build/
+# Node modules
+node_modules/
+# Package manager lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+# Environment files
+.env
+.env.local
+.env.*.local
+# Logs
+logs/
+*.log
+# Development files
+AGENTS.md
+opencode.json
+*.aider*
+tui.json
+# Local development
+helm-project-overview.md
