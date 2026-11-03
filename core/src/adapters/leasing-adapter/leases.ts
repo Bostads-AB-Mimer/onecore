@@ -105,10 +105,7 @@ export const createLease = async (
       result.status == 409 &&
       result.data?.error === ReplyToOfferErrorCodes.RentalObjectNotAvailable
     ) {
-      logger.warn(
-        { objectId, contactId, fromDate },
-        'Rental object is not available from the lease start date'
-      )
+      // Expected outcome, not a failure: the calling process logs it.
       return { ok: false, err: ReplyToOfferErrorCodes.RentalObjectNotAvailable }
     } else {
       logger.error(
