@@ -6,7 +6,13 @@ import config from '../../common/config'
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { appendEntry, readQueue, FailedRowEntry } from './failed-sync-queue'
 import { readSyncPosition, saveSyncPosition } from './last-timestamp'
-import { CmlogSync, handledIdOf, runCmlogSync } from './run-cmlog-sync'
+import {
+  CmlogSync,
+  handledIdOf,
+  onXpandClock,
+  runCmlogSync,
+  SyncFailedError,
+} from './run-cmlog-sync'
 
 type Change = { id: string; value: string; timestamp: Date }
 
@@ -17,7 +23,9 @@ const change = (overrides: Partial<Change> = {}): Change => ({
   ...overrides,
 })
 
-const NOW = new Date('2026-10-15T08:30:00.000Z')
+// Change timestamps are on the Xpand clock: Swedish wall time labelled UTC.
+const NOW = new Date('2026-10-15T06:30:00.000Z')
+const NOW_ON_XPAND_CLOCK = new Date('2026-10-15T08:30:00.000Z')
 const HOUR = 60 * 60 * 1000
 
 const hoursBefore = (date: Date, hours: number) =>
@@ -269,6 +277,135 @@ describe('runCmlogSync', () => {
     expect(await readState()).toBe(c.timestamp.toISOString())
   })
 
+  describe('undo failures', () => {
+    const undoFailure = (undoFailed = ['a']) =>
+      new SyncFailedError({
+        message: `sak A-1 failed to sync: c=sync-failed, undo failed: ${undoFailed.join(', ')}`,
+        undoFailed,
+      })
+
+    it('a new row whose undo fails gets one undo mail, and its retry sends no second one', async () => {
+      const c = change()
+      fetchChanges
+        .mockResolvedValueOnce({ ok: true, data: [c] })
+        .mockResolvedValue({ ok: true, data: [] })
+      sync.mockRejectedValue(undoFailure())
+
+      await run()
+
+      expect(subjects()).toEqual([
+        'sync-things: nytt fel på sak A-1',
+        'sync-things: återställning misslyckades för sak A-1',
+      ])
+      expect((await readQueue(queueFile))[0].undoFailedIn).toEqual(['a'])
+
+      sendEmailSpy.mockClear()
+      await run({}, new Date(NOW.getTime() + 2 * 60 * 1000))
+
+      expect(sync).toHaveBeenCalledTimes(2)
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+    })
+
+    it('a queued row whose retry fails an undo mails once and keeps the marker', async () => {
+      await appendEntry(queueFile, entryFor(change()))
+      sync.mockRejectedValue(undoFailure())
+
+      await run()
+
+      expect(subjects()).toEqual([
+        'sync-things: återställning misslyckades för sak A-1',
+      ])
+      const [entry] = await readQueue(queueFile)
+      expect(entry.undoFailedIn).toEqual(['a'])
+    })
+
+    it('mails again when a later retry leaves another target changed, naming only the new one', async () => {
+      await appendEntry(queueFile, entryFor(change(), { undoFailedIn: ['a'] }))
+      sync.mockRejectedValue(undoFailure(['b', 'a']))
+
+      await run()
+
+      expect(subjects()).toEqual([
+        'sync-things: återställning misslyckades för sak A-1',
+      ])
+      const body = sendEmailSpy.mock.calls[0][0].body as string
+      expect(body).toContain('återställas i: b.')
+      expect((await readQueue(queueFile))[0].undoFailedIn).toEqual(['a', 'b'])
+    })
+
+    it('keeps the marker when a later retry undoes cleanly, since that undo writes back the changed value', async () => {
+      await appendEntry(queueFile, entryFor(change(), { undoFailedIn: ['a'] }))
+      sync.mockRejectedValue(undoFailure([]))
+
+      await run()
+
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+      expect((await readQueue(queueFile))[0].undoFailedIn).toEqual(['a'])
+    })
+
+    it('a crash-retried row whose undo fails mails once and saves the marker', async () => {
+      const c = change()
+      await appendEntry(
+        queueFile,
+        entryFor(c, {
+          addedAt: hoursBefore(NOW, 30),
+          lastAttemptAt: hoursBefore(NOW, 1),
+        })
+      )
+      fetchChanges.mockResolvedValue({ ok: true, data: [c] })
+      sync.mockRejectedValue(undoFailure())
+
+      await run()
+
+      expect(sync).toHaveBeenCalledTimes(1)
+      expect(subjects()).toEqual([
+        'sync-things: återställning misslyckades för sak A-1',
+      ])
+      const [entry] = await readQueue(queueFile)
+      expect(entry.undoFailedIn).toEqual(['a'])
+      expect(entry.addedAt).toBe(hoursBefore(NOW, 30))
+    })
+
+    it('the give-up mail names the targets left changed', async () => {
+      await appendEntry(
+        queueFile,
+        entryFor(change(), {
+          addedAt: hoursBefore(NOW, 31 * 24),
+          lastAttemptAt: hoursBefore(NOW, 25),
+          stillFailingNotifiedAt: hoursBefore(NOW, 30 * 24),
+          undoFailedIn: ['a'],
+        })
+      )
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run()
+
+      expect(subjects()).toEqual(['sync-things: ger upp sak A-1'])
+      const body = sendEmailSpy.mock.calls[0][0].body as string
+      expect(body).toContain('kunde inte återställas i: a.')
+    })
+
+    it('the undo mail names the targets left changed', async () => {
+      await appendEntry(queueFile, entryFor(change()))
+      sync.mockRejectedValue(undoFailure())
+
+      await run()
+
+      const body = sendEmailSpy.mock.calls[0][0].body as string
+      expect(body).toContain('återställas i: a.')
+      expect(body).toContain('Kräver manuell kontroll')
+    })
+
+    it('a plain error sends no undo mail', async () => {
+      await appendEntry(queueFile, entryFor(change()))
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run()
+
+      expect(sendEmailSpy).not.toHaveBeenCalled()
+    })
+  })
+
   describe('retry schedule', () => {
     const failedFor = (
       hours: number,
@@ -478,6 +615,52 @@ describe('runCmlogSync', () => {
       expect(body).not.toContain('Gör ändringen i Xpand på nytt')
     })
 
+    it('the first failure mail includes the definition’s failure advice', async () => {
+      fetchChanges.mockResolvedValue({ ok: true, data: [change()] })
+      sync.mockRejectedValue(new Error('tenfast down'))
+      const failureAdvice = jest.fn().mockReturnValue('Rätta det i Tenfast.')
+
+      await run({ failureAdvice })
+
+      expect(failureAdvice).toHaveBeenCalledWith(
+        change(),
+        expect.objectContaining({ lastError: 'tenfast down' })
+      )
+      const body = sendEmailSpy.mock.calls[0][0].body as string
+      expect(body).toContain('Rätta det i Tenfast.')
+    })
+
+    it('the still-failing mail includes the definition’s failure advice', async () => {
+      await appendEntry(
+        queueFile,
+        failedFor(30, { lastAttemptAt: hoursBefore(NOW, 6) })
+      )
+      sync.mockRejectedValue(new Error('still down'))
+
+      await run({ failureAdvice: () => 'Rätta det i Tenfast.' })
+
+      expect(subjects()).toEqual([
+        'sync-things: sak A-1 misslyckas fortfarande',
+      ])
+      const body = sendEmailSpy.mock.calls[0][0].body as string
+      expect(body).toContain('Rätta det i Tenfast.')
+    })
+
+    it('the failure mail has no advice line when the definition returns none', async () => {
+      fetchChanges.mockResolvedValue({ ok: true, data: [change()] })
+      sync.mockRejectedValue(new Error('tenfast down'))
+
+      await run({ failureAdvice: () => undefined })
+
+      const body = sendEmailSpy.mock.calls[0][0].body as string
+      expect(body.split('\n')).toEqual([
+        `Misslyckades på sak A-1 vid ${change().timestamp.toISOString()}.`,
+        'Fel: tenfast down',
+        '',
+        expect.stringContaining('återförsökskön'),
+      ])
+    })
+
     it('a newer change for the same key starts a fresh clock', async () => {
       await appendEntry(
         queueFile,
@@ -631,7 +814,7 @@ describe('runCmlogSync', () => {
 
     it('start-now: remembers the rows it read so they are not synced later', async () => {
       const c = change()
-      const soon = new Date('2026-10-15T08:00:30.000Z')
+      const soon = new Date('2026-10-15T06:00:30.000Z')
       fetchChanges.mockResolvedValue({ ok: true, data: [c] })
       await run({ firstRun: 'start-now' }, soon)
 
@@ -645,7 +828,7 @@ describe('runCmlogSync', () => {
 
     it('start-now: when cmlog has nothing, reads the window before now next time', async () => {
       await run({ firstRun: 'start-now' })
-      expect(await readState()).toBe(NOW.toISOString())
+      expect(await readState()).toBe(NOW_ON_XPAND_CLOCK.toISOString())
 
       await run({ firstRun: 'start-now' })
 
@@ -666,7 +849,7 @@ describe('runCmlogSync', () => {
   })
 
   describe('look-back window', () => {
-    const SOON = new Date('2026-10-15T08:01:00.000Z')
+    const SOON = new Date('2026-10-15T06:01:00.000Z')
     const handled = change({ id: 'A-1' })
 
     it('moves the timestamp file only once a second is done', async () => {
@@ -803,6 +986,28 @@ describe('runCmlogSync', () => {
         new Date('2026-10-15T08:19:59.000Z')
       )
     })
+
+    it.each([
+      ['winter', '2026-01-15T08:00:00.000Z', '2026-01-15T07:11:00.000Z'],
+      ['summer', '2026-07-15T08:00:00.000Z', '2026-07-15T06:11:00.000Z'],
+    ])(
+      'in %s, an idle job stops re-reading about ten minutes after the last change',
+      async (_, lastChange, elevenMinutesLater) => {
+        const last = change({ timestamp: new Date(lastChange) })
+        await writePosition(
+          lastChange,
+          new Date(last.timestamp.getTime() - 5 * 60 * 1000).toISOString(),
+          [last]
+        )
+        fetchChanges.mockResolvedValue({ ok: true, data: [last] })
+
+        await run({}, new Date(elevenMinutesLater))
+
+        expect((await readPosition())?.readFrom).toBe(
+          new Date(last.timestamp.getTime() + 60 * 1000).toISOString()
+        )
+      }
+    )
 
     it('reads a bare timestamp file exactly as the old code did', async () => {
       await fs.writeFile(stateFile, handled.timestamp.toISOString(), 'utf-8')
@@ -1189,5 +1394,36 @@ describe('runCmlogSync', () => {
       readFrom: '2026-10-15T06:55:00.000Z',
       handled: [],
     })
+  })
+})
+
+describe('onXpandClock', () => {
+  it.each([
+    ['winter time', '2026-01-15T07:00:00.000Z', '2026-01-15T08:00:00.000Z'],
+    ['summer time', '2026-07-15T06:00:00.000Z', '2026-07-15T08:00:00.000Z'],
+    ['across midnight', '2026-12-31T23:30:00.000Z', '2027-01-01T00:30:00.000Z'],
+    [
+      'before clocks go forward',
+      '2026-03-29T00:59:59.000Z',
+      '2026-03-29T01:59:59.000Z',
+    ],
+    [
+      'after clocks go forward',
+      '2026-03-29T01:00:00.000Z',
+      '2026-03-29T03:00:00.000Z',
+    ],
+    [
+      'after clocks go back',
+      '2026-10-25T01:00:00.000Z',
+      '2026-10-25T02:00:00.000Z',
+    ],
+  ])('reads %s as Swedish wall time labelled UTC', (_, real, xpand) => {
+    expect(onXpandClock(new Date(real)).toISOString()).toBe(xpand)
+  })
+
+  it('keeps milliseconds', () => {
+    expect(
+      onXpandClock(new Date('2026-01-15T07:00:00.123Z')).toISOString()
+    ).toBe('2026-01-15T08:00:00.123Z')
   })
 })

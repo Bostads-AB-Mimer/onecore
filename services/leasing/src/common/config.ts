@@ -31,6 +31,8 @@ export interface Config {
   }
   tenfast: {
     baseUrl: string
+    // Tenfast web UI (not the API), used to build links to leases in Tenfast
+    appUrl: string
     apiKey: string
     companyId: string
     leaseTemplates: {
@@ -98,6 +100,7 @@ const config = configPackage({
     },
     tenfast: {
       baseUrl: '',
+      appUrl: '',
       apiKey: '',
       username: '',
       password: '',

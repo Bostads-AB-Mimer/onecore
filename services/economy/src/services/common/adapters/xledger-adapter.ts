@@ -12,6 +12,7 @@ import {
   MiscellaneousInvoiceArticle,
   MiscellaneousInvoiceBaseItem,
   PaymentStatus,
+  PaymentSyncEvent,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
   XledgerProject,
@@ -912,7 +913,7 @@ export async function getLatestPaymentCursor(): Promise<string | null> {
 }
 
 export interface PaymentsSinceResult {
-  events: InvoicePaymentEvent[]
+  events: PaymentSyncEvent[]
   lastCursor: string | null
 }
 
@@ -986,10 +987,8 @@ async function fetchPaymentsPage(params: {
     edges.length > 0 ? edges.at(-1).cursor : null
 
   const events = edges
-    .map((e: any) => mapToPaymentSyncEvent(e.node))
-    .filter(
-      (e: InvoicePaymentEvent | null): e is InvoicePaymentEvent => e !== null
-    )
+    .map((e: any) => mapToPaymentSyncEvent(e.node, e.cursor))
+    .filter((e: PaymentSyncEvent | null): e is PaymentSyncEvent => e !== null)
 
   if (result.data.arTransactions.pageInfo.hasNextPage && lastCursor) {
     const next = await fetchPaymentsPage({ after: lastCursor })
@@ -1025,7 +1024,10 @@ function resolvePaymentSyncInvoiceId(event: any): string | null {
   return event.invoiceNumber ?? event.extIdentifier ?? null
 }
 
-function mapToPaymentSyncEvent(event: any): InvoicePaymentEvent | null {
+function mapToPaymentSyncEvent(
+  event: any,
+  cursor: string
+): PaymentSyncEvent | null {
   const invoiceId = resolvePaymentSyncInvoiceId(event)
   if (!invoiceId) {
     logger.info(
@@ -1049,6 +1051,7 @@ function mapToPaymentSyncEvent(event: any): InvoicePaymentEvent | null {
       : new Date(event.paymentDate),
     text: event.text,
     transactionSourceCode: event.transactionHeader.transactionSource.code,
+    cursor,
   }
 }
 

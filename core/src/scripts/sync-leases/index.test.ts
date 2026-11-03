@@ -142,6 +142,49 @@ describe('syncLeases', () => {
     // State advanced to that row's timestamp
     const written = (await fs.readFile(stateFile, 'utf-8')).trim()
     expect(written).toBe(lease.timestamp.toISOString())
+
+    expect(sendEmailSpy.mock.calls[0][0].body).not.toContain(
+      'Rätta slutdatumet'
+    )
+  })
+
+  it('the first failure mail for a mismatched end date tells staff to set it in Tenfast', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T11:00:00.000Z'),
+    })
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [lease] })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: false,
+      err: 'sync-failed',
+      statusCode: 409,
+      detail: 'end-date-mismatch: Tenfast 2026-03-31, Xpand 2025-12-31',
+    })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    expect(sendEmailSpy.mock.calls[0][0].subject).toMatch(
+      `sync-leases: nytt fel på avtal ${lease.leaseId}`
+    )
+    const [entry] = await readQueue(queueFile)
+    expect(entry.lastError).toBe(
+      `lease ${lease.leaseId} failed to sync: tenfast=sync-failed (409) [end-date-mismatch: Tenfast 2026-03-31, Xpand 2025-12-31]`
+    )
+    const body = sendEmailSpy.mock.calls[0][0].body as string
+    expect(body).toContain('Tenfast 2026-03-31, Xpand 2025-12-31')
+    expect(body).toContain('Rätta slutdatumet i Tenfast')
+    expect(body).toContain('Nästa återförsök bekräftar ändringen.')
   })
 
   it('the give-up mail asks for the change to be made in Tenfast by hand', async () => {
@@ -561,8 +604,8 @@ describe('syncLeases', () => {
 
     const queue = await readQueue(queueFile)
     expect(queue).toHaveLength(1)
-    expect(queue[0].lastError).toMatch(
-      `Failed to sync other invoice recipient ${otherInvoiceRecipient.contactCode} for lease ${lease.leaseId}: sync-failed`
+    expect(queue[0].lastError).toBe(
+      `lease ${lease.leaseId} failed to sync: xledger=sync-failed [recipient ${otherInvoiceRecipient.contactCode}: sync-failed], not attempted: tenfast`
     )
     expect(sendEmailSpy).toHaveBeenCalledTimes(1)
   })
@@ -669,7 +712,7 @@ describe('syncLeases', () => {
     const queue = await readQueue(queueFile)
     expect(queue).toHaveLength(1)
     expect(queue[0].lastError).toBe(
-      'Failed to sync lease L-1: sync-failed (termination-pdf-upload-failed)'
+      'lease L-1 failed to sync: tenfast=sync-failed (500) [termination-pdf-upload-failed]'
     )
   })
 
@@ -764,6 +807,49 @@ describe('syncLeases', () => {
     const body = sendEmailSpy.mock.calls[0][0].body as string
     expect(body).toContain('är uppsagt i Tenfast')
     expect(body).toContain('Bifoga det i Tenfast för hand.')
+    expect(body).not.toContain('Ändringen har inte nått Tenfast')
+  })
+
+  it('the give-up mail for a mismatched end date tells staff to set it in Tenfast', async () => {
+    const lease = factory.leaseChange.build({
+      action: 'terminate',
+      timestamp: new Date('2026-05-01T09:00:00.000Z'),
+    })
+    const monthAgo = new Date(
+      Date.now() - 31 * 24 * 60 * 60 * 1000
+    ).toISOString()
+    await appendEntry(queueFile, {
+      ...makeLeaseEntry(
+        lease,
+        `lease ${lease.leaseId} failed to sync: tenfast=sync-failed (409) [end-date-mismatch: Tenfast 2026-03-31, Xpand 2025-12-31]`
+      ),
+      addedAt: monthAgo,
+      lastAttemptAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
+      stillFailingNotifiedAt: monthAgo,
+    })
+    jest
+      .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+      .mockResolvedValue({
+        status: 200,
+        data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+      })
+    jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+      ok: false,
+      err: 'sync-failed',
+      statusCode: 409,
+      detail: 'end-date-mismatch: Tenfast 2026-03-31, Xpand 2025-12-31',
+    })
+    jest
+      .spyOn(leasingAdapter, 'getUpdatedLeases')
+      .mockResolvedValue({ ok: true, data: [] })
+    const sendEmailSpy = jest
+      .spyOn(communicationAdapter, 'sendEmail')
+      .mockResolvedValue({ ok: true, data: null })
+
+    await syncLeases({ stateFile, queueFile })
+
+    const body = sendEmailSpy.mock.calls[0][0].body as string
+    expect(body).toContain('sista debiteringsdag i Xpand')
     expect(body).not.toContain('Ändringen har inte nått Tenfast')
   })
 
@@ -890,5 +976,96 @@ describe('syncLeases', () => {
 
     expect(syncLease.mock.calls.map((call) => call[2])).toEqual(['void'])
     expect(await readQueue(queueFile)).toEqual([])
+  })
+
+  describe('undo of the invoice recipient', () => {
+    const setupCreateWithRecipient = () => {
+      const lease = factory.leaseChange.build({
+        action: 'create',
+        timestamp: new Date('2026-05-01T17:00:00.000Z'),
+      })
+      const otherInvoiceRecipient = {
+        contactCode: 'P999997',
+        role: 'otherInvoiceRecipient' as const,
+        fullName: 'Annan Mottagare',
+        firstName: 'Annan',
+        lastName: 'Mottagare',
+      }
+      const contact = factory.contactsServiceContact.build({
+        contactCode: lease.contactCode,
+        relatedContacts: [otherInvoiceRecipient],
+      })
+      const recipientContact = factory.contactsServiceContact.build({
+        contactCode: otherInvoiceRecipient.contactCode,
+      })
+      const getByContactCode = jest
+        .fn()
+        .mockResolvedValueOnce({ ok: true, data: contact })
+        .mockResolvedValueOnce({ ok: true, data: recipientContact })
+      jest
+        .spyOn(contactsAdapter, 'makeContactsAdapter')
+        .mockReturnValue({ getByContactCode } as any)
+      jest
+        .spyOn(leasingAdapter, 'getUpdatedLeases')
+        .mockResolvedValue({ ok: true, data: [lease] })
+      jest
+        .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+        .mockResolvedValue({
+          status: 200,
+          data: factory.rentalPropertyInfo.build({ type: 'Lägenhet' }),
+        })
+      jest
+        .spyOn(communicationAdapter, 'sendEmail')
+        .mockResolvedValue({ ok: true, data: null })
+      jest
+        .spyOn(leasingAdapter, 'syncLease')
+        .mockResolvedValue({ ok: false, err: 'unknown' } as any)
+      return { lease, otherInvoiceRecipient }
+    }
+
+    it('case 15: Tenfast fails after the recipient was updated — the Xledger update is undone', async () => {
+      const { lease, otherInvoiceRecipient } = setupCreateWithRecipient()
+      const undo = {
+        previous: {
+          fullName: 'Gammal',
+          street: null,
+          zipCode: null,
+          city: null,
+          emailAddress: null,
+        },
+      }
+      jest
+        .spyOn(economyAdapter, 'syncContactToEconomy')
+        .mockResolvedValue({ ok: true, data: { skipped: false, undo } })
+      const undoEconomy = jest
+        .spyOn(economyAdapter, 'undoContactSyncInEconomy')
+        .mockResolvedValue({ ok: true, data: null })
+
+      await syncLeases({ stateFile, queueFile })
+
+      expect(undoEconomy).toHaveBeenCalledWith(
+        otherInvoiceRecipient.contactCode,
+        undo
+      )
+      const queue = await readQueue(queueFile)
+      expect(queue[0].lastError).toBe(
+        `lease ${lease.leaseId} failed to sync: tenfast=unknown, outcome unknown, undone: xledger`
+      )
+    })
+
+    it('case 16: Tenfast fails after the recipient was created — the customer is kept', async () => {
+      const { lease } = setupCreateWithRecipient()
+      const economy = jest
+        .spyOn(economyAdapter, 'syncContactToEconomy')
+        .mockResolvedValue({ ok: true, data: { skipped: false, undo: null } })
+
+      await syncLeases({ stateFile, queueFile })
+
+      expect(economy).toHaveBeenCalledTimes(1)
+      const queue = await readQueue(queueFile)
+      expect(queue[0].lastError).toBe(
+        `lease ${lease.leaseId} failed to sync: tenfast=unknown, outcome unknown, already written: xledger`
+      )
+    })
   })
 })

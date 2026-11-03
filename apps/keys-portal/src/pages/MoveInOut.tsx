@@ -244,7 +244,7 @@ export default function MoveInOut() {
         error={
           isError
             ? error?.status === 503
-              ? 'Nyckeltjänsten startar, försök igen om någon minut'
+              ? error.message
               : 'Kunde inte ladda in- och utflyttar'
             : null
         }

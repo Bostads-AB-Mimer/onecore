@@ -379,9 +379,10 @@ const syncRelatedContactToEconomy = async (
       },
       'relationChanges.propagationFailed'
     )
+    return economy
   }
 
-  return economy
+  return { ok: true, data: null }
 }
 
 /**
