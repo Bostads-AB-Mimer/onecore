@@ -1,10 +1,10 @@
 # Synka Hyresobjektstyp från Xpand
 
-_Del av [processöversikten](../DOCS_Sync_Overview.md) för Xpand-synk. Där beskrivs det gemensamma — sparad position, felkö, återförsök, notifieringar, schemaläggning och vad som händer om något ligger nere — som inte upprepas här._
+_Del av [processöversikten](../DOCS_Sync_Overview.md), som beskriver det gemensamma: schema, sparad position, felkö, mejl och avbrott._
 
 Ett fristående script (`core/src/scripts/sync-rental-object-types/index.ts`) för över ändrade hyresobjektstyper från Xpand till **Tenfast**. När en handläggare byter typ på ett hyresobjekt i Xpand — t.ex. från `STD Standard hyresobjektstyp` till `POÄNGFRITT Poängfritt` — sätts motsvarande kategori på hyresobjektet i Tenfast.
 
-Scriptet körs som CronJobbet `sync-rental-object-types` varje minut. Vid första körningen, utan sparad position, synkas **ingenting**: scriptet sparar tidpunkten för den senaste ändringen och börjar därifrån. Typer som ändrats innan jobbet startades förs alltså inte över.
+Vid första körningen synkas **ingenting**: typer som ändrades innan jobbet startade, eller medan PVC:n var borta, förs inte över.
 
 ## Vilka ändringar som plockas upp
 
@@ -21,7 +21,7 @@ Hyresobjekt 807-033-01-0101
 - Har samma hyresobjekt ändrats flera gånger sedan förra körningen synkas bara den senaste ändringen.
 - Rader som inte går att tolka hoppas över med en varning i loggen.
 
-Leasing svarar också med tidpunkten för den senaste rad den läst, även om raden inte gick att tolka. Den sparas som position, så en rad som inte går att tolka läses om, och dess varning loggas, bara tills fönstret passerat den — ungefär tio körningar (se [Sparad position](../DOCS_Sync_Overview.md#sparad-position)). Samma luckor som för de andra synkarna gäller: rader från timmen som upprepas när klockan ställs tillbaka, och rader som syns i `cmlog` mer än fem minuter efter sin `logtime`, kan tappas — se [processöversikten](../DOCS_Sync_Overview.md#cmlog-som-ändringskälla).
+Leasing svarar också med `until`, tiden för den senaste rad den läst, tolkad eller inte. Den sparas som position, så en otolkbar rad och dess varning läses om i ungefär tio körningar, inte för alltid.
 
 ## Vilka objekt som är i scope
 
@@ -34,10 +34,6 @@ Alla hyresobjekt — lägenheter, lokaler och bilplatser — så länge de finns
 3. Har hyresobjektet redan den kategorin i Tenfast görs ingenting.
 4. Annars sätts kategorin — kod och benämning från tabellen — på hyresobjektet.
 
-Tabellen innehåller 25 koder:
-
-`55PLUS`, `ANPASSAD`, `AVS`, `BLOCK`, `BOKOMP`, `CO-LIVING`, `DELABOSTAD`, `EXTERN`, `FÖRHAN`, `G-LOKAL`, `KOMMERS`, `KOMMERSM`, `KOOPHYRES`, `KORTTID`, `NATT`, `NYPROD`, `POÄNGFRITT`, `RENOVERAD`, `SAMLOKAL`, `SERV`, `SNABB`, `STD`, `STUD`, `TRYGG`, `UNGDOM`
-
 ## Felhantering
 
 Alla fel behandlas lika: raden läggs i felkön, ett mejl skickas och raden försöks igen enligt [processöversikten](../DOCS_Sync_Overview.md#felkö-och-återförsök). Det gäller även fel som inte går över av sig själva:
@@ -48,13 +44,13 @@ Alla fel behandlas lika: raden läggs i felkön, ett mejl skickas och raden för
 | Tenfast avvisar ändringen                    | Troligen inte                                                    |
 | Typkoden finns inte i tabellen, eller är tom | Nej — bara om typen ändras igen i Xpand, eller tabellen byggs ut |
 
-**En nyare ändring ersätter en köad.** Byts typen igen på samma hyresobjekt stryks den gamla ändringen ur kön och ett mejl skickas. Utan det skulle en gammal ändring som till slut lyckas kunna sätta tillbaka den gamla typen i Tenfast. Ger synken upp efter 30 dagar är rådet i mejlet att göra ändringen i Xpand på nytt.
+**En nyare ändring ersätter en köad.** Byts typen igen på samma hyresobjekt stryks den gamla ändringen ur kön och ett mejl skickas. Ger synken upp efter 30 dagar är rådet i mejlet att göra ändringen i Xpand på nytt.
 
 Ligger en ändring i kön och hyresobjektet sedan inte finns i Tenfast stryks den ur kön med ett mejl om att den inte synkades.
 
 ## Flödesdiagram
 
-Processens beslutslogik för en ändring. System- och integrationsdetaljer är medvetet utelämnade här — se sekvensdiagrammet nedan för det. Kö och sparad position finns i [processöversiktens flödesdiagram](../DOCS_Sync_Overview.md#gemensamt-flödesdiagram).
+Processens beslutslogik för en ändring. Kö och sparad position finns i [processöversiktens flödesdiagram](../DOCS_Sync_Overview.md#gemensamt-flödesdiagram).
 
 ```mermaid
 flowchart LR
@@ -78,7 +74,7 @@ U --> Z
 
 ## Sekvensdiagram
 
-Vilka tjänster som anropas i varje steg, i vilken ordning. Det här är ett fristående, schemalagt script — inte en HTTP-endpoint initierad av en människa. Kön gås igenom med samma anropskedja och är utelämnad här.
+Vilka tjänster som anropas, i vilken ordning. Kön går igenom samma kedja och är utelämnad.
 
 ```mermaid
 sequenceDiagram
@@ -138,6 +134,4 @@ sequenceDiagram
 ## Att känna till
 
 - **Koder som saknas i Tenfasts tabell försöks igen i 30 dagar.** I testdata finns minst `HDK` och `DIREKT`, som inte finns i tabellen. En sådan ändring kan inte lyckas förrän tabellen byggs ut, men köas och mejlas ändå som vilket fel som helst — och ges upp efter 30 dagar.
-- **En tömd typ förs inte över.** Tenfast får aldrig en tom kategori; ändringen blir ett fel.
-- **Ingen historik förs över.** Typer som ändrades innan jobbet startade första gången — eller medan PVC:n var borta — ligger kvar i Tenfast som de var.
 - **Benämningen kommer från tabellen**, inte från Xpand. Byter Xpand namn på en typ men behåller koden syns det inte i Tenfast.

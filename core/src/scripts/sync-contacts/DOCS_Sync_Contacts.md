@@ -1,14 +1,12 @@
 # Synka Kontakter från Xpand
 
-_Del av [processöversikten](../DOCS_Sync_Overview.md) för Xpand-synk. Där beskrivs det gemensamma — sparad position, felkö, återförsök, notifieringar, schemaläggning och vad som händer om något ligger nere — som inte upprepas här._
+_Del av [processöversikten](../DOCS_Sync_Overview.md), som beskriver det gemensamma: schema, sparad position, felkö, mejl och avbrott._
 
-Ett fristående script (`core/src/scripts/sync-contacts/index.ts`) hämtar de kontakter som ändrats i Xpand sedan förra körningen och skriver dem vidare till de tre system som håller egna kopior av kontaktuppgifter: **Tenfast** (hyresgäster), **Xledger** (kunder) och **Odoo** (hyresgäster i ärendehanteringen). Xpand är källan; de tre målen uppdateras, aldrig tvärtom.
-
-Scriptet körs som CronJobbet `sync-contacts` varje minut. Vid första körningen, utan sparad position, synkas samtliga kontakter som någonsin loggats i Xpand.
+Ett fristående script (`core/src/scripts/sync-contacts/index.ts`) hämtar de kontakter som ändrats i Xpand sedan förra körningen och skriver dem vidare till de tre system som håller egna kopior av kontaktuppgifter: **Tenfast** (hyresgäster), **Xledger** (kunder) och **Odoo** (hyresgäster i ärendehanteringen).
 
 ## Vilka ändringar som plockas upp
 
-Contacts-tjänsten (`GET /contacts/sync`) läser `cmlog`-rader som börjar med `Kontakt ` och plockar ut kontaktkoden ur första ordet efter. Har samma kontakt ändrats flera gånger sedan förra körningen blir det en enda synk, med den senaste tidsstämpeln — hela kontakten hämtas färskt ändå. Kontaktuppgifterna läses därefter ur Xpand, i en enda fråga för alla ändrade koder. En kontaktkod som inte längre finns i Xpand faller bort tyst. Det kan även en befintlig kontakt göra: frågan begränsas till lika många kontaktrader som koder, så om en kod har två rader i Xpands kontakttabell trängs en annan ändrad kontakt ut — utan logg och utan mejl. Om sådana dubbletter finns i Xpand i dag är inte kontrollerat.
+Contacts-tjänsten (`GET /contacts/sync`) läser `cmlog`-rader som börjar med `Kontakt ` och plockar ut kontaktkoden ur första ordet efter. Flera ändringar av samma kontakt blir en synk, med den senaste tidsstämpeln. Kontaktuppgifterna läses därefter ur Xpand, i en enda fråga för alla ändrade koder. En kontaktkod som inte längre finns i Xpand faller bort tyst. Det kan även en befintlig kontakt göra: frågan begränsas till lika många kontaktrader som koder, så om en kod har två rader i Xpands kontakttabell trängs en annan ändrad kontakt ut — utan logg och utan mejl. Om sådana dubbletter finns i Xpand i dag är inte kontrollerat.
 
 ## Vad som synkas
 
@@ -44,7 +42,7 @@ Ingen av de tre skapar något nytt i det här flödet — de uppdaterar bara det
 
 **Scriptet läser och skickar inga relationer** — god man, förvaltare och annan fakturamottagare. Synk-endpointen tar inte med dem, och synkpayloaden har inga fält för dem.
 
-En god man eller fakturamottagare synkas ändå som sig själv: hen är en egen kontakt med egen kontaktkod, och när hens uppgifter ändras i Xpand skrivs en egen `Kontakt`-rad i `cmlog`. Det som _inte_ händer är någon spridning: scriptet tittar inte på vems god man hen är. För Tenfast behövs det inte, eftersom Tenfast själv uppdaterar alla relationer som pekar på samma kontakt. Xledger och Odoo har ingen relationsmodell att uppdatera.
+En god man eller fakturamottagare är en egen kontakt och synkas som sig själv när hens uppgifter ändras. Scriptet sprider inget vidare till huvudmannen; Tenfast uppdaterar själv relationer som pekar på kontakten, och Xledger och Odoo har ingen relationsmodell.
 
 Relationerna själva hanteras utanför den här synken:
 
@@ -55,15 +53,13 @@ Relationerna själva hanteras utanför den här synken:
 
 De tre anropen görs parallellt och **alla tre måste lyckas** för att raden ska räknas som synkad. Misslyckas något hamnar hela raden i felkön, med status per mål i felmeddelandet (`tenfast=… xledger=… odoo=…`).
 
-Det gäller även när Economy avvisar kunden med ett 4xx-svar, t.ex. för att kontakten saknar namn i Xpand. Den köade raden skickar samma uppgifter vid varje återförsök och lyckas därför aldrig. Det som löser det är rättelsen i Xpand: den skriver en ny `cmlog`-rad som ersätter den köade.
+Avvisar Economy kunden (4xx) lyckas den köade raden aldrig, eftersom den skickar samma uppgifter igen; rättelsen i Xpand ger en ny `cmlog`-rad som ersätter den.
 
-Ett återförsök kör om alla tre, även de som redan lyckats. Det är ofarligt eftersom alla tre bara uppdaterar befintlig data.
-
-Kommer en nyare ändring för samma kontakt medan en äldre ligger i kön stryks den äldre — se [processöversikten](../DOCS_Sync_Overview.md#felkö-och-återförsök). Ger synken upp efter 30 dagar är rådet i mejlet att göra ändringen i Xpand på nytt.
+Ett återförsök kör om alla tre, även de som redan lyckats. Det är ofarligt eftersom alla tre bara uppdaterar befintlig data. Ger synken upp efter 30 dagar är rådet i mejlet att göra ändringen i Xpand på nytt.
 
 ## Flödesdiagram
 
-Processens beslutslogik för en kontakt. System- och integrationsdetaljer är medvetet utelämnade här — se sekvensdiagrammet nedan för det. Kö och sparad position finns i [processöversiktens flödesdiagram](../DOCS_Sync_Overview.md#gemensamt-flödesdiagram).
+Processens beslutslogik för en kontakt. Kö och sparad position finns i [processöversiktens flödesdiagram](../DOCS_Sync_Overview.md#gemensamt-flödesdiagram).
 
 ```mermaid
 flowchart LR
@@ -92,7 +88,7 @@ I --> Z
 
 ## Sekvensdiagram
 
-Vilka tjänster som anropas i varje steg, i vilken ordning. Det här är ett fristående, schemalagt script — inte en HTTP-endpoint initierad av en människa. Kön gås igenom med samma anropskedja och är utelämnad här.
+Vilka tjänster som anropas, i vilken ordning. Kön går igenom samma kedja och är utelämnad.
 
 ```mermaid
 sequenceDiagram
@@ -165,7 +161,4 @@ sequenceDiagram
 
 ## Att känna till
 
-- **Bara befintliga poster uppdateras.** En kontakt som är ny i Xpand dyker inte upp i Tenfast, Xledger eller Odoo genom den här synken. Den kommer in den väg där den först behövs — t.ex. när ett avtal skapas.
-- **Telefon går bara till Odoo**, och adressen bara till Xledger.
-- **Högst cirka 2 000 ändrade kontakter per körning.** Contacts hämtar alla ändrade kontakter i en enda SQL-fråga med en parameter per kontaktkod, och SQL Server tillåter högst 2 100 parametrar. Har fler kontakter ändrats sedan sparad position svarar Contacts med fel, körningen avbryts utan att flytta positionen, och nästa körning försöker med samma — och fler — kontakter. Synken kommer då aldrig ifatt, utan mejl. Det gäller första körningen (hela historiken i testmiljön omfattar långt fler) och varje avbrott som är långt nog.
-- **Inga relationer, ingen ny kund.** Se [Relationer](#relationer) och [Vad varje målsystem gör](#vad-varje-målsystem-gör).
+- **Högst cirka 2 000 ändrade kontakter per körning.** Contacts hämtar alla ändrade kontakter i en enda SQL-fråga med en parameter per kontaktkod, och SQL Server tillåter högst 2 100 parametrar. Har fler ändrats svarar Contacts med fel och positionen står still, så synken kommer aldrig ifatt, utan mejl. Det gäller första körningen och varje tillräckligt långt avbrott.
