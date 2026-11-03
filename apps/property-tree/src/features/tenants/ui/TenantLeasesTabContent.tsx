@@ -4,12 +4,12 @@ import type { RentalPropertyInfo } from '@onecore/types'
 import { InfoIcon } from 'lucide-react'
 
 import {
-  ExternalLeaseLink,
   formatAddress,
   formatDate,
   formatRentalType,
   getPropertyIdentifier,
   LeaseMobileCard,
+  LeaseNumber,
   LeaseStatusBadge,
   sortLeasesByStatus,
 } from '@/entities/lease'
@@ -97,10 +97,9 @@ export function TenantLeasesTabContent({
       key: 'leaseNumber',
       label: 'Kontraktsnummer',
       render: (lease: Lease) => (
-        <span className="inline-flex items-center gap-1">
+        <LeaseNumber externalUrl={lease.externalUrl}>
           {lease.leaseNumber}
-          <ExternalLeaseLink url={lease.externalUrl} />
-        </span>
+        </LeaseNumber>
       ),
     },
     {

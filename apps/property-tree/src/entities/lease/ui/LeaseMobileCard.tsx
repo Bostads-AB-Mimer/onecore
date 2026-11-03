@@ -5,7 +5,7 @@ import type { Lease } from '@/services/api/core/leaseService'
 import { Button } from '@/shared/ui/Button'
 
 import { formatDate } from '../lib/formatting'
-import { ExternalLeaseLink } from './ExternalLeaseLink'
+import { LeaseNumber } from './LeaseNumber'
 import { LeaseStatusBadge } from './LeaseStatusBadge'
 
 interface LeaseMobileCardProps {
@@ -30,9 +30,10 @@ export function LeaseMobileCard({
     <div className="space-y-3 w-full">
       <div className="flex justify-between items-start">
         <div>
-          <div className="text-sm font-medium flex items-center gap-1">
-            {title ?? `Kontrakt ${lease.leaseNumber}`}
-            <ExternalLeaseLink url={lease.externalUrl} />
+          <div className="text-sm font-medium">
+            <LeaseNumber externalUrl={lease.externalUrl}>
+              {title ?? `Kontrakt ${lease.leaseNumber}`}
+            </LeaseNumber>
           </div>
           <div className="text-xs text-muted-foreground mt-1">
             {formatDate(lease.leaseStartDate)}

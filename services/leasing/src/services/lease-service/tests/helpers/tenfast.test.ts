@@ -1,5 +1,6 @@
 import { sub } from 'date-fns'
 import { LeaseStatus, LeaseType } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 import config from '../../../../common/config'
 import {
@@ -167,6 +168,38 @@ describe('buildTenfastLeaseUrl', () => {
     expect(buildTenfastLeaseUrl('a/b')).toBe(
       'https://tenfast.example.com/hyresvard/avtal/a%2Fb'
     )
+  })
+
+  it('keeps a path in the configured URL', () => {
+    config.tenfast.appUrl = 'https://example.com/tenfast'
+
+    expect(buildTenfastLeaseUrl('abc')).toBe(
+      'https://example.com/tenfast/hyresvard/avtal/abc'
+    )
+  })
+
+  it('returns undefined and warns once when the configured URL is invalid', () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {})
+    config.tenfast.appUrl = 'tenfast-invalid.example.com'
+
+    expect(buildTenfastLeaseUrl('abc')).toBeUndefined()
+    expect(buildTenfastLeaseUrl('def')).toBeUndefined()
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+
+    warnSpy.mockRestore()
+  })
+
+  it('does not fail the lease mapping when the configured URL is invalid', () => {
+    jest.spyOn(logger, 'warn').mockImplementation(() => {})
+    config.tenfast.appUrl = 'not a url'
+    const lease = factory.tenfastLease.build()
+
+    const mapped = mapToOnecoreLease(lease)
+
+    expect(mapped.leaseId).toBe(lease.externalId)
+    expect(mapped.externalUrl).toBeUndefined()
+
+    jest.restoreAllMocks()
   })
 
   it('returns undefined when no Tenfast UI URL is configured', () => {

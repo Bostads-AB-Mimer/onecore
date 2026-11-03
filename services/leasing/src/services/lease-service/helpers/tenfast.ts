@@ -15,18 +15,43 @@ import {
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
 
+// Parsed Tenfast UI base URL, cached per configured value so an invalid
+// value is only parsed and logged once instead of once per mapped lease.
+let parsedAppUrl: { appUrl: string; base: URL | undefined } | undefined
+
+const getTenfastAppBaseUrl = (): URL | undefined => {
+  const appUrl = config.tenfast.appUrl
+  if (!appUrl) return undefined
+  if (parsedAppUrl?.appUrl === appUrl) return parsedAppUrl.base
+
+  let base: URL | undefined
+  try {
+    // A trailing slash keeps any path in appUrl when resolving below
+    base = new URL(appUrl.endsWith('/') ? appUrl : `${appUrl}/`)
+  } catch (err: unknown) {
+    logger.warn({ appUrl, err }, 'tenfast.appUrl invalid')
+  }
+
+  parsedAppUrl = { appUrl, base }
+  return base
+}
+
 /**
  * Build a link to a lease in the Tenfast web UI from its internal Tenfast id.
- * Returns undefined when no Tenfast UI URL is configured.
+ * Returns undefined when no valid Tenfast UI URL is configured, so a config
+ * error only hides the link instead of failing the lease mapping.
  */
 export const buildTenfastLeaseUrl = (
   tenfastLeaseId: string
 ): string | undefined => {
-  if (!config.tenfast.appUrl) return undefined
+  const base = getTenfastAppBaseUrl()
+  if (!base) return undefined
 
+  // Relative path (no leading slash) so it is appended to the base path
+  // instead of replacing it
   return new URL(
-    `/hyresvard/avtal/${encodeURIComponent(tenfastLeaseId)}`,
-    config.tenfast.appUrl
+    `hyresvard/avtal/${encodeURIComponent(tenfastLeaseId)}`,
+    base
   ).toString()
 }
 

@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 
 import {
-  ExternalLeaseLink,
   formatDate,
   LeaseMobileCard,
+  LeaseNumber,
   LeaseStatusBadge,
 } from '@/entities/lease'
 import { useLeasesByRentalProperty } from '@/entities/lease/hooks/useLeasesByRentalProperty'
@@ -110,10 +110,9 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
       key: 'leaseNumber',
       label: 'Kontraktsnummer',
       render: (lease: Lease) => (
-        <span className="inline-flex items-center gap-1">
+        <LeaseNumber externalUrl={lease.externalUrl}>
           {`${lease.rentalPropertyId}/${lease.leaseNumber}`}
-          <ExternalLeaseLink url={lease.externalUrl} />
-        </span>
+        </LeaseNumber>
       ),
     },
     {

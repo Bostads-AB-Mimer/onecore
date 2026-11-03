@@ -1,10 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import {
-  ExternalLeaseLink,
-  formatDate,
-  LeaseStatusBadge,
-} from '@/entities/lease'
+import { formatDate, LeaseNumber, LeaseStatusBadge } from '@/entities/lease'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 
@@ -18,9 +14,10 @@ export const leaseColumns = [
     className: 'px-2',
     sortKey: 'leaseId',
     render: (lease: LeaseSearchResult) => (
-      <span className="font-medium inline-flex items-center gap-1">
-        {lease.leaseId}
-        <ExternalLeaseLink url={lease.externalUrl} />
+      <span className="font-medium">
+        <LeaseNumber externalUrl={lease.externalUrl}>
+          {lease.leaseId}
+        </LeaseNumber>
       </span>
     ),
   },
