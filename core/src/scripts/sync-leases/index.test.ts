@@ -165,8 +165,8 @@ describe('syncLeases', () => {
     jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
       ok: false,
       err: 'sync-failed',
-      statusCode: 500,
-      detail: 'end-date-mismatch',
+      statusCode: 409,
+      detail: 'end-date-mismatch: Tenfast 2026-03-31, Xpand 2025-12-31',
     })
     const sendEmailSpy = jest
       .spyOn(communicationAdapter, 'sendEmail')
@@ -177,7 +177,12 @@ describe('syncLeases', () => {
     expect(sendEmailSpy.mock.calls[0][0].subject).toMatch(
       `sync-leases: nytt fel på avtal ${lease.leaseId}`
     )
+    const [entry] = await readQueue(queueFile)
+    expect(entry.lastError).toBe(
+      `lease ${lease.leaseId} failed to sync: tenfast=sync-failed (409) [end-date-mismatch: Tenfast 2026-03-31, Xpand 2025-12-31]`
+    )
     const body = sendEmailSpy.mock.calls[0][0].body as string
+    expect(body).toContain('Tenfast 2026-03-31, Xpand 2025-12-31')
     expect(body).toContain('Rätta slutdatumet i Tenfast')
     expect(body).toContain('Nästa återförsök bekräftar ändringen.')
   })
@@ -816,7 +821,7 @@ describe('syncLeases', () => {
     await appendEntry(queueFile, {
       ...makeLeaseEntry(
         lease,
-        `Failed to sync lease ${lease.leaseId}: sync-failed (end-date-mismatch)`
+        `lease ${lease.leaseId} failed to sync: tenfast=sync-failed (409) [end-date-mismatch: Tenfast 2026-03-31, Xpand 2025-12-31]`
       ),
       addedAt: monthAgo,
       lastAttemptAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
@@ -831,8 +836,8 @@ describe('syncLeases', () => {
     jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
       ok: false,
       err: 'sync-failed',
-      statusCode: 500,
-      detail: 'end-date-mismatch',
+      statusCode: 409,
+      detail: 'end-date-mismatch: Tenfast 2026-03-31, Xpand 2025-12-31',
     })
     jest
       .spyOn(leasingAdapter, 'getUpdatedLeases')
