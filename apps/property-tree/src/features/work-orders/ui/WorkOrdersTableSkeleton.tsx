@@ -46,8 +46,8 @@ export function WorkOrdersTableSkeleton() {
             ),
           },
           {
-            key: 'type',
-            label: 'Typ',
+            key: 'maintenanceTeam',
+            label: 'Resursgrupp',
             render: () => (
               <div className="h-4 w-16 bg-slate-200 animate-pulse rounded" />
             ),

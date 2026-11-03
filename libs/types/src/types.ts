@@ -18,10 +18,13 @@ import {
   CommentThreadSchema,
   InvoiceRowSchema,
   InvoicePaymentEventSchema,
+  PaymentSyncEventSchema,
   InvoiceSchema,
   XledgerContactSchema,
   RentInvoiceRowSchema,
   LeaseRentRowSchema,
+  MiscellaneousInvoiceSchema,
+  MiscellaneousInvoiceBaseItemSchema,
 } from './schemas/v1'
 import {
   MiscellaneousInvoicePayload,
@@ -249,6 +252,10 @@ interface Listing {
   listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
   applicants?: Applicant[]
   rentalObject: RentalObject
+  // Whether listing text content ("annonsinnehåll") exists for the rental
+  // object. Only populated by the leasing read queries that join
+  // listing_text_content (listings with applicants, listing by id).
+  hasListingTextContent?: boolean
 }
 
 interface Applicant {
@@ -324,6 +331,8 @@ interface ApartmentInfo {
   number: string
   type: string
   roomTypeCode: string
+  // Whole-room count from Xpand (balgt.roomcount); null when not registered
+  roomCount: number | null
   entrance: string
   floor: string
   hasElevator: boolean
@@ -393,6 +402,11 @@ interface RentalObject {
   boaArea?: number
   isSpecialResidentialArea?: boolean
   isSpecialProperty?: boolean
+  // Whether listing text content ("annonsinnehåll") exists for the rental
+  // object. Only populated by the leasing vacant parking spaces route, which
+  // attaches it from the leasing DB since the objects themselves come from
+  // Xpand.
+  hasListingTextContent?: boolean
 }
 
 interface RentalTag {
@@ -445,7 +459,12 @@ type Comment = z.infer<typeof CommentSchema>
 type CommentThread = z.infer<typeof CommentThreadSchema>
 type Invoice = z.infer<typeof InvoiceSchema>
 type InvoiceRow = z.infer<typeof InvoiceRowSchema>
+type MiscellaneousInvoice = z.infer<typeof MiscellaneousInvoiceSchema>
+type MiscellaneousInvoiceBaseItem = z.infer<
+  typeof MiscellaneousInvoiceBaseItemSchema
+>
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
+type PaymentSyncEvent = z.infer<typeof PaymentSyncEventSchema>
 type RentInvoiceRow = z.infer<typeof RentInvoiceRowSchema>
 type XledgerContact = z.infer<typeof XledgerContactSchema>
 type XledgerProject = z.infer<typeof XledgerProjectSchema>
@@ -469,7 +488,10 @@ export type {
   Invoices,
   Invoice,
   InvoiceRow,
+  MiscellaneousInvoice,
+  MiscellaneousInvoiceBaseItem,
   InvoicePaymentEvent,
+  PaymentSyncEvent,
   RentInvoiceRow,
   XledgerContact,
   XledgerProject,

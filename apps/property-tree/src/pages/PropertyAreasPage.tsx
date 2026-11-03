@@ -201,13 +201,16 @@ export function PropertyAreasPage() {
 
   const totals = kvvAreaList.reduce(
     (acc, k) => ({
-      properties: acc.properties + k.propertyCount,
       entrances: acc.entrances + k.entranceCount,
       residences: acc.residences + k.residenceCount,
       parking: acc.parking + k.parkingCount,
     }),
-    { properties: 0, entrances: 0, residences: 0, parking: 0 }
+    { entrances: 0, residences: 0, parking: 0 }
   )
+  // Distinct codes: a split property is a card in two areas but one fastighet.
+  const totalProperties = new Set(
+    tree?.kvvAreas.flatMap((a) => a.properties.map((p) => p.code)) ?? []
+  ).size
 
   const pendingPropertyCodes = useMemo(
     () => new Set(pendingChanges.map((c) => c.propertyCode)),
@@ -405,7 +408,7 @@ export function PropertyAreasPage() {
                       title="Fastigheter"
                     >
                       <Building2 className="h-4 w-4 text-muted-foreground" />
-                      {totals.properties}
+                      {totalProperties}
                     </span>
                     <span
                       className="flex items-center gap-1.5"

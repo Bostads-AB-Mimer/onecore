@@ -21,6 +21,21 @@ export async function getKeyNotesByRentalObject(
   return db(TABLE).where({ rentalObjectCode }).orderBy('id', 'desc')
 }
 
+/** Batch variant: notes for many rental objects, keyed by code (every code present). */
+export async function getKeyNotesByRentalObjects(
+  rentalObjectCodes: string[],
+  db: Knex
+): Promise<Record<string, KeyNote[]>> {
+  const result: Record<string, KeyNote[]> = {}
+  for (const code of rentalObjectCodes) result[code] = []
+  if (rentalObjectCodes.length === 0) return result
+  const rows: KeyNote[] = await db(TABLE)
+    .whereIn('rentalObjectCode', rentalObjectCodes)
+    .orderBy('id', 'desc')
+  for (const row of rows) result[row.rentalObjectCode]?.push(row)
+  return result
+}
+
 /**
  * Get a single key note by ID.
  *

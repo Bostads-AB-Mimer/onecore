@@ -24,14 +24,19 @@ export {
   type LeaseTerminationConfirmationRequest,
   type LeaseTerminationConfirmationEmail,
 } from './communication/tenant-notification'
+export * as guides from './guides'
 export * from './room'
 
 export * as schemas from './schemas'
 export {
   SyncContactToEconomySchema,
   type SyncContactToEconomyPayload,
+  SyncContactToEconomyUndoSchema,
+  type SyncContactToEconomyUndo,
   SyncContactToWorkOrderSchema,
   type SyncContactToWorkOrderPayload,
+  SyncContactToWorkOrderUndoSchema,
+  type SyncContactToWorkOrderUndo,
 } from './schemas/v1/contact-sync'
 export { LeaseChangeSchema, type LeaseChange } from './schemas/v1/lease-sync'
 export {

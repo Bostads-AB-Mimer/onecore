@@ -11,13 +11,14 @@ export function formatReleaseNoteDate(dateString: string): string {
   })
 }
 
-/**
- * Sort release notes with pinned items first, preserving date order otherwise
- */
-export function sortReleaseNotesByPinned(notes: ReleaseNote[]): ReleaseNote[] {
-  return [...notes].sort((a, b) => {
-    if (a.pinned && !b.pinned) return -1
-    if (!a.pinned && b.pinned) return 1
-    return 0 // Keep original order (already sorted by date)
-  })
+export type ReleaseNoteStatus = 'draft' | 'scheduled' | 'published'
+
+// A future publishedAt means the note is scheduled and not yet visible.
+export function getReleaseNoteStatus(
+  note: Pick<ReleaseNote, 'publishedAt'>
+): ReleaseNoteStatus {
+  if (!note.publishedAt) return 'draft'
+  return new Date(note.publishedAt).getTime() > Date.now()
+    ? 'scheduled'
+    : 'published'
 }

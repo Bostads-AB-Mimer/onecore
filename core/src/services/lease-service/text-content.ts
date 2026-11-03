@@ -146,6 +146,12 @@ export const routes = (router: KoaRouter) => {
         const result = await leasingAdapter.createListingTextContent(body)
 
         if (!result.ok) {
+          if (result.err === 'bad-request') {
+            ctx.status = 400
+            ctx.body = { error: 'Invalid request body', ...metadata }
+            return
+          }
+
           if (result.err === 'conflict') {
             ctx.status = 409
             ctx.body = {
@@ -237,6 +243,12 @@ export const routes = (router: KoaRouter) => {
         )
 
         if (!result.ok) {
+          if (result.err === 'bad-request') {
+            ctx.status = 400
+            ctx.body = { error: 'Invalid request body', ...metadata }
+            return
+          }
+
           if (result.err === 'not-found') {
             ctx.status = 404
             ctx.body = { reason: 'Listing text content not found', ...metadata }

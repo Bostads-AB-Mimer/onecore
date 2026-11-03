@@ -9,6 +9,7 @@ const pageTitles: Record<string, string> = {
   '/Keys': 'Nycklar',
   '/key-systems': 'Låssystem',
   '/activity-log': 'Händelselogg',
+  '/move-in-out': 'In- och utflytt',
 }
 
 export function PageTitle() {

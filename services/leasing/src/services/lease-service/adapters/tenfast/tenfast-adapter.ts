@@ -19,6 +19,7 @@ import {
   TenfastTag,
   TenfastArticleSchema,
   TenfastArticle,
+  TenfastContactRelationsSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -1487,6 +1488,96 @@ export const getLeaseByExternalId = async (
     }
   } catch (err) {
     logger.error(mapHttpError(err), 'tenfast-adapter.getLeaseByExternalId')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+// Tenfast end dates arrive as UTC or Stockholm midnight; compare Stockholm calendar dates.
+const toStockholmDate = (date: Date) =>
+  date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })
+
+const hasEnded = (endDate: Date | null | undefined, now: Date) =>
+  !!endDate && toStockholmDate(endDate) < toStockholmDate(now)
+
+const isCurrentSubletOf = (
+  lease: TenfastLease,
+  contactCode: string,
+  now: Date
+) =>
+  lease.andraHandHG?.externalId === contactCode &&
+  !hasEnded(lease.andraHandHG.endDate, now) &&
+  !hasEnded(lease.endDate, now)
+
+export const getSubletLeases = async (
+  contactCode: string,
+  filters: GetLeasesFilters = defaultFilters
+): Promise<AdapterResult<TenfastLease[], 'unknown' | SchemaError>> => {
+  try {
+    const res = await tenfastApi.request({
+      method: 'get',
+      url: `${tenfastBaseUrl}/v1/hyresvard/extras/contacts/${encodeURIComponent(contactCode)}/relations?hyresvard=${tenfastCompanyId}`,
+    })
+
+    if (res.status === 404) {
+      return { ok: true, data: [] }
+    }
+
+    if (res.status !== 200) {
+      logger.error(
+        { error: mapHttpError(res.data), contactCode },
+        'getSubletLeases: Unknown error'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    const relations = TenfastContactRelationsSchema.safeParse(res.data)
+
+    if (!relations.success) {
+      logger.error(
+        { error: JSON.stringify(relations.error, null, 2) },
+        'getSubletLeases: Failed to parse Tenfast response'
+      )
+      return {
+        ok: false,
+        err: { tag: 'schema-error', error: relations.error },
+      }
+    }
+
+    const leaseIds = relations.data.relationsTo.andraHandHyresgast.flatMap(
+      ({ avtal }) => (avtal.externalId ? [avtal.externalId] : [])
+    )
+
+    const results = await Promise.all(
+      leaseIds.map((leaseId) =>
+        getLeaseByExternalId(leaseId).then((result) => ({ leaseId, result }))
+      )
+    )
+
+    const now = new Date()
+    const leases: TenfastLease[] = []
+    for (const { leaseId, result } of results) {
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          logger.warn(
+            { leaseId, contactCode },
+            'getSubletLeases: Sublet lease not found, skipping it'
+          )
+          continue
+        }
+        logger.error(
+          { error: result.err, leaseId, contactCode },
+          'getSubletLeases: Failed to fetch sublet lease'
+        )
+        return { ok: false, err: 'unknown' }
+      }
+      if (isCurrentSubletOf(result.data, contactCode, now)) {
+        leases.push(result.data)
+      }
+    }
+
+    return { ok: true, data: filterByStatus(leases, filters.status) }
+  } catch (err) {
+    logger.error(mapHttpError(err), 'tenfast-adapter.getSubletLeases')
     return { ok: false, err: 'unknown' }
   }
 }

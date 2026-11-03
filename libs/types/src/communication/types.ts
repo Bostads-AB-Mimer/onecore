@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import {
   ChannelSchema,
+  CreateReleaseNoteParamsSchema,
+  CreateReleaseNoteSchema,
   CustomerMessageSchema,
   DirectionSchema,
   DispatchAttachmentSchema,
@@ -10,7 +12,11 @@ import {
   LogOutboundRecipientSchema,
   MessageRecipientSchema,
   RecipientStatusSchema,
+  ReleaseNoteAppSchema,
+  ReleaseNoteCategorySchema,
+  ReleaseNoteSchema,
   TemplateSchema,
+  UpdateReleaseNoteSchema,
 } from './schema'
 
 export type Direction = z.infer<typeof DirectionSchema>
@@ -29,3 +35,12 @@ export type DispatchWithRecipients = z.infer<
   typeof DispatchWithRecipientsSchema
 >
 export type CustomerMessage = z.infer<typeof CustomerMessageSchema>
+
+export type ReleaseNoteCategory = z.infer<typeof ReleaseNoteCategorySchema>
+export type ReleaseNoteApp = z.infer<typeof ReleaseNoteAppSchema>
+export type ReleaseNote = z.infer<typeof ReleaseNoteSchema>
+export type CreateReleaseNote = z.infer<typeof CreateReleaseNoteSchema>
+export type UpdateReleaseNote = z.infer<typeof UpdateReleaseNoteSchema>
+export type CreateReleaseNoteParams = z.infer<
+  typeof CreateReleaseNoteParamsSchema
+>
