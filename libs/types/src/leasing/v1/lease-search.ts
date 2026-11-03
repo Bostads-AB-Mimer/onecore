@@ -141,6 +141,8 @@ export type LeaseSearchQueryParamsInput = z.input<
 export const LeaseSearchResultSchema = z.object({
   // Core lease fields (always returned)
   leaseId: z.string(),
+  // Link to the lease in the source leasing system's web UI, when available
+  externalUrl: z.string().url().optional(),
   objectTypeCode: z.string(),
   leaseType: z.nativeEnum(LeaseType),
   contacts: z.array(ContactInfoSchema),

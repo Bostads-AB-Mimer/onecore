@@ -1,4 +1,5 @@
 // UI Components
+export { ExternalLeaseLink } from './ui/ExternalLeaseLink'
 export { LeaseInfo } from './ui/LeaseInfo'
 export { LeaseMobileCard } from './ui/LeaseMobileCard'
 export { LeaseStatusBadge } from './ui/LeaseStatusBadge'

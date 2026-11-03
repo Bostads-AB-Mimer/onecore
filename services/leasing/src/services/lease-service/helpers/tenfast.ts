@@ -8,11 +8,27 @@ import {
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
+import config from '../../../common/config'
 import {
   TenfastLease,
   TenfastInvoiceRow,
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
+
+/**
+ * Build a link to a lease in the Tenfast web UI from its internal Tenfast id.
+ * Returns undefined when no Tenfast UI URL is configured.
+ */
+export const buildTenfastLeaseUrl = (
+  tenfastLeaseId: string
+): string | undefined => {
+  if (!config.tenfast.appUrl) return undefined
+
+  return new URL(
+    `/hyresvard/avtal/${encodeURIComponent(tenfastLeaseId)}`,
+    config.tenfast.appUrl
+  ).toString()
+}
 
 /**
  * Map TenFAST rental object type to LeaseType enum.
@@ -129,6 +145,7 @@ export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
   return {
     leaseId: lease.externalId,
     leaseNumber: lease.externalId.split('/')[1],
+    externalUrl: buildTenfastLeaseUrl(lease._id),
     leaseStartDate: lease.startDate,
     leaseEndDate: lease.endDate ?? undefined,
     status: calculateLeaseStatus(lease),

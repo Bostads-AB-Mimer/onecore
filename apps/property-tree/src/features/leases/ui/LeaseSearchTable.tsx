@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom'
 
-import { formatDate, LeaseStatusBadge } from '@/entities/lease'
+import {
+  ExternalLeaseLink,
+  formatDate,
+  LeaseStatusBadge,
+} from '@/entities/lease'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 
@@ -12,7 +16,10 @@ export function LeaseMobileCard(lease: LeaseSearchResult) {
     <div className="space-y-3 w-full">
       <div className="flex justify-between items-start">
         <div>
-          <div className="text-sm font-medium">{lease.leaseId}</div>
+          <div className="text-sm font-medium flex items-center gap-1">
+            {lease.leaseId}
+            <ExternalLeaseLink url={lease.externalUrl} />
+          </div>
           <div className="text-xs text-muted-foreground mt-1">
             {formatDate(lease.startDate)} - {formatDate(lease.lastDebitDate)}
           </div>

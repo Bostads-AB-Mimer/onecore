@@ -1,7 +1,9 @@
 import { sub } from 'date-fns'
 import { LeaseStatus, LeaseType } from '@onecore/types'
 
+import config from '../../../../common/config'
 import {
+  buildTenfastLeaseUrl,
   mapToOnecoreLease,
   mapToOnecoreRentalObjectRent,
 } from '../../helpers/tenfast'
@@ -133,6 +135,53 @@ describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
     })
 
     expect(mapToOnecoreLease(lease).type).toBe(LeaseType.OtherContract)
+  })
+})
+
+describe('buildTenfastLeaseUrl', () => {
+  const originalAppUrl = config.tenfast.appUrl
+
+  afterEach(() => {
+    config.tenfast.appUrl = originalAppUrl
+  })
+
+  it('builds a link to the lease in the Tenfast UI', () => {
+    config.tenfast.appUrl = 'https://tenfast.example.com'
+
+    expect(buildTenfastLeaseUrl('6ae9b2cd672cf891f4543fde')).toBe(
+      'https://tenfast.example.com/hyresvard/avtal/6ae9b2cd672cf891f4543fde'
+    )
+  })
+
+  it('ignores a trailing slash in the configured URL', () => {
+    config.tenfast.appUrl = 'https://tenfast.example.com/'
+
+    expect(buildTenfastLeaseUrl('abc')).toBe(
+      'https://tenfast.example.com/hyresvard/avtal/abc'
+    )
+  })
+
+  it('encodes the id', () => {
+    config.tenfast.appUrl = 'https://tenfast.example.com'
+
+    expect(buildTenfastLeaseUrl('a/b')).toBe(
+      'https://tenfast.example.com/hyresvard/avtal/a%2Fb'
+    )
+  })
+
+  it('returns undefined when no Tenfast UI URL is configured', () => {
+    config.tenfast.appUrl = ''
+
+    expect(buildTenfastLeaseUrl('abc')).toBeUndefined()
+  })
+
+  it('is used by mapToOnecoreLease with the Tenfast _id', () => {
+    config.tenfast.appUrl = 'https://tenfast.example.com'
+    const lease = factory.tenfastLease.build({ _id: 'mongo-id-1' })
+
+    expect(mapToOnecoreLease(lease).externalUrl).toBe(
+      'https://tenfast.example.com/hyresvard/avtal/mongo-id-1'
+    )
   })
 })
 

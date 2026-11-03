@@ -3,9 +3,10 @@ import { Calendar } from 'lucide-react'
 import type { Lease } from '@/services/api/core/leaseService'
 
 import { formatDate } from '../lib/formatting'
+import { ExternalLeaseLink } from './ExternalLeaseLink'
 
 interface LeaseInfoProps {
-  lease: Pick<Lease, 'leaseId' | 'leaseStartDate'> &
+  lease: Pick<Lease, 'leaseId' | 'leaseStartDate' | 'externalUrl'> &
     Partial<Pick<Lease, 'lastDebitDate' | 'preferredMoveOutDate' | 'rentRows'>>
 }
 
@@ -31,7 +32,10 @@ export function LeaseInfo({ lease }: LeaseInfoProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <p className="text-sm text-muted-foreground">Kontraktsnummer</p>
-          <p className="font-medium">{lease.leaseId}</p>
+          <p className="font-medium flex items-center gap-1">
+            {lease.leaseId}
+            <ExternalLeaseLink url={lease.externalUrl} />
+          </p>
         </div>
         {leaseRent !== null && (
           <div>
