@@ -91,6 +91,7 @@ export const Lease = z.object({
     'PreliminaryTerminated',
     'PendingSignature',
     'NotSent',
+    'Voided',
   ]),
   tenantContactIds: z.array(z.string()).optional(),
   subletContactId: z.string().optional(),
@@ -268,6 +269,8 @@ function mapLeaseStatus(status: LeaseStatus): z.infer<typeof Lease>['status'] {
       return 'PendingSignature'
     case LeaseStatus.NotSent:
       return 'NotSent'
+    case LeaseStatus.Voided:
+      return 'Voided'
   }
 }
 

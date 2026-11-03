@@ -12,6 +12,7 @@ export const LeaseStatus = {
   PreliminaryTerminated: 4, // Preliminärt uppsagt
   PendingSignature: 5, // Väntar på signering
   NotSent: 6, // Ej skickat
+  Voided: 7, // Makulerat
 } as const
 
 export const getStatusBadge = (status: Lease['status'] | number): ReactNode => {
@@ -93,6 +94,16 @@ export const getStatusBadge = (status: Lease['status'] | number): ReactNode => {
         className="bg-gray-50 text-gray-700 hover:bg-gray-50 border-gray-200 whitespace-nowrap"
       >
         Ej skickat
+      </Badge>
+    )
+  }
+  if (status === 'Voided' || numericStatus === LeaseStatus.Voided) {
+    return (
+      <Badge
+        variant="outline"
+        className="bg-red-50 text-red-700 hover:bg-red-50 border-red-200 whitespace-nowrap"
+      >
+        Makulerat
       </Badge>
     )
   }

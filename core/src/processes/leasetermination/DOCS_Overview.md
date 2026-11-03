@@ -16,11 +16,12 @@ De processer i den här mappen beskriver hur ett hyreskontrakt avslutas — anti
 
 Tenfast håller ett `stage`-fält på avtalet som onecore mappar till sin egen `LeaseStatus`. De statusar som rör den här dokumentationen:
 
-| Tenfast `stage`         | onecore `LeaseStatus` | Betydelse                                                             |
-| ----------------------- | --------------------- | --------------------------------------------------------------------- |
-| `preTermination`        | PreliminaryTerminated | Hyresgästen har begärt uppsägning via simplesign, väntar på signering |
-| `terminationScheduled`  | AboutToEnd            | Uppsägningen är bekräftad, avtalet löper på uppsägningstiden ut       |
-| `terminated`/`archived` | Ended                 | Avtalet har upphört                                                   |
+| Tenfast `stage`         | onecore `LeaseStatus` | Betydelse                                                                                                        |
+| ----------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `preTermination`        | PreliminaryTerminated | Hyresgästen har begärt uppsägning via simplesign, väntar på signering                                            |
+| `terminationScheduled`  | AboutToEnd            | Uppsägningen är bekräftad, avtalet löper på uppsägningstiden ut                                                  |
+| `terminated`/`archived` | Ended                 | Avtalet har upphört                                                                                              |
+| `voided`                | Voided                | Avtalet är makulerat (annullerat); döljs i listor om inte `status=voided` efterfrågas, och tas bort ur sökcachen |
 
 Tenfast har även ett `cancellation`-objekt på avtalet (`cancelled`, `requested`, `cancelledByType`, `preferredMoveOutDate` m.fl.) som fungerar som revisionsspår. Fältet `cancelledByType` är det som skiljer ett hyresgäst-initierat uppsägningsförsök (`'hyresgast'`, hårdkodat av onecore i den preliminära uppsägningen) från ett system-/Xpand-drivet.
 

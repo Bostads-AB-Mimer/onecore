@@ -6,6 +6,7 @@ enum LeaseStatus {
   PreliminaryTerminated = 4, // Preliminärt uppsagt
   PendingSignature = 5, // Väntar på signering
   NotSent = 6, // Ej skickat
+  Voided = 7, // Makulerat
 }
 
 const LeaseStatusLabel: Record<LeaseStatus, string> = {
@@ -16,6 +17,7 @@ const LeaseStatusLabel: Record<LeaseStatus, string> = {
   [LeaseStatus.NotSent]: 'Ej skickat',
   [LeaseStatus.PreliminaryTerminated]: 'Preliminärt uppsagt',
   [LeaseStatus.PendingSignature]: 'Väntar på signering',
+  [LeaseStatus.Voided]: 'Makulerat',
 }
 
 enum ParkingSpaceType {

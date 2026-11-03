@@ -795,7 +795,7 @@ export const routes = (router: KoaRouter) => {
    *         name: status
    *         schema:
    *           type: string
-   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended, preliminary-terminated, pending-signature, not-sent, voided. Default is all statuses except voided.
    *       - in: query
    *         name: includeSubletLeases
    *         schema:
@@ -941,7 +941,7 @@ export const routes = (router: KoaRouter) => {
    *         name: status
    *         schema:
    *           type: string
-   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended, preliminary-terminated, pending-signature, not-sent, voided. Default is all statuses except voided.
    *     responses:
    *       200:
    *         description: Successfully retrieved leases.
@@ -1011,7 +1011,10 @@ export const routes = (router: KoaRouter) => {
       }
 
       const getLeases = await tenfastAdapter.getLeasesByRentalPropertyId(
-        property.data._id
+        property.data._id,
+        queryParams.data?.status
+          ? { status: queryParams.data.status }
+          : undefined
       )
 
       if (!getLeases.ok) {

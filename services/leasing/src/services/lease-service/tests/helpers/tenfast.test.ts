@@ -75,6 +75,16 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Current)
   })
 
+  it('returns Voided for voided stage', () => {
+    const lease = factory.tenfastLease.build({
+      stage: 'voided',
+      startDate: sub(new Date(), { days: 30 }),
+      endDate: null,
+    })
+
+    expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Voided)
+  })
+
   it('returns Ended as fallback for unexpected stage', () => {
     const lease = factory.tenfastLease.build({
       stage: 'unknownStage',

@@ -12707,6 +12707,7 @@ export interface components {
         | 'PreliminaryTerminated'
         | 'PendingSignature'
         | 'NotSent'
+        | 'Voided'
       tenantContactIds?: string[]
       subletContactId?: string
       rentalPropertyId: string
@@ -12891,7 +12892,7 @@ export interface components {
       /** Format: date-time */
       signedAt: string | null
       /** @enum {number} */
-      status: 0 | 1 | 2 | 3 | 4 | 5 | 6
+      status: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
       rentalObjectCode: string | null
       property?: string | null
       buildingCode?: string | null
@@ -16033,6 +16034,7 @@ export interface components {
           | 'PreliminaryTerminated'
           | 'PendingSignature'
           | 'NotSent'
+          | 'Voided'
         tenantContactIds?: string[]
         subletContactId?: string
         rentalPropertyId: string
@@ -16400,6 +16402,7 @@ export interface components {
           | 'PreliminaryTerminated'
           | 'PendingSignature'
           | 'NotSent'
+          | 'Voided'
         tenantContactIds?: string[]
         subletContactId?: string
         rentalPropertyId: string
@@ -16859,6 +16862,7 @@ export interface components {
           | 'PreliminaryTerminated'
           | 'PendingSignature'
           | 'NotSent'
+          | 'Voided'
         tenantContactIds?: string[]
         subletContactId?: string
         rentalPropertyId: string

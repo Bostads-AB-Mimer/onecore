@@ -17,6 +17,7 @@ describe(filterByStatus, () => {
       stage: 'signingInProgress',
     })
     const notSentLease = factory.tenfastLease.build({ stage: 'draft' })
+    const voidedLease = factory.tenfastLease.build({ stage: 'voided' })
 
     const leases = [
       currentLease,
@@ -27,6 +28,7 @@ describe(filterByStatus, () => {
       terminatedLease,
       pendingSignatureLease,
       notSentLease,
+      voidedLease,
     ]
 
     expect(filterByStatus(leases, ['current'])).toEqual([currentLease])
@@ -43,6 +45,7 @@ describe(filterByStatus, () => {
       pendingSignatureLease,
     ])
     expect(filterByStatus(leases, ['not-sent'])).toEqual([notSentLease])
+    expect(filterByStatus(leases, ['voided'])).toEqual([voidedLease])
   })
 
   it('filters leases by multiple statuses', () => {

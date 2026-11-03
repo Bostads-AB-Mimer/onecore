@@ -6,6 +6,10 @@ const toMs = (d?: string) => (d ? new Date(d).getTime() : undefined)
 // ——— CHANGED: only use lastDebitDate ———
 export const pickEndDate = (lease: Lease) => lease.lastDebitDate ?? undefined
 
+// Voided (makulerat) is dead regardless of its dates: numeric 7 or 'Voided'.
+const isVoided = (s?: string | number) =>
+  s === 7 || (typeof s === 'string' && s.trim().toLowerCase() === 'voided')
+
 function normalizeBackendStatus(
   s?: string | number
 ): 'active' | 'upcoming' | 'ended' | 'abouttoend' | null {
@@ -31,6 +35,8 @@ function normalizeBackendStatus(
 export function deriveDisplayStatus(
   lease: Lease
 ): 'active' | 'upcoming' | 'ended' {
+  if (isVoided(lease.status)) return 'ended'
+
   const now = Date.now()
   const start = toMs(lease.leaseStartDate)
   const end = toMs(pickEndDate(lease)) // ← lastDebitDate-only

@@ -52,4 +52,17 @@ describe('deriveDisplayStatus', () => {
       deriveDisplayStatus(makeLease({ status: 'abouttoend' as any }))
     ).toBe('active')
   })
+
+  it('treats a voided lease as ended even when its start date is in the future', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2025-06-01'))
+
+    const voided = { leaseStartDate: '2025-12-01', lastDebitDate: undefined }
+    expect(
+      deriveDisplayStatus(makeLease({ ...voided, status: 'Voided' as any }))
+    ).toBe('ended')
+    expect(
+      deriveDisplayStatus(makeLease({ ...voided, status: 7 as any }))
+    ).toBe('ended')
+  })
 })
