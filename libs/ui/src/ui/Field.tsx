@@ -9,7 +9,12 @@ interface FieldProps {
 }
 
 /** A read-only label/value pair, for fact grids like "Grundinformation". */
-export function Field({ label, value, isLoading, emptyText = '-' }: FieldProps) {
+export function Field({
+  label,
+  value,
+  isLoading,
+  emptyText = '-',
+}: FieldProps) {
   return (
     <div>
       <p className="text-sm text-muted-foreground">{label}</p>

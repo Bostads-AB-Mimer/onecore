@@ -1,1 +1,6 @@
-export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@onecore/ui'
+export {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+} from '@onecore/ui'
