@@ -71,7 +71,7 @@ Uo --> |Has this contact_code:<br/>an earlier try created it| M
 Uo --> |No contact_code| Fl(Set contact_code<br/>password and e-mail untouched)
 Uo --> |Another contact_code| Lg(Log the mismatch<br/>contact_code untouched)
 Fl --> D[login-exists<br/>no e-mail]
-Lg --> D
+Lg --> D3[login-bound-to-other-contact<br/>no e-mail]
 M --> D2[Done]
 Ao --> |Other error| T{Second try?}
 T --> |No| A
@@ -79,18 +79,19 @@ T --> |Yes| X2[login-setup-failed]
 ```
 
 - **En befintlig användare får aldrig mejlet.** Annars kunde vem som helst ta över ett konto genom att skriva sin egen e-post i formuläret. Svaret får varningen `login-exists`, så att webapi inte ber personen leta efter ett mejl som aldrig kommer.
-- **En befintlig kontaktkod byts aldrig här**, av samma skäl: formuläret ska inte kunna flytta någon annans inloggning till en ny kontakt. En kod som inte längre går att slå upp byts i stället vid inloggning. Skillnaden loggas.
+- **En befintlig kontaktkod byts aldrig här**, av samma skäl: formuläret ska inte kunna flytta någon annans inloggning till en ny kontakt. Skillnaden loggas och svaret får varningen `login-bound-to-other-contact`. Reparationen vid inloggning löser det inte: den byter bara en kod som inte går att slå upp, och borttagna eller GDPR-rensade kontakter går fortfarande att slå upp. Den gamla kontakten kan inte ha personnumret, för då hade skapandet nekats, men inloggningen visar den tills någon ändrar koden för hand.
 - **Ett nytt försök skapar inte användaren igen.** Användar-id:t sparas mellan försöken, så bara steget som föll görs om.
 - **En användare med just den här kontaktkoden** skapades av ett försök som aldrig fick svar, till exempel vid en timeout. Den räknas som ny och får mejlet.
 
 ## Varningar
 
-| Varning                      | Orsak                                                                   | Hur personen kommer vidare                                                                                                                                  |
-| ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `application-profile-failed` | Boendeprofilen sparades inte                                            | Fyller i den under Mina sidor                                                                                                                               |
-| `waiting-lists-failed`       | Minst en kö lades inte till                                             | Väljer köer under Mina sidor                                                                                                                                |
-| `login-setup-failed`         | Ingen Keycloak-användare eller inget mejl efter två försök              | Kundtjänst, eller nattkörningen som skapar användaren. En ny registrering svarar `existing`. Finns användaren men mejlet uteblev fungerar "Glömt lösenord". |
-| `login-exists`               | Det fanns redan en inloggning för personnumret, så inget mejl skickades | Loggar in, eller använder "Glömt lösenord" om lösenord aldrig valts                                                                                         |
+| Varning                        | Orsak                                                                                             | Hur personen kommer vidare                                                                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `application-profile-failed`   | Boendeprofilen sparades inte                                                                      | Fyller i den under Mina sidor                                                                                                                               |
+| `waiting-lists-failed`         | Minst en kö lades inte till                                                                       | Väljer köer under Mina sidor                                                                                                                                |
+| `login-setup-failed`           | Ingen Keycloak-användare eller inget mejl efter två försök                                        | Kundtjänst, eller nattkörningen som skapar användaren. En ny registrering svarar `existing`. Finns användaren men mejlet uteblev fungerar "Glömt lösenord". |
+| `login-exists`                 | Det fanns redan en inloggning för personnumret, så inget mejl skickades                           | Loggar in, eller använder "Glömt lösenord" om lösenord aldrig valts                                                                                         |
+| `login-bound-to-other-contact` | Inloggningen för personnumret hör till en annan kontakt och behåller den, så inget mejl skickades | Kundtjänst. Inloggningen skulle visa den gamla kontakten, inte den nya                                                                                      |
 
 ## Uppslagningen av personkontakter
 
