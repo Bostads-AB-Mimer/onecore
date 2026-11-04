@@ -17,7 +17,21 @@ import type {
 import { lookupPersonContacts } from './person-contacts-lookup'
 import { setUpNewContactProfileAndWaitingLists } from './new-contact-profile-and-waiting-lists'
 
-export type RegisterApplicantError = CreateContactError | 'person-lookup-failed'
+export type RegisterApplicantError =
+  | Exclude<
+      CreateContactError,
+      'contacts-service-error' | 'invalid-national-id'
+    >
+  | 'person-lookup-failed'
+  /**
+   * The contacts service did not answer the create (a timeout, a dropped connection) or
+   * answered with something unrecognised, so the contact may exist even though core never
+   * got its code. Not a plain failure: retrying would answer 'existing' for someone who has
+   * no profile, queues or login.
+   */
+  | 'contact-outcome-unknown'
+  /** Old enough by birth year, but the contacts service still requires an exact age of 16. */
+  | 'too-young'
 
 export type RegisterApplicantResult =
   | {
@@ -33,7 +47,7 @@ export type RegisterApplicantResult =
    * changed; kundtjänst has to help.
    */
   | { outcome: 'inactive' }
-  /** Nothing was created. */
+  /** Nothing was created, except after 'contact-outcome-unknown', when it is not known. */
   | { outcome: 'failed'; error: RegisterApplicantError }
 
 /** Two tries: the first, and one retry. */
@@ -49,6 +63,12 @@ type Existing =
   | { outcome: 'existing' }
   | { outcome: 'inactive' }
   | { outcome: 'failed'; error: 'person-lookup-failed' }
+
+type LoginSetup =
+  | 'ready'
+  /** The username already had a user, which keeps its password and gets no e-mail. */
+  | 'exists'
+  | 'failed'
 
 const findExisting = async (nationalId: string): Promise<Existing> => {
   const result = await lookupPersonContacts(nationalId)
@@ -81,17 +101,18 @@ const toCreateContactBody = (
 
 /**
  * Creates the person's login in the mimer-contacts realm and e-mails a new user a link to
- * choose a password. Tried twice; false when both tries fail.
+ * choose a password. Tried twice; 'failed' when both tries fail.
  *
  * A user that already has the username keeps its password and e-mail and only gets a
  * missing contact_code filled in, because the e-mail typed into the form must not be able to
- * take over someone else's login.
+ * take over someone else's login. For the same reason a contact_code it already has is never
+ * replaced here: the contact_code repair at login replaces one that no longer resolves.
  */
 const setUpLogin = async (
   username: string,
   email: string,
   contactCode: string
-): Promise<boolean> => {
+): Promise<LoginSetup> => {
   // Kept across tries, so a retry neither creates the user twice nor skips the e-mail.
   let userId: string | undefined
   let sendEmail = false
@@ -109,13 +130,25 @@ const setUpLogin = async (
         if (created === 'conflict') {
           const user = await admin.findUserByUsername(username)
           if (!user) throw new EmailTakenError()
+          const existingCodes = (
+            user.attributes?.[CONTACT_CODE_ATTRIBUTE] ?? []
+          ).filter(Boolean)
           // A user that already carries the contact code created a moment ago is one an
           // earlier try created without seeing the answer, so it still needs its e-mail.
-          sendEmail =
-            user.attributes?.[CONTACT_CODE_ATTRIBUTE]?.includes(contactCode) ??
-            false
-          if (!sendEmail) await admin.fillMissingContactCode(user, contactCode)
-          userId = user.id
+          if (existingCodes.includes(contactCode)) {
+            userId = user.id
+            sendEmail = true
+          } else {
+            if (existingCodes.length === 0) {
+              await admin.setContactCode(user, contactCode)
+            } else {
+              logger.warn(
+                { contactCode, existingContactCodes: existingCodes },
+                'registerApplicant.existingLoginHasOtherContactCode'
+              )
+            }
+            return 'exists'
+          }
         } else {
           userId = created.id
           sendEmail = true
@@ -123,17 +156,17 @@ const setUpLogin = async (
       }
 
       if (sendEmail) await admin.sendSetPasswordEmail(userId)
-      return true
+      return 'ready'
     } catch (error: unknown) {
       logger.error(
         { contactCode, attempt, ...describeKeycloakFailure(error) },
         'registerApplicant.loginSetupFailed'
       )
       // Retrying cannot free an e-mail address another user holds.
-      if (error instanceof EmailTakenError) return false
+      if (error instanceof EmailTakenError) return 'failed'
     }
   }
-  return false
+  return 'failed'
 }
 
 /**
@@ -164,6 +197,19 @@ export const registerApplicant = async (
   )
 
   if (!created.ok) {
+    if (created.err === 'contacts-service-error') {
+      logger.error(
+        { statusCode: created.statusCode },
+        'registerApplicant.contactOutcomeUnknown'
+      )
+      return { outcome: 'failed', error: 'contact-outcome-unknown' }
+    }
+    if (created.err === 'invalid-national-id') {
+      // The route has already checked the number with the same rules the service uses, so
+      // the service refusing it is its exact-age rule, stricter than registration's
+      // birth-year rule. Remove once the service lets the caller choose the rule.
+      return { outcome: 'failed', error: 'too-young' }
+    }
     if (created.err !== 'duplicate-contact') {
       return { outcome: 'failed', error: created.err }
     }
@@ -179,7 +225,7 @@ export const registerApplicant = async (
 
   // The profile and queues live in ONECore and Xpand, the login in Keycloak; neither
   // depends on the other.
-  const [setUp, loginReady] = await Promise.all([
+  const [setUp, login] = await Promise.all([
     setUpNewContactProfileAndWaitingLists(contactCode, {
       applicationProfile: application.applicationProfile,
       waitingLists: application.waitingLists,
@@ -194,7 +240,8 @@ export const registerApplicant = async (
     ...(setUp.waitingLists.some((outcome) => outcome.status === 'failed')
       ? (['waiting-lists-failed'] as const)
       : []),
-    ...(loginReady ? [] : (['login-setup-failed'] as const)),
+    ...(login === 'failed' ? (['login-setup-failed'] as const) : []),
+    ...(login === 'exists' ? (['login-exists'] as const) : []),
   ]
 
   logger.info({ contactCode, warnings }, 'registerApplicant.created')

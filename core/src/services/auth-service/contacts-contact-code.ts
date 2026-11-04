@@ -1,6 +1,5 @@
-import axios, { isAxiosError } from 'axios'
+import { isAxiosError } from 'axios'
 import { decodeJwt } from 'jose'
-import Personnummer from 'personnummer'
 import { logger } from '@onecore/utilities'
 
 import { contactsAdapter } from '../../adapters/contacts-adapter'
@@ -8,14 +7,12 @@ import type { AdapterResult } from '../../adapters/types'
 import { httpStatusForContactsKeycloakError } from './contacts-keycloak-errors'
 import {
   CONTACT_CODE_ATTRIBUTE,
-  getProvisioningToken,
+  connectContactsKeycloakAdmin,
   isContactsProvisioningConfigured,
-  type MimerContactsUser,
+  toContactsUsername,
 } from './contacts-keycloak-provisioning'
 import {
   type ContactsTokenResponse,
-  contactsKeycloakAdminUrl,
-  contactsKeycloakRequestConfig,
   refreshContactsAccessToken,
 } from './keycloak-contacts'
 
@@ -62,19 +59,6 @@ function readContactCodeClaim(value: unknown): string | undefined {
   return undefined
 }
 
-/**
- * The Keycloak username as a twelve-digit personnummer, or null when it is not one.
- *
- * The contacts service's by-nid lookup matches anything for an input without digits, so only a
- * valid personnummer (or samordningsnummer) is ever looked up. Twelve digits is the form Xpand
- * stores for nearly all private individuals.
- */
-function personnummerFromUsername(username: string): string | null {
-  const options = { allowCoordinationNumber: true, allowInterimNumber: false }
-  if (!Personnummer.valid(username, options)) return null
-  return Personnummer.parse(username, options).format(true)
-}
-
 /** null when the contacts service has no such contact. */
 async function findContact<T>(
   lookup: () => Promise<AdapterResult<T, 'not-found' | 'unknown'>>
@@ -98,9 +82,9 @@ async function findContact<T>(
   )
 }
 
-async function keycloak<T>(request: () => Promise<{ data: T }>): Promise<T> {
+async function keycloak<T>(request: Promise<T>): Promise<T> {
   try {
-    return (await request()).data
+    return await request
   } catch (error) {
     throw new ContactCodeError('keycloak_unavailable', error)
   }
@@ -145,19 +129,11 @@ async function setContactCode(
     throw new ContactCodeError('provisioning_not_configured')
   }
 
-  const adminToken = await keycloak(async () => ({
-    data: await getProvisioningToken(),
-  }))
-  const userUrl = `${contactsKeycloakAdminUrl()}/users/${encodeURIComponent(claims.sub)}`
-  const adminConfig = {
-    ...contactsKeycloakRequestConfig,
-    headers: { Authorization: `Bearer ${adminToken}` },
-  }
-
-  const user = await keycloak(() =>
-    axios.get<MimerContactsUser>(userUrl, adminConfig)
-  )
-  const personnummer = personnummerFromUsername(user.username)
+  const admin = await keycloak(connectContactsKeycloakAdmin())
+  const user = await keycloak(admin.getUser(claims.sub))
+  // The username is the personnummer. Only a valid one is ever looked up: the contacts
+  // service's by-nid lookup matches anything for an input without digits.
+  const personnummer = toContactsUsername(user.username)
   if (!personnummer) {
     logger.warn(
       { sub: claims.sub },
@@ -181,21 +157,7 @@ async function setContactCode(
     },
     'Setting contact_code on mimer-contacts user'
   )
-  // With the declarative user profile, attributes missing from a PUT are removed, so the whole
-  // representation goes back with only contact_code changed.
-  await keycloak(() =>
-    axios.put(
-      userUrl,
-      {
-        ...user,
-        attributes: {
-          ...user.attributes,
-          [CONTACT_CODE_ATTRIBUTE]: [contact.contactCode],
-        },
-      },
-      adminConfig
-    )
-  )
+  await keycloak(admin.setContactCode(user, contact.contactCode))
 
   return refreshWithContactCode(tokens.refresh_token)
 }

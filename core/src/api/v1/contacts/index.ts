@@ -21,10 +21,8 @@ import {
 } from '@onecore/utilities'
 import { paginatedResponseSchema } from '@onecore/types'
 
-import {
-  CREATE_CONTACT_STATUS,
-  makeContactsAdapter,
-} from '../../../adapters/contacts-adapter'
+import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
+import { CREATE_CONTACT_STATUS } from '../../../processes/contacts/create-contact-status'
 import {
   addRelation,
   removeRelation,
