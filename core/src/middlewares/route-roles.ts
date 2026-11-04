@@ -59,6 +59,13 @@ export const requiredRolesFor = (rawPath: string, method: string): string[] => {
     return ['invoice-channels:read', 'api-access']
   }
 
+  // Registration creates an Xpand contact and a Keycloak login for whoever is in the body, so
+  // it has a role of its own: neither contact-auth (the token helpers below) nor
+  // contacts:write is enough. Checked first, because the token rule matches this path too.
+  if (path.includes('/auth/contacts/register')) {
+    return ['contacts:register']
+  }
+
   // mimer.nu BFF (webapi): exchange mimer-contacts OAuth tokens via core only.
   // Handlers use (.*)/auth/contacts/* — match any path prefix (e.g. /v1/auth/...).
   if (path.includes('/auth/contacts/') && method === 'POST') {

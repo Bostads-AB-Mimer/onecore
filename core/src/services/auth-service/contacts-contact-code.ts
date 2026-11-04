@@ -3,20 +3,21 @@ import { decodeJwt } from 'jose'
 import Personnummer from 'personnummer'
 import { logger } from '@onecore/utilities'
 
-import config from '../../common/config'
 import { contactsAdapter } from '../../adapters/contacts-adapter'
 import type { AdapterResult } from '../../adapters/types'
 import { httpStatusForContactsKeycloakError } from './contacts-keycloak-errors'
 import {
+  CONTACT_CODE_ATTRIBUTE,
+  getProvisioningToken,
+  isContactsProvisioningConfigured,
+  type MimerContactsUser,
+} from './contacts-keycloak-provisioning'
+import {
   type ContactsTokenResponse,
   contactsKeycloakAdminUrl,
   contactsKeycloakRequestConfig,
-  contactsOAuthPostConfig,
   refreshContactsAccessToken,
-  tokenEndpointUrl,
 } from './keycloak-contacts'
-
-const CONTACT_CODE_ATTRIBUTE = 'contact_code'
 
 /**
  * Upper bound on the whole step. webapi gives up on /auth/contacts/token after 15 s, and the
@@ -41,18 +42,6 @@ export class ContactCodeError extends Error {
   ) {
     super(reason)
   }
-}
-
-type KeycloakUserRepresentation = {
-  id: string
-  username: string
-  attributes?: Record<string, string[]>
-  [key: string]: unknown
-}
-
-export function isContactsProvisioningConfigured(): boolean {
-  const { clientId, clientSecret } = config.auth.keycloak.contacts.provisioning
-  return Boolean(clientId && clientSecret)
 }
 
 /**
@@ -117,22 +106,6 @@ async function keycloak<T>(request: () => Promise<{ data: T }>): Promise<T> {
   }
 }
 
-async function getProvisioningToken(): Promise<string> {
-  const { clientId, clientSecret } = config.auth.keycloak.contacts.provisioning
-  const tokens = await keycloak(() =>
-    axios.post<{ access_token: string }>(
-      tokenEndpointUrl(),
-      new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: clientId,
-        client_secret: clientSecret,
-      }).toString(),
-      contactsOAuthPostConfig
-    )
-  )
-  return tokens.access_token
-}
-
 /** The attribute was just set, so only a refreshed token carries it. */
 async function refreshWithContactCode(
   refreshToken: string
@@ -172,7 +145,9 @@ async function setContactCode(
     throw new ContactCodeError('provisioning_not_configured')
   }
 
-  const adminToken = await getProvisioningToken()
+  const adminToken = await keycloak(async () => ({
+    data: await getProvisioningToken(),
+  }))
   const userUrl = `${contactsKeycloakAdminUrl()}/users/${encodeURIComponent(claims.sub)}`
   const adminConfig = {
     ...contactsKeycloakRequestConfig,
@@ -180,7 +155,7 @@ async function setContactCode(
   }
 
   const user = await keycloak(() =>
-    axios.get<KeycloakUserRepresentation>(userUrl, adminConfig)
+    axios.get<MimerContactsUser>(userUrl, adminConfig)
   )
   const personnummer = personnummerFromUsername(user.username)
   if (!personnummer) {
