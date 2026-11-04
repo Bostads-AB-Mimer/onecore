@@ -15,7 +15,7 @@ import {
   listNewOutboundExports,
   getLeasesByTenantId,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
-import { PaymentStatus } from '@onecore/types'
+import { LeaseType, PaymentStatus } from '@onecore/types'
 import {
   TenfastTenantFactory,
   TenfastRentalPropertyFactory,
@@ -197,6 +197,29 @@ describe('Tenfast Adapter', () => {
           }),
         })
       )
+    })
+
+    it.each([
+      ['bostad', LeaseType.HousingContract],
+      ['parkering', LeaseType.ParkingSpaceContract],
+      ['lokal', LeaseType.CommercialTenantContract],
+      ['förråd', LeaseType.CommercialTenantContract],
+      ['Förråd', LeaseType.CommercialTenantContract],
+      ['forrad', LeaseType.CommercialTenantContract],
+      ['unknown', LeaseType.OtherContract],
+    ])('maps rental object typ "%s" to %s', async (typ, expected) => {
+      const mockLease = TenfastLeaseFactory.build({
+        hyresobjekt: [TenfastRentalPropertyFactory.build({ typ })],
+      })
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: mockLease,
+      })
+
+      const result = await getLease(mockLease.externalId)
+
+      assert(result.ok)
+      expect(result.data.type).toBe(expected)
     })
 
     it('should encode lease IDs containing slashes correctly', async () => {

@@ -350,12 +350,15 @@ const transformToLease = (tenfastLease: TenfastLease): Lease => {
 
   const rentalProperty = tenfastLease.hyresobjekt[0]
 
+  // Same mapping as the leasing service. Tenfast sends 'förråd', which Xpand
+  // types as Lokalkontrakt.
   const LeaseTypeFromTenfastTyp: Record<string, LeaseType> = {
     bostad: LeaseType.HousingContract,
     parkering: LeaseType.ParkingSpaceContract,
     lokal: LeaseType.CommercialTenantContract,
     garage: LeaseType.GarageContract,
-    forrad: LeaseType.StorageContract,
+    förråd: LeaseType.CommercialTenantContract,
+    forrad: LeaseType.CommercialTenantContract,
     ovrigt: LeaseType.OtherContract,
   }
 
@@ -370,7 +373,8 @@ const transformToLease = (tenfastLease: TenfastLease): Lease => {
     rentalPropertyId: rentalProperty.externalId,
     rentalObject: undefined,
     type:
-      LeaseTypeFromTenfastTyp[rentalProperty.typ] ?? LeaseType.OtherContract,
+      LeaseTypeFromTenfastTyp[rentalProperty.typ.toLowerCase()] ??
+      LeaseType.OtherContract,
     lastDebitDate: lastDebitDate,
     noticeGivenBy: undefined,
     noticeDate: undefined,
