@@ -117,6 +117,18 @@ schema (`hyresobjekt[].externalId` only), because drafts can lack fields
 `TenfastLeaseSchema` requires. The object's own leases are also checked with
 `isClaimingLease`, which counts an unknown or missing stage as claiming.
 
+The same rule guards writes and single objects. `getLeaseStagesForRentalObject`
+searches every lease on one object (`filter[hyresobjekt][externalId]`, no stage
+filter, parsed leniently), and `getVacantFrom` turns them into the first free
+day: undefined if any lease claims the object or runs until further notice.
+`createLease` checks it before writing anything and returns
+`rental-object-not-available` (leasing 409, core
+`ReplyToOfferErrorCodes.RentalObjectNotAvailable`) when the lease would start
+before that day. The check is not atomic with the create, because Tenfast has
+no conditional create. `getAvailabilityForRentalObject` (by-code) uses the
+searched leases instead of batch-get's, so a draft or a lease beyond the 10
+latest is seen there too.
+
 Important interaction (confirmed, not hypothetical): **`soon-vacant`
 already includes a rental object whose current lease is
 `terminationScheduled`, as long as that lease ends within about a month.**
@@ -176,7 +188,9 @@ vacant), so an unreadable lease never makes an object vacant.
 - **Any of them without `endDate`:** not vacant (`vacantFrom` undefined). That
   covers a tenancy until further notice and a signed successor to a terminated
   lease.
-- **Otherwise:** vacant the day after the latest end.
+- **Otherwise:** vacant the day after the latest end, but never before today.
+  A lease past its end date can stay in force until Tenfast moves it to
+  `terminated` (AVTAL-408).
 
 `determineVacantFrom` keeps undefined as undefined, whatever the Xpand block
 says. Rule decided in AVTAL-343.

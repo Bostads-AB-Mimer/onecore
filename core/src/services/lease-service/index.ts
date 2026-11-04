@@ -1255,6 +1255,10 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '202':
    *         description: Offer accepted successful.
+   *       '409':
+   *         description: >
+   *           The rental object is not available from the lease start date,
+   *           so no lease was created. error is rental-object-not-available.
    *       '500':
    *         description: Internal server error. Failed to accept the offer.
    *     security:
@@ -2222,6 +2226,10 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: Parking space id is missing. It needs to be passed in the url.
+   *       '409':
+   *         description: >
+   *           The rental object is not available from the start date, so no
+   *           lease was created. error is rental-object-not-available.
    *       '500':
    *         description: Internal server error
    *         content:

@@ -1,5 +1,6 @@
 import {
   getLeasedUntil,
+  getVacantFrom,
   isClaimingLease,
   mapTenfastRentalObjectToAvailabilityInfo,
 } from '../../../adapters/tenfast/tenfast-rental-object-helpers'
@@ -143,6 +144,54 @@ describe('tenfast-rental-object-helpers', () => {
       expect(getLeasedUntil([lease as TenfastLease])).toEqual(
         new Date('2026-06-30')
       )
+    })
+  })
+
+  describe(getVacantFrom, () => {
+    it('is vacant today without leases', () => {
+      expect(getVacantFrom([])).toEqual(TODAY)
+    })
+
+    it('is vacant the day after the last lease ends', () => {
+      expect(getVacantFrom([terminated('2026-06-30')])).toEqual(
+        new Date('2026-07-01T00:00:00.000Z')
+      )
+    })
+
+    it('is vacant today, not in the past, when a lease in force has passed its end date', () => {
+      expect(getVacantFrom([terminated('2026-03-15')])).toEqual(TODAY)
+    })
+
+    it('is vacant today when a lease in force ended yesterday', () => {
+      expect(getVacantFrom([terminated('2026-03-30')])).toEqual(TODAY)
+    })
+
+    it('is vacant tomorrow when a lease ends today', () => {
+      expect(getVacantFrom([terminated('2026-03-31')])).toEqual(
+        new Date('2026-04-01T00:00:00.000Z')
+      )
+    })
+
+    it.each(['upcoming', 'draft', 'signingInProgress'])(
+      'is not vacant when a next tenant has a %s lease, even after the running lease ends',
+      (stage) => {
+        expect(
+          getVacantFrom([terminated('2026-06-30'), { stage, endDate: null }])
+        ).toBeUndefined()
+      }
+    )
+
+    it('ignores leases that never hold the object', () => {
+      expect(
+        getVacantFrom([
+          { stage: 'voided', endDate: null },
+          { stage: 'rejected', endDate: null },
+        ])
+      ).toEqual(TODAY)
+    })
+
+    it('is not vacant on a lease without a stage', () => {
+      expect(getVacantFrom([{ endDate: null }])).toBeUndefined()
     })
   })
 

@@ -116,7 +116,16 @@ sequenceDiagram
         Leasing -->> Core: Tenant
         note over Core: Determine VAT rate from tenant<br/>and residential area rules.
 
+        note over Core: Start date: the one given, otherwise the day<br/>the parking space is free (vacantFrom, or today).
         Core ->> Leasing: Create Lease
+        Leasing ->> Tenfast: Search Leases on Rental Object
+        Tenfast -->> Leasing: Leases
+
+        break when Rental Object is not Available from Start Date<br/>(leased then, or a next tenant's lease:<br/>draft, out for signing or signed)
+            Leasing -->> Core: 409 rental-object-not-available
+            Core-->User: 409, listing status unchanged
+        end
+
         Leasing ->> Tenfast: Create Lease
         Tenfast -->> Leasing: Create Lease Result
         Leasing -->> Core: Create Lease Result
