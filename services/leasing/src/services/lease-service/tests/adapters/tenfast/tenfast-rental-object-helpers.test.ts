@@ -1,5 +1,6 @@
 import {
   getLeasedUntil,
+  isClaimingLease,
   mapTenfastRentalObjectToAvailabilityInfo,
 } from '../../../adapters/tenfast/tenfast-rental-object-helpers'
 import { TenfastLease } from '../../../adapters/tenfast/schemas'
@@ -320,6 +321,32 @@ describe('tenfast-rental-object-helpers', () => {
         id: 'Bilplats',
         name: 'Bilplats',
       })
+    })
+  })
+
+  describe(isClaimingLease, () => {
+    it.each(['upcoming', 'draft', 'signingInProgress'])(
+      'counts a %s lease as claiming the object',
+      (stage) => {
+        expect(isClaimingLease({ stage })).toBe(true)
+      }
+    )
+
+    it.each([
+      'active',
+      'terminationScheduled',
+      'preTermination',
+      'archived',
+      'terminated',
+      'voided',
+      'rejected',
+    ])('does not count a %s lease as claiming the object', (stage) => {
+      expect(isClaimingLease({ stage })).toBe(false)
+    })
+
+    it('counts a lease with a missing or unknown stage as claiming the object', () => {
+      expect(isClaimingLease({})).toBe(true)
+      expect(isClaimingLease({ stage: 'someNewStage' })).toBe(true)
     })
   })
 })
