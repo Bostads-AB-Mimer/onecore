@@ -69,6 +69,26 @@ describe('requiredRolesFor', () => {
     expect(requiredRolesFor('/AUTH/Contacts/Register', 'POST')).toEqual([
       'contacts:register',
     ])
+    expect(requiredRolesFor('/auth/contacts/register/', 'POST')).toEqual([
+      'contacts:register',
+    ])
+  })
+
+  // The handlers' (.*) prefix lets any route be reached under this path, so the narrow role
+  // must not carry over to them.
+  it('does not gate other routes reached through the registration path on contacts:register', () => {
+    expect(
+      requiredRolesFor('/auth/contacts/register/files/upload', 'POST')
+    ).not.toContain('contacts:register')
+    expect(
+      requiredRolesFor(
+        '/auth/contacts/register/component-categories/1',
+        'DELETE'
+      )
+    ).toEqual(['api-access'])
+    expect(requiredRolesFor('/auth/contacts/register', 'GET')).toEqual([
+      'api-access',
+    ])
   })
 
   it('keeps the existing special cases', () => {

@@ -1,4 +1,5 @@
 import axios, { isAxiosError } from 'axios'
+import Personnummer from 'personnummer'
 
 import config from '../../common/config'
 import {
@@ -21,6 +22,23 @@ export type MimerContactsUser = {
   username: string
   attributes?: Record<string, string[]>
   [key: string]: unknown
+}
+
+const PERSONNUMMER_OPTIONS = {
+  allowCoordinationNumber: true,
+  allowInterimNumber: false,
+}
+
+/**
+ * The mimer-contacts username for a personnummer (or samordningsnummer): twelve digits, the
+ * form Xpand stores for nearly all private individuals. null when the input is not a valid one.
+ *
+ * The one place this rule lives: registration writes usernames with it, and the contact_code
+ * repair at login reads them back with it, so the two cannot drift apart.
+ */
+export function toContactsUsername(nationalId: string): string | null {
+  if (!Personnummer.valid(nationalId, PERSONNUMMER_OPTIONS)) return null
+  return Personnummer.parse(nationalId, PERSONNUMMER_OPTIONS).format(true)
 }
 
 export function isContactsProvisioningConfigured(): boolean {
@@ -69,6 +87,7 @@ export function describeKeycloakFailure(error: unknown): {
  * Every method throws on failure, with the axios error unchanged.
  */
 export type ContactsKeycloakAdmin = {
+  getUser(id: string): Promise<MimerContactsUser>
   /** null when no user has exactly this username. */
   findUserByUsername(username: string): Promise<MimerContactsUser | null>
   /**
@@ -83,14 +102,11 @@ export type ContactsKeycloakAdmin = {
     contactCode: string
   }): Promise<{ id: string } | 'conflict'>
   /**
-   * Sets contact_code on a user that has none. A user that already has one is left alone.
+   * Sets contact_code, replacing any it had, and leaves everything else on the user as it was.
    *
-   * @returns whether the user was changed.
+   * @param user the full representation, as getUser or findUserByUsername returns it
    */
-  fillMissingContactCode(
-    user: MimerContactsUser,
-    contactCode: string
-  ): Promise<boolean>
+  setContactCode(user: MimerContactsUser, contactCode: string): Promise<void>
   /** E-mails the user a link to choose a password, which ends on Mina sidor. */
   sendSetPasswordEmail(userId: string): Promise<void>
 }
@@ -103,7 +119,14 @@ export async function connectContactsKeycloakAdmin(): Promise<ContactsKeycloakAd
     headers: { Authorization: `Bearer ${token}` },
   }
 
+  const userUrl = (id: string) => `${usersUrl}/${encodeURIComponent(id)}`
+
   return {
+    async getUser(id) {
+      const res = await axios.get<MimerContactsUser>(userUrl(id), requestConfig)
+      return res.data
+    },
+
     async findUserByUsername(username) {
       const res = await axios.get<MimerContactsUser[]>(usersUrl, {
         ...requestConfig,
@@ -148,14 +171,11 @@ export async function connectContactsKeycloakAdmin(): Promise<ContactsKeycloakAd
       }
     },
 
-    async fillMissingContactCode(user, contactCode) {
-      if (user.attributes?.[CONTACT_CODE_ATTRIBUTE]?.some(Boolean)) {
-        return false
-      }
+    async setContactCode(user, contactCode) {
       // With the declarative user profile, attributes missing from a PUT are removed, so the
-      // whole representation goes back with only contact_code added.
+      // whole representation goes back with only contact_code changed.
       await axios.put(
-        `${usersUrl}/${encodeURIComponent(user.id)}`,
+        userUrl(user.id),
         {
           ...user,
           attributes: {
@@ -165,12 +185,11 @@ export async function connectContactsKeycloakAdmin(): Promise<ContactsKeycloakAd
         },
         requestConfig
       )
-      return true
     },
 
     async sendSetPasswordEmail(userId) {
       await axios.put(
-        `${usersUrl}/${encodeURIComponent(userId)}/execute-actions-email`,
+        `${userUrl(userId)}/execute-actions-email`,
         [UPDATE_PASSWORD_ACTION],
         {
           ...requestConfig,

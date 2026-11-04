@@ -5,12 +5,15 @@ import request from 'supertest'
 import { WaitingListType } from '@onecore/types'
 
 const mockConfig = {
-  // Read when the contacts adapter module loads, for its status map.
-  contactsService: { url: 'http://contacts.test' },
+  minaSidor: { url: 'https://mina-sidor.test/' },
   auth: {
     keycloak: {
       url: 'http://keycloak.test',
-      contacts: { realm: 'mimer-contacts' },
+      contacts: {
+        realm: 'mimer-contacts',
+        clientId: 'mina-sidor',
+        clientSecret: 'client-secret',
+      },
     },
   },
 }
@@ -25,6 +28,7 @@ jest.mock('../../../processes/contacts/register-applicant', () => ({
 }))
 
 jest.mock('../contacts-keycloak-provisioning', () => ({
+  ...jest.requireActual('../contacts-keycloak-provisioning'),
   isContactsProvisioningConfigured: jest.fn(),
 }))
 
@@ -90,9 +94,22 @@ describe('POST /auth/contacts/register', () => {
     jest.useRealTimers()
   })
 
+  it('goes by the calendar year in Sweden, not in UTC', async () => {
+    // 00:30 on New Year's Day in Sweden, still 2026 in UTC.
+    jest.setSystemTime(new Date('2026-12-31T23:30:00Z'))
+    try {
+      const res = await post({ ...body, nationalId: TURNS_16_NEXT_YEAR })
+      expect(res.status).toBe(201)
+    } finally {
+      jest.setSystemTime(new Date('2026-11-04T12:00:00Z'))
+    }
+  })
+
   beforeEach(() => {
     jest.clearAllMocks()
     mockConfig.auth.keycloak.url = 'http://keycloak.test'
+    mockConfig.auth.keycloak.contacts.clientId = 'mina-sidor'
+    mockConfig.minaSidor.url = 'https://mina-sidor.test/'
     provisioningConfigured.mockReturnValue(true)
     register.mockResolvedValue({
       outcome: 'created',
@@ -112,12 +129,23 @@ describe('POST /auth/contacts/register', () => {
       expect(register).not.toHaveBeenCalled()
     })
 
-    it('answers 503 when Keycloak has no URL', async () => {
-      mockConfig.auth.keycloak.url = ''
+    it.each([
+      ['Keycloak has no URL', () => (mockConfig.auth.keycloak.url = '')],
+      [
+        'the mina-sidor client the e-mail names is not set',
+        () => (mockConfig.auth.keycloak.contacts.clientId = ''),
+      ],
+      [
+        'the link in the e-mail has nowhere to go',
+        () => (mockConfig.minaSidor.url = ''),
+      ],
+    ])('answers 503 when %s', async (_, unset) => {
+      unset()
 
       const res = await post(body)
 
       expect(res.status).toBe(503)
+      expect(res.body.error).toBe('registration-not-configured')
       expect(register).not.toHaveBeenCalled()
     })
 
@@ -205,8 +233,8 @@ describe('POST /auth/contacts/register', () => {
     ['person-lookup-failed', 503],
     ['xpand-unavailable', 503],
     ['xpand-rejected', 422],
-    ['invalid-national-id', 422],
-    ['contacts-service-error', 502],
+    ['too-young', 422],
+    ['contact-outcome-unknown', 502],
   ] as const)('answers a %s failure with %i', async (error, status) => {
     register.mockResolvedValue({ outcome: 'failed', error })
 

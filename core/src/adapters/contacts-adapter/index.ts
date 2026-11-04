@@ -34,29 +34,6 @@ export type CreateContactError =
   CreateContactErrorCode | 'invalid-request' | 'contacts-service-error'
 
 /**
- * Status a create failure maps to.
- *
- * Only reachable before the contact exists — once it does, a route answers
- * success and reports later problems as warnings instead. A Record over the
- * error union, so a new service error code fails the typecheck until mapped.
- */
-export const CREATE_CONTACT_STATUS: Record<
-  CreateContactError,
-  400 | 409 | 422 | 502 | 503
-> = {
-  'duplicate-contact': 409,
-  'invalid-national-id': 422,
-  'invalid-request': 400,
-  'xpand-rejected': 422,
-  'xpand-fault': 502,
-  'xpand-auth-failed': 502,
-  'xpand-malformed-response': 502,
-  'xpand-unavailable': 503,
-  'write-backend-not-configured': 503,
-  'contacts-service-error': 502,
-}
-
-/**
  * Derived from the schema rather than listed here: a code added by the service
  * must not silently fall through to the catch-all, which would drop the
  * `detail` text the new code was created to carry.

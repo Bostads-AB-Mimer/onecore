@@ -13,16 +13,16 @@ Två regler styr allt:
 
 Routen gör det som kan avgöras utan att fråga någon annan tjänst, innan något skapas:
 
-| Kontroll                                               | Svar                                                        |
-| ------------------------------------------------------ | ----------------------------------------------------------- |
-| Keycloak-URL, realm eller provisioning-klienten saknas | 503 `registration-not-configured`                           |
-| Kroppen följer inte schemat                            | 400 `invalid-request` med fältnamnen, aldrig det som skrevs |
-| Inte ett giltigt personnummer eller samordningsnummer  | 422 `invalid-national-id`                                   |
-| Fyller inte 16 i år                                    | 422 `too-young`                                             |
+| Kontroll                                                                                     | Svar                                                        |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Keycloak-URL, realm, mina-sidor-klienten, provisioning-klienten eller `minaSidor.url` saknas | 503 `registration-not-configured`                           |
+| Kroppen följer inte schemat                                                                  | 400 `invalid-request` med fältnamnen, aldrig det som skrevs |
+| Inte ett giltigt personnummer eller samordningsnummer                                        | 422 `invalid-national-id`                                   |
+| Fyller inte 16 i år                                                                          | 422 `too-young`                                             |
 
-Åldersregeln går på födelseår, inte exakt ålder: man får registrera sig från det kalenderår man fyller 16, som Mina sidor alltid har lovat. Contacts-tjänsten kräver fortfarande exakt 16 år när kontakten skapas, så den som fyller 16 senare i år får `invalid-national-id` från den tills tjänsten låter anroparen välja regel.
+Åldersregeln går på födelseår, inte exakt ålder: man får registrera sig från det kalenderår man fyller 16, som Mina sidor alltid har lovat. Året räknas i svensk tid, inte i containerns UTC. Contacts-tjänsten kräver fortfarande exakt 16 år när kontakten skapas och svarar då `invalid-national-id`. Routen har redan kontrollerat numret med samma regler som tjänsten, så processen översätter det till `too-young` tills tjänsten låter anroparen välja regel.
 
-Personnumret normaliseras till tolv siffror, samma form som Keycloak-användarnamnet.
+Personnumret normaliseras till tolv siffror med `toContactsUsername`, samma form och samma funktion som Keycloak-användarnamnet läses med vid inloggning.
 
 ## Flödesdiagram
 
@@ -37,6 +37,8 @@ Lo --> |None| C(Create contact in Xpand<br/>via contacts)
 
 C --> Co{Result}
 Co --> |duplicate-contact| L2(Look up person contacts again)
+Co --> |contacts-service-error:<br/>no answer| U[502 contact-outcome-unknown<br/>contact may exist]
+Co --> |invalid-national-id:<br/>exact-age rule| Y[422 too-young<br/>nothing created]
 Co --> |Any other error| F2[Error status from the create mapping<br/>nothing created]
 Co --> |Created| S
 
@@ -52,6 +54,8 @@ K --> W
 W[Collect warnings] --> R[201 created<br/>contactCode, warnings]
 ```
 
+`contact-outcome-unknown` betyder att contacts-tjänsten aldrig svarade, till exempel vid en timeout, eller svarade med något okänt. Tjänsten kan ha skapat kontakten ändå. Ett nytt försök skulle svara `existing` för någon som saknar profil, köer och inloggning, så webapi ska skicka personen till kundtjänst i stället för att be dem försöka igen. Tvetydiga svar från Xpand (`xpand-unavailable`, `xpand-malformed-response`) reder contacts-tjänsten själv ut genom att slå upp numret igen. Når de core fanns ingen kontakt.
+
 `duplicate-contact` betyder att contacts dubblettkontroll hittade en rad med numret, som matchar alla rader, även raderade och företag. Antingen registrerade någon numret precis innan (ett dubbelklick), eller så är raden ingen personkontakt. Felets `detail` innehåller den befintliga kontaktkoden och lämnar aldrig processen.
 
 ## Keycloak-inloggningen
@@ -64,25 +68,29 @@ Ao --> |409| U(Find user by username)
 U --> Uo{Found?}
 Uo --> |No: the e-mail is taken| X[login-setup-failed<br/>no retry]
 Uo --> |Has this contact_code:<br/>an earlier try created it| M
-Uo --> |Otherwise| Fl(Fill in contact_code if missing<br/>password and e-mail untouched)
-Fl --> D[Done, no e-mail]
+Uo --> |No contact_code| Fl(Set contact_code<br/>password and e-mail untouched)
+Uo --> |Another contact_code| Lg(Log the mismatch<br/>contact_code untouched)
+Fl --> D[login-exists<br/>no e-mail]
+Lg --> D
 M --> D2[Done]
 Ao --> |Other error| T{Second try?}
 T --> |No| A
 T --> |Yes| X2[login-setup-failed]
 ```
 
-- **En befintlig användare får aldrig mejlet.** Annars kunde vem som helst ta över ett konto genom att skriva sin egen e-post i formuläret.
+- **En befintlig användare får aldrig mejlet.** Annars kunde vem som helst ta över ett konto genom att skriva sin egen e-post i formuläret. Svaret får varningen `login-exists`, så att webapi inte ber personen leta efter ett mejl som aldrig kommer.
+- **En befintlig kontaktkod byts aldrig här**, av samma skäl: formuläret ska inte kunna flytta någon annans inloggning till en ny kontakt. En kod som inte längre går att slå upp byts i stället vid inloggning. Skillnaden loggas.
 - **Ett nytt försök skapar inte användaren igen.** Användar-id:t sparas mellan försöken, så bara steget som föll görs om.
 - **En användare med just den här kontaktkoden** skapades av ett försök som aldrig fick svar, till exempel vid en timeout. Den räknas som ny och får mejlet.
 
 ## Varningar
 
-| Varning                      | Orsak                                                      | Hur personen kommer vidare                                                                                                                                  |
-| ---------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `application-profile-failed` | Boendeprofilen sparades inte                               | Fyller i den under Mina sidor                                                                                                                               |
-| `waiting-lists-failed`       | Minst en kö lades inte till                                | Väljer köer under Mina sidor                                                                                                                                |
-| `login-setup-failed`         | Ingen Keycloak-användare eller inget mejl efter två försök | Kundtjänst, eller nattkörningen som skapar användaren. En ny registrering svarar `existing`. Finns användaren men mejlet uteblev fungerar "Glömt lösenord". |
+| Varning                      | Orsak                                                                   | Hur personen kommer vidare                                                                                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `application-profile-failed` | Boendeprofilen sparades inte                                            | Fyller i den under Mina sidor                                                                                                                               |
+| `waiting-lists-failed`       | Minst en kö lades inte till                                             | Väljer köer under Mina sidor                                                                                                                                |
+| `login-setup-failed`         | Ingen Keycloak-användare eller inget mejl efter två försök              | Kundtjänst, eller nattkörningen som skapar användaren. En ny registrering svarar `existing`. Finns användaren men mejlet uteblev fungerar "Glömt lösenord". |
+| `login-exists`               | Det fanns redan en inloggning för personnumret, så inget mejl skickades | Loggar in, eller använder "Glömt lösenord" om lösenord aldrig valts                                                                                         |
 
 ## Uppslagningen av personkontakter
 

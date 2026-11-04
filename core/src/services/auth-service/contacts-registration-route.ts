@@ -5,29 +5,44 @@ import {
 } from '@onecore/utilities'
 
 import config from '../../common/config'
-import { CREATE_CONTACT_STATUS } from '../../adapters/contacts-adapter'
+import { CREATE_CONTACT_STATUS } from '../../processes/contacts/create-contact-status'
 import {
   registerApplicant,
-  type RegisterApplicantResult,
+  type RegisterApplicantError,
 } from '../../processes/contacts/register-applicant'
-import { isContactsProvisioningConfigured } from './contacts-keycloak-provisioning'
+import {
+  isContactsProvisioningConfigured,
+  toContactsUsername,
+} from './contacts-keycloak-provisioning'
 import {
   isOldEnoughToRegister,
-  normalizeRegistrationNationalId,
   RegisterContactRequestBodySchema,
 } from './contacts-registration-schema'
+import { isContactsKeycloakConfigured } from './keycloak-contacts'
 
+/**
+ * Everything the login step needs: the realm and its mina-sidor client (whose id the
+ * set-password e-mail names), the provisioning client, and where the e-mail's link ends.
+ *
+ * Whether minaSidor.url is a valid redirect URI on that client only Keycloak can tell.
+ */
 const isRegistrationConfigured = () =>
-  Boolean(
-    config.auth.keycloak.url &&
-    config.auth.keycloak.contacts.realm &&
-    isContactsProvisioningConfigured()
-  )
+  isContactsKeycloakConfigured() &&
+  isContactsProvisioningConfigured() &&
+  Boolean(config.minaSidor.url)
 
-type Failure = Extract<RegisterApplicantResult, { outcome: 'failed' }>['error']
-
-const statusForFailure = (error: Failure): number =>
-  error === 'person-lookup-failed' ? 503 : CREATE_CONTACT_STATUS[error]
+const statusForFailure = (error: RegisterApplicantError): number => {
+  switch (error) {
+    case 'person-lookup-failed':
+      return 503
+    case 'contact-outcome-unknown':
+      return 502
+    case 'too-young':
+      return 422
+    default:
+      return CREATE_CONTACT_STATUS[error]
+  }
+}
 
 /**
  * Registration of a new applicant from Mina sidor, called by webapi.
@@ -104,8 +119,9 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
    *       '201':
    *         description: |
    *           Registered. `content` is `{outcome: "created", contactCode, warnings}`, where warnings are any of
-   *           `application-profile-failed`, `waiting-lists-failed` and `login-setup-failed` (no login or no e-mail;
-   *           kundtjänst or the nightly sync creates it).
+   *           `application-profile-failed`, `waiting-lists-failed`, `login-setup-failed` (no login or no e-mail;
+   *           kundtjänst or the nightly sync creates it) and `login-exists` (a login with this personnummer
+   *           already existed, so no e-mail was sent; the person logs in or uses "Glömt lösenord").
    *       '200':
    *         description: |
    *           Nothing was created. `content` is `{outcome: "existing"}` or `{outcome: "inactive"}`.
@@ -114,14 +130,17 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
    *       '422':
    *         description: Not a valid personnummer (invalid-national-id), too young to register (too-young), or Xpand refused the contact (xpand-rejected)
    *       '502':
-   *         description: The contacts service or Xpand failed; nothing was created
+   *         description: |
+   *           The contacts service or Xpand failed; nothing was created. Except `contact-outcome-unknown`: the
+   *           contacts service did not answer, so the contact may exist without profile, queues or login. Do not
+   *           retry; send the person to kundtjänst.
    *       '503':
    *         description: Registration is not configured on this environment (registration-not-configured), existing contacts could not be checked (person-lookup-failed), or Xpand is unavailable
    */
   router.post('(.*)/auth/contacts/register', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
-    // Checked before anything is created, so a misconfigured environment cannot leave
+    // Checked before anything is created, so an environment missing a setting cannot leave
     // contacts behind without a login.
     if (!isRegistrationConfigured()) {
       ctx.status = 503
@@ -141,7 +160,7 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
       return
     }
 
-    const nationalId = normalizeRegistrationNationalId(parsed.data.nationalId)
+    const nationalId = toContactsUsername(parsed.data.nationalId)
     if (!nationalId) {
       ctx.status = 422
       ctx.body = { error: 'invalid-national-id', ...metadata }

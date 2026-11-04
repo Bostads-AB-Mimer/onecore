@@ -94,9 +94,10 @@ const setUpResult = (
 })
 
 const fakeAdmin = (): jest.Mocked<ContactsKeycloakAdmin> => ({
+  getUser: jest.fn(),
   findUserByUsername: jest.fn().mockResolvedValue(null),
   createPersonUser: jest.fn().mockResolvedValue({ id: 'user-1' }),
-  fillMissingContactCode: jest.fn().mockResolvedValue(true),
+  setContactCode: jest.fn().mockResolvedValue(undefined),
   sendSetPasswordEmail: jest.fn().mockResolvedValue(undefined),
 })
 
@@ -178,6 +179,34 @@ describe('registerApplicant', () => {
       expect(connect).not.toHaveBeenCalled()
     })
 
+    it("answers 'contact-outcome-unknown' when the contacts service did not answer, since the contact may exist", async () => {
+      createContact.mockResolvedValue({
+        ok: false,
+        err: 'contacts-service-error',
+      })
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'failed',
+        error: 'contact-outcome-unknown',
+      })
+      expect(setUp).not.toHaveBeenCalled()
+      expect(connect).not.toHaveBeenCalled()
+    })
+
+    it("answers 'too-young' when the service refuses the number on its exact-age rule", async () => {
+      createContact.mockResolvedValue({
+        ok: false,
+        err: 'invalid-national-id',
+        statusCode: 422,
+        detail: 'Kunden måste vara minst 16 år.',
+      })
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'failed',
+        error: 'too-young',
+      })
+    })
+
     it("answers 'existing' when the duplicate check fires because someone registered in between", async () => {
       lookup
         .mockResolvedValueOnce(noContacts)
@@ -253,20 +282,36 @@ describe('registerApplicant', () => {
   })
 
   describe('setting up the login', () => {
-    it('only fills in contact_code on a user that already has the username, and sends no e-mail', async () => {
+    it("only fills in contact_code on a user that already has the username, sends no e-mail and warns 'login-exists'", async () => {
       const user = { id: 'user-9', username: nationalId }
       admin.createPersonUser.mockResolvedValue('conflict')
       admin.findUserByUsername.mockResolvedValue(user)
 
       await expect(registerApplicant(application)).resolves.toMatchObject({
         outcome: 'created',
-        warnings: [],
+        warnings: ['login-exists'],
       })
-      expect(admin.fillMissingContactCode).toHaveBeenCalledWith(
-        user,
-        contactCode
-      )
+      expect(admin.setContactCode).toHaveBeenCalledWith(user, contactCode)
       expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+    })
+
+    it('leaves another contact_code on an existing user alone and logs the mismatch', async () => {
+      admin.createPersonUser.mockResolvedValue('conflict')
+      admin.findUserByUsername.mockResolvedValue({
+        id: 'user-9',
+        username: nationalId,
+        attributes: { contact_code: ['P000009'] },
+      })
+
+      await expect(registerApplicant(application)).resolves.toMatchObject({
+        warnings: ['login-exists'],
+      })
+      expect(admin.setContactCode).not.toHaveBeenCalled()
+      expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+      expect(logger.warn).toHaveBeenCalledWith(
+        { contactCode, existingContactCodes: ['P000009'] },
+        'registerApplicant.existingLoginHasOtherContactCode'
+      )
     })
 
     it('still sends the e-mail when the existing user is the one an earlier try created', async () => {
@@ -282,7 +327,7 @@ describe('registerApplicant', () => {
       await expect(registerApplicant(application)).resolves.toMatchObject({
         warnings: [],
       })
-      expect(admin.fillMissingContactCode).not.toHaveBeenCalled()
+      expect(admin.setContactCode).not.toHaveBeenCalled()
       expect(admin.sendSetPasswordEmail).toHaveBeenCalledWith('user-1')
     })
 

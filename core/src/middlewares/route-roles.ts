@@ -1,3 +1,5 @@
+const REGISTER_PATH = /\/auth\/contacts\/register\/?$/
+
 /**
  * Which Keycloak realm roles a request needs, by path and method.
  *
@@ -62,7 +64,9 @@ export const requiredRolesFor = (rawPath: string, method: string): string[] => {
   // Registration creates an Xpand contact and a Keycloak login for whoever is in the body, so
   // it has a role of its own: neither contact-auth (the token helpers below) nor
   // contacts:write is enough. Checked first, because the token rule matches this path too.
-  if (path.includes('/auth/contacts/register')) {
+  // Anchored at the end and POST only: the handlers' (.*) prefix would otherwise let
+  // '/auth/contacts/register/...' reach other routes on this role alone.
+  if (REGISTER_PATH.test(path) && method === 'POST') {
     return ['contacts:register']
   }
 

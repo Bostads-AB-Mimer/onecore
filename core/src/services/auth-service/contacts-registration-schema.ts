@@ -1,5 +1,4 @@
 import z from 'zod'
-import Personnummer from 'personnummer'
 import { WaitingListType } from '@onecore/types'
 import {
   CreateContactAddressSchema,
@@ -40,38 +39,32 @@ export const RegistrationWarningSchema = z.enum([
   'waiting-lists-failed',
   /** No Keycloak user or no set-password e-mail; kundtjänst or the nightly run sorts it out. */
   'login-setup-failed',
+  /**
+   * A login with this personnummer already existed, so no set-password e-mail was sent. The
+   * person logs in, or uses "Glömt lösenord" if they never chose a password.
+   */
+  'login-exists',
 ])
 
 export type RegistrationWarning = z.infer<typeof RegistrationWarningSchema>
 
-const PERSONNUMMER_OPTIONS = {
-  allowCoordinationNumber: true,
-  allowInterimNumber: false,
-}
-
-/**
- * The personnummer (or samordningsnummer) as twelve digits, the form used for Keycloak
- * usernames, or null when it is not a valid one.
- */
-export function normalizeRegistrationNationalId(input: string): string | null {
-  if (!Personnummer.valid(input, PERSONNUMMER_OPTIONS)) return null
-  return Personnummer.parse(input, PERSONNUMMER_OPTIONS).format(true)
-}
-
 /** Registration opens in the calendar year a person turns this age. */
 const REGISTRATION_AGE = 16
+
+/** Swedish time, not the container's UTC, so the year turns at midnight in Sweden. */
+const stockholmYear = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Europe/Stockholm',
+  year: 'numeric',
+})
 
 /**
  * Whether a person may register, by birth year rather than exact age: from the calendar year
  * they turn 16, as Mina sidor has always promised. Creating a contact by a caseworker keeps
  * the exact-age rule.
  *
- * @param nationalId twelve digits, from normalizeRegistrationNationalId
+ * @param nationalId twelve digits, from toContactsUsername
  */
-export function isOldEnoughToRegister(
-  nationalId: string,
-  today: Date
-): boolean {
+export function isOldEnoughToRegister(nationalId: string, now: Date): boolean {
   const birthYear = Number(nationalId.slice(0, 4))
-  return today.getFullYear() - birthYear >= REGISTRATION_AGE
+  return Number(stockholmYear.format(now)) - birthYear >= REGISTRATION_AGE
 }
