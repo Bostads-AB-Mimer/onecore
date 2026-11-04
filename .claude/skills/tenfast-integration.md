@@ -100,6 +100,35 @@ Only 7 states were enumerated above even though the developer said there
 are 9 total — 2 remain unaccounted for. Don't assume the list is complete;
 ask if it matters for what you're building.
 
+**Don't rely on `reserved` to find unsigned leases** (AVTAL-274). By design
+it marks an object with a `draft` or `signingInProgress` lease. Tested
+against test on 2026-11-02, drafts didn't set it, some leases out for
+signing lacked it, and a `voided` lease left it behind. Tenfast confirmed
+both as bugs the same day and opened tickets: the state isn't always
+recomputed when a lease changes, and voided leases count as reserved. The
+`!reserved` exclusion syntax returned 400 because it wasn't deployed yet.
+Go by lease stage instead, which doesn't depend on those fixes: `avtal/search` takes a comma-separated list
+(`filter[stage]=upcoming,draft,signingInProgress`, `CLAIMING_STAGES` in
+`tenfast-rental-object-helpers.ts`). `getAvailabilityForVacantRentalObjects`
+uses that search to keep objects with a next tenant's lease, signed or not,
+out of the publish list. Don't rely only on `includeAvtal` for this, because
+it returns an object's 10 latest leases. The search is parsed with a lenient
+schema (`hyresobjekt[].externalId` only), because drafts can lack fields
+`TenfastLeaseSchema` requires. The object's own leases are also checked with
+`isClaimingLease`, which counts an unknown or missing stage as claiming.
+
+The same rule guards writes and single objects. `getLeaseStagesForRentalObject`
+searches every lease on one object (`filter[hyresobjekt][externalId]`, no stage
+filter, parsed leniently), and `getVacantFrom` turns them into the first free
+day: undefined if any lease claims the object or runs until further notice.
+`createLease` checks it before writing anything and returns
+`rental-object-not-available` (leasing 409, core
+`ReplyToOfferErrorCodes.RentalObjectNotAvailable`) when the lease would start
+before that day. The check is not atomic with the create, because Tenfast has
+no conditional create. `getAvailabilityForRentalObject` (by-code) uses the
+searched leases instead of batch-get's, so a draft or a lease beyond the 10
+latest is seen there too.
+
 Important interaction (confirmed, not hypothetical): **`soon-vacant`
 already includes a rental object whose current lease is
 `terminationScheduled`, as long as that lease ends within about a month.**
@@ -159,7 +188,9 @@ vacant), so an unreadable lease never makes an object vacant.
 - **Any of them without `endDate`:** not vacant (`vacantFrom` undefined). That
   covers a tenancy until further notice and a signed successor to a terminated
   lease.
-- **Otherwise:** vacant the day after the latest end.
+- **Otherwise:** vacant the day after the latest end, but never before today.
+  A lease past its end date can stay in force until Tenfast moves it to
+  `terminated` (AVTAL-408).
 
 `determineVacantFrom` keeps undefined as undefined, whatever the Xpand block
 says. Rule decided in AVTAL-343.

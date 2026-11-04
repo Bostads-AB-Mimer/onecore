@@ -99,7 +99,6 @@ enum LeaseType {
   CooperativeTenancyContract = 'Kooperativ hyresrätt',
   CommercialTenantContract = 'Lokalkontrakt',
   RenegotiationContract = 'Omförhandlingskontrakt',
-  StorageContract = 'Förrådskontrakt',
   OtherContract = 'Övrigt',
   ParkingSpaceContract = 'P-Platskontrakt',
   ShortTermRental = 'Korttidsuthyrning',

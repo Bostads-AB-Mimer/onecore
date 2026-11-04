@@ -3,7 +3,7 @@ import {
   logger,
   PaginatedResponse,
 } from '@onecore/utilities'
-import { Lease, leasing, schemas } from '@onecore/types'
+import { Lease, leasing, ReplyToOfferErrorCodes, schemas } from '@onecore/types'
 import z from 'zod'
 
 import { AdapterResult } from '../types'
@@ -82,7 +82,12 @@ export const createLease = async (
   fromDate: string,
   companyCode: string,
   includeVAT: boolean
-): Promise<AdapterResult<string, 'create-lease-failed' | 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    string,
+    ReplyToOfferErrorCodes.RentalObjectNotAvailable | 'unknown'
+  >
+> => {
   const axiosOptions = {
     method: 'POST',
     data: {
@@ -104,14 +109,11 @@ export const createLease = async (
     if (result.status == 200) {
       return { ok: true, data: result.data.content }
     } else if (
-      result.status == 404 &&
-      result.data.error === 'Lease cannot be created on this rental object'
+      result.status == 409 &&
+      result.data?.error === ReplyToOfferErrorCodes.RentalObjectNotAvailable
     ) {
-      logger.error(
-        { objectId, contactId, fromDate },
-        'Lease could not be created for rental object'
-      )
-      return { ok: false, err: 'create-lease-failed' }
+      // Expected outcome, not a failure: the calling process logs it.
+      return { ok: false, err: ReplyToOfferErrorCodes.RentalObjectNotAvailable }
     } else {
       logger.error(
         {
