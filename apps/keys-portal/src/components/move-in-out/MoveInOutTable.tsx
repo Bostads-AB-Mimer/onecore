@@ -12,13 +12,37 @@ import {
   TableLink,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { FilterDropdown } from '@/components/ui/filter-dropdown'
+import { MultiFilterDropdown } from '@/components/ui/multi-filter-dropdown'
 import { FilterableTableHeader } from '@/components/shared/tables/FilterableTableHeader'
-import { MoveInOutStatusBadge } from '@/components/shared/tables/StatusBadges'
+import {
+  MoveInOutStatusBadge,
+  MoveInOutStatusLabels,
+} from '@/components/shared/tables/StatusBadges'
 import { NotePopover } from '@/components/shared/tables/NotePopover'
-import type { MoveInOutSortKey } from '@/services/api/moveInOutService'
-import type { MoveInOutRow, MoveInOutTenant } from '@/services/types'
+import { RentalObjectNotes } from '@/components/loan/RentalObjectNotes'
+import {
+  toVacantFilter,
+  type MoveInOutSortKey,
+  type VacantFilter,
+} from '@/services/api/moveInOutService'
+import type {
+  MoveInOutRow,
+  MoveInOutStatus,
+  MoveInOutTenant,
+} from '@/services/types'
 
 const COLUMN_COUNT = 12
+
+// Cast: the label record is keyed by the status enum, Object.entries widens to string
+const STATUS_OPTIONS = (
+  Object.entries(MoveInOutStatusLabels) as [MoveInOutStatus, string][]
+).map(([value, label]) => ({ value, label }))
+
+const VACANT_OPTIONS: { value: VacantFilter; label: string }[] = [
+  { value: 'true', label: 'Vakant' },
+  { value: 'false', label: 'Ej vakant' },
+]
 
 interface MoveInOutTableProps {
   rows: MoveInOutRow[]
@@ -28,6 +52,13 @@ interface MoveInOutTableProps {
   sortKey: MoveInOutSortKey
   sortOrder: 'asc' | 'desc'
   onSortChange: (key: MoveInOutSortKey) => void
+  statusFilter: MoveInOutStatus[]
+  onStatusFilterChange: (statuses: MoveInOutStatus[]) => void
+  /** A search is active; an empty result then means "no match", not "no moves" */
+  searchActive: boolean
+  vacantFilter: VacantFilter | null
+  onVacantFilterChange: (vacant: VacantFilter | null) => void
+  onNoteSaved: () => void
 }
 
 const fmtDate = (value: string | null | undefined) =>
@@ -104,7 +135,15 @@ export function MoveInOutTable({
   sortKey,
   sortOrder,
   onSortChange,
+  statusFilter,
+  onStatusFilterChange,
+  searchActive,
+  vacantFilter,
+  onVacantFilterChange,
+  onNoteSaved,
 }: MoveInOutTableProps) {
+  const filtered =
+    searchActive || statusFilter.length > 0 || vacantFilter !== null
   const sort = (key: MoveInOutSortKey) => (
     <SortButton
       active={sortKey === key}
@@ -126,7 +165,15 @@ export function MoveInOutTable({
             <FilterableTableHeader label="Utflytt">
               {sort('lastDebitDate')}
             </FilterableTableHeader>
-            <TableHead>Inflyttande</TableHead>
+            <FilterableTableHeader label="Inflyttande">
+              <FilterDropdown
+                options={VACANT_OPTIONS}
+                selectedValue={vacantFilter}
+                onSelectionChange={(v) =>
+                  onVacantFilterChange(toVacantFilter(v))
+                }
+              />
+            </FilterableTableHeader>
             <FilterableTableHeader label="Inflytt">
               {sort('leaseStartDate')}
             </FilterableTableHeader>
@@ -134,7 +181,13 @@ export function MoveInOutTable({
             <TableHead>Återlämnat</TableHead>
             <TableHead>Lån skapat</TableHead>
             <TableHead>Utlämnat</TableHead>
-            <TableHead>Status</TableHead>
+            <FilterableTableHeader label="Status">
+              <MultiFilterDropdown
+                options={STATUS_OPTIONS}
+                selectedValues={statusFilter}
+                onSelectionChange={onStatusFilterChange}
+              />
+            </FilterableTableHeader>
             <TableHead>Anteckning</TableHead>
           </TableRow>
         </TableHeader>
@@ -143,7 +196,12 @@ export function MoveInOutTable({
             <TableEmptyState
               colSpan={COLUMN_COUNT}
               isLoading={isLoading}
-              message={error ?? 'Inga in- eller utflyttar i perioden'}
+              message={
+                error ??
+                (filtered
+                  ? 'Inga objekt matchar filtret'
+                  : 'Inga in- eller utflyttar i perioden')
+              }
             />
           ) : (
             rows.map((row) => (
@@ -178,15 +236,17 @@ export function MoveInOutTable({
                   <MoveInOutStatusBadge status={row.status} />
                 </TableCell>
                 <TableCell>
-                  {row.notes.length > 0 ? (
+                  <div className="flex items-center gap-1">
                     <NotePopover
                       text={row.notes.join('\n\n')}
                       label="Anteckning"
                       align="end"
                     />
-                  ) : (
-                    <span className="text-muted-foreground">-</span>
-                  )}
+                    <RentalObjectNotes
+                      rentalObjectCode={row.rentalObjectCode}
+                      onSaved={onNoteSaved}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             ))

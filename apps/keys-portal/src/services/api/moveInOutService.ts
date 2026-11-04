@@ -1,9 +1,19 @@
-import type { MoveInOutRow, PaginatedResponse } from '@/services/types'
+import type {
+  MoveInOutRow,
+  MoveInOutStatus,
+  PaginatedResponse,
+} from '@/services/types'
 
 import { ApiError, GET } from './core/base-api'
 
 export type MoveInOutSortKey =
   'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
+
+/** URL form of the vacancy filter; absent = both */
+export type VacantFilter = 'true' | 'false'
+
+export const toVacantFilter = (v: string | null): VacantFilter | null =>
+  v === 'true' || v === 'false' ? v : null
 
 export interface MoveInOutQuery {
   endDateFrom?: string
@@ -11,6 +21,9 @@ export interface MoveInOutQuery {
   startDateFrom?: string
   startDateTo?: string
   q?: string
+  /** Rows with any of these statuses; sent as repeated ?status= */
+  status?: MoveInOutStatus[]
+  vacant?: boolean
   sortBy?: MoveInOutSortKey
   sortOrder?: 'asc' | 'desc'
   page?: number

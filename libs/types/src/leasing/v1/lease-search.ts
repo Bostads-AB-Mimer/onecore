@@ -96,7 +96,7 @@ export const LeaseSearchQueryParamsSchema = z.object({
   limit: z
     .string()
     .optional()
-    .transform((val) => (val ? Math.min(parseInt(val, 10), 100) : 20))
+    .transform((val) => (val ? Math.min(parseInt(val, 10), 500) : 20))
     .refine((val) => !isNaN(val), { message: 'limit must be a valid number' }),
 
   // When false (default), Upphört (status 3) is excluded. When true, all statuses are returned.
