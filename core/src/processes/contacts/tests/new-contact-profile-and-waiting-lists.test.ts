@@ -1,11 +1,10 @@
-import { AxiosResponse } from 'axios'
+import { AxiosError, AxiosResponse } from 'axios'
+import { logger } from '@onecore/utilities'
 import { WaitingListType } from '@onecore/types'
 
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
-import {
-  NewContactApplicationProfile,
-  setUpApplicationProfileAndWaitingLists,
-} from '../application-profile-and-waiting-lists'
+import { UpdateClientApplicationProfileRequestParams } from '../../../services/lease-service/helpers/application-profile'
+import { setUpNewContactProfileAndWaitingLists } from '../new-contact-profile-and-waiting-lists'
 
 jest.mock('../../../adapters/leasing-adapter')
 
@@ -20,7 +19,7 @@ const mockAddToWaitingList =
 
 const contactCode = 'P069077'
 
-const profile: NewContactApplicationProfile = {
+const profile: UpdateClientApplicationProfileRequestParams = {
   numAdults: 2,
   numChildren: 1,
   housingType: 'RENTAL',
@@ -32,20 +31,41 @@ const profile: NewContactApplicationProfile = {
 // The process reads only the status, so the rest of the response is left out.
 const response = (status: number) => ({ status }) as AxiosResponse
 
+/**
+ * What the leasing adapter actually rejects with when leasing answers 500 or
+ * higher: the shared axios instance resolves only statuses below 500.
+ */
+const rejectedByLeasing = (status: number, error: string) =>
+  new AxiosError(
+    `Request failed with status code ${status}`,
+    AxiosError.ERR_BAD_RESPONSE,
+    undefined,
+    undefined,
+    // Only status and body are read from a rejected response.
+    { status, data: { error } } as AxiosResponse
+  )
+
+const savedProfile = {
+  ok: true as const,
+  // The process ignores the saved profile, so its shape is irrelevant here.
+  data: {} as never,
+  statusCode: 201,
+}
+
 beforeEach(() => {
   jest.resetAllMocks()
-  mockSaveProfile.mockResolvedValue({
-    ok: true,
-    // The process ignores the saved profile, so its shape is irrelevant here.
-    data: {} as never,
-    statusCode: 201,
-  })
+  jest.spyOn(logger, 'error').mockImplementation(() => {})
+  mockSaveProfile.mockResolvedValue(savedProfile)
   mockAddToWaitingList.mockResolvedValue(response(201))
 })
 
-describe('setUpApplicationProfileAndWaitingLists', () => {
+afterEach(() => {
+  jest.restoreAllMocks()
+})
+
+describe('setUpNewContactProfileAndWaitingLists', () => {
   it('does nothing when neither a profile nor any waiting list is requested', async () => {
-    const result = await setUpApplicationProfileAndWaitingLists(contactCode, {
+    const result = await setUpNewContactProfileAndWaitingLists(contactCode, {
       waitingLists: [],
     })
 
@@ -59,7 +79,7 @@ describe('setUpApplicationProfileAndWaitingLists', () => {
   })
 
   it('saves the profile as a new client profile, pending review', async () => {
-    const result = await setUpApplicationProfileAndWaitingLists(contactCode, {
+    const result = await setUpNewContactProfileAndWaitingLists(contactCode, {
       applicationProfile: profile,
       waitingLists: [],
     })
@@ -86,7 +106,7 @@ describe('setUpApplicationProfileAndWaitingLists', () => {
   it('reports a failed profile as a warning', async () => {
     mockSaveProfile.mockResolvedValue({ ok: false, err: 'bad-params' })
 
-    const result = await setUpApplicationProfileAndWaitingLists(contactCode, {
+    const result = await setUpNewContactProfileAndWaitingLists(contactCode, {
       applicationProfile: profile,
       waitingLists: [],
     })
@@ -103,7 +123,7 @@ describe('setUpApplicationProfileAndWaitingLists', () => {
   it('still enrols the waiting lists when the profile fails', async () => {
     mockSaveProfile.mockResolvedValue({ ok: false, err: 'unknown' })
 
-    const result = await setUpApplicationProfileAndWaitingLists(contactCode, {
+    const result = await setUpNewContactProfileAndWaitingLists(contactCode, {
       applicationProfile: profile,
       waitingLists: [WaitingListType.Housing],
     })
@@ -113,8 +133,32 @@ describe('setUpApplicationProfileAndWaitingLists', () => {
     ])
   })
 
+  it('starts the waiting lists without waiting for the profile', async () => {
+    let releaseProfile: () => void = () => {}
+    mockSaveProfile.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseProfile = () => resolve(savedProfile)
+        })
+    )
+
+    const pending = setUpNewContactProfileAndWaitingLists(contactCode, {
+      applicationProfile: profile,
+      waitingLists: [WaitingListType.Housing],
+    })
+    await new Promise((resolve) => setImmediate(resolve))
+
+    expect(mockAddToWaitingList).toHaveBeenCalledWith(
+      contactCode,
+      WaitingListType.Housing
+    )
+
+    releaseProfile()
+    expect((await pending).applicationProfile).toEqual({ status: 'created' })
+  })
+
   it('enrols every requested waiting list, in order', async () => {
-    const result = await setUpApplicationProfileAndWaitingLists(contactCode, {
+    const result = await setUpNewContactProfileAndWaitingLists(contactCode, {
       waitingLists: [
         WaitingListType.Housing,
         WaitingListType.ParkingSpace,
@@ -146,19 +190,19 @@ describe('setUpApplicationProfileAndWaitingLists', () => {
       return response(201)
     })
 
-    await setUpApplicationProfileAndWaitingLists(contactCode, {
+    await setUpNewContactProfileAndWaitingLists(contactCode, {
       waitingLists: [WaitingListType.Housing, WaitingListType.ParkingSpace],
     })
 
     expect(maxInFlight).toBe(1)
   })
 
-  it('reports a non-201 answer from leasing as a failed queue', async () => {
-    // The adapter hands back the raw axios response, which resolves for
-    // anything below 500, so a 404 must not read as an enrolment.
+  it('reports a 404 from leasing as a failed queue', async () => {
+    // Below 500 the adapter resolves with the raw axios response, so a 404
+    // must not read as an enrolment.
     mockAddToWaitingList.mockResolvedValue(response(404))
 
-    const result = await setUpApplicationProfileAndWaitingLists(contactCode, {
+    const result = await setUpNewContactProfileAndWaitingLists(contactCode, {
       waitingLists: [WaitingListType.ParkingSpace],
     })
 
@@ -174,12 +218,53 @@ describe('setUpApplicationProfileAndWaitingLists', () => {
     ])
   })
 
-  it('reports a thrown enrolment as failed and carries on with the rest', async () => {
+  it('reports a 500 from leasing as a failed queue with its status', async () => {
+    mockAddToWaitingList.mockRejectedValue(
+      rejectedByLeasing(500, 'Waiting list type does not exist in Xpand')
+    )
+
+    const result = await setUpNewContactProfileAndWaitingLists(contactCode, {
+      waitingLists: [WaitingListType.Storage],
+    })
+
+    expect(result.waitingLists).toEqual([
+      {
+        waitingListType: WaitingListType.Storage,
+        status: 'failed',
+        error: '500',
+      },
+    ])
+    expect(result.warnings).toEqual([
+      'Kunden skapades men kunde inte ställas i kön för förråd.',
+    ])
+  })
+
+  it("logs leasing's reason for a rejected enrolment, not the axios error", async () => {
+    mockAddToWaitingList.mockRejectedValue(
+      rejectedByLeasing(500, 'Waiting list type does not exist in Xpand')
+    )
+
+    await setUpNewContactProfileAndWaitingLists(contactCode, {
+      waitingLists: [WaitingListType.Storage],
+    })
+
+    expect(logger.error).toHaveBeenCalledWith(
+      {
+        contactCode,
+        waitingListType: WaitingListType.Storage,
+        status: 500,
+        error: 'Waiting list type does not exist in Xpand',
+      },
+      expect.any(String)
+    )
+  })
+
+  it('reports an enrolment that never got an answer as unknown and carries on', async () => {
     mockAddToWaitingList
       .mockRejectedValueOnce(new Error('socket hang up'))
       .mockResolvedValueOnce(response(201))
 
-    const result = await setUpApplicationProfileAndWaitingLists(contactCode, {
+    const result = await setUpNewContactProfileAndWaitingLists(contactCode, {
       waitingLists: [WaitingListType.Housing, WaitingListType.Storage],
     })
 
@@ -194,13 +279,24 @@ describe('setUpApplicationProfileAndWaitingLists', () => {
     expect(result.warnings).toEqual([
       'Kunden skapades men kunde inte ställas i kön för bostad.',
     ])
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ status: undefined, error: 'socket hang up' }),
+      expect.any(String)
+    )
   })
 
-  it('collects one warning per failed step', async () => {
-    mockSaveProfile.mockResolvedValue({ ok: false, err: 'unknown' })
-    mockAddToWaitingList.mockResolvedValue(response(500))
+  it('lists the profile warning first, then one per failed queue in order', async () => {
+    // The profile fails last, after the queues, to show the order is fixed
+    // rather than the order the steps finish in.
+    mockSaveProfile.mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ ok: false, err: 'unknown' }), 5)
+        )
+    )
+    mockAddToWaitingList.mockRejectedValue(rejectedByLeasing(503, 'down'))
 
-    const result = await setUpApplicationProfileAndWaitingLists(contactCode, {
+    const result = await setUpNewContactProfileAndWaitingLists(contactCode, {
       applicationProfile: profile,
       waitingLists: [WaitingListType.ParkingSpace, WaitingListType.Storage],
     })

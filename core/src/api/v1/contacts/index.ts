@@ -25,7 +25,7 @@ import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
 import {
   addRelation,
   removeRelation,
-  setUpApplicationProfileAndWaitingLists,
+  setUpNewContactProfileAndWaitingLists,
 } from '../../../processes/contacts'
 import { transformContact, transformContacts } from './transform'
 import { Config } from '@/common/config'
@@ -173,7 +173,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
         applicationProfile: profileOutcome,
         waitingLists: waitingListOutcomes,
         warnings,
-      } = await setUpApplicationProfileAndWaitingLists(contactCode, {
+      } = await setUpNewContactProfileAndWaitingLists(contactCode, {
         applicationProfile,
         waitingLists,
       })

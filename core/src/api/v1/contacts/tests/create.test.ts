@@ -6,11 +6,24 @@ import { makeOkapiRouter } from 'koa-okapi-router'
 
 import { routes } from '../index'
 import * as contactsAdapterModule from '../../../../adapters/contacts-adapter'
-import * as leasingAdapter from '../../../../adapters/leasing-adapter'
+import { WaitingListType } from '@onecore/types'
+import {
+  NewContactProfileAndWaitingListsResult,
+  setUpNewContactProfileAndWaitingLists,
+} from '../../../../processes/contacts'
 import { Config } from '@/common/config'
 
 jest.mock('../../../../adapters/contacts-adapter')
-jest.mock('../../../../adapters/leasing-adapter')
+// The profile and queue steps are covered by the process's own tests; here
+// only the route's handling of the contact and of the process outcome is.
+jest.mock('../../../../processes/contacts', () => ({
+  ...jest.requireActual('../../../../processes/contacts'),
+  setUpNewContactProfileAndWaitingLists: jest.fn(),
+}))
+
+const mockSetUp = setUpNewContactProfileAndWaitingLists as jest.MockedFunction<
+  typeof setUpNewContactProfileAndWaitingLists
+>
 
 const mockCreateContact = jest.fn()
 
@@ -59,24 +72,57 @@ beforeEach(() => {
     ok: true,
     data: { contactCode: 'P069077', contact: null },
   })
-  ;(
-    leasingAdapter.createOrUpdateApplicationProfileByContactCode as jest.Mock
-  ).mockResolvedValue({ ok: true, data: {} })
-  ;(leasingAdapter.addApplicantToWaitingList as jest.Mock).mockResolvedValue({
-    status: 201,
+  mockSetUp.mockResolvedValue({
+    applicationProfile: { status: 'skipped' },
+    waitingLists: [],
+    warnings: [],
   })
 })
 
 describe('POST /v1/contacts', () => {
-  it('creates the contact and the profile', async () => {
+  it('creates the contact, then sets up its profile and waiting lists', async () => {
+    mockSetUp.mockResolvedValue({
+      applicationProfile: { status: 'created' },
+      waitingLists: [
+        { waitingListType: WaitingListType.Housing, status: 'created' },
+        { waitingListType: WaitingListType.ParkingSpace, status: 'created' },
+      ],
+      warnings: [],
+    })
+
     const res = await request(app.callback())
       .post('/v1/contacts')
-      .send(body({ applicationProfile: profile }))
+      .send(
+        body({
+          applicationProfile: profile,
+          waitingLists: [WaitingListType.Housing, WaitingListType.ParkingSpace],
+        })
+      )
 
     expect(res.status).toBe(201)
+    expect(mockSetUp).toHaveBeenCalledWith('P069077', {
+      applicationProfile: profile,
+      waitingLists: [WaitingListType.Housing, WaitingListType.ParkingSpace],
+    })
     expect(res.body.content.contactCode).toBe('P069077')
-    expect(res.body.content.applicationProfile.status).toBe('created')
+    expect(res.body.content.applicationProfile).toEqual({ status: 'created' })
+    expect(res.body.content.waitingLists).toEqual([
+      { waitingListType: WaitingListType.Housing, status: 'created' },
+      { waitingListType: WaitingListType.ParkingSpace, status: 'created' },
+    ])
     expect(res.body.warnings).toBeUndefined()
+  })
+
+  it('passes no profile and no waiting lists when none are requested', async () => {
+    const res = await request(app.callback()).post('/v1/contacts').send(body())
+
+    expect(res.status).toBe(201)
+    expect(mockSetUp).toHaveBeenCalledWith('P069077', {
+      applicationProfile: undefined,
+      waitingLists: [],
+    })
+    expect(res.body.content.applicationProfile).toEqual({ status: 'skipped' })
+    expect(res.body.content.waitingLists).toEqual([])
   })
 
   it('rejects an invalid body before touching anything', async () => {
@@ -86,6 +132,7 @@ describe('POST /v1/contacts', () => {
 
     expect(res.status).toBe(400)
     expect(mockCreateContact).not.toHaveBeenCalled()
+    expect(mockSetUp).not.toHaveBeenCalled()
   })
 
   /**
@@ -105,9 +152,7 @@ describe('POST /v1/contacts', () => {
 
     expect(res.status).toBe(409)
     expect(res.body.detail).toBe('P012345')
-    expect(
-      leasingAdapter.createOrUpdateApplicationProfileByContactCode
-    ).not.toHaveBeenCalled()
+    expect(mockSetUp).not.toHaveBeenCalled()
   })
 
   it('maps an unreachable write backend to 503', async () => {
@@ -119,106 +164,43 @@ describe('POST /v1/contacts', () => {
   })
 
   /**
-   * The contact exists from here on and cannot be removed, so a later failure
-   * must never produce an error status — that would invite a retry which the
-   * duplicate check would then block.
+   * The contact exists from here on and cannot be removed, so a failed later
+   * step must never produce an error status — that would invite a retry which
+   * the duplicate check would then block.
    */
-  it('still returns 201 when the application profile fails', async () => {
-    ;(
-      leasingAdapter.createOrUpdateApplicationProfileByContactCode as jest.Mock
-    ).mockResolvedValue({ ok: false, err: 'unknown' })
+  it('still returns 201 when later steps fail, with their outcomes and warnings', async () => {
+    const outcome: NewContactProfileAndWaitingListsResult = {
+      applicationProfile: { status: 'failed', error: 'unknown' },
+      waitingLists: [
+        {
+          waitingListType: WaitingListType.Housing,
+          status: 'failed',
+          error: '500',
+        },
+        { waitingListType: WaitingListType.Storage, status: 'created' },
+      ],
+      warnings: [
+        'Kunden skapades men hushållsuppgifterna kunde inte sparas.',
+        'Kunden skapades men kunde inte ställas i kön för bostad.',
+      ],
+    }
+    mockSetUp.mockResolvedValue(outcome)
 
     const res = await request(app.callback())
       .post('/v1/contacts')
-      .send(body({ applicationProfile: profile }))
+      .send(
+        body({
+          applicationProfile: profile,
+          waitingLists: [WaitingListType.Housing, WaitingListType.Storage],
+        })
+      )
 
     expect(res.status).toBe(201)
     expect(res.body.content.contactCode).toBe('P069077')
-    expect(res.body.content.applicationProfile.status).toBe('failed')
-    expect(res.body.warnings).toHaveLength(1)
-  })
-
-  it('skips the profile when none is supplied', async () => {
-    const res = await request(app.callback()).post('/v1/contacts').send(body())
-
-    expect(res.status).toBe(201)
-    expect(res.body.content.applicationProfile.status).toBe('skipped')
-    expect(
-      leasingAdapter.createOrUpdateApplicationProfileByContactCode
-    ).not.toHaveBeenCalled()
-  })
-
-  it('enrols the contact in each requested waiting list', async () => {
-    const res = await request(app.callback())
-      .post('/v1/contacts')
-      .send(body({ waitingLists: [2, 1] }))
-
-    expect(res.status).toBe(201)
-    expect(leasingAdapter.addApplicantToWaitingList).toHaveBeenCalledTimes(2)
-    expect(leasingAdapter.addApplicantToWaitingList).toHaveBeenCalledWith(
-      'P069077',
-      2
+    expect(res.body.content.applicationProfile).toEqual(
+      outcome.applicationProfile
     )
-    expect(res.body.content.waitingLists).toEqual([
-      { waitingListType: 2, status: 'created' },
-      { waitingListType: 1, status: 'created' },
-    ])
-    expect(res.body.warnings).toBeUndefined()
-  })
-
-  it('calls no waiting list when none is requested', async () => {
-    const res = await request(app.callback()).post('/v1/contacts').send(body())
-
-    expect(res.status).toBe(201)
-    expect(leasingAdapter.addApplicantToWaitingList).not.toHaveBeenCalled()
-    expect(res.body.content.waitingLists).toEqual([])
-  })
-
-  /**
-   * The contact exists once a queue step runs, so a queue failure must be
-   * reported per list and as a warning — never as an error status. The other
-   * requested lists must still be attempted.
-   */
-  it('still returns 201 when one queue fails, and reports which one', async () => {
-    ;(leasingAdapter.addApplicantToWaitingList as jest.Mock)
-      .mockRejectedValueOnce(new Error('Xpand said no'))
-      .mockResolvedValueOnce({ status: 201 })
-
-    const res = await request(app.callback())
-      .post('/v1/contacts')
-      .send(body({ waitingLists: [2, 3] }))
-
-    expect(res.status).toBe(201)
-    expect(leasingAdapter.addApplicantToWaitingList).toHaveBeenCalledTimes(2)
-    expect(res.body.content.waitingLists).toEqual([
-      { waitingListType: 2, status: 'failed', error: 'unknown' },
-      { waitingListType: 3, status: 'created' },
-    ])
-    expect(res.body.warnings).toHaveLength(1)
-    expect(res.body.warnings[0]).toContain('bostad')
-  })
-
-  /**
-   * The adapter returns the raw axios response, and core's instance resolves
-   * everything below 500 rather than throwing. A rejected enrolment therefore
-   * arrives as a normal return value — reporting it as 'created' would tell the
-   * caseworker the customer is queued when they are not.
-   */
-  it('reports a non-201 from leasing as a failed queue, not a created one', async () => {
-    ;(leasingAdapter.addApplicantToWaitingList as jest.Mock)
-      .mockResolvedValueOnce({ status: 404 })
-      .mockResolvedValueOnce({ status: 201 })
-
-    const res = await request(app.callback())
-      .post('/v1/contacts')
-      .send(body({ waitingLists: [2, 3] }))
-
-    expect(res.status).toBe(201)
-    expect(res.body.content.waitingLists).toEqual([
-      { waitingListType: 2, status: 'failed', error: '404' },
-      { waitingListType: 3, status: 'created' },
-    ])
-    expect(res.body.warnings).toHaveLength(1)
-    expect(res.body.warnings[0]).toContain('bostad')
+    expect(res.body.content.waitingLists).toEqual(outcome.waitingLists)
+    expect(res.body.warnings).toEqual(outcome.warnings)
   })
 })

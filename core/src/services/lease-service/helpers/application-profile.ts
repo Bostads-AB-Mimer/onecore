@@ -8,7 +8,7 @@ type UpdateAdminApplicationProfileRequestParams = z.infer<
   typeof schemas.admin.applicationProfile.UpdateApplicationProfileRequestParams
 >
 
-type UpdateClientApplicationProfileRequestParams = z.infer<
+export type UpdateClientApplicationProfileRequestParams = z.infer<
   typeof schemas.client.applicationProfile.UpdateApplicationProfileRequestParams
 >
 
