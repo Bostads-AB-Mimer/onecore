@@ -196,6 +196,8 @@ const config = configPackage({
       apiKey: '',
       companyId: '',
     },
+    // JSON array of MimerCompany, set via the COMPANIES env var
+    companies: '[]',
     rentalObjectRequirementExceptions: ['FAKT AVG'],
     // 2425 Hemförsäkring is not rental loss
     rentalLossExcludedAccounts: ['2425'],
