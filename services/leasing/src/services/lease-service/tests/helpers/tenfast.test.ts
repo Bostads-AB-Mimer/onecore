@@ -93,8 +93,11 @@ describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
     ['parkering', LeaseType.ParkingSpaceContract],
     ['lokal', LeaseType.CommercialTenantContract],
     ['garage', LeaseType.GarageContract],
-    ['forrad', LeaseType.StorageContract],
+    ['förråd', LeaseType.CommercialTenantContract],
+    ['Förråd', LeaseType.CommercialTenantContract],
+    ['forrad', LeaseType.CommercialTenantContract],
     ['ovrigt', LeaseType.OtherContract],
+    ['unknown', LeaseType.OtherContract],
   ])('maps "%s" to %s', (typ, expected) => {
     const lease = factory.tenfastLease.build({
       hyresobjekt: [factory.tenfastRentalObject.build({ typ })],

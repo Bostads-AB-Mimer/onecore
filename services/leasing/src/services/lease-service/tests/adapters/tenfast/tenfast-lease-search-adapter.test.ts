@@ -809,6 +809,31 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result.removedLeaseIds).toEqual(['lease-archived'])
     })
 
+    it.each(['förråd', 'Förråd', 'Forrad'])(
+      'labels a "%s" lease as Lokal and types it as a commercial lease, like Xpand',
+      async (typ) => {
+        const lease = factory.tenfastLease.build({
+          stage: 'active',
+          hyresobjekt: [factory.tenfastRentalObject.build({ typ })],
+        })
+
+        jest.spyOn(tenfastAdapter, 'getLeasesUpdatedSince').mockResolvedValue({
+          ok: true,
+          data: [lease],
+        })
+
+        const result =
+          await tenfastLeaseSearchAdapter.fetchLeasesUpdatedSinceForCache(
+            new Date('2024-01-01')
+          )
+
+        expect(result.changed[0]).toMatchObject({
+          objectTypeCode: 'Lokal',
+          leaseType: LeaseType.CommercialTenantContract,
+        })
+      }
+    )
+
     it('throws when the adapter call fails', async () => {
       jest.spyOn(tenfastAdapter, 'getLeasesUpdatedSince').mockResolvedValue({
         ok: false,

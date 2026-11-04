@@ -23,7 +23,10 @@ const TENFAST_TYP_TO_LEASE_TYPE: Partial<Record<string, LeaseType>> = {
   parkering: LeaseType.ParkingSpaceContract,
   lokal: LeaseType.CommercialTenantContract,
   garage: LeaseType.GarageContract,
-  forrad: LeaseType.StorageContract,
+  // Tenfast sends 'förråd'. Xpand types förråd leases as Lokalkontrakt, and
+  // consumers (Odoo, keys-portal, lease search) only count that as a facility.
+  förråd: LeaseType.CommercialTenantContract,
+  forrad: LeaseType.CommercialTenantContract,
   mark: LeaseType.OtherContract,
   ovrigt: LeaseType.OtherContract,
 }
