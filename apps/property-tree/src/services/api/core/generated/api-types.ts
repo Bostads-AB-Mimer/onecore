@@ -12696,6 +12696,8 @@ export interface components {
     Lease: {
       leaseId: string
       leaseNumber: string
+      /** Format: uri */
+      externalUrl?: string
       /** Format: date-time */
       leaseStartDate: string
       /** Format: date-time */
@@ -12860,6 +12862,8 @@ export interface components {
     }
     LeaseSearchResult: {
       leaseId: string
+      /** Format: uri */
+      externalUrl?: string
       objectTypeCode: string
       /** @enum {string} */
       leaseType:
@@ -16022,6 +16026,8 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */
@@ -16389,6 +16395,8 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */
@@ -16848,6 +16856,8 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */

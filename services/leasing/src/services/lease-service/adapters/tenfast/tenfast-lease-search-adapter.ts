@@ -13,6 +13,7 @@ import type { DeltaSyncResult } from '../../../../common/lease-cache'
 import {
   mapTenfastTypToLeaseType,
   calculateLeaseStatus,
+  buildTenfastLeaseUrl,
 } from '../../helpers/tenfast'
 import {
   getRentalObjectCodesByBuildingManager,
@@ -62,6 +63,7 @@ function mapTenfastLeaseToSearchResult(
 
   return {
     leaseId: lease.externalId,
+    externalUrl: buildTenfastLeaseUrl(lease._id),
     objectTypeCode:
       TENFAST_TYP_TO_LABEL[ro?.typ?.toLowerCase() ?? ''] ?? ro?.typ ?? '',
     leaseType: mapTenfastTypToLeaseType(ro?.typ),

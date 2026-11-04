@@ -4,6 +4,7 @@ import * as tenfastLeaseSearchAdapter from '../../../adapters/tenfast/tenfast-le
 import * as xpandLeaseSearchAdapter from '../../../adapters/xpand/lease-search-adapter'
 import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import * as leaseCache from '../../../../../common/lease-cache'
+import config from '../../../../../common/config'
 import * as factory from '../../factories'
 
 jest.mock('../../../../../common/lease-cache', () => ({
@@ -833,6 +834,27 @@ describe('tenfast-lease-search-adapter', () => {
         })
       }
     )
+
+    it('maps the Tenfast _id to an externalUrl', async () => {
+      const originalAppUrl = config.tenfast.appUrl
+      config.tenfast.appUrl = 'https://tenfast.example.com'
+
+      jest.spyOn(tenfastAdapter, 'getLeasesUpdatedSince').mockResolvedValue({
+        ok: true,
+        data: [factory.tenfastLease.build({ _id: 'mongo-id-1' })],
+      })
+
+      const result =
+        await tenfastLeaseSearchAdapter.fetchLeasesUpdatedSinceForCache(
+          new Date('2024-01-01')
+        )
+
+      config.tenfast.appUrl = originalAppUrl
+
+      expect(result.changed[0].externalUrl).toBe(
+        'https://tenfast.example.com/hyresvard/avtal/mongo-id-1'
+      )
+    })
 
     it('throws when the adapter call fails', async () => {
       jest.spyOn(tenfastAdapter, 'getLeasesUpdatedSince').mockResolvedValue({
