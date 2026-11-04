@@ -18,6 +18,7 @@ import {
   CommentThreadSchema,
   InvoiceRowSchema,
   InvoicePaymentEventSchema,
+  PaymentSyncEventSchema,
   InvoiceSchema,
   XledgerContactSchema,
   RentInvoiceRowSchema,
@@ -80,6 +81,8 @@ interface PhoneNumber {
 interface Lease {
   leaseId: string
   leaseNumber: string
+  // Link to the lease in the source leasing system's web UI, when available
+  externalUrl?: string
   leaseStartDate: Date
   leaseEndDate: Date | undefined
   status: LeaseStatus
@@ -463,6 +466,7 @@ type MiscellaneousInvoiceBaseItem = z.infer<
   typeof MiscellaneousInvoiceBaseItemSchema
 >
 type InvoicePaymentEvent = z.infer<typeof InvoicePaymentEventSchema>
+type PaymentSyncEvent = z.infer<typeof PaymentSyncEventSchema>
 type RentInvoiceRow = z.infer<typeof RentInvoiceRowSchema>
 type XledgerContact = z.infer<typeof XledgerContactSchema>
 type XledgerProject = z.infer<typeof XledgerProjectSchema>
@@ -489,6 +493,7 @@ export type {
   MiscellaneousInvoice,
   MiscellaneousInvoiceBaseItem,
   InvoicePaymentEvent,
+  PaymentSyncEvent,
   RentInvoiceRow,
   XledgerContact,
   XledgerProject,

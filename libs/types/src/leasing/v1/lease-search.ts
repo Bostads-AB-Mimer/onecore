@@ -96,7 +96,7 @@ export const LeaseSearchQueryParamsSchema = z.object({
   limit: z
     .string()
     .optional()
-    .transform((val) => (val ? Math.min(parseInt(val, 10), 100) : 20))
+    .transform((val) => (val ? Math.min(parseInt(val, 10), 500) : 20))
     .refine((val) => !isNaN(val), { message: 'limit must be a valid number' }),
 
   // When false (default), Upphört (status 3) is excluded. When true, all statuses are returned.
@@ -141,6 +141,8 @@ export type LeaseSearchQueryParamsInput = z.input<
 export const LeaseSearchResultSchema = z.object({
   // Core lease fields (always returned)
   leaseId: z.string(),
+  // Link to the lease in the source leasing system's web UI, when available
+  externalUrl: z.string().url().optional(),
   objectTypeCode: z.string(),
   leaseType: z.nativeEnum(LeaseType),
   contacts: z.array(ContactInfoSchema),

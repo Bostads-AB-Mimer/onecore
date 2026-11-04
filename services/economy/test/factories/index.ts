@@ -4,6 +4,7 @@ export {
   InvoicePaymentEventFactory as invoicePaymentEvent,
   MiscellaneousInvoiceFactory as miscellaneousInvoice,
   MiscellaneousInvoiceBaseItemFactory as miscellaneousInvoiceBaseItem,
+  PaymentSyncEventFactory as paymentSyncEvent,
 } from './invoice'
 
 export * from './tenfast'

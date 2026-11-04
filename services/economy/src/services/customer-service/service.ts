@@ -1,4 +1,5 @@
 import { Contact } from '@onecore/types'
+import type { SyncContactToEconomyUndo } from '@onecore/types'
 import {
   addCustomer,
   getCustomer,
@@ -26,25 +27,33 @@ const transformToXledgerCustomerPayload = (
   emailAddress: payload.emailAddress,
 })
 
+const toPrevious = (customer: any): SyncContactToEconomyUndo['previous'] => ({
+  fullName: customer.description ?? '',
+  street: customer.address?.streetAddress ?? null,
+  zipCode: customer.address?.zipCode ?? null,
+  city: customer.address?.place ?? null,
+  emailAddress: customer.email ?? null,
+})
+
 export const syncCustomer = async (
   customerPayload: SyncCustomerPayload,
   create?: boolean
-): Promise<any> => {
-  let xledgerCustomer = await getCustomer(customerPayload.contactCode)
-  if (!xledgerCustomer) {
-    if (create) {
-      xledgerCustomer = await addCustomer(
-        transformToXledgerCustomerPayload(customerPayload)
-      )
-    } else {
-      return null
-    }
-  } else {
-    xledgerCustomer = await updateCustomer(
-      xledgerCustomer,
+): Promise<{
+  customer: any
+  previous: SyncContactToEconomyUndo['previous'] | null
+} | null> => {
+  const existing = await getCustomer(customerPayload.contactCode)
+  if (!existing) {
+    if (!create) return null
+    const customer = await addCustomer(
       transformToXledgerCustomerPayload(customerPayload)
     )
+    return { customer, previous: null }
   }
 
-  return xledgerCustomer
+  const customer = await updateCustomer(
+    existing,
+    transformToXledgerCustomerPayload(customerPayload)
+  )
+  return { customer, previous: toPrevious(existing) }
 }

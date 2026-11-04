@@ -1541,6 +1541,8 @@ export interface paths {
           status?: string
           /** @description Whether to include contact information in the response */
           includeContacts?: boolean
+          /** @description Also return leases where the contact is the current sublet tenant (andrahandshyresgäst). */
+          includeSubletLeases?: boolean
         }
         path: {
           /** @description Contact code of the individual to fetch leases for. */
@@ -12694,6 +12696,8 @@ export interface components {
     Lease: {
       leaseId: string
       leaseNumber: string
+      /** Format: uri */
+      externalUrl?: string
       /** Format: date-time */
       leaseStartDate: string
       /** Format: date-time */
@@ -12858,6 +12862,8 @@ export interface components {
     }
     LeaseSearchResult: {
       leaseId: string
+      /** Format: uri */
+      externalUrl?: string
       objectTypeCode: string
       /** @enum {string} */
       leaseType:
@@ -16020,6 +16026,8 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */
@@ -16387,6 +16395,8 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */
@@ -16846,6 +16856,8 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */

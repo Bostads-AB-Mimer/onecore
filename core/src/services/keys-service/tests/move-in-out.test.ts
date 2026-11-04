@@ -1,4 +1,5 @@
 import request from 'supertest'
+import { AxiosError, AxiosHeaders } from 'axios'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
@@ -281,7 +282,21 @@ describe('deriveStatus', () => {
     expect(r.status).toBe('RETURNED_VACANT')
   })
 
-  it('NO_LOANS when nobody has borrowed anything', () => {
+  it('RETURNED_AWAITING_LOAN when all returned and the new tenant has no loan', () => {
+    const r = deriveStatus({
+      ...base,
+      loans: [
+        loan({
+          contact: 'P1',
+          returnedAt: d('2026-10-15'),
+          keysArray: [K1, K2],
+        }),
+      ],
+    })
+    expect(r.status).toBe('RETURNED_AWAITING_LOAN')
+  })
+
+  it('NO_LOANS when the outgoing tenant has no loan', () => {
     expect(deriveStatus({ ...base, loans: [] }).status).toBe('NO_LOANS')
     expect(deriveStatus({ ...base, incoming: null, loans: [] }).status).toBe(
       'NO_LOANS'
@@ -559,6 +574,115 @@ describe('GET /keys/move-in-out', () => {
     expect(searchSpy).toHaveBeenCalledTimes(2)
   })
 
+  describe('status and vacant filters', () => {
+    // OBJ-A: old tenant keeps a key -> NOT_RETURNED, someone moves in
+    // OBJ-B: no keys or cards -> NO_KEYS, nobody moves in (vacant)
+    // OBJ-C: new tenant's loan created -> CREATED, someone moves in
+    const keysByCode: Record<string, keys.Key[]> = {
+      'OBJ-A': [K1],
+      'OBJ-C': [K2],
+    }
+    const loansByCode: Record<string, keys.KeyLoanWithDetails[]> = {
+      'OBJ-A': [loan({ contact: 'P1', pickedUpAt: d('2024-01-02') })],
+      'OBJ-C': [
+        loan({ contact: 'P3', returnedAt: d('2026-10-20'), keysArray: [K2] }),
+        loan({ contact: 'P6', createdAt: d('2026-10-21'), keysArray: [K2] }),
+      ],
+    }
+    const pick = <T>(byCode: Record<string, T[]>, codes: string[]) =>
+      Object.fromEntries(codes.map((c) => [c, byCode[c] ?? []]))
+
+    let loansSpy: jest.SpyInstance
+    let notesSpy: jest.SpyInstance
+
+    beforeEach(() => {
+      jest
+        .spyOn(leasingAdapter, 'searchLeases')
+        .mockImplementation(async (q) =>
+          q.endDateFrom
+            ? paginated([
+                searchResult('L1', 'OBJ-A', 'P1', '2024-01-01', '2026-10-05'),
+                searchResult('L2', 'OBJ-B', 'P2', '2024-01-01', '2026-10-10'),
+                searchResult('L3', 'OBJ-C', 'P3', '2024-01-01', '2026-10-20'),
+              ])
+            : paginated([
+                searchResult('L4', 'OBJ-A', 'P4', '2026-10-06', null),
+                searchResult('L6', 'OBJ-C', 'P6', '2026-10-21', null),
+              ])
+        )
+      jest
+        .spyOn(keysAdapter.KeysApi, 'getBatchByRentalObject')
+        .mockImplementation(async (codes) => ({
+          ok: true,
+          data: pick(keysByCode, codes),
+        }))
+      loansSpy = jest
+        .spyOn(keysAdapter.KeyLoansApi, 'getBatchByRentalObject')
+        .mockImplementation(async (codes) => ({
+          ok: true,
+          data: {
+            loans: pick(loansByCode, codes),
+            cards: pick({}, codes),
+            cardsUnresolved: [],
+          },
+        }))
+      notesSpy = jest
+        .spyOn(keysAdapter.KeyNotesApi, 'getBatchByRentalObject')
+        .mockResolvedValue({ ok: true, data: {} })
+    })
+
+    const base = '/keys/move-in-out?endDateFrom=2026-10-01&endDateTo=2026-11-01'
+    const codesOf = (res: request.Response) =>
+      res.body.content.map(
+        (r: { rentalObjectCode: string }) => r.rentalObjectCode
+      )
+
+    it('keeps rows matching any of the given statuses, then paginates', async () => {
+      const page1 = await request(app.callback()).get(
+        `${base}&status=NOT_RETURNED&status=CREATED&limit=1`
+      )
+      expect(page1.status).toBe(200)
+      expect(page1.body._meta.totalRecords).toBe(2)
+      expect(codesOf(page1)).toEqual(['OBJ-A'])
+      // Status needs key data for every object, notes only for the page
+      expect(loansSpy).toHaveBeenCalledWith(['OBJ-A', 'OBJ-B', 'OBJ-C'])
+      expect(notesSpy).toHaveBeenCalledWith(['OBJ-A'])
+
+      const page2 = await request(app.callback()).get(
+        `${base}&status=NOT_RETURNED&status=CREATED&limit=1&page=2`
+      )
+      expect(codesOf(page2)).toEqual(['OBJ-C'])
+      expect(page2.body.content[0].status).toBe('CREATED')
+    })
+
+    it('accepts a single status', async () => {
+      const res = await request(app.callback()).get(`${base}&status=NO_KEYS`)
+      expect(res.status).toBe(200)
+      expect(codesOf(res)).toEqual(['OBJ-B'])
+    })
+
+    it('rejects an unknown status', async () => {
+      const res = await request(app.callback()).get(`${base}&status=BOGUS`)
+      expect(res.status).toBe(400)
+    })
+
+    it('filters on vacancy without fetching key data for other pages', async () => {
+      const vacant = await request(app.callback()).get(`${base}&vacant=true`)
+      expect(codesOf(vacant)).toEqual(['OBJ-B'])
+      expect(loansSpy).toHaveBeenLastCalledWith(['OBJ-B'])
+
+      const occupied = await request(app.callback()).get(`${base}&vacant=false`)
+      expect(codesOf(occupied)).toEqual(['OBJ-A', 'OBJ-C'])
+    })
+
+    it('combines status and vacancy', async () => {
+      const res = await request(app.callback()).get(
+        `${base}&status=NO_KEYS&status=CREATED&vacant=false`
+      )
+      expect(codesOf(res)).toEqual(['OBJ-C'])
+    })
+  })
+
   it('shares one lease search between concurrent requests for the same filter', async () => {
     let release!: () => void
     const gate = new Promise<void>((resolve) => (release = resolve))
@@ -596,6 +720,33 @@ describe('GET /keys/move-in-out', () => {
     expect(b.body._meta.totalRecords).toBe(1)
     // One ending + one starting search, not two of each
     expect(searchSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('passes on 503 and Retry-After while the lease search cache warms up', async () => {
+    const warmingUp = new AxiosError(
+      'Request failed with status code 503',
+      '503',
+      undefined,
+      undefined,
+      {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: new AxiosHeaders({ 'retry-after': '45' }),
+        config: { headers: new AxiosHeaders() },
+        data: 'Lease cache is warming up — retry shortly',
+      }
+    )
+    jest.spyOn(leasingAdapter, 'searchLeases').mockRejectedValue(warmingUp)
+    const keysBatch = jest.spyOn(keysAdapter.KeysApi, 'getBatchByRentalObject')
+
+    const res = await request(app.callback()).get(
+      '/keys/move-in-out?endDateFrom=2026-10-01&endDateTo=2026-11-01'
+    )
+
+    expect(res.status).toBe(503)
+    expect(res.headers['retry-after']).toBe('45')
+    expect(res.body.reason).toMatch(/värmer upp/)
+    expect(keysBatch).not.toHaveBeenCalled()
   })
 
   it('responds with 500 when the keys batch fails', async () => {

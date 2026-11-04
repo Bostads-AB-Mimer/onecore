@@ -81,6 +81,8 @@ export const RentalObjectRentInfo = z.object({
 export const Lease = z.object({
   leaseId: z.string(),
   leaseNumber: z.string(),
+  // Link to the lease in the source leasing system's web UI, when available
+  externalUrl: z.string().url().optional(),
   leaseStartDate: z.coerce.date(),
   leaseEndDate: z.coerce.date().optional(),
   status: z.enum([
@@ -279,6 +281,7 @@ export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
   return {
     leaseId: lease.leaseId,
     leaseNumber: lease.leaseNumber,
+    externalUrl: lease.externalUrl,
     leaseStartDate: lease.leaseStartDate,
     leaseEndDate: lease.leaseEndDate,
     status: mapLeaseStatus(lease.status),
@@ -318,5 +321,10 @@ const IncludeNonTenantContactsQueryParamSchema = z.object({
 export const GetLeasesOptionsSchema = leasing.v1.GetLeasesOptionsSchema.merge(
   IncludeContactsQueryParamSchema
 ).merge(IncludeNonTenantContactsQueryParamSchema)
+
+export const GetLeasesByContactCodeOptionsSchema =
+  leasing.v1.GetLeasesByContactCodeOptionsSchema.merge(
+    IncludeContactsQueryParamSchema
+  ).merge(IncludeNonTenantContactsQueryParamSchema)
 
 export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema

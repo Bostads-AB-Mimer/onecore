@@ -70,6 +70,8 @@ function setCategories(data: GuideCategory[]) {
 
 const triggerText = (id: string) =>
   container.querySelector(`#${id}`)?.textContent?.trim()
+const triggerDisabled = (id: string) =>
+  container.querySelector<HTMLButtonElement>(`#${id}`)?.disabled
 
 beforeEach(() => {
   container = document.createElement('div')
@@ -84,6 +86,12 @@ afterEach(() => {
 })
 
 describe('CategoryPicker', () => {
+  it('lets a new guide pick a category', () => {
+    render(null)
+
+    expect(triggerDisabled('guide-category')).toBe(false)
+  })
+
   it('shows the parent and the subcategory of a saved guide', () => {
     render({ id: 'c3' })
 
@@ -114,5 +122,6 @@ describe('CategoryPicker', () => {
     act(() => setCurrent({ id: 'c2' }))
 
     expect(current).toEqual({ id: 'c2' })
+    expect(triggerDisabled('guide-category')).toBe(true)
   })
 })

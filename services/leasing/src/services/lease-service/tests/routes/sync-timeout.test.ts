@@ -2,11 +2,13 @@ import KoaRouter from '@koa/router'
 import { boundTenfastCalls } from '../../adapters/tenfast/tenfast-api'
 import { routes as contactRoutes } from '../../routes/contacts'
 import { routes as leaseSyncRoutes } from '../../routes/lease-sync'
+import { routes as leaseRoutes } from '../../routes/leases'
 import { routes as rentalObjectTypeSyncRoutes } from '../../routes/rental-object-type-sync'
 
 const router = new KoaRouter()
 contactRoutes(router)
 leaseSyncRoutes(router)
+leaseRoutes(router)
 rentalObjectTypeSyncRoutes(router)
 
 const handlersFor = (method: string, path: string) =>
@@ -20,6 +22,7 @@ describe('Tenfast call bound on the sync routes', () => {
     ['POST', '/leases/sync'],
     ['POST', '/rental-objects/123-456/type/sync'],
     ['POST', '/contacts/P123456/sync'],
+    ['POST', '/leases/batch'],
   ])('%s %s bounds its Tenfast calls', (method, path) => {
     expect(handlersFor(method, path)).toContain(boundTenfastCalls)
   })

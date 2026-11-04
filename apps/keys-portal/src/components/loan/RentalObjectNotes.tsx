@@ -10,16 +10,17 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { FileText } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { keyNoteService } from '@/services/api/keyNoteService'
 import type { KeyNote } from '@/services/types'
 
 type Props = {
   rentalObjectCode: string
+  onSaved?: () => void
 }
 
-export function RentalObjectNotes({ rentalObjectCode }: Props) {
+export function RentalObjectNotes({ rentalObjectCode, onSaved }: Props) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -79,6 +80,7 @@ export function RentalObjectNotes({ rentalObjectCode }: Props) {
         setNote(created)
       }
       setOpen(false)
+      onSaved?.()
     } catch (err) {
       console.error('Failed to save note:', err)
       alert('Misslyckades med att spara noteringen')
@@ -97,7 +99,7 @@ export function RentalObjectNotes({ rentalObjectCode }: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="h-7 px-2 text-xs gap-1">
-          <FileText className="h-3.5 w-3.5" />
+          <Pencil className="h-3.5 w-3.5" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">

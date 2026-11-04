@@ -43,6 +43,12 @@ export const InvoicePaymentEventSchema = z.object({
   slTransactionType: z.string().nullable(),
 })
 
+// A payment from the Xledger payment feed together with the feed cursor that
+// points at it, so the Tenfast sync can save its position after each payment.
+export const PaymentSyncEventSchema = InvoicePaymentEventSchema.extend({
+  cursor: z.string(),
+})
+
 export const InvoiceSchema = z.object({
   invoiceId: z.string(),
   leaseIds: z.string().array(),

@@ -145,3 +145,33 @@ describe(leasingAdapter.getLeasesByRentalObjectCode, () => {
     expect(result).toEqual([])
   })
 })
+
+describe(leasingAdapter.getLeasesByContactCode, () => {
+  const { contactCode } = factory.contact.build()
+
+  it('asks leasing for sublet leases when includeSubletLeases is true', async () => {
+    const scope = nock(serviceUrl)
+      .get(`/leases/by-contact-code/${contactCode}`)
+      .query({ includeSubletLeases: 'true' })
+      .reply(200, { content: [] })
+
+    await leasingAdapter.getLeasesByContactCode(contactCode, {
+      includeSubletLeases: true,
+    })
+
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('leaves the parameter out otherwise', async () => {
+    const scope = nock(serviceUrl)
+      .get(`/leases/by-contact-code/${contactCode}`)
+      .query({ status: 'current' })
+      .reply(200, { content: [] })
+
+    await leasingAdapter.getLeasesByContactCode(contactCode, {
+      status: ['current'],
+    })
+
+    expect(scope.isDone()).toBe(true)
+  })
+})
