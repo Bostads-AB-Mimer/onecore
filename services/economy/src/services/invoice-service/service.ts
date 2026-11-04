@@ -1181,7 +1181,8 @@ const convertToLedgerCsvRows = (ledgerRows: LedgerRow[]) => {
 
 //#region Rental Loss Accounting
 export const exportRentalLosses = async (
-  companyId: string
+  companyId: string,
+  reportId: string
 ): Promise<{
   rentalLosses: RentalLoss[]
   errors: RentalLossError[]
@@ -1196,7 +1197,7 @@ export const exportRentalLosses = async (
     throw new Error('Could not find company ' + companyId)
   }
 
-  const rentalLossResults = await getRentalLosses(company)
+  const rentalLossResults = await getRentalLosses(company, reportId)
   if (rentalLossResults.ok !== true) {
     logger.error(
       { error: rentalLossResults.err },

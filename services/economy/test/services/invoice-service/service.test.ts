@@ -885,7 +885,7 @@ describe('Rental Invoice Accounting', () => {
 
   describe('exportRentalLosses', () => {
     it('throws when the company cannot be found', async () => {
-      await expect(exportRentalLosses('999')).rejects.toThrow(
+      await expect(exportRentalLosses('999', 'report-id')).rejects.toThrow(
         'Could not find company 999'
       )
     })
@@ -893,7 +893,7 @@ describe('Rental Invoice Accounting', () => {
     it('throws when the rental loss adapter returns an error', async () => {
       mockGetRentalLosses.mockResolvedValue({ ok: false, err: 'nope' })
 
-      await expect(exportRentalLosses('001')).rejects.toThrow(
+      await expect(exportRentalLosses('001', 'report-id')).rejects.toThrow(
         'Could not retrieve rental loss information: nope'
       )
     })
@@ -911,7 +911,7 @@ describe('Rental Invoice Accounting', () => {
         },
       })
 
-      const result = await exportRentalLosses('001')
+      const result = await exportRentalLosses('001', 'report-id')
 
       expect(result).toEqual({
         rentalLosses,

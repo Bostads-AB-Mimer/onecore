@@ -205,13 +205,20 @@ export const routes = (router: KoaRouter) => {
   )
 
   router.post(
-    '(.*)/accounting/import-rental-loss/{:companyId}',
+    '(.*)/accounting/import-rental-loss/{:companyId}/{:reportId}',
     async (ctx) => {
-      const companyId = ctx.params.companyId
+      const { companyId, reportId } = ctx.params
 
       if (!companyId) {
         ctx.status = 400
         ctx.body = 'Company with specified ID could not be found'
+        return
+      }
+
+      // Tenfast report ids are 24 character hex object ids
+      if (!reportId || !/^[0-9a-f]{24}$/i.test(reportId)) {
+        ctx.status = 400
+        ctx.body = 'A valid Tenfast report ID must be specified'
         return
       }
 
@@ -221,7 +228,7 @@ export const routes = (router: KoaRouter) => {
           errors: exportErrors,
           rentalObjectsWithoutRentRows,
           checksumMismatches,
-        } = await exportRentalLosses(companyId)
+        } = await exportRentalLosses(companyId, reportId)
         const rentalLossesWithBlocks =
           await handleRentalBlocks(exportedRentalLosses)
         const { rentalLosses, errors: enrichmentErrors } =
@@ -252,7 +259,10 @@ export const routes = (router: KoaRouter) => {
           checksumMismatches,
         }
       } catch (error) {
-        logger.error({ error, companyId }, 'Could not import rental loss')
+        logger.error(
+          { error, companyId, reportId },
+          'Could not import rental loss'
+        )
         ctx.status = 500
         ctx.body = 'Could not import rental loss ' + (error as any).message
       }

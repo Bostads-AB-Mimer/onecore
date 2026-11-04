@@ -1504,6 +1504,7 @@ describe(listNewOutboundExports, () => {
 })
 
 describe(getRentalLosses, () => {
+  const reportId = '6aeafb7fbe29b7ac851dbf2b'
   const company = {
     tenfastId: 'test-hyresvard-id',
     xpandId: '001',
@@ -1583,8 +1584,15 @@ describe(getRentalLosses, () => {
         : { status: 200, data: article }
     )
 
-    const result = await getRentalLosses(company)
+    const result = await getRentalLosses(company, reportId)
 
+    expect(mockAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining(
+          `/v1/hyresvard/reports/${reportId}/download`
+        ),
+      })
+    )
     assert(result.ok)
     expect(result.data.rentalLosses).toHaveLength(11)
     expect(result.data.rentalLosses[0].rentalLossRows).toHaveLength(1)
@@ -1602,7 +1610,7 @@ describe(getRentalLosses, () => {
         : { status: 404, data: {} }
     )
 
-    const result = await getRentalLosses(company)
+    const result = await getRentalLosses(company, reportId)
 
     assert(result.ok)
     expect(result.data.errors).toEqual([
@@ -1643,7 +1651,7 @@ describe(getRentalLosses, () => {
       ]),
     ])
 
-    const result = await getRentalLosses(company)
+    const result = await getRentalLosses(company, reportId)
 
     assert(result.ok)
     expect(result.data.rentalLosses).toHaveLength(1)
@@ -1659,7 +1667,7 @@ describe(getRentalLosses, () => {
       ]),
     ])
 
-    const result = await getRentalLosses(company)
+    const result = await getRentalLosses(company, reportId)
 
     assert(result.ok)
     const [row] = result.data.rentalLosses[0].rentalLossRows
@@ -1679,7 +1687,7 @@ describe(getRentalLosses, () => {
       { ...buildRentalLoss('RO2', [rentRow]), proration: null },
     ])
 
-    const result = await getRentalLosses(company)
+    const result = await getRentalLosses(company, reportId)
 
     assert(result.ok)
     expect(result.data.rentalLosses.map((loss) => loss.rentalObject)).toEqual([
@@ -1691,7 +1699,7 @@ describe(getRentalLosses, () => {
   it('reports no checksum mismatch when the amount matches Tenfast proration', async () => {
     mockReport([withProration(buildRentalLoss('RO1', [rentRow]), [3000])])
 
-    const result = await getRentalLosses(company)
+    const result = await getRentalLosses(company, reportId)
 
     assert(result.ok)
     expect(result.data.checksumMismatches).toEqual([])
@@ -1700,7 +1708,7 @@ describe(getRentalLosses, () => {
   it('reports a checksum mismatch but still returns the rental loss', async () => {
     mockReport([withProration(buildRentalLoss('RO1', [rentRow]), [2500])])
 
-    const result = await getRentalLosses(company)
+    const result = await getRentalLosses(company, reportId)
 
     assert(result.ok)
     expect(result.data.rentalLosses).toHaveLength(1)
@@ -1725,7 +1733,7 @@ describe(getRentalLosses, () => {
         : { status: 200, data: { ...article, accountConfigurations: [] } }
     )
 
-    const result = await getRentalLosses(company)
+    const result = await getRentalLosses(company, reportId)
 
     assert(result.ok)
     expect(result.data.rentalLosses[0].rentalLossRows).toEqual([])
