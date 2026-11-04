@@ -22,7 +22,9 @@ import z from 'zod'
 
 import {
   GetLeaseOptionsSchema,
+  GetLeasesByContactCodeOptionsSchema,
   GetLeasesOptionsSchema,
+  LeaseBatchRequestBody,
   mapLease,
   Lease as LeaseSchema,
 } from './schemas/lease'
@@ -796,6 +798,12 @@ export const routes = (router: KoaRouter) => {
    *           type: boolean
    *           default: false
    *         description: Whether to include contact information in the response
+   *       - in: query
+   *         name: includeSubletLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Also return leases where the contact is the current sublet tenant (andrahandshyresgäst).
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -814,7 +822,9 @@ export const routes = (router: KoaRouter) => {
   router.get('/leases/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
+      const queryParams = GetLeasesByContactCodeOptionsSchema.safeParse(
+        ctx.query
+      )
 
       if (!queryParams.success) {
         ctx.status = 400
@@ -902,11 +912,25 @@ export const routes = (router: KoaRouter) => {
         const contact = await leasingAdapter.getContactByContactCode(
           lease.subletContactId
         )
-        if (!contact.ok || !contact.data) {
+        if (contact.ok) {
+          const leaseContactType: leasing.v1.LeaseContactType = 'subletTenant'
+          contacts.push({ ...contact.data, leaseContactType })
+        } else if (contact.err === 'not-found') {
+          logger.error(
+            { contactCode: lease.subletContactId, leaseId: lease.leaseId },
+            'Sublet contact not found, returning lease without it'
+          )
+        } else {
+          logger.error(
+            {
+              error: contact.err,
+              contactCode: lease.subletContactId,
+              leaseId: lease.leaseId,
+            },
+            'Failed to fetch sublet contact'
+          )
           return { ok: false, err: 'no-contact' }
         }
-        const leaseContactType: leasing.v1.LeaseContactType = 'subletTenant'
-        contacts.push({ ...contact.data, leaseContactType })
       }
 
       lease.tenants = contacts
@@ -1268,6 +1292,74 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  /**
+   * @swagger
+   * /leases/batch:
+   *   post:
+   *     summary: Get multiple leases by id
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves leases for a batch of lease ids in a single call.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - leaseIds
+   *             properties:
+   *               leaseIds:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 minItems: 1
+   *     responses:
+   *       '200':
+   *         description: Successful response with the requested leases
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Lease'
+   *       '400':
+   *         description: Invalid request body
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/leases/batch',
+    parseRequestBody(LeaseBatchRequestBody),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { leaseIds } = ctx.request.body as z.infer<
+        typeof LeaseBatchRequestBody
+      >
+
+      try {
+        const leases = await leasingAdapter.getLeasesBatch(leaseIds)
+
+        ctx.status = 200
+        ctx.body = {
+          content: leases.map(mapLease),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(
+          { err, metadata },
+          'Error fetching lease batch from leasing'
+        )
+        ctx.status = 500
+      }
+    }
+  )
 
   /**
    * @swagger

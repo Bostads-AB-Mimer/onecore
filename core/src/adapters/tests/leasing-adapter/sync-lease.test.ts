@@ -137,6 +137,60 @@ describe(leasingAdapter.syncLease, () => {
     expect(result.err).toBe('unknown')
   })
 
+  it('passes the document outcome through', async () => {
+    nock(config.tenantsLeasesService.url)
+      .post('/leases/sync')
+      .reply(201, {
+        content: { action: 'created', leaseId, document: 'missing' },
+      })
+
+    const result = await leasingAdapter.syncLease(
+      leaseId,
+      contactCode,
+      'create'
+    )
+
+    expect(result).toEqual({
+      ok: true,
+      data: { action: 'created', leaseId, document: 'missing' },
+    })
+  })
+
+  it('carries the service error as detail on a failed sync', async () => {
+    nock(config.tenantsLeasesService.url)
+      .post('/leases/sync')
+      .reply(500, { error: 'termination-pdf-upload-failed' })
+
+    const result = await leasingAdapter.syncLease(
+      leaseId,
+      undefined,
+      'terminate'
+    )
+
+    assert(!result.ok)
+    expect(result.err).toBe('sync-failed')
+    expect(result.detail).toBe('termination-pdf-upload-failed')
+  })
+
+  it('appends the service detail to the error', async () => {
+    nock(config.tenantsLeasesService.url).post('/leases/sync').reply(409, {
+      error: 'end-date-mismatch',
+      detail: 'Tenfast 2026-05-31, Xpand 2026-04-30',
+    })
+
+    const result = await leasingAdapter.syncLease(
+      leaseId,
+      undefined,
+      'terminate'
+    )
+
+    assert(!result.ok)
+    expect(result.statusCode).toBe(409)
+    expect(result.detail).toBe(
+      'end-date-mismatch: Tenfast 2026-05-31, Xpand 2026-04-30'
+    )
+  })
+
   it('serializes body without contactCode when undefined', async () => {
     nock(config.tenantsLeasesService.url)
       .post('/leases/sync', { leaseId, action: 'terminate' })

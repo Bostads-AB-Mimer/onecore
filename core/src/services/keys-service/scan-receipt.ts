@@ -28,23 +28,14 @@ async function sendErrorNotification(
   const email = config.scanner.errorNotificationEmail
   if (!email) return
 
-  try {
-    if (attachments && attachments.length > 0) {
-      await communicationAdapter.sendEmail({
-        to: email,
-        subject,
-        body: message,
-        attachments,
-      })
-    } else {
-      await axios.post(`${config.communicationService.url}/sendMessage`, {
-        to: email,
-        subject,
-        text: message,
-      })
-    }
-  } catch (err) {
-    logger.error(err, 'Failed to send scan error notification')
+  const result = await communicationAdapter.sendEmail({
+    to: email,
+    subject,
+    body: message,
+    attachments,
+  })
+  if (!result.ok) {
+    logger.error(result.err, 'Failed to send scan error notification')
   }
 }
 

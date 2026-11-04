@@ -1,6 +1,6 @@
 import Odoo from 'odoo-await'
 import striptags from 'striptags'
-import { logger } from '@onecore/utilities'
+import { errorName, logger, redactedMessage } from '@onecore/utilities'
 import { groupBy } from 'lodash'
 import z from 'zod'
 import Config from '../../../../common/config'
@@ -25,7 +25,10 @@ import {
   WorkOrder,
   WorkOrderMessage,
 } from '../../schemas'
-import type { SyncContactToWorkOrderPayload } from '@onecore/types'
+import type {
+  SyncContactToWorkOrderPayload,
+  SyncContactToWorkOrderUndo,
+} from '@onecore/types'
 
 // Inspection-origin work orders all use this category + space; resolved by name
 // at runtime because Odoo ids differ per environment.
@@ -61,11 +64,13 @@ const WORK_ORDER_FIELDS: string[] = [
   'due_date',
   'write_date',
   'stage_id',
+  'maintenance_team_id',
   'phone_number',
   'hidden_from_my_pages',
   'master_key',
   'maintenance_unit_code',
   'maintenance_unit_caption',
+  'close_request_pending',
 ]
 
 const MESSAGE_DOMAIN = (workOrderIds: number[]) => [
@@ -76,9 +81,17 @@ const MESSAGE_DOMAIN = (workOrderIds: number[]) => [
     'in',
     [
       'from_tenant',
+      // The tenant's close request echoed back into their thread, and the
+      // handler's reason when it is declined. Neither is tenant_-prefixed, so
+      // Odoo sends no SMS/e-post for them.
+      'close_request_from_tenant',
+      'close_request_declined',
+      'receipt_to_tenant', // Acknowledgement receipt when a handler/contractor confirms a tenant message (MIM-1960)
       'tenant_sms',
       'tenant_mail',
       'tenant_mail_and_sms',
+      // Published to Mina sidor only — no SMS/e-post notification (MIM-1957).
+      'tenant_my_pages',
       'failed_tenant_sms',
       'failed_tenant_mail',
       'failed_tenant_mail_and_sms',
@@ -91,6 +104,7 @@ const MESSAGE_FIELDS: string[] = [
   'body',
   'message_type',
   'author_id',
+  'onecore_tenant_author_name',
   'create_date',
 ]
 
@@ -783,6 +797,77 @@ export const closeWorkOrder = async (workOrderId: number): Promise<boolean> => {
   }
 }
 
+// Odoo refuses a tenant's close request with a UserError whose message is this
+// prefix followed by a reason code (onecore_maintenance_extension,
+// request_close_from_tenant). The prefix and the code are the contract. Any
+// text after them is for people. An unknown code is not treated as a
+// conflict: it means the two sides have drifted, and should surface as a
+// failure rather than a quiet 409.
+const CLOSE_REQUEST_CONFLICT_PATTERN = /close_request_conflict:(\w+)/
+
+const CloseRequestConflictReasonSchema = z.enum([
+  'already_pending', // a request is already waiting for a decision
+  'closed', // the work order has reached Avslutad
+  'hidden', // the work order is hidden from Mina sidor
+])
+
+export type CloseRequestConflictReason = z.infer<
+  typeof CloseRequestConflictReasonSchema
+>
+
+export class CloseRequestConflictError extends Error {
+  readonly reason: CloseRequestConflictReason
+
+  constructor(reason: CloseRequestConflictReason) {
+    super(`Close request refused by Odoo: ${reason}`)
+    this.name = 'CloseRequestConflictError'
+    this.reason = reason
+  }
+}
+
+const parseCloseRequestConflict = (
+  err: unknown
+): CloseRequestConflictReason | undefined => {
+  if (!(err instanceof Error)) return undefined
+  const match = err.message.match(CLOSE_REQUEST_CONFLICT_PATTERN)
+  const parsed = CloseRequestConflictReasonSchema.safeParse(match?.[1])
+  return parsed.success ? parsed.data : undefined
+}
+
+/**
+ * Records, on the tenant's behalf, that they want the work order closed. It
+ * does not close anything: Odoo posts a close_request_from_tenant message and
+ * flags the request, and whoever handles the case accepts or declines it.
+ * Throws CloseRequestConflictError when Odoo refuses (already pending, closed
+ * or hidden). Any other failure is rethrown unchanged.
+ */
+export const requestCloseWorkOrder = async (
+  workOrderId: number,
+  reason?: string
+): Promise<void> => {
+  try {
+    await odoo.connect()
+
+    // execute_kw params are [args, kwargs]. The reason goes as a keyword so
+    // an omitted one falls back to Odoo's reason=None default.
+    await odoo.execute_kw('maintenance.request', 'request_close_from_tenant', [
+      [workOrderId],
+      reason ? { reason } : {},
+    ])
+  } catch (err) {
+    const conflictReason = parseCloseRequestConflict(err)
+    if (conflictReason) {
+      logger.info(
+        { workOrderId, reason: conflictReason },
+        'odoo-adapter.requestCloseWorkOrder: refused by Odoo'
+      )
+      throw new CloseRequestConflictError(conflictReason)
+    }
+    logger.error({ err }, 'odoo-adapter.requestCloseWorkOrder')
+    throw err
+  }
+}
+
 export const addMessageToWorkOrder = async (
   workOrderId: number,
   message: string
@@ -804,22 +889,34 @@ export const addMessageToWorkOrder = async (
   }
 }
 
+type OdooTenantValues = {
+  id: number
+  name: string
+  email_address: string | false
+  phone_number: string | false
+}
+
 export const syncContact = async (
   payload: SyncContactToWorkOrderPayload
 ): Promise<
   AdapterResult<
-    { updatedCount: number } | null,
+    {
+      updatedCount: number
+      previous: SyncContactToWorkOrderUndo['tenants']
+    } | null,
     'could-not-update-contact' | 'unknown'
   >
 > => {
   try {
     await odoo.connect()
 
-    const tenantIds: number[] = await odoo.search('maintenance.tenant', {
-      contact_code: payload.contactCode,
-    })
+    const tenants = await odoo.searchRead<OdooTenantValues>(
+      'maintenance.tenant',
+      { contact_code: payload.contactCode },
+      ['name', 'email_address', 'phone_number']
+    )
 
-    if (tenantIds.length === 0) {
+    if (tenants.length === 0) {
       logger.warn(
         { contactCode: payload.contactCode },
         'No tenant found in Odoo, skipping'
@@ -839,14 +936,100 @@ export const syncContact = async (
       updateData.phone_number = payload.phoneNumber
     }
 
-    for (const tenantId of tenantIds) {
-      await odoo.update('maintenance.tenant', tenantId, updateData)
+    await odoo.update(
+      'maintenance.tenant',
+      tenants.map((t) => t.id),
+      updateData
+    )
+
+    return {
+      ok: true,
+      data: {
+        updatedCount: tenants.length,
+        previous: tenants.map((t) => ({
+          id: t.id,
+          fullName: t.name,
+          emailAddress: t.email_address || null,
+          phoneNumber: t.phone_number || null,
+        })),
+      },
+    }
+  } catch (error) {
+    logger.error(
+      {
+        contactCode: payload.contactCode,
+        errorName: errorName(error),
+        message: redactedMessage(error, [
+          payload.fullName,
+          payload.emailAddress,
+          payload.phoneNumber,
+        ]),
+      },
+      'Error syncing contact to Odoo'
+    )
+    return { ok: false, err: 'could-not-update-contact' }
+  }
+}
+
+export const restoreContact = async (
+  contactCode: string,
+  tenants: SyncContactToWorkOrderUndo['tenants']
+): Promise<
+  AdapterResult<
+    { restored: number[]; missing: number[] },
+    'foreign-tenant' | 'could-not-restore-contact'
+  >
+> => {
+  try {
+    await odoo.connect()
+
+    const ids = tenants.map((t) => t.id)
+    const existing = await odoo.searchRead<{
+      id: number
+      contact_code: string
+    }>('maintenance.tenant', [['id', 'in', ids]], ['contact_code'])
+    if (existing.some((t) => t.contact_code !== contactCode)) {
+      return { ok: false, err: 'foreign-tenant' }
     }
 
-    return { ok: true, data: { updatedCount: tenantIds.length } }
+    const existingIds = new Set(existing.map((t) => t.id))
+    const restorable = tenants.filter((t) => existingIds.has(t.id))
+    const byValues = groupBy(restorable, (t) =>
+      JSON.stringify([t.fullName, t.emailAddress, t.phoneNumber])
+    )
+    for (const group of Object.values(byValues)) {
+      const [{ fullName, emailAddress, phoneNumber }] = group
+      await odoo.update(
+        'maintenance.tenant',
+        group.map((t) => t.id),
+        {
+          name: fullName,
+          email_address: emailAddress ?? false,
+          phone_number: phoneNumber ?? false,
+        }
+      )
+    }
+
+    return {
+      ok: true,
+      data: {
+        restored: restorable.map((t) => t.id),
+        missing: ids.filter((id) => !existingIds.has(id)),
+      },
+    }
   } catch (error) {
-    logger.error(error, 'Error syncing contact to Odoo')
-    return { ok: false, err: 'could-not-update-contact' }
+    logger.error(
+      {
+        contactCode,
+        errorName: errorName(error),
+        message: redactedMessage(
+          error,
+          tenants.flatMap((t) => [t.fullName, t.emailAddress, t.phoneNumber])
+        ),
+      },
+      'Error restoring contact in Odoo'
+    )
+    return { ok: false, err: 'could-not-restore-contact' }
   }
 }
 

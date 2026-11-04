@@ -94,15 +94,6 @@ interface OdooWorkOrder {
   hidden_from_my_pages: boolean
 }
 
-interface OdooWorkOrderMessage {
-  id: number
-  res_id: number
-  body: string
-  message_type: string
-  author_id: [number, string]
-  create_date: string
-}
-
 export type {
   WorkOrder,
   WorkOrderMessage,
@@ -112,5 +103,4 @@ export type {
   CreateWorkOrderImage,
   CreateWorkOrderMessage,
   OdooWorkOrder,
-  OdooWorkOrderMessage,
 }

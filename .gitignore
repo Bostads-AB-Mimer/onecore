@@ -67,7 +67,9 @@ lib-cov
 !.claude/skills/
 !.claude/skills/*
 CLAUDE.md
+
 REVIEW.md
+local.claude.md
 
 # --- Private Keys --- 
 *.pem

@@ -1,10 +1,12 @@
 import { Outlet } from 'react-router-dom'
 
+import { GuideSheet } from '@/widgets/guide-sheet'
 import { SidebarNavigation } from '@/widgets/sidebar'
 
 import { CommandPalette } from '@/features/search'
 
 import { FeedbackModalProvider } from '@/shared/hooks/useFeedbackModal'
+import { GuideSheetProvider } from '@/shared/hooks/useGuideSheet'
 import { SidebarToggleButton } from '@/shared/ui/layout'
 import { SidebarInset, SidebarProvider, useSidebar } from '@/shared/ui/Sidebar'
 import { Toaster } from '@/shared/ui/Toaster'
@@ -21,9 +23,11 @@ import { RouteDocumentTitle } from './RouteDocumentTitle'
 export function AppLayout() {
   return (
     <FeedbackModalProvider>
-      <SidebarProvider>
-        <AppLayoutContent />
-      </SidebarProvider>
+      <GuideSheetProvider>
+        <SidebarProvider>
+          <AppLayoutContent />
+        </SidebarProvider>
+      </GuideSheetProvider>
     </FeedbackModalProvider>
   )
 }
@@ -47,6 +51,7 @@ function AppLayoutContent() {
       </div>
       <Toaster />
       <FeedbackModal />
+      <GuideSheet />
     </div>
   )
 }

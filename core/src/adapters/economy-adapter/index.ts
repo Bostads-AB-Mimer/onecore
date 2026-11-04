@@ -1,12 +1,20 @@
 import fs from 'node:fs'
 import z from 'zod'
-import { loggedAxios as axios, logger } from '@onecore/utilities'
+import {
+  errorMessage,
+  errorName,
+  loggedAxios as axios,
+  logger,
+} from '@onecore/utilities'
 import {
   economy,
   Invoice,
   InvoicePaymentEvent,
+  MiscellaneousInvoice,
   RentInvoiceRow,
   SyncContactToEconomyPayload,
+  SyncContactToEconomyUndoSchema,
+  type SyncContactToEconomyUndo,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
   XledgerProject,
@@ -179,8 +187,17 @@ export async function getInvoicesSentToDebtCollection(
     return { ok: false, err: invoicesResult.err }
   }
 
+  // reference is the paying contact's code: cmctc.cmctckod from Xpand,
+  // subledger.code from Xledger. The endpoint also returns invoices for
+  // shared leases paid by a co-holder, which must not count here. Compared
+  // case-insensitively: the lookup itself accepts any casing, and a mismatch
+  // here would fail open (no invoices = credit check passes).
+  const normalize = (code: string) => code.trim().toUpperCase()
+  const isPaidBy = (invoice: Invoice) =>
+    normalize(invoice.reference) === normalize(contactCode)
+
   const hasDebtCollection = invoicesResult.data.filter((invoice: Invoice) => {
-    return invoice.sentToDebtCollection !== undefined
+    return invoice.sentToDebtCollection !== undefined && isPaidBy(invoice)
   })
 
   return { ok: true, data: hasDebtCollection }
@@ -209,7 +226,6 @@ export async function submitMiscellaneousInvoice(
     SubmitMiscellaneousInvoiceErrorCodes
   >
 > {
-  // eslint-disable-next-line n/no-unsupported-features/node-builtins
   const formData = new FormData()
 
   if (attachment) {
@@ -217,7 +233,6 @@ export async function submitMiscellaneousInvoice(
 
     formData.append(
       'attachment',
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins
       new Blob([fileBuffer]),
       attachment.originalFilename
     )
@@ -226,7 +241,7 @@ export async function submitMiscellaneousInvoice(
   formData.append('invoice', JSON.stringify(invoice))
 
   try {
-    const url = `${config.economyService.url}/invoices/miscellaneous`
+    const url = `${config.economyService.url}/miscellaneous-invoices`
     const response = await axios.postForm(url, formData, {
       // Resolve on 4xx so error bodies from economy can be inspected. Matches
       // the repo-wide axios default (see leasing-adapter) without depending on
@@ -298,6 +313,43 @@ export async function getInvoices({
     return { ok: true, data: allInvoices }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoices')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export async function getMiscellaneousInvoices({
+  from,
+  to,
+  after,
+  pageSize,
+}: {
+  from?: Date
+  to?: Date
+  after?: string
+  pageSize?: number
+}): Promise<
+  AdapterResult<
+    {
+      content: MiscellaneousInvoice[]
+      pageInfo: { hasNextPage: boolean; endCursor?: string }
+    },
+    'unknown'
+  >
+> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/miscellaneous-invoices`,
+      { params: { from, to, after, pageSize } }
+    )
+
+    if (response.status === 200) {
+      return { ok: true, data: response.data.content }
+    }
+
+    logger.error(response.data, 'economy-adapter.getMiscellaneousInvoices')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  } catch (err: any) {
+    logger.error(err, 'economy-adapter.getMiscellaneousInvoices')
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
@@ -557,7 +609,7 @@ export async function getAutogiroConsent(
 }
 
 const PaymentsSinceResultSchema = z.object({
-  events: schemas.v1.InvoicePaymentEventSchema.array(),
+  events: schemas.v1.PaymentSyncEventSchema.array(),
   lastCursor: z.string().nullable(),
 })
 
@@ -646,7 +698,12 @@ export async function syncContactToEconomy(
   contactCode: string,
   contactData: Omit<SyncContactToEconomyPayload, 'contactCode'>,
   options?: { create?: boolean }
-): Promise<AdapterResult<{ skipped: boolean }, 'sync-failed' | 'unknown'>> {
+): Promise<
+  AdapterResult<
+    { skipped: boolean; undo?: SyncContactToEconomyUndo | null },
+    'sync-failed' | 'unknown'
+  >
+> {
   const payload: SyncContactToEconomyPayload = {
     contactCode,
     ...contactData,
@@ -656,11 +713,32 @@ export async function syncContactToEconomy(
     const response = await axios.post(
       `${config.economyService.url}/customers/${contactCode}/sync${options?.create ? `?create=${options.create}` : ''}`,
       payload,
-      { timeout: SYNC_CONTACT_TIMEOUT_MS }
+      {
+        timeout: SYNC_CONTACT_TIMEOUT_MS,
+        // leasing-adapter makes every 4xx resolve on the shared axios instance
+        validateStatus: (status) => status >= 200 && status < 300,
+      }
     )
-    return { ok: true, data: { skipped: response.data?.skipped === true } }
+    const undo = SyncContactToEconomyUndoSchema.nullable().safeParse(
+      response.data?.undo
+    )
+    return {
+      ok: true,
+      data: {
+        skipped: response.data?.skipped === true,
+        ...(undo.success && { undo: undo.data }),
+      },
+    }
   } catch (err) {
-    logger.error(err, 'economy-adapter.syncContactToEconomy')
+    logger.error(
+      {
+        contactCode,
+        status: axios.isAxiosError(err) ? err.response?.status : undefined,
+        errorName: errorName(err),
+        message: errorMessage(err),
+      },
+      'economy-adapter.syncContactToEconomy'
+    )
     if (axios.isAxiosError(err) && err.response) {
       return {
         ok: false,
@@ -670,4 +748,15 @@ export async function syncContactToEconomy(
     }
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
+}
+
+export const undoContactSyncInEconomy = async (
+  contactCode: string,
+  undo: SyncContactToEconomyUndo
+): Promise<AdapterResult<null, 'not-found' | 'sync-failed' | 'unknown'>> => {
+  const result = await syncContactToEconomy(contactCode, undo.previous)
+  if (!result.ok) return result
+  return result.data.skipped
+    ? { ok: false, err: 'not-found' }
+    : { ok: true, data: null }
 }
