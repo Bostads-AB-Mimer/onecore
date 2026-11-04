@@ -1,16 +1,20 @@
 import axios from 'axios'
-import config from '../../config'
-import { logger } from '@onecore/utilities'
+
+import config, { isRentalObjectRequirementException } from '../../config'
+import { errorMessage, logger } from '@onecore/utilities'
 import { AdapterResult } from '../../types'
+import { z } from 'zod'
 import {
-  TenfastTenantSchema,
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
+  TenfastInvoicesByExportedResponseSchema,
+  TenfastTenantSchema,
   TenfastInvoiceSchema,
-  TenfastInvoice,
-  TenfastInvoiceRow,
-  TenfastRentArticleSchema,
-  TenfastRentArticle,
+  TenfastRentalLossHyraSchema,
+  TenfastRentalLossSchema,
+  TenfastRentalLoss,
+  TenfastRentalLossHyra,
+  TenfastRentalLossResponseSchema,
   TenfastBatchGetRentalObjectsResponseSchema,
   type TenfastBatchGetLease,
   TenfastTenantLeasesResponseSchema,
@@ -25,25 +29,44 @@ import {
   TenfastAutogiroConsentResponseSchema,
   TenfastAutogiroConsent,
   isVisibleTenfastInvoice,
+  TenfastInvoice,
+  TenfastInvoiceRow,
+  TenfastRentArticleSchema,
+  TenfastRentArticle,
 } from './schemas'
-import { TenfastDeferralSource } from '../../invoice-deferral'
+
 import {
-  Contact,
   Invoice,
   InvoiceRow,
   InvoiceTransactionType,
+  PaymentStatus,
+  Contact,
   Lease,
   LeaseStatus,
   LeaseType,
-  PaymentStatus,
   RentalProperty,
+  economy,
 } from '@onecore/types'
+
+import {
+  InvoiceRowWithAccounting,
+  InvoiceWithAccounting,
+  MimerCompany,
+  RentalLoss,
+  RentalLossChecksumMismatch,
+  RentalLossError,
+  RentalLossInterval,
+  RentalLossRow,
+  TenfastRentalObject,
+} from '@src/common/types/typesv2'
+
+import { TenfastDeferralSource } from '../../invoice-deferral'
 
 const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
 const companyId = config.tenfast.companyId
 
-const makeTenfastRequest = async (
+export const makeTenfastRequest = async (
   url: string,
   config?: {
     method?: string
@@ -94,6 +117,108 @@ export const getTenantByContactCode = async (
     }
 
     return { ok: true, data: parsed.data }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
+  }
+}
+
+const getRentalObjectById = async (
+  id: string
+): Promise<AdapterResult<TenfastRentalObject, string>> => {
+  try {
+    const result = await makeTenfastRequest(`/v1/hyresvard/hyresobjekt/${id}`)
+    if (result.status !== 200) {
+      return { ok: false, err: result.statusText }
+    }
+
+    const rentalObject: TenfastRentalObject = {
+      _id: result.data._id,
+      externalId: result.data.externalId,
+    }
+
+    return { ok: true, data: rentalObject }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
+  }
+}
+
+/*export const getInvoicesForTenant = async (
+  tenantId: string
+): Promise<AdapterResult<Invoice[], string>> => {
+  try {
+    const result = await makeTenfastRequest(
+      `/v1/hyresvard/hyresgaster/${tenantId}/hyror`
+    )
+    if (result.status !== 200) {
+      return { ok: false, err: result.statusText }
+    }
+
+    const parsedResponse = TenfastInvoicesByTenantIdResponseSchema.safeParse(
+      result.data
+    )
+
+    if (!parsedResponse.success) {
+      logger.error(
+        { tenantId, error: parsedResponse.error.issues },
+        'Failed to parse Tenfast invoices by tenant id response'
+      )
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return {
+      ok: true,
+      data: parsedResponse.data
+        .filter(isVisibleTenfastInvoice)
+        .map(transformToInvoice),
+    }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
+  }
+}*/
+
+export const getInvoicesForTenant = async (
+  tenantId: string,
+  from?: Date
+): Promise<AdapterResult<ParsedTenfastInvoice[], string>> => {
+  try {
+    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
+      params: {
+        hyresvard: companyId,
+        hyresgast: tenantId,
+        paginate: 'false',
+        from: from ? dateToDateString(from) : undefined,
+        to: from ? dateToDateString(new Date()) : undefined,
+      },
+    })
+    if (result.status !== 200) {
+      logger.warn(
+        { tenantId, status: result.status, data: result.data },
+        'Failed to fetch Tenfast invoices for tenant'
+      )
+      return { ok: false, err: result.statusText }
+    }
+
+    const parsedResponse = TenfastInvoicesByTenantIdResponseSchema.safeParse(
+      result.data
+    )
+
+    if (!parsedResponse.success) {
+      logger.error(
+        { tenantId, error: parsedResponse.error.issues },
+        'Failed to parse Tenfast invoices by tenant id response'
+      )
+      return { ok: false, err: 'schema-error' }
+    }
+
+    return {
+      ok: true,
+      data: parsedResponse.data.records
+        .filter(isVisibleTenfastInvoice)
+        .map(transformToInvoice),
+    }
   } catch (err: any) {
     logger.error(err)
     return { ok: false, err: err.message }
@@ -155,51 +280,6 @@ const dateToDateString = (date: Date): string => {
 export type ParsedTenfastInvoice = {
   invoice: Invoice
   tenfastDeferral?: TenfastDeferralSource
-}
-
-export const getInvoicesForTenant = async (
-  tenantId: string,
-  from?: Date
-): Promise<AdapterResult<ParsedTenfastInvoice[], string>> => {
-  try {
-    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
-      params: {
-        hyresvard: companyId,
-        hyresgast: tenantId,
-        paginate: 'false',
-        from: from ? dateToDateString(from) : undefined,
-        to: from ? dateToDateString(new Date()) : undefined,
-      },
-    })
-    if (result.status !== 200) {
-      logger.warn(
-        { tenantId, status: result.status, data: result.data },
-        'Failed to fetch Tenfast invoices for tenant'
-      )
-      return { ok: false, err: result.statusText }
-    }
-
-    const parsedResponse = TenfastInvoicesByTenantIdResponseSchema.safeParse(
-      result.data
-    )
-
-    if (!parsedResponse.success) {
-      logger.error(
-        { tenantId, error: parsedResponse.error.issues },
-        'Failed to parse Tenfast invoices by tenant id response'
-      )
-      return { ok: false, err: 'schema-error' }
-    }
-    return {
-      ok: true,
-      data: parsedResponse.data.records
-        .filter(isVisibleTenfastInvoice)
-        .map(transformToInvoice),
-    }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
-  }
 }
 
 export const getInvoicesByContactCode = async (
@@ -463,14 +543,25 @@ export const getInvoiceArticle = async (
 ): Promise<AdapterResult<TenfastRentArticle, string>> => {
   try {
     const result = await makeTenfastRequest(
-      `/v1/hyresvard/articles/${articleId}`
+      `/v1/hyresvard/articles/${articleId}`,
+      { validateStatus: (status) => [200, 404].includes(status) }
     )
+
+    if (result.status === 404) {
+      logger.warn({ articleId }, 'tenfast-adapter.getInvoiceArticle: not found')
+      return { ok: false, err: 'not-found' }
+    }
+
     if (result.status !== 200) {
       return { ok: false, err: result.statusText }
     }
 
     const parsedResponse = TenfastRentArticleSchema.safeParse(result.data)
     if (!parsedResponse.success) {
+      logger.error(
+        { articleId, issues: parsedResponse.error.issues },
+        'tenfast-adapter.getInvoiceArticle: response failed schema validation'
+      )
       return { ok: false, err: 'schema-error' }
     }
 
@@ -481,6 +572,63 @@ export const getInvoiceArticle = async (
   }
 }
 
+let rentArticles: TenfastRentArticle[]
+
+const retrieveRentArticles = async () => {
+  const result = await makeTenfastRequest(`/v1/hyresvard/articles`)
+
+  if (result.status !== 200) {
+    logger.error(result.status)
+    throw new Error('Could not retrieve rent articles from Tenfast')
+  }
+
+  const correctArticles = result.data.filter((article: any) => article.category)
+
+  const parsedResponse = z
+    .array(TenfastRentArticleSchema)
+    .safeParse(correctArticles)
+  if (!parsedResponse.success) {
+    logger.error(parsedResponse)
+    throw new Error('Could not retrieve rent articles from Tenfast')
+  }
+
+  rentArticles = parsedResponse.data
+}
+
+/*const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
+  const remainingAmount = tenfastInvoice.amount - tenfastInvoice.amountPaid
+
+  return {
+    amount: tenfastInvoice.amount,
+    debitStatus: 0, //
+    fromDate: new Date(tenfastInvoice.interval.from),
+    toDate: new Date(tenfastInvoice.interval.to),
+    invoiceDate: tenfastInvoice.activatedAt
+      ? new Date(tenfastInvoice.activatedAt)
+      : new Date(tenfastInvoice.expectedInvoiceDate), // If tenfastInvoice.state == 'draft', activatedAt will be null
+    expirationDate: new Date(tenfastInvoice.due),
+    paidAmount: tenfastInvoice.amountPaid,
+    remainingAmount,
+    roundoff: tenfastInvoice.roundingAmount,
+    invoiceId: tenfastInvoice.ocrNumber,
+    externalId: tenfastInvoice._id,
+    leaseId: tenfastInvoice.contractCode!!,
+    recipientContactCode: tenfastInvoice.recipientContactCode!!,
+    recipientName: tenfastInvoice.recipientName!!,
+    paymentStatus:
+      remainingAmount <= 0 ? PaymentStatus.Paid : PaymentStatus.Unpaid,
+    type: 'Regular',
+    reference: tenfastInvoice.ocrNumber,
+    source: 'next', // ??
+    invoiceRows: tenfastInvoice.hyror.map(transformToInvoiceRow),
+    transactionType: InvoiceTransactionType.Rent,
+    // TODO this is only (?) used for uniquely identifying invoices with the same invoice number in mina sidor.
+    // We should maybe add a unique id property to the Invoice type instead
+    transactionTypeName: 'some random string',
+    credit: null,
+  }
+}*/
+
 const toTenfastDeferralSource = (
   gracePeriod: TenfastInvoice['gracePeriod']
 ): TenfastDeferralSource | undefined => {
@@ -489,13 +637,15 @@ const toTenfastDeferralSource = (
   }
 
   return {
-    reason: gracePeriod.reason,
+    reason: gracePeriod.reason ?? '',
     madeBy: gracePeriod.madeByEmail,
   }
 }
 
 const transformToInvoice = (
-  tenfastInvoice: TenfastInvoice
+  tenfastInvoice: Omit<TenfastInvoice, 'avtal'> & {
+    avtal: { externalId: string }[]
+  }
 ): ParsedTenfastInvoice => {
   const remainingAmount = tenfastInvoice.amount - tenfastInvoice.amountPaid
 
@@ -866,6 +1016,7 @@ const transformToInvoiceRow = (
     totalAmount: tenfastInvoiceRow.amount * (1 + tenfastInvoiceRow.vat),
     printGroup: tenfastInvoiceRow.consolidationLabel ?? null,
     invoiceRowText: tenfastInvoiceRow.label,
+    rentalObject: tenfastInvoiceRow.hyresobjekt,
     // We do not have the fields below in tenfast at the moment
     deduction: 0,
     roundoff: 0,
@@ -874,6 +1025,341 @@ const transformToInvoiceRow = (
     invoiceDate: '',
     invoiceDueDate: '',
     invoiceNumber: '',
+  }
+}
+
+export const convertToDate = (tenfastDate: string) => {
+  return new Date(tenfastDate)
+}
+
+const replaceRentalObjectExternalIds = async (invoice: Invoice) => {
+  for (const invoiceRow of invoice.invoiceRows) {
+    if (invoiceRow.rentalObject) {
+      const rentalObjectResult = await getRentalObjectById(
+        invoiceRow.rentalObject
+      )
+      if (rentalObjectResult.ok) {
+        invoiceRow.rentalObject = rentalObjectResult.data.externalId
+      }
+    }
+  }
+}
+
+const enrichInvoiceRowsWithAccounting = async (
+  invoice: Invoice
+): Promise<{
+  invoiceRows: InvoiceRowWithAccounting[]
+  errors: { invoiceNumber: string; error: string }[]
+}> => {
+  const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
+  const errors: { invoiceNumber: string; error: string }[] = []
+
+  for (const invoiceRow of invoice.invoiceRows) {
+    const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
+      ...invoiceRow,
+    }
+
+    // Every row needs an article: the account, cost code and project code
+    // all come from its account configuration.
+    if (!invoiceRow.rentArticle) {
+      logger.error(
+        { invoiceNumber: invoice.invoiceId },
+        'Invoice row has no rent article'
+      )
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error: 'Minst en hyresrad på avin saknar hyresartikel',
+      })
+      continue
+    }
+
+    const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
+    if (!articleResult.ok) {
+      logger.error(
+        { article: invoiceRow.rentArticle, error: articleResult.err },
+        'Could not get article information'
+      )
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error:
+          articleResult.err === 'not-found'
+            ? `Hyresartikeln ${invoiceRow.rentArticle} finns inte i Tenfast`
+            : `Kunde inte hämta hyresartikeln ${invoiceRow.rentArticle} från Tenfast`,
+      })
+      continue
+    }
+
+    const article = articleResult.data
+    invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
+    if (!article.accountConfigurations?.length) {
+      logger.error({ article }, 'Rent article has no account configurations')
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error: `Hyresartikeln ${article.code} har inga konton`,
+      })
+      continue
+    }
+
+    const accountConfiguration = article.accountConfigurations.find(
+      (accountConfiguration) => {
+        return (
+          accountConfiguration.categoryCode === 'Intäkter' &&
+          accountConfiguration.debitType === 'HYRA'
+        )
+      }
+    )
+    if (!accountConfiguration) {
+      logger.error(
+        { article },
+        'Rent article has no account configuration for Intäkter'
+      )
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error: `Hyresartikeln ${article.code} har inget konto för kategorin Intäkter`,
+      })
+      continue
+    }
+
+    invoiceRowWithAccounting.account = accountConfiguration.accountNr.toString()
+    invoiceRowWithAccounting.costCode =
+      accountConfiguration.costCenter && accountConfiguration.costCenter !== ''
+        ? accountConfiguration.costCenter
+        : undefined
+    invoiceRowWithAccounting.property =
+      accountConfiguration.property && accountConfiguration.property !== ''
+        ? accountConfiguration.property
+        : undefined
+    invoiceRowWithAccounting.projectCode =
+      accountConfiguration.projectCode &&
+      accountConfiguration.projectCode !== ''
+        ? accountConfiguration.projectCode
+        : undefined
+    invoiceRowWithAccounting.freeCode = accountConfiguration.freeText
+
+    // A rental object (hyresobjekt) is normally required on every invoice row,
+    // but certain article codes (e.g. invoice fees) are exempt via
+    // configuration. The article code is resolved above into rentArticleName.
+    if (
+      !invoiceRow.rentalObject &&
+      !isRentalObjectRequirementException(
+        invoiceRowWithAccounting.rentArticleName
+      )
+    ) {
+      logger.error(
+        {
+          invoiceId: invoice.invoiceId,
+          article: invoiceRowWithAccounting.rentArticleName,
+        },
+        'Minst en hyresrad på avin saknar hyresobjekt'
+      )
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error: `Minst en hyresrad på avin saknar hyresobjekt (hyresartikel ${invoiceRowWithAccounting.rentArticleName})`,
+      })
+      continue
+    }
+
+    invoiceRowsWithAccounting.push(invoiceRowWithAccounting)
+  }
+  return {
+    invoiceRows: invoiceRowsWithAccounting,
+    errors,
+  }
+}
+
+export const getInvoicesNotExported = async (
+  maxCount: number,
+  company: MimerCompany
+): Promise<
+  AdapterResult<
+    {
+      invoices: InvoiceWithAccounting[]
+      errors: { invoiceNumber: string; error: string }[] | undefined
+    },
+    string
+  >
+> => {
+  const errors: { invoiceNumber: string; error: string }[] = []
+
+  try {
+    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
+      params: {
+        isManuallyExported: 'false',
+        status: 'issued',
+        limit: maxCount,
+        hyresvard: company.tenfastId,
+        /*paginate:
+          'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
+        //ocrNumber: '552606000000733',
+      },
+    })
+
+    if (result.status !== 200) {
+      logger.error(
+        { error: result.statusText },
+        'Error getting invoices from Tenfast'
+      )
+      return { ok: false, err: result.statusText }
+    }
+
+    if (!result.data.records || result.data.records.length === 0) {
+      return {
+        ok: true,
+        data: {
+          invoices: [],
+          errors: undefined,
+        },
+      }
+    }
+
+    const parsedResponse = TenfastInvoicesByExportedResponseSchema.safeParse(
+      result.data
+    )
+
+    if (!parsedResponse.success) {
+      logger.error(
+        { error: parsedResponse.error },
+        'Error parsing Tenfast invoices'
+      )
+      return { ok: false, err: 'schema-error' }
+    }
+
+    const invoices = await transformExportedInvoiceRecords(
+      parsedResponse.data.records,
+      errors
+    )
+    return {
+      ok: true,
+      data: {
+        invoices: invoices,
+        errors,
+      },
+    }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
+  }
+}
+
+const transformExportedInvoiceRecords = async (
+  records: z.infer<typeof TenfastInvoicesByExportedResponseSchema>['records'],
+  errors: { invoiceNumber: string; error: string }[]
+): Promise<InvoiceWithAccounting[]> => {
+  const invoices: InvoiceWithAccounting[] = []
+  for (const invoiceResult of records) {
+    const invoice: InvoiceWithAccounting = {
+      ...transformToInvoice(invoiceResult).invoice,
+      externalId: invoiceResult._id,
+      roundoff: invoiceResult.roundingAmount,
+      recipientContactCode: invoiceResult.recipientContactCode,
+      recipientName: invoiceResult.recipientName,
+    }
+
+    if (!invoice.invoiceId) {
+      logger.error(
+        { externalId: invoice.externalId },
+        'Invoice has no ocrNumber'
+      )
+    }
+
+    await replaceRentalObjectExternalIds(invoice)
+
+    const invoiceRowsWithAccountingResult =
+      await enrichInvoiceRowsWithAccounting(invoice)
+
+    if (invoiceRowsWithAccountingResult.errors?.length === 0) {
+      invoice.invoiceRows = invoiceRowsWithAccountingResult.invoiceRows
+      invoices.push(invoice)
+    } else {
+      errors.push(...invoiceRowsWithAccountingResult.errors)
+    }
+  }
+  return invoices
+}
+
+/**
+ * Debug counterpart to getInvoicesNotExported: fetches specific invoices by
+ * OCR number regardless of whether they have already been exported. Used by
+ * the import-invoices debug endpoint to regenerate accounting files without
+ * marking the invoices as exported.
+ */
+export const getInvoicesByOcr = async (
+  ocrNumbers: string[],
+  company: MimerCompany
+): Promise<
+  AdapterResult<
+    {
+      invoices: InvoiceWithAccounting[]
+      errors: { invoiceNumber: string; error: string }[] | undefined
+    },
+    string
+  >
+> => {
+  const errors: { invoiceNumber: string; error: string }[] = []
+
+  try {
+    const allInvoices: InvoiceWithAccounting[] = []
+
+    for (const ocrNumber of ocrNumbers) {
+      const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
+        params: {
+          status: 'issued',
+          hyresvard: company.tenfastId,
+          ocrNumber,
+        },
+      })
+
+      if (result.status !== 200) {
+        logger.error(
+          { ocrNumber, status: result.status },
+          'Error getting invoice from Tenfast by OCR'
+        )
+        errors.push({
+          invoiceNumber: ocrNumber,
+          error: `Tenfast returned status ${result.status}`,
+        })
+        continue
+      }
+
+      const parsedResponse = TenfastInvoicesByExportedResponseSchema.safeParse(
+        result.data
+      )
+
+      if (!parsedResponse.success) {
+        logger.error(
+          { error: parsedResponse.error, ocrNumber },
+          'Error parsing Tenfast invoice'
+        )
+        errors.push({ invoiceNumber: ocrNumber, error: 'schema-error' })
+        continue
+      }
+
+      if (parsedResponse.data.records.length === 0) {
+        errors.push({
+          invoiceNumber: ocrNumber,
+          error: 'Invoice not found in Tenfast',
+        })
+        continue
+      }
+
+      allInvoices.push(
+        ...(await transformExportedInvoiceRecords(
+          parsedResponse.data.records,
+          errors
+        ))
+      )
+    }
+
+    return {
+      ok: true,
+      data: {
+        invoices: allInvoices,
+        errors,
+      },
+    }
+  } catch (err: any) {
+    logger.error(err)
+    return { ok: false, err: err.message }
   }
 }
 
@@ -1113,4 +1599,446 @@ export const getAutogiroConsentByNationalRegistrationNumber = async (
   }
 }
 
+const emptyToUndefined = (
+  value: string | null | undefined
+): string | undefined => (value && value !== '' ? value : undefined)
+
+// Number of days in a closed date interval [from, to] (inclusive on both ends),
+// e.g. [2026-07-01, 2026-07-31] = 31.
+const daysInclusive = (from: Date, to: Date): number => {
+  const ms = to.getTime() - from.getTime()
+  if (ms < 0) return 0
+  return Math.floor(ms / (24 * 60 * 60 * 1000)) + 1
+}
+
+const roundCurrency = (value: number): number =>
+  Math.round((value + Number.EPSILON) * 100) / 100
+
+// The part of a rent row that falls within an uncontracted interval, prorated
+// by the days the row is valid there. A rent row is only valid between its own
+// from and to dates (e.g. an old rent ending and a new one starting with a rent
+// change), so rows outside the interval give no rental loss.
+const prorateRentRow = (
+  hyra: TenfastRentalLossHyra,
+  interval: RentalLossInterval,
+  daysInMonth: number
+):
+  | { amount: number; from: Date; to: Date; coversInterval: boolean }
+  | undefined => {
+  const rowFrom = hyra.from ? new Date(hyra.from) : undefined
+  const rowTo = hyra.to ? new Date(hyra.to) : undefined
+  const from = rowFrom && rowFrom > interval.from ? rowFrom : interval.from
+  const to = rowTo && rowTo < interval.to ? rowTo : interval.to
+  const days = daysInclusive(from, to)
+
+  if (days <= 0) return undefined
+
+  return {
+    amount: roundCurrency((hyra.amount * days) / daysInMonth),
+    from,
+    to,
+    coversInterval:
+      from.getTime() === interval.from.getTime() &&
+      to.getTime() === interval.to.getTime(),
+  }
+}
+
+// Maps one Tenfast rental loss to one RentalLoss per uncontracted interval.
+// Tenfast reports every uncontracted interval of the month on a single record;
+// downstream accounting (rental blocks, proration, voucher dates) works on a
+// single continuous interval, so we split here instead.
+//
+// calculatedAmount is the rental loss of all rent rows valid in the
+// uncontracted intervals, before rows are left out for missing articles or
+// rental loss accounts. It is compared with Tenfast's own proration.
+export const mapToRentalLoss = async (
+  tenfastRentalLoss: TenfastRentalLoss
+): Promise<{
+  rentalLosses: RentalLoss[]
+  errors: RentalLossError[]
+  calculatedAmount: number
+  calculatedRowCount: number
+}> => {
+  const errors: RentalLossError[] = []
+  const rentalObjectExternalId = tenfastRentalLoss.hyresobjekt.externalId
+
+  const intervals = tenfastRentalLoss.uncontractedIntervals.map((interval) => ({
+    from: new Date(interval.from),
+    to: new Date(interval.to),
+  }))
+
+  if (intervals.length === 0) {
+    logger.error(
+      { rentalObject: rentalObjectExternalId, month: tenfastRentalLoss.month },
+      'Rental loss has no uncontracted intervals'
+    )
+    errors.push({
+      rentalObject: rentalObjectExternalId,
+      error: `Hyresbortfallet för ${rentalObjectExternalId} ${tenfastRentalLoss.month} saknar avtalslösa perioder`,
+    })
+
+    return {
+      rentalLosses: [],
+      errors,
+      calculatedAmount: 0,
+      calculatedRowCount: 0,
+    }
+  }
+
+  let calculatedAmount = 0
+  let calculatedRowCount = 0
+  const rentalLossRowsPerInterval: RentalLossRow[][] = intervals.map(() => [])
+
+  for (const hyra of tenfastRentalLoss.hyresobjekt.hyror) {
+    const proratedParts = intervals.map((interval) =>
+      prorateRentRow(hyra, interval, tenfastRentalLoss.days.month)
+    )
+
+    // Not valid during any uncontracted interval, so no rental loss.
+    if (proratedParts.every((part) => !part)) continue
+
+    proratedParts.forEach((part) => {
+      if (!part) return
+      calculatedAmount += part.amount
+      calculatedRowCount++
+    })
+
+    if (!hyra.article) {
+      logger.error(
+        { rentalObject: rentalObjectExternalId, label: hyra.label },
+        'Rental loss row is missing rent article'
+      )
+      errors.push({
+        rentalObject: rentalObjectExternalId,
+        error: `Hyresraden ${hyra.label} saknar hyresartikel`,
+      })
+      continue
+    }
+
+    const articleResult = await getInvoiceArticle(hyra.article)
+    if (!articleResult.ok) {
+      errors.push({
+        rentalObject: rentalObjectExternalId,
+        error: `Kunde inte hämta hyresartikel ${hyra.article}`,
+      })
+      continue
+    }
+
+    const article = articleResult.data
+    const rentalLossConfigurations =
+      article.accountConfigurations?.filter(
+        (accountConfiguration) =>
+          accountConfiguration.debitType === 'HYRESBORTFALL'
+      ) ?? []
+
+    // Only include rows whose article actually has rental loss
+    // (HYRESBORTFALL) account configurations.
+    if (rentalLossConfigurations.length === 0) {
+      continue
+    }
+
+    const incomeConfiguration = rentalLossConfigurations.find(
+      (accountConfiguration) => accountConfiguration.categoryCode === 'Intäkter'
+    )
+    const costConfiguration = rentalLossConfigurations.find(
+      (accountConfiguration) =>
+        accountConfiguration.categoryCode === 'Kostnad/Inköp'
+    )
+
+    if (!incomeConfiguration || !costConfiguration) {
+      logger.error(
+        { article },
+        'Rent article is missing rental loss account configuration'
+      )
+      errors.push({
+        rentalObject: rentalObjectExternalId,
+        error: `Hyresartikeln ${article.code} saknar konton för hyresbortfall (Intäkter och/eller Kostnad/Inköp)`,
+      })
+      continue
+    }
+
+    const row: Omit<RentalLossRow, 'amount' | 'totalAmount'> = {
+      vat: hyra.vat,
+      rentArticleName: article.code,
+      rentalObject: rentalObjectExternalId,
+      incomeAccount: incomeConfiguration.accountNr,
+      incomeProjectCode: emptyToUndefined(incomeConfiguration.projectCode),
+      incomeProperty: emptyToUndefined(incomeConfiguration.property),
+      incomeFreeCode: emptyToUndefined(incomeConfiguration.freeText),
+      incomeCostCode: emptyToUndefined(incomeConfiguration.costCenter),
+      costAccount: costConfiguration.accountNr,
+      costProjectCode: emptyToUndefined(costConfiguration.projectCode),
+      costProperty: emptyToUndefined(costConfiguration.property),
+      costFreeCode: emptyToUndefined(costConfiguration.freeText),
+      costCostCode: emptyToUndefined(costConfiguration.costCenter),
+    }
+
+    proratedParts.forEach((part, index) => {
+      if (!part) return
+      rentalLossRowsPerInterval[index].push({
+        ...row,
+        amount: part.amount,
+        totalAmount: roundCurrency(part.amount * (1 + (row.vat ?? 0))),
+        // A row valid during only part of the interval keeps its own dates.
+        ...(part.coversInterval
+          ? {}
+          : { fromDate: part.from, toDate: part.to }),
+      })
+    })
+  }
+
+  const rentalLosses = intervals.map((uncontractedInterval, index) => ({
+    rentalLossRows: rentalLossRowsPerInterval[index],
+    rentalObject: rentalObjectExternalId,
+    month: tenfastRentalLoss.month,
+    days: {
+      totalInMonth: tenfastRentalLoss.days.month,
+      contracted: tenfastRentalLoss.days.contracted,
+      uncontracted: daysInclusive(
+        uncontractedInterval.from,
+        uncontractedInterval.to
+      ),
+    },
+    uncontractedInterval,
+  }))
+
+  return {
+    rentalLosses,
+    errors,
+    calculatedAmount: roundCurrency(calculatedAmount),
+    calculatedRowCount,
+  }
+}
+
+// Compares our calculated rental loss with Tenfast's own proration of the same
+// rent rows. Each prorated part is rounded to öre on both sides, so allow one
+// öre per part. Reports without proration (older report versions) are not
+// checked.
+export const checkRentalLossAgainstTenfast = (
+  tenfastRentalLoss: TenfastRentalLoss,
+  calculatedAmount: number,
+  calculatedRowCount: number
+): RentalLossChecksumMismatch | undefined => {
+  const tenfastRows = tenfastRentalLoss.proration?.hyraRows
+  if (!tenfastRows) return undefined
+
+  const tenfastAmount = roundCurrency(
+    tenfastRows.reduce((sum, hyra) => sum + hyra.amount, 0)
+  )
+  const diff = roundCurrency(calculatedAmount - tenfastAmount)
+  const tolerance =
+    0.01 * Math.max(1, calculatedRowCount, tenfastRows.length) + Number.EPSILON
+
+  if (Math.abs(diff) <= tolerance) return undefined
+
+  return {
+    rentalObject: tenfastRentalLoss.hyresobjekt.externalId,
+    month: tenfastRentalLoss.month,
+    calculatedAmount,
+    tenfastAmount,
+    diff,
+  }
+}
+
+export const getRentalLosses = async (
+  company: MimerCompany,
+  reportId: string
+): Promise<
+  AdapterResult<
+    {
+      rentalLosses: RentalLoss[]
+      errors: RentalLossError[]
+      // External ids of uncontracted rental objects that have no rent rows
+      // in Tenfast, so there is no rental loss to account for.
+      rentalObjectsWithoutRentRows: string[]
+      // Rental objects where our calculated rental loss differs from
+      // Tenfast's proration. Reported only, they are still accounted.
+      checksumMismatches: RentalLossChecksumMismatch[]
+    },
+    string
+  >
+> => {
+  const result = await makeTenfastRequest(
+    `/v1/hyresvard/reports/${encodeURIComponent(reportId)}/download`,
+    {
+      params: {
+        hyresvard: company.tenfastId,
+        /*paginate:
+        'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
+        //ocrNumber: '552606000000733',
+      },
+    }
+  )
+
+  if (result.status !== 200) {
+    logger.error(
+      { error: result.statusText },
+      'Error getting invoices from Tenfast'
+    )
+    return { ok: false, err: result.statusText }
+  }
+
+  const parsedResponse = TenfastRentalLossResponseSchema.safeParse(result.data)
+
+  if (parsedResponse.error) {
+    logger.error({ error: parsedResponse.error }, 'Could not parse rental loss')
+    return { ok: false, err: 'schema-error' }
+  }
+
+  logger.info(
+    { hyresvard: company.tenfastId, count: parsedResponse.data.length },
+    'Got rental loss report from Tenfast'
+  )
+
+  const rentalLosses: RentalLoss[] = []
+  const errors: RentalLossError[] = []
+  const rentalObjectsWithoutRentRows: string[] = []
+  const checksumMismatches: RentalLossChecksumMismatch[] = []
+
+  const rentalLossResults = parsedResponse.data.filter((rentalLoss) => {
+    return rentalLoss.days.uncontracted > 0
+  })
+
+  if (rentalLossResults.length === 0) {
+    logger.info(
+      { hyresvard: company.tenfastId },
+      'No rental objects with uncontracted days returned from Tenfast'
+    )
+    return {
+      ok: true,
+      data: {
+        rentalLosses: [],
+        errors: [],
+        rentalObjectsWithoutRentRows: [],
+        checksumMismatches: [],
+      },
+    }
+  }
+
+  logger.info(
+    { hyresvard: company.tenfastId, count: rentalLossResults.length },
+    'Rental losses to process'
+  )
+
+  for (const tenfastRentalLoss of rentalLossResults) {
+    if (tenfastRentalLoss.hyresobjekt.hyror.length === 0) {
+      rentalObjectsWithoutRentRows.push(
+        tenfastRentalLoss.hyresobjekt.externalId
+      )
+      continue
+    }
+
+    const {
+      rentalLosses: mappedRentalLosses,
+      errors: rentalLossErrors,
+      calculatedAmount,
+      calculatedRowCount,
+    } = await mapToRentalLoss(tenfastRentalLoss)
+    rentalLosses.push(...mappedRentalLosses)
+    errors.push(...rentalLossErrors)
+
+    const mismatch = checkRentalLossAgainstTenfast(
+      tenfastRentalLoss,
+      calculatedAmount,
+      calculatedRowCount
+    )
+    if (mismatch) checksumMismatches.push(mismatch)
+  }
+
+  if (checksumMismatches.length > 0) {
+    logger.warn(
+      { hyresvard: company.tenfastId, checksumMismatches },
+      'Calculated rental loss differs from Tenfast proration'
+    )
+  }
+
+  if (rentalObjectsWithoutRentRows.length > 0) {
+    logger.warn(
+      {
+        hyresvard: company.tenfastId,
+        count: rentalObjectsWithoutRentRows.length,
+      },
+      'Uncontracted rental objects without rent rows'
+    )
+  }
+
+  logger.info(
+    {
+      hyresvard: company.tenfastId,
+      count: rentalLosses.length,
+      errors: errors.length,
+    },
+    'Rental losses processed'
+  )
+
+  return {
+    ok: true,
+    data: {
+      rentalLosses,
+      errors,
+      rentalObjectsWithoutRentRows,
+      checksumMismatches,
+    },
+  }
+}
+
+/**
+ * Marks each invoice as exported in Tenfast. Keeps going when a single
+ * invoice fails, since the accounting files have already been uploaded:
+ * stopping would leave the rest unmarked and they would be exported again.
+ * Returns the invoices that could not be marked so they can be handled
+ * manually.
+ */
+export const markInvoicesAsExported = async (
+  invoices: Invoice[]
+): Promise<economy.MarkInvoiceAsExportedFailure[]> => {
+  const failures: economy.MarkInvoiceAsExportedFailure[] = []
+
+  for (const invoice of invoices) {
+    if (!invoice.externalId) {
+      logger.error(
+        { invoiceNumber: invoice.invoiceId },
+        'tenfast-adapter.markInvoicesAsExported: invoice has no external id'
+      )
+      failures.push({
+        invoiceNumber: invoice.invoiceId,
+        error: 'missing-external-id',
+      })
+      continue
+    }
+
+    try {
+      const response = await makeTenfastRequest(
+        `/v1/hyresvard/hyror/${invoice.externalId}/manual-export`,
+        { method: 'POST', validateStatus: () => true }
+      )
+
+      if (response.status < 200 || response.status >= 300) {
+        logger.error(
+          { invoiceNumber: invoice.invoiceId, status: response.status },
+          'tenfast-adapter.markInvoicesAsExported'
+        )
+        failures.push({
+          invoiceNumber: invoice.invoiceId,
+          error: 'request-failed',
+          status: response.status,
+        })
+      }
+    } catch (err: unknown) {
+      logger.error(
+        {
+          invoiceNumber: invoice.invoiceId,
+          error: errorMessage(err),
+        },
+        'tenfast-adapter.markInvoicesAsExported'
+      )
+      failures.push({
+        invoiceNumber: invoice.invoiceId,
+        error: 'request-failed',
+      })
+    }
+  }
+
+  return failures
+}
 export type { TenfastOutboundExport }

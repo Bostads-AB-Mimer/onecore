@@ -22,6 +22,7 @@ import { match, P } from 'ts-pattern'
 
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
+import { InvoiceWithAccounting } from '@src/common/types/typesv2'
 
 const XledgerAuthHeader = {
   Authorization: 'token ' + config.xledger.apiToken,
@@ -1477,33 +1478,45 @@ export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
   }
 }
 
-const getTaxRule = (totalAmount: number, totalVat: number, account: string) => {
-  const vatRate = Math.round((totalVat * 100) / (totalAmount - totalVat))
+const getTaxRuleFromPercentage = (vatPercentage: number, account: string) => {
   const accounts208 = ['3012', '3014', '3016']
 
-  switch (vatRate) {
-    case 25:
-      return accounts208.includes(account) ? '208' : '2'
-    case 12:
-      return '21'
-    case 6:
-      return '22'
+  switch (vatPercentage) {
+    case 0.25:
+      return accounts208.includes(account) ? '208N' : '2N'
+    case 0.12:
+      return '21N'
+    case 0.06:
+      return '22N'
     default:
       return ''
   }
 }
 
-export const getPeriodInformation = (
-  invoiceDate: Date | null,
-  fromDate: Date,
-  toDate: Date
+export const setInvoiceRowsTaxRule = (invoice: InvoiceWithAccounting) => {
+  invoice.invoiceRows.forEach((row) => {
+    if (row.vat && row.vat !== 0) {
+      row.taxRule = getTaxRuleFromPercentage(row.vat, row.account ?? '')
+    }
+  })
+}
+
+export const getPeriodInformationFromDateStrings = (
+  invoiceDate: string | null,
+  fromDate: string,
+  toDate: string
 ): { periodStart: string; periods: string } => {
   if (!invoiceDate) {
     invoiceDate = fromDate
   }
 
-  const toStart = fromDate.getMonth() - invoiceDate.getMonth()
-  const invoiceInterval = toDate.getMonth() - fromDate.getMonth()
+  // Months since year 0 for a "YYYY-MM-DD" string, so differences stay
+  // correct across New Year.
+  const monthIndex = (date: string) =>
+    parseInt(date.substring(0, 4)) * 12 + parseInt(date.substring(5, 7))
+
+  const toStart = monthIndex(fromDate) - monthIndex(invoiceDate)
+  const invoiceInterval = monthIndex(toDate) - monthIndex(fromDate)
 
   const periodInformation = {
     periodStart: toStart == 0 ? '' : toStart.toString(),
@@ -1516,54 +1529,12 @@ export const getPeriodInformation = (
   return periodInformation
 }
 
-export const transformAggregatedInvoiceRow = (
-  invoiceRow: InvoiceDataRow,
-  chunkNumber: number
-): InvoiceDataRow => {
-  const periodInformation = getPeriodInformation(
-    null,
-    dateFromXledgerDateString(invoiceRow.InvoiceFromDate as string),
-    dateFromXledgerDateString(invoiceRow.InvoiceToDate as string)
-  )
-
-  const transformedRow = {
-    voucherType: 'AR',
-    voucherNo:
-      '1' +
-      invoiceRow.BatchId.toString().padStart(5, '0') +
-      chunkNumber.toString().padStart(3, '0'),
-    voucherDate: invoiceRow.InvoiceFromDate,
-    account: invoiceRow.Account,
-    posting1: invoiceRow.CostCode,
-    posting2: invoiceRow.ProjectCode,
-    posting3: invoiceRow.Property,
-    posting4: invoiceRow.FreeCode,
-    posting5: invoiceRow.CounterPart,
-    periodStart: periodInformation.periodStart,
-    noOfPeriods: periodInformation.periods,
-    subledgerNo: '',
-    invoiceDate: '',
-    invoiceNo: '',
-    ocr: '',
-    dueDate: '',
-    text: '',
-    taxRule: getTaxRule(
-      invoiceRow.totalAmount as number,
-      invoiceRow.totalVat as number,
-      invoiceRow.Account as string
-    ).toString(),
-    amount: -invoiceRow.totalAmount,
-    totalAccount: invoiceRow.TotalAccount,
-  }
-
-  return transformedRow
-}
-
 export const uploadFile = async (filename: string, csvFile: string) => {
   const sftpConfig: SftpClient.ConnectOptions = {
     host: config.xledger.sftp.host,
     username: config.xledger.sftp.username,
     password: config.xledger.sftp.password,
+    port: config.xledger.sftp.port,
   }
 
   if (config.xledger.sftp.useSshDss) {
@@ -1595,6 +1566,7 @@ export const uploadFile = async (filename: string, csvFile: string) => {
     await sftp.connect(sftpConfig)
     await sftp.put(stream, remoteDir + '/' + filename)
   } catch (err) {
+    logger.error({ err }, 'SFTP Error')
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
     await sftp.end()
