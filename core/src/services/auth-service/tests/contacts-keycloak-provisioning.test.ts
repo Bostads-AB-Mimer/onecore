@@ -26,6 +26,7 @@ jest.mock('../../../common/config', () => ({
 import {
   connectContactsKeycloakAdmin,
   isContactsProvisioningConfigured,
+  toContactsUsername,
 } from '../contacts-keycloak-provisioning'
 
 const keycloak = 'http://keycloak.test'
@@ -64,6 +65,44 @@ describe('contacts Keycloak provisioning', () => {
 
     it('is true with client id and secret', () => {
       expect(isContactsProvisioningConfigured()).toBe(true)
+    })
+  })
+
+  describe('toContactsUsername', () => {
+    it.each([
+      ['200801011230', '200801011230'],
+      ['0801011230', '200801011230'],
+      ['080101-1230', '200801011230'],
+      ['20080101-1230', '200801011230'],
+      // Samordningsnummer: day + 60.
+      ['200801611237', '200801611237'],
+    ])('turns %s into twelve digits', (input, expected) => {
+      expect(toContactsUsername(input)).toBe(expected)
+    })
+
+    // A wrong check digit, no digits, and an interim number (a letter in place of a digit).
+    it.each(['200801011231', 'not-a-number', '', '20080101T230'])(
+      'is null for %p',
+      (input) => {
+        expect(toContactsUsername(input)).toBeNull()
+      }
+    )
+  })
+
+  describe('getUser', () => {
+    it('reads the full user representation by id', async () => {
+      const user = {
+        id: 'user-1',
+        username: '200801011234',
+        attributes: { contact_code: ['P123456'] },
+      }
+      expectProvisioningToken()
+        .get(`${usersPath}/user-1`)
+        .matchHeader('authorization', 'Bearer admin-token')
+        .reply(200, user)
+
+      const admin = await connectContactsKeycloakAdmin()
+      await expect(admin.getUser('user-1')).resolves.toEqual(user)
     })
   })
 
@@ -167,54 +206,44 @@ describe('contacts Keycloak provisioning', () => {
     })
   })
 
-  describe('fillMissingContactCode', () => {
-    it('adds contact_code and keeps every other field and attribute', async () => {
-      let put: Record<string, unknown> | undefined
-      expectProvisioningToken()
-        .put(`${usersPath}/user-1`, (body) => {
-          put = body
-          return true
-        })
-        .reply(204)
+  describe('setContactCode', () => {
+    it.each([
+      ['a user without one', { account_type: ['person'] }],
+      [
+        'a user with another',
+        { account_type: ['person'], contact_code: ['P000001'] },
+      ],
+    ])(
+      'sets contact_code on %s and keeps every other field and attribute',
+      async (_, attributes) => {
+        let put: Record<string, unknown> | undefined
+        expectProvisioningToken()
+          .put(`${usersPath}/user-1`, (body) => {
+            put = body
+            return true
+          })
+          .reply(204)
 
-      const admin = await connectContactsKeycloakAdmin()
-      await expect(
-        admin.fillMissingContactCode(
+        const admin = await connectContactsKeycloakAdmin()
+        await admin.setContactCode(
           {
             id: 'user-1',
             username: '200801011234',
             email: 'old@example.com',
-            attributes: { account_type: ['person'] },
+            attributes,
           },
           'P123456'
         )
-      ).resolves.toBe(true)
 
-      expect(put).toEqual({
-        id: 'user-1',
-        username: '200801011234',
-        email: 'old@example.com',
-        attributes: { account_type: ['person'], contact_code: ['P123456'] },
-      })
-      expect(nock.isDone()).toBe(true)
-    })
-
-    it('leaves a user that already has a contact_code alone', async () => {
-      expectProvisioningToken()
-
-      const admin = await connectContactsKeycloakAdmin()
-      await expect(
-        admin.fillMissingContactCode(
-          {
-            id: 'user-1',
-            username: '200801011234',
-            attributes: { contact_code: ['P000001'] },
-          },
-          'P123456'
-        )
-      ).resolves.toBe(false)
-      expect(nock.isDone()).toBe(true)
-    })
+        expect(put).toEqual({
+          id: 'user-1',
+          username: '200801011234',
+          email: 'old@example.com',
+          attributes: { account_type: ['person'], contact_code: ['P123456'] },
+        })
+        expect(nock.isDone()).toBe(true)
+      }
+    )
   })
 
   describe('sendSetPasswordEmail', () => {
