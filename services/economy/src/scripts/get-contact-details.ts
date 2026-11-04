@@ -13,18 +13,12 @@ const MAX_CONTACTS_PER_QUERY = 2000
 const getContactDetails = async () => {
   console.log(process.argv[2])
 
-  const contactCodesFile = await fs.readFile(
-    process.argv[2]
-  )
+  const contactCodesFile = await fs.readFile(process.argv[2])
   const contactCodes = contactCodesFile.toString().split('\n')
 
   const batchId = await createBatch(0)
   const contacts = []
-  for (
-    let i = 0;
-    i < contactCodes.length;
-    i += MAX_CONTACTS_PER_QUERY
-  ) {
+  for (let i = 0; i < contactCodes.length; i += MAX_CONTACTS_PER_QUERY) {
     const chunk = contactCodes.slice(i, i + MAX_CONTACTS_PER_QUERY)
     contacts.push(...(await getXpandContacts(chunk)))
     console.log(`Fetched contacts ${i + 1} - ${i + chunk.length}`)

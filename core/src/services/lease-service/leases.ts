@@ -164,8 +164,8 @@ export const routes = (router: KoaRouter) => {
           if (!lease.contacts || lease.contacts.length === 0) {
             logger.error(
               'No tenant on contract Id ' +
-              lease.leaseId +
-              ', skipping lease for CSC report'
+                lease.leaseId +
+                ', skipping lease for CSC report'
             )
             return null
           }

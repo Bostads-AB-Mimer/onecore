@@ -109,14 +109,14 @@ const transformFromDbContact = (
     birthDate: protectedIdentity ? undefined : row.birthDate,
     ...(row.street || row.street2 || row.postalCode || row.city
       ? {
-        address: {
-          street: row.street,
-          street2: row.street2,
-          number: '',
-          postalCode: row.postalCode,
-          city: row.city,
-        },
-      }
+          address: {
+            street: row.street,
+            street2: row.street2,
+            number: '',
+            postalCode: row.postalCode,
+            city: row.city,
+          },
+        }
       : {}),
     phoneNumbers: phoneNumbers,
     emailAddress:
@@ -743,12 +743,12 @@ const getContacts = async (contactCodes: string[]) => {
       },
       phoneNumbers: row.phoneNumber
         ? [
-          {
-            phoneNumber: row.phoneNumber,
-            type: '',
-            isMainNumber: true,
-          },
-        ]
+            {
+              phoneNumber: row.phoneNumber,
+              type: '',
+              isMainNumber: true,
+            },
+          ]
         : [],
       emailAddress:
         process.env.NODE_ENV === 'production'

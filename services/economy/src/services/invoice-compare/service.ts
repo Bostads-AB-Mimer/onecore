@@ -257,7 +257,11 @@ export const getXpandInvoiceRows = async (
 
   // Intäktkonto per artikel för fakturans år (repsk p1, keyrektk INTAKT)
   const articleKeys = [
-    ...new Set(invoices.flatMap((invoice) => invoice.rows.map((row) => row.article)).filter((a) => a !== '')),
+    ...new Set(
+      invoices
+        .flatMap((invoice) => invoice.rows.map((row) => row.article))
+        .filter((a) => a !== '')
+    ),
   ]
   const articleAccounts = await getXpandArticleAccounts(articleKeys, month)
 
@@ -354,7 +358,10 @@ const fetchTenfastPaged = async (params: {
   let next: string | null = ''
   let totalCount: number | undefined = undefined
 
-  while (next !== null && (totalCount === undefined || records.length < totalCount)) {
+  while (
+    next !== null &&
+    (totalCount === undefined || records.length < totalCount)
+  ) {
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
         hyresvard: params.hyresvard,
@@ -431,8 +438,7 @@ const getArticleInfos = async (
 
     const configurations =
       (result.data.accountConfigurations as
-        | TenfastAccountConfiguration[]
-        | undefined) ?? []
+        TenfastAccountConfiguration[] | undefined) ?? []
     const incomeConfiguration = configurations.find(
       (configuration) =>
         configuration.categoryCode === 'Intäkter' &&
@@ -493,7 +499,7 @@ export const getTenfastInvoiceRows = async (
   visible.forEach((invoice) => {
     const byRentalObjectId = new Map<
       string,
-      { lease: typeof invoice.avtal[number]; rentalObject: string }
+      { lease: (typeof invoice.avtal)[number]; rentalObject: string }
     >()
     invoice.avtal.forEach((lease) => {
       lease.hyresobjekt.forEach((rentalObject) => {
@@ -514,7 +520,9 @@ export const getTenfastInvoiceRows = async (
       const lease = match?.lease ?? mainLease
       const rentalObject = match?.rentalObject ?? mainRentalObject
       const amount = row.amount ?? 0
-      const articleInfo = row.article ? articleInfos.get(row.article) : undefined
+      const articleInfo = row.article
+        ? articleInfos.get(row.article)
+        : undefined
       const articleCode = articleInfo?.code ?? row.article ?? ''
 
       rows.push({
@@ -522,7 +530,9 @@ export const getTenfastInvoiceRows = async (
         invoiceNumber: invoice.ocrNumber || invoice._id,
         state: invoice.state,
         invoiceDate: (
-          invoice.createdAt ?? invoice.expectedInvoiceDate ?? ''
+          invoice.createdAt ??
+          invoice.expectedInvoiceDate ??
+          ''
         ).slice(0, 10),
         customer: lease?.hyresgaster[0]?.externalId ?? '',
         contract: lease?.externalId ?? '',
@@ -552,9 +562,9 @@ export const getPropertyMap = async (
   rentalObjectCodes: string[],
   month: string
 ): Promise<Map<string, string>> => {
-  const unique = [...new Set(rentalObjectCodes.map((c) => c.split('/')[0]))].filter(
-    (code) => code !== ''
-  )
+  const unique = [
+    ...new Set(rentalObjectCodes.map((c) => c.split('/')[0])),
+  ].filter((code) => code !== '')
   const year = month.slice(0, 4)
   const rules = await getRentalSpecificRules(unique, year)
 
@@ -608,10 +618,7 @@ const TOLERANCE = 1
  * Keys where the two sides differ: present on only one side, or with a netto
  * or vat difference above the tolerance.
  */
-export const findDiffKeys = (
-  left: Aggregates,
-  right: Aggregates
-): string[] => {
+export const findDiffKeys = (left: Aggregates, right: Aggregates): string[] => {
   const diffs: string[] = []
 
   const keys = [...new Set([...Object.keys(left), ...Object.keys(right)])]
@@ -711,20 +718,18 @@ export const invoiceContributions = (
   })
 
   const out: InvoiceContribution[] = []
-    ;[...byKey.keys()]
-      .sort()
-      .forEach((key) => {
-        const contributions = [...byKey.get(key)!.values()]
-        const byAbsAmount = (a: InvoiceContribution, b: InvoiceContribution) =>
-          Math.abs(b.invoiceNetto) - Math.abs(a.invoiceNetto)
-        const xpand = contributions
-          .filter((contribution) => contribution.side === 'xpand')
-          .sort(byAbsAmount)
-        const tenfast = contributions
-          .filter((contribution) => contribution.side === 'tenfast')
-          .sort(byAbsAmount)
-        out.push(...xpand, ...tenfast)
-      })
+  ;[...byKey.keys()].sort().forEach((key) => {
+    const contributions = [...byKey.get(key)!.values()]
+    const byAbsAmount = (a: InvoiceContribution, b: InvoiceContribution) =>
+      Math.abs(b.invoiceNetto) - Math.abs(a.invoiceNetto)
+    const xpand = contributions
+      .filter((contribution) => contribution.side === 'xpand')
+      .sort(byAbsAmount)
+    const tenfast = contributions
+      .filter((contribution) => contribution.side === 'tenfast')
+      .sort(byAbsAmount)
+    out.push(...xpand, ...tenfast)
+  })
   return out
 }
 
@@ -822,7 +827,10 @@ const comparisonRowToRecord = (row: ComparisonRow) => ({
   vat: row.vat.toFixed(2),
 })
 
-const diffRowToRecord = (row: DiffRow, contributions: InvoiceContribution[]) => {
+const diffRowToRecord = (
+  row: DiffRow,
+  contributions: InvoiceContribution[]
+) => {
   const [kontrakt, artikel] = row.group.split('|')
   // Xpand-kontributioner ligger före tenfast i listan, så nummer och datum
   // hör ihop parvis (största belopp först per sida)
@@ -892,10 +900,7 @@ export const compareInvoices = async (
 
   logger.info('invoice-compare: fetching Xpand invoice rows...')
   const xpandRows = await getXpandInvoiceRows(month, company)
-  logger.info(
-    { rows: xpandRows.length },
-    'invoice-compare: Xpand rows fetched'
-  )
+  logger.info({ rows: xpandRows.length }, 'invoice-compare: Xpand rows fetched')
 
   logger.info('invoice-compare: fetching Tenfast invoice rows...')
   const tenfastRows = await getTenfastInvoiceRows(month, mimerCompany.tenfastId)
@@ -914,9 +919,9 @@ export const compareInvoices = async (
   )
   const propertyMap = await getPropertyMap(allRentalObjects, month)
 
-    ;[...xpandRows, ...tenfastRows].forEach((row) => {
-      row.property = propertyMap.get(row.rentalObject.split('/')[0]) ?? ''
-    })
+  ;[...xpandRows, ...tenfastRows].forEach((row) => {
+    row.property = propertyMap.get(row.rentalObject.split('/')[0]) ?? ''
+  })
 
   const filteredXpand = applyFilters(xpandRows, {
     properties: options.properties,
@@ -949,12 +954,10 @@ export const compareInvoices = async (
   const xpandAggregates = aggregateRows(filteredXpand.rows, groupKey)
   const tenfastAggregates = aggregateRows(filteredTenfast.rows, groupKey)
   const diffKeys = findDiffKeys(xpandAggregates, tenfastAggregates)
-  const diffRows = toDiffRows(
-    xpandAggregates,
-    tenfastAggregates,
-    diffKeys,
-    [...filteredXpand.rows, ...filteredTenfast.rows]
-  )
+  const diffRows = toDiffRows(xpandAggregates, tenfastAggregates, diffKeys, [
+    ...filteredXpand.rows,
+    ...filteredTenfast.rows,
+  ])
   const contributions = invoiceContributions(
     [...filteredXpand.rows, ...filteredTenfast.rows],
     diffKeys,
@@ -985,9 +988,7 @@ export const compareInvoices = async (
     )
     write(
       'diff_per_kontrakt_artikel.csv',
-      toCsv(
-        diffRows.map((row) => diffRowToRecord(row, contributions))
-      )
+      toCsv(diffRows.map((row) => diffRowToRecord(row, contributions)))
     )
     write(
       'invoice_contributions.csv',
@@ -1013,14 +1014,13 @@ export const compareInvoices = async (
     `${diffRows.length} diffande kontrakt+artikel-grupper, total netto-diff (xpand - tenfast): ${totalDiff.toFixed(2)}`
   )
 
-  const top = [...diffRows]
-    .sort((a, b) => Math.abs(b.diffNetto) - Math.abs(a.diffNetto))
+  const top = [...diffRows].sort(
+    (a, b) => Math.abs(b.diffNetto) - Math.abs(a.diffNetto)
+  )
   //.slice(0, 25)
   if (top.length) {
     console.log('\nDiffar per kontrakt+artikel (CSV):')
-    console.log(
-      toCsv(top.map((row) => diffRowToRecord(row, contributions)))
-    )
+    console.log(toCsv(top.map((row) => diffRowToRecord(row, contributions))))
   }
 
   return {

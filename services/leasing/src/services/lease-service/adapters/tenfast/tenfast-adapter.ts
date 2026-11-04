@@ -1302,10 +1302,10 @@ export const preliminaryTerminateLease = async (
       number,
       {
         err:
-        | 'lease-not-found'
-        | 'tenant-email-missing'
-        | 'termination-failed'
-        | 'unknown'
+          | 'lease-not-found'
+          | 'tenant-email-missing'
+          | 'termination-failed'
+          | 'unknown'
         message: string
       }
     > = {

@@ -1510,10 +1510,13 @@ export const getPeriodInformationFromDateStrings = (
     invoiceDate = fromDate
   }
 
-  const toStart =
-    parseInt(fromDate.substring(5, 7)) - parseInt(invoiceDate.substring(5, 7))
-  const invoiceInterval =
-    parseInt(toDate.substring(5, 7)) - parseInt(fromDate.substring(5, 7))
+  // Months since year 0 for a "YYYY-MM-DD" string, so differences stay
+  // correct across New Year.
+  const monthIndex = (date: string) =>
+    parseInt(date.substring(0, 4)) * 12 + parseInt(date.substring(5, 7))
+
+  const toStart = monthIndex(fromDate) - monthIndex(invoiceDate)
+  const invoiceInterval = monthIndex(toDate) - monthIndex(fromDate)
 
   const periodInformation = {
     periodStart: toStart == 0 ? '' : toStart.toString(),
@@ -1723,21 +1726,23 @@ export const submitMiscellaneousInvoice = async (
           ourRef: {
             dbId: ${JSON.stringify(invoice.reference)}
           }
-          ${invoice.projectCode
-        ? `
+          ${
+            invoice.projectCode
+              ? `
                 glObject2: {
                   code: ${JSON.stringify(invoice.projectCode)}
                 }
               `
-        : ''
-      }
+              : ''
+          }
           comment: ${JSON.stringify(invoice.comment ?? '')}
-          ${invoice.attachment
-        ? `
+          ${
+            invoice.attachment
+              ? `
                 attachment: ${JSON.stringify(invoice.attachment.originalFilename)}
                 `
-        : ''
-      }
+              : ''
+          }
         }
       }
     `

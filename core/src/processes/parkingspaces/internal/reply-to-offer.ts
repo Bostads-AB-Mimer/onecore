@@ -154,7 +154,7 @@ export const acceptOffer = async (
       return endFailingProcess(
         log,
         validationResultProperty.err ??
-        ReplyToOfferErrorCodes.NotEligibleToRent,
+          ReplyToOfferErrorCodes.NotEligibleToRent,
         400,
         `Applicant ${offer.offeredApplicant.contactCode} is not eligible for renting due to Property Rental Rules`
       )

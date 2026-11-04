@@ -15,7 +15,10 @@ import {
   listNewOutboundExports,
   getRentalLosses,
   getLeasesByTenantId,
+  markInvoicesAsExported,
+  getInvoicesNotExported,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
+import { MimerCompany } from '@src/common/types/typesv2'
 import { PaymentStatus } from '@onecore/types'
 import {
   TenfastTenantFactory,
@@ -28,6 +31,7 @@ import {
   TenfastInvoiceRowFactory,
   TenfastAutogiroConsentFactory,
   TenfastOutboundExportFactory,
+  invoice as InvoiceFactory,
 } from '../../factories'
 
 // Mock axios
@@ -1738,5 +1742,170 @@ describe(getRentalLosses, () => {
     assert(result.ok)
     expect(result.data.rentalLosses[0].rentalLossRows).toEqual([])
     expect(result.data.checksumMismatches).toEqual([])
+  })
+})
+
+describe(markInvoicesAsExported, () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('marks every invoice and returns no failures when all succeed', async () => {
+    mockAxios.request.mockResolvedValue({ status: 200, data: {} })
+    const invoices = [
+      InvoiceFactory.build({ invoiceId: '1', externalId: 'ext-1' }),
+      InvoiceFactory.build({ invoiceId: '2', externalId: 'ext-2' }),
+    ]
+
+    const failures = await markInvoicesAsExported(invoices)
+
+    expect(failures).toEqual([])
+    expect(mockAxios.request).toHaveBeenCalledTimes(2)
+    expect(mockAxios.request.mock.calls[1][0].url).toBe(
+      '/v1/hyresvard/hyror/ext-2/manual-export'
+    )
+  })
+
+  it('keeps going after a failed invoice and returns the failures', async () => {
+    mockAxios.request
+      .mockRejectedValueOnce(new Error('socket hang up'))
+      .mockResolvedValueOnce({ status: 503, data: {} })
+      .mockResolvedValueOnce({ status: 200, data: {} })
+    const invoices = [
+      InvoiceFactory.build({ invoiceId: '1', externalId: 'ext-1' }),
+      InvoiceFactory.build({ invoiceId: '2', externalId: 'ext-2' }),
+      InvoiceFactory.build({ invoiceId: '3', externalId: 'ext-3' }),
+      InvoiceFactory.build({ invoiceId: '4', externalId: undefined }),
+    ]
+
+    const failures = await markInvoicesAsExported(invoices)
+
+    expect(mockAxios.request).toHaveBeenCalledTimes(3)
+    expect(failures).toEqual([
+      { invoiceNumber: '1', error: 'request-failed' },
+      { invoiceNumber: '2', error: 'request-failed', status: 503 },
+      { invoiceNumber: '4', error: 'missing-external-id' },
+    ])
+  })
+})
+
+describe(getInvoicesNotExported, () => {
+  const company = {
+    tenfastId: 'test-hyresvard-id',
+    xpandId: '001',
+  } as MimerCompany // only the ids are read by getInvoicesNotExported
+
+  const article = {
+    ...TenfastRentArticleFactory.build(),
+    code: 'HYRA',
+    accountConfigurations: [
+      {
+        accountNr: 3011,
+        categoryCode: 'Intäkter',
+        debitType: 'HYRA',
+        costCenter: '',
+        property: '',
+        freeText: '',
+        projectCode: '',
+      },
+    ],
+  }
+
+  // Answers the invoice list with the given rows and article lookups with
+  // the given response. Rental object lookups get 404 and are left as is.
+  const mockTenfast = (
+    rows: ReturnType<typeof TenfastInvoiceRowFactory.build>[],
+    articleResponse: () => Promise<{ status: number; data?: unknown }>
+  ) => {
+    const record = TenfastInvoiceFactory.build({ hyror: rows })
+    mockAxios.request.mockImplementation(async (config) => {
+      if (config.url === '/v1/hyresvard/hyror') {
+        return { status: 200, data: { records: [record] } }
+      }
+      if (config.url?.startsWith('/v1/hyresvard/articles/')) {
+        return articleResponse()
+      }
+      return { status: 404, data: {} }
+    })
+    return record
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('exports an invoice whose rows all have an article with accounting', async () => {
+    mockTenfast(
+      [TenfastInvoiceRowFactory.build({ article: 'a-1' })],
+      async () => ({
+        status: 200,
+        data: article,
+      })
+    )
+
+    const result = await getInvoicesNotExported(1000, company)
+
+    assert(result.ok)
+    expect(result.data.errors).toEqual([])
+    expect(result.data.invoices).toHaveLength(1)
+    expect(result.data.invoices[0].invoiceRows[0]).toMatchObject({
+      account: '3011',
+    })
+  })
+
+  it('leaves out an invoice with a row that has no article', async () => {
+    const record = mockTenfast(
+      [TenfastInvoiceRowFactory.build({ article: null })],
+      async () => ({ status: 200, data: article })
+    )
+
+    const result = await getInvoicesNotExported(1000, company)
+
+    assert(result.ok)
+    expect(result.data.invoices).toEqual([])
+    expect(result.data.errors).toEqual([
+      {
+        invoiceNumber: record.ocrNumber,
+        error: 'Minst en hyresrad på avin saknar hyresartikel',
+      },
+    ])
+  })
+
+  it('leaves out an invoice whose article does not exist in Tenfast', async () => {
+    const record = mockTenfast(
+      [TenfastInvoiceRowFactory.build({ article: 'a-1' })],
+      async () => ({ status: 404, data: {} })
+    )
+
+    const result = await getInvoicesNotExported(1000, company)
+
+    assert(result.ok)
+    expect(result.data.invoices).toEqual([])
+    expect(result.data.errors).toEqual([
+      {
+        invoiceNumber: record.ocrNumber,
+        error: 'Hyresartikeln a-1 finns inte i Tenfast',
+      },
+    ])
+  })
+
+  it('leaves out an invoice whose article lookup fails', async () => {
+    const record = mockTenfast(
+      [TenfastInvoiceRowFactory.build({ article: 'a-1' })],
+      async () => {
+        throw new Error('socket hang up')
+      }
+    )
+
+    const result = await getInvoicesNotExported(1000, company)
+
+    assert(result.ok)
+    expect(result.data.invoices).toEqual([])
+    expect(result.data.errors).toEqual([
+      {
+        invoiceNumber: record.ocrNumber,
+        error: 'Kunde inte hämta hyresartikeln a-1 från Tenfast',
+      },
+    ])
   })
 })

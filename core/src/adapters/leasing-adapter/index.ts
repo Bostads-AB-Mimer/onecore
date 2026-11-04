@@ -50,9 +50,9 @@ const getLease = async (
 ): Promise<Lease> => {
   const leaseResponse = await axios.get(
     tenantsLeasesServiceUrl +
-    '/leases/' +
-    encodeURIComponent(leaseId) +
-    (includeContacts ? '?includeContacts=true' : '')
+      '/leases/' +
+      encodeURIComponent(leaseId) +
+      (includeContacts ? '?includeContacts=true' : '')
   )
 
   return leaseResponse.data.content
@@ -172,8 +172,8 @@ const getContactForPnr = async (
 ): Promise<Contact> => {
   const contactResponse = await axios.get(
     tenantsLeasesServiceUrl +
-    '/contacts/by-national-registration-number/' +
-    nationalRegistrationNumber
+      '/contacts/by-national-registration-number/' +
+      nationalRegistrationNumber
   )
 
   return contactResponse.data.content
@@ -406,8 +406,8 @@ const getCreditInformation = async (
 ): Promise<ConsumerReport> => {
   const informationResponse = await axios.get(
     tenantsLeasesServiceUrl +
-    '/cas/getConsumerReport/' +
-    nationalRegistrationNumber
+      '/cas/getConsumerReport/' +
+      nationalRegistrationNumber
   )
   return informationResponse.data.content
 }

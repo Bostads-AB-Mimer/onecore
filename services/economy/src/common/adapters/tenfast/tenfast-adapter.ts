@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 import config, { isRentalObjectRequirementException } from '../../config'
-import { logger } from '@onecore/utilities'
+import { errorMessage, logger } from '@onecore/utilities'
 import { AdapterResult } from '../../types'
 import { z } from 'zod'
 import {
@@ -45,6 +45,7 @@ import {
   LeaseStatus,
   LeaseType,
   RentalProperty,
+  economy,
 } from '@onecore/types'
 
 import {
@@ -1054,71 +1055,82 @@ const enrichInvoiceRowsWithAccounting = async (
       ...invoiceRow,
     }
 
-    if (invoiceRow.rentArticle) {
-      const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
+    // Every row needs an article: the account, cost code and project code
+    // all come from its account configuration.
+    if (!invoiceRow.rentArticle) {
+      logger.error(
+        { invoiceNumber: invoice.invoiceId },
+        'Invoice row has no rent article'
+      )
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error: 'Minst en hyresrad på avin saknar hyresartikel',
+      })
+      continue
+    }
 
-      if (articleResult.ok) {
-        const article = articleResult.data
-        invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
-        if (article.accountConfigurations?.length) {
-          const accountConfiguration = article.accountConfigurations.find(
-            (accountConfiguration) => {
-              return (
-                accountConfiguration.categoryCode === 'Intäkter' &&
-                accountConfiguration.debitType === 'HYRA'
-              )
-            }
-          )
+    const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
+    if (!articleResult.ok) {
+      logger.error(
+        { article: invoiceRow.rentArticle, error: articleResult.err },
+        'Could not get article information'
+      )
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error:
+          articleResult.err === 'not-found'
+            ? `Hyresartikeln ${invoiceRow.rentArticle} finns inte i Tenfast`
+            : `Kunde inte hämta hyresartikeln ${invoiceRow.rentArticle} från Tenfast`,
+      })
+      continue
+    }
 
-          if (accountConfiguration) {
-            invoiceRowWithAccounting.account =
-              accountConfiguration.accountNr.toString()
-            invoiceRowWithAccounting.costCode =
-              accountConfiguration.costCenter &&
-              accountConfiguration.costCenter !== ''
-                ? accountConfiguration.costCenter
-                : undefined
-            invoiceRowWithAccounting.property =
-              accountConfiguration.property &&
-              accountConfiguration.property !== ''
-                ? accountConfiguration.property
-                : undefined
-            invoiceRowWithAccounting.projectCode =
-              accountConfiguration.projectCode &&
-              accountConfiguration.projectCode !== ''
-                ? accountConfiguration.projectCode
-                : undefined
+    const article = articleResult.data
+    invoiceRowWithAccounting.rentArticleName = article.code ?? undefined
+    if (!article.accountConfigurations?.length) {
+      logger.error({ article }, 'Rent article has no account configurations')
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error: `Hyresartikeln ${article.code} har inga konton`,
+      })
+      continue
+    }
 
-            invoiceRowWithAccounting.freeCode = accountConfiguration.freeText
-          } else {
-            logger.error(
-              { article },
-              'Rent article has no account configuration for Intäkter'
-            )
-            errors.push({
-              invoiceNumber: invoice.invoiceId,
-              error: `Hyresartikeln ${article.code} har inget konto för kategorin Intäkter`,
-            })
-            continue
-          }
-        } else {
-          logger.error(
-            { article },
-            'Rent article has no account configurations'
-          )
-          errors.push({
-            invoiceNumber: invoice.invoiceId,
-            error: `Hyresartikeln ${article.code} har inga konton`,
-          })
-          continue
-        }
-      } else {
-        logger.error(
-          { article: invoiceRow.rentArticle, articleResult },
-          'Could not get article information'
+    const accountConfiguration = article.accountConfigurations.find(
+      (accountConfiguration) => {
+        return (
+          accountConfiguration.categoryCode === 'Intäkter' &&
+          accountConfiguration.debitType === 'HYRA'
         )
       }
+    )
+    if (!accountConfiguration) {
+      logger.error(
+        { article },
+        'Rent article has no account configuration for Intäkter'
+      )
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        error: `Hyresartikeln ${article.code} har inget konto för kategorin Intäkter`,
+      })
+      continue
     }
+
+    invoiceRowWithAccounting.account = accountConfiguration.accountNr.toString()
+    invoiceRowWithAccounting.costCode =
+      accountConfiguration.costCenter && accountConfiguration.costCenter !== ''
+        ? accountConfiguration.costCenter
+        : undefined
+    invoiceRowWithAccounting.property =
+      accountConfiguration.property && accountConfiguration.property !== ''
+        ? accountConfiguration.property
+        : undefined
+    invoiceRowWithAccounting.projectCode =
+      accountConfiguration.projectCode &&
+      accountConfiguration.projectCode !== ''
+        ? accountConfiguration.projectCode
+        : undefined
+    invoiceRowWithAccounting.freeCode = accountConfiguration.freeText
 
     // A rental object (hyresobjekt) is normally required on every invoice row,
     // but certain article codes (e.g. invoice fees) are exempt via
@@ -1240,7 +1252,10 @@ const transformExportedInvoiceRecords = async (
     }
 
     if (!invoice.invoiceId) {
-      console.error(`Invoice ${invoice.externalId} has no ocrNumber`)
+      logger.error(
+        { externalId: invoice.externalId },
+        'Invoice has no ocrNumber'
+      )
     }
 
     await replaceRentalObjectExternalIds(invoice)
@@ -1866,7 +1881,10 @@ export const getRentalLosses = async (
     return { ok: false, err: 'schema-error' }
   }
 
-  console.log('Got report', parsedResponse.data.length)
+  logger.info(
+    { hyresvard: company.tenfastId, count: parsedResponse.data.length },
+    'Got rental loss report from Tenfast'
+  )
 
   const rentalLosses: RentalLoss[] = []
   const errors: RentalLossError[] = []
@@ -1893,7 +1911,10 @@ export const getRentalLosses = async (
     }
   }
 
-  console.log('Actual rental losses', rentalLossResults.length)
+  logger.info(
+    { hyresvard: company.tenfastId, count: rentalLossResults.length },
+    'Rental losses to process'
+  )
 
   for (const tenfastRentalLoss of rentalLossResults) {
     if (tenfastRentalLoss.hyresobjekt.hyror.length === 0) {
@@ -1937,7 +1958,14 @@ export const getRentalLosses = async (
     )
   }
 
-  console.log('Without errors', rentalLosses.length)
+  logger.info(
+    {
+      hyresvard: company.tenfastId,
+      count: rentalLosses.length,
+      errors: errors.length,
+    },
+    'Rental losses processed'
+  )
 
   return {
     ok: true,
@@ -1950,19 +1978,63 @@ export const getRentalLosses = async (
   }
 }
 
-export const markInvoicesAsExported = async (invoices: Invoice[]) => {
+/**
+ * Marks each invoice as exported in Tenfast. Keeps going when a single
+ * invoice fails, since the accounting files have already been uploaded:
+ * stopping would leave the rest unmarked and they would be exported again.
+ * Returns the invoices that could not be marked so they can be handled
+ * manually.
+ */
+export const markInvoicesAsExported = async (
+  invoices: Invoice[]
+): Promise<economy.MarkInvoiceAsExportedFailure[]> => {
+  const failures: economy.MarkInvoiceAsExportedFailure[] = []
+
   for (const invoice of invoices) {
-    if (invoice.externalId) {
-      const result = await makeTenfastRequest(
-        `/v1/hyresvard/hyror/${invoice.externalId}/manual-export`,
-        { method: 'POST' }
-      )
-    } else {
+    if (!invoice.externalId) {
       logger.error(
-        { invoiceId: invoice.invoiceId },
-        'Invoice has no external id'
+        { invoiceNumber: invoice.invoiceId },
+        'tenfast-adapter.markInvoicesAsExported: invoice has no external id'
       )
+      failures.push({
+        invoiceNumber: invoice.invoiceId,
+        error: 'missing-external-id',
+      })
+      continue
+    }
+
+    try {
+      const response = await makeTenfastRequest(
+        `/v1/hyresvard/hyror/${invoice.externalId}/manual-export`,
+        { method: 'POST', validateStatus: () => true }
+      )
+
+      if (response.status < 200 || response.status >= 300) {
+        logger.error(
+          { invoiceNumber: invoice.invoiceId, status: response.status },
+          'tenfast-adapter.markInvoicesAsExported'
+        )
+        failures.push({
+          invoiceNumber: invoice.invoiceId,
+          error: 'request-failed',
+          status: response.status,
+        })
+      }
+    } catch (err: unknown) {
+      logger.error(
+        {
+          invoiceNumber: invoice.invoiceId,
+          error: errorMessage(err),
+        },
+        'tenfast-adapter.markInvoicesAsExported'
+      )
+      failures.push({
+        invoiceNumber: invoice.invoiceId,
+        error: 'request-failed',
+      })
     }
   }
+
+  return failures
 }
 export type { TenfastOutboundExport }

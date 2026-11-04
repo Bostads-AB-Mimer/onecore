@@ -75,7 +75,7 @@ export const getColumns = (
     },
     {
       field: 'rent.amount',
-      headerName: 'Hyra', 
+      headerName: 'Hyra',
       ...sharedColumnProps,
       valueGetter: (params: any) =>
         params.row.rentalObject?.availabilityInfo?.rent?.amount ?? 0,

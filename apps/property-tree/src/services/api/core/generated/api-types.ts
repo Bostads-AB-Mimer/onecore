@@ -1856,6 +1856,8 @@ export interface paths {
     get: {
       parameters: {
         query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string
           /** @description Search by tenant name */
           name?: string
           /** @description Search by rental object address */
@@ -1907,10 +1909,6 @@ export interface paths {
           /** @description Sort direction */
           sortOrder?: 'asc' | 'desc'
         }
-        path: {
-          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          leaseId: string
-        }
       }
       responses: {
         /** @description Successful response with contact information */
@@ -1921,7 +1919,7 @@ export interface paths {
             }
           }
         }
-        /** @description Internal server error. Failed to terminate lease. */
+        /** @description Internal server error */
         500: {
           content: never
         }

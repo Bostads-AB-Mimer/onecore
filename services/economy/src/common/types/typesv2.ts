@@ -48,6 +48,9 @@ export type InvoiceWithAccounting = Omit<Invoice, 'invoiceRows'> & {
   totalAccount?: string
   counterPartCode?: string
   roundOffCostCode?: string
+  // ORESUTJ account for the invoice's year, resolved when the invoice is
+  // prepared for accounting. Only set when the invoice has a round-off amount.
+  roundOffAccount?: string
 }
 
 export type RentalLoss = {

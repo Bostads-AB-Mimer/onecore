@@ -1,7 +1,4 @@
-import {
-  closeDb,
-  compareInvoices,
-} from '@src/services/invoice-compare/service'
+import { closeDb, compareInvoices } from '@src/services/invoice-compare/service'
 
 /**
  * Jämför fakturerade rader mellan Xpand och Tenfast för en månad, filtrerat

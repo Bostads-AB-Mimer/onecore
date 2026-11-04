@@ -157,25 +157,57 @@ export async function getInvoicesByContactCode(
   }
 }
 
-export type ImportInvoicesResult = {
-  errors: unknown[]
-  successfulInvoices: string[]
-  skippedInvoices: string[]
-}
+export type ImportInvoicesError = 'partial-upload' | 'export-failed' | 'unknown'
 
+/**
+ * Exports the next batch of rental invoice accounting for a company.
+ * For 'partial-upload', `detail` lists the files that reached Xledger; for
+ * 'export-failed', `detail` is the reason given by the economy service.
+ */
 export async function importInvoices(
   companyId: string
-): Promise<AdapterResult<ImportInvoicesResult, 'unknown'>> {
-  const response = await axios.post(
-    `${config.economyService.url}/accounting/import-invoices/${companyId}`
-  )
+): Promise<AdapterResult<economy.ImportInvoicesResponse, ImportInvoicesError>> {
+  try {
+    const response = await axios.post(
+      `${config.economyService.url}/accounting/import-invoices/${encodeURIComponent(companyId)}`,
+      undefined,
+      // Handle every status here instead of relying on the process-wide
+      // axios default set by leasing-adapter.
+      { validateStatus: () => true }
+    )
 
-  if (response.status === 200) {
-    return { ok: true, data: response.data }
+    if (response.status === 200) {
+      return {
+        ok: true,
+        data: economy.ImportInvoicesResponseSchema.parse(response.data),
+      }
+    }
+
+    const errorBody = economy.ImportInvoicesErrorResponseSchema.safeParse(
+      response.data
+    )
+    logger.error(
+      { status: response.status, error: errorBody.data?.error },
+      'economy-adapter.importInvoices'
+    )
+
+    if (!errorBody.success) {
+      return { ok: false, err: 'unknown', statusCode: response.status }
+    }
+
+    return {
+      ok: false,
+      err: errorBody.data.error,
+      statusCode: response.status,
+      detail:
+        errorBody.data.error === 'partial-upload'
+          ? (errorBody.data.uploadedFiles ?? []).join(', ')
+          : errorBody.data.reason,
+    }
+  } catch (err: unknown) {
+    logger.error({ error: errorMessage(err) }, 'economy-adapter.importInvoices')
+    return { ok: false, err: 'unknown' }
   }
-
-  logger.error(response.data, 'economy-adapter.importInvoices')
-  return { ok: false, err: 'unknown' }
 }
 
 export async function getInvoicesSentToDebtCollection(

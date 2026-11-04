@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import {
   getInvoiceDetails,
   getPublicInvoiceByOcr,
@@ -10,6 +11,7 @@ import {
   handleRentalBlocks,
   enrichRentalLossesWithAccounting,
   uploadCsvFiles,
+  PartialCsvUploadError,
   uploadRentalLossCsvFile,
   createLedgerRows,
   createAggregatedTotalRow,
@@ -665,6 +667,54 @@ describe('Rental Invoice Accounting', () => {
       ])
     })
 
+    it('resolves the round-off account for the year of the invoice', async () => {
+      const invoice = buildInvoice({
+        invoiceId: 'rounded',
+        roundoff: 0.43,
+        fromDate: new Date('2027-01-01'),
+      })
+      mockGetInvoicesNotExported.mockResolvedValue({
+        ok: true,
+        data: { invoices: [invoice], errors: undefined },
+      })
+      ;(enrichInvoiceWithAccounting as jest.Mock).mockResolvedValue(undefined)
+
+      const result = await exportRentalInvoicesAccounting('001')
+
+      expect(mockGetRoundOffInformation).toHaveBeenCalledWith('2027')
+      // Company 001 has its own round-off cost code in the test config, which
+      // takes precedence over the one from Xpand.
+      expect(result.exportedInvoices[0]).toMatchObject({
+        roundOffAccount: '3999',
+        roundOffCostCode: '999',
+      })
+    })
+
+    it('leaves out only the invoices whose round-off account is missing', async () => {
+      const rounded = buildInvoice({ invoiceId: 'rounded', roundoff: 0.43 })
+      const even = buildInvoice({ invoiceId: 'even', roundoff: 0 })
+      mockGetInvoicesNotExported.mockResolvedValue({
+        ok: true,
+        data: { invoices: [rounded, even], errors: undefined },
+      })
+      ;(enrichInvoiceWithAccounting as jest.Mock).mockResolvedValue(undefined)
+      mockGetRoundOffInformation.mockRejectedValue(
+        new Error(
+          'Konto för öresutjämning (ORESUTJ) saknas i Xpand för år 2026'
+        )
+      )
+
+      const result = await exportRentalInvoicesAccounting('001')
+
+      expect(result.exportedInvoices.map((i) => i.invoiceId)).toEqual(['even'])
+      expect(result.errors).toEqual([
+        {
+          invoiceNumber: 'rounded',
+          error: 'Konto för öresutjämning (ORESUTJ) saknas i Xpand för år 2026',
+        },
+      ])
+    })
+
     it('applies counterpart customer accounts when a match is found', async () => {
       const invoice = buildInvoice()
       mockGetInvoicesNotExported.mockResolvedValue({
@@ -744,16 +794,32 @@ describe('Rental Invoice Accounting', () => {
       })
     })
 
-    it('includes a round off row when roundoff is non-zero', async () => {
+    it('includes a round off row on the resolved account when roundoff is non-zero', async () => {
+      const invoice = buildInvoice({
+        totalAccount: '2970',
+        ledgerAccount: '1530',
+        roundoff: 0.43,
+        roundOffAccount: '3999',
+        roundOffCostCode: '123',
+      })
+
+      const result = await createAccounting([invoice])
+
+      expect(
+        result.aggregateAccountingCsv.some((row) => row.includes(';3999;123;'))
+      ).toBe(true)
+    })
+
+    it('throws when an invoice with roundoff was not prepared', async () => {
       const invoice = buildInvoice({
         totalAccount: '2970',
         ledgerAccount: '1530',
         roundoff: 0.43,
       })
 
-      await createAccounting([invoice])
-
-      expect(mockGetRoundOffInformation).toHaveBeenCalled()
+      await expect(createAccounting([invoice])).rejects.toThrow(
+        'Round-off account not resolved'
+      )
     })
 
     it('does not throw when the ledger and aggregate sums match', async () => {
@@ -847,6 +913,105 @@ describe('Rental Invoice Accounting', () => {
       expect(rows[0].account).toBe('1530')
       expect(rows[1].account).toBe('2970')
       expect(rows[1].amount).toBe(-1000)
+    })
+  })
+
+  describe('voucher grouping for counterpart customers', () => {
+    // Columns in the AR/GL csv files: 1 = Voucher No, 3 = Account, 8 = Posting 5
+    const VOUCHER = 1
+    const ACCOUNT = 3
+    const POSTING_5 = 8
+
+    const vouchersOf = (csv: string[]) => {
+      const vouchers = new Map<string, string[][]>()
+      for (const row of csv.slice(1)) {
+        const columns = row.split(';')
+        vouchers.set(columns[VOUCHER], [
+          ...(vouchers.get(columns[VOUCHER]) ?? []),
+          columns,
+        ])
+      }
+      return [...vouchers.values()]
+    }
+
+    const counterPart = (invoiceId: string, counterPartCode: string) =>
+      buildInvoice({
+        invoiceId,
+        recipientContactCode: `K${invoiceId}`,
+        totalAccount: '2440',
+        ledgerAccount: '1510',
+        counterPartCode,
+      })
+
+    it('puts counterparts sharing accounts in separate ledger vouchers', async () => {
+      const rows = await createLedgerRows([
+        counterPart('1', 'CP1'),
+        counterPart('2', 'CP2'),
+      ])
+
+      const totals = rows.filter((row) => row.account === '2440')
+      expect(totals).toHaveLength(2)
+      expect(totals.map((row) => row.counterPartCode)).toEqual(['CP1', 'CP2'])
+      expect(new Set(rows.map((row) => row.voucherNumber)).size).toBe(2)
+    })
+
+    it('keeps a counterpart apart from tenants on the same ledger account', async () => {
+      const tenant = buildInvoice({
+        invoiceId: 'tenant',
+        totalAccount: '2970',
+        ledgerAccount: '1530',
+      })
+      const sameLedger = buildInvoice({
+        invoiceId: 'cp',
+        totalAccount: '2440',
+        ledgerAccount: '1530',
+        counterPartCode: 'CP1',
+      })
+
+      const rows = await createLedgerRows([tenant, sameLedger])
+
+      const tenantTotal = rows.find(
+        (row) =>
+          row.invoiceNumber === undefined && row.counterPartCode === undefined
+      )
+      const counterPartTotal = rows.find(
+        (row) =>
+          row.invoiceNumber === undefined && row.counterPartCode === 'CP1'
+      )
+      expect(tenantTotal).toMatchObject({ account: '2970', amount: -1000 })
+      expect(counterPartTotal).toMatchObject({ account: '2440', amount: -1000 })
+    })
+
+    it('gives each counterpart its own aggregate voucher with its code on every row', async () => {
+      const result = await createAccounting([
+        counterPart('1', 'CP1'),
+        counterPart('2', 'CP2'),
+      ])
+
+      const vouchers = vouchersOf(result.aggregateAccountingCsv)
+      expect(vouchers).toHaveLength(2)
+      for (const voucher of vouchers) {
+        expect(new Set(voucher.map((columns) => columns[POSTING_5])).size).toBe(
+          1
+        )
+        expect(voucher.some((columns) => columns[ACCOUNT] === '2440')).toBe(
+          true
+        )
+      }
+      expect(vouchers.map((voucher) => voucher[0][POSTING_5]).sort()).toEqual([
+        'CP1',
+        'CP2',
+      ])
+    })
+
+    it('carries the counterpart code on the ledger total row in the csv', async () => {
+      const result = await createAccounting([counterPart('1', 'CP1')])
+
+      const totalRow = result.ledgerAccountingCsv
+        .slice(1)
+        .map((row) => row.split(';'))
+        .find((columns) => columns[ACCOUNT] === '2440')
+      expect(totalRow?.[POSTING_5]).toBe('CP1')
     })
   })
 
@@ -1834,6 +1999,10 @@ describe('Rental Invoice Accounting', () => {
   })
 
   describe('uploadCsvFiles', () => {
+    beforeEach(() => {
+      mockUploadFile.mockReset()
+    })
+
     it('throws when the company cannot be found', async () => {
       await expect(uploadCsvFiles('999', [], [])).rejects.toThrow(
         'Could not find company 999'
@@ -1846,6 +2015,31 @@ describe('Rental Invoice Accounting', () => {
       expect(mockUploadFile).toHaveBeenCalledTimes(2)
       expect(mockUploadFile.mock.calls[0][0]).toContain('aggregated.gl.csv')
       expect(mockUploadFile.mock.calls[1][0]).toContain('ledger.gl.csv')
+    })
+
+    it('throws a PartialCsvUploadError naming the aggregate file when the ledger upload fails', async () => {
+      mockUploadFile
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('sftp down'))
+
+      const error = await uploadCsvFiles('001', ['a'], ['b']).catch(
+        (err: unknown) => err
+      )
+
+      expect(error).toBeInstanceOf(PartialCsvUploadError)
+      assert(error instanceof PartialCsvUploadError)
+      expect(error.code).toBe('partial-upload')
+      expect(error.uploadedFiles).toHaveLength(1)
+      expect(error.uploadedFiles[0]).toContain('aggregated.gl.csv')
+    })
+
+    it('rethrows as is when the aggregate upload fails', async () => {
+      mockUploadFile.mockRejectedValueOnce(new Error('sftp down'))
+
+      await expect(uploadCsvFiles('001', ['a'], ['b'])).rejects.toThrow(
+        'sftp down'
+      )
+      expect(mockUploadFile).toHaveBeenCalledTimes(1)
     })
   })
 

@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import {
+  errorMessage,
   generateRouteMetadata,
   logger,
   makeSuccessResponseBody,
@@ -38,6 +39,7 @@ import {
   stralforsPostChannelLookup,
   getAutogiroConsent,
   getPublicInvoiceByOcr,
+  PartialCsvUploadError,
 } from './service'
 import * as invoiceService from './service'
 import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
@@ -81,8 +83,9 @@ export const routes = (router: KoaRouter) => {
 
       const invoicesResult = await exportRentalInvoicesAccounting(companyId)
 
+      let markFailures: economy.MarkInvoiceAsExportedFailure[] = []
       if (invoicesResult.exportedInvoices.length > 0) {
-        const { aggregateAccountingCsv, ledgerAccountingCsv, errors } =
+        const { aggregateAccountingCsv, ledgerAccountingCsv } =
           await createAccounting(
             invoicesResult.exportedInvoices,
             acceptedDifference
@@ -93,7 +96,10 @@ export const routes = (router: KoaRouter) => {
           aggregateAccountingCsv,
           ledgerAccountingCsv
         )
-        await markInvoicesAsExported(
+        // The files are in Xledger at this point. Invoices that cannot be
+        // marked are returned to the caller, which must not request another
+        // batch: they would be fetched and posted again.
+        markFailures = await markInvoicesAsExported(
           invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices)
         )
       }
@@ -107,10 +113,33 @@ export const routes = (router: KoaRouter) => {
         skippedInvoices: invoicesResult.skippedInvoices.map(
           (invoice) => invoice.invoiceId
         ),
+        markFailures,
+      } satisfies economy.ImportInvoicesResponse
+    } catch (err: unknown) {
+      if (err instanceof PartialCsvUploadError) {
+        logger.error(
+          { companyId: ctx.params.companyId, uploadedFiles: err.uploadedFiles },
+          'Accounting files only partially uploaded to Xledger'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: err.code,
+          reason: err.message,
+          uploadedFiles: err.uploadedFiles,
+        } satisfies economy.ImportInvoicesErrorResponse
+        return
       }
-    } catch (error) {
+
+      const reason = errorMessage(err)
+      logger.error(
+        { companyId: ctx.params.companyId, error: reason },
+        'Could not export invoices'
+      )
       ctx.status = 500
-      ctx.body = 'Could not export invoices ' + (error as any).message
+      ctx.body = {
+        error: 'export-failed',
+        reason,
+      } satisfies economy.ImportInvoicesErrorResponse
     }
   })
 

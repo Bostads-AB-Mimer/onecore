@@ -39,7 +39,9 @@ const createChainable = (resolveValue: unknown[]) => {
 // per-table results (mockTableQueries) are used.
 const mockDb: any = jest.fn((table: string) =>
   createChainable(
-    mockQueryResults.length ? mockQueryResults.shift() : (mockTableQueries[table] ?? [])
+    mockQueryResults.length
+      ? mockQueryResults.shift()
+      : (mockTableQueries[table] ?? [])
   )
 )
 mockDb.raw = mockRaw
@@ -57,9 +59,7 @@ beforeEach(() => {
   }
 })
 
-const buildInvoice = (
-  projectCode: string | undefined
-): InvoiceWithAccounting =>
+const buildInvoice = (projectCode: string | undefined): InvoiceWithAccounting =>
   ({
     invoiceId: '55123456',
     invoiceDate: new Date('2026-06-15T00:00:00.000Z'),
@@ -237,5 +237,44 @@ describe(adapter.getActiveRentalBlocksWithAccounting, () => {
     expect(sql).toMatch(/repsk\.keyrektk = 'INKOP'/)
     // fdate is compared with the end of the range, tdate with the start
     expect(bindings).toEqual(['RO1', to, from, '2026'])
+  })
+})
+
+describe(adapter.getRoundOffInformation, () => {
+  // The cache lives for the whole module, so each test uses its own years.
+  it('looks up each year separately and caches per year', async () => {
+    mockQueryResults.push(
+      [{ p1: '3999 ', p2: '100 ' }],
+      [{ p1: '3998 ', p2: '200 ' }]
+    )
+
+    const first = await adapter.getRoundOffInformation('2030')
+    const second = await adapter.getRoundOffInformation('2031')
+    const cached = await adapter.getRoundOffInformation('2030')
+
+    expect(first).toEqual({ account: '3999', costCode: '100' })
+    expect(second).toEqual({ account: '3998', costCode: '200' })
+    expect(cached).toEqual(first)
+    expect(mockDb).toHaveBeenCalledTimes(2)
+  })
+
+  it('throws a typed error and caches nothing when the year has no row', async () => {
+    mockQueryResults.push([], [{ p1: '3997', p2: null }])
+
+    await expect(adapter.getRoundOffInformation('2032')).rejects.toBeInstanceOf(
+      adapter.RoundOffInformationNotFoundError
+    )
+    await expect(adapter.getRoundOffInformation('2032')).resolves.toEqual({
+      account: '3997',
+      costCode: undefined,
+    })
+  })
+
+  it('throws a typed error when the row has no account', async () => {
+    mockQueryResults.push([{ p1: null, p2: '100' }])
+
+    await expect(adapter.getRoundOffInformation('2033')).rejects.toThrow(
+      'Konto för öresutjämning (ORESUTJ) saknas i Xpand för år 2033'
+    )
   })
 })

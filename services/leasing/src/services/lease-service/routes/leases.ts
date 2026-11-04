@@ -1711,8 +1711,8 @@ export const routes = (router: KoaRouter) => {
 
       const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
         .body as z.infer<
-          typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
-        >
+        typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
+      >
 
       const result = await tenfastAdapter.preliminaryTerminateLease(
         ctx.params.leaseId,

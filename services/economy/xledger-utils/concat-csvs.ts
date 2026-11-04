@@ -7,7 +7,10 @@ const globChars = /[*?]/
 const expandSegment = (base: string, segment: string): string[] => {
   const regex = new RegExp(
     '^' +
-      segment.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '.') +
+      segment
+        .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*/g, '[^/]*')
+        .replace(/\?/g, '.') +
       '$'
   )
 
@@ -23,7 +26,9 @@ const expandPattern = (pattern: string): string[] => {
     : path.resolve(pattern)
 
   let bases = [path.dirname(candidate)]
-  let remaining = path.relative(path.dirname(candidate), candidate).split(path.sep)
+  let remaining = path
+    .relative(path.dirname(candidate), candidate)
+    .split(path.sep)
   const matched: string[] = []
 
   while (remaining.length > 0) {
@@ -85,8 +90,7 @@ const concatCsvs = () => {
   const [pattern, outputFile] = args
 
   const outputPath = path.resolve(
-    outputFile ??
-      path.join(path.dirname(path.resolve(pattern)), 'concat.csv')
+    outputFile ?? path.join(path.dirname(path.resolve(pattern)), 'concat.csv')
   )
 
   const files = expandPattern(pattern)
@@ -102,7 +106,10 @@ const concatCsvs = () => {
 
   files.forEach((file, index) => {
     const lines = removeTrailingEmptyLines(
-      fs.readFileSync(file, 'utf8').split('\n').map((line) => line.replace(/\r$/, ''))
+      fs
+        .readFileSync(file, 'utf8')
+        .split('\n')
+        .map((line) => line.replace(/\r$/, ''))
     )
 
     if (index === 0) {

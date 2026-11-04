@@ -84,33 +84,33 @@ export const routes = (router: KoaRouter) => {
   leasesRoutes(router)
 
   /**
- * @swagger
- * /leases/parking-space-types:
- *   get:
- *     summary: Get all parking space types
- *     tags:
- *       - Lease service
- *     description: Returns a list of all parking space types (P-platstyper).
- *     responses:
- *       '200':
- *         description: List of parking space types
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 content:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       code:
- *                         type: string
- *                       caption:
- *                         type: string
- *       '500':
- *         description: Internal server error
- */
+   * @swagger
+   * /leases/parking-space-types:
+   *   get:
+   *     summary: Get all parking space types
+   *     tags:
+   *       - Lease service
+   *     description: Returns a list of all parking space types (P-platstyper).
+   *     responses:
+   *       '200':
+   *         description: List of parking space types
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       code:
+   *                         type: string
+   *                       caption:
+   *                         type: string
+   *       '500':
+   *         description: Internal server error
+   */
   router.get('/leases/parking-space-types', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -140,9 +140,8 @@ export const routes = (router: KoaRouter) => {
    *       - Lease service
    *     description: Retrieves contact information for tenants matching the given lease search filters.
    *     parameters:
-   *       - in: path
-   *         name: leaseId
-   *         required: true
+   *       - in: query
+   *         name: q
    *         schema:
    *           type: string
    *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
@@ -269,7 +268,7 @@ export const routes = (router: KoaRouter) => {
    *                   items:
    *                     $ref: '#/components/schemas/ContactInfo'
    *       '500':
-   *         description: Internal server error. Failed to terminate lease.
+   *         description: Internal server error
    *     security:
    *       - bearerAuth: []
    */

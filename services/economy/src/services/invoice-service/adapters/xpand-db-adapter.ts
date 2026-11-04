@@ -3,10 +3,7 @@ import { Address } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 import config, { isRentalObjectRequirementException } from '@src/common/config'
-import {
-  InvoiceDeliveryMethod,
-  XpandContact,
-} from '@src/common/types'
+import { InvoiceDeliveryMethod, XpandContact } from '@src/common/types'
 import { mapContactFlags } from '@src/services/common/adapters/xpand-db-adapter'
 import {
   InvoiceRowWithAccounting,
@@ -23,9 +20,19 @@ type RentalSpecificRule = {
 
 type RentalSpecificRules = Record<string, RentalSpecificRule>
 
-type RoundOffInformation = {
+export type RoundOffInformation = {
   account: string
-  costCode: string
+  costCode: string | undefined
+}
+
+export class RoundOffInformationNotFoundError extends Error {
+  readonly code = 'round-off-information-not-found'
+
+  constructor(readonly year: string) {
+    // Swedish: the message is shown to economy staff in the export report.
+    super(`Konto för öresutjämning (ORESUTJ) saknas i Xpand för år ${year}`)
+    this.name = 'RoundOffInformationNotFoundError'
+  }
 }
 
 const db = knex({
@@ -95,29 +102,34 @@ export const enrichInvoiceWithAccounting = async (
   return invoice
 }
 
-let roundOffInformation: RoundOffInformation | undefined = undefined
+// The ORESUTJ account and cost code are configured per year in Xpand.
+const roundOffInformationByYear = new Map<string, RoundOffInformation>()
 
 export const getRoundOffInformation = async (
   year: string
 ): Promise<RoundOffInformation> => {
-  if (roundOffInformation === undefined) {
-    const roundOffInformationDb = await db('repsk')
-      .where('keycode', 'ORESUTJ')
-      .andWhere('year', year)
-      .distinct()
-
-    roundOffInformation = {
-      account: roundOffInformationDb[0]['p1']?.toString().trimEnd(),
-      costCode: roundOffInformationDb[0]['p2']?.toString().trimEnd(),
-    }
+  const cached = roundOffInformationByYear.get(year)
+  if (cached) {
+    return cached
   }
 
-  if (roundOffInformation !== undefined) {
-    return roundOffInformation
-  } else {
-    logger.error({ year }, 'Round off information not found')
-    throw Error(`Round off information not found for ${year}`)
+  const rows = await db('repsk')
+    .where('keycode', 'ORESUTJ')
+    .andWhere('year', year)
+    .distinct()
+
+  const account = rows[0]?.['p1']?.toString().trimEnd()
+  if (!account) {
+    logger.warn({ year }, 'Round off information not found')
+    throw new RoundOffInformationNotFoundError(year)
   }
+
+  const roundOffInformation: RoundOffInformation = {
+    account,
+    costCode: rows[0]['p2']?.toString().trimEnd(),
+  }
+  roundOffInformationByYear.set(year, roundOffInformation)
+  return roundOffInformation
 }
 
 export const getRentalSpecificRules = async (
@@ -313,7 +325,9 @@ const blankToUndefined = (value: unknown): string | undefined => {
   return trimmed ? trimmed : undefined
 }
 
-const transformRentalBlockWithAccounting = (dbRow: any): RentalBlockWithAccounting => {
+const transformRentalBlockWithAccounting = (
+  dbRow: any
+): RentalBlockWithAccounting => {
   return {
     account: dbRow.p1.trim(),
     costCode: blankToUndefined(dbRow.p2),
@@ -322,12 +336,12 @@ const transformRentalBlockWithAccounting = (dbRow: any): RentalBlockWithAccounti
     freeCode: blankToUndefined(dbRow.p5),
     description: dbRow.caption?.toString().trimEnd(),
     fromDate: dbRow.fromDate,
-    toDate: dbRow.toDate
+    toDate: dbRow.toDate,
   }
 }
 
 /**
- * Returns an active rental block with accounting information for a given rental object, if the 
+ * Returns an active rental block with accounting information for a given rental object, if the
  * block is active within the date range and has accounting information. Rental blocks without
  * accounting information are not returned even if they are active within the date range.
  * A block is active if it overlaps the date range on at least one day, so blocks that start
@@ -335,10 +349,15 @@ const transformRentalBlockWithAccounting = (dbRow: any): RentalBlockWithAccounti
  * Only the cost (INKOP) accounting of the block is used. Some blocks also have income (INTAKT)
  * accounting, which would otherwise be returned as a second block with the same dates.
  */
-export const getActiveRentalBlocksWithAccounting = async (rentalId: string, from: Date, to: Date) => {
+export const getActiveRentalBlocksWithAccounting = async (
+  rentalId: string,
+  from: Date,
+  to: Date
+) => {
   const year = from.toISOString().substring(0, 4)
 
-  const blockWithAccounting = await db.raw(`select p1, p2, p3, p4, p5, hyspt.fdate as fromDate, hyspt.tdate as toDate, hyspa.caption as caption from hyspt 
+  const blockWithAccounting = await db.raw(
+    `select p1, p2, p3, p4, p5, hyspt.fdate as fromDate, hyspt.tdate as toDate, hyspa.caption as caption from hyspt 
   inner join hyspa on hyspt.keyhyspa = hyspa.keyhyspa
   inner join repsk on hyspa.keyhyspa = repsk.keycode
   inner join babuf ON hyspt.keycmobj = babuf.keycmobj
@@ -347,7 +366,9 @@ export const getActiveRentalBlocksWithAccounting = async (rentalId: string, from
   and hyspt.fdate <= ?
   and (hyspt.tdate >= ? or hyspt.tdate is null)
   and repsk.year = ?
-  and repsk.keyrektk = 'INKOP'`, [rentalId, to, from, year])
+  and repsk.keyrektk = 'INKOP'`,
+    [rentalId, to, from, year]
+  )
 
   return blockWithAccounting.map(transformRentalBlockWithAccounting)
 }

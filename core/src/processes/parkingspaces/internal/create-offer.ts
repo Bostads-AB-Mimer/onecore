@@ -222,7 +222,7 @@ export const createOfferForInternalParkingSpace = async (
           objectId: listing.id.toString(),
           applicationType:
             eligibleApplicant.applicationType &&
-              eligibleApplicant.applicationType === 'Replace'
+            eligibleApplicant.applicationType === 'Replace'
               ? 'Replace'
               : 'Additional',
           offerURL: constructOfferURL(offer.data.id),
@@ -307,7 +307,7 @@ export async function validateEligibilityAndDisqualifyIfNot(
       if (_err instanceof Error) {
         log.push(
           _err.message ??
-          `Unknown error updating disqualified applicant status for applicant ${applicant.id}`
+            `Unknown error updating disqualified applicant status for applicant ${applicant.id}`
         )
         logger.debug(log)
       }

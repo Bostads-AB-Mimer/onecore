@@ -496,6 +496,15 @@ const prepareInvoicesForAccounting = async (
     try {
       await enrichInvoiceWithAccounting(invoice)
       await setInvoiceRowsTaxRule(invoice)
+      // Resolved here rather than when the rows are built, so a year without
+      // an ORESUTJ account only leaves out the invoices that need one.
+      if (invoice.roundoff) {
+        const roundOffInformation = await getRoundOffInformation(
+          invoice.fromDate.getFullYear().toString()
+        )
+        invoice.roundOffAccount = roundOffInformation.account
+        invoice.roundOffCostCode ??= roundOffInformation.costCode
+      }
     } catch (error) {
       let message
       if (error instanceof Error) {
@@ -756,14 +765,6 @@ export const createAccounting = async (
   const ledgerAccountingCsv = await createLedgerCsv(invoices)
   //c§onst contactsCsv = await getContacts(invoices)
 
-  console.log('--- AGGREGATE CSV ---')
-  console.log(aggregateAccountingCsv.join('\n'))
-  console.log('---------')
-
-  console.log('\n--- LEDGER CSV ---')
-  console.log(ledgerAccountingCsv.join('\n'))
-  console.log('---------')
-
   /*console.log('\n--- CONTACT CSV ---')
   console.log(contactsCsv.join('\n'))
   console.log('---------')*/
@@ -781,7 +782,7 @@ const getExportInvoiceRows = async (invoices: InvoiceWithAccounting[]) => {
   for (const invoice of invoices) {
     if (invoice.roundoff && invoice.roundoff !== 0) {
       exportInvoiceRows.push(
-        await createRoundOffRow(
+        createRoundOffRow(
           invoice,
           invoice.totalAccount!!,
           invoice.ledgerAccount!!
@@ -821,17 +822,22 @@ const getExportInvoiceRows = async (invoices: InvoiceWithAccounting[]) => {
   return exportInvoiceRows
 }
 
-const createRoundOffRow = async (
+const createRoundOffRow = (
   invoice: InvoiceWithAccounting,
   totalAccount: string,
   ledgerAccount: string
-): Promise<ExportedInvoiceRow> => {
-  const year = invoice.fromDate.getFullYear()
-  const roundOffInformation = await getRoundOffInformation(year.toString())
+): ExportedInvoiceRow => {
+  if (!invoice.roundOffAccount) {
+    // prepareInvoicesForAccounting sets it for every invoice with a round-off
+    // amount, so this only happens if that step was skipped.
+    throw new Error(
+      `Round-off account not resolved for invoice ${invoice.invoiceId}`
+    )
+  }
 
   return {
-    account: roundOffInformation.account,
-    costCode: invoice.roundOffCostCode ?? roundOffInformation.costCode,
+    account: invoice.roundOffAccount,
+    costCode: invoice.roundOffCostCode,
     amount: invoice.roundoff as number,
     totalAmount: invoice.roundoff as number,
     rowTotalAmount: invoice.roundoff as number,
@@ -861,8 +867,12 @@ const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
   const rowChunks: Record<string, ExportedInvoiceRow[]> = {}
 
   invoiceRows.forEach((invoiceRow) => {
+    // Counterpart customers (intercompany) must not share a voucher with
+    // other customers, so the counterpart code is part of the voucher key.
     const key =
       invoiceRow.totalAccount +
+      ':' +
+      invoiceRow.counterPartCode +
       ':' +
       invoiceRow.taxRule +
       ':' +
@@ -897,8 +907,6 @@ const createAggregateRows = async (invoiceRows: ExportedInvoiceRow[]) => {
     )
     aggregatedRows.push(chunkTotalRow)
   })
-
-  console.table(aggregatedRows)
 
   return aggregatedRows
 }
@@ -944,7 +952,7 @@ const safeAdd = (
  * rows that can exist in the same voucher):
  *
  * 'Account', 'CostCode', 'Property', 'ProjectCode', 'FreeCode', 'InvoiceDate', 'InvoiceFromDate',
- * 'InvoiceToDate', 'TotalAccount'
+ * 'InvoiceToDate', 'TotalAccount', 'CounterPartCode'
  *
  * @param invoiceRows
  */
@@ -952,9 +960,6 @@ const groupAggregateRows = (
   invoiceRows: ExportedInvoiceRow[],
   voucherNumber: string
 ): AggregatedRow[] => {
-  console.log('groupAggregateRows')
-  console.table(invoiceRows)
-
   const groupedRows = [
     ...invoiceRows
       .reduce((r, o) => {
@@ -977,7 +982,9 @@ const groupAggregateRows = (
           '||' +
           dateString(o.toDate) +
           '||' +
-          o.totalAccount
+          o.totalAccount +
+          '||' +
+          o.counterPartCode
 
         const aggregatedRow = r.get(key) || {
           account: o.account,
@@ -1031,9 +1038,6 @@ export const createAggregatedTotalRow = (
     vat: 0,
   }
 
-  console.log('AGGREGATED TOTAL')
-  console.table(aggregatedRows)
-
   const totalRow = aggregatedRows.reduce((acc: AggregatedRow, row) => {
     acc.amount = (acc.amount as number) - (row.totalAmount as number)
     return acc
@@ -1084,7 +1088,16 @@ export const createLedgerRows = async (
   const invoiceChunks: Record<string, InvoiceWithAccounting[]> = {}
 
   invoices.forEach((invoice) => {
-    const key = invoice.ledgerAccount + ':' + dateString(invoice.invoiceDate)
+    // The total row of a voucher is posted to the first invoice's total
+    // account and counterpart, so every invoice in a voucher must share them.
+    const key =
+      invoice.ledgerAccount +
+      ':' +
+      invoice.totalAccount +
+      ':' +
+      invoice.counterPartCode +
+      ':' +
+      dateString(invoice.invoiceDate)
     if (!invoiceChunks[key]) {
       invoiceChunks[key] = []
     }
@@ -1105,8 +1118,6 @@ export const createLedgerRows = async (
     const chunkTotalRow = createLedgerTotalRow(chunkInvoices, voucherNumber)
     ledgerRows.push(chunkTotalRow)
   })
-
-  console.table(ledgerRows)
 
   return ledgerRows
 }
@@ -1155,6 +1166,7 @@ const createLedgerTotalRow = (
     account: invoices[0].totalAccount,
     voucherDate: dateString(invoices[0].invoiceDate) ?? '',
     voucherNumber,
+    counterPartCode: invoices[0].counterPartCode,
     vat: totalVat ?? 0,
     amount: -Math.round(((totalAmount as number) + Number.EPSILON) * 100) / 100,
   }
@@ -1278,9 +1290,6 @@ export const createRentalLossAccounting = async (
   })
 
   const aggregateRowsCsv = convertToAggregateCsvRows(aggregateRows, 'GL')
-
-  console.table(aggregateRows)
-  console.log(aggregateRowsCsv)
 
   return {
     aggregateRentalLossAccountingCsv: aggregateRowsCsv,
@@ -1491,8 +1500,6 @@ export const handleRentalBlocks = async (rentalLosses: RentalLoss[]) => {
       rentalLoss.uncontractedInterval.to
     )
 
-    console.log('Blocks for', rentalLoss.rentalObject, rentalBlocks[0])
-
     if (!rentalBlocks || rentalBlocks.length === 0) {
       rentalLossesWithBlocks.push(rentalLoss)
       continue
@@ -1687,8 +1694,6 @@ export const handleRentalBlocks = async (rentalLosses: RentalLoss[]) => {
     })
   }
 
-  console.table(rentalLossesWithBlocks)
-
   return rentalLossesWithBlocks
 }
 
@@ -1756,7 +1761,25 @@ export const uploadCsvFiles = async (
   )
 
   const ledgerFilename = `${company.xpandId}/GL-HYRESAVISERING_${Date.now()}-${company.xpandId}-ledger.gl.csv`
-  await uploadFileToXledger(ledgerFilename, ledgerAccountingCsv.join('\n'))
+  try {
+    await uploadFileToXledger(ledgerFilename, ledgerAccountingCsv.join('\n'))
+  } catch (err: unknown) {
+    // The aggregate file is already in Xledger, so a retry would post it
+    // twice. Report which file got through so it can be handled manually.
+    throw new PartialCsvUploadError([aggregateFilename], err)
+  }
+}
+
+export class PartialCsvUploadError extends Error {
+  readonly code = 'partial-upload'
+
+  constructor(
+    readonly uploadedFiles: string[],
+    cause: unknown
+  ) {
+    super('Only some accounting files were uploaded to Xledger', { cause })
+    this.name = 'PartialCsvUploadError'
+  }
 }
 
 export const uploadRentalLossCsvFile = async (

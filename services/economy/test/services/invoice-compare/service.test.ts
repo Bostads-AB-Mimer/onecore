@@ -162,18 +162,12 @@ describe('invoice-compare service', () => {
     })
 
     it('ignores differences of 1 SEK or less', () => {
-      const near = aggregateRows(
-        [row({ netto: 951, vat: 237.5 })],
-        groupKey
-      )
+      const near = aggregateRows([row({ netto: 951, vat: 237.5 })], groupKey)
       expect(findDiffKeys(near, right)).toEqual(['110-005-02-0601/04|FAKT AVG'])
     })
 
     it('flags differences above 1 SEK', () => {
-      const near = aggregateRows(
-        [row({ netto: 951.01, vat: 237.5 })],
-        groupKey
-      )
+      const near = aggregateRows([row({ netto: 951.01, vat: 237.5 })], groupKey)
       expect(findDiffKeys(near, right)).toEqual([
         '110-005-02-0601/04|FAKT AVG',
         '306-008-01-0201/02|HYRAB2',
@@ -201,7 +195,12 @@ describe('invoice-compare service', () => {
           vat: -25,
         }),
         // grupp utan diff, ska inte bidra
-        row({ invoiceNumber: '100003', article: 'FAKT AVG', netto: 49, vat: 0 }),
+        row({
+          invoiceNumber: '100003',
+          article: 'FAKT AVG',
+          netto: 49,
+          vat: 0,
+        }),
         row({
           side: 'tenfast',
           invoiceNumber: '552606000000001',
@@ -211,7 +210,10 @@ describe('invoice-compare service', () => {
         }),
       ]
 
-      const left = aggregateRows(rows.filter((r) => r.side === 'xpand'), groupKey)
+      const left = aggregateRows(
+        rows.filter((r) => r.side === 'xpand'),
+        groupKey
+      )
       const right = aggregateRows(
         rows.filter((r) => r.side === 'tenfast'),
         groupKey
@@ -267,16 +269,20 @@ describe('invoice-compare service', () => {
       ]
 
       const diffKeys = findDiffKeys(
-        aggregateRows(rows.filter((r) => r.side === 'xpand'), groupKey),
-        aggregateRows(rows.filter((r) => r.side === 'tenfast'), groupKey)
+        aggregateRows(
+          rows.filter((r) => r.side === 'xpand'),
+          groupKey
+        ),
+        aggregateRows(
+          rows.filter((r) => r.side === 'tenfast'),
+          groupKey
+        )
       )
 
       expect(diffKeys).toEqual(['306-008-01-0201/02|HYRAB2'])
       const contributions = invoiceContributions(rows, diffKeys, groupKey)
       expect(contributions).toHaveLength(2)
-      expect(
-        contributions.find((c) => c.side === 'xpand')
-      ).toEqual(
+      expect(contributions.find((c) => c.side === 'xpand')).toEqual(
         expect.objectContaining({
           invoiceNumber: '100001',
           invoiceNetto: 1100,

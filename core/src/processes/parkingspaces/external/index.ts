@@ -134,7 +134,8 @@ export const createLeaseForExternalParkingSpace = async (
       )
       creditCheck = creditInformation.status === '1'
       log.push(
-        `Extern kreditupplysning genomförd. Resultat: ${creditInformation.status_text
+        `Extern kreditupplysning genomförd. Resultat: ${
+          creditInformation.status_text
         } ${creditInformation.errorList?.[0]?.Reject_text ?? ''}`
       )
     } else {
@@ -168,7 +169,8 @@ export const createLeaseForExternalParkingSpace = async (
       creditCheck = debtCollectionInvoices.data.length === 0
 
       log.push(
-        `Intern kreditkontroll genomförd, resultat: ${creditCheck ? 'inga anmärkningar' : 'hyresfakturor hos inkasso'
+        `Intern kreditkontroll genomförd, resultat: ${
+          creditCheck ? 'inga anmärkningar' : 'hyresfakturor hos inkasso'
         }`
       )
     }

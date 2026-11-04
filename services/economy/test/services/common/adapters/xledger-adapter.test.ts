@@ -1020,26 +1020,34 @@ describe(adapter.getPeriodInformationFromDateStrings, () => {
     expect(result).toEqual({ periodStart: '-1', periods: '1' })
   })
 
-  // Only the month part of the dates is compared, so year boundaries are not
-  // handled. These tests pin the current behaviour.
-  it('ignores the year when the period starts in the next year', () => {
+  it('counts the offset across New Year when the period starts in the next year', () => {
     const result = adapter.getPeriodInformationFromDateStrings(
       '2025-12-20',
       '2026-01-01',
       '2026-01-31'
     )
 
-    expect(result).toEqual({ periodStart: '-11', periods: '1' })
+    expect(result).toEqual({ periodStart: '1', periods: '1' })
   })
 
-  it('ignores the year when the period spans a year boundary', () => {
+  it('counts the periods across New Year when the period spans it', () => {
     const result = adapter.getPeriodInformationFromDateStrings(
       '2025-12-01',
       '2025-12-01',
       '2026-02-28'
     )
 
-    expect(result).toEqual({ periodStart: '', periods: '-9' })
+    expect(result).toEqual({ periodStart: '', periods: '3' })
+  })
+
+  it('counts both offset and periods across New Year', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-11-20',
+      '2027-01-01',
+      '2027-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '2', periods: '3' })
   })
 })
 

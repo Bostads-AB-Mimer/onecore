@@ -158,7 +158,7 @@ const addToWaitingList = async (
     logger.error(
       error,
       'Error adding applicant to waitinglist using Xpand SOAP API for list ' +
-      waitingListTypeCaption
+        waitingListTypeCaption
     )
     return { ok: false, err: 'unknown' }
   }
@@ -262,7 +262,7 @@ const removeFromWaitingList = async (
     logger.error(
       error,
       'Error removing applicant from waitinglist using Xpand SOAP API. waitingListTypeCaption: ' +
-      waitingListTypeCaption
+        waitingListTypeCaption
     )
     return { ok: false, err: 'unknown' }
   }
