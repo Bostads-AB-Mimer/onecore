@@ -651,8 +651,8 @@ const transformToInvoice = (
       invoiceDate: tenfastInvoice.activatedAt
         ? new Date(tenfastInvoice.activatedAt)
         : // expectedInvoiceDate is no longer returned for some invoices
-          // (e.g. credited ones), fall back to the due date.
-          new Date(tenfastInvoice.expectedInvoiceDate ?? tenfastInvoice.due),
+        // (e.g. credited ones), fall back to the due date.
+        new Date(tenfastInvoice.expectedInvoiceDate ?? tenfastInvoice.due),
       expirationDate: new Date(tenfastInvoice.due),
       paidAmount: tenfastInvoice.amountPaid,
       remainingAmount,
@@ -1000,17 +1000,17 @@ const enrichInvoiceRowsWithAccounting = async (
               accountConfiguration.accountNr.toString()
             invoiceRowWithAccounting.costCode =
               accountConfiguration.costCenter &&
-              accountConfiguration.costCenter !== ''
+                accountConfiguration.costCenter !== ''
                 ? accountConfiguration.costCenter
                 : undefined
             invoiceRowWithAccounting.property =
               accountConfiguration.property &&
-              accountConfiguration.property !== ''
+                accountConfiguration.property !== ''
                 ? accountConfiguration.property
                 : undefined
             invoiceRowWithAccounting.projectCode =
               accountConfiguration.projectCode &&
-              accountConfiguration.projectCode !== ''
+                accountConfiguration.projectCode !== ''
                 ? accountConfiguration.projectCode
                 : undefined
 
@@ -1763,7 +1763,7 @@ export const getRentalLosses = async (
     string
   >
 > => {
-  const reportId = '6ae49a9a86cfe96e81e8a9c5'
+  const reportId = '6aeafb7fbe29b7ac851dbf2b'
   const result = await makeTenfastRequest(
     `/v1/hyresvard/reports/${reportId}/download`,
     {
