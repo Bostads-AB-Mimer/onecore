@@ -22,6 +22,7 @@ import {
 import { paginatedResponseSchema } from '@onecore/types'
 
 import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
+import { CREATE_CONTACT_STATUS } from '../../../processes/contacts/create-contact-status'
 import {
   addRelation,
   removeRelation,
@@ -33,27 +34,6 @@ import { AdapterResult } from '@/adapters/types'
 import { ProcessStatus } from '@/common/types'
 import type { Contact } from '@onecore/contacts/domain'
 import { ParameterizedContext } from 'koa'
-
-/**
- * Status a create failure maps to.
- *
- * Only reachable before the contact exists — once it does, the route always
- * answers 201 and reports later problems as warnings instead.
- */
-type CreateContactFailureStatus = 400 | 409 | 422 | 502 | 503
-
-const CREATE_CONTACT_STATUS: Record<string, CreateContactFailureStatus> = {
-  'duplicate-contact': 409,
-  'invalid-national-id': 422,
-  'invalid-request': 400,
-  'xpand-rejected': 422,
-  'xpand-fault': 502,
-  'xpand-auth-failed': 502,
-  'xpand-malformed-response': 502,
-  'xpand-unavailable': 503,
-  'write-backend-not-configured': 503,
-  'contacts-service-error': 502,
-}
 
 export const routes = (router: OkapiRouter, config: Config) => {
   const contactsServiceUrl = config.contactsService.url
@@ -159,7 +139,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
 
       if (!created.ok) {
         // Nothing was created, so this is a plain failure the caller can act on.
-        ctx.status = CREATE_CONTACT_STATUS[created.err] ?? 502
+        ctx.status = CREATE_CONTACT_STATUS[created.err]
         ctx.body = { error: created.err, detail: created.detail, ...metadata }
         return
       }

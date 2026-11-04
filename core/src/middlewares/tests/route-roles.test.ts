@@ -57,6 +57,53 @@ describe('requiredRolesFor', () => {
     ])
   })
 
+  // contact-auth alone must not register: a leaked token-helper credential would otherwise
+  // be able to create contacts and logins.
+  it('gates registration on contacts:register alone', () => {
+    expect(requiredRolesFor('/auth/contacts/register', 'POST')).toEqual([
+      'contacts:register',
+    ])
+    expect(requiredRolesFor('/v1/auth/contacts/register', 'POST')).toEqual([
+      'contacts:register',
+    ])
+    expect(requiredRolesFor('/AUTH/Contacts/Register', 'POST')).toEqual([
+      'contacts:register',
+    ])
+    expect(requiredRolesFor('/auth/contacts/register/', 'POST')).toEqual([
+      'contacts:register',
+    ])
+  })
+
+  // The handler's (.*) prefix also matches these, so a prefix rule must not gate them first:
+  // most of those rules accept api-access, which every client and staff user has.
+  it.each([
+    '/invoices/notify-batch/auth/contacts/register',
+    '/v1/tenant-notifications/lease-termination-confirmation/auth/contacts/register',
+    '/invoice-channels/auth/contacts/register',
+    '/v1/contacts/auth/contacts/register',
+    '/webhooks/infobip/auth/contacts/register',
+    '/scan-receipt/auth/contacts/register',
+  ])('gates registration under the prefix %s on contacts:register', (path) => {
+    expect(requiredRolesFor(path, 'POST')).toEqual(['contacts:register'])
+  })
+
+  // The handlers' (.*) prefix lets any route be reached under this path, so the narrow role
+  // must not carry over to them.
+  it('does not gate other routes reached through the registration path on contacts:register', () => {
+    expect(
+      requiredRolesFor('/auth/contacts/register/files/upload', 'POST')
+    ).not.toContain('contacts:register')
+    expect(
+      requiredRolesFor(
+        '/auth/contacts/register/component-categories/1',
+        'DELETE'
+      )
+    ).toEqual(['api-access'])
+    expect(requiredRolesFor('/auth/contacts/register', 'GET')).toEqual([
+      'api-access',
+    ])
+  })
+
   it('keeps the existing special cases', () => {
     expect(requiredRolesFor('/scan-receipt/x', 'POST')).toEqual([
       'scanner-upload',
