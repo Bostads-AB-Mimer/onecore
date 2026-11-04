@@ -57,6 +57,20 @@ describe('requiredRolesFor', () => {
     ])
   })
 
+  // contact-auth alone must not register: a leaked token-helper credential would otherwise
+  // be able to create contacts and logins.
+  it('gates registration on contacts:register alone', () => {
+    expect(requiredRolesFor('/auth/contacts/register', 'POST')).toEqual([
+      'contacts:register',
+    ])
+    expect(requiredRolesFor('/v1/auth/contacts/register', 'POST')).toEqual([
+      'contacts:register',
+    ])
+    expect(requiredRolesFor('/AUTH/Contacts/Register', 'POST')).toEqual([
+      'contacts:register',
+    ])
+  })
+
   it('keeps the existing special cases', () => {
     expect(requiredRolesFor('/scan-receipt/x', 'POST')).toEqual([
       'scanner-upload',
