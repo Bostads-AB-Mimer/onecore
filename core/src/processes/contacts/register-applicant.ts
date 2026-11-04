@@ -68,6 +68,13 @@ type LoginSetup =
   | 'ready'
   /** The username already had a user, which keeps its password and gets no e-mail. */
   | 'exists'
+  /**
+   * As 'exists', but the user carries another contact's code and keeps it. That contact cannot
+   * have this personnummer (the create would have been refused), yet the contact_code repair at
+   * login keeps any code that still resolves, deleted and GDPR-purged contacts included. So the
+   * login names the old contact until someone changes it by hand.
+   */
+  | 'bound-to-other-contact'
   | 'failed'
 
 const findExisting = async (nationalId: string): Promise<Existing> => {
@@ -106,7 +113,7 @@ const toCreateContactBody = (
  * A user that already has the username keeps its password and e-mail and only gets a
  * missing contact_code filled in, because the e-mail typed into the form must not be able to
  * take over someone else's login. For the same reason a contact_code it already has is never
- * replaced here: the contact_code repair at login replaces one that no longer resolves.
+ * replaced here, only reported as 'bound-to-other-contact'.
  */
 const setUpLogin = async (
   username: string,
@@ -139,14 +146,14 @@ const setUpLogin = async (
             userId = user.id
             sendEmail = true
           } else {
-            if (existingCodes.length === 0) {
-              await admin.setContactCode(user, contactCode)
-            } else {
+            if (existingCodes.length > 0) {
               logger.warn(
                 { contactCode, existingContactCodes: existingCodes },
                 'registerApplicant.existingLoginHasOtherContactCode'
               )
+              return 'bound-to-other-contact'
             }
+            await admin.setContactCode(user, contactCode)
             return 'exists'
           }
         } else {
@@ -242,6 +249,9 @@ export const registerApplicant = async (
       : []),
     ...(login === 'failed' ? (['login-setup-failed'] as const) : []),
     ...(login === 'exists' ? (['login-exists'] as const) : []),
+    ...(login === 'bound-to-other-contact'
+      ? (['login-bound-to-other-contact'] as const)
+      : []),
   ]
 
   logger.info({ contactCode, warnings }, 'registerApplicant.created')
