@@ -73,6 +73,14 @@ export type RentalLossError = {
   error: string
 }
 
+export type RentalLossChecksumMismatch = {
+  rentalObject: string
+  month: string
+  calculatedAmount: number
+  tenfastAmount: number
+  diff: number
+}
+
 export type RentalLossRow = {
   amount: number
   totalAmount: number

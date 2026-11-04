@@ -13,6 +13,7 @@ import {
   TenfastRentalLossHyraSchema,
   TenfastRentalLossSchema,
   TenfastRentalLoss,
+  TenfastRentalLossHyra,
   TenfastRentalLossResponseSchema,
   TenfastBatchGetRentalObjectsResponseSchema,
   type TenfastBatchGetLease,
@@ -49,7 +50,9 @@ import {
   InvoiceWithAccounting,
   MimerCompany,
   RentalLoss,
+  RentalLossChecksumMismatch,
   RentalLossError,
+  RentalLossInterval,
   RentalLossRow,
   TenfastRentalObject,
 } from '@src/common/types/typesv2'
@@ -1517,26 +1520,95 @@ const daysInclusive = (from: Date, to: Date): number => {
 const roundCurrency = (value: number): number =>
   Math.round((value + Number.EPSILON) * 100) / 100
 
+// The part of a rent row that falls within an uncontracted interval, prorated
+// by the days the row is valid there. A rent row is only valid between its own
+// from and to dates (e.g. an old rent ending and a new one starting with a rent
+// change), so rows outside the interval give no rental loss.
+const prorateRentRow = (
+  hyra: TenfastRentalLossHyra,
+  interval: RentalLossInterval,
+  daysInMonth: number
+):
+  | { amount: number; from: Date; to: Date; coversInterval: boolean }
+  | undefined => {
+  const rowFrom = hyra.from ? new Date(hyra.from) : undefined
+  const rowTo = hyra.to ? new Date(hyra.to) : undefined
+  const from = rowFrom && rowFrom > interval.from ? rowFrom : interval.from
+  const to = rowTo && rowTo < interval.to ? rowTo : interval.to
+  const days = daysInclusive(from, to)
+
+  if (days <= 0) return undefined
+
+  return {
+    amount: roundCurrency((hyra.amount * days) / daysInMonth),
+    from,
+    to,
+    coversInterval:
+      from.getTime() === interval.from.getTime() &&
+      to.getTime() === interval.to.getTime(),
+  }
+}
+
 // Maps one Tenfast rental loss to one RentalLoss per uncontracted interval.
 // Tenfast reports every uncontracted interval of the month on a single record;
 // downstream accounting (rental blocks, proration, voucher dates) works on a
 // single continuous interval, so we split here instead.
+//
+// calculatedAmount is the rental loss of all rent rows valid in the
+// uncontracted intervals, before rows are left out for missing articles or
+// rental loss accounts. It is compared with Tenfast's own proration.
 export const mapToRentalLoss = async (
   tenfastRentalLoss: TenfastRentalLoss
 ): Promise<{
   rentalLosses: RentalLoss[]
   errors: RentalLossError[]
+  calculatedAmount: number
+  calculatedRowCount: number
 }> => {
   const errors: RentalLossError[] = []
-  // Accounting and article data per rent row, without amounts. Amounts depend
-  // on the interval and are calculated per split rental loss below.
-  const rentalLossRowTemplates: {
-    monthlyAmount: number
-    row: Omit<RentalLossRow, 'amount' | 'totalAmount'>
-  }[] = []
   const rentalObjectExternalId = tenfastRentalLoss.hyresobjekt.externalId
 
+  const intervals = tenfastRentalLoss.uncontractedIntervals.map((interval) => ({
+    from: new Date(interval.from),
+    to: new Date(interval.to),
+  }))
+
+  if (intervals.length === 0) {
+    logger.error(
+      { rentalObject: rentalObjectExternalId, month: tenfastRentalLoss.month },
+      'Rental loss has no uncontracted intervals'
+    )
+    errors.push({
+      rentalObject: rentalObjectExternalId,
+      error: `Hyresbortfallet för ${rentalObjectExternalId} ${tenfastRentalLoss.month} saknar avtalslösa perioder`,
+    })
+
+    return {
+      rentalLosses: [],
+      errors,
+      calculatedAmount: 0,
+      calculatedRowCount: 0,
+    }
+  }
+
+  let calculatedAmount = 0
+  let calculatedRowCount = 0
+  const rentalLossRowsPerInterval: RentalLossRow[][] = intervals.map(() => [])
+
   for (const hyra of tenfastRentalLoss.hyresobjekt.hyror) {
+    const proratedParts = intervals.map((interval) =>
+      prorateRentRow(hyra, interval, tenfastRentalLoss.days.month)
+    )
+
+    // Not valid during any uncontracted interval, so no rental loss.
+    if (proratedParts.every((part) => !part)) continue
+
+    proratedParts.forEach((part) => {
+      if (!part) return
+      calculatedAmount += part.amount
+      calculatedRowCount++
+    })
+
     if (!hyra.article) {
       logger.error(
         { rentalObject: rentalObjectExternalId, label: hyra.label },
@@ -1591,73 +1663,87 @@ export const mapToRentalLoss = async (
       continue
     }
 
-    rentalLossRowTemplates.push({
-      monthlyAmount: hyra.amount,
-      row: {
-        vat: hyra.vat,
-        rentArticleName: article.code,
-        rentalObject: rentalObjectExternalId,
-        incomeAccount: incomeConfiguration.accountNr,
-        incomeProjectCode: emptyToUndefined(incomeConfiguration.projectCode),
-        incomeProperty: emptyToUndefined(incomeConfiguration.property),
-        incomeFreeCode: emptyToUndefined(incomeConfiguration.freeText),
-        incomeCostCode: emptyToUndefined(incomeConfiguration.costCenter),
-        costAccount: costConfiguration.accountNr,
-        costProjectCode: emptyToUndefined(costConfiguration.projectCode),
-        costProperty: emptyToUndefined(costConfiguration.property),
-        costFreeCode: emptyToUndefined(costConfiguration.freeText),
-        costCostCode: emptyToUndefined(costConfiguration.costCenter),
-      },
+    const row: Omit<RentalLossRow, 'amount' | 'totalAmount'> = {
+      vat: hyra.vat,
+      rentArticleName: article.code,
+      rentalObject: rentalObjectExternalId,
+      incomeAccount: incomeConfiguration.accountNr,
+      incomeProjectCode: emptyToUndefined(incomeConfiguration.projectCode),
+      incomeProperty: emptyToUndefined(incomeConfiguration.property),
+      incomeFreeCode: emptyToUndefined(incomeConfiguration.freeText),
+      incomeCostCode: emptyToUndefined(incomeConfiguration.costCenter),
+      costAccount: costConfiguration.accountNr,
+      costProjectCode: emptyToUndefined(costConfiguration.projectCode),
+      costProperty: emptyToUndefined(costConfiguration.property),
+      costFreeCode: emptyToUndefined(costConfiguration.freeText),
+      costCostCode: emptyToUndefined(costConfiguration.costCenter),
+    }
+
+    proratedParts.forEach((part, index) => {
+      if (!part) return
+      rentalLossRowsPerInterval[index].push({
+        ...row,
+        amount: part.amount,
+        totalAmount: roundCurrency(part.amount * (1 + (row.vat ?? 0))),
+        // A row valid during only part of the interval keeps its own dates.
+        ...(part.coversInterval
+          ? {}
+          : { fromDate: part.from, toDate: part.to }),
+      })
     })
   }
 
-  const intervals = tenfastRentalLoss.uncontractedIntervals.map((interval) => ({
-    from: new Date(interval.from),
-    to: new Date(interval.to),
+  const rentalLosses = intervals.map((uncontractedInterval, index) => ({
+    rentalLossRows: rentalLossRowsPerInterval[index],
+    rentalObject: rentalObjectExternalId,
+    month: tenfastRentalLoss.month,
+    days: {
+      totalInMonth: tenfastRentalLoss.days.month,
+      contracted: tenfastRentalLoss.days.contracted,
+      uncontracted: daysInclusive(
+        uncontractedInterval.from,
+        uncontractedInterval.to
+      ),
+    },
+    uncontractedInterval,
   }))
 
-  if (intervals.length === 0) {
-    logger.error(
-      { rentalObject: rentalObjectExternalId, month: tenfastRentalLoss.month },
-      'Rental loss has no uncontracted intervals'
-    )
-    errors.push({
-      rentalObject: rentalObjectExternalId,
-      error: `Hyresbortfallet för ${rentalObjectExternalId} ${tenfastRentalLoss.month} saknar avtalslösa perioder`,
-    })
-
-    return { rentalLosses: [], errors }
+  return {
+    rentalLosses,
+    errors,
+    calculatedAmount: roundCurrency(calculatedAmount),
+    calculatedRowCount,
   }
+}
 
-  const rentalLosses = intervals.map((uncontractedInterval) => {
-    const uncontractedDays = daysInclusive(
-      uncontractedInterval.from,
-      uncontractedInterval.to
-    )
+// Compares our calculated rental loss with Tenfast's own proration of the same
+// rent rows. Each prorated part is rounded to öre on both sides, so allow one
+// öre per part. Reports without proration (older report versions) are not
+// checked.
+export const checkRentalLossAgainstTenfast = (
+  tenfastRentalLoss: TenfastRentalLoss,
+  calculatedAmount: number,
+  calculatedRowCount: number
+): RentalLossChecksumMismatch | undefined => {
+  const tenfastRows = tenfastRentalLoss.proration?.hyraRows
+  if (!tenfastRows) return undefined
 
-    return {
-      rentalLossRows: rentalLossRowTemplates.map(({ monthlyAmount, row }) => {
-        const uncontractedAmount =
-          (monthlyAmount * uncontractedDays) / tenfastRentalLoss.days.month
+  const tenfastAmount = roundCurrency(
+    tenfastRows.reduce((sum, hyra) => sum + hyra.amount, 0)
+  )
+  const diff = roundCurrency(calculatedAmount - tenfastAmount)
+  const tolerance =
+    0.01 * Math.max(1, calculatedRowCount, tenfastRows.length) + Number.EPSILON
 
-        return {
-          ...row,
-          amount: roundCurrency(uncontractedAmount),
-          totalAmount: roundCurrency(uncontractedAmount * (1 + (row.vat ?? 0))),
-        }
-      }),
-      rentalObject: rentalObjectExternalId,
-      month: tenfastRentalLoss.month,
-      days: {
-        totalInMonth: tenfastRentalLoss.days.month,
-        contracted: tenfastRentalLoss.days.contracted,
-        uncontracted: uncontractedDays,
-      },
-      uncontractedInterval,
-    }
-  })
+  if (Math.abs(diff) <= tolerance) return undefined
 
-  return { rentalLosses, errors }
+  return {
+    rentalObject: tenfastRentalLoss.hyresobjekt.externalId,
+    month: tenfastRentalLoss.month,
+    calculatedAmount,
+    tenfastAmount,
+    diff,
+  }
 }
 
 export const getRentalLosses = async (
@@ -1670,6 +1756,9 @@ export const getRentalLosses = async (
       // External ids of uncontracted rental objects that have no rent rows
       // in Tenfast, so there is no rental loss to account for.
       rentalObjectsWithoutRentRows: string[]
+      // Rental objects where our calculated rental loss differs from
+      // Tenfast's proration. Reported only, they are still accounted.
+      checksumMismatches: RentalLossChecksumMismatch[]
     },
     string
   >
@@ -1707,6 +1796,7 @@ export const getRentalLosses = async (
   const rentalLosses: RentalLoss[] = []
   const errors: RentalLossError[] = []
   const rentalObjectsWithoutRentRows: string[] = []
+  const checksumMismatches: RentalLossChecksumMismatch[] = []
 
   const rentalLossResults = parsedResponse.data.filter((rentalLoss) => {
     return rentalLoss.days.uncontracted > 0
@@ -1723,6 +1813,7 @@ export const getRentalLosses = async (
         rentalLosses: [],
         errors: [],
         rentalObjectsWithoutRentRows: [],
+        checksumMismatches: [],
       },
     }
   }
@@ -1737,10 +1828,28 @@ export const getRentalLosses = async (
       continue
     }
 
-    const { rentalLosses: mappedRentalLosses, errors: rentalLossErrors } =
-      await mapToRentalLoss(tenfastRentalLoss)
+    const {
+      rentalLosses: mappedRentalLosses,
+      errors: rentalLossErrors,
+      calculatedAmount,
+      calculatedRowCount,
+    } = await mapToRentalLoss(tenfastRentalLoss)
     rentalLosses.push(...mappedRentalLosses)
     errors.push(...rentalLossErrors)
+
+    const mismatch = checkRentalLossAgainstTenfast(
+      tenfastRentalLoss,
+      calculatedAmount,
+      calculatedRowCount
+    )
+    if (mismatch) checksumMismatches.push(mismatch)
+  }
+
+  if (checksumMismatches.length > 0) {
+    logger.warn(
+      { hyresvard: company.tenfastId, checksumMismatches },
+      'Calculated rental loss differs from Tenfast proration'
+    )
   }
 
   if (rentalObjectsWithoutRentRows.length > 0) {
@@ -1761,6 +1870,7 @@ export const getRentalLosses = async (
       rentalLosses,
       errors,
       rentalObjectsWithoutRentRows,
+      checksumMismatches,
     },
   }
 }

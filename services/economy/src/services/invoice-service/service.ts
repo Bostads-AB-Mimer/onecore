@@ -38,6 +38,7 @@ import {
   LedgerRow,
   xledgerDateString,
   RentalLoss,
+  RentalLossChecksumMismatch,
   RentalLossError,
   RentalLossRow,
   RentalBlockWithAccounting,
@@ -58,7 +59,7 @@ import {
   getInvoicesByOcr,
   getRentalLosses,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
-import config from '@src/common/config'
+import config, { isRentalLossExcludedAccount } from '@src/common/config'
 import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
 
 export { markInvoicesAsExported } from '@src/common/adapters/tenfast/tenfast-adapter'
@@ -184,9 +185,9 @@ export const getInvoicesByContactCode = async (
         ...parsed.invoice,
         ...(tenfastInvoice?.invoice.fromDate &&
           tenfastInvoice.invoice.toDate && {
-          fromDate: tenfastInvoice.invoice.fromDate,
-          toDate: tenfastInvoice.invoice.toDate,
-        }),
+            fromDate: tenfastInvoice.invoice.fromDate,
+            toDate: tenfastInvoice.invoice.toDate,
+          }),
         ...(tenfastInvoice && {
           invoiceRows: tenfastInvoice.invoice.invoiceRows,
         }),
@@ -1044,7 +1045,10 @@ export const createAggregatedTotalRow = (
   return totalRow
 }
 
-const convertToAggregateCsvRows = (aggregateRows: AggregatedRow[]) => {
+const convertToAggregateCsvRows = (
+  aggregateRows: AggregatedRow[],
+  voucherType: 'AR' | 'GL' = 'AR'
+) => {
   const csvRows: string[] = []
 
   csvRows.push(
@@ -1058,7 +1062,7 @@ const convertToAggregateCsvRows = (aggregateRows: AggregatedRow[]) => {
       row.toDate
     )
     csvRows.push(
-      `AR;${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${row.counterPartCode || ''};${periodInfo.periodStart};${periodInfo.periods};${''};${''};${''};${''};${''};${''};${row.taxRule ?? ''};${row.amount}`
+      `${voucherType};${row.voucherNumber};${xledgerDateString(row.voucherDate)};${row.account};${row.costCode || ''};${row.projectCode || ''};${row.property || ''};${row.freeCode || ''};${row.counterPartCode || ''};${periodInfo.periodStart};${periodInfo.periods};${''};${''};${''};${''};${''};${''};${row.taxRule ?? ''};${row.amount}`
     )
   })
 
@@ -1182,6 +1186,7 @@ export const exportRentalLosses = async (
   rentalLosses: RentalLoss[]
   errors: RentalLossError[]
   rentalObjectsWithoutRentRows: string[]
+  checksumMismatches: RentalLossChecksumMismatch[]
 }> => {
   const company = config.companies.find(
     (company) => company.xpandId.localeCompare(companyId) === 0
@@ -1202,8 +1207,12 @@ export const exportRentalLosses = async (
     )
   }
 
-  const { rentalLosses, errors, rentalObjectsWithoutRentRows } =
-    rentalLossResults.data
+  const {
+    rentalLosses,
+    errors,
+    rentalObjectsWithoutRentRows,
+    checksumMismatches,
+  } = rentalLossResults.data
 
   if (errors.length > 0) {
     logger.warn(
@@ -1212,7 +1221,12 @@ export const exportRentalLosses = async (
     )
   }
 
-  return { rentalLosses, errors, rentalObjectsWithoutRentRows }
+  return {
+    rentalLosses,
+    errors,
+    rentalObjectsWithoutRentRows,
+    checksumMismatches,
+  }
 }
 
 export const createRentalLossAccounting = async (
@@ -1246,8 +1260,11 @@ export const createRentalLossAccounting = async (
     voucherIndex++
     voucherRowCount = 0
 
+    // Rows come in balanced income/cost pairs (see
+    // createRentalLossAggregateRows). Only start a new voucher between two
+    // pairs, so every voucher balances.
     chunkAggregatedRows.forEach((aggregatedRow) => {
-      if (voucherRowCount > MAX_VOUCHER_ROWS) {
+      if (voucherRowCount >= MAX_VOUCHER_ROWS && voucherRowCount % 2 === 0) {
         voucherNumber =
           Date.now().toString().substring(6, 12) +
           voucherIndex.toString().padStart(3, '0')
@@ -1259,7 +1276,7 @@ export const createRentalLossAccounting = async (
     })
   })
 
-  const aggregateRowsCsv = convertToAggregateCsvRows(aggregateRows)
+  const aggregateRowsCsv = convertToAggregateCsvRows(aggregateRows, 'GL')
 
   console.table(aggregateRows)
   console.log(aggregateRowsCsv)
@@ -1298,6 +1315,13 @@ const createRentalLossAggregateRows = (rentalLosses: RentalLoss[]) => {
 
   rentalLosses.forEach((rentalLoss) => {
     rentalLoss.rentalLossRows.forEach((rentalLossRow) => {
+      if (
+        isRentalLossExcludedAccount(rentalLossRow.incomeAccount) ||
+        isRentalLossExcludedAccount(rentalLossRow.costAccount)
+      ) {
+        return
+      }
+
       const validationError = validateRentalLossRow(rentalLossRow)
       if (validationError) {
         errors.push({
@@ -1358,7 +1382,8 @@ const createRentalLossAggregateRows = (rentalLosses: RentalLoss[]) => {
  * and free code, from Xpand's rental specific accounting rules for every
  * rental loss row where the article (or rental block) did not provide them.
  * This mirrors enrichInvoiceWithAccounting for invoices. Rental losses whose
- * rental object has no rules for the year are left out and reported as errors.
+ * rental object has no rules for the year are kept as they are and reported as
+ * errors.
  */
 export const enrichRentalLossesWithAccounting = async (
   rentalLosses: RentalLoss[]
@@ -1395,8 +1420,11 @@ export const enrichRentalLossesWithAccounting = async (
       )
       errors.push({
         rentalObject: rentalLoss.rentalObject,
-        error: `Kunde inte hitta konteringsregler för hyresobjektet ${rentalLoss.rentalObject} (${year})`,
+        error: `Kunde inte hitta konteringsregler för hyresobjektet ${rentalLoss.rentalObject} (${year}), hyresbortfallet konteras utan kostnadsställe och fastighet från Xpand`,
       })
+      // Keep the rental loss so it is still accounted, with only the
+      // accounting from the article (or rental block).
+      enrichedRentalLosses.push(rentalLoss)
       continue
     }
 
@@ -1422,6 +1450,33 @@ export const enrichRentalLossesWithAccounting = async (
 // RentalLoss.month is "YYYY-MM"
 const rentalLossYear = (rentalLoss: RentalLoss): string =>
   rentalLoss.month.substring(0, 4)
+
+// Rental loss block accounts (308x) and the income accounts they apply to:
+// 3081, 3086 and 3089 for housing rent, 3087 for parking.
+const RENTAL_LOSS_BLOCK_ACCOUNTS: Record<string, number[]> = {
+  '3081': [3011],
+  '3086': [3011],
+  '3087': [3015],
+  '3089': [3011],
+}
+
+// Whether a rental block replaces the cost side of a rental loss row. This
+// follows the rental loss accounting of the old system (Xpand):
+// - Rows booked on the same account on both sides (e.g. 2420, 2883) keep it.
+// - A rental loss block account (308x) applies only to the rent it is meant
+//   for (RENTAL_LOSS_BLOCK_ACCOUNTS). Other rent keeps the article's account.
+// - Other block accounts, e.g. 1182 for projects, apply to all rent.
+const blockAccountApplies = (
+  row: RentalLossRow,
+  block: RentalBlockWithAccounting
+): boolean => {
+  if (row.incomeAccount === row.costAccount) return false
+
+  const incomeAccounts = RENTAL_LOSS_BLOCK_ACCOUNTS[block.account]
+  if (incomeAccounts) return incomeAccounts.includes(row.incomeAccount)
+
+  return !block.account.startsWith('308')
+}
 
 export const handleRentalBlocks = async (rentalLosses: RentalLoss[]) => {
   const rentalLossesWithBlocks: RentalLoss[] = []
@@ -1545,8 +1600,32 @@ export const handleRentalBlocks = async (rentalLosses: RentalLoss[]) => {
         continue
       }
 
-      const splitRows = segments.map((segment): RentalLossRow => {
-        const factor = daysInclusive(segment.from, segment.to) / lossTotalDays
+      // A rent row valid during only part of the loss interval carries its
+      // own dates. Split it within those dates, and prorate by its own days.
+      const rowFrom = Math.max(
+        startOfDay(row.fromDate ?? lossInterval.from).getTime(),
+        lossStart
+      )
+      const rowTo = Math.min(
+        startOfDay(row.toDate ?? lossInterval.to).getTime(),
+        lossEnd
+      )
+      const rowTotalDays = daysInclusive(new Date(rowFrom), new Date(rowTo))
+      if (rowTotalDays <= 0) {
+        newRows.push({ ...row })
+        continue
+      }
+
+      const rowSegments = segments
+        .map((segment) => ({
+          ...segment,
+          from: new Date(Math.max(segment.from.getTime(), rowFrom)),
+          to: new Date(Math.min(segment.to.getTime(), rowTo)),
+        }))
+        .filter((segment) => segment.from.getTime() <= segment.to.getTime())
+
+      const splitRows = rowSegments.map((segment): RentalLossRow => {
+        const factor = daysInclusive(segment.from, segment.to) / rowTotalDays
         const splitRow: RentalLossRow = {
           ...row,
           amount: roundCurrency(row.amount * factor),
@@ -1557,13 +1636,25 @@ export const handleRentalBlocks = async (rentalLosses: RentalLoss[]) => {
 
         if (!segment.block) return splitRow
 
+        const block = segment.block
+
+        // A row keeping its own account only gets the block's free code,
+        // and only if it has none of its own.
+        if (!blockAccountApplies(row, block)) {
+          return {
+            ...splitRow,
+            costFreeCode: row.costFreeCode || block.freeCode,
+            isBlock: true,
+          }
+        }
+
         return {
           ...splitRow,
-          costAccount: Number(segment.block.account),
-          costProjectCode: segment.block.projectCode,
-          costProperty: segment.block.property,
-          costFreeCode: segment.block.freeCode,
-          costCostCode: segment.block.costCode,
+          costAccount: Number(block.account),
+          costProjectCode: block.projectCode || row.costProjectCode,
+          costProperty: block.property || row.costProperty,
+          costFreeCode: block.freeCode || row.costFreeCode,
+          costCostCode: block.costCode || row.costCostCode,
           isBlock: true,
         }
       })

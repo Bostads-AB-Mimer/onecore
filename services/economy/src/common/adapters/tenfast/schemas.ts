@@ -101,7 +101,7 @@ export const TenfastLeaseSchema = z.object({
         _id: z.string(),
         isCompany: z.boolean(),
         displayName: z.string(),
-        externalId: z.string()
+        externalId: z.string(),
       })
     )
     .min(1),
@@ -597,6 +597,20 @@ export const TenfastRentalLossSchema = z.object({
       to: z.string(),
     })
   ),
+  // Tenfast's own proration of the rent rows valid in the uncontracted
+  // period. Null for fully contracted objects, missing in older report
+  // versions.
+  proration: z
+    .object({
+      simplifiedInterval: z.object({ from: z.string(), to: z.string() }),
+      hyraRows: z.array(
+        TenfastRentalLossHyraSchema.extend({
+          accountingRows: z.array(z.any()).nullish(),
+          proratedInterval: z.object({ from: z.string(), to: z.string() }),
+        })
+      ),
+    })
+    .nullish(),
   avtalIds: z.array(z.string()),
   relatedAvtalCoverage: z.array(
     z.object({

@@ -332,6 +332,8 @@ const transformRentalBlockWithAccounting = (dbRow: any): RentalBlockWithAccounti
  * accounting information are not returned even if they are active within the date range.
  * A block is active if it overlaps the date range on at least one day, so blocks that start
  * or end inside the range are included. The caller truncates them to the range.
+ * Only the cost (INKOP) accounting of the block is used. Some blocks also have income (INTAKT)
+ * accounting, which would otherwise be returned as a second block with the same dates.
  */
 export const getActiveRentalBlocksWithAccounting = async (rentalId: string, from: Date, to: Date) => {
   const year = from.toISOString().substring(0, 4)
@@ -344,7 +346,8 @@ export const getActiveRentalBlocksWithAccounting = async (rentalId: string, from
   where babuf.hyresid = ?
   and hyspt.fdate <= ?
   and (hyspt.tdate >= ? or hyspt.tdate is null)
-  and repsk.year = ?`, [rentalId, to, from, year])
+  and repsk.year = ?
+  and repsk.keyrektk = 'INKOP'`, [rentalId, to, from, year])
 
   return blockWithAccounting.map(transformRentalBlockWithAccounting)
 }

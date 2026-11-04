@@ -234,6 +234,7 @@ describe(adapter.getActiveRentalBlocksWithAccounting, () => {
     const [sql, bindings] = mockRaw.mock.calls[0]
     expect(sql).toMatch(/hyspt\.fdate <= \?/)
     expect(sql).toMatch(/hyspt\.tdate >= \? or hyspt\.tdate is null/)
+    expect(sql).toMatch(/repsk\.keyrektk = 'INKOP'/)
     // fdate is compared with the end of the range, tdate with the start
     expect(bindings).toEqual(['RO1', to, from, '2026'])
   })

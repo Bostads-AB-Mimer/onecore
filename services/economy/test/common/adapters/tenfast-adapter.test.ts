@@ -1438,4 +1438,123 @@ describe(getRentalLosses, () => {
       },
     ])
   })
+
+  const mockReport = (rentalLosses: any[]) =>
+    mockAxios.request.mockImplementation(async (config: any) =>
+      config.url.includes('/reports/')
+        ? { status: 200, data: rentalLosses }
+        : { status: 200, data: article }
+    )
+
+  const withProration = (rentalLoss: any, amounts: number[]) => ({
+    ...rentalLoss,
+    proration: {
+      simplifiedInterval: { from: '2026-11-01', to: '2026-11-30' },
+      hyraRows: amounts.map((amount, i) => ({
+        ...rentRow,
+        _id: `prorated-${i}`,
+        amount,
+        accountingRows: null,
+        proratedInterval: { from: '2026-11-01', to: '2026-11-30' },
+      })),
+    },
+  })
+
+  it('leaves out rent rows that are not valid during the uncontracted period', async () => {
+    mockReport([
+      buildRentalLoss('RO1', [
+        { ...rentRow, _id: 'old', amount: 1000, to: '2026-10-31' },
+        { ...rentRow, _id: 'current', amount: 3000 },
+        { ...rentRow, _id: 'new', amount: 5000, from: '2026-12-01' },
+      ]),
+    ])
+
+    const result = await getRentalLosses(company)
+
+    assert(result.ok)
+    expect(result.data.rentalLosses).toHaveLength(1)
+    expect(
+      result.data.rentalLosses[0].rentalLossRows.map((row) => row.amount)
+    ).toEqual([3000])
+  })
+
+  it('prorates a rent row starting inside the uncontracted period to its own dates', async () => {
+    mockReport([
+      buildRentalLoss('RO1', [
+        { ...rentRow, amount: 3000, from: '2026-11-21', to: null },
+      ]),
+    ])
+
+    const result = await getRentalLosses(company)
+
+    assert(result.ok)
+    const [row] = result.data.rentalLosses[0].rentalLossRows
+    // 10 of 30 days
+    expect(row.amount).toBe(1000)
+    expect(row.fromDate).toEqual(new Date('2026-11-21'))
+    expect(row.toDate).toEqual(new Date('2026-11-30'))
+  })
+
+  it('accepts objects without proration, as Tenfast returns for contracted objects', async () => {
+    mockReport([
+      {
+        ...buildRentalLoss('RO1', [rentRow]),
+        days: { month: 30, contracted: 30, uncontracted: 0 },
+        proration: null,
+      },
+      { ...buildRentalLoss('RO2', [rentRow]), proration: null },
+    ])
+
+    const result = await getRentalLosses(company)
+
+    assert(result.ok)
+    expect(result.data.rentalLosses.map((loss) => loss.rentalObject)).toEqual([
+      'RO2',
+    ])
+    expect(result.data.checksumMismatches).toEqual([])
+  })
+
+  it('reports no checksum mismatch when the amount matches Tenfast proration', async () => {
+    mockReport([withProration(buildRentalLoss('RO1', [rentRow]), [3000])])
+
+    const result = await getRentalLosses(company)
+
+    assert(result.ok)
+    expect(result.data.checksumMismatches).toEqual([])
+  })
+
+  it('reports a checksum mismatch but still returns the rental loss', async () => {
+    mockReport([withProration(buildRentalLoss('RO1', [rentRow]), [2500])])
+
+    const result = await getRentalLosses(company)
+
+    assert(result.ok)
+    expect(result.data.rentalLosses).toHaveLength(1)
+    expect(result.data.checksumMismatches).toEqual([
+      {
+        rentalObject: 'RO1',
+        month: '2026-11',
+        calculatedAmount: 3000,
+        tenfastAmount: 2500,
+        diff: 500,
+      },
+    ])
+  })
+
+  it('checks rows left out for missing rental loss accounts against Tenfast too', async () => {
+    mockAxios.request.mockImplementation(async (config: any) =>
+      config.url.includes('/reports/')
+        ? {
+            status: 200,
+            data: [withProration(buildRentalLoss('RO1', [rentRow]), [3000])],
+          }
+        : { status: 200, data: { ...article, accountConfigurations: [] } }
+    )
+
+    const result = await getRentalLosses(company)
+
+    assert(result.ok)
+    expect(result.data.rentalLosses[0].rentalLossRows).toEqual([])
+    expect(result.data.checksumMismatches).toEqual([])
+  })
 })

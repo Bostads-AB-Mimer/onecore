@@ -34,6 +34,7 @@ const mockCompanies: MimerCompany[] = [
 
 jest.mock('@src/common/config', () => ({
   __esModule: true,
+  ...jest.requireActual('@src/common/config'),
   default: {
     ...jest.requireActual('@src/common/config').default,
     get companies() {
@@ -906,6 +907,7 @@ describe('Rental Invoice Accounting', () => {
           rentalLosses,
           errors,
           rentalObjectsWithoutRentRows: ['RO3'],
+          checksumMismatches: [],
         },
       })
 
@@ -915,6 +917,7 @@ describe('Rental Invoice Accounting', () => {
         rentalLosses,
         errors,
         rentalObjectsWithoutRentRows: ['RO3'],
+        checksumMismatches: [],
       })
     })
   })
@@ -997,6 +1000,149 @@ describe('Rental Invoice Accounting', () => {
       expect(row.costProperty).toBe('PROP1')
       expect(row.costFreeCode).toBe('FREE1')
       expect(row.costCostCode).toBe('CC1')
+    })
+
+    describe('which rows get the block account', () => {
+      const blockedRow = (overrides: Record<string, unknown>) =>
+        buildRentalLoss({
+          rentalLossRows: [
+            {
+              amount: 100,
+              totalAmount: 100,
+              vat: 0,
+              incomeAccount: 3015,
+              costAccount: 3085,
+              ...overrides,
+            } as any,
+          ],
+        })
+
+      const costSide = async (
+        overrides: Record<string, unknown>,
+        block: Partial<RentalBlockWithAccounting>
+      ) => {
+        mockGetActiveRentalBlocksWithAccounting.mockResolvedValue([
+          buildBlock(block),
+        ])
+        const [result] = await handleRentalBlocks([blockedRow(overrides)])
+        const [row] = result.rentalLossRows
+        return { costAccount: row.costAccount, costFreeCode: row.costFreeCode }
+      }
+
+      it('moves housing rent to a rental loss block account', async () => {
+        expect(
+          await costSide(
+            { incomeAccount: 3011, costAccount: 3081 },
+            { account: '3089', freeCode: '10607' }
+          )
+        ).toEqual({ costAccount: 3089, costFreeCode: '10607' })
+      })
+
+      it('keeps the article cost account for other rent, with the block free code', async () => {
+        expect(
+          await costSide({}, { account: '3086', freeCode: '10617' })
+        ).toEqual({ costAccount: 3085, costFreeCode: '10617' })
+      })
+
+      it('moves parking rent to the parking block account', async () => {
+        expect(
+          await costSide({}, { account: '3087', freeCode: '10619' })
+        ).toEqual({ costAccount: 3087, costFreeCode: '10619' })
+      })
+
+      it('gives rows keeping their account no other block accounting', async () => {
+        mockGetActiveRentalBlocksWithAccounting.mockResolvedValue([
+          buildBlock({ account: '1182', projectCode: '86450' }),
+        ])
+
+        const [result] = await handleRentalBlocks([
+          blockedRow({
+            incomeAccount: 2420,
+            costAccount: 2420,
+            costFreeCode: '10162',
+            costProjectCode: undefined,
+            costCostCode: '550',
+            costProperty: 'KST',
+          }),
+        ])
+
+        expect(result.rentalLossRows[0]).toMatchObject({
+          costAccount: 2420,
+          costFreeCode: '10162',
+          costProjectCode: undefined,
+          costCostCode: '550',
+          costProperty: 'KST',
+        })
+      })
+
+      it('moves any rent to a block account outside the rental loss accounts', async () => {
+        expect(
+          await costSide({}, { account: '1182', freeCode: '9806' })
+        ).toEqual({ costAccount: 1182, costFreeCode: '9806' })
+      })
+
+      it('keeps the account and free code of rows booked on the same account', async () => {
+        expect(
+          await costSide(
+            { incomeAccount: 2420, costAccount: 2420, costFreeCode: '10162' },
+            { account: '3086', freeCode: '10610' }
+          )
+        ).toEqual({ costAccount: 2420, costFreeCode: '10162' })
+      })
+
+      it('gives rows booked on the same account the block free code if they have none', async () => {
+        expect(
+          await costSide(
+            { incomeAccount: 2883, costAccount: 2883 },
+            { account: '3081', freeCode: '10615' }
+          )
+        ).toEqual({ costAccount: 2883, costFreeCode: '10615' })
+      })
+    })
+
+    it('splits a rent row valid during part of the interval within its own dates', async () => {
+      // The row is valid 2026-07-11..2026-07-31 (21 days, 2100) and the block
+      // covers 2026-07-01..2026-07-20, so the row splits at 2026-07-20.
+      const rentalLoss = buildRentalLoss({
+        rentalLossRows: [
+          {
+            amount: 2100,
+            totalAmount: 2100,
+            vat: 0,
+            incomeAccount: 3012,
+            costAccount: 6100,
+            fromDate: new Date('2026-07-11T00:00:00.000Z'),
+            toDate: new Date('2026-07-31T00:00:00.000Z'),
+          } as any,
+        ],
+      })
+      mockGetActiveRentalBlocksWithAccounting.mockResolvedValue([
+        buildBlock({ toDate: new Date('2026-07-20T00:00:00.000Z') }),
+      ])
+
+      const [result] = await handleRentalBlocks([rentalLoss])
+
+      expect(
+        result.rentalLossRows.map((row) => ({
+          from: row.fromDate,
+          to: row.toDate,
+          amount: row.amount,
+          isBlock: row.isBlock,
+        }))
+      ).toEqual([
+        {
+          from: new Date('2026-07-11T00:00:00.000Z'),
+          to: new Date('2026-07-20T00:00:00.000Z'),
+          amount: 1000,
+          isBlock: true,
+        },
+        {
+          from: new Date('2026-07-21T00:00:00.000Z'),
+          to: new Date('2026-07-31T00:00:00.000Z'),
+          amount: 1100,
+          isBlock: undefined,
+        },
+      ])
     })
 
     it('prorates by days when the block partially overlaps the loss interval', async () => {
@@ -1511,17 +1657,19 @@ describe('Rental Invoice Accounting', () => {
       expect(mockGetRentalSpecificRules).toHaveBeenCalledWith(['RO2'], '2027')
     })
 
-    it('leaves out rental losses without rules and reports an error', async () => {
+    it('keeps rental losses without rules unchanged and reports an error', async () => {
       mockGetRentalSpecificRules.mockResolvedValue({
         RO1: { costCode: 'CC1', property: 'PROP1' },
       })
+      const withoutRules = buildRentalLoss({ rentalObject: 'RO2' })
 
       const { rentalLosses, errors } = await enrichRentalLossesWithAccounting([
         buildRentalLoss({ rentalObject: 'RO1' }),
-        buildRentalLoss({ rentalObject: 'RO2' }),
+        withoutRules,
       ])
 
-      expect(rentalLosses.map((r) => r.rentalObject)).toEqual(['RO1'])
+      expect(rentalLosses.map((r) => r.rentalObject)).toEqual(['RO1', 'RO2'])
+      expect(rentalLosses[1]).toEqual(withoutRules)
       expect(errors).toEqual([
         {
           rentalObject: 'RO2',
@@ -1566,6 +1714,78 @@ describe('Rental Invoice Accounting', () => {
       expect(incomeRow.endsWith(';-100')).toBe(true)
       expect(costRow.split(';')[3]).toBe('6100')
       expect(costRow.endsWith(';100')).toBe(true)
+    })
+
+    const lossWithRows = (rows: Record<string, unknown>[]): RentalLoss => ({
+      rentalObject: 'RO1',
+      month: '2026-07',
+      days: { totalInMonth: 31, contracted: 0, uncontracted: 31 },
+      uncontractedInterval: {
+        from: new Date('2026-07-01T00:00:00.000Z'),
+        to: new Date('2026-07-31T00:00:00.000Z'),
+      },
+      rentalLossRows: rows.map(
+        (row) =>
+          ({
+            amount: 100,
+            totalAmount: 100,
+            vat: 0,
+            incomeAccount: 3015,
+            costAccount: 3085,
+            ...row,
+          }) as any
+      ),
+    })
+
+    const parseCsv = (csv: string[]) =>
+      csv.slice(1).map((line) => {
+        const fields = line.split(';')
+        return {
+          voucherType: fields[0],
+          voucherNumber: fields[1],
+          account: fields[3],
+          amount: Number(fields[fields.length - 1]),
+        }
+      })
+
+    it('uses voucher type GL', async () => {
+      const result = await createRentalLossAccounting([lossWithRows([{}])])
+
+      expect(
+        parseCsv(result.aggregateRentalLossAccountingCsv).map(
+          (row) => row.voucherType
+        )
+      ).toEqual(['GL', 'GL'])
+    })
+
+    it('keeps every voucher balanced when a voucher is split', async () => {
+      // 251 rows give 502 csv rows, more than one voucher holds
+      const rows = Array.from({ length: 251 }, (_, i) => ({ amount: i + 1 }))
+
+      const result = await createRentalLossAccounting([lossWithRows(rows)])
+
+      const balances: Record<string, number> = {}
+      parseCsv(result.aggregateRentalLossAccountingCsv).forEach((row) => {
+        balances[row.voucherNumber] =
+          (balances[row.voucherNumber] ?? 0) + row.amount
+      })
+      expect(Object.keys(balances).length).toBeGreaterThan(1)
+      Object.values(balances).forEach((balance) =>
+        expect(balance).toBeCloseTo(0, 2)
+      )
+    })
+
+    it('leaves out rows on excluded accounts', async () => {
+      const result = await createRentalLossAccounting([
+        lossWithRows([{}, { incomeAccount: 2425, costAccount: 2425 }]),
+      ])
+
+      expect(
+        parseCsv(result.aggregateRentalLossAccountingCsv).map(
+          (row) => row.account
+        )
+      ).toEqual(['3015', '3085'])
+      expect(result.errors).toEqual([])
     })
 
     it('leaves out rows without a valid cost account and reports them', async () => {

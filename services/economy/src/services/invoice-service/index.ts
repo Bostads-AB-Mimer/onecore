@@ -219,6 +219,7 @@ export const routes = (router: KoaRouter) => {
           rentalLosses: exportedRentalLosses,
           errors: exportErrors,
           rentalObjectsWithoutRentRows,
+          checksumMismatches,
         } = await exportRentalLosses(companyId)
         const rentalLossesWithBlocks =
           await handleRentalBlocks(exportedRentalLosses)
@@ -247,6 +248,7 @@ export const routes = (router: KoaRouter) => {
           rentalLosses: rentalLosses.length,
           uploadedRows: Math.max(accountingRowCount, 0),
           rentalObjectsWithoutRentRows,
+          checksumMismatches,
         }
       } catch (error) {
         logger.error({ error, companyId }, 'Could not import rental loss')
