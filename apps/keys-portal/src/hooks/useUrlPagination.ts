@@ -25,10 +25,14 @@ export function useUrlPagination(defaultLimit = 60) {
 
   // Helper to update URL params
   const updateUrlParams = useCallback(
-    (updates: Record<string, string | null>) => {
+    (updates: Record<string, string | string[] | null>) => {
       const newParams = new URLSearchParams(searchParams)
       Object.entries(updates).forEach(([key, value]) => {
-        if (value) {
+        if (Array.isArray(value)) {
+          // Repeated key (?status=A&status=B); an empty array clears it
+          newParams.delete(key)
+          value.forEach((v) => newParams.append(key, v))
+        } else if (value) {
           newParams.set(key, value)
         } else {
           newParams.delete(key)

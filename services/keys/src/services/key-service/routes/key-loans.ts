@@ -421,7 +421,8 @@ export const routes = (router: KoaRouter) => {
    *
    *       With `includeCards=true` the cards found in DAX are also returned as a `cards`
    *       sidecar keyed by rentalObjectCode, and `cardsUnresolved` lists the codes whose
-   *       DAX lookup failed (their cards are unknown, not empty).
+   *       DAX lookup failed (their cards are unknown, not empty). Cards are cached per
+   *       rental object for 10 minutes; loans are always read live.
    *     tags: [Key Loans]
    *     parameters:
    *       - in: query

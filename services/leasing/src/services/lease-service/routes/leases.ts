@@ -145,7 +145,7 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: integer
    *           default: 20
-   *           maximum: 100
+   *           maximum: 500
    *         description: Items per page
    *       - in: query
    *         name: includeEnded
@@ -505,7 +505,7 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: integer
    *           default: 20
-   *           maximum: 100
+   *           maximum: 500
    *         description: Items per page
    *       - in: query
    *         name: sortBy
