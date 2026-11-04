@@ -295,7 +295,7 @@ describe('registerApplicant', () => {
       expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
     })
 
-    it('leaves another contact_code on an existing user alone and logs the mismatch', async () => {
+    it("leaves another contact_code on an existing user alone, logs the mismatch and warns 'login-bound-to-other-contact'", async () => {
       admin.createPersonUser.mockResolvedValue('conflict')
       admin.findUserByUsername.mockResolvedValue({
         id: 'user-9',
@@ -304,7 +304,8 @@ describe('registerApplicant', () => {
       })
 
       await expect(registerApplicant(application)).resolves.toMatchObject({
-        warnings: ['login-exists'],
+        outcome: 'created',
+        warnings: ['login-bound-to-other-contact'],
       })
       expect(admin.setContactCode).not.toHaveBeenCalled()
       expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()

@@ -44,6 +44,12 @@ export const RegistrationWarningSchema = z.enum([
    * person logs in, or uses "Glömt lösenord" if they never chose a password.
    */
   'login-exists',
+  /**
+   * A login with this personnummer already existed but belongs to another contact, which it
+   * keeps, so no e-mail was sent. Logging in would show that contact, not the new one, so the
+   * person needs kundtjänst.
+   */
+  'login-bound-to-other-contact',
 ])
 
 export type RegistrationWarning = z.infer<typeof RegistrationWarningSchema>

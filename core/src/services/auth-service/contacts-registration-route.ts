@@ -120,8 +120,10 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
    *         description: |
    *           Registered. `content` is `{outcome: "created", contactCode, warnings}`, where warnings are any of
    *           `application-profile-failed`, `waiting-lists-failed`, `login-setup-failed` (no login or no e-mail;
-   *           kundtjänst or the nightly sync creates it) and `login-exists` (a login with this personnummer
-   *           already existed, so no e-mail was sent; the person logs in or uses "Glömt lösenord").
+   *           kundtjänst or the nightly sync creates it), `login-exists` (a login with this personnummer
+   *           already existed, so no e-mail was sent; the person logs in or uses "Glömt lösenord") and
+   *           `login-bound-to-other-contact` (that login belongs to another contact and keeps it, so it would
+   *           not show the new one; send the person to kundtjänst).
    *       '200':
    *         description: |
    *           Nothing was created. `content` is `{outcome: "existing"}` or `{outcome: "inactive"}`.

@@ -10,6 +10,18 @@ export const requiredRolesFor = (rawPath: string, method: string): string[] => {
   // otherwise POST /V1/contacts reaches the handler but is gated as api-access.
   const path = rawPath.toLowerCase()
 
+  // Registration creates an Xpand contact and a Keycloak login for whoever is in the body, so
+  // it has a role of its own: neither contact-auth (the token helpers below) nor
+  // contacts:write is enough.
+  // Checked before every other rule: the handler's (.*) prefix also matches
+  // '/invoices/notify-batch/auth/contacts/register' and the like, which a prefix rule below
+  // would otherwise gate on that rule's roles, api-access included.
+  // Anchored at the end and POST only, so the same (.*) prefix on other handlers cannot let
+  // '/auth/contacts/register/...' reach them on this role alone.
+  if (REGISTER_PATH.test(path) && method === 'POST') {
+    return ['contacts:register']
+  }
+
   if (path.startsWith('/scan-receipt')) return ['scanner-upload']
 
   // All routes under /leases/for-csc require csc:get or api-access
@@ -59,15 +71,6 @@ export const requiredRolesFor = (rawPath: string, method: string): string[] => {
 
   if (path.startsWith('/invoice-channels')) {
     return ['invoice-channels:read', 'api-access']
-  }
-
-  // Registration creates an Xpand contact and a Keycloak login for whoever is in the body, so
-  // it has a role of its own: neither contact-auth (the token helpers below) nor
-  // contacts:write is enough. Checked first, because the token rule matches this path too.
-  // Anchored at the end and POST only: the handlers' (.*) prefix would otherwise let
-  // '/auth/contacts/register/...' reach other routes on this role alone.
-  if (REGISTER_PATH.test(path) && method === 'POST') {
-    return ['contacts:register']
   }
 
   // mimer.nu BFF (webapi): exchange mimer-contacts OAuth tokens via core only.
