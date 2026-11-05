@@ -1,7 +1,8 @@
-import { Bug, TriangleAlert } from 'lucide-react'
+import { Bug, MapPin, TriangleAlert } from 'lucide-react'
 
 import { components } from '@/services/api/core/generated/api-types'
 
+import { openAddressInGoogleMaps } from '@/shared/lib/addresses'
 import { Badge } from '@/shared/ui/Badge'
 import { CollapsibleInfoCard } from '@/shared/ui/CollapsibleInfoCard'
 import { CopyableField } from '@/shared/ui/CopyableField'
@@ -14,6 +15,9 @@ import {
 
 import { ApartmentTemperature } from './ApartmentTemperature'
 import { MalarEnergiFacilityIdField } from './MalarEnergiFacilityIdField'
+
+// The residence address has no city, and all of Mimer's residences are in Västerås
+const RESIDENCE_CITY = 'Västerås'
 
 interface ResidenceBasicInfoProps {
   residence: components['schemas']['ResidenceDetails']
@@ -73,6 +77,7 @@ export const ResidenceBasicInfo = ({
   const rent = objectRent ?? null
 
   const currentRentalBlock = getCurrentRentalBlock(residence)
+  const address = residence.name
 
   return (
     <TooltipProvider>
@@ -129,10 +134,25 @@ export const ResidenceBasicInfo = ({
         }
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Adress</p>
-            <p className="font-medium">{residence.name}</p>
-          </div>
+          <CopyableField
+            label="Adress"
+            value={address ?? undefined}
+            actions={
+              address
+                ? [
+                    {
+                      icon: <MapPin className="h-4 w-4" />,
+                      onClick: () =>
+                        openAddressInGoogleMaps(
+                          `${address}, ${RESIDENCE_CITY}`
+                        ),
+                      tooltip: 'Öppna i Google Maps',
+                      ariaLabel: 'Öppna adress i Google Maps',
+                    },
+                  ]
+                : undefined
+            }
+          />
           <div>
             <p className="text-sm text-muted-foreground">Fastighet</p>
             <p className="font-medium">
