@@ -1,3 +1,5 @@
+import type { EmailAttachment } from '@onecore/types'
+
 import type { BulkEmailResult, BulkSmsResult, Tenant } from '@/services/types'
 
 import { GET, POST } from './baseApi'
@@ -69,10 +71,16 @@ async function sendBulkSms(
 async function sendBulkEmail(
   recipients: { contactCode: string; emailAddress: string }[],
   subject: string,
-  text: string
+  text: string,
+  attachments?: EmailAttachment[]
 ): Promise<{ content: BulkEmailResult; warnings?: string[] }> {
   const { data, error } = await POST('/sendBulkEmail', {
-    body: { recipients, subject, text },
+    body: {
+      recipients,
+      subject,
+      text,
+      ...(attachments?.length && { attachments }),
+    },
   })
 
   if (error) throw error
