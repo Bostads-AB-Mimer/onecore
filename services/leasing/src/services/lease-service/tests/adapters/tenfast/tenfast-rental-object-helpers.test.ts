@@ -116,6 +116,9 @@ describe('tenfast-rental-object-helpers', () => {
       expect(getLeasedUntil([untilFurtherNotice('preTermination')])).toBe(
         'indefinite'
       )
+      expect(
+        getLeasedUntil([untilFurtherNotice('terminationSigningInProgress')])
+      ).toBe('indefinite')
     })
 
     it('ignores leases that never held the object', () => {
@@ -385,6 +388,7 @@ describe('tenfast-rental-object-helpers', () => {
       'active',
       'terminationScheduled',
       'preTermination',
+      'terminationSigningInProgress',
       'archived',
       'terminated',
       'voided',

@@ -9,6 +9,7 @@ const IN_FORCE_STAGES = new Set([
   'active',
   'terminationScheduled',
   'preTermination',
+  'terminationSigningInProgress',
   'upcoming',
 ])
 // Stages that never hold the object: ended, annulled or never signed.
@@ -66,9 +67,11 @@ export const isClaimingLease = (lease: {
  * which includes a signed successor to a terminated lease: the object never
  * becomes vacant in between.
  *
- * Tenfast sets endDate when notice is given (and for fixed-term leases). A
- * notice that was withdrawn (`requested` and `cancelled`) counts as no end,
- * in case the end date is left behind. Leases on a rental object are parsed
+ * Tenfast sets endDate when notice is given (and for fixed-term leases), but
+ * not until the tenant has signed it: a lease whose notice awaits signing has
+ * no end, so the object stays taken if the tenant never signs. A notice that
+ * was withdrawn (`requested` and `cancelled`) counts as no end, in case the
+ * end date is left behind. Leases on a rental object are parsed
  * partially, so stage and cancellation may be missing: a lease whose stage is
  * missing or unknown counts as in force without an end, so an object is never
  * shown as vacant on a lease we can't read.

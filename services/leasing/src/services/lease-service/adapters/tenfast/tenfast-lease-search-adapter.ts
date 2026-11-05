@@ -14,6 +14,7 @@ import {
   mapTenfastTypToLeaseType,
   calculateLeaseStatus,
   buildTenfastLeaseUrl,
+  getLeaseEndDate,
 } from '../../helpers/tenfast'
 import {
   getRentalObjectCodesByBuildingManager,
@@ -61,6 +62,8 @@ function mapTenfastLeaseToSearchResult(
     })
   }
 
+  const endDate = getLeaseEndDate(lease) ?? null
+
   return {
     leaseId: lease.externalId,
     externalUrl: buildTenfastLeaseUrl(lease._id),
@@ -75,8 +78,8 @@ function mapTenfastLeaseToSearchResult(
     property: ro?.fastighet?.fastighetsbeteckning ?? null,
     districtName: ro?.stadsdel ?? ro?.fastighet?.stadsdel ?? null,
     startDate: lease.startDate ?? null,
-    endDate: lease.endDate ?? null,
-    lastDebitDate: lease.endDate ?? null,
+    endDate,
+    lastDebitDate: endDate,
     signedAt: lease.signedAt ?? null,
     status: calculateLeaseStatus(lease),
   }

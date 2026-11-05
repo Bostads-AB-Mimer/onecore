@@ -340,6 +340,12 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *                 format: date-time
    *                 description: The desired move-out date
+   *               reason:
+   *                 type: string
+   *                 minLength: 1
+   *                 maxLength: 60
+   *                 default: Uppsägning av hyresgäst
+   *                 description: The reason for the termination
    *     responses:
    *       '200':
    *         description: Preliminary termination initiated successfully
@@ -363,8 +369,8 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
-        .body as leasingAdapter.PreliminaryTerminateLeaseRequestParams
+      const { contactCode, lastDebitDate, desiredMoveDate, reason } = ctx
+        .request.body as leasingAdapter.PreliminaryTerminateLeaseRequestParams
 
       try {
         const result = await leasingAdapter.preliminaryTerminateLease(
@@ -373,6 +379,7 @@ export const routes = (router: KoaRouter) => {
             contactCode,
             lastDebitDate,
             desiredMoveDate,
+            reason,
           }
         )
 

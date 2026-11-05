@@ -1760,6 +1760,7 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
   const contactCode = 'P12345'
   const lastDebitDate = new Date('2025-12-31')
   const desiredMoveDate = new Date('2025-12-31')
+  const reason = 'Flyttar till annan ort'
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -1789,7 +1790,8 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
       leaseId,
       contactCode,
       lastDebitDate,
-      desiredMoveDate
+      desiredMoveDate,
+      reason
     )
 
     // Assert
@@ -1812,10 +1814,43 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
       data: {
         endDate: '2025-12-31',
         cancelledByType: 'hyresgast',
-        reason: 'Tenant requested termination',
+        reason,
         preferredMoveOutDate: '2025-12-31',
       },
     })
+  })
+
+  it('should send dates given as Swedish midnight as the Swedish day', async () => {
+    // Arrange
+    ;(request as jest.Mock)
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { _id: '693aa758ba075dbac223a1ff', externalId: leaseId },
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { message: 'Signerings begäran skickad' },
+      })
+
+    // Act: 23:00 UTC on Dec 30 is midnight on Dec 31 in Sweden
+    await tenfastAdapter.preliminaryTerminateLease(
+      leaseId,
+      contactCode,
+      new Date('2025-12-30T23:00:00.000Z'),
+      new Date('2025-12-14T23:00:00.000Z'),
+      reason
+    )
+
+    // Assert
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          endDate: '2025-12-31',
+          preferredMoveOutDate: '2025-12-15',
+        }),
+      })
+    )
   })
 
   it('should return "lease-not-found" when lease lookup returns 404', async () => {
@@ -1832,7 +1867,8 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
       leaseId,
       contactCode,
       lastDebitDate,
-      desiredMoveDate
+      desiredMoveDate,
+      reason
     )
 
     // Assert
@@ -1857,7 +1893,8 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
       leaseId,
       contactCode,
       lastDebitDate,
-      desiredMoveDate
+      desiredMoveDate,
+      reason
     )
 
     // Assert
@@ -1889,7 +1926,8 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
       leaseId,
       contactCode,
       lastDebitDate,
-      desiredMoveDate
+      desiredMoveDate,
+      reason
     )
 
     // Assert
@@ -1920,7 +1958,8 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
       leaseId,
       contactCode,
       lastDebitDate,
-      desiredMoveDate
+      desiredMoveDate,
+      reason
     )
 
     // Assert
@@ -1951,7 +1990,8 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
       leaseId,
       contactCode,
       lastDebitDate,
-      desiredMoveDate
+      desiredMoveDate,
+      reason
     )
 
     // Assert
@@ -1982,7 +2022,8 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
       leaseId,
       contactCode,
       lastDebitDate,
-      desiredMoveDate
+      desiredMoveDate,
+      reason
     )
 
     // Assert
@@ -2001,7 +2042,8 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
       leaseId,
       contactCode,
       lastDebitDate,
-      desiredMoveDate
+      desiredMoveDate,
+      reason
     )
 
     // Assert
@@ -2033,7 +2075,8 @@ describe(tenfastAdapter.preliminaryTerminateLease, () => {
       leaseIdWithSlash,
       contactCode,
       lastDebitDate,
-      desiredMoveDate
+      desiredMoveDate,
+      reason
     )
 
     // Assert

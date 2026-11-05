@@ -1250,7 +1250,8 @@ export const preliminaryTerminateLease = async (
   leaseId: string,
   contactCode: string,
   lastDebitDate: Date,
-  desiredMoveDate: Date
+  desiredMoveDate: Date,
+  reason: string
 ): Promise<
   AdapterResult<
     PreliminaryTerminationResponse,
@@ -1285,24 +1286,11 @@ export const preliminaryTerminateLease = async (
     const tenfastLeaseId = leaseResponse.data._id
 
     // Format dates to YYYY-MM-DD format as required by tenfast API
-    const endDate = lastDebitDate.toISOString().split('T')[0]
-
-    const requestData: {
-      endDate: string
-      cancelledByType: string
-      reason: string
-      preferredMoveOutDate?: string
-    } = {
-      endDate,
+    const requestData = {
+      endDate: toSwedishDay(lastDebitDate),
       cancelledByType: 'hyresgast',
-      reason: 'Tenant requested termination',
-    }
-
-    // Only include preferredMoveOutDate if desiredMoveDate is provided
-    if (desiredMoveDate) {
-      requestData.preferredMoveOutDate = desiredMoveDate
-        .toISOString()
-        .split('T')[0]
+      reason,
+      preferredMoveOutDate: toSwedishDay(desiredMoveDate),
     }
 
     const terminationResponse = await tenfastApi.request({
@@ -1555,12 +1543,14 @@ export const getLeaseByExternalId = async (
   }
 }
 
-// Tenfast end dates arrive as UTC or Stockholm midnight; compare Stockholm calendar dates.
-const toStockholmDate = (date: Date) =>
-  date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })
+// Swedish day, so UTC midnight and Swedish midnight give the same date.
+const toSwedishDay = (date: Date) =>
+  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(
+    date
+  )
 
 const hasEnded = (endDate: Date | null | undefined, now: Date) =>
-  !!endDate && toStockholmDate(endDate) < toStockholmDate(now)
+  !!endDate && toSwedishDay(endDate) < toSwedishDay(now)
 
 const isCurrentSubletOf = (
   lease: TenfastLease,
@@ -1685,7 +1675,8 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     const params = new URLSearchParams({
       hyresvard: tenfastCompanyId,
       populate: 'hyresgaster,hyresobjekt',
-      states: 'active,upcoming,preTermination,terminationScheduled',
+      states:
+        'active,upcoming,preTermination,terminationSigningInProgress,terminationScheduled',
     })
 
     const records = await fetchAllPages(
@@ -1709,12 +1700,6 @@ export type TerminateLeaseBody = {
   supplementaryAgreements: boolean
   handled: boolean
 }
-
-// Swedish day, so UTC midnight and Swedish midnight give the same date.
-const toSwedishDay = (date: Date) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(
-    date
-  )
 
 export const terminateLease = async (
   leaseId: string,

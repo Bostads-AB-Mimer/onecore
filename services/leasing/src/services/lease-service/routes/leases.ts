@@ -1037,7 +1037,7 @@ export const routes = (router: KoaRouter) => {
    * /leases/lf-export:
    *   get:
    *     summary: Export home insurance data for Länsförsäkringar
-   *     description: Returns leases with a home insurance rent row in states active, upcoming, preTermination, and terminationScheduled, with all fields needed for the daily LF export.
+   *     description: Returns leases with a home insurance rent row in states active, upcoming, preTermination, terminationSigningInProgress, and terminationScheduled, with all fields needed for the daily LF export.
    *     tags: [Leases]
    *     responses:
    *       200:
@@ -1716,6 +1716,12 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *                 format: date-time
    *                 description: The desired move-out date
+   *               reason:
+   *                 type: string
+   *                 minLength: 1
+   *                 maxLength: 60
+   *                 default: Uppsägning av hyresgäst
+   *                 description: The reason for the termination
    *     responses:
    *       200:
    *         description: Preliminary termination initiated successfully
@@ -1737,8 +1743,8 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
-        .body as z.infer<
+      const { contactCode, lastDebitDate, desiredMoveDate, reason } = ctx
+        .request.body as z.infer<
         typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
       >
 
@@ -1746,7 +1752,8 @@ export const routes = (router: KoaRouter) => {
         ctx.params.leaseId,
         contactCode,
         new Date(lastDebitDate),
-        new Date(desiredMoveDate)
+        new Date(desiredMoveDate),
+        reason
       )
 
       if (!result.ok) {

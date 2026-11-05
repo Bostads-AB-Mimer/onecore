@@ -260,6 +260,7 @@ export const TenfastLeaseSchema = z.object({
       docId: z.string().optional(),
       sentAt: optionalDateField,
       signedAt: optionalDateField,
+      preliminaryEndDate: optionalDateField, // End date until the tenant has signed the notice
     })
     .optional(),
   id: z.string(),

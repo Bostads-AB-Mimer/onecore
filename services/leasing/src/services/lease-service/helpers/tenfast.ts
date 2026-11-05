@@ -90,6 +90,7 @@ export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
     case 'active':
       return LeaseStatus.Current
     case 'preTermination':
+    case 'terminationSigningInProgress':
       return LeaseStatus.PreliminaryTerminated
     case 'terminationScheduled':
       return LeaseStatus.AboutToEnd
@@ -165,8 +166,17 @@ const mapToOnecoreRentalObject = (
 // lastDebitDate: Date | undefined // Sista betaldatum
 // approvalDate: Date | undefined // När godkände mimer kontraktet?
 
+// Until the tenant signs a notice, Tenfast keeps the end date on the signing
+// request and leaves endDate empty on the lease.
+export const getLeaseEndDate = (lease: TenfastLease): Date | undefined => {
+  if (lease.endDate) return lease.endDate
+  if (lease.stage !== 'terminationSigningInProgress') return undefined
+  return lease.simplesignTermination?.preliminaryEndDate ?? undefined
+}
+
 export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
   const rentalObject = lease.hyresobjekt[0]
+  const endDate = getLeaseEndDate(lease)
 
   const stadsdel = rentalObject?.stadsdel ?? rentalObject?.fastighet?.stadsdel
 
@@ -175,7 +185,7 @@ export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
     leaseNumber: lease.externalId.split('/')[1],
     externalUrl: buildTenfastLeaseUrl(lease._id),
     leaseStartDate: lease.startDate,
-    leaseEndDate: lease.endDate ?? undefined,
+    leaseEndDate: endDate,
     status: calculateLeaseStatus(lease),
     noticeGivenBy: lease.cancellation.cancelledByType ?? undefined,
     noticeDate: lease.cancellation.handledAt ?? undefined,
@@ -183,7 +193,7 @@ export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
     preferredMoveOutDate: lease.cancellation.preferredMoveOutDate ?? undefined,
     terminationDate: lease.cancellation.handledAt ?? undefined,
     contractDate: lease.signedAt ?? undefined,
-    lastDebitDate: lease.endDate ?? undefined,
+    lastDebitDate: endDate,
     approvalDate: lease.signedAt ?? undefined,
     residentialArea: stadsdel
       ? { code: stadsdel, caption: stadsdel }

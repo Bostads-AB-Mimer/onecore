@@ -75,7 +75,7 @@ group as "probably real, unconfirmed," not settled fact.
 `helpers/tenfast.ts:calculateLeaseStatus` and
 `adapters/tenfast/filters.ts:stageToStatus`): `active`, `upcoming`,
 `terminationScheduled`, `archived`, `terminated`, `preTermination`,
-`signingInProgress`, `draft`. Unconfirmed (no switch case, mapping, or test
+`terminationSigningInProgress`, `signingInProgress`, `draft`. Unconfirmed (no switch case, mapping, or test
 references them — if Tenfast sends these, current code silently falls
 through to `default`/"Unknown Tenfast stage"): `voided`, `rejected`.
 
@@ -167,7 +167,9 @@ articles and rent rows.
 
 On a lease's `cancellation` object:
 
-- `requested: true` — a termination notice **has been given**.
+- `requested: true` — a termination notice **has been given**. It stays unset
+  while a SimpleSign notice awaits signing (`terminationSigningInProgress`), so
+  use the stage to find those leases.
 - `cancelled: true` — the termination notice was **itself later withdrawn**
   (i.e. the lease is _not_ ending after all). This does NOT mean "the lease
   is cancelled/ended" — that reading is backwards and was an actual bug.
@@ -180,14 +182,14 @@ checking only `requested` can produce false positives.
 ## vacantFrom from leases: mostly the end date, not the notice flags
 
 `getLeasedUntil` (`tenfast-rental-object-helpers.ts`) looks at leases in
-force: `active`, `terminationScheduled`, `preTermination` and `upcoming`. A
-lease with a missing or unknown stage counts as in force without an end (not
+force: `active`, `terminationScheduled`, `preTermination`,
+`terminationSigningInProgress` and `upcoming`. A lease with a missing or unknown stage counts as in force without an end (not
 vacant), so an unreadable lease never makes an object vacant.
 
 - **No such lease:** vacant today.
 - **Any of them without `endDate`:** not vacant (`vacantFrom` undefined). That
-  covers a tenancy until further notice and a signed successor to a terminated
-  lease.
+  covers a tenancy until further notice, a signed successor to a terminated
+  lease and a notice that awaits signing.
 - **Otherwise:** vacant the day after the latest end, but never before today.
   A lease past its end date can stay in force until Tenfast moves it to
   `terminated` (AVTAL-408).
@@ -199,6 +201,12 @@ On Tenfast test (2,229 objects, 2026-10-14), `endDate` was set exactly when
 notice had been given, both on terminating and on upcoming leases. No lease
 had a withdrawn notice. A withdrawn notice (`requested && cancelled`) still
 counts as no end, in case Tenfast leaves the date behind.
+
+Seen on staging 2026-11-05: `send-simplesign-termination` moves the lease to
+`terminationSigningInProgress` at once, with `endDate` null until the tenant
+has signed. The end date is in `simplesignTermination.preliminaryEndDate`, which
+`getLeaseEndDate` (`helpers/tenfast.ts`) returns for display. `getLeasedUntil`
+ignores it on purpose.
 
 ## Query syntax
 
