@@ -386,7 +386,8 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
       '216-704-00-0022/02',
       'P12345',
       new Date('2025-12-31T00:00:00.000Z'),
-      new Date('2025-12-31T00:00:00.000Z')
+      new Date('2025-12-31T00:00:00.000Z'),
+      'Uppsägning av hyresgäst'
     )
   })
 
@@ -407,8 +408,40 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
       '123-456',
       'P12345',
       expect.any(Date),
-      expect.any(Date)
+      expect.any(Date),
+      'Uppsägning av hyresgäst'
     )
+  })
+
+  it('should pass a given reason on to the adapter', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'preliminaryTerminateLease')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { message: 'Signerings begäran skickad' },
+      })
+
+    const res = await request(app.callback())
+      .post('/leases/234-567/preliminary-termination')
+      .send({ ...validRequestBody, reason: 'Flyttar till annan ort' })
+
+    expect(res.status).toBe(200)
+    expect(tenfastAdapter.preliminaryTerminateLease).toHaveBeenCalledWith(
+      '234-567',
+      'P12345',
+      expect.any(Date),
+      expect.any(Date),
+      'Flyttar till annan ort'
+    )
+  })
+
+  it('should return 400 if reason is blank', async () => {
+    const res = await request(app.callback())
+      .post('/leases/234-567/preliminary-termination')
+      .send({ ...validRequestBody, reason: '   ' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.data).toMatchObject([{ path: ['reason'] }])
   })
 })
 

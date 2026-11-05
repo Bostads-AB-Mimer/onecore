@@ -1250,7 +1250,8 @@ export const preliminaryTerminateLease = async (
   leaseId: string,
   contactCode: string,
   lastDebitDate: Date,
-  desiredMoveDate: Date
+  desiredMoveDate: Date,
+  reason: string
 ): Promise<
   AdapterResult<
     PreliminaryTerminationResponse,
@@ -1285,7 +1286,7 @@ export const preliminaryTerminateLease = async (
     const tenfastLeaseId = leaseResponse.data._id
 
     // Format dates to YYYY-MM-DD format as required by tenfast API
-    const endDate = lastDebitDate.toISOString().split('T')[0]
+    const endDate = toSwedishDay(lastDebitDate)
 
     const requestData: {
       endDate: string
@@ -1295,14 +1296,12 @@ export const preliminaryTerminateLease = async (
     } = {
       endDate,
       cancelledByType: 'hyresgast',
-      reason: 'Tenant requested termination',
+      reason,
     }
 
     // Only include preferredMoveOutDate if desiredMoveDate is provided
     if (desiredMoveDate) {
-      requestData.preferredMoveOutDate = desiredMoveDate
-        .toISOString()
-        .split('T')[0]
+      requestData.preferredMoveOutDate = toSwedishDay(desiredMoveDate)
     }
 
     const terminationResponse = await tenfastApi.request({

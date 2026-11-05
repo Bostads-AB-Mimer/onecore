@@ -51,6 +51,7 @@ export const PreliminaryTerminateLeaseRequestSchema = z.object({
   contactCode: z.string(),
   lastDebitDate: z.string().datetime(),
   desiredMoveDate: z.string().datetime(),
+  reason: z.string().trim().min(1).default('Uppsägning av hyresgäst'),
 })
 
 export const PreliminaryTerminateLeaseResponseSchema = z.object({
