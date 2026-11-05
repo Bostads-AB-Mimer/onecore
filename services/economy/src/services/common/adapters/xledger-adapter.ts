@@ -40,7 +40,17 @@ const TransactionSourceDbId = {
   AR: 797,
   SO: 600,
   OS: 3536,
+  // Kundförlust (write-off). Entity-specific like TENANT_COMPANY_DB_ID;
+  // only used in filters, rows are classified by transactionSource.code
+  KF: 49647743,
 }
+// Rows that make up an invoice: the invoice itself plus any write-off on it
+const invoiceTransactionSourceDbIds = [
+  TransactionSourceDbId.SO,
+  TransactionSourceDbId.AR,
+  TransactionSourceDbId.OS,
+  TransactionSourceDbId.KF,
+]
 interface XledgerResponse {
   status: 'ok' | 'retry' | 'error'
   data: any
@@ -257,7 +267,36 @@ function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
     .otherwise(() => null)
 }
 
-const transformToInvoice = (invoiceData: any): Invoice => {
+// A kundförlust (KF) row is a write-off matched to the invoice; Xledger then
+// reports invoiceRemaining as 0. Fold KF rows into their invoice.
+const transformToInvoices = (edges: any[]): Invoice[] => {
+  const writtenOffByInvoice = new Map<string, number>()
+  const invoiceEdges: any[] = []
+
+  for (const edge of edges) {
+    if (edge.node.transactionHeader?.transactionSource?.code === 'KF') {
+      const invoiceNumber = edge.node.invoiceNumber
+      writtenOffByInvoice.set(
+        invoiceNumber,
+        (writtenOffByInvoice.get(invoiceNumber) ?? 0) -
+          parseFloat(edge.node.amount)
+      )
+    } else {
+      invoiceEdges.push(edge)
+    }
+  }
+
+  return invoiceEdges.map((edge) => {
+    // A reversed write-off nets to 0 and reopens the invoice
+    const writtenOff = writtenOffByInvoice.get(edge.node.invoiceNumber) ?? 0
+    return transformToInvoice(edge, writtenOff > 0 ? writtenOff : undefined)
+  })
+}
+
+const transformToInvoice = (
+  invoiceData: any,
+  writtenOffAmount?: number
+): Invoice => {
   const InvoiceTypeMap: Record<number, Invoice['type']> = {
     600: 'Other',
     797: 'Regular',
@@ -305,8 +344,10 @@ const transformToInvoice = (invoiceData: any): Invoice => {
     transactionTypeName: randomUUID(),
     paidAmount:
       parseFloat(invoiceData.node.amount) -
-      parseFloat(invoiceData.node.invoiceRemaining),
+      parseFloat(invoiceData.node.invoiceRemaining) -
+      (writtenOffAmount ?? 0),
     remainingAmount: parseFloat(invoiceData.node.invoiceRemaining),
+    writtenOffAmount,
     type: InvoiceTypeMap[invoiceData.node.headerTransactionSourceDbId],
     description: invoiceData.node.text ?? undefined,
     sentToDebtCollection,
@@ -321,6 +362,11 @@ const transformToInvoice = (invoiceData: any): Invoice => {
   // TODO? handle overpaid invoices (negative remainingAmount)?
   // TODO? DO we want a unique status for invoices paid after due date?
   function getPaymentStatus(invoice: Omit<Invoice, 'paymentStatus'>) {
+    // A write-off zeroes invoiceRemaining without any payment being made.
+    // It wins over any remaining balance; Saldo still shows the open amount.
+    if (invoice.writtenOffAmount && invoice.writtenOffAmount > 0) {
+      return PaymentStatus.WrittenOff
+    }
     //Can remainingAmount be negative? otherwise skip check
     if (!invoice.remainingAmount || invoice.remainingAmount <= 0) {
       return PaymentStatus.Paid
@@ -675,6 +721,11 @@ const invoiceNodeFragment = `
   slTransactionType {
     name
   }
+  transactionHeader {
+    transactionSource {
+      code
+    }
+  }
   invoiceFile {
     url
   }
@@ -843,7 +894,7 @@ export const getInvoicesByContactCode = async (
         first: 100,
         filter: {
           subledgerDbId: ${xledgerId},
-          headerTransactionSourceDbId_in: [600, 797, 3536]${fromDateFilter}
+          headerTransactionSourceDbId_in: [${invoiceTransactionSourceDbIds}]${fromDateFilter}
         }
       )
       {
@@ -858,7 +909,7 @@ export const getInvoicesByContactCode = async (
 
   const result = await makeXledgerRequest(query)
 
-  return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
+  return transformToInvoices(result.data?.arTransactions?.edges ?? [])
 }
 
 /*
@@ -873,9 +924,9 @@ export const getInvoicesByInvoiceNumbers = async (
   invoiceNumbers: string[]
 ): Promise<Invoice[]> => {
   const CHUNK_SIZE = 50
-  // One invoice number can match several transaction rows (e.g. a regular row
-  // plus a loss row on account 1529), so the page size must be well above the
-  // chunk size — Xledger truncates at `first` without reporting it.
+  // One invoice number can match several transaction rows (regular row plus
+  // loss (1529) and write-off (KF) rows), so the page size must be well above
+  // the chunk size — Xledger truncates at `first` without reporting it.
   const PAGE_SIZE = 10000
   const invoices: Invoice[] = []
 
@@ -900,11 +951,7 @@ export const getInvoicesByInvoiceNumbers = async (
         first: PAGE_SIZE,
         filter: {
           invoiceNumber_in: chunk,
-          headerTransactionSourceDbId_in: [
-            TransactionSourceDbId.SO,
-            TransactionSourceDbId.AR,
-            TransactionSourceDbId.OS,
-          ],
+          headerTransactionSourceDbId_in: invoiceTransactionSourceDbIds,
         },
       },
     }
@@ -920,7 +967,7 @@ export const getInvoicesByInvoiceNumbers = async (
         )
       }
 
-      invoices.push(...edges.map(transformToInvoice))
+      invoices.push(...transformToInvoices(edges))
     } catch (err) {
       logger.error(
         { err, invoiceNumbers: chunk.length },
@@ -931,36 +978,6 @@ export const getInvoicesByInvoiceNumbers = async (
   }
 
   return invoices
-}
-
-export const getInvoices = async (from?: Date, to?: Date) => {
-  const query = {
-    query: `
-      query($from: String, $to: String) {
-        arTransactions(
-          first: 10000,
-          filter: {
-            invoiceDate_gte: $from
-            invoiceDate_lt: $to
-            headerTransactionSourceDbId_in: [600, 797, 3536]
-          }
-        ) {
-          edges {
-            node {
-              ${invoiceNodeFragment}
-            }
-          }
-        }
-      }
-    `,
-    variables: {
-      from: from ? dateToGraphQlDateString(from) : null,
-      to: to ? dateToGraphQlDateString(to) : null,
-    },
-  }
-
-  const result = await makeXledgerRequest(query)
-  return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
 }
 
 export const getAllInvoicesWithMatchIds = async ({
@@ -1043,9 +1060,9 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
   const q = {
     query: `query {
       arTransactions(
-        first: 1
+        first: 25
         filter: {
-          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [600, 797, 3536]
+          invoiceNumber: "${invoiceNumber}", headerTransactionSourceDbId_in: [${invoiceTransactionSourceDbIds}]
         }
       ) {
           edges {
@@ -1064,8 +1081,7 @@ export async function getInvoiceByInvoiceNumber(invoiceNumber: string) {
       return null
     }
 
-    const [invoice] =
-      result.data?.arTransactions.edges.map(transformToInvoice) ?? []
+    const [invoice] = transformToInvoices(result.data.arTransactions.edges)
     return invoice
   } catch (err) {
     logger.error(err, 'Error getting invoice from Xledger')

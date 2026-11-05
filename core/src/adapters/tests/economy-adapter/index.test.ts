@@ -1,4 +1,5 @@
 import nock from 'nock'
+import { PaymentStatus } from '@onecore/types'
 
 import config from '../../../common/config'
 import * as economyAdapter from '../../economy-adapter'
@@ -78,6 +79,27 @@ describe('economy-adapter', () => {
       await economyAdapter.getInvoicesSentToDebtCollection('P123456')
 
     expect(result).toStrictEqual({ ok: true, data: [] })
+  })
+
+  it('counts written-off invoices even without the debt collection text', async () => {
+    // A kundförlust booking in Xledger is structural; the "Sergel Inkasso"
+    // text is typed by hand and may be missing.
+    const writtenOff = ownInvoices.map((i) => ({
+      ...i,
+      sentToDebtCollection: undefined,
+      paymentStatus: PaymentStatus.WrittenOff,
+    }))
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(200, { content: writtenOff })
+
+    const result =
+      await economyAdapter.getInvoicesSentToDebtCollection('P123456')
+
+    expect(result).toStrictEqual({
+      ok: true,
+      data: JSON.parse(JSON.stringify(writtenOff)),
+    })
   })
 
   describe(economyAdapter.submitMiscellaneousInvoice, () => {

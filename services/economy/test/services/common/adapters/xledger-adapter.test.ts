@@ -2,7 +2,7 @@ import nock from 'nock'
 
 import * as adapter from '@src/services/common/adapters/xledger-adapter'
 import config from '@src/common/config'
-import { schemas } from '@onecore/types'
+import { PaymentStatus, schemas } from '@onecore/types'
 
 afterEach(() => {
   nock.abortPendingRequests()
@@ -316,6 +316,227 @@ describe(adapter.getInvoicesByContactCode, () => {
     expect(result).toEqual([
       expect.objectContaining({ credit: { originalInvoiceId: '12345' } }),
     ])
+  })
+})
+
+describe('kundförlust (KF) rows', () => {
+  // A write-off is booked in Xledger as a KF-sourced row on the customer
+  // ledger account, matched to the invoice. Xledger then reports
+  // invoiceRemaining as 0, which must not read as paid.
+  const invoiceRow = {
+    invoiceNumber: '12043',
+    invoiceDate: '2026-05-20',
+    invoiceRemaining: '0.0000',
+    amount: '1250.0000',
+    subledger: { code: 'P058289' },
+    period: { fromDate: '2026-05-01', toDate: '2026-05-31' },
+    dueDate: '2026-06-19',
+    text: 'Sergel Inkasso 20260724',
+    headerTransactionSourceDbId: 600,
+    transactionHeader: { transactionSource: { code: 'SO' } },
+    account: { code: '1530' },
+  }
+  const writeOffRow = {
+    invoiceNumber: '12043',
+    invoiceDate: '2026-10-01',
+    invoiceRemaining: '0.0000',
+    amount: '-1250.0000',
+    subledger: { code: 'P058289' },
+    period: { fromDate: '2026-10-01', toDate: '2026-10-01' },
+    dueDate: '2026-10-01',
+    text: null,
+    headerTransactionSourceDbId: 49647743,
+    transactionHeader: { transactionSource: { code: 'KF' } },
+    account: { code: '1530' },
+  }
+  const customerReply = {
+    data: { customers: { edges: [{ node: { dbId: 1234 } }] } },
+  }
+
+  it('requests KF rows together with invoices for a contact', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: { customers: { edges: [{ node: { dbId: 1234 } }] } },
+      })
+    let capturedQuery = ''
+    nock(origin)
+      .post(pathname, (body) => {
+        capturedQuery = body.query
+        return true
+      })
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+
+    await adapter.getInvoicesByContactCode('P058289')
+
+    expect(capturedQuery).toContain('49647743')
+  })
+
+  it('folds a KF row into its invoice as written off instead of paid', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: { customers: { edges: [{ node: { dbId: 1234 } }] } },
+      })
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [{ node: invoiceRow }, { node: writeOffRow }],
+          },
+        },
+      })
+
+    const result = await adapter.getInvoicesByContactCode('P058289')
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        invoiceId: '12043',
+        paymentStatus: PaymentStatus.WrittenOff,
+        writtenOffAmount: 1250,
+        paidAmount: 0,
+        remainingAmount: 0,
+      }),
+    ])
+    expect(() => schemas.v1.InvoiceSchema.array().parse(result)).not.toThrow()
+  })
+
+  it('keeps the paid part when only part of an invoice is written off', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: { customers: { edges: [{ node: { dbId: 1234 } }] } },
+      })
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              { node: invoiceRow },
+              { node: { ...writeOffRow, amount: '-250.0000' } },
+            ],
+          },
+        },
+      })
+
+    const result = await adapter.getInvoicesByContactCode('P058289')
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        paymentStatus: PaymentStatus.WrittenOff,
+        writtenOffAmount: 250,
+        paidAmount: 1000,
+      }),
+    ])
+  })
+
+  it('folds KF rows into invoices looked up by invoice number', async () => {
+    let capturedBody: any
+    nock(origin)
+      .post(pathname, (body) => {
+        capturedBody = body
+        return true
+      })
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [{ node: invoiceRow }, { node: writeOffRow }],
+          },
+        },
+      })
+
+    const result = await adapter.getInvoicesByInvoiceNumbers(['12043'])
+
+    expect(
+      capturedBody.variables.filter.headerTransactionSourceDbId_in
+    ).toContain(49647743)
+    expect(result).toEqual([
+      expect.objectContaining({
+        invoiceId: '12043',
+        paymentStatus: PaymentStatus.WrittenOff,
+        writtenOffAmount: 1250,
+      }),
+    ])
+  })
+
+  it('classifies a write-off by its source code, not its dbId', async () => {
+    // The dbId is entity-specific; the code is Xledger's own label.
+    nock(origin).post(pathname).reply(200, customerReply)
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              { node: invoiceRow },
+              { node: { ...writeOffRow, headerTransactionSourceDbId: 1 } },
+            ],
+          },
+        },
+      })
+
+    const result = await adapter.getInvoicesByContactCode('P058289')
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        invoiceId: '12043',
+        paymentStatus: PaymentStatus.WrittenOff,
+      }),
+    ])
+  })
+
+  it('leaves writtenOffAmount unset when KF rows net to zero', async () => {
+    // A reversed write-off reopens the invoice; status follows the balance.
+    nock(origin).post(pathname).reply(200, customerReply)
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [
+              { node: { ...invoiceRow, invoiceRemaining: '1250.0000' } },
+              { node: writeOffRow },
+              { node: { ...writeOffRow, amount: '1250.0000' } },
+            ],
+          },
+        },
+      })
+
+    const result = await adapter.getInvoicesByContactCode('P058289')
+
+    expect(result).toHaveLength(1)
+    expect(result?.[0].writtenOffAmount).toBeUndefined()
+    expect(result?.[0].paymentStatus).toBe(PaymentStatus.Overdue)
+  })
+
+  it('folds KF rows into a single-invoice lookup', async () => {
+    let capturedQuery = ''
+    nock(origin)
+      .post(pathname, (body) => {
+        capturedQuery = body.query
+        return true
+      })
+      .reply(200, {
+        data: {
+          arTransactions: {
+            edges: [{ node: invoiceRow }, { node: writeOffRow }],
+          },
+        },
+      })
+
+    const result = await adapter.getInvoiceByInvoiceNumber('12043')
+
+    expect(capturedQuery).toContain('49647743')
+    expect(capturedQuery).not.toMatch(/first:\s*1\b/)
+    expect(result).toEqual(
+      expect.objectContaining({
+        invoiceId: '12043',
+        paymentStatus: PaymentStatus.WrittenOff,
+        writtenOffAmount: 1250,
+      })
+    )
   })
 })
 

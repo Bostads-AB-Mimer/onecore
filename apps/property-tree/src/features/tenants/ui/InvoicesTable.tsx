@@ -106,6 +106,9 @@ export const InvoicesTable = (props: Props) => {
       .with({ paymentStatus: PaymentStatus.Overdue }, () => (
         <Badge variant="destructive">Förfallen</Badge>
       ))
+      .with({ paymentStatus: PaymentStatus.WrittenOff }, () => (
+        <Badge variant="destructive">Kundförlust</Badge>
+      ))
       .otherwise((v) => (
         <Badge variant="secondary">Okänd betalstatus: {v.paymentStatus}</Badge>
       ))
@@ -359,6 +362,11 @@ export const InvoicesTable = (props: Props) => {
           <div className="mb-3 text-sm bg-background/50 rounded p-2">
             <span className="font-medium">Text:</span> {invoice.description}
             {invoice.expectedLoss && <div>Befarad kundförlust</div>}
+            {invoice.writtenOffAmount !== undefined && (
+              <div>
+                Bokförd kundförlust: {formatCurrency(invoice.writtenOffAmount)}
+              </div>
+            )}
           </div>
         )}
         {invoice.credit && (
