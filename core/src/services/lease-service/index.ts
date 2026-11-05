@@ -343,6 +343,7 @@ export const routes = (router: KoaRouter) => {
    *               reason:
    *                 type: string
    *                 minLength: 1
+   *                 maxLength: 60
    *                 default: Uppsägning av hyresgäst
    *                 description: The reason for the termination
    *     responses:

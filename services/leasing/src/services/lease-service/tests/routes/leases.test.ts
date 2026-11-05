@@ -443,6 +443,15 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
     expect(res.status).toBe(400)
     expect(res.body.data).toMatchObject([{ path: ['reason'] }])
   })
+
+  it('should return 400 if reason is longer than 60 characters', async () => {
+    const res = await request(app.callback())
+      .post('/leases/234-567/preliminary-termination')
+      .send({ ...validRequestBody, reason: 'a'.repeat(61) })
+
+    expect(res.status).toBe(400)
+    expect(res.body.data).toMatchObject([{ path: ['reason'] }])
+  })
 })
 
 describe('POST /leases/:leaseId/home-insurance', () => {

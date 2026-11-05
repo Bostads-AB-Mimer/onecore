@@ -95,7 +95,7 @@ sequenceDiagram
 
 - Det här är den **enda** platsen i onecore där en bilplats-uppsägning är hyresgäst-initierad — motsatsen till [Synka Uppsägning från Xpand](./DOCS_Terminate_Lease_via_Xpand_Sync.md), där bilplatser tvärtom filtreras bort (se processöversiktens not om det).
 - `cancelledByType: 'hyresgast'` är hårdkodat av onecore i anropet till Tenfast — det är så Tenfast (och därmed statistik/revisionsspår) vet att uppsägningen kom från hyresgästen själv.
-- `reason` är valfri i anropet till Core. Utan den skickas `"Uppsägning av hyresgäst"` till Tenfast, och en tom sträng ger 400. Defaulten sätts i `PreliminaryTerminateLeaseRequestSchema`.
+- `reason` är valfri i anropet till Core. Utan den skickas `"Uppsägning av hyresgäst"` till Tenfast. En tom sträng eller mer än 60 tecken ger 400. Defaulten sätts i `PreliminaryTerminateLeaseRequestSchema`.
 - `preferredMoveOutDate` är bara hyresgästens önskemål, för kännedom. Avtalets slutdatum styrs av `endDate`. Båda datumen visas på signeringsblanketten och skickas till Tenfast som svenska kalenderdagar.
 - Dubbletter stoppas i Mina Sidor, som blockerar en ny uppsägning när en redan pågår. Det finns ingen sådan kontroll i onecore.
 - Det här steget skickar bara en **signeringsbegäran** — avtalet är inte uppsagt förrän hyresgästen faktiskt signerar med BankID. Medan signeringen pågår står avtalet i `terminationSigningInProgress`. Själva stegövergången i Tenfast (vidare till `terminationScheduled`) styrs av Tenfast internt och är inte synlig i den här kodbasen.

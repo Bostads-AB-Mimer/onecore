@@ -168,7 +168,7 @@ const mapToOnecoreRentalObject = (
 
 // Until the tenant signs a notice, Tenfast keeps the end date on the signing
 // request and leaves endDate empty on the lease.
-const getLeaseEndDate = (lease: TenfastLease): Date | undefined => {
+export const getLeaseEndDate = (lease: TenfastLease): Date | undefined => {
   if (lease.endDate) return lease.endDate
   if (lease.stage !== 'terminationSigningInProgress') return undefined
   return lease.simplesignTermination?.preliminaryEndDate ?? undefined

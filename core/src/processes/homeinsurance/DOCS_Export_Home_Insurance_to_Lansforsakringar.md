@@ -2,7 +2,7 @@
 
 _Del av [processöversikten](./DOCS_Overview.md) för hemförsäkring._
 
-Ett fristående script (`core/src/scripts/home-insurance-export.ts`) hämtar samtliga hyreskontrakt med en hemförsäkringsrad i Tenfast — i statusarna `active`, `upcoming`, `preTermination` och `terminationScheduled` — och skickar en daglig Excel-fil med dem till Länsförsäkringar via SFTP. Det här är ett annat exportflöde än mimer.nu:s eget (se [processöversiktens](./DOCS_Overview.md) avsnitt "Utanför denna dokumentation") — den här exporten läser från Tenfast, inte från mimer.nu:s lokala databas.
+Ett fristående script (`core/src/scripts/home-insurance-export.ts`) hämtar samtliga hyreskontrakt med en hemförsäkringsrad i Tenfast — i statusarna `active`, `upcoming`, `preTermination`, `terminationSigningInProgress` och `terminationScheduled` — och skickar en daglig Excel-fil med dem till Länsförsäkringar via SFTP. Det här är ett annat exportflöde än mimer.nu:s eget (se [processöversiktens](./DOCS_Overview.md) avsnitt "Utanför denna dokumentation") — den här exporten läser från Tenfast, inte från mimer.nu:s lokala databas.
 
 Schemaläggningen ligger inte i onecore-repot utan i `mimer-onecore-operations` (`apps/onecore/core/lfinsuranceexportcronjob.yaml`) — ett Kubernetes CronJob vid namn `lf-insurance-export` som kör `npm run script:home-insurance-export` i core-imagen, dagligen kl 23:59 (`59 23 * * *`).
 
@@ -37,7 +37,7 @@ sequenceDiagram
     CronJob ->> Core: Run Home Insurance Export<br/>(npm run script:home-insurance-export)
 
     Core ->> Leasing: Get LF Export
-    Leasing ->> Tenfast: Get Leases with Home Insurance Row<br/>(states: active, upcoming,<br/>preTermination, terminationScheduled)
+    Leasing ->> Tenfast: Get Leases with Home Insurance Row<br/>(states: active, upcoming,<br/>preTermination, terminationSigningInProgress,<br/>terminationScheduled)
     Tenfast -->> Leasing: Leases (paginated)
     note over Leasing: Adress, Postnr and Ort come from the<br/>lease's hyresobjekt (not the tenant invoice address).<br/>annualRent is populated from the insurance row amount.
     Leasing -->> Core: Export Rows
