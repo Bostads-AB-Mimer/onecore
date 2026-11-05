@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { match } from 'ts-pattern'
 
 import { authConfig } from '@/auth-config'
+import { toReturnPath } from '@/auth/returnPath'
 import { POST } from '@/services/api/core/base-api'
 
 type AuthCallbackState =
@@ -17,7 +18,7 @@ export function AuthCallback() {
 
   const code = searchParams.get('code')
 
-  const lastKnownClientPath = searchParams.get('state') ?? '/'
+  const lastKnownClientPath = toReturnPath(searchParams.get('state'))
 
   const requested = React.useRef(false)
 
