@@ -1541,6 +1541,8 @@ export interface paths {
           status?: string
           /** @description Whether to include contact information in the response */
           includeContacts?: boolean
+          /** @description Also return leases where the contact is the current sublet tenant (andrahandshyresgäst). */
+          includeSubletLeases?: boolean
         }
         path: {
           /** @description Contact code of the individual to fetch leases for. */
@@ -1951,6 +1953,11 @@ export interface paths {
              * @description The desired move-out date
              */
             desiredMoveDate: string
+            /**
+             * @description The reason for the termination
+             * @default Uppsägning av hyresgäst
+             */
+            reason?: string
           }
         }
       }
@@ -2422,6 +2429,10 @@ export interface paths {
         202: {
           content: never
         }
+        /** @description The rental object is not available from the lease start date, so no lease was created. error is rental-object-not-available. */
+        409: {
+          content: never
+        }
         /** @description Internal server error. Failed to accept the offer. */
         500: {
           content: never
@@ -2888,6 +2899,10 @@ export interface paths {
               message?: string
             }
           }
+        }
+        /** @description The rental object is not available from the start date, so no lease was created. error is rental-object-not-available. */
+        409: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -9214,7 +9229,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
-        /** @description Keys service is syncing its DAX card owner mirror; retry later */
+        /** @description Keys service is syncing its DAX card owner mirror, or the lease search cache is warming up. Retry after the seconds given in Retry-After. */
         503: {
           content: never
         }
@@ -11883,7 +11898,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Wildcard search string */
+          /** @description Search string. Every word must match the contact code or a name field (substring), or the whole string must match an invoice address line. A word of six or more digits also matches the national id by prefix, in ten- or twelve-digit form. Repeat the parameter to require several strings to match. */
           q?: string[]
           /** @description Filter on contact type */
           type?: 'individual' | 'organisation'
@@ -12699,6 +12714,8 @@ export interface components {
     Lease: {
       leaseId: string
       leaseNumber: string
+      /** Format: uri */
+      externalUrl?: string
       /** Format: date-time */
       leaseStartDate: string
       /** Format: date-time */
@@ -12863,6 +12880,8 @@ export interface components {
     }
     LeaseSearchResult: {
       leaseId: string
+      /** Format: uri */
+      externalUrl?: string
       objectTypeCode: string
       /** @enum {string} */
       leaseType:
@@ -12872,7 +12891,6 @@ export interface components {
         | 'Kooperativ hyresrätt'
         | 'Lokalkontrakt'
         | 'Omförhandlingskontrakt'
-        | 'Förrådskontrakt'
         | 'Övrigt'
         | 'P-Platskontrakt'
         | 'Korttidsuthyrning'
@@ -16038,6 +16056,8 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */
@@ -16405,6 +16425,8 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */
@@ -16864,6 +16886,8 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */

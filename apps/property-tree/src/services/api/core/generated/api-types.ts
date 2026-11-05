@@ -1953,6 +1953,11 @@ export interface paths {
              * @description The desired move-out date
              */
             desiredMoveDate: string
+            /**
+             * @description The reason for the termination
+             * @default Uppsägning av hyresgäst
+             */
+            reason?: string
           }
         }
       }
@@ -2424,6 +2429,10 @@ export interface paths {
         202: {
           content: never
         }
+        /** @description The rental object is not available from the lease start date, so no lease was created. error is rental-object-not-available. */
+        409: {
+          content: never
+        }
         /** @description Internal server error. Failed to accept the offer. */
         500: {
           content: never
@@ -2890,6 +2899,10 @@ export interface paths {
               message?: string
             }
           }
+        }
+        /** @description The rental object is not available from the start date, so no lease was created. error is rental-object-not-available. */
+        409: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -9172,8 +9185,9 @@ export interface paths {
      * returns one row per rental object with the outgoing and incoming tenant,
      * key/card counts, loan return and handout dates, and a derived status.
      * Give endDateFrom+endDateTo for move-outs, startDateFrom+startDateTo for
-     * move-ins, or both for the union. Search and sort apply to the whole result;
-     * key and card data (DAX) is fetched only for the requested page.
+     * move-ins, or both for the union. Search, filters and sort apply to the whole
+     * result. Key and card data (DAX) is fetched only for the requested page,
+     * unless `status` is given: then it is fetched for every object in the range.
      */
     get: {
       parameters: {
@@ -9184,6 +9198,10 @@ export interface paths {
           startDateTo?: string
           /** @description Matches rental object code, address, tenant name or contact code. */
           q?: string
+          /** @description Keep rows with any of these statuses. Repeat the param for several. */
+          status?: components['schemas']['MoveInOutStatus'][]
+          /** @description true keeps rows with no incoming tenant, false keeps rows with one. */
+          vacant?: boolean
           sortBy?: 'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
           sortOrder?: 'asc' | 'desc'
           /** @description When true, adds a `timings` block with per-phase durations. */
@@ -9211,7 +9229,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
-        /** @description Keys service is syncing its DAX card owner mirror; retry later */
+        /** @description Keys service is syncing its DAX card owner mirror, or the lease search cache is warming up. Retry after the seconds given in Retry-After. */
         503: {
           content: never
         }
@@ -11880,7 +11898,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Wildcard search string */
+          /** @description Search string. Every word must match the contact code or a name field (substring), or the whole string must match an invoice address line. A word of six or more digits also matches the national id by prefix, in ten- or twelve-digit form. Repeat the parameter to require several strings to match. */
           q?: string[]
           /** @description Filter on contact type */
           type?: 'individual' | 'organisation'
@@ -12873,7 +12891,6 @@ export interface components {
         | 'Kooperativ hyresrätt'
         | 'Lokalkontrakt'
         | 'Omförhandlingskontrakt'
-        | 'Förrådskontrakt'
         | 'Övrigt'
         | 'P-Platskontrakt'
         | 'Korttidsuthyrning'
@@ -15735,6 +15752,18 @@ export interface components {
       offset?: number
       limit?: number
     }
+    /** @enum {string} */
+    MoveInOutStatus:
+      | 'NOT_RETURNED'
+      | 'LOANED_TO_OTHER'
+      | 'RETURNED_AWAITING_LOAN'
+      | 'CREATED'
+      | 'PARTIAL'
+      | 'HANDED_OUT'
+      | 'RETURNED_VACANT'
+      | 'NO_LOANS'
+      | 'NO_KEYS'
+      | 'UNKNOWN'
     MoveInOutRow: {
       rentalObjectCode: string
       address: string | null
@@ -15760,15 +15789,16 @@ export interface components {
       incomingLoanPickedUpAt: string | null
       /** @enum {string} */
       status:
-        | 'UNKNOWN'
         | 'NOT_RETURNED'
         | 'LOANED_TO_OTHER'
+        | 'RETURNED_AWAITING_LOAN'
         | 'CREATED'
+        | 'PARTIAL'
         | 'HANDED_OUT'
         | 'RETURNED_VACANT'
-        | 'NO_KEYS'
         | 'NO_LOANS'
-        | 'PARTIAL'
+        | 'NO_KEYS'
+        | 'UNKNOWN'
       notes: string[]
     }
     PaginatedResponse: {
