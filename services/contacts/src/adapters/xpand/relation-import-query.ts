@@ -12,9 +12,9 @@ import {
 } from './relation-sql'
 
 /**
- * One current ANNANFM row on one of the holder's active leases. Several rows
- * per holder are normal (one per lease); collapsing happens in the import
- * script. `leaseKey` identifies the lease; `leaseId` is the operator-facing
+ * One current invoice recipient (an ANNANFM row or a c/o addressee) on one of
+ * the holder's active leases. Several rows per holder are normal (one per
+ * lease, one per source); collapsing happens in the import script. `leaseKey` identifies the lease; `leaseId` is the operator-facing
  * label that goes into the conflict report.
  */
 export type InvoiceRecipientCandidate = {
@@ -121,6 +121,64 @@ export const allInvoiceRecipientCandidates = async (
     leaseKey: r.leaseKey.trim(),
     // The label is what verksamheten calls the lease, but it is not a key and
     // legacy rows may have none; identity always comes from leaseKey.
+    leaseId: (r.leaseLabel ?? '').trim(),
+  }))
+}
+
+type CoAddresseeRow = {
+  holderCode: string
+  coCode: string
+  leaseKey: string
+  leaseLabel: string | null
+}
+
+/**
+ * Every (holder, c/o addressee, lease) triple on the current invoice period
+ * of an active lease. The c/o addressee on the lease's invoice settings
+ * (`hyfak.keycmctc3`) counts as an annan fakturamottagare for the contact the
+ * invoice row belongs to (`hyfak.keycmctc`), whether that addressee is a god
+ * man, förvaltare or anyone else. That contact must currently hold the lease,
+ * and the invoice must go to them (`hyfak.keycmctc4` empty or the same
+ * contact): with a third-party payer the c/o is on the payer's address.
+ * Excludes a contact set as their own c/o.
+ */
+export const allCoAddresseeCandidates = async (
+  db: Knex,
+  now: Date
+): Promise<InvoiceRecipientCandidate[]> => {
+  const [periodFrom, periodTo] = currentRelation(db, 'r', now)
+  const [tenFrom, tenTo] = currentRelation(db, 'ten', now)
+
+  const rows: CoAddresseeRow[] = await db('hyobj as o')
+    .innerJoin('hyrep as r', function () {
+      this.on('r.keyhyobj', 'o.keyhyobj').andOn(periodFrom).andOn(periodTo)
+    })
+    .innerJoin('hyfak as f', 'f.keyhyrep', 'r.keyhyrep')
+    .innerJoin('hyavk as ten', function () {
+      this.on('ten.keyhyobj', 'o.keyhyobj')
+        .andOn('ten.keycmctc', 'f.keycmctc')
+        .andOn(db.raw('TRIM(ten.keyhyakt) = ?', [INNEHAVARE]))
+        .andOn(tenFrom)
+        .andOn(tenTo)
+    })
+    .innerJoin('cmctc as holder', 'holder.keycmctc', 'f.keycmctc')
+    .innerJoin('cmctc as co', 'co.keycmctc', 'f.keycmctc3')
+    .whereNull('o.sistadeb')
+    .whereRaw('f.keycmctc <> f.keycmctc3')
+    .where((q) =>
+      q.whereNull('f.keycmctc4').orWhereRaw('f.keycmctc4 = f.keycmctc')
+    )
+    .select(
+      'holder.cmctckod as holderCode',
+      'co.cmctckod as coCode',
+      'o.keyhyobj as leaseKey',
+      'o.hyobjben as leaseLabel'
+    )
+
+  return rows.map((r) => ({
+    holderContactCode: r.holderCode.trim(),
+    recipientContactCode: r.coCode.trim(),
+    leaseKey: r.leaseKey.trim(),
     leaseId: (r.leaseLabel ?? '').trim(),
   }))
 }

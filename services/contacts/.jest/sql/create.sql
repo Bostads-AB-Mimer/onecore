@@ -171,3 +171,22 @@ CREATE TABLE hyavk (
   fdate DATETIME NULL,
   tdate DATETIME NULL
 )
+GO
+
+IF OBJECT_ID(N'hyrep', N'U') IS NULL
+CREATE TABLE hyrep (
+  keyhyrep CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+  keyhyobj CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+  fdate DATETIME NULL,
+  tdate DATETIME NULL
+)
+GO
+
+IF OBJECT_ID(N'hyfak', N'U') IS NULL
+CREATE TABLE hyfak (
+  keyhyfak CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+  keyhyrep CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+  keycmctc CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  keycmctc3 CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  keycmctc4 CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+)
