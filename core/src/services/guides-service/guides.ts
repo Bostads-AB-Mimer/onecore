@@ -31,7 +31,7 @@ export const routes = (router: KoaRouter) => {
    * /guides:
    *   get:
    *     summary: List guides
-   *     description: Published guides ordered by category and title. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
+   *     description: Published guides ordered by title, each with every category it is listed under. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
    *     tags: [Guides]
    *     parameters:
    *       - in: query
@@ -291,7 +291,7 @@ export const routes = (router: KoaRouter) => {
    * /guides:
    *   post:
    *     summary: Create a guide
-   *     description: Requires the guides-admin role. Images are added afterwards through the image upload endpoint.
+   *     description: Requires the guides-admin role. The guide is listed under every category in categories (at least one, no duplicates). Images are added afterwards through the image upload endpoint.
    *     tags: [Guides]
    *     requestBody:
    *       required: true
@@ -310,7 +310,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/GuideWithUrls'
    *       400:
-   *         description: Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation.
+   *         description: Validation failed in core or in the communication service; error holds the code (e.g. category-not-found or category-parent-not-top-level for any of the categories, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation.
    *         content:
    *           application/json:
    *             schema:
@@ -412,7 +412,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/GuideWithUrls'
    *       400:
-   *         description: Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation.
+   *         description: Validation failed in core or in the communication service; error holds the code (e.g. category-not-found or category-parent-not-top-level for any of the categories, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation.
    *         content:
    *           application/json:
    *             schema:

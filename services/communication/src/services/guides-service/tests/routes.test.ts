@@ -52,7 +52,7 @@ const guide: guides.Guide = {
   title: 'Registrera uppsägning',
   description: '',
   status: 'published',
-  category,
+  categories: [category],
   stepCount: 1,
   createdBy: 'Anna',
   updatedBy: 'Anna',
@@ -243,7 +243,7 @@ describe('POST /guides', () => {
   })
 
   it.each([
-    ['category name', { category: { name: '   ' } }, ['category']],
+    ['category name', { categories: [{ name: '   ' }] }, ['categories']],
     ['title', { title: '   ' }, ['title']],
   ])(
     'returns 400 when the %s is only whitespace',
@@ -268,7 +268,7 @@ describe('POST /guides', () => {
       .mockResolvedValue(guide)
     const input = factory.guideWrite.build({
       title: '  Registrera uppsägning  ',
-      category: { name: '  Tenfast  ' },
+      categories: [{ name: '  Tenfast  ' }, { id: category.id }],
       steps: [factory.step.build({ title: '  Step  ' })],
     })
 
@@ -276,9 +276,29 @@ describe('POST /guides', () => {
 
     expect(res.status).toBe(200)
     const saved = spy.mock.calls[0][0]
-    expect(saved.category).toEqual({ name: 'Tenfast' })
+    expect(saved.categories).toEqual([{ name: 'Tenfast' }, { id: category.id }])
     expect(saved.title).toBe('Registrera uppsägning')
     expect(saved.steps[0].title).toBe('Step')
+  })
+
+  it.each([
+    ['no category', []],
+    ['the same id twice', [{ id: category.id }, { id: category.id }]],
+    ['the same new name twice', [{ name: 'Tenfast' }, { name: ' tenfast ' }]],
+  ])('returns 400 for a guide with %s', async (_case, categories) => {
+    const spy = jest.spyOn(guidesAdapter, 'createGuide')
+
+    const res = await request(app.callback())
+      .post('/guides')
+      .send(factory.guideWrite.build({ categories }))
+
+    expect(res.status).toBe(400)
+    expect(res.body.issues).toContainEqual(
+      expect.objectContaining({
+        path: expect.arrayContaining(['categories']),
+      })
+    )
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('returns 400 when publishing without steps', async () => {

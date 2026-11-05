@@ -10765,7 +10765,7 @@ export interface paths {
   '/guides': {
     /**
      * List guides
-     * @description Published guides ordered by category and title. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
+     * @description Published guides ordered by title, each with every category it is listed under. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
      */
     get: {
       parameters: {
@@ -10799,7 +10799,7 @@ export interface paths {
     }
     /**
      * Create a guide
-     * @description Requires the guides-admin role. Images are added afterwards through the image upload endpoint.
+     * @description Requires the guides-admin role. The guide is listed under every category in categories (at least one, no duplicates). Images are added afterwards through the image upload endpoint.
      */
     post: {
       requestBody: {
@@ -10816,7 +10816,7 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found or category-parent-not-top-level for any of the categories, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
             'application/json': {
@@ -10965,7 +10965,7 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found or category-parent-not-top-level for any of the categories, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
             'application/json': {
@@ -15840,7 +15840,7 @@ export interface components {
       description: string
       /** @enum {string} */
       status: 'draft' | 'published'
-      category: {
+      categories: {
         /** Format: uuid */
         id: string
         name: string
@@ -15850,7 +15850,7 @@ export interface components {
         createdAt: string
         /** Format: date-time */
         updatedAt: string
-      }
+      }[]
       stepCount: number
       createdBy: string
       updatedBy: string
@@ -15884,7 +15884,7 @@ export interface components {
       description: string
       /** @enum {string} */
       status: 'draft' | 'published'
-      category: {
+      categories: {
         /** Format: uuid */
         id: string
         name: string
@@ -15894,7 +15894,7 @@ export interface components {
         createdAt: string
         /** Format: date-time */
         updatedAt: string
-      }
+      }[]
       stepCount: number
       createdBy: string
       updatedBy: string
@@ -15947,7 +15947,7 @@ export interface components {
       /** @default */
       description?: string
       slug: string
-      category:
+      categories: (
         | {
             /** Format: uuid */
             id: string
@@ -15957,6 +15957,7 @@ export interface components {
             /** Format: uuid */
             parentId?: string
           }
+      )[]
       /** @enum {string} */
       status: 'draft' | 'published'
       steps: {
@@ -15982,7 +15983,7 @@ export interface components {
       /** @default */
       description?: string
       slug: string
-      category:
+      categories: (
         | {
             /** Format: uuid */
             id: string
@@ -15992,6 +15993,7 @@ export interface components {
             /** Format: uuid */
             parentId?: string
           }
+      )[]
       /** @enum {string} */
       status: 'draft' | 'published'
       steps: {

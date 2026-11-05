@@ -21,13 +21,18 @@ vi.mock('@/entities/guide', async (importOriginal) => ({
 
 type Category = { id: string; name: string; parentId?: string }
 
-const summary = (title: string, category: Category): GuideSummary => ({
+const summary = (title: string, ...inCategories: Category[]): GuideSummary => ({
   id: title,
   slug: title.toLowerCase().replace(/\s+/g, '-'),
   title,
   description: '',
   status: 'published',
-  category: { parentId: null, ...category, createdAt: '', updatedAt: '' },
+  categories: inCategories.map((category) => ({
+    parentId: null,
+    ...category,
+    createdAt: '',
+    updatedAt: '',
+  })),
   stepCount: 1,
   createdBy: 'a',
   updatedBy: 'a',
@@ -157,6 +162,58 @@ describe('GuidesOverview', () => {
     const html = render({ categoryId: 'tom' })
 
     expect(html).toContain('Inga guider i kategorin')
+  })
+
+  describe('with a guide in several categories', () => {
+    beforeEach(() => {
+      useGuidesMock.mockReturnValue({
+        data: [
+          ...guides,
+          summary('Koppla ärende till kontrakt', tenfast, odoo),
+        ],
+        isLoading: false,
+        isError: false,
+      })
+    })
+
+    it('counts the guide under each of its categories', () => {
+      const html = render()
+
+      expect(html).toContain('3 guider')
+      expect(html).toContain('2 guider')
+    })
+
+    it('lists the guide in each of its categories, with a badge per category', () => {
+      const html = render({ categoryId: 'c1' })
+      expect(html).toContain('Koppla ärende till kontrakt')
+      // Only the guide's badge names the other category on this page.
+      expect(html).toContain('Odoo')
+      expect(render({ categoryId: 'c2' })).toContain(
+        'Koppla ärende till kontrakt'
+      )
+    })
+
+    it('lists the guide under each category while searching', () => {
+      render()
+      const html = search('koppla')
+
+      expect(html.split('Koppla ärende till kontrakt</h3>')).toHaveLength(3)
+    })
+
+    it('lists the guide among the own guides of a category with subcategories', () => {
+      useGuidesMock.mockReturnValue({
+        data: [
+          summary('Säga upp avtal', contracts),
+          summary('Koppla ärende till kontrakt', odoo, tenfast),
+        ],
+        isLoading: false,
+        isError: false,
+      })
+      const html = render({ categoryId: 'c1' })
+
+      expect(html).toContain('Underkategorier')
+      expect(html).toContain('Koppla ärende till kontrakt')
+    })
   })
 
   describe('with subcategories', () => {

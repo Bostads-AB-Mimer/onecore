@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Link2, Pencil } from 'lucide-react'
 
-import { GuideStatusBadge, type GuideWithUrls } from '@/entities/guide'
+import {
+  GuideCategoryBadges,
+  GuideStatusBadge,
+  type GuideWithUrls,
+} from '@/entities/guide'
 
 import { useClipboardCopy, useToast } from '@/shared/hooks'
 import { formatDate } from '@/shared/lib/fileUtils'
 import { cn } from '@/shared/lib/utils'
 import { paths } from '@/shared/routes'
-import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 
 import { guideLink, stepAnchorId, stepNumberFromHash } from '../lib/stepAnchor'
@@ -96,7 +99,7 @@ export function GuideView({
             <p className="mt-2 text-muted-foreground">{guide.description}</p>
           )}
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <Badge variant="outline">{guide.category.name}</Badge>
+            <GuideCategoryBadges guide={guide} />
             {guide.status === 'draft' && <GuideStatusBadge status="draft" />}
             <span>Uppdaterad {formatDate(guide.updatedAt)}</span>
             <span>av {guide.updatedBy}</span>

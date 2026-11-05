@@ -171,9 +171,8 @@ export const routes = (router: OkapiRouter) => {
     {
       summary: 'List guides',
       description:
-        'Returns guide summaries ordered by top-level category, then ' +
-        'subcategory and title. Drafts are only included when ' +
-        'includeDrafts=true.',
+        'Returns guide summaries ordered by title, each with all its ' +
+        'categories. Drafts are only included when includeDrafts=true.',
       tags: ['Guides'],
       query: {
         includeDrafts: {
@@ -292,9 +291,12 @@ export const routes = (router: OkapiRouter) => {
         'Creates a guide with its steps. Step bodies are sanitized to the ' +
         'allowed HTML subset. Images are added afterwards via the image ' +
         'endpoint, so any image metadata in the payload is ignored. ' +
-        'Errors: 409 slug-taken, 400 category-not-found (also for an ' +
-        'unknown parentId), 400 category-parent-not-top-level when a new ' +
-        'subcategory names a subcategory as parent, 400 ' +
+        'A guide is linked to every category in categories (at least ' +
+        'one, no duplicates); each is an existing id or a new name. ' +
+        'Errors: 409 slug-taken, 400 category-not-found when any ' +
+        'category id or parentId is unknown, 400 ' +
+        'category-parent-not-top-level when any new subcategory names a ' +
+        'subcategory as parent, 400 ' +
         'step-belongs-to-other-guide when a step id is already used by ' +
         'another guide.',
       tags: ['Guides'],
@@ -324,14 +326,15 @@ export const routes = (router: OkapiRouter) => {
     {
       summary: 'Update a guide',
       description:
-        'Replaces metadata and steps. Steps are upserted by id and steps ' +
+        'Replaces metadata, categories and steps. Steps are upserted by id and steps ' +
         'missing from the payload are deleted with their images. Returns ' +
         'the storage keys of removed images so the caller can delete files. ' +
         'expectedUpdatedAt must equal the stored updatedAt (millisecond ' +
         'precision); image uploads and deletes also move it forward. ' +
         'Errors: 409 guide-modified when expectedUpdatedAt is stale (the ' +
         'guide changed since the caller loaded it), 409 slug-taken, 400 ' +
-        'category-not-found, 400 category-parent-not-top-level, 400 ' +
+        'category-not-found or category-parent-not-top-level for any of ' +
+        'the categories, 400 ' +
         'step-belongs-to-other-guide when a step id is owned by another ' +
         'guide, and 400 image-not-in-step when an image id is unknown or ' +
         'sent on a step it does not belong to (images cannot be moved ' +

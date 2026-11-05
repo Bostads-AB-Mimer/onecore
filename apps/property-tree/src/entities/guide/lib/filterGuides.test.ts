@@ -3,23 +3,25 @@ import { describe, expect, it } from 'vitest'
 import type { GuideSummary } from '../types'
 import { filterGuides } from './filterGuides'
 
+const category = (name: string, parentId: string | null = null) => ({
+  id: name,
+  name,
+  parentId,
+  createdAt: '',
+  updatedAt: '',
+})
+
 const summary = (
   title: string,
   description: string,
-  categoryName: string
+  ...categoryNames: string[]
 ): GuideSummary => ({
   id: title,
   slug: title,
   title,
   description,
   status: 'published',
-  category: {
-    id: categoryName,
-    name: categoryName,
-    parentId: null,
-    createdAt: '',
-    updatedAt: '',
-  },
+  categories: categoryNames.map((name) => category(name)),
   stepCount: 1,
   createdBy: 'a',
   updatedBy: 'a',
@@ -78,14 +80,8 @@ describe('filterGuides', () => {
 
     it('includes the guides of its subcategories', () => {
       const inSubcategory: GuideSummary = {
-        ...summary('Säga upp avtal', '', 'Avtal'),
-        category: {
-          id: 'Avtal',
-          name: 'Avtal',
-          parentId: 'Tenfast',
-          createdAt: '',
-          updatedAt: '',
-        },
+        ...summary('Säga upp avtal', ''),
+        categories: [category('Avtal', 'Tenfast')],
       }
 
       expect(
@@ -97,24 +93,10 @@ describe('filterGuides', () => {
 
     it("matches a subcategory guide on its parent's name", () => {
       const inSubcategory: GuideSummary = {
-        ...summary('Säga upp avtal', '', 'Avtal'),
-        category: {
-          id: 'Avtal',
-          name: 'Avtal',
-          parentId: 'Tenfast',
-          createdAt: '',
-          updatedAt: '',
-        },
+        ...summary('Säga upp avtal', ''),
+        categories: [category('Avtal', 'Tenfast')],
       }
-      const categories = [
-        {
-          ...inSubcategory.category,
-          id: 'Tenfast',
-          name: 'Tenfast',
-          parentId: null,
-        },
-        inSubcategory.category,
-      ]
+      const categories = [category('Tenfast'), category('Avtal', 'Tenfast')]
 
       expect(
         filterGuides([inSubcategory], 'tenfast', { categories }).map(
@@ -123,6 +105,24 @@ describe('filterGuides', () => {
       ).toEqual(['Säga upp avtal'])
       // Without the categories the parent's name is unknown.
       expect(filterGuides([inSubcategory], 'tenfast')).toEqual([])
+    })
+
+    it('includes a guide in any of its categories', () => {
+      const inBoth = summary('Koppla ärende', '', 'Odoo', 'Tenfast')
+
+      for (const categoryId of ['Odoo', 'Tenfast']) {
+        expect(
+          filterGuides([inBoth], '', { categoryId }).map((g) => g.title)
+        ).toEqual(['Koppla ärende'])
+      }
+      expect(filterGuides([inBoth], '', { categoryId: 'Ekonomi' })).toEqual([])
+    })
+
+    it('matches the name of any of its categories', () => {
+      const inBoth = summary('Koppla ärende', '', 'Odoo', 'Tenfast')
+
+      expect(filterGuides([inBoth], 'odoo')).toHaveLength(1)
+      expect(filterGuides([inBoth], 'tenfast')).toHaveLength(1)
     })
 
     it('returns an empty list for an unknown category', () => {

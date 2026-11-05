@@ -307,9 +307,9 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
             />
           </div>
           <CategoryPicker
-            value={state.category}
-            onChange={(category) =>
-              dispatch({ type: 'set-category', category })
+            value={state.categories}
+            onChange={(categories) =>
+              dispatch({ type: 'set-categories', categories })
             }
           />
           <div className="space-y-2">
