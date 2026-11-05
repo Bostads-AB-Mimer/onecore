@@ -433,6 +433,12 @@ export const sendInspectionProtocolEmail = async (
   }
 }
 
+// leasing-adapter sets a process-wide validateStatus (<500); 4xx must throw
+// here so bulkSendError forwards the reason instead of returning ok: true.
+const throwOnNon2xx = {
+  validateStatus: (status: number) => status >= 200 && status < 300,
+}
+
 // Forwards the communication service's error code (`reason`, e.g.
 // TOO_MANY_RECIPIENTS or the sendAt validation codes) instead of flattening
 // to 'error', so the frontend can show what actually went wrong.
@@ -459,7 +465,8 @@ export const sendBulkSms = async (
   try {
     const result = await axios.post(
       `${config.communicationService.url}/sendBulkSms`,
-      body
+      body,
+      throwOnNon2xx
     )
 
     // warnings is a sibling of content (non-blocking issues, e.g. the SMS
@@ -481,7 +488,8 @@ export const sendBulkEmail = async (
   try {
     const result = await axios.post(
       `${config.communicationService.url}/sendBulkEmail`,
-      body
+      body,
+      throwOnNon2xx
     )
 
     // warnings is a sibling of content (non-blocking issues, e.g. the email

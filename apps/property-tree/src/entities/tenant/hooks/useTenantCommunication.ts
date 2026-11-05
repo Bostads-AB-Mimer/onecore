@@ -36,8 +36,13 @@ export function useTenantCommunication(contactCode: string | undefined) {
     isLoading: communicationQuery.isLoading,
     error: communicationQuery.error,
     cancelDispatch: cancelMutation.mutateAsync,
-    isCancelling: cancelMutation.isPending,
+    // Id of the dispatch being changed, so only that row shows as pending.
+    cancellingDispatchId: cancelMutation.isPending
+      ? cancelMutation.variables
+      : undefined,
     rescheduleDispatch: rescheduleMutation.mutateAsync,
-    isRescheduling: rescheduleMutation.isPending,
+    reschedulingDispatchId: rescheduleMutation.isPending
+      ? rescheduleMutation.variables?.dispatchId
+      : undefined,
   }
 }

@@ -88,11 +88,12 @@ export const LogOutboundRecipientSchema = z.object({
   toAddress: z.string(),
   externalMessageId: z.string().optional(),
   // Subset of RecipientStatusSchema: only states a new outbound row may start
-  // in. delivered/bounced arrive via delivery reports, received is inbound,
-  // cancelled only via the cancel flow.
+  // in. delivered only for my-pages (no delivery reports), bounced via reports,
+  // received is inbound, cancelled only via the cancel flow.
   status: RecipientStatusSchema.extract([
     'pending',
     'sent',
+    'delivered',
     'failed',
     'scheduled',
   ]).optional(),

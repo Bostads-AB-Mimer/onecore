@@ -22,6 +22,7 @@ import { ResponsiveTable } from '@/shared/ui/ResponsiveTable'
 const channelOptions = [
   { label: 'SMS', value: 'sms' },
   { label: 'E-post', value: 'email' },
+  { label: 'Mina sidor', value: 'my-pages' },
 ]
 
 const statusOptions = [
@@ -45,10 +46,12 @@ const CATEGORY_LABELS: Record<string, string> = {
   bulk_email: 'Massutskick e-post',
   work_order_tenant_sms: 'Arbetsorder SMS',
   work_order_tenant_mail: 'Arbetsorder e-post',
+  work_order_tenant_my_pages: 'Arbetsorder Mina sidor',
   parking_space_offer: 'Bilplatserbjudande',
   parking_space_accept_offer: 'Bilplats accepterat',
   non_scored_parking_space_approved: 'Bilplats godkänd',
   non_scored_parking_space_denied: 'Bilplats nekad',
+  lease_termination_confirmation: 'Uppsägningsbekräftelse',
 }
 const categoryLabel = (messageType: string) =>
   CATEGORY_LABELS[messageType] ?? messageType

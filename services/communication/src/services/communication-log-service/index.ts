@@ -163,7 +163,11 @@ export const routes = (router: OkapiRouter) => {
           ctx.body = { dispatchId: ctx.params.id, cancelledRecipients: 0 }
           return
         }
-        if (!statuses.includes('scheduled')) {
+        // my-pages is never scheduled; the check also narrows channel to sms/email.
+        if (
+          dispatch.dispatch.channel === 'my-pages' ||
+          !statuses.includes('scheduled')
+        ) {
           ctx.status = 400
           ctx.body = { error: 'NOT_SCHEDULED' }
           return
@@ -239,7 +243,11 @@ export const routes = (router: OkapiRouter) => {
           ctx.body = { error: 'Dispatch not found' }
           return
         }
-        if (!dispatch.recipients.some((r) => r.status === 'scheduled')) {
+        // my-pages is never scheduled; the check also narrows channel to sms/email.
+        if (
+          dispatch.dispatch.channel === 'my-pages' ||
+          !dispatch.recipients.some((r) => r.status === 'scheduled')
+        ) {
           ctx.status = 400
           ctx.body = { error: 'NOT_SCHEDULED' }
           return
@@ -356,7 +364,7 @@ export const routes = (router: OkapiRouter) => {
           schema: z.string().optional(),
         },
         channel: {
-          description: "'sms' | 'email' (repeatable)",
+          description: "'sms' | 'email' | 'my-pages' (repeatable)",
           schema: z.optional(z.array(z.string())),
         },
         messageType: {

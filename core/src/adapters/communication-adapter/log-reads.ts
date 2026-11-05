@@ -4,12 +4,19 @@ import { communication } from '@onecore/types'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 
+// leasing-adapter sets a process-wide validateStatus (<500); 4xx must throw
+// here so the catch blocks map them instead of returning ok: true.
+const throwOnNon2xx = {
+  validateStatus: (status: number) => status >= 200 && status < 300,
+}
+
 export const getCustomerMessages = async (
   contactCode: string
 ): Promise<AdapterResult<communication.CustomerMessage[], 'error'>> => {
   try {
     const result = await axios.get(
-      `${config.communicationService.url}/communication-log/customers/${encodeURIComponent(contactCode)}/messages`
+      `${config.communicationService.url}/communication-log/customers/${encodeURIComponent(contactCode)}/messages`,
+      throwOnNon2xx
     )
     return { ok: true, data: result.data }
   } catch (err) {
@@ -27,7 +34,8 @@ export const getDispatchById = async (
 > => {
   try {
     const result = await axios.get(
-      `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}`
+      `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}`,
+      throwOnNon2xx
     )
     return { ok: true, data: result.data }
   } catch (err) {
@@ -52,7 +60,7 @@ export const searchDispatches = async (
       // indexes: null serializes arrays as `channel=sms&channel=email`
       // (repeated keys) instead of axios' default `channel[]=...`, which the
       // service's query schema would not recognize.
-      { params: query, paramsSerializer: { indexes: null } }
+      { params: query, paramsSerializer: { indexes: null }, ...throwOnNon2xx }
     )
     return { ok: true, data: result.data }
   } catch (err) {
@@ -75,7 +83,7 @@ export const getDispatchRecipients = async (
   try {
     const result = await axios.get(
       `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}/recipients`,
-      { params: query, paramsSerializer: { indexes: null } }
+      { params: query, paramsSerializer: { indexes: null }, ...throwOnNon2xx }
     )
     return { ok: true, data: result.data }
   } catch (err) {

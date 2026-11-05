@@ -4,6 +4,12 @@ import { communication } from '@onecore/types'
 import config from '../../common/config'
 import { AdapterResult } from '../types'
 
+// leasing-adapter sets a process-wide validateStatus (<500); 4xx must throw
+// here so the catch blocks map them instead of returning ok: true.
+const throwOnNon2xx = {
+  validateStatus: (status: number) => status >= 200 && status < 300,
+}
+
 // Error mapping shared by both scheduled-dispatch operations:
 // 'not-found' -> unknown dispatch id
 // 'conflict'  -> Infobip already sent/started the bulk; nothing was changed
@@ -36,7 +42,9 @@ export const cancelDispatch = async (
 > => {
   try {
     const result = await axios.post(
-      `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}/cancel`
+      `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}/cancel`,
+      undefined,
+      throwOnNon2xx
     )
     // Runtime guarantee at the service boundary: axios types the body as
     // `any`, so validate against the shared schema instead of asserting.
@@ -58,7 +66,8 @@ export const rescheduleDispatch = async (
   try {
     const result = await axios.post(
       `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}/reschedule`,
-      { sendAt }
+      { sendAt },
+      throwOnNon2xx
     )
     return {
       ok: true,

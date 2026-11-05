@@ -112,12 +112,18 @@ function MessageRow({
     toDatetimeLocalValue(new Date(dispatch.sendAt))
   )
   const [confirmCancel, setConfirmCancel] = useState(false)
-  const rescheduleError = validateScheduleInput(
-    rescheduleLocal,
-    MAX_SCHEDULE_DAYS_AHEAD[dispatch.channel]
-  )
+  // my-pages can't be scheduled; canManageSchedule hides the controls anyway.
+  const maxDaysAhead =
+    dispatch.channel === 'my-pages'
+      ? null
+      : MAX_SCHEDULE_DAYS_AHEAD[dispatch.channel]
+  const rescheduleError =
+    maxDaysAhead === null
+      ? null
+      : validateScheduleInput(rescheduleLocal, maxDaysAhead)
   const rescheduleBounds = {
-    ...getScheduleBounds(MAX_SCHEDULE_DAYS_AHEAD[dispatch.channel]),
+    max:
+      maxDaysAhead === null ? undefined : getScheduleBounds(maxDaysAhead).max,
     // Infobip only postpones — it silently ignores moves to an earlier time —
     // so the picker floor is one minute after the current send time.
     min: toDatetimeLocalValue(
@@ -298,9 +304,9 @@ export function TenantCommunicationTabContent({
     isLoading,
     error,
     cancelDispatch,
-    isCancelling,
+    cancellingDispatchId,
     rescheduleDispatch,
-    isRescheduling,
+    reschedulingDispatchId,
   } = useTenantCommunication(contactCode)
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
@@ -420,8 +426,8 @@ export function TenantCommunicationTabContent({
               message={message}
               onCancelSchedule={handleCancelSchedule}
               onReschedule={handleReschedule}
-              isCancelling={isCancelling}
-              isRescheduling={isRescheduling}
+              isCancelling={cancellingDispatchId === message.dispatch.id}
+              isRescheduling={reschedulingDispatchId === message.dispatch.id}
             />
           ))}
         </div>
