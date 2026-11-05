@@ -85,6 +85,7 @@ export const TenfastLeaseSchema = z.object({
     'draft',
     'terminationScheduled',
     'preTermination',
+    'terminationSigningInProgress',
   ]),
   startDate: z.coerce
     .date()

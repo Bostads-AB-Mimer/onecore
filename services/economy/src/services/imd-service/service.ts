@@ -163,6 +163,7 @@ const INVOICEABLE_STAGES = new Set([
   'upcoming',
   'terminationScheduled',
   'preTermination',
+  'terminationSigningInProgress',
 ])
 
 function coversPeriod(

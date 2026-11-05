@@ -16,11 +16,12 @@ De processer i den här mappen beskriver hur ett hyreskontrakt avslutas — anti
 
 Tenfast håller ett `stage`-fält på avtalet som onecore mappar till sin egen `LeaseStatus`. De statusar som rör den här dokumentationen:
 
-| Tenfast `stage`         | onecore `LeaseStatus` | Betydelse                                                             |
-| ----------------------- | --------------------- | --------------------------------------------------------------------- |
-| `preTermination`        | PreliminaryTerminated | Hyresgästen har begärt uppsägning via simplesign, väntar på signering |
-| `terminationScheduled`  | AboutToEnd            | Uppsägningen är bekräftad, avtalet löper på uppsägningstiden ut       |
-| `terminated`/`archived` | Ended                 | Avtalet har upphört                                                   |
+| Tenfast `stage`                | onecore `LeaseStatus` | Betydelse                                                                                                                                                              |
+| ------------------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `terminationSigningInProgress` | PreliminaryTerminated | Uppsägningen är skickad för signering. Avtalets `endDate` är tomt och slutdatumet ligger i `simplesignTermination.preliminaryEndDate`, som onecore visar som slutdatum |
+| `preTermination`               | PreliminaryTerminated | Uppsägningen är begärd och avtalet har slutdatum, men den är inte hanterad                                                                                             |
+| `terminationScheduled`         | AboutToEnd            | Uppsägningen är bekräftad, avtalet löper på uppsägningstiden ut                                                                                                        |
+| `terminated`/`archived`        | Ended                 | Avtalet har upphört                                                                                                                                                    |
 
 Tenfast har även ett `cancellation`-objekt på avtalet (`cancelled`, `requested`, `cancelledByType`, `preferredMoveOutDate` m.fl.) som fungerar som revisionsspår. Fältet `cancelledByType` är det som skiljer ett hyresgäst-initierat uppsägningsförsök (`'hyresgast'`, hårdkodat av onecore i den preliminära uppsägningen) från ett system-/Xpand-drivet.
 

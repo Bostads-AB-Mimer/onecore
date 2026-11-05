@@ -319,6 +319,7 @@ const stageToLeaseStatus = (stage: TenfastLease['stage']): LeaseStatus => {
     case 'terminationScheduled':
       return LeaseStatus.AboutToEnd
     case 'preTermination':
+    case 'terminationSigningInProgress':
       return LeaseStatus.PreliminaryTerminated
     case 'signingInProgress':
       return LeaseStatus.PendingSignature

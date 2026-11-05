@@ -38,6 +38,16 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
     )
   })
 
+  it('returns PreliminaryTerminated while a notice awaits signing', () => {
+    const lease = factory.tenfastLease.build({
+      stage: 'terminationSigningInProgress',
+    })
+
+    expect(mapToOnecoreLease(lease).status).toBe(
+      LeaseStatus.PreliminaryTerminated
+    )
+  })
+
   it('returns Ended for archived stage', () => {
     const lease = factory.tenfastLease.build({
       stage: 'archived',
@@ -87,6 +97,50 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(LeaseStatus.Ended)
+  })
+})
+
+describe('lease end date (via mapToOnecoreLease)', () => {
+  const preliminaryEndDate = new Date('2027-02-28T00:00:00.000Z')
+  const simplesignTermination = { signatures: [], preliminaryEndDate }
+
+  it('uses the preliminary end date while a notice awaits signing', () => {
+    const lease = mapToOnecoreLease(
+      factory.tenfastLease.build({
+        stage: 'terminationSigningInProgress',
+        endDate: null,
+        simplesignTermination,
+      })
+    )
+
+    expect(lease.leaseEndDate).toEqual(preliminaryEndDate)
+    expect(lease.lastDebitDate).toEqual(preliminaryEndDate)
+  })
+
+  it('keeps an end date already set on the lease', () => {
+    const endDate = new Date('2027-01-31T00:00:00.000Z')
+    const lease = mapToOnecoreLease(
+      factory.tenfastLease.build({
+        stage: 'terminationSigningInProgress',
+        endDate,
+        simplesignTermination,
+      })
+    )
+
+    expect(lease.leaseEndDate).toEqual(endDate)
+  })
+
+  it('ignores the preliminary end date in other stages', () => {
+    const lease = mapToOnecoreLease(
+      factory.tenfastLease.build({
+        stage: 'active',
+        endDate: null,
+        simplesignTermination,
+      })
+    )
+
+    expect(lease.leaseEndDate).toBeUndefined()
+    expect(lease.lastDebitDate).toBeUndefined()
   })
 })
 

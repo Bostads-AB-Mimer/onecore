@@ -9,6 +9,7 @@ const IN_FORCE_STAGES = new Set([
   'active',
   'terminationScheduled',
   'preTermination',
+  'terminationSigningInProgress',
   'upcoming',
 ])
 // Stages that never hold the object: ended, annulled or never signed.
