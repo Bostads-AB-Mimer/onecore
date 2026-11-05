@@ -23,7 +23,7 @@ export const GuideWriteFactory = Factory.define<guides.ServiceGuideWrite>(
     description: `Description of guide ${sequence}`,
     // Unique per build so parallel builds inside one test do not collide.
     slug: `guide-${sequence}-${randomUUID().slice(0, 8)}`,
-    category: { name: `Category ${sequence}` },
+    categories: [{ name: `Category ${sequence}` }],
     status: 'draft',
     steps: StepFactory.buildList(2),
     author: 'Test User',

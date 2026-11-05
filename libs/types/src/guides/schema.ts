@@ -84,7 +84,10 @@ export const GuideSummarySchema = z.object({
   title: z.string(),
   description: z.string(),
   status: GuideStatusSchema,
-  category: GuideCategorySchema,
+  // Every category the guide is listed under, ordered by top-level category
+  // name, the category itself before its subcategories, then name. All are
+  // equal: none of them is the guide's main category.
+  categories: z.array(GuideCategorySchema).min(1),
   stepCount: z.number().int().nonnegative(),
   createdBy: z.string(),
   updatedBy: z.string(),
@@ -145,11 +148,16 @@ export const CategoryInputSchema = z.union([
   }),
 ])
 
+// Caps the categories of one guide so a payload cannot fan out into an
+// unbounded number of category lookups and inserts.
+export const MAX_GUIDE_CATEGORIES = 20
+
 export const GuideInputBaseSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(1000).default(''),
   slug: SlugSchema,
-  category: CategoryInputSchema,
+  // A guide is listed under every category it names, at least one.
+  categories: z.array(CategoryInputSchema).min(1).max(MAX_GUIDE_CATEGORIES),
   status: GuideStatusSchema,
   steps: z.array(StepInputSchema),
 })
@@ -217,6 +225,40 @@ export const uniqueIdRules = (input: GuideInputBase, ctx: z.RefinementCtx) => {
   })
 }
 
+// The key two category inputs collide on: the same id, or the same new name
+// (trimmed, case-insensitive like the database collation) under the same
+// parent. Exported so the editor can flag a duplicate before saving.
+export const categoryInputKey = (
+  category: z.infer<typeof CategoryInputSchema>
+) =>
+  'id' in category
+    ? `id:${category.id.toLowerCase()}`
+    : `name:${(category.parentId ?? '').toLowerCase()}:${category.name
+        .trim()
+        .toLowerCase()}`
+
+/**
+ * A guide is linked to each category once, so naming the same category twice
+ * in one payload is a client bug. Reject it instead of silently merging.
+ */
+export const uniqueCategoryRules = (
+  input: GuideInputBase,
+  ctx: z.RefinementCtx
+) => {
+  const seen = new Set<string>()
+  input.categories.forEach((category, index) => {
+    const key = categoryInputKey(category)
+    if (seen.has(key)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['categories', index],
+        message: 'Categories must be unique',
+      })
+    }
+    seen.add(key)
+  })
+}
+
 // Optimistic concurrency token for updates: the guide's updatedAt as the
 // client last saw it (ISO 8601, UTC). The service rejects the save with 409
 // guide-modified when the stored value differs, so a save from stale editor
@@ -226,14 +268,16 @@ const ExpectedUpdatedAtSchema = z.string().datetime()
 
 const AuthorSchema = z.string().trim().min(1).max(200)
 
-export const GuideInputSchema =
-  GuideInputBaseSchema.superRefine(publishRules).superRefine(uniqueIdRules)
+export const GuideInputSchema = GuideInputBaseSchema.superRefine(publishRules)
+  .superRefine(uniqueIdRules)
+  .superRefine(uniqueCategoryRules)
 export const CreateGuideRequestSchema = GuideInputSchema
 export const UpdateGuideRequestSchema = GuideInputBaseSchema.extend({
   expectedUpdatedAt: ExpectedUpdatedAtSchema,
 })
   .superRefine(publishRules)
   .superRefine(uniqueIdRules)
+  .superRefine(uniqueCategoryRules)
 
 // Service-level create payload: core adds the acting user's name.
 export const ServiceGuideWriteSchema = GuideInputBaseSchema.extend({
@@ -241,6 +285,7 @@ export const ServiceGuideWriteSchema = GuideInputBaseSchema.extend({
 })
   .superRefine(publishRules)
   .superRefine(uniqueIdRules)
+  .superRefine(uniqueCategoryRules)
 
 // Service-level update payload: the create payload plus the concurrency token.
 export const ServiceGuideUpdateSchema = GuideInputBaseSchema.extend({
@@ -249,6 +294,7 @@ export const ServiceGuideUpdateSchema = GuideInputBaseSchema.extend({
 })
   .superRefine(publishRules)
   .superRefine(uniqueIdRules)
+  .superRefine(uniqueCategoryRules)
 
 export const ListGuidesQuerySchema = z.object({
   // Query strings arrive as text, so accept both booleans and 'true'/'false'.

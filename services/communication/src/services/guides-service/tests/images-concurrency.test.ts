@@ -59,7 +59,7 @@ describe('guide image concurrency', () => {
       db
     )
     createdGuideIds.push(guide.id)
-    createdCategoryIds.push(guide.category.id)
+    createdCategoryIds.push(guide.categories[0].id)
     const stepId = guide.steps[0].id
 
     const uploadCount = 6
@@ -95,7 +95,7 @@ describe('guide image concurrency', () => {
       db
     )
     createdGuideIds.push(guide.id)
-    createdCategoryIds.push(guide.category.id)
+    createdCategoryIds.push(guide.categories[0].id)
     const storageKey = `guide/${guide.id}/${randomUUID()}.png`
 
     // An upload that has taken the guide lock (as createStepImage does

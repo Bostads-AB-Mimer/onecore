@@ -40,13 +40,15 @@ const guide: guides.Guide = {
   title: 'Registrera uppsägning',
   description: '',
   status: 'published',
-  category: {
-    id: randomUUID(),
-    name: 'Tenfast',
-    parentId: null,
-    createdAt: now,
-    updatedAt: now,
-  },
+  categories: [
+    {
+      id: randomUUID(),
+      name: 'Tenfast',
+      parentId: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ],
   stepCount: 1,
   createdBy: 'Anna',
   updatedBy: 'Anna',
@@ -85,7 +87,7 @@ const writeBody = (): guides.CreateGuideRequest => ({
   title: 'Ny guide',
   description: '',
   slug: 'ny-guide',
-  category: { name: 'Tenfast' },
+  categories: [{ name: 'Tenfast' }],
   status: 'draft',
   steps: [{ id: randomUUID(), title: 'Steg 1', body: '<p>x</p>', images: [] }],
 })
@@ -264,19 +266,51 @@ describe('POST /guides', () => {
     expect(spy.mock.calls[0][0].author).toBe('Anna')
   })
 
-  it('passes the parent of a new subcategory on to communication', async () => {
+  it('passes every category, new subcategories included, on to communication', async () => {
     const spy = jest
       .spyOn(communicationAdapter.guides, 'createGuide')
       .mockResolvedValue({ ok: true, data: guide })
     const parentId = randomUUID()
+    const existingId = randomUUID()
+    const categories = [{ id: existingId }, { name: 'Avtal', parentId }]
 
     const res = await request(app.callback())
       .post('/guides')
       .set(asAdmin)
-      .send({ ...writeBody(), category: { name: 'Avtal', parentId } })
+      .send({ ...writeBody(), categories })
 
     expect(res.status).toBe(200)
-    expect(spy.mock.calls[0][0].category).toEqual({ name: 'Avtal', parentId })
+    expect(spy.mock.calls[0][0].categories).toEqual(categories)
+  })
+
+  it('passes every category on to communication on update', async () => {
+    const spy = jest
+      .spyOn(communicationAdapter.guides, 'updateGuide')
+      .mockResolvedValue({
+        ok: true,
+        data: { guide, removedStorageKeys: [] },
+      })
+    const categories = [{ id: randomUUID() }, { name: 'Odoo' }]
+
+    const res = await request(app.callback())
+      .put(`/guides/${guide.id}`)
+      .set(asAdmin)
+      .send({ ...updateBody(), categories })
+
+    expect(res.status).toBe(200)
+    expect(spy.mock.calls[0][1].categories).toEqual(categories)
+  })
+
+  it('returns 400 without calling communication when no category is given', async () => {
+    const spy = jest.spyOn(communicationAdapter.guides, 'createGuide')
+
+    const res = await request(app.callback())
+      .post('/guides')
+      .set(asAdmin)
+      .send({ ...writeBody(), categories: [] })
+
+    expect(res.status).toBe(400)
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('returns 400 with issues on invalid input', async () => {
