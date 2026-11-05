@@ -3,12 +3,14 @@ import {
   FileText,
   Info,
   MessageSquare,
+  Receipt,
   Users,
   Wrench,
 } from 'lucide-react'
 
 import { SpaceComponents } from '@/features/component-library'
 import { LeasesTabContent } from '@/features/leases'
+import { RentRowsTabContent } from '@/features/rent-rows'
 import { CurrentTenant } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
 
@@ -29,12 +31,14 @@ interface FacilityTabsMobileProps {
   facility: Facility
   leases?: Lease[]
   leasesIsLoading: boolean
+  currentLease?: Lease
 }
 
 export function FacilityTabsMobile({
   facility,
   leases,
   leasesIsLoading,
+  currentLease,
 }: FacilityTabsMobileProps) {
   const rentalId = facility.rentalInformation?.rentalId
 
@@ -74,6 +78,14 @@ export function FacilityTabsMobile({
       title: 'Kontrakt',
       content: rentalId ? (
         <LeasesTabContent rentalPropertyId={rentalId} />
+      ) : null,
+    },
+    {
+      id: 'rent-rows',
+      icon: Receipt,
+      title: 'Hyresrader',
+      content: rentalId ? (
+        <RentRowsTabContent rentalObjectCode={rentalId} lease={currentLease} />
       ) : null,
     },
     {

@@ -7,12 +7,16 @@ import { routes as listingRoutes } from './routes/listings'
 import { routes as applicantsRoutes } from './routes/applicants'
 import { routes as rentalObjectsRoutes } from './routes/rental-objects'
 import { routes as listingTextContentRoutes } from './routes/listing-text-content'
+import { routes as leaseSyncRoutes } from './routes/lease-sync'
+import { routes as rentalObjectTypeSyncRoutes } from './routes/rental-object-type-sync'
 import { routes as listingAreaTextContentRoutes } from './routes/listing-area-text-content'
 
 export const routes = (router: KoaRouter) => {
   applicantsRoutes(router)
   offerRoutes(router)
   commentRoutes(router)
+  leaseSyncRoutes(router)
+  rentalObjectTypeSyncRoutes(router)
   leaseRoutes(router)
   contactRoutes(router)
   listingRoutes(router)

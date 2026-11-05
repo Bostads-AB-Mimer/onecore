@@ -403,6 +403,8 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '201':
    *         description: Offer creation successful.
+   *       '404':
+   *         description: No eligible applicant found for the listing.
    *       '500':
    *         description: Internal server error. Failed to create the offer.
    *     security:
@@ -422,7 +424,7 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    ctx.status = 500
+    ctx.status = result.httpStatus
     ctx.body = { error: result.error, ...metadata }
 
     // Step 6: Communicate error to dev team and customer service

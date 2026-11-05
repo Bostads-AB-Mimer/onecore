@@ -64,6 +64,7 @@ const {
   NotFoundResponseSchema,
   BadRequestResponseSchema,
   SchemaDownloadUrlResponseSchema,
+  MoveInOutStatusSchema,
   MoveInOutRowSchema,
 } = keys
 
@@ -151,6 +152,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Card', CardSchema)
   registerSchema('CardDetails', CardDetailsSchema)
   registerSchema('QueryCardOwnersParams', QueryCardOwnersParamsSchema)
+  registerSchema('MoveInOutStatus', MoveInOutStatusSchema)
   registerSchema('MoveInOutRow', MoveInOutRowSchema)
 
   // Register pagination schemas

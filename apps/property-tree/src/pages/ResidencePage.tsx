@@ -19,6 +19,7 @@ export const ResidencePage = () => {
     leases,
     leasesIsLoading,
     leasesError,
+    objectRent,
   } = useResidenceDetails(rentalId!)
 
   const currentLease: Lease | undefined = leases?.[0] as Lease
@@ -38,6 +39,7 @@ export const ResidencePage = () => {
               residence={residence}
               building={building}
               lease={currentLease}
+              objectRent={objectRent?.rent.amount}
             />
 
             <ResidenceTabs

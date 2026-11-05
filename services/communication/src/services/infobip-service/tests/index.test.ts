@@ -2,7 +2,7 @@ import request from 'supertest'
 import KoaRouter from '@koa/router'
 import Koa from 'koa'
 import bodyParser from 'koa-bodyparser'
-import { Email, WorkOrderSms } from '@onecore/types'
+import { Email, WorkOrderSms, InvoiceNotificationEmail } from '@onecore/types'
 
 import { isMessageEmail, isValidWorkOrderSms, isValidBulkSms } from '../index'
 import * as emailAdapter from '../adapters/email-adapter'
@@ -507,6 +507,94 @@ describe('/sendBulkSms', () => {
   })
 })
 
+describe('/send-invoice-notification-email', () => {
+  let sendInvoiceNotificationEmailSpy: jest.SpyInstance<
+    Promise<any>,
+    [email: InvoiceNotificationEmail],
+    any
+  >
+
+  beforeEach(() => {
+    sendInvoiceNotificationEmailSpy = jest.spyOn(
+      emailAdapter,
+      'sendInvoiceNotificationEmail'
+    )
+    sendInvoiceNotificationEmailSpy.mockReset()
+  })
+
+  const validBody = {
+    to: 'tenant@example.com',
+    firstName: 'Anna',
+    address: 'Testgatan 1',
+    invoiceNumber: 'INV-2024-001',
+    dueDate: '2024-03-31',
+    totalAmount: '5000',
+  }
+
+  it('should return 204 for a valid request without attachments', async () => {
+    sendInvoiceNotificationEmailSpy.mockResolvedValue({ data: {} })
+
+    const res = await request(app.callback())
+      .post('/send-invoice-notification-email')
+      .send(validBody)
+
+    expect(res.status).toBe(204)
+    expect(sendInvoiceNotificationEmailSpy).toHaveBeenCalledWith(validBody)
+  })
+
+  it('should return 204 for a valid request with PDF attachment', async () => {
+    sendInvoiceNotificationEmailSpy.mockResolvedValue({ data: {} })
+
+    const body = {
+      ...validBody,
+      attachments: [
+        {
+          filename: 'faktura.pdf',
+          content: Buffer.from('pdf-content').toString('base64'),
+          contentType: 'application/pdf',
+        },
+      ],
+    }
+
+    const res = await request(app.callback())
+      .post('/send-invoice-notification-email')
+      .send(body)
+
+    expect(res.status).toBe(204)
+    expect(sendInvoiceNotificationEmailSpy).toHaveBeenCalledWith(body)
+  })
+
+  it('should return 400 for missing required fields', async () => {
+    const res = await request(app.callback())
+      .post('/send-invoice-notification-email')
+      .send({ to: 'tenant@example.com' })
+
+    expect(res.status).toBe(400)
+    expect(sendInvoiceNotificationEmailSpy).not.toHaveBeenCalled()
+  })
+
+  it('should return 400 for invalid email address', async () => {
+    const res = await request(app.callback())
+      .post('/send-invoice-notification-email')
+      .send({ ...validBody, to: 'not-an-email' })
+
+    expect(res.status).toBe(400)
+    expect(sendInvoiceNotificationEmailSpy).not.toHaveBeenCalled()
+  })
+
+  it('should return 500 when adapter throws', async () => {
+    sendInvoiceNotificationEmailSpy.mockRejectedValue(
+      new Error('Infobip error')
+    )
+
+    const res = await request(app.callback())
+      .post('/send-invoice-notification-email')
+      .send(validBody)
+
+    expect(res.status).toBe(500)
+  })
+})
+
 describe('/sendBulkSms logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 
@@ -784,6 +872,119 @@ describe('parking space offer email logging', () => {
         messageType: 'non_scored_parking_space_denied',
       })
     )
+  })
+})
+
+describe('/sendLeaseTerminationConfirmation', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+  const getTemplateMock = jest.spyOn(templateRender, 'getEmailTemplate')
+  let sendSpy: jest.SpyInstance
+
+  const terminationBody = {
+    to: 'tenant@example.com',
+    contactCode: 'P123456',
+    firstName: 'Anna',
+    leaseId: '307-002-11-0201/11',
+    endDate: '2026-10-31',
+    rentalType: 'Bilplats' as const,
+  }
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    getTemplateMock.mockReset()
+    getTemplateMock.mockResolvedValue({
+      subject: 'Standardämne',
+      html: '<p>Hej {{firstName}}!</p><p>Sista dag: {{endDate}}</p>',
+    })
+    sendSpy = jest.spyOn(emailAdapter, 'sendLeaseTerminationConfirmation')
+    sendSpy.mockReset()
+    sendSpy.mockResolvedValue(emailSendResult('mid-term'))
+  })
+
+  it('returns 204 and logs the confirmation with the termination messageType', async () => {
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send({ ...terminationBody, correlationId: 'tenfast-evt-1' })
+
+    expect(res.status).toBe(204)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'email',
+        messageType: 'lease_termination_confirmation',
+        audienceCriteria: {
+          correlationId: 'tenfast-evt-1',
+          leaseId: '307-002-11-0201/11',
+        },
+        subject: 'Standardämne',
+        body: expect.stringContaining('Hej Anna!'),
+        recipients: [
+          expect.objectContaining({
+            contactCode: 'P123456',
+            toAddress: 'tenant@example.com',
+            externalMessageId: 'mid-term',
+            status: 'pending',
+          }),
+        ],
+      })
+    )
+  })
+
+  it('falls back to the Swedish label when the template cannot be fetched', async () => {
+    getTemplateMock.mockResolvedValue(null)
+
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send(terminationBody)
+
+    expect(res.status).toBe(204)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: 'Bekräftelse på uppsägning',
+        body: expect.stringContaining('avtal 307-002-11-0201/11'),
+      })
+    )
+  })
+
+  it('returns 400 for an invalid body', async () => {
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send({ to: 'not-an-email' })
+
+    expect(res.status).toBe(400)
+    expect(sendSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not fail the send when communication logging throws', async () => {
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send(terminationBody)
+
+    expect(res.status).toBe(204)
+  })
+
+  it('logs triggeredByUser when the caller supplies it', async () => {
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send({ ...terminationBody, triggeredByUser: 'Tenfast' })
+
+    expect(res.status).toBe(204)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ triggeredByUser: 'Tenfast' })
+    )
+  })
+
+  it('returns 500 when the send adapter throws', async () => {
+    sendSpy.mockRejectedValueOnce(new Error('Infobip down'))
+
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send(terminationBody)
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('Infobip down')
   })
 })
 

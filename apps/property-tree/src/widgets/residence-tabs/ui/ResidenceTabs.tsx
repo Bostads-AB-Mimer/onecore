@@ -7,6 +7,7 @@ import {
   Lock,
   Map,
   MessageSquare,
+  Receipt,
   Users,
   Wrench,
 } from 'lucide-react'
@@ -16,6 +17,7 @@ import { InspectionsTabContent } from '@/features/inspections'
 import { LeasesTabContent } from '@/features/leases'
 import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
 import { RentalBlocksTabContent } from '@/features/rental-blocks'
+import { RentRowsTabContent } from '@/features/rent-rows'
 import { ResidenceFloorplanTabsContent } from '@/features/residences'
 import { TenantsTabContent } from '@/features/tenants'
 import { WorkOrdersTabContent } from '@/features/work-orders'
@@ -84,6 +86,10 @@ export const ResidenceTabs = ({
           <FileText className="h-4 w-4" />
           <span className="hidden sm:inline">Kontrakt</span>
         </TabsTrigger>
+        <TabsTrigger value="rent-rows" className="flex items-center gap-1.5">
+          <Receipt className="h-4 w-4" />
+          <span className="hidden sm:inline">Hyresrader</span>
+        </TabsTrigger>
         <TabsTrigger value="keys" className="flex items-center gap-1.5">
           <KeyRound className="h-4 w-4" />
           <span className="hidden sm:inline">Nycklar</span>
@@ -137,6 +143,15 @@ export const ResidenceTabs = ({
 
       <TabsContent value="contracts">
         <LeasesTabContent rentalPropertyId={rentalId} />
+      </TabsContent>
+
+      <TabsContent value="rent-rows">
+        {rentalId && (
+          <RentRowsTabContent
+            rentalObjectCode={rentalId}
+            lease={currentLease}
+          />
+        )}
       </TabsContent>
 
       <TabsContent value="keys">

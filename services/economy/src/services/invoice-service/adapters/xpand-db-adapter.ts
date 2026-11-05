@@ -1,12 +1,5 @@
 import knex from 'knex'
-import {
-  Address,
-  Invoice,
-  InvoiceRow,
-  InvoiceTransactionType,
-  invoiceTransactionTypeTranslation,
-  paymentStatusTranslation,
-} from '@onecore/types'
+import { Address, InvoiceRow } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 import config from '@src/common/config'
@@ -17,7 +10,7 @@ import {
   xledgerDateString,
   XpandContact,
 } from '@src/common/types'
-import { match, P } from 'ts-pattern'
+import { mapContactFlags } from '@src/services/common/adapters/xpand-db-adapter'
 
 type RentalSpecificRule = {
   costCode: string
@@ -357,7 +350,10 @@ export const getContacts = async (
       'cmctc.keycmctc as contactKey',
       'cmctc.lagsokt as protectedIdentity',
       'krknr.autogiro as autogiro',
-      'krknr.stopdate as autogiroCancelledAt'
+      'krknr.stopdate as autogiroCancelledAt',
+      'cmctc.avliden as deceased',
+      'cmctc.konkurs as emigrated',
+      'cmctc.blockinfo as noAdvertising'
     )
     .leftJoin('krknr', 'cmctc.keycmctc', 'krknr.keycmctc')
 
@@ -438,6 +434,9 @@ export const getContacts = async (
     const contactCode = contactRow.contactCode?.trimEnd()
     const emailAddress = getContactEmail(contactCode)
 
+    const { protectedIdentity, deceased, emigrated, noAdvertising } =
+      mapContactFlags(contactRow)
+
     return {
       contactCode: contactRow.contactCode?.trimEnd(),
       contactKey: contactRow.contactKey?.trimEnd(),
@@ -458,209 +457,14 @@ export const getContacts = async (
         emailAddress !== ''
           ? InvoiceDeliveryMethod.Email
           : InvoiceDeliveryMethod.Other,
+      protectedIdentity,
+      deceased,
+      emigrated,
+      noAdvertising,
     }
   })
 
   return contacts
-}
-
-/*
- * If invoice number ends with "K" we get the original invoice by simply
- * removing the "K" from the invoice number.
- */
-function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
-  return match(invoiceNode)
-    .with({ invoiceNumber: P.string.endsWith('K') }, (v) => ({
-      originalInvoiceId: v.invoiceNumber.replace('K', ''),
-    }))
-    .otherwise(() => null)
-}
-
-function transformFromDbInvoice(row: any, contactCode: string): Invoice {
-  const amount = [row.amount, row.reduction, row.vat, row.roundoff].reduce(
-    (sum, value) => sum + value,
-    0
-  )
-
-  return {
-    // The invoice's actual paying contact — for invoices found via a shared
-    // lease this is the other holder, not the contact the lookup was made
-    // for. Matches the Xledger transform, where reference is the subledger
-    // (customer) code.
-    reference: row.recipientContactCode
-      ? (row.recipientContactCode as string).trimEnd()
-      : contactCode,
-    invoiceId: row.invoiceId.trim(),
-    leaseId: row.leaseId?.trim(),
-    amount: Math.round((amount + Number.EPSILON) * 100) / 100,
-    fromDate: row.fromDate,
-    toDate: row.toDate,
-    invoiceDate: row.invoiceDate,
-    expirationDate: row.expirationDate,
-    debitStatus: row.debitStatus,
-    paymentStatus: getPaymentStatus(row.paymentStatus),
-    transactionType: getTransactionType(row.transactionType),
-    transactionTypeName: row.transactionTypeName.trim(),
-    type: 'Regular',
-    source: 'legacy',
-    invoiceRows: [],
-    credit: getInvoiceCredit(row),
-  }
-}
-
-const buildInvoicesByContactCodeQuery = (filters?: { from?: Date }) => {
-  let query = db
-    .select(
-      'krfkh.invoice as invoiceId',
-      'krfkh.reference as leaseId',
-      'krfkh.amount as amount',
-      'krfkh.fromdate as fromDate',
-      'krfkh.todate as toDate',
-      'krfkh.reduction',
-      'krfkh.vat',
-      'krfkh.roundoff',
-      'krfkh.invdate as invoiceDate',
-      'krfkh.expdate as expirationDate',
-      'krfkh.debstatus as debitStatus',
-      'krfkh.paystatus as paymentStatus',
-      'krfkh.keyrevrt as transactionType',
-      'revrt.name as transactionTypeName',
-      'cmctc.cmctckod as recipientContactCode',
-      'krfkh.keykrfkh as invoiceRowKey'
-    )
-    .from('krfkh')
-    .innerJoin('cmctc', 'cmctc.keycmctc', 'krfkh.keycmctc')
-    .innerJoin('revrt', 'revrt.keyrevrt', 'krfkh.keyrevrt')
-    .whereIn('krfkh.type', [1, 2])
-    .orderBy('krfkh.fromdate', 'desc')
-
-  if (filters?.from) {
-    query = query.andWhere('krfkh.fromdate', '>=', filters.from)
-  }
-
-  return query
-}
-
-/*
- * Leases where the contact is a (co-)holder. Invoices in krfkh are bound to
- * a single paying contact (keycmctc), so a co-holder on a shared lease has no
- * invoices of their own — their household's invoices must be looked up via
- * the leases they hold (MIM-1160). Only INNEHAVARE relations count, mirroring
- * isLeaseHolderRelation in the leasing service — other relation types (e.g.
- * guarantors) must not expose invoices.
- *
- * Terminated leases are excluded, using the leasing service's rule
- * (isLeaseTerminated: last debit date or termination date has passed): hyavk
- * rows survive termination, and a former co-holder must not keep seeing
- * invoices issued to whoever remains on the contract. Upcoming leases are
- * kept — their advance invoices are relevant to both holders.
- */
-const getHolderLeaseIds = async (contactKey: string): Promise<string[]> => {
-  try {
-    const rows = await db
-      .from('hyavk')
-      .select(
-        'hyobj.hyobjben as leaseId',
-        'hyobj.sistadeb as lastDebitDate',
-        'hyobj.makuldatum as terminationDate'
-      )
-      .innerJoin('cmctc', 'cmctc.keycmctc', 'hyavk.keycmctc')
-      .innerJoin('hyobj', 'hyobj.keyhyobj', 'hyavk.keyhyobj')
-      .where('cmctc.cmctckod', contactKey)
-      .where('hyavk.keyhyakt', 'INNEHAVARE')
-
-    // Compared on calendar dates, like the leasing service does.
-    const toIsoDate = (date: Date) => date.toISOString().split('T')[0]
-    const today = toIsoDate(new Date())
-    const hasPassed = (date: Date | null | undefined) =>
-      date != null && toIsoDate(new Date(date)) < today
-
-    return rows
-      .filter(
-        (row) =>
-          !hasPassed(row.lastDebitDate) && !hasPassed(row.terminationDate)
-      )
-      .map((row) => row.leaseId?.trimEnd())
-      .filter((leaseId: string | undefined): leaseId is string =>
-        Boolean(leaseId)
-      )
-  } catch (err) {
-    // Degrade to recipient-only invoices rather than failing the whole
-    // invoice lookup for every contact.
-    logger.error({ err }, 'adapter.getHolderLeaseIds')
-    return []
-  }
-}
-
-export const getInvoicesByContactCode = async (
-  contactKey: string,
-  filters?: { from?: Date }
-): Promise<Invoice[] | undefined> => {
-  logger.info(
-    { contactCode: contactKey },
-    'Getting invoices by contact code from Xpand DB'
-  )
-
-  const [recipientRows, holderLeaseIds] = await Promise.all([
-    buildInvoicesByContactCodeQuery(filters).where({
-      'cmctc.cmctckod': contactKey,
-    }),
-    getHolderLeaseIds(contactKey),
-  ])
-
-  // Chunked to stay below MSSQL's 2100-bind-parameter limit — an organisation
-  // contact can hold a very large number of lease objects.
-  const LEASE_CHUNK_SIZE = 500
-  const leaseRows: typeof recipientRows = []
-  for (let i = 0; i < holderLeaseIds.length; i += LEASE_CHUNK_SIZE) {
-    const chunkRows = await buildInvoicesByContactCodeQuery(filters).whereIn(
-      'krfkh.reference',
-      holderLeaseIds.slice(i, i + LEASE_CHUNK_SIZE)
-    )
-    leaseRows.push(...chunkRows)
-  }
-
-  // Merge both lookups, dropping duplicate rows (an invoice where the contact
-  // is both recipient and lease holder is returned by both queries). Keyed on
-  // krfkh's primary key — invoice numbers are not guaranteed unique, so two
-  // distinct rows sharing a number must both survive.
-  const seenRowKeys = new Set<string>()
-  const rows: typeof recipientRows = []
-  for (const row of [...recipientRows, ...leaseRows]) {
-    const rowKey = row.invoiceRowKey?.trimEnd()
-    if (rowKey) {
-      if (seenRowKeys.has(rowKey)) {
-        continue
-      }
-      seenRowKeys.add(rowKey)
-    }
-    rows.push(row)
-  }
-
-  rows.sort(
-    (a, b) => new Date(b.fromDate).getTime() - new Date(a.fromDate).getTime()
-  )
-
-  if (rows.length > 0) {
-    const invoices: Invoice[] = rows
-      .filter((row) => {
-        // Only include invoices with invoiceIds
-        // that have not been deleted (debitStatus 6 = makulerad)
-        if (row.invoiceId && row.debitStatus !== 6) {
-          return true
-        } else {
-          return false
-        }
-      })
-      .map((row) => transformFromDbInvoice(row, contactKey))
-    logger.info(
-      { contactCode: contactKey },
-      'Getting invoices by contact code from Xpand DB completed'
-    )
-    return invoices
-  }
-
-  return undefined
 }
 
 export const getRentalInvoices = async (
@@ -824,12 +628,8 @@ export const getInvoiceRows = async (
             : invoiceToDateString
 
         const invoice: InvoiceRow = {
-          account: trim(invoiceRow['p1']),
           amount: sumColumns(invoiceRow['rowAmount']),
-          company: trim(invoiceRow['company']),
-          contactCode: trim(invoiceRow['cmctckod']),
           deduction: sumColumns(invoiceRow['rowReduction']),
-          freeCode: trim(invoiceRow['p5']),
           fromDate: fromDateString,
           invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
           invoiceDueDate: xledgerDateString(
@@ -837,14 +637,10 @@ export const getInvoiceRows = async (
           ),
           invoiceNumber: trim(invoiceRow['invoice']),
           invoiceRowText: trim(invoiceRow['text']),
-          invoiceTotalAmount: sumColumns(invoiceRow['invoiceTotal']),
           printGroup: trim(invoiceRow['printGroup']),
-          printGroupLabel: trim(invoiceRow['printGroupLabel']),
-          projectCode: trim(invoiceRow['p4']),
           rentArticle: trim(invoiceRow['rentArticle']),
           roundoff: sumColumns(invoiceRow['roundoff']),
           rowType: sumColumns(invoiceRow['rowtype']),
-          tenantName: trim(invoiceRow['cmctcben']),
           toDate: toDateString,
           totalAmount: sumColumns(
             invoiceRow['rowAmount'],
@@ -855,13 +651,10 @@ export const getInvoiceRows = async (
         }
 
         if (type === 2) {
-          // credit invoice, reverse signs
-          invoice.totalAmount = -invoice.totalAmount
           invoice.amount = -invoice.amount
           invoice.vat = -invoice.vat
           invoice.deduction = -invoice.deduction
           invoice.roundoff = -invoice.roundoff
-          invoice.invoiceTotalAmount = -invoice.invoiceTotalAmount
         }
 
         return invoice
@@ -876,25 +669,4 @@ export const getInvoiceRows = async (
   )
 
   return convertedInvoiceRows
-}
-
-function getTransactionType(transactionTypeString: any) {
-  if (!transactionTypeString || !(typeof transactionTypeString == 'string')) {
-    return InvoiceTransactionType.Other
-  }
-
-  let transactionType =
-    invoiceTransactionTypeTranslation[transactionTypeString.trimEnd()]
-
-  if (!transactionType) {
-    transactionType = InvoiceTransactionType.Other
-  }
-
-  return transactionType
-}
-
-function getPaymentStatus(paymentStatusNumber: number) {
-  const paymentStatus = paymentStatusTranslation[paymentStatusNumber]
-
-  return paymentStatus
 }

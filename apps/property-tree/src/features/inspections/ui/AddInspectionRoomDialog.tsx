@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { ALL_VALID_TYPE_CODES, ROOM_CAPTION_TEMPLATES } from '@onecore/types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ROOM_CAPTION_TEMPLATES, ALL_VALID_TYPE_CODES } from '@onecore/types'
+
+import { inspectionService } from '@/services/api/core/inspectionService'
+import type { Room } from '@/services/types'
 
 import { Button } from '@/shared/ui/Button'
 import {
@@ -18,9 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/Select'
-
-import { inspectionService } from '@/services/api/core/inspectionService'
-import type { Room } from '@/services/types'
 
 interface AddInspectionRoomDialogProps {
   inspectionId: string

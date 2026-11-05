@@ -1,5 +1,6 @@
 import { Knex } from 'knex'
 import { ApplicantStatus, ListingStatus, OfferStatus } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 import * as listingAdapter from './adapters/listing-adapter'
 import * as offerAdapter from './adapters/offer-adapter'
@@ -120,6 +121,49 @@ export const denyOffer = async (
 
     return { ok: false, err: 'unknown' }
   }
+}
+
+export const handleExpiredOffers = async (
+  db: Knex
+): Promise<AdapterResult<number[], 'unknown'>> => {
+  const expiredOffers =
+    await offerAdapter.getActiveOffersPastResponseDeadline(db)
+
+  if (!expiredOffers.ok) {
+    return { ok: false, err: 'unknown' }
+  }
+
+  const affectedListingIds: number[] = []
+
+  for (const offer of expiredOffers.data) {
+    try {
+      await db.transaction(async (trx) => {
+        await updateApplicant(
+          trx,
+          offer.applicantId,
+          ApplicantStatus.OfferExpired
+        )
+        await updateOfferAnsweredStatus(
+          trx,
+          offer.id,
+          OfferStatus.Expired,
+          new Date()
+        )
+        await updateOfferApplicant(
+          trx,
+          offer.id,
+          offer.listingId,
+          offer.applicantId,
+          ApplicantStatus.OfferExpired
+        )
+      })
+      affectedListingIds.push(offer.listingId)
+    } catch (err) {
+      logger.error(err, `Error handling expired offer ${offer.id}`)
+    }
+  }
+
+  return { ok: true, data: affectedListingIds }
 }
 
 const updateListing = async (listingId: number, trx: Knex) => {

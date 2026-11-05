@@ -1,4 +1,5 @@
 import { HttpStatusCode } from 'axios'
+import dayjs from 'dayjs'
 import {
   parkingSpaceApplicationCategoryTranslation,
   Applicant,
@@ -13,15 +14,14 @@ import { logger } from '@onecore/utilities'
 import {
   addApplicantToWaitingList,
   getActiveListingByRentalObjectCode,
-  createNewListing,
   applyForListing,
   setApplicantStatusActive,
   getApplicantByContactCodeAndListingId,
   validateResidentialAreaRentalRules,
   validatePropertyRentalRules,
   getContactByContactCode,
-  getLeasesForContactCode,
   getParkingSpaceByCode,
+  getLeasesByContactCode,
 } from '../../../adapters/leasing-adapter'
 import {
   ProcessError,
@@ -31,9 +31,9 @@ import {
 import { makeProcessError, validateRentalRules } from '../utils'
 import { sendNotificationToRole } from '../../../adapters/communication-adapter'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
-import dayjs from 'dayjs'
 
 // PROCESS Part 1 - Create Note of Interest for Scored Parking Space
+// See DOCS_Create_Note_of_Interest_for_Scored_Parking_Space.md for the full flow.
 export const createNoteOfInterestForInternalParkingSpace = async (
   parkingSpaceId: string,
   contactCode: string,
@@ -98,10 +98,8 @@ export const createNoteOfInterestForInternalParkingSpace = async (
     const applicantContact = getApplicantContact.data
 
     //step 3a. Check if applicant is tenant
-    const leases = await getLeasesForContactCode(contactCode, {
-      includeUpcomingLeases: true,
-      includeTerminatedLeases: false,
-      includeContacts: false,
+    const leases = await getLeasesByContactCode(contactCode, {
+      status: ['current', 'upcoming'],
     })
 
     if (leases.length < 1) {

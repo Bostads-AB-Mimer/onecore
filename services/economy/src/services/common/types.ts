@@ -1,4 +1,4 @@
-import { Contact, RentInvoiceRow } from '@onecore/types'
+import { Contact, InvoiceRow, RentalProperty } from '@onecore/types'
 
 export type XledgerRentCase = {
   contactCode: string
@@ -51,21 +51,10 @@ export type EnrichedXledgerBalanceCorrection = XledgerBalanceCorrection &
       }
   )
 
-export type RentalProperty = {
-  rentalPropertyType: 'Residence' | 'ParkingSpace' | 'Facility' | 'Other'
-  rentalId: string
-  address: string
-  code: string
-  postalCode: string | null
-  city: string | null
-  type: string
-  areaSize: number | null
-}
-
 export type RentInvoice = {
   invoiceNumber: string
   reference: string
-  roundoff: number
+  roundoff?: number
   fromDate: Date
   toDate: Date
   invoiceDate: Date
@@ -84,12 +73,12 @@ export type OtherInvoice = {
   comment?: string
 }
 
-export type Invoice = {
+export type DebtCollectionInvoice = {
   invoiceNumber: string
   invoiceDate: Date
   expiryDate: Date
   amount: number
-  rows: RentInvoiceRow[]
+  rows: InvoiceRow[]
   comment: string
   reference?: string
   fromDate?: Date
@@ -101,5 +90,5 @@ export type Invoice = {
 
 export type EnrichedXledgerRentCase = XledgerRentCase & {
   contact: Contact
-  invoice: Invoice
+  invoice: DebtCollectionInvoice
 }

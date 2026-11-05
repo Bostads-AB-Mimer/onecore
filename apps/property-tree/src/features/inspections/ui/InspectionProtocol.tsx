@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import {
   AlertCircle,
-  Camera,
-  ChevronDown,
   Home,
   Key,
   Loader2,
@@ -25,11 +23,6 @@ import { Alert, AlertDescription } from '@/shared/ui/Alert'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/shared/ui/Collapsible'
 import {
   Dialog,
   DialogContent,
@@ -60,9 +53,6 @@ export function InspectionProtocol({
   isOpen,
   source = 'xpand',
 }: InspectionProtocolProps) {
-  const [expandedPhotos, setExpandedPhotos] = useState<Record<string, boolean>>(
-    {}
-  )
   const [showSendModal, setShowSendModal] = useState(false)
   const [selectedRecipient, setSelectedRecipient] = useState<
     'new-tenant' | 'tenant' | null
@@ -71,10 +61,6 @@ export function InspectionProtocol({
     useState<TenantContactsResponse | null>(null)
   const [isFetchingContacts, setIsFetchingContacts] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
-
-  const togglePhotoExpansion = (key: string) => {
-    setExpandedPhotos((prev) => ({ ...prev, [key]: !prev[key] }))
-  }
 
   const { downloadPdf, isDownloading: isDownloadingPdf } =
     useInspectionPdfDownload()
@@ -321,44 +307,6 @@ export function InspectionProtocol({
           )}
         </CardContent>
       </Card>
-    )
-  }
-
-  const renderComponentPhotos = (
-    roomId: string,
-    component: string,
-    photos: string[]
-  ) => {
-    if (!photos || photos.length === 0) return null
-
-    const photoKey = `${roomId}-${component}`
-    const isExpanded = expandedPhotos[photoKey]
-
-    return (
-      <Collapsible
-        open={isExpanded}
-        onOpenChange={() => togglePhotoExpansion(photoKey)}
-      >
-        <CollapsibleTrigger className="flex items-center gap-1 text-sm text-primary hover:underline mt-2">
-          <Camera className="h-3 w-3" />
-          Visa foton ({photos.length})
-          <ChevronDown
-            className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-          />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
-            {photos.map((photo, i) => (
-              <img
-                key={i}
-                src={photo}
-                alt={`${component} foto ${i + 1}`}
-                className="rounded-md border object-cover aspect-square w-full"
-              />
-            ))}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
     )
   }
 

@@ -3,9 +3,9 @@ import * as utils from '../utils'
 
 export const calculateVacantFrom = (listing: Listing): Date => {
   const todaysDate = utils.date.getUTCDateWithoutTime(new Date())
-  const vacantDate = listing.rentalObject.vacantFrom
+  const vacantDate = listing.rentalObject.availabilityInfo?.vacantFrom
     ? utils.date.getUTCDateWithoutTime(
-        new Date(listing.rentalObject.vacantFrom)
+        new Date(listing.rentalObject.availabilityInfo.vacantFrom)
       )
     : null
   const fromDate =

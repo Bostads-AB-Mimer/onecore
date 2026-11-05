@@ -75,15 +75,16 @@ export const getParkingSpaceColumns = (
       headerName: 'Bilplatstyp',
     },
     {
-      field: 'monthlyRent',
+      field: 'rent.amount',
       flex: 1,
       headerName: 'Hyra',
+      valueGetter: (params) => params.row.availabilityInfo?.rent?.amount ?? 0,
       valueFormatter: ({ value }) => `${numberFormatter.format(value)}/mån`,
     },
     {
       field: 'vacantFrom',
       headerName: 'Ledig FR.O.M',
-      valueGetter: (params) => params.row.vacantFrom ?? '',
+      valueGetter: (params) => params.row.availabilityInfo?.vacantFrom ?? '',
       valueFormatter: (v) => printVacantFrom(dateFormatter, v.value),
       flex: 0.6,
     },

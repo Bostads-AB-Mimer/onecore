@@ -3,7 +3,7 @@ import { useState } from 'react'
 import type { Note, NotesState } from '../types'
 
 // Mock initial data - this would typically come from API based on entityType and entityId
-const getInitialNotes = (entityType: string, entityId: string): Note[] => {
+const getInitialNotes = (entityType: string): Note[] => {
   if (entityType === 'tenant') {
     return [
       {
@@ -55,13 +55,9 @@ const getInitialNotes = (entityType: string, entityId: string): Note[] => {
   return []
 }
 
-export function useNotesState(
-  entityType: string,
-  entityId: string,
-  categories: string[]
-) {
+export function useNotesState(entityType: string, categories: string[]) {
   const [state, setState] = useState<NotesState>({
-    notes: getInitialNotes(entityType, entityId),
+    notes: getInitialNotes(entityType),
     newNote: '',
     selectedCategory: categories[0] || undefined,
     isAddingNote: false,

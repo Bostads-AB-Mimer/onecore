@@ -1,4 +1,5 @@
 import nock from 'nock'
+import { loggedAxios } from '@onecore/utilities'
 
 import config from '../../common/config'
 import * as propertyManagementAdapter from '../property-management-adapter'
@@ -37,5 +38,43 @@ describe(propertyManagementAdapter.getApartmentRentalPropertyInfo, () => {
       await propertyManagementAdapter.getApartmentRentalPropertyInfo('1234')
 
     expect(result).toEqual({ ok: true, data: apartmentInfo })
+  })
+})
+
+describe(propertyManagementAdapter.getRentalPropertyInfoFromXpand, () => {
+  afterEach(() => jest.restoreAllMocks())
+
+  it('returns status and content', async () => {
+    const apartmentInfo = factory.apartmentInfo.build()
+    nock(config.propertyInfoService.url)
+      .get('/rentalPropertyInfo/1234')
+      .reply(200, { content: apartmentInfo })
+
+    const result =
+      await propertyManagementAdapter.getRentalPropertyInfoFromXpand('1234')
+
+    expect(result).toEqual({ status: 200, data: apartmentInfo })
+  })
+
+  it('leaves the call unbounded unless the caller sets a timeout', async () => {
+    const getSpy = jest
+      .spyOn(loggedAxios, 'get')
+      .mockResolvedValue({ status: 200, data: { content: {} } })
+
+    await propertyManagementAdapter.getRentalPropertyInfoFromXpand('1234')
+
+    expect(getSpy.mock.calls[0][1]?.timeout).toBeUndefined()
+  })
+
+  it('passes a caller timeout through', async () => {
+    const getSpy = jest
+      .spyOn(loggedAxios, 'get')
+      .mockResolvedValue({ status: 200, data: { content: {} } })
+
+    await propertyManagementAdapter.getRentalPropertyInfoFromXpand('1234', {
+      timeoutMs: 30_000,
+    })
+
+    expect(getSpy.mock.calls[0][1]?.timeout).toBe(30_000)
   })
 })

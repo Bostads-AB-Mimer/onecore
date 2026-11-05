@@ -1,8 +1,9 @@
 import { useMutation } from '@tanstack/react-query'
+
 import {
-  linearService,
   type CreateFeedbackRequest,
   type LinearIssue,
+  linearService,
 } from '@/services/api/core/linearService'
 
 /**

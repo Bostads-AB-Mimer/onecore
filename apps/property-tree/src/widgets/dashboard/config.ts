@@ -7,6 +7,7 @@ import {
   DollarSign,
   Eye,
   FileText,
+  Gauge,
   Home,
   Key,
   Lock,
@@ -20,6 +21,10 @@ import { resolve } from '@/shared/lib/env'
 import { routes } from '@/shared/routes'
 
 import type { DashboardCard } from './types'
+
+export const isThirdPartyCard = (
+  card: Pick<DashboardCard, 'isExternal' | 'isOnecoreApp'>
+) => card.isExternal && !card.isOnecoreApp
 
 export const dashboardCards: DashboardCard[] = [
   {
@@ -53,9 +58,10 @@ export const dashboardCards: DashboardCard[] = [
     id: 'rental',
     title: 'Uthyrning',
     icon: Home,
-    description: 'Hantera uthyrning av lägenheter',
+    description: 'Hantera uthyrning av bilplatser',
     path: resolve('VITE_INTERNAL_PORTAL', ''),
     isExternal: true,
+    isOnecoreApp: true,
     isDisabled: false,
   },
   {
@@ -74,6 +80,7 @@ export const dashboardCards: DashboardCard[] = [
     description: 'Hantera ärenden och support',
     path: resolve('VITE_ODOO_URL', ''),
     isExternal: true,
+    isOnecoreApp: true,
     isDisabled: false,
   },
   {
@@ -119,6 +126,7 @@ export const dashboardCards: DashboardCard[] = [
     description: 'Nyckelhantering',
     path: resolve('VITE_KEYS_URL', ''),
     isExternal: true,
+    isOnecoreApp: true,
     isDisabled: false,
   },
   {
@@ -149,13 +157,22 @@ export const dashboardCards: DashboardCard[] = [
     isDisabled: false,
   },
   {
+    id: 'imd',
+    title: 'IMD',
+    icon: Gauge,
+    description: 'Bearbeta IMD-data och exportera till Tenfast',
+    path: routes.imd,
+    isExternal: false,
+    isDisabled: false,
+  },
+  {
     id: 'tenfast',
-    title: 'Hyresadministration & avtal',
+    title: 'Avtal- & Hyresadministration',
     icon: FileText,
     description: 'Hyreshantering och administration',
     path: resolve('VITE_TENFAST_URL', ''),
     isExternal: true,
-    isDisabled: true,
+    isDisabled: false,
   },
   {
     id: 'stray-invoice',
@@ -171,4 +188,9 @@ export const dashboardCards: DashboardCard[] = [
     ...card,
     isDisabled: card.isDisabled || !card.path,
   }))
-  .sort((a, b) => Number(a.isDisabled) - Number(b.isDisabled))
+  // Disabled cards last; among the rest, OneCore before third-party systems
+  .sort(
+    (a, b) =>
+      Number(a.isDisabled) - Number(b.isDisabled) ||
+      Number(isThirdPartyCard(a)) - Number(isThirdPartyCard(b))
+  )

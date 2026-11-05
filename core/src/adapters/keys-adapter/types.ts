@@ -1,5 +1,4 @@
 import { keys } from '@onecore/types'
-import { z } from 'zod'
 
 export type { AdapterResult } from '../types'
 

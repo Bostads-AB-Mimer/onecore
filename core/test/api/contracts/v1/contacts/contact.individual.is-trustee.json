@@ -1,6 +1,7 @@
 {
   "type": "individual",
   "contactCode": "P004810",
+  "protectedIdentity": false,
   "personal": {
     "firstName": "Maggan",
     "lastName": "Korvistoppitalo",

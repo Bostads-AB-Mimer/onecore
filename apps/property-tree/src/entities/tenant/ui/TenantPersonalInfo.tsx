@@ -1,34 +1,33 @@
 import { MapPin } from 'lucide-react'
 
 import type { Lease } from '@/services/api/core/leaseService'
-import type { Tenant } from '@/services/types'
+import type { RelatedContact, Tenant } from '@/services/types'
+
+import { openAddressInGoogleMaps } from '@/shared/lib/addresses'
 import { CopyableField } from '@/shared/ui/CopyableField'
 import { TooltipProvider } from '@/shared/ui/Tooltip'
 
 import { getTenantRoles, isOrganization } from '../lib/classification'
 import { formatTenantAddress, formatTenantName } from '../lib/formatting'
+import { getIncomingRelationSummary } from '../lib/relations'
 
 type LeaseTenant = NonNullable<Lease['tenants']>[number]
 
 interface TenantPersonalInfoProps {
   tenant: Tenant | LeaseTenant
+  relatedContacts?: RelatedContact[]
   variant?: 'compact' | 'full'
+  isSubletTenant?: boolean
 }
 
 export function TenantPersonalInfo({
   tenant,
+  relatedContacts = [],
   variant = 'full',
+  isSubletTenant = false,
 }: TenantPersonalInfoProps) {
   const displayName = formatTenantName(tenant)
-
-  const handleOpenInMaps = (address: NonNullable<Tenant['address']>) => {
-    const formattedAddress = formatTenantAddress(address)
-    window.open(
-      `https://maps.google.com/?q=${encodeURIComponent(formattedAddress)}`,
-      '_blank',
-      'noopener,noreferrer'
-    )
-  }
+  const relationSummary = getIncomingRelationSummary(relatedContacts)
 
   return (
     <TooltipProvider>
@@ -47,7 +46,9 @@ export function TenantPersonalInfo({
             actions={[
               {
                 icon: <MapPin className="h-4 w-4" />,
-                onClick: () => handleOpenInMaps(tenant.address!),
+                onClick: () =>
+                  // Non-null: this field only renders when tenant.address is set
+                  openAddressInGoogleMaps(formatTenantAddress(tenant.address!)),
                 tooltip: 'Öppna i Google Maps',
                 ariaLabel: 'Öppna adress i Google Maps',
               },
@@ -56,7 +57,13 @@ export function TenantPersonalInfo({
         )}
         <CopyableField label="Kundnummer" value={tenant.contactCode} />
         {variant === 'full' && (
-          <CopyableField label="Typ/roll" value={getTenantRoles(tenant)} />
+          <CopyableField
+            label="Typ/roll"
+            value={getTenantRoles(tenant, { isSubletTenant })}
+          />
+        )}
+        {variant === 'full' && relationSummary && (
+          <CopyableField label="Relaterade kontakter" value={relationSummary} />
         )}
       </div>
     </TooltipProvider>

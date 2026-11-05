@@ -1,16 +1,18 @@
+import { LeaseType } from '@onecore/types'
+
 //constant values for lease.type
 //string values taken from xpand
 
 const leaseTypes = {
-  housingContract: 'Bostadskontrakt',
-  campusContract: 'Campuskontrakt',
-  garageContract: 'Garagekontrakt',
-  cooperativeTenancyContract: 'Kooperativ hyresrätt',
-  commercialTenantContract: 'Lokalkontrakt',
-  renegotiationContract: 'Omförhandlingskontrakt',
-  otherContract: 'Övrigt',
-  parkingspaceContract: 'P-Platskontrakt',
-  shortTermRental: 'Korttidsuthyrning',
+  housingContract: LeaseType.HousingContract,
+  campusContract: LeaseType.CampusContract,
+  garageContract: LeaseType.GarageContract,
+  cooperativeTenancyContract: LeaseType.CooperativeTenancyContract,
+  commercialTenantContract: LeaseType.CommercialTenantContract,
+  renegotiationContract: LeaseType.RenegotiationContract,
+  otherContract: LeaseType.OtherContract,
+  parkingspaceContract: LeaseType.ParkingSpaceContract,
+  shortTermRental: LeaseType.ShortTermRental,
 }
 
 export { leaseTypes }

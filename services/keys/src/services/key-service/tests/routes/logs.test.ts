@@ -173,6 +173,7 @@ describe('GET /logs', () => {
  */
 describe('GET /logs/search', () => {
   it('returns 400 when no search parameters provided', async () => {
+    jest.spyOn(logsAdapter, 'getLogsSearchQuery').mockReturnValueOnce({} as any)
     const res = await request(app.callback()).get('/logs/search')
 
     expect(res.status).toBe(400)
@@ -182,6 +183,7 @@ describe('GET /logs/search', () => {
   })
 
   it('returns 400 when q parameter is too short', async () => {
+    jest.spyOn(logsAdapter, 'getLogsSearchQuery').mockReturnValueOnce({} as any)
     const res = await request(app.callback()).get('/logs/search?q=a')
 
     expect(res.status).toBe(400)
@@ -191,6 +193,7 @@ describe('GET /logs/search', () => {
   })
 
   it('returns 400 when only pagination parameters provided', async () => {
+    jest.spyOn(logsAdapter, 'getLogsSearchQuery').mockReturnValueOnce({} as any)
     const res = await request(app.callback()).get(
       '/logs/search?page=1&limit=10'
     )

@@ -27,8 +27,10 @@ type ReplyToOfferError =
   | ReplyToOfferErrorCodes.Unknown
   | ReplyToOfferErrorCodes.ApplicantNotTenant
   | ReplyToOfferErrorCodes.NotEligibleToRent
+  | ReplyToOfferErrorCodes.RentalObjectNotAvailable
 
 // PROCESS Part 3 - Accept Offer for Scored Parking Space
+// See DOCS_Accept_Offer.md for the full flow.
 export const acceptOffer = async (
   offerId: number
 ): Promise<ProcessResult<null, ReplyToOfferError>> => {
@@ -109,12 +111,10 @@ export const acceptOffer = async (
     }
 
     //Check if applicant is tenant
-    const leases = await leasingAdapter.getLeasesForContactCode(
+    const leases = await leasingAdapter.getLeasesByContactCode(
       offer.offeredApplicant.contactCode,
       {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
-        includeContacts: false,
+        status: ['current', 'about-to-end', 'upcoming'],
       }
     )
 
@@ -165,12 +165,27 @@ export const acceptOffer = async (
     let leaseId: string
 
     try {
+      const includeVAT = false
       const createLeaseResult = await leasingAdapter.createLease(
         listing.rentalObjectCode,
         offer.offeredApplicant.contactCode,
         calculateVacantFrom(listing).toISOString(),
-        '001'
+        '001',
+        includeVAT
       )
+
+      if (
+        !createLeaseResult.ok &&
+        createLeaseResult.err ===
+          ReplyToOfferErrorCodes.RentalObjectNotAvailable
+      ) {
+        return endFailingProcess(
+          log,
+          ReplyToOfferErrorCodes.RentalObjectNotAvailable,
+          409,
+          `Bilplats ${listingWithoutRentalObject.rentalObjectCode} är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt på den (utkast, skickat för påskrift eller signerat), kanske för samma sökande om ett tidigare försök skapade kontraktet. Inget nytt kontrakt skapades.`
+        )
+      }
 
       if (!createLeaseResult.ok) {
         log.push(
@@ -242,13 +257,15 @@ export const acceptOffer = async (
       const denyOtherOffers = await Promise.all(
         otherOffers.data.map((o) => denyOffer(o.id))
       )
-      const failedDenyOtherOffers = denyOtherOffers.filter(
-        (o) => o.processStatus === ProcessStatus.failed
-      )
-      if (failedDenyOtherOffers.length > 0) {
+      const failedDenyOtherOfferIds = otherOffers.data
+        .filter(
+          (_, i) => denyOtherOffers[i].processStatus === ProcessStatus.failed
+        )
+        .map((o) => o.id)
+      if (failedDenyOtherOfferIds.length > 0) {
         log.push(
           'Kunde inte neka följande andra erbjudanden för kunden: ' +
-            failedDenyOtherOffers.join(', ')
+            failedDenyOtherOfferIds.join(', ')
         )
       }
     }
@@ -284,7 +301,9 @@ export const acceptOffer = async (
           address: listing.rentalObject.address,
           firstName: contactResult.data.firstName,
           availableFrom: calculateVacantFrom(listing).toISOString(),
-          rent: String(listing.rentalObject.monthlyRent),
+          rent: String(
+            listing.rentalObject.availabilityInfo?.rent?.amount ?? ''
+          ),
           type: listing.rentalObject.objectTypeCaption ?? '',
           parkingSpaceId: listing.rentalObjectCode,
           objectId: listing.id.toString(),
@@ -334,6 +353,7 @@ export const acceptOffer = async (
 }
 
 // PROCESS Part 3 - Deny Offer for Scored Parking Space
+// See DOCS_Deny_Offer.md for the full flow.
 export const denyOffer = async (
   offerId: number
 ): Promise<ProcessResult<{ listingId: number }, ReplyToOfferError>> => {
@@ -358,48 +378,6 @@ export const denyOffer = async (
       )
     }
     const offer = res.data
-
-    //Get listing
-    const listingWithoutRentalObject =
-      await leasingAdapter.getListingByListingId(offer.listingId)
-    if (!listingWithoutRentalObject) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoListing,
-        404,
-        `The listing ${offer.listingId.toString()} cannot be found.`
-      )
-    }
-
-    const parkingSpacesResult = await leasingAdapter.getParkingSpaceByCode(
-      listingWithoutRentalObject.rentalObjectCode
-    )
-
-    if (!parkingSpacesResult.ok) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoListing,
-        500,
-        `RentalObject for listing with id ${listingWithoutRentalObject.id} not found`
-      )
-    }
-
-    const listing = {
-      ...listingWithoutRentalObject,
-      rentalObject: parkingSpacesResult.data,
-    }
-
-    if (
-      !listingWithoutRentalObject ||
-      !listing.rentalObject.residentialAreaCode
-    ) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoListing,
-        404,
-        `The listing ${offer.listingId.toString()} does not exist or is no longer available.`
-      )
-    }
 
     const closeOffer = await leasingAdapter.closeOfferByDeny(offer.id)
 
@@ -427,7 +405,7 @@ export const denyOffer = async (
     return {
       processStatus: ProcessStatus.successful,
       httpStatus: 202,
-      data: { listingId: listing.id },
+      data: { listingId: offer.listingId },
     }
   } catch (err) {
     return endFailingProcess(
@@ -435,59 +413,6 @@ export const denyOffer = async (
       ReplyToOfferErrorCodes.Unknown,
       500,
       `Deny offer for internal parking space - unknown error`,
-      err
-    )
-  }
-}
-
-// PROCESS Part 3 - Expire Offer for Scored Parking Space
-export const expireOffer = async (
-  offerId: number
-): Promise<ProcessResult<null, ReplyToOfferError>> => {
-  const log: string[] = [
-    `Svarstide har gått ut för erbjudande om intern bilplats`,
-    `Tidpunkt för när svarstiden gått ut: ${new Date()
-      .toISOString()
-      .substring(0, 16)
-      .replace('T', ' ')}`,
-    `Erbjudande-ID ${offerId}`,
-  ]
-
-  try {
-    //Get offer
-    const res = await leasingAdapter.getOfferByOfferId(offerId)
-    if (!res.ok) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoOffer,
-        404,
-        `The offer ${offerId} does not exist or could not be retrieved.`
-      )
-    }
-    const offer = res.data
-
-    //Get listing
-    const listing = await leasingAdapter.getListingByListingId(offer.listingId)
-    if (!listing || !listing.rentalObject.residentialAreaCode) {
-      return endFailingProcess(
-        log,
-        ReplyToOfferErrorCodes.NoListing,
-        404,
-        `The listing ${offer.listingId.toString()} does not exist or is no longer available.`
-      )
-    }
-
-    return {
-      processStatus: ProcessStatus.successful,
-      httpStatus: 200,
-      data: null,
-    }
-  } catch (err) {
-    return endFailingProcess(
-      log,
-      ReplyToOfferErrorCodes.Unknown,
-      404,
-      `Expire offer for internal parking space - unknown error`,
       err
     )
   }

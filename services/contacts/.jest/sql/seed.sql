@@ -217,7 +217,12 @@ VALUES
   -- BEGIN cmeml ROWS
   ('_0XG120TO7     ', 'mail           ', '_0J4157JJ1     ', 'o.kontaktbarsson@test.example.se                                ', 1, NULL, NULL, '_0XG120TO8'),
 
-  ('_0J415815F     ', 'mail           ', '_0J4158KK1     ', 'valle.von.testberg@test.se', 1, NULL, NULL, '14-06564  ')
+  ('_0J415815F     ', 'mail           ', '_0J4158KK1     ', 'valle.von.testberg@test.se', 1, NULL, NULL, '14-06564  '),
+
+  -- P000555 (object key _0J4157EE1) — has both a phone (above) and an email,
+  -- plus a förvaltare (P000444), so the by-phone-number and by-email-address
+  -- lookups can assert relatedContacts is surfaced.
+  ('_0J4157EE9     ', 'mail           ', '_0J4157EE1     ', 'fiktiv.personsson@test.example.se', 1, NULL, NULL, '_0J4157EE8')
   -- END cmeml ROWS
 ;
 
@@ -265,6 +270,8 @@ VALUES
   ('_0J415P100     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157FF1     ', 'SE', 'Hittepåplatsen 66', NULL, '722 15', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415P101'),
 
   ('_2300MARN4LN1U0', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157GG1     ', 'SE', '', NULL, '722 09', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2007-06-01T00:00:00.000Z', NULL, '_2300MARN5'),
+  -- P000777: a fakturaadress not yet in effect — tdate NULL, fdate far future.
+  ('_2300MARN4LN1U1', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157GG1     ', 'SE', 'Framtidsvägen 1', NULL, '722 08', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2099-01-01T00:00:00.000Z', NULL, '_2300MARN6'),
 
   ('_0J415NMUT     ', 'adrpost        ', '_RQA11RNMA     ', '_0J4157HH1     ', 'SE', 'Gammal Info:s Väg 34', NULL, '722 10', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415NMUU'),
   ('_0J415P1H6     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157HH1     ', 'SE', 'Gammal Info:s Väg 34', NULL, '722 10', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, '2005-09-30T00:00:00.000Z', '1x-415P1H7'),
@@ -276,6 +283,8 @@ VALUES
   ('_0J415NO93     ', 'adrpost        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Addressgatan 54', NULL, '724 80', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415NO94'),
   ('_0J415P2VG     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Addressgatan 54', NULL, '724 80', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, '2009-08-30T00:00:00.000Z', '1x-415P2VH'),
   ('_1C40HIQBWGDHKI', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Addressgatan 54', NULL, '724 80', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2009-09-01T00:00:00.000Z', NULL, '_1C40HIQBX'),
+  -- P001000: a second fakturaadress left open-ended; the later fdate is current.
+  ('_1C40HIQBWGDHKJ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4157JJ1     ', 'SE', 'Senaste Flyttgatan 7', NULL, '722 25', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, '2015-01-01T00:00:00.000Z', NULL, '_1C40HIQBY'),
 
   ('_6L20Z2POR5O24F', 'adrpost        ', '_RQA11RNMA     ', '_0J4158KK1     ', 'SE', 'Finnsintegatan 20', NULL, '72480', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '_6L20Z2PB3'),
   ('_6L20Z2Q6K5O24F', 'adrfakt        ', '_RQA11RNMA     ', '_0J4158KK1     ', 'SE', 'Finnsintegatan 20', NULL, '72480', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, '2008-01-31T00:00:00.000Z', '_6L20Z2PB3'),
@@ -292,3 +301,144 @@ VALUES
   ('_0J415P786     ', 'adrfakt        ', '_RQA11RNMA     ', '_0J4158OO1     ', 'SE', 'Testgatan 2', NULL, '722 22', 'VÄSTERÅS', 'SVERIGE', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '1x-415P787')
   -- END cmadr ROWS
 ;
+
+-- Guardian relations.
+-- P000555 has förvaltare P000444 (forvtyp = 2).
+-- P000666 has god man P000444 (forvtyp = 1) — exists to prove the
+-- förvaltare endpoints filter on type.
+UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 2 WHERE cmctckod = 'P000555';
+UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 1 WHERE cmctckod = 'P000666';
+
+-- Protected-identity (lagsokt) redaction fixture.
+-- P000777 has förvaltare P000888 (forvtyp = 2); P000999 has förvaltare P000777.
+-- P000888 (guardian side) and P000999 (ward side) carry a protected identity,
+-- so their names must come back 'redacted' in relatedContacts — proving the
+-- redaction holds in both the guardian and the ward direction.
+UPDATE cmctc SET keycmctc2 = '_0J4157HHH     ', forvtyp = 2 WHERE cmctckod = 'P000777';
+UPDATE cmctc SET keycmctc2 = '_0J4157GGG     ', forvtyp = 2 WHERE cmctckod = 'P000999';
+UPDATE cmctc SET lagsokt = 1 WHERE cmctckod IN ('P000888', 'P000999');
+
+-- Structured first/last names (fnamn/enamn) for relation fixtures, so the
+-- relatedContacts firstName/lastName fields carry real values (cmctcben stays
+-- the Xpand "Lastname Firstname" form).
+UPDATE cmctc SET fnamn = 'Testy', enamn = 'McTestface' WHERE cmctckod = 'P000444';
+UPDATE cmctc SET fnamn = 'Fiktiv', enamn = 'Personsson' WHERE cmctckod = 'P000555';
+UPDATE cmctc SET fnamn = 'Testolina', enamn = 'Exempelsdotter' WHERE cmctckod = 'P000666';
+
+-- Annan fakturamottagare scenarios. These P9000xx contacts are kept
+-- out of FULL_TEST_DATA_SET so trimToDataSet strips them from other test files;
+-- the other-invoice-recipient e2e opts them in via its own dataSet.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_OIRC900001    ', '_OIRO900001    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900001', 'Holder Active', 1053, 'OIR9000001'),
+  ('_OIRC900002    ', '_OIRO900002    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900002', 'Holder Terminated', 1053, 'OIR9000002'),
+  ('_OIRC900003    ', '_OIRO900003    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900003', 'Holder Expired', 1053, 'OIR9000003'),
+  ('_OIRC900004    ', '_OIRO900004    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900004', 'Holder Protected', 1053, 'OIR9000004'),
+  ('_OIRC900010    ', '_OIRO900010    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900010', 'Recipient Normal', 1053, 'OIR9000010'),
+  -- Reverse-direction (other-invoice-recipient-for) isolation fixtures.
+  -- P900011 is ANNANFM only on a terminated lease; P900012 only on an expired
+  -- relation. Both must yield an empty recipient-for list, exercising the
+  -- tenantRows sistadeb and currentRelation filters independently.
+  ('_OIRC900011    ', '_OIRO900011    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900011', 'Recipient TerminatedOnly', 1053, 'OIR9000011'),
+  ('_OIRC900012    ', '_OIRO900012    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900012', 'Recipient ExpiredOnly', 1053, 'OIR9000012'),
+  -- Legacy ANNANFM rows in Xpand commonly have NULL fdate/tdate (unbounded
+  -- validity); P900005/P900013 exercise that case on an active lease.
+  ('_OIRC900005    ', '_OIRO900005    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900005', 'Holder NullFdate', 1053, 'OIR9000005'),
+  ('_OIRC900013    ', '_OIRO900013    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900013', 'Recipient NullFdate', 1053, 'OIR9000013');
+
+-- Structured first/last names for the invoice-recipient fixtures asserted in
+-- the bake-in tests (cmctcben stays the "Lastname Firstname" form).
+UPDATE cmctc SET fnamn = 'Active', enamn = 'Holder' WHERE cmctckod = 'P900001';
+UPDATE cmctc SET fnamn = 'Normal', enamn = 'Recipient' WHERE cmctckod = 'P900010';
+
+-- Lease objects: OBJ2 terminated (sistadeb set), the rest active.
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000001     ', '100-001-01-0001/01', NULL),
+  ('_OBJ000002     ', '100-001-01-0002/01', '2022-01-01'),
+  ('_OBJ000003     ', '100-001-01-0003/01', NULL),
+  ('_OBJ000004     ', '100-001-01-0004/01', NULL),
+  ('_OBJ000005     ', '100-001-01-0005/01', NULL),
+  ('_OBJ000006     ', '100-001-01-0006/01', NULL);
+
+-- INNEHAVARE rows (holders), all currently valid.
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0001    ', '_OBJ000001     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900001';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0002    ', '_OBJ000002     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900002';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0003    ', '_OBJ000003     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900003';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0004    ', '_OBJ000004     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900004';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0005    ', '_OBJ000005     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900001';
+
+-- ANNANFM rows (recipients). OBJ3's is expired; OBJ4's is the protected P000888.
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00001    ', '_OBJ000001     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900010';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00002    ', '_OBJ000002     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900010';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00003    ', '_OBJ000003     ', keycmctc, 'ANNANFM', '2020-01-01', '2021-01-01' FROM cmctc WHERE cmctckod = 'P900010';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00004    ', '_OBJ000004     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P000888';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00005    ', '_OBJ000005     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900010';
+
+-- P900011: current ANNANFM relation, but the lease (OBJ2) is terminated.
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00006    ', '_OBJ000002     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900011';
+-- P900012: active lease (OBJ3), but the ANNANFM relation itself is expired.
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00007    ', '_OBJ000003     ', keycmctc, 'ANNANFM', '2020-01-01', '2021-01-01' FROM cmctc WHERE cmctckod = 'P900012';
+
+-- P900005 holds active lease OBJ6 whose ANNANFM row (P900013) has NULL
+-- fdate/tdate — the legacy Xpand shape for unbounded validity.
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0006    ', '_OBJ000006     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900005';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00008    ', '_OBJ000006     ', keycmctc, 'ANNANFM', NULL, NULL FROM cmctc WHERE cmctckod = 'P900013';
+
+-- Conflict fixture for the relation import: P900006 holds two active leases
+-- (OBJ7, OBJ8) with two *different* ANNANFM recipients (P900014, P900015).
+-- Cannot be collapsed to contact level → must be reported, not imported.
+-- Kept out of FULL_TEST_DATA_SET like the other P9000xx contacts.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_OIRC900006    ', '_OIRO900006    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900006', 'Holder Conflict', 1053, 'OIR9000006'),
+  ('_OIRC900014    ', '_OIRO900014    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900014', 'Recipient ConflictA', 1053, 'OIR9000014'),
+  ('_OIRC900015    ', '_OIRO900015    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900015', 'Recipient ConflictB', 1053, 'OIR9000015');
+
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000007     ', '100-001-01-0007/01', NULL),
+  ('_OBJ000008     ', '100-001-01-0008/01', NULL);
+
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0007    ', '_OBJ000007     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900006';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0008    ', '_OBJ000008     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900006';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00009    ', '_OBJ000007     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900014';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00010    ', '_OBJ000008     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900015';
+
+-- Rows the relation import must ignore. Without the guards in
+-- relation-import-query.ts each of these would change the exact counts
+-- asserted in relation-import-query.test.ts.
+-- 1) Self-edges on a dedicated contact so the live Xpand-backed e2e reads
+--    (which have no self-edge guard) never see them: P900007 is INNEHAVARE
+--    and ANNANFM on their own lease OBJ9, and points keycmctc2 at themself
+--    with forvtyp = 1.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_OIRC900007    ', '_OIRO900007    ', '_0EI00000P     ', '00001          ', '00001          ', 'P900007', 'Holder SelfEdge', 1053, 'OIR9000007');
+INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES
+  ('_OBJ000009     ', '100-001-01-0009/01', NULL);
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKTEN0009    ', '_OBJ000009     ', keycmctc, 'INNEHAVARE', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900007';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00011    ', '_OBJ000009     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'P900007';
+UPDATE cmctc SET keycmctc2 = keycmctc, forvtyp = 1 WHERE cmctckod = 'P900007';
+-- 2) The GDPR-erased placeholder contact: ANNANFM on P900004's lease OBJ4
+--    and a förvaltare pointer at P000444.
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, lcidcivno, timestamp) VALUES
+  ('_GDPR0000001   ', '_GDPRO000001   ', '_0EI00000P     ', '00001          ', '00001          ', 'RENSAD_GDPR', 'Rensad GDPR', 1053, 'GDPR000001');
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKFM00012    ', '_OBJ000004     ', keycmctc, 'ANNANFM', '2020-01-01', NULL FROM cmctc WHERE cmctckod = 'RENSAD_GDPR';
+UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 2 WHERE cmctckod = 'RENSAD_GDPR';

@@ -3,23 +3,21 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import {
-  Lease,
   ConsumerReport,
   ReplyToOfferErrorCodes,
   GetActiveOfferByListingIdErrorCodes,
-  ListingStatus,
-  UpdateListingStatusErrorCodes,
 } from '@onecore/types'
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
+import { contactsAdapter } from '../../../adapters/contacts-adapter'
 import * as replyToOffer from '../../../processes/parkingspaces/internal/reply-to-offer'
+import * as externalParkingSpaceProcess from '../../../processes/parkingspaces/external'
 
 import * as factory from '../../../../test/factories'
 import { ProcessStatus } from '../../../common/types'
 import { schemas } from '../schemas'
-import { Lease as LeaseSchema } from '../schemas/lease'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -29,7 +27,6 @@ app.use(router.routes())
 
 beforeEach(jest.resetAllMocks)
 describe('lease-service', () => {
-  const leaseMock: Lease = factory.lease.build()
   const consumerReportMock: ConsumerReport = {
     pnr: '4512121122',
     template: 'TEST_TEMPLATE',
@@ -48,129 +45,6 @@ describe('lease-service', () => {
     city: 'Västerås',
   }
 
-  describe('GET /leases/by-rental-property-id/:rentalPropertyId', () => {
-    it('responds with 400 for invalid query parameters', async () => {
-      const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123?includeUpcomingLeases=invalid'
-      )
-
-      expect(res.status).toBe(400)
-      expect(res.body).toMatchObject({
-        reason: 'Invalid query parameters',
-        error: expect.any(Object),
-      })
-    })
-
-    it('responds with 500 if adapter fails', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
-        .mockRejectedValue(new Error('Adapter error'))
-
-      const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123'
-      )
-
-      expect(res.status).toBe(500)
-    })
-
-    it('responds with a list of leases for valid query parameters', async () => {
-      const getLeasesForPropertyIdSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPropertyId')
-        .mockResolvedValue(factory.lease.buildList(1))
-
-      const res = await request(app.callback()).get(
-        '/leases/by-rental-property-id/123?includeUpcomingLeases=true&includeTerminatedLeases=false&includeContacts=true'
-      )
-
-      expect(res.status).toBe(200)
-      expect(getLeasesForPropertyIdSpy).toHaveBeenCalledWith(
-        '123',
-        expect.objectContaining({
-          includeUpcomingLeases: true,
-          includeTerminatedLeases: false,
-          includeContacts: true,
-        })
-      )
-
-      expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
-    })
-  })
-
-  describe('GET /leases/by-pnr/:pnr', () => {
-    it('responds with a list of leases', async () => {
-      const getLeaseSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForPnr')
-        .mockResolvedValue([leaseMock])
-
-      const res = await request(app.callback()).get(
-        '/leases/by-pnr/101010-1010'
-      )
-      expect(res.status).toBe(200)
-      expect(getLeaseSpy).toHaveBeenCalled()
-      expect(res.body.content).toBeInstanceOf(Array)
-      expect(JSON.stringify(res.body.content[0])).toEqual(
-        JSON.stringify(leaseMock)
-      )
-    })
-  })
-
-  describe('GET /leases/:id', () => {
-    it('responds with lease', async () => {
-      const getLeaseSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLease')
-        .mockResolvedValue(leaseMock)
-
-      const res = await request(app.callback()).get('/leases/1337')
-      expect(res.status).toBe(200)
-      expect(getLeaseSpy).toHaveBeenCalled()
-      expect(JSON.stringify(res.body.content)).toEqual(
-        JSON.stringify(leaseMock)
-      )
-    })
-  })
-
-  describe('POST /leases/batch', () => {
-    it('responds with 400 if leaseIds is missing', async () => {
-      const res = await request(app.callback()).post('/leases/batch').send({})
-
-      expect(res.status).toBe(400)
-    })
-
-    it('responds with 400 if leaseIds is an empty array', async () => {
-      const res = await request(app.callback())
-        .post('/leases/batch')
-        .send({ leaseIds: [] })
-
-      expect(res.status).toBe(400)
-    })
-
-    it('responds with 500 if adapter fails', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesBatch')
-        .mockRejectedValue(new Error('Adapter error'))
-
-      const res = await request(app.callback())
-        .post('/leases/batch')
-        .send({ leaseIds: ['1337'] })
-
-      expect(res.status).toBe(500)
-    })
-
-    it('responds with 200 and the leases for the given ids', async () => {
-      const getLeasesBatchSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesBatch')
-        .mockResolvedValue(factory.lease.buildList(2))
-
-      const res = await request(app.callback())
-        .post('/leases/batch')
-        .send({ leaseIds: ['1337', '1338'] })
-
-      expect(res.status).toBe(200)
-      expect(getLeasesBatchSpy).toHaveBeenCalledWith(['1337', '1338'])
-      expect(() => LeaseSchema.array().parse(res.body.content)).not.toThrow()
-    })
-  })
-
   describe('GET /contacts/by-pnr/:pnr', () => {
     it('responds with a contact', async () => {
       const contact = factory.contact.build()
@@ -185,6 +59,27 @@ describe('lease-service', () => {
       expect(res.status).toBe(200)
       expect(getContactSpy).toHaveBeenCalled()
       expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(contact))
+    })
+  })
+
+  describe('GET /contacts/from-lease-search', () => {
+    it('resolves a personnummer in q to a contact code before calling leasing', async () => {
+      jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
+        ok: true,
+        data: factory.contactsServiceContact.build({ contactCode: 'P158770' }),
+      })
+      const filtersSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactsByFilters')
+        .mockResolvedValue({ ok: true, data: { content: [] } })
+
+      const res = await request(app.callback()).get(
+        '/contacts/from-lease-search?q=198001011234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(filtersSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'P158770' })
+      )
     })
   })
 
@@ -255,7 +150,7 @@ describe('lease-service', () => {
     it('responds with successful processStatus', async () => {
       jest.spyOn(replyToOffer, 'acceptOffer').mockResolvedValue({
         processStatus: ProcessStatus.successful,
-        httpStatus: 202,
+        httpStatus: 200,
         data: null,
       })
 
@@ -302,33 +197,6 @@ describe('lease-service', () => {
       const result = await request(app.callback()).post('/offers/123/deny')
 
       expect(result.status).toBe(404)
-      expect(result.body.error).toBe('no-offer')
-    })
-  })
-
-  describe('GET /offers/:offerId/expire', () => {
-    it('responds with successful processStatus', async () => {
-      jest.spyOn(replyToOffer, 'expireOffer').mockResolvedValueOnce({
-        processStatus: ProcessStatus.successful,
-        httpStatus: 202,
-        data: null,
-      })
-
-      const result = await request(app.callback()).get('/offers/123/expire')
-
-      expect(result.status).toBe(202)
-      expect(result.body.message).toBe('Offer expired successfully')
-    })
-    it('expire offer returns 500 on error', async () => {
-      jest.spyOn(replyToOffer, 'expireOffer').mockResolvedValue({
-        processStatus: ProcessStatus.failed,
-        httpStatus: 404,
-        error: ReplyToOfferErrorCodes.NoOffer,
-      })
-
-      const result = await request(app.callback()).get('/offers/123/expire')
-
-      expect(result.status).toBe(500)
       expect(result.body.error).toBe('no-offer')
     })
   })
@@ -1028,5 +896,50 @@ describe('GET /contacts/:contactCode/:rentalObjectCode/verify-application', () =
     )
 
     expect(res.status).toBe(200)
+  })
+})
+
+describe('POST /parking-spaces/:parkingSpaceId/leases', () => {
+  it('responds with 200 and the content on success', async () => {
+    jest
+      .spyOn(externalParkingSpaceProcess, 'createLeaseForExternalParkingSpace')
+      .mockResolvedValueOnce({
+        processStatus: ProcessStatus.successful,
+        httpStatus: 200,
+        data: { LeaseId: '123-456-789/01' },
+        response: { leaseId: '123-456-789/01', message: 'Lease created.' },
+      })
+
+    const res = await request(app.callback())
+      .post('/parking-spaces/123-456-789/leases')
+      .send({ contactCode: 'P12345', startDate: '2026-09-01' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({
+      leaseId: '123-456-789/01',
+      message: 'Lease created.',
+    })
+    expect(res.body.error).toBeUndefined()
+  })
+
+  it('surfaces the specific error code on failure, not just the generic response body', async () => {
+    jest
+      .spyOn(externalParkingSpaceProcess, 'createLeaseForExternalParkingSpace')
+      .mockResolvedValueOnce({
+        processStatus: ProcessStatus.failed,
+        httpStatus: 500,
+        error: 'fetch-invoices-failed',
+        response: { message: 'Could not fetch invoices for applicant.' },
+      })
+
+    const res = await request(app.callback())
+      .post('/parking-spaces/123-456-789/leases')
+      .send({ contactCode: 'P12345', startDate: '2026-09-01' })
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('fetch-invoices-failed')
+    expect(res.body.content).toEqual({
+      message: 'Could not fetch invoices for applicant.',
+    })
   })
 })

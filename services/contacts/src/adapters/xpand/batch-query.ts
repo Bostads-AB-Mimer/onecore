@@ -1,11 +1,14 @@
 import knex from 'knex'
 import { ContactCode } from '@src/domain'
+import { currentInvoiceAddress } from './address-sql'
 import { DbContactRow } from './db-model'
+import { isLeaseHolderColumn, LEASE_HOLDER } from './relation-sql'
 
 export type ContactIncludeOptions = {
   includePhone?: boolean
   includeEmail?: boolean
   includeAddress?: boolean
+  includeRelations?: boolean
 }
 
 const BASE_COLUMNS = [
@@ -19,8 +22,6 @@ const BASE_COLUMNS = [
   'cmctc.keycmctc as contactKey',
   'cmctc.lagsokt as protectedIdentity',
   'cmctc.utslag as specialAttention',
-  'trustee.cmctcben as trusteeName',
-  'trustee.cmctckod as trusteeId',
 ]
 
 const ADDRESS_COLUMNS = [
@@ -53,7 +54,7 @@ const PHONE_COLUMNS = [
 
 /**
  * Lean batch lookup of contacts by exact contact code. Selects only base
- * `cmctc` columns (plus the trustee self-join) by default — no row explosion.
+ * `cmctc` columns by default — no row explosion.
  * Each `include*` flag adds the corresponding left-join and its columns.
  *
  * Composable: other endpoints can adopt this builder later to gain an
@@ -67,16 +68,24 @@ export const contactsByCodesQuery = async (
   const trimmed = contactCodes.map((c) => c.trim())
   const placeholders = trimmed.map(() => '?').join(', ')
 
+  // The code filter lives in the CTE and the join to it narrows `cmctc`, so
+  // the codes are bound once (MSSQL's 2100-parameter cap).
   let query = db
-    .from('cmctc')
-    .leftJoin('cmctc as trustee', 'cmctc.keycmctc2', 'trustee.keycmctc')
-    .whereRaw(`TRIM(cmctc.cmctckod) IN (${placeholders})`, trimmed)
+    .with(LEASE_HOLDER, (lh) => {
+      lh.select('cmctc.keycmctc', isLeaseHolderColumn(db, new Date()))
+        .from('cmctc')
+        .whereRaw(`TRIM(cmctc.cmctckod) IN (${placeholders})`, trimmed)
+    })
+    .from(LEASE_HOLDER)
+    .join('cmctc', 'cmctc.keycmctc', `${LEASE_HOLDER}.keycmctc`)
 
-  const columns: string[] = [...BASE_COLUMNS]
+  const columns = [...BASE_COLUMNS, `${LEASE_HOLDER}.isLeaseHolder`]
 
   if (options.includeAddress) {
     query = query.leftJoin('cmadr', (join) => {
-      join.on('cmadr.keycode', 'cmctc.keycmobj').andOnNull('cmadr.tdate')
+      join
+        .on('cmadr.keycode', 'cmctc.keycmobj')
+        .andOn(currentInvoiceAddress(db))
     })
     columns.push(...ADDRESS_COLUMNS)
   }
