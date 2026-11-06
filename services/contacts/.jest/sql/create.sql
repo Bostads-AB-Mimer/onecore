@@ -171,3 +171,21 @@ CREATE TABLE hyavk (
   fdate DATETIME NULL,
   tdate DATETIME NULL
 )
+GO
+
+IF OBJECT_ID(N'cmcro', N'U') IS NULL
+CREATE TABLE cmcro (
+  keycmcro CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+  keycmctc CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  keycmrol CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+)
+GO
+
+IF OBJECT_ID(N'bkqte', N'U') IS NULL
+CREATE TABLE bkqte (
+  keybkqte CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
+  keybkkty CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  keycmctc CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  quetime DATETIME NULL,
+  timestamp CHAR(10) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL
+)
