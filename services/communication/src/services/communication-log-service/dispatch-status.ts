@@ -23,12 +23,18 @@ export function deriveDispatchStatusFromCounts(
   // dispatch, so a zero-recipient row would badge 'failed' but not appear under
   // the failed filter (out of domain in practice).
   if (total === 0) return 'failed'
-  // 'scheduled' only while the send time is still in the future; once it has
-  // fired, leftover 'scheduled' recipients are stragglers awaiting delivery
-  // reports and count as in-flight ('sending'), not scheduled.
+  // 'scheduled' only while the send time is still in the future; once the
+  // slot has passed, leftover 'scheduled' rows are awaiting the worker (or a
+  // retry) and count as in-flight ('sending'), not scheduled.
   if (sendAtInFuture && has('scheduled')) return 'scheduled'
   if (total === (counts.cancelled ?? 0)) return 'cancelled'
-  if (has('pending') || has('sent') || has('received') || has('scheduled'))
+  if (
+    has('pending') ||
+    has('sent') ||
+    has('received') ||
+    has('scheduled') ||
+    has('sending')
+  )
     return 'sending'
   if (total === (counts.delivered ?? 0)) return 'delivered'
   if (has('delivered')) return 'partially_delivered'

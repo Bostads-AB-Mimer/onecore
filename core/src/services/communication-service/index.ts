@@ -1,7 +1,7 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
 import { generateRouteMetadata } from '@onecore/utilities'
-import { BulkSms, BulkEmail } from '@onecore/types'
+import { BulkSms, BulkEmail, communication } from '@onecore/types'
 
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { getActingUserName } from '../../utils/acting-user'
@@ -60,6 +60,7 @@ const BulkEmailResult = z.object({
 export const routes = (router: KoaRouter) => {
   registerSchema('BulkSmsResult', BulkSmsResult)
   registerSchema('BulkEmailResult', BulkEmailResult)
+  registerSchema('ScheduleConfig', communication.ScheduleConfigSchema)
 
   logReadRoutes(router)
 
@@ -309,7 +310,7 @@ export const routes = (router: KoaRouter) => {
    * /communication-log/dispatches/{id}/cancel:
    *   post:
    *     summary: Cancel a scheduled dispatch
-   *     description: Cancels the scheduled bulk at Infobip and marks the dispatch's recipients as cancelled. Idempotent for already-cancelled dispatches.
+   *     description: Marks the dispatch's still-scheduled recipients as cancelled so the scheduled-sends worker never sends them. Works for SMS and email alike, also on a partly processed dispatch. Idempotent for already-cancelled dispatches.
    *     tags:
    *       - Communication service
    *     parameters:
@@ -334,12 +335,10 @@ export const routes = (router: KoaRouter) => {
    *                       type: string
    *                     cancelledRecipients:
    *                       type: integer
-   *       '400':
-   *         description: Dispatch is not scheduled
    *       '404':
    *         description: Dispatch not found
    *       '409':
-   *         description: The bulk was already sent or is processing; nothing was changed
+   *         description: No scheduled recipient is left (ALREADY_PROCESSED); nothing was changed
    *       '500':
    *         description: Internal server error
    *     security:
@@ -363,7 +362,7 @@ export const routes = (router: KoaRouter) => {
    * /communication-log/dispatches/{id}/reschedule:
    *   post:
    *     summary: Move a scheduled dispatch to a new send time
-   *     description: Reschedules the bulk at Infobip and updates the dispatch's sendAt. The new time must be in the future and within the channel cap (sms 90 days, email 5 days).
+   *     description: Updates the dispatch's sendAt, earlier or later, for SMS and email alike. The new time must follow the rules in /communication-log/schedule-config (future, within max days ahead, on a 10-minute slot, outside blocked hours). Only while no recipient has been claimed or sent.
    *     tags:
    *       - Communication service
    *     parameters:
@@ -402,11 +401,11 @@ export const routes = (router: KoaRouter) => {
    *                     sendAt:
    *                       type: string
    *       '400':
-   *         description: Dispatch is not scheduled, or sendAt is invalid for the channel
+   *         description: sendAt breaks a scheduling rule (SCHEDULING_DISABLED, SEND_AT_IN_PAST, SEND_AT_TOO_FAR_AHEAD, SEND_AT_OFF_SLOT, SEND_AT_IN_BLOCKED_HOURS, SEND_AT_TOO_SOON)
    *       '404':
    *         description: Dispatch not found
    *       '409':
-   *         description: The bulk was already sent or is processing; nothing was changed
+   *         description: A recipient was already claimed or sent (ALREADY_PROCESSED); nothing was changed
    *       '500':
    *         description: Internal server error
    *     security:
@@ -438,6 +437,42 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /communication-log/schedule-config:
+   *   get:
+   *     summary: Scheduling rules for scheduled sends
+   *     description: The rules the communication service enforces on sendAt, so a picker can offer only valid times. enabled=false hides scheduling entirely. Times are wall-clock in timeZone.
+   *     tags:
+   *       - Communication service
+   *     responses:
+   *       '200':
+   *         description: Scheduling rules
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ScheduleConfig'
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/communication-log/schedule-config', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.getScheduleConfig()
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } else {
+      ctx.status = 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
 
   /**
    * @swagger

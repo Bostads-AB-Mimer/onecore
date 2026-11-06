@@ -50,6 +50,11 @@ export const RECIPIENT_STATUS_META: Record<
     label: 'Schemalagt',
     className: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   },
+  // Claimed by the scheduled-sends worker; provider call in flight.
+  sending: {
+    label: 'Skickas',
+    className: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
   cancelled: {
     label: 'Avbrutet',
     className: 'bg-gray-50 text-gray-600 border-gray-200',

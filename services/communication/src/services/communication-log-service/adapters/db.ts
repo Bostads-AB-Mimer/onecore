@@ -28,8 +28,8 @@ export type CustomerMessage = {
  * `message_recipient` row per recipient inside a transaction. Returns the
  * dispatch id. Provider-agnostic: callers pass the provider name and (if
  * known) per-recipient externalMessageId for later webhook matching.
- * Scheduled sends pass an explicit `id` (it doubles as the provider bulkId)
- * and the target `sendAt`; both otherwise fall back to DB defaults.
+ * Scheduled sends pass the target `sendAt` (otherwise the DB defaults to now)
+ * and recipients in status 'scheduled' for the worker to pick up.
  */
 export async function logOutboundDispatch(
   params: LogOutboundParams
@@ -37,7 +37,6 @@ export async function logOutboundDispatch(
   return db.transaction(async (trx) => {
     const [inserted] = await trx('dispatch')
       .insert({
-        ...(params.id && { id: params.id }),
         direction: 'outbound',
         channel: params.channel,
         fromAddress: params.fromAddress,
@@ -161,69 +160,9 @@ export async function updateRecipientStatusByExternalId(
 }
 
 /**
- * Remove a dispatch (recipients cascade). Used to undo the log-before-send
- * row of a scheduled dispatch when Infobip rejects the schedule — the
- * operation failed entirely, so no audit row should remain.
- */
-export async function deleteDispatch(dispatchId: string): Promise<void> {
-  try {
-    await db('dispatch').where('id', dispatchId).delete()
-    logger.info({ dispatchId }, 'deleted dispatch')
-  } catch (err) {
-    logger.error(
-      { err, dispatchId },
-      'communication-log-adapter.deleteDispatch'
-    )
-    throw err
-  }
-}
-
-/**
- * Backfill provider message ids onto a dispatch's recipients after a
- * log-before-send flow (scheduled sends log first, so the ids from Infobip's
- * response arrive later). Single statement via OPENJSON to stay well under
- * MSSQL's parameter cap for large bulks. Matches on toAddress; if two
- * recipients share an address they get the same id, which delivery-report
- * matching tolerates.
- */
-export async function setRecipientExternalIds(
-  dispatchId: string,
-  pairs: { toAddress: string; externalMessageId: string }[]
-): Promise<void> {
-  if (pairs.length === 0) return
-
-  try {
-    await db.raw(
-      `
-      UPDATE mr SET externalMessageId = j.externalMessageId
-      FROM message_recipient mr
-      JOIN OPENJSON(?) WITH (
-        toAddress NVARCHAR(255) '$.toAddress',
-        externalMessageId NVARCHAR(100) '$.externalMessageId'
-      ) j ON j.toAddress = mr.toAddress
-      WHERE mr.dispatchId = ?
-    `,
-      [JSON.stringify(pairs), dispatchId]
-    )
-
-    logger.info(
-      { dispatchId, pairCount: pairs.length },
-      'backfilled recipient external ids'
-    )
-  } catch (err) {
-    logger.error(
-      { err, dispatchId },
-      'communication-log-adapter.setRecipientExternalIds'
-    )
-    throw err
-  }
-}
-
-/**
- * Mark every still-'scheduled' recipient of a dispatch as 'cancelled'.
- * Called after Infobip has confirmed the bulk cancellation, so rows that a
- * delivery report already moved past 'scheduled' are left untouched.
- * Returns the number of rows updated.
+ * Mark every still-'scheduled' recipient of a dispatch as 'cancelled'. The
+ * status predicate makes it atomic against the worker's claim: a row the
+ * worker already moved to 'sending' is left alone. Returns the rows updated.
  */
 export async function cancelScheduledRecipients(
   dispatchId: string
@@ -245,8 +184,10 @@ export async function cancelScheduledRecipients(
 }
 
 /**
- * Update a dispatch's intended send time. Called after Infobip has confirmed
- * a reschedule; recipient statuses stay 'scheduled'.
+ * Move a dispatch's send time. Only while every recipient is still
+ * 'scheduled' (or 'cancelled'): once the worker has claimed or sent any row,
+ * moving sendAt would silently reset the staleness clock, so the statement
+ * matches nothing and the route answers 409. Atomic against the claim.
  */
 export async function updateDispatchSendAt(
   dispatchId: string,
@@ -255,9 +196,19 @@ export async function updateDispatchSendAt(
   try {
     const updatedCount = await db('dispatch')
       .where('id', dispatchId)
+      .whereExists(
+        db('message_recipient')
+          .whereRaw('message_recipient.dispatchId = dispatch.id')
+          .where('status', 'scheduled')
+      )
+      .whereNotExists(
+        db('message_recipient')
+          .whereRaw('message_recipient.dispatchId = dispatch.id')
+          .whereNotIn('status', ['scheduled', 'cancelled'])
+      )
       .update({ sendAt })
 
-    logger.info({ dispatchId, sendAt }, 'rescheduled dispatch')
+    logger.info({ dispatchId, sendAt, updatedCount }, 'rescheduled dispatch')
     return { updatedCount }
   } catch (err) {
     logger.error(
@@ -327,7 +278,8 @@ const AUTOMATIC_USER = 'Automatiskt utskick'
 // deriveDispatchStatusFromCounts at the SQL level, so a status filter paginates
 // correctly. `mr` is correlated to `dispatch.id`. These MUST stay in sync with
 // the JS derivation — dispatch-status.test.ts asserts agreement for every
-// status combination. Non-terminal (in-flight) statuses: pending/sent/received.
+// status combination. Non-terminal (in-flight) statuses:
+// pending/sent/received/sending.
 const STATUS_PREDICATE_SQL: Record<string, string> = {
   // scheduled only while it hasn't fired yet (sendAt in the future); once fired,
   // a leftover 'scheduled' recipient is a straggler counted as sending.
@@ -337,20 +289,20 @@ const STATUS_PREDICATE_SQL: Record<string, string> = {
   cancelled: `EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id)
      AND NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status <> 'cancelled')`,
   // not a future-scheduled send, and something still in flight — including a
-  // post-fire 'scheduled' straggler (mirrors the JS derivation)
+  // post-slot 'scheduled' row awaiting the worker (mirrors the JS derivation)
   sending: `NOT (dispatch.sendAt > GETUTCDATE()
        AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status = 'scheduled'))
-     AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('pending','sent','received','scheduled'))`,
+     AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('pending','sent','received','scheduled','sending'))`,
   // all recipients delivered
   delivered: `EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id)
      AND NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status <> 'delivered')`,
   // all terminal, at least one delivered AND at least one non-delivered
   // (failed/bounced/cancelled) — includes the delivered+cancelled mix
-  partially_delivered: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('scheduled','pending','sent','received'))
+  partially_delivered: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('scheduled','sending','pending','sent','received'))
      AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status = 'delivered')
      AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status <> 'delivered')`,
   // all terminal, none delivered, at least one failed/bounced
-  failed: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('scheduled','pending','sent','received','delivered'))
+  failed: `NOT EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('scheduled','sending','pending','sent','received','delivered'))
      AND EXISTS (SELECT 1 FROM message_recipient mr WHERE mr.dispatchId = dispatch.id AND mr.status IN ('failed','bounced'))`,
 }
 

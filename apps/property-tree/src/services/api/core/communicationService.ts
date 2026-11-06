@@ -8,6 +8,7 @@ export type DispatchListItem = components['schemas']['DispatchListItem']
 export type MessageRecipient = components['schemas']['MessageRecipient']
 export type PaginationMeta = components['schemas']['PaginationMeta']
 export type PaginationLinks = components['schemas']['PaginationLinks']
+export type ScheduleConfig = components['schemas']['ScheduleConfig']
 
 export type PaginatedResponse<T> = {
   content: T[]
@@ -74,6 +75,14 @@ export const communicationService = {
     return data
   },
 
+  /** Scheduling rules (slots, blocked hours, max days ahead, enabled flag). */
+  async getScheduleConfig(): Promise<ScheduleConfig> {
+    const { data, error } = await GET('/communication-log/schedule-config')
+    if (error) throw error
+    if (!data?.content) throw new Error('Response ok but missing content')
+    return data.content
+  },
+
   /** Cancel a scheduled dispatch (idempotent; 409 if it already fired). */
   async cancelDispatch(
     dispatchId: string
@@ -89,7 +98,7 @@ export const communicationService = {
     return data.content
   },
 
-  /** Move a scheduled dispatch to a new send time (ISO instant). */
+  /** Move a scheduled dispatch to a new send time (ISO instant), earlier or later. */
   async rescheduleDispatch(
     dispatchId: string,
     sendAt: string

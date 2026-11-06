@@ -24,11 +24,13 @@ describe('deriveDispatchStatus', () => {
       'cancelled'
     )
   })
-  it('sending while any recipient is still pending/sent', () => {
+  it('sending while any recipient is still pending/sent/sending', () => {
     expect(deriveDispatchStatus(['pending', 'delivered'], false)).toBe(
       'sending'
     )
     expect(deriveDispatchStatus(['sent'], false)).toBe('sending')
+    // A claimed row with the provider call in flight is in flight too.
+    expect(deriveDispatchStatus(['sending', 'delivered'], true)).toBe('sending')
   })
   it('delivered when all terminal and all delivered', () => {
     expect(deriveDispatchStatus(['delivered', 'delivered'], false)).toBe(
@@ -68,10 +70,12 @@ const SQL_MIRROR: Record<
     (p.has('pending') ||
       p.has('sent') ||
       p.has('received') ||
-      p.has('scheduled')),
+      p.has('scheduled') ||
+      p.has('sending')),
   delivered: (p) => p.size > 0 && [...p].every((s) => s === 'delivered'),
   partially_delivered: (p) =>
     !p.has('scheduled') &&
+    !p.has('sending') &&
     !p.has('pending') &&
     !p.has('sent') &&
     !p.has('received') &&
@@ -79,6 +83,7 @@ const SQL_MIRROR: Record<
     [...p].some((s) => s !== 'delivered'),
   failed: (p) =>
     !p.has('scheduled') &&
+    !p.has('sending') &&
     !p.has('pending') &&
     !p.has('sent') &&
     !p.has('received') &&
@@ -92,7 +97,7 @@ const DISPATCH_STATUSES = Object.keys(
 
 describe('SQL status predicates agree with the JS derivation', () => {
   const all = communication.RECIPIENT_STATUS
-  // Every non-empty subset of the 8 recipient statuses, in both sendAt windows.
+  // Every non-empty subset of the 9 recipient statuses, in both sendAt windows.
   for (const future of [true, false]) {
     for (let mask = 1; mask < 1 << all.length; mask++) {
       const present = all.filter((_, i) => mask & (1 << i))

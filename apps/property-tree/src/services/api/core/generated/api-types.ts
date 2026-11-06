@@ -642,7 +642,7 @@ export interface paths {
   '/communication-log/dispatches/{id}/cancel': {
     /**
      * Cancel a scheduled dispatch
-     * @description Cancels the scheduled bulk at Infobip and marks the dispatch's recipients as cancelled. Idempotent for already-cancelled dispatches.
+     * @description Marks the dispatch's still-scheduled recipients as cancelled so the scheduled-sends worker never sends them. Works for SMS and email alike, also on a partly processed dispatch. Idempotent for already-cancelled dispatches.
      */
     post: {
       parameters: {
@@ -663,15 +663,11 @@ export interface paths {
             }
           }
         }
-        /** @description Dispatch is not scheduled */
-        400: {
-          content: never
-        }
         /** @description Dispatch not found */
         404: {
           content: never
         }
-        /** @description The bulk was already sent or is processing; nothing was changed */
+        /** @description No scheduled recipient is left (ALREADY_PROCESSED); nothing was changed */
         409: {
           content: never
         }
@@ -685,7 +681,7 @@ export interface paths {
   '/communication-log/dispatches/{id}/reschedule': {
     /**
      * Move a scheduled dispatch to a new send time
-     * @description Reschedules the bulk at Infobip and updates the dispatch's sendAt. The new time must be in the future and within the channel cap (sms 90 days, email 5 days).
+     * @description Updates the dispatch's sendAt, earlier or later, for SMS and email alike. The new time must follow the rules in /communication-log/schedule-config (future, within max days ahead, on a 10-minute slot, outside blocked hours). Only while no recipient has been claimed or sent.
      */
     post: {
       parameters: {
@@ -717,7 +713,7 @@ export interface paths {
             }
           }
         }
-        /** @description Dispatch is not scheduled, or sendAt is invalid for the channel */
+        /** @description sendAt breaks a scheduling rule (SCHEDULING_DISABLED, SEND_AT_IN_PAST, SEND_AT_TOO_FAR_AHEAD, SEND_AT_OFF_SLOT, SEND_AT_IN_BLOCKED_HOURS, SEND_AT_TOO_SOON) */
         400: {
           content: never
         }
@@ -725,9 +721,31 @@ export interface paths {
         404: {
           content: never
         }
-        /** @description The bulk was already sent or is processing; nothing was changed */
+        /** @description A recipient was already claimed or sent (ALREADY_PROCESSED); nothing was changed */
         409: {
           content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/schedule-config': {
+    /**
+     * Scheduling rules for scheduled sends
+     * @description The rules the communication service enforces on sendAt, so a picker can offer only valid times. enabled=false hides scheduling entirely. Times are wall-clock in timeZone.
+     */
+    get: {
+      responses: {
+        /** @description Scheduling rules */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ScheduleConfig']
+            }
+          }
         }
         /** @description Internal server error */
         500: {
@@ -2615,6 +2633,10 @@ export interface paths {
         202: {
           content: never
         }
+        /** @description The rental object is not available from the lease start date, so no lease was created. error is rental-object-not-available. */
+        409: {
+          content: never
+        }
         /** @description Internal server error. Failed to accept the offer. */
         500: {
           content: never
@@ -3081,6 +3103,10 @@ export interface paths {
               message?: string
             }
           }
+        }
+        /** @description The rental object is not available from the start date, so no lease was created. error is rental-object-not-available. */
+        409: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -9363,8 +9389,9 @@ export interface paths {
      * returns one row per rental object with the outgoing and incoming tenant,
      * key/card counts, loan return and handout dates, and a derived status.
      * Give endDateFrom+endDateTo for move-outs, startDateFrom+startDateTo for
-     * move-ins, or both for the union. Search and sort apply to the whole result;
-     * key and card data (DAX) is fetched only for the requested page.
+     * move-ins, or both for the union. Search, filters and sort apply to the whole
+     * result. Key and card data (DAX) is fetched only for the requested page,
+     * unless `status` is given: then it is fetched for every object in the range.
      */
     get: {
       parameters: {
@@ -9375,6 +9402,10 @@ export interface paths {
           startDateTo?: string
           /** @description Matches rental object code, address, tenant name or contact code. */
           q?: string
+          /** @description Keep rows with any of these statuses. Repeat the param for several. */
+          status?: components['schemas']['MoveInOutStatus'][]
+          /** @description true keeps rows with no incoming tenant, false keeps rows with one. */
+          vacant?: boolean
           sortBy?: 'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
           sortOrder?: 'asc' | 'desc'
           /** @description When true, adds a `timings` block with per-phase durations. */
@@ -9402,7 +9433,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
-        /** @description Keys service is syncing its DAX card owner mirror; retry later */
+        /** @description Keys service is syncing its DAX card owner mirror, or the lease search cache is warming up. Retry after the seconds given in Retry-After. */
         503: {
           content: never
         }
@@ -12071,7 +12102,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Wildcard search string */
+          /** @description Search string. Every word must match the contact code or a name field (substring), or the whole string must match an invoice address line. A word of six or more digits also matches the national id by prefix, in ten- or twelve-digit form. Repeat the parameter to require several strings to match. */
           q?: string[]
           /** @description Filter on contact type */
           type?: 'individual' | 'organisation'
@@ -13064,7 +13095,6 @@ export interface components {
         | 'Kooperativ hyresrätt'
         | 'Lokalkontrakt'
         | 'Omförhandlingskontrakt'
-        | 'Förrådskontrakt'
         | 'Övrigt'
         | 'P-Platskontrakt'
         | 'Korttidsuthyrning'
@@ -15926,6 +15956,18 @@ export interface components {
       offset?: number
       limit?: number
     }
+    /** @enum {string} */
+    MoveInOutStatus:
+      | 'NOT_RETURNED'
+      | 'LOANED_TO_OTHER'
+      | 'RETURNED_AWAITING_LOAN'
+      | 'CREATED'
+      | 'PARTIAL'
+      | 'HANDED_OUT'
+      | 'RETURNED_VACANT'
+      | 'NO_LOANS'
+      | 'NO_KEYS'
+      | 'UNKNOWN'
     MoveInOutRow: {
       rentalObjectCode: string
       address: string | null
@@ -15951,15 +15993,16 @@ export interface components {
       incomingLoanPickedUpAt: string | null
       /** @enum {string} */
       status:
-        | 'UNKNOWN'
         | 'NOT_RETURNED'
         | 'LOANED_TO_OTHER'
+        | 'RETURNED_AWAITING_LOAN'
         | 'CREATED'
+        | 'PARTIAL'
         | 'HANDED_OUT'
         | 'RETURNED_VACANT'
-        | 'NO_KEYS'
         | 'NO_LOANS'
-        | 'PARTIAL'
+        | 'NO_KEYS'
+        | 'UNKNOWN'
       notes: string[]
     }
     PaginatedResponse: {
@@ -17532,6 +17575,16 @@ export interface components {
       /** @description Present when scheduled: target send time as ISO instant */
       scheduledFor?: string
     }
+    ScheduleConfig: {
+      enabled: boolean
+      timeZone: string
+      slotMinutes: number
+      blockedHours: {
+        from: string
+        until: string
+      }
+      maxDaysAhead: number
+    }
     CustomerMessage: {
       dispatch: {
         /** Format: uuid */
@@ -17574,6 +17627,7 @@ export interface components {
           | 'bounced'
           | 'received'
           | 'scheduled'
+          | 'sending'
           | 'cancelled'
         /** Format: date-time */
         statusUpdatedAt: string
@@ -17625,6 +17679,7 @@ export interface components {
           | 'bounced'
           | 'received'
           | 'scheduled'
+          | 'sending'
           | 'cancelled'
         /** Format: date-time */
         statusUpdatedAt: string
@@ -17673,6 +17728,7 @@ export interface components {
         bounced: components['schemas']['DispatchListItem']['statusSummary']['pending']
         received: components['schemas']['DispatchListItem']['statusSummary']['pending']
         scheduled: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        sending: components['schemas']['DispatchListItem']['statusSummary']['pending']
         cancelled: components['schemas']['DispatchListItem']['statusSummary']['pending']
       }
       audience: {
@@ -17696,6 +17752,7 @@ export interface components {
         | 'bounced'
         | 'received'
         | 'scheduled'
+        | 'sending'
         | 'cancelled'
       /** Format: date-time */
       statusUpdatedAt: string

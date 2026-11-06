@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from 'react'
 import { AlertTriangle, ChevronDown, Info, Mail, User } from 'lucide-react'
 
 import { useScheduleField } from '@/shared/hooks/useScheduleField'
-import { MAX_SCHEDULE_DAYS_AHEAD } from '@/shared/lib/schedule'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -63,7 +62,7 @@ export function EmailModal(props: EmailModalProps) {
   const [body, setBody] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
-  const schedule = useScheduleField(MAX_SCHEDULE_DAYS_AHEAD.email)
+  const schedule = useScheduleField()
 
   const recipients = props.recipients ?? []
 

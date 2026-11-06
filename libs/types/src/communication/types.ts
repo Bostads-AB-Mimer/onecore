@@ -21,6 +21,7 @@ import {
   ReleaseNoteCategorySchema,
   ReleaseNoteSchema,
   RescheduleDispatchResponseSchema,
+  ScheduleConfigSchema,
   TemplateSchema,
   UpdateReleaseNoteSchema,
 } from './schema'
@@ -64,3 +65,4 @@ export type CancelDispatchResponse = z.infer<
 export type RescheduleDispatchResponse = z.infer<
   typeof RescheduleDispatchResponseSchema
 >
+export type ScheduleConfig = z.infer<typeof ScheduleConfigSchema>

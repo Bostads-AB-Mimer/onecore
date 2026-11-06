@@ -4,6 +4,7 @@ export {
   type DispatchSearchQueryParams,
   useDispatchSearch,
 } from './hooks/useDispatchSearch'
+export { useScheduleConfig } from './hooks/useScheduleConfig'
 export {
   ChannelBadge,
   DispatchStatusBadge,

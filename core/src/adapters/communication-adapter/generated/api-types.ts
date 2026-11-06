@@ -15,24 +15,27 @@ export interface paths {
         content: {
           'application/json': {
             /** @enum {string} */
-            channel: 'sms' | 'email'
+            channel: 'sms' | 'email' | 'my-pages'
             fromAddress: string
             subject?: string
             body: string
             messageType: string
             provider: string
             triggeredByUser?: string
+            /** Format: date-time */
+            sendAt?: string
             audienceCriteria?: {
               [key: string]: unknown
             }
             /** Format: uuid */
             templateId?: string
+            workOrderCode?: string
             recipients: {
               contactCode?: string
               toAddress: string
               externalMessageId?: string
               /** @enum {string} */
-              status?: 'pending' | 'sent' | 'failed'
+              status?: 'pending' | 'sent' | 'delivered' | 'failed' | 'scheduled'
               error?: string
             }[]
           }
@@ -53,6 +56,7 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+              message?: string
             }
           }
         }
@@ -82,7 +86,7 @@ export interface paths {
                 /** @enum {string} */
                 direction: 'outbound' | 'inbound'
                 /** @enum {string} */
-                channel: 'sms' | 'email'
+                channel: 'sms' | 'email' | 'my-pages'
                 fromAddress: string
                 subject: string | null
                 body: string
@@ -90,13 +94,14 @@ export interface paths {
                 provider: string
                 triggeredByUser: string | null
                 /** Format: date-time */
-                triggeredAt: string
+                sendAt: string
                 recipientCount: number
                 audienceCriteria: string | null
                 /** Format: uuid */
                 inReplyToDispatchId: string | null
                 /** Format: uuid */
                 templateId: string | null
+                workOrderCode: string | null
                 /** Format: date-time */
                 createdAt: string
               }
@@ -115,6 +120,9 @@ export interface paths {
                   | 'failed'
                   | 'bounced'
                   | 'received'
+                  | 'scheduled'
+                  | 'sending'
+                  | 'cancelled'
                 /** Format: date-time */
                 statusUpdatedAt: string
                 externalMessageId: string | null
@@ -130,6 +138,7 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+              message?: string
             }
           }
         }
@@ -138,6 +147,156 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/cancel': {
+    /**
+     * Cancel a scheduled dispatch
+     * @description Marks every still-'scheduled' recipient as 'cancelled' so the scheduled-sends worker never sends them. Allowed until no 'scheduled' recipient remains: a partly processed dispatch cancels the rest and returns the count. Idempotent: an already-cancelled dispatch returns 200 with 0. 409 ALREADY_PROCESSED when every recipient has been claimed or sent.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              dispatchId: string
+              cancelledRecipients: number
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/reschedule': {
+    /**
+     * Move a scheduled dispatch to a new send time
+     * @description Updates the dispatch's sendAt, earlier or later. The new time must follow the scheduling rules (future, within max days ahead, on a 10-minute slot, outside blocked hours; see /schedule-config) — each violation is a 400 with its code. Only while no recipient has been claimed or sent: 409 ALREADY_PROCESSED otherwise, since moving an overdue dispatch would reset its staleness clock.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** Format: date-time */
+            sendAt: string
+          }
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              dispatchId: string
+              sendAt: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/communication-log/schedule-config': {
+    /**
+     * Scheduling rules for scheduled sends
+     * @description The rules the bulk send and reschedule routes enforce on sendAt, so a picker can offer only valid times: enabled flag, slot length, daily blocked window (wall-clock in timeZone) and max days ahead.
+     */
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              enabled: boolean
+              timeZone: string
+              slotMinutes: number
+              blockedHours: {
+                from: string
+                until: string
+              }
+              maxDaysAhead: number
             }
           }
         }
@@ -167,7 +326,7 @@ export interface paths {
                 /** @enum {string} */
                 direction: 'outbound' | 'inbound'
                 /** @enum {string} */
-                channel: 'sms' | 'email'
+                channel: 'sms' | 'email' | 'my-pages'
                 fromAddress: string
                 subject: string | null
                 body: string
@@ -175,13 +334,14 @@ export interface paths {
                 provider: string
                 triggeredByUser: string | null
                 /** Format: date-time */
-                triggeredAt: string
+                sendAt: string
                 recipientCount: number
                 audienceCriteria: string | null
                 /** Format: uuid */
                 inReplyToDispatchId: string | null
                 /** Format: uuid */
                 templateId: string | null
+                workOrderCode: string | null
                 /** Format: date-time */
                 createdAt: string
               }
@@ -200,6 +360,9 @@ export interface paths {
                   | 'failed'
                   | 'bounced'
                   | 'received'
+                  | 'scheduled'
+                  | 'sending'
+                  | 'cancelled'
                 /** Format: date-time */
                 statusUpdatedAt: string
                 externalMessageId: string | null
@@ -215,6 +378,214 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches': {
+    /**
+     * Search and list dispatches
+     * @description Paginated dispatch search. Filters: q (subject/body LIKE), channel, messageType, derived status, source (manual/automatic), sendAt range, contactCode, minRecipients, and audience codes (district/building/area). Newest first by default.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Content search (subject/body) */
+          q?: string
+          /** @description 'sms' | 'email' | 'my-pages' (repeatable) */
+          channel?: string[]
+          /** @description Category (repeatable) */
+          messageType?: string[]
+          /** @description Derived status (repeatable) */
+          status?: string[]
+          /** @description manual | automatic */
+          source?: 'manual' | 'automatic'
+          /** @description ISO date lower bound */
+          sendAtFrom?: string
+          /** @description ISO date upper bound */
+          sendAtTo?: string
+          /** @description Dispatches that reached this contact */
+          contactCode?: string
+          /** @description Minimum recipient count */
+          minRecipients?: number
+          /** @description Audience district (repeatable) */
+          audienceDistrictNames?: string[]
+          /** @description Audience building code (repeatable) */
+          audienceBuildingCodes?: string[]
+          /** @description Audience area code (repeatable) */
+          audienceAreaCodes?: string[]
+          /** @description sendAt | recipientCount | createdAt */
+          sortBy?: 'sendAt' | 'recipientCount' | 'createdAt'
+          /** @description asc | desc */
+          sortOrder?: 'asc' | 'desc'
+          /** @description Page (1-based) */
+          page?: number
+          /** @description Page size */
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                /** Format: uuid */
+                id: string
+                /** @enum {string} */
+                direction: 'outbound' | 'inbound'
+                /** @enum {string} */
+                channel: 'sms' | 'email' | 'my-pages'
+                fromAddress: string
+                subject: string | null
+                body: string
+                messageType: string
+                provider: string
+                triggeredByUser: string | null
+                /** Format: date-time */
+                sendAt: string
+                recipientCount: number
+                /** Format: uuid */
+                inReplyToDispatchId: string | null
+                /** Format: uuid */
+                templateId: string | null
+                workOrderCode: string | null
+                /** Format: date-time */
+                createdAt: string
+                /** @enum {string} */
+                status:
+                  | 'scheduled'
+                  | 'sending'
+                  | 'delivered'
+                  | 'partially_delivered'
+                  | 'failed'
+                  | 'cancelled'
+                statusSummary: {
+                  pending: number
+                  sent: number
+                  delivered: number
+                  failed: number
+                  bounced: number
+                  received: number
+                  scheduled: number
+                  sending: number
+                  cancelled: number
+                }
+                audience: {
+                  type: string
+                  value: string
+                }[]
+              }[]
+              _meta: {
+                totalRecords: number
+                page: number
+                limit: number
+                count: number
+              }
+              _links: {
+                href: string
+                /** @enum {string} */
+                rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+              }[]
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/recipients': {
+    /**
+     * Paginated recipients of a dispatch
+     * @description Page through a dispatch's recipients, optionally filtered by status or a toAddress/contactCode substring. Use instead of the full dispatch-by-id read for large bulks.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Recipient status (repeatable) */
+          status?: string[]
+          /** @description toAddress/contactCode substring */
+          q?: string
+          /** @description Page (1-based) */
+          page?: number
+          /** @description Page size */
+          limit?: number
+        }
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                /** Format: uuid */
+                id: string
+                /** Format: uuid */
+                dispatchId: string
+                contactCode: string | null
+                toAddress: string
+                /** @enum {string} */
+                status:
+                  | 'pending'
+                  | 'sent'
+                  | 'delivered'
+                  | 'failed'
+                  | 'bounced'
+                  | 'received'
+                  | 'scheduled'
+                  | 'sending'
+                  | 'cancelled'
+                /** Format: date-time */
+                statusUpdatedAt: string
+                externalMessageId: string | null
+                error: string | null
+                /** Format: date-time */
+                createdAt: string
+              }[]
+              _meta: {
+                totalRecords: number
+                page: number
+                limit: number
+                count: number
+              }
+              _links: {
+                href: string
+                /** @enum {string} */
+                rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+              }[]
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
             }
           }
         }

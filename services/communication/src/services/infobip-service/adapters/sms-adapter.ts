@@ -4,7 +4,7 @@ import { logger } from '@onecore/utilities'
 import striptags from 'striptags'
 import he from 'he'
 
-import { ScheduleOptions } from '../schedule'
+import { ProviderResponseError } from './provider-error'
 
 // SMS sender ID registered with Infobip
 const SMS_SENDER = 'Mimer'
@@ -62,19 +62,19 @@ export type InfobipSendSmsResponse = {
 // SMS is sent via the Tele2 instance of the Infobip SMS platform.
 // Same /sms/3/messages contract as Infobip, but uses the separate
 // Tele2 procurement credentials (config.tele2). Email still uses config.infobip.
-// `schedule` queues the send at Infobip for future delivery; bulkId is our
-// dispatch id so the schedule can be managed (cancelled/rescheduled) later.
+// `signal` lets the scheduled-sends worker bound the call.
 const sendSmsV3 = async (
   destinations: { to: string }[],
   text: string,
-  schedule?: ScheduleOptions
+  signal?: AbortSignal
 ): Promise<InfobipSendSmsResponse> => {
   const baseUrl = config.tele2.baseUrl.replace(/\/$/, '') // Remove trailing slash
   const url = `${baseUrl}/sms/3/messages`
   const apiKey = config.tele2.apiKey
-  logger.info({ url, scheduled: !!schedule }, 'Sending SMS via v3 API')
+  logger.info({ url }, 'Sending SMS via v3 API')
   const response = await fetch(url, {
     method: 'POST',
+    signal,
     headers: {
       Authorization: `App ${apiKey}`,
       'Content-Type': 'application/json',
@@ -91,22 +91,12 @@ const sendSmsV3 = async (
           ...buildDeliveryWebhook(),
         },
       ],
-      ...(schedule && {
-        options: {
-          schedule: {
-            bulkId: schedule.bulkId,
-            // Strict ISO instant with 'Z' — accepted by both SMS v3 and email
-            // v4 (email rejects the RFC 822 +0000 form the docs describe).
-            sendAt: schedule.sendAt.toISOString(),
-          },
-        },
-      }),
     }),
   })
 
   if (!response.ok) {
     const errorBody = await response.text()
-    throw new Error(`Infobip SMS API error: ${response.status} - ${errorBody}`)
+    throw new ProviderResponseError('infobip-sms', response.status, errorBody)
   }
 
   return response.json() as Promise<InfobipSendSmsResponse>
@@ -145,13 +135,12 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
 export const sendBulkSms = async (sms: {
   phoneNumbers: string[]
   text: string
-  schedule?: ScheduleOptions
+  signal?: AbortSignal
 }) => {
   logger.info(
     {
       recipientCount: sms.phoneNumbers.length,
       baseUrl: config.tele2.baseUrl,
-      scheduled: !!sms.schedule,
     },
     'Sending bulk SMS'
   )
@@ -160,7 +149,7 @@ export const sendBulkSms = async (sms: {
     const destinations = sms.phoneNumbers.map((phone: string) => ({
       to: phone,
     }))
-    const response = await sendSmsV3(destinations, sms.text, sms.schedule)
+    const response = await sendSmsV3(destinations, sms.text, sms.signal)
     logger.info(
       { recipientCount: sms.phoneNumbers.length },
       'Bulk SMS submitted to Infobip'

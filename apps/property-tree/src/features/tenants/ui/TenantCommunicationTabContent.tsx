@@ -17,21 +17,19 @@ import {
   channelLabel,
   RECIPIENT_STATUS_META,
   RecipientStatusBadge,
+  useScheduleConfig,
 } from '@/entities/dispatch'
 import { useTenantCommunication } from '@/entities/tenant'
 
 import type { CustomerMessage } from '@/services/api/core/communicationService'
 
-import { linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
 import { useToast } from '@/shared/hooks/useToast'
 import { formatTimestamp } from '@/shared/lib/formatters'
+import { linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
 import {
   formatScheduleTimestamp,
-  getScheduleBounds,
-  MAX_SCHEDULE_DAYS_AHEAD,
   scheduleSendErrorText,
-  toDatetimeLocalValue,
-  validateScheduleInput,
+  validateScheduleDate,
 } from '@/shared/lib/schedule'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent } from '@/shared/ui/Card'
@@ -43,6 +41,7 @@ import {
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Input } from '@/shared/ui/Input'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
+import { ScheduleDateTimePicker } from '@/shared/ui/ScheduleDateTimePicker'
 import {
   Select,
   SelectContent,
@@ -99,42 +98,30 @@ function MessageRow({
       ? 'Meddelande Mina sidor'
       : channelLabel(dispatch.channel))
 
-  const isScheduled =
+  // Cancel/reschedule work for SMS and email alike now that our own worker
+  // owns the schedule; the service rejects anything already claimed.
+  const canManageSchedule =
     recipient.status === 'scheduled' &&
     new Date(dispatch.sendAt).getTime() > Date.now()
-  // Email only for now: the Tele2 account's API key lacks bulk-management
-  // permissions, so SMS cancel/reschedule 403s at Infobip.
-  // TODO(MIM-1897): when Tele2 grants the permissions, drop the channel check:
-  // const canManageSchedule = isScheduled
-  const canManageSchedule = isScheduled && dispatch.channel === 'email'
 
-  const [rescheduleLocal, setRescheduleLocal] = useState(() =>
-    toDatetimeLocalValue(new Date(dispatch.sendAt))
+  // Rules from the service; the picker is hidden until they are loaded and
+  // when scheduling is switched off (cancel still works then). A failed fetch
+  // shows a hint instead, so it never reads as "scheduling off".
+  const { data: scheduleConfig, isError: scheduleConfigError } =
+    useScheduleConfig()
+  const canReschedule = scheduleConfig?.enabled === true
+
+  const [rescheduleAt, setRescheduleAt] = useState<Date | null>(
+    () => new Date(dispatch.sendAt)
   )
   const [confirmCancel, setConfirmCancel] = useState(false)
-  // my-pages can't be scheduled; canManageSchedule hides the controls anyway.
-  const maxDaysAhead =
-    dispatch.channel === 'my-pages'
-      ? null
-      : MAX_SCHEDULE_DAYS_AHEAD[dispatch.channel]
-  const rescheduleError =
-    maxDaysAhead === null
-      ? null
-      : validateScheduleInput(rescheduleLocal, maxDaysAhead)
-  const rescheduleBounds = {
-    max:
-      maxDaysAhead === null ? undefined : getScheduleBounds(maxDaysAhead).max,
-    // Infobip only postpones — it silently ignores moves to an earlier time —
-    // so the picker floor is one minute after the current send time.
-    min: toDatetimeLocalValue(
-      new Date(new Date(dispatch.sendAt).getTime() + 60 * 1000)
-    ),
-  }
+  const rescheduleError = scheduleConfig
+    ? validateScheduleDate(rescheduleAt, scheduleConfig)
+    : null
 
   const handleRescheduleClick = async () => {
-    if (rescheduleError) return
-    // datetime-local is parsed as local time; the API gets a UTC instant.
-    await onReschedule(dispatch.id, new Date(rescheduleLocal).toISOString())
+    if (rescheduleError || !rescheduleAt) return
+    await onReschedule(dispatch.id, rescheduleAt.toISOString())
   }
 
   const handleCancelClick = async () => {
@@ -246,23 +233,30 @@ function MessageRow({
                       </span>
                     </div>
                   )}
+                  {scheduleConfigError && (
+                    <p className="text-sm text-muted-foreground">
+                      Kunde inte hämta regler för schemaläggning
+                    </p>
+                  )}
                   <div className="flex flex-wrap items-center gap-2">
-                    <Input
-                      type="datetime-local"
-                      value={rescheduleLocal}
-                      onChange={(e) => setRescheduleLocal(e.target.value)}
-                      min={rescheduleBounds.min}
-                      max={rescheduleBounds.max}
-                      className="w-auto"
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleRescheduleClick}
-                      disabled={!!rescheduleError || isRescheduling}
-                    >
-                      {isRescheduling ? 'Bokar om...' : 'Boka om'}
-                    </Button>
+                    {canReschedule && scheduleConfig && (
+                      <>
+                        <ScheduleDateTimePicker
+                          value={rescheduleAt}
+                          onChange={setRescheduleAt}
+                          config={scheduleConfig}
+                          disabled={isRescheduling}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleRescheduleClick}
+                          disabled={!!rescheduleError || isRescheduling}
+                        >
+                          {isRescheduling ? 'Bokar om...' : 'Boka om'}
+                        </Button>
+                      </>
+                    )}
                     <Button
                       size="sm"
                       variant="destructive"
@@ -277,7 +271,7 @@ function MessageRow({
                           : 'Avboka utskick'}
                     </Button>
                   </div>
-                  {rescheduleError && (
+                  {canReschedule && rescheduleError && (
                     <p className="text-sm text-destructive">
                       {rescheduleError}
                     </p>

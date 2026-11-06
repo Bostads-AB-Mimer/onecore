@@ -94,8 +94,8 @@ interface BulkSmsResult {
   invalid: string[]
   totalSent: number
   totalInvalid: number
-  // Present when the send was scheduled: the dispatch id (= provider bulkId,
-  // the handle for cancel/reschedule) and the target time as an ISO instant.
+  // Present when the send was scheduled: the dispatch id (the handle for
+  // cancel/reschedule) and the target time as an ISO instant.
   dispatchId?: string
   scheduledFor?: string
 }
@@ -105,8 +105,8 @@ interface BulkEmailResult {
   invalid: string[]
   totalSent: number
   totalInvalid: number
-  // Present when the send was scheduled: the dispatch id (= provider bulkId,
-  // the handle for cancel/reschedule) and the target time as an ISO instant.
+  // Present when the send was scheduled: the dispatch id (the handle for
+  // cancel/reschedule) and the target time as an ISO instant.
   dispatchId?: string
   scheduledFor?: string
 }

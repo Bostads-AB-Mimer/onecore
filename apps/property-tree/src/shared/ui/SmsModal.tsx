@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'
 
 import { useScheduleField } from '@/shared/hooks/useScheduleField'
-import { MAX_SCHEDULE_DAYS_AHEAD } from '@/shared/lib/schedule'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
@@ -74,7 +73,7 @@ export function SmsModal(props: SmsModalProps) {
   const [isSending, setIsSending] = useState(false)
   const [showCostConfirmation, setShowCostConfirmation] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
-  const schedule = useScheduleField(MAX_SCHEDULE_DAYS_AHEAD.sms)
+  const schedule = useScheduleField()
 
   const charactersLeft = MAX_SMS_LENGTH - message.length
 

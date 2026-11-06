@@ -1,8 +1,9 @@
-import { loggedAxios as axios } from '@onecore/utilities'
+import { loggedAxios as axios, logger } from '@onecore/utilities'
 import { communication } from '@onecore/types'
 
 import config from '../../common/config'
 import { AdapterResult } from '../types'
+import { client, CommonErr, fail, mapFetchError, ok } from './helpers'
 
 // leasing-adapter sets a process-wide validateStatus (<500); 4xx must throw
 // here so the catch blocks map them instead of returning ok: true.
@@ -12,10 +13,10 @@ const throwOnNon2xx = {
 
 // Error mapping shared by both scheduled-dispatch operations:
 // 'not-found' -> unknown dispatch id
-// 'conflict'  -> Infobip already sent/started the bulk; nothing was changed
-// 400s forward the upstream code (NOT_SCHEDULED, SEND_AT_IN_PAST,
-// SEND_AT_TOO_FAR_AHEAD, SEND_AT_TOO_SOON, SEND_AT_NOT_LATER); a 400
-// without a code falls back to the generic 'error'.
+// 'conflict'  -> the worker already claimed/sent the recipients; nothing changed
+// 400s forward the upstream code (SCHEDULING_DISABLED, SEND_AT_IN_PAST,
+// SEND_AT_TOO_FAR_AHEAD, SEND_AT_OFF_SLOT, SEND_AT_IN_BLOCKED_HOURS,
+// SEND_AT_TOO_SOON); a 400 without a code falls back to the generic 'error'.
 type ScheduleError = 'not-found' | 'conflict' | 'error' | string
 
 const mapError = (
@@ -54,6 +55,26 @@ export const cancelDispatch = async (
     }
   } catch (err) {
     return mapError(err)
+  }
+}
+
+// Scheduling rules the service enforces, so the frontend picker can offer
+// only valid slots. `enabled: false` means the service rejects any sendAt.
+export const getScheduleConfig = async (): Promise<
+  AdapterResult<communication.ScheduleConfig, CommonErr>
+> => {
+  try {
+    const { data, error, response } = await client.GET(
+      '/communication-log/schedule-config'
+    )
+    if (error || !response.ok) return fail(mapFetchError(response))
+    return ok(communication.ScheduleConfigSchema.parse(data))
+  } catch (err) {
+    logger.error(
+      { err },
+      'communication-adapter: GET /communication-log/schedule-config failed'
+    )
+    return fail('unknown')
   }
 }
 

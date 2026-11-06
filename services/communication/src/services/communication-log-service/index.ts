@@ -13,14 +13,10 @@ import {
   updateDispatchSendAt,
 } from './adapters/db'
 import {
-  cancelScheduledBulk,
-  rescheduleScheduledBulk,
-  ScheduledBulkConflictError,
-} from '../infobip-service/adapters/schedule-adapter'
-import {
   evaluateSendAt,
-  MAX_SCHEDULE_DAYS_AHEAD,
-} from '../infobip-service/schedule'
+  getScheduleRules,
+  toScheduleConfig,
+} from '../scheduled-sends/rules'
 
 const LogOutboundResponseSchema = z.object({
   dispatchId: z.string().uuid(),
@@ -28,33 +24,20 @@ const LogOutboundResponseSchema = z.object({
 
 const ErrorResponseSchema = z.object({
   error: z.string(),
-  // Provider detail for 409s (what Infobip actually said) — internal service,
-  // so surfacing it aids debugging without leaking to end users via core.
   message: z.string().optional(),
 })
 
-const RETRY_DELAY_MS = 250
-
-// Retry a transient failure a few times before giving up. Used where an
-// Infobip mutation has already succeeded and the follow-up DB write is the
-// only thing standing between us and a permanently divergent state.
-async function withRetries<T>(
-  attempts: number,
-  fn: () => Promise<T>
-): Promise<T> {
-  let lastError: unknown
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      return await fn()
-    } catch (error) {
-      lastError = error
-      if (attempt < attempts) {
-        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
-      }
-    }
-  }
-  throw lastError
-}
+// Recipient statuses that mean the worker has already taken the row: a
+// dispatch with any of these can no longer be rescheduled (MIM-1838).
+const PROCESSED_STATUSES: ReadonlySet<communication.RecipientStatus> = new Set([
+  'sending',
+  'sent',
+  'delivered',
+  'failed',
+  'bounced',
+  'received',
+  'pending',
+])
 
 export const routes = (router: OkapiRouter) => {
   router.post(
@@ -130,19 +113,18 @@ export const routes = (router: OkapiRouter) => {
     {
       summary: 'Cancel a scheduled dispatch',
       description:
-        'Cancels the Infobip scheduled bulk (bulkId = dispatch id) and marks ' +
-        "every still-'scheduled' recipient as 'cancelled'. Idempotent: a " +
-        'dispatch whose recipients are already cancelled returns 200 without ' +
-        'calling Infobip. 409 when Infobip refuses (bulk already sent or ' +
-        'processing) — recipient statuses are then left for delivery reports ' +
-        'to finalize.',
+        "Marks every still-'scheduled' recipient as 'cancelled' so the " +
+        'scheduled-sends worker never sends them. Allowed until no ' +
+        "'scheduled' recipient remains: a partly processed dispatch cancels " +
+        'the rest and returns the count. Idempotent: an already-cancelled ' +
+        'dispatch returns 200 with 0. 409 ALREADY_PROCESSED when every ' +
+        'recipient has been claimed or sent.',
       tags: ['Communication log'],
       params: {
         id: { description: 'Dispatch id (UUID)', schema: z.string().uuid() },
       },
       response: {
         200: communication.CancelDispatchResponseSchema,
-        400: ErrorResponseSchema,
         404: ErrorResponseSchema,
         409: ErrorResponseSchema,
         500: ErrorResponseSchema,
@@ -163,44 +145,27 @@ export const routes = (router: OkapiRouter) => {
           ctx.body = { dispatchId: ctx.params.id, cancelledRecipients: 0 }
           return
         }
-        // my-pages is never scheduled; the check also narrows channel to sms/email.
-        if (
-          dispatch.dispatch.channel === 'my-pages' ||
-          !statuses.includes('scheduled')
-        ) {
-          ctx.status = 400
-          ctx.body = { error: 'NOT_SCHEDULED' }
+
+        // The update only touches 'scheduled' rows, so 0 means the worker
+        // took the last one between our read and the write.
+        const { updatedCount } = statuses.includes('scheduled')
+          ? await cancelScheduledRecipients(ctx.params.id)
+          : { updatedCount: 0 }
+        if (updatedCount === 0) {
+          ctx.status = 409
+          ctx.body = {
+            error: 'ALREADY_PROCESSED',
+            message: 'No scheduled recipients left to cancel',
+          }
           return
         }
 
-        await cancelScheduledBulk(dispatch.dispatch.channel, ctx.params.id)
-
-        // Infobip has cancelled the bulk — from here the DB write must land,
-        // or the rows stay 'scheduled' forever for a bulk that will never
-        // send (nothing else writes 'cancelled'). Retry before failing.
-        try {
-          const { updatedCount } = await withRetries(2, () =>
-            cancelScheduledRecipients(ctx.params.id)
-          )
-          ctx.status = 200
-          ctx.body = {
-            dispatchId: ctx.params.id,
-            cancelledRecipients: updatedCount,
-          }
-        } catch (error) {
-          logger.error(
-            { err: error, dispatchId: ctx.params.id },
-            "bulk cancelled at Infobip but recipients could not be marked 'cancelled' — log still shows scheduled"
-          )
-          ctx.status = 500
-          ctx.body = { error: 'CANCEL_STATUS_UPDATE_FAILED' }
+        ctx.status = 200
+        ctx.body = {
+          dispatchId: ctx.params.id,
+          cancelledRecipients: updatedCount,
         }
       } catch (error) {
-        if (error instanceof ScheduledBulkConflictError) {
-          ctx.status = 409
-          ctx.body = { error: 'ALREADY_PROCESSED', message: error.message }
-          return
-        }
         logger.error({ err: error }, 'failed to cancel scheduled dispatch')
         ctx.status = 500
         ctx.body = { error: 'CANCEL_FAILED' }
@@ -211,14 +176,14 @@ export const routes = (router: OkapiRouter) => {
   router.post(
     '/communication-log/dispatches/:id/reschedule',
     {
-      summary: 'Move a scheduled dispatch to a later send time',
+      summary: 'Move a scheduled dispatch to a new send time',
       description:
-        'Reschedules the Infobip bulk (bulkId = dispatch id) and updates the ' +
-        "dispatch's sendAt. The new time must be LATER than the currently " +
-        'scheduled time — Infobip can postpone a queued bulk but silently ' +
-        'ignores moves to an earlier time — and within the channel cap ' +
-        '(sms 90 days, email 5 days). 409 when Infobip refuses (bulk ' +
-        'already sent or processing).',
+        "Updates the dispatch's sendAt, earlier or later. The new time must " +
+        'follow the scheduling rules (future, within max days ahead, on a ' +
+        '10-minute slot, outside blocked hours; see /schedule-config) — each ' +
+        'violation is a 400 with its code. Only while no recipient has been ' +
+        'claimed or sent: 409 ALREADY_PROCESSED otherwise, since moving an ' +
+        'overdue dispatch would reset its staleness clock.',
       tags: ['Communication log'],
       params: {
         id: { description: 'Dispatch id (UUID)', schema: z.string().uuid() },
@@ -243,76 +208,80 @@ export const routes = (router: OkapiRouter) => {
           ctx.body = { error: 'Dispatch not found' }
           return
         }
-        // my-pages is never scheduled; the check also narrows channel to sms/email.
+        const statuses = dispatch.recipients.map((r) => r.status)
         if (
-          dispatch.dispatch.channel === 'my-pages' ||
-          !dispatch.recipients.some((r) => r.status === 'scheduled')
+          !statuses.includes('scheduled') ||
+          statuses.some((s) => PROCESSED_STATUSES.has(s))
         ) {
-          ctx.status = 400
-          ctx.body = { error: 'NOT_SCHEDULED' }
+          ctx.status = 409
+          ctx.body = {
+            error: 'ALREADY_PROCESSED',
+            message: 'Dispatch is no longer (fully) scheduled',
+          }
           return
         }
 
         const evaluation = evaluateSendAt(
           ctx.request.body.sendAt,
-          MAX_SCHEDULE_DAYS_AHEAD[dispatch.dispatch.channel]
+          getScheduleRules()
         )
-        // 'immediate' (within the grace window) is not a valid reschedule
-        // target — the point of rescheduling is a concrete future time.
         if (evaluation.kind === 'invalid') {
           ctx.status = 400
-          ctx.body = { error: evaluation.code }
+          ctx.body = { error: evaluation.code, message: evaluation.message }
           return
         }
+        // 'immediate' (within the grace window) is not a valid reschedule
+        // target — the point of rescheduling is a concrete future slot.
         if (evaluation.kind !== 'scheduled') {
           ctx.status = 400
           ctx.body = { error: 'SEND_AT_TOO_SOON' }
           return
         }
-        // Infobip can postpone a queued bulk but silently ignores moves to an
-        // earlier time (verified live 2026-07-27) — only allow later times.
-        if (evaluation.sendAt <= new Date(dispatch.dispatch.sendAt)) {
-          ctx.status = 400
-          ctx.body = { error: 'SEND_AT_NOT_LATER' }
-          return
-        }
 
-        await rescheduleScheduledBulk(
-          dispatch.dispatch.channel,
+        // Conditional update: 0 rows means the worker claimed a recipient
+        // between our read and the write.
+        const { updatedCount } = await updateDispatchSendAt(
           ctx.params.id,
           evaluation.sendAt
         )
-
-        // Infobip has moved the bulk — from here the DB write must land, or
-        // the log keeps showing the old time for a send that will fire at
-        // the new one. Retry before failing. Mirrors the cancel route.
-        try {
-          await withRetries(2, () =>
-            updateDispatchSendAt(ctx.params.id, evaluation.sendAt)
-          )
-          ctx.status = 200
-          ctx.body = {
-            dispatchId: ctx.params.id,
-            sendAt: evaluation.sendAt.toISOString(),
-          }
-        } catch (error) {
-          logger.error(
-            { err: error, dispatchId: ctx.params.id },
-            'bulk rescheduled at Infobip but dispatch sendAt could not be updated — log still shows the old time'
-          )
-          ctx.status = 500
-          ctx.body = { error: 'RESCHEDULE_STATUS_UPDATE_FAILED' }
-        }
-      } catch (error) {
-        if (error instanceof ScheduledBulkConflictError) {
+        if (updatedCount === 0) {
           ctx.status = 409
-          ctx.body = { error: 'ALREADY_PROCESSED', message: error.message }
+          ctx.body = {
+            error: 'ALREADY_PROCESSED',
+            message: 'Dispatch was claimed by the worker',
+          }
           return
         }
+
+        ctx.status = 200
+        ctx.body = {
+          dispatchId: ctx.params.id,
+          sendAt: evaluation.sendAt.toISOString(),
+        }
+      } catch (error) {
         logger.error({ err: error }, 'failed to reschedule dispatch')
         ctx.status = 500
         ctx.body = { error: 'RESCHEDULE_FAILED' }
       }
+    }
+  )
+
+  router.get(
+    '/communication-log/schedule-config',
+    {
+      summary: 'Scheduling rules for scheduled sends',
+      description:
+        'The rules the bulk send and reschedule routes enforce on sendAt, so ' +
+        'a picker can offer only valid times: enabled flag, slot length, ' +
+        'daily blocked window (wall-clock in timeZone) and max days ahead.',
+      tags: ['Communication log'],
+      response: {
+        200: communication.ScheduleConfigSchema,
+      },
+    },
+    async (ctx) => {
+      ctx.status = 200
+      ctx.body = toScheduleConfig(getScheduleRules())
     }
   )
 

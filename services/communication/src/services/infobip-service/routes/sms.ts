@@ -4,8 +4,8 @@ import { ParkingSpaceOfferSms, WorkOrderSms, BulkSms } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 import z from 'zod'
 
-import { evaluateSendAt, MAX_SCHEDULE_DAYS_AHEAD } from '../schedule'
-import { runScheduledBulk } from '../bulk-send'
+import { runBulkSend } from '../bulk-send'
+import { evaluateSendAt, getScheduleRules } from '../../scheduled-sends/rules'
 
 import {
   sendParkingSpaceOfferSms,
@@ -269,7 +269,7 @@ export const routes = (router: KoaRouter) => {
 
         const scheduleEvaluation = evaluateSendAt(
           body.sendAt,
-          MAX_SCHEDULE_DAYS_AHEAD.sms
+          getScheduleRules()
         )
         if (scheduleEvaluation.kind === 'invalid') {
           ctx.status = 400
@@ -281,7 +281,7 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const outcome = await runScheduledBulk({
+        const outcome = await runBulkSend({
           channel: 'sms',
           messageType: 'bulk_sms',
           fromAddress: SMS_SENDER,
@@ -293,11 +293,10 @@ export const routes = (router: KoaRouter) => {
             toAddress: r.normalizedPhone,
           })),
           evaluation: scheduleEvaluation,
-          send: (toAddresses, schedule) =>
+          send: (toAddresses) =>
             sendBulkSms({
               phoneNumbers: toAddresses,
               text: body.text,
-              schedule,
             }),
         })
         if (!outcome.ok) {
@@ -319,7 +318,7 @@ export const routes = (router: KoaRouter) => {
             totalSent: successful.length,
             totalInvalid: invalidPhones.length,
             ...(outcome.schedule && {
-              dispatchId: outcome.schedule.bulkId,
+              dispatchId: outcome.schedule.dispatchId,
               scheduledFor: outcome.schedule.sendAt.toISOString(),
             }),
           },

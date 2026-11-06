@@ -2,11 +2,13 @@ import { CalendarClock } from 'lucide-react'
 
 import type { ScheduleFieldState } from '@/shared/hooks/useScheduleField'
 import { Checkbox } from '@/shared/ui/Checkbox'
-import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
+import { ScheduleDateTimePicker } from '@/shared/ui/ScheduleDateTimePicker'
 
-// The "Schemalägg utskick" checkbox + datetime picker used by the send
-// modals. State and validation live in useScheduleField.
+// The "Schemalägg utskick" checkbox + slot picker used by the send modals.
+// State and validation live in useScheduleField. Renders nothing while the
+// rules load or when the service has scheduling switched off; a failed rules
+// fetch gets its own hint so it never reads as "scheduling off".
 export function ScheduleField({
   id,
   field,
@@ -14,6 +16,15 @@ export function ScheduleField({
   id: string
   field: ScheduleFieldState
 }) {
+  if (field.isError) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Kunde inte hämta regler för schemaläggning
+      </p>
+    )
+  }
+  if (!field.enabled || !field.config) return null
+
   return (
     <div>
       <div className="flex items-center gap-2">
@@ -32,12 +43,10 @@ export function ScheduleField({
       </div>
       {field.isScheduling && (
         <div className="mt-2">
-          <Input
-            type="datetime-local"
-            value={field.sendAtLocal}
-            onChange={(e) => field.setSendAtLocal(e.target.value)}
-            min={field.bounds.min}
-            max={field.bounds.max}
+          <ScheduleDateTimePicker
+            value={field.sendAt}
+            onChange={field.setSendAt}
+            config={field.config}
           />
           {field.error && (
             <p className="mt-1 text-sm text-destructive">{field.error}</p>
