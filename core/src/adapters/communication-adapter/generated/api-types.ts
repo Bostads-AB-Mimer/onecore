@@ -101,6 +101,7 @@ export interface paths {
                 inReplyToDispatchId: string | null
                 /** Format: uuid */
                 templateId: string | null
+                templateName: string | null
                 workOrderCode: string | null
                 /** Format: date-time */
                 createdAt: string
@@ -341,6 +342,7 @@ export interface paths {
                 inReplyToDispatchId: string | null
                 /** Format: uuid */
                 templateId: string | null
+                templateName: string | null
                 workOrderCode: string | null
                 /** Format: date-time */
                 createdAt: string
@@ -452,6 +454,7 @@ export interface paths {
                 inReplyToDispatchId: string | null
                 /** Format: uuid */
                 templateId: string | null
+                templateName: string | null
                 workOrderCode: string | null
                 /** Format: date-time */
                 createdAt: string
@@ -1809,6 +1812,368 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/message-templates': {
+    /**
+     * List message templates
+     * @description Alphabetical by name. status=active (default) hides archived templates; archived lists only those; all lists both. SMS only for now (channels is always ["sms"]).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description active | archived | all (default active) */
+          status?: 'active' | 'archived' | 'all'
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }[]
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+    /**
+     * Create an SMS template
+     * @description Name must be unique among active templates (case-insensitive): 409 TEMPLATE_NAME_TAKEN otherwise.
+     */
+    post: {
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            name: string
+            body: string
+          }
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/message-templates/{id}': {
+    /**
+     * Get a message template by id
+     * @description Archived templates resolve too (the log links to them).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Template id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+    /**
+     * Update a template in place
+     * @description Only the supplied fields change. Past dispatches keep their sent text; only the "Mall: <name>" label follows a rename. 409 TEMPLATE_NAME_TAKEN when renaming into an active name.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description Template id (UUID) */
+          id: string
+        }
+      }
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            name?: string
+            body?: string
+          }
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/message-templates/{id}/archive': {
+    /**
+     * Archive a template
+     * @description Hides it from the picker and the default list. Past dispatches still resolve its name. Idempotent.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Template id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/message-templates/{id}/restore': {
+    /**
+     * Restore an archived template
+     * @description Makes it active again. 409 TEMPLATE_NAME_TAKEN when an active template has taken the name meanwhile.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Template id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
             }
           }
         }

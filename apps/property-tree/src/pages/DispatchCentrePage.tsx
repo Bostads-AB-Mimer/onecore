@@ -99,6 +99,11 @@ const dispatchColumns = [
         <div className="text-sm text-muted-foreground truncate">
           {truncate(d.body)}
         </div>
+        {d.templateName && (
+          <div className="text-xs text-muted-foreground truncate">
+            Mall: {d.templateName}
+          </div>
+        )}
       </div>
     ),
   },

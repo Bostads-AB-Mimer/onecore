@@ -5,6 +5,7 @@ import {
   formatScheduleTimestamp,
   scheduleSendErrorText,
 } from '@/shared/lib/schedule'
+import { templateErrorText } from '@/shared/lib/templateErrorText'
 
 import { useToast } from './useToast'
 
@@ -21,7 +22,8 @@ interface UseSingleSmsOptions {
   sendSms: (
     recipients: { contactCode: string; phoneNumber: string }[],
     message: string,
-    sendAt?: string
+    sendAt?: string,
+    templateId?: string
   ) => Promise<{
     content: { totalSent: number; totalInvalid: number; scheduledFor?: string }
     warnings?: string[]
@@ -41,10 +43,12 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
       recipient,
       message,
       sendAt,
+      templateId,
     }: {
       recipient: SingleSmsRecipient
       message: string
       sendAt?: string
+      templateId?: string
     }) =>
       sendSms(
         [
@@ -54,7 +58,8 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
           },
         ],
         message,
-        sendAt
+        sendAt,
+        templateId
       ),
     onSuccess: (result) => {
       // Refresh any open tenant communication log so the new message appears.
@@ -101,10 +106,15 @@ export function useSingleSms({ sendSms }: UseSingleSmsOptions) {
   const closeSms = useCallback(() => setRecipient(null), [])
 
   const handleSendSms = useCallback(
-    async (message: string, sendAt?: string) => {
+    async (message: string, sendAt?: string, templateId?: string) => {
       if (!recipient) return
       try {
-        await sendMutation.mutateAsync({ recipient, message, sendAt })
+        await sendMutation.mutateAsync({
+          recipient,
+          message,
+          sendAt,
+          templateId,
+        })
       } catch {
         // Surfaced via onError; swallow so the modal doesn't see a rejection.
       }
@@ -130,8 +140,9 @@ function extractErrorMessage(error: unknown): string {
       error?: string
     }
     // Core forwards the communication service's error code in `error`
-    // (e.g. SEND_AT_TOO_FAR_AHEAD); show its Swedish text when known.
-    const mapped = scheduleSendErrorText(apiError.error ?? apiError.reason)
+    // (e.g. SEND_AT_TOO_FAR_AHEAD, TEMPLATE_NOT_FOUND); show its Swedish text.
+    const code = apiError.error ?? apiError.reason
+    const mapped = scheduleSendErrorText(code) ?? templateErrorText(code)
     if (mapped) return mapped
     if (apiError.message) return apiError.message
     if (apiError.reason) return apiError.reason

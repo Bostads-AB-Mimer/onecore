@@ -7,14 +7,15 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import DispatchCentrePage from '@/pages/DispatchCentrePage'
 import { EconomyPage } from '@/pages/EconomyPage'
 import { FacilityPage } from '@/pages/FacilityPage'
-import { ImdPage } from '@/pages/ImdPage'
 import { GuideCategoryPage } from '@/pages/GuideCategoryPage'
 import { GuideEditorPage } from '@/pages/GuideEditorPage'
 import { GuidePage } from '@/pages/GuidePage'
 import { GuidesPage } from '@/pages/GuidesPage'
+import { ImdPage } from '@/pages/ImdPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
+import { MessageTemplatesPage } from '@/pages/MessageTemplatesPage'
 import { MiscellaneousInvoicesPage } from '@/pages/MiscellaneousInvoicesPage'
 import { ParkingSpacePage } from '@/pages/ParkingSpacePage'
 import { PropertyAreasPage } from '@/pages/PropertyAreasPage'
@@ -146,6 +147,11 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: routes.dispatchCentre,
             element: <DispatchCentrePage />,
             handle: { title: 'Utskick' },
+          },
+          {
+            path: routes.messageTemplates,
+            element: <MessageTemplatesPage />,
+            handle: { title: 'Mallar' },
           },
           {
             path: 'economy',

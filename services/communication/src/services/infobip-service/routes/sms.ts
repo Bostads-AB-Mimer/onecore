@@ -14,6 +14,7 @@ import {
 } from '../adapters/sms-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
+import { getTemplateById } from '../../template-service/adapters/db'
 
 // SMS sender used for fromAddress when logging outbound SMS dispatches.
 // Mirrors the constant in sms-adapter.ts (kept private there).
@@ -279,6 +280,30 @@ export const routes = (router: KoaRouter) => {
             ...metadata,
           }
           return
+        }
+
+        // Verify the template link BEFORE the provider call: an unknown id
+        // would fail the dispatch FK after the SMS went out, leaving it
+        // unlogged. Archived is fine — the text really started from it.
+        const templateId = body.logMeta?.templateId
+        if (templateId) {
+          let template: Awaited<ReturnType<typeof getTemplateById>>
+          try {
+            template = await getTemplateById(templateId)
+          } catch (lookupError: unknown) {
+            logger.error(
+              { err: lookupError, templateId },
+              'template lookup failed before bulk SMS send — nothing was sent'
+            )
+            ctx.status = 500
+            ctx.body = { reason: 'TEMPLATE_LOOKUP_FAILED', ...metadata }
+            return
+          }
+          if (!template) {
+            ctx.status = 400
+            ctx.body = { reason: 'TEMPLATE_NOT_FOUND', ...metadata }
+            return
+          }
         }
 
         const outcome = await runBulkSend({

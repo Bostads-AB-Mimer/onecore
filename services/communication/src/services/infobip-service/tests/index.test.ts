@@ -11,6 +11,7 @@ import * as smsAdapter from '../adapters/sms-adapter'
 import { routes } from '../'
 import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
 import { getScheduleRules } from '../../scheduled-sends/rules'
+import { getTemplateById } from '../../template-service/adapters/db'
 
 jest.mock('@onecore/utilities', () => {
   return {
@@ -33,6 +34,11 @@ jest.mock('@onecore/utilities', () => {
 // behavior, not persistence. The dedicated db-adapter tests cover that path.
 jest.mock('../../communication-log-service/adapters/db', () => ({
   logOutboundDispatch: jest.fn().mockResolvedValue({ dispatchId: 'test-id' }),
+}))
+
+// Template lookup is DB-backed too; the send route only needs its result.
+jest.mock('../../template-service/adapters/db', () => ({
+  getTemplateById: jest.fn().mockResolvedValue(null),
 }))
 
 // Scheduling rules come from config; pin them so the tests don't depend on
@@ -662,6 +668,94 @@ describe('/sendBulkSms logging', () => {
     expect(res.body.warnings).toEqual([
       expect.stringContaining('Communication log failed'),
     ])
+  })
+})
+
+describe('/sendBulkSms template link', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+  const getTemplateByIdMock = getTemplateById as jest.Mock
+  let sendBulkSmsSpy: jest.SpyInstance
+
+  const TEMPLATE_ID = '11111111-1111-1111-1111-111111111111'
+  const template = (isActive: boolean) => ({
+    id: TEMPLATE_ID,
+    name: 'Nyckel klar',
+    channels: ['sms'],
+    subject: null,
+    body: 'Hej!',
+    categories: [],
+    isActive,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    getTemplateByIdMock.mockReset()
+    sendBulkSmsSpy = jest.spyOn(smsAdapter, 'sendBulkSms')
+    sendBulkSmsSpy.mockReset()
+    sendBulkSmsSpy.mockResolvedValue({})
+  })
+
+  it('rejects an unknown templateId before anything is sent', async () => {
+    getTemplateByIdMock.mockResolvedValue(null)
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        logMeta: { templateId: TEMPLATE_ID },
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('TEMPLATE_NOT_FOUND')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('sends and links an archived template (the text still started from it)', async () => {
+    getTemplateByIdMock.mockResolvedValue(template(false))
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        logMeta: { templateId: TEMPLATE_ID },
+      })
+
+    expect(res.status).toBe(200)
+    expect(sendBulkSmsSpy).toHaveBeenCalledTimes(1)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ templateId: TEMPLATE_ID })
+    )
+  })
+
+  it('fails closed when the template lookup itself fails', async () => {
+    getTemplateByIdMock.mockRejectedValue(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        logMeta: { templateId: TEMPLATE_ID },
+      })
+
+    expect(res.status).toBe(500)
+    expect(res.body.reason).toBe('TEMPLATE_LOOKUP_FAILED')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not look up anything when no templateId is given', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({ phoneNumbers: ['0701234567'], text: 'Test' })
+
+    expect(res.status).toBe(200)
+    expect(getTemplateByIdMock).not.toHaveBeenCalled()
   })
 })
 

@@ -367,6 +367,206 @@ export interface paths {
       }
     }
   }
+  '/message-templates': {
+    /**
+     * List message templates
+     * @description Alphabetical. `status=active` (default) hides archived templates; `archived` lists only those; `all` lists both.
+     */
+    get: {
+      parameters: {
+        query?: {
+          status?: 'active' | 'archived' | 'all'
+        }
+      }
+      responses: {
+        /** @description Templates */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate'][]
+            }
+          }
+        }
+        /** @description Invalid status filter */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create an SMS template
+     * @description Name must be unique among active templates (409 TEMPLATE_NAME_TAKEN otherwise).
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateMessageTemplate']
+        }
+      }
+      responses: {
+        /** @description The created template */
+        201: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description TEMPLATE_NAME_TAKEN */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/message-templates/{id}': {
+    /** Get a message template */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The template (archived ones resolve too) */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update a template in place
+     * @description Only the supplied fields change. Past dispatches keep their sent text; only the "Mall" label follows a rename.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateMessageTemplate']
+        }
+      }
+      responses: {
+        /** @description The updated template */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description Invalid or empty request body */
+        400: {
+          content: never
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description TEMPLATE_NAME_TAKEN */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/message-templates/{id}/archive': {
+    /**
+     * Archive a template
+     * @description Hidden from the picker and the default list; past dispatches still show its name. Idempotent.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The archived template */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/message-templates/{id}/restore': {
+    /**
+     * Restore an archived template
+     * @description Makes it active again; 409 TEMPLATE_NAME_TAKEN when an active template holds the name.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The restored template */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description TEMPLATE_NAME_TAKEN */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/communication-log/customers/{contactCode}/messages': {
     /**
      * Get the communication timeline for a customer
@@ -17607,6 +17807,7 @@ export interface components {
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        templateName: string | null
         workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
@@ -17659,6 +17860,7 @@ export interface components {
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        templateName: string | null
         workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
@@ -17709,6 +17911,7 @@ export interface components {
       inReplyToDispatchId: string | null
       /** Format: uuid */
       templateId: string | null
+      templateName: string | null
       workOrderCode: string | null
       /** Format: date-time */
       createdAt: string
@@ -17851,6 +18054,28 @@ export interface components {
     }
     ReleaseNoteCapabilities: {
       canManage: boolean
+    }
+    MessageTemplate: {
+      /** Format: uuid */
+      id: string
+      name: string
+      channels: ('sms' | 'email' | 'my-pages')[]
+      subject: string | null
+      body: string
+      categories: string[]
+      isActive: boolean
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateMessageTemplate: {
+      name: string
+      body: string
+    }
+    UpdateMessageTemplate: {
+      name?: string
+      body?: string
     }
     GuideCategory: {
       /** Format: uuid */

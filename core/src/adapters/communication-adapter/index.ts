@@ -30,6 +30,7 @@ export * from './delivery-reports'
 export * from './dispatch-schedule'
 export * as guides from './guides'
 export * from './release-notes'
+export * from './message-templates'
 
 export const sendNotificationToContact = async (
   recipientContact: Contact,

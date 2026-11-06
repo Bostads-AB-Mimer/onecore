@@ -24,6 +24,10 @@ import {
   ScheduleRules,
 } from './rules'
 
+// Dispatch rows as the worker reads them: no template join, so the read-side
+// `templateName` is absent (see getDispatchesByIds).
+export type WorkerDispatch = Omit<communication.Dispatch, 'templateName'>
+
 export type WorkerSettings = {
   rules: ScheduleRules
   stalenessHours: number
@@ -37,7 +41,7 @@ export type WorkerSettings = {
 export type ProviderSendResponse = { messages?: Array<{ messageId: string }> }
 
 export type SendBatchFn = (
-  dispatch: communication.Dispatch,
+  dispatch: WorkerDispatch,
   toAddresses: string[],
   signal: AbortSignal
 ) => Promise<ProviderSendResponse>
@@ -122,7 +126,7 @@ const fences = (batch: ClaimedRecipient[]) =>
 
 // One provider call for one dispatch's claimed rows, then settle their status.
 async function sendBatch(
-  dispatch: communication.Dispatch,
+  dispatch: WorkerDispatch,
   batch: ClaimedRecipient[],
   settings: WorkerSettings,
   deps: WorkerDeps

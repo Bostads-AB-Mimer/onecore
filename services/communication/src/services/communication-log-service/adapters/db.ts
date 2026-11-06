@@ -23,6 +23,15 @@ export type CustomerMessage = {
   recipient: MessageRecipient
 }
 
+// Dispatch rows for the read side: LEFT JOIN template so the log can show
+// "Mall: <name>" with the template's CURRENT name (renames relabel history;
+// the sent text in dispatch.body never changes). Filters must qualify
+// `dispatch.` since template has id/createdAt columns too.
+const dispatchWithTemplateName = () =>
+  db<Dispatch>('dispatch')
+    .leftJoin('template', 'template.id', 'dispatch.templateId')
+    .select('dispatch.*', 'template.name as templateName')
+
 /**
  * Persist an outbound communication event. Writes one `dispatch` row and one
  * `message_recipient` row per recipient inside a transaction. Returns the
@@ -226,7 +235,9 @@ export async function updateDispatchSendAt(
 export async function getDispatchById(
   id: string
 ): Promise<DispatchWithRecipients | null> {
-  const dispatch = await db<Dispatch>('dispatch').where('id', id).first()
+  const dispatch = await dispatchWithTemplateName()
+    .where('dispatch.id', id)
+    .first()
   if (!dispatch) return null
 
   const recipients = await db<MessageRecipient>('message_recipient')
@@ -253,7 +264,10 @@ export async function getCustomerMessages(
   if (recipients.length === 0) return []
 
   const dispatchIds = recipients.map((r) => r.dispatchId)
-  const dispatches = await db<Dispatch>('dispatch').whereIn('id', dispatchIds)
+  const dispatches = await dispatchWithTemplateName().whereIn(
+    'dispatch.id',
+    dispatchIds
+  )
   const byId = new Map(dispatches.map((d) => [d.id, d]))
 
   return recipients
@@ -337,7 +351,7 @@ export async function searchDispatches(
   ctx: Context
 ): Promise<PaginatedResponse<communication.DispatchListItem>> {
   try {
-    const query = db<Dispatch>('dispatch').select('dispatch.*')
+    const query = dispatchWithTemplateName()
 
     if (params.channel?.length)
       query.whereIn('dispatch.channel', params.channel)

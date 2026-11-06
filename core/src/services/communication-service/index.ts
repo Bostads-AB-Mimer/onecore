@@ -7,6 +7,7 @@ import * as communicationAdapter from '../../adapters/communication-adapter'
 import { getActingUserName } from '../../utils/acting-user'
 import { registerSchema } from '../../utils/openapi'
 import { logReadRoutes } from './log-reads'
+import { routes as messageTemplateRoutes } from './message-templates'
 import { routes as releaseNoteRoutes } from './release-notes'
 
 const BulkSmsResult = z.object({
@@ -65,6 +66,8 @@ export const routes = (router: KoaRouter) => {
   logReadRoutes(router)
 
   releaseNoteRoutes(router)
+
+  messageTemplateRoutes(router)
 
   /**
    * @swagger

@@ -35,6 +35,8 @@ Rules (`rules.ts`, Swedish local time, Europe/Stockholm):
   unaffected. `GET /communication-log/schedule-config` exposes the rules
   (and the flag) so the frontend picker mirrors them.
 
+For SMS, `logMeta.templateId` is verified before `runBulkSend` (400 `TEMPLATE_NOT_FOUND`, 500 `TEMPLATE_LOOKUP_FAILED`, nothing scheduled or sent); see `../template-service/DOCS_Message_Templates.md`.
+
 ## The worker (`worker.ts`)
 
 Started from `src/index.ts` when `scheduledSends.enabled` is true. Every

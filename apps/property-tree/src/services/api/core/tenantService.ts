@@ -72,10 +72,17 @@ async function sendBulkSms(
   recipients: { contactCode: string; phoneNumber: string }[],
   text: string,
   // ISO 8601 instant; schedules the send at Infobip, omit for immediate.
-  sendAt?: string
+  sendAt?: string,
+  // Template the text started from; stored on the dispatch for the log.
+  templateId?: string
 ): Promise<{ content: BulkSmsResult; warnings?: string[] }> {
   const { data, error } = await POST('/sendBulkSms', {
-    body: { recipients, text, ...(sendAt && { sendAt }) },
+    body: {
+      recipients,
+      text,
+      ...(sendAt && { sendAt }),
+      ...(templateId && { logMeta: { templateId } }),
+    },
   })
 
   if (error) throw error

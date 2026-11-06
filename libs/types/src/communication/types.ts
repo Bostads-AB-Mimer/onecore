@@ -3,6 +3,7 @@ import {
   AudienceCriterionSchema,
   CancelDispatchResponseSchema,
   ChannelSchema,
+  CreateTemplateSchema,
   CreateReleaseNoteParamsSchema,
   CreateReleaseNoteSchema,
   CustomerMessageSchema,
@@ -23,7 +24,9 @@ import {
   RescheduleDispatchResponseSchema,
   ScheduleConfigSchema,
   TemplateSchema,
+  TemplateStatusFilterSchema,
   UpdateReleaseNoteSchema,
+  UpdateTemplateSchema,
 } from './schema'
 
 export type Direction = z.infer<typeof DirectionSchema>
@@ -34,6 +37,9 @@ export type Dispatch = z.infer<typeof DispatchSchema>
 export type MessageRecipient = z.infer<typeof MessageRecipientSchema>
 export type DispatchAttachment = z.infer<typeof DispatchAttachmentSchema>
 export type Template = z.infer<typeof TemplateSchema>
+export type CreateTemplate = z.infer<typeof CreateTemplateSchema>
+export type UpdateTemplate = z.infer<typeof UpdateTemplateSchema>
+export type TemplateStatusFilter = z.infer<typeof TemplateStatusFilterSchema>
 
 export type LogOutboundRecipient = z.infer<typeof LogOutboundRecipientSchema>
 export type LogOutboundParams = z.infer<typeof LogOutboundParamsSchema>

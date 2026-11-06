@@ -6,6 +6,7 @@ import {
   scheduleSendErrorText,
 } from '@/shared/lib/schedule'
 import { getIdRange } from '@/shared/lib/selectRange'
+import { templateErrorText } from '@/shared/lib/templateErrorText'
 import type { EmailRecipient } from '@/shared/ui/EmailModal'
 import type { SmsRecipient } from '@/shared/ui/SmsModal'
 
@@ -31,7 +32,8 @@ export interface UseBulkMessagingOptions<TItem> {
   sendBulkSms: (
     recipients: { contactCode: string; phoneNumber: string }[],
     message: string,
-    sendAt?: string
+    sendAt?: string,
+    templateId?: string
   ) => Promise<{
     content: { totalSent: number; totalInvalid: number; scheduledFor?: string }
     warnings?: string[]
@@ -78,7 +80,8 @@ export interface UseBulkMessagingReturn {
   handleSendSms: (
     message: string,
     recipients: SmsRecipient[],
-    sendAt?: string
+    sendAt?: string,
+    templateId?: string
   ) => Promise<void>
   handleSendEmail: (
     subject: string,
@@ -296,7 +299,8 @@ export function useBulkMessaging<TItem>({
     async (
       message: string,
       validRecipients: SmsRecipient[],
-      sendAt?: string
+      sendAt?: string,
+      templateId?: string
     ) => {
       try {
         const recipients = validRecipients
@@ -305,7 +309,12 @@ export function useBulkMessaging<TItem>({
           )
           .map((r) => ({ contactCode: r.id, phoneNumber: r.phone }))
 
-        const result = await sendBulkSms(recipients, message, sendAt)
+        const result = await sendBulkSms(
+          recipients,
+          message,
+          sendAt,
+          templateId
+        )
 
         // Key on the server's outcome, not the request: a sendAt within the
         // grace window is sent immediately (no scheduledFor in the response).
@@ -448,8 +457,9 @@ function extractErrorMessage(error: unknown): string {
       error?: string
     }
     // Core forwards the communication service's error code in `error`
-    // (e.g. SEND_AT_TOO_FAR_AHEAD); show its Swedish text when known.
-    const mapped = scheduleSendErrorText(apiError.error ?? apiError.reason)
+    // (e.g. SEND_AT_TOO_FAR_AHEAD, TEMPLATE_NOT_FOUND); show its Swedish text.
+    const code = apiError.error ?? apiError.reason
+    const mapped = scheduleSendErrorText(code) ?? templateErrorText(code)
     if (mapped) return mapped
     if (apiError.message) return apiError.message
     if (apiError.reason) return apiError.reason

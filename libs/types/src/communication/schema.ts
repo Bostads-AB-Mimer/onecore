@@ -41,6 +41,9 @@ export const DispatchSchema = z.object({
   audienceCriteria: z.string().nullable(),
   inReplyToDispatchId: z.string().uuid().nullable(),
   templateId: z.string().uuid().nullable(),
+  // Current name of the template the message started from (LEFT JOIN at read
+  // time, so renames relabel history; the sent text in `body` never changes).
+  templateName: z.string().nullable(),
   // od-<odoo id> of the maintenance request this dispatch belongs to, when it
   // has one. Null for dispatches with no errand (bulk sends, parking offers).
   // The internal portal builds the Odoo deep link from this code alone.
@@ -78,10 +81,27 @@ export const TemplateSchema = z.object({
   subject: z.string().nullable(),
   body: z.string(),
   categories: z.array(z.string()),
-  status: z.boolean(),
+  isActive: z.boolean(), // false = archived: hidden from the picker, still resolves in the log
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
+
+// SMS templates (first version): name + body only. channels is always 'sms',
+// subject/categories stay null. Standalone objects, not .partial()/.pick():
+// swagger dedup depends on key order.
+export const CreateTemplateSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  body: z.string().trim().min(1).max(1600),
+})
+
+export const UpdateTemplateSchema = z.object({
+  name: z.string().trim().min(1).max(255).optional(),
+  body: z.string().trim().min(1).max(1600).optional(),
+})
+
+// List filter: archived templates (isActive = 0) are hidden by default.
+export const TEMPLATE_STATUS_FILTER = ['active', 'archived', 'all'] as const
+export const TemplateStatusFilterSchema = z.enum(TEMPLATE_STATUS_FILTER)
 
 // Input shape for the logging adapter. Any route that wants to persist an
 // outbound message calls this after the provider has accepted the send.

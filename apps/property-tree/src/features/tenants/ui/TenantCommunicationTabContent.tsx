@@ -202,6 +202,9 @@ function MessageRow({
                   label="Kanal"
                   value={channelLabel(dispatch.channel)}
                 />
+                {dispatch.templateName && (
+                  <DetailRow label="Mall" value={dispatch.templateName} />
+                )}
                 {dispatch.subject && (
                   <DetailRow label="Ämne" value={dispatch.subject} />
                 )}

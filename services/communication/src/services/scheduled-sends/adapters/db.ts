@@ -115,9 +115,10 @@ export async function countOpenScheduledRecipients(): Promise<number> {
   }
 }
 
+// Raw rows: no template join here, so the read-side `templateName` is absent.
 export async function getDispatchesByIds(
   ids: string[]
-): Promise<communication.Dispatch[]> {
+): Promise<Omit<communication.Dispatch, 'templateName'>[]> {
   if (ids.length === 0) return []
   try {
     return await db<communication.Dispatch>('dispatch').whereIn('id', ids)
