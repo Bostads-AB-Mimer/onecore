@@ -504,7 +504,7 @@ export const sendLeaseTerminationConfirmation = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error

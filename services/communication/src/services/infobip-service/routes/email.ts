@@ -428,10 +428,10 @@ export const routes = (router: KoaRouter) => {
           body:
             rendered?.body ||
             `${LEASE_TERMINATION_CONFIRMATION_SUBJECT} av ${body.rentalType}, avtal ${body.leaseId}.`,
-          sendResult: result.data,
+          sendResult: result,
         })
         ctx.status = 204
-        ctx.body = { content: result.data, ...metadata }
+        ctx.body = { content: result, ...metadata }
       } catch (error: any) {
         logger.error(
           { error: error.message },
