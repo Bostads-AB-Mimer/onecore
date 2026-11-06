@@ -60,9 +60,9 @@ export const getWorkOrdersByRentalPropertyId = async (
 ): Promise<AdapterResult<OdooWorkOrder[], 'unknown'>> => {
   try {
     const fetchResponse = await client().GET(
-      '/workOrders/residenceId/{residenceId}',
+      '/workOrders/rentalId/{rentalId}',
       {
-        params: { path: { residenceId: rentalPropertyId } },
+        params: { path: { rentalId: rentalPropertyId } },
       }
     )
 

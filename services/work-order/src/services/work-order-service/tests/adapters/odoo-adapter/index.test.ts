@@ -31,6 +31,7 @@ import {
   getMaintenanceTeams,
   getWorkOrderById,
   getWorkOrdersByContactCode,
+  getWorkOrdersByRentalId,
   requestCloseWorkOrder,
 } from '../../../adapters/odoo-adapter'
 
@@ -221,6 +222,65 @@ describe('odoo-adapter getWorkOrderById', () => {
       (clause: unknown[]) => clause[0] === 'message_type'
     )
     expect(messageTypeFilter[2]).toContain('receipt_to_tenant')
+  })
+})
+
+describe('odoo-adapter getWorkOrdersByRentalId', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    odooMock.connect.mockResolvedValue(undefined)
+  })
+
+  // Odoo keeps the rentalId on a different related record per kind, so one
+  // domain must match all three regardless of which kind the id belongs to.
+  it.each([
+    ['Lägenhet', '306-001-01-0101'],
+    ['Lokal', '705-022-99-0002'],
+    ['Bilplats', '216-704-00-0017'],
+  ])('searches every rentalId path for a %s', async (_kind, rentalId) => {
+    odooMock.searchRead
+      .mockResolvedValueOnce([]) // maintenance.request
+      .mockResolvedValueOnce([]) // mail.message
+
+    await getWorkOrdersByRentalId(rentalId)
+
+    expect(odooMock.searchRead.mock.calls[0][0]).toBe('maintenance.request')
+    expect(odooMock.searchRead.mock.calls[0][1]).toEqual([
+      '|',
+      '|',
+      ['rental_property_id.rental_property_id', '=', rentalId],
+      ['facility_id.rental_property_id', '=', rentalId],
+      ['parking_space_id.rental_property_id', '=', rentalId],
+      ['building_code', '=', false],
+      ['maintenance_unit_code', '=', false],
+    ])
+  })
+
+  it('returns the transformed work orders with url and messages', async () => {
+    const odooWorkOrder = factory.odooWorkOrder.build({ id: 12345 })
+    const odooMessage = factory.odooWorkOrderMessage.build({ res_id: 12345 })
+
+    odooMock.searchRead
+      .mockResolvedValueOnce([odooWorkOrder]) // maintenance.request
+      .mockResolvedValueOnce([odooMessage]) // mail.message
+
+    const result = await getWorkOrdersByRentalId('705-022-99-0002')
+
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({
+      Code: 'od-12345',
+      Url: expect.stringContaining('id=12345'),
+    })
+    expect(result[0].Messages).toHaveLength(1)
+  })
+
+  it('rethrows when Odoo fails', async () => {
+    const odooError = new Error('connection refused')
+    odooMock.searchRead.mockRejectedValueOnce(odooError)
+
+    await expect(getWorkOrdersByRentalId('306-001-01-0101')).rejects.toBe(
+      odooError
+    )
   })
 })
 

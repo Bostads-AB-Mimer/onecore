@@ -253,19 +253,22 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /workOrders/residenceId/{residenceId}:
+   * /workOrders/rentalId/{rentalId}:
    *   get:
-   *     summary: Get work orders by residence id
+   *     summary: Get work orders by rental id
    *     tags:
    *       - Work Order Service
-   *     description: Retrieves work orders based on the provided residence id.
+   *     description: |
+   *       Retrieves Odoo work orders for a rental object (Lägenhet, Lokal or Bilplats).
+   *       Building-wide and maintenance unit work orders are excluded.
+   *       Lokal and Bilplats work orders created before Odoo 1.0.118 are not found.
    *     parameters:
    *       - in: path
-   *         name: residenceId
+   *         name: rentalId
    *         required: true
    *         schema:
    *           type: string
-   *         description: The residence id to filter work orders.
+   *         description: The rental object code to filter work orders.
    *     responses:
    *       '200':
    *         description: Successfully retrieved work orders.
@@ -300,12 +303,14 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/workOrders/residenceId/:residenceId', async (ctx) => {
+  // Shared by the rentalId route and its deprecated residenceId alias.
+  const getWorkOrdersByRentalIdHandler = async (
+    ctx: KoaRouter.RouterContext,
+    rentalId: string
+  ) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const workOrders = await odooAdapter.getWorkOrdersByResidenceId(
-        ctx.params.residenceId
-      )
+      const workOrders = await odooAdapter.getWorkOrdersByRentalId(rentalId)
       ctx.status = 200
       ctx.body = {
         content: {
@@ -323,7 +328,65 @@ export const routes = (router: KoaRouter) => {
         }
       }
     }
-  })
+  }
+
+  router.get('(.*)/workOrders/rentalId/:rentalId', (ctx) =>
+    getWorkOrdersByRentalIdHandler(ctx, ctx.params.rentalId)
+  )
+
+  /**
+   * @swagger
+   * /workOrders/residenceId/{residenceId}:
+   *   get:
+   *     summary: Get work orders by residence id
+   *     deprecated: true
+   *     tags:
+   *       - Work Order Service
+   *     description: Deprecated alias of /workOrders/rentalId/{rentalId}, kept for callers outside core. Use /workOrders/rentalId/{rentalId} instead.
+   *     parameters:
+   *       - in: path
+   *         name: residenceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code to filter work orders.
+   *     responses:
+   *       '200':
+   *         description: Successfully retrieved work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     workOrders:
+   *                       type: array
+   *                       items:
+   *                         $ref: '#/components/schemas/WorkOrder'
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *       '500':
+   *         description: Internal server error. Failed to retrieve work orders.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: Internal server error
+   *                 metadata:
+   *                   type: object
+   *                   description: Route metadata
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/workOrders/residenceId/:residenceId', (ctx) =>
+    getWorkOrdersByRentalIdHandler(ctx, ctx.params.residenceId)
+  )
 
   /**
    * @swagger
