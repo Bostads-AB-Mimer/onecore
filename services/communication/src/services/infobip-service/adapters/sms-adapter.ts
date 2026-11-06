@@ -4,6 +4,8 @@ import { logger } from '@onecore/utilities'
 import striptags from 'striptags'
 import he from 'he'
 
+import { ProviderResponseError } from './provider-error'
+
 // SMS sender ID registered with Infobip
 const SMS_SENDER = 'Mimer'
 
@@ -60,9 +62,11 @@ export type InfobipSendSmsResponse = {
 // SMS is sent via the Tele2 instance of the Infobip SMS platform.
 // Same /sms/3/messages contract as Infobip, but uses the separate
 // Tele2 procurement credentials (config.tele2). Email still uses config.infobip.
+// `signal` lets the scheduled-sends worker bound the call.
 const sendSmsV3 = async (
   destinations: { to: string }[],
-  text: string
+  text: string,
+  signal?: AbortSignal
 ): Promise<InfobipSendSmsResponse> => {
   const baseUrl = config.tele2.baseUrl.replace(/\/$/, '') // Remove trailing slash
   const url = `${baseUrl}/sms/3/messages`
@@ -70,6 +74,7 @@ const sendSmsV3 = async (
   logger.info({ url }, 'Sending SMS via v3 API')
   const response = await fetch(url, {
     method: 'POST',
+    signal,
     headers: {
       Authorization: `App ${apiKey}`,
       'Content-Type': 'application/json',
@@ -91,7 +96,7 @@ const sendSmsV3 = async (
 
   if (!response.ok) {
     const errorBody = await response.text()
-    throw new Error(`Infobip SMS API error: ${response.status} - ${errorBody}`)
+    throw new ProviderResponseError('infobip-sms', response.status, errorBody)
   }
 
   return response.json() as Promise<InfobipSendSmsResponse>
@@ -130,6 +135,7 @@ export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
 export const sendBulkSms = async (sms: {
   phoneNumbers: string[]
   text: string
+  signal?: AbortSignal
 }) => {
   logger.info(
     {
@@ -143,10 +149,10 @@ export const sendBulkSms = async (sms: {
     const destinations = sms.phoneNumbers.map((phone: string) => ({
       to: phone,
     }))
-    const response = await sendSmsV3(destinations, sms.text)
+    const response = await sendSmsV3(destinations, sms.text, sms.signal)
     logger.info(
       { recipientCount: sms.phoneNumbers.length },
-      'Bulk SMS sent successfully'
+      'Bulk SMS submitted to Infobip'
     )
     return response
   } catch (error) {

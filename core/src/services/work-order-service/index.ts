@@ -2486,9 +2486,9 @@ export const routes = (router: KoaRouter) => {
         {
           contactCode,
           toAddress: MY_PAGES_TO_ADDRESS,
-          // Terminal on write: a Mina sidor publication has no delivery
-          // webhook that could later move it to 'delivered'.
-          status: 'sent',
+          // 'delivered' on write: a Mina sidor publication has no delivery
+          // webhook, and 'sent' would read as in flight in the dispatch centre.
+          status: 'delivered',
         },
       ],
     })

@@ -1083,7 +1083,7 @@ describe('work-order-service index', () => {
           {
             contactCode: 'P123456',
             toAddress: 'Mina sidor',
-            status: 'sent',
+            status: 'delivered',
           },
         ],
       })

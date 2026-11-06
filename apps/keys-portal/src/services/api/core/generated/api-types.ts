@@ -367,6 +367,147 @@ export interface paths {
       }
     }
   }
+  '/communication-log/customers/{contactCode}/messages': {
+    /**
+     * Get the communication timeline for a customer
+     * @description Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Customer id (contactCode) */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description Array of (dispatch + recipient) pairs, newest first */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CustomerMessage'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches': {
+    /**
+     * Search and list dispatches
+     * @description Paginated dispatch search. Filters by content (q), channel, messageType, derived status, source (manual/automatic), sendAt range, contactCode, minRecipients, and audience codes (district/building/area). Newest first by default.
+     */
+    get: {
+      parameters: {
+        query?: {
+          q?: string
+          channel?: string[]
+          messageType?: string[]
+          status?: string[]
+          source?: 'manual' | 'automatic'
+          sendAtFrom?: string
+          sendAtTo?: string
+          contactCode?: string
+          minRecipients?: number
+          audienceDistrictNames?: string[]
+          audienceBuildingCodes?: string[]
+          audienceAreaCodes?: string[]
+          sortBy?: 'sendAt' | 'recipientCount' | 'createdAt'
+          sortOrder?: 'asc' | 'desc'
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Paginated dispatches */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['DispatchListItem'][]
+              _meta: components['schemas']['PaginationMeta']
+              _links: components['schemas']['PaginationLinks'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/recipients': {
+    /**
+     * Paginated recipients of a dispatch
+     * @description Page through a dispatch's recipients, optionally filtered by status or a toAddress/contactCode substring. Use instead of the full dispatch-by-id read for large bulks.
+     */
+    get: {
+      parameters: {
+        query?: {
+          status?: string[]
+          q?: string
+          page?: number
+          limit?: number
+        }
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Paginated recipients */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageRecipient'][]
+              _meta: components['schemas']['PaginationMeta']
+              _links: components['schemas']['PaginationLinks'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}': {
+    /** Get a dispatch and its recipients by dispatch id */
+    get: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Dispatch + recipients */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DispatchWithRecipients']
+            }
+          }
+        }
+        /** @description Dispatch not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   security: {}
   '/sendBulkSms': {
     /**
@@ -383,6 +524,11 @@ export interface paths {
               phoneNumber: string
             }[]
             text: string
+            /**
+             * Format: date-time
+             * @description ISO 8601 instant with offset/Z. Schedules the send (max 90 days ahead); omit for immediate.
+             */
+            sendAt?: string
             logMeta?: {
               audienceCriteria?: {
                 [key: string]: unknown
@@ -430,6 +576,11 @@ export interface paths {
             }[]
             subject: string
             text: string
+            /**
+             * Format: date-time
+             * @description ISO 8601 instant with offset/Z. Schedules the send (max 5 days ahead, Infobip's email limit); omit for immediate.
+             */
+            sendAt?: string
             logMeta?: {
               audienceCriteria?: {
                 [key: string]: unknown
@@ -488,26 +639,37 @@ export interface paths {
       }
     }
   }
-  '/communication-log/customers/{contactCode}/messages': {
+  '/communication-log/dispatches/{id}/cancel': {
     /**
-     * Get the communication timeline for a customer
-     * @description Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+     * Cancel a scheduled dispatch
+     * @description Marks the dispatch's still-scheduled recipients as cancelled so the scheduled-sends worker never sends them. Works for SMS and email alike, also on a partly processed dispatch. Idempotent for already-cancelled dispatches.
      */
-    get: {
+    post: {
       parameters: {
         path: {
-          /** @description Customer id (contactCode) */
-          contactCode: string
+          /** @description Dispatch id (UUID) */
+          id: string
         }
       }
       responses: {
-        /** @description Array of (dispatch + recipient) pairs, newest first */
+        /** @description Cancelled */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['CustomerMessage'][]
+              content?: {
+                dispatchId?: string
+                cancelledRecipients?: number
+              }
             }
           }
+        }
+        /** @description Dispatch not found */
+        404: {
+          content: never
+        }
+        /** @description No scheduled recipient is left (ALREADY_PROCESSED); nothing was changed */
+        409: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -516,27 +678,74 @@ export interface paths {
       }
     }
   }
-  '/communication-log/dispatches/{id}': {
-    /** Get a dispatch and its recipients by dispatch id */
-    get: {
+  '/communication-log/dispatches/{id}/reschedule': {
+    /**
+     * Move a scheduled dispatch to a new send time
+     * @description Updates the dispatch's sendAt, earlier or later, for SMS and email alike. The new time must follow the rules in /communication-log/schedule-config (future, within max days ahead, on a 10-minute slot, outside blocked hours). Only while no recipient has been claimed or sent.
+     */
+    post: {
       parameters: {
         path: {
           /** @description Dispatch id (UUID) */
           id: string
         }
       }
+      requestBody: {
+        content: {
+          'application/json': {
+            /**
+             * Format: date-time
+             * @description New send time as ISO 8601 instant with offset/Z.
+             */
+            sendAt: string
+          }
+        }
+      }
       responses: {
-        /** @description Dispatch + recipients */
+        /** @description Rescheduled */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['DispatchWithRecipients']
+              content?: {
+                dispatchId?: string
+                sendAt?: string
+              }
             }
           }
+        }
+        /** @description sendAt breaks a scheduling rule (SCHEDULING_DISABLED, SEND_AT_IN_PAST, SEND_AT_TOO_FAR_AHEAD, SEND_AT_OFF_SLOT, SEND_AT_IN_BLOCKED_HOURS, SEND_AT_TOO_SOON) */
+        400: {
+          content: never
         }
         /** @description Dispatch not found */
         404: {
           content: never
+        }
+        /** @description A recipient was already claimed or sent (ALREADY_PROCESSED); nothing was changed */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/schedule-config': {
+    /**
+     * Scheduling rules for scheduled sends
+     * @description The rules the communication service enforces on sendAt, so a picker can offer only valid times. enabled=false hides scheduling entirely. Times are wall-clock in timeZone.
+     */
+    get: {
+      responses: {
+        /** @description Scheduling rules */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ScheduleConfig']
+            }
+          }
         }
         /** @description Internal server error */
         500: {
@@ -17354,6 +17563,10 @@ export interface components {
       invalid: string[]
       totalSent: number
       totalInvalid: number
+      /** @description Present when scheduled: dispatch id (cancel/reschedule handle) */
+      dispatchId?: string
+      /** @description Present when scheduled: target send time as ISO instant */
+      scheduledFor?: string
     }
     BulkEmailResult: {
       /** @description Email addresses that received email */
@@ -17362,6 +17575,20 @@ export interface components {
       invalid: string[]
       totalSent: number
       totalInvalid: number
+      /** @description Present when scheduled: dispatch id (cancel/reschedule handle) */
+      dispatchId?: string
+      /** @description Present when scheduled: target send time as ISO instant */
+      scheduledFor?: string
+    }
+    ScheduleConfig: {
+      enabled: boolean
+      timeZone: string
+      slotMinutes: number
+      blockedHours: {
+        from: string
+        until: string
+      }
+      maxDaysAhead: number
     }
     CustomerMessage: {
       dispatch: {
@@ -17378,7 +17605,7 @@ export interface components {
         provider: string
         triggeredByUser: string | null
         /** Format: date-time */
-        triggeredAt: string
+        sendAt: string
         recipientCount: number
         audienceCriteria: string | null
         /** Format: uuid */
@@ -17398,7 +17625,15 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced'
+          | 'received'
+          | 'scheduled'
+          | 'sending'
+          | 'cancelled'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -17422,7 +17657,7 @@ export interface components {
         provider: string
         triggeredByUser: string | null
         /** Format: date-time */
-        triggeredAt: string
+        sendAt: string
         recipientCount: number
         audienceCriteria: string | null
         /** Format: uuid */
@@ -17442,7 +17677,15 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced'
+          | 'received'
+          | 'scheduled'
+          | 'sending'
+          | 'cancelled'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -17450,6 +17693,78 @@ export interface components {
         /** Format: date-time */
         createdAt: string
       }[]
+    }
+    DispatchListItem: {
+      /** Format: uuid */
+      id: string
+      /** @enum {string} */
+      direction: 'outbound' | 'inbound'
+      /** @enum {string} */
+      channel: 'sms' | 'email' | 'my-pages'
+      fromAddress: string
+      subject: string | null
+      body: string
+      messageType: string
+      provider: string
+      triggeredByUser: string | null
+      /** Format: date-time */
+      sendAt: string
+      recipientCount: number
+      /** Format: uuid */
+      inReplyToDispatchId: string | null
+      /** Format: uuid */
+      templateId: string | null
+      workOrderCode: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** @enum {string} */
+      status:
+        | 'scheduled'
+        | 'sending'
+        | 'delivered'
+        | 'partially_delivered'
+        | 'failed'
+        | 'cancelled'
+      statusSummary: {
+        pending: number
+        sent: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        delivered: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        failed: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        bounced: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        received: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        scheduled: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        sending: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        cancelled: components['schemas']['DispatchListItem']['statusSummary']['pending']
+      }
+      audience: {
+        type: string
+        value: string
+      }[]
+    }
+    MessageRecipient: {
+      /** Format: uuid */
+      id: string
+      /** Format: uuid */
+      dispatchId: string
+      contactCode: string | null
+      toAddress: string
+      /** @enum {string} */
+      status:
+        | 'pending'
+        | 'sent'
+        | 'delivered'
+        | 'failed'
+        | 'bounced'
+        | 'received'
+        | 'scheduled'
+        | 'sending'
+        | 'cancelled'
+      /** Format: date-time */
+      statusUpdatedAt: string
+      externalMessageId: string | null
+      error: string | null
+      /** Format: date-time */
+      createdAt: string
     }
     ReleaseNote: {
       /** Format: uuid */
