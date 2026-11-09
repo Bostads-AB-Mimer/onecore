@@ -12,8 +12,12 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
-import { hasInvoiceDeferral } from '../lib/invoiceDeferral'
+import {
+  getInvoiceDeferralTooltip,
+  hasInvoiceDeferral,
+} from '../lib/invoiceDeferral'
 import { InvoiceDeferralAction } from './InvoiceDeferralAction'
+import { InvoiceDeferralInfo } from './InvoiceDeferralInfo'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   style: 'currency',
@@ -89,24 +93,23 @@ export const InvoicesTable = (props: Props) => {
   }
 
   const getDeferralBadge = (invoice: Invoice) => {
-    if (!hasInvoiceDeferral(invoice)) {
+    if (!hasInvoiceDeferral(invoice) || !invoice.deferral) {
       return null
     }
 
     const badge = <Badge variant="destructive">Anstånd</Badge>
+    const tooltip = getInvoiceDeferralTooltip(invoice.deferral)
 
-    if (invoice.deferral?.madeBy) {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="cursor-help">{badge}</span>
-          </TooltipTrigger>
-          <TooltipContent>Beviljat av {invoice.deferral.madeBy}</TooltipContent>
-        </Tooltip>
-      )
-    }
-
-    return badge
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="cursor-help">{badge}</span>
+        </TooltipTrigger>
+        <TooltipContent className="whitespace-pre-line">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
+    )
   }
 
   const getInvoiceType = (invoice: Invoice): string => {
@@ -354,11 +357,8 @@ export const InvoicesTable = (props: Props) => {
             {invoice.expectedLoss && <div>Befarad kundförlust</div>}
           </div>
         )}
-        {invoice.deferral?.madeBy && (
-          <div className="mb-3 text-sm bg-background/50 rounded p-2">
-            <span className="font-medium">Anstånd beviljat av:</span>{' '}
-            {invoice.deferral.madeBy}
-          </div>
+        {invoice.deferral && (
+          <InvoiceDeferralInfo deferral={invoice.deferral} />
         )}
         {invoice.credit && (
           <div className="mb-3 text-sm bg-background/50 rounded p-2">

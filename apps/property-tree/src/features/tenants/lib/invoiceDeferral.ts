@@ -31,3 +31,48 @@ export function canGrantInvoiceDeferral(invoice: Invoice): boolean {
 export function hasInvoiceDeferral(invoice: Invoice): boolean {
   return !!invoice.deferral
 }
+
+export type InvoiceDeferralSummaryLine = {
+  label: string
+  value: string
+}
+
+const formatDeferralDate = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date
+  return dateObj.toISOString().slice(0, 10)
+}
+
+export function getInvoiceDeferralTooltip(
+  deferral: NonNullable<Invoice['deferral']>
+): string {
+  return getInvoiceDeferralSummaryLines(deferral)
+    .map((line) => `${line.label}: ${line.value}`)
+    .join('\n')
+}
+
+export function getInvoiceDeferralSummaryLines(
+  deferral: NonNullable<Invoice['deferral']>
+): InvoiceDeferralSummaryLine[] {
+  const lines: InvoiceDeferralSummaryLine[] = [
+    {
+      label: 'Nytt förfallodatum',
+      value: formatDeferralDate(deferral.endDate),
+    },
+  ]
+
+  if (deferral.madeBy) {
+    lines.push({
+      label: 'Beviljat av',
+      value: deferral.madeBy,
+    })
+  }
+
+  if (deferral.reason) {
+    lines.push({
+      label: 'Anledning',
+      value: deferral.reason,
+    })
+  }
+
+  return lines
+}

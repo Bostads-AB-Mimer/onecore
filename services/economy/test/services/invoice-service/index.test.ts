@@ -16,8 +16,18 @@ import {
   SubmitMiscellaneousInvoiceErrorCodes,
 } from '@onecore/types'
 
-const parsedXledger = (invoice: Invoice) => ({ invoice })
-const parsedTenfast = (invoice: Invoice) => ({ invoice })
+const parsedXledger = (invoice: Invoice, defermentEndDate?: Date) => ({
+  invoice,
+  ...(defermentEndDate ? { defermentEndDate } : {}),
+})
+
+const parsedTenfast = (
+  invoice: Invoice,
+  tenfastDeferral?: { reason: string; madeBy: string }
+) => ({
+  invoice,
+  ...(tenfastDeferral ? { tenfastDeferral } : {}),
+})
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -143,6 +153,89 @@ describe('Invoice Service', () => {
           }),
         ])
       )
+    })
+
+    it('merges deferral creator from Tenfast when Xledger has deferment', async () => {
+      const invoiceId = '55123456'
+      const defermentEndDate = new Date('2026-07-15T00:00:00.000Z')
+      const xledgerInvoice = factory.invoice.build({
+        invoiceId,
+        source: 'next',
+      })
+      const tenfastInvoice = factory.invoice.build({
+        invoiceId,
+        source: 'next',
+      })
+
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([
+          parsedXledger(xledgerInvoice, defermentEndDate),
+        ])
+
+      jest
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([
+          parsedTenfast(tenfastInvoice, {
+            reason: 'Betalningsplan',
+            madeBy: 'admin@mimer.nu',
+          }),
+        ])
+
+      const res = await request(app.callback()).get(
+        `/invoices/bycontactcode/P123456`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            invoiceId,
+            deferral: {
+              endDate: defermentEndDate.toISOString(),
+              reason: 'Betalningsplan',
+              madeBy: 'admin@mimer.nu',
+            },
+          }),
+        ])
+      )
+    })
+
+    it('omits deferral when Xledger has no deferment even if Tenfast has grace period', async () => {
+      const invoiceId = '55123456'
+      const xledgerInvoice = factory.invoice.build({
+        invoiceId,
+        source: 'next',
+      })
+      const tenfastInvoice = factory.invoice.build({
+        invoiceId,
+        source: 'next',
+      })
+
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([parsedXledger(xledgerInvoice)])
+
+      jest
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([
+          parsedTenfast(tenfastInvoice, {
+            reason: 'Betalningsplan',
+            madeBy: 'admin@mimer.nu',
+          }),
+        ])
+
+      const res = await request(app.callback()).get(
+        `/invoices/bycontactcode/P123456`
+      )
+
+      expect(res.status).toBe(200)
+
+      const invoiceResponse = res.body.content.find(
+        (invoice: { invoiceId: string }) => invoice.invoiceId === invoiceId
+      )
+
+      expect(invoiceResponse.deferral).toBeUndefined()
     })
 
     it('uses fromDate and toDate from Xledger if xpand not available', async () => {
