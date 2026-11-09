@@ -7,12 +7,19 @@ import { INNEHAVARE, RENSAD_GDPR } from './relation-sql'
 /** cmrol key of the role captioned Leverantör (supplier). */
 export const SUPPLIER_ROLE = '_0DE0O1STV'
 
+/**
+ * cmrol key of the role captioned Sökande (applicant). Its `croused` flag is
+ * what Xpand reports as the applicant's IsActive, and what login requires.
+ */
+export const APPLICANT_ROLE = '_0DE0O2500'
+
 type CandidateRow = {
   contactCode: string
   supplierOnly: number
   currentTenant: number
   queueTime: number
   xpandUser: number
+  isActive: number
   createdAt: Date | null
 }
 
@@ -30,6 +37,9 @@ type CandidateRow = {
  * A lease counts while it is still running, also when notice has been given
  * (`sistadeb` in the future): that tenant still lives there. This is wider
  * than the relation import, which only reads leases without notice.
+ *
+ * Active means the Sökande role is in use. A tenant without that role is not
+ * active: being a tenant does not let anyone log in.
  */
 export const loginContactCandidates = async (
   db: Knex,
@@ -77,6 +87,15 @@ export const loginContactCandidates = async (
       db.raw(
         `CASE WHEN cmctc.keysyusr IS NULL OR LTRIM(cmctc.keysyusr) = ''
            THEN 0 ELSE 1 END AS xpandUser`
+      ),
+      db.raw(
+        `CASE WHEN EXISTS (
+           SELECT 1 FROM cmcro r
+           WHERE r.keycmctc = cmctc.keycmctc
+             AND TRIM(r.keycmrol) = ?
+             AND r.croused = 1
+         ) THEN 1 ELSE 0 END AS isActive`,
+        [APPLICANT_ROLE]
       )
     )
 
@@ -86,6 +105,7 @@ export const loginContactCandidates = async (
     currentTenant: r.currentTenant === 1,
     queueTime: r.queueTime === 1,
     xpandUser: r.xpandUser === 1,
+    isActive: r.isActive === 1,
     createdAt: r.createdAt,
   }))
 }

@@ -136,6 +136,82 @@ describe('createContact', () => {
     expect(result).toMatchObject({ ok: false, err: 'invalid-national-id' })
   })
 
+  describe('age rule', () => {
+    // Valid numbers around the boundary on the faked date (2026-11-04).
+    const TURNS_16_ON_NEW_YEARS_EVE = '201012312383'
+    const TURNS_16_NEXT_YEAR = '201101012381'
+
+    beforeAll(() => {
+      // Only Date is faked; the awaited calls need real microtasks.
+      jest.useFakeTimers({
+        now: new Date('2026-11-04T12:00:00Z'),
+        doNotFake: ['nextTick', 'queueMicrotask', 'setImmediate'],
+      })
+    })
+
+    afterAll(() => {
+      jest.useRealTimers()
+    })
+
+    const create = (overrides: Partial<CreateContactRequest>) => {
+      const contactWriter = writer()
+      return {
+        contactWriter,
+        result: createContact(
+          { contactsRepository: repository(), contactWriter },
+          request(overrides)
+        ),
+      }
+    }
+
+    it('requires 16 on the day when no rule is given', async () => {
+      const { result, contactWriter } = create({
+        nationalId: TURNS_16_ON_NEW_YEARS_EVE,
+      })
+
+      await expect(result).resolves.toMatchObject({
+        ok: false,
+        err: 'invalid-national-id',
+      })
+      expect(contactWriter.createContact).not.toHaveBeenCalled()
+    })
+
+    it('lets birth-year in during the calendar year they turn 16', async () => {
+      const { result } = create({
+        nationalId: TURNS_16_ON_NEW_YEARS_EVE,
+        ageRule: 'birth-year',
+      })
+
+      await expect(result).resolves.toMatchObject({ ok: true })
+    })
+
+    it('refuses birth-year before the calendar year they turn 16', async () => {
+      const { result, contactWriter } = create({
+        nationalId: TURNS_16_NEXT_YEAR,
+        ageRule: 'birth-year',
+      })
+
+      await expect(result).resolves.toEqual({
+        ok: false,
+        err: 'invalid-national-id',
+        detail: 'Kunden måste fylla minst 16 år i år.',
+      })
+      expect(contactWriter.createContact).not.toHaveBeenCalled()
+    })
+
+    it('never sends the rule on to Xpand', async () => {
+      const { result, contactWriter } = create({
+        nationalId: TURNS_16_ON_NEW_YEARS_EVE,
+        ageRule: 'birth-year',
+      })
+      await result
+
+      expect(contactWriter.createContact).toHaveBeenCalledWith(
+        expect.not.objectContaining({ ageRule: expect.anything() })
+      )
+    })
+  })
+
   it('never returns the generated password', async () => {
     const result = await createContact(
       { contactsRepository: repository(), contactWriter: writer() },

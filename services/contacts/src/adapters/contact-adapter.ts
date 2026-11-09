@@ -6,6 +6,7 @@ import {
   PhoneNumber,
   RelatedContact,
 } from '@src/domain/contact'
+import { PersonContact } from '@src/domain/login-contact'
 import { ContactIncludeOptions } from './xpand/batch-query'
 
 /**
@@ -188,6 +189,27 @@ export interface ContactsRepository {
   getLoginContactByNationalIdNumber: (
     nid: NationalIdNumber
   ) => Promise<Contact | null>
+
+  /**
+   * Every person contact for a personnummer, each with whether the person can
+   * log in with it, in the order login prefers them.
+   *
+   * The same contacts `getLoginContactByNationalIdNumber` chooses among: P
+   * codes, not deleted, either stored form of the number. Unlike the duplicate
+   * check (`existsByNationalIdNumber`), which matches every row, deleted ones
+   * and companies included.
+   *
+   * The first is the contact login uses, so the person can log in exactly when
+   * it is active. A later active contact does not help them.
+   *
+   * @param nid - The national ID number in any common notation.
+   *
+   * @returns The contacts, empty when there are none, or null when `nid` is
+   *          not a valid identity number.
+   */
+  getPersonContactsByNationalIdNumber: (
+    nid: NationalIdNumber
+  ) => Promise<PersonContact[] | null>
 
   /**
    * Retrieves contacts by their phone number.

@@ -21,7 +21,19 @@ export type LoginContactCandidate = {
   queueTime: boolean
   /** Has an Xpand user (keysyusr), which mimer.nu registration creates. */
   xpandUser: boolean
+  /**
+   * Its Sökande role is in use (`croused`), which is what webapi requires to
+   * let the person in. Not a ranking signal: login picks the same contact
+   * either way, and refuses it when it is inactive.
+   */
+  isActive: boolean
   createdAt: Date | null
+}
+
+/** One of a person's contacts, and whether they can log in with it. */
+export type PersonContact = {
+  contactCode: ContactCode
+  isActive: boolean
 }
 
 export type LoginContactChoice = {
@@ -57,11 +69,19 @@ const compareAge = (a: LoginContactCandidate, b: LoginContactCandidate) => {
 }
 
 /**
+ * The contacts for a personnummer in the order login prefers them: anything but
+ * a supplier-only contact first, then a current tenant, then one with queue
+ * time, then one with an Xpand user. When those tie, the newest wins, since a
+ * second registration is made because the older one no longer works.
+ */
+export const rankLoginContacts = (
+  candidates: LoginContactCandidate[]
+): LoginContactCandidate[] =>
+  [...candidates].sort((a, b) => compareSignals(a, b) || compareAge(a, b))
+
+/**
  * Picks the contact a person logs in as among the contacts for their
- * personnummer: anything but a supplier-only contact first, then a current
- * tenant, then one with queue time, then one with an Xpand user. When those
- * tie, the newest wins, since a second registration is made because the older
- * one no longer works.
+ * personnummer: the first by `rankLoginContacts`.
  *
  * @returns null when there are no candidates.
  */
@@ -70,9 +90,7 @@ export const pickLoginContact = (
 ): LoginContactChoice | null => {
   if (candidates.length === 0) return null
 
-  const ranked = [...candidates].sort(
-    (a, b) => compareSignals(a, b) || compareAge(a, b)
-  )
+  const ranked = rankLoginContacts(candidates)
 
   return {
     contactCode: ranked[0].contactCode,
