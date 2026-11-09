@@ -5,12 +5,8 @@ import {
 
 describe('hashNotificationPayload', () => {
   const base = {
-    to: 'tenant@example.com',
-    contactCode: 'P123456',
-    firstName: 'Anna',
     leaseId: '307-002-11-0201/11',
-    endDate: new Date('2026-10-31'),
-    rentalType: 'Bilplats' as const,
+    correlationId: 'corr-1',
   }
 
   it('ignores server-added triggeredByUser', () => {
@@ -62,5 +58,15 @@ describe('createInMemoryIdempotencyStore', () => {
     expect(store.claim('key-1', 'hash-a')).toBe('claimed')
     store.release('key-1', 'hash-a')
     expect(store.claim('key-1', 'hash-a')).toBe('claimed')
+  })
+
+  it('returns the summary stored with a succeeded key', () => {
+    const store = createInMemoryIdempotencyStore(60_000)
+    const summary = { sentCount: 1, skippedContactCodes: ['P654321'] }
+    store.claim('key-1', 'hash-a')
+    expect(store.getSummary('key-1', 'hash-a')).toBeUndefined()
+    store.markSucceeded('key-1', 'hash-a', summary)
+    expect(store.getSummary('key-1', 'hash-a')).toEqual(summary)
+    expect(store.getSummary('key-1', 'hash-b')).toBeUndefined()
   })
 })

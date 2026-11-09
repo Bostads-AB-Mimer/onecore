@@ -10,5 +10,6 @@ export const ParkingSpaceAssignedToOtherTemplateId = 200000000092051
 export const WorkOrderEmailTemplateId = 200000000146435
 export const WorkOrderExternalContractorEmailTemplateId = 200000000173744
 export const InvoiceNotificationEmailTemplateId = 205000000057686
-// Published Infobip template for tenant lease-termination confirmation (AVTAL-232).
-export const LeaseTerminationConfirmationTemplateId = 205000000080539
+// Published Infobip template for tenant lease-termination confirmation
+// (AVTAL-232), with move-out date, rental object address and lease holders.
+export const LeaseTerminationConfirmationTemplateId = 205000000091017

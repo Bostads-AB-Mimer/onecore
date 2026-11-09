@@ -34,7 +34,9 @@ import {
 import {
   getEmailTemplate,
   renderTemplate,
+  renderTemplateWithPlaceholders,
 } from '../adapters/email-template-render'
+import { buildLeaseTerminationPlaceholders } from '../adapters/lease-termination-placeholders'
 import {
   AdditionalParkingSpaceOfferTemplateId,
   ReplaceParkingSpaceOfferTemplateId,
@@ -414,7 +416,9 @@ export const routes = (router: KoaRouter) => {
           LeaseTerminationConfirmationTemplateId
         )
         const rendered = template
-          ? renderTemplate(template, { ...body, type: body.rentalType })
+          ? renderTemplateWithPlaceholders(template, () =>
+              buildLeaseTerminationPlaceholders(body)
+            )
           : null
         await logParkingSpaceEmail({
           messageType: LeaseTerminationConfirmationMessageType,

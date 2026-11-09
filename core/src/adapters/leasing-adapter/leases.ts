@@ -21,8 +21,11 @@ type HomeInsuranceExportRow = z.infer<
 >
 
 export const getLease = async (leaseId: string): Promise<Lease | null> => {
+  // Explicit validateStatus: the process-wide default (<500) would let other
+  // 4xx through with no content, which callers would read as "not found".
   const leaseResponse = await axios(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}`
+    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}`,
+    { validateStatus: (status) => status === 200 || status === 404 }
   )
 
   if (leaseResponse.status === 404) {

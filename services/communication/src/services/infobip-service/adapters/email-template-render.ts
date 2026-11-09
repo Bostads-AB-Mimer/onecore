@@ -162,9 +162,19 @@ export const fillTokens = (
 export const renderTemplate = (
   template: EmailTemplate,
   email: ParkingSpaceEmailLike
+): { subject: string; body: string } | null =>
+  renderTemplateWithPlaceholders(template, () =>
+    buildParkingSpacePlaceholders(email)
+  )
+
+// Same as renderTemplate, for emails that build their own placeholders. Takes
+// a builder so a throwing builder is caught here too (never fails the send).
+export const renderTemplateWithPlaceholders = (
+  template: EmailTemplate,
+  buildPlaceholders: () => Record<string, string>
 ): { subject: string; body: string } | null => {
   try {
-    const placeholders = buildParkingSpacePlaceholders(email)
+    const placeholders = buildPlaceholders()
     return {
       subject: fillTokens(template.subject ?? '', placeholders),
       body: fillTokens(htmlToText(template.html), placeholders),
