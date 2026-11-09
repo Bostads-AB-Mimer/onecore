@@ -8,7 +8,7 @@
   "packageManager": "pnpm@10.28.1",
   "main": "./src/index.ts",
   "scripts": {
-    "test": "NODE_OPTIONS='-r dotenv/config' DOTENV_CONFIG_PATH=.env.test jest",
+    "test": "NODE_OPTIONS='-r dotenv/config' DOTENV_CONFIG_PATH=.env.test TZ=UTC jest",
     "test:watch": "NODE_OPTIONS='-r dotenv/config' DOTENV_CONFIG_PATH=.env.test TZ=UTC jest --watch",
     "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "start": "pnpm migrate:up && node -r dotenv/config build/index",
