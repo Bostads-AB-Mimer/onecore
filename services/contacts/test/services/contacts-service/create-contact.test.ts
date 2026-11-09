@@ -199,6 +199,21 @@ describe('createContact', () => {
       expect(contactWriter.createContact).not.toHaveBeenCalled()
     })
 
+    it('turns the year at midnight in Sweden, not in UTC', async () => {
+      // 00:30 on New Year's Day in Sweden, still 2026 in UTC.
+      jest.setSystemTime(new Date('2026-12-31T23:30:00Z'))
+      try {
+        const { result } = create({
+          nationalId: TURNS_16_NEXT_YEAR,
+          ageRule: 'birth-year',
+        })
+
+        await expect(result).resolves.toMatchObject({ ok: true })
+      } finally {
+        jest.setSystemTime(new Date('2026-11-04T12:00:00Z'))
+      }
+    })
+
     it('never sends the rule on to Xpand', async () => {
       const { result, contactWriter } = create({
         nationalId: TURNS_16_ON_NEW_YEARS_EVE,

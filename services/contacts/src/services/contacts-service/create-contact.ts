@@ -37,6 +37,15 @@ export type CreateContactResult = {
 const MINIMUM_AGE = 16
 
 /**
+ * Swedish time, not the container's UTC, so the year turns at midnight in
+ * Sweden, as it does for core's own registration check.
+ */
+const stockholmYear = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Europe/Stockholm',
+  year: 'numeric',
+})
+
+/**
  * Whether the person is old enough under the caller's rule. `birth-year` lets
  * someone in from the calendar year they turn 16; the default is 16 on the day.
  *
@@ -50,7 +59,7 @@ const isOldEnough = (
 ): boolean => {
   if (rule === 'birth-year') {
     const birthYear = Number(forms.twelveDigits.slice(0, 4))
-    return today.getFullYear() - birthYear >= MINIMUM_AGE
+    return Number(stockholmYear.format(today)) - birthYear >= MINIMUM_AGE
   }
   const age = getAgeFromNationalId(forms.twelveDigits)
   return age !== null && age >= MINIMUM_AGE
