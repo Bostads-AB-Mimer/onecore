@@ -73,7 +73,7 @@ Always use `pnpm` — never `npm` or `yarn`.
 - Check-then-write is a race: decide inside the transaction or rely on a unique index and map the violation to 409. Never hold a transaction open across a network call. Enforce invariants on every write path (create, update, move, re-parent).
 - Xpand char codes are space-padded and SQL compares them ignoring trailing blanks and case — JavaScript doesn't. Trim and normalise both sides before comparing, and handle NULL.
 - Keep the diff to the change: no unrelated generated-type, lockfile or notes churn. Don't add backward-compatibility machinery for internal tools unless asked.
-- When you change a flow, update its `DOCS_*.md`, `ARCHITECTURE.md` and any `.claude/skills` file that describes it, including failure branches.
+- When you change a flow, update its `DOCS_*.md`, `ARCHITECTURE.md` and any `.claude/skills` file that describes it, including failure branches. New skills go in `.claude/skills/<name>/SKILL.md`; a flat `.md` file there is not loaded as a skill.
 
 ### Security
 
