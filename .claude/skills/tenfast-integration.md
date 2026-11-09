@@ -208,6 +208,12 @@ has signed. The end date is in `simplesignTermination.preliminaryEndDate`, which
 `getLeaseEndDate` (`helpers/tenfast.ts`) returns for display. `getLeasedUntil`
 ignores it on purpose.
 
+The `states` filter on `/v1/hyresvard/extras/avtal/articles/:id` (home
+insurance export) only accepts `active`, `upcoming`, `preTermination` and
+`terminationScheduled`. Any other value, `terminationSigningInProgress`
+included, gives 400 `Invalid state`. An unknown article id also gives 400
+(`Kunde inte hitta artikeln`), not 404. Checked on Tenfast test 2026-11-09.
+
 ## Query syntax
 
 `/v1/hyresvard/avtal/search` supports nested bracket-notation filters, e.g.:
