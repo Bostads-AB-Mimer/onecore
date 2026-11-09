@@ -2,7 +2,9 @@
 # Creates a local "mimer-contacts" realm that uses the theme, on the Keycloak from docker-compose.yml.
 # Recreates it from scratch on every run. Local only: never point KC at a shared Keycloak.
 #   Login page: http://localhost:18080/realms/mimer-contacts/account  (198501011236 / Test1234!)
-#   Mail (password reset): http://localhost:18025
+#   Mail (password reset, set password): http://localhost:18025
+#   Clients as core uses them (config auth.keycloak.contacts): mina-sidor / mina-sidor-secret and
+#   mimer-contacts-provisioning / provisioning-secret, with Mina sidor at http://localhost:3000/
 set -euo pipefail
 KC=http://localhost:18080
 R=mimer-contacts
@@ -30,9 +32,47 @@ for r in $R fake-bankid; do curl -s -o /dev/null -X DELETE -H "Authorization: Be
 api POST "" '{
   "realm": "mimer-contacts", "enabled": true,
   "registrationAllowed": false, "resetPasswordAllowed": true, "rememberMe": false, "loginWithEmailAllowed": false,
-  "loginTheme": "mimer", "internationalizationEnabled": true, "supportedLocales": ["sv"], "defaultLocale": "sv",
+  "loginTheme": "mimer", "emailTheme": "mimer",
+  "internationalizationEnabled": true, "supportedLocales": ["sv"], "defaultLocale": "sv",
   "smtpServer": {"host": "mailpit", "port": "1025", "from": "noreply@mimer.example.test", "fromDisplayName": "Mimer"}
 }'
+
+echo "== user profile (attributes missing from it are dropped when a user is saved)"
+api GET "/$R/users/profile"
+# As in the dev realm: users are created with only a username (and, at registration, an
+# e-mail), so names and e-mail are optional. Required, Keycloak would stop a new user at an
+# "update profile" page after they choose their password.
+api PUT "/$R/users/profile" "$(jq '(.attributes[] | select(.name == "email" or .name == "firstName" or .name == "lastName")) |= del(.required)
+  | .attributes += [
+  {"name": "contact_code", "displayName": "Kontaktkod", "multivalued": false,
+   "permissions": {"view": [], "edit": ["admin"]}},
+  {"name": "account_type", "displayName": "Kontotyp", "multivalued": false,
+   "permissions": {"view": [], "edit": ["admin"]},
+   "validations": {"options": {"options": ["person", "company"]}}}]' "$OUT")"
+
+echo "== clients"
+# The OIDC client of Mina sidor. Core's set-password e-mail ends on one of its redirect URIs.
+api POST "/$R/clients" '{"clientId": "mina-sidor", "publicClient": false, "secret": "mina-sidor-secret",
+  "standardFlowEnabled": true, "directAccessGrantsEnabled": false,
+  "redirectUris": ["http://localhost:3000/*"], "webOrigins": ["http://localhost:3000"],
+  "attributes": {"pkce.code.challenge.method": "S256"}}'
+# Core's admin client: reads users and sets contact_code at login, creates users and sends the
+# set-password e-mail at registration.
+api POST "/$R/clients" '{"clientId": "mimer-contacts-provisioning", "publicClient": false,
+  "secret": "provisioning-secret", "serviceAccountsEnabled": true, "standardFlowEnabled": false,
+  "directAccessGrantsEnabled": false}'
+api GET "/$R/clients?clientId=mimer-contacts-provisioning"
+provisioning=$(jq -r '.[0].id' "$OUT")
+api GET "/$R/clients/$provisioning/service-account-user"
+service_user=$(jq -r .id "$OUT")
+api GET "/$R/clients?clientId=realm-management"
+realm_management=$(jq -r '.[0].id' "$OUT")
+roles='[]'
+for role in view-users manage-users; do
+  api GET "/$R/clients/$realm_management/roles/$role"
+  roles=$(jq --slurpfile r "$OUT" '. + $r' <<<"$roles")
+done
+api POST "/$R/users/$service_user/role-mappings/clients/$realm_management" "$roles"
 
 echo "== test user"
 api POST "/$R/users" '{"username": "198501011236", "enabled": true, "email": "test@mimer.example.test",
