@@ -197,7 +197,7 @@ export async function connectContactsKeycloakAdmin(): Promise<ContactsKeycloakAd
             // The link ends on this client's redirect_uri, which Keycloak only accepts when it
             // is one of the client's valid redirect URIs.
             client_id: config.auth.keycloak.contacts.clientId,
-            redirect_uri: config.minaSidor.url,
+            redirect_uri: config.auth.keycloak.contacts.setPasswordRedirectUri,
           },
         }
       )

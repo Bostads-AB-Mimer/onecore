@@ -1,7 +1,6 @@
 import nock from 'nock'
 
 const mockConfig = {
-  minaSidor: { url: 'https://mina-sidor.test/' },
   auth: {
     keycloak: {
       url: 'http://keycloak.test',
@@ -13,6 +12,7 @@ const mockConfig = {
           clientId: 'mimer-contacts-provisioning',
           clientSecret: 'provisioning-secret',
         },
+        setPasswordRedirectUri: 'https://mina-sidor.test/',
       },
     },
   },
