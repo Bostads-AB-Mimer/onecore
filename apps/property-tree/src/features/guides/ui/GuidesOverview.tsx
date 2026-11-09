@@ -143,8 +143,8 @@ export function GuidesOverview({
         )
       }
 
-      const ownGuides = matches.filter(
-        (guide) => guide.category.id === categoryId
+      const ownGuides = matches.filter((guide) =>
+        guide.categories.some(({ id }) => id === categoryId)
       )
       return (
         <div className="space-y-8">

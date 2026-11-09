@@ -3,10 +3,10 @@ import { ListOrdered } from 'lucide-react'
 import { formatDate } from '@/shared/lib/fileUtils'
 import { cn } from '@/shared/lib/utils'
 import { paths } from '@/shared/routes'
-import { Badge } from '@/shared/ui/Badge'
 import { Card, CardContent } from '@/shared/ui/Card'
 
 import type { GuideSummary } from '../types'
+import { GuideCategoryBadges } from './GuideCategoryBadges'
 import { GuideStatusBadge } from './GuideStatusBadge'
 import { SelectableCardLink } from './SelectableCardLink'
 
@@ -36,7 +36,7 @@ export function GuideCard({ guide, onSelect, className }: GuideCardProps) {
           </p>
         )}
         <div className="mt-auto flex flex-wrap items-center gap-2 pt-2 text-xs text-muted-foreground">
-          <Badge variant="outline">{guide.category.name}</Badge>
+          <GuideCategoryBadges guide={guide} />
           <span className="inline-flex items-center gap-1">
             <ListOrdered className="h-3.5 w-3.5" aria-hidden />
             {guide.stepCount} steg

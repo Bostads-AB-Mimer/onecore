@@ -22,6 +22,13 @@ const tenfast: GuideCategory = {
   createdAt: '',
   updatedAt: '',
 }
+const odoo: GuideCategory = {
+  id: 'c2',
+  name: 'Odoo',
+  parentId: null,
+  createdAt: '',
+  updatedAt: '',
+}
 const contracts: GuideCategory = {
   id: 'c3',
   name: 'Avtal',
@@ -39,10 +46,12 @@ let container: HTMLDivElement
 let root: Root
 // The editor state the picker is bound to, and a way to change it from the
 // outside like a save does.
-let current: EditorCategory | null
-let setCurrent: (value: EditorCategory | null) => void
+type Rows = (EditorCategory | null)[]
 
-function Harness({ initial }: { initial: EditorCategory | null }) {
+let current: Rows
+let setCurrent: (value: Rows) => void
+
+function Harness({ initial }: { initial: Rows }) {
   const [value, setValue] = useState(initial)
   current = value
   setCurrent = setValue
@@ -54,7 +63,7 @@ function Harness({ initial }: { initial: EditorCategory | null }) {
   )
 }
 
-function render(initial: EditorCategory | null) {
+function render(initial: Rows) {
   act(() => {
     root.render(createElement(Harness, { initial }))
   })
@@ -72,6 +81,17 @@ const triggerText = (id: string) =>
   container.querySelector(`#${id}`)?.textContent?.trim()
 const triggerDisabled = (id: string) =>
   container.querySelector<HTMLButtonElement>(`#${id}`)?.disabled
+const button = (name: string) =>
+  [...container.querySelectorAll<HTMLButtonElement>('button')].find(
+    (candidate) =>
+      candidate.textContent?.trim() === name ||
+      candidate.getAttribute('aria-label') === name
+  )
+const click = (name: string) => {
+  const target = button(name)
+  if (!target) throw new Error(`No button "${name}"`)
+  act(() => target.click())
+}
 
 beforeEach(() => {
   container = document.createElement('div')
@@ -87,41 +107,70 @@ afterEach(() => {
 
 describe('CategoryPicker', () => {
   it('lets a new guide pick a category', () => {
-    render(null)
+    render([null])
 
-    expect(triggerDisabled('guide-category')).toBe(false)
+    expect(triggerDisabled('guide-category-0')).toBe(false)
   })
 
   it('shows the parent and the subcategory of a saved guide', () => {
-    render({ id: 'c3' })
+    render([{ id: 'c3' }])
 
-    expect(triggerText('guide-category')).toBe('Tenfast')
-    expect(triggerText('guide-subcategory')).toBe('Avtal')
+    expect(triggerText('guide-category-0')).toBe('Tenfast')
+    expect(triggerText('guide-subcategory-0')).toBe('Avtal')
+  })
+
+  it('shows one row per category', () => {
+    setCategories([tenfast, odoo, contracts])
+    render([{ id: 'c3' }, { id: 'c2' }])
+
+    expect(triggerText('guide-category-0')).toBe('Tenfast')
+    expect(triggerText('guide-subcategory-0')).toBe('Avtal')
+    expect(triggerText('guide-category-1')).toBe('Odoo')
+    expect(container.textContent).toContain('Kategori 2')
+  })
+
+  it('adds an empty row', () => {
+    render([{ id: 'c1' }])
+
+    click('Lägg till kategori')
+
+    expect(current).toEqual([{ id: 'c1' }, null])
+    expect(triggerDisabled('guide-category-1')).toBe(false)
+  })
+
+  it('removes a row but never the last one', () => {
+    setCategories([tenfast, odoo, contracts])
+    render([{ id: 'c1' }, { id: 'c2' }])
+
+    click('Ta bort kategori 1')
+
+    expect(current).toEqual([{ id: 'c2' }])
+    expect(button('Ta bort kategori')).toBeUndefined()
   })
 
   it('keeps a category the list does not know yet', () => {
     // A save that created the subcategory puts its id in the state before
     // the category list has been refetched.
     setCategories([tenfast])
-    render({ name: 'Avtal', parentId: 'c1' })
-    act(() => setCurrent({ id: 'c3' }))
+    render([{ name: 'Avtal', parentId: 'c1' }])
+    act(() => setCurrent([{ id: 'c3' }]))
 
-    expect(current).toEqual({ id: 'c3' })
+    expect(current).toEqual([{ id: 'c3' }])
 
     setCategories([tenfast, contracts])
-    render({ id: 'c3' })
+    render([{ id: 'c3' }])
 
-    expect(current).toEqual({ id: 'c3' })
-    expect(triggerText('guide-category')).toBe('Tenfast')
-    expect(triggerText('guide-subcategory')).toBe('Avtal')
+    expect(current).toEqual([{ id: 'c3' }])
+    expect(triggerText('guide-category-0')).toBe('Tenfast')
+    expect(triggerText('guide-subcategory-0')).toBe('Avtal')
   })
 
   it('keeps a top-level category the list does not know yet', () => {
     setCategories([tenfast])
-    render({ name: 'Odoo' })
-    act(() => setCurrent({ id: 'c2' }))
+    render([{ name: 'Odoo' }])
+    act(() => setCurrent([{ id: 'c2' }]))
 
-    expect(current).toEqual({ id: 'c2' })
-    expect(triggerDisabled('guide-category')).toBe(true)
+    expect(current).toEqual([{ id: 'c2' }])
+    expect(triggerDisabled('guide-category-0')).toBe(true)
   })
 })
