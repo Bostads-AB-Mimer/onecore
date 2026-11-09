@@ -20,7 +20,7 @@ Routen gör det som kan avgöras utan att fråga någon annan tjänst, innan nå
 | Inte ett giltigt personnummer eller samordningsnummer                                        | 422 `invalid-national-id`                                   |
 | Fyller inte 16 i år                                                                          | 422 `too-young`                                             |
 
-Åldersregeln går på födelseår, inte exakt ålder: man får registrera sig från det kalenderår man fyller 16, som Mina sidor alltid har lovat. Året räknas i svensk tid, inte i containerns UTC. Contacts-tjänsten kräver fortfarande exakt 16 år när kontakten skapas och svarar då `invalid-national-id`. Routen har redan kontrollerat numret med samma regler som tjänsten, så processen översätter det till `too-young` tills tjänsten låter anroparen välja regel.
+Åldersregeln går på födelseår, inte exakt ålder: man får registrera sig från det kalenderår man fyller 16, som Mina sidor alltid har lovat. Året räknas i svensk tid, inte i containerns UTC. Processen skapar kontakten med `ageRule: 'birth-year'`, så contacts-tjänsten använder samma regel, också den i svensk tid. Skapa från property-tree behåller exakt 16 år.
 
 Personnumret normaliseras till tolv siffror med `toContactsUsername`, samma form och samma funktion som Keycloak-användarnamnet läses med vid inloggning.
 
@@ -31,20 +31,19 @@ flowchart TD
 A[Valid body, personnummer as 12 digits] --> L(Look up person contacts)
 L --> Lo{Result}
 Lo --> |Lookup failed| F1[503 person-lookup-failed<br/>nothing created]
-Lo --> |At least one active| E[200 existing<br/>nothing changed]
-Lo --> |Only inactive| I[200 inactive<br/>nothing changed]
+Lo --> |First contact active| E[200 existing<br/>nothing changed]
+Lo --> |First contact inactive| I[200 inactive<br/>nothing changed]
 Lo --> |None| C(Create contact in Xpand<br/>via contacts)
 
 C --> Co{Result}
 Co --> |duplicate-contact| L2(Look up person contacts again)
 Co --> |contacts-service-error:<br/>no answer| U[502 contact-outcome-unknown<br/>contact may exist]
-Co --> |invalid-national-id:<br/>exact-age rule| Y[422 too-young<br/>nothing created]
 Co --> |Any other error| F2[Error status from the create mapping<br/>nothing created]
 Co --> |Created| S
 
 L2 --> L2o{Result}
-L2o --> |Active| E
-L2o --> |Inactive, or none:<br/>company, deleted or GDPR row| I
+L2o --> |First contact active| E
+L2o --> |First contact inactive, or none:<br/>company, deleted or GDPR row| I
 L2o --> |Lookup failed| F1
 
 S[Contact exists] --> P(Profile and queues<br/>shared process)
@@ -95,9 +94,13 @@ T --> |Yes| X2[login-setup-failed]
 
 ## Uppslagningen av personkontakter
 
-`lookupPersonContacts` i [`person-contacts-lookup.ts`](./person-contacts-lookup.ts) ska ge alla personkontakter för ett personnummer, var och en markerad aktiv eller inaktiv. Personkontakt betyder en P-kod som inte är mjukraderad och inte en GDPR-rad.
+Processen frågar contacts-tjänsten (`GET /contacts/by-nid/:nid/person-contacts`) efter alla personkontakter för personnumret: P-koder som inte är raderade, med numret lagrat i någon av formerna. Företag och raderade kontakter räknas inte, men dubblettkontrollen vid skapandet hittar dem ändå.
 
-**Den är inte byggd än.** Contacts-tjänsten saknar en sådan uppslagning, och vad "aktiv" betyder i Xpand utreds fortfarande. Tills den finns svarar den `not-implemented`, och registreringen svarar 503 `person-lookup-failed` utan att skapa något, i stället för att gissa vem som är aktiv.
+Kontakterna kommer i den ordning inloggningen rangordnar dem, och var och en är markerad aktiv eller inaktiv. Aktiv betyder att kontaktens Sökande-roll används, vilket webapi kräver för att släppa in personen.
+
+**Den första kontakten avgör.** Inloggningen använder bara den, och nekar den om den är inaktiv. Är den aktiv svarar registreringen `existing`, annars `inactive`. En aktiv kontakt längre ner hjälper inte: att be personen logga in skulle bara sluta med ett nej.
+
+Svarar tjänsten inte, eller med något oväntat, blir svaret 503 `person-lookup-failed` och ingenting skapas.
 
 ## Loggning
 

@@ -37,8 +37,6 @@ const statusForFailure = (error: RegisterApplicantError): number => {
       return 503
     case 'contact-outcome-unknown':
       return 502
-    case 'too-young':
-      return 422
     default:
       return CREATE_CONTACT_STATUS[error]
   }
@@ -58,8 +56,8 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
    *       creates the person's login in the mimer-contacts realm and e-mails them a link to choose a password.
    *
    *       Never creates a second contact for a personnummer. When one already exists the answer is 200 with
-   *       outcome `existing` (an active person contact: log in) or `inactive` (only inactive contacts, or a row
-   *       that is no person contact: contact kundtjänst), and nothing is changed, in Keycloak either.
+   *       outcome `existing` (the contact login uses is active: log in) or `inactive` (that contact is inactive,
+   *       or the only row is no person contact: contact kundtjänst), and nothing is changed, in Keycloak either.
    *
    *       NOT TRANSACTIONAL. The contact is created in Xpand and cannot be removed. Once it exists the answer is
    *       always 201, and a later step that failed is listed under `warnings`. Do not retry a request that may
@@ -126,7 +124,8 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
    *           not show the new one; send the person to kundtjänst).
    *       '200':
    *         description: |
-   *           Nothing was created. `content` is `{outcome: "existing"}` or `{outcome: "inactive"}`.
+   *           Nothing was created. `content` is `{outcome: "existing"}` (the person can log in) or
+   *           `{outcome: "inactive"}` (they have a contact but cannot log in with it; send them to kundtjänst).
    *       '400':
    *         description: Invalid body (invalid-request)
    *       '422':

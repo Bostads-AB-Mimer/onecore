@@ -233,7 +233,7 @@ describe('POST /auth/contacts/register', () => {
     ['person-lookup-failed', 503],
     ['xpand-unavailable', 503],
     ['xpand-rejected', 422],
-    ['too-young', 422],
+    ['invalid-national-id', 422],
     ['contact-outcome-unknown', 502],
   ] as const)('answers a %s failure with %i', async (error, status) => {
     register.mockResolvedValue({ outcome: 'failed', error })
