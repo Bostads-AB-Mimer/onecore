@@ -14,14 +14,10 @@ import type {
   RegisterContactRequestBody,
   RegistrationWarning,
 } from '../../services/auth-service/contacts-registration-schema'
-import { lookupPersonContacts } from './person-contacts-lookup'
 import { setUpNewContactProfileAndWaitingLists } from './new-contact-profile-and-waiting-lists'
 
 export type RegisterApplicantError =
-  | Exclude<
-      CreateContactError,
-      'contacts-service-error' | 'invalid-national-id'
-    >
+  | Exclude<CreateContactError, 'contacts-service-error'>
   | 'person-lookup-failed'
   /**
    * The contacts service did not answer the create (a timeout, a dropped connection) or
@@ -30,8 +26,6 @@ export type RegisterApplicantError =
    * no profile, queues or login.
    */
   | 'contact-outcome-unknown'
-  /** Old enough by birth year, but the contacts service still requires an exact age of 16. */
-  | 'too-young'
 
 export type RegisterApplicantResult =
   | {
@@ -39,12 +33,12 @@ export type RegisterApplicantResult =
       contactCode: string
       warnings: RegistrationWarning[]
     }
-  /** At least one active person contact already has the personnummer. Nothing was changed. */
+  /** The person can log in: the contact login uses is active. Nothing was changed. */
   | { outcome: 'existing' }
   /**
-   * Only inactive contacts have the personnummer, or the duplicate check matched a row that is
-   * not a person contact (a company, a deleted contact, a GDPR placeholder). Nothing was
-   * changed; kundtjänst has to help.
+   * The person has a contact but cannot log in with it: the contact login uses is inactive, or
+   * the duplicate check matched a row that is not a person contact (a company, a deleted
+   * contact, a GDPR placeholder). Nothing was changed; kundtjänst has to help.
    */
   | { outcome: 'inactive' }
   /** Nothing was created, except after 'contact-outcome-unknown', when it is not known. */
@@ -77,16 +71,28 @@ type LoginSetup =
   | 'bound-to-other-contact'
   | 'failed'
 
+/**
+ * Whether the personnummer already has a person contact, and whether login accepts it.
+ *
+ * The contacts come in the order login prefers them, and login only ever uses the first, so
+ * that one decides. An active contact further down would not let the person in, and telling
+ * them to log in would only end in a refusal.
+ */
 const findExisting = async (nationalId: string): Promise<Existing> => {
-  const result = await lookupPersonContacts(nationalId)
+  const result = await contactsAdapter.getPersonContactsByNationalId(nationalId)
   if (!result.ok) {
-    logger.error({ err: result.err }, 'registerApplicant.personLookupFailed')
+    // 'invalid-national-id' as well: the route checked the number with the same rules.
+    logger.error(
+      { err: result.err, statusCode: result.statusCode },
+      'registerApplicant.personLookupFailed'
+    )
     return { outcome: 'failed', error: 'person-lookup-failed' }
   }
-  if (result.data.some((contact) => contact.isActive)) {
-    return { outcome: 'existing' }
-  }
-  return result.data.length > 0 ? { outcome: 'inactive' } : { outcome: 'none' }
+  const [loginContact] = result.data
+  if (!loginContact) return { outcome: 'none' }
+  return loginContact.isActive
+    ? { outcome: 'existing' }
+    : { outcome: 'inactive' }
 }
 
 const toCreateContactBody = (
@@ -104,6 +110,8 @@ const toCreateContactBody = (
     },
   ],
   phoneNumbers: application.phoneNumbers,
+  // From the calendar year they turn 16, as the route has already checked.
+  ageRule: 'birth-year',
 })
 
 /**
@@ -210,12 +218,6 @@ export const registerApplicant = async (
         'registerApplicant.contactOutcomeUnknown'
       )
       return { outcome: 'failed', error: 'contact-outcome-unknown' }
-    }
-    if (created.err === 'invalid-national-id') {
-      // The route has already checked the number with the same rules the service uses, so
-      // the service refusing it is its exact-age rule, stricter than registration's
-      // birth-year rule. Remove once the service lets the caller choose the rule.
-      return { outcome: 'failed', error: 'too-young' }
     }
     if (created.err !== 'duplicate-contact') {
       return { outcome: 'failed', error: created.err }

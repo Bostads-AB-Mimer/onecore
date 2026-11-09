@@ -7,7 +7,6 @@ import {
   type ContactsKeycloakAdmin,
 } from '../../../services/auth-service/contacts-keycloak-provisioning'
 import type { RegisterContactRequestBody } from '../../../services/auth-service/contacts-registration-schema'
-import { lookupPersonContacts } from '../person-contacts-lookup'
 import {
   type NewContactProfileAndWaitingListsResult,
   setUpNewContactProfileAndWaitingLists,
@@ -19,11 +18,10 @@ jest.mock('@onecore/utilities', () => ({
 }))
 
 jest.mock('../../../adapters/contacts-adapter', () => ({
-  contactsAdapter: { createContact: jest.fn() },
-}))
-
-jest.mock('../person-contacts-lookup', () => ({
-  lookupPersonContacts: jest.fn(),
+  contactsAdapter: {
+    createContact: jest.fn(),
+    getPersonContactsByNationalId: jest.fn(),
+  },
 }))
 
 jest.mock('../new-contact-profile-and-waiting-lists', () => ({
@@ -40,9 +38,10 @@ jest.mock(
   })
 )
 
-const lookup = lookupPersonContacts as jest.MockedFunction<
-  typeof lookupPersonContacts
->
+const lookup =
+  contactsAdapter.getPersonContactsByNationalId as jest.MockedFunction<
+    typeof contactsAdapter.getPersonContactsByNationalId
+  >
 const createContact = contactsAdapter.createContact as jest.MockedFunction<
   typeof contactsAdapter.createContact
 >
@@ -69,8 +68,16 @@ const application: RegisterContactRequestBody = {
   waitingLists: [WaitingListType.Housing],
 }
 
+// In the order login prefers them: login uses the first.
 const noContacts = { ok: true as const, data: [] }
 const activeContact = {
+  ok: true as const,
+  data: [
+    { contactCode: 'P000002', isActive: true },
+    { contactCode: 'P000001', isActive: false },
+  ],
+}
+const activeFurtherDown = {
   ok: true as const,
   data: [
     { contactCode: 'P000001', isActive: false },
@@ -117,7 +124,7 @@ describe('registerApplicant', () => {
   })
 
   describe('when the personnummer already has contacts', () => {
-    it("answers 'existing' for an active person contact and changes nothing", async () => {
+    it("answers 'existing' when the contact login uses is active, and changes nothing", async () => {
       lookup.mockResolvedValue(activeContact)
 
       await expect(registerApplicant(application)).resolves.toEqual({
@@ -138,8 +145,18 @@ describe('registerApplicant', () => {
       expect(connect).not.toHaveBeenCalled()
     })
 
+    it("answers 'inactive' when only a contact further down is active, since login uses the first", async () => {
+      lookup.mockResolvedValue(activeFurtherDown)
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'inactive',
+      })
+      expect(createContact).not.toHaveBeenCalled()
+      expect(connect).not.toHaveBeenCalled()
+    })
+
     it('fails without creating anything when the lookup fails', async () => {
-      lookup.mockResolvedValue({ ok: false, err: 'not-implemented' })
+      lookup.mockResolvedValue({ ok: false, err: 'contacts-service-error' })
 
       await expect(registerApplicant(application)).resolves.toEqual({
         outcome: 'failed',
@@ -161,6 +178,7 @@ describe('registerApplicant', () => {
         addresses: [application.address],
         emailAddresses: [{ emailAddress, type: 'private', isPrimary: true }],
         phoneNumbers: application.phoneNumbers,
+        ageRule: 'birth-year',
       })
     })
 
@@ -191,20 +209,6 @@ describe('registerApplicant', () => {
       })
       expect(setUp).not.toHaveBeenCalled()
       expect(connect).not.toHaveBeenCalled()
-    })
-
-    it("answers 'too-young' when the service refuses the number on its exact-age rule", async () => {
-      createContact.mockResolvedValue({
-        ok: false,
-        err: 'invalid-national-id',
-        statusCode: 422,
-        detail: 'Kunden måste vara minst 16 år.',
-      })
-
-      await expect(registerApplicant(application)).resolves.toEqual({
-        outcome: 'failed',
-        error: 'too-young',
-      })
     })
 
     it("answers 'existing' when the duplicate check fires because someone registered in between", async () => {
