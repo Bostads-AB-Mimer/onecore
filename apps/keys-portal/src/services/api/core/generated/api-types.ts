@@ -12610,7 +12610,7 @@ export interface paths {
   '/v1/tenant-notifications/lease-termination-confirmation': {
     /**
      * Send a lease termination confirmation email
-     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking lease is terminated. Only `leaseId` is used: OneCore looks up the lease (end date, type, preferred move-out date, rental object address, holders) and each holder in the contacts service, then emails every holder with an email address. Any other body fields are ignored. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
+     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking space or garage lease is terminated. Only `leaseId` is used: OneCore looks up the lease (end date, type, preferred move-out date, rental object address, holders) and each holder in the contacts service, then emails every holder with an email address. Any other body fields are ignored. The 200 body says how many holders were emailed and which were skipped for lack of a valid email address. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
      */
     post: {
       requestBody?: {
@@ -12627,6 +12627,8 @@ export interface paths {
               content: {
                 /** @enum {boolean} */
                 sent: true
+                sentCount: number
+                skippedContactCodes: string[]
               }
             }
           }
