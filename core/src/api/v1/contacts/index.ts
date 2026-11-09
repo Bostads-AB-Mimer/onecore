@@ -16,16 +16,17 @@ import {
 } from './schema'
 import {
   generateRouteMetadata,
-  logger,
   makeSuccessResponseBody,
   RouteMetadata,
 } from '@onecore/utilities'
-import { paginatedResponseSchema, WaitingListType } from '@onecore/types'
+import { paginatedResponseSchema } from '@onecore/types'
 
 import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
-import { addRelation, removeRelation } from '../../../processes/contacts'
-import * as leasingAdapter from '../../../adapters/leasing-adapter'
-import { makeClientApplicationProfileRequestParams } from '../../../services/lease-service/helpers/application-profile'
+import {
+  addRelation,
+  removeRelation,
+  setUpNewContactProfileAndWaitingLists,
+} from '../../../processes/contacts'
 import { transformContact, transformContacts } from './transform'
 import { Config } from '@/common/config'
 import { AdapterResult } from '@/adapters/types'
@@ -52,13 +53,6 @@ const CREATE_CONTACT_STATUS: Record<string, CreateContactFailureStatus> = {
   'xpand-unavailable': 503,
   'write-backend-not-configured': 503,
   'contacts-service-error': 502,
-}
-
-/** Swedish queue names for caseworker-facing warnings. */
-const WAITING_LIST_LABELS: Record<WaitingListType, string> = {
-  [WaitingListType.Housing]: 'bostad',
-  [WaitingListType.ParkingSpace]: 'bilplats',
-  [WaitingListType.Storage]: 'förråd',
 }
 
 export const routes = (router: OkapiRouter, config: Config) => {
@@ -171,85 +165,18 @@ export const routes = (router: OkapiRouter, config: Config) => {
       }
 
       const { contactCode } = created.data
-      const warnings: string[] = []
 
-      // From here on the contact exists and we cannot remove it. Every remaining step
-      // reports its own outcome; none of them may turn the response into an
-      // error, because that would invite a retry that cannot succeed.
-      let profileStatus: 'created' | 'skipped' | 'failed' = 'skipped'
-      let profileError: string | undefined
-
-      if (applicationProfile) {
-        const result =
-          await leasingAdapter.createOrUpdateApplicationProfileByContactCode(
-            contactCode,
-            makeClientApplicationProfileRequestParams(
-              applicationProfile,
-              undefined
-            )
-          )
-
-        if (result.ok) {
-          profileStatus = 'created'
-        } else {
-          profileStatus = 'failed'
-          profileError = result.err
-          warnings.push(
-            'Kunden skapades men hushållsuppgifterna kunde inte sparas.'
-          )
-          logger.error(
-            { contactCode, err: result.err },
-            'createContact.applicationProfileFailed'
-          )
-        }
-      }
-
-      // Sequential rather than concurrent: these are writes against the same
-      // contact, and Xpand's own registration flow issues them one at a time.
-      const waitingListResults: {
-        waitingListType: WaitingListType
-        status: 'created' | 'failed'
-        error?: string
-      }[] = []
-
-      const failedWaitingList = (
-        waitingListType: WaitingListType,
-        error: string
-      ) => {
-        waitingListResults.push({ waitingListType, status: 'failed', error })
-        warnings.push(
-          `Kunden skapades men kunde inte ställas i kön för ${WAITING_LIST_LABELS[waitingListType]}.`
-        )
-      }
-
-      for (const waitingListType of waitingLists) {
-        try {
-          const res = await leasingAdapter.addApplicantToWaitingList(
-            contactCode,
-            waitingListType
-          )
-
-          // The status has to be checked explicitly: the adapter returns the
-          // raw axios response, and the shared instance treats everything below
-          // 500 as a resolved call. Without this a 404 from leasing would be
-          // reported to the caseworker as a queue the customer is now in.
-          if (res.status === 201) {
-            waitingListResults.push({ waitingListType, status: 'created' })
-          } else {
-            failedWaitingList(waitingListType, String(res.status))
-            logger.error(
-              { contactCode, waitingListType, status: res.status },
-              'createContact.addToWaitingListRejected'
-            )
-          }
-        } catch (err) {
-          failedWaitingList(waitingListType, 'unknown')
-          logger.error(
-            { contactCode, waitingListType, err },
-            'createContact.addToWaitingListFailed'
-          )
-        }
-      }
+      // From here on the contact exists and we cannot remove it, so the
+      // remaining steps report problems as warnings rather than an error, which
+      // would invite a retry that cannot succeed.
+      const {
+        applicationProfile: profileOutcome,
+        waitingLists: waitingListOutcomes,
+        warnings,
+      } = await setUpNewContactProfileAndWaitingLists(contactCode, {
+        applicationProfile,
+        waitingLists,
+      })
 
       ctx.status = 201
       ctx.body = {
@@ -259,11 +186,8 @@ export const routes = (router: OkapiRouter, config: Config) => {
             contact: created.data.contact
               ? transformContact(created.data.contact)
               : null,
-            applicationProfile: {
-              status: profileStatus,
-              ...(profileError ? { error: profileError } : {}),
-            },
-            waitingLists: waitingListResults,
+            applicationProfile: profileOutcome,
+            waitingLists: waitingListOutcomes,
           },
           metadata
         ),
