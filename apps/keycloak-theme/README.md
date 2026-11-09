@@ -30,12 +30,30 @@ registration and contact_code code can run against it. Point core at it with:
 AUTH__KEYCLOAK__URL=http://localhost:18080
 AUTH__KEYCLOAK__CONTACTS__CLIENT_SECRET=mina-sidor-secret
 AUTH__KEYCLOAK__CONTACTS__PROVISIONING__CLIENT_SECRET=provisioning-secret
-MINA_SIDOR__URL=http://localhost:3000/
+AUTH__KEYCLOAK__CONTACTS__SET_PASSWORD_REDIRECT_URI=http://localhost:3000/
 ```
 
 `AUTH__KEYCLOAK__URL` is also where core checks staff tokens (the `onecore` realm),
 which this Keycloak doesn't have, so set it only for a core run that exercises the
 tenant realm.
+
+### What a shared realm needs
+
+`setup-realm.sh` is the reference for what core's registration and login need. In dev
+and prod, `mimer-contacts` is set up by hand, so check each of these there:
+
+- **Themes:** login and e-mail theme `mimer`.
+- **Login:** _Login with email_ off, _Duplicate emails_ on. Households share an
+  address, and with duplicates off the second person's registration creates the
+  contact but no login.
+- **User profile:** `contact_code` and `account_type` declared, editable by admin only.
+  Keycloak 26 drops an undeclared attribute without an error. First name, last name and
+  e-mail not required, or a new user is stopped at an "update profile" page.
+- **`mina-sidor` client:** a single-valued user-attribute mapper for `contact_code`
+  into the access token. Core's `AUTH__KEYCLOAK__CONTACTS__SET_PASSWORD_REDIRECT_URI`
+  must be one of its valid redirect URIs, or Keycloak refuses the set-password e-mail.
+- **`mimer-contacts-provisioning` client:** service account with `realm-management`
+  `view-users` and `manage-users`.
 
 Theme caching is off, so edits to templates, texts and CSS show on reload (use a
 fresh or incognito window for CSS, the browser caches it). Changes to `src/` or the

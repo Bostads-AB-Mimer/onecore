@@ -4,7 +4,8 @@
 #   Login page: http://localhost:18080/realms/mimer-contacts/account  (198501011236 / Test1234!)
 #   Mail (password reset, set password): http://localhost:18025
 #   Clients as core uses them (config auth.keycloak.contacts): mina-sidor / mina-sidor-secret and
-#   mimer-contacts-provisioning / provisioning-secret, with Mina sidor at http://localhost:3000/
+#   mimer-contacts-provisioning / provisioning-secret, with Mina sidor (and the set-password
+#   link's redirect URI) at http://localhost:3000/
 set -euo pipefail
 KC=http://localhost:18080
 R=mimer-contacts
@@ -29,9 +30,12 @@ echo "== realm"
 for r in $R fake-bankid; do curl -s -o /dev/null -X DELETE -H "Authorization: Bearer $(tok)" "$KC/admin/realms/$r" || true; done
 # Swedish only: one supported locale hides the language picker. Internationalization must stay
 # enabled, otherwise Keycloak falls back to English instead of the default locale.
+# Duplicate e-mails allowed: people in one household register with a shared address, and
+# Keycloak's default refuses the second user. Safe because login by e-mail is off.
 api POST "" '{
   "realm": "mimer-contacts", "enabled": true,
   "registrationAllowed": false, "resetPasswordAllowed": true, "rememberMe": false, "loginWithEmailAllowed": false,
+  "duplicateEmailsAllowed": true,
   "loginTheme": "mimer", "emailTheme": "mimer",
   "internationalizationEnabled": true, "supportedLocales": ["sv"], "defaultLocale": "sv",
   "smtpServer": {"host": "mailpit", "port": "1025", "from": "noreply@mimer.example.test", "fromDisplayName": "Mimer"}
@@ -52,10 +56,17 @@ api PUT "/$R/users/profile" "$(jq '(.attributes[] | select(.name == "email" or .
 
 echo "== clients"
 # The OIDC client of Mina sidor. Core's set-password e-mail ends on one of its redirect URIs.
+# Its tokens carry the contact_code claim, single-valued, which core reads at login. Without
+# the mapper core would "repair" contact_code on every login and the claim would still be missing.
 api POST "/$R/clients" '{"clientId": "mina-sidor", "publicClient": false, "secret": "mina-sidor-secret",
   "standardFlowEnabled": true, "directAccessGrantsEnabled": false,
   "redirectUris": ["http://localhost:3000/*"], "webOrigins": ["http://localhost:3000"],
-  "attributes": {"pkce.code.challenge.method": "S256"}}'
+  "attributes": {"pkce.code.challenge.method": "S256"},
+  "protocolMappers": [{"name": "contact_code", "protocol": "openid-connect",
+    "protocolMapper": "oidc-usermodel-attribute-mapper",
+    "config": {"user.attribute": "contact_code", "claim.name": "contact_code", "jsonType.label": "String",
+      "multivalued": "false", "access.token.claim": "true", "id.token.claim": "true",
+      "userinfo.token.claim": "true"}}]}'
 # Core's admin client: reads users and sets contact_code at login, creates users and sends the
 # set-password e-mail at registration.
 api POST "/$R/clients" '{"clientId": "mimer-contacts-provisioning", "publicClient": false,
