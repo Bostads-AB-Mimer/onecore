@@ -33,21 +33,13 @@ const DateOnlySchema = z
 /**
  * Public Core API request body — notification kind is implied by the URL.
  *
- * Only `leaseId` is needed: OneCore reads everything else from the lease and
- * the contacts service. The other fields are optional so Tenfast's existing
- * integration, which sends all of them, keeps working unchanged:
- * - `to`, `firstName`: ignored — recipients and names come from contacts.
- * - `contactCode`: added to the lease's holders as a recipient.
- * - `endDate`, `rentalType`: fallbacks when the lease has no end date or is
- *   not typed as a parking space contract.
+ * Only `leaseId` is used: OneCore reads everything else from the lease and
+ * the contacts service. Tenfast still sends `to`, `contactCode`, `firstName`,
+ * `endDate` and `rentalType`; parsing strips them so they can never override
+ * the lease data.
  */
 export const LeaseTerminationConfirmationRequestSchema = z.object({
   leaseId: z.string().min(1),
-  to: z.string().email().optional(),
-  contactCode: z.string().min(1).optional(),
-  firstName: z.string().min(1).optional(),
-  endDate: DateOnlySchema.optional(),
-  rentalType: LeaseTerminationRentalTypeSchema.optional(),
   correlationId: z.string().min(1).optional(),
 })
 
@@ -81,7 +73,8 @@ export type LeaseTerminationTenant = z.infer<
 export const LeaseTerminationConfirmationEmailSchema = z.object({
   to: z.string().email(),
   contactCode: z.string().min(1),
-  firstName: z.string().min(1),
+  // May be empty: a holder without a name in contacts still gets the email.
+  firstName: z.string(),
   lastName: z.string(),
   leaseId: z.string().min(1),
   endDate: DateOnlySchema,

@@ -12610,7 +12610,7 @@ export interface paths {
   '/v1/tenant-notifications/lease-termination-confirmation': {
     /**
      * Send a lease termination confirmation email
-     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking lease is terminated. Only `leaseId` is required: OneCore looks up the lease (end date, type, preferred move-out date, rental object address, holders) and each holder in the contacts service, then emails every holder with an email address. The other body fields are optional and kept for compatibility: `to` and `firstName` are ignored, `contactCode` adds a recipient, `endDate` and `rentalType` are fallbacks when the lease lacks them. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
+     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking lease is terminated. Only `leaseId` is used: OneCore looks up the lease (end date, type, preferred move-out date, rental object address, holders) and each holder in the contacts service, then emails every holder with an email address. Any other body fields are ignored. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
      */
     post: {
       requestBody?: {
@@ -12635,7 +12635,8 @@ export interface paths {
         400: {
           content: {
             'application/json': {
-              error: string
+              /** @enum {string} */
+              error: 'missing-idempotency-key' | 'invalid-request'
               detail?: string
             }
           }
@@ -12644,7 +12645,8 @@ export interface paths {
         404: {
           content: {
             'application/json': {
-              error: string
+              /** @enum {string} */
+              error: 'lease-not-found'
               detail?: string
             }
           }
@@ -12653,7 +12655,8 @@ export interface paths {
         409: {
           content: {
             'application/json': {
-              error: string
+              /** @enum {string} */
+              error: 'idempotency-conflict'
               detail?: string
             }
           }
@@ -12662,7 +12665,12 @@ export interface paths {
         422: {
           content: {
             'application/json': {
-              error: string
+              /** @enum {string} */
+              error:
+                | 'missing-end-date'
+                | 'unsupported-rental-type'
+                | 'contact-not-found'
+                | 'no-recipient'
               detail?: string
             }
           }
@@ -12671,7 +12679,9 @@ export interface paths {
         502: {
           content: {
             'application/json': {
-              error: string
+              /** @enum {string} */
+              error:
+                'lease-lookup-failed' | 'contact-lookup-failed' | 'send-failed'
               detail?: string
             }
           }
@@ -17876,14 +17886,6 @@ export interface components {
     }
     SendLeaseTerminationConfirmationRequest: {
       leaseId: string
-      /** Format: email */
-      to?: string
-      contactCode?: string
-      firstName?: string
-      /** Format: date */
-      endDate?: string
-      /** @enum {string} */
-      rentalType?: 'Bilplats'
       correlationId?: string
     }
     ContactV1:

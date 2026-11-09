@@ -8,6 +8,7 @@ import {
 } from '@onecore/types'
 import type { Contact } from '@onecore/contacts/schema'
 import { logger } from '@onecore/utilities'
+import { z } from 'zod'
 
 import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { contactsAdapter } from '../../../adapters/contacts-adapter'
@@ -17,20 +18,16 @@ import {
   IdempotencyStore,
   tenantNotificationIdempotencyStore,
 } from './idempotency'
+import { SendLeaseTerminationConfirmationErrorCodes } from './schema'
 
 /** The integration's request plus server-set audit attribution. */
 export type LeaseTerminationNotification =
   LeaseTerminationConfirmationRequest & { triggeredByUser?: string }
 
-export type SendLeaseTerminationConfirmationError =
-  | 'idempotency-conflict'
-  | 'lease-not-found'
-  | 'lease-lookup-failed'
-  | 'missing-end-date'
-  | 'unsupported-rental-type'
-  | 'contact-lookup-failed'
-  | 'no-recipient'
-  | 'send-failed'
+// The route's 400s (missing key, invalid body) are decided before this runs.
+export type SendLeaseTerminationConfirmationError = z.infer<
+  (typeof SendLeaseTerminationConfirmationErrorCodes)[404 | 409 | 422 | 502]
+>
 
 export type SendLeaseTerminationConfirmationResult =
   | { ok: true; duplicate: boolean }
@@ -95,18 +92,15 @@ type LeaseFacts = {
   rentalObjectAddress: string | undefined
 }
 
-// The lease is the source of truth; the request's endDate/rentalType are only
-// fallbacks for integrations that still send them (see the request schema).
+// Only parking space contracts are supported (see LeaseTerminationRentalType).
 const resolveRentalType = (
-  lease: Lease,
-  notification: LeaseTerminationNotification
+  lease: Lease
 ): LeaseTerminationRentalType | undefined =>
-  lease.type?.trim() === LeaseType.ParkingSpaceContract
-    ? 'Bilplats'
-    : notification.rentalType
+  lease.type?.trim() === LeaseType.ParkingSpaceContract ? 'Bilplats' : undefined
 
+// Everything in the email comes from the lease — never from the request.
 const getLeaseFacts = async (
-  notification: LeaseTerminationNotification
+  leaseId: string
 ): Promise<
   | { ok: true; data: LeaseFacts }
   | {
@@ -120,11 +114,11 @@ const getLeaseFacts = async (
 > => {
   let lease: Lease | null
   try {
-    lease = await leasingAdapter.getLease(notification.leaseId)
+    lease = await leasingAdapter.getLease(leaseId)
   } catch (err: unknown) {
     logger.error(
       {
-        leaseId: notification.leaseId,
+        leaseId,
         error: err instanceof Error ? err.message : String(err),
       },
       'sendLeaseTerminationConfirmation: lease lookup failed'
@@ -138,24 +132,20 @@ const getLeaseFacts = async (
 
   // JSON from the leasing service: dates arrive as strings despite the type.
   const leaseEndDate = toDateString(lease.leaseEndDate)
-  const endDate = leaseEndDate
-    ? new Date(`${leaseEndDate}T00:00:00.000Z`)
-    : notification.endDate
-  if (!endDate) {
+  if (!leaseEndDate) {
     return { ok: false, error: 'missing-end-date' }
   }
+  const endDate = new Date(`${leaseEndDate}T00:00:00.000Z`)
 
-  const rentalType = resolveRentalType(lease, notification)
+  const rentalType = resolveRentalType(lease)
   if (!rentalType) {
     return { ok: false, error: 'unsupported-rental-type' }
   }
 
-  // Every holder on the lease gets the confirmation. A contactCode from the
-  // caller is kept even if the lease lists no tenants, so a gap in the lease
-  // data never silently drops the one recipient we were given.
+  // Every holder on the lease gets the confirmation.
   const contactCodes = [
     ...new Set(
-      [...(lease.tenantContactIds ?? []), notification.contactCode ?? '']
+      (lease.tenantContactIds ?? [])
         .map((code) => code.trim())
         .filter((code) => code.length > 0)
     ),
@@ -178,7 +168,10 @@ const getLeaseFacts = async (
 const getHolders = async (
   contactCodes: string[],
   leaseId: string
-): Promise<Contact[] | null> => {
+): Promise<
+  | { ok: true; data: Contact[] }
+  | { ok: false; error: 'contact-lookup-failed' | 'contact-not-found' }
+> => {
   const result = await contactsAdapter
     .getByContactCodeBatch(contactCodes, {
       includeEmail: true,
@@ -192,29 +185,34 @@ const getHolders = async (
       return null
     })
 
-  if (!result) return null
+  if (!result) return { ok: false, error: 'contact-lookup-failed' }
 
   if (!result.ok) {
     logger.error(
       { leaseId, err: result.err, statusCode: result.statusCode },
       'sendLeaseTerminationConfirmation: contacts lookup failed'
     )
-    return null
+    return { ok: false, error: 'contact-lookup-failed' }
   }
 
   const byCode = new Map(result.data.map((c) => [c.contactCode.trim(), c]))
   const missing = contactCodes.filter((code) => !byCode.has(code))
   if (missing.length > 0) {
-    // The lease names these holders, so they are expected to exist.
+    // The lease names these holders, so they are expected to exist. This is a
+    // data problem, not an outage: a retry will not help, so report it apart
+    // from contact-lookup-failed.
     logger.error(
       { leaseId, missing },
       'sendLeaseTerminationConfirmation: lease holders missing in contacts'
     )
-    return null
+    return { ok: false, error: 'contact-not-found' }
   }
 
   // Keep lease order so both holders' emails list them identically.
-  return contactCodes.map((code) => byCode.get(code) as Contact) // every code checked above
+  return {
+    ok: true,
+    data: contactCodes.map((code) => byCode.get(code) as Contact), // every code checked above
+  }
 }
 
 // Per-recipient key, so a retry after a partial failure only resends to the
@@ -243,17 +241,17 @@ export const sendLeaseTerminationConfirmation = async (
     return { ok: false as const, error }
   }
 
-  const leaseFacts = await getLeaseFacts(notification)
+  const leaseFacts = await getLeaseFacts(notification.leaseId)
   if (!leaseFacts.ok) return fail(leaseFacts.error)
 
   const holders = await getHolders(
     leaseFacts.data.contactCodes,
     notification.leaseId
   )
-  if (!holders) return fail('contact-lookup-failed')
+  if (!holders.ok) return fail(holders.error)
 
   const recipients: Recipient[] = []
-  for (const contact of holders) {
+  for (const contact of holders.data) {
     const emailAddress = primaryEmail(contact)
     if (emailAddress) {
       recipients.push({ contact, emailAddress })
@@ -267,13 +265,27 @@ export const sendLeaseTerminationConfirmation = async (
 
   if (recipients.length === 0) return fail('no-recipient')
 
-  const tenants = holders.map(toLeaseTerminationTenant)
+  const tenants = holders.data.map(toLeaseTerminationTenant)
 
   const results = await Promise.all(
     recipients.map(async ({ contact, emailAddress }) => {
       const key = recipientKey(idempotencyKey, contact.contactCode)
+      const claim = store.claim(key, payloadHash)
       // Already sent on an earlier, partially failed attempt.
-      if (store.claim(key, payloadHash) !== 'claimed') return true
+      if (claim === 'duplicate') return true
+      if (claim !== 'claimed') {
+        // 'conflict' or 'in-flight': we cannot tell whether this holder got
+        // the email, so never report it as sent.
+        logger.error(
+          {
+            leaseId: notification.leaseId,
+            contactCode: contact.contactCode,
+            claim,
+          },
+          'sendLeaseTerminationConfirmation: recipient key not claimable'
+        )
+        return false
+      }
 
       const { firstName, lastName } = nameOf(contact)
       const email: LeaseTerminationConfirmationEmail = {

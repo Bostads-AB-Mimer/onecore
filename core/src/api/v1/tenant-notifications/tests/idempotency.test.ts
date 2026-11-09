@@ -5,12 +5,8 @@ import {
 
 describe('hashNotificationPayload', () => {
   const base = {
-    to: 'tenant@example.com',
-    contactCode: 'P123456',
-    firstName: 'Anna',
     leaseId: '307-002-11-0201/11',
-    endDate: new Date('2026-10-31'),
-    rentalType: 'Bilplats' as const,
+    correlationId: 'corr-1',
   }
 
   it('ignores server-added triggeredByUser', () => {

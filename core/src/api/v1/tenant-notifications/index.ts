@@ -10,7 +10,7 @@ import {
   sendLeaseTerminationConfirmation,
 } from './send-notification'
 import {
-  SendLeaseTerminationConfirmationErrorResponseBodySchema_APIv1,
+  SendLeaseTerminationConfirmationErrorResponseBodySchemas_APIv1 as ErrorBody,
   SendLeaseTerminationConfirmationRequestBodySchema,
   SendLeaseTerminationConfirmationResponseBodySchema_APIv1,
 } from './schema'
@@ -27,13 +27,10 @@ export const routes = (router: OkapiRouter, _config: Config) => {
       description:
         'Triggers a lease termination confirmation email on behalf of an ' +
         'integration (e.g. Tenfast) after a parking lease is terminated. ' +
-        'Only `leaseId` is required: OneCore looks up the lease (end date, ' +
-        'type, preferred move-out date, rental object address, holders) and ' +
-        'each holder in the contacts service, then emails every holder with ' +
-        'an email address. The other body fields are optional and kept for ' +
-        'compatibility: `to` and `firstName` are ignored, `contactCode` adds ' +
-        'a recipient, `endDate` and `rentalType` are fallbacks when the lease ' +
-        'lacks them. ' +
+        'Only `leaseId` is used: OneCore looks up the lease (end date, type, ' +
+        'preferred move-out date, rental object address, holders) and each ' +
+        'holder in the contacts service, then emails every holder with an ' +
+        'email address. Any other body fields are ignored. ' +
         'Requires `Idempotency-Key` for safe retries. OneCore owns delivery ' +
         'and the communication log. Requires `tenant-notifications:lease-termination` ' +
         'or `api-access`.',
@@ -44,11 +41,11 @@ export const routes = (router: OkapiRouter, _config: Config) => {
       },
       response: {
         200: SendLeaseTerminationConfirmationResponseBodySchema_APIv1,
-        400: SendLeaseTerminationConfirmationErrorResponseBodySchema_APIv1,
-        404: SendLeaseTerminationConfirmationErrorResponseBodySchema_APIv1,
-        409: SendLeaseTerminationConfirmationErrorResponseBodySchema_APIv1,
-        422: SendLeaseTerminationConfirmationErrorResponseBodySchema_APIv1,
-        502: SendLeaseTerminationConfirmationErrorResponseBodySchema_APIv1,
+        400: ErrorBody[400],
+        404: ErrorBody[404],
+        409: ErrorBody[409],
+        422: ErrorBody[422],
+        502: ErrorBody[502],
       },
     },
     async (ctx) => {
@@ -121,8 +118,7 @@ export const routes = (router: OkapiRouter, _config: Config) => {
             ctx.status = 422
             ctx.body = {
               error: 'missing-end-date',
-              detail:
-                'The lease has no end date and the request did not supply endDate',
+              detail: 'The lease has no end date',
               ...metadata,
             }
             return
@@ -130,8 +126,16 @@ export const routes = (router: OkapiRouter, _config: Config) => {
             ctx.status = 422
             ctx.body = {
               error: 'unsupported-rental-type',
-              detail:
-                'The lease is not a parking space contract and the request did not supply rentalType',
+              detail: 'The lease is not a parking space contract',
+              ...metadata,
+            }
+            return
+          case 'contact-not-found':
+            // Already logged with the missing contact codes.
+            ctx.status = 422
+            ctx.body = {
+              error: 'contact-not-found',
+              detail: 'A lease holder was not found in contacts',
               ...metadata,
             }
             return

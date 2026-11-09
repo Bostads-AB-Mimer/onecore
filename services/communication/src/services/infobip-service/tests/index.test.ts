@@ -990,6 +990,15 @@ describe('/sendLeaseTerminationConfirmation', () => {
     expect(sendSpy).not.toHaveBeenCalled()
   })
 
+  it('sends when the holder has no first name in contacts', async () => {
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send({ ...terminationBody, firstName: '' })
+
+    expect(res.status).toBe(204)
+    expect(sendSpy).toHaveBeenCalledTimes(1)
+  })
+
   it('does not fail the send when communication logging throws', async () => {
     logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
 

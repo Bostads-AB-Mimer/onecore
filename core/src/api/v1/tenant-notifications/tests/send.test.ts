@@ -72,7 +72,7 @@ const lease = (
   tenantContactIds,
   type: 'P-Platskontrakt',
   // JSON from the leasing service: dates arrive as strings.
-  leaseEndDate: undefined,
+  leaseEndDate: '2026-10-31T00:00:00.000Z',
   preferredMoveOutDate: '2026-10-15T00:00:00.000Z',
   rentalObject: { address: 'Bilvägen 3 ' },
   ...overrides,
@@ -213,13 +213,34 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
     expect(sendMock.mock.calls[0][0].tenants).toHaveLength(2)
   })
 
-  it('includes the caller contactCode even when the lease lists no tenants', async () => {
+  it('ignores recipient fields in the request and uses the lease holders', async () => {
+    getLeaseMock.mockResolvedValue(lease(['P654321']))
+    getContactsMock.mockResolvedValue({ ok: true, data: [BO] })
+
+    const res = await postNotification(
+      body({ to: 'not-an-email', contactCode: 'P123456', firstName: 'Anna' })
+    )
+
+    expect(res.status).toBe(200)
+    expect(getContactsMock).toHaveBeenCalledWith(['P654321'], expect.anything())
+    expect(sendMock).toHaveBeenCalledTimes(1)
+    expect(sendMock.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        to: 'bo@example.com',
+        contactCode: 'P654321',
+        firstName: 'Bo',
+      })
+    )
+  })
+
+  it('returns 422 when the lease lists no holders', async () => {
     getLeaseMock.mockResolvedValue(lease([]))
 
     const res = await postNotification()
 
-    expect(res.status).toBe(200)
-    expect(getContactsMock).toHaveBeenCalledWith(['P123456'], expect.anything())
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('no-recipient')
+    expect(sendMock).not.toHaveBeenCalled()
   })
 
   it('returns 422 when no holder has an email address', async () => {
@@ -254,7 +275,7 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
     )
   })
 
-  it("prefers the lease's end date over the request's", async () => {
+  it('ignores endDate in the request', async () => {
     getLeaseMock.mockResolvedValue(
       lease(['P123456'], { leaseEndDate: '2026-11-30T00:00:00.000Z' })
     )
@@ -266,23 +287,24 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
     )
   })
 
-  it('returns 422 when neither the lease nor the request has an end date', async () => {
-    const res = await postNotification({ leaseId: '307-002-11-0201/11' })
+  it('returns 422 when the lease has no end date, even if the request has one', async () => {
+    getLeaseMock.mockResolvedValue(
+      lease(['P123456'], { leaseEndDate: undefined })
+    )
+
+    const res = await postNotification(body({ endDate: '2026-10-31' }))
 
     expect(res.status).toBe(422)
     expect(res.body.error).toBe('missing-end-date')
     expect(sendMock).not.toHaveBeenCalled()
   })
 
-  it('returns 422 for a non-parking lease without a rentalType fallback', async () => {
+  it('returns 422 for a non-parking lease, even if the request says Bilplats', async () => {
     getLeaseMock.mockResolvedValue(
       lease(['P123456'], { type: 'Bostadskontrakt' })
     )
 
-    const res = await postNotification({
-      leaseId: '307-002-11-0201/11',
-      endDate: '2026-10-31',
-    })
+    const res = await postNotification(body({ rentalType: 'Bilplats' }))
 
     expect(res.status).toBe(422)
     expect(res.body.error).toBe('unsupported-rental-type')
@@ -335,8 +357,22 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
 
     const res = await postNotification()
 
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('contact-not-found')
+    expect(sendMock).not.toHaveBeenCalled()
+  })
+
+  it('does not report a recipient as sent when its key is held by another payload', async () => {
+    // Left over from an earlier request with the same key but another payload.
+    tenantNotificationIdempotencyStore.claim(
+      `${IDEMPOTENCY_KEY}#P123456`,
+      'other-payload-hash'
+    )
+
+    const res = await postNotification()
+
     expect(res.status).toBe(502)
-    expect(res.body.error).toBe('contact-lookup-failed')
+    expect(res.body.error).toBe('send-failed')
     expect(sendMock).not.toHaveBeenCalled()
   })
 
@@ -423,7 +459,7 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
   })
 
   it('returns 400 for invalid request fields', async () => {
-    const res = await postNotification(body({ endDate: 'not-a-date' }))
+    const res = await postNotification(body({ leaseId: '' }))
 
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('invalid-request')
