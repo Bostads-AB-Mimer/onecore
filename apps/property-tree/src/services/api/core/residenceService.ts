@@ -4,6 +4,7 @@ import type {
   RentalBlock,
   RentalBlocksSearchParams,
   ResidenceDetails,
+  ResidenceMedia,
   ResidenceSummary,
 } from '../../types'
 import { GET, PUT } from './baseApi'
@@ -45,6 +46,19 @@ export const residenceService = {
 
     if (error) throw error
     if (!data.content) throw new Error('No data returned from API')
+
+    return data.content
+  },
+
+  async getMedia(rentalId: string): Promise<ResidenceMedia> {
+    const { data, error } = await GET(
+      '/residences/by-rental-id/{rentalId}/media',
+      {
+        params: { path: { rentalId } },
+      }
+    )
+
+    if (error) throw error
 
     return data.content
   },

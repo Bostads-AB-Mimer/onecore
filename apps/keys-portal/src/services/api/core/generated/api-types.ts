@@ -5492,6 +5492,54 @@ export interface paths {
       }
     }
   }
+  '/residences/by-rental-id/{rentalId}/media': {
+    /**
+     * Get published photos and energy declaration for a residence
+     * @description Returns 200 with an empty list when nothing is published. imageLevel
+     * is 'shared' when the photos are published for a coarser code level
+     * and may show the building rather than this residence.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Rental id of the residence */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description The published media, empty when nothing is published. */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['ResidenceMedia']
+            }
+          }
+        }
+        /** @description The rental id does not have the residence code format. */
+        400: {
+          content: {
+            'application/json': {
+              /** @example invalid-rental-id */
+              reason?: string
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+        /** @description The public media host could not be reached. */
+        503: {
+          content: {
+            'application/json': {
+              /** @example media-unavailable */
+              reason?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/residences/by-rental-id/{rentalId}/malar-energi-facility-id': {
     /**
      * Update or add a residence's Mälarenergi facility id.
@@ -13789,6 +13837,13 @@ export interface components {
       } | null
       areaSize: number | null
       malarEnergiFacilityId: string | null
+    }
+    ResidenceMedia: {
+      images: string[]
+      /** @enum {string|null} */
+      imageLevel: 'residence' | 'shared' | null
+      /** Format: uri */
+      energyDeclarationUrl: string | null
     }
     ResidenceSummary: {
       id: string

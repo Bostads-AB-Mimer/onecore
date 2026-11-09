@@ -15,6 +15,7 @@ import {
 
 import { ApartmentTemperature } from './ApartmentTemperature'
 import { MalarEnergiFacilityIdField } from './MalarEnergiFacilityIdField'
+import { ResidenceMediaCard } from './ResidenceMediaCard'
 
 // The residence address has no city, and all of Mimer's residences are in Västerås
 const RESIDENCE_CITY = 'Västerås'
@@ -119,117 +120,136 @@ export const ResidenceBasicInfo = ({
         </div>
       </div>
 
-      {/* Preview content for mobile */}
-      <CollapsibleInfoCard
-        title="Grundläggande information"
-        previewContent={
-          <div className="space-y-2">
-            <div>
-              <span className="text-sm text-muted-foreground">
-                Objektsnummer:{' '}
-              </span>
-              <span className="font-medium">{residence.code}</span>
-            </div>
-          </div>
-        }
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          <CopyableField
-            label="Adress"
-            value={address ?? undefined}
-            actions={
-              address
-                ? [
-                    {
-                      icon: <MapPin className="h-4 w-4" />,
-                      onClick: () =>
-                        openAddressInGoogleMaps(
-                          `${address}, ${RESIDENCE_CITY}`
-                        ),
-                      tooltip: 'Öppna i Google Maps',
-                      ariaLabel: 'Öppna adress i Google Maps',
-                    },
-                  ]
-                : undefined
+      {/* The breakpoint is shared with ResidenceMediaCard. It measures the content
+          width rather than the viewport, since the sidebar takes up a varying part.
+          The media column is implicit, so it only exists when the card renders. */}
+      <div className="@container">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 @[1000px]:auto-cols-[320px] @[1000px]:grid-flow-col">
+          {/* Preview content for mobile */}
+          <CollapsibleInfoCard
+            title="Grundläggande information"
+            previewContent={
+              <div className="space-y-2">
+                <div>
+                  <span className="text-sm text-muted-foreground">
+                    Objektsnummer:{' '}
+                  </span>
+                  <span className="font-medium">{residence.code}</span>
+                </div>
+              </div>
             }
-          />
-          <div>
-            <p className="text-sm text-muted-foreground">Fastighet</p>
-            <p className="font-medium">
-              {residence.property?.name && residence.property?.code
-                ? `${residence.property.name}, ${residence.property.code}`
-                : '-'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Byggnad</p>
-            <p className="font-medium">{residence.building?.code ?? '-'}</p>
-          </div>
-          <CopyableField
-            label="Objektsnummer/lägenhetskod"
-            value={residence.propertyObject.rentalId ?? undefined}
-          />
-          <CopyableField
-            label="Skatteverkets lägenhetsnummer"
-            value={residence.rentalInformation?.apartmentNumber ?? undefined}
-          />
-          <div>
-            <p className="text-sm text-muted-foreground">Hyresobjektstyp</p>
-            <p className="font-medium">
-              {residence.propertyObject?.rentalInformation?.type.name ?? '-'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Typ</p>
-            <p className="font-medium">{residence.residenceType.name}</p>
-          </div>
-          <CopyableField
-            label="Yta"
-            value={residence.areaSize ? `${residence.areaSize} m²` : undefined}
-          />
-          <MalarEnergiFacilityIdField
-            rentalId={residence.propertyObject.rentalId ?? undefined}
-            value={residence.malarEnergiFacilityId || undefined}
-          />
-          <ApartmentTemperature
-            objectNumber={residence.propertyObject.rentalId ?? undefined}
-          />
-          <CopyableField
-            label="Hyra för objekt"
-            value={
-              rent
-                ? `${Math.round(rent).toLocaleString('sv-SE')} kr/mån`
-                : undefined
-            }
-          />
-          {building?.construction.constructionYear && (
-            <div>
-              <p className="text-sm text-muted-foreground">Byggnadsår</p>
-              <p className="font-medium">
-                {building.construction.constructionYear}
-              </p>
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <CopyableField
+                label="Adress"
+                value={address ?? undefined}
+                actions={
+                  address
+                    ? [
+                        {
+                          icon: <MapPin className="h-4 w-4" />,
+                          onClick: () =>
+                            openAddressInGoogleMaps(
+                              `${address}, ${RESIDENCE_CITY}`
+                            ),
+                          tooltip: 'Öppna i Google Maps',
+                          ariaLabel: 'Öppna adress i Google Maps',
+                        },
+                      ]
+                    : undefined
+                }
+              />
+              <div>
+                <p className="text-sm text-muted-foreground">Fastighet</p>
+                <p className="font-medium">
+                  {residence.property?.name && residence.property?.code
+                    ? `${residence.property.name}, ${residence.property.code}`
+                    : '-'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Byggnad</p>
+                <p className="font-medium">{residence.building?.code ?? '-'}</p>
+              </div>
+              <CopyableField
+                label="Objektsnummer/lägenhetskod"
+                value={residence.propertyObject.rentalId ?? undefined}
+              />
+              <CopyableField
+                label="Skatteverkets lägenhetsnummer"
+                value={
+                  residence.rentalInformation?.apartmentNumber ?? undefined
+                }
+              />
+              <div>
+                <p className="text-sm text-muted-foreground">Hyresobjektstyp</p>
+                <p className="font-medium">
+                  {residence.propertyObject?.rentalInformation?.type.name ??
+                    '-'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Typ</p>
+                <p className="font-medium">{residence.residenceType.name}</p>
+              </div>
+              <CopyableField
+                label="Yta"
+                value={
+                  residence.areaSize ? `${residence.areaSize} m²` : undefined
+                }
+              />
+              <MalarEnergiFacilityIdField
+                rentalId={residence.propertyObject.rentalId ?? undefined}
+                value={residence.malarEnergiFacilityId || undefined}
+              />
+              <ApartmentTemperature
+                objectNumber={residence.propertyObject.rentalId ?? undefined}
+              />
+              <CopyableField
+                label="Hyra för objekt"
+                value={
+                  rent
+                    ? `${Math.round(rent).toLocaleString('sv-SE')} kr/mån`
+                    : undefined
+                }
+              />
+              {building?.construction.constructionYear && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Byggnadsår</p>
+                  <p className="font-medium">
+                    {building.construction.constructionYear}
+                  </p>
+                </div>
+              )}
+              {building?.construction.renovationYear && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Ombyggnadsår</p>
+                  <p className="font-medium">
+                    {building.construction.renovationYear}
+                  </p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <p className="font-medium">
+                  {residence.status === 'LEASED'
+                    ? 'Uthyrd'
+                    : residence.status === 'VACANT'
+                      ? 'Vakant'
+                      : 'N/A'}
+                </p>
+              </div>
             </div>
+          </CollapsibleInfoCard>
+          {residence.propertyObject.rentalId && (
+            <ResidenceMediaCard
+              key={residence.propertyObject.rentalId}
+              rentalId={residence.propertyObject.rentalId}
+              address={address ?? residence.propertyObject.rentalId}
+            />
           )}
-          {building?.construction.renovationYear && (
-            <div>
-              <p className="text-sm text-muted-foreground">Ombyggnadsår</p>
-              <p className="font-medium">
-                {building.construction.renovationYear}
-              </p>
-            </div>
-          )}
-          <div>
-            <p className="text-sm text-muted-foreground">Status</p>
-            <p className="font-medium">
-              {residence.status === 'LEASED'
-                ? 'Uthyrd'
-                : residence.status === 'VACANT'
-                  ? 'Vakant'
-                  : 'N/A'}
-            </p>
-          </div>
         </div>
-      </CollapsibleInfoCard>
+      </div>
     </TooltipProvider>
   )
 }

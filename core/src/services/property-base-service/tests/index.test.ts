@@ -408,6 +408,53 @@ describe('@onecore/property-service', () => {
     })
   })
 
+  describe('GET /property/residences/by-rental-id/:rentalId/media', () => {
+    const path = '/property/residences/by-rental-id/705-025-01-0103/media'
+
+    it('returns 200 and the media', async () => {
+      const media = {
+        images: ['https://pub.mimer.nu/bofaktablad/a_1.jpg'],
+        imageLevel: 'shared' as const,
+        energyDeclarationUrl: null,
+      }
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceMedia')
+        .mockResolvedValueOnce({ ok: true, data: media })
+
+      const res = await request(app.callback()).get(path)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(media)
+    })
+
+    it('returns 200 with empty content when nothing is published', async () => {
+      const media = { images: [], imageLevel: null, energyDeclarationUrl: null }
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceMedia')
+        .mockResolvedValueOnce({ ok: true, data: media })
+
+      const res = await request(app.callback()).get(path)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(media)
+    })
+
+    it.each([
+      ['invalid-rental-id', 400],
+      ['media-unavailable', 503],
+      ['unknown', 500],
+    ] as const)('maps %s to status %i', async (err, status) => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceMedia')
+        .mockResolvedValueOnce({ ok: false, err })
+
+      const res = await request(app.callback()).get(path)
+
+      expect(res.status).toBe(status)
+      expect(res.body.reason).toBe(err)
+    })
+  })
+
   describe('GET /property/staircases', () => {
     it('returns 200 and a list of staircases', async () => {
       const staircasesMock = factory.staircase.buildList(3)

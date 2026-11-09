@@ -23,6 +23,7 @@ import {
   getRentalIdsWithBlock,
   upsertMalarEnergiFacilityId,
 } from '../adapters/residence-adapter'
+import { getResidenceMedia } from '../adapters/residence-media-adapter'
 import {
   residencesQueryParamsSchema,
   ResidenceSchema,
@@ -604,6 +605,70 @@ export const routes = (router: KoaRouter) => {
       }
     }
   )
+
+  /**
+   * @swagger
+   * /residences/rental-id/{rentalId}/media:
+   *   get:
+   *     summary: Get published photos and energy declaration for a residence.
+   *     description: |
+   *       Finds the files published on the public media host. A residence
+   *       without files returns 200 with an empty list, since this searches for
+   *       files rather than looking up one resource.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental id of the residence.
+   *     responses:
+   *       200:
+   *         description: The published media, empty when nothing is published.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ResidenceMedia'
+   *       400:
+   *         description: The rental id does not have the residence code format.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: invalid-rental-id
+   *       503:
+   *         description: The public media host could not be reached.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: media-unavailable
+   */
+  router.get('(.*)/residences/rental-id/:rentalId/media', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await getResidenceMedia(ctx.params.rentalId)
+
+    if (!result.ok) {
+      ctx.status = result.err === 'invalid-rental-id' ? 400 : 503
+      ctx.body = { reason: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
 
   /**
    * @swagger
