@@ -136,6 +136,12 @@ export const ErrorResponseBodySchema = z.object({
   error: z.string(),
 })
 
+/** What the shared errorHandler answers when a route throws. */
+export const InternalServerErrorResponseBodySchema = z.object({
+  errorMessage: z.string(),
+  message: z.string(),
+})
+
 /* -------------------------------------------------------------------------
  * Creating contacts
  *
@@ -182,6 +188,15 @@ export const CreateContactPhoneNumberSchema = z.object({
   isPrimary: z.boolean().default(false),
 })
 
+/**
+ * The minimum age to create a contact: 16, counted either way.
+ *
+ * - `exact-age`: 16 on the day. What staff creating a contact get.
+ * - `birth-year`: from the calendar year the person turns 16, which is what
+ *   public registration on Mina sidor has always promised.
+ */
+export const CreateContactAgeRuleSchema = z.enum(['exact-age', 'birth-year'])
+
 export const CreateContactRequestBodySchema = z.object({
   /**
    * Personnummer. Accepted in any common notation; normalised and checksum
@@ -198,6 +213,8 @@ export const CreateContactRequestBodySchema = z.object({
    */
   emailAddresses: z.array(CreateContactEmailAddressSchema).min(1),
   phoneNumbers: z.array(CreateContactPhoneNumberSchema).default([]),
+  /** Left out means `exact-age`; only public registration asks for `birth-year`. */
+  ageRule: CreateContactAgeRuleSchema.optional(),
 })
 
 export const CreateContactResponseBodySchema =
@@ -233,6 +250,31 @@ export const CreateContactErrorResponseBodySchema = z.object({
    */
   detail: z.string().optional(),
 })
+
+/* -------------------------------------------------------------------------
+ * Person contacts for a personnummer
+ *
+ * What registration needs to decide between "log in", "contact customer
+ * service" and "create": the person contacts for the number, in the order
+ * login prefers them, each with whether login accepts it.
+ * ---------------------------------------------------------------------- */
+
+export const PersonContactSchema = z.object({
+  contactCode: z.string(),
+  /** The Sökande role is in use; login refuses the contact otherwise. */
+  isActive: z.boolean(),
+})
+
+export const GetPersonContactsResponseBodySchema =
+  ONECoreHateOASResponseBodySchema.extend({
+    content: z.object({
+      /**
+       * Login picks the first for a user with no live contact_code yet, who can
+       * then log in exactly when it is active. A live contact_code is kept.
+       */
+      contacts: z.array(PersonContactSchema),
+    }),
+  })
 
 /* -------------------------------------------------------------------------
  * Administering relations

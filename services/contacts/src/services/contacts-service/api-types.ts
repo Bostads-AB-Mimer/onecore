@@ -8,6 +8,7 @@ import {
   CreateContactResponseBodySchema,
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
+  GetPersonContactsResponseBodySchema,
   GetRelatedContactsResponseBodySchema,
   RelationErrorResponseBodySchema,
   RelationRoleTypeSchema,
@@ -22,6 +23,10 @@ export type GetContactResponseBody = z.infer<
 
 export type GetContactsResponseBody = z.infer<
   typeof GetContactsResponseBodySchema
+>
+
+export type GetPersonContactsResponseBody = z.infer<
+  typeof GetPersonContactsResponseBodySchema
 >
 
 export type GetRelatedContactsResponseBody = z.infer<

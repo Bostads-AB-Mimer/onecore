@@ -21,6 +21,8 @@ import {
   ErrorResponseBodySchema,
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
+  GetPersonContactsResponseBodySchema,
+  InternalServerErrorResponseBodySchema,
   GetRelatedContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
   RelationActorSchema,
@@ -93,6 +95,8 @@ export const routes = (
         'Creates a contact in Xpand together with its applicant role and a web ' +
         'account. Rejects with 409 when a contact with the same national ID ' +
         'already exists. ' +
+        'Rejects anyone under 16 with 422 invalid-national-id: 16 on the day, ' +
+        'or from the calendar year they turn 16 when ageRule is birth-year. ' +
         'NOT REVERSIBLE HERE. Once 201 is returned the contact exists in Xpand ' +
         'and this API cannot remove it again; cleaning one up means manual work ' +
         'in Xpand. Callers must not retry a request that may have succeeded — a ' +
@@ -875,6 +879,42 @@ export const routes = (
           ...metadata,
           content: result,
         }
+      }
+    }
+  )
+
+  router.get(
+    '/contacts/by-nid/:nid/person-contacts',
+    {
+      summary: "A person's contacts, and whether they can log in with them",
+      description:
+        'Every person contact (P code, not deleted, number stored in either form) for a personnummer or samordningsnummer, in the order login prefers them, as /login-contact ranks them. isActive is true when the Sökande role is in use, which login requires. Login picks the first for a user whose Keycloak account has no live contact_code yet, so such a person can log in exactly when the first is active; a user whose contact_code already names a live contact keeps logging in as that contact, wherever it is listed. 200 with an empty list when there are none; companies and deleted contacts are left out, so the duplicate check on create can still match a number this answers empty for.',
+      tags: ['Contacts'],
+      params: {
+        nid: z.string(),
+      },
+      response: {
+        200: GetPersonContactsResponseBodySchema,
+        400: ErrorResponseBodySchema,
+        500: InternalServerErrorResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx, ctx.queryParameterNames ?? [])
+      const contacts =
+        await contactsRepository.getPersonContactsByNationalIdNumber(
+          ctx.params.nid
+        )
+
+      if (!contacts) {
+        ctx.status = 400
+        ctx.body = { error: 'invalid-national-id', ...metadata }
+        return
+      }
+
+      ctx.body = {
+        ...metadata,
+        content: { contacts },
       }
     }
   )

@@ -476,15 +476,24 @@ INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, c
   ('_LGNC920015    ', '_LGNO920015    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920015', 'Login Refund', '197707079872', NULL, '2024-03-01', 0, 1053, 'LGN9200015');
 
 -- Roles: Sökande (_0DE0O2500) on the customers, Leverantör (_0DE0O1STV) alone
--- on the supplier contacts.
-INSERT INTO cmcro (keycmcro, keycmctc, keycmrol)
-SELECT '_CROLGN0003    ', keycmctc, '_0DE0O2500     ' FROM cmctc WHERE cmctckod = 'P920003';
-INSERT INTO cmcro (keycmcro, keycmctc, keycmrol)
-SELECT '_CROLGN0004    ', keycmctc, '_0DE0O1STV     ' FROM cmctc WHERE cmctckod = 'P920004';
-INSERT INTO cmcro (keycmcro, keycmctc, keycmrol)
-SELECT '_CROLGN0014    ', keycmctc, '_0DE0O2500     ' FROM cmctc WHERE cmctckod = 'P920014';
-INSERT INTO cmcro (keycmcro, keycmctc, keycmrol)
-SELECT '_CROLGN0015    ', keycmctc, '_0DE0O1STV     ' FROM cmctc WHERE cmctckod = 'P920015';
+-- on the supplier contacts. croused = 1 marks the Sökande role in use (active).
+-- P920001 has no Sökande role while the newer P920002 has an active one, so
+-- login picks an inactive contact for 195001019800. P920014's role is not in
+-- use; P920006 and P920011 are active.
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol, croused)
+SELECT '_CROLGN0002    ', keycmctc, '_0DE0O2500     ', 1 FROM cmctc WHERE cmctckod = 'P920002';
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol, croused)
+SELECT '_CROLGN0003    ', keycmctc, '_0DE0O2500     ', 1 FROM cmctc WHERE cmctckod = 'P920003';
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol, croused)
+SELECT '_CROLGN0004    ', keycmctc, '_0DE0O1STV     ', 1 FROM cmctc WHERE cmctckod = 'P920004';
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol, croused)
+SELECT '_CROLGN0006    ', keycmctc, '_0DE0O2500     ', 1 FROM cmctc WHERE cmctckod = 'P920006';
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol, croused)
+SELECT '_CROLGN0011    ', keycmctc, '_0DE0O2500     ', 1 FROM cmctc WHERE cmctckod = 'P920011';
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol, croused)
+SELECT '_CROLGN0014    ', keycmctc, '_0DE0O2500     ', 0 FROM cmctc WHERE cmctckod = 'P920014';
+INSERT INTO cmcro (keycmcro, keycmctc, keycmrol, croused)
+SELECT '_CROLGN0015    ', keycmctc, '_0DE0O1STV     ', 1 FROM cmctc WHERE cmctckod = 'P920015';
 
 -- Leases: OBJ20 under notice (last debit far ahead), OBJ21 running, OBJ22 ended.
 INSERT INTO hyobj (keyhyobj, hyobjben, sistadeb) VALUES

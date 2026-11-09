@@ -7,6 +7,7 @@ import {
 import { AdapterResult } from '@src/adapters/types'
 import { XpandSoapConfig } from '@src/common/config'
 import { getBirthDateFromNationalId } from '@src/domain/national-id'
+import { swedishDate } from '@src/domain/swedish-time'
 import { el, elOpt, envelope, wrap } from './xml'
 import { SoapBody } from './client'
 
@@ -62,28 +63,12 @@ const dataWrap = (name: string, children: string) =>
   wrap(name, children, 'data')
 
 /**
- * Pinned to Swedish time rather than the process time zone: the service runs
- * in a UTC container, so an address created late in the Swedish evening would
- * otherwise be stamped with the previous calendar day. An explicit time zone
- * also makes the result independent of where tests run.
- */
-const SWEDISH_TIME_ZONE = 'Europe/Stockholm'
-
-/** sv-SE formats as YYYY-MM-DD. */
-const swedishDate = new Intl.DateTimeFormat('sv-SE', {
-  timeZone: SWEDISH_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-})
-
-/**
  * Midnight of the Swedish calendar date of `now`, serialised as
  * DataContractSerializer expects — the FromDate mimer.nu stamps on new
- * addresses.
+ * addresses. Swedish rather than the container's UTC, so an address created
+ * late in the Swedish evening is not stamped with the previous day.
  */
-const stockholmMidnight = (now: Date): string =>
-  `${swedishDate.format(now)}T00:00:00`
+const stockholmMidnight = (now: Date): string => `${swedishDate(now)}T00:00:00`
 
 /**
  * Derives the birth date from a personal identity number.

@@ -177,8 +177,14 @@ IF OBJECT_ID(N'cmcro', N'U') IS NULL
 CREATE TABLE cmcro (
   keycmcro CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL,
   keycmctc CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
-  keycmrol CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+  keycmrol CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  croused SMALLINT NULL
 )
+GO
+
+-- Test databases created before croused was added.
+IF COL_LENGTH(N'cmcro', N'croused') IS NULL
+ALTER TABLE cmcro ADD croused SMALLINT NULL
 GO
 
 IF OBJECT_ID(N'bkqte', N'U') IS NULL

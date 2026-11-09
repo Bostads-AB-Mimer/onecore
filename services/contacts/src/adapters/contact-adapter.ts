@@ -6,6 +6,7 @@ import {
   PhoneNumber,
   RelatedContact,
 } from '@src/domain/contact'
+import { PersonContact } from '@src/domain/login-contact'
 import { ContactIncludeOptions } from './xpand/batch-query'
 
 /**
@@ -188,6 +189,31 @@ export interface ContactsRepository {
   getLoginContactByNationalIdNumber: (
     nid: NationalIdNumber
   ) => Promise<Contact | null>
+
+  /**
+   * Every person contact for a personnummer, each with whether the person can
+   * log in with it, in the order login prefers them.
+   *
+   * The same contacts `getLoginContactByNationalIdNumber` chooses among: P
+   * codes, not deleted, either stored form of the number. Unlike the duplicate
+   * check (`existsByNationalIdNumber`), which matches every row, deleted ones
+   * and companies included.
+   *
+   * The first is the contact login picks for a user whose Keycloak account has
+   * no live `contact_code` yet, the case for someone who has not logged in
+   * before: they can log in exactly when it is active, and a later active
+   * contact does not help them. A `contact_code` that already names a live
+   * contact is never replaced, so a user who has one logs in as that contact,
+   * whatever its place here.
+   *
+   * @param nid - The national ID number in any common notation.
+   *
+   * @returns The contacts, empty when there are none, or null when `nid` is
+   *          not a valid identity number.
+   */
+  getPersonContactsByNationalIdNumber: (
+    nid: NationalIdNumber
+  ) => Promise<PersonContact[] | null>
 
   /**
    * Retrieves contacts by their phone number.
