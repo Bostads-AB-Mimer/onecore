@@ -140,17 +140,17 @@ No `as` or `!` without a comment saying why; use `catch (err: unknown)`. `satisf
 
 ## Testing
 
-- Run tests per package from its folder: `pnpm test`.
+- Run tests per package from its folder: `pnpm test`. (property has no `test` script at the moment, so its tests don't run in CI.)
 - **leasing, contacts, keys and communication** need a test database in Docker. Start Docker first; `pnpm test` creates the database (`test:create-db`) before running jest.
-- Build test data with the package's `fishery` factories (e.g. `core/test/factories/`, `services/leasing/src/services/lease-service/tests/factories/`), overriding only the fields the test is about: `factory.x.build({ field: value })`. If there is no factory for the type yet, add one instead of writing inline objects.
-- Compare dates with the shared matchers in `src/common/test/matchers.ts` (loaded globally in leasing and core) instead of exact equality: `toBeSameDayAs`, `toBeNearDate` for values created "now", and `toBeStartOfDayUTC` (leasing). `toBeSameDayAs` compares in local time.
+- Build test data with the package's `fishery` factories (e.g. `core/test/factories/`, `services/leasing/src/services/lease-service/tests/factories/`), overriding only the fields the test is about: `factory.x.build({ field: value })`. If there is no factory for the type yet, add one instead of writing inline objects (exceptions in `.claude/skills/test-conventions.md`).
+- Compare dates with the shared matchers in each package's `src/common/test/matchers.ts` (loaded globally in leasing and core) instead of exact equality: `toBeSameDayAs`, `toBeNearDate` for values created "now", and `toBeStartOfDayUTC` (leasing). `toBeSameDayAs` compares in local time.
 - Tests that depend on today's date must freeze the clock (`jest.useFakeTimers()` + `jest.setSystemTime(...)`) and restore it in `afterEach(() => jest.useRealTimers())`, not at the end of the test body — a failing assertion would leak the fake clock into later tests.
 
 ### Writing tests
 
-Tests are the spec for both people and agents: a reader should understand what the code is supposed to do from the tests alone.
+Tests are the spec for both people and agents: a reader should understand what the code is supposed to do from the tests alone. Examples and per-layer details (mocking, factories, fake timers) are in `.claude/skills/test-conventions.md`.
 
-- Name a test after the behaviour it checks, in the present tense: `returns 409 when the rental object already has a lease`, not `should work` or `test createLease`.
+- Name a test after the behaviour it checks, in the present tense: `returns 409 when the rental object already has a lease`, not `should work` or `test createLease`. In an existing file that uses another style, match the file.
 - Structure each test with `// Arrange`, `// Act` and `// Assert` comments, so the setup, the call and the checks are easy to tell apart.
 - Test every outcome a change introduces, including failure branches (each error code, empty results, invalid input), not only the happy path.
 - Test at the layer that owns the behaviour: status codes and error bodies in route tests, mapping and parsing in adapter tests. Mock the layer below (e.g. `jest.spyOn(adapter, 'fn')`), not the code under test.
