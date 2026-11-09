@@ -5,7 +5,6 @@ import request from 'supertest'
 import { WaitingListType } from '@onecore/types'
 
 const mockConfig = {
-  minaSidor: { url: 'https://mina-sidor.test/' },
   auth: {
     keycloak: {
       url: 'http://keycloak.test',
@@ -13,6 +12,7 @@ const mockConfig = {
         realm: 'mimer-contacts',
         clientId: 'mina-sidor',
         clientSecret: 'client-secret',
+        setPasswordRedirectUri: 'https://mina-sidor.test/',
       },
     },
   },
@@ -109,7 +109,8 @@ describe('POST /auth/contacts/register', () => {
     jest.clearAllMocks()
     mockConfig.auth.keycloak.url = 'http://keycloak.test'
     mockConfig.auth.keycloak.contacts.clientId = 'mina-sidor'
-    mockConfig.minaSidor.url = 'https://mina-sidor.test/'
+    mockConfig.auth.keycloak.contacts.setPasswordRedirectUri =
+      'https://mina-sidor.test/'
     provisioningConfigured.mockReturnValue(true)
     register.mockResolvedValue({
       outcome: 'created',
@@ -137,7 +138,7 @@ describe('POST /auth/contacts/register', () => {
       ],
       [
         'the link in the e-mail has nowhere to go',
-        () => (mockConfig.minaSidor.url = ''),
+        () => (mockConfig.auth.keycloak.contacts.setPasswordRedirectUri = ''),
       ],
     ])('answers 503 when %s', async (_, unset) => {
       unset()
