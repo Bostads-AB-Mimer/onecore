@@ -1,7 +1,8 @@
 # Keycloak theme (`@onecore/keycloak-theme`)
 
-The `mimer` login theme for the tenant realm (`mimer-contacts`) in Keycloak. It makes
-the Keycloak login look like the login on mimer.nu/mina-sidor. Built against
+The `mimer` theme for the tenant realm (`mimer-contacts`) in Keycloak. Its login part
+makes the Keycloak login look like the login on mimer.nu/mina-sidor; its e-mail part
+gives the set-password and password-reset e-mails Mimer's own Swedish texts. Built against
 Keycloak **26.3.3**, the version pinned for dev in `mimer-onecore-operations`
 (`apps/keycloak/keycloak-helm.yaml`, branch `refactor/dev`). Production
 (`mimer-onecore-operations-production`) does not pin an image tag and runs an
@@ -20,7 +21,39 @@ pnpm preview:stop
 ```
 
 - Login: http://localhost:18080/realms/mimer-contacts/account (`198501011236` / `Test1234!`)
-- Mail (password reset): http://localhost:18025
+- Mail (password reset, set password): http://localhost:18025
+
+The local realm also has the clients core uses, with the same names as in dev, so core's
+registration and contact_code code can run against it. Point core at it with:
+
+```sh
+AUTH__KEYCLOAK__URL=http://localhost:18080
+AUTH__KEYCLOAK__CONTACTS__CLIENT_SECRET=mina-sidor-secret
+AUTH__KEYCLOAK__CONTACTS__PROVISIONING__CLIENT_SECRET=provisioning-secret
+AUTH__KEYCLOAK__CONTACTS__SET_PASSWORD_REDIRECT_URI=http://localhost:3000/
+```
+
+`AUTH__KEYCLOAK__URL` is also where core checks staff tokens (the `onecore` realm),
+which this Keycloak doesn't have, so set it only for a core run that exercises the
+tenant realm.
+
+### What a shared realm needs
+
+`setup-realm.sh` is the reference for what core's registration and login need. In dev
+and prod, `mimer-contacts` is set up by hand, so check each of these there:
+
+- **Themes:** login and e-mail theme `mimer`.
+- **Login:** _Login with email_ off, _Duplicate emails_ on. Households share an
+  address, and with duplicates off the second person's registration creates the
+  contact but no login.
+- **User profile:** `contact_code` and `account_type` declared, editable by admin only.
+  Keycloak 26 drops an undeclared attribute without an error. First name, last name and
+  e-mail not required, or a new user is stopped at an "update profile" page.
+- **`mina-sidor` client:** a single-valued user-attribute mapper for `contact_code`
+  into the access token. Core's `AUTH__KEYCLOAK__CONTACTS__SET_PASSWORD_REDIRECT_URI`
+  must be one of its valid redirect URIs, or Keycloak refuses the set-password e-mail.
+- **`mimer-contacts-provisioning` client:** service account with `realm-management`
+  `view-users` and `manage-users`.
 
 Theme caching is off, so edits to templates, texts and CSS show on reload (use a
 fresh or incognito window for CSS, the browser caches it). Changes to `src/` or the
@@ -45,12 +78,35 @@ from Keycloak's own `keycloak.v2`.
 | `resources/fonts/`, `resources/img/` | Bison and Graphik, copied by the build from `apps/internal-portal/frontend/assets`; the mimer.nu logo and the white BankID mark from Mina sidor                                                                             |
 
 Every other page (set new password, errors) still uses the parent's templates and
-only picks up the CSS and texts.
+only picks up the CSS and texts. Keycloak's own Swedish is missing the texts on the
+choose-password pages (they fall back to English), so `messages_sv.properties` fills them in.
+
+### E-mail (`theme/mimer/email/`)
+
+`theme.properties` sets `parent=base`, Keycloak's own e-mail theme, so the templates
+and layout are Keycloak's. Only the texts in `messages/messages_sv.properties` are
+ours:
+
+- **Set password** (`executeActions*`): what core sends a new applicant at
+  registration (`execute-actions-email` with `UPDATE_PASSWORD`). The text assumes
+  that is the only action, so don't use this e-mail for other required actions. The link
+  is valid for the realm's admin-action lifespan (12 hours by default) unless core
+  passes a `lifespan`.
+- **Glömt lösenord** (`passwordReset*`).
+- **Link lifespan in words** (`linkExpirationFormatter.*`): Keycloak's Swedish has none,
+  so without them the e-mail says "12 hours".
+
+Keycloak picks the e-mail language like the login's: the realm needs
+internationalization on with `sv` as the default, and the build copies the texts to
+`messages_en.properties` as for the login.
+
+The realm uses it once _Realm settings → Themes → Email theme_ is `mimer`.
 
 ## Packaging and deployment
 
 `META-INF/keycloak-themes.json` plus `theme/` zipped together is a theme JAR,
-which Keycloak loads from its `providers` directory. `pnpm build`
+which Keycloak loads from its `providers` directory. `keycloak-themes.json` lists the
+types the theme has (`login`, `email`); a type missing there is not offered in the realm. `pnpm build`
 (`scripts/build.sh`) first generates the git-ignored files in `theme/` (the
 bundled script, the fonts, `messages_en.properties`), then writes the JAR to
 `dist/mimer-theme.jar` with fixed timestamps, so an unchanged theme gives a
@@ -60,7 +116,8 @@ like the other apps. Anything added to the JAR goes in `scripts/build.sh` only.
 
 In the cluster that image runs as an **init container** next to Keycloak and
 copies the JAR into the providers volume. Installing the theme does nothing by
-itself: a realm has to select it (_Realm settings → Themes → Login theme_), so
+itself: a realm has to select it (_Realm settings → Themes → Login theme_ and
+_Email theme_), so
 other realms on the same Keycloak are unaffected. The tenant realm is Swedish
 only: _Realm settings → Localization_, internationalization **on**, supported
 locales `sv` only, default `sv`. With internationalization off Keycloak uses
