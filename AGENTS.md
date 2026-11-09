@@ -46,25 +46,7 @@ Always use `pnpm` — never `npm` or `yarn`.
 
 ## Running Locally
 
-`pnpm dev` (Turborepo) starts everything; filter with `pnpm dev -- --filter='@onecore/leasing'`. Infrastructure (SQL Server, Elasticsearch, Kibana, MinIO) runs from `docker-compose.yaml` — start Docker first.
-
-Default ports:
-
-| Service             | Port |     | App                          | Port          |
-| ------------------- | ---- | --- | ---------------------------- | ------------- |
-| core                | 5010 |     | internal-portal backend      | 7001          |
-| leasing             | 5020 |     | internal-portal frontend     | 7003          |
-| property-management | 5030 |     | leasing-portal BFF (uth-345) | 7002          |
-| communication       | 5040 |     | keys-portal, property-tree   | 3000 (`PORT`) |
-| property            | 5050 |     |                              |               |
-| work-order          | 5070 |     |                              |               |
-| economy             | 5080 |     |                              |               |
-| inspection          | 5090 |     |                              |               |
-| file-storage        | 5091 |     |                              |               |
-| keys                | 5092 |     |                              |               |
-| contacts            | 5093 |     |                              |               |
-
-Each service's Swagger UI is at `http://localhost:<port>/swagger`.
+`pnpm dev` starts everything (start Docker first). Default ports, Swagger URLs and the related repositories (onecore-odoo, the ops repos, mimer.nu) are in `.claude/skills/local-setup.md`.
 
 ## Git & Pull Requests
 
@@ -189,15 +171,3 @@ When you are done implementing a task, run `pnpm exec prettier --write <paths>` 
 - Label each finding blocking, should-fix, nit or question. Blocking = breaks behaviour, leaks data, or breaks a Security rule or the race/invariant rule above. Question = you are not sure it is wrong; ask instead of asserting.
 - Findings in code the PR didn't touch: mark as pre-existing and suggest a follow-up card instead.
 - At most 5 nits. Don't report what CI enforces (lint, formatting, types).
-
-## Related Repositories
-
-| Repo                                            | Where                               | What                                                                                                                                               |
-| ----------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `onecore` (this, **public**)                    | GitHub `Bostads-AB-Mimer`           | Core, services, apps                                                                                                                               |
-| `onecore-odoo` (public)                         | GitHub                              | Odoo case management; calls core                                                                                                                   |
-| `mimer-onecore-operations` (private)            | GitHub                              | Flux/Kustomize config for the dev cluster (one environment per epic, e.g. `epic-avtal-49`) and the test cluster (stage). PRs go to `refactor/dev`. |
-| `mimer-onecore-operations-production` (private) | GitHub                              | Same for production                                                                                                                                |
-| `API`, `Webbappar` (mimer.nu)                   | Azure DevOps `mimeronline/Mimer.nu` | mimer.nu's .NET API and the Vue apps Sök ledigt and Mina sidor. Maintained by another vendor.                                                      |
-
-A feature that spans repos uses the same epic name in each (e.g. `epic/avtal-49-…` in onecore and onecore-odoo, `epic/avtal-49-start-using-tenfast` in mimer.nu), and they are released together.
