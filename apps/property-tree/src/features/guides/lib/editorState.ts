@@ -1,4 +1,4 @@
-import type { guides } from '@onecore/types'
+import { guides } from '@onecore/types'
 
 import type {
   CreateGuideRequest,
@@ -102,7 +102,11 @@ export interface EditorState {
   slug: string
   /** Once the user edits the slug by hand it stops following the title. */
   slugTouched: boolean
-  category: EditorCategory | null
+  /**
+   * One entry per category row in the editor; null for a row nothing has
+   * been picked in yet. The guide is listed under every category.
+   */
+  categories: (EditorCategory | null)[]
   status: GuideStatus
   steps: EditorStep[]
   /**
@@ -118,7 +122,7 @@ export type EditorAction =
   | { type: 'set-title'; title: string }
   | { type: 'set-description'; description: string }
   | { type: 'set-slug'; slug: string }
-  | { type: 'set-category'; category: EditorCategory | null }
+  | { type: 'set-categories'; categories: (EditorCategory | null)[] }
   | { type: 'add-step'; id: string }
   | { type: 'remove-step'; stepId: string }
   | { type: 'move-step'; from: number; to: number }
@@ -175,7 +179,7 @@ export const fromGuide = (guide: GuideWithUrls): EditorState => ({
   description: guide.description,
   slug: guide.slug,
   slugTouched: true,
-  category: { id: guide.category.id },
+  categories: guide.categories.map(({ id }) => ({ id })),
   status: guide.status,
   steps: guide.steps.map((step) => ({
     id: step.id,
@@ -197,7 +201,7 @@ export const emptyState = (): EditorState => ({
   description: '',
   slug: '',
   slugTouched: false,
-  category: null,
+  categories: [null],
   status: 'draft',
   steps: [],
   dirty: false,
@@ -337,8 +341,8 @@ export function editorReducer(
       return { ...state, dirty: true, description: action.description }
     case 'set-slug':
       return { ...state, dirty: true, slug: action.slug, slugTouched: true }
-    case 'set-category':
-      return { ...state, dirty: true, category: action.category }
+    case 'set-categories':
+      return { ...state, dirty: true, categories: action.categories }
     case 'add-step':
       return {
         ...state,
@@ -511,17 +515,23 @@ export function validate(state: EditorState, status: GuideStatus): string[] {
       'Slug får bara innehålla små bokstäver a–z, siffror och bindestreck.'
     )
   }
-  if (!state.category) problems.push('Välj eller skapa en kategori.')
-  if (
-    state.category &&
-    'name' in state.category &&
-    !state.category.name.trim()
-  ) {
-    problems.push(
-      state.category.parentId
-        ? 'Ange ett namn på den nya underkategorin.'
-        : 'Ange ett namn på den nya kategorin.'
-    )
+  if (state.categories.length === 0 || state.categories.includes(null)) {
+    problems.push('Välj eller skapa en kategori.')
+  }
+  for (const category of state.categories) {
+    if (category && 'name' in category && !category.name.trim()) {
+      problems.push(
+        category.parentId
+          ? 'Ange ett namn på den nya underkategorin.'
+          : 'Ange ett namn på den nya kategorin.'
+      )
+    }
+  }
+  const keys = state.categories.flatMap((category) =>
+    category ? [guides.categoryInputKey(category)] : []
+  )
+  if (new Set(keys).size < keys.length) {
+    problems.push('Samma kategori är vald flera gånger.')
   }
   state.steps.forEach((step, index) => {
     if (step.title.trim().length === 0) {
@@ -551,20 +561,19 @@ export function toRequest(
   state: EditorState,
   status: GuideStatus
 ): CreateGuideRequest {
-  if (!state.category) throw new Error('Category is required')
   return {
     title: state.title.trim(),
     description: state.description.trim(),
     slug: state.slug,
-    category:
-      'id' in state.category
-        ? { id: state.category.id }
+    categories: state.categories.map((category) => {
+      if (!category) throw new Error('Every category row needs a category')
+      return 'id' in category
+        ? { id: category.id }
         : {
-            name: state.category.name.trim(),
-            ...(state.category.parentId && {
-              parentId: state.category.parentId,
-            }),
-          },
+            name: category.name.trim(),
+            ...(category.parentId && { parentId: category.parentId }),
+          }
+    }),
     status,
     steps: state.steps.map((step) => ({
       id: step.id,
@@ -597,8 +606,8 @@ export function toUpdateRequest(
 
 /**
  * A GuideWithUrls built from unsaved state, for the preview dialog. The
- * category list resolves the name of an already existing category, which the
- * state only holds by id.
+ * category list resolves the names of already existing categories, which the
+ * state only holds by id. Rows without a category are left out.
  */
 export function toPreview(
   state: EditorState,
@@ -606,30 +615,31 @@ export function toPreview(
   categories: readonly GuideCategory[] = []
 ): GuideWithUrls {
   const now = new Date().toISOString()
-  const category = state.category
-  const categoryName = !category
-    ? ''
-    : 'name' in category
-      ? category.name
-      : (categories.find((item) => item.id === category.id)?.name ?? '')
   return {
     id: state.guideId ?? 'preview',
     slug: state.slug || 'preview',
     title: state.title || 'Namnlös guide',
     description: state.description,
     status: state.status,
-    category: {
-      id: state.category && 'id' in state.category ? state.category.id : 'new',
-      name: categoryName,
-      parentId: !category
-        ? null
-        : 'id' in category
-          ? (categories.find((item) => item.id === category.id)?.parentId ??
-            null)
-          : (category.parentId ?? null),
-      createdAt: now,
-      updatedAt: now,
-    },
+    categories: state.categories.flatMap((category, index) => {
+      if (!category) return []
+      const existing =
+        'id' in category
+          ? categories.find((item) => item.id === category.id)
+          : undefined
+      return [
+        {
+          id: 'id' in category ? category.id : `new-${index}`,
+          name: 'name' in category ? category.name : (existing?.name ?? ''),
+          parentId:
+            'id' in category
+              ? (existing?.parentId ?? null)
+              : (category.parentId ?? null),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]
+    }),
     stepCount: state.steps.length,
     createdBy: author,
     updatedBy: author,

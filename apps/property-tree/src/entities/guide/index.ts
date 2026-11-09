@@ -14,6 +14,7 @@ export {
 // UI
 export { CategoryCard } from './ui/CategoryCard'
 export { GuideCard } from './ui/GuideCard'
+export { GuideCategoryBadges } from './ui/GuideCategoryBadges'
 export { GuideStatusBadge } from './ui/GuideStatusBadge'
 
 // Types

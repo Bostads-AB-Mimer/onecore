@@ -19,6 +19,7 @@ import {
   nextUpdatedAt,
 } from './guide-version'
 import {
+  GuideCategoryLinkRow,
   GuideCategoryRow,
   GuideRow,
   GuideStepImageRow,
@@ -28,56 +29,78 @@ import {
   normalizeId,
 } from './rows'
 
-type ListRow = GuideRow & {
-  categoryName: string
-  categoryParentId: string | null
-  categoryCreatedAt: Date
-  categoryUpdatedAt: Date
-  stepCount: number
+type ListRow = GuideRow & { stepCount: number }
+
+/**
+ * Select the categories of the guides `scope` narrows `guide as g` to, each
+ * guide's categories ordered by top-level category name, the category itself
+ * before its subcategories, then name. One query for any number of guides.
+ */
+async function readCategoryLinks(
+  db: Knex,
+  scope: (qb: Knex.QueryBuilder) => void
+): Promise<Map<string, GuideCategoryRow[]>> {
+  const rows: GuideCategoryLinkRow[] = await db('guide_category_link as l')
+    .join('guide as g', 'g.id', 'l.guideId')
+    .join('guide_category as c', 'c.id', 'l.categoryId')
+    .leftJoin('guide_category as p', 'p.id', 'c.parentId')
+    .select('l.guideId', 'c.*')
+    .modify(scope)
+    .orderByRaw(
+      'COALESCE(p.name, c.name) ASC, ' +
+        'CASE WHEN c.parentId IS NULL THEN 0 ELSE 1 END ASC, ' +
+        'c.name ASC'
+    )
+
+  const byGuide = new Map<string, GuideCategoryRow[]>()
+  for (const { guideId, ...category } of rows) {
+    const key = normalizeId(guideId)
+    const list = byGuide.get(key)
+    if (list) list.push(category)
+    else byGuide.set(key, [category])
+  }
+  return byGuide
+}
+
+/** The categories of one guide; a guide without any is a broken write. */
+const categoriesOf = (
+  byGuide: Map<string, GuideCategoryRow[]>,
+  guideId: string
+): GuideCategoryRow[] => {
+  const categories = byGuide.get(normalizeId(guideId))
+  if (!categories) throw new Error(`Guide ${guideId} has no category`)
+  return categories
 }
 
 export async function listGuides(
   query: guides.ListGuidesQuery,
   db: Knex
 ): Promise<guides.GuideSummary[]> {
+  const onlyPublished = (qb: Knex.QueryBuilder) => {
+    if (!query.includeDrafts) qb.where('g.status', 'published')
+  }
   try {
+    // A guide is listed under each of its categories, so the list itself is
+    // ordered by title; callers group it by category.
     const rows: ListRow[] = await db('guide as g')
-      .join('guide_category as c', 'c.id', 'g.categoryId')
-      .leftJoin('guide_category as p', 'p.id', 'c.parentId')
       .select(
         'g.*',
-        'c.name as categoryName',
-        'c.parentId as categoryParentId',
-        'c.createdAt as categoryCreatedAt',
-        'c.updatedAt as categoryUpdatedAt',
         db.raw(
           '(SELECT COUNT(*) FROM guide_step s WHERE s.guideId = g.id) AS stepCount'
         )
       )
-      .modify((qb) => {
-        if (!query.includeDrafts) qb.where('g.status', 'published')
-      })
-      // Top-level category name first, so a subcategory's guides follow
-      // their parent's own guides, then subcategory name and title.
-      .orderByRaw(
-        'COALESCE(p.name, c.name) ASC, ' +
-          'CASE WHEN c.parentId IS NULL THEN 0 ELSE 1 END ASC, ' +
-          'c.name ASC, g.title ASC'
-      )
+      .modify(onlyPublished)
+      .orderBy('g.title', 'asc')
+    // Sequential, not parallel: `db` may be a transaction, whose single
+    // connection cannot run two requests at once.
+    const categories = await readCategoryLinks(db, onlyPublished)
 
-    return rows.map((row) =>
-      mapSummary(
-        row,
-        {
-          id: row.categoryId,
-          name: row.categoryName,
-          parentId: row.categoryParentId,
-          createdAt: row.categoryCreatedAt,
-          updatedAt: row.categoryUpdatedAt,
-        },
-        Number(row.stepCount)
-      )
-    )
+    // A guide deleted between the two reads has no links left; leave it out
+    // instead of failing the whole list.
+    return rows.flatMap((row) => {
+      const linked = categories.get(normalizeId(row.id))
+      return linked ? [mapSummary(row, linked, Number(row.stepCount))] : []
+    })
   } catch (err) {
     logger.error({ err }, 'guidesAdapter.listGuides')
     throw err
@@ -85,17 +108,17 @@ export async function listGuides(
 }
 
 /**
- * Load a guide with its category, steps and images. Not logged here: it runs
- * inside the adapters below, which log a failure once at their own level.
+ * Load a guide with its categories, steps and images. Not logged here: it
+ * runs inside the adapters below, which log a failure once at their own
+ * level.
  */
 async function readGuide(id: string, db: Knex): Promise<guides.Guide | null> {
   const guide = await db<GuideRow>('guide').where('id', id).first()
   if (!guide) return null
 
-  const category = await db<GuideCategoryRow>('guide_category')
-    .where('id', guide.categoryId)
-    .first()
-  if (!category) throw new Error(`Guide ${id} has no category`)
+  const categories = await readCategoryLinks(db, (qb) => {
+    qb.where('g.id', id)
+  })
 
   const steps = await db<GuideStepRow>('guide_step')
     .where('guideId', id)
@@ -111,7 +134,7 @@ async function readGuide(id: string, db: Knex): Promise<guides.Guide | null> {
           )
           .orderBy('sortOrder', 'asc')
 
-  return mapGuide(guide, category, steps, images)
+  return mapGuide(guide, categoriesOf(categories, id), steps, images)
 }
 
 export async function getGuideById(
@@ -229,6 +252,35 @@ async function assertImagesBelongToTheirSteps(
   }
 }
 
+/**
+ * Resolve every category of a write in order, inside the write's
+ * transaction. Two inputs can name the same category (an id and the name of
+ * that category), so the ids are deduplicated.
+ */
+async function resolveCategoryIds(
+  inputs: guides.CategoryInput[],
+  trx: Knex
+): Promise<string[]> {
+  const ids = new Set<string>()
+  for (const input of inputs) {
+    const category = await resolveCategory(input, trx)
+    ids.add(normalizeId(category.id))
+  }
+  return [...ids]
+}
+
+/** Replace the category links of a guide with `categoryIds`. */
+async function linkCategories(
+  guideId: string,
+  categoryIds: string[],
+  trx: Knex
+): Promise<void> {
+  await trx('guide_category_link').where('guideId', guideId).delete()
+  await trx('guide_category_link').insert(
+    categoryIds.map((categoryId) => ({ guideId, categoryId }))
+  )
+}
+
 export async function createGuide(
   input: guides.ServiceGuideWrite,
   db: Knex
@@ -237,7 +289,7 @@ export async function createGuide(
     return await db.transaction(async (trx) => {
       await assertStepsAreNotOwnedByAnotherGuide(input.steps, null, trx)
 
-      const category = await resolveCategory(input.category, trx)
+      const categoryIds = await resolveCategoryIds(input.categories, trx)
       const id = randomUUID()
       const now = new Date()
 
@@ -247,7 +299,6 @@ export async function createGuide(
           slug: input.slug,
           title: input.title,
           description: input.description,
-          categoryId: category.id,
           status: input.status,
           publishedAt: input.status === 'published' ? now : null,
           createdBy: input.author,
@@ -257,6 +308,8 @@ export async function createGuide(
           updatedAt: asDateTime2(trx, now),
         })
       )
+
+      await linkCategories(id, categoryIds, trx)
 
       // Images cannot exist yet: they are uploaded against a saved step.
       for (const [index, step] of input.steps.entries()) {
@@ -319,8 +372,10 @@ export async function updateGuide(
       await assertStepsAreNotOwnedByAnotherGuide(input.steps, id, trx)
       await assertImagesBelongToTheirSteps(id, input.steps, trx)
 
-      const category = await resolveCategory(input.category, trx)
+      const categoryIds = await resolveCategoryIds(input.categories, trx)
 
+      // updatedAt moves forward on every save, so a change of only the
+      // categories also invalidates other editors' concurrency tokens.
       await guardSlugConflict(input.slug, () =>
         trx('guide')
           .where('id', id)
@@ -328,7 +383,6 @@ export async function updateGuide(
             slug: input.slug,
             title: input.title,
             description: input.description,
-            categoryId: category.id,
             status: input.status,
             publishedAt:
               input.status === 'published'
@@ -338,6 +392,8 @@ export async function updateGuide(
             updatedAt: asDateTime2(trx, nextUpdatedAt(existing.updatedAt, now)),
           })
       )
+
+      await linkCategories(id, categoryIds, trx)
 
       const existingSteps = await trx<GuideStepRow>('guide_step').where(
         'guideId',

@@ -7,10 +7,17 @@ interface FilterOptions {
   categories?: readonly GuideCategory[]
 }
 
+/** True when the guide is in `categoryId` or one of its subcategories. */
+const isInCategory = (guide: GuideSummary, categoryId: string) =>
+  guide.categories.some(
+    (category) => category.id === categoryId || category.parentId === categoryId
+  )
+
 /**
- * Case-insensitive match on title, description and category name, optionally
- * limited to one category and its subcategories. A guide in a subcategory
- * also matches its parent's name, which is looked up in `categories`.
+ * Case-insensitive match on title, description and the names of all the
+ * guide's categories, optionally limited to one category and its
+ * subcategories. A guide in a subcategory also matches its parent's name,
+ * which is looked up in `categories`.
  */
 export function filterGuides(
   guides: GuideSummary[],
@@ -21,23 +28,19 @@ export function filterGuides(
   const inCategory =
     categoryId === undefined
       ? guides
-      : guides.filter(
-          ({ category }) =>
-            category.id === categoryId || category.parentId === categoryId
-        )
+      : guides.filter((guide) => isInCategory(guide, categoryId))
   if (needle.length === 0) return inCategory
 
-  const parentName = ({ category }: GuideSummary) =>
-    category.parentId === null
-      ? ''
-      : (categories.find(({ id }) => id === category.parentId)?.name ?? '')
+  const categoryNames = (guide: GuideSummary) =>
+    guide.categories.flatMap(({ name, parentId }) =>
+      parentId === null
+        ? [name]
+        : [name, categories.find(({ id }) => id === parentId)?.name ?? '']
+    )
 
   return inCategory.filter((guide) =>
-    [
-      guide.title,
-      guide.description,
-      guide.category.name,
-      parentName(guide),
-    ].some((text) => text.toLowerCase().includes(needle))
+    [guide.title, guide.description, ...categoryNames(guide)].some((text) =>
+      text.toLowerCase().includes(needle)
+    )
   )
 }

@@ -16,7 +16,6 @@ export type GuideRow = {
   slug: string
   title: string
   description: string
-  categoryId: string
   status: guides.GuideStatus
   publishedAt: Date | null
   createdBy: string
@@ -90,9 +89,12 @@ export const mapStep = (
   updatedAt: row.updatedAt,
 })
 
+/** A row of guide_category_link joined with its category. */
+export type GuideCategoryLinkRow = GuideCategoryRow & { guideId: string }
+
 export const mapSummary = (
   row: GuideRow,
-  category: GuideCategoryRow,
+  categories: GuideCategoryRow[],
   stepCount: number
 ): guides.GuideSummary => ({
   id: normalizeId(row.id),
@@ -100,7 +102,7 @@ export const mapSummary = (
   title: row.title,
   description: row.description,
   status: row.status,
-  category: mapCategory(category),
+  categories: categories.map(mapCategory),
   stepCount,
   createdBy: row.createdBy,
   updatedBy: row.updatedBy,
@@ -111,11 +113,11 @@ export const mapSummary = (
 
 export const mapGuide = (
   row: GuideRow,
-  category: GuideCategoryRow,
+  categories: GuideCategoryRow[],
   steps: GuideStepRow[],
   images: GuideStepImageRow[]
 ): guides.Guide => ({
-  ...mapSummary(row, category, steps.length),
+  ...mapSummary(row, categories, steps.length),
   steps: [...steps]
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((step) => mapStep(step, images)),

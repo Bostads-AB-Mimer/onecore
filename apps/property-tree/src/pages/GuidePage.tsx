@@ -49,12 +49,16 @@ export function GuidePage() {
               <Link to={routes.guides}>Guider</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
-          {data && !isUnpublishedGuide(data) && (
-            <>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>{data.category.name}</BreadcrumbItem>
-            </>
-          )}
+          {/* A guide in several categories has no single place in the
+              hierarchy, so only a guide in one category names it here. */}
+          {data &&
+            !isUnpublishedGuide(data) &&
+            data.categories.length === 1 && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>{data.categories[0].name}</BreadcrumbItem>
+              </>
+            )}
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbPage>{title}</BreadcrumbPage>

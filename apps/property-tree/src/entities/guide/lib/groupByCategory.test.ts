@@ -5,19 +5,19 @@ import { groupByCategory, groupBySubcategory } from './groupByCategory'
 
 const summary = (
   title: string,
-  category: { id: string; name: string; parentId?: string }
+  ...categories: { id: string; name: string; parentId?: string }[]
 ): GuideSummary => ({
   id: title,
   slug: title,
   title,
   description: '',
   status: 'published',
-  category: {
+  categories: categories.map((category) => ({
     parentId: null,
     ...category,
     createdAt: '',
     updatedAt: '',
-  },
+  })),
   stepCount: 1,
   createdBy: 'a',
   updatedBy: 'a',
@@ -35,7 +35,7 @@ const category = (id: string, name: string): GuideCategory => ({
 })
 
 describe('groupByCategory', () => {
-  it('groups guides under their category in first-seen order', () => {
+  it('groups guides under their category, sorted by category name', () => {
     const tenfast = { id: 'c1', name: 'Tenfast' }
     const invoices = { id: 'c2', name: 'Ströfakturor' }
 
@@ -45,9 +45,9 @@ describe('groupByCategory', () => {
       summary('c', tenfast),
     ])
 
-    expect(groups.map((g) => g.name)).toEqual(['Tenfast', 'Ströfakturor'])
-    expect(groups[0].guides.map((g) => g.title)).toEqual(['a', 'c'])
-    expect(groups[1].guides.map((g) => g.title)).toEqual(['b'])
+    expect(groups.map((g) => g.name)).toEqual(['Ströfakturor', 'Tenfast'])
+    expect(groups[0].guides.map((g) => g.title)).toEqual(['b'])
+    expect(groups[1].guides.map((g) => g.title)).toEqual(['a', 'c'])
   })
 
   it('counts the guides in each category', () => {
@@ -62,8 +62,40 @@ describe('groupByCategory', () => {
     ])
 
     expect(groups.map((g) => [g.name, g.guides.length])).toEqual([
-      ['Tenfast', 3],
       ['Odoo', 1],
+      ['Tenfast', 3],
+    ])
+  })
+
+  it('lists a guide under each of its categories', () => {
+    const tenfast = { id: 'c1', name: 'Tenfast' }
+    const odoo = { id: 'c2', name: 'Odoo' }
+
+    const groups = groupByCategory([
+      summary('a', tenfast, odoo),
+      summary('b', tenfast),
+    ])
+
+    expect(
+      groups.map((g) => [g.name, g.guides.map((guide) => guide.title)])
+    ).toEqual([
+      ['Odoo', ['a']],
+      ['Tenfast', ['a', 'b']],
+    ])
+  })
+
+  it('counts a guide in a category and its subcategories once', () => {
+    const tenfast = { id: 'c1', name: 'Tenfast' }
+    const contracts = { id: 'c3', name: 'Avtal', parentId: 'c1' }
+    const objects = { id: 'c4', name: 'Hyresobjekt', parentId: 'c1' }
+
+    const groups = groupByCategory(
+      [summary('a', tenfast, contracts, objects)],
+      [category('c1', 'Tenfast')]
+    )
+
+    expect(groups.map((g) => [g.name, g.guides.length])).toEqual([
+      ['Tenfast', 1],
     ])
   })
 
@@ -83,8 +115,8 @@ describe('groupByCategory', () => {
     )
 
     expect(groups.map((g) => [g.id, g.name, g.guides.length])).toEqual([
-      ['c1', 'Tenfast', 3],
       ['c2', 'Odoo', 1],
+      ['c1', 'Tenfast', 3],
     ])
   })
 
@@ -135,6 +167,18 @@ describe('groupBySubcategory', () => {
     ).toEqual([
       ['Avtal', 'c1', ['b', 'd']],
       ['Hyresobjekt', 'c1', ['c']],
+    ])
+  })
+
+  it('lists a guide under each of its subcategories', () => {
+    const contracts = { id: 'c3', name: 'Avtal', parentId: 'c1' }
+    const objects = { id: 'c4', name: 'Hyresobjekt', parentId: 'c1' }
+
+    const groups = groupBySubcategory([summary('a', contracts, objects)], 'c1')
+
+    expect(groups.map((g) => [g.name, g.guides.length])).toEqual([
+      ['Avtal', 1],
+      ['Hyresobjekt', 1],
     ])
   })
 })

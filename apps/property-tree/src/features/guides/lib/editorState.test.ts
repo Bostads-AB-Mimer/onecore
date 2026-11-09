@@ -45,13 +45,15 @@ const guide: GuideWithUrls = {
   title: 'Min guide',
   description: 'Beskrivning',
   status: 'draft',
-  category: {
-    id: 'c1',
-    name: 'Tenfast',
-    parentId: null,
-    createdAt: '',
-    updatedAt: '',
-  },
+  categories: [
+    {
+      id: 'c1',
+      name: 'Tenfast',
+      parentId: null,
+      createdAt: '',
+      updatedAt: '',
+    },
+  ],
   stepCount: 1,
   createdBy: 'Anna',
   updatedBy: 'Anna',
@@ -105,7 +107,31 @@ describe('editorReducer', () => {
     expect(state.steps[0].saved).toBe(true)
     expect(state.steps[0].images[0].caption).toBe('')
     expect(state.dirty).toBe(false)
-    expect(state.category).toEqual({ id: 'c1' })
+    expect(state.categories).toEqual([{ id: 'c1' }])
+  })
+
+  it('loads every category of a guide', () => {
+    const state = fromGuide({
+      ...guide,
+      categories: [
+        ...guide.categories,
+        { ...guide.categories[0], id: 'c3', parentId: 'c1' },
+      ],
+    })
+    expect(state.categories).toEqual([{ id: 'c1' }, { id: 'c3' }])
+  })
+
+  it('starts a new guide with one empty category row', () => {
+    expect(emptyState().categories).toEqual([null])
+  })
+
+  it('replaces the categories and marks the guide dirty', () => {
+    const state = editorReducer(fromGuide(guide), {
+      type: 'set-categories',
+      categories: [{ id: 'c1' }, { name: 'Odoo' }],
+    })
+    expect(state.categories).toEqual([{ id: 'c1' }, { name: 'Odoo' }])
+    expect(state.dirty).toBe(true)
   })
 
   it('manages images on a step', () => {
@@ -301,7 +327,7 @@ describe('validate', () => {
   })
 
   it('requires a name for a new category', () => {
-    const state = { ...fromGuide(guide), category: { name: '  ' } }
+    const state = { ...fromGuide(guide), categories: [{ name: '  ' }] }
     expect(validate(state, 'draft')).toEqual([
       'Ange ett namn på den nya kategorin.',
     ])
@@ -310,11 +336,46 @@ describe('validate', () => {
   it('requires a name for a new subcategory', () => {
     const state = {
       ...fromGuide(guide),
-      category: { name: '  ', parentId: 'c1' },
+      categories: [{ id: 'c1' }, { name: '  ', parentId: 'c1' }],
     }
     expect(validate(state, 'draft')).toEqual([
       'Ange ett namn på den nya underkategorin.',
     ])
+  })
+
+  it('requires a category in every row', () => {
+    const state = { ...fromGuide(guide), categories: [{ id: 'c1' }, null] }
+    expect(validate(state, 'draft')).toEqual(['Välj eller skapa en kategori.'])
+    expect(validate({ ...state, categories: [] }, 'draft')).toEqual([
+      'Välj eller skapa en kategori.',
+    ])
+  })
+
+  it('rejects the same category twice', () => {
+    const state = fromGuide(guide)
+    const duplicate = ['Samma kategori är vald flera gånger.']
+    expect(
+      validate({ ...state, categories: [{ id: 'c1' }, { id: 'c1' }] }, 'draft')
+    ).toEqual(duplicate)
+    expect(
+      validate(
+        { ...state, categories: [{ name: 'Odoo' }, { name: ' odoo ' }] },
+        'draft'
+      )
+    ).toEqual(duplicate)
+    // The same name under different parents is two categories.
+    expect(
+      validate(
+        {
+          ...state,
+          categories: [
+            { name: 'Avtal', parentId: 'c1' },
+            { name: 'Avtal', parentId: 'c2' },
+          ],
+        },
+        'draft'
+      )
+    ).toEqual([])
   })
 })
 
@@ -330,25 +391,27 @@ describe('toRequest', () => {
     const request = toRequest(state, 'published')
 
     expect(request.status).toBe('published')
-    expect(request.category).toEqual({ id: 'c1' })
+    expect(request.categories).toEqual([{ id: 'c1' }])
     expect(request.steps[0].images).toEqual([
       { id: 'img-1', sortOrder: 0, altText: 'Dialogen', caption: null },
     ])
     expect(request.steps[0].calloutText).toBe('Tänk på')
   })
 
-  it('sends the parent of a new subcategory', () => {
+  it('sends every category, with the parent of a new subcategory', () => {
     const state = {
       ...fromGuide(guide),
-      category: { name: '  Avtal ', parentId: 'c1' },
+      categories: [
+        { id: 'c1' },
+        { name: '  Avtal ', parentId: 'c1' },
+        { name: 'Nytt' },
+      ],
     }
-    expect(toRequest(state, 'draft').category).toEqual({
-      name: 'Avtal',
-      parentId: 'c1',
-    })
-    expect(
-      toRequest({ ...state, category: { name: 'Nytt' } }, 'draft').category
-    ).toEqual({ name: 'Nytt' })
+    expect(toRequest(state, 'draft').categories).toEqual([
+      { id: 'c1' },
+      { name: 'Avtal', parentId: 'c1' },
+      { name: 'Nytt' },
+    ])
   })
 
   it('drops callout text when no callout type is set', () => {
@@ -418,31 +481,44 @@ describe('toPreview', () => {
 
   it('resolves the name of an existing category', () => {
     const preview = toPreview(fromGuide(guide), 'Anna', categories)
-    expect(preview.category).toMatchObject({ id: 'c1', name: 'Tenfast' })
+    expect(preview.categories).toMatchObject([{ id: 'c1', name: 'Tenfast' }])
   })
 
   it('uses the typed name for a new category and leaves it empty when unknown', () => {
     const state = fromGuide(guide)
     expect(
-      toPreview({ ...state, category: { name: 'Nytt' } }, 'Anna', categories)
-        .category.name
+      toPreview(
+        { ...state, categories: [{ name: 'Nytt' }] },
+        'Anna',
+        categories
+      ).categories[0].name
     ).toBe('Nytt')
-    expect(toPreview(state, 'Anna', []).category.name).toBe('')
+    expect(toPreview(state, 'Anna', []).categories[0].name).toBe('')
   })
 
   it('keeps the parent of a subcategory', () => {
     const state = fromGuide(guide)
     expect(
-      toPreview({ ...state, category: { id: 'c3' } }, 'Anna', categories)
-        .category
+      toPreview({ ...state, categories: [{ id: 'c3' }] }, 'Anna', categories)
+        .categories[0]
     ).toMatchObject({ id: 'c3', name: 'Avtal', parentId: 'c1' })
     expect(
       toPreview(
-        { ...state, category: { name: 'Nytt', parentId: 'c1' } },
+        { ...state, categories: [{ name: 'Nytt', parentId: 'c1' }] },
         'Anna',
         categories
-      ).category.parentId
+      ).categories[0].parentId
     ).toBe('c1')
+  })
+
+  it('shows every picked category and skips empty rows', () => {
+    const state = {
+      ...fromGuide(guide),
+      categories: [{ id: 'c1' }, null, { id: 'c3' }],
+    }
+    expect(
+      toPreview(state, 'Anna', categories).categories.map((c) => c.name)
+    ).toEqual(['Tenfast', 'Avtal'])
   })
 
   it('falls back to placeholder titles for empty fields', () => {
