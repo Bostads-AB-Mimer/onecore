@@ -151,6 +151,7 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
         : (tenfastRentalObject.hyraExcludingVat ?? 0),
       vat: includeVAT ? (tenfastRentalObject.hyraVat ?? 0) : 0,
       rows: (tenfastRentalObject.hyror ?? []).map((hyra) => ({
+        code: hyra.article ?? '',
         description: hyra.label || '',
         amount: includeVAT
           ? currency(hyra.amount).add(hyra.vat).value
