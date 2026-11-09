@@ -10,6 +10,7 @@ import {
   NationalIdForms,
   parseNationalId,
 } from '@src/domain/national-id'
+import { swedishYear } from '@src/domain/swedish-time'
 import { generateInitialPassword } from './password'
 import {
   CreateContactAgeRuleSchema,
@@ -37,17 +38,10 @@ export type CreateContactResult = {
 const MINIMUM_AGE = 16
 
 /**
- * Swedish time, not the container's UTC, so the year turns at midnight in
- * Sweden, as it does for core's own registration check.
- */
-const stockholmYear = new Intl.DateTimeFormat('sv-SE', {
-  timeZone: 'Europe/Stockholm',
-  year: 'numeric',
-})
-
-/**
  * Whether the person is old enough under the caller's rule. `birth-year` lets
  * someone in from the calendar year they turn 16; the default is 16 on the day.
+ * Both count in Swedish time, so the day and the year turn at midnight in
+ * Sweden, as they do for core's own registration check.
  *
  * The year is read from the twelve-digit form: a samordningsnummer only offsets
  * the day, so its first four digits are still the birth year.
@@ -59,9 +53,9 @@ const isOldEnough = (
 ): boolean => {
   if (rule === 'birth-year') {
     const birthYear = Number(forms.twelveDigits.slice(0, 4))
-    return Number(stockholmYear.format(today)) - birthYear >= MINIMUM_AGE
+    return swedishYear(today) - birthYear >= MINIMUM_AGE
   }
-  const age = getAgeFromNationalId(forms.twelveDigits)
+  const age = getAgeFromNationalId(forms.twelveDigits, today)
   return age !== null && age >= MINIMUM_AGE
 }
 

@@ -30,11 +30,11 @@ export type LoginContactCandidate = {
   createdAt: Date | null
 }
 
-/** One of a person's contacts, and whether they can log in with it. */
-export type PersonContact = {
-  contactCode: ContactCode
-  isActive: boolean
-}
+/** One of a person's contacts, and whether login accepts it. */
+export type PersonContact = Pick<
+  LoginContactCandidate,
+  'contactCode' | 'isActive'
+>
 
 export type LoginContactChoice = {
   contactCode: ContactCode

@@ -199,8 +199,12 @@ export interface ContactsRepository {
    * check (`existsByNationalIdNumber`), which matches every row, deleted ones
    * and companies included.
    *
-   * The first is the contact login uses, so the person can log in exactly when
-   * it is active. A later active contact does not help them.
+   * The first is the contact login picks for a user whose Keycloak account has
+   * no live `contact_code` yet, the case for someone who has not logged in
+   * before: they can log in exactly when it is active, and a later active
+   * contact does not help them. A `contact_code` that already names a live
+   * contact is never replaced, so a user who has one logs in as that contact,
+   * whatever its place here.
    *
    * @param nid - The national ID number in any common notation.
    *

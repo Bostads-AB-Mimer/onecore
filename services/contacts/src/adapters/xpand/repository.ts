@@ -25,6 +25,7 @@ import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
 import { contactExists } from './contact-lookup-query'
 import { loginContactCandidates } from './login-contact-query'
+import { redactedError } from './redacted-error'
 import { pickLoginContact, rankLoginContacts } from '@src/domain/login-contact'
 import {
   relatedContactsFor,
@@ -296,12 +297,11 @@ export const xpandContactsRepository = (
         )
       } catch (err: unknown) {
         // Knex writes the SQL with its bindings, the personnummer here, into
-        // err.message. Only the driver's code is logged, and the error thrown
-        // on (which errorHandler logs and returns) does not carry it.
+        // err.message, and err.stack starts with that message. So the message
+        // is left out of the log, and the error thrown on (which errorHandler
+        // logs and returns) does not carry it or the original as its cause.
         logger.error(
-          {
-            code: err instanceof Error && 'code' in err ? err.code : undefined,
-          },
+          redactedError(err),
           'contactsRepository.getPersonContactsByNationalIdNumber'
         )
         throw new Error('Person contacts lookup failed')

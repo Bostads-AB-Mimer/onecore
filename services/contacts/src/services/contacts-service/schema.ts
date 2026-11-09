@@ -136,6 +136,12 @@ export const ErrorResponseBodySchema = z.object({
   error: z.string(),
 })
 
+/** What the shared errorHandler answers when a route throws. */
+export const InternalServerErrorResponseBodySchema = z.object({
+  errorMessage: z.string(),
+  message: z.string(),
+})
+
 /* -------------------------------------------------------------------------
  * Creating contacts
  *
@@ -262,7 +268,10 @@ export const PersonContactSchema = z.object({
 export const GetPersonContactsResponseBodySchema =
   ONECoreHateOASResponseBodySchema.extend({
     content: z.object({
-      /** Login uses the first, so the person can log in exactly when it is active. */
+      /**
+       * Login picks the first for a user with no live contact_code yet, who can
+       * then log in exactly when it is active. A live contact_code is kept.
+       */
       contacts: z.array(PersonContactSchema),
     }),
   })

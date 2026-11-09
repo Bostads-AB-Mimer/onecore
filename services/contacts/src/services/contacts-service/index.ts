@@ -22,6 +22,7 @@ import {
   GetContactResponseBodySchema,
   GetContactsResponseBodySchema,
   GetPersonContactsResponseBodySchema,
+  InternalServerErrorResponseBodySchema,
   GetRelatedContactsResponseBodySchema,
   ONECoreHateOASResponseBodySchema,
   RelationActorSchema,
@@ -887,7 +888,7 @@ export const routes = (
     {
       summary: "A person's contacts, and whether they can log in with them",
       description:
-        'Every person contact (P code, not deleted, number stored in either form) for a personnummer or samordningsnummer, in the order login prefers them, as /login-contact ranks them. isActive is true when the Sökande role is in use, which login requires. Login uses the first contact, so the person can log in exactly when the first is active. 200 with an empty list when there are none; companies and deleted contacts are left out, so the duplicate check on create can still match a number this answers empty for.',
+        'Every person contact (P code, not deleted, number stored in either form) for a personnummer or samordningsnummer, in the order login prefers them, as /login-contact ranks them. isActive is true when the Sökande role is in use, which login requires. Login picks the first for a user whose Keycloak account has no live contact_code yet, so such a person can log in exactly when the first is active; a user whose contact_code already names a live contact keeps logging in as that contact, wherever it is listed. 200 with an empty list when there are none; companies and deleted contacts are left out, so the duplicate check on create can still match a number this answers empty for.',
       tags: ['Contacts'],
       params: {
         nid: z.string(),
@@ -895,6 +896,7 @@ export const routes = (
       response: {
         200: GetPersonContactsResponseBodySchema,
         400: ErrorResponseBodySchema,
+        500: InternalServerErrorResponseBodySchema,
       },
     },
     async (ctx) => {
