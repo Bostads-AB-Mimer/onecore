@@ -488,19 +488,100 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
       return { ok: true, data: null }
     })
 
-    const first = postNotification()
-    const second = postNotification()
-
+    // supertest only sends on .then(), so start the first request now and the
+    // second once the first is blocked inside the send.
+    const first = postNotification().then((res) => res)
     await new Promise((resolve) => setTimeout(resolve, 10))
+    const secondRes = await postNotification()
     releaseSend()
-
-    const [firstRes, secondRes] = await Promise.all([first, second])
+    const firstRes = await first
 
     expect(firstRes.status).toBe(200)
-    expect(secondRes.status).toBe(200)
+    // The first request could still have failed, so the second must not
+    // claim the email was sent.
+    expect(secondRes.status).toBe(409)
+    expect(secondRes.body.error).toBe('request-in-progress')
     expect(
       communicationAdapter.sendLeaseTerminationConfirmationEmail
     ).toHaveBeenCalledTimes(1)
+  })
+
+  it('releases the key when processing throws, so a retry sends', async () => {
+    // An unexpected throw (here from the send adapter) must not leave the
+    // request or recipient key in-flight.
+    sendMock
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    expect((await postNotification()).status).toBe(500)
+
+    const retry = await postNotification()
+    expect(retry.status).toBe(200)
+    expect(retry.body.content).toEqual({ sent: true })
+    expect(sendMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('trims the address and skips a holder whose email is invalid', async () => {
+    getLeaseMock.mockResolvedValue(lease(['P123456', 'P654321']))
+    getContactsMock.mockResolvedValue({
+      ok: true,
+      data: [
+        individual('P123456', 'Anna', 'Andersson', ' anna@example.com '),
+        individual('P654321', 'Bo', 'Berg', 'saknas'),
+      ],
+    })
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(200)
+    expect(sendMock).toHaveBeenCalledTimes(1)
+    expect(sendMock.mock.calls[0][0].to).toBe('anna@example.com')
+    // Bo gets no email but is still listed as a holder.
+    expect(
+      sendMock.mock.calls[0][0].tenants.map(
+        (t: { contactCode: string }) => t.contactCode
+      )
+    ).toEqual(['P123456', 'P654321'])
+  })
+
+  it('uses the trimmed contact code when contacts returns a padded one', async () => {
+    // Xpand char codes are space-padded.
+    getContactsMock.mockResolvedValue({
+      ok: true,
+      data: [{ ...ANNA, contactCode: 'P123456   ' }],
+    })
+
+    expect((await postNotification()).status).toBe(200)
+    const [email] = sendMock.mock.calls[0]
+    expect(email.contactCode).toBe('P123456')
+    expect(email.tenants[0].contactCode).toBe('P123456')
+  })
+
+  it('reads lease dates at Swedish midnight as that Swedish date', async () => {
+    getLeaseMock.mockResolvedValue(
+      lease(['P123456'], {
+        // 2026-10-31 00:00 and 2026-10-15 00:00 in Europe/Stockholm.
+        leaseEndDate: '2026-10-30T23:00:00.000Z',
+        preferredMoveOutDate: '2026-10-14T22:00:00.000Z',
+      })
+    )
+
+    expect((await postNotification()).status).toBe(200)
+    const [email] = sendMock.mock.calls[0]
+    expect(email.endDate).toEqual(new Date('2026-10-31T00:00:00.000Z'))
+    expect(email.preferredMoveOutDate).toBe('2026-10-15')
+  })
+
+  it('treats an unparseable end date as missing', async () => {
+    getLeaseMock.mockResolvedValue(
+      lease(['P123456'], { leaseEndDate: 'not-a-date' })
+    )
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('missing-end-date')
+    expect(sendMock).not.toHaveBeenCalled()
   })
 
   it('allows retry after a failed send with the same Idempotency-Key', async () => {

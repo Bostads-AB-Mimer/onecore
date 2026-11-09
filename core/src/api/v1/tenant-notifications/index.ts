@@ -101,6 +101,16 @@ export const routes = (router: OkapiRouter, _config: Config) => {
               ...metadata,
             }
             return
+          case 'request-in-progress':
+            // Retryable: the outcome of the running request is not known yet.
+            ctx.status = 409
+            ctx.body = {
+              error: 'request-in-progress',
+              detail:
+                'A request with this Idempotency-Key is still being processed; retry later',
+              ...metadata,
+            }
+            return
           case 'lease-not-found':
             // Tenfast just confirmed this lease, so it is expected to exist.
             logger.error(

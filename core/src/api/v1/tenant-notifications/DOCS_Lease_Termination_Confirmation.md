@@ -11,6 +11,9 @@ log) is used. Tenfast still sends `to`, `contactCode`, `firstName`, `endDate`
 and `rentalType`; request parsing strips them, so they never override what the
 lease and contacts say.
 
+Lease dates are read as Swedish calendar dates (Europe/Stockholm), so a date
+Tenfast stores at Swedish midnight is not shifted back a day.
+
 ```mermaid
 sequenceDiagram
     participant T as Tenfast
@@ -23,9 +26,12 @@ sequenceDiagram
     C->>C: claim Idempotency-Key
     alt key reused with other payload
         C-->>T: 409 idempotency-conflict
-    else already sent / in flight
+    else already sent
         C-->>T: 200 sent
+    else another request with this key is still running
+        C-->>T: 409 request-in-progress (retryable)
     end
+    Note over C: from here on the key is released on any outcome but success, including an unexpected error
     C->>L: GET /leases/{leaseId}
     alt lease not found
         C-->>T: 404 lease-not-found
@@ -45,7 +51,8 @@ sequenceDiagram
     else a holder is missing in contacts
         C-->>T: 422 contact-not-found (fail closed, nothing sent)
     end
-    alt no holder has an email address
+    Note over C: a holder's address is the first valid one, primary first; a missing or invalid address skips the holder
+    alt no holder has a valid email address
         C-->>T: 422 no-recipient
     end
     loop each holder with an email (claim per-holder key; a key held by another payload or in flight counts as failed)

@@ -19,7 +19,7 @@ export const SendLeaseTerminationConfirmationResponseBodySchema_APIv1 = z
 export const SendLeaseTerminationConfirmationErrorCodes = {
   400: z.enum(['missing-idempotency-key', 'invalid-request']),
   404: z.enum(['lease-not-found']),
-  409: z.enum(['idempotency-conflict']),
+  409: z.enum(['idempotency-conflict', 'request-in-progress']),
   422: z.enum([
     'missing-end-date',
     'unsupported-rental-type',

@@ -8,6 +8,7 @@ import {
 } from '@onecore/types'
 import type { Contact } from '@onecore/contacts/schema'
 import { logger } from '@onecore/utilities'
+import axios from 'axios'
 import { z } from 'zod'
 
 import * as communicationAdapter from '../../../adapters/communication-adapter'
@@ -38,12 +39,44 @@ type Recipient = {
   emailAddress: string
 }
 
-const toDateString = (value: Date | string | undefined): string | undefined =>
-  value ? new Date(value).toISOString().slice(0, 10) : undefined
+// `{ status, error }` for the log — never the raw AxiosError (AGENTS.md).
+const errorLogFields = (err: unknown) => ({
+  status: axios.isAxiosError(err) ? err.response?.status : undefined,
+  error: err instanceof Error ? err.message : String(err),
+})
 
-const primaryEmail = (contact: Contact): string | undefined => {
-  const emails = contact.communication.emailAddresses
-  return (emails.find((e) => e.isPrimary) ?? emails[0])?.emailAddress
+// sv-SE formats as YYYY-MM-DD. Lease dates are Swedish calendar dates: a
+// Tenfast date at Swedish midnight arrives as 23:00Z the day before, so
+// formatting in UTC (toISOString) would shift it back one day.
+const swedishDateFormatter = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Europe/Stockholm',
+})
+
+export const toSwedishDateString = (
+  value: Date | string | null | undefined
+): string | undefined => {
+  if (!value) return undefined
+  const date = new Date(value)
+  // An unparseable date is treated as missing rather than thrown.
+  return Number.isNaN(date.getTime())
+    ? undefined
+    : swedishDateFormatter.format(date)
+}
+
+const EmailAddressSchema = z.string().trim().email()
+
+// Primary address first, then the others. Xpand emails can be padded or junk
+// ('-', 'saknas'); the communication service rejects those with a 400 that a
+// retry would never fix, so an invalid address counts as no address.
+export const deliverableEmail = (contact: Contact): string | undefined => {
+  const emails = [...contact.communication.emailAddresses].sort(
+    (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
+  )
+  for (const { emailAddress } of emails) {
+    const parsed = EmailAddressSchema.safeParse(emailAddress)
+    if (parsed.success) return parsed.data
+  }
+  return undefined
 }
 
 const nameOf = (contact: Contact) =>
@@ -117,10 +150,7 @@ const getLeaseFacts = async (
     lease = await leasingAdapter.getLease(leaseId)
   } catch (err: unknown) {
     logger.error(
-      {
-        leaseId,
-        error: err instanceof Error ? err.message : String(err),
-      },
+      { leaseId, ...errorLogFields(err) },
       'sendLeaseTerminationConfirmation: lease lookup failed'
     )
     return { ok: false, error: 'lease-lookup-failed' }
@@ -131,7 +161,7 @@ const getLeaseFacts = async (
   }
 
   // JSON from the leasing service: dates arrive as strings despite the type.
-  const leaseEndDate = toDateString(lease.leaseEndDate)
+  const leaseEndDate = toSwedishDateString(lease.leaseEndDate)
   if (!leaseEndDate) {
     return { ok: false, error: 'missing-end-date' }
   }
@@ -157,7 +187,7 @@ const getLeaseFacts = async (
       contactCodes,
       endDate,
       rentalType,
-      preferredMoveOutDate: toDateString(lease.preferredMoveOutDate),
+      preferredMoveOutDate: toSwedishDateString(lease.preferredMoveOutDate),
       rentalObjectAddress: lease.rentalObject?.address?.trim() || undefined,
     },
   }
@@ -179,7 +209,7 @@ const getHolders = async (
     })
     .catch((err: unknown) => {
       logger.error(
-        { leaseId, error: err instanceof Error ? err.message : String(err) },
+        { leaseId, ...errorLogFields(err) },
         'sendLeaseTerminationConfirmation: contacts lookup threw'
       )
       return null
@@ -208,10 +238,15 @@ const getHolders = async (
     return { ok: false, error: 'contact-not-found' }
   }
 
-  // Keep lease order so both holders' emails list them identically.
+  // Keep lease order so both holders' emails list them identically. Use the
+  // trimmed lease code: Xpand codes can be space-padded, and the code ends up
+  // in the per-recipient idempotency key and the communication log.
   return {
     ok: true,
-    data: contactCodes.map((code) => byCode.get(code) as Contact), // every code checked above
+    data: contactCodes.map((code) => ({
+      ...(byCode.get(code) as Contact), // every code checked above
+      contactCode: code,
+    })),
   }
 }
 
@@ -220,73 +255,84 @@ const getHolders = async (
 const recipientKey = (idempotencyKey: string, contactCode: string) =>
   `${idempotencyKey}#${contactCode}`
 
-export const sendLeaseTerminationConfirmation = async (
+type SendOutcome =
+  | { ok: true }
+  | {
+      ok: false
+      error: Exclude<
+        SendLeaseTerminationConfirmationError,
+        'idempotency-conflict' | 'request-in-progress'
+      >
+    }
+
+// Sends one email to one holder under its own idempotency key. The key is
+// released on any outcome but success — including a throw — so it can never be
+// left in-flight and block the holder on later retries.
+const sendToRecipient = async (
+  email: LeaseTerminationConfirmationEmail,
+  key: string,
+  payloadHash: string,
+  store: IdempotencyStore
+): Promise<boolean> => {
+  const claim = store.claim(key, payloadHash)
+  // Already sent on an earlier, partially failed attempt.
+  if (claim === 'duplicate') return true
+  if (claim !== 'claimed') {
+    // 'conflict' or 'in-flight': we cannot tell whether this holder got the
+    // email, so never report it as sent.
+    logger.error(
+      { leaseId: email.leaseId, contactCode: email.contactCode, claim },
+      'sendLeaseTerminationConfirmation: recipient key not claimable'
+    )
+    return false
+  }
+
+  let sent = false
+  try {
+    const result =
+      await communicationAdapter.sendLeaseTerminationConfirmationEmail(email)
+    sent = result.ok
+    return sent
+  } finally {
+    if (sent) store.markSucceeded(key, payloadHash)
+    else store.release(key, payloadHash)
+  }
+}
+
+const sendToLeaseHolders = async (
   notification: LeaseTerminationNotification,
   idempotencyKey: string,
-  store: IdempotencyStore = tenantNotificationIdempotencyStore
-): Promise<SendLeaseTerminationConfirmationResult> => {
-  const payloadHash = hashNotificationPayload(notification)
-  const claim = store.claim(idempotencyKey, payloadHash)
-
-  if (claim === 'conflict') {
-    return { ok: false, error: 'idempotency-conflict' }
-  }
-
-  if (claim === 'duplicate' || claim === 'in-flight') {
-    return { ok: true, duplicate: true }
-  }
-
-  const fail = (error: SendLeaseTerminationConfirmationError) => {
-    store.release(idempotencyKey, payloadHash)
-    return { ok: false as const, error }
-  }
-
+  payloadHash: string,
+  store: IdempotencyStore
+): Promise<SendOutcome> => {
   const leaseFacts = await getLeaseFacts(notification.leaseId)
-  if (!leaseFacts.ok) return fail(leaseFacts.error)
+  if (!leaseFacts.ok) return leaseFacts
 
   const holders = await getHolders(
     leaseFacts.data.contactCodes,
     notification.leaseId
   )
-  if (!holders.ok) return fail(holders.error)
+  if (!holders.ok) return holders
 
   const recipients: Recipient[] = []
   for (const contact of holders.data) {
-    const emailAddress = primaryEmail(contact)
+    const emailAddress = deliverableEmail(contact)
     if (emailAddress) {
       recipients.push({ contact, emailAddress })
     } else {
       logger.warn(
         { leaseId: notification.leaseId, contactCode: contact.contactCode },
-        'sendLeaseTerminationConfirmation: lease holder has no email address, skipping'
+        'sendLeaseTerminationConfirmation: lease holder has no valid email address, skipping'
       )
     }
   }
 
-  if (recipients.length === 0) return fail('no-recipient')
+  if (recipients.length === 0) return { ok: false, error: 'no-recipient' }
 
   const tenants = holders.data.map(toLeaseTerminationTenant)
 
   const results = await Promise.all(
-    recipients.map(async ({ contact, emailAddress }) => {
-      const key = recipientKey(idempotencyKey, contact.contactCode)
-      const claim = store.claim(key, payloadHash)
-      // Already sent on an earlier, partially failed attempt.
-      if (claim === 'duplicate') return true
-      if (claim !== 'claimed') {
-        // 'conflict' or 'in-flight': we cannot tell whether this holder got
-        // the email, so never report it as sent.
-        logger.error(
-          {
-            leaseId: notification.leaseId,
-            contactCode: contact.contactCode,
-            claim,
-          },
-          'sendLeaseTerminationConfirmation: recipient key not claimable'
-        )
-        return false
-      }
-
+    recipients.map(({ contact, emailAddress }) => {
       const { firstName, lastName } = nameOf(contact)
       const email: LeaseTerminationConfirmationEmail = {
         to: emailAddress,
@@ -302,21 +348,55 @@ export const sendLeaseTerminationConfirmation = async (
         rentalObjectAddress: leaseFacts.data.rentalObjectAddress,
         tenants,
       }
-
-      const result =
-        await communicationAdapter.sendLeaseTerminationConfirmationEmail(email)
-
-      if (result.ok) {
-        store.markSucceeded(key, payloadHash)
-      } else {
-        store.release(key, payloadHash)
-      }
-      return result.ok
+      return sendToRecipient(
+        email,
+        recipientKey(idempotencyKey, contact.contactCode),
+        payloadHash,
+        store
+      )
     })
   )
 
-  if (results.some((ok) => !ok)) return fail('send-failed')
+  return results.every(Boolean)
+    ? { ok: true }
+    : { ok: false, error: 'send-failed' }
+}
 
-  store.markSucceeded(idempotencyKey, payloadHash)
-  return { ok: true, duplicate: false }
+export const sendLeaseTerminationConfirmation = async (
+  notification: LeaseTerminationNotification,
+  idempotencyKey: string,
+  store: IdempotencyStore = tenantNotificationIdempotencyStore
+): Promise<SendLeaseTerminationConfirmationResult> => {
+  const payloadHash = hashNotificationPayload(notification)
+  const claim = store.claim(idempotencyKey, payloadHash)
+
+  if (claim === 'conflict') {
+    return { ok: false, error: 'idempotency-conflict' }
+  }
+
+  if (claim === 'duplicate') {
+    return { ok: true, duplicate: true }
+  }
+
+  // Another request with this key is still running and may yet fail, so this
+  // one must not report the email as sent. The caller retries later.
+  if (claim === 'in-flight') {
+    return { ok: false, error: 'request-in-progress' }
+  }
+
+  // Release the key on any outcome but success — including a throw — so a
+  // failed attempt never leaves it in-flight and blocks retries.
+  let outcome: SendOutcome | undefined
+  try {
+    outcome = await sendToLeaseHolders(
+      notification,
+      idempotencyKey,
+      payloadHash,
+      store
+    )
+    return outcome.ok ? { ok: true, duplicate: false } : outcome
+  } finally {
+    if (outcome?.ok) store.markSucceeded(idempotencyKey, payloadHash)
+    else store.release(idempotencyKey, payloadHash)
+  }
 }

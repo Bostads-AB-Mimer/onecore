@@ -175,3 +175,26 @@ describe(leasingAdapter.getLeasesByContactCode, () => {
     expect(scope.isDone()).toBe(true)
   })
 })
+
+describe(leasingAdapter.getLease, () => {
+  const leaseId = '307-002-11-0201/11'
+  const leasePath = `/leases/${encodeURIComponent(leaseId)}`
+
+  it('returns the lease on 200', async () => {
+    nock(serviceUrl).get(leasePath).reply(200, { content: { leaseId } })
+
+    expect(await leasingAdapter.getLease(leaseId)).toEqual({ leaseId })
+  })
+
+  it('returns null on 404', async () => {
+    nock(serviceUrl).get(leasePath).reply(404, { error: 'not-found' })
+
+    expect(await leasingAdapter.getLease(leaseId)).toBeNull()
+  })
+
+  it('throws on any other 4xx instead of reporting not found', async () => {
+    nock(serviceUrl).get(leasePath).reply(400, { error: 'bad-request' })
+
+    await expect(leasingAdapter.getLease(leaseId)).rejects.toThrow()
+  })
+})
