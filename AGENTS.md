@@ -44,6 +44,16 @@ Always use `pnpm` — never `npm` or `yarn`.
 - `pnpm run db:init`: Creates database schemas
 - Process flows are documented as Mermaid diagrams in `DOCS_*.md` next to the code (e.g. `core/src/processes/`).
 
+## Running Locally
+
+`pnpm dev` starts everything (start Docker first). Default ports, Swagger URLs and the related repositories (onecore-odoo, the ops repos, mimer.nu) are in the `local-setup` skill (`.claude/skills/local-setup/SKILL.md`).
+
+## Git & Pull Requests
+
+- Before starting work, check open PRs for the same change: `gh pr list --state open --search "<keywords>"`. If one overlaps, build on it or coordinate instead of opening a parallel PR.
+- Merges between long-lived branches (main → epic, epic → epic) must use **"Create a merge commit"**, never squash. Squashing drops the second parent, so the next merge starts from an old base and shows conflicts in files that were already merged. Say so in the PR description.
+- PRs in the ops repo `mimer-onecore-operations` target `refactor/dev`, not `main`.
+
 ---
 
 ## Code Standards
@@ -63,7 +73,7 @@ Always use `pnpm` — never `npm` or `yarn`.
 - Check-then-write is a race: decide inside the transaction or rely on a unique index and map the violation to 409. Never hold a transaction open across a network call. Enforce invariants on every write path (create, update, move, re-parent).
 - Xpand char codes are space-padded and SQL compares them ignoring trailing blanks and case — JavaScript doesn't. Trim and normalise both sides before comparing, and handle NULL.
 - Keep the diff to the change: no unrelated generated-type, lockfile or notes churn. Don't add backward-compatibility machinery for internal tools unless asked.
-- When you change a flow, update its `DOCS_*.md`, `ARCHITECTURE.md` and any `.claude/skills` file that describes it, including failure branches.
+- When you change a flow, update its `DOCS_*.md`, `ARCHITECTURE.md` and any `.claude/skills` file that describes it, including failure branches. New skills go in `.claude/skills/<name>/SKILL.md`; a flat `.md` file there is not loaded as a skill.
 
 ### Security
 
@@ -71,6 +81,9 @@ Always use `pnpm` — never `npm` or `yarn`.
 - Never interpolate input into SQL, LIKE patterns or GraphQL.
 - No secrets in query strings. Never log a raw AxiosError; log `{ status, error }`.
 - Protected identity (skyddad identitet): contact data comes only from the contacts service, and that path fails closed.
+- This repository is **public**. Commit messages, PR descriptions and review comments must not describe an unfixed vulnerability in a way that shows how to exploit it (which endpoint, which bypass, which key). Describe the fix, not the attack, and keep details in Linear until it is fixed and deployed.
+- Build security lists (redacted headers or fields, allowed origins, roles) from the code, not from memory: grep for what is actually sent, logged or checked, and combine explicit names with a pattern that catches variants.
+- For a security fix, check that it is complete, not only that the reported case is fixed.
 
 ### Types
 
@@ -108,6 +121,26 @@ No `as` or `!` without a comment saying why; use `catch (err: unknown)`. `satisf
 - Use `parseRequestBody` middleware instead of manual body parsing.
 - Use `.parse()` inside try/catch — not `.safeParse()`-then-throw. Use `.safeParse()` only when you need `{ ok: false }` return semantics and you are not inside a try/catch.
 
+## Testing
+
+- Run tests per package from its folder: `pnpm test`. (property has no `test` script at the moment, so its tests don't run in CI.)
+- **leasing, contacts, keys and communication** need a test database in Docker. Start Docker first; `pnpm test` creates the database (`test:create-db`) before running jest.
+- Build test data with the package's `fishery` factories (e.g. `core/test/factories/`, `services/leasing/src/services/lease-service/tests/factories/`), overriding only the fields the test is about: `factory.x.build({ field: value })`. If there is no factory for the type yet, add one instead of writing inline objects (exceptions in `.claude/skills/test-conventions/SKILL.md`).
+- Compare dates with the shared matchers in each package's `src/common/test/matchers.ts` (loaded globally in leasing and core) instead of exact equality: `toBeSameDayAs`, `toBeNearDate` for values created "now", and `toBeStartOfDayUTC` (leasing). `toBeSameDayAs` compares in local time.
+- Tests that depend on today's date must freeze the clock (`jest.useFakeTimers()` + `jest.setSystemTime(...)`) and restore it in `afterEach(() => jest.useRealTimers())`, not at the end of the test body — a failing assertion would leak the fake clock into later tests.
+
+### Writing tests
+
+Tests are the spec for both people and agents: a reader should understand what the code is supposed to do from the tests alone. Examples and per-layer details (mocking, factories, fake timers) are in `.claude/skills/test-conventions/SKILL.md`.
+
+- Name a test after the behaviour it checks, in the present tense: `returns 409 when the rental object already has a lease`, not `should work` or `test createLease`. In an existing file that uses another style, match the file.
+- Structure each test with `// Arrange`, `// Act` and `// Assert` comments, so the setup, the call and the checks are easy to tell apart.
+- Test every outcome a change introduces, including failure branches (each error code, empty results, invalid input), not only the happy path.
+- Test at the layer that owns the behaviour: status codes and error bodies in route tests, mapping and parsing in adapter tests. Mock the layer below (e.g. `jest.spyOn(adapter, 'fn')`), not the code under test.
+- One behaviour per test. Use `it.each` for the same behaviour over several inputs.
+- A new test must fail without the change it covers. Check it by reverting the fix or breaking the code once; a test that passes either way proves nothing.
+- Never weaken, skip or delete an existing test to make it pass. If the expected behaviour really changed, update the test and say so in the PR description.
+
 ---
 
 ## UI & Styling
@@ -116,7 +149,14 @@ When modifying UI styling (CSS, Tailwind, MUI, etc.), only change the specific p
 
 ## Implementation Behavior
 
-When the user provides a task or plan, start implementing immediately. Do not spend time re-exploring the codebase, writing plan files, or restating the requirements unless explicitly asked. If you need to read files to implement, read them — but don't turn that into an exploration phase.
+When the user provides a task or plan, start implementing without a long exploration phase: no plan files or restated requirements unless asked. Read the files you need, but don't turn that into an exploration phase.
+
+Before you start:
+
+- Check open PRs for the same change (see Git & Pull Requests).
+- Ask before building when the change lets users do something the current process doesn't (e.g. editing a value the system has always calculated), or when the ticket or mockup contradicts how the system works today. Don't settle that by picking an interpretation yourself.
+- Verify the specific facts your change relies on (where a limit comes from, which fields an endpoint returns) in the code, not from memory or names. Only those facts, not the code around them.
+- If there is no one to ask, state the assumption in the PR description so the reviewer sees it.
 
 ## Cross-Service Verification
 
@@ -128,6 +168,7 @@ When you are done implementing a task, run `pnpm exec prettier --write <paths>` 
 
 ## Reviewing
 
-- Label each finding blocking, should-fix or nit. Blocking = breaks behaviour, leaks data, or breaks a Security rule or the race/invariant rule above.
+- Before a PR is marked ready, get an independent review: one that reads the code fresh, not starting from the author's conclusion (a separate agent or a colleague). This applies to small fixes too.
+- Label each finding blocking, should-fix, nit or question. Blocking = breaks behaviour, leaks data, or breaks a Security rule or the race/invariant rule above. Question = you are not sure it is wrong; ask instead of asserting.
 - Findings in code the PR didn't touch: mark as pre-existing and suggest a follow-up card instead.
 - At most 5 nits. Don't report what CI enforces (lint, formatting, types).
