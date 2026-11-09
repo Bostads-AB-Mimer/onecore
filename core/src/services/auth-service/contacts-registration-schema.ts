@@ -53,24 +53,3 @@ export const RegistrationWarningSchema = z.enum([
 ])
 
 export type RegistrationWarning = z.infer<typeof RegistrationWarningSchema>
-
-/** Registration opens in the calendar year a person turns this age. */
-const REGISTRATION_AGE = 16
-
-/** Swedish time, not the container's UTC, so the year turns at midnight in Sweden. */
-const stockholmYear = new Intl.DateTimeFormat('sv-SE', {
-  timeZone: 'Europe/Stockholm',
-  year: 'numeric',
-})
-
-/**
- * Whether a person may register, by birth year rather than exact age: from the calendar year
- * they turn 16, as Mina sidor has always promised. Creating a contact by a caseworker keeps
- * the exact-age rule.
- *
- * @param nationalId twelve digits, from toContactsUsername
- */
-export function isOldEnoughToRegister(nationalId: string, now: Date): boolean {
-  const birthYear = Number(nationalId.slice(0, 4))
-  return Number(stockholmYear.format(now)) - birthYear >= REGISTRATION_AGE
-}

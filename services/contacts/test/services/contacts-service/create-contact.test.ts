@@ -365,4 +365,92 @@ describe('createContact', () => {
       data: { contactCode: 'P069077', contact: null },
     })
   })
+
+  /**
+   * A double click or a retry from webapi sends the same number twice while
+   * Xpand's slow create is still running. Without the lock both requests pass
+   * the duplicate check before the first commits, and both create a contact.
+   */
+  describe('concurrent creates', () => {
+    /** A writer whose create stays pending until the test releases it. */
+    const slowWriter = () => {
+      // Definitely assigned: the Promise executor runs synchronously.
+      let release!: () => void
+      const pending = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const createContact = jest.fn(async () => {
+        await pending
+        return { ok: true as const, data: { contactCode: 'P069077' } }
+      })
+      return { contactWriter: { createContact }, release }
+    }
+
+    /** A repository that sees the contact once a create has been sent. */
+    const repositoryBackedBy = (createContact: jest.Mock): ContactsRepository =>
+      repository({
+        existsByNationalIdNumber: jest.fn(async () =>
+          createContact.mock.calls.length > 0 ? 'P069077' : null
+        ),
+      })
+
+    it('creates one contact when the same number arrives twice', async () => {
+      const { contactWriter, release } = slowWriter()
+      const contactsRepository = repositoryBackedBy(contactWriter.createContact)
+
+      const first = createContact(
+        { contactsRepository, contactWriter },
+        request()
+      )
+      // The same person in the ten-digit form: the lock is on the normalised number.
+      const second = createContact(
+        { contactsRepository, contactWriter },
+        request({ nationalId: '900729-2387' })
+      )
+      release()
+
+      await expect(first).resolves.toMatchObject({
+        ok: true,
+        data: { contactCode: 'P069077' },
+      })
+      await expect(second).resolves.toMatchObject({
+        ok: false,
+        err: 'duplicate-contact',
+      })
+      expect(contactWriter.createContact).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not hold back a different number', async () => {
+      const { contactWriter, release } = slowWriter()
+
+      const first = createContact(
+        { contactsRepository: repository(), contactWriter },
+        request()
+      )
+      await expect(
+        createContact(
+          { contactsRepository: repository(), contactWriter: writer() },
+          request({ nationalId: '201012312383', ageRule: 'birth-year' })
+        )
+      ).resolves.toMatchObject({ ok: true })
+
+      release()
+      await first
+    })
+
+    it('lets the next create for the number run after one throws', async () => {
+      const contactWriter = writer({
+        createContact: jest
+          .fn()
+          .mockRejectedValueOnce(new Error('boom'))
+          .mockResolvedValue({ ok: true, data: { contactCode: 'P069077' } }),
+      })
+      const deps = { contactsRepository: repository(), contactWriter }
+
+      await expect(createContact(deps, request())).rejects.toThrow('boom')
+      await expect(createContact(deps, request())).resolves.toMatchObject({
+        ok: true,
+      })
+    })
+  })
 })
