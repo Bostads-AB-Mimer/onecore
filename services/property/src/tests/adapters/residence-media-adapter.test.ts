@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios'
 
 import {
+  clearResidenceMediaCache,
   getResidenceMedia,
   normalizeRentalId,
 } from '../../adapters/residence-media-adapter'
@@ -16,6 +17,10 @@ const mockPublishedFiles = (files: string[]) =>
   }))
 
 describe('residence-media-adapter', () => {
+  beforeEach(() => {
+    clearResidenceMediaCache()
+  })
+
   afterEach(() => {
     jest.restoreAllMocks()
   })
@@ -170,6 +175,57 @@ describe('residence-media-adapter', () => {
       const result = await getResidenceMedia(RENTAL_ID)
 
       expect(result).toEqual({ ok: false, err: 'media-unavailable' })
+    })
+
+    it('shares probes between residences with the same codes', async () => {
+      const head = mockPublishedFiles([
+        `${IMAGES}/705-025-01_1.jpg`,
+        `${ENERGY}/705-025-01.jpg`,
+      ])
+
+      await getResidenceMedia('705-025-01-0103')
+      const callsForFirst = head.mock.calls.length
+      const second = await getResidenceMedia('705-025-01-0104')
+
+      // Only the second residence's own images are probed again.
+      expect(head.mock.calls.slice(callsForFirst).map(([url]) => url)).toEqual([
+        `${IMAGES}/705-025-01-0104_1.jpg`,
+      ])
+      expect(second).toEqual({
+        ok: true,
+        data: {
+          images: [`${IMAGES}/705-025-01_1.jpg`],
+          imageLevel: 'shared',
+          energyDeclarationUrl: `${ENERGY}/705-025-01.jpg`,
+        },
+      })
+    })
+
+    it('shares one in-flight probe between concurrent requests', async () => {
+      const head = mockPublishedFiles([])
+
+      await Promise.all([
+        getResidenceMedia(RENTAL_ID),
+        getResidenceMedia(RENTAL_ID),
+      ])
+
+      const urls = head.mock.calls.map(([url]) => url)
+      expect(urls).toHaveLength(new Set(urls).size)
+    })
+
+    it('does not cache a failed probe', async () => {
+      jest
+        .spyOn(axios, 'head')
+        .mockRejectedValueOnce(new AxiosError('Request failed with status 503'))
+      mockPublishedFiles([`${IMAGES}/${RENTAL_ID}_1.jpg`])
+
+      const first = await getResidenceMedia(RENTAL_ID)
+      const second = await getResidenceMedia(RENTAL_ID)
+
+      expect(first).toEqual({ ok: false, err: 'media-unavailable' })
+      expect(second.ok && second.data.images).toEqual([
+        `${IMAGES}/${RENTAL_ID}_1.jpg`,
+      ])
     })
   })
 })
