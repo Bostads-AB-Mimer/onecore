@@ -12610,7 +12610,7 @@ export interface paths {
   '/v1/tenant-notifications/lease-termination-confirmation': {
     /**
      * Send a lease termination confirmation email
-     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking lease is terminated. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
+     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking lease is terminated. Only `leaseId` is required: OneCore looks up the lease (end date, type, preferred move-out date, rental object address, holders) and each holder in the contacts service, then emails every holder with an email address. The other body fields are optional and kept for compatibility: `to` and `firstName` are ignored, `contactCode` adds a recipient, `endDate` and `rentalType` are fallbacks when the lease lacks them. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
      */
     post: {
       requestBody?: {
@@ -12640,8 +12640,26 @@ export interface paths {
             }
           }
         }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
         /** @description Conflict */
         409: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Unprocessable Entity */
+        422: {
           content: {
             'application/json': {
               error: string
@@ -17857,15 +17875,15 @@ export interface components {
       roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
     }
     SendLeaseTerminationConfirmationRequest: {
-      /** Format: email */
-      to: string
-      contactCode: string
-      firstName: string
       leaseId: string
+      /** Format: email */
+      to?: string
+      contactCode?: string
+      firstName?: string
       /** Format: date */
-      endDate: string
+      endDate?: string
       /** @enum {string} */
-      rentalType: 'Bilplats'
+      rentalType?: 'Bilplats'
       correlationId?: string
     }
     ContactV1:
