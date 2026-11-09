@@ -2,6 +2,7 @@ import { logger, loggedAxios, PaginatedResponse } from '@onecore/utilities'
 import {
   AddRelationErrorCodeSchema,
   CreateContactErrorCodeSchema,
+  GetPersonContactsResponseBodySchema,
   RemoveRelationErrorCodeSchema,
 } from '@onecore/contacts/schema'
 import type {
@@ -23,7 +24,8 @@ import type {
 
 import { AdapterResult } from '@/adapters/types'
 import * as utils from '@/utils'
-import { AxiosResponse } from 'axios'
+import { AxiosResponse, isAxiosError } from 'axios'
+import type { z } from 'zod'
 import config from '../../common/config'
 
 /**
@@ -40,6 +42,17 @@ export type CreateContactError =
  */
 const KNOWN_CREATE_ERRORS: ReadonlySet<string> =
   new Set<CreateContactErrorCode>(CreateContactErrorCodeSchema.options)
+
+/** One of a person's contacts, and whether login accepts it. */
+export type PersonContact = z.infer<
+  typeof GetPersonContactsResponseBodySchema
+>['content']['contacts'][number]
+
+export type PersonContactsError =
+  /** The service did not accept the number as a personnummer or samordningsnummer. */
+  | 'invalid-national-id'
+  /** No answer, an unexpected status, or a body that does not match the contract. */
+  | 'contacts-service-error'
 
 /**
  * Failures the contacts service can report when adding/removing a relation,
@@ -240,6 +253,53 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
         `/contacts/by-nid/${encodeURIComponent(nid)}/login-contact`
       )
       return singleResponse(response)
+    },
+
+    /**
+     * Every person contact for a personnummer, in the order login prefers them, each with
+     * whether login accepts it. Login uses the first, so the person can log in exactly when the
+     * first is active. Empty when there are none.
+     */
+    async getPersonContactsByNationalId(
+      nid: string
+    ): Promise<AdapterResult<PersonContact[], PersonContactsError>> {
+      try {
+        const response = await axios(
+          `/contacts/by-nid/${encodeURIComponent(nid)}/person-contacts`
+        )
+        if (response.status === 400) {
+          return { ok: false, err: 'invalid-national-id', statusCode: 400 }
+        }
+        if (response.status !== 200) {
+          logger.error(
+            { status: response.status },
+            'contactsAdapter.getPersonContactsByNationalId'
+          )
+          return {
+            ok: false,
+            err: 'contacts-service-error',
+            statusCode: response.status,
+          }
+        }
+        const body = GetPersonContactsResponseBodySchema.safeParse(
+          response.data
+        )
+        if (!body.success) {
+          logger.error(
+            { status: response.status, error: 'unexpected-body' },
+            'contactsAdapter.getPersonContactsByNationalId'
+          )
+          return { ok: false, err: 'contacts-service-error', statusCode: 200 }
+        }
+        return { ok: true, data: body.data.content.contacts }
+      } catch (err: unknown) {
+        // Never the raw error: its config carries the URL, and the URL the personnummer.
+        logger.error(
+          { error: isAxiosError(err) ? err.code : 'unknown' },
+          'contactsAdapter.getPersonContactsByNationalId'
+        )
+        return { ok: false, err: 'contacts-service-error' }
+      }
     },
 
     async listByPhoneNumber(
