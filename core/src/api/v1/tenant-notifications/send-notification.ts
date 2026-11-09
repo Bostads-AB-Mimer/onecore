@@ -15,6 +15,7 @@ import * as communicationAdapter from '../../../adapters/communication-adapter'
 import { contactsAdapter } from '../../../adapters/contacts-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import {
+  DeliverySummary,
   hashNotificationPayload,
   IdempotencyStore,
   tenantNotificationIdempotencyStore,
@@ -31,7 +32,7 @@ export type SendLeaseTerminationConfirmationError = z.infer<
 >
 
 export type SendLeaseTerminationConfirmationResult =
-  | { ok: true; duplicate: boolean }
+  | { ok: true; duplicate: boolean; summary: DeliverySummary }
   | { ok: false; error: SendLeaseTerminationConfirmationError }
 
 type Recipient = {
@@ -125,11 +126,22 @@ type LeaseFacts = {
   rentalObjectAddress: string | undefined
 }
 
-// Only parking space contracts are supported (see LeaseTerminationRentalType).
+// Parking spaces and garages both count as 'Bilplats' in this flow.
+const BILPLATS_LEASE_TYPES: string[] = [
+  LeaseType.ParkingSpaceContract,
+  LeaseType.GarageContract,
+]
+
 const resolveRentalType = (
   lease: Lease
 ): LeaseTerminationRentalType | undefined =>
-  lease.type?.trim() === LeaseType.ParkingSpaceContract ? 'Bilplats' : undefined
+  BILPLATS_LEASE_TYPES.includes(lease.type?.trim() ?? '')
+    ? 'Bilplats'
+    : undefined
+
+// Xpand codes are space-padded and compared case-insensitively in SQL; the
+// lease (Tenfast externalId) and contacts may differ in both.
+const normalizeContactCode = (code: string) => code.trim().toUpperCase()
 
 // Everything in the email comes from the lease — never from the request.
 const getLeaseFacts = async (
@@ -163,12 +175,23 @@ const getLeaseFacts = async (
   // JSON from the leasing service: dates arrive as strings despite the type.
   const leaseEndDate = toSwedishDateString(lease.leaseEndDate)
   if (!leaseEndDate) {
+    // The end date is set at preliminary termination, before Tenfast
+    // confirms and calls us, so a missing one is unexpected.
+    logger.error(
+      { leaseId },
+      'sendLeaseTerminationConfirmation: lease has no end date'
+    )
     return { ok: false, error: 'missing-end-date' }
   }
   const endDate = new Date(`${leaseEndDate}T00:00:00.000Z`)
 
   const rentalType = resolveRentalType(lease)
   if (!rentalType) {
+    // Tenfast only calls for parking terminations, so this is unexpected too.
+    logger.error(
+      { leaseId, leaseType: lease.type },
+      'sendLeaseTerminationConfirmation: unsupported lease type'
+    )
     return { ok: false, error: 'unsupported-rental-type' }
   }
 
@@ -176,7 +199,7 @@ const getLeaseFacts = async (
   const contactCodes = [
     ...new Set(
       (lease.tenantContactIds ?? [])
-        .map((code) => code.trim())
+        .map(normalizeContactCode)
         .filter((code) => code.length > 0)
     ),
   ]
@@ -225,7 +248,9 @@ const getHolders = async (
     return { ok: false, error: 'contact-lookup-failed' }
   }
 
-  const byCode = new Map(result.data.map((c) => [c.contactCode.trim(), c]))
+  const byCode = new Map(
+    result.data.map((c) => [normalizeContactCode(c.contactCode), c])
+  )
   const missing = contactCodes.filter((code) => !byCode.has(code))
   if (missing.length > 0) {
     // The lease names these holders, so they are expected to exist. This is a
@@ -239,8 +264,8 @@ const getHolders = async (
   }
 
   // Keep lease order so both holders' emails list them identically. Use the
-  // trimmed lease code: Xpand codes can be space-padded, and the code ends up
-  // in the per-recipient idempotency key and the communication log.
+  // normalized code: it ends up in the per-recipient idempotency key and the
+  // communication log, so it must be the same however the source spelled it.
   return {
     ok: true,
     data: contactCodes.map((code) => ({
@@ -250,13 +275,17 @@ const getHolders = async (
   }
 }
 
-// Per-recipient key, so a retry after a partial failure only resends to the
-// holders whose email did not go out.
+// Request and per-recipient records share one store, so each gets its own
+// prefix and the caller's key is encoded: no Idempotency-Key can ever equal a
+// recipient key. The per-recipient key lets a retry after a partial failure
+// resend only to the holders whose email did not go out.
+const requestKey = (idempotencyKey: string) =>
+  `request:${encodeURIComponent(idempotencyKey)}`
 const recipientKey = (idempotencyKey: string, contactCode: string) =>
-  `${idempotencyKey}#${contactCode}`
+  `recipient:${encodeURIComponent(idempotencyKey)}:${encodeURIComponent(contactCode)}`
 
 type SendOutcome =
-  | { ok: true }
+  | { ok: true; summary: DeliverySummary }
   | {
       ok: false
       error: Exclude<
@@ -315,11 +344,13 @@ const sendToLeaseHolders = async (
   if (!holders.ok) return holders
 
   const recipients: Recipient[] = []
+  const skippedContactCodes: string[] = []
   for (const contact of holders.data) {
     const emailAddress = deliverableEmail(contact)
     if (emailAddress) {
       recipients.push({ contact, emailAddress })
     } else {
+      skippedContactCodes.push(contact.contactCode)
       logger.warn(
         { leaseId: notification.leaseId, contactCode: contact.contactCode },
         'sendLeaseTerminationConfirmation: lease holder has no valid email address, skipping'
@@ -331,7 +362,10 @@ const sendToLeaseHolders = async (
 
   const tenants = holders.data.map(toLeaseTerminationTenant)
 
-  const results = await Promise.all(
+  // allSettled, not all: a throwing send must not end this function while a
+  // sibling send is still running, or the request key would be released early
+  // and a retry admitted while that holder's send is in flight.
+  const settled = await Promise.allSettled(
     recipients.map(({ contact, emailAddress }) => {
       const { firstName, lastName } = nameOf(contact)
       const email: LeaseTerminationConfirmationEmail = {
@@ -357,8 +391,16 @@ const sendToLeaseHolders = async (
     })
   )
 
-  return results.every(Boolean)
-    ? { ok: true }
+  const rejected = settled.find(
+    (r): r is PromiseRejectedResult => r.status === 'rejected'
+  )
+  if (rejected) throw rejected.reason
+
+  return settled.every((r) => r.status === 'fulfilled' && r.value)
+    ? {
+        ok: true,
+        summary: { sentCount: recipients.length, skippedContactCodes },
+      }
     : { ok: false, error: 'send-failed' }
 }
 
@@ -368,14 +410,20 @@ export const sendLeaseTerminationConfirmation = async (
   store: IdempotencyStore = tenantNotificationIdempotencyStore
 ): Promise<SendLeaseTerminationConfirmationResult> => {
   const payloadHash = hashNotificationPayload(notification)
-  const claim = store.claim(idempotencyKey, payloadHash)
+  const key = requestKey(idempotencyKey)
+  const claim = store.claim(key, payloadHash)
 
   if (claim === 'conflict') {
     return { ok: false, error: 'idempotency-conflict' }
   }
 
   if (claim === 'duplicate') {
-    return { ok: true, duplicate: true }
+    const summary = store.getSummary(key, payloadHash)
+    // A request key is only ever marked succeeded together with its summary.
+    if (!summary) {
+      throw new Error('Succeeded idempotency record has no delivery summary')
+    }
+    return { ok: true, duplicate: true, summary }
   }
 
   // Another request with this key is still running and may yet fail, so this
@@ -394,9 +442,11 @@ export const sendLeaseTerminationConfirmation = async (
       payloadHash,
       store
     )
-    return outcome.ok ? { ok: true, duplicate: false } : outcome
+    return outcome.ok
+      ? { ok: true, duplicate: false, summary: outcome.summary }
+      : outcome
   } finally {
-    if (outcome?.ok) store.markSucceeded(idempotencyKey, payloadHash)
-    else store.release(idempotencyKey, payloadHash)
+    if (outcome?.ok) store.markSucceeded(key, payloadHash, outcome.summary)
+    else store.release(key, payloadHash)
   }
 }

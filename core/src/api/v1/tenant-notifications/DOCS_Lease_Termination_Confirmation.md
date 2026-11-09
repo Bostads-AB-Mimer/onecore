@@ -1,7 +1,8 @@
 # Lease termination confirmation
 
 Tenfast calls `POST /v1/tenant-notifications/lease-termination-confirmation`
-after a parking lease termination is confirmed. OneCore enriches the
+after a parking space or garage lease termination is confirmed (both are
+`Bilplats` in the email). OneCore enriches the
 notification from the lease and the contacts service and emails every lease
 holder through the communication service (Infobip template
 `LeaseTerminationConfirmationTemplateId`).
@@ -10,6 +11,11 @@ Only `leaseId` (and the optional `correlationId`, stored in the communication
 log) is used. Tenfast still sends `to`, `contactCode`, `firstName`, `endDate`
 and `rentalType`; request parsing strips them, so they never override what the
 lease and contacts say.
+
+Contact codes are matched trimmed and case-insensitively (Xpand pads them and
+compares ignoring case). Request and per-holder idempotency records use
+separate, encoded key prefixes, so no `Idempotency-Key` can collide with a
+holder record.
 
 Lease dates are read as Swedish calendar dates (Europe/Stockholm), so a date
 Tenfast stores at Swedish midnight is not shifted back a day.
@@ -27,7 +33,7 @@ sequenceDiagram
     alt key reused with other payload
         C-->>T: 409 idempotency-conflict
     else already sent
-        C-->>T: 200 sent
+        C-->>T: 200 sent (same summary as the first response)
     else another request with this key is still running
         C-->>T: 409 request-in-progress (retryable)
     end
@@ -38,10 +44,10 @@ sequenceDiagram
     else leasing fails
         C-->>T: 502 lease-lookup-failed
     end
-    alt lease has no end date
+    alt lease has no end date (set at preliminary termination, so unexpected; logged at error)
         C-->>T: 422 missing-end-date
     end
-    alt lease is not a P-Platskontrakt
+    alt lease is neither P-Platskontrakt nor Garagekontrakt (logged at error)
         C-->>T: 422 unsupported-rental-type
     end
     Note over C: holders = lease.tenantContactIds
@@ -55,14 +61,15 @@ sequenceDiagram
     alt no holder has a valid email address
         C-->>T: 422 no-recipient
     end
-    loop each holder with an email (claim per-holder key; a key held by another payload or in flight counts as failed)
+    loop each holder with an email, in parallel (claim per-holder key; a key held by another payload or in flight counts as failed)
         C->>M: POST /sendLeaseTerminationConfirmation
         M->>M: send via Infobip, write communication log
     end
+    Note over C: waits for every send to settle before releasing the request key, even if one throws
     alt any send failed
         C-->>T: 502 send-failed (retry resends only to failed holders)
     else
-        C-->>T: 200 sent
+        C-->>T: 200 { sent, sentCount, skippedContactCodes }
     end
 ```
 

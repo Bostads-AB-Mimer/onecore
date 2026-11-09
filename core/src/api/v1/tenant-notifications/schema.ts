@@ -11,6 +11,10 @@ export const SendLeaseTerminationConfirmationResponseBodySchema_APIv1 = z
   .extend({
     content: z.object({
       sent: z.literal(true),
+      // Holders emailed; at least 1, otherwise the response is 422 no-recipient.
+      sentCount: z.number().int(),
+      // Holders on the lease without a valid email address in contacts.
+      skippedContactCodes: z.array(z.string()),
     }),
   })
 

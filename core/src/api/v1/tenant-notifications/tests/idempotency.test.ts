@@ -59,4 +59,14 @@ describe('createInMemoryIdempotencyStore', () => {
     store.release('key-1', 'hash-a')
     expect(store.claim('key-1', 'hash-a')).toBe('claimed')
   })
+
+  it('returns the summary stored with a succeeded key', () => {
+    const store = createInMemoryIdempotencyStore(60_000)
+    const summary = { sentCount: 1, skippedContactCodes: ['P654321'] }
+    store.claim('key-1', 'hash-a')
+    expect(store.getSummary('key-1', 'hash-a')).toBeUndefined()
+    store.markSucceeded('key-1', 'hash-a', summary)
+    expect(store.getSummary('key-1', 'hash-a')).toEqual(summary)
+    expect(store.getSummary('key-1', 'hash-b')).toBeUndefined()
+  })
 })

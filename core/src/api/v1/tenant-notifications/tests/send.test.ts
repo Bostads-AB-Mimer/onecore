@@ -140,12 +140,18 @@ beforeEach(() => {
   getContactsMock.mockReset().mockResolvedValue({ ok: true, data: [ANNA] })
 })
 
+const ONE_SENT = { sent: true, sentCount: 1, skippedContactCodes: [] }
+
 describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
   it('sends a lease termination notification and returns sent: true', async () => {
     const res = await postNotification()
 
     expect(res.status).toBe(200)
-    expect(res.body.content).toEqual({ sent: true })
+    expect(res.body.content).toEqual({
+      sent: true,
+      sentCount: 1,
+      skippedContactCodes: [],
+    })
     expect(
       communicationAdapter.sendLeaseTerminationConfirmationEmail
     ).toHaveBeenCalledTimes(1)
@@ -209,8 +215,54 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
     const res = await postNotification()
 
     expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({
+      sent: true,
+      sentCount: 1,
+      skippedContactCodes: ['P654321'],
+    })
     expect(sendMock).toHaveBeenCalledTimes(1)
     expect(sendMock.mock.calls[0][0].tenants).toHaveLength(2)
+  })
+
+  it('replays the same delivery summary for a duplicate request', async () => {
+    getLeaseMock.mockResolvedValue(lease(['P123456', 'P654321']))
+    getContactsMock.mockResolvedValue({
+      ok: true,
+      data: [ANNA, individual('P654321', 'Bo', 'Berg', null)],
+    })
+
+    const first = await postNotification()
+    const replay = await postNotification()
+
+    expect(replay.status).toBe(200)
+    expect(replay.body.content).toEqual(first.body.content)
+    expect(sendMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('matches lease holders to contacts regardless of case and padding', async () => {
+    getLeaseMock.mockResolvedValue(lease(['p123456 ', 'P123456']))
+    getContactsMock.mockResolvedValue({
+      ok: true,
+      data: [{ ...ANNA, contactCode: 'P123456  ' }],
+    })
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(200)
+    expect(getContactsMock).toHaveBeenCalledWith(['P123456'], expect.anything())
+    expect(sendMock).toHaveBeenCalledTimes(1)
+    expect(sendMock.mock.calls[0][0].contactCode).toBe('P123456')
+  })
+
+  it('sends for a garage lease as Bilplats', async () => {
+    getLeaseMock.mockResolvedValue(
+      lease(['P123456'], { type: 'Garagekontrakt' })
+    )
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(200)
+    expect(sendMock.mock.calls[0][0].rentalType).toBe('Bilplats')
   })
 
   it('ignores recipient fields in the request and uses the lease holders', async () => {
@@ -365,7 +417,7 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
   it('does not report a recipient as sent when its key is held by another payload', async () => {
     // Left over from an earlier request with the same key but another payload.
     tenantNotificationIdempotencyStore.claim(
-      `${IDEMPOTENCY_KEY}#P123456`,
+      `recipient:${IDEMPOTENCY_KEY}:P123456`,
       'other-payload-hash'
     )
 
@@ -415,7 +467,11 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
     const res = await postNotification()
 
     expect(res.status).toBe(200)
-    expect(res.body.content).toEqual({ sent: true })
+    expect(res.body.content).toEqual({
+      sent: true,
+      sentCount: 1,
+      skippedContactCodes: [],
+    })
     expect(
       communicationAdapter.sendLeaseTerminationConfirmationEmail
     ).toHaveBeenCalledTimes(1)
@@ -441,7 +497,11 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
     const res = await postNotification()
 
     expect(res.status).toBe(200)
-    expect(res.body.content).toEqual({ sent: true })
+    expect(res.body.content).toEqual({
+      sent: true,
+      sentCount: 1,
+      skippedContactCodes: [],
+    })
     expect(
       communicationAdapter.sendLeaseTerminationConfirmationEmail
     ).toHaveBeenCalledTimes(1)
@@ -506,6 +566,44 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
     ).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps request and recipient keys apart', async () => {
+    // A request whose key looks like another request's recipient key.
+    getLeaseMock.mockResolvedValue(lease(['P123456']))
+    expect((await postNotification(body(), 'event-1')).status).toBe(200)
+
+    const res = await postNotification(body(), 'event-1#P123456')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual(ONE_SENT)
+    expect(sendMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('holds the request key until every holder send has settled', async () => {
+    getLeaseMock.mockResolvedValue(lease(['P123456', 'P654321']))
+    getContactsMock.mockResolvedValue({ ok: true, data: [ANNA, BO] })
+    let releaseBo!: () => void
+    const boBlocked = new Promise<void>((resolve) => {
+      releaseBo = resolve
+    })
+    sendMock.mockImplementation(async (email: { contactCode: string }) => {
+      if (email.contactCode === 'P123456') throw new Error('boom')
+      await boBlocked
+      return { ok: true, data: null }
+    })
+
+    const first = postNotification().then((res) => res)
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    // Anna's send has thrown but Bo's is still running: the key must hold.
+    const retryWhileRunning = await postNotification()
+    releaseBo()
+    const firstRes = await first
+
+    expect(retryWhileRunning.status).toBe(409)
+    expect(retryWhileRunning.body.error).toBe('request-in-progress')
+    expect(firstRes.status).toBe(500)
+    expect(sendMock).toHaveBeenCalledTimes(2)
+  })
+
   it('releases the key when processing throws, so a retry sends', async () => {
     // An unexpected throw (here from the send adapter) must not leave the
     // request or recipient key in-flight.
@@ -517,7 +615,11 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
 
     const retry = await postNotification()
     expect(retry.status).toBe(200)
-    expect(retry.body.content).toEqual({ sent: true })
+    expect(retry.body.content).toEqual({
+      sent: true,
+      sentCount: 1,
+      skippedContactCodes: [],
+    })
     expect(sendMock).toHaveBeenCalledTimes(2)
   })
 
