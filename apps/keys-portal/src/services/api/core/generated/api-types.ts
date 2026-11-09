@@ -12656,7 +12656,7 @@ export interface paths {
           content: {
             'application/json': {
               /** @enum {string} */
-              error: 'idempotency-conflict'
+              error: 'idempotency-conflict' | 'request-in-progress'
               detail?: string
             }
           }
