@@ -65,6 +65,7 @@ export interface Config {
     batchSize: number // recipients per provider call
     claimMinutes: number // claim expiry; must exceed providerTimeoutMs
     providerTimeoutMs: number // well under Kubernetes' 30 s SIGTERM grace
+    maxAttempts: number // hard cap on provider calls (= copies) per recipient
   }
 }
 
@@ -123,6 +124,10 @@ const config = configPackage({
       batchSize: 500,
       claimMinutes: 5,
       providerTimeoutMs: 20000,
+      // The original send plus one retry. An unclear provider answer (5xx,
+      // timeout) may still have sent, so every extra attempt can be a
+      // duplicate SMS to every recipient in the batch.
+      maxAttempts: 2,
     },
   },
 })

@@ -56,15 +56,17 @@ leader election and no extra pods.
 ```mermaid
 flowchart TD
     T[tick at slot boundary] --> X[expireStaleRecipients: slot older than stalenessHours → failed, error SCHEDULE_EXPIRED]
-    X --> C[claimDueRecipients TOP batchSize: scheduled and due, or sending with lapsed claim → sending, claimedUntil = now + claimMinutes, attempts + 1]
+    X --> E[failExhaustedRecipients: attempts ≥ maxAttempts, not under a live claim → failed, error MAX_ATTEMPTS_EXCEEDED]
+    E --> C[claimDueRecipients TOP batchSize: scheduled and due, or sending with lapsed claim, attempts < maxAttempts → sending, claimedUntil = now + claimMinutes, attempts + 1]
     C -->|no rows| S[log tick summary]
     C -->|rows, grouped per dispatch| P[one provider call per dispatch group]
     P -->|2xx| OK[markRecipientsSent: sending → sent with provider message ids]
     P -->|ProviderResponseError 4xx/5xx| R[releaseRecipients: sending → scheduled, retried next tick]
     P -->|timeout / connection lost| U[leave sending; claim lapses, next tick resends — double send accepted]
-    OK --> C
-    R --> C
-    U --> C
+    OK -->|full batch, every call 2xx| C
+    OK -->|short batch| S
+    R -->|circuit breaker: no more claims this tick| S
+    U -->|circuit breaker: no more claims this tick| S
 ```
 
 - The claim is one `UPDATE … WITH (UPDLOCK, READPAST, ROWLOCK) … OUTPUT`
@@ -72,8 +74,19 @@ flowchart TD
 - Every status write after a claim is fenced on `attempts` (the claim
   incremented it), so a slow worker can't overwrite a row another worker
   re-claimed.
+- **Resend guards.** A refused or unclear provider call (4xx/5xx, timeout) may
+  still have sent, so every retry can be a duplicate to the whole batch:
+  - _Attempt cap:_ the claim only takes rows with `attempts < maxAttempts`
+    (default 2 = the send plus one retry), enforced in SQL so it holds across
+    replicas and restarts. Rows at the cap end as `failed`
+    `MAX_ATTEMPTS_EXCEEDED` at the next tick.
+  - _Circuit breaker:_ after any refused or unclear call the tick claims
+    nothing more; groups already claimed in that round are still sent. A
+    released batch is due again immediately, so without this the loop would
+    resend the same recipients back to back until the provider answered 2xx.
 - Worker stopping mid-batch: groups not yet sent are released straight back to
-  `scheduled` so another replica takes them at the next tick.
+  `scheduled` with their attempt refunded (nothing was sent), so another
+  replica takes them at the next tick and a deploy never uses up the cap.
 
 ### Status flow
 
@@ -84,17 +97,21 @@ scheduled ──claim──▶ sending ──provider 2xx──▶ sent ──de
     └──claim lapsed────┘   (worker died; resend — double send accepted)
 
 scheduled/sending (claim lapsed), slot older than stalenessHours ──▶ failed, error SCHEDULE_EXPIRED
+scheduled/sending (claim lapsed), attempts ≥ maxAttempts ──▶ failed, error MAX_ATTEMPTS_EXCEEDED
 scheduled ──cancel──▶ cancelled
 ```
 
-Staleness (default 3 h) bounds every retry path: repeated provider refusals,
-an outage, or a send scheduled at 20:50 that fails and can't retry until
-07:00 all end as `failed`, logged once with `logger.error` (ids only).
+Two limits bound every retry path, whichever hits first: `maxAttempts`
+(default 2) caps the copies a recipient can get, and staleness (default 3 h)
+caps the time. Repeated provider refusals, an outage, or a send scheduled at
+20:50 that fails and can't retry until 07:00 all end as `failed`, logged once
+per tick with `logger.error` (ids only).
 
 Accepted edge cases, mirroring "an occasional double send beats a missed
-send": a row whose provider call succeeded but whose `markRecipientsSent`
-kept failing is resent when the claim lapses, and if that keeps happening it
-ends as `failed` after the staleness window although it was delivered.
+send", now bounded by `maxAttempts`: a row whose provider call succeeded but
+whose `markRecipientsSent` kept failing is resent when the claim lapses (at
+most `maxAttempts` copies), and then ends as `failed` although it was
+delivered.
 
 Turning the flag off stops both the claim and the expiry: rows already
 `scheduled` stay put (the dispatch derivation shows them as `sending` once
@@ -122,10 +139,12 @@ Pure DB updates, SMS and email alike:
 ## Observability
 
 - One `info` line per tick: `scheduled-sends tick` with
-  `{ expired, claimed, sent, retried, unknown, released, durationMs }`. Alert
-  in Elasticsearch when none has been logged for a while during open hours.
-- `warn` per refused/unknown batch (dispatch id, count, attempt), and one
-  `logger.error` when recipients expire. Never phone numbers or addresses.
+  `{ expired, exhausted, claimed, sent, retried, unknown, released, durationMs }`.
+  Alert in Elasticsearch when none has been logged for a while during open
+  hours.
+- `warn` per refused/unknown batch (dispatch id, count, attempt), one `warn`
+  when the circuit breaker ends a tick early, and one `logger.error` when
+  recipients expire or hit the attempt cap. Never phone numbers or addresses.
 
 ## Config (`src/common/config.ts`, env prefix `SCHEDULED_SENDS__`)
 
@@ -139,3 +158,4 @@ Pure DB updates, SMS and email alike:
 | `batchSize`         | 500     | recipients per provider call                  |
 | `claimMinutes`      | 5       | claim expiry; must exceed `providerTimeoutMs` |
 | `providerTimeoutMs` | 20000   | abort the provider call after this            |
+| `maxAttempts`       | 2       | max provider calls (= copies) per recipient   |

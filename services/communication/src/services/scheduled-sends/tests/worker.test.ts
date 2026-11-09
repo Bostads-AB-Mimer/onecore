@@ -2,6 +2,7 @@ import { ProviderResponseError } from '../../infobip-service/adapters/provider-e
 import {
   claimDueRecipients,
   expireStaleRecipients,
+  failExhaustedRecipients,
   getDispatchesByIds,
   markRecipientsSent,
   releaseRecipients,
@@ -14,6 +15,7 @@ jest.mock('@onecore/utilities', () => ({
 
 jest.mock('../adapters/db', () => ({
   expireStaleRecipients: jest.fn(),
+  failExhaustedRecipients: jest.fn(),
   claimDueRecipients: jest.fn(),
   getDispatchesByIds: jest.fn(),
   markRecipientsSent: jest.fn(),
@@ -21,6 +23,7 @@ jest.mock('../adapters/db', () => ({
 }))
 
 const expireMock = expireStaleRecipients as jest.Mock
+const exhaustMock = failExhaustedRecipients as jest.Mock
 const claimMock = claimDueRecipients as jest.Mock
 const getDispatchesMock = getDispatchesByIds as jest.Mock
 const markSentMock = markRecipientsSent as jest.Mock
@@ -37,6 +40,7 @@ const settings: WorkerSettings = {
   batchSize: 100,
   claimMinutes: 5,
   providerTimeoutMs: 1000,
+  maxAttempts: 2,
 }
 
 // Tuesday 14:00 local (summer), open hours.
@@ -67,6 +71,7 @@ beforeEach(() => {
   // (the tick stops claiming after a short batch) must not leak into the next.
   jest.resetAllMocks()
   expireMock.mockResolvedValue({ ids: [], dispatchIds: [] })
+  exhaustMock.mockResolvedValue({ ids: [], dispatchIds: [] })
   claimMock.mockResolvedValue([])
   getDispatchesMock.mockResolvedValue([])
   markSentMock.mockResolvedValue({ updatedCount: 0 })
@@ -96,7 +101,20 @@ describe('runTick', () => {
       now: NOW,
       cutoff: new Date('2026-07-14T09:00:00.000Z'),
       claimedUntil: new Date('2026-07-14T12:05:00.000Z'),
+      maxAttempts: 2,
     })
+  })
+
+  it('fails recipients that used up maxAttempts before claiming', async () => {
+    exhaustMock.mockResolvedValue({ ids: ['r1', 'r2'], dispatchIds: ['d1'] })
+
+    const summary = await runTick(settings, deps(jest.fn()))
+
+    expect(exhaustMock).toHaveBeenCalledWith({ maxAttempts: 2, now: NOW })
+    expect(exhaustMock.mock.invocationCallOrder[0]).toBeLessThan(
+      claimMock.mock.invocationCallOrder[0]
+    )
+    expect(summary.exhausted).toBe(2)
   })
 
   it('sends one provider call per dispatch and marks the rows sent with provider ids', async () => {
@@ -217,8 +235,67 @@ describe('runTick', () => {
     )
 
     expect(send).toHaveBeenCalledTimes(1)
-    expect(releaseMock).toHaveBeenCalledWith([{ id: 'b', attempts: 1 }], NOW)
+    // Nothing was sent for 'b', so its attempt is refunded.
+    expect(releaseMock).toHaveBeenCalledWith([{ id: 'b', attempts: 1 }], NOW, {
+      refundAttempt: true,
+    })
     expect(summary).toMatchObject({ sent: 1, released: 1 })
+  })
+
+  it('stops claiming for the rest of the tick after a provider refusal (no resend loop)', async () => {
+    // A full batch, refused: the released rows are due again at once, so
+    // without the breaker the next claim would hand back the same rows.
+    const full = Array.from({ length: 100 }, (_, i) => row(`r${i}`, 'd1'))
+    claimMock.mockResolvedValue(full)
+    getDispatchesMock.mockResolvedValue([dispatch('d1')])
+    const send = jest
+      .fn()
+      .mockRejectedValue(new ProviderResponseError('infobip-sms', 504, 'gw'))
+
+    const summary = await runTick(settings, deps(send))
+
+    expect(claimMock).toHaveBeenCalledTimes(1)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(summary).toMatchObject({ claimed: 100, retried: 100 })
+  })
+
+  it('stops claiming after an unknown outcome (timeout) too', async () => {
+    const full = Array.from({ length: 100 }, (_, i) => row(`r${i}`, 'd1'))
+    claimMock.mockResolvedValue(full)
+    getDispatchesMock.mockResolvedValue([dispatch('d1')])
+    const send = jest.fn().mockRejectedValue(new Error('timeout'))
+
+    await runTick(settings, deps(send))
+
+    expect(claimMock).toHaveBeenCalledTimes(1)
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('still sends the other dispatches already claimed when one batch fails', async () => {
+    claimMock.mockResolvedValueOnce([row('a', 'd1'), row('b', 'd2')])
+    getDispatchesMock.mockResolvedValue([dispatch('d1'), dispatch('d2')])
+    const send = jest
+      .fn()
+      .mockRejectedValueOnce(new ProviderResponseError('infobip-sms', 500, 'x'))
+      .mockResolvedValueOnce({ messages: [{ messageId: 'm-b' }] })
+
+    const summary = await runTick(settings, deps(send))
+
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(markSentMock).toHaveBeenCalledWith(
+      [{ id: 'b', attempts: 1, externalMessageId: 'm-b' }],
+      NOW
+    )
+    expect(summary).toMatchObject({ sent: 1, retried: 1 })
+  })
+
+  it('releases rows of a missing dispatch without refunding the attempt', async () => {
+    claimMock.mockResolvedValueOnce([row('a', 'gone')])
+    getDispatchesMock.mockResolvedValue([])
+
+    await runTick(settings, deps(jest.fn()))
+
+    expect(releaseMock).toHaveBeenCalledWith([{ id: 'a', attempts: 1 }], NOW)
   })
 })
 

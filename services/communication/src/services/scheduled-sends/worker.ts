@@ -13,6 +13,7 @@ import {
   ClaimedRecipient,
   claimDueRecipients,
   expireStaleRecipients,
+  failExhaustedRecipients,
   getDispatchesByIds,
   markRecipientsSent,
   releaseRecipients,
@@ -34,6 +35,7 @@ export type WorkerSettings = {
   batchSize: number
   claimMinutes: number
   providerTimeoutMs: number
+  maxAttempts: number
 }
 
 // Both Infobip send responses (SMS v3, email v4) expose messages[i] aligned
@@ -54,6 +56,7 @@ export type WorkerDeps = {
 
 export type TickSummary = {
   expired: number
+  exhausted: number // used up maxAttempts -> failed
   claimed: number
   sent: number
   retried: number // provider refused; back to 'scheduled' for the next tick
@@ -187,9 +190,9 @@ async function sendBatch(
 }
 
 /**
- * One tick: expire stale rows, then claim and send due rows in batches until
- * nothing is due or the worker is stopping. Exported for tests; the loop
- * below drives it in production.
+ * One tick: expire stale and exhausted rows, then claim and send due rows in
+ * batches until nothing is due, the provider fails, or the worker is
+ * stopping. Exported for tests; the loop below drives it in production.
  */
 export async function runTick(
   settings: WorkerSettings,
@@ -198,6 +201,7 @@ export async function runTick(
   const startedAt = Date.now()
   const summary: TickSummary = {
     expired: 0,
+    exhausted: 0,
     claimed: 0,
     sent: 0,
     retried: 0,
@@ -221,6 +225,22 @@ export async function runTick(
     )
   }
 
+  const exhausted = await failExhaustedRecipients({
+    maxAttempts: settings.maxAttempts,
+    now,
+  })
+  summary.exhausted = exhausted.ids.length
+  if (exhausted.ids.length > 0) {
+    logger.error(
+      {
+        dispatchIds: exhausted.dispatchIds,
+        recipientCount: exhausted.ids.length,
+        maxAttempts: settings.maxAttempts,
+      },
+      'scheduled recipients failed after max attempts (MAX_ATTEMPTS_EXCEEDED)'
+    )
+  }
+
   while (!deps.isStopping()) {
     const claimNow = deps.now()
     const rows = await claimDueRecipients({
@@ -230,6 +250,7 @@ export async function runTick(
       claimedUntil: new Date(
         claimNow.getTime() + settings.claimMinutes * 60_000
       ),
+      maxAttempts: settings.maxAttempts,
     })
     if (rows.length === 0) break
     summary.claimed += rows.length
@@ -244,15 +265,25 @@ export async function runTick(
       (await getDispatchesByIds([...groups.keys()])).map((d) => [d.id, d])
     )
 
+    let providerFailed = false
     for (const [dispatchId, batch] of groups) {
       const dispatch = dispatches.get(dispatchId)
       // Stopping: hand rows back now so another replica picks them up at the
-      // next tick instead of after the claim lapses. A missing dispatch can't
-      // happen (FK cascade) but must not strand the rows either.
-      if (deps.isStopping() || !dispatch) {
-        if (!dispatch) {
-          logger.error({ dispatchId }, 'claimed recipients have no dispatch')
-        }
+      // next tick instead of after the claim lapses. Nothing was sent, so the
+      // attempt is refunded.
+      if (deps.isStopping()) {
+        const { updatedCount } = await releaseRecipients(
+          fences(batch),
+          deps.now(),
+          { refundAttempt: true }
+        )
+        summary.released += updatedCount
+        continue
+      }
+      // A missing dispatch can't happen (FK cascade) but must not strand the
+      // rows either. No refund: if it ever happens, the cap ends it.
+      if (!dispatch) {
+        logger.error({ dispatchId }, 'claimed recipients have no dispatch')
         const { updatedCount } = await releaseRecipients(
           fences(batch),
           deps.now()
@@ -260,7 +291,22 @@ export async function runTick(
         summary.released += updatedCount
         continue
       }
-      summary[await sendBatch(dispatch, batch, settings, deps)] += batch.length
+      const outcome = await sendBatch(dispatch, batch, settings, deps)
+      summary[outcome] += batch.length
+      if (outcome !== 'sent') providerFailed = true
+    }
+
+    // Circuit breaker: after any refused or unclear provider call, claim
+    // nothing more this tick. A released batch is due again at once, so
+    // without this the loop would re-claim and resend the same recipients
+    // back to back (a 504 after the provider accepted = one duplicate SMS per
+    // recipient per loop). Groups already claimed above were still sent.
+    if (providerFailed) {
+      logger.warn(
+        { claimed: summary.claimed, retried: summary.retried },
+        'scheduled-sends: provider failed; no more claims until the next tick'
+      )
+      break
     }
 
     // A short batch means nothing else is due right now.
@@ -295,6 +341,7 @@ export class ScheduledSendsWorker {
         blockedUntil: this.settings.rules.blockedUntil,
         stalenessHours: this.settings.stalenessHours,
         batchSize: this.settings.batchSize,
+        maxAttempts: this.settings.maxAttempts,
       },
       'scheduled-sends worker started'
     )
@@ -350,4 +397,5 @@ export const createScheduledSendsWorker = (): ScheduledSendsWorker =>
     batchSize: config.scheduledSends.batchSize,
     claimMinutes: config.scheduledSends.claimMinutes,
     providerTimeoutMs: config.scheduledSends.providerTimeoutMs,
+    maxAttempts: config.scheduledSends.maxAttempts,
   })
