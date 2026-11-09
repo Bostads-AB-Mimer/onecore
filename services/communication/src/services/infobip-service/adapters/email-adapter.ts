@@ -31,6 +31,7 @@ import {
   formatToSwedishCurrency,
   getParkingSpaceImageUrl,
 } from './parking-space-formatting'
+import { buildLeaseTerminationPlaceholders } from './lease-termination-placeholders'
 
 // Response from POSTing to Infobip's /email/4/messages (outbound email send).
 // Order of `messages` matches the destinations array passed in.
@@ -476,12 +477,9 @@ export const sendLeaseTerminationConfirmation = async (
   }
 
   try {
-    const placeholders = JSON.stringify({
-      firstName: email.firstName,
-      leaseId: email.leaseId,
-      endDate: dateFormatter.format(new Date(email.endDate)),
-      type: email.rentalType,
-    })
+    const placeholders = JSON.stringify(
+      buildLeaseTerminationPlaceholders(email)
+    )
 
     const response = await sendEmailV4([
       {

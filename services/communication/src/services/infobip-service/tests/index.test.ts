@@ -887,6 +887,27 @@ describe('/sendLeaseTerminationConfirmation', () => {
     leaseId: '307-002-11-0201/11',
     endDate: '2026-10-31',
     rentalType: 'Bilplats' as const,
+    lastName: 'Andersson',
+    preferredMoveOutDate: '2026-10-15',
+    rentalObjectAddress: 'Bilvägen 3',
+    tenants: [
+      {
+        contactCode: 'P123456',
+        fullName: 'Anna Andersson',
+        birthDate: '1985-03-14',
+        street: 'Storgatan 1',
+        zipCode: '722 11',
+        city: 'Västerås',
+      },
+      {
+        contactCode: 'P654321',
+        fullName: 'Bo Berg',
+        birthDate: '1990-07-01',
+        street: 'Lillgatan 2',
+        zipCode: '722 12',
+        city: 'Västerås',
+      },
+    ],
   }
 
   beforeEach(() => {
@@ -895,7 +916,10 @@ describe('/sendLeaseTerminationConfirmation', () => {
     getTemplateMock.mockReset()
     getTemplateMock.mockResolvedValue({
       subject: 'Standardämne',
-      html: '<p>Hej {{firstName}}!</p><p>Sista dag: {{endDate}}</p>',
+      html:
+        '<p>Hej {{firstName}}!</p><p>Sista dag: {{endDate}}</p>' +
+        '<p>Önskad avflytt: {{preferredMoveOutDate}}</p>' +
+        '<p>{{tenant2Name}} {{tenant2BirthDate}}</p>',
     })
     sendSpy = jest.spyOn(emailAdapter, 'sendLeaseTerminationConfirmation')
     sendSpy.mockReset()
@@ -917,7 +941,9 @@ describe('/sendLeaseTerminationConfirmation', () => {
           leaseId: '307-002-11-0201/11',
         },
         subject: 'Standardämne',
-        body: expect.stringContaining('Hej Anna!'),
+        body: expect.stringMatching(
+          /Hej Anna![\s\S]*Önskad avflytt: 2026-10-15[\s\S]*Bo Berg 1990-07-01/
+        ),
         recipients: [
           expect.objectContaining({
             contactCode: 'P123456',
@@ -950,6 +976,15 @@ describe('/sendLeaseTerminationConfirmation', () => {
     const res = await request(app.callback())
       .post('/sendLeaseTerminationConfirmation')
       .send({ to: 'not-an-email' })
+
+    expect(res.status).toBe(400)
+    expect(sendSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when no lease holders are supplied', async () => {
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send({ ...terminationBody, tenants: [] })
 
     expect(res.status).toBe(400)
     expect(sendSpy).not.toHaveBeenCalled()

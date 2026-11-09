@@ -10,9 +10,73 @@ import { requiredRolesFor } from '../../../../middlewares/route-roles'
 import { routes } from '../index'
 import { tenantNotificationIdempotencyStore } from '../idempotency'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
+import * as leasingAdapter from '../../../../adapters/leasing-adapter'
+import { contactsAdapter } from '../../../../adapters/contacts-adapter'
 import { Config } from '@/common/config'
+import type { Contact } from '@onecore/contacts/schema'
 
 jest.mock('../../../../adapters/communication-adapter')
+jest.mock('../../../../adapters/leasing-adapter')
+jest.mock('../../../../adapters/contacts-adapter')
+
+const sendMock =
+  communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock
+const getLeaseMock = leasingAdapter.getLease as jest.Mock
+const getContactsMock = contactsAdapter.getByContactCodeBatch as jest.Mock
+
+const individual = (
+  contactCode: string,
+  firstName: string,
+  lastName: string,
+  emailAddress: string | null,
+  birthDate: string | null = '1985-03-14T00:00:00.000Z'
+): Contact => ({
+  type: 'individual',
+  contactCode,
+  contactKey: `_${contactCode}`,
+  protectedIdentity: false,
+  personal: {
+    nationalId: '198503142382',
+    birthDate,
+    firstName,
+    lastName,
+    fullName: `${firstName} ${lastName}`,
+  },
+  communication: {
+    phoneNumbers: [],
+    emailAddresses: emailAddress
+      ? [{ emailAddress, type: 'private', isPrimary: true }]
+      : [],
+    specialAttention: false,
+  },
+  addresses: [
+    {
+      street: `${lastName}gatan 1`,
+      zipCode: '722 11',
+      city: 'Västerås',
+      region: null,
+      country: null,
+      full: null,
+    },
+  ],
+})
+
+const ANNA = individual('P123456', 'Anna', 'Andersson', 'anna@example.com')
+const BO = individual('P654321', 'Bo', 'Berg', 'bo@example.com', '1990-07-01')
+
+const lease = (
+  tenantContactIds: string[] = ['P123456'],
+  overrides: Record<string, unknown> = {}
+) => ({
+  leaseId: '307-002-11-0201/11',
+  tenantContactIds,
+  type: 'P-Platskontrakt',
+  // JSON from the leasing service: dates arrive as strings.
+  leaseEndDate: undefined,
+  preferredMoveOutDate: '2026-10-15T00:00:00.000Z',
+  rentalObject: { address: 'Bilvägen 3 ' },
+  ...overrides,
+})
 
 const LEASE_TERMINATION_ROLE = TenantNotificationRole.LeaseTermination
 const IDEMPOTENCY_KEY = 'tenfast-evt-123'
@@ -71,9 +135,9 @@ const postNotification = (
 beforeEach(() => {
   mockUser = TEST_USER
   tenantNotificationIdempotencyStore.clear()
-  ;(communicationAdapter.sendLeaseTerminationConfirmationEmail as jest.Mock)
-    .mockReset()
-    .mockResolvedValue({ ok: true, data: null })
+  sendMock.mockReset().mockResolvedValue({ ok: true, data: null })
+  getLeaseMock.mockReset().mockResolvedValue(lease())
+  getContactsMock.mockReset().mockResolvedValue({ ok: true, data: [ANNA] })
 })
 
 describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
@@ -85,14 +149,213 @@ describe('POST /v1/tenant-notifications/lease-termination-confirmation', () => {
     expect(
       communicationAdapter.sendLeaseTerminationConfirmationEmail
     ).toHaveBeenCalledTimes(1)
-    expect(
-      communicationAdapter.sendLeaseTerminationConfirmationEmail
-    ).toHaveBeenCalledWith(
+    expect(sendMock).toHaveBeenCalledWith({
+      to: 'anna@example.com',
+      contactCode: 'P123456',
+      firstName: 'Anna',
+      lastName: 'Andersson',
+      leaseId: '307-002-11-0201/11',
+      endDate: new Date('2026-10-31T00:00:00.000Z'),
+      rentalType: 'Bilplats',
+      preferredMoveOutDate: '2026-10-15',
+      rentalObjectAddress: 'Bilvägen 3',
+      tenants: [
+        {
+          contactCode: 'P123456',
+          fullName: 'Anna Andersson',
+          birthDate: '1985-03-14',
+          street: 'Anderssongatan 1',
+          zipCode: '722 11',
+          city: 'Västerås',
+        },
+      ],
+      triggeredByUser: 'Tenfast Integration',
+    })
+    expect(getContactsMock).toHaveBeenCalledWith(['P123456'], {
+      includeEmail: true,
+      includeAddress: true,
+    })
+  })
+
+  it('emails every lease holder, each listing both holders', async () => {
+    getLeaseMock.mockResolvedValue(lease(['P123456', 'P654321']))
+    getContactsMock.mockResolvedValue({ ok: true, data: [BO, ANNA] })
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(200)
+    expect(sendMock).toHaveBeenCalledTimes(2)
+    const sent = sendMock.mock.calls.map(([email]) => email)
+    expect(sent.map((e) => [e.to, e.contactCode, e.firstName])).toEqual([
+      ['anna@example.com', 'P123456', 'Anna'],
+      ['bo@example.com', 'P654321', 'Bo'],
+    ])
+    for (const email of sent) {
+      // Lease order, regardless of the order contacts returned them in.
+      expect(
+        email.tenants.map((t: { fullName: string }) => t.fullName)
+      ).toEqual(['Anna Andersson', 'Bo Berg'])
+    }
+    expect(sent[1].tenants[1].birthDate).toBe('1990-07-01')
+  })
+
+  it('skips a holder without email but still lists them', async () => {
+    getLeaseMock.mockResolvedValue(lease(['P123456', 'P654321']))
+    getContactsMock.mockResolvedValue({
+      ok: true,
+      data: [ANNA, individual('P654321', 'Bo', 'Berg', null)],
+    })
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(200)
+    expect(sendMock).toHaveBeenCalledTimes(1)
+    expect(sendMock.mock.calls[0][0].tenants).toHaveLength(2)
+  })
+
+  it('includes the caller contactCode even when the lease lists no tenants', async () => {
+    getLeaseMock.mockResolvedValue(lease([]))
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(200)
+    expect(getContactsMock).toHaveBeenCalledWith(['P123456'], expect.anything())
+  })
+
+  it('returns 422 when no holder has an email address', async () => {
+    getContactsMock.mockResolvedValue({
+      ok: true,
+      data: [individual('P123456', 'Anna', 'Andersson', null)],
+    })
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('no-recipient')
+    expect(sendMock).not.toHaveBeenCalled()
+  })
+
+  it('sends with only leaseId, reading everything else from the lease', async () => {
+    getLeaseMock.mockResolvedValue(
+      lease(['P123456'], { leaseEndDate: '2026-11-30T00:00:00.000Z' })
+    )
+
+    const res = await postNotification({ leaseId: '307-002-11-0201/11' })
+
+    expect(res.status).toBe(200)
+    expect(sendMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        leaseId: '307-002-11-0201/11',
+        to: 'anna@example.com',
+        contactCode: 'P123456',
+        firstName: 'Anna',
+        endDate: new Date('2026-11-30T00:00:00.000Z'),
         rentalType: 'Bilplats',
       })
     )
+  })
+
+  it("prefers the lease's end date over the request's", async () => {
+    getLeaseMock.mockResolvedValue(
+      lease(['P123456'], { leaseEndDate: '2026-11-30T00:00:00.000Z' })
+    )
+
+    await postNotification(body({ endDate: '2026-10-31' }))
+
+    expect(sendMock.mock.calls[0][0].endDate).toEqual(
+      new Date('2026-11-30T00:00:00.000Z')
+    )
+  })
+
+  it('returns 422 when neither the lease nor the request has an end date', async () => {
+    const res = await postNotification({ leaseId: '307-002-11-0201/11' })
+
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('missing-end-date')
+    expect(sendMock).not.toHaveBeenCalled()
+  })
+
+  it('returns 422 for a non-parking lease without a rentalType fallback', async () => {
+    getLeaseMock.mockResolvedValue(
+      lease(['P123456'], { type: 'Bostadskontrakt' })
+    )
+
+    const res = await postNotification({
+      leaseId: '307-002-11-0201/11',
+      endDate: '2026-10-31',
+    })
+
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('unsupported-rental-type')
+    expect(sendMock).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when leaseId is missing', async () => {
+    const res = await postNotification({ endDate: '2026-10-31' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('invalid-request')
+  })
+
+  it('returns 404 when the lease does not exist', async () => {
+    getLeaseMock.mockResolvedValue(null)
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(404)
+    expect(res.body.error).toBe('lease-not-found')
+    expect(sendMock).not.toHaveBeenCalled()
+  })
+
+  it('returns 502 when the lease lookup fails', async () => {
+    getLeaseMock.mockRejectedValue(new Error('leasing down'))
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('lease-lookup-failed')
+    expect(sendMock).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when the contacts lookup fails', async () => {
+    getContactsMock.mockResolvedValue({
+      ok: false,
+      err: 'unknown',
+      statusCode: 500,
+    })
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('contact-lookup-failed')
+    expect(sendMock).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when a lease holder is missing in contacts', async () => {
+    getLeaseMock.mockResolvedValue(lease(['P123456', 'P654321']))
+
+    const res = await postNotification()
+
+    expect(res.status).toBe(502)
+    expect(res.body.error).toBe('contact-lookup-failed')
+    expect(sendMock).not.toHaveBeenCalled()
+  })
+
+  it('only resends to the holder whose email failed on retry', async () => {
+    getLeaseMock.mockResolvedValue(lease(['P123456', 'P654321']))
+    getContactsMock.mockResolvedValue({ ok: true, data: [ANNA, BO] })
+    sendMock
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: false, err: 'unknown', statusCode: 500 })
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    expect((await postNotification()).status).toBe(502)
+    expect((await postNotification()).status).toBe(200)
+
+    expect(sendMock.mock.calls.map(([email]) => email.contactCode)).toEqual([
+      'P123456',
+      'P654321',
+      'P654321',
+    ])
   })
 
   it('returns 400 when Idempotency-Key is missing', async () => {

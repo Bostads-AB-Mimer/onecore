@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 
-import { LeaseTerminationConfirmationEmail } from '@onecore/types'
+import type { LeaseTerminationNotification } from './send-notification'
 
 export type IdempotencyClaimOutcome =
   'claimed' | 'duplicate' | 'conflict' | 'in-flight'
@@ -16,7 +16,7 @@ export type IdempotencyStore = {
 
 /** Stable hash of the integration payload (excludes server-added attribution). */
 export const hashNotificationPayload = (
-  notification: LeaseTerminationConfirmationEmail
+  notification: LeaseTerminationNotification
 ): string => {
   const { triggeredByUser: _triggeredByUser, ...dedupeFields } = notification
   const canonical = JSON.stringify(
