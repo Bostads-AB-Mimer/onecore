@@ -40,6 +40,17 @@ const tenfastCompanyId = config.tenfast.companyId
 
 type SchemaError = { tag: 'schema-error'; error: z.ZodError }
 
+/** A non-2xx Tenfast response, keeping the status and Tenfast's error body for logging. */
+export class TenfastHttpError extends Error {
+  constructor(
+    readonly status: number,
+    readonly data: unknown
+  ) {
+    super(`Tenfast responded with status ${status}`)
+    this.name = 'TenfastHttpError'
+  }
+}
+
 /**
  * Fetches all pages from a paginated Tenfast endpoint.
  *
@@ -49,7 +60,8 @@ type SchemaError = { tag: 'schema-error'; error: z.ZodError }
  *                   `records`, `next`, and `totalCount` fields.
  * @returns        - All records across all pages combined, typed as the
  *                   schema's own output type (preserving branded strings etc.)
- * @throws         - On non-200/201 responses or schema parse failures.
+ * @throws         - TenfastHttpError on non-200/201 responses, ZodError on
+ *                   schema parse failures.
  */
 const fetchAllPages = async <
   S extends z.ZodType<{
@@ -81,9 +93,7 @@ const fetchAllPages = async <
     })
 
     if (response.status !== 200 && response.status !== 201) {
-      throw new Error(
-        `Tenfast responded with status ${response.status}: ${JSON.stringify(response.data)}`
-      )
+      throw new TenfastHttpError(response.status, response.data)
     }
 
     const parsed = schema.safeParse(response.data)
@@ -1166,11 +1176,28 @@ async function getOrImportContact(
   return { ok: true, data: importResult.data }
 }
 
+// Structured log fields for a failed Tenfast call. JSON.stringify drops an
+// Error's message and stack, and a raw AxiosError must not be logged.
+export const tenfastErrorLogFields = (err: unknown) => {
+  if (err instanceof TenfastHttpError) {
+    return { status: err.status, error: err.data }
+  }
+  if (isAxiosError(err)) {
+    return {
+      status: err.response?.status,
+      error: err.response?.data ?? err.message,
+      code: err.code,
+    }
+  }
+  if (err instanceof Error) return { err }
+  return { error: err }
+}
+
 function handleTenfastError<E extends string>(
   errorObj: unknown,
   errorLiteral: E
 ) {
-  logger.error({ err: JSON.stringify(errorObj) }, errorLiteral)
+  logger.error(tenfastErrorLogFields(errorObj), errorLiteral)
   return { ok: false, err: errorLiteral } as const
 }
 
@@ -1675,8 +1702,8 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     const params = new URLSearchParams({
       hyresvard: tenfastCompanyId,
       populate: 'hyresgaster,hyresobjekt',
-      states:
-        'active,upcoming,preTermination,terminationSigningInProgress,terminationScheduled',
+      // The only values this endpoint accepts; any other state gives a 400.
+      states: 'active,upcoming,preTermination,terminationScheduled',
     })
 
     const records = await fetchAllPages(

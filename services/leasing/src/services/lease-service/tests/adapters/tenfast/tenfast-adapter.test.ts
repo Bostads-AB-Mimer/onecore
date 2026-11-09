@@ -4,6 +4,7 @@ jest.mock('../../../adapters/tenfast/tenfast-api', () => ({
 
 import assert from 'node:assert'
 import { logger } from '@onecore/utilities'
+import { AxiosError, AxiosHeaders } from 'axios'
 import * as tenfastAdapter from '../../../adapters/tenfast/tenfast-adapter'
 import { request } from '../../../adapters/tenfast/tenfast-api'
 import * as factory from '../../factories'
@@ -4024,5 +4025,89 @@ describe(tenfastAdapter.getSubletLeases, () => {
       ok: false,
       err: 'unknown',
     })
+  })
+})
+
+describe(tenfastAdapter.getLeasesWithHomeInsurance, () => {
+  it('filters only on the states the Tenfast endpoint accepts', async () => {
+    const lease = factory.tenfastLease.build()
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 200,
+      data: { records: [lease], prev: null, next: null, totalCount: 1 },
+    })
+
+    const result = await tenfastAdapter.getLeasesWithHomeInsurance()
+
+    assert(result.ok)
+    expect(result.data.map((l) => l.externalId)).toEqual([lease.externalId])
+    const url = new URL((request as jest.Mock).mock.calls.at(-1)[0].url)
+    expect(url.searchParams.get('states')).toBe(
+      'active,upcoming,preTermination,terminationScheduled'
+    )
+  })
+
+  it("logs Tenfast's status and error body when Tenfast rejects the request", async () => {
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation()
+    ;(request as jest.Mock).mockResolvedValueOnce({
+      status: 400,
+      data: { error: 'Kunde inte hitta artikeln' },
+    })
+
+    const result = await tenfastAdapter.getLeasesWithHomeInsurance()
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+    expect(errorSpy).toHaveBeenCalledWith(
+      { status: 400, error: { error: 'Kunde inte hitta artikeln' } },
+      'unknown'
+    )
+    errorSpy.mockRestore()
+  })
+})
+
+describe(tenfastAdapter.tenfastErrorLogFields, () => {
+  it('returns status and body for a TenfastHttpError', () => {
+    const err = new tenfastAdapter.TenfastHttpError(400, { error: 'bad' })
+
+    expect(tenfastAdapter.tenfastErrorLogFields(err)).toEqual({
+      status: 400,
+      error: { error: 'bad' },
+    })
+  })
+
+  it('returns status, body and code for an AxiosError, not the request', () => {
+    const err = new AxiosError(
+      'Request failed',
+      'ERR_BAD_RESPONSE',
+      { headers: new AxiosHeaders({ 'api-token': 'secret' }) },
+      undefined,
+      {
+        status: 502,
+        statusText: 'Bad Gateway',
+        data: { error: 'upstream' },
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      }
+    )
+
+    const fields = tenfastAdapter.tenfastErrorLogFields(err)
+
+    expect(fields).toEqual({
+      status: 502,
+      error: { error: 'upstream' },
+      code: 'ERR_BAD_RESPONSE',
+    })
+    expect(JSON.stringify(fields)).not.toContain('secret')
+  })
+
+  it('keeps an Error under err so the logger serializes message and stack', () => {
+    const err = new Error('boom')
+
+    expect(tenfastAdapter.tenfastErrorLogFields(err)).toEqual({ err })
+  })
+
+  it('logs anything else as error', () => {
+    expect(
+      tenfastAdapter.tenfastErrorLogFields({ status: 500, error: 'x' })
+    ).toEqual({ error: { status: 500, error: 'x' } })
   })
 })
