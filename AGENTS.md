@@ -46,12 +46,13 @@ Always use `pnpm` — never `npm` or `yarn`.
 
 ## Running Locally
 
-`pnpm dev` starts everything (start Docker first). Default ports, Swagger URLs and the related repositories (onecore-odoo, the ops repos, mimer.nu) are in `.claude/skills/local-setup.md`.
+`pnpm dev` starts everything (start Docker first). Default ports, Swagger URLs and the related repositories (onecore-odoo, the ops repos, mimer.nu) are in the `local-setup` skill (`.claude/skills/local-setup/SKILL.md`).
 
 ## Git & Pull Requests
 
 - Before starting work, check open PRs for the same change: `gh pr list --state open --search "<keywords>"`. If one overlaps, build on it or coordinate instead of opening a parallel PR.
 - Merges between long-lived branches (main → epic, epic → epic) must use **"Create a merge commit"**, never squash. Squashing drops the second parent, so the next merge starts from an old base and shows conflicts in files that were already merged. Say so in the PR description.
+- PRs in the ops repo `mimer-onecore-operations` target `refactor/dev`, not `main`.
 
 ---
 
@@ -124,13 +125,13 @@ No `as` or `!` without a comment saying why; use `catch (err: unknown)`. `satisf
 
 - Run tests per package from its folder: `pnpm test`. (property has no `test` script at the moment, so its tests don't run in CI.)
 - **leasing, contacts, keys and communication** need a test database in Docker. Start Docker first; `pnpm test` creates the database (`test:create-db`) before running jest.
-- Build test data with the package's `fishery` factories (e.g. `core/test/factories/`, `services/leasing/src/services/lease-service/tests/factories/`), overriding only the fields the test is about: `factory.x.build({ field: value })`. If there is no factory for the type yet, add one instead of writing inline objects (exceptions in `.claude/skills/test-conventions.md`).
+- Build test data with the package's `fishery` factories (e.g. `core/test/factories/`, `services/leasing/src/services/lease-service/tests/factories/`), overriding only the fields the test is about: `factory.x.build({ field: value })`. If there is no factory for the type yet, add one instead of writing inline objects (exceptions in `.claude/skills/test-conventions/SKILL.md`).
 - Compare dates with the shared matchers in each package's `src/common/test/matchers.ts` (loaded globally in leasing and core) instead of exact equality: `toBeSameDayAs`, `toBeNearDate` for values created "now", and `toBeStartOfDayUTC` (leasing). `toBeSameDayAs` compares in local time.
 - Tests that depend on today's date must freeze the clock (`jest.useFakeTimers()` + `jest.setSystemTime(...)`) and restore it in `afterEach(() => jest.useRealTimers())`, not at the end of the test body — a failing assertion would leak the fake clock into later tests.
 
 ### Writing tests
 
-Tests are the spec for both people and agents: a reader should understand what the code is supposed to do from the tests alone. Examples and per-layer details (mocking, factories, fake timers) are in `.claude/skills/test-conventions.md`.
+Tests are the spec for both people and agents: a reader should understand what the code is supposed to do from the tests alone. Examples and per-layer details (mocking, factories, fake timers) are in `.claude/skills/test-conventions/SKILL.md`.
 
 - Name a test after the behaviour it checks, in the present tense: `returns 409 when the rental object already has a lease`, not `should work` or `test createLease`. In an existing file that uses another style, match the file.
 - Structure each test with `// Arrange`, `// Act` and `// Assert` comments, so the setup, the call and the checks are easy to tell apart.

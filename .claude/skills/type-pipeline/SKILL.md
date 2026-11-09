@@ -153,13 +153,8 @@ This table tracks which services have which parts of the pipeline. **Update this
 
 ### Service Ports
 
-| Service | Port | Swagger URL |
-|---|---|---|
-| Core | 5010 | http://localhost:5010/swagger |
-| Property | 5050 | http://localhost:5050/swagger |
-| Work Order | 5070 | http://localhost:5070/swagger |
-| Inspection | 5090 | http://localhost:5090/swagger |
-| Keys | 5092 | http://localhost:5092/swagger |
+Ports for every service and app are in the `local-setup` skill; each
+service's Swagger UI is at `http://localhost:<port>/swagger`.
 
 ## Naming Conventions
 

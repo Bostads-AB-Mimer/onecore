@@ -229,7 +229,7 @@ title then follows a rename.
 - Needs the Docker test DB (`pnpm test` runs `test:create-db` first); so do
   contacts, keys and communication.
 - The Tenfast adapter's tag and article caches are module-level with a
-  5-minute TTL (see `tenfast-integration.md`). `tenfast-adapter.test.ts`
+  5-minute TTL (see the `tenfast-integration` skill). `tenfast-adapter.test.ts`
   busts them in two ways: `describe('VAT rent row article swap')` uses the
   fake-timer pattern above, and `describe('tag propagation')` spies on
   `Date.now` with a growing offset per test. Follow the one already used in
