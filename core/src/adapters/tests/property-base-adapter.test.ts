@@ -417,6 +417,38 @@ describe('@onecore/property-adapter', () => {
       })
     })
   })
+
+  describe('getResidenceMedia', () => {
+    const url = `${config.propertyBaseService.url}/residences/rental-id/705-025-01-0103/media`
+
+    it('returns the media', async () => {
+      const media = {
+        images: ['https://pub.mimer.nu/bofaktablad/a_1.jpg'],
+        imageLevel: 'shared',
+        energyDeclarationUrl: null,
+      }
+      mockServer.use(http.get(url, () => HttpResponse.json({ content: media })))
+
+      const result =
+        await propertyBaseAdapter.getResidenceMedia('705-025-01-0103')
+
+      expect(result).toEqual({ ok: true, data: media })
+    })
+
+    it.each([
+      [400, 'invalid-rental-id'],
+      [503, 'media-unavailable'],
+      [500, 'unknown'],
+    ])('maps status %i to %s', async (status, err) => {
+      mockServer.use(http.get(url, () => new HttpResponse(null, { status })))
+
+      const result =
+        await propertyBaseAdapter.getResidenceMedia('705-025-01-0103')
+
+      expect(result).toEqual({ ok: false, err })
+    })
+  })
+
   describe('getStaircases', () => {
     it('returns err if request fails', async () => {
       mockServer.use(
