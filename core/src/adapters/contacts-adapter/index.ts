@@ -150,11 +150,16 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
       return listResponse(response)
     },
 
+    /**
+     * With excludeDeleted, a contact marked as deleted in Xpand is not-found.
+     */
     async getByContactCode(
-      contactCode: string
+      contactCode: string,
+      options?: { excludeDeleted?: boolean }
     ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {
       const response = await axios<GetContactResponseBody>(
-        `/contacts/${contactCode}`
+        `/contacts/${contactCode}`,
+        options?.excludeDeleted ? { params: { excludeDeleted: true } } : {}
       )
       return singleResponse(response)
     },
@@ -219,6 +224,20 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
     ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {
       const response = await axios<GetContactResponseBody>(
         `/contacts/by-nid/${nid}`
+      )
+      return singleResponse(response)
+    },
+
+    /**
+     * The contact a person logs in to mimer.nu as. Unlike getByNationalId, which returns
+     * whichever contact comes first, the contacts service skips deleted and company
+     * contacts, ranks supplier-only contacts last and prefers a tenant, then queue time.
+     */
+    async getLoginContactByNationalId(
+      nid: string
+    ): Promise<AdapterResult<Contact, 'not-found' | 'unknown'>> {
+      const response = await axios<GetContactResponseBody>(
+        `/contacts/by-nid/${encodeURIComponent(nid)}/login-contact`
       )
       return singleResponse(response)
     },

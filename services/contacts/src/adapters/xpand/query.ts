@@ -194,7 +194,7 @@ export const contactObjectKeysForEmailAddress = async (
  * SQL Server has no REGEXP_REPLACE in the versions we target, hence the nested
  * REPLACE calls.
  */
-const NORMALISED_NATIONAL_ID_SQL = `REPLACE(REPLACE(REPLACE(${NATIONAL_ID_NUMBER}, '-', ''), '+', ''), ' ', '')`
+export const NORMALISED_NATIONAL_ID_SQL = `REPLACE(REPLACE(REPLACE(${NATIONAL_ID_NUMBER}, '-', ''), '+', ''), ' ', '')`
 
 /**
  * Finds the contact code of an existing contact with the given national ID
@@ -282,6 +282,7 @@ export const contactsQuery = () => {
   let contactType: ContactTypeFilter = 'any'
   let objectKeyFilter: ContactCode[] = []
   let contactCodeFilter: ContactCode[] = []
+  let excludeDeleted = false
 
   /**
    * Applies the base cmctc-only criteria/filters to a knex
@@ -306,6 +307,10 @@ export const contactsQuery = () => {
             .andWhereNot('cmctc.fnamn', null)
         )
       })
+    }
+
+    if (excludeDeleted) {
+      qb.andWhere('cmctc.deletemark', 0)
     }
 
     if (objectKeyFilter.length) {
@@ -432,6 +437,15 @@ export const contactsQuery = () => {
      */
     isContactType(type: ContactTypeFilter) {
       contactType = type
+      return this
+    },
+
+    /**
+     * Leaves out contacts marked as deleted in Xpand, which the other
+     * queries in this service read like any other contact.
+     */
+    notDeleted(exclude = true) {
+      excludeDeleted = exclude
       return this
     },
 

@@ -63,6 +63,16 @@ export interface Config {
       realm: string
       clientId: string
       clientSecret: string
+      contacts: {
+        realm: string
+        clientId: string
+        clientSecret: string
+        /** Service client with realm-management view-users and manage-users in the realm. */
+        provisioning: {
+          clientId: string
+          clientSecret: string
+        }
+      }
     }
   }
   microsoftGraph: {
@@ -158,6 +168,15 @@ const config = configPackage({
         realm: 'onecore-test',
         clientId: 'onecore-test',
         clientSecret: 'your-client-secret',
+        contacts: {
+          realm: 'mimer-contacts',
+          clientId: 'mina-sidor',
+          clientSecret: '',
+          provisioning: {
+            clientId: 'mimer-contacts-provisioning',
+            clientSecret: '',
+          },
+        },
       },
     },
     microsoftGraph: {

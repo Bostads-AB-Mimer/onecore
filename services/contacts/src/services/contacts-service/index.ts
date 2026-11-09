@@ -381,10 +381,17 @@ export const routes = (
     '/contacts/:contactCode',
     {
       summary: 'Get a single contact by their canonical ID.',
-      description: `Get a single contact by their Contact Code.`,
+      description:
+        'Get a single contact by their Contact Code. Contacts marked as deleted in Xpand are returned unless excludeDeleted is true, in which case they are 404.',
       tags: ['Contacts'],
       params: {
         contactCode: z.string(),
+      },
+      query: {
+        excludeDeleted: {
+          description: 'Answer 404 for a contact marked as deleted.',
+          schema: z.optional(z.boolean()),
+        },
       },
       response: {
         200: GetContactResponseBodySchema,
@@ -394,7 +401,9 @@ export const routes = (
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const { contactCode } = ctx.params
-      const result = await contactsRepository.getByContactCode(contactCode)
+      const result = await contactsRepository.getByContactCode(contactCode, {
+        excludeDeleted: isTrue(ctx.query.excludeDeleted),
+      })
 
       if (result) {
         ctx.status = 200
@@ -818,6 +827,41 @@ export const routes = (
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx, ctx.queryParameterNames ?? [])
       const result = await contactsRepository.getByNationalIdNumber(
+        ctx.params.nid
+      )
+
+      if (!result) {
+        ctx.status = 404
+        ctx.body = {
+          ...metadata,
+        }
+      } else {
+        ctx.body = {
+          ...metadata,
+          content: result,
+        }
+      }
+    }
+  )
+
+  router.get(
+    '/contacts/by-nid/:nid/login-contact',
+    {
+      summary: 'Get the contact a person logs in to mimer.nu as',
+      description:
+        'A personnummer can have several contacts. Only private individuals that are not deleted are considered, ranked with supplier-only contacts last, then by current lease, then queue time, then an Xpand user, then newest. 404 when there is none or nid is not a valid personnummer or samordningsnummer.',
+      tags: ['Contacts'],
+      params: {
+        nid: z.string(),
+      },
+      response: {
+        200: GetContactResponseBodySchema,
+        404: ONECoreHateOASResponseBodySchema,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx, ctx.queryParameterNames ?? [])
+      const result = await contactsRepository.getLoginContactByNationalIdNumber(
         ctx.params.nid
       )
 
