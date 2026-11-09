@@ -18,9 +18,9 @@ a new test must fail without its change, factories, date matchers, frozen
 clock) are in `AGENTS.md` under `## Testing`. This skill is the longer
 reference with examples.
 
-Based on surveys of the tests in leasing (42 files under
+Based on surveys of the tests in leasing (about 50 files under
 `services/leasing/src/services/lease-service/tests/`, 2026-10) and core
-(98 files, 2026-11). Conventions are split into **solid** (repeated across
+(about 100 files, 2026-11). Conventions are split into **solid** (repeated across
 most files, or adopted as practice going forward — follow these) and
 **mixed** (several idioms coexist — pick one deliberately).
 
@@ -35,21 +35,20 @@ Label the three phases of every test with `// Arrange`, `// Act`,
 `// Assert` comments, even when a phase is one line:
 
 ```ts
-it('returns the lease id when Tenfast accepts the request', async () => {
+it('returns the rental object when Tenfast responds with 200', async () => {
   // Arrange
-  const mockLease = factory.tenfastLease.build()
-  ;(request as jest.Mock).mockResolvedValue({ status: 200, data: mockLease })
+  const mockRentalObject = factory.tenfastRentalObject.build()
+  // request is replaced by jest.mock at the top of the file
+  ;(request as jest.Mock).mockResolvedValue({
+    status: 200,
+    data: mockRentalObject,
+  })
 
   // Act
-  const result = await tenfastAdapter.createLease(
-    contact,
-    'CODE',
-    new Date(),
-    true
-  )
+  const result = await tenfastAdapter.getRentalObject('RENTAL_CODE')
 
   // Assert
-  expect(result).toEqual({ ok: true, data: mockLease.externalId })
+  expect(result).toEqual({ ok: true, data: mockRentalObject })
 })
 ```
 
@@ -61,8 +60,8 @@ yet.
 
 Plain, present-tense descriptions of the behaviour:
 `'responds with 404 if no listing found'`, not `'should work'`. This is
-already the majority in core (about 1 500 tests vs. 200 starting with
-"should"); leasing is more mixed (about 36 % "should"). When adding to an
+already the majority in core (about 1 600 of 1 800 tests); in leasing about
+a fifth still start with "should". When adding to an
 existing file that uses "should …", matching the file is fine.
 
 ### Test data: fishery factories, not inline literals
@@ -229,9 +228,12 @@ title then follows a rename.
 
 - Needs the Docker test DB (`pnpm test` runs `test:create-db` first); so do
   contacts, keys and communication.
-- The Tenfast adapter's tag and article caches are module-level with a TTL;
-  see `tenfast-integration.md` and bust them with the fake-timer pattern
-  above (`describe('tag propagation')` in `tenfast-adapter.test.ts`).
+- The Tenfast adapter's tag and article caches are module-level with a
+  5-minute TTL (see `tenfast-integration.md`). `tenfast-adapter.test.ts`
+  busts them in two ways: `describe('VAT rent row article swap')` uses the
+  fake-timer pattern above, and `describe('tag propagation')` spies on
+  `Date.now` with a growing offset per test. Follow the one already used in
+  the `describe` you add to.
 
 ### core
 
