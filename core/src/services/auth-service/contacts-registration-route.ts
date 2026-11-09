@@ -3,6 +3,7 @@ import {
   generateRouteMetadata,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
+import { isOldEnough } from '@onecore/contacts/schema'
 
 import config from '../../common/config'
 import { CREATE_CONTACT_STATUS } from '../../processes/contacts/create-contact-status'
@@ -14,22 +15,21 @@ import {
   isContactsProvisioningConfigured,
   toContactsUsername,
 } from './contacts-keycloak-provisioning'
-import {
-  isOldEnoughToRegister,
-  RegisterContactRequestBodySchema,
-} from './contacts-registration-schema'
+import { RegisterContactRequestBodySchema } from './contacts-registration-schema'
 import { isContactsKeycloakConfigured } from './keycloak-contacts'
 
 /**
  * Everything the login step needs: the realm and its mina-sidor client (whose id the
  * set-password e-mail names), the provisioning client, and where the e-mail's link ends.
  *
- * Whether minaSidor.url is a valid redirect URI on that client only Keycloak can tell.
+ * The redirect URI has its own setting with no default, so an environment that has not
+ * chosen one has registration off instead of sending links to another site. Whether it is
+ * a valid redirect URI on the client only Keycloak can tell.
  */
 const isRegistrationConfigured = () =>
   isContactsKeycloakConfigured() &&
   isContactsProvisioningConfigured() &&
-  Boolean(config.minaSidor.url)
+  Boolean(config.auth.keycloak.contacts.setPasswordRedirectUri)
 
 const statusForFailure = (error: RegisterApplicantError): number => {
   switch (error) {
@@ -167,7 +167,9 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
       ctx.body = { error: 'invalid-national-id', ...metadata }
       return
     }
-    if (!isOldEnoughToRegister(nationalId, new Date())) {
+    // From the calendar year they turn 16, as Mina sidor has always promised. The same
+    // rule the contacts service applies to the create, so the two cannot disagree.
+    if (!isOldEnough(nationalId, 'birth-year', new Date())) {
       ctx.status = 422
       ctx.body = { error: 'too-young', ...metadata }
       return

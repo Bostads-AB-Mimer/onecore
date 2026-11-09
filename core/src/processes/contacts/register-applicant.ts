@@ -223,7 +223,8 @@ export const registerApplicant = async (
       return { outcome: 'failed', error: created.err }
     }
     // The contacts service matches any row with the number. Either someone registered it
-    // in between (a double click, say), or the row is no person contact: a company, a
+    // in between (a double click, say: the service creates one at a time per number, so
+    // the second request waits and lands here), or the row is no person contact: a company, a
     // deleted contact or a GDPR placeholder. Its `detail` names the existing contact code,
     // which must never reach the person registering, so it is dropped here.
     const again = await findExisting(application.nationalId)

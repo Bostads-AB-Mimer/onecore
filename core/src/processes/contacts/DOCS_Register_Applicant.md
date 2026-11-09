@@ -13,14 +13,14 @@ Två regler styr allt:
 
 Routen gör det som kan avgöras utan att fråga någon annan tjänst, innan något skapas:
 
-| Kontroll                                                                                     | Svar                                                        |
-| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Keycloak-URL, realm, mina-sidor-klienten, provisioning-klienten eller `minaSidor.url` saknas | 503 `registration-not-configured`                           |
-| Kroppen följer inte schemat                                                                  | 400 `invalid-request` med fältnamnen, aldrig det som skrevs |
-| Inte ett giltigt personnummer eller samordningsnummer                                        | 422 `invalid-national-id`                                   |
-| Fyller inte 16 i år                                                                          | 422 `too-young`                                             |
+| Kontroll                                                                                              | Svar                                                        |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Keycloak-URL, realm, mina-sidor-klienten, provisioning-klienten eller `setPasswordRedirectUri` saknas | 503 `registration-not-configured`                           |
+| Kroppen följer inte schemat                                                                           | 400 `invalid-request` med fältnamnen, aldrig det som skrevs |
+| Inte ett giltigt personnummer eller samordningsnummer                                                 | 422 `invalid-national-id`                                   |
+| Fyller inte 16 i år                                                                                   | 422 `too-young`                                             |
 
-Åldersregeln går på födelseår, inte exakt ålder: man får registrera sig från det kalenderår man fyller 16, som Mina sidor alltid har lovat. Året räknas i svensk tid, inte i containerns UTC. Processen skapar kontakten med `ageRule: 'birth-year'`, så contacts-tjänsten använder samma regel, också den i svensk tid. Skapa från property-tree behåller exakt 16 år.
+Åldersregeln går på födelseår, inte exakt ålder: man får registrera sig från det kalenderår man fyller 16, som Mina sidor alltid har lovat. Året räknas i svensk tid, inte i containerns UTC. Routen och contacts-tjänsten använder samma funktion, `isOldEnough` från `@onecore/contacts/schema`, och processen skapar kontakten med `ageRule: 'birth-year'`, så de två kan inte komma fram till olika svar. Skapa från property-tree behåller exakt 16 år.
 
 Personnumret normaliseras till tolv siffror med `toContactsUsername`, samma form och samma funktion som Keycloak-användarnamnet läses med vid inloggning.
 
@@ -55,7 +55,7 @@ W[Collect warnings] --> R[201 created<br/>contactCode, warnings]
 
 `contact-outcome-unknown` betyder att contacts-tjänsten aldrig svarade, till exempel vid en timeout, eller svarade med något okänt. Tjänsten kan ha skapat kontakten ändå. Ett nytt försök skulle svara `existing` för någon som saknar profil, köer och inloggning, så webapi ska skicka personen till kundtjänst i stället för att be dem försöka igen. Tvetydiga svar från Xpand (`xpand-unavailable`, `xpand-malformed-response`) reder contacts-tjänsten själv ut genom att slå upp numret igen. Når de core fanns ingen kontakt.
 
-`duplicate-contact` betyder att contacts dubblettkontroll hittade en rad med numret, som matchar alla rader, även raderade och företag. Antingen registrerade någon numret precis innan (ett dubbelklick), eller så är raden ingen personkontakt. Felets `detail` innehåller den befintliga kontaktkoden och lämnar aldrig processen.
+`duplicate-contact` betyder att contacts dubblettkontroll hittade en rad med numret, som matchar alla rader, även raderade och företag. Antingen registrerade någon numret precis innan (ett dubbelklick, eller webapi som försöker igen), eller så är raden ingen personkontakt. Contacts-tjänsten kör dubblettkontrollen och skapandet ett i taget per personnummer, så två samtidiga anrop kan inte båda skapa en kontakt: det andra väntar och får `duplicate-contact`. Låset finns bara i processen och räcker eftersom contacts-tjänsten körs med en replika. Felets `detail` innehåller den befintliga kontaktkoden och lämnar aldrig processen.
 
 ## Keycloak-inloggningen
 
