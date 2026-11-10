@@ -6,7 +6,10 @@ import {
 import currency from 'currency.js'
 
 // Rent rows run over whole days and all dates here are UTC midnights, so
-// dates are compared by their UTC day.
+// dates are compared by their UTC day. Today is the UTC day too, so in the
+// hour or two after Swedish midnight the Swedish day counts as a later day.
+// That is harmless: the rent of that day is then summed from the rows, which
+// gives the same total as Tenfast's own for the day.
 const toUtcDay = (date: Date) => date.toISOString().slice(0, 10)
 
 /**
@@ -51,7 +54,13 @@ export function withRentAt(
       row.amount > 0 &&
       isInForce(row, today) &&
       !isInForce(row, day) &&
-      !rowsInForce.some((successor) => successor.code === row.code)
+      // Taking over means starting after today: several rows can share an
+      // article (a rent and its index supplement), and one that is already
+      // in force today is a sibling, not a successor.
+      !rowsInForce.some(
+        (successor) =>
+          successor.code === row.code && !isInForce(successor, today)
+      )
   )
   if (rowsInForce.length === 0 || chargeEndedWithoutSuccessor)
     return availabilityInfo

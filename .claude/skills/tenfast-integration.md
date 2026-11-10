@@ -168,9 +168,10 @@ articles and rent rows.
 `hyra`, `hyraExcludingVat` and `hyraVat` on a hyresobjekt are computed by
 Tenfast for today: the sum of the rows in `hyror` that are in force today
 (`from`/`to`, both days included) and have `includeInContract: true`. Checked
-against 1,140 objects on production on 2026-11-10 (bostad, parkering, lokal):
-every total matched. No endpoint takes a date, so Tenfast can't give the rent
-for another day.
+on production on 2026-11-10 (bostad, parkering, lokal): the rent `withRentAt`
+sums for the next day matched Tenfast's total on 3,069 of the 3,070 objects
+with rows, and the last one had a row changing at midnight. No endpoint takes
+a date, so Tenfast can't give the rent for another day.
 
 - **`includeInContract: false`** marks a row outside the total, such as the
   optional home insurance. `consolidationLabel` ("Summarad" in the Tenfast UI)
@@ -193,9 +194,16 @@ day look incomplete, so a sum would be too low:
 - **No included row is in force that day.**
 - **A charge in force today has ended by then, and no row of the same article
   takes over.** That is what missing next-year rows look like when other rows
-  remain. A negative row that ends is trusted: on production (2026-11-10) the
-  rows ending without a successor were rent discounts ("Hyresrabatt
-  2026-2028", 63 of 4,000 bostad), which are meant to end.
+  remain. Taking over means starting after today: rows often share an article
+  (a rent and its index supplement on 135 of 256 lokaler), and a sibling
+  already in force is not a successor. A negative row that ends is trusted:
+  on production (2026-11-10) the rows ending without a successor were rent
+  discounts ("Hyresrabatt 2026-2028", 63 of 4,000 bostad), which are meant to
+  end.
+
+Run for move-in day 2027-01-16 on 7,727 production objects with rows
+(2026-11-10): 33 rents changed, 2 fell back, none came out as 0, under half or
+over double today's.
 
 The day comes from:
 

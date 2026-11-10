@@ -295,6 +295,26 @@ describe('rental-object-availability-helpers', () => {
         expect(result.rent.amount).toBe(10047)
       })
 
+      it('does not take a row of the same article that is in force already for the one taking over', () => {
+        // Rows can share an article, such as a rent and its supplement. The
+        // supplement runs on, but next year's rent is not entered yet.
+        const nextYearMissing = withRows([
+          rentOf2026,
+          {
+            code: 'RENT',
+            description: 'Rent supplement',
+            amount: 37.72,
+            vatPercentage: 0,
+            fromDate: new Date('2026-01-01'),
+            includedInRent: true,
+          },
+        ])
+
+        expect(withRentAt(nextYearMissing, new Date('2027-01-16'))).toBe(
+          nextYearMissing
+        )
+      })
+
       it('trusts a discount that ends, since that only raises the rent', () => {
         const result = withRentAt(
           withRows([

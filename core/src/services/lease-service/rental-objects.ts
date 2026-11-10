@@ -552,7 +552,33 @@ export const routes = (router: KoaRouter) => {
    *                             items:
    *                               type: object
    *       '400':
-   *         description: The request body is invalid, such as a rentAtByRentalObjectCode value that is not a valid day (error invalid-request when reported by the leasing service).
+   *         description: |
+   *           The request body is invalid, such as a rentAtByRentalObjectCode
+   *           value that is not a valid day. The body lists the invalid
+   *           fields (status and data). If only the leasing service rejects
+   *           the request, the body is an error code instead (error).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 status:
+   *                   type: string
+   *                   enum: [error]
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       message:
+   *                         type: string
+   *                       path:
+   *                         type: array
+   *                         items:
+   *                           type: string
+   *                 error:
+   *                   type: string
+   *                   enum: [invalid-request]
    *       '500':
    *         description: Internal server error. Failed to fetch rental object availabilities.
    *         content:
