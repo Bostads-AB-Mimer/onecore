@@ -302,7 +302,39 @@ export const getInvoicesByContactCode = async (
     throw invoicesResult.err
   }
 
+  await replaceRentArticleIdsWithCodes(invoicesResult.data)
   return invoicesResult.data
+}
+
+/**
+ * Tenfast invoice rows reference their article by Tenfast's internal id.
+ * Shown to users, replace it with the article code (e.g. HYRAB). Only on
+ * this read path: the accounting export looks articles up by id. A row whose
+ * article can't be fetched keeps the id; getInvoiceArticle logs the failure.
+ */
+const replaceRentArticleIdsWithCodes = async (
+  invoices: ParsedTenfastInvoice[]
+) => {
+  const rows = invoices.flatMap((parsed) => parsed.invoice.invoiceRows)
+  const articleIds = [
+    ...new Set(
+      rows.flatMap((row) => (row.rentArticle ? [row.rentArticle] : []))
+    ),
+  ]
+
+  const codeById = new Map(
+    await Promise.all(
+      articleIds.map(async (articleId) => {
+        const result = await getInvoiceArticle(articleId)
+        return [articleId, result.ok ? result.data.code : undefined] as const
+      })
+    )
+  )
+
+  for (const row of rows) {
+    const code = row.rentArticle ? codeById.get(row.rentArticle) : undefined
+    if (code) row.rentArticle = code
+  }
 }
 
 export const getRentalProperty = async (
