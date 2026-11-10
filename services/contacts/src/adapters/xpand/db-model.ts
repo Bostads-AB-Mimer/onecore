@@ -13,8 +13,6 @@ export type DbContact = {
   /** `lagsokt`, a DATETIME presence sentinel: non-null means protected. */
   protectedIdentity: Date | null
   specialAttention: string | undefined
-  /** 1 when a protected identity counts as a tenant — see `isLeaseHolderColumn`. */
-  isLeaseHolder: number
 }
 
 /**

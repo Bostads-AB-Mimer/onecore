@@ -112,7 +112,6 @@ describe('/contacts/:contactCode', () => {
     // and removed again, so the seeded data set stays untouched.
     const LEASE_KEY = '_OBJPROT001    '
     const RELATION_KEY = '_AVKPROT001    '
-    const DAY_MS = 24 * 60 * 60 * 1000
 
     const addLease = async (
       contactCode: string,
@@ -158,7 +157,7 @@ describe('/contacts/:contactCode', () => {
       return response.data.content
     }
 
-    it('redacts a protected identity that is neither tenant nor invoice recipient', async () => {
+    it('redacts a protected identity that is not an invoice recipient', async () => {
       const contact = await fetchContact('P000999')
 
       expect(contact.protectedIdentity).toBe(true)
@@ -175,42 +174,8 @@ describe('/contacts/:contactCode', () => {
       expect(contact.personal.fullName).toBe('Testovic Faksimilo')
     })
 
-    it('does not redact a protected tenant on a current lease', async () => {
+    it('redacts a protected INNEHAVARE on an Xpand lease — Tenfast decides who is a tenant, via core', async () => {
       await addLease('P000999', { fdate: new Date('2020-01-01'), tdate: null })
-
-      const contact = await fetchContact('P000999')
-
-      expect(contact.protectedIdentity).toBe(true)
-      expect(contact.personal.fullName).toBe('Hittepåberg Mollgan')
-    })
-
-    it('does not redact a protected tenant on an upcoming lease', async () => {
-      await addLease('P000999', {
-        fdate: new Date(Date.now() + 30 * DAY_MS),
-        tdate: null,
-      })
-
-      const contact = await fetchContact('P000999')
-
-      expect(contact.personal.fullName).toBe('Hittepåberg Mollgan')
-    })
-
-    it('does not redact a protected tenant whose lease ended within 60 days', async () => {
-      await addLease('P000999', {
-        fdate: new Date('2020-01-01'),
-        tdate: new Date(Date.now() - 30 * DAY_MS),
-      })
-
-      const contact = await fetchContact('P000999')
-
-      expect(contact.personal.fullName).toBe('Hittepåberg Mollgan')
-    })
-
-    it('redacts a protected former tenant whose lease ended over 60 days ago', async () => {
-      await addLease('P000999', {
-        fdate: new Date('2020-01-01'),
-        tdate: new Date(Date.now() - 90 * DAY_MS),
-      })
 
       const contact = await fetchContact('P000999')
 
