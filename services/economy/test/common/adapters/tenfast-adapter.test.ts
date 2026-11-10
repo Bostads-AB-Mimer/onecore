@@ -5,6 +5,7 @@ import {
   getRentalProperty,
   getLease,
   getInvoicesForTenant,
+  getInvoicesByContactCode,
   getInvoiceByOcr,
   getInvoiceArticle,
   getActiveLeasesByRentalObjectCodes,
@@ -420,6 +421,138 @@ describe('Tenfast Adapter', () => {
       assert(result.ok)
       expect(result.data).toHaveLength(1)
       expect(result.data[0].invoice.invoiceId).toBe('55123456')
+    })
+  })
+
+  describe(getInvoicesByContactCode, () => {
+    // Tenfast references an article on an invoice row by its internal id.
+    const articleId = '6af2c8b04b883398396c10bd'
+
+    const mockTenfast = (articleResponse: { status: number; data: unknown }) =>
+      mockAxios.request.mockImplementation(async (config: { url?: string }) => {
+        if (config.url?.includes('/extras/hyresgaster/')) {
+          return { status: 200, data: TenfastTenantFactory.build() }
+        }
+        if (config.url?.includes('/articles/')) {
+          return articleResponse
+        }
+        return {
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [
+              TenfastInvoiceFactory.build({
+                hyror: [
+                  TenfastInvoiceRowFactory.build({ article: articleId }),
+                  TenfastInvoiceRowFactory.build({ article: articleId }),
+                ],
+              }),
+            ],
+          }),
+        }
+      })
+
+    it('shows the article code instead of the Tenfast article id on invoice rows', async () => {
+      // Arrange
+      mockTenfast({
+        status: 200,
+        data: TenfastRentArticleFactory.build({
+          _id: articleId,
+          code: 'HYRAB',
+        }),
+      })
+
+      // Act
+      const invoices = await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const rows = invoices[0].invoice.invoiceRows
+      expect(rows.map((row) => row.rentArticle)).toEqual(['HYRAB', 'HYRAB'])
+    })
+
+    it('looks up each article once, even when several rows use it', async () => {
+      // Arrange
+      mockTenfast({
+        status: 200,
+        data: TenfastRentArticleFactory.build({
+          _id: articleId,
+          code: 'HYRAB',
+        }),
+      })
+
+      // Act
+      await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const articleRequests = mockAxios.request.mock.calls.filter(([config]) =>
+        config.url?.includes('/articles/')
+      )
+      expect(articleRequests).toHaveLength(1)
+    })
+
+    it('keeps the article id when the article cannot be fetched', async () => {
+      // Arrange
+      mockTenfast({ status: 404, data: {} })
+
+      // Act
+      const invoices = await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const rows = invoices[0].invoice.invoiceRows
+      expect(rows.map((row) => row.rentArticle)).toEqual([articleId, articleId])
+    })
+
+    it('gives each row the code of its own article and leaves rows without an article alone', async () => {
+      // Arrange
+      const feeArticleId = '6af2c8b04b883398396c10d0'
+      const missingArticleId = '6af2c8b04b883398396c10ff'
+      const codeById: Record<string, string> = {
+        [articleId]: 'HYRAB',
+        [feeArticleId]: 'HYRESSATT',
+      }
+      mockAxios.request.mockImplementation(async (config: { url?: string }) => {
+        if (config.url?.includes('/extras/hyresgaster/')) {
+          return { status: 200, data: TenfastTenantFactory.build() }
+        }
+        if (config.url?.includes('/articles/')) {
+          const id = config.url.split('/articles/')[1]
+          return codeById[id]
+            ? {
+                status: 200,
+                data: TenfastRentArticleFactory.build({
+                  _id: id,
+                  code: codeById[id],
+                }),
+              }
+            : { status: 404, data: {} }
+        }
+        return {
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [
+              TenfastInvoiceFactory.build({
+                hyror: [
+                  TenfastInvoiceRowFactory.build({ article: articleId }),
+                  TenfastInvoiceRowFactory.build({ article: feeArticleId }),
+                  TenfastInvoiceRowFactory.build({ article: missingArticleId }),
+                  TenfastInvoiceRowFactory.build({ article: null }),
+                ],
+              }),
+            ],
+          }),
+        }
+      })
+
+      // Act
+      const invoices = await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const rows = invoices[0].invoice.invoiceRows
+      expect(rows.map((row) => row.rentArticle)).toEqual([
+        'HYRAB',
+        'HYRESSATT',
+        missingArticleId,
+        null,
+      ])
     })
   })
 
