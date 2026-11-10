@@ -10,6 +10,8 @@ import * as templateRender from '../adapters/email-template-render'
 import * as smsAdapter from '../adapters/sms-adapter'
 import { routes } from '../'
 import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
+import { getScheduleRules } from '../../scheduled-sends/rules'
+import { getTemplateById } from '../../template-service/adapters/db'
 
 jest.mock('@onecore/utilities', () => {
   return {
@@ -34,23 +36,45 @@ jest.mock('../../communication-log-service/adapters/db', () => ({
   logOutboundDispatch: jest.fn().mockResolvedValue({ dispatchId: 'test-id' }),
 }))
 
+// Template lookup is DB-backed too; the send route only needs its result.
+jest.mock('../../template-service/adapters/db', () => ({
+  getTemplateById: jest.fn().mockResolvedValue(null),
+}))
+
+// Scheduling rules come from config; pin them so the tests don't depend on
+// .env.test. The pure rule functions stay real.
+jest.mock('../../scheduled-sends/rules', () => ({
+  ...jest.requireActual('../../scheduled-sends/rules'),
+  getScheduleRules: jest.fn(() => ({
+    enabled: true,
+    blockedFrom: '21:00',
+    blockedUntil: '07:00',
+    maxDaysAhead: 30,
+  })),
+}))
+
+// A 10-minute slot at 12:00Z (13:00/14:00 local — always open), `days` ahead.
+const openSlotDaysAhead = (days: number) => {
+  const d = new Date(Date.now() + days * 24 * 3600 * 1000)
+  d.setUTCHours(12, 0, 0, 0)
+  return d.toISOString()
+}
+
 // Builds a full Infobip v4 send response so spy return types match the adapter.
 const emailSendResult = (messageId: string) => ({
-  data: {
-    messages: [
-      {
-        messageId,
-        to: 'tenant@example.com',
-        status: {
-          groupId: 1,
-          groupName: 'PENDING',
-          id: 26,
-          name: 'PENDING_ACCEPTED',
-          description: 'Message accepted',
-        },
+  messages: [
+    {
+      messageId,
+      to: 'tenant@example.com',
+      status: {
+        groupId: 1,
+        groupName: 'PENDING',
+        id: 26,
+        name: 'PENDING_ACCEPTED',
+        description: 'Message accepted',
       },
-    ],
-  },
+    },
+  ],
 })
 
 const app = new Koa()
@@ -179,8 +203,8 @@ describe('/sendWorkOrderEmail', () => {
 describe('work order tenant message logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 
-  // The SMS adapter returns the Infobip v3 response directly (no `.data`
-  // wrapper, unlike the email adapter), so the route reads messages[0] off it.
+  // The SMS adapter returns the Infobip v3 response directly, so the route
+  // reads messages[0] off it.
   const smsSendResult = (messageId: string) => ({
     messages: [
       {
@@ -323,6 +347,26 @@ describe('work order tenant message logging', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.warnings).toEqual(['Communication log failed'])
+  })
+
+  // MIM-1957: the communication log links every work-order dispatch to its
+  // Odoo errand, not just Mina sidor ones.
+  it('passes workOrderCode from the request into the dispatch row', async () => {
+    jest
+      .spyOn(smsAdapter, 'sendWorkOrderSms')
+      .mockResolvedValue(smsSendResult('mid-wo-code'))
+
+    const res = await request(app.callback()).post('/sendWorkOrderSms').send({
+      phoneNumber: '0701234567',
+      text: 'Ditt ärende är uppdaterat',
+      contactCode: 'P123456',
+      workOrderCode: 'od-12345',
+    })
+
+    expect(res.status).toBe(200)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ workOrderCode: 'od-12345' })
+    )
   })
 })
 
@@ -578,8 +622,8 @@ describe('/send-invoice-notification-email', () => {
 describe('/sendBulkSms logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 
-  // The SMS adapter returns the Infobip v3 response directly (no `.data`
-  // wrapper), so the route reads messageId off messages[i].
+  // The SMS adapter returns the Infobip v3 response directly, so the route
+  // reads messageId off messages[i].
   const smsSendResult = (messageId: string) => ({
     messages: [
       {
@@ -624,6 +668,379 @@ describe('/sendBulkSms logging', () => {
     expect(res.body.warnings).toEqual([
       expect.stringContaining('Communication log failed'),
     ])
+  })
+})
+
+describe('/sendBulkSms template link', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+  const getTemplateByIdMock = getTemplateById as jest.Mock
+  let sendBulkSmsSpy: jest.SpyInstance
+
+  const TEMPLATE_ID = '11111111-1111-1111-1111-111111111111'
+  const template = (isActive: boolean) => ({
+    id: TEMPLATE_ID,
+    name: 'Nyckel klar',
+    channels: ['sms'],
+    subject: null,
+    body: 'Hej!',
+    categories: [],
+    isActive,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    getTemplateByIdMock.mockReset()
+    sendBulkSmsSpy = jest.spyOn(smsAdapter, 'sendBulkSms')
+    sendBulkSmsSpy.mockReset()
+    sendBulkSmsSpy.mockResolvedValue({})
+  })
+
+  it('rejects an unknown templateId before anything is sent', async () => {
+    getTemplateByIdMock.mockResolvedValue(null)
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        logMeta: { templateId: TEMPLATE_ID },
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('TEMPLATE_NOT_FOUND')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('sends and links an archived template (the text still started from it)', async () => {
+    getTemplateByIdMock.mockResolvedValue(template(false))
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        logMeta: { templateId: TEMPLATE_ID },
+      })
+
+    expect(res.status).toBe(200)
+    expect(sendBulkSmsSpy).toHaveBeenCalledTimes(1)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ templateId: TEMPLATE_ID })
+    )
+  })
+
+  it('fails closed when the template lookup itself fails', async () => {
+    getTemplateByIdMock.mockRejectedValue(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        logMeta: { templateId: TEMPLATE_ID },
+      })
+
+    expect(res.status).toBe(500)
+    expect(res.body.reason).toBe('TEMPLATE_LOOKUP_FAILED')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not look up anything when no templateId is given', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({ phoneNumbers: ['0701234567'], text: 'Test' })
+
+    expect(res.status).toBe(200)
+    expect(getTemplateByIdMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('/sendBulkSms scheduling', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+  const getScheduleRulesMock = getScheduleRules as jest.Mock
+  let sendBulkSmsSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    sendBulkSmsSpy = jest.spyOn(smsAdapter, 'sendBulkSms')
+    sendBulkSmsSpy.mockReset()
+    sendBulkSmsSpy.mockResolvedValue({
+      messages: [
+        {
+          to: '46701234567',
+          messageId: 'mid-immediate',
+          status: {
+            groupId: 1,
+            groupName: 'PENDING',
+            id: 26,
+            name: 'PENDING_ACCEPTED',
+            description: 'Message accepted',
+          },
+        },
+      ],
+    })
+  })
+
+  it('only logs a scheduled send: recipients land as scheduled and the provider is not called', async () => {
+    const sendAt = openSlotDaysAhead(1)
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({ phoneNumbers: ['0701234567'], text: 'Test', sendAt })
+
+    expect(res.status).toBe(200)
+    // Our own worker sends at the slot; nothing reaches Infobip now.
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sendAt: new Date(sendAt),
+        recipients: [
+          expect.objectContaining({
+            toAddress: '46701234567',
+            status: 'scheduled',
+          }),
+        ],
+      })
+    )
+    expect(res.body.content.dispatchId).toBe('test-id')
+    expect(res.body.content.scheduledFor).toBe(new Date(sendAt).toISOString())
+  })
+
+  it('treats sendAt within the grace window as an immediate send', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: new Date(Date.now() + 5 * 1000).toISOString(),
+      })
+
+    expect(res.status).toBe(200)
+    expect(sendBulkSmsSpy).toHaveBeenCalledTimes(1)
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipients: [expect.objectContaining({ status: 'pending' })],
+      })
+    )
+    expect(res.body.content.dispatchId).toBeUndefined()
+  })
+
+  it('rejects sendAt in the past', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: new Date(Date.now() - 60 * 1000).toISOString(),
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('SEND_AT_IN_PAST')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects sendAt beyond max days ahead', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: openSlotDaysAhead(31),
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('SEND_AT_TOO_FAR_AHEAD')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+
+  it('rejects sendAt off the slot grid and inside blocked hours', async () => {
+    const offSlot = new Date(openSlotDaysAhead(1))
+    offSlot.setUTCMinutes(7)
+    const offSlotRes = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: offSlot.toISOString(),
+      })
+    expect(offSlotRes.status).toBe(400)
+    expect(offSlotRes.body.reason).toBe('SEND_AT_OFF_SLOT')
+
+    // 21:30Z is 22:30/23:30 local: blocked in both DST regimes.
+    const blocked = new Date(openSlotDaysAhead(1))
+    blocked.setUTCHours(21, 30, 0, 0)
+    const blockedRes = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: blocked.toISOString(),
+      })
+    expect(blockedRes.status).toBe(400)
+    expect(blockedRes.body.reason).toBe('SEND_AT_IN_BLOCKED_HOURS')
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects sendAt with SCHEDULING_DISABLED when the flag is off; immediate sends still work', async () => {
+    getScheduleRulesMock.mockReturnValueOnce({
+      enabled: false,
+      blockedFrom: '21:00',
+      blockedUntil: '07:00',
+      maxDaysAhead: 30,
+    })
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: openSlotDaysAhead(1),
+      })
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('SCHEDULING_DISABLED')
+
+    getScheduleRulesMock.mockReturnValueOnce({
+      enabled: false,
+      blockedFrom: '21:00',
+      blockedUntil: '07:00',
+      maxDaysAhead: 30,
+    })
+    const immediate = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({ phoneNumbers: ['0701234567'], text: 'Test' })
+    expect(immediate.status).toBe(200)
+    expect(sendBulkSmsSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects sendAt without a timezone offset', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        // No Z/offset: not an absolute instant, so the schema must reject it.
+        sendAt: '2026-08-01T10:00:00',
+      })
+
+    expect(res.status).toBe(400)
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+
+  it('a failed log write means nothing is scheduled', async () => {
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkSms')
+      .send({
+        phoneNumbers: ['0701234567'],
+        text: 'Test',
+        sendAt: openSlotDaysAhead(1),
+      })
+
+    // The dispatch row IS the schedule, so without it nothing will ever be
+    // sent. The reason code drives the user-facing "try again" toast.
+    expect(res.status).toBe(500)
+    expect(res.body.reason).toBe('SCHEDULE_LOG_FAILED')
+    expect(sendBulkSmsSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('/sendBulkEmail scheduling', () => {
+  const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
+  let sendBulkEmailSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    logOutboundDispatchMock.mockReset()
+    logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
+    sendBulkEmailSpy = jest.spyOn(emailAdapter, 'sendBulkEmail')
+    sendBulkEmailSpy.mockReset()
+    sendBulkEmailSpy.mockResolvedValue(emailSendResult('mid-immediate'))
+  })
+
+  it('only logs a scheduled send: recipients land as scheduled and the provider is not called', async () => {
+    const sendAt = openSlotDaysAhead(1)
+
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Test',
+        text: 'Test',
+        sendAt,
+      })
+
+    expect(res.status).toBe(200)
+    expect(sendBulkEmailSpy).not.toHaveBeenCalled()
+    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sendAt: new Date(sendAt),
+        recipients: [expect.objectContaining({ status: 'scheduled' })],
+      })
+    )
+    expect(res.body.content.dispatchId).toBe('test-id')
+    expect(res.body.content.scheduledFor).toBe(new Date(sendAt).toISOString())
+  })
+
+  it('rejects sendAt in the past', async () => {
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Test',
+        text: 'Test',
+        sendAt: new Date(Date.now() - 60 * 1000).toISOString(),
+      })
+
+    expect(res.status).toBe(400)
+    expect(res.body.reason).toBe('SEND_AT_IN_PAST')
+    expect(sendBulkEmailSpy).not.toHaveBeenCalled()
+    expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('applies the same max days ahead as SMS (no 5-day email cap)', async () => {
+    const ok = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Test',
+        text: 'Test',
+        sendAt: openSlotDaysAhead(6),
+      })
+    expect(ok.status).toBe(200)
+
+    const tooFar = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Test',
+        text: 'Test',
+        sendAt: openSlotDaysAhead(31),
+      })
+    expect(tooFar.status).toBe(400)
+    expect(tooFar.body.reason).toBe('SEND_AT_TOO_FAR_AHEAD')
+  })
+
+  it('a failed log write means nothing is scheduled', async () => {
+    logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
+
+    const res = await request(app.callback())
+      .post('/sendBulkEmail')
+      .send({
+        emails: ['tenant@example.com'],
+        subject: 'Test',
+        text: 'Test',
+        sendAt: openSlotDaysAhead(1),
+      })
+
+    expect(res.status).toBe(500)
+    expect(res.body.reason).toBe('SCHEDULE_LOG_FAILED')
+    expect(sendBulkEmailSpy).not.toHaveBeenCalled()
   })
 })
 
@@ -867,6 +1284,27 @@ describe('/sendLeaseTerminationConfirmation', () => {
     leaseId: '307-002-11-0201/11',
     endDate: '2026-10-31',
     rentalType: 'Bilplats' as const,
+    lastName: 'Andersson',
+    preferredMoveOutDate: '2026-10-15',
+    rentalObjectAddress: 'Bilvägen 3',
+    tenants: [
+      {
+        contactCode: 'P123456',
+        fullName: 'Anna Andersson',
+        birthDate: '1985-03-14',
+        street: 'Storgatan 1',
+        zipCode: '722 11',
+        city: 'Västerås',
+      },
+      {
+        contactCode: 'P654321',
+        fullName: 'Bo Berg',
+        birthDate: '1990-07-01',
+        street: 'Lillgatan 2',
+        zipCode: '722 12',
+        city: 'Västerås',
+      },
+    ],
   }
 
   beforeEach(() => {
@@ -875,7 +1313,10 @@ describe('/sendLeaseTerminationConfirmation', () => {
     getTemplateMock.mockReset()
     getTemplateMock.mockResolvedValue({
       subject: 'Standardämne',
-      html: '<p>Hej {{firstName}}!</p><p>Sista dag: {{endDate}}</p>',
+      html:
+        '<p>Hej {{firstName}}!</p><p>Sista dag: {{endDate}}</p>' +
+        '<p>Önskad avflytt: {{preferredMoveOutDate}}</p>' +
+        '<p>{{tenant2Name}} {{tenant2BirthDate}}</p>',
     })
     sendSpy = jest.spyOn(emailAdapter, 'sendLeaseTerminationConfirmation')
     sendSpy.mockReset()
@@ -897,7 +1338,9 @@ describe('/sendLeaseTerminationConfirmation', () => {
           leaseId: '307-002-11-0201/11',
         },
         subject: 'Standardämne',
-        body: expect.stringContaining('Hej Anna!'),
+        body: expect.stringMatching(
+          /Hej Anna![\s\S]*Önskad avflytt: 2026-10-15[\s\S]*Bo Berg 1990-07-01/
+        ),
         recipients: [
           expect.objectContaining({
             contactCode: 'P123456',
@@ -933,6 +1376,24 @@ describe('/sendLeaseTerminationConfirmation', () => {
 
     expect(res.status).toBe(400)
     expect(sendSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 when no lease holders are supplied', async () => {
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send({ ...terminationBody, tenants: [] })
+
+    expect(res.status).toBe(400)
+    expect(sendSpy).not.toHaveBeenCalled()
+  })
+
+  it('sends when the holder has no first name in contacts', async () => {
+    const res = await request(app.callback())
+      .post('/sendLeaseTerminationConfirmation')
+      .send({ ...terminationBody, firstName: '' })
+
+    expect(res.status).toBe(204)
+    expect(sendSpy).toHaveBeenCalledTimes(1)
   })
 
   it('does not fail the send when communication logging throws', async () => {

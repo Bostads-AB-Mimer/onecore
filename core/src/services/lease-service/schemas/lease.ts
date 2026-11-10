@@ -49,6 +49,12 @@ export const Contact = z.object({
   emailAddress: z.string().nullable().optional(),
   isTenant: z.boolean(),
   specialAttention: z.boolean().optional(),
+  protectedIdentity: z.boolean(),
+  // Only set for a protected identity, and only by the routes that fill in its
+  // details from the contacts service (see withProtectedIdentityDetails).
+  protectedIdentityDetails: z
+    .enum(['shown', 'withheld', 'unavailable'])
+    .optional(),
 })
 
 export const RentalObjectRentSchema = z.object({
@@ -75,6 +81,8 @@ export const RentalObjectRentInfo = z.object({
 export const Lease = z.object({
   leaseId: z.string(),
   leaseNumber: z.string(),
+  // Link to the lease in the source leasing system's web UI, when available
+  externalUrl: z.string().url().optional(),
   leaseStartDate: z.coerce.date(),
   leaseEndDate: z.coerce.date().optional(),
   status: z.enum([
@@ -228,6 +236,10 @@ export const Lease = z.object({
         emailAddress: z.string().nullable().optional(),
         isTenant: z.boolean(),
         specialAttention: z.boolean().optional(),
+        protectedIdentity: z.boolean(),
+        protectedIdentityDetails: z
+          .enum(['shown', 'withheld', 'unavailable'])
+          .optional(),
         // --- tenant-only additions (not part of Contact) ---
         parkingSpaceWaitingList: z
           .object({
@@ -261,10 +273,15 @@ function mapLeaseStatus(status: LeaseStatus): z.infer<typeof Lease>['status'] {
   }
 }
 
+export const LeaseBatchRequestBody = z.object({
+  leaseIds: z.array(z.string()).min(1),
+})
+
 export function mapLease(lease: OnecoreTypesLease): z.infer<typeof Lease> {
   return {
     leaseId: lease.leaseId,
     leaseNumber: lease.leaseNumber,
+    externalUrl: lease.externalUrl,
     leaseStartDate: lease.leaseStartDate,
     leaseEndDate: lease.leaseEndDate,
     status: mapLeaseStatus(lease.status),
@@ -304,5 +321,10 @@ const IncludeNonTenantContactsQueryParamSchema = z.object({
 export const GetLeasesOptionsSchema = leasing.v1.GetLeasesOptionsSchema.merge(
   IncludeContactsQueryParamSchema
 ).merge(IncludeNonTenantContactsQueryParamSchema)
+
+export const GetLeasesByContactCodeOptionsSchema =
+  leasing.v1.GetLeasesByContactCodeOptionsSchema.merge(
+    IncludeContactsQueryParamSchema
+  ).merge(IncludeNonTenantContactsQueryParamSchema)
 
 export const GetLeaseOptionsSchema = IncludeContactsQueryParamSchema

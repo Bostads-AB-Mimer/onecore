@@ -201,6 +201,9 @@ export class LeaseSearchQueryBuilder {
         xpandDb.raw(`(
           SELECT rentalpropertyid, SUM(yearrent) as totalYearRent
           FROM hy_debitrowrentalproperty_xpand_api
+          -- Only rows active today; future rows (next year's rent) must not be summed in
+          WHERE (debitfdate IS NULL OR debitfdate <= GETDATE())
+            AND (debittodate IS NULL OR debittodate >= GETDATE())
           GROUP BY rentalpropertyid
         ) as rent`),
         'rent.rentalpropertyid',
@@ -619,7 +622,9 @@ export const transformRow = (
     postalCode: trimmedRow.postalCode || null,
     city: trimmedRow.city || null,
     startDate: trimmedRow.startDate || null,
+    endDate: null,
     lastDebitDate: trimmedRow.lastDebitDate || null,
+    signedAt: null,
     rentalObjectCode: trimmedRow.rentalObjectCode || null,
     status,
   }

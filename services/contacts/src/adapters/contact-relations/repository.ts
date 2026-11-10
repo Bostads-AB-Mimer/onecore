@@ -145,3 +145,29 @@ export const activeRelationsInRole = async (
     .orderBy('id')
   return rows
 }
+
+/**
+ * Which of the given contact codes are the annan fakturamottagare (the
+ * related side of an active `annan_fakturamottagare` row) for someone.
+ * Returned codes are trimmed.
+ */
+export const invoiceRecipientCodes = async (
+  db: Knex,
+  contactCodes: string[]
+): Promise<Set<string>> => {
+  const codes = [
+    ...new Set(contactCodes.map((c) => c.trim()).filter((c) => c.length > 0)),
+  ]
+  const result = new Set<string>()
+  for (const chunk of chunked(codes, READ_CHUNK_SIZE)) {
+    const rows: Pick<DbContactRelationRow, 'related_contact_code'>[] = await db(
+      TABLE
+    )
+      .distinct('related_contact_code')
+      .whereNull('deleted_at')
+      .where('role_type', 'annan_fakturamottagare')
+      .whereIn('related_contact_code', chunk)
+    for (const row of rows) result.add(row.related_contact_code.trim())
+  }
+  return result
+}

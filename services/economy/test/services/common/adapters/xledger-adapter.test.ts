@@ -4,9 +4,117 @@ import * as adapter from '@src/services/common/adapters/xledger-adapter'
 import config from '@src/common/config'
 import { schemas } from '@onecore/types'
 
-afterEach(nock.cleanAll)
+afterEach(() => {
+  nock.abortPendingRequests()
+  nock.cleanAll()
+})
 
 const { origin, pathname } = new URL(config.xledger.url)
+
+const rateLimitBody = {
+  errors: [
+    { code: 'BAD_REQUEST.BURST_RATE_LIMIT_REACHED', message: 'Rate limited' },
+  ],
+}
+const matchIdBody = {
+  data: { arTransactions: { edges: [{ node: { matchId: 1 } }] } },
+}
+
+describe('makeXledgerRequest rate limiting', () => {
+  const defaultPolicy = { ...adapter.xledgerRequestPolicy }
+
+  beforeEach(() => {
+    adapter.setXledgerRequestPolicy({ baseDelayMs: 1, maxDelayMs: 5 })
+  })
+
+  afterEach(() => {
+    adapter.setXledgerRequestPolicy(defaultPolicy)
+  })
+
+  it('retries after a burst rate limit and succeeds', async () => {
+    nock(origin).post(pathname).reply(200, rateLimitBody)
+    nock(origin).post(pathname).reply(200, rateLimitBody)
+    nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+    expect(nock.isDone()).toBe(true)
+  })
+
+  it('gives up after maxAttempts instead of retrying forever', async () => {
+    adapter.setXledgerRequestPolicy({ maxAttempts: 3 })
+    const scope = nock(origin).post(pathname).times(3).reply(200, rateLimitBody)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).rejects.toThrow(
+      /rate limit.*3 attempts/i
+    )
+    expect(scope.isDone()).toBe(true)
+    expect(extra.isDone()).toBe(false)
+  })
+
+  it('waits with exponential backoff and jitter between attempts', () => {
+    adapter.setXledgerRequestPolicy({ baseDelayMs: 1000, maxDelayMs: 10_000 })
+
+    expect(adapter.retryDelayMs(1, () => 0)).toBe(500)
+    expect(adapter.retryDelayMs(2, () => 0)).toBe(1000)
+    expect(adapter.retryDelayMs(3, () => 0)).toBe(2000)
+    expect(adapter.retryDelayMs(1, () => 0.5)).toBe(1000)
+    expect(adapter.retryDelayMs(1, () => 0.999)).toBeLessThan(1500)
+    expect(adapter.retryDelayMs(10, () => 0.999)).toBeLessThan(15_000)
+    expect(adapter.retryDelayMs(10, () => 0.5)).toBe(10_000)
+  })
+
+  it('releases its slot while sleeping between retries', async () => {
+    adapter.setXledgerRequestPolicy({
+      maxConcurrency: 1,
+      baseDelayMs: 100,
+      maxDelayMs: 100,
+    })
+    nock(origin).post(pathname).reply(200, rateLimitBody)
+    nock(origin).post(pathname).times(2).reply(200, matchIdBody)
+
+    const rateLimited = adapter.getInvoiceMatchId('1')
+    const started = Date.now()
+    const normal = adapter.getInvoiceMatchId('2')
+
+    await expect(normal).resolves.toEqual(1)
+    expect(Date.now() - started).toBeLessThan(50)
+    await expect(rateLimited).resolves.toEqual(1)
+  })
+
+  it('never has more than maxConcurrency requests in flight', async () => {
+    adapter.setXledgerRequestPolicy({ maxConcurrency: 2 })
+    let inFlight = 0
+    let peak = 0
+
+    nock(origin)
+      .post(pathname)
+      .times(6)
+      .reply(async () => {
+        inFlight++
+        peak = Math.max(peak, inFlight)
+        await new Promise((r) => setTimeout(r, 10))
+        inFlight--
+        return [200, matchIdBody]
+      })
+
+    await Promise.all(
+      Array.from({ length: 6 }, () => adapter.getInvoiceMatchId('1'))
+    )
+
+    expect(peak).toBe(2)
+  })
+
+  it('times out and does not retry a slow request', async () => {
+    adapter.setXledgerRequestPolicy({ timeoutMs: 20 })
+    const slow = nock(origin).post(pathname).delay(200).reply(200, matchIdBody)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).rejects.toThrow(/timeout/i)
+    expect(slow.isDone()).toBe(true)
+    expect(extra.isDone()).toBe(false)
+  })
+})
 
 describe(adapter.getInvoicesByContactCode, () => {
   it('returns null when customer does not exist', async () => {
@@ -96,6 +204,7 @@ describe(adapter.getInvoicesByContactCode, () => {
                   invoiceRemaining: 100,
                   subledger: {
                     code: 'code',
+                    description: 'Test Tenant',
                   },
                   period: {
                     fromDate: '2025-01-01',
@@ -399,9 +508,10 @@ describe(adapter.getPaymentsSince, () => {
       amount: -1000,
       paymentDate: new Date('2026-04-02'),
       transactionSourceCode: 'OCR',
+      cursor: 'cursor-42',
     })
     expect(() =>
-      schemas.v1.InvoicePaymentEventSchema.array().parse(result.events)
+      schemas.v1.PaymentSyncEventSchema.array().parse(result.events)
     ).not.toThrow()
   })
 
@@ -501,7 +611,10 @@ describe(adapter.getPaymentsSince, () => {
 
     const result = await adapter.getPaymentsSince('some-cursor')
 
-    expect(result.events).toHaveLength(2)
+    expect(result.events.map((e) => e.cursor)).toEqual([
+      'page1-cursor',
+      'page2-cursor',
+    ])
     expect(result.lastCursor).toBe('page2-cursor')
   })
 
@@ -841,6 +954,185 @@ describe(adapter.submitMiscellaneousInvoice, () => {
       })
 
     const result = await adapter.submitMiscellaneousInvoice(invoice)
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(adapter.getPeriodInformationFromDateStrings, () => {
+  it('returns empty values for a single-month period invoiced in the same month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-01',
+      '2026-03-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '' })
+  })
+
+  it('uses fromDate as invoice date when invoiceDate is null', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      null,
+      '2026-03-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '' })
+  })
+
+  it('returns number of periods for a multi-month period starting in the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-01-15',
+      '2026-01-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '3' })
+  })
+
+  it('returns offset to period start when the period starts after the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-20',
+      '2026-04-01',
+      '2026-04-30'
+    )
+
+    expect(result).toEqual({ periodStart: '1', periods: '1' })
+  })
+
+  it('returns offset and number of periods for a multi-month period starting after the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-20',
+      '2026-05-01',
+      '2026-07-31'
+    )
+
+    expect(result).toEqual({ periodStart: '2', periods: '3' })
+  })
+
+  it('returns a negative offset when the period starts before the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-05-10',
+      '2026-04-01',
+      '2026-04-30'
+    )
+
+    expect(result).toEqual({ periodStart: '-1', periods: '1' })
+  })
+
+  it('counts the offset across New Year when the period starts in the next year', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2025-12-20',
+      '2026-01-01',
+      '2026-01-31'
+    )
+
+    expect(result).toEqual({ periodStart: '1', periods: '1' })
+  })
+
+  it('counts the periods across New Year when the period spans it', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2025-12-01',
+      '2025-12-01',
+      '2026-02-28'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '3' })
+  })
+
+  it('counts both offset and periods across New Year', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-11-20',
+      '2027-01-01',
+      '2027-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '2', periods: '3' })
+  })
+})
+
+describe(adapter.getMiscellaneousInvoices, () => {
+  it('returns transformed invoices and pageInfo on success', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          salesOrders: {
+            edges: [
+              {
+                cursor: 'cursor-1',
+                node: {
+                  invoiceDate: '2023-02-15T00:00:00.000Z',
+                  invoiceNumber: '552303315030452',
+                  ourRef: { name: 'Jane Doe' },
+                  subledger: { code: 'P123456' },
+                  invoiceAmount: 500,
+                  headerInfo:
+                    '705-025-03-0205/01: Skadedjursbekämpning: Råttor',
+                  invoiceFile: { url: 'https://xledger.example.com/files/1' },
+                  invoiceBaseItems: {
+                    edges: [
+                      {
+                        node: {
+                          text: 'Skadedjursbekämpning',
+                          amount: 500,
+                          quantity: 1,
+                          unitPrice: 500,
+                          glObject1: { code: '12345' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+            pageInfo: { hasNextPage: true },
+          },
+        },
+      })
+
+    const result = await adapter.getMiscellaneousInvoices({})
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        content: [
+          {
+            invoiceId: '552303315030452',
+            amount: 500,
+            invoiceBaseItems: [
+              {
+                text: 'Skadedjursbekämpning',
+                amount: 500,
+                quantity: 1,
+                unitPrice: 500,
+                costCentre: '12345',
+              },
+            ],
+            invoiceDate: new Date('2023-02-15T00:00:00.000Z'),
+            reference: 'P123456',
+            ourReference: 'Jane Doe',
+            description: '705-025-03-0205/01: Skadedjursbekämpning: Råttor',
+            invoiceFileUrl: 'https://xledger.example.com/files/1',
+          },
+        ],
+        pageInfo: { hasNextPage: true, endCursor: 'cursor-1' },
+      },
+    })
+  })
+
+  it('returns unknown when Xledger returns no edges', async () => {
+    nock(origin).post(pathname).reply(200, { data: {} })
+
+    const result = await adapter.getMiscellaneousInvoices({})
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown on request failure', async () => {
+    nock(origin).post(pathname).reply(500)
+
+    const result = await adapter.getMiscellaneousInvoices({})
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })

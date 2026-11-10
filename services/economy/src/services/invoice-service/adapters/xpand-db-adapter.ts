@@ -1,24 +1,15 @@
 import knex from 'knex'
-import {
-  Address,
-  Invoice,
-  InvoiceRow,
-  InvoiceTransactionType,
-  invoiceTransactionTypeTranslation,
-  paymentStatusTranslation,
-} from '@onecore/types'
+import { Address } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
-import config from '@src/common/config'
-import {
-  InvoiceDataRow,
-  Invoice as InvoiceRecord,
-  InvoiceDeliveryMethod,
-  xledgerDateString,
-  XpandContact,
-} from '@src/common/types'
+import config, { isRentalObjectRequirementException } from '@src/common/config'
+import { InvoiceDeliveryMethod, XpandContact } from '@src/common/types'
 import { mapContactFlags } from '@src/services/common/adapters/xpand-db-adapter'
-import { match, P } from 'ts-pattern'
+import {
+  InvoiceRowWithAccounting,
+  InvoiceWithAccounting,
+  RentalBlockWithAccounting,
+} from '@src/common/types/typesv2'
 
 type RentalSpecificRule = {
   costCode: string
@@ -29,9 +20,19 @@ type RentalSpecificRule = {
 
 type RentalSpecificRules = Record<string, RentalSpecificRule>
 
-type RoundOffInformation = {
+export type RoundOffInformation = {
   account: string
-  costCode: string
+  costCode: string | undefined
+}
+
+export class RoundOffInformationNotFoundError extends Error {
+  readonly code = 'round-off-information-not-found'
+
+  constructor(readonly year: string) {
+    // Swedish: the message is shown to economy staff in the export report.
+    super(`Konto för öresutjämning (ORESUTJ) saknas i Xpand för år ${year}`)
+    this.name = 'RoundOffInformationNotFoundError'
+  }
 }
 
 const db = knex({
@@ -47,59 +48,88 @@ const db = knex({
   client: 'mssql',
 })
 
-export const closeDb = () => {
-  db.destroy()
+export const enrichInvoiceWithAccounting = async (
+  invoice: InvoiceWithAccounting
+): Promise<InvoiceWithAccounting> => {
+  const year = invoice.invoiceDate.getFullYear()
+  const rentalIds = invoice.invoiceRows
+    .map((invoiceRow: InvoiceRowWithAccounting) => invoiceRow.rentalObject)
+    .filter((rentalObject): rentalObject is string => Boolean(rentalObject))
+  const rentalSpecificRules = await getRentalSpecificRules(
+    rentalIds,
+    year.toString()
+  )
+
+  for (const invoiceRow of invoice.invoiceRows) {
+    // Rows exempt from the rental object requirement (e.g. invoice fees) have
+    // no rental object and therefore no rental-specific accounting rules to
+    // apply. Their accounting is resolved from the article configuration.
+    if (!invoiceRow.rentalObject) {
+      if (isRentalObjectRequirementException(invoiceRow.rentArticleName)) {
+        continue
+      }
+
+      logger.error(
+        { invoiceNumber: invoice.invoiceId },
+        'Invoice row is missing a rental object'
+      )
+      throw new Error(
+        `Minst en hyresrad på avin ${invoice.invoiceId} saknar hyresobjekt`
+      )
+    }
+
+    const rentalSpecificRule = rentalSpecificRules[invoiceRow.rentalObject]
+    if (!rentalSpecificRule || Object.keys(rentalSpecificRule).length === 0) {
+      logger.error(
+        {
+          invoiceNumber: invoice.invoiceId,
+          rentalSpecificRules,
+          rentalObject: invoiceRow.rentalObject,
+        },
+        'Could not get accounting rules for invoice from Xpand'
+      )
+      throw new Error(
+        `Kunde inte hitta konteringsregler för hyresobjektet ${invoiceRow.rentalObject} på faktura ${invoice.invoiceId}`
+      )
+    }
+    invoiceRow.projectCode =
+      invoiceRow.projectCode ?? rentalSpecificRule?.projectCode
+    invoiceRow.costCode = invoiceRow.costCode ?? rentalSpecificRule?.costCode
+    invoiceRow.property = invoiceRow.property ?? rentalSpecificRule?.property
+    invoiceRow.freeCode = invoiceRow.freeCode ?? rentalSpecificRule?.freeCode
+  }
+
+  return invoice
 }
 
-let roundOffInformation: RoundOffInformation | undefined = undefined
+// The ORESUTJ account and cost code are configured per year in Xpand.
+const roundOffInformationByYear = new Map<string, RoundOffInformation>()
 
 export const getRoundOffInformation = async (
   year: string
 ): Promise<RoundOffInformation> => {
-  if (roundOffInformation === undefined) {
-    const roundOffInformationDb = await db('repsk')
-      .where('keycode', 'ORESUTJ')
-      .andWhere('year', year)
-      .distinct()
-
-    roundOffInformation = {
-      account: roundOffInformationDb[0]['p1']?.toString().trimEnd(),
-      costCode: roundOffInformationDb[0]['p2']?.toString().trimEnd(),
-    }
+  const cached = roundOffInformationByYear.get(year)
+  if (cached) {
+    return cached
   }
 
-  if (roundOffInformation !== undefined) {
-    return roundOffInformation
-  } else {
-    logger.error({ year }, 'Round off information not found')
-    throw Error(`Round off information not found for ${year}`)
+  const rows = await db('repsk')
+    .where('keycode', 'ORESUTJ')
+    .andWhere('year', year)
+    .distinct()
+
+  const account = rows[0]?.['p1']?.toString().trimEnd()
+  if (!account) {
+    logger.warn({ year }, 'Round off information not found')
+    throw new RoundOffInformationNotFoundError(year)
   }
-}
 
-export const getInvoices = async (rows: InvoiceDataRow[]) => {
-  const uniqueInvoiceNumbers: Record<string, string> = {}
-
-  rows.forEach((row) => {
-    uniqueInvoiceNumbers[row.invoiceNumber as string] = row.tenantName as string
-  })
-
-  const invoiceNumbers = Object.keys(uniqueInvoiceNumbers)
-
-  const invoices = await db('krfkh')
-    .innerJoin('revrt', 'krfkh.keyrevrt', 'revrt.keyrevrt')
-    .innerJoin('cmctc', 'krfkh.keycmctc', 'cmctc.keycmctc')
-    .whereIn('invoice', invoiceNumbers)
-    .where('name', 'HYRA')
-    .orWhere('name', 'HYRA INTERN')
-
-  const invoiceTypes: Record<string, boolean> = {}
-  invoices.forEach((invoice) => {
-    invoice.tenantName =
-      uniqueInvoiceNumbers[(invoice.invoice as string).trimEnd()]
-    invoiceTypes[invoice.name] = true
-  })
-
-  return invoices
+  const roundOffInformation: RoundOffInformation = {
+    account,
+    costCode: rows[0]['p2']?.toString().trimEnd(),
+  }
+  roundOffInformationByYear.set(year, roundOffInformation)
+  return roundOffInformation
 }
 
 export const getRentalSpecificRules = async (
@@ -107,239 +137,52 @@ export const getRentalSpecificRules = async (
   year: string
 ) => {
   const specificRules: RentalSpecificRules = {}
-  const specificRulesBuildingsQuery = db('repsk')
-    .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
-    .innerJoin('babuf', 'babyg.keycmobj', 'babuf.keyobjbyg')
-    .where('year', year)
-    .andWhereLike('keyrektk', 'INTAKT%')
-    .whereIn('hyresid', rentalIds)
-    .distinct()
 
-  const specificRulesBuildings = await specificRulesBuildingsQuery
+  // SQL Server tillåter max ~2100 parametrar per fråga, så hyresid-listan
+  // måste köras i bitar.
+  const chunkSize = 1000
+  const chunks: string[][] = []
+  for (let i = 0; i < rentalIds.length; i += chunkSize) {
+    chunks.push(rentalIds.slice(i, i + chunkSize))
+  }
 
-  specificRulesBuildings.forEach((row) => {
-    specificRules[row['hyresid'].toString().trimEnd()] = {
-      costCode: row['p2'].toString().trimEnd(),
-      property: row['p3'].toString().trimEnd(),
-    }
-  })
+  for (const chunk of chunks) {
+    const specificRulesBuildingsQuery = db('repsk')
+      .innerJoin('babyg', 'babyg.keybabyg', 'repsk.keycode')
+      .innerJoin('babuf', 'babyg.keycmobj', 'babuf.keyobjbyg')
+      .where('year', year)
+      .andWhereLike('keyrektk', 'INTAKT%')
+      .whereIn('hyresid', chunk)
+      .distinct()
 
-  const specificRulesAreasQuery = db('repsk')
-    .innerJoin('bayta', 'bayta.keybayta', 'repsk.keycode')
-    .innerJoin('babuf', 'bayta.keycmobj', 'babuf.keyobjyta')
-    .where('year', year)
-    .andWhereLike('keyrektk', 'INTAKT%')
-    .whereIn('hyresid', rentalIds)
-    .distinct()
+    const specificRulesBuildings = await specificRulesBuildingsQuery
 
-  const specificRulesAreas = await specificRulesAreasQuery
-
-  specificRulesAreas.forEach((row) => {
-    specificRules[row['hyresid'].toString().trimEnd()] = {
-      costCode: row['p2']?.toString().trimEnd(),
-      property: row['p3']?.toString().trimEnd(),
-    }
-  })
-
-  return specificRules
-}
-
-const getRentalRowSpecificRule = async (
-  row: InvoiceDataRow
-): Promise<RentalSpecificRule | null> => {
-  const rowSpecificRuleResult = await db('repsk')
-    .select('p1', 'p2', 'p3', 'p4', 'p5', 'hyrad.avitext as text')
-    .innerJoin('repsr', 'repsk.keyrepsr', 'repsr.keyrepsr')
-    .innerJoin('repst', 'repst.keydbtbl', 'repsk.keydbtbl')
-    .innerJoin('hyrad', 'repsk.keycode', 'hyrad.keyhyrad')
-    .innerJoin('cmart', 'cmart.keycmart', 'hyrad.keycmart')
-    .innerJoin('hyobj', 'hyrad.keyhyobj', 'hyobj.keyhyobj')
-    .where('repsk.year', '2025') // TODO: Fix year.
-    .andWhere('keyrektk', 'INTAKT')
-    //.andWhere('hyrad.keycmuni', 'year')
-    .andWhere('repst.name', 'Hyresrad')
-    .andWhere('hyobj.hyobjben', row.contractCode)
-    .andWhere('cmart.code', row.rentArticle)
-
-  let rowIndex = 0
-
-  if (rowSpecificRuleResult.length > 1) {
-    rowIndex = rowSpecificRuleResult.findIndex((resultRow) => {
-      return (row.invoiceRowText as string).localeCompare(resultRow['text'])
+    specificRulesBuildings.forEach((row) => {
+      specificRules[row['hyresid'].toString().trimEnd()] = {
+        costCode: row['p2'].toString().trimEnd(),
+        property: row['p3'].toString().trimEnd(),
+      }
     })
 
-    if (rowIndex === -1) {
-      logger.error(
-        {
-          rentArticle: row.rentArticle,
-          contractCode: row.contractCode,
-          invoiceNumber: row.invoiceNumber,
-          invoiceRowText: row.invoiceRowText,
-          rowSpecificRuleResult,
-        },
-        'Multiple results row specific accounting for article'
-      )
+    const specificRulesAreasQuery = db('repsk')
+      .innerJoin('bayta', 'bayta.keybayta', 'repsk.keycode')
+      .innerJoin('babuf', 'bayta.keycmobj', 'babuf.keyobjyta')
+      .where('year', year)
+      .andWhereLike('keyrektk', 'INTAKT%')
+      .whereIn('hyresid', chunk)
+      .distinct()
 
-      throw new Error(
-        `Konteringsregler för hyresartikeln ${row.rentArticle} på faktura ${row.invoiceNumber} kunde inte hämtas (det finns flera uppsättningar konteringsregler för artikeln)`
-      )
-    }
-  }
+    const specificRulesAreas = await specificRulesAreasQuery
 
-  if (rowSpecificRuleResult && rowSpecificRuleResult.length > 0) {
-    return {
-      costCode: rowSpecificRuleResult[rowIndex].p2?.toString().trimEnd(),
-      property: rowSpecificRuleResult[rowIndex].p3?.toString().trimEnd(),
-      projectCode: rowSpecificRuleResult[rowIndex].p4?.toString().trimEnd(),
-      freeCode: rowSpecificRuleResult[rowIndex].p5?.toString().trimEnd(),
-    }
-  } else {
-    logger.error(
-      {
-        contractCode: row.contractCode,
-        rentArticle: row.rentArticle,
-        invoiceRowText: row.invoiceRowText,
-      },
-      'No specific rule for invoice row'
-    )
-    return null
-  }
-}
-
-const getAdditionalColumns = async (
-  row: InvoiceDataRow,
-  rentalSpecificRules: Record<string, RentalSpecificRules>
-): Promise<{ row: InvoiceDataRow | undefined; error?: string | undefined }> => {
-  const contractCode = row.contractCode as string
-  const additionalColumns: InvoiceDataRow = {}
-
-  if ('Öresutjämning' == row.invoiceRowText) {
-    return {
-      row: undefined,
-    }
-  }
-
-  let specificRule: RentalSpecificRule | null = null
-
-  if (row.company === '001' && !additionalColumns['costCode'] && contractCode) {
-    specificRule =
-      rentalSpecificRules[(row.fromDate as string).substring(0, 4)][
-        contractCode.split('/')[0]
-      ]
-    if (!specificRule) {
-      logger.error(
-        row,
-        'Could not find cost code and property for normal rent row'
-      )
-      return {
-        row: undefined,
-        error: `Kunde inte hitta kostnadsställe och fastighet för hyresobjekt ${contractCode.split('/')[0]} på faktura ${row.invoiceNumber} med fråndatum ${row.fromDate}. Denna faktura måste bokföras manuellt i Xledger (både reskontra och intäktskonton)`,
+    specificRulesAreas.forEach((row) => {
+      specificRules[row['hyresid'].toString().trimEnd()] = {
+        costCode: row['p2']?.toString().trimEnd(),
+        property: row['p3']?.toString().trimEnd(),
       }
-    }
-  } else if (row.company === '006') {
-    specificRule = await getRentalRowSpecificRule(row)
+    })
   }
 
-  if (specificRule) {
-    additionalColumns['costCode'] = specificRule['costCode']
-    additionalColumns['property'] = specificRule['property']
-
-    if (specificRule['projectCode']) {
-      additionalColumns['projectCode'] = specificRule['projectCode']
-    }
-
-    if (specificRule['freeCode']) {
-      additionalColumns['freeCode'] = specificRule['freeCode']
-    }
-  }
-
-  return { row: additionalColumns }
-}
-
-export const enrichInvoiceRows = async (
-  invoiceDataRows: InvoiceDataRow[],
-  invoices: Record<string, InvoiceRecord>
-): Promise<{
-  rows: InvoiceDataRow[]
-  errors: { invoiceNumber: string; error: string }[]
-}> => {
-  const errors: { invoiceNumber: string; error: string }[] = []
-
-  invoiceDataRows.forEach((row) => {
-    const invoice = invoices[row.invoiceNumber]
-
-    if (invoice) {
-      row.invoiceDate = invoice.invdate as string
-      row.invoiceFromDate = invoice.fromdate as string
-      row.invoiceToDate = invoice.todate as string
-      row.invoiceDueDate = invoice.expdate as string
-    } else {
-      // Invoice is not found in Xpand. A common reason is that it's an
-      // invoice of the wrong type, for instance reminder.
-      invoiceDataRows = invoiceDataRows.filter((filterRow) => {
-        return !(filterRow.invoiceNumber as string).localeCompare(
-          row.invoiceNumber as string
-        )
-      })
-      logger.error(
-        row.invoiceNumber,
-        'Invoice not found in XPand, removed invoice rows'
-      )
-      errors.push({
-        invoiceNumber: row.invoiceNumber as string,
-        error: 'Fakturans fakturaraderna kunde inte hämtas från Xpand',
-      })
-    }
-  })
-
-  const rentalIdMap: Record<string, boolean> = {}
-
-  invoiceDataRows.forEach((row) => {
-    rentalIdMap[row.contractCode.toString().split('/')[0]] = true
-  })
-
-  const rentalIds = Object.keys(rentalIdMap)
-  const rentalSpecificRules: Record<string, RentalSpecificRules> = {}
-  rentalSpecificRules['2025'] = await getRentalSpecificRules(rentalIds, '2025')
-  rentalSpecificRules['2026'] = await getRentalSpecificRules(rentalIds, '2026')
-
-  const enrichedInvoiceRows = await Promise.all(
-    invoiceDataRows.map(
-      async (row: InvoiceDataRow): Promise<InvoiceDataRow | null> => {
-        const additionalColumns = await getAdditionalColumns(
-          row,
-          rentalSpecificRules
-        )
-
-        if (!additionalColumns.row && additionalColumns.error) {
-          logger.error(
-            {
-              invoiceNumber: row.invoiceNumber,
-              error: additionalColumns.error,
-            },
-            'No additional columns'
-          )
-          errors.push({
-            invoiceNumber: row.invoiceNumber as string,
-            error:
-              additionalColumns.error ??
-              'Kunde inte hitta fastighet eller kostnadsställe för fakturan',
-          })
-          return null
-        } else {
-          return { ...row, ...additionalColumns.row }
-        }
-      }
-    )
-  )
-
-  const errorInvoiceNumbers = new Set(errors.map((e) => e.invoiceNumber))
-  const rows = (await Promise.all(enrichedInvoiceRows)).filter(
-    (row) =>
-      row !== null && !errorInvoiceNumbers.has(row.invoiceNumber as string)
-  )
-
-  return { rows: rows as InvoiceDataRow[], errors }
+  return specificRules
 }
 
 export const getContacts = async (
@@ -475,326 +318,57 @@ export const getContacts = async (
   return contacts
 }
 
-/*
- * If invoice number ends with "K" we get the original invoice by simply
- * removing the "K" from the invoice number.
- */
-function getInvoiceCredit(invoiceNode: any): Invoice['credit'] {
-  return match(invoiceNode)
-    .with({ invoiceNumber: P.string.endsWith('K') }, (v) => ({
-      originalInvoiceId: v.invoiceNumber.replace('K', ''),
-    }))
-    .otherwise(() => null)
+// Xpand stores unset posting columns as blank padded strings. Map them to
+// undefined so the rental object's own rules can fill them in later.
+const blankToUndefined = (value: unknown): string | undefined => {
+  const trimmed = value?.toString().trim()
+  return trimmed ? trimmed : undefined
 }
 
-function transformFromDbInvoice(row: any, contactCode: string): Invoice {
-  const amount = [row.amount, row.reduction, row.vat, row.roundoff].reduce(
-    (sum, value) => sum + value,
-    0
-  )
-
+const transformRentalBlockWithAccounting = (
+  dbRow: any
+): RentalBlockWithAccounting => {
   return {
-    reference: contactCode,
-    invoiceId: row.invoiceId.trim(),
-    leaseIds: row.leaseId ? [row.leaseId.trim()] : [],
-    amount: Math.round((amount + Number.EPSILON) * 100) / 100,
-    fromDate: row.fromDate,
-    toDate: row.toDate,
-    invoiceDate: row.invoiceDate,
-    expirationDate: row.expirationDate,
-    debitStatus: row.debitStatus,
-    paymentStatus: getPaymentStatus(row.paymentStatus),
-    transactionType: getTransactionType(row.transactionType),
-    transactionTypeName: row.transactionTypeName.trim(),
-    type: 'Regular',
-    source: 'legacy',
-    invoiceRows: [],
-    credit: getInvoiceCredit(row),
+    account: dbRow.p1.trim(),
+    costCode: blankToUndefined(dbRow.p2),
+    property: blankToUndefined(dbRow.p3),
+    projectCode: blankToUndefined(dbRow.p4),
+    freeCode: blankToUndefined(dbRow.p5),
+    description: dbRow.caption?.toString().trimEnd(),
+    fromDate: dbRow.fromDate,
+    toDate: dbRow.toDate,
   }
 }
 
-export const getInvoicesByContactCode = async (
-  contactKey: string,
-  filters?: { from?: Date }
-): Promise<Invoice[] | undefined> => {
-  logger.info(
-    { contactCode: contactKey },
-    'Getting invoices by contact code from Xpand DB'
-  )
-
-  let query = db
-    .select(
-      'krfkh.invoice as invoiceId',
-      'krfkh.reference as leaseId',
-      'krfkh.amount as amount',
-      'krfkh.fromdate as fromDate',
-      'krfkh.todate as toDate',
-      'krfkh.reduction',
-      'krfkh.vat',
-      'krfkh.roundoff',
-      'krfkh.invdate as invoiceDate',
-      'krfkh.expdate as expirationDate',
-      'krfkh.debstatus as debitStatus',
-      'krfkh.paystatus as paymentStatus',
-      'krfkh.keyrevrt as transactionType',
-      'revrt.name as transactionTypeName'
-    )
-    .from('krfkh')
-    .innerJoin('cmctc', 'cmctc.keycmctc', 'krfkh.keycmctc')
-    .innerJoin('revrt', 'revrt.keyrevrt', 'krfkh.keyrevrt')
-    .where({ 'cmctc.cmctckod': contactKey })
-    .andWhere('krfkh.type', 'in', [1, 2])
-    .orderBy('krfkh.fromdate', 'desc')
-
-  if (filters?.from) {
-    query = query.andWhere('krfkh.fromdate', '>=', filters.from)
-  }
-
-  const rows = await query
-
-  if (rows && rows.length > 0) {
-    const invoices: Invoice[] = rows
-      .filter((row) => {
-        // Only include invoices with invoiceIds
-        // that have not been deleted (debitStatus 6 = makulerad)
-        if (row.invoiceId && row.debitStatus !== 6) {
-          return true
-        } else {
-          return false
-        }
-      })
-      .map((row) => transformFromDbInvoice(row, contactKey))
-    logger.info(
-      { contactCode: contactKey },
-      'Getting invoices by contact code from Xpand DB completed'
-    )
-    return invoices
-  }
-
-  return undefined
-}
-
-export const getRentalInvoices = async (
-  fromDate: Date,
-  toDate: Date,
-  companyId: string
+/**
+ * Returns an active rental block with accounting information for a given rental object, if the
+ * block is active within the date range and has accounting information. Rental blocks without
+ * accounting information are not returned even if they are active within the date range.
+ * A block is active if it overlaps the date range on at least one day, so blocks that start
+ * or end inside the range are included. The caller truncates them to the range.
+ * Only the cost (INKOP) accounting of the block is used. Some blocks also have income (INTAKT)
+ * accounting, which would otherwise be returned as a second block with the same dates.
+ */
+export const getActiveRentalBlocksWithAccounting = async (
+  rentalId: string,
+  from: Date,
+  to: Date
 ) => {
-  const keycodes =
-    companyId === '001' ? ['FADBT_HYRA'] : ['FADBT_INTHYRA', 'FADBT_HYRA']
+  const year = from.toISOString().substring(0, 4)
 
-  logger.info(
-    { keycodes, companyId, fromDate, toDate },
-    'Getting new invoices for company'
+  const blockWithAccounting = await db.raw(
+    `select p1, p2, p3, p4, p5, hyspt.fdate as fromDate, hyspt.tdate as toDate, hyspa.caption as caption from hyspt 
+  inner join hyspa on hyspt.keyhyspa = hyspa.keyhyspa
+  inner join repsk on hyspa.keyhyspa = repsk.keycode
+  inner join babuf ON hyspt.keycmobj = babuf.keycmobj
+  inner join cmobj on hyspt.keycmobj = cmobj.keycmobj
+  where babuf.hyresid = ?
+  and hyspt.fdate <= ?
+  and (hyspt.tdate >= ? or hyspt.tdate is null)
+  and repsk.year = ?
+  and repsk.keyrektk = 'INKOP'`,
+    [rentalId, to, from, year]
   )
 
-  const rentalInvoiceQuery = db.raw(
-    `select DISTINCT(invoice) from krfkh inner join krfkr on krfkr.keykrfkh = krfkh.keykrfkh
-inner join cmcmp on krfkh.keycmcmp = cmcmp.keycmcmp
-inner join cmart on cmart.code = krfkr.code
-inner join cmarg on cmart.keycmarg = cmarg.keycmarg
-inner Join repsk on cmart.keycmart = repsk.keycode
-inner join repsr on repsk.keyrepsr = repsr.keyrepsr
-where repsr.keycode IN (` +
-      keycodes.map((_) => "'" + _ + "'").join(',') +
-      ')' +
-      `and cmcmp.code = ?
-and krfkh.fromdate >= ? AND krfkh.fromdate < ?
-and not invoice is null
-and not invoice like 'IH%'`,
-    [companyId, fromDate, toDate]
-  )
-
-  const rentalInvoiceNumbers = await rentalInvoiceQuery
-
-  return rentalInvoiceNumbers
-}
-
-export const getBatchTotalAmount = async (invoiceNumbers: string[]) => {
-  const total = await db.raw(
-    'select SUM( \
-	case when krfkh.type = 2 then krfkh.amount + krfkh.vat + roundoff + krfkh.reduction \
-  when type = 1 then -(krfkh.amount + krfkh.vat + roundoff + krfkh.reduction) end) \
-	as invoicesTotal \
-	from krfkh \
-	where invoice in (' +
-      invoiceNumbers.map((_) => "'" + _ + "'").join(',') +
-      ')'
-  )
-
-  return total[0].invoicesTotal as number
-}
-
-export const getInvoiceRows = async (
-  companyId: string,
-  invoiceNumbers: string[]
-): Promise<InvoiceRow[]> => {
-  if (invoiceNumbers.length === 0) {
-    return []
-  }
-
-  const keycodes = companyId === '001' ? ['FADBT_HYRA'] : ['FADBT_HYRA']
-  const invoiceRowsQuery = db.raw(
-    `
-    SELECT
-      cmart.code AS rentArticle,
-      cmart.utskrgrupp AS printGroup,
-      krfkr.printgroup AS printGroupLabel,
-      krfkr.reduction AS rowReduction,
-      krfkr.amount AS rowAmount,
-      krfkr.vat AS rowVat,
-      cmcmp.code AS company,
-      krfkh.fromdate AS invoiceFromDate,
-      krfkh.todate AS invoiceToDate,
-      krfkh.expdate AS expirationDate,
-      krfkh.amount + krfkh.vat + roundoff + krfkh.reduction AS invoiceTotal,
-      *
-    FROM krfkh
-    INNER JOIN krfkr ON krfkr.keykrfkh = krfkh.keykrfkh
-    INNER JOIN cmcmp ON krfkh.keycmcmp = cmcmp.keycmcmp
-    INNER JOIN cmctc ON krfkh.keycmctc = cmctc.keycmctc
-    LEFT JOIN cmart ON cmart.keycmart = krfkr.keycmart
-    LEFT JOIN cmarg ON cmart.keycmarg = cmarg.keycmarg
-    LEFT JOIN repsk ON cmart.keycmart = repsk.keycode
-    LEFT JOIN repsr ON repsk.keyrepsr = repsr.keyrepsr
-    WHERE
-      (
-        (repsr.keycode IN (${keycodes.map((_) => "'" + _ + "'").join(',')}) AND keyrektk = 'INTAKT' AND repsk.year = datepart(year, krfkh.fromdate)) OR
-        (krfkh.invoice like '5%' and (repsr.keycode is null and keyrektk is null and repsk.year is null)) or
-        (krfkh.invoice like '8%' and ((repsr.keycode is null and keyrektk = 'INTAKT' and repsk.year = datepart(year, krfkh.fromdate)) or (repsr.keycode is null and keyrektk is null and repsk.year is null)))
-      )
-      AND cmcmp.code = ?
-      AND (krfkh.type = 1 OR krfkh.type = 2)
-      AND invoice IN (${invoiceNumbers.map((_) => `'${_}'`).join(',')})
-    ORDER BY invoice ASC, krfkr.printsort ASC
-    `,
-    [companyId]
-  )
-
-  const invoiceRows = await invoiceRowsQuery
-
-  logger.info(
-    {
-      includedRows: invoiceRows.length,
-      includedInvoices: new Set<string>(
-        invoiceRows.map((row: any) => row.invoice)
-      ).size,
-      requestedInvoices: invoiceNumbers.length,
-    },
-    'Retrieved invoices'
-  )
-
-  const sumColumns = (...args: any[]) => {
-    let sum = 0
-
-    args.forEach((arg) => {
-      sum += arg as number
-    })
-
-    return Math.round((sum + Number.EPSILON) * 100) / 100
-  }
-
-  const trim = (column: any): string => {
-    return column ? (column as string).trimEnd() : column
-  }
-
-  // Derive "current month" strings in UTC so they share the same calendar as
-  // xledgerDateString (which uses toISOString → UTC). Comparing in any other
-  // timezone risks a row being rewritten to a different month than the one
-  // its formatted date string ends up in around month boundaries.
-  const now = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const y = now.getUTCFullYear()
-  const m = pad(now.getUTCMonth() + 1)
-  const lastDay = pad(
-    new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)
-    ).getUTCDate()
-  )
-  const startOfCurrentMonthString = `${y}${m}01`
-  const endOfCurrentMonthString = `${y}${m}${lastDay}`
-
-  const convertedInvoiceRows: InvoiceRow[] = invoiceRows.map(
-    (invoiceRow: any) => {
-      try {
-        const type = invoiceRow['type'] as number
-
-        const invoiceFromDateString = xledgerDateString(
-          invoiceRow['invoiceFromDate'] as Date
-        )
-        const fromDateString =
-          invoiceFromDateString < startOfCurrentMonthString
-            ? startOfCurrentMonthString
-            : invoiceFromDateString
-
-        const invoiceToDateString = xledgerDateString(
-          invoiceRow['invoiceToDate'] as Date
-        )
-        const toDateString =
-          invoiceToDateString < startOfCurrentMonthString
-            ? endOfCurrentMonthString
-            : invoiceToDateString
-
-        const invoice: InvoiceRow = {
-          amount: sumColumns(invoiceRow['rowAmount']),
-          deduction: sumColumns(invoiceRow['rowReduction']),
-          fromDate: fromDateString,
-          invoiceDate: xledgerDateString(invoiceRow['invdate'] as Date),
-          invoiceDueDate: xledgerDateString(
-            invoiceRow['expirationDate'] as Date
-          ),
-          invoiceNumber: trim(invoiceRow['invoice']),
-          invoiceRowText: trim(invoiceRow['text']),
-          printGroup: trim(invoiceRow['printGroup']),
-          rentArticle: trim(invoiceRow['rentArticle']),
-          roundoff: sumColumns(invoiceRow['roundoff']),
-          rowType: sumColumns(invoiceRow['rowtype']),
-          toDate: toDateString,
-          totalAmount: sumColumns(
-            invoiceRow['rowAmount'],
-            invoiceRow['rowReduction'],
-            invoiceRow['rowVat']
-          ),
-          vat: sumColumns(invoiceRow['rowVat']),
-        }
-
-        if (type === 2) {
-          invoice.amount = -invoice.amount
-          invoice.vat = -invoice.vat
-          invoice.deduction = -invoice.deduction
-          invoice.roundoff = -invoice.roundoff
-        }
-
-        return invoice
-      } catch (err) {
-        logger.error(
-          { invoiceRow: JSON.stringify(invoiceRow), err },
-          'Error converting row'
-        )
-        throw new Error('Error converting row')
-      }
-    }
-  )
-
-  return convertedInvoiceRows
-}
-
-function getTransactionType(transactionTypeString: any) {
-  if (!transactionTypeString || !(typeof transactionTypeString == 'string')) {
-    return InvoiceTransactionType.Other
-  }
-
-  let transactionType =
-    invoiceTransactionTypeTranslation[transactionTypeString.trimEnd()]
-
-  if (!transactionType) {
-    transactionType = InvoiceTransactionType.Other
-  }
-
-  return transactionType
-}
-
-function getPaymentStatus(paymentStatusNumber: number) {
-  const paymentStatus = paymentStatusTranslation[paymentStatusNumber]
-
-  return paymentStatus
+  return blockWithAccounting.map(transformRentalBlockWithAccounting)
 }

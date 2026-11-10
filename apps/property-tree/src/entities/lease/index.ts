@@ -1,5 +1,7 @@
 // UI Components
+export { ExternalLeaseLink } from './ui/ExternalLeaseLink'
 export { LeaseInfo } from './ui/LeaseInfo'
+export { LeaseNumber } from './ui/LeaseNumber'
 export { LeaseMobileCard } from './ui/LeaseMobileCard'
 export { LeaseStatusBadge } from './ui/LeaseStatusBadge'
 
@@ -21,7 +23,6 @@ export { getPropertyIdentifier } from './lib/property'
 export { sortLeasesByStatus } from './lib/sorting'
 
 // Hooks
-export { useContactEnrichment } from './hooks/useContactEnrichment'
 export { useLeaseFilters } from './hooks/useLeaseFilters'
 export { useLeasesByContactCode } from './hooks/useLeasesByContactCode'
 export { useLeasesByRentalProperty } from './hooks/useLeasesByRentalProperty'

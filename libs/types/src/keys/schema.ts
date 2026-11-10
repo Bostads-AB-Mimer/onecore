@@ -549,3 +549,44 @@ export const KeyLoanWithDetailsSchema = KeyLoanSchema.extend({
   // Array of receipts for this loan
   receipts: z.array(ReceiptSchema),
 })
+
+// Move-in / move-out overview (core aggregation of leases + keys + loans)
+// Ordered by handover step, then the states outside the flow
+export const MoveInOutStatusSchema = z.enum([
+  'NOT_RETURNED',
+  'LOANED_TO_OTHER',
+  'RETURNED_AWAITING_LOAN',
+  'CREATED',
+  'PARTIAL',
+  'HANDED_OUT',
+  'RETURNED_VACANT',
+  'NO_LOANS',
+  'NO_KEYS',
+  'UNKNOWN',
+])
+
+export const MoveInOutTenantSchema = z.object({
+  leaseId: z.string(),
+  names: z.array(z.string()),
+  contactCodes: z.array(z.string()),
+  leaseStartDate: z.coerce.date().nullable(),
+  lastDebitDate: z.coerce.date().nullable(),
+})
+
+export const MoveInOutRowSchema = z.object({
+  rentalObjectCode: z.string(),
+  address: z.string().nullable(),
+  objectTypeCode: z.string().nullable(),
+  outgoing: MoveInOutTenantSchema.nullable(),
+  incoming: MoveInOutTenantSchema.nullable(),
+  keyCount: z.number(),
+  cardCount: z.number(),
+  // null when the outgoing tenant never had a loan on this object
+  outgoingAllReturned: z.boolean().nullable(),
+  outgoingReturnedAt: z.coerce.date().nullable(),
+  incomingLoanCreatedAt: z.coerce.date().nullable(),
+  incomingLoanPickedUpAt: z.coerce.date().nullable(),
+  status: MoveInOutStatusSchema,
+  // Key notes (anteckningar) on the rental object, newest first
+  notes: z.array(z.string()),
+})

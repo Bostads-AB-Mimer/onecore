@@ -59,4 +59,5 @@ export type CommonErr =
   | 'conflict'
   | 'unauthorized'
   | 'forbidden'
+  | 'unavailable'
   | 'unknown'

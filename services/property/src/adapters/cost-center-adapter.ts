@@ -1,23 +1,44 @@
 import { logger } from '@onecore/utilities'
 
 import { trimStrings } from '@src/utils/data-conversion'
+import {
+  resolvePropertyShares,
+  splitPropertySubtree,
+  type PropertyShare,
+} from '@src/utils/property-shares'
 import type { CostCenterSummary, CostCenterTree } from '@src/types/cost-center'
 
 import { filterToOperatingCompanies } from './company-scope'
 import { prisma } from './db'
+import { getKvvAreaExceptions } from './kvv-area-adapter'
 import { buildPropertySubtrees } from './property-subtree-adapter'
 
-/**
- * Cost-center membership: the entity with its KVV areas, plus the property
- * codes that survive the operating-company filter — a property sold after
- * being linked stays in our own table, so unfiltered links would show ghosts
- * with their tenants still attached.
- *
- * Uncached HERE so /cost-centers/:id/tree shows admin edits immediately; the
- * /property-tree path caches this per root for 15 min (grouping adapter).
- * The expensive below-property half has its own cache (subtree adapter).
- */
-export const fetchCostCenterMembership = async (id: string) => {
+export type CostCenterMembership = {
+  costCenter: {
+    id: string
+    code: string
+    name: string
+    leadKeycloakUserId: string | null
+    deputyKeycloakUserId: string | null
+  }
+  areas: Array<{
+    id: string
+    code: string
+    name: string | null
+    responsibleKeycloakUserId: string | null
+    properties: PropertyShare[]
+  }>
+  /** Every property some share covers, operating-company filtered. */
+  propertyCodes: string[]
+}
+
+/** The cost center with its areas' property shares (see property-shares),
+ * company-filtered so a property sold after linking shows no ghost. */
+// Uncached HERE so /cost-centers/:id/tree shows admin edits at once; the
+// /property-tree path caches it per root for 15 min (grouping adapter).
+export const fetchCostCenterMembership = async (
+  id: string
+): Promise<CostCenterMembership | null> => {
   const costCenter = await prisma.onecoreCostCenter
     .findUnique({
       where: { id },
@@ -31,12 +52,39 @@ export const fetchCostCenterMembership = async (id: string) => {
 
   if (!costCenter) return null
 
+  const linkedAreas = costCenter.kvvAreas.map((area) => ({
+    id: area.id,
+    propertyCodes: area.propertyLinks.map((link) => link.propertyCode),
+  }))
+  const exceptions = await getKvvAreaExceptions()
+  const sharesByArea = resolvePropertyShares(linkedAreas, exceptions)
+
   const propertyCodes = await filterToOperatingCompanies(
-    costCenter.kvvAreas.flatMap((area) =>
-      area.propertyLinks.map((link) => link.propertyCode)
+    Array.from(sharesByArea.values()).flatMap((shares) =>
+      shares.map((share) => share.propertyCode)
     )
   )
-  return { costCenter, propertyCodes }
+  const operating = new Set(propertyCodes)
+
+  return {
+    costCenter: {
+      id: costCenter.id,
+      code: costCenter.code,
+      name: costCenter.name,
+      leadKeycloakUserId: costCenter.leadKeycloakUserId ?? null,
+      deputyKeycloakUserId: costCenter.deputyKeycloakUserId ?? null,
+    },
+    areas: costCenter.kvvAreas.map((area) => ({
+      id: area.id,
+      code: area.code,
+      name: area.name ?? null,
+      responsibleKeycloakUserId: area.responsibleKeycloakUserId ?? null,
+      properties: (sharesByArea.get(area.id) ?? []).filter((share) =>
+        operating.has(share.propertyCode)
+      ),
+    })),
+    propertyCodes,
+  }
 }
 
 export const getCostCenterTreeById = async (
@@ -46,23 +94,19 @@ export const getCostCenterTreeById = async (
     const membership = await fetchCostCenterMembership(id)
     if (!membership) return null
 
-    const { costCenter, propertyCodes } = membership
+    const { costCenter, areas, propertyCodes } = membership
     const subtrees = await buildPropertySubtrees(propertyCodes)
 
     return {
-      id: costCenter.id,
-      code: costCenter.code,
-      name: costCenter.name,
-      leadKeycloakUserId: costCenter.leadKeycloakUserId ?? null,
-      deputyKeycloakUserId: costCenter.deputyKeycloakUserId ?? null,
-      kvvAreas: costCenter.kvvAreas.map((area) => ({
+      ...costCenter,
+      kvvAreas: areas.map((area) => ({
         id: area.id,
         code: area.code,
-        name: area.name ?? null,
-        responsibleKeycloakUserId: area.responsibleKeycloakUserId ?? null,
-        properties: area.propertyLinks.flatMap((link) => {
-          const subtree = subtrees.get(link.propertyCode)
-          return subtree ? [subtree] : []
+        name: area.name,
+        responsibleKeycloakUserId: area.responsibleKeycloakUserId,
+        properties: area.properties.flatMap((share) => {
+          const subtree = subtrees.get(share.propertyCode)
+          return subtree ? [splitPropertySubtree(subtree, share.buildings)] : []
         }),
       })),
     }

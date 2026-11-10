@@ -1,7 +1,10 @@
 import { sub } from 'date-fns'
 import { LeaseStatus, LeaseType } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
+import config from '../../../../common/config'
 import {
+  buildTenfastLeaseUrl,
   mapToOnecoreLease,
   mapToOnecoreRentalObjectRent,
 } from '../../helpers/tenfast'
@@ -28,6 +31,16 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
   it('returns PreliminaryTerminated for preTermination stage', () => {
     const lease = factory.tenfastLease.build({
       stage: 'preTermination',
+    })
+
+    expect(mapToOnecoreLease(lease).status).toBe(
+      LeaseStatus.PreliminaryTerminated
+    )
+  })
+
+  it('returns PreliminaryTerminated while a notice awaits signing', () => {
+    const lease = factory.tenfastLease.build({
+      stage: 'terminationSigningInProgress',
     })
 
     expect(mapToOnecoreLease(lease).status).toBe(
@@ -87,14 +100,61 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
   })
 })
 
+describe('lease end date (via mapToOnecoreLease)', () => {
+  const preliminaryEndDate = new Date('2027-02-28T00:00:00.000Z')
+  const simplesignTermination = { signatures: [], preliminaryEndDate }
+
+  it('uses the preliminary end date while a notice awaits signing', () => {
+    const lease = mapToOnecoreLease(
+      factory.tenfastLease.build({
+        stage: 'terminationSigningInProgress',
+        endDate: null,
+        simplesignTermination,
+      })
+    )
+
+    expect(lease.leaseEndDate).toEqual(preliminaryEndDate)
+    expect(lease.lastDebitDate).toEqual(preliminaryEndDate)
+  })
+
+  it('keeps an end date already set on the lease', () => {
+    const endDate = new Date('2027-01-31T00:00:00.000Z')
+    const lease = mapToOnecoreLease(
+      factory.tenfastLease.build({
+        stage: 'terminationSigningInProgress',
+        endDate,
+        simplesignTermination,
+      })
+    )
+
+    expect(lease.leaseEndDate).toEqual(endDate)
+  })
+
+  it('ignores the preliminary end date in other stages', () => {
+    const lease = mapToOnecoreLease(
+      factory.tenfastLease.build({
+        stage: 'active',
+        endDate: null,
+        simplesignTermination,
+      })
+    )
+
+    expect(lease.leaseEndDate).toBeUndefined()
+    expect(lease.lastDebitDate).toBeUndefined()
+  })
+})
+
 describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
   it.each([
     ['bostad', LeaseType.HousingContract],
     ['parkering', LeaseType.ParkingSpaceContract],
     ['lokal', LeaseType.CommercialTenantContract],
     ['garage', LeaseType.GarageContract],
-    ['forrad', LeaseType.StorageContract],
+    ['förråd', LeaseType.CommercialTenantContract],
+    ['Förråd', LeaseType.CommercialTenantContract],
+    ['forrad', LeaseType.CommercialTenantContract],
     ['ovrigt', LeaseType.OtherContract],
+    ['unknown', LeaseType.OtherContract],
   ])('maps "%s" to %s', (typ, expected) => {
     const lease = factory.tenfastLease.build({
       hyresobjekt: [factory.tenfastRentalObject.build({ typ })],
@@ -133,6 +193,85 @@ describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
     })
 
     expect(mapToOnecoreLease(lease).type).toBe(LeaseType.OtherContract)
+  })
+})
+
+describe('buildTenfastLeaseUrl', () => {
+  const originalAppUrl = config.tenfast.appUrl
+
+  afterEach(() => {
+    config.tenfast.appUrl = originalAppUrl
+  })
+
+  it('builds a link to the lease in the Tenfast UI', () => {
+    config.tenfast.appUrl = 'https://tenfast.example.com'
+
+    expect(buildTenfastLeaseUrl('6ae9b2cd672cf891f4543fde')).toBe(
+      'https://tenfast.example.com/hyresvard/avtal/6ae9b2cd672cf891f4543fde'
+    )
+  })
+
+  it('ignores a trailing slash in the configured URL', () => {
+    config.tenfast.appUrl = 'https://tenfast.example.com/'
+
+    expect(buildTenfastLeaseUrl('abc')).toBe(
+      'https://tenfast.example.com/hyresvard/avtal/abc'
+    )
+  })
+
+  it('encodes the id', () => {
+    config.tenfast.appUrl = 'https://tenfast.example.com'
+
+    expect(buildTenfastLeaseUrl('a/b')).toBe(
+      'https://tenfast.example.com/hyresvard/avtal/a%2Fb'
+    )
+  })
+
+  it('keeps a path in the configured URL', () => {
+    config.tenfast.appUrl = 'https://example.com/tenfast'
+
+    expect(buildTenfastLeaseUrl('abc')).toBe(
+      'https://example.com/tenfast/hyresvard/avtal/abc'
+    )
+  })
+
+  it('returns undefined and warns once when the configured URL is invalid', () => {
+    const warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {})
+    config.tenfast.appUrl = 'tenfast-invalid.example.com'
+
+    expect(buildTenfastLeaseUrl('abc')).toBeUndefined()
+    expect(buildTenfastLeaseUrl('def')).toBeUndefined()
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+
+    warnSpy.mockRestore()
+  })
+
+  it('does not fail the lease mapping when the configured URL is invalid', () => {
+    jest.spyOn(logger, 'warn').mockImplementation(() => {})
+    config.tenfast.appUrl = 'not a url'
+    const lease = factory.tenfastLease.build()
+
+    const mapped = mapToOnecoreLease(lease)
+
+    expect(mapped.leaseId).toBe(lease.externalId)
+    expect(mapped.externalUrl).toBeUndefined()
+
+    jest.restoreAllMocks()
+  })
+
+  it('returns undefined when no Tenfast UI URL is configured', () => {
+    config.tenfast.appUrl = ''
+
+    expect(buildTenfastLeaseUrl('abc')).toBeUndefined()
+  })
+
+  it('is used by mapToOnecoreLease with the Tenfast _id', () => {
+    config.tenfast.appUrl = 'https://tenfast.example.com'
+    const lease = factory.tenfastLease.build({ _id: 'mongo-id-1' })
+
+    expect(mapToOnecoreLease(lease).externalUrl).toBe(
+      'https://tenfast.example.com/hyresvard/avtal/mongo-id-1'
+    )
   })
 })
 

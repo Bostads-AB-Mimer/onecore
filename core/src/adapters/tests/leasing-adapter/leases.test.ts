@@ -71,10 +71,10 @@ describe(leasingAdapter.createLease, () => {
     expect(result).toEqual({ ok: true, data: 'lease-123' })
   })
 
-  it('returns create-lease-failed when the rental object cannot have a lease', async () => {
+  it('returns rental-object-not-available on a 409 with that error code', async () => {
     nock(serviceUrl)
       .post('/leases')
-      .reply(404, { error: 'Lease cannot be created on this rental object' })
+      .reply(409, { error: 'rental-object-not-available' })
 
     const result = await leasingAdapter.createLease(
       params.objectId,
@@ -84,7 +84,7 @@ describe(leasingAdapter.createLease, () => {
       params.includeVAT
     )
 
-    expect(result).toEqual({ ok: false, err: 'create-lease-failed' })
+    expect(result).toEqual({ ok: false, err: 'rental-object-not-available' })
   })
 
   it('returns ok:false instead of throwing on a 500', async () => {
@@ -143,5 +143,58 @@ describe(leasingAdapter.getLeasesByRentalObjectCode, () => {
       await leasingAdapter.getLeasesByRentalObjectCode('does-not-exist')
 
     expect(result).toEqual([])
+  })
+})
+
+describe(leasingAdapter.getLeasesByContactCode, () => {
+  const { contactCode } = factory.contact.build()
+
+  it('asks leasing for sublet leases when includeSubletLeases is true', async () => {
+    const scope = nock(serviceUrl)
+      .get(`/leases/by-contact-code/${contactCode}`)
+      .query({ includeSubletLeases: 'true' })
+      .reply(200, { content: [] })
+
+    await leasingAdapter.getLeasesByContactCode(contactCode, {
+      includeSubletLeases: true,
+    })
+
+    expect(scope.isDone()).toBe(true)
+  })
+
+  it('leaves the parameter out otherwise', async () => {
+    const scope = nock(serviceUrl)
+      .get(`/leases/by-contact-code/${contactCode}`)
+      .query({ status: 'current' })
+      .reply(200, { content: [] })
+
+    await leasingAdapter.getLeasesByContactCode(contactCode, {
+      status: ['current'],
+    })
+
+    expect(scope.isDone()).toBe(true)
+  })
+})
+
+describe(leasingAdapter.getLease, () => {
+  const leaseId = '307-002-11-0201/11'
+  const leasePath = `/leases/${encodeURIComponent(leaseId)}`
+
+  it('returns the lease on 200', async () => {
+    nock(serviceUrl).get(leasePath).reply(200, { content: { leaseId } })
+
+    expect(await leasingAdapter.getLease(leaseId)).toEqual({ leaseId })
+  })
+
+  it('returns null on 404', async () => {
+    nock(serviceUrl).get(leasePath).reply(404, { error: 'not-found' })
+
+    expect(await leasingAdapter.getLease(leaseId)).toBeNull()
+  })
+
+  it('throws on any other 4xx instead of reporting not found', async () => {
+    nock(serviceUrl).get(leasePath).reply(400, { error: 'bad-request' })
+
+    await expect(leasingAdapter.getLease(leaseId)).rejects.toThrow()
   })
 })

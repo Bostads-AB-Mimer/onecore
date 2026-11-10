@@ -1,6 +1,7 @@
 import KoaRouter from '@koa/router'
 import swaggerJsdoc from 'swagger-jsdoc'
 import zodToJsonSchema from 'zod-to-json-schema'
+import { property } from '@onecore/types'
 
 import * as types from '@src/types'
 
@@ -13,6 +14,10 @@ const schemas = {
   }).definitions,
   ...zodToJsonSchema(types.ResidenceDetailedSchema, {
     name: 'ResidenceDetails',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(property.ResidenceMediaSchema, {
+    name: 'ResidenceMedia',
     target: 'openApi3',
   }).definitions,
   ...zodToJsonSchema(types.ResidenceSearchResultSchema, {
@@ -105,6 +110,10 @@ const schemas = {
   }).definitions,
   ...zodToJsonSchema(types.BlockReasonSchema, {
     name: 'BlockReason',
+    target: 'openApi3',
+  }).definitions,
+  ...zodToJsonSchema(types.GetRentalIdsWithBlockResponseSchema, {
+    name: 'GetRentalIdsWithBlockResponse',
     target: 'openApi3',
   }).definitions,
   ...zodToJsonSchema(types.ComponentCategorySchema, {

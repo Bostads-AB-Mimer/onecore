@@ -6,6 +6,9 @@ export interface DashboardCard {
   icon: LucideIcon
   description: string
   path: string
+  /** Opens in a new tab instead of navigating inside this app. */
   isExternal: boolean
+  /** An external link to another OneCore frontend, not a third-party system. */
+  isOnecoreApp?: boolean
   isDisabled: boolean
 }

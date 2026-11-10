@@ -1,9 +1,16 @@
-import type { ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
+import { Fragment, type ReactNode, useState } from 'react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
 
 import type { RowSelection } from '../hooks/useRowSelection'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { cn } from '../lib/utils'
+import { Button } from '../ui/Button'
 import { Card, CardContent } from '../ui/Card'
 import { Checkbox } from '../ui/Checkbox'
 import {
@@ -37,6 +44,7 @@ export interface ResponsiveTableProps<T> {
   sortBy?: string
   sortOrder?: SortOrder
   onSort?: (sortKey: string, sortOrder: SortOrder | undefined) => void // asc, desc, then off
+  expandableContent?: (item: T) => ReactNode | null // rows open to show it; null = nothing to show
 }
 
 const headerChecked = (state: RowSelection<unknown>['pageState']) =>
@@ -55,8 +63,18 @@ export function ResponsiveTable<T>({
   sortBy,
   sortOrder,
   onSort,
+  expandableContent,
 }: ResponsiveTableProps<T>) {
   const isMobile = useIsMobile()
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+
+  const toggleExpanded = (id: string) =>
+    setExpandedRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   const handleSort = (sortKey: string) => {
     if (!onSort) return
@@ -98,41 +116,70 @@ export function ResponsiveTable<T>({
     const visibleColumns = columns.filter((col) => !col.hideOnMobile)
     return (
       <div className="space-y-3">
-        {data.map((item) => (
-          <Card
-            key={keyExtractor(item)}
-            className="overflow-hidden"
-            data-state={
-              selection?.isSelected(keyExtractor(item)) ? 'selected' : undefined
-            }
-            onClick={onRowClick ? () => onRowClick(item) : undefined}
-          >
-            <CardContent className="flex min-h-[44px] items-start gap-3 p-4">
-              {selection && <div className="pt-1">{rowCheckbox(item)}</div>}
-              <div className="min-w-0 flex-1">
-                {mobileCardRenderer ? (
-                  mobileCardRenderer(item)
-                ) : (
-                  <div className="space-y-3">
-                    {visibleColumns.map((column) => (
-                      <div
-                        key={column.key}
-                        className="flex min-h-[44px] items-center justify-between"
-                      >
-                        <span className="min-w-0 flex-1 text-sm font-medium text-muted-foreground">
-                          {column.label}:
-                        </span>
-                        <div className="ml-2 flex min-h-[44px] items-center text-right text-sm">
-                          {column.render(item)}
+        {data.map((item) => {
+          const id = keyExtractor(item)
+          const content = expandableContent?.(item) ?? null
+          const isExpanded = expandedRows.has(id)
+          return (
+            <Card
+              key={id}
+              className="overflow-hidden"
+              data-state={selection?.isSelected(id) ? 'selected' : undefined}
+              onClick={onRowClick ? () => onRowClick(item) : undefined}
+            >
+              <CardContent className="flex min-h-[44px] items-start gap-3 p-4">
+                {selection && <div className="pt-1">{rowCheckbox(item)}</div>}
+                <div className="min-w-0 flex-1">
+                  {mobileCardRenderer ? (
+                    mobileCardRenderer(item)
+                  ) : (
+                    <div className="space-y-3">
+                      {visibleColumns.map((column) => (
+                        <div
+                          key={column.key}
+                          className="flex min-h-[44px] items-center justify-between"
+                        >
+                          <span className="min-w-0 flex-1 text-sm font-medium text-muted-foreground">
+                            {column.label}:
+                          </span>
+                          <div className="ml-2 flex min-h-[44px] items-center text-right text-sm">
+                            {column.render(item)}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                      ))}
+                    </div>
+                  )}
+                  {content !== null && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 w-full justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleExpanded(id)
+                      }}
+                    >
+                      {isExpanded ? (
+                        <>
+                          <ChevronDown className="mr-1 h-4 w-4" />
+                          Dölj detaljer
+                        </>
+                      ) : (
+                        <>
+                          <ChevronRight className="mr-1 h-4 w-4" />
+                          Visa detaljer
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  {isExpanded && content !== null && (
+                    <div className="mt-2 border-t pt-3">{content}</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     )
   }
@@ -145,6 +192,7 @@ export function ResponsiveTable<T>({
       <Table>
         <TableHeader>
           <TableRow>
+            {expandableContent && <TableHead className="w-[40px]" />}
             {selection && (
               <TableHead className="w-10 px-2">
                 <Checkbox
@@ -195,27 +243,66 @@ export function ResponsiveTable<T>({
         <TableBody>
           {data.map((item) => {
             const id = keyExtractor(item)
+            const content = expandableContent?.(item) ?? null
+            const isExpanded = expandedRows.has(id)
             return (
-              <TableRow
-                key={id}
-                className={cn('min-h-[44px]', onRowClick && 'cursor-pointer')}
-                data-state={selection?.isSelected(id) ? 'selected' : undefined}
-                onClick={onRowClick ? () => onRowClick(item) : undefined}
-              >
-                {selection && (
-                  <TableCell className="px-2 py-3">
-                    {rowCheckbox(item)}
-                  </TableCell>
+              <Fragment key={id}>
+                <TableRow
+                  className={cn('min-h-[44px]', onRowClick && 'cursor-pointer')}
+                  data-state={
+                    selection?.isSelected(id) ? 'selected' : undefined
+                  }
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
+                >
+                  {expandableContent && (
+                    <TableCell className="py-3">
+                      {content !== null && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          aria-label={
+                            isExpanded ? 'Dölj detaljer' : 'Visa detaljer'
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleExpanded(id)
+                          }}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </TableCell>
+                  )}
+                  {selection && (
+                    <TableCell className="px-2 py-3">
+                      {rowCheckbox(item)}
+                    </TableCell>
+                  )}
+                  {columns.map((column) => (
+                    <TableCell
+                      key={column.key}
+                      className={cn(column.className, 'py-3')}
+                    >
+                      {column.render(item)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                {isExpanded && content !== null && (
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableCell
+                      colSpan={columns.length + (selection ? 1 : 0) + 1}
+                      className="py-4"
+                    >
+                      {content}
+                    </TableCell>
+                  </TableRow>
                 )}
-                {columns.map((column) => (
-                  <TableCell
-                    key={column.key}
-                    className={cn(column.className, 'py-3')}
-                  >
-                    {column.render(item)}
-                  </TableCell>
-                ))}
-              </TableRow>
+              </Fragment>
             )
           })}
         </TableBody>

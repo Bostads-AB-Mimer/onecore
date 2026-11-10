@@ -46,6 +46,11 @@ Apart from the core orchestration service, packages belong to one of three categ
 
 `apps/leasing-portal` is the frontend (with its own BFF) for apartment leasing as it moves from Xpand to ONECore. Its pages also run inside property-tree under `/uthyrning`. See [`apps/leasing-portal/frontend/README.md`](apps/leasing-portal/frontend/README.md) and [`apps/leasing-portal/backend/README.md`](apps/leasing-portal/backend/README.md).
 
+### Documentation
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — system architecture overview: apps, services, internal structure
+- For external integrations and incident troubleshooting, see `ONECORE-INTEGRATIONS.md` and `ONECORE-TROUBLESHOOTING.md` in the private `mimer-onecore-operations` repo
+
 ### Getting started
 
 #### Requirements

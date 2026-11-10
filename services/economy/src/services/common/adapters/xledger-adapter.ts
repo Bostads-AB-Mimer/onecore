@@ -8,8 +8,11 @@ import {
   Invoice,
   InvoicePaymentEvent,
   InvoiceTransactionType,
+  MiscellaneousInvoice,
   MiscellaneousInvoiceArticle,
+  MiscellaneousInvoiceBaseItem,
   PaymentStatus,
+  PaymentSyncEvent,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
   XledgerProject,
@@ -19,6 +22,7 @@ import { match, P } from 'ts-pattern'
 
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
+import { InvoiceWithAccounting } from '@src/common/types/typesv2'
 
 const XledgerAuthHeader = {
   Authorization: 'token ' + config.xledger.apiToken,
@@ -59,23 +63,81 @@ const getCallerFromError = (error: Error) => {
 const stringifyGraphQlQuery = (query: XledgerGraphQlQuery) =>
   `Query: ${query.query}${query.variables ? `\nVariables: ${JSON.stringify(query.variables, null, 2)}` : ''}`
 
+// Bounds retry storms. Capped attempts, jittered backoff, a request timeout and a concurrency cap.
+export const xledgerRequestPolicy = { ...config.xledger.requestPolicy }
+
+// Test-only override; production values come from config.
+export const setXledgerRequestPolicy = (
+  policy: Partial<typeof xledgerRequestPolicy>
+) => Object.assign(xledgerRequestPolicy, policy)
+
+// Exponential backoff capped at maxDelayMs, then scaled by a random factor
+// in [0.5, 1.5) so the effective ceiling is 1.5 * maxDelayMs.
+export const retryDelayMs = (attempt: number, random = Math.random) => {
+  const { baseDelayMs, maxDelayMs } = xledgerRequestPolicy
+  const exponential = Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1))
+  return Math.round(exponential * (0.5 + random()))
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+let inFlight = 0
+const waiting: Array<() => void> = []
+
+const acquireSlot = async () => {
+  if (inFlight < xledgerRequestPolicy.maxConcurrency) {
+    inFlight++
+    return
+  }
+  await new Promise<void>((resolve) => waiting.push(resolve))
+}
+
+// Hands the slot straight to the next waiter so inFlight never overshoots.
+const releaseSlot = () => {
+  const next = waiting.shift()
+  if (next) next()
+  else inFlight--
+}
+
 const makeXledgerRequest = async (
   query: XledgerGraphQlQuery,
   attachment?: any // TODO formidable file PersistentFileStorage
 ): Promise<any> => {
-  function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms))
-  }
+  const { maxAttempts } = xledgerRequestPolicy
 
-  const result = await makeXledgerHttpRequest(query, attachment)
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    await acquireSlot()
+    let result: XledgerResponse
+    try {
+      result = await makeXledgerHttpRequest(query, attachment)
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.code === 'ECONNABORTED') {
+        logger.warn(
+          { attempt, timeoutMs: xledgerRequestPolicy.timeoutMs, inFlight },
+          `Xledger request timed out\n${stringifyGraphQlQuery(query)}`
+        )
+      }
+      throw err
+    } finally {
+      releaseSlot()
+    }
 
-  if (result.status === 'ok') {
-    return result.data
-  } else if (result.status === 'retry') {
-    logger.warn('Rate limit exceeded, waiting and retrying')
-    await sleep(3000)
-    return await makeXledgerRequest(query, attachment)
-  } else {
+    if (result.status === 'ok') {
+      return result.data
+    }
+
+    if (result.status === 'retry') {
+      const isLast = attempt === maxAttempts
+      logger.warn(
+        { attempt, maxAttempts, inFlight, queueLength: waiting.length },
+        isLast
+          ? 'Xledger rate limit exceeded, giving up'
+          : 'Xledger rate limit exceeded, waiting and retrying'
+      )
+      if (!isLast) await sleep(retryDelayMs(attempt))
+      continue
+    }
+
     const error = new Error(
       result.data.map((error: any) => error.message).join('\n')
     )
@@ -85,6 +147,8 @@ const makeXledgerRequest = async (
     )
     throw error
   }
+
+  throw new Error(`Xledger rate limit exceeded after ${maxAttempts} attempts`)
 }
 
 const makeXledgerHttpRequest = async (
@@ -94,13 +158,11 @@ const makeXledgerHttpRequest = async (
   let result: axios.AxiosResponse
 
   if (attachment) {
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins
     const formData = new FormData()
 
     const fileBuffer = fs.readFileSync(attachment.filepath)
     formData.append(
       attachment.originalFilename,
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins
       new Blob([fileBuffer]),
       attachment.originalFilename
     )
@@ -110,11 +172,13 @@ const makeXledgerHttpRequest = async (
       headers: {
         ...XledgerAuthHeader,
       },
+      timeout: xledgerRequestPolicy.timeoutMs,
     })
   } else {
     result = await axios(`${config.xledger.url}`, {
       data: query,
       ...axiosOptions,
+      timeout: xledgerRequestPolicy.timeoutMs,
     })
   }
 
@@ -850,7 +914,7 @@ export async function getLatestPaymentCursor(): Promise<string | null> {
 }
 
 export interface PaymentsSinceResult {
-  events: InvoicePaymentEvent[]
+  events: PaymentSyncEvent[]
   lastCursor: string | null
 }
 
@@ -924,10 +988,8 @@ async function fetchPaymentsPage(params: {
     edges.length > 0 ? edges.at(-1).cursor : null
 
   const events = edges
-    .map((e: any) => mapToPaymentSyncEvent(e.node))
-    .filter(
-      (e: InvoicePaymentEvent | null): e is InvoicePaymentEvent => e !== null
-    )
+    .map((e: any) => mapToPaymentSyncEvent(e.node, e.cursor))
+    .filter((e: PaymentSyncEvent | null): e is PaymentSyncEvent => e !== null)
 
   if (result.data.arTransactions.pageInfo.hasNextPage && lastCursor) {
     const next = await fetchPaymentsPage({ after: lastCursor })
@@ -963,7 +1025,10 @@ function resolvePaymentSyncInvoiceId(event: any): string | null {
   return event.invoiceNumber ?? event.extIdentifier ?? null
 }
 
-function mapToPaymentSyncEvent(event: any): InvoicePaymentEvent | null {
+function mapToPaymentSyncEvent(
+  event: any,
+  cursor: string
+): PaymentSyncEvent | null {
   const invoiceId = resolvePaymentSyncInvoiceId(event)
   if (!invoiceId) {
     logger.info(
@@ -987,6 +1052,7 @@ function mapToPaymentSyncEvent(event: any): InvoicePaymentEvent | null {
       : new Date(event.paymentDate),
     text: event.text,
     transactionSourceCode: event.transactionHeader.transactionSource.code,
+    cursor,
   }
 }
 
@@ -1226,6 +1292,135 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
   }
 }
 
+export const getMiscellaneousInvoices = async ({
+  from,
+  to,
+  after,
+  pageSize = 100,
+}: {
+  from?: Date
+  to?: Date
+  after?: string
+  pageSize?: number
+}): Promise<
+  AdapterResult<
+    {
+      content: MiscellaneousInvoice[]
+      pageInfo: { hasNextPage: boolean; endCursor?: string }
+    },
+    'unknown'
+  >
+> => {
+  try {
+    const query = {
+      query: gql`
+        query (
+          $after: String
+          $first: Int
+          $filter: SalesOrder_Filter
+          $orderDirection: OrderDirection = DESC
+        ) {
+          salesOrders(
+            first: $first
+            after: $after
+            filter: $filter
+            orderBy: { field: CREATED_AT, direction: $orderDirection }
+          ) {
+            edges {
+              cursor
+              node {
+                invoiceDate
+                invoiceNumber
+                ourRef {
+                  name
+                }
+                subledger {
+                  code
+                }
+                invoiceAmount
+                headerInfo
+                invoiceFile {
+                  url
+                }
+                invoiceBaseItems(first: 100) {
+                  edges {
+                    node {
+                      text
+                      amount
+                      quantity
+                      unitPrice
+                      glObject1 {
+                        code
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            pageInfo {
+              hasNextPage
+            }
+          }
+        }
+      `,
+      variables: {
+        after: after ?? null,
+        first: pageSize,
+        filter: {
+          invoiceDate_gte: from ? dateToGraphQlDateString(from) : undefined,
+          invoiceDate_lte: to ? dateToGraphQlDateString(to) : undefined,
+        },
+      },
+    }
+
+    const result = await makeXledgerRequest(query)
+
+    if (!result.data?.salesOrders?.edges) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    const content = result.data.salesOrders.edges.map((e: any) =>
+      transformToMiscellaneousInvoice(e.node)
+    )
+    const lastEdge = result.data.salesOrders.edges.at(-1)
+    const pageInfo = {
+      hasNextPage: result.data.salesOrders.pageInfo.hasNextPage,
+      endCursor: lastEdge?.cursor,
+    }
+
+    return { ok: true, data: { content, pageInfo } }
+  } catch (err) {
+    logger.error(err, 'Error getting sales orders from Xledger')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const transformToMiscellaneousInvoice = (node: any): MiscellaneousInvoice => {
+  return {
+    invoiceId: node.invoiceNumber,
+    amount: node.invoiceAmount,
+    invoiceBaseItems: node.invoiceBaseItems?.edges?.map((e: any) =>
+      transformToMiscellaneousInvoiceBaseItem(e.node)
+    ),
+    invoiceDate: new Date(node.invoiceDate),
+    reference: node.subledger.code,
+    ourReference: node.ourRef?.name,
+    description: node.headerInfo,
+    invoiceFileUrl: node.invoiceFile?.url,
+  }
+}
+
+const transformToMiscellaneousInvoiceBaseItem = (
+  node: any
+): MiscellaneousInvoiceBaseItem => {
+  return {
+    text: node.text,
+    amount: node.amount,
+    quantity: node.quantity,
+    unitPrice: node.unitPrice,
+    costCentre: node.glObject1?.code ?? null,
+  }
+}
 export const createCustomerLedgerRow = (
   invoiceDataRows: InvoiceDataRow[],
   batchId: string,
@@ -1283,33 +1478,45 @@ export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
   }
 }
 
-const getTaxRule = (totalAmount: number, totalVat: number, account: string) => {
-  const vatRate = Math.round((totalVat * 100) / (totalAmount - totalVat))
+const getTaxRuleFromPercentage = (vatPercentage: number, account: string) => {
   const accounts208 = ['3012', '3014', '3016']
 
-  switch (vatRate) {
-    case 25:
-      return accounts208.includes(account) ? '208' : '2'
-    case 12:
-      return '21'
-    case 6:
-      return '22'
+  switch (vatPercentage) {
+    case 0.25:
+      return accounts208.includes(account) ? '208N' : '2N'
+    case 0.12:
+      return '21N'
+    case 0.06:
+      return '22N'
     default:
       return ''
   }
 }
 
-export const getPeriodInformation = (
-  invoiceDate: Date | null,
-  fromDate: Date,
-  toDate: Date
+export const setInvoiceRowsTaxRule = (invoice: InvoiceWithAccounting) => {
+  invoice.invoiceRows.forEach((row) => {
+    if (row.vat && row.vat !== 0) {
+      row.taxRule = getTaxRuleFromPercentage(row.vat, row.account ?? '')
+    }
+  })
+}
+
+export const getPeriodInformationFromDateStrings = (
+  invoiceDate: string | null,
+  fromDate: string,
+  toDate: string
 ): { periodStart: string; periods: string } => {
   if (!invoiceDate) {
     invoiceDate = fromDate
   }
 
-  const toStart = fromDate.getMonth() - invoiceDate.getMonth()
-  const invoiceInterval = toDate.getMonth() - fromDate.getMonth()
+  // Months since year 0 for a "YYYY-MM-DD" string, so differences stay
+  // correct across New Year.
+  const monthIndex = (date: string) =>
+    parseInt(date.substring(0, 4)) * 12 + parseInt(date.substring(5, 7))
+
+  const toStart = monthIndex(fromDate) - monthIndex(invoiceDate)
+  const invoiceInterval = monthIndex(toDate) - monthIndex(fromDate)
 
   const periodInformation = {
     periodStart: toStart == 0 ? '' : toStart.toString(),
@@ -1322,54 +1529,12 @@ export const getPeriodInformation = (
   return periodInformation
 }
 
-export const transformAggregatedInvoiceRow = (
-  invoiceRow: InvoiceDataRow,
-  chunkNumber: number
-): InvoiceDataRow => {
-  const periodInformation = getPeriodInformation(
-    null,
-    dateFromXledgerDateString(invoiceRow.InvoiceFromDate as string),
-    dateFromXledgerDateString(invoiceRow.InvoiceToDate as string)
-  )
-
-  const transformedRow = {
-    voucherType: 'AR',
-    voucherNo:
-      '1' +
-      invoiceRow.BatchId.toString().padStart(5, '0') +
-      chunkNumber.toString().padStart(3, '0'),
-    voucherDate: invoiceRow.InvoiceFromDate,
-    account: invoiceRow.Account,
-    posting1: invoiceRow.CostCode,
-    posting2: invoiceRow.ProjectCode,
-    posting3: invoiceRow.Property,
-    posting4: invoiceRow.FreeCode,
-    posting5: invoiceRow.CounterPart,
-    periodStart: periodInformation.periodStart,
-    noOfPeriods: periodInformation.periods,
-    subledgerNo: '',
-    invoiceDate: '',
-    invoiceNo: '',
-    ocr: '',
-    dueDate: '',
-    text: '',
-    taxRule: getTaxRule(
-      invoiceRow.totalAmount as number,
-      invoiceRow.totalVat as number,
-      invoiceRow.Account as string
-    ).toString(),
-    amount: -invoiceRow.totalAmount,
-    totalAccount: invoiceRow.TotalAccount,
-  }
-
-  return transformedRow
-}
-
 export const uploadFile = async (filename: string, csvFile: string) => {
   const sftpConfig: SftpClient.ConnectOptions = {
     host: config.xledger.sftp.host,
     username: config.xledger.sftp.username,
     password: config.xledger.sftp.password,
+    port: config.xledger.sftp.port,
   }
 
   if (config.xledger.sftp.useSshDss) {
@@ -1401,6 +1566,7 @@ export const uploadFile = async (filename: string, csvFile: string) => {
     await sftp.connect(sftpConfig)
     await sftp.put(stream, remoteDir + '/' + filename)
   } catch (err) {
+    logger.error({ err }, 'SFTP Error')
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
     await sftp.end()

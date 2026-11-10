@@ -1,5 +1,9 @@
 import KoaRouter from '@koa/router'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import {
+  logger,
+  generateRouteMetadata,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import { LeaseType, property } from '@onecore/types'
 import { z } from 'zod'
 
@@ -16,6 +20,7 @@ import { routes as marketAreaRoutes } from './market-areas'
 import { routes as propertyKvvAreaRoutes } from './property-kvv-area'
 import { routes as propertyTreeRoutes } from './property-tree'
 import { routes as rentalObjectRoutes } from './rental-objects'
+import { routes as rentalObjectExportRoutes } from './rental-objects-export'
 
 /**
  * @swagger
@@ -52,6 +57,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Property', schemas.PropertySchema)
   registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
+  registerSchema('ResidenceMedia', property.ResidenceMediaSchema)
   registerSchema('ResidenceSummary', schemas.ResidenceSummarySchema)
   registerSchema('Staircase', schemas.StaircaseSchema)
   registerSchema('Room', schemas.RoomSchema)
@@ -63,6 +69,10 @@ export const routes = (router: KoaRouter) => {
   registerSchema(
     'RentalBlockWithRentalObject',
     schemas.RentalBlockWithRentalObjectSchema
+  )
+  registerSchema(
+    'RentalIdsWithBlockResponse',
+    schemas.RentalIdsWithBlockResponseSchema
   )
   registerSchema('FacilitySearchResult', schemas.FacilitySearchResultSchema)
   registerSchema('ResidenceSearchResult', schemas.ResidenceSearchResultSchema)
@@ -174,6 +184,7 @@ export const routes = (router: KoaRouter) => {
   marketAreaRoutes(router)
   propertyKvvAreaRoutes(router)
   rentalObjectRoutes(router)
+  rentalObjectExportRoutes(router)
   propertyTreeRoutes(router)
 
   /**
@@ -1071,6 +1082,84 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /residences/by-rental-id/{rentalId}/media:
+   *   get:
+   *     summary: Get published photos and energy declaration for a residence
+   *     description: |
+   *       Returns 200 with an empty list when nothing is published. imageLevel
+   *       is 'shared' when the photos are published for a coarser code level
+   *       and may show the building rather than this residence.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Rental id of the residence
+   *     responses:
+   *       200:
+   *         description: The published media, empty when nothing is published.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - content
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ResidenceMedia'
+   *       400:
+   *         description: The rental id does not have the residence code format.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: invalid-rental-id
+   *       500:
+   *         description: Internal server error.
+   *       503:
+   *         description: The public media host could not be reached.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: media-unavailable
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/residences/by-rental-id/:rentalId/media', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await propertyBaseAdapter.getResidenceMedia(
+      ctx.params.rentalId
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+      return
+    }
+
+    if (result.err === 'invalid-rental-id') {
+      ctx.status = 400
+    } else if (result.err === 'media-unavailable') {
+      ctx.status = 503
+    } else {
+      ctx.status = 500
+    }
+    ctx.body = { reason: result.err, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /residences/by-rental-id/{rentalId}/malar-energi-facility-id:
    *   put:
    *     summary: Update or add a residence's Mälarenergi facility id.
@@ -1641,6 +1730,76 @@ export const routes = (router: KoaRouter) => {
         ...getAllRentalBlocksResult.data,
         ...metadata,
       }
+    } catch (error) {
+      logger.error({ error, metadata }, 'Internal server error')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/rental-ids:
+   *   get:
+   *     summary: Rental ids carrying a matching rental block
+   *     description: >
+   *       Lean bulk lookup - distinct rental ids only, no pagination or
+   *       enrichment. Used by Odoo to render the "Spärr skadedjur" badge on
+   *       every kanban card from a single call.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason caption (supports multiple values)
+   *       - in: query
+   *         name: active
+   *         schema:
+   *           type: boolean
+   *         description: true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, all blocks.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved rental ids
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/RentalIdsWithBlockResponse'
+   *       400:
+   *         description: Invalid query parameters
+   *       500:
+   *         description: Internal server error
+   */
+  router.get('(.*)/residences/rental-blocks/rental-ids', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const queryParams =
+      schemas.GetRentalIdsWithBlockQueryParamsSchema.safeParse(ctx.query)
+
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = { error: queryParams.error.errors, ...metadata }
+      return
+    }
+
+    try {
+      const result = await propertyBaseAdapter.getRentalIdsWithBlock(
+        queryParams.data
+      )
+
+      if (!result.ok) {
+        logger.error({ err: result.err, metadata }, 'Internal server error')
+        ctx.status = 500
+        ctx.body = { error: 'Internal server error', ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
     } catch (error) {
       logger.error({ error, metadata }, 'Internal server error')
       ctx.status = 500

@@ -1,7 +1,12 @@
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
-import type { KeyLoan, KeyDetails, CardDetails } from '@/services/types'
+import type {
+  KeyLoan,
+  KeyDetails,
+  CardDetails,
+  MoveInOutStatus,
+} from '@/services/types'
 import {
   KeyTypeLabels,
   KeyEventTypeLabels,
@@ -325,11 +330,11 @@ interface ItemTypeBadgeProps {
 /**
  * Badge showing the type of key or card.
  * For keys: Shows the key type label (Huvudnyckel, Fastighet, etc.)
- * For cards: Shows "Droppe"
+ * For cards: Shows "Tagg"
  */
 export function ItemTypeBadge({ itemType }: ItemTypeBadgeProps) {
   if (itemType === 'CARD') {
-    return <Badge variant="secondary">Droppe</Badge>
+    return <Badge variant="secondary">Tagg</Badge>
   }
   const label =
     KeyTypeLabels[itemType as keyof typeof KeyTypeLabels] || itemType
@@ -417,4 +422,47 @@ export function KeySystemTypeBadge({ type }: KeySystemTypeBadgeProps) {
   const label = KeySystemTypeLabels[type] || type
   const variant = getKeySystemTypeVariant(type)
   return <Badge variant={variant}>{label}</Badge>
+}
+
+// ============================================
+// Move-in / move-out Status Badge
+// ============================================
+
+// Key order is the handover order and drives the status filter list
+export const MoveInOutStatusLabels: Record<MoveInOutStatus, string> = {
+  NOT_RETURNED: 'Ej återlämnat',
+  LOANED_TO_OTHER: 'Utlånat till annan',
+  RETURNED_AWAITING_LOAN: 'Återlämnat, ej utlånat',
+  CREATED: 'Lån skapat',
+  PARTIAL: 'Delvis utlämnat',
+  HANDED_OUT: 'Utlämnat',
+  RETURNED_VACANT: 'Återlämnat, vakant',
+  NO_LOANS: 'Inget lån',
+  NO_KEYS: 'Inga nycklar',
+  UNKNOWN: 'Okänt',
+}
+
+const moveInOutVariant: Record<
+  MoveInOutStatus,
+  'destructive' | 'warning' | 'success' | 'secondary' | 'outline'
+> = {
+  NOT_RETURNED: 'destructive',
+  LOANED_TO_OTHER: 'destructive',
+  RETURNED_AWAITING_LOAN: 'warning',
+  CREATED: 'warning',
+  PARTIAL: 'secondary',
+  HANDED_OUT: 'success',
+  RETURNED_VACANT: 'success',
+  NO_LOANS: 'outline',
+  NO_KEYS: 'outline',
+  UNKNOWN: 'warning',
+}
+
+/** Badge for the derived key status of a move-in/move-out row */
+export function MoveInOutStatusBadge({ status }: { status: MoveInOutStatus }) {
+  return (
+    <Badge variant={moveInOutVariant[status]} className="whitespace-nowrap">
+      {MoveInOutStatusLabels[status]}
+    </Badge>
+  )
 }

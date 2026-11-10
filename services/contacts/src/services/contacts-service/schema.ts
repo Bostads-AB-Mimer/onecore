@@ -74,6 +74,9 @@ export const ContactAddressSchema = z.object({
 export const ContactBaseSchema = z.object({
   contactCode: z.string(),
   contactKey: z.string(),
+  // Skyddad identitet. Reported even when the data is not redacted (tenants
+  // and invoice recipients, whose Xpand data is already anonymised).
+  protectedIdentity: z.boolean(),
   communication: ContactCommunicationSchema,
   addresses: z.array(ContactAddressSchema),
   relatedContacts: z.array(RelatedContactSchema).optional(),
