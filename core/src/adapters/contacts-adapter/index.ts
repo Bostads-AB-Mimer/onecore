@@ -166,12 +166,22 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
         includeEmail?: boolean
         includeAddress?: boolean
         includeRelations?: boolean
+        /**
+         * Every code is a tenant verified against Tenfast, so protected
+         * identities come back unredacted. Set only by revealProtectedTenants.
+         */
+        verifiedTenants?: boolean
       }
     ): Promise<AdapterResult<Contact[], 'unknown'>> {
       if (contactCodes.length === 0) return { ok: true, data: [] }
 
-      const { includePhone, includeEmail, includeAddress, includeRelations } =
-        options ?? {}
+      const {
+        includePhone,
+        includeEmail,
+        includeAddress,
+        includeRelations,
+        verifiedTenants,
+      } = options ?? {}
 
       const CHUNK_SIZE = 500
       const BATCH_CONCURRENCY = 5
@@ -190,6 +200,7 @@ export const makeContactsAdapter = (contactsServiceUrl: string) => {
               includeEmail,
               includeAddress,
               includeRelations,
+              verifiedTenants,
             },
             paramsSerializer: { indexes: null },
           }).then(listResponse),

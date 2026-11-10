@@ -15,7 +15,6 @@ const row = (overrides: Partial<DbContactRow> = {}): DbContactRow => ({
   city: '',
   protectedIdentity: null,
   specialAttention: undefined,
-  isLeaseHolder: 0,
   addressId: '_ADR',
   adress1: 'Exempelvägen 1',
   adress3: '722 99',
@@ -50,10 +49,11 @@ describe('transformDbContactRows: protected identity', () => {
     expect(contact.addresses).toEqual([])
   })
 
-  it('does not redact a protected tenant', () => {
-    const [contact] = transformDbContactRows([
-      row({ ...protectedRow, isLeaseHolder: 1 }),
-    ])
+  it('does not redact a protected contact whose code is exempt', () => {
+    const [contact] = transformDbContactRows(
+      [row(protectedRow)],
+      new Set(['P123456'])
+    )
 
     expect(contact.protectedIdentity).toBe(true)
     expect(contact.type === 'individual' && contact.personal.fullName).toBe(

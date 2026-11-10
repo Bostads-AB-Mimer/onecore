@@ -44,6 +44,7 @@ import {
 
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
+import * as leasesAdapter from '../../../adapters/leasing-adapter/leases'
 import * as propertyBaseAdapter from '../../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import { contactsAdapter } from '../../../adapters/contacts-adapter'
@@ -193,13 +194,16 @@ describe('leases routes', () => {
     })
 
     it('responds with a list of leases for valid query parameters', async () => {
+      const tenant = factory.contactsServiceContact.build()
       jest
-        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-        .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({ ok: true, data: [tenant] })
 
       const getLeasesByContactCodeSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
-        .mockResolvedValue([leaseMock])
+        .mockResolvedValue([
+          { ...leaseMock, tenantContactIds: [tenant.contactCode] },
+        ])
 
       const res = await request(app.callback()).get(
         '/leases/by-contact-code/123?status=current,upcoming,about-to-end&includeContacts=true'
@@ -248,8 +252,8 @@ describe('leases routes', () => {
     })
 
     describe('with a sublet tenant', () => {
-      const firstHand = factory.contact.build()
-      const sublet = factory.contact.build()
+      const firstHand = factory.contactsServiceContact.build()
+      const sublet = factory.contactsServiceContact.build()
       const subletLease = factory.lease.build({
         tenantContactIds: [firstHand.contactCode],
         subletContactId: sublet.contactCode,
@@ -263,28 +267,35 @@ describe('leases routes', () => {
       })
 
       it('adds the sublet contact tagged as subletTenant', async () => {
-        jest
-          .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-          .mockResolvedValueOnce({ ok: true, data: firstHand })
-          .mockResolvedValueOnce({ ok: true, data: sublet })
+        const getContactsSpy = jest
+          .spyOn(contactsAdapter, 'getByContactCodeBatch')
+          .mockResolvedValue({ ok: true, data: [firstHand, sublet] })
 
         const res = await request(app.callback()).get(url)
 
         expect(res.status).toBe(200)
+        expect(getContactsSpy).toHaveBeenCalledTimes(1)
+        expect(getContactsSpy).toHaveBeenCalledWith(
+          [firstHand.contactCode, sublet.contactCode],
+          { includePhone: true, includeEmail: true, includeAddress: true }
+        )
         expect(res.body.content[0].tenants).toEqual([
-          expect.objectContaining({ contactCode: firstHand.contactCode }),
+          expect.objectContaining({
+            contactCode: firstHand.contactCode,
+            isTenant: true,
+          }),
           expect.objectContaining({
             contactCode: sublet.contactCode,
             leaseContactType: 'subletTenant',
+            isTenant: false,
           }),
         ])
       })
 
       it('returns the lease without the sublet contact when that contact does not exist', async () => {
         jest
-          .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-          .mockResolvedValueOnce({ ok: true, data: firstHand })
-          .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+          .spyOn(contactsAdapter, 'getByContactCodeBatch')
+          .mockResolvedValue({ ok: true, data: [firstHand] })
 
         const res = await request(app.callback()).get(url)
 
@@ -295,27 +306,110 @@ describe('leases routes', () => {
         expect(res.body.content[0].subletContactId).toBe(sublet.contactCode)
       })
 
-      it('fails when the sublet contact lookup fails', async () => {
+      it('fails when the contact lookup fails', async () => {
         jest
-          .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-          .mockResolvedValueOnce({ ok: true, data: firstHand })
-          .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+          .spyOn(contactsAdapter, 'getByContactCodeBatch')
+          .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
+
+        const res = await request(app.callback()).get(url)
+
+        expect(res.status).toBe(500)
+        expect(res.body.error).toBe('unknown')
+      })
+
+      it('still fails when a first-hand tenant cannot be found', async () => {
+        jest
+          .spyOn(contactsAdapter, 'getByContactCodeBatch')
+          .mockResolvedValue({ ok: true, data: [sublet] })
 
         const res = await request(app.callback()).get(url)
 
         expect(res.status).toBe(500)
         expect(res.body.error).toBe('no-contact')
       })
+    })
 
-      it('still fails when a first-hand tenant cannot be found', async () => {
+    describe('with a tenant with protected identity', () => {
+      const redacted = factory.contactsServiceContact.build({
+        protectedIdentity: true,
+        personal: {
+          nationalId: 'redacted',
+          birthDate: 'redacted',
+          firstName: 'redacted',
+          lastName: 'redacted',
+          fullName: 'redacted',
+        },
+        communication: {
+          phoneNumbers: [],
+          emailAddresses: [],
+          specialAttention: false,
+        },
+        addresses: [],
+      })
+      const unredacted = factory.contactsServiceContact.build({
+        contactCode: redacted.contactCode,
+        protectedIdentity: true,
+      })
+      const lease = factory.lease.build({
+        tenantContactIds: [redacted.contactCode],
+      })
+      const url = `/leases/by-contact-code/${redacted.contactCode}?includeContacts=true`
+
+      beforeEach(() => {
         jest
-          .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-          .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+          .spyOn(tenantLeaseAdapter, 'getLeasesByContactCode')
+          .mockResolvedValue([lease])
+      })
+
+      it('shows the tenant when Tenfast has a lease for them', async () => {
+        jest
+          .spyOn(leasesAdapter, 'getLeasesByContactCode')
+          .mockResolvedValue([lease])
+        const getContactsSpy = jest
+          .spyOn(contactsAdapter, 'getByContactCodeBatch')
+          .mockResolvedValueOnce({ ok: true, data: [redacted] })
+          .mockResolvedValueOnce({ ok: true, data: [unredacted] })
 
         const res = await request(app.callback()).get(url)
 
-        expect(res.status).toBe(500)
-        expect(res.body.error).toBe('no-contact')
+        expect(res.status).toBe(200)
+        expect(getContactsSpy).toHaveBeenLastCalledWith(
+          [redacted.contactCode],
+          expect.objectContaining({ verifiedTenants: true })
+        )
+        expect(res.body.content[0].tenants).toEqual([
+          expect.objectContaining({
+            contactCode: redacted.contactCode,
+            fullName: unredacted.personal.fullName,
+            protectedIdentity: true,
+            protectedIdentityDetails: 'shown',
+          }),
+        ])
+      })
+
+      it('responds 200 with the tenant redacted when they are not a tenant in Tenfast', async () => {
+        jest
+          .spyOn(leasesAdapter, 'getLeasesByContactCode')
+          .mockResolvedValue([])
+        jest
+          .spyOn(contactsAdapter, 'getByContactCodeBatch')
+          .mockResolvedValue({ ok: true, data: [redacted] })
+
+        const res = await request(app.callback()).get(url)
+
+        expect(res.status).toBe(200)
+        expect(res.body.content[0].tenants).toEqual([
+          expect.objectContaining({
+            contactCode: redacted.contactCode,
+            firstName: null,
+            lastName: null,
+            fullName: null,
+            nationalRegistrationNumber: '',
+            birthDate: null,
+            protectedIdentity: true,
+            protectedIdentityDetails: 'withheld',
+          }),
+        ])
       })
     })
   })
@@ -389,15 +483,21 @@ describe('leases routes', () => {
         .spyOn(tenantLeaseAdapter, 'getLease')
         .mockResolvedValue({ ...leaseMock, tenantContactIds: ['123'] })
 
-      const getContactSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
-        .mockResolvedValue({ ok: true, data: factory.contact.build() })
+      const getContactsSpy = jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({
+          ok: true,
+          data: [factory.contactsServiceContact.build({ contactCode: '123' })],
+        })
 
       const res = await request(app.callback()).get(
         '/leases/1337?includeContacts=true'
       )
-      expect(getContactSpy).toHaveBeenCalledWith('123')
+      expect(getContactsSpy).toHaveBeenCalledWith(['123'], expect.any(Object))
       expect(res.status).toBe(200)
+      expect(res.body.content.tenants).toEqual([
+        expect.objectContaining({ contactCode: '123' }),
+      ])
       expect(() => LeaseSchema.parse(res.body.content)).not.toThrow()
     })
 

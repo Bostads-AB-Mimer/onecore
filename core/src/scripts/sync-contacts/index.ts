@@ -17,6 +17,7 @@ import {
   type SyncStep,
 } from '../../processes/sync-steps'
 import { ProcessStatus } from '../../common/types'
+import { revealProtectedTenants } from '../../processes/contacts'
 import { ContactSyncPayloadSchema, toSyncPayload } from './payload'
 import { runCmlogSync, SyncFailedError } from '../shared/run-cmlog-sync'
 
@@ -85,10 +86,24 @@ export const syncContacts = (
       name: 'sync-contacts',
       entryType: 'contact',
       firstRun: 'sync-all',
-      fetchChanges: (since) =>
-        makeContactsAdapter(config.contactsService.url).getUpdatedContacts(
-          since
-        ),
+      fetchChanges: async (since) => {
+        const result = await makeContactsAdapter(
+          config.contactsService.url
+        ).getUpdatedContacts(since)
+        if (!result.ok) return result
+        // Protected tenants go to Xledger, Odoo and Tenfast unredacted.
+        // revealProtectedTenants keeps order, so index i is update i.
+        const contacts = await revealProtectedTenants(
+          result.data.map((update) => update.contact)
+        )
+        return {
+          ...result,
+          data: result.data.map((update, i) => ({
+            ...update,
+            contact: contacts[i],
+          })),
+        }
+      },
       sync: syncContact,
       keyFor: (update) =>
         `${update.contact.contactCode}:${update.timestamp.toISOString()}`,

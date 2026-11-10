@@ -27,7 +27,13 @@ import {
 import { paginatedResponseSchema, WaitingListType } from '@onecore/types'
 
 import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
-import { addRelation, removeRelation } from '../../../processes/contacts'
+import {
+  addRelation,
+  removeRelation,
+  revealProtectedTenant,
+  revealProtectedTenantList,
+  revealProtectedTenants,
+} from '../../../processes/contacts'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import { makeClientApplicationProfileRequestParams } from '../../../services/lease-service/helpers/application-profile'
 import { transformContact, transformContacts } from './transform'
@@ -83,6 +89,9 @@ export const routes = (router: OkapiRouter, config: Config) => {
   const contactsServiceUrl = config.contactsService.url
 
   const contactsAdapter = makeContactsAdapter(contactsServiceUrl)
+  // Protected identities with a lease in Tenfast are returned unredacted, so
+  // every read below passes through these (see revealProtectedTenants).
+  const revealDeps = { contacts: contactsAdapter }
 
   const encodeError = (
     ctx: ParameterizedContext,
@@ -339,7 +348,9 @@ export const routes = (router: OkapiRouter, config: Config) => {
         ctx.status = 200
         ctx.body = {
           ...response.data,
-          content: transformContacts(response.data.content),
+          content: transformContacts(
+            await revealProtectedTenants(response.data.content, revealDeps)
+          ),
         }
       } else {
         const metadata = generateRouteMetadata(ctx)
@@ -389,7 +400,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
         return
       }
 
-      const result = await contactsAdapter.getByContactCodes(codes)
+      const result = await revealProtectedTenantList(
+        await contactsAdapter.getByContactCodes(codes),
+        revealDeps
+      )
 
       if (result.ok) {
         ctx.status = 200
@@ -453,12 +467,15 @@ export const routes = (router: OkapiRouter, config: Config) => {
         includeRelations,
       } = ctx.query
 
-      const response = await contactsAdapter.getByContactCodeBatch(code, {
-        includePhone,
-        includeEmail,
-        includeAddress,
-        includeRelations,
-      })
+      const response = await revealProtectedTenantList(
+        await contactsAdapter.getByContactCodeBatch(code, {
+          includePhone,
+          includeEmail,
+          includeAddress,
+          includeRelations,
+        }),
+        revealDeps
+      )
 
       encodeListResponse(ctx, response)
     }
@@ -483,7 +500,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
     async (ctx) => {
       const { contactCode } = ctx.params
 
-      const response = await contactsAdapter.getByContactCode(contactCode)
+      const response = await revealProtectedTenant(
+        await contactsAdapter.getByContactCode(contactCode),
+        revealDeps
+      )
 
       encodeSingleResponse(ctx, response)
     }
@@ -508,8 +528,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
     async (ctx) => {
       const { contactCode } = ctx.params
 
-      const response =
-        await contactsAdapter.getByTrusteeOfContactCode(contactCode)
+      const response = await revealProtectedTenant(
+        await contactsAdapter.getByTrusteeOfContactCode(contactCode),
+        revealDeps
+      )
 
       encodeSingleResponse(ctx, response)
     }
@@ -811,7 +833,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
     async (ctx) => {
       const { phoneNumber } = ctx.params
 
-      const response = await contactsAdapter.listByPhoneNumber(phoneNumber)
+      const response = await revealProtectedTenantList(
+        await contactsAdapter.listByPhoneNumber(phoneNumber),
+        revealDeps
+      )
 
       encodeListResponse(ctx, response)
     }
@@ -836,7 +861,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
     async (ctx) => {
       const { emailAddress } = ctx.params
 
-      const response = await contactsAdapter.listByEmailAddress(emailAddress)
+      const response = await revealProtectedTenantList(
+        await contactsAdapter.listByEmailAddress(emailAddress),
+        revealDeps
+      )
 
       encodeListResponse(ctx, response)
     }
@@ -861,7 +889,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
     async (ctx) => {
       const { nid } = ctx.params
 
-      const response = await contactsAdapter.getByNationalId(nid)
+      const response = await revealProtectedTenant(
+        await contactsAdapter.getByNationalId(nid),
+        revealDeps
+      )
 
       encodeSingleResponse(ctx, response)
     }
