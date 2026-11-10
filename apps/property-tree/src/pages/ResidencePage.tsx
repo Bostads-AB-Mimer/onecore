@@ -4,7 +4,7 @@ import { ResidenceTabs } from '@/widgets/residence-tabs'
 
 import { ResidenceBasicInfo, useResidenceDetails } from '@/features/residences'
 
-import { Lease } from '@/services/api/core'
+import { findActiveLease } from '@/entities/lease'
 
 import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
@@ -22,7 +22,7 @@ export const ResidencePage = () => {
     objectRent,
   } = useResidenceDetails(rentalId!)
 
-  const currentLease: Lease | undefined = leases?.[0] as Lease
+  const currentLease = findActiveLease(leases)
 
   return (
     <ViewLayout>
