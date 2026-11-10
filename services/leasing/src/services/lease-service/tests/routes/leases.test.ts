@@ -386,7 +386,8 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
       '216-704-00-0022/02',
       'P12345',
       new Date('2025-12-31T00:00:00.000Z'),
-      new Date('2025-12-31T00:00:00.000Z')
+      new Date('2025-12-31T00:00:00.000Z'),
+      'Uppsägning av hyresgäst'
     )
   })
 
@@ -407,8 +408,49 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
       '123-456',
       'P12345',
       expect.any(Date),
-      expect.any(Date)
+      expect.any(Date),
+      'Uppsägning av hyresgäst'
     )
+  })
+
+  it('should pass a given reason on to the adapter', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'preliminaryTerminateLease')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { message: 'Signerings begäran skickad' },
+      })
+
+    const res = await request(app.callback())
+      .post('/leases/234-567/preliminary-termination')
+      .send({ ...validRequestBody, reason: 'Flyttar till annan ort' })
+
+    expect(res.status).toBe(200)
+    expect(tenfastAdapter.preliminaryTerminateLease).toHaveBeenCalledWith(
+      '234-567',
+      'P12345',
+      expect.any(Date),
+      expect.any(Date),
+      'Flyttar till annan ort'
+    )
+  })
+
+  it('should return 400 if reason is blank', async () => {
+    const res = await request(app.callback())
+      .post('/leases/234-567/preliminary-termination')
+      .send({ ...validRequestBody, reason: '   ' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.data).toMatchObject([{ path: ['reason'] }])
+  })
+
+  it('should return 400 if reason is longer than 60 characters', async () => {
+    const res = await request(app.callback())
+      .post('/leases/234-567/preliminary-termination')
+      .send({ ...validRequestBody, reason: 'a'.repeat(61) })
+
+    expect(res.status).toBe(400)
+    expect(res.body.data).toMatchObject([{ path: ['reason'] }])
   })
 })
 
@@ -715,6 +757,35 @@ describe('POST /leases', () => {
 
     expect(res.status).toBe(500)
     expect(res.body.error).toBe('lease-could-not-be-created')
+  })
+
+  it('returns 400 without creating a lease when fromDate is not a valid date', async () => {
+    const createLeaseSpy = jest.spyOn(tenfastAdapter, 'createLease')
+
+    const res = await request(app.callback())
+      .post('/leases')
+      .send({ ...validRequestBody, fromDate: 'not-a-date' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('invalid-from-date')
+    expect(createLeaseSpy).not.toHaveBeenCalled()
+    createLeaseSpy.mockRestore()
+  })
+
+  it('returns 409 when the rental object is not available', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+    jest
+      .spyOn(tenfastAdapter, 'createLease')
+      .mockResolvedValueOnce({ ok: false, err: 'rental-object-not-available' })
+
+    const res = await request(app.callback())
+      .post('/leases')
+      .send(validRequestBody)
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toBe('rental-object-not-available')
   })
 
   it('calls createLease with correct arguments', async () => {

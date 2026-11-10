@@ -20,6 +20,7 @@ export const InvoiceRowSchema = z.object({
   toDate: z.string(),
   totalAmount: z.number(),
   vat: z.number(),
+  rentalObject: z.string().optional(),
 })
 
 export const InvoiceDeferralSchema = z.object({
@@ -51,8 +52,11 @@ export const PaymentSyncEventSchema = InvoicePaymentEventSchema.extend({
 
 export const InvoiceSchema = z.object({
   invoiceId: z.string(),
+  externalId: z.string().optional(),
   leaseIds: z.string().array(),
   amount: z.number(),
+  recipientContactCode: z.string().optional(),
+  recipientName: z.string().optional(),
   reference: z.string(),
   fromDate: z.coerce.date(),
   toDate: z.coerce.date(),
@@ -64,6 +68,7 @@ export const InvoiceSchema = z.object({
   transactionType: InvoiceTransactionTypeSchema,
   transactionTypeName: z.string(),
   paidAmount: z.number().optional(),
+  roundoff: z.number().optional(),
   daysSinceLastDebitDate: z.number().optional(),
   description: z.string().optional(),
   sentToDebtCollection: z.coerce.date().optional(),
@@ -75,6 +80,10 @@ export const InvoiceSchema = z.object({
   credit: z.object({ originalInvoiceId: z.string() }).nullable(),
   accountCode: z.string().optional(),
   expectedLoss: z.boolean().optional(),
+  totalVat6: z.number().optional(),
+  totalVat12: z.number().optional(),
+  totalVat25: z.number().optional(),
+  totalVat: z.number().optional(),
   matchId: z.number().optional(), // TODO ska denna finnas i Invoice?
   costCentre: z.string().optional(), // TODO ska denna finnas i Invoice?
 })

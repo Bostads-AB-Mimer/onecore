@@ -204,6 +204,7 @@ describe(adapter.getInvoicesByContactCode, () => {
                   invoiceRemaining: 100,
                   subledger: {
                     code: 'code',
+                    description: 'Test Tenant',
                   },
                   period: {
                     fromDate: '2025-01-01',
@@ -955,6 +956,98 @@ describe(adapter.submitMiscellaneousInvoice, () => {
     const result = await adapter.submitMiscellaneousInvoice(invoice)
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(adapter.getPeriodInformationFromDateStrings, () => {
+  it('returns empty values for a single-month period invoiced in the same month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-01',
+      '2026-03-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '' })
+  })
+
+  it('uses fromDate as invoice date when invoiceDate is null', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      null,
+      '2026-03-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '' })
+  })
+
+  it('returns number of periods for a multi-month period starting in the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-01-15',
+      '2026-01-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '3' })
+  })
+
+  it('returns offset to period start when the period starts after the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-20',
+      '2026-04-01',
+      '2026-04-30'
+    )
+
+    expect(result).toEqual({ periodStart: '1', periods: '1' })
+  })
+
+  it('returns offset and number of periods for a multi-month period starting after the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-20',
+      '2026-05-01',
+      '2026-07-31'
+    )
+
+    expect(result).toEqual({ periodStart: '2', periods: '3' })
+  })
+
+  it('returns a negative offset when the period starts before the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-05-10',
+      '2026-04-01',
+      '2026-04-30'
+    )
+
+    expect(result).toEqual({ periodStart: '-1', periods: '1' })
+  })
+
+  it('counts the offset across New Year when the period starts in the next year', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2025-12-20',
+      '2026-01-01',
+      '2026-01-31'
+    )
+
+    expect(result).toEqual({ periodStart: '1', periods: '1' })
+  })
+
+  it('counts the periods across New Year when the period spans it', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2025-12-01',
+      '2025-12-01',
+      '2026-02-28'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '3' })
+  })
+
+  it('counts both offset and periods across New Year', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-11-20',
+      '2027-01-01',
+      '2027-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '2', periods: '3' })
   })
 })
 

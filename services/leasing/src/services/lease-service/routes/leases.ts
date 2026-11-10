@@ -145,7 +145,7 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: integer
    *           default: 20
-   *           maximum: 100
+   *           maximum: 500
    *         description: Items per page
    *       - in: query
    *         name: includeEnded
@@ -505,7 +505,7 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: integer
    *           default: 20
-   *           maximum: 100
+   *           maximum: 500
    *         description: Items per page
    *       - in: query
    *         name: sortBy
@@ -1188,6 +1188,13 @@ export const routes = (router: KoaRouter) => {
    *                 LeaseId:
    *                   type: string
    *                   description: The ID of the newly created lease.
+   *       400:
+   *         description: fromDate is not a valid date (error invalid-from-date).
+   *       409:
+   *         description: >
+   *           The rental object is not available from fromDate: it is leased
+   *           then, or a next tenant has a lease on it that is signed or
+   *           not yet signed. error is rental-object-not-available.
    *       500:
    *         description: Internal server error. Failed to create lease.
    */
@@ -1195,6 +1202,18 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     try {
       const request = <CreateLeaseRequest>ctx.request.body
+
+      // An invalid date compares as neither before nor after any date, so it
+      // would slip past the availability check in createLease.
+      const fromDate = new Date(request.fromDate)
+      if (isNaN(fromDate.getTime())) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'invalid-from-date',
+          ...metadata,
+        }
+        return
+      }
 
       const contactResult = await getContactByContactCode(
         request.contactCode,
@@ -1220,7 +1239,7 @@ export const routes = (router: KoaRouter) => {
       const createLeaseTenfastResult = await tenfastAdapter.createLease(
         contactResult.data,
         request.parkingSpaceId,
-        new Date(request.fromDate),
+        fromDate,
         request.includeVAT
       )
 
@@ -1231,6 +1250,15 @@ export const routes = (router: KoaRouter) => {
         )
         ctx.body = {
           content: createLeaseTenfastResult.data,
+          ...metadata,
+        }
+        return
+      }
+
+      if (createLeaseTenfastResult.err === 'rental-object-not-available') {
+        ctx.status = 409
+        ctx.body = {
+          error: createLeaseTenfastResult.err,
           ...metadata,
         }
         return
@@ -1764,6 +1792,12 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *                 format: date-time
    *                 description: The desired move-out date
+   *               reason:
+   *                 type: string
+   *                 minLength: 1
+   *                 maxLength: 60
+   *                 default: Uppsägning av hyresgäst
+   *                 description: The reason for the termination
    *     responses:
    *       200:
    *         description: Preliminary termination initiated successfully
@@ -1785,8 +1819,8 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
-        .body as z.infer<
+      const { contactCode, lastDebitDate, desiredMoveDate, reason } = ctx
+        .request.body as z.infer<
         typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
       >
 
@@ -1794,7 +1828,8 @@ export const routes = (router: KoaRouter) => {
         ctx.params.leaseId,
         contactCode,
         new Date(lastDebitDate),
-        new Date(desiredMoveDate)
+        new Date(desiredMoveDate),
+        reason
       )
 
       if (!result.ok) {

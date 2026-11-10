@@ -4,6 +4,7 @@ import {
   Listing,
   ListingStatus,
   Invoice,
+  ReplyToOfferErrorCodes,
   Tenant,
 } from '@onecore/types'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
@@ -387,6 +388,66 @@ describe('parkingspaces', () => {
         '001',
         true
       )
+    })
+
+    it('starts the lease when the parking space is free if no start date is given', async () => {
+      jest
+        .spyOn(leasingAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
+            rentalObjectCode: '705-808-00-0006',
+            address: 'Testgatan 1',
+            availabilityInfo: {
+              rent: { amount: 500, vat: 0.25, rows: [] },
+              rentalObjectCode: '705-808-00-0006',
+              rentalTenureType: { id: 'Bilplats', name: 'Bilplats' },
+              vacantFrom: new Date('2099-12-01T00:00:00.000Z'),
+            },
+            objectTypeCaption: 'Bilplats',
+            objectTypeCode: 'BP',
+            residentialAreaCaption: 'Test',
+            residentialAreaCode: 'TST',
+          },
+        })
+      createContractSpy.mockClear()
+
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        undefined
+      )
+
+      expect(createContractSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        '2099-12-01T00:00:00.000Z',
+        '001',
+        expect.any(Boolean)
+      )
+    })
+
+    it('returns 409 rental-object-not-available without updating the listing when the parking space is not available', async () => {
+      createContractSpy.mockResolvedValueOnce({
+        ok: false,
+        err: ReplyToOfferErrorCodes.RentalObjectNotAvailable,
+      })
+      updateListingStatusSpy.mockReset()
+
+      const result = await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          processStatus: ProcessStatus.failed,
+          httpStatus: 409,
+          error: 'rental-object-not-available',
+        })
+      )
+      expect(updateListingStatusSpy).not.toHaveBeenCalled()
     })
 
     it('should update listing status if create lease succeeds', async () => {

@@ -342,6 +342,12 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *                 format: date-time
    *                 description: The desired move-out date
+   *               reason:
+   *                 type: string
+   *                 minLength: 1
+   *                 maxLength: 60
+   *                 default: Uppsägning av hyresgäst
+   *                 description: The reason for the termination
    *     responses:
    *       '200':
    *         description: Preliminary termination initiated successfully
@@ -365,8 +371,8 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
-        .body as leasingAdapter.PreliminaryTerminateLeaseRequestParams
+      const { contactCode, lastDebitDate, desiredMoveDate, reason } = ctx
+        .request.body as leasingAdapter.PreliminaryTerminateLeaseRequestParams
 
       try {
         const result = await leasingAdapter.preliminaryTerminateLease(
@@ -375,6 +381,7 @@ export const routes = (router: KoaRouter) => {
             contactCode,
             lastDebitDate,
             desiredMoveDate,
+            reason,
           }
         )
 
@@ -1257,6 +1264,10 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '202':
    *         description: Offer accepted successful.
+   *       '409':
+   *         description: >
+   *           The rental object is not available from the lease start date,
+   *           so no lease was created. error is rental-object-not-available.
    *       '500':
    *         description: Internal server error. Failed to accept the offer.
    *     security:
@@ -2224,6 +2235,10 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: Parking space id is missing. It needs to be passed in the url.
+   *       '409':
+   *         description: >
+   *           The rental object is not available from the start date, so no
+   *           lease was created. error is rental-object-not-available.
    *       '500':
    *         description: Internal server error
    *         content:

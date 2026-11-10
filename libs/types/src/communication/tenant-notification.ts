@@ -25,17 +25,21 @@ export type LeaseTerminationRentalType = z.infer<
   typeof LeaseTerminationRentalTypeSchema
 >
 
-/** Public Core API request body — notification kind is implied by the URL. */
+const DateOnlySchema = z
+  .string()
+  .date()
+  .transform((value) => new Date(`${value}T00:00:00.000Z`))
+
+/**
+ * Public Core API request body — notification kind is implied by the URL.
+ *
+ * Only `leaseId` is used: OneCore reads everything else from the lease and
+ * the contacts service. Tenfast still sends `to`, `contactCode`, `firstName`,
+ * `endDate` and `rentalType`; parsing strips them so they can never override
+ * the lease data.
+ */
 export const LeaseTerminationConfirmationRequestSchema = z.object({
-  to: z.string().email(),
-  contactCode: z.string().min(1),
-  firstName: z.string().min(1),
   leaseId: z.string().min(1),
-  endDate: z
-    .string()
-    .date()
-    .transform((value) => new Date(`${value}T00:00:00.000Z`)),
-  rentalType: LeaseTerminationRentalTypeSchema,
   correlationId: z.string().min(1).optional(),
 })
 
@@ -43,11 +47,44 @@ export type LeaseTerminationConfirmationRequest = z.infer<
   typeof LeaseTerminationConfirmationRequestSchema
 >
 
-/** Communication service payload — adds server-set audit attribution. */
-export const LeaseTerminationConfirmationEmailSchema =
-  LeaseTerminationConfirmationRequestSchema.extend({
-    triggeredByUser: z.string().min(1).optional(),
-  })
+/**
+ * A lease holder as shown in the confirmation. Core resolves it from the
+ * contacts service (never from the integration payload). Empty strings mean
+ * contacts has no value — e.g. an organisation has no birth date.
+ */
+export const LeaseTerminationTenantSchema = z.object({
+  contactCode: z.string().min(1),
+  fullName: z.string(),
+  birthDate: z.string(),
+  street: z.string(),
+  zipCode: z.string(),
+  city: z.string(),
+})
+
+export type LeaseTerminationTenant = z.infer<
+  typeof LeaseTerminationTenantSchema
+>
+
+/**
+ * Communication service payload for one recipient. Core sends one per lease
+ * holder: `to`, `contactCode`, `firstName` and `lastName` describe the
+ * recipient, `tenants` lists every holder on the lease (recipient included).
+ */
+export const LeaseTerminationConfirmationEmailSchema = z.object({
+  to: z.string().email(),
+  contactCode: z.string().min(1),
+  // May be empty: a holder without a name in contacts still gets the email.
+  firstName: z.string(),
+  lastName: z.string(),
+  leaseId: z.string().min(1),
+  endDate: DateOnlySchema,
+  rentalType: LeaseTerminationRentalTypeSchema,
+  correlationId: z.string().min(1).optional(),
+  preferredMoveOutDate: z.string().date().optional(),
+  rentalObjectAddress: z.string().optional(),
+  tenants: z.array(LeaseTerminationTenantSchema).min(1),
+  triggeredByUser: z.string().min(1).optional(),
+})
 
 export type LeaseTerminationConfirmationEmail = z.infer<
   typeof LeaseTerminationConfirmationEmailSchema

@@ -15,24 +15,27 @@ export interface paths {
         content: {
           'application/json': {
             /** @enum {string} */
-            channel: 'sms' | 'email'
+            channel: 'sms' | 'email' | 'my-pages'
             fromAddress: string
             subject?: string
             body: string
             messageType: string
             provider: string
             triggeredByUser?: string
+            /** Format: date-time */
+            sendAt?: string
             audienceCriteria?: {
               [key: string]: unknown
             }
             /** Format: uuid */
             templateId?: string
+            workOrderCode?: string
             recipients: {
               contactCode?: string
               toAddress: string
               externalMessageId?: string
               /** @enum {string} */
-              status?: 'pending' | 'sent' | 'failed'
+              status?: 'pending' | 'sent' | 'delivered' | 'failed' | 'scheduled'
               error?: string
             }[]
           }
@@ -53,6 +56,7 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+              message?: string
             }
           }
         }
@@ -82,7 +86,7 @@ export interface paths {
                 /** @enum {string} */
                 direction: 'outbound' | 'inbound'
                 /** @enum {string} */
-                channel: 'sms' | 'email'
+                channel: 'sms' | 'email' | 'my-pages'
                 fromAddress: string
                 subject: string | null
                 body: string
@@ -90,13 +94,15 @@ export interface paths {
                 provider: string
                 triggeredByUser: string | null
                 /** Format: date-time */
-                triggeredAt: string
+                sendAt: string
                 recipientCount: number
                 audienceCriteria: string | null
                 /** Format: uuid */
                 inReplyToDispatchId: string | null
                 /** Format: uuid */
                 templateId: string | null
+                templateName: string | null
+                workOrderCode: string | null
                 /** Format: date-time */
                 createdAt: string
               }
@@ -115,6 +121,9 @@ export interface paths {
                   | 'failed'
                   | 'bounced'
                   | 'received'
+                  | 'scheduled'
+                  | 'sending'
+                  | 'cancelled'
                 /** Format: date-time */
                 statusUpdatedAt: string
                 externalMessageId: string | null
@@ -130,6 +139,7 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+              message?: string
             }
           }
         }
@@ -138,6 +148,156 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/cancel': {
+    /**
+     * Cancel a scheduled dispatch
+     * @description Marks every still-'scheduled' recipient as 'cancelled' so the scheduled-sends worker never sends them. Allowed until no 'scheduled' recipient remains: a partly processed dispatch cancels the rest and returns the count. Idempotent: an already-cancelled dispatch returns 200 with 0. 409 ALREADY_PROCESSED when every recipient has been claimed or sent.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              dispatchId: string
+              cancelledRecipients: number
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/reschedule': {
+    /**
+     * Move a scheduled dispatch to a new send time
+     * @description Updates the dispatch's sendAt, earlier or later. The new time must follow the scheduling rules (future, within max days ahead, on a 10-minute slot, outside blocked hours; see /schedule-config) — each violation is a 400 with its code. Only while no recipient has been claimed or sent: 409 ALREADY_PROCESSED otherwise, since moving an overdue dispatch would reset its staleness clock.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** Format: date-time */
+            sendAt: string
+          }
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              dispatchId: string
+              sendAt: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/communication-log/schedule-config': {
+    /**
+     * Scheduling rules for scheduled sends
+     * @description The rules the bulk send and reschedule routes enforce on sendAt, so a picker can offer only valid times: enabled flag, slot length, daily blocked window (wall-clock in timeZone) and max days ahead.
+     */
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              enabled: boolean
+              timeZone: string
+              slotMinutes: number
+              blockedHours: {
+                from: string
+                until: string
+              }
+              maxDaysAhead: number
             }
           }
         }
@@ -167,7 +327,7 @@ export interface paths {
                 /** @enum {string} */
                 direction: 'outbound' | 'inbound'
                 /** @enum {string} */
-                channel: 'sms' | 'email'
+                channel: 'sms' | 'email' | 'my-pages'
                 fromAddress: string
                 subject: string | null
                 body: string
@@ -175,13 +335,15 @@ export interface paths {
                 provider: string
                 triggeredByUser: string | null
                 /** Format: date-time */
-                triggeredAt: string
+                sendAt: string
                 recipientCount: number
                 audienceCriteria: string | null
                 /** Format: uuid */
                 inReplyToDispatchId: string | null
                 /** Format: uuid */
                 templateId: string | null
+                templateName: string | null
+                workOrderCode: string | null
                 /** Format: date-time */
                 createdAt: string
               }
@@ -200,6 +362,9 @@ export interface paths {
                   | 'failed'
                   | 'bounced'
                   | 'received'
+                  | 'scheduled'
+                  | 'sending'
+                  | 'cancelled'
                 /** Format: date-time */
                 statusUpdatedAt: string
                 externalMessageId: string | null
@@ -215,6 +380,215 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches': {
+    /**
+     * Search and list dispatches
+     * @description Paginated dispatch search. Filters: q (subject/body LIKE), channel, messageType, derived status, source (manual/automatic), sendAt range, contactCode, minRecipients, and audience codes (district/building/area). Newest first by default.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Content search (subject/body) */
+          q?: string
+          /** @description 'sms' | 'email' | 'my-pages' (repeatable) */
+          channel?: string[]
+          /** @description Category (repeatable) */
+          messageType?: string[]
+          /** @description Derived status (repeatable) */
+          status?: string[]
+          /** @description manual | automatic */
+          source?: 'manual' | 'automatic'
+          /** @description ISO date lower bound */
+          sendAtFrom?: string
+          /** @description ISO date upper bound */
+          sendAtTo?: string
+          /** @description Dispatches that reached this contact */
+          contactCode?: string
+          /** @description Minimum recipient count */
+          minRecipients?: number
+          /** @description Audience district (repeatable) */
+          audienceDistrictNames?: string[]
+          /** @description Audience building code (repeatable) */
+          audienceBuildingCodes?: string[]
+          /** @description Audience area code (repeatable) */
+          audienceAreaCodes?: string[]
+          /** @description sendAt | recipientCount | createdAt */
+          sortBy?: 'sendAt' | 'recipientCount' | 'createdAt'
+          /** @description asc | desc */
+          sortOrder?: 'asc' | 'desc'
+          /** @description Page (1-based) */
+          page?: number
+          /** @description Page size */
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                /** Format: uuid */
+                id: string
+                /** @enum {string} */
+                direction: 'outbound' | 'inbound'
+                /** @enum {string} */
+                channel: 'sms' | 'email' | 'my-pages'
+                fromAddress: string
+                subject: string | null
+                body: string
+                messageType: string
+                provider: string
+                triggeredByUser: string | null
+                /** Format: date-time */
+                sendAt: string
+                recipientCount: number
+                /** Format: uuid */
+                inReplyToDispatchId: string | null
+                /** Format: uuid */
+                templateId: string | null
+                templateName: string | null
+                workOrderCode: string | null
+                /** Format: date-time */
+                createdAt: string
+                /** @enum {string} */
+                status:
+                  | 'scheduled'
+                  | 'sending'
+                  | 'delivered'
+                  | 'partially_delivered'
+                  | 'failed'
+                  | 'cancelled'
+                statusSummary: {
+                  pending: number
+                  sent: number
+                  delivered: number
+                  failed: number
+                  bounced: number
+                  received: number
+                  scheduled: number
+                  sending: number
+                  cancelled: number
+                }
+                audience: {
+                  type: string
+                  value: string
+                }[]
+              }[]
+              _meta: {
+                totalRecords: number
+                page: number
+                limit: number
+                count: number
+              }
+              _links: {
+                href: string
+                /** @enum {string} */
+                rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+              }[]
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/recipients': {
+    /**
+     * Paginated recipients of a dispatch
+     * @description Page through a dispatch's recipients, optionally filtered by status or a toAddress/contactCode substring. Use instead of the full dispatch-by-id read for large bulks.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Recipient status (repeatable) */
+          status?: string[]
+          /** @description toAddress/contactCode substring */
+          q?: string
+          /** @description Page (1-based) */
+          page?: number
+          /** @description Page size */
+          limit?: number
+        }
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                /** Format: uuid */
+                id: string
+                /** Format: uuid */
+                dispatchId: string
+                contactCode: string | null
+                toAddress: string
+                /** @enum {string} */
+                status:
+                  | 'pending'
+                  | 'sent'
+                  | 'delivered'
+                  | 'failed'
+                  | 'bounced'
+                  | 'received'
+                  | 'scheduled'
+                  | 'sending'
+                  | 'cancelled'
+                /** Format: date-time */
+                statusUpdatedAt: string
+                externalMessageId: string | null
+                error: string | null
+                /** Format: date-time */
+                createdAt: string
+              }[]
+              _meta: {
+                totalRecords: number
+                page: number
+                limit: number
+                count: number
+              }
+              _links: {
+                href: string
+                /** @enum {string} */
+                rel: 'self' | 'first' | 'last' | 'prev' | 'next'
+              }[]
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
             }
           }
         }
@@ -224,7 +598,7 @@ export interface paths {
   '/guides': {
     /**
      * List guides
-     * @description Returns guide summaries ordered by top-level category, then subcategory and title. Drafts are only included when includeDrafts=true.
+     * @description Returns guide summaries ordered by title, each with all its categories. Drafts are only included when includeDrafts=true.
      */
     get: {
       parameters: {
@@ -245,7 +619,7 @@ export interface paths {
               description: string
               /** @enum {string} */
               status: 'draft' | 'published'
-              category: {
+              categories: {
                 /** Format: uuid */
                 id: string
                 name: string
@@ -255,7 +629,7 @@ export interface paths {
                 createdAt: string
                 /** Format: date-time */
                 updatedAt: string
-              }
+              }[]
               stepCount: number
               createdBy: string
               updatedBy: string
@@ -296,7 +670,7 @@ export interface paths {
     }
     /**
      * Create a guide
-     * @description Creates a guide with its steps. Step bodies are sanitized to the allowed HTML subset. Images are added afterwards via the image endpoint, so any image metadata in the payload is ignored. Errors: 409 slug-taken, 400 category-not-found (also for an unknown parentId), 400 category-parent-not-top-level when a new subcategory names a subcategory as parent, 400 step-belongs-to-other-guide when a step id is already used by another guide.
+     * @description Creates a guide with its steps. Step bodies are sanitized to the allowed HTML subset. Images are added afterwards via the image endpoint, so any image metadata in the payload is ignored. A guide is linked to every category in categories (at least one, no duplicates); each is an existing id or a new name. Errors: 409 slug-taken, 400 category-not-found when any category id or parentId is unknown, 400 category-parent-not-top-level when any new subcategory names a subcategory as parent, 400 step-belongs-to-other-guide when a step id is already used by another guide.
      */
     post: {
       /** @description Request Body */
@@ -307,7 +681,7 @@ export interface paths {
             /** @default */
             description?: string
             slug: string
-            category:
+            categories: (
               | {
                   /** Format: uuid */
                   id: string
@@ -317,6 +691,7 @@ export interface paths {
                   /** Format: uuid */
                   parentId?: string
                 }
+            )[]
             /** @enum {string} */
             status: 'draft' | 'published'
             steps: {
@@ -352,7 +727,7 @@ export interface paths {
               description: string
               /** @enum {string} */
               status: 'draft' | 'published'
-              category: {
+              categories: {
                 /** Format: uuid */
                 id: string
                 name: string
@@ -362,7 +737,7 @@ export interface paths {
                 createdAt: string
                 /** Format: date-time */
                 updatedAt: string
-              }
+              }[]
               stepCount: number
               createdBy: string
               updatedBy: string
@@ -503,7 +878,7 @@ export interface paths {
               description: string
               /** @enum {string} */
               status: 'draft' | 'published'
-              category: {
+              categories: {
                 /** Format: uuid */
                 id: string
                 name: string
@@ -513,7 +888,7 @@ export interface paths {
                 createdAt: string
                 /** Format: date-time */
                 updatedAt: string
-              }
+              }[]
               stepCount: number
               createdBy: string
               updatedBy: string
@@ -604,7 +979,7 @@ export interface paths {
               description: string
               /** @enum {string} */
               status: 'draft' | 'published'
-              category: {
+              categories: {
                 /** Format: uuid */
                 id: string
                 name: string
@@ -614,7 +989,7 @@ export interface paths {
                 createdAt: string
                 /** Format: date-time */
                 updatedAt: string
-              }
+              }[]
               stepCount: number
               createdBy: string
               updatedBy: string
@@ -685,7 +1060,7 @@ export interface paths {
     }
     /**
      * Update a guide
-     * @description Replaces metadata and steps. Steps are upserted by id and steps missing from the payload are deleted with their images. Returns the storage keys of removed images so the caller can delete files. expectedUpdatedAt must equal the stored updatedAt (millisecond precision); image uploads and deletes also move it forward. Errors: 409 guide-modified when expectedUpdatedAt is stale (the guide changed since the caller loaded it), 409 slug-taken, 400 category-not-found, 400 category-parent-not-top-level, 400 step-belongs-to-other-guide when a step id is owned by another guide, and 400 image-not-in-step when an image id is unknown or sent on a step it does not belong to (images cannot be moved between steps by a save).
+     * @description Replaces metadata, categories and steps. Steps are upserted by id and steps missing from the payload are deleted with their images. Returns the storage keys of removed images so the caller can delete files. expectedUpdatedAt must equal the stored updatedAt (millisecond precision); image uploads and deletes also move it forward. Errors: 409 guide-modified when expectedUpdatedAt is stale (the guide changed since the caller loaded it), 409 slug-taken, 400 category-not-found or category-parent-not-top-level for any of the categories, 400 step-belongs-to-other-guide when a step id is owned by another guide, and 400 image-not-in-step when an image id is unknown or sent on a step it does not belong to (images cannot be moved between steps by a save).
      */
     put: {
       parameters: {
@@ -702,7 +1077,7 @@ export interface paths {
             /** @default */
             description?: string
             slug: string
-            category:
+            categories: (
               | {
                   /** Format: uuid */
                   id: string
@@ -712,6 +1087,7 @@ export interface paths {
                   /** Format: uuid */
                   parentId?: string
                 }
+            )[]
             /** @enum {string} */
             status: 'draft' | 'published'
             steps: {
@@ -750,7 +1126,7 @@ export interface paths {
                 description: string
                 /** @enum {string} */
                 status: 'draft' | 'published'
-                category: {
+                categories: {
                   /** Format: uuid */
                   id: string
                   name: string
@@ -760,7 +1136,7 @@ export interface paths {
                   createdAt: string
                   /** Format: date-time */
                   updatedAt: string
-                }
+                }[]
                 stepCount: number
                 createdBy: string
                 updatedBy: string
@@ -1438,6 +1814,368 @@ export interface paths {
           content: {
             'application/json': {
               error: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/message-templates': {
+    /**
+     * List message templates
+     * @description Alphabetical by name. status=active (default) hides archived templates; archived lists only those; all lists both. SMS only for now (channels is always ["sms"]).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description active | archived | all (default active) */
+          status?: 'active' | 'archived' | 'all'
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }[]
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+    /**
+     * Create an SMS template
+     * @description Name must be unique among active templates (case-insensitive): 409 TEMPLATE_NAME_TAKEN otherwise.
+     */
+    post: {
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            name: string
+            body: string
+          }
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/message-templates/{id}': {
+    /**
+     * Get a message template by id
+     * @description Archived templates resolve too (the log links to them).
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Template id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+    /**
+     * Update a template in place
+     * @description Only the supplied fields change. Past dispatches keep their sent text; only the "Mall: <name>" label follows a rename. 409 TEMPLATE_NAME_TAKEN when renaming into an active name.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description Template id (UUID) */
+          id: string
+        }
+      }
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            name?: string
+            body?: string
+          }
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/message-templates/{id}/archive': {
+    /**
+     * Archive a template
+     * @description Hides it from the picker and the default list. Past dispatches still resolve its name. Idempotent.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Template id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/message-templates/{id}/restore': {
+    /**
+     * Restore an archived template
+     * @description Makes it active again. 409 TEMPLATE_NAME_TAKEN when an active template has taken the name meanwhile.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Template id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** Format: uuid */
+              id: string
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string | null
+              body: string
+              categories: string[]
+              isActive: boolean
+              /** Format: date-time */
+              createdAt: string
+              /** Format: date-time */
+              updatedAt: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
             }
           }
         }

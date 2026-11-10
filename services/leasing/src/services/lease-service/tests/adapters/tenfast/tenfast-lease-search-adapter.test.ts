@@ -810,6 +810,57 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result.removedLeaseIds).toEqual(['lease-archived'])
     })
 
+    it('uses the preliminary end date while a notice awaits signing', async () => {
+      const preliminaryEndDate = new Date('2027-02-28T00:00:00.000Z')
+
+      jest.spyOn(tenfastAdapter, 'getLeasesUpdatedSince').mockResolvedValue({
+        ok: true,
+        data: [
+          factory.tenfastLease.build({
+            stage: 'terminationSigningInProgress',
+            endDate: null,
+            simplesignTermination: { signatures: [], preliminaryEndDate },
+          }),
+        ],
+      })
+
+      const result =
+        await tenfastLeaseSearchAdapter.fetchLeasesUpdatedSinceForCache(
+          new Date('2024-01-01')
+        )
+
+      expect(result.changed[0]).toMatchObject({
+        endDate: preliminaryEndDate,
+        lastDebitDate: preliminaryEndDate,
+        status: LeaseStatus.PreliminaryTerminated,
+      })
+    })
+
+    it.each(['förråd', 'Förråd', 'Forrad'])(
+      'labels a "%s" lease as Lokal and types it as a commercial lease, like Xpand',
+      async (typ) => {
+        const lease = factory.tenfastLease.build({
+          stage: 'active',
+          hyresobjekt: [factory.tenfastRentalObject.build({ typ })],
+        })
+
+        jest.spyOn(tenfastAdapter, 'getLeasesUpdatedSince').mockResolvedValue({
+          ok: true,
+          data: [lease],
+        })
+
+        const result =
+          await tenfastLeaseSearchAdapter.fetchLeasesUpdatedSinceForCache(
+            new Date('2024-01-01')
+          )
+
+        expect(result.changed[0]).toMatchObject({
+          objectTypeCode: 'Lokal',
+          leaseType: LeaseType.CommercialTenantContract,
+        })
+      }
+    )
+
     it('maps the Tenfast _id to an externalUrl', async () => {
       const originalAppUrl = config.tenfast.appUrl
       config.tenfast.appUrl = 'https://tenfast.example.com'

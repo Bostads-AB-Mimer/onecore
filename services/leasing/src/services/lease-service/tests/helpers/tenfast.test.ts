@@ -38,6 +38,16 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
     )
   })
 
+  it('returns PreliminaryTerminated while a notice awaits signing', () => {
+    const lease = factory.tenfastLease.build({
+      stage: 'terminationSigningInProgress',
+    })
+
+    expect(mapToOnecoreLease(lease).status).toBe(
+      LeaseStatus.PreliminaryTerminated
+    )
+  })
+
   it('returns Ended for archived stage', () => {
     const lease = factory.tenfastLease.build({
       stage: 'archived',
@@ -90,14 +100,61 @@ describe('calculateLeaseStatus (via mapToOnecoreLease)', () => {
   })
 })
 
+describe('lease end date (via mapToOnecoreLease)', () => {
+  const preliminaryEndDate = new Date('2027-02-28T00:00:00.000Z')
+  const simplesignTermination = { signatures: [], preliminaryEndDate }
+
+  it('uses the preliminary end date while a notice awaits signing', () => {
+    const lease = mapToOnecoreLease(
+      factory.tenfastLease.build({
+        stage: 'terminationSigningInProgress',
+        endDate: null,
+        simplesignTermination,
+      })
+    )
+
+    expect(lease.leaseEndDate).toEqual(preliminaryEndDate)
+    expect(lease.lastDebitDate).toEqual(preliminaryEndDate)
+  })
+
+  it('keeps an end date already set on the lease', () => {
+    const endDate = new Date('2027-01-31T00:00:00.000Z')
+    const lease = mapToOnecoreLease(
+      factory.tenfastLease.build({
+        stage: 'terminationSigningInProgress',
+        endDate,
+        simplesignTermination,
+      })
+    )
+
+    expect(lease.leaseEndDate).toEqual(endDate)
+  })
+
+  it('ignores the preliminary end date in other stages', () => {
+    const lease = mapToOnecoreLease(
+      factory.tenfastLease.build({
+        stage: 'active',
+        endDate: null,
+        simplesignTermination,
+      })
+    )
+
+    expect(lease.leaseEndDate).toBeUndefined()
+    expect(lease.lastDebitDate).toBeUndefined()
+  })
+})
+
 describe('mapTenfastTypToLeaseType (via mapToOnecoreLease)', () => {
   it.each([
     ['bostad', LeaseType.HousingContract],
     ['parkering', LeaseType.ParkingSpaceContract],
     ['lokal', LeaseType.CommercialTenantContract],
     ['garage', LeaseType.GarageContract],
-    ['forrad', LeaseType.StorageContract],
+    ['förråd', LeaseType.CommercialTenantContract],
+    ['Förråd', LeaseType.CommercialTenantContract],
+    ['forrad', LeaseType.CommercialTenantContract],
     ['ovrigt', LeaseType.OtherContract],
+    ['unknown', LeaseType.OtherContract],
   ])('maps "%s" to %s', (typ, expected) => {
     const lease = factory.tenfastLease.build({
       hyresobjekt: [factory.tenfastRentalObject.build({ typ })],

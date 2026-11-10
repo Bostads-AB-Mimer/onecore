@@ -279,47 +279,173 @@ describe('guides-adapter', () => {
       expect(all.find((g) => g.id === draft.id)?.stepCount).toBe(2)
     }))
 
-  it('lists subcategory guides after the parent category guides', () =>
+  it('lists guides by title, each with all its categories', () =>
     withContext(async ({ db }) => {
       // Sorts first, so the guides below lead the list.
       const prefix = `000 ${randomUUID().slice(0, 8)}`
-      const parent = await createGuide(
+      const b = await resolveCategory({ name: `${prefix} B` }, db)
+      const second = await createGuide(
         factory.guideWrite.build({
-          title: 'Ö direkt i kategorin',
-          category: { name: `${prefix} B` },
+          title: `${prefix} Ö`,
+          categories: [{ name: `${prefix} C` }, { id: b.id }],
         }),
         db
       )
-      const parentId = parent.category.id
-      const inSub = await createGuide(
+      const first = await createGuide(
         factory.guideWrite.build({
-          title: 'A i underkategorin',
-          category: { name: 'Avtal', parentId },
-        }),
-        db
-      )
-      // Sorts between the parent and "Avtal", so ordering by the guide's
-      // own category name would put it before the subcategory's guide.
-      const other = await createGuide(
-        factory.guideWrite.build({
-          title: 'Annan kategori',
-          category: { name: `${prefix} C` },
+          title: `${prefix} A`,
+          categories: [{ name: 'Avtal', parentId: b.id }],
         }),
         db
       )
 
       const listed = await listGuides({ includeDrafts: true }, db)
-      const ids = listed
-        .map((g) => g.id)
-        .filter((id) => [parent.id, inSub.id, other.id].includes(id))
+      const ours = listed.filter((g) => [first.id, second.id].includes(g.id))
 
-      expect(ids).toEqual([parent.id, inSub.id, other.id])
-      expect(listed.find((g) => g.id === inSub.id)?.category.parentId).toBe(
-        parentId
+      expect(ours.map((g) => g.id)).toEqual([first.id, second.id])
+      expect(ours[0].categories.map((c) => c.parentId)).toEqual([b.id])
+      expect(ours[1].categories.map((c) => c.name)).toEqual([
+        `${prefix} B`,
+        `${prefix} C`,
+      ])
+    }))
+
+  it('links a guide to several categories and subcategories', () =>
+    withContext(async ({ db }) => {
+      const suffix = randomUUID().slice(0, 8)
+      const tenfast = await resolveCategory({ name: `Tenfast ${suffix}` }, db)
+      const odoo = await resolveCategory({ name: `Odoo ${suffix}` }, db)
+
+      const created = await createGuide(
+        factory.guideWrite.build({
+          categories: [
+            { id: tenfast.id },
+            { name: 'Avtal', parentId: tenfast.id },
+            { name: 'Ärenden', parentId: odoo.id },
+          ],
+        }),
+        db
       )
-      expect(listed.find((g) => g.id === parent.id)?.category.parentId).toBe(
-        null
+
+      const avtal = created.categories.find((c) => c.name === 'Avtal')
+      const arenden = created.categories.find((c) => c.name === 'Ärenden')
+      // Ordered by top-level name, the category before its subcategories.
+      expect(created.categories.map((c) => c.id)).toEqual([
+        arenden?.id,
+        tenfast.id,
+        avtal?.id,
+      ])
+      expect(avtal?.parentId).toBe(tenfast.id)
+      expect(arenden?.parentId).toBe(odoo.id)
+
+      const read = await getGuideById(created.id, db)
+      expect(read?.categories).toEqual(created.categories)
+    }))
+
+  it('links a category once when an id and its name both name it', () =>
+    withContext(async ({ db }) => {
+      const name = `Tenfast ${randomUUID().slice(0, 8)}`
+      const tenfast = await resolveCategory({ name }, db)
+
+      const created = await createGuide(
+        factory.guideWrite.build({
+          categories: [{ id: tenfast.id }, { name }],
+        }),
+        db
       )
+
+      expect(created.categories.map((c) => c.id)).toEqual([tenfast.id])
+    }))
+
+  it('creates nothing when one of the categories is unknown', () =>
+    withContext(async ({ db }) => {
+      const input = factory.guideWrite.build({
+        categories: [{ name: `Ny ${randomUUID()}` }, { id: randomUUID() }],
+      })
+
+      await expect(createGuide(input, db)).rejects.toBeInstanceOf(
+        CategoryNotFoundError
+      )
+      expect(await getGuideBySlug(input.slug, db)).toBeNull()
+    }))
+
+  it('replaces the categories on update and moves updatedAt forward', () =>
+    withContext(async ({ db }) => {
+      const suffix = randomUUID().slice(0, 8)
+      const created = await createGuide(
+        factory.guideWrite.build({
+          categories: [
+            { name: `Tenfast ${suffix}` },
+            { name: `Odoo ${suffix}` },
+          ],
+        }),
+        db
+      )
+      const odoo = created.categories.find((c) => c.name.startsWith('Odoo'))
+
+      const result = await updateGuide(
+        created.id,
+        {
+          ...factory.guideWrite.build({
+            slug: created.slug,
+            title: created.title,
+            description: created.description,
+            steps: created.steps.map((step) => ({ ...step, images: [] })),
+            categories: [
+              { id: odoo!.id },
+              { name: 'Avtal', parentId: odoo!.id },
+            ],
+          }),
+          expectedUpdatedAt: created.updatedAt.toISOString(),
+        },
+        db
+      )
+
+      expect(result?.guide.categories.map((c) => c.name)).toEqual([
+        `Odoo ${suffix}`,
+        'Avtal',
+      ])
+      expect(result!.guide.updatedAt.getTime()).toBeGreaterThan(
+        created.updatedAt.getTime()
+      )
+      const links = await db('guide_category_link').where('guideId', created.id)
+      expect(links).toHaveLength(2)
+    }))
+
+  it('keeps the old categories when an update is refused', () =>
+    withContext(async ({ db }) => {
+      const created = await createGuide(factory.guideWrite.build(), db)
+
+      await expect(
+        updateGuide(
+          created.id,
+          {
+            ...factory.guideWrite.build({
+              slug: created.slug,
+              steps: [],
+              categories: [
+                { name: `Ny ${randomUUID()}`, parentId: randomUUID() },
+              ],
+            }),
+            expectedUpdatedAt: created.updatedAt.toISOString(),
+          },
+          db
+        )
+      ).rejects.toBeInstanceOf(CategoryNotFoundError)
+
+      const read = await getGuideById(created.id, db)
+      expect(read?.categories).toEqual(created.categories)
+    }))
+
+  it('removes the category links when the guide is deleted', () =>
+    withContext(async ({ db }) => {
+      const created = await createGuide(factory.guideWrite.build(), db)
+
+      await deleteGuide(created.id, db)
+
+      expect(
+        await db('guide_category_link').where('guideId', created.id)
+      ).toHaveLength(0)
     }))
 
   it('upserts steps by id, reorders them and deletes missing ones', () =>
@@ -343,7 +469,7 @@ describe('guides-adapter', () => {
         created.id,
         factory.guideWrite.build({
           slug: created.slug,
-          category: { id: created.category.id },
+          categories: [{ id: created.categories[0].id }],
           steps: [c, { ...a, title: 'Renamed' }, newStep],
         }),
         db
@@ -383,7 +509,7 @@ describe('guides-adapter', () => {
         created.id,
         factory.guideWrite.build({
           slug: created.slug,
-          category: { id: created.category.id },
+          categories: [{ id: created.categories[0].id }],
           steps: [
             {
               ...step,
@@ -422,7 +548,7 @@ describe('guides-adapter', () => {
 
       const moved = factory.guideWrite.build({
         slug: created.slug,
-        category: { id: created.category.id },
+        categories: [{ id: created.categories[0].id }],
         steps: [
           { ...a, images: [] },
           {
@@ -458,7 +584,7 @@ describe('guides-adapter', () => {
           created.id,
           factory.guideWrite.build({
             slug: created.slug,
-            category: { id: created.category.id },
+            categories: [{ id: created.categories[0].id }],
             steps: [
               {
                 ...step,
@@ -489,7 +615,7 @@ describe('guides-adapter', () => {
           mine.id,
           factory.guideWrite.build({
             slug: mine.slug,
-            category: { id: mine.category.id },
+            categories: [{ id: mine.categories[0].id }],
             steps: [stolen],
           }),
           db
@@ -517,7 +643,7 @@ describe('guides-adapter', () => {
         created.id,
         factory.guideWrite.build({
           slug: newSlug,
-          category: { id: created.category.id },
+          categories: [{ id: created.categories[0].id }],
           steps: created.steps.map((s) => ({ ...s, images: [] })),
         }),
         db
@@ -544,7 +670,7 @@ describe('guides-adapter', () => {
           second.id,
           factory.guideWrite.build({
             slug: first.slug,
-            category: { id: second.category.id },
+            categories: [{ id: second.categories[0].id }],
             steps: second.steps.map((s) => ({ ...s, images: [] })),
           }),
           db
@@ -561,7 +687,7 @@ describe('guides-adapter', () => {
       const created = await createGuide(factory.guideWrite.build(), db)
       const base = {
         slug: created.slug,
-        category: { id: created.category.id },
+        categories: [{ id: created.categories[0].id }],
         steps: created.steps.map((s) => ({ ...s, images: [] })),
       }
 
@@ -624,7 +750,7 @@ describe('guide version (optimistic concurrency)', () => {
   ) =>
     factory.guideWrite.build({
       slug: guide.slug,
-      category: { id: guide.category.id },
+      categories: [{ id: guide.categories[0].id }],
       steps,
     })
 

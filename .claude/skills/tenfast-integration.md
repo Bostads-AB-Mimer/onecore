@@ -75,10 +75,11 @@ group as "probably real, unconfirmed," not settled fact.
 `helpers/tenfast.ts:calculateLeaseStatus` and
 `adapters/tenfast/filters.ts:stageToStatus`): `active`, `upcoming`,
 `terminationScheduled`, `archived`, `terminated`, `preTermination`,
-`signingInProgress`, `draft`. Also valid, but not mapped in those two (they
-fall through to `default`/"Unknown Tenfast stage" there): `voided`,
-`rejected`. Tenfast accepts all of these as `filter[stage]` values and
-rejects an unknown one with `400 invalidsearchfilter: filter.avtal.stage`.
+`terminationSigningInProgress`, `signingInProgress`, `draft`. Also valid, but
+not mapped in those two (they fall through to `default`/"Unknown Tenfast
+stage" there): `voided`, `rejected`. Tenfast accepts all of these as
+`filter[stage]` values and rejects an unknown one with
+`400 invalidsearchfilter: filter.avtal.stage`.
 `tenfast-rental-object-helpers.ts` treats `draft`, `signingInProgress`,
 `voided` and `rejected` as never being a tenancy.
 
@@ -102,6 +103,35 @@ Definitions as given:
 Only 7 states were enumerated above even though the developer said there
 are 9 total — 2 remain unaccounted for. Don't assume the list is complete;
 ask if it matters for what you're building.
+
+**Don't rely on `reserved` to find unsigned leases** (AVTAL-274). By design
+it marks an object with a `draft` or `signingInProgress` lease. Tested
+against test on 2026-11-02, drafts didn't set it, some leases out for
+signing lacked it, and a `voided` lease left it behind. Tenfast confirmed
+both as bugs the same day and opened tickets: the state isn't always
+recomputed when a lease changes, and voided leases count as reserved. The
+`!reserved` exclusion syntax returned 400 because it wasn't deployed yet.
+Go by lease stage instead, which doesn't depend on those fixes: `avtal/search` takes a comma-separated list
+(`filter[stage]=upcoming,draft,signingInProgress`, `CLAIMING_STAGES` in
+`tenfast-rental-object-helpers.ts`). `getAvailabilityForVacantRentalObjects`
+uses that search to keep objects with a next tenant's lease, signed or not,
+out of the publish list. Don't rely only on `includeAvtal` for this, because
+it returns an object's 10 latest leases. The search is parsed with a lenient
+schema (`hyresobjekt[].externalId` only), because drafts can lack fields
+`TenfastLeaseSchema` requires. The object's own leases are also checked with
+`isClaimingLease`, which counts an unknown or missing stage as claiming.
+
+The same rule guards writes and single objects. `getLeaseStagesForRentalObject`
+searches every lease on one object (`filter[hyresobjekt][externalId]`, no stage
+filter, parsed leniently), and `getVacantFrom` turns them into the first free
+day: undefined if any lease claims the object or runs until further notice.
+`createLease` checks it before writing anything and returns
+`rental-object-not-available` (leasing 409, core
+`ReplyToOfferErrorCodes.RentalObjectNotAvailable`) when the lease would start
+before that day. The check is not atomic with the create, because Tenfast has
+no conditional create. `getAvailabilityForRentalObject` (by-code) uses the
+searched leases instead of batch-get's, so a draft or a lease beyond the 10
+latest is seen there too.
 
 Important interaction (confirmed, not hypothetical): **`soon-vacant`
 already includes a rental object whose current lease is
@@ -192,7 +222,9 @@ date without a notice, and no end date lay beyond 2027.
 
 On a lease's `cancellation` object:
 
-- `requested: true` — a termination notice **has been given**.
+- `requested: true` — a termination notice **has been given**. It stays unset
+  while a SimpleSign notice awaits signing (`terminationSigningInProgress`), so
+  use the stage to find those leases.
 - `cancelled: true` — the termination notice was **itself later withdrawn**
   (i.e. the lease is _not_ ending after all). This does NOT mean "the lease
   is cancelled/ended" — that reading is backwards and was an actual bug.
@@ -205,15 +237,17 @@ checking only `requested` can produce false positives.
 ## vacantFrom from leases: mostly the end date, not the notice flags
 
 `getLeasedUntil` (`tenfast-rental-object-helpers.ts`) looks at leases in
-force: `active`, `terminationScheduled`, `preTermination` and `upcoming`. A
-lease with a missing or unknown stage counts as in force without an end (not
+force: `active`, `terminationScheduled`, `preTermination`,
+`terminationSigningInProgress` and `upcoming`. A lease with a missing or unknown stage counts as in force without an end (not
 vacant), so an unreadable lease never makes an object vacant.
 
 - **No such lease:** vacant today.
 - **Any of them without `endDate`:** not vacant (`vacantFrom` undefined). That
-  covers a tenancy until further notice and a signed successor to a terminated
-  lease.
-- **Otherwise:** vacant the day after the latest end.
+  covers a tenancy until further notice, a signed successor to a terminated
+  lease and a notice that awaits signing.
+- **Otherwise:** vacant the day after the latest end, but never before today.
+  A lease past its end date can stay in force until Tenfast moves it to
+  `terminated` (AVTAL-408).
 
 `determineVacantFrom` (`@onecore/utilities`, shared by leasing and core)
 keeps undefined as undefined, whatever the Xpand block says, and callers
@@ -224,6 +258,18 @@ On Tenfast test (2,229 objects, 2026-10-14), `endDate` was set exactly when
 notice had been given, both on terminating and on upcoming leases. No lease
 had a withdrawn notice. A withdrawn notice (`requested && cancelled`) still
 counts as no end, in case Tenfast leaves the date behind.
+
+Seen on staging 2026-11-05: `send-simplesign-termination` moves the lease to
+`terminationSigningInProgress` at once, with `endDate` null until the tenant
+has signed. The end date is in `simplesignTermination.preliminaryEndDate`, which
+`getLeaseEndDate` (`helpers/tenfast.ts`) returns for display. `getLeasedUntil`
+ignores it on purpose.
+
+The `states` filter on `/v1/hyresvard/extras/avtal/articles/:id` (home
+insurance export) only accepts `active`, `upcoming`, `preTermination` and
+`terminationScheduled`. Any other value, `terminationSigningInProgress`
+included, gives 400 `Invalid state`. An unknown article id also gives 400
+(`Kunde inte hitta artikeln`), not 404. Checked on Tenfast test 2026-11-09.
 
 ## Query syntax
 

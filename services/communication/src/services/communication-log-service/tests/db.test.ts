@@ -2,9 +2,11 @@ const insertMock = jest.fn().mockReturnValue({
   returning: jest.fn().mockResolvedValue([{ id: 'dispatch-1' }]),
 })
 const batchInsertMock = jest.fn().mockResolvedValue(undefined)
+// Recipients are inserted via trx.raw (OPENJSON), not trx(...).insert.
+const rawMock = jest.fn().mockResolvedValue(undefined)
 
 const trx = jest.fn(() => ({ insert: insertMock }))
-Object.assign(trx, { batchInsert: batchInsertMock })
+Object.assign(trx, { batchInsert: batchInsertMock, raw: rawMock })
 
 // Mock the shared client module, not knex: jest.setupFilesAfterEnv imports
 // common/db before this file runs, so a knex mock would arrive too late and

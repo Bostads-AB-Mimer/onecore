@@ -1,15 +1,22 @@
-import { loggedAxios as axios } from '@onecore/utilities'
+import { loggedAxios as axios, PaginatedResponse } from '@onecore/utilities'
 import { communication } from '@onecore/types'
 
 import config from '../../common/config'
 import { AdapterResult } from '../types'
+
+// leasing-adapter sets a process-wide validateStatus (<500); 4xx must throw
+// here so the catch blocks map them instead of returning ok: true.
+const throwOnNon2xx = {
+  validateStatus: (status: number) => status >= 200 && status < 300,
+}
 
 export const getCustomerMessages = async (
   contactCode: string
 ): Promise<AdapterResult<communication.CustomerMessage[], 'error'>> => {
   try {
     const result = await axios.get(
-      `${config.communicationService.url}/communication-log/customers/${encodeURIComponent(contactCode)}/messages`
+      `${config.communicationService.url}/communication-log/customers/${encodeURIComponent(contactCode)}/messages`,
+      throwOnNon2xx
     )
     return { ok: true, data: result.data }
   } catch (err) {
@@ -27,7 +34,56 @@ export const getDispatchById = async (
 > => {
   try {
     const result = await axios.get(
-      `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}`
+      `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}`,
+      throwOnNon2xx
+    )
+    return { ok: true, data: result.data }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      if (err.response.status === 404) {
+        return { ok: false, err: 'not-found', statusCode: 404 }
+      }
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const searchDispatches = async (
+  query: Record<string, string | string[] | undefined>
+): Promise<
+  AdapterResult<PaginatedResponse<communication.DispatchListItem>, 'error'>
+> => {
+  try {
+    const result = await axios.get(
+      `${config.communicationService.url}/communication-log/dispatches`,
+      // indexes: null serializes arrays as `channel=sms&channel=email`
+      // (repeated keys) instead of axios' default `channel[]=...`, which the
+      // service's query schema would not recognize.
+      { params: query, paramsSerializer: { indexes: null }, ...throwOnNon2xx }
+    )
+    return { ok: true, data: result.data }
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      return { ok: false, err: 'error', statusCode: err.response.status }
+    }
+    return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+export const getDispatchRecipients = async (
+  id: string,
+  query: Record<string, string | string[] | undefined>
+): Promise<
+  AdapterResult<
+    PaginatedResponse<communication.MessageRecipient>,
+    'error' | 'not-found'
+  >
+> => {
+  try {
+    const result = await axios.get(
+      `${config.communicationService.url}/communication-log/dispatches/${encodeURIComponent(id)}/recipients`,
+      { params: query, paramsSerializer: { indexes: null }, ...throwOnNon2xx }
     )
     return { ok: true, data: result.data }
   } catch (err) {

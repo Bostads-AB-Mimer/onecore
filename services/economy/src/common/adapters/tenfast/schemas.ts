@@ -85,6 +85,7 @@ export const TenfastLeaseSchema = z.object({
     'draft',
     'terminationScheduled',
     'preTermination',
+    'terminationSigningInProgress',
   ]),
   startDate: z.coerce
     .date()
@@ -101,6 +102,7 @@ export const TenfastLeaseSchema = z.object({
         _id: z.string(),
         isCompany: z.boolean(),
         displayName: z.string(),
+        externalId: z.string(),
       })
     )
     .min(1),
@@ -110,6 +112,7 @@ export const TenfastLeaseSchema = z.object({
   canDelete: z.boolean().optional(),
   depositState: z.array(z.any()),
 })
+
 export const TenfastInvoiceStateSchema = z.enum([
   'betald',
   'ny',
@@ -208,6 +211,7 @@ export const TenfastInvoiceSchema = z.object({
   ekoNotifications: z.array(z.any()),
   skipEmail: z.boolean(),
   markedAsLate: z.boolean(),
+  roundingAmount: z.number().optional(),
   reference: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -216,6 +220,9 @@ export const TenfastInvoiceSchema = z.object({
   late: z.boolean(),
   state: TenfastInvoiceStateSchema,
   gracePeriod: TenfastGracePeriodSchema.nullish(),
+  recipientContactCode: z.string().optional(),
+  recipientName: z.string().optional(),
+  contractCode: z.string().optional(),
 })
 
 export const TenfastInvoicesByTenantIdResponseSchema = z.object({
@@ -294,16 +301,32 @@ export const TenfastTenantSchema = z.object({
   updatedAt: z.string().optional(),
 })
 
+export const TenfastAccountConfigurationSchema = z.object({
+  accountNr: z.number(),
+  categoryCode: z.string(),
+  debitType: z.string(),
+  costCenter: z.string(),
+  property: z.string(),
+  freeText: z.string(),
+  projectCode: z.string(),
+})
+
+export type TenfastAccountConfiguration = z.infer<
+  typeof TenfastAccountConfigurationSchema
+>
 export const TenfastRentArticleSchema = z.object({
   includeInContract: z.boolean(),
   _id: z.string(),
-  label: z.string(),
-  type: z.string(),
-  accountNr: z.string().nullable(),
-  createdAt: z.string(),
+  // label, type and accountNr are no longer returned by the Tenfast API for
+  // newer articles (title/defaultLabel are used instead), so they are optional.
+  label: z.string().optional(),
+  type: z.string().optional(),
+  accountNr: z.string().nullable().optional(),
+  createdAt: z.string().nullable(),
   hyresvard: z.string(),
   code: z.string(),
   title: z.string(),
+  accountConfigurations: z.array(TenfastAccountConfigurationSchema).optional(),
 })
 
 // Lean lease schema for the batch-get endpoint, where hyresgaster/hyresobjekt
@@ -424,3 +447,219 @@ export const TenfastOutboundExportListSchema = z.object({
 })
 
 export type TenfastOutboundExport = z.infer<typeof TenfastOutboundExportSchema>
+
+export const TenfastInvoiceSnapshotSchema = z.object({
+  hyresvard: z.object({
+    originalId: z.string(),
+    displayName: z.string(),
+    idbeteckning: z.string(),
+    isCompany: z.boolean(),
+    postadress: z.string(),
+    postnummer: z.string(),
+    stad: z.string(),
+    phone: z.string(),
+    momsnummer: z.string(),
+    paymentMethods: z.any(),
+    logo: z.any(),
+  }),
+  hyresgaster: z.array(
+    z.object({
+      originalId: z.string(),
+      displayName: z.string(),
+      idbeteckning: z.string(),
+      isCompany: z.boolean(),
+      fakturaMottagare: z.object({
+        name: z.string().nullable(),
+        idbeteckning: z.string().nullable(),
+        email: z.string().nullable(),
+        phone: z.string().nullable(),
+        postadress: z.string().nullable(),
+        postnummer: z.string().nullable(),
+        godMan: z.boolean(),
+      }),
+      postadress: z.string(),
+      postnummer: z.string(),
+      stad: z.string(),
+      phone: z.string(),
+    })
+  ),
+  avtal: z.array(
+    z.object({
+      originalId: z.string(),
+      externalId: z.string(),
+      version: z.number(),
+      reference: z.number(),
+    })
+  ),
+  hyresobjekt: z.array(
+    z.object({
+      avtalId: z.string(),
+      originalId: z.string(),
+      externalId: z.string(),
+      postadress: z.string(),
+      postnummer: z.string(),
+      skvNummer: z.number().nullable(),
+      nummer: z.string(),
+      stad: z.string(),
+    })
+  ),
+})
+
+// Looking up invoices by the export endpoint (/v1/hyresvard/hyror) returns
+// populated `avtal` objects, but those lease objects are far leaner than the
+// full `TenfastLeaseSchema` (hyresobjekt come back as IDs, many optional
+// fields are missing, etc.). Downstream only needs `_id`, `externalId`, and
+// the first tenant's `externalId` / `displayName`, so we use a permissive lean
+// schema here rather than the strict lease schema. Additional fields returned
+// by Tenfast are passed through untouched.
+const TenfastExportLeaseSchema = z
+  .object({
+    _id: z.string(),
+    externalId: z.string(),
+    hyresgaster: z
+      .array(
+        z.object({
+          _id: z.string(),
+          externalId: z.string(),
+          displayName: z.string(),
+        })
+      )
+      .min(1),
+    canVoid: z.boolean().optional(),
+  })
+  .passthrough()
+
+export const TenfastInvoicesByExportedResponseSchema = z.object({
+  records: z.array(
+    TenfastInvoiceSchema.extend({
+      avtal: z.array(TenfastExportLeaseSchema),
+      ocrNumber: z.string().optional(),
+      reference: z.coerce.string().optional(),
+    }).transform((data) => ({
+      ...data,
+      reference: data.reference ?? '',
+      ocrNumber: data.ocrNumber ?? '',
+      contractCode: data.avtal[0]?.externalId,
+      recipientContactCode: data.avtal[0]?.hyresgaster[0]?.externalId,
+      recipientName: data.avtal[0]?.hyresgaster[0]?.displayName,
+    }))
+  ),
+})
+
+// Getting invoices by OCR from Tenfast returns a list of full Lease objects,
+export const TenfastInvoicesByOcrResponseSchema = z.object({
+  records: z.array(
+    TenfastInvoiceSchema.extend({
+      avtal: z.array(TenfastLeaseSchema),
+      snapshot: TenfastInvoiceSnapshotSchema.optional(),
+    }).transform((data) => ({
+      ...data,
+      avtal: data.avtal.map((x) => x.id),
+      recipientId: data.snapshot?.hyresgaster[0]?.originalId,
+      contractCode: data.snapshot?.avtal[0]?.externalId,
+      recipientContactCode: data.avtal[0]?.hyresgaster[0]?.externalId, // TODO: Add
+      recipientName:
+        data.snapshot?.hyresgaster[0]?.displayName ??
+        data.avtal[0]?.hyresgaster[0]?.displayName,
+    }))
+  ),
+})
+
+export const TenfastTenantByContactCodeResponseSchema = TenfastTenantSchema
+
+export type TenfastInvoicesByExportedResponse = z.infer<
+  typeof TenfastInvoicesByExportedResponseSchema
+>
+export type TenfastInvoicesByOcrResponse = z.infer<
+  typeof TenfastInvoicesByOcrResponseSchema
+>
+export type TenfastTenantByContactCodeResponse = z.infer<
+  typeof TenfastTenantByContactCodeResponseSchema
+>
+
+// Rental loss (hyresbortfall) for a single rental object for a single month.
+// Mirrors the shape of stuff/tenfast/hyresbortfall.json.
+export const TenfastRentalLossHyraSchema = z.object({
+  _id: z.string(),
+  label: z.string(),
+  amount: z.number(),
+  vat: z.number(),
+  hyresobjekt: z.string(),
+  article: z.string().nullable(),
+  includeInContract: z.boolean(),
+  from: z.string().nullable().optional(),
+  to: z.string().nullable().optional(),
+  consolidationLabel: z.string().nullable().optional(),
+})
+
+export const TenfastRentalLossSchema = z.object({
+  month: z.string(), // "YYYY-MM"
+  hyresvard: z.object({
+    id: z.string(),
+    name: z.string(),
+  }),
+  hyresobjekt: z.object({
+    id: z.string(),
+    externalId: z.string(),
+    fastighetId: z.string(),
+    postadress: z.string(),
+    postnummer: z.string(),
+    stad: z.string(),
+    skvNummer: z.union([z.string(), z.number()]).nullable(),
+    objektnummer: z.string(),
+    typ: z.string(),
+    hyror: z.array(TenfastRentalLossHyraSchema),
+  }),
+  days: z.object({
+    month: z.number(),
+    contracted: z.number(),
+    uncontracted: z.number(),
+  }),
+  uncontractedIntervals: z.array(
+    z.object({
+      from: z.string(),
+      to: z.string(),
+    })
+  ),
+  // Tenfast's own proration of the rent rows valid in the uncontracted
+  // period. Null for fully contracted objects, missing in older report
+  // versions.
+  proration: z
+    .object({
+      simplifiedInterval: z.object({ from: z.string(), to: z.string() }),
+      hyraRows: z.array(
+        TenfastRentalLossHyraSchema.extend({
+          accountingRows: z.array(z.any()).nullish(),
+          proratedInterval: z.object({ from: z.string(), to: z.string() }),
+        })
+      ),
+    })
+    .nullish(),
+  avtalIds: z.array(z.string()),
+  relatedAvtalCoverage: z.array(
+    z.object({
+      avtalId: z.string(),
+      source: z.string(),
+      reference: z.number(),
+      externalId: z.string(),
+      version: z.number(),
+      hyresobjekt: z.array(z.string()),
+      startDate: z.string().nullable(),
+      endDate: z.string().nullable(),
+      signed: z.boolean(),
+      signedAt: z.string().nullable(),
+      cancellation: z
+        .object({
+          cancelled: z.boolean(),
+          doneAutomatically: z.boolean().optional(),
+        })
+        .optional(),
+      automaticExtension: z.any().nullable(),
+    })
+  ),
+})
+
+export const TenfastRentalLossResponseSchema = z.array(TenfastRentalLossSchema)
+
+export type TenfastRentalLossHyra = z.infer<typeof TenfastRentalLossHyraSchema>
+export type TenfastRentalLoss = z.infer<typeof TenfastRentalLossSchema>

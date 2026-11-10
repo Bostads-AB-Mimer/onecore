@@ -1,5 +1,8 @@
-import { useGuideCategories } from '@/entities/guide'
+import { Plus, X } from 'lucide-react'
 
+import { type GuideCategory, useGuideCategories } from '@/entities/guide'
+
+import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
 import {
@@ -19,8 +22,66 @@ import {
 import type { EditorCategory } from '../lib/editorState'
 
 interface CategoryPickerProps {
+  /** One entry per row; null for a row nothing has been picked in yet. */
+  value: (EditorCategory | null)[]
+  onChange: (categories: (EditorCategory | null)[]) => void
+}
+
+/**
+ * Pick the categories a guide is listed under, one row per category. A row
+ * picks an existing category or the name of a new one, then optionally a
+ * subcategory of it. There is always at least one row.
+ */
+export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
+  const { data: categories, isLoading, isError } = useGuideCategories()
+  const rows = value.length > 0 ? value : [null]
+
+  return (
+    <div className="space-y-4">
+      {rows.map((category, index) => (
+        <CategoryRow
+          // Rows have no id of their own; a removed row shifts the rest up,
+          // which is fine since each row is fully controlled by its value.
+          key={index}
+          index={index}
+          label={rows.length > 1 ? `Kategori ${index + 1}` : 'Kategori'}
+          value={category}
+          categories={categories}
+          isLoading={isLoading}
+          isError={isError}
+          onChange={(next) =>
+            onChange(rows.map((row, i) => (i === index ? next : row)))
+          }
+          onRemove={
+            rows.length > 1
+              ? () => onChange(rows.filter((_, i) => i !== index))
+              : undefined
+          }
+        />
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => onChange([...rows, null])}
+      >
+        <Plus />
+        Lägg till kategori
+      </Button>
+    </div>
+  )
+}
+
+interface CategoryRowProps {
+  index: number
+  label: string
   value: EditorCategory | null
+  categories: GuideCategory[] | undefined
+  isLoading: boolean
+  isError: boolean
   onChange: (category: EditorCategory | null) => void
+  /** Unset for the last remaining row, which cannot be removed. */
+  onRemove?: () => void
 }
 
 /**
@@ -28,13 +89,23 @@ interface CategoryPickerProps {
  * a subcategory of it. Subcategories can only be added under an existing
  * category, since a new one has no id to point at yet.
  */
-export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
-  const { data: categories, isLoading, isError } = useGuideCategories()
+function CategoryRow({
+  index,
+  label,
+  value,
+  categories,
+  isLoading,
+  isError,
+  onChange,
+  onRemove,
+}: CategoryRowProps) {
   const all = categories ?? []
   // Without the categories a saved subcategory cannot be told from a
   // top-level one, so picking anything would move the guide; keep the
   // select closed until they are there.
   const unavailable = isLoading || isError
+  const categoryId = `guide-category-${index}`
+  const subcategoryId = `guide-subcategory-${index}`
 
   const { category: parentId, subcategory: subValue } = splitCategory(
     value,
@@ -65,7 +136,20 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="guide-category">Kategori</Label>
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor={categoryId}>{label}</Label>
+        {onRemove && (
+          <Button
+            type="button"
+            variant="subtle"
+            size="icon"
+            onClick={onRemove}
+            aria-label={`Ta bort ${label.toLowerCase()}`}
+          >
+            <X />
+          </Button>
+        )}
+      </div>
       <Select
         value={knownParent ? parentId : ''}
         onValueChange={(next) => {
@@ -75,7 +159,7 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
         }}
         disabled={unavailable || pendingParent}
       >
-        <SelectTrigger id="guide-category">
+        <SelectTrigger id={categoryId}>
           <SelectValue
             placeholder={
               isLoading
@@ -108,7 +192,7 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
 
       {hasExistingParent && (
         <>
-          <Label htmlFor="guide-subcategory" className="block pt-2">
+          <Label htmlFor={subcategoryId} className="block pt-2">
             Underkategori
           </Label>
           <Select
@@ -119,7 +203,7 @@ export function CategoryPicker({ value, onChange }: CategoryPickerProps) {
             }}
             disabled={!knownSub}
           >
-            <SelectTrigger id="guide-subcategory">
+            <SelectTrigger id={subcategoryId}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

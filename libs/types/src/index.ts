@@ -20,7 +20,9 @@ export {
   LeaseTerminationConfirmationEmailSchema,
   LeaseTerminationConfirmationMessageType,
   LeaseTerminationRentalTypeSchema,
+  LeaseTerminationTenantSchema,
   type LeaseTerminationRentalType,
+  type LeaseTerminationTenant,
   type LeaseTerminationConfirmationRequest,
   type LeaseTerminationConfirmationEmail,
 } from './communication/tenant-notification'

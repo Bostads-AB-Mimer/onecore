@@ -367,6 +367,347 @@ export interface paths {
       }
     }
   }
+  '/message-templates': {
+    /**
+     * List message templates
+     * @description Alphabetical. `status=active` (default) hides archived templates; `archived` lists only those; `all` lists both.
+     */
+    get: {
+      parameters: {
+        query?: {
+          status?: 'active' | 'archived' | 'all'
+        }
+      }
+      responses: {
+        /** @description Templates */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate'][]
+            }
+          }
+        }
+        /** @description Invalid status filter */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create an SMS template
+     * @description Name must be unique among active templates (409 TEMPLATE_NAME_TAKEN otherwise).
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateMessageTemplate']
+        }
+      }
+      responses: {
+        /** @description The created template */
+        201: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description TEMPLATE_NAME_TAKEN */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/message-templates/{id}': {
+    /** Get a message template */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The template (archived ones resolve too) */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update a template in place
+     * @description Only the supplied fields change. Past dispatches keep their sent text; only the "Mall" label follows a rename.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateMessageTemplate']
+        }
+      }
+      responses: {
+        /** @description The updated template */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description Invalid or empty request body */
+        400: {
+          content: never
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description TEMPLATE_NAME_TAKEN */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/message-templates/{id}/archive': {
+    /**
+     * Archive a template
+     * @description Hidden from the picker and the default list; past dispatches still show its name. Idempotent.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The archived template */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/message-templates/{id}/restore': {
+    /**
+     * Restore an archived template
+     * @description Makes it active again; 409 TEMPLATE_NAME_TAKEN when an active template holds the name.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The restored template */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description TEMPLATE_NAME_TAKEN */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/customers/{contactCode}/messages': {
+    /**
+     * Get the communication timeline for a customer
+     * @description Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Customer id (contactCode) */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description Array of (dispatch + recipient) pairs, newest first */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CustomerMessage'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches': {
+    /**
+     * Search and list dispatches
+     * @description Paginated dispatch search. Filters by content (q), channel, messageType, derived status, source (manual/automatic), sendAt range, contactCode, minRecipients, and audience codes (district/building/area). Newest first by default.
+     */
+    get: {
+      parameters: {
+        query?: {
+          q?: string
+          channel?: string[]
+          messageType?: string[]
+          status?: string[]
+          source?: 'manual' | 'automatic'
+          sendAtFrom?: string
+          sendAtTo?: string
+          contactCode?: string
+          minRecipients?: number
+          audienceDistrictNames?: string[]
+          audienceBuildingCodes?: string[]
+          audienceAreaCodes?: string[]
+          sortBy?: 'sendAt' | 'recipientCount' | 'createdAt'
+          sortOrder?: 'asc' | 'desc'
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Paginated dispatches */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['DispatchListItem'][]
+              _meta: components['schemas']['PaginationMeta']
+              _links: components['schemas']['PaginationLinks'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/recipients': {
+    /**
+     * Paginated recipients of a dispatch
+     * @description Page through a dispatch's recipients, optionally filtered by status or a toAddress/contactCode substring. Use instead of the full dispatch-by-id read for large bulks.
+     */
+    get: {
+      parameters: {
+        query?: {
+          status?: string[]
+          q?: string
+          page?: number
+          limit?: number
+        }
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Paginated recipients */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageRecipient'][]
+              _meta: components['schemas']['PaginationMeta']
+              _links: components['schemas']['PaginationLinks'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}': {
+    /** Get a dispatch and its recipients by dispatch id */
+    get: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Dispatch + recipients */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DispatchWithRecipients']
+            }
+          }
+        }
+        /** @description Dispatch not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   security: {}
   '/sendBulkSms': {
     /**
@@ -383,6 +724,11 @@ export interface paths {
               phoneNumber: string
             }[]
             text: string
+            /**
+             * Format: date-time
+             * @description ISO 8601 instant with offset/Z. Schedules the send (max 90 days ahead); omit for immediate.
+             */
+            sendAt?: string
             logMeta?: {
               audienceCriteria?: {
                 [key: string]: unknown
@@ -430,6 +776,11 @@ export interface paths {
             }[]
             subject: string
             text: string
+            /**
+             * Format: date-time
+             * @description ISO 8601 instant with offset/Z. Schedules the send (max 5 days ahead, Infobip's email limit); omit for immediate.
+             */
+            sendAt?: string
             logMeta?: {
               audienceCriteria?: {
                 [key: string]: unknown
@@ -488,26 +839,37 @@ export interface paths {
       }
     }
   }
-  '/communication-log/customers/{contactCode}/messages': {
+  '/communication-log/dispatches/{id}/cancel': {
     /**
-     * Get the communication timeline for a customer
-     * @description Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+     * Cancel a scheduled dispatch
+     * @description Marks the dispatch's still-scheduled recipients as cancelled so the scheduled-sends worker never sends them. Works for SMS and email alike, also on a partly processed dispatch. Idempotent for already-cancelled dispatches.
      */
-    get: {
+    post: {
       parameters: {
         path: {
-          /** @description Customer id (contactCode) */
-          contactCode: string
+          /** @description Dispatch id (UUID) */
+          id: string
         }
       }
       responses: {
-        /** @description Array of (dispatch + recipient) pairs, newest first */
+        /** @description Cancelled */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['CustomerMessage'][]
+              content?: {
+                dispatchId?: string
+                cancelledRecipients?: number
+              }
             }
           }
+        }
+        /** @description Dispatch not found */
+        404: {
+          content: never
+        }
+        /** @description No scheduled recipient is left (ALREADY_PROCESSED); nothing was changed */
+        409: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -516,27 +878,74 @@ export interface paths {
       }
     }
   }
-  '/communication-log/dispatches/{id}': {
-    /** Get a dispatch and its recipients by dispatch id */
-    get: {
+  '/communication-log/dispatches/{id}/reschedule': {
+    /**
+     * Move a scheduled dispatch to a new send time
+     * @description Updates the dispatch's sendAt, earlier or later, for SMS and email alike. The new time must follow the rules in /communication-log/schedule-config (future, within max days ahead, on a 10-minute slot, outside blocked hours). Only while no recipient has been claimed or sent.
+     */
+    post: {
       parameters: {
         path: {
           /** @description Dispatch id (UUID) */
           id: string
         }
       }
+      requestBody: {
+        content: {
+          'application/json': {
+            /**
+             * Format: date-time
+             * @description New send time as ISO 8601 instant with offset/Z.
+             */
+            sendAt: string
+          }
+        }
+      }
       responses: {
-        /** @description Dispatch + recipients */
+        /** @description Rescheduled */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['DispatchWithRecipients']
+              content?: {
+                dispatchId?: string
+                sendAt?: string
+              }
             }
           }
+        }
+        /** @description sendAt breaks a scheduling rule (SCHEDULING_DISABLED, SEND_AT_IN_PAST, SEND_AT_TOO_FAR_AHEAD, SEND_AT_OFF_SLOT, SEND_AT_IN_BLOCKED_HOURS, SEND_AT_TOO_SOON) */
+        400: {
+          content: never
         }
         /** @description Dispatch not found */
         404: {
           content: never
+        }
+        /** @description A recipient was already claimed or sent (ALREADY_PROCESSED); nothing was changed */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/schedule-config': {
+    /**
+     * Scheduling rules for scheduled sends
+     * @description The rules the communication service enforces on sendAt, so a picker can offer only valid times. enabled=false hides scheduling entirely. Times are wall-clock in timeZone.
+     */
+    get: {
+      responses: {
+        /** @description Scheduling rules */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ScheduleConfig']
+            }
+          }
         }
         /** @description Internal server error */
         500: {
@@ -1979,6 +2388,11 @@ export interface paths {
              * @description The desired move-out date
              */
             desiredMoveDate: string
+            /**
+             * @description The reason for the termination
+             * @default Uppsägning av hyresgäst
+             */
+            reason?: string
           }
         }
       }
@@ -2450,6 +2864,10 @@ export interface paths {
         202: {
           content: never
         }
+        /** @description The rental object is not available from the lease start date, so no lease was created. error is rental-object-not-available. */
+        409: {
+          content: never
+        }
         /** @description Internal server error. Failed to accept the offer. */
         500: {
           content: never
@@ -2916,6 +3334,10 @@ export interface paths {
               message?: string
             }
           }
+        }
+        /** @description The rental object is not available from the start date, so no lease was created. error is rental-object-not-available. */
+        409: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -5290,6 +5712,54 @@ export interface paths {
             'application/json': {
               /** @example Internal server error */
               error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/residences/by-rental-id/{rentalId}/media': {
+    /**
+     * Get published photos and energy declaration for a residence
+     * @description Returns 200 with an empty list when nothing is published. imageLevel
+     * is 'shared' when the photos are published for a coarser code level
+     * and may show the building rather than this residence.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Rental id of the residence */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description The published media, empty when nothing is published. */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['ResidenceMedia']
+            }
+          }
+        }
+        /** @description The rental id does not have the residence code format. */
+        400: {
+          content: {
+            'application/json': {
+              /** @example invalid-rental-id */
+              reason?: string
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+        /** @description The public media host could not be reached. */
+        503: {
+          content: {
+            'application/json': {
+              /** @example media-unavailable */
+              reason?: string
             }
           }
         }
@@ -9198,8 +9668,9 @@ export interface paths {
      * returns one row per rental object with the outgoing and incoming tenant,
      * key/card counts, loan return and handout dates, and a derived status.
      * Give endDateFrom+endDateTo for move-outs, startDateFrom+startDateTo for
-     * move-ins, or both for the union. Search and sort apply to the whole result;
-     * key and card data (DAX) is fetched only for the requested page.
+     * move-ins, or both for the union. Search, filters and sort apply to the whole
+     * result. Key and card data (DAX) is fetched only for the requested page,
+     * unless `status` is given: then it is fetched for every object in the range.
      */
     get: {
       parameters: {
@@ -9210,6 +9681,10 @@ export interface paths {
           startDateTo?: string
           /** @description Matches rental object code, address, tenant name or contact code. */
           q?: string
+          /** @description Keep rows with any of these statuses. Repeat the param for several. */
+          status?: components['schemas']['MoveInOutStatus'][]
+          /** @description true keeps rows with no incoming tenant, false keeps rows with one. */
+          vacant?: boolean
           sortBy?: 'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
           sortOrder?: 'asc' | 'desc'
           /** @description When true, adds a `timings` block with per-phase durations. */
@@ -9237,7 +9712,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
-        /** @description Keys service is syncing its DAX card owner mirror; retry later */
+        /** @description Keys service is syncing its DAX card owner mirror, or the lease search cache is warming up. Retry after the seconds given in Retry-After. */
         503: {
           content: never
         }
@@ -11630,7 +12105,7 @@ export interface paths {
   '/guides': {
     /**
      * List guides
-     * @description Published guides ordered by category and title. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
+     * @description Published guides ordered by title, each with every category it is listed under. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
      */
     get: {
       parameters: {
@@ -11664,7 +12139,7 @@ export interface paths {
     }
     /**
      * Create a guide
-     * @description Requires the guides-admin role. Images are added afterwards through the image upload endpoint.
+     * @description Requires the guides-admin role. The guide is listed under every category in categories (at least one, no duplicates). Images are added afterwards through the image upload endpoint.
      */
     post: {
       requestBody: {
@@ -11681,7 +12156,7 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found or category-parent-not-top-level for any of the categories, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
             'application/json': {
@@ -11830,7 +12305,7 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found or category-parent-not-top-level for any of the categories, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
             'application/json': {
@@ -11906,7 +12381,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Wildcard search string */
+          /** @description Search string. Every word must match the contact code or a name field (substring), or the whole string must match an invoice address line. A word of six or more digits also matches the national id by prefix, in ten- or twelve-digit form. Repeat the parameter to require several strings to match. */
           q?: string[]
           /** @description Filter on contact type */
           type?: 'individual' | 'organisation'
@@ -12633,7 +13108,7 @@ export interface paths {
   '/v1/tenant-notifications/lease-termination-confirmation': {
     /**
      * Send a lease termination confirmation email
-     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking lease is terminated. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
+     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking space or garage lease is terminated. Only `leaseId` is used: OneCore looks up the lease (end date, type, preferred move-out date, rental object address, holders) and each holder in the contacts service, then emails every holder with an email address. Any other body fields are ignored. The 200 body says how many holders were emailed and which were skipped for lack of a valid email address. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
      */
     post: {
       requestBody?: {
@@ -12650,6 +13125,8 @@ export interface paths {
               content: {
                 /** @enum {boolean} */
                 sent: true
+                sentCount: number
+                skippedContactCodes: string[]
               }
             }
           }
@@ -12658,7 +13135,18 @@ export interface paths {
         400: {
           content: {
             'application/json': {
-              error: string
+              /** @enum {string} */
+              error: 'missing-idempotency-key' | 'invalid-request'
+              detail?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error: 'lease-not-found'
               detail?: string
             }
           }
@@ -12667,7 +13155,22 @@ export interface paths {
         409: {
           content: {
             'application/json': {
-              error: string
+              /** @enum {string} */
+              error: 'idempotency-conflict' | 'request-in-progress'
+              detail?: string
+            }
+          }
+        }
+        /** @description Unprocessable Entity */
+        422: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'missing-end-date'
+                | 'unsupported-rental-type'
+                | 'contact-not-found'
+                | 'no-recipient'
               detail?: string
             }
           }
@@ -12676,7 +13179,9 @@ export interface paths {
         502: {
           content: {
             'application/json': {
-              error: string
+              /** @enum {string} */
+              error:
+                'lease-lookup-failed' | 'contact-lookup-failed' | 'send-failed'
               detail?: string
             }
           }
@@ -12899,7 +13404,6 @@ export interface components {
         | 'Kooperativ hyresrätt'
         | 'Lokalkontrakt'
         | 'Omförhandlingskontrakt'
-        | 'Förrådskontrakt'
         | 'Övrigt'
         | 'P-Platskontrakt'
         | 'Korttidsuthyrning'
@@ -13642,6 +14146,13 @@ export interface components {
       } | null
       areaSize: number | null
       malarEnergiFacilityId: string | null
+    }
+    ResidenceMedia: {
+      images: string[]
+      /** @enum {string|null} */
+      imageLevel: 'residence' | 'shared' | null
+      /** Format: uri */
+      energyDeclarationUrl: string | null
     }
     ResidenceSummary: {
       id: string
@@ -15815,6 +16326,18 @@ export interface components {
       offset?: number
       limit?: number
     }
+    /** @enum {string} */
+    MoveInOutStatus:
+      | 'NOT_RETURNED'
+      | 'LOANED_TO_OTHER'
+      | 'RETURNED_AWAITING_LOAN'
+      | 'CREATED'
+      | 'PARTIAL'
+      | 'HANDED_OUT'
+      | 'RETURNED_VACANT'
+      | 'NO_LOANS'
+      | 'NO_KEYS'
+      | 'UNKNOWN'
     MoveInOutRow: {
       rentalObjectCode: string
       address: string | null
@@ -15840,15 +16363,16 @@ export interface components {
       incomingLoanPickedUpAt: string | null
       /** @enum {string} */
       status:
-        | 'UNKNOWN'
         | 'NOT_RETURNED'
         | 'LOANED_TO_OTHER'
+        | 'RETURNED_AWAITING_LOAN'
         | 'CREATED'
+        | 'PARTIAL'
         | 'HANDED_OUT'
         | 'RETURNED_VACANT'
-        | 'NO_KEYS'
         | 'NO_LOANS'
-        | 'PARTIAL'
+        | 'NO_KEYS'
+        | 'UNKNOWN'
       notes: string[]
     }
     PaginatedResponse: {
@@ -17404,6 +17928,10 @@ export interface components {
       invalid: string[]
       totalSent: number
       totalInvalid: number
+      /** @description Present when scheduled: dispatch id (cancel/reschedule handle) */
+      dispatchId?: string
+      /** @description Present when scheduled: target send time as ISO instant */
+      scheduledFor?: string
     }
     BulkEmailResult: {
       /** @description Email addresses that received email */
@@ -17412,6 +17940,20 @@ export interface components {
       invalid: string[]
       totalSent: number
       totalInvalid: number
+      /** @description Present when scheduled: dispatch id (cancel/reschedule handle) */
+      dispatchId?: string
+      /** @description Present when scheduled: target send time as ISO instant */
+      scheduledFor?: string
+    }
+    ScheduleConfig: {
+      enabled: boolean
+      timeZone: string
+      slotMinutes: number
+      blockedHours: {
+        from: string
+        until: string
+      }
+      maxDaysAhead: number
     }
     CustomerMessage: {
       dispatch: {
@@ -17428,13 +17970,14 @@ export interface components {
         provider: string
         triggeredByUser: string | null
         /** Format: date-time */
-        triggeredAt: string
+        sendAt: string
         recipientCount: number
         audienceCriteria: string | null
         /** Format: uuid */
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        templateName: string | null
         workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
@@ -17448,7 +17991,15 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced'
+          | 'received'
+          | 'scheduled'
+          | 'sending'
+          | 'cancelled'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -17472,13 +18023,14 @@ export interface components {
         provider: string
         triggeredByUser: string | null
         /** Format: date-time */
-        triggeredAt: string
+        sendAt: string
         recipientCount: number
         audienceCriteria: string | null
         /** Format: uuid */
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        templateName: string | null
         workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
@@ -17492,7 +18044,15 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced'
+          | 'received'
+          | 'scheduled'
+          | 'sending'
+          | 'cancelled'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -17500,6 +18060,79 @@ export interface components {
         /** Format: date-time */
         createdAt: string
       }[]
+    }
+    DispatchListItem: {
+      /** Format: uuid */
+      id: string
+      /** @enum {string} */
+      direction: 'outbound' | 'inbound'
+      /** @enum {string} */
+      channel: 'sms' | 'email' | 'my-pages'
+      fromAddress: string
+      subject: string | null
+      body: string
+      messageType: string
+      provider: string
+      triggeredByUser: string | null
+      /** Format: date-time */
+      sendAt: string
+      recipientCount: number
+      /** Format: uuid */
+      inReplyToDispatchId: string | null
+      /** Format: uuid */
+      templateId: string | null
+      templateName: string | null
+      workOrderCode: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** @enum {string} */
+      status:
+        | 'scheduled'
+        | 'sending'
+        | 'delivered'
+        | 'partially_delivered'
+        | 'failed'
+        | 'cancelled'
+      statusSummary: {
+        pending: number
+        sent: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        delivered: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        failed: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        bounced: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        received: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        scheduled: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        sending: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        cancelled: components['schemas']['DispatchListItem']['statusSummary']['pending']
+      }
+      audience: {
+        type: string
+        value: string
+      }[]
+    }
+    MessageRecipient: {
+      /** Format: uuid */
+      id: string
+      /** Format: uuid */
+      dispatchId: string
+      contactCode: string | null
+      toAddress: string
+      /** @enum {string} */
+      status:
+        | 'pending'
+        | 'sent'
+        | 'delivered'
+        | 'failed'
+        | 'bounced'
+        | 'received'
+        | 'scheduled'
+        | 'sending'
+        | 'cancelled'
+      /** Format: date-time */
+      statusUpdatedAt: string
+      externalMessageId: string | null
+      error: string | null
+      /** Format: date-time */
+      createdAt: string
     }
     ReleaseNote: {
       /** Format: uuid */
@@ -17592,6 +18225,28 @@ export interface components {
     ReleaseNoteCapabilities: {
       canManage: boolean
     }
+    MessageTemplate: {
+      /** Format: uuid */
+      id: string
+      name: string
+      channels: ('sms' | 'email' | 'my-pages')[]
+      subject: string | null
+      body: string
+      categories: string[]
+      isActive: boolean
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateMessageTemplate: {
+      name: string
+      body: string
+    }
+    UpdateMessageTemplate: {
+      name?: string
+      body?: string
+    }
     GuideCategory: {
       /** Format: uuid */
       id: string
@@ -17611,7 +18266,7 @@ export interface components {
       description: string
       /** @enum {string} */
       status: 'draft' | 'published'
-      category: {
+      categories: {
         /** Format: uuid */
         id: string
         name: string
@@ -17621,7 +18276,7 @@ export interface components {
         createdAt: string
         /** Format: date-time */
         updatedAt: string
-      }
+      }[]
       stepCount: number
       createdBy: string
       updatedBy: string
@@ -17655,7 +18310,7 @@ export interface components {
       description: string
       /** @enum {string} */
       status: 'draft' | 'published'
-      category: {
+      categories: {
         /** Format: uuid */
         id: string
         name: string
@@ -17665,7 +18320,7 @@ export interface components {
         createdAt: string
         /** Format: date-time */
         updatedAt: string
-      }
+      }[]
       stepCount: number
       createdBy: string
       updatedBy: string
@@ -17718,7 +18373,7 @@ export interface components {
       /** @default */
       description?: string
       slug: string
-      category:
+      categories: (
         | {
             /** Format: uuid */
             id: string
@@ -17728,6 +18383,7 @@ export interface components {
             /** Format: uuid */
             parentId?: string
           }
+      )[]
       /** @enum {string} */
       status: 'draft' | 'published'
       steps: {
@@ -17753,7 +18409,7 @@ export interface components {
       /** @default */
       description?: string
       slug: string
-      category:
+      categories: (
         | {
             /** Format: uuid */
             id: string
@@ -17763,6 +18419,7 @@ export interface components {
             /** Format: uuid */
             parentId?: string
           }
+      )[]
       /** @enum {string} */
       status: 'draft' | 'published'
       steps: {
@@ -17931,15 +18588,7 @@ export interface components {
       roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
     }
     SendLeaseTerminationConfirmationRequest: {
-      /** Format: email */
-      to: string
-      contactCode: string
-      firstName: string
       leaseId: string
-      /** Format: date */
-      endDate: string
-      /** @enum {string} */
-      rentalType: 'Bilplats'
       correlationId?: string
     }
     ContactV1:

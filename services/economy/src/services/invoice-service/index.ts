@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import {
+  errorMessage,
   generateRouteMetadata,
   logger,
   makeSuccessResponseBody,
@@ -19,6 +20,18 @@ import {
 } from '../common/adapters/xledger-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
+  createAccounting,
+  createRentalLossAccounting,
+  DEFAULT_ACCEPTED_SUM_DIFFERENCE,
+  exportRentalInvoicesAccounting,
+  exportRentalInvoicesAccountingByOcr,
+  exportRentalLosses,
+  handleRentalBlocks,
+  enrichRentalLossesWithAccounting,
+  markInvoicesAsExported,
+  uploadCsvFiles,
+  uploadRentalLossCsvFile,
+  getInvoiceDetails,
   getInvoicesByContactCode,
   fetchInvoiceRows,
   fetchPaymentEvents,
@@ -26,11 +39,265 @@ import {
   stralforsPostChannelLookup,
   getAutogiroConsent,
   getPublicInvoiceByOcr,
+  PartialCsvUploadError,
 } from './service'
 import * as invoiceService from './service'
 import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
 
+// Parses the optional accepted difference between the ledger sum and the
+// aggregate sum (default DEFAULT_ACCEPTED_SUM_DIFFERENCE). Returns null when
+// the provided value is not a non-negative number.
+const parseAcceptedDifference = (value: unknown): number | null => {
+  if (value === undefined) {
+    return DEFAULT_ACCEPTED_SUM_DIFFERENCE
+  }
+
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null
+  }
+
+  return parsed
+}
+
 export const routes = (router: KoaRouter) => {
+  router.post('(.*)/accounting/import-invoices/{:companyId}', async (ctx) => {
+    try {
+      const companyId = ctx.params.companyId
+
+      if (!companyId) {
+        ctx.status = 400
+        ctx.body = 'Company with specified ID could not be found'
+      }
+
+      const acceptedDifference = parseAcceptedDifference(
+        ctx.query.acceptedDifference
+      )
+
+      if (acceptedDifference === null) {
+        ctx.status = 400
+        ctx.body =
+          'Query parameter acceptedDifference must be a non-negative number'
+        return
+      }
+
+      const invoicesResult = await exportRentalInvoicesAccounting(companyId)
+
+      let markFailures: economy.MarkInvoiceAsExportedFailure[] = []
+      if (invoicesResult.exportedInvoices.length > 0) {
+        const { aggregateAccountingCsv, ledgerAccountingCsv } =
+          await createAccounting(
+            invoicesResult.exportedInvoices,
+            acceptedDifference
+          )
+
+        await uploadCsvFiles(
+          companyId,
+          aggregateAccountingCsv,
+          ledgerAccountingCsv
+        )
+        // The files are in Xledger at this point. Invoices that cannot be
+        // marked are returned to the caller, which must not request another
+        // batch: they would be fetched and posted again.
+        markFailures = await markInvoicesAsExported(
+          invoicesResult.exportedInvoices.concat(invoicesResult.skippedInvoices)
+        )
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        errors: invoicesResult.errors,
+        successfulInvoices: invoicesResult.exportedInvoices.map(
+          (invoice) => invoice.invoiceId
+        ),
+        skippedInvoices: invoicesResult.skippedInvoices.map(
+          (invoice) => invoice.invoiceId
+        ),
+        markFailures,
+      } satisfies economy.ImportInvoicesResponse
+    } catch (err: unknown) {
+      if (err instanceof PartialCsvUploadError) {
+        logger.error(
+          { companyId: ctx.params.companyId, uploadedFiles: err.uploadedFiles },
+          'Accounting files only partially uploaded to Xledger'
+        )
+        ctx.status = 500
+        ctx.body = {
+          error: err.code,
+          reason: err.message,
+          uploadedFiles: err.uploadedFiles,
+        } satisfies economy.ImportInvoicesErrorResponse
+        return
+      }
+
+      const reason = errorMessage(err)
+      logger.error(
+        { companyId: ctx.params.companyId, error: reason },
+        'Could not export invoices'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: 'export-failed',
+        reason,
+      } satisfies economy.ImportInvoicesErrorResponse
+    }
+  })
+
+  /*
+    Debug variant of the import-invoices endpoint. Creates the accounting files
+    for the invoices with the given OCR numbers, without marking them as
+    exported. Request body: { "ocrNumbers": ["...", "..."] }
+  */
+  router.post(
+    '(.*)/accounting/import-invoices/{:companyId}/debug',
+    async (ctx) => {
+      try {
+        const companyId = ctx.params.companyId
+
+        if (!companyId) {
+          ctx.status = 400
+          ctx.body = 'Company with specified ID could not be found'
+          return
+        }
+
+        const ocrNumbers = ctx.request.body?.ocrNumbers
+        if (
+          !Array.isArray(ocrNumbers) ||
+          ocrNumbers.length === 0 ||
+          ocrNumbers.some((ocr) => typeof ocr !== 'string')
+        ) {
+          ctx.status = 400
+          ctx.body = {
+            message:
+              'Request body must contain a non-empty array of OCR numbers: { "ocrNumbers": ["..."] }',
+          }
+          return
+        }
+
+        const acceptedDifference = parseAcceptedDifference(
+          ctx.query.acceptedDifference
+        )
+
+        if (acceptedDifference === null) {
+          ctx.status = 400
+          ctx.body =
+            'Query parameter acceptedDifference must be a non-negative number'
+          return
+        }
+
+        const invoicesResult = await exportRentalInvoicesAccountingByOcr(
+          companyId,
+          ocrNumbers
+        )
+
+        let accountingErrors: { invoiceNumber: string; error: string }[] = []
+        let uploaded: { aggregate: number; ledger: number } | null = null
+
+        if (invoicesResult.exportedInvoices.length > 0) {
+          const { aggregateAccountingCsv, ledgerAccountingCsv, errors } =
+            await createAccounting(
+              invoicesResult.exportedInvoices,
+              acceptedDifference
+            )
+
+          await uploadCsvFiles(
+            companyId,
+            aggregateAccountingCsv,
+            ledgerAccountingCsv
+          )
+
+          accountingErrors = errors
+          uploaded = {
+            aggregate: aggregateAccountingCsv.length,
+            ledger: ledgerAccountingCsv.length,
+          }
+        }
+
+        // Intentionally not calling markInvoicesAsExported: this is a debug
+        // endpoint that only regenerates the accounting files.
+        ctx.status = 200
+        ctx.body = {
+          errors: [...invoicesResult.errors, ...accountingErrors],
+          uploadedFiles: uploaded,
+          successfulInvoices: invoicesResult.exportedInvoices.map(
+            (invoice) => invoice.invoiceId
+          ),
+          skippedInvoices: invoicesResult.skippedInvoices.map(
+            (invoice) => invoice.invoiceId
+          ),
+        }
+      } catch (error) {
+        ctx.status = 500
+        ctx.body = 'Could not export invoices ' + (error as any).message
+      }
+    }
+  )
+
+  router.post(
+    '(.*)/accounting/import-rental-loss/{:companyId}/{:reportId}',
+    async (ctx) => {
+      const { companyId, reportId } = ctx.params
+
+      if (!companyId) {
+        ctx.status = 400
+        ctx.body = 'Company with specified ID could not be found'
+        return
+      }
+
+      // Tenfast report ids are 24 character hex object ids
+      if (!reportId || !/^[0-9a-f]{24}$/i.test(reportId)) {
+        ctx.status = 400
+        ctx.body = 'A valid Tenfast report ID must be specified'
+        return
+      }
+
+      try {
+        const {
+          rentalLosses: exportedRentalLosses,
+          errors: exportErrors,
+          rentalObjectsWithoutRentRows,
+          checksumMismatches,
+        } = await exportRentalLosses(companyId, reportId)
+        const rentalLossesWithBlocks =
+          await handleRentalBlocks(exportedRentalLosses)
+        const { rentalLosses, errors: enrichmentErrors } =
+          await enrichRentalLossesWithAccounting(rentalLossesWithBlocks)
+        const { aggregateRentalLossAccountingCsv, errors: accountingErrors } =
+          await createRentalLossAccounting(rentalLosses)
+
+        // The first csv row is the header
+        const accountingRowCount = aggregateRentalLossAccountingCsv.length - 1
+        if (accountingRowCount > 0) {
+          await uploadRentalLossCsvFile(
+            companyId,
+            aggregateRentalLossAccountingCsv
+          )
+        } else {
+          logger.warn(
+            { companyId },
+            'No rental loss accounting rows created, nothing uploaded'
+          )
+        }
+
+        ctx.status = 200
+        ctx.body = {
+          errors: [...exportErrors, ...enrichmentErrors, ...accountingErrors],
+          rentalLosses: rentalLosses.length,
+          uploadedRows: Math.max(accountingRowCount, 0),
+          rentalObjectsWithoutRentRows,
+          checksumMismatches,
+        }
+      } catch (error) {
+        logger.error(
+          { error, companyId, reportId },
+          'Could not import rental loss'
+        )
+        ctx.status = 500
+        ctx.body = 'Could not import rental loss ' + (error as any).message
+      }
+    }
+  )
+
   router.get('(.*)/invoices/bycontactcode/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const queryParams = economy.GetInvoicesByContactCodeQueryParams.safeParse(
@@ -109,9 +376,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await invoiceService.getInvoiceDetails(
-        ctx.params.invoiceNumber
-      )
+      const result = await getInvoiceDetails(ctx.params.invoiceNumber)
       if (!result) {
         ctx.status = 404
         return

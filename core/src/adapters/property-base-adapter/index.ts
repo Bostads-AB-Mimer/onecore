@@ -388,6 +388,46 @@ export async function getResidenceByRentalId(
   }
 }
 
+export async function getResidenceMedia(
+  rentalId: string
+): Promise<
+  AdapterResult<
+    property.ResidenceMedia,
+    'invalid-rental-id' | 'media-unavailable' | 'unknown'
+  >
+> {
+  try {
+    const fetchResponse = await client().GET(
+      '/residences/rental-id/{rentalId}/media',
+      {
+        params: { path: { rentalId } },
+      }
+    )
+
+    if (fetchResponse.data?.content) {
+      return {
+        ok: true,
+        data: property.ResidenceMediaSchema.parse(fetchResponse.data.content),
+      }
+    }
+
+    if (fetchResponse.response.status === 400) {
+      return { ok: false, err: 'invalid-rental-id' }
+    }
+
+    if (fetchResponse.response.status === 503) {
+      return { ok: false, err: 'media-unavailable' }
+    }
+
+    throw new Error(
+      `Unexpected response status: ${fetchResponse.response.status}`
+    )
+  } catch (err) {
+    logger.error({ err }, '@onecore/property-adapter.getResidenceMedia')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function updateMalarEnergiFacilityId(
   rentalId: string,
   body: property.UpdateMalarEnergiFacilityIdRequest

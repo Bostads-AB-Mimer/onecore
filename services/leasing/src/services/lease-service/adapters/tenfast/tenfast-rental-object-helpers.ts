@@ -37,6 +37,7 @@ const IN_FORCE_STAGES = new Set([
   'active',
   'terminationScheduled',
   'preTermination',
+  'terminationSigningInProgress',
   'upcoming',
 ])
 // Stages that never hold the object: ended, annulled or never signed.
@@ -49,6 +50,44 @@ const NOT_IN_FORCE_STAGES = new Set([
   'signingInProgress',
 ])
 
+// The lease fields that decide whether a rental object is vacant. Leases are
+// often parsed partially (on a rental object, or from a search without
+// populate), so every field may be missing.
+export type LeaseStageInfo = Partial<
+  Pick<TenfastLease, 'externalId' | 'stage' | 'endDate'> & {
+    cancellation: Partial<
+      Pick<TenfastLease['cancellation'], 'requested' | 'cancelled'>
+    >
+  }
+>
+
+// Lease stages through which a next tenant has claimed the object: signed to
+// start later, or not signed yet (a draft, or out for signing).
+export const CLAIMING_STAGES = ['upcoming', 'draft', 'signingInProgress']
+
+/**
+ * Whether the lease claims the rental object for a next tenant, so the object
+ * must not be offered again. A lease whose stage is missing or unknown counts
+ * as claiming, so an object is never offered on a lease we can't read.
+ */
+export const isClaimingLease = (lease: {
+  stage?: string
+  externalId?: string
+}): boolean => {
+  if (lease.stage && CLAIMING_STAGES.includes(lease.stage)) return true
+  if (
+    lease.stage &&
+    (IN_FORCE_STAGES.has(lease.stage) || NOT_IN_FORCE_STAGES.has(lease.stage))
+  )
+    return false
+
+  logger.warn(
+    { stage: lease.stage, leaseId: lease.externalId },
+    'isClaimingLease: unknown lease stage, rental object counted as claimed'
+  )
+  return true
+}
+
 /**
  * When the leases in force (IN_FORCE_STAGES) leave the rental object: the
  * latest end date among them, null if there are none, or 'indefinite' if any
@@ -56,20 +95,22 @@ const NOT_IN_FORCE_STAGES = new Set([
  * which includes a signed successor to a terminated lease: the object never
  * becomes vacant in between.
  *
- * Tenfast sets endDate when notice is given (and for fixed-term leases). A
- * notice that was withdrawn (`requested` and `cancelled`) counts as no end,
- * in case the end date is left behind. Leases on a rental object are parsed
+ * Tenfast sets endDate when notice is given (and for fixed-term leases), but
+ * not until the tenant has signed it: a lease whose notice awaits signing has
+ * no end, so the object stays taken if the tenant never signs. A notice that
+ * was withdrawn (`requested` and `cancelled`) counts as no end, in case the
+ * end date is left behind. Leases on a rental object are parsed
  * partially, so stage and cancellation may be missing: a lease whose stage is
  * missing or unknown counts as in force without an end, so an object is never
  * shown as vacant on a lease we can't read.
  */
 export const getLeasedUntil = (
-  leases: TenfastLease[]
+  leases: LeaseStageInfo[]
 ): Date | null | 'indefinite' => {
   const endDates: Date[] = []
   for (const lease of leases) {
-    if (NOT_IN_FORCE_STAGES.has(lease.stage)) continue
-    if (!IN_FORCE_STAGES.has(lease.stage)) {
+    if (lease.stage && NOT_IN_FORCE_STAGES.has(lease.stage)) continue
+    if (!lease.stage || !IN_FORCE_STAGES.has(lease.stage)) {
       logger.warn(
         { stage: lease.stage, leaseId: lease.externalId },
         'getLeasedUntil: unknown lease stage, rental object counted as not vacant'
@@ -87,28 +128,40 @@ export const getLeasedUntil = (
   return new Date(Math.max(...endDates.map((date) => date.getTime())))
 }
 
+/**
+ * The first day the rental object is free for a new lease (UTC midnight), or
+ * undefined if it is not vacant at all: leased until further notice, or
+ * claimed by a next tenant (see isClaimingLease).
+ */
+export const getVacantFrom = (leases: LeaseStageInfo[]): Date | undefined => {
+  if (leases.some(isClaimingLease)) return undefined
+
+  const leasedUntil = getLeasedUntil(leases)
+  if (leasedUntil === 'indefinite') return undefined
+
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
+
+  if (leasedUntil) {
+    // Vacant the day after the last lease ends, but never before today: a
+    // lease past its end date can stay in force until Tenfast moves it on.
+    const vacantFrom = new Date(leasedUntil)
+    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
+    vacantFrom.setUTCHours(0, 0, 0, 0)
+    return vacantFrom > today ? vacantFrom : today
+  }
+
+  // No lease running or to come: vacant as of today.
+  return today
+}
+
 export const mapTenfastRentalObjectToAvailabilityInfo = (
   includeVAT: boolean,
   tenfastRentalObject: TenfastRentalObject,
   tagsById: Map<string, TenfastTag> = new Map()
 ): RentalObjectAvailabilityInfo => {
   const leases = tenfastRentalObject.avtal ?? []
-  const leasedUntil = getLeasedUntil(leases)
-
-  // undefined: leased until further notice, so not vacant at all.
-  let vacantFrom: Date | undefined
-  if (leasedUntil === 'indefinite') {
-    vacantFrom = undefined
-  } else if (leasedUntil) {
-    // Vacant the day after the last lease ends.
-    vacantFrom = new Date(leasedUntil)
-    vacantFrom.setUTCDate(vacantFrom.getUTCDate() + 1)
-    vacantFrom.setUTCHours(0, 0, 0, 0)
-  } else {
-    // No lease running or to come: vacant as of today.
-    vacantFrom = new Date()
-    vacantFrom.setUTCHours(0, 0, 0, 0)
-  }
+  const vacantFrom = getVacantFrom(leases)
 
   return {
     rentalObjectCode: tenfastRentalObject.externalId,
@@ -128,6 +181,7 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
         : (tenfastRentalObject.hyraExcludingVat ?? 0),
       vat: includeVAT ? (tenfastRentalObject.hyraVat ?? 0) : 0,
       rows: (tenfastRentalObject.hyror ?? []).map((hyra) => ({
+        code: hyra.article ?? '',
         description: hyra.label || '',
         amount: includeVAT
           ? currency(hyra.amount).add(hyra.vat).value

@@ -17,6 +17,19 @@ const email = {
   leaseId: '307-002-11-0201/11',
   endDate: new Date('2026-10-31'),
   rentalType: 'Bilplats' as const,
+  lastName: 'Andersson',
+  preferredMoveOutDate: '2026-10-15',
+  rentalObjectAddress: 'Bilvägen 3',
+  tenants: [
+    {
+      contactCode: 'P123456',
+      fullName: 'Anna Andersson',
+      birthDate: '1985-03-14',
+      street: 'Storgatan 1',
+      zipCode: '722 11',
+      city: 'Västerås',
+    },
+  ],
 }
 
 afterEach(() => {
@@ -33,6 +46,8 @@ describe('sendLeaseTerminationConfirmationEmail', () => {
           leaseId: '307-002-11-0201/11',
           endDate: '2026-10-31',
           rentalType: 'Bilplats',
+          preferredMoveOutDate: '2026-10-15',
+          tenants: [expect.objectContaining({ birthDate: '1985-03-14' })],
         })
         return true
       })

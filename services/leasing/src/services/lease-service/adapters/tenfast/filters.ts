@@ -21,6 +21,7 @@ const stageToStatus: Record<string, GetLeasesFilters['status'][number]> = {
   archived: 'ended',
   terminated: 'ended',
   preTermination: 'preliminary-terminated',
+  terminationSigningInProgress: 'preliminary-terminated',
   signingInProgress: 'pending-signature',
   draft: 'not-sent',
 }

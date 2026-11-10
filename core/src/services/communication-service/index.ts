@@ -6,6 +6,8 @@ import { BulkSms, BulkEmail, communication } from '@onecore/types'
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import { getActingUserName } from '../../utils/acting-user'
 import { registerSchema } from '../../utils/openapi'
+import { logReadRoutes } from './log-reads'
+import { routes as messageTemplateRoutes } from './message-templates'
 import { routes as releaseNoteRoutes } from './release-notes'
 
 const BulkSmsResult = z.object({
@@ -13,6 +15,14 @@ const BulkSmsResult = z.object({
   invalid: z.array(z.string()).describe('Invalid phone numbers'),
   totalSent: z.number(),
   totalInvalid: z.number(),
+  dispatchId: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: dispatch id (cancel/reschedule handle)'),
+  scheduledFor: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: target send time as ISO instant'),
 })
 
 const BulkEmailResult = z.object({
@@ -22,6 +32,14 @@ const BulkEmailResult = z.object({
   invalid: z.array(z.string()).describe('Invalid email addresses'),
   totalSent: z.number(),
   totalInvalid: z.number(),
+  dispatchId: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: dispatch id (cancel/reschedule handle)'),
+  scheduledFor: z
+    .string()
+    .optional()
+    .describe('Present when scheduled: target send time as ISO instant'),
 })
 
 /**
@@ -43,13 +61,13 @@ const BulkEmailResult = z.object({
 export const routes = (router: KoaRouter) => {
   registerSchema('BulkSmsResult', BulkSmsResult)
   registerSchema('BulkEmailResult', BulkEmailResult)
-  registerSchema('CustomerMessage', communication.CustomerMessageSchema)
-  registerSchema(
-    'DispatchWithRecipients',
-    communication.DispatchWithRecipientsSchema
-  )
+  registerSchema('ScheduleConfig', communication.ScheduleConfigSchema)
+
+  logReadRoutes(router)
 
   releaseNoteRoutes(router)
+
+  messageTemplateRoutes(router)
 
   /**
    * @swagger
@@ -85,6 +103,10 @@ export const routes = (router: KoaRouter) => {
    *                       type: string
    *               text:
    *                 type: string
+   *               sendAt:
+   *                 type: string
+   *                 format: date-time
+   *                 description: ISO 8601 instant with offset/Z. Schedules the send (max 90 days ahead); omit for immediate.
    *               logMeta:
    *                 type: object
    *                 properties:
@@ -180,6 +202,10 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *               text:
    *                 type: string
+   *               sendAt:
+   *                 type: string
+   *                 format: date-time
+   *                 description: ISO 8601 instant with offset/Z. Schedules the send (max 5 days ahead, Infobip's email limit); omit for immediate.
    *               logMeta:
    *                 type: object
    *                 properties:
@@ -284,42 +310,125 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /communication-log/customers/{contactCode}/messages:
-   *   get:
-   *     summary: Get the communication timeline for a customer
-   *     description: Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+   * /communication-log/dispatches/{id}/cancel:
+   *   post:
+   *     summary: Cancel a scheduled dispatch
+   *     description: Marks the dispatch's still-scheduled recipients as cancelled so the scheduled-sends worker never sends them. Works for SMS and email alike, also on a partly processed dispatch. Idempotent for already-cancelled dispatches.
    *     tags:
    *       - Communication service
    *     parameters:
    *       - in: path
-   *         name: contactCode
+   *         name: id
    *         required: true
    *         schema:
    *           type: string
-   *         description: Customer id (contactCode)
+   *         description: Dispatch id (UUID)
    *     responses:
    *       '200':
-   *         description: Array of (dispatch + recipient) pairs, newest first
+   *         description: Cancelled
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
    *                 content:
-   *                   type: array
-   *                   items:
-   *                     $ref: '#/components/schemas/CustomerMessage'
+   *                   type: object
+   *                   properties:
+   *                     dispatchId:
+   *                       type: string
+   *                     cancelledRecipients:
+   *                       type: integer
+   *       '404':
+   *         description: Dispatch not found
+   *       '409':
+   *         description: No scheduled recipient is left (ALREADY_PROCESSED); nothing was changed
    *       '500':
    *         description: Internal server error
    *     security:
    *       - bearerAuth: []
    */
-  router.get(
-    '(.*)/communication-log/customers/:contactCode/messages',
+  router.post('(.*)/communication-log/dispatches/:id/cancel', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const result = await communicationAdapter.cancelDispatch(ctx.params.id)
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    } else {
+      ctx.status = result.statusCode ?? 500
+      ctx.body = { error: result.err, ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /communication-log/dispatches/{id}/reschedule:
+   *   post:
+   *     summary: Move a scheduled dispatch to a new send time
+   *     description: Updates the dispatch's sendAt, earlier or later, for SMS and email alike. The new time must follow the rules in /communication-log/schedule-config (future, within max days ahead, on a 10-minute slot, outside blocked hours). Only while no recipient has been claimed or sent.
+   *     tags:
+   *       - Communication service
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Dispatch id (UUID)
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - sendAt
+   *             properties:
+   *               sendAt:
+   *                 type: string
+   *                 format: date-time
+   *                 description: New send time as ISO 8601 instant with offset/Z.
+   *     responses:
+   *       '200':
+   *         description: Rescheduled
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     dispatchId:
+   *                       type: string
+   *                     sendAt:
+   *                       type: string
+   *       '400':
+   *         description: sendAt breaks a scheduling rule (SCHEDULING_DISABLED, SEND_AT_IN_PAST, SEND_AT_TOO_FAR_AHEAD, SEND_AT_OFF_SLOT, SEND_AT_IN_BLOCKED_HOURS, SEND_AT_TOO_SOON)
+   *       '404':
+   *         description: Dispatch not found
+   *       '409':
+   *         description: A recipient was already claimed or sent (ALREADY_PROCESSED); nothing was changed
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '(.*)/communication-log/dispatches/:id/reschedule',
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const result = await communicationAdapter.getCustomerMessages(
-        ctx.params.contactCode
+      const body = ctx.request.body as { sendAt?: string }
+
+      if (!body?.sendAt || typeof body.sendAt !== 'string') {
+        ctx.status = 400
+        ctx.body = { error: 'sendAt is required', ...metadata }
+        return
+      }
+
+      const result = await communicationAdapter.rescheduleDispatch(
+        ctx.params.id,
+        body.sendAt
       )
 
       if (result.ok) {
@@ -334,44 +443,36 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
-   * /communication-log/dispatches/{id}:
+   * /communication-log/schedule-config:
    *   get:
-   *     summary: Get a dispatch and its recipients by dispatch id
+   *     summary: Scheduling rules for scheduled sends
+   *     description: The rules the communication service enforces on sendAt, so a picker can offer only valid times. enabled=false hides scheduling entirely. Times are wall-clock in timeZone.
    *     tags:
    *       - Communication service
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Dispatch id (UUID)
    *     responses:
    *       '200':
-   *         description: Dispatch + recipients
+   *         description: Scheduling rules
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
    *                 content:
-   *                   $ref: '#/components/schemas/DispatchWithRecipients'
-   *       '404':
-   *         description: Dispatch not found
+   *                   $ref: '#/components/schemas/ScheduleConfig'
    *       '500':
    *         description: Internal server error
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/communication-log/dispatches/:id', async (ctx) => {
+  router.get('(.*)/communication-log/schedule-config', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await communicationAdapter.getDispatchById(ctx.params.id)
+    const result = await communicationAdapter.getScheduleConfig()
 
     if (result.ok) {
       ctx.status = 200
       ctx.body = { content: result.data, ...metadata }
     } else {
-      ctx.status = result.statusCode ?? 500
+      ctx.status = 500
       ctx.body = { error: result.err, ...metadata }
     }
   })

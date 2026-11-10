@@ -22,7 +22,7 @@ import {
 
 type MoveInOutRow = keys.MoveInOutRow
 
-const LEASE_SEARCH_PAGE_SIZE = 100
+const LEASE_SEARCH_PAGE_SIZE = 500
 const DEFAULT_PAGE_SIZE = 100
 const BATCH_SIZE = 100
 const OBJECT_CACHE_TTL_MS = 2 * 60 * 1000
@@ -40,6 +40,11 @@ const sortBySchema = z.enum([
 ])
 type SortBy = z.infer<typeof sortBySchema>
 
+// Koa gives a string for one ?status= and an array for several
+const statusParam = z
+  .union([keys.MoveInOutStatusSchema, z.array(keys.MoveInOutStatusSchema)])
+  .transform((s) => (Array.isArray(s) ? s : [s]))
+
 const querySchema = z
   .object({
     endDateFrom: dateString.optional(),
@@ -47,6 +52,8 @@ const querySchema = z
     startDateFrom: dateString.optional(),
     startDateTo: dateString.optional(),
     q: z.string().trim().min(1).optional(),
+    status: statusParam.optional(),
+    vacant: z.enum(['true', 'false']).optional(),
     sortBy: sortBySchema.optional(),
     sortOrder: z.enum(['asc', 'desc']).optional(),
     debug: z.enum(['true', 'false']).optional(),
@@ -218,6 +225,8 @@ export type MoveInOutTimings = {
   /** Present on a cold load only; cached loads did no lease search */
   leaseSearch?: { ending: LeaseSearchStats; starting: LeaseSearchStats }
   objects: number
+  /** Objects whose keys and loans were fetched; the whole result when filtering on status */
+  keyDataObjects: number
   keysAndLoansMs: number
   keysBatchMs: number
   loansBatchMs: number
@@ -364,6 +373,101 @@ function sortObjects(
   })
 }
 
+type KeyData = {
+  keys: Record<string, keys.KeyDetails[]>
+  loans: Record<string, keys.KeyLoanWithDetails[]>
+  cards: Record<string, keys.Card[]>
+  cardsUnresolved: Set<string>
+}
+
+type BatchTiming = 'keysBatchMs' | 'loansBatchMs' | 'notesBatchMs'
+
+async function timed<T>(
+  timings: MoveInOutTimings,
+  key: BatchTiming,
+  p: Promise<T>
+): Promise<T> {
+  const start = Date.now()
+  const result = await p
+  timings[key] += Date.now() - start
+  return result
+}
+
+/** Keys, loans and cards (DAX) for the given objects, in parallel batches. */
+async function fetchKeyData(
+  codes: string[],
+  timings: MoveInOutTimings
+): Promise<KeyData> {
+  const data: KeyData = {
+    keys: {},
+    loans: {},
+    cards: {},
+    cardsUnresolved: new Set(),
+  }
+  const t = Date.now()
+  await runWithConcurrency(
+    chunk(codes, BATCH_SIZE),
+    async (batch) => {
+      const [keysResult, loansResult] = await Promise.all([
+        timed(timings, 'keysBatchMs', KeysApi.getBatchByRentalObject(batch)),
+        timed(
+          timings,
+          'loansBatchMs',
+          KeyLoansApi.getBatchByRentalObject(batch)
+        ),
+      ])
+      if (!keysResult.ok)
+        throw new Error(`keys batch failed: ${keysResult.err}`)
+      if (!loansResult.ok) {
+        if (loansResult.err === 'unavailable') throw new KeysUnavailableError()
+        throw new Error(`key loans batch failed: ${loansResult.err}`)
+      }
+      Object.assign(data.keys, keysResult.data)
+      Object.assign(data.loans, loansResult.data.loans)
+      Object.assign(data.cards, loansResult.data.cards)
+      loansResult.data.cardsUnresolved.forEach((c) =>
+        data.cardsUnresolved.add(c)
+      )
+    },
+    BATCH_CONCURRENCY
+  )
+  timings.keyDataObjects += codes.length
+  timings.keysAndLoansMs += Date.now() - t
+  return data
+}
+
+/** Notes are informational; a failed batch leaves its objects without notes. */
+async function fetchNotes(
+  codes: string[],
+  timings: MoveInOutTimings
+): Promise<Record<string, keys.KeyNote[]>> {
+  const notes: Record<string, keys.KeyNote[]> = {}
+  await runWithConcurrency(
+    chunk(codes, BATCH_SIZE),
+    async (batch) => {
+      const result = await timed(
+        timings,
+        'notesBatchMs',
+        KeyNotesApi.getBatchByRentalObject(batch)
+      )
+      if (result.ok) Object.assign(notes, result.data)
+      else logger.warn({ err: result.err }, 'move-in-out: notes batch failed')
+    },
+    BATCH_CONCURRENCY
+  )
+  return notes
+}
+
+const deriveFor = (o: ResolvedObject, data: KeyData) =>
+  deriveStatus({
+    outgoing: o.outgoing,
+    incoming: o.incoming,
+    keys: data.keys[o.rentalObjectCode] ?? [],
+    cards: data.cards[o.rentalObjectCode] ?? [],
+    loans: data.loans[o.rentalObjectCode] ?? [],
+    cardsUnresolved: data.cardsUnresolved.has(o.rentalObjectCode),
+  })
+
 export async function buildMoveInOutPage(
   query: Query,
   page: number,
@@ -376,74 +480,60 @@ export async function buildMoveInOutPage(
   const t0 = Date.now()
   const resolved = await resolveObjects(query)
 
-  const q = query.q
-  const filtered = q
-    ? resolved.objects.filter((o) => matchesSearch(o, q))
-    : resolved.objects
+  const { q, vacant } = query
+  const filtered = resolved.objects.filter(
+    (o) =>
+      (!q || matchesSearch(o, q)) &&
+      // Vacant = nobody moves in within the neighbour window
+      (!vacant || (o.incoming === null) === (vacant === 'true'))
+  )
   const sorted = sortObjects(
     filtered,
     query.sortBy ?? 'lastDebitDate',
     query.sortOrder ?? 'asc'
   )
-  const pageObjects = sorted.slice((page - 1) * limit, page * limit)
-  const codes = pageObjects.map((o) => o.rentalObjectCode)
 
   const timings: MoveInOutTimings = {
     leaseSearchMs: resolved.leaseSearchMs,
     leasesFound: resolved.leasesFound,
     ...(resolved.at >= t0 ? { leaseSearch: resolved.leaseSearch } : {}),
-    objects: codes.length,
+    objects: 0,
+    keyDataObjects: 0,
     keysAndLoansMs: 0,
     keysBatchMs: 0,
     loansBatchMs: 0,
     notesBatchMs: 0,
     totalMs: 0,
   }
-  if (codes.length === 0) {
-    return { rows: [], totalRecords: filtered.length, timings }
+
+  // Status depends on keys and loans, so filtering on it needs them for the
+  // whole result before paginating; otherwise only the page is fetched.
+  const { status } = query
+  let matching = sorted
+  let allKeyData: KeyData | null = null
+  if (status && sorted.length > 0) {
+    const wanted = new Set(status)
+    const data = await fetchKeyData(
+      sorted.map((o) => o.rentalObjectCode),
+      timings
+    )
+    allKeyData = data
+    matching = sorted.filter((o) => wanted.has(deriveFor(o, data).status))
   }
 
-  const t1 = Date.now()
-  const keysByCode: Record<string, keys.KeyDetails[]> = {}
-  const loansByCode: Record<string, keys.KeyLoanWithDetails[]> = {}
-  const cardsByCode: Record<string, keys.Card[]> = {}
-  const cardsUnresolved = new Set<string>()
-  const notesByCode: Record<string, keys.KeyNote[]> = {}
-  const timed = async <T>(
-    key: 'keysBatchMs' | 'loansBatchMs' | 'notesBatchMs',
-    p: Promise<T>
-  ) => {
-    const start = Date.now()
-    const result = await p
-    timings[key] += Date.now() - start
-    return result
+  const pageObjects = matching.slice((page - 1) * limit, page * limit)
+  const codes = pageObjects.map((o) => o.rentalObjectCode)
+  timings.objects = codes.length
+  if (codes.length === 0) {
+    timings.totalMs = Date.now() - t0
+    logger.info({ ...timings }, 'move-in-out: timings')
+    return { rows: [], totalRecords: matching.length, timings }
   }
-  await runWithConcurrency(
-    chunk(codes, BATCH_SIZE),
-    async (batch) => {
-      const [keysResult, loansResult, notesResult] = await Promise.all([
-        timed('keysBatchMs', KeysApi.getBatchByRentalObject(batch)),
-        timed('loansBatchMs', KeyLoansApi.getBatchByRentalObject(batch)),
-        timed('notesBatchMs', KeyNotesApi.getBatchByRentalObject(batch)),
-      ])
-      if (!keysResult.ok)
-        throw new Error(`keys batch failed: ${keysResult.err}`)
-      if (!loansResult.ok) {
-        if (loansResult.err === 'unavailable') throw new KeysUnavailableError()
-        throw new Error(`key loans batch failed: ${loansResult.err}`)
-      }
-      // Notes are informational; a failed lookup leaves them empty
-      if (notesResult.ok) Object.assign(notesByCode, notesResult.data)
-      else
-        logger.warn({ err: notesResult.err }, 'move-in-out: notes batch failed')
-      Object.assign(keysByCode, keysResult.data)
-      Object.assign(loansByCode, loansResult.data.loans)
-      Object.assign(cardsByCode, loansResult.data.cards)
-      loansResult.data.cardsUnresolved.forEach((c) => cardsUnresolved.add(c))
-    },
-    BATCH_CONCURRENCY
-  )
-  timings.keysAndLoansMs = Date.now() - t1
+
+  const [keyData, notesByCode] = await Promise.all([
+    allKeyData ?? fetchKeyData(codes, timings),
+    fetchNotes(codes, timings),
+  ])
 
   const rows = pageObjects.map((o) => ({
     rentalObjectCode: o.rentalObjectCode,
@@ -452,18 +542,11 @@ export async function buildMoveInOutPage(
     outgoing: o.outgoing,
     incoming: o.incoming,
     notes: (notesByCode[o.rentalObjectCode] ?? []).map((n) => n.description),
-    ...deriveStatus({
-      outgoing: o.outgoing,
-      incoming: o.incoming,
-      keys: keysByCode[o.rentalObjectCode] ?? [],
-      cards: cardsByCode[o.rentalObjectCode] ?? [],
-      loans: loansByCode[o.rentalObjectCode] ?? [],
-      cardsUnresolved: cardsUnresolved.has(o.rentalObjectCode),
-    }),
+    ...deriveFor(o, keyData),
   }))
   timings.totalMs = Date.now() - t0
   logger.info({ ...timings }, 'move-in-out: timings')
-  return { rows, totalRecords: filtered.length, timings }
+  return { rows, totalRecords: matching.length, timings }
 }
 
 export const routes = (router: KoaRouter) => {
@@ -477,8 +560,9 @@ export const routes = (router: KoaRouter) => {
    *       returns one row per rental object with the outgoing and incoming tenant,
    *       key/card counts, loan return and handout dates, and a derived status.
    *       Give endDateFrom+endDateTo for move-outs, startDateFrom+startDateTo for
-   *       move-ins, or both for the union. Search and sort apply to the whole result;
-   *       key and card data (DAX) is fetched only for the requested page.
+   *       move-ins, or both for the union. Search, filters and sort apply to the whole
+   *       result. Key and card data (DAX) is fetched only for the requested page,
+   *       unless `status` is given: then it is fetched for every object in the range.
    *     tags: [Keys Service]
    *     parameters:
    *       - in: query
@@ -506,6 +590,20 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: Matches rental object code, address, tenant name or contact code.
+   *       - in: query
+   *         name: status
+   *         style: form
+   *         explode: true
+   *         schema:
+   *           type: array
+   *           items:
+   *             $ref: '#/components/schemas/MoveInOutStatus'
+   *         description: Keep rows with any of these statuses. Repeat the param for several.
+   *       - in: query
+   *         name: vacant
+   *         schema:
+   *           type: boolean
+   *         description: true keeps rows with no incoming tenant, false keeps rows with one.
    *       - in: query
    *         name: sortBy
    *         schema:
@@ -567,6 +665,8 @@ export const routes = (router: KoaRouter) => {
       'startDateFrom',
       'startDateTo',
       'q',
+      'status',
+      'vacant',
       'sortBy',
       'sortOrder',
       'page',

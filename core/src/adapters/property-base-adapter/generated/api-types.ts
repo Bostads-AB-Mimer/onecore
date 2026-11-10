@@ -1203,6 +1203,50 @@ export interface paths {
       }
     }
   }
+  '/residences/rental-id/{rentalId}/media': {
+    /**
+     * Get published photos and energy declaration for a residence.
+     * @description Finds the files published on the public media host. A residence
+     * without files returns 200 with an empty list, since this searches for
+     * files rather than looking up one resource.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental id of the residence. */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description The published media, empty when nothing is published. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ResidenceMedia']
+            }
+          }
+        }
+        /** @description The rental id does not have the residence code format. */
+        400: {
+          content: {
+            'application/json': {
+              /** @example invalid-rental-id */
+              reason?: string
+            }
+          }
+        }
+        /** @description The public media host could not be reached. */
+        503: {
+          content: {
+            'application/json': {
+              /** @example media-unavailable */
+              reason?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/residences/rental-id/{rentalId}/rental-blocks': {
     /**
      * Get rental blocks by rental ID
@@ -3201,6 +3245,13 @@ export interface components {
       } | null
       areaSize: number | null
       malarEnergiFacilityId: string | null
+    }
+    ResidenceMedia: {
+      images: string[]
+      /** @enum {string|null} */
+      imageLevel: 'residence' | 'shared' | null
+      /** Format: uri */
+      energyDeclarationUrl: string | null
     }
     ResidenceSearchResult: {
       id: string

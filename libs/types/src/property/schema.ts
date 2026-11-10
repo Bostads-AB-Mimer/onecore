@@ -33,6 +33,18 @@ export const UpdateMalarEnergiFacilityIdResponseSchema = z.object({
   malarEnergiFacilityId: z.string(), // echoed back after a successful write
 })
 
+// ---- Residence: media (photos and energy declaration) ----
+// 'residence' means the photos belong to this rental id. 'shared' means they
+// were found on a coarser code level, so they may show the building rather
+// than this residence.
+export const ResidenceMediaImageLevelSchema = z.enum(['residence', 'shared'])
+
+export const ResidenceMediaSchema = z.object({
+  images: z.array(z.string().url()), // in file number order
+  imageLevel: ResidenceMediaImageLevelSchema.nullable(), // null when no images
+  energyDeclarationUrl: z.string().url().nullable(),
+})
+
 // ---- Apartment temperatures (EcoGuard Curves) ----
 // Request/response shapes shared by the property service and the core proxy.
 export const ApartmentTemperaturesIntervalSchema = z.enum(['H', 'D'])

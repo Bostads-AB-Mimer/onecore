@@ -390,6 +390,7 @@ interface ParkingSpace {
 interface RentalObject {
   rentalObjectCode: string
   address: string
+  rent?: RentalObjectRent
   availabilityInfo?: RentalObjectAvailabilityInfo
   districtCaption?: string
   districtCode?: string
@@ -530,10 +531,10 @@ export type {
   CommentThread,
   CommentType,
   Comment,
+  LeaseRentRow,
+  IdentityCheckContact,
   MiscellaneousInvoicePayload,
   MiscellaneousInvoiceArticle,
   MiscellaneousInvoiceRow,
-  LeaseRentRow,
-  IdentityCheckContact,
   InvoiceNotificationEmail,
 }

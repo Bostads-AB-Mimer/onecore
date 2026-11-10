@@ -16,6 +16,7 @@ jest.mock('@onecore/utilities', () => {
     axiosTypes: axios,
     generateRouteMetadata: utilities.generateRouteMetadata,
     makeSuccessResponseBody: utilities.makeSuccessResponseBody,
+    errorMessage: utilities.errorMessage,
     errorName: utilities.errorName,
     redactedMessage: utilities.redactedMessage,
   }

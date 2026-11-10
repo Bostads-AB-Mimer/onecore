@@ -260,6 +260,7 @@ export const TenfastLeaseSchema = z.object({
       docId: z.string().optional(),
       sentAt: optionalDateField,
       signedAt: optionalDateField,
+      preliminaryEndDate: optionalDateField, // End date until the tenant has signed the notice
     })
     .optional(),
   id: z.string(),
@@ -311,6 +312,44 @@ export const TenfastLeaseTemplateResponseSchema = z.object({
 
 export const TenfastPaginatedLeaseResponseSchema = z.object({
   records: z.array(TenfastLeaseSchema),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
+// Only which rental objects each lease is on. Lenient on purpose: draft
+// leases can lack fields TenfastLeaseSchema requires, and one unparseable
+// lease must not fail the whole list.
+export const TenfastPaginatedLeaseRentalObjectsResponseSchema = z.object({
+  records: z.array(
+    z.object({
+      hyresobjekt: z
+        .array(z.object({ externalId: z.string().optional() }))
+        .optional(),
+    })
+  ),
+  prev: z.string().nullable(),
+  next: z.string().nullable(),
+  totalCount: z.number(),
+})
+
+// Leases of one rental object, read only for their stage and end. Parsed
+// partially so an incomplete draft can't fail the parse (and so block a
+// lease being created on a free object).
+export const TenfastPaginatedLeaseStagesResponseSchema = z.object({
+  records: z.array(
+    z.object({
+      externalId: z.string().optional(),
+      stage: z.string().optional(),
+      endDate: optionalDateField,
+      cancellation: z
+        .object({
+          requested: z.boolean().optional().nullable(),
+          cancelled: z.boolean().optional(),
+        })
+        .optional(),
+    })
+  ),
   prev: z.string().nullable(),
   next: z.string().nullable(),
   totalCount: z.number(),

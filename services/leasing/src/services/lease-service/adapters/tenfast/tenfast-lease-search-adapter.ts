@@ -14,6 +14,7 @@ import {
   mapTenfastTypToLeaseType,
   calculateLeaseStatus,
   buildTenfastLeaseUrl,
+  getLeaseEndDate,
 } from '../../helpers/tenfast'
 import {
   getRentalObjectCodesByBuildingManager,
@@ -32,7 +33,10 @@ const TENFAST_TYP_TO_LABEL: Record<string, string> = {
   parkering: 'Parkering',
   lokal: 'Lokal',
   ovrigt: 'Övrigt',
-  forrad: 'Förråd',
+  // Xpand types förråd as a lokal (keycmobt 'balok'), so it is labelled and
+  // filtered as Lokal there.
+  förråd: 'Lokal',
+  forrad: 'Lokal',
 }
 
 /** Build a LeaseSearchResult from a TenfastLease */
@@ -58,10 +62,13 @@ function mapTenfastLeaseToSearchResult(
     })
   }
 
+  const endDate = getLeaseEndDate(lease) ?? null
+
   return {
     leaseId: lease.externalId,
     externalUrl: buildTenfastLeaseUrl(lease._id),
-    objectTypeCode: TENFAST_TYP_TO_LABEL[ro?.typ ?? ''] ?? ro?.typ ?? '',
+    objectTypeCode:
+      TENFAST_TYP_TO_LABEL[ro?.typ?.toLowerCase() ?? ''] ?? ro?.typ ?? '',
     leaseType: mapTenfastTypToLeaseType(ro?.typ),
     contacts,
     address: ro?.postadress ?? null,
@@ -71,8 +78,8 @@ function mapTenfastLeaseToSearchResult(
     property: ro?.fastighet?.fastighetsbeteckning ?? null,
     districtName: ro?.stadsdel ?? ro?.fastighet?.stadsdel ?? null,
     startDate: lease.startDate ?? null,
-    endDate: lease.endDate ?? null,
-    lastDebitDate: lease.endDate ?? null,
+    endDate,
+    lastDebitDate: endDate,
     signedAt: lease.signedAt ?? null,
     status: calculateLeaseStatus(lease),
   }

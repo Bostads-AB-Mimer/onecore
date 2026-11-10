@@ -15,6 +15,8 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObjectSchema,
   TenfastPaginatedLeaseResponseSchema,
+  TenfastPaginatedLeaseRentalObjectsResponseSchema,
+  TenfastPaginatedLeaseStagesResponseSchema,
   TenfastTagSchema,
   TenfastTag,
   TenfastArticleSchema,
@@ -25,12 +27,29 @@ import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
-import { mapTenfastRentalObjectToAvailabilityInfo } from './tenfast-rental-object-helpers'
+import {
+  CLAIMING_STAGES,
+  getVacantFrom,
+  isClaimingLease,
+  LeaseStageInfo,
+  mapTenfastRentalObjectToAvailabilityInfo,
+} from './tenfast-rental-object-helpers'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
 
 type SchemaError = { tag: 'schema-error'; error: z.ZodError }
+
+/** A non-2xx Tenfast response, keeping the status and Tenfast's error body for logging. */
+export class TenfastHttpError extends Error {
+  constructor(
+    readonly status: number,
+    readonly data: unknown
+  ) {
+    super(`Tenfast responded with status ${status}`)
+    this.name = 'TenfastHttpError'
+  }
+}
 
 /**
  * Fetches all pages from a paginated Tenfast endpoint.
@@ -41,7 +60,8 @@ type SchemaError = { tag: 'schema-error'; error: z.ZodError }
  *                   `records`, `next`, and `totalCount` fields.
  * @returns        - All records across all pages combined, typed as the
  *                   schema's own output type (preserving branded strings etc.)
- * @throws         - On non-200/201 responses or schema parse failures.
+ * @throws         - TenfastHttpError on non-200/201 responses, ZodError on
+ *                   schema parse failures.
  */
 const fetchAllPages = async <
   S extends z.ZodType<{
@@ -73,9 +93,7 @@ const fetchAllPages = async <
     })
 
     if (response.status !== 200 && response.status !== 201) {
-      throw new Error(
-        `Tenfast responded with status ${response.status}: ${JSON.stringify(response.data)}`
-      )
+      throw new TenfastHttpError(response.status, response.data)
     }
 
     const parsed = schema.safeParse(response.data)
@@ -106,9 +124,26 @@ export const createLease = async (
     | 'rent-article-is-missing'
     | 'could-not-parse-lease'
     | 'could-not-fetch-articles'
+    | 'rental-object-not-available'
+    | 'could-not-find-leases'
     | 'unknown'
   >
 > => {
+  // Checked first so nothing is written (such as importing the tenant) for a
+  // lease that won't be created. Not atomic with the create below: Tenfast
+  // has no conditional create, so two leases started at the same moment can
+  // both pass.
+  const leasesResult = await getLeaseStagesForRentalObject(rentalObjectCode)
+  if (!leasesResult.ok) return leasesResult
+  const vacantFrom = getVacantFrom(leasesResult.data)
+  if (!vacantFrom || fromDate < vacantFrom) {
+    logger.warn(
+      { rentalObjectCode, fromDate, vacantFrom },
+      'tenfast-adapter.createLease: rental object is not available from the lease start date'
+    )
+    return { ok: false, err: 'rental-object-not-available' }
+  }
+
   const tenantResult = await getOrImportContact(contact.contactCode)
   if (!tenantResult.ok) return { ok: false, err: tenantResult.err }
 
@@ -652,7 +687,7 @@ export const getAvailabilityForVacantRentalObjects = async (
     | 'could-not-parse-rental-object'
     | 'get-rental-object-bad-request'
     | 'could-not-find-terminating-leases'
-    | 'could-not-find-upcoming-leases'
+    | 'could-not-find-claimed-leases'
   >
 > => {
   type VacantOrSoonVacantResult =
@@ -684,9 +719,9 @@ export const getAvailabilityForVacantRentalObjects = async (
         const rentalObjectResponse = await tenfastApi.request({
           method: 'get',
           // includeAvtal must be signed|open|all — Tenfast rejects the legacy `true`.
-          // `all` is required here: the upcoming-lease filter below has to see leases
-          // regardless of signature status, or an object with an unsigned upcoming
-          // lease would wrongly be listed as vacant.
+          // `all` is required here: the claimed-lease filter below has to see
+          // unsigned leases too, or an object with a draft or a lease out for
+          // signing would wrongly be listed as vacant.
           url: `${tenfastBaseUrl}/v1/hyresvard/hyresobjekt?hyresvard=${tenfastCompanyId}&states=vacant,soon-vacant&typ=${type}&includeAvtal=all&paginate=${page}`,
         })
         if (rentalObjectResponse.status === 400)
@@ -750,33 +785,39 @@ export const getAvailabilityForVacantRentalObjects = async (
     }
   }
 
-  type UpcomingRentalObjectIdsResult =
+  type ClaimedRentalObjectIdsResult =
     | { ok: true; ids: Set<string> }
-    | { ok: false; err: 'could-not-find-upcoming-leases' }
+    | { ok: false; err: 'could-not-find-claimed-leases' }
 
-  // A terminationScheduled lease's own record has no visibility into other
-  // leases on the same rental object — if a new tenant has already signed an
-  // upcoming lease for it before the current tenant has left, that object is
-  // already re-let and must not be published as available. populate must
-  // include hyresgaster here too, for the same schema reason as above.
-  const fetchUpcomingRentalObjectIds =
-    async (): Promise<UpcomingRentalObjectIdsResult> => {
+  // Rental objects a next tenant already has a lease for (CLAIMING_STAGES:
+  // signed and upcoming, or still a draft or out for signing), which must not
+  // be published as available. Searched for directly rather than read from
+  // each object's own leases: a terminationScheduled lease's record has no
+  // visibility into other leases on the object, and includeAvtal only returns
+  // an object's 10 latest. Tenfast's `reserved` state isn't used: it isn't
+  // always recomputed when a lease changes, and voided leases count as
+  // reserved (both confirmed by Tenfast as bugs, 2026-11).
+  // filter[stage] takes a comma-separated list.
+  const fetchClaimedRentalObjectIds =
+    async (): Promise<ClaimedRentalObjectIdsResult> => {
       try {
         const leases = await fetchAllPages(
           (paginate) =>
-            `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=upcoming&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt,hyresgaster&paginate=${paginate}`,
-          TenfastPaginatedLeaseResponseSchema
+            `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=${CLAIMING_STAGES.join(',')}&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt&paginate=${paginate}`,
+          TenfastPaginatedLeaseRentalObjectsResponseSchema
         )
         return {
           ok: true,
           ids: new Set(
             leases.flatMap((lease) =>
-              (lease.hyresobjekt ?? []).map((ro) => ro.externalId)
+              (lease.hyresobjekt ?? []).flatMap((ro) =>
+                ro.externalId ? [ro.externalId] : []
+              )
             )
           ),
         }
       } catch (err) {
-        return handleTenfastError(err, 'could-not-find-upcoming-leases')
+        return handleTenfastError(err, 'could-not-find-claimed-leases')
       }
     }
 
@@ -785,21 +826,26 @@ export const getAvailabilityForVacantRentalObjects = async (
       tagsById,
       vacantOrSoonVacantResult,
       terminatingLeasesResult,
-      upcomingRentalObjectIdsResult,
+      claimedRentalObjectIdsResult,
     ] = await Promise.all([
       getTags(),
       fetchVacantOrSoonVacant(),
       fetchTerminatingLeases(),
-      fetchUpcomingRentalObjectIds(),
+      fetchClaimedRentalObjectIds(),
     ])
 
     if (!vacantOrSoonVacantResult.ok) return vacantOrSoonVacantResult
     if (!terminatingLeasesResult.ok) return terminatingLeasesResult
-    if (!upcomingRentalObjectIdsResult.ok) return upcomingRentalObjectIdsResult
+    if (!claimedRentalObjectIdsResult.ok) return claimedRentalObjectIdsResult
 
-    // Exclude records with an upcoming lease (someone's already moving in soon).
+    // Exclude records already claimed by a next tenant. Hidden rather than
+    // flagged, as decided with the product owner (AVTAL-215): leasing watches
+    // the leases it sends out. The object's own leases are checked as well,
+    // so one with a lease we can't read is never offered (isClaimingLease).
     const availableRecords = vacantOrSoonVacantResult.records.filter(
-      (record) => filterByStatus(record.avtal ?? [], ['upcoming']).length === 0
+      (record) =>
+        !claimedRentalObjectIdsResult.ids.has(record.externalId) &&
+        !(record.avtal ?? []).some(isClaimingLease)
     )
 
     const recordsFromTerminatingLeases = terminatingLeasesResult.leases.flatMap(
@@ -807,7 +853,7 @@ export const getAvailabilityForVacantRentalObjects = async (
         (lease.hyresobjekt ?? [])
           .filter(
             (rentalObject) =>
-              !upcomingRentalObjectIdsResult.ids.has(rentalObject.externalId)
+              !claimedRentalObjectIdsResult.ids.has(rentalObject.externalId)
           )
           .map((rentalObject) => ({
             ...rentalObject,
@@ -836,6 +882,26 @@ export const getAvailabilityForVacantRentalObjects = async (
     }
   } catch (err: any) {
     return handleTenfastError(err, 'could-not-find-rental-object')
+  }
+}
+
+/**
+ * Every lease on a rental object, whatever its stage, read only for what
+ * decides whether the object is vacant (see getVacantFrom). Searched rather
+ * than included on the rental object, which only carries its 10 latest leases.
+ */
+export const getLeaseStagesForRentalObject = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<LeaseStageInfo[], 'could-not-find-leases'>> => {
+  try {
+    const leases = await fetchAllPages(
+      (paginate) =>
+        `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[hyresobjekt][externalId]=${encodeURIComponent(rentalObjectCode)}&paginate=${paginate ?? ''}`,
+      TenfastPaginatedLeaseStagesResponseSchema
+    )
+    return { ok: true, data: leases }
+  } catch (err) {
+    return handleTenfastError(err, 'could-not-find-leases')
   }
 }
 
@@ -892,11 +958,14 @@ export const getAvailabilityForRentalObject = async (
 ): Promise<
   AdapterResult<
     RentalObjectAvailabilityInfo,
-    'could-not-find-rental-object' | 'could-not-parse-rental-object'
+    | 'could-not-find-rental-object'
+    | 'could-not-parse-rental-object'
+    | 'could-not-find-leases'
   >
 > => {
-  const [rentalObjectResult, tagsById] = await Promise.all([
+  const [rentalObjectResult, leasesResult, tagsById] = await Promise.all([
     getRentalObjectWithLeases(rentalObjectCode),
+    getLeaseStagesForRentalObject(rentalObjectCode),
     getTags(),
   ])
 
@@ -906,6 +975,7 @@ export const getAvailabilityForRentalObject = async (
       err: rentalObjectResult.err,
     }
   }
+  if (!leasesResult.ok) return leasesResult
 
   if (!rentalObjectResult.data) {
     return {
@@ -917,7 +987,10 @@ export const getAvailabilityForRentalObject = async (
   const availability: RentalObjectAvailabilityInfo =
     mapTenfastRentalObjectToAvailabilityInfo(
       includeVAT,
-      rentalObjectResult.data,
+      // Every lease, not just the signed ones batch-get includes: a draft or a
+      // lease out for signing claims the object, and batch-get only carries
+      // the 10 latest leases.
+      { ...rentalObjectResult.data, avtal: leasesResult.data },
       tagsById
     )
 
@@ -1104,11 +1177,28 @@ async function getOrImportContact(
   return { ok: true, data: importResult.data }
 }
 
+// Structured log fields for a failed Tenfast call. JSON.stringify drops an
+// Error's message and stack, and a raw AxiosError must not be logged.
+export const tenfastErrorLogFields = (err: unknown) => {
+  if (err instanceof TenfastHttpError) {
+    return { status: err.status, error: err.data }
+  }
+  if (isAxiosError(err)) {
+    return {
+      status: err.response?.status,
+      error: err.response?.data ?? err.message,
+      code: err.code,
+    }
+  }
+  if (err instanceof Error) return { err }
+  return { error: err }
+}
+
 function handleTenfastError<E extends string>(
   errorObj: unknown,
   errorLiteral: E
 ) {
-  logger.error({ err: JSON.stringify(errorObj) }, errorLiteral)
+  logger.error(tenfastErrorLogFields(errorObj), errorLiteral)
   return { ok: false, err: errorLiteral } as const
 }
 
@@ -1188,7 +1278,8 @@ export const preliminaryTerminateLease = async (
   leaseId: string,
   contactCode: string,
   lastDebitDate: Date,
-  desiredMoveDate: Date
+  desiredMoveDate: Date,
+  reason: string
 ): Promise<
   AdapterResult<
     PreliminaryTerminationResponse,
@@ -1223,24 +1314,11 @@ export const preliminaryTerminateLease = async (
     const tenfastLeaseId = leaseResponse.data._id
 
     // Format dates to YYYY-MM-DD format as required by tenfast API
-    const endDate = lastDebitDate.toISOString().split('T')[0]
-
-    const requestData: {
-      endDate: string
-      cancelledByType: string
-      reason: string
-      preferredMoveOutDate?: string
-    } = {
-      endDate,
+    const requestData = {
+      endDate: toSwedishDay(lastDebitDate),
       cancelledByType: 'hyresgast',
-      reason: 'Tenant requested termination',
-    }
-
-    // Only include preferredMoveOutDate if desiredMoveDate is provided
-    if (desiredMoveDate) {
-      requestData.preferredMoveOutDate = desiredMoveDate
-        .toISOString()
-        .split('T')[0]
+      reason,
+      preferredMoveOutDate: toSwedishDay(desiredMoveDate),
     }
 
     const terminationResponse = await tenfastApi.request({
@@ -1493,12 +1571,14 @@ export const getLeaseByExternalId = async (
   }
 }
 
-// Tenfast end dates arrive as UTC or Stockholm midnight; compare Stockholm calendar dates.
-const toStockholmDate = (date: Date) =>
-  date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })
+// Swedish day, so UTC midnight and Swedish midnight give the same date.
+const toSwedishDay = (date: Date) =>
+  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(
+    date
+  )
 
 const hasEnded = (endDate: Date | null | undefined, now: Date) =>
-  !!endDate && toStockholmDate(endDate) < toStockholmDate(now)
+  !!endDate && toSwedishDay(endDate) < toSwedishDay(now)
 
 const isCurrentSubletOf = (
   lease: TenfastLease,
@@ -1623,6 +1703,7 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     const params = new URLSearchParams({
       hyresvard: tenfastCompanyId,
       populate: 'hyresgaster,hyresobjekt',
+      // The only values this endpoint accepts; any other state gives a 400.
       states: 'active,upcoming,preTermination,terminationScheduled',
     })
 
@@ -1647,12 +1728,6 @@ export type TerminateLeaseBody = {
   supplementaryAgreements: boolean
   handled: boolean
 }
-
-// Swedish day, so UTC midnight and Swedish midnight give the same date.
-const toSwedishDay = (date: Date) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(
-    date
-  )
 
 export const terminateLease = async (
   leaseId: string,

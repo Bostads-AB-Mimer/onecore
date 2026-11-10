@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
 import { match } from 'ts-pattern'
 import { logger } from '@onecore/utilities'
 import { economy } from '@onecore/types'
@@ -12,6 +13,11 @@ import {
 } from '../../common/adapters/tenfast/tenfast-adapter'
 
 import z from 'zod'
+
+// IMD and Tenfast dates are plain YYYY-MM-DD values parsed as UTC midnight, so
+// all month/day arithmetic must run in UTC. In local time a period start of
+// 2026-03-01 00:00 (+01:00) would be formatted as 2026-02-28.
+dayjs.extend(utc)
 
 type IMDRow = z.infer<typeof economy.IMDRowSchema>
 
@@ -100,7 +106,7 @@ function isMultipleLeaseMatch(
 const IMD_BILLING_MONTH_OFFSET = 2
 
 function billingPeriodForConsumption(from: Date): { from: Date; to: Date } {
-  const billingMonth = dayjs(from).add(IMD_BILLING_MONTH_OFFSET, 'month')
+  const billingMonth = dayjs.utc(from).add(IMD_BILLING_MONTH_OFFSET, 'month')
   return {
     from: billingMonth.startOf('month').toDate(),
     to: billingMonth.endOf('month').toDate(),
@@ -113,7 +119,7 @@ function hasTenantMoved(lease: LeaseMatch, consumptionFrom: Date): boolean {
   const billingPeriod = billingPeriodForConsumption(consumptionFrom)
   return (
     lease.leaseEndDate !== null &&
-    dayjs(lease.leaseEndDate).isBefore(billingPeriod.to, 'day')
+    dayjs.utc(lease.leaseEndDate).isBefore(billingPeriod.to, 'day')
   )
 }
 
@@ -163,6 +169,7 @@ const INVOICEABLE_STAGES = new Set([
   'upcoming',
   'terminationScheduled',
   'preTermination',
+  'terminationSigningInProgress',
 ])
 
 function coversPeriod(
@@ -171,8 +178,9 @@ function coversPeriod(
 ): boolean {
   return (
     lease.startDate !== null &&
-    !dayjs(lease.startDate).isAfter(period.from, 'day') &&
-    (lease.endDate === null || !dayjs(lease.endDate).isBefore(period.to, 'day'))
+    !dayjs.utc(lease.startDate).isAfter(period.from, 'day') &&
+    (lease.endDate === null ||
+      !dayjs.utc(lease.endDate).isBefore(period.to, 'day'))
   )
 }
 
@@ -394,7 +402,7 @@ function getUnitConfig(unit: string) {
 }
 
 function buildInvoiceText(row: EnrichedIMDRow, description: string): string {
-  const month = SWEDISH_MONTHS[row.from.getMonth()]
+  const month = SWEDISH_MONTHS[row.from.getUTCMonth()]
   const volume = row.volume.toString().replace('.', ',')
   return `${description} ${month},${volume},${row.measurementUnit}(25% moms tillkommer)`
 }
