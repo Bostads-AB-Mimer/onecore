@@ -80,6 +80,7 @@ not mapped in those two (they fall through to `default`/"Unknown Tenfast
 stage" there): `voided`, `rejected`. Tenfast accepts all of these as
 `filter[stage]` values and rejects an unknown one with
 `400 invalidsearchfilter: filter.avtal.stage`.
+For the listing history cutoff, `NON_TENANCY_STAGES` in
 `tenfast-rental-object-helpers.ts` treats `draft`, `signingInProgress`,
 `voided` and `rejected` as never being a tenancy.
 
@@ -204,8 +205,10 @@ tenant data, and don't commit it.
 
 `tenfast-rental-object-helpers.ts` answers two different questions:
 
-- **`vacantFrom`** comes from `getLeasedUntil`, which reads lease `stage`;
-  see "vacantFrom from leases" below.
+- **`vacantFrom`** comes from `getVacantFrom`: undefined if any lease claims
+  the object (`isClaimingLease`, e.g. a draft or upcoming lease), otherwise
+  from `getLeasedUntil`, which reads lease `stage`; see "vacantFrom from
+  leases" below.
 - **`listingHistorySince`** = the `startDate` of the latest lease that has
   begun (`getLatestStartedLease`), whatever its stage, skipping `draft`,
   `signingInProgress`, `voided` and `rejected`. Nothing is published during a
