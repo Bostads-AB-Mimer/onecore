@@ -3,6 +3,7 @@ import {
   determineVacantFrom,
   withRentAt,
 } from '../../helpers/rental-object-availability-helpers'
+import { RentRow } from '@onecore/types'
 import { RentalObjectFactory } from '../factories/rental-object'
 import { RentalObjectAvailabilityInfoFactory } from '../factories/rental-object-availability-info'
 
@@ -139,6 +140,7 @@ describe('rental-object-availability-helpers', () => {
         vat: 0,
         rows: [
           {
+            code: 'INSURANCE',
             description: 'Home insurance',
             amount: 93,
             vatPercentage: 0,
@@ -146,6 +148,7 @@ describe('rental-object-availability-helpers', () => {
             includedInRent: false,
           },
           {
+            code: 'RENT',
             description: 'Rent',
             amount: 7775.88,
             vatPercentage: 0,
@@ -154,6 +157,7 @@ describe('rental-object-availability-helpers', () => {
             includedInRent: true,
           },
           {
+            code: 'RENT',
             description: 'Rent',
             amount: 10032,
             vatPercentage: 0,
@@ -161,6 +165,7 @@ describe('rental-object-availability-helpers', () => {
             includedInRent: true,
           },
           {
+            code: 'OPERATING',
             description: 'Operating cost',
             amount: 0.4,
             vatPercentage: 0,
@@ -168,6 +173,7 @@ describe('rental-object-availability-helpers', () => {
             includedInRent: true,
           },
           {
+            code: 'FEE',
             description: 'Rent setting fee',
             amount: 15,
             vatPercentage: 0,
@@ -233,8 +239,117 @@ describe('rental-object-availability-helpers', () => {
 
       expect(result).toEqual({
         ...availabilityInfo,
-        rent: { ...availabilityInfo.rent, amount: 10047.4 },
+        rent: {
+          ...availabilityInfo.rent,
+          amount: 10047.4,
+          asOf: new Date('2027-01-16'),
+        },
       })
+    })
+
+    describe('when a row in force today has ended by then', () => {
+      const withRows = (rows: RentRow[]) => ({
+        ...availabilityInfo,
+        rent: { ...availabilityInfo.rent, rows },
+      })
+      const fee: RentRow = {
+        code: 'FEE',
+        description: 'Rent setting fee',
+        amount: 15,
+        vatPercentage: 0,
+        includedInRent: true,
+      }
+      const rentOf2026: RentRow = {
+        code: 'RENT',
+        description: 'Rent',
+        amount: 7775.88,
+        vatPercentage: 0,
+        toDate: new Date('2026-12-31'),
+        includedInRent: true,
+      }
+
+      it('keeps the total from Tenfast when no row of the same article takes over, even with other rows in force', () => {
+        // Next year's rent is not entered yet: a sum would say 15.
+        const nextYearMissing = withRows([rentOf2026, fee])
+
+        expect(withRentAt(nextYearMissing, new Date('2027-01-16'))).toBe(
+          nextYearMissing
+        )
+      })
+
+      it('sums the rows when a row of the same article takes over', () => {
+        const result = withRentAt(
+          withRows([
+            rentOf2026,
+            {
+              ...rentOf2026,
+              amount: 10032,
+              fromDate: new Date('2027-01-01'),
+              toDate: undefined,
+            },
+            fee,
+          ]),
+          new Date('2027-01-16')
+        )
+
+        expect(result.rent.amount).toBe(10047)
+      })
+
+      it('trusts a discount that ends, since that only raises the rent', () => {
+        const result = withRentAt(
+          withRows([
+            { ...rentOf2026, toDate: undefined },
+            {
+              code: 'DISCOUNT',
+              description: 'Rent discount',
+              amount: -1400.15,
+              vatPercentage: 0,
+              toDate: new Date('2026-12-31'),
+              includedInRent: true,
+            },
+          ]),
+          new Date('2027-01-16')
+        )
+
+        expect(result.rent.amount).toBe(7775.88)
+      })
+
+      it('does not mind a row outside the rent ending', () => {
+        const result = withRentAt(
+          withRows([
+            { ...rentOf2026, toDate: undefined },
+            {
+              code: 'INSURANCE',
+              description: 'Home insurance',
+              amount: 93,
+              vatPercentage: 0,
+              toDate: new Date('2026-12-31'),
+              includedInRent: false,
+            },
+          ]),
+          new Date('2027-01-16')
+        )
+
+        expect(result.rent.asOf).toEqual(new Date('2027-01-16'))
+      })
+    })
+
+    it('says which day the total is the rent of', () => {
+      const asOfToday = { ...availabilityInfo.rent, asOf: TODAY }
+      const today = { ...availabilityInfo, rent: asOfToday }
+
+      // Recalculated for the move-in day
+      expect(withRentAt(today, new Date('2027-01-16')).rent.asOf).toEqual(
+        new Date('2027-01-16')
+      )
+      // Kept at today when the total from Tenfast is kept
+      expect(withRentAt(today, undefined).rent.asOf).toEqual(TODAY)
+      expect(
+        withRentAt(
+          { ...today, rent: { ...asOfToday, rows: [] } },
+          new Date('2027-01-16')
+        ).rent.asOf
+      ).toEqual(TODAY)
     })
 
     it.each([

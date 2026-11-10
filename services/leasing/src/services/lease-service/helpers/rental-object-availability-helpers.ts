@@ -1,4 +1,8 @@
-import { RentalObject, RentalObjectAvailabilityInfo } from '@onecore/types'
+import {
+  RentalObject,
+  RentalObjectAvailabilityInfo,
+  RentRow,
+} from '@onecore/types'
 import currency from 'currency.js'
 
 // Rent rows run over whole days and all dates here are UTC midnights, so
@@ -12,33 +16,51 @@ const toUtcDay = (date: Date) => date.toISOString().slice(0, 10)
  * reflected in it (AVTAL-489).
  *
  * The total is the sum of the rows in force that day that are part of the
- * rent (includedInRent), which is how Tenfast computes its own total. Without
- * a date, or for today or earlier, the total from Tenfast is kept. So it is
- * when no row is in force that day, such as when the rows end at the turn of
- * the year and the next year's are not entered yet: the rent of today is then
- * the best one known, where a sum would say the rent is 0. The rows are
- * returned as they are.
+ * rent (includedInRent), which is how Tenfast computes its own total. The
+ * rows are returned as they are, and rent.asOf says which day the total is
+ * the rent of.
+ *
+ * The total from Tenfast (the rent of today) is kept, with asOf left at
+ * today, when:
+ * - there is no date, or it is today or earlier
+ * - the rows for that day look incomplete, so that a sum would give a rent
+ *   that is too low: no row is in force that day, or a charge in force today
+ *   has ended by then with no row of the same article taking over. That is
+ *   what it looks like when rows end at the turn of the year and the next
+ *   year's are not entered yet. A discount (a negative row) that ends is
+ *   trusted, since that only raises the rent.
  */
 export function withRentAt(
   availabilityInfo: RentalObjectAvailabilityInfo,
   rentAt?: Date
 ): RentalObjectAvailabilityInfo {
-  if (!rentAt || toUtcDay(rentAt) <= toUtcDay(new Date()))
-    return availabilityInfo
+  const today = toUtcDay(new Date())
+  if (!rentAt || toUtcDay(rentAt) <= today) return availabilityInfo
 
   const day = toUtcDay(rentAt)
-  const rowsInForce = availabilityInfo.rent.rows.filter(
-    (row) =>
-      row.includedInRent !== false &&
-      (!row.fromDate || toUtcDay(row.fromDate) <= day) &&
-      (!row.toDate || toUtcDay(row.toDate) >= day)
+  const isInForce = (row: RentRow, onDay: string) =>
+    (!row.fromDate || toUtcDay(row.fromDate) <= onDay) &&
+    (!row.toDate || toUtcDay(row.toDate) >= onDay)
+
+  const includedRows = availabilityInfo.rent.rows.filter(
+    (row) => row.includedInRent !== false
   )
-  if (rowsInForce.length === 0) return availabilityInfo
+  const rowsInForce = includedRows.filter((row) => isInForce(row, day))
+  const chargeEndedWithoutSuccessor = includedRows.some(
+    (row) =>
+      row.amount > 0 &&
+      isInForce(row, today) &&
+      !isInForce(row, day) &&
+      !rowsInForce.some((successor) => successor.code === row.code)
+  )
+  if (rowsInForce.length === 0 || chargeEndedWithoutSuccessor)
+    return availabilityInfo
 
   return {
     ...availabilityInfo,
     rent: {
       ...availabilityInfo.rent,
+      asOf: new Date(`${day}T00:00:00.000Z`),
       amount: rowsInForce.reduce(
         (total, row) => total.add(row.amount),
         currency(0)

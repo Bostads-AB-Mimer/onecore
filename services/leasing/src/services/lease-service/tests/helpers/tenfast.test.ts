@@ -342,7 +342,7 @@ describe('mapToOnecoreRentalObjectRent', () => {
         vatPercentage: 0,
         fromDate: undefined,
         toDate: undefined,
-        includedInRent: false,
+        includedInRent: true,
       },
     ])
   })

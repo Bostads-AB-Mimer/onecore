@@ -8,6 +8,7 @@ import listingTextContentAdapter from '../../adapters/listing-text-content-adapt
 import { routes } from '../../routes/rental-objects'
 import { toYearMonthDayString } from '../../adapters/tenfast/schemas'
 import * as factory from '../factories'
+import { logger } from '@onecore/utilities'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -1264,6 +1265,77 @@ describe('parking spaces', () => {
             availability.rent.amount
         )
       ).toEqual([RENT_ON_MOVE_IN_DAY, RENT_ON_MOVE_IN_DAY, RENT_TODAY])
+    })
+
+    it('matches move-in days to codes without regard to case or blanks, and says which day each rent is of', async () => {
+      // Arrange
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: '306-007-05-0403A',
+              vacantFrom: undefined,
+              rent: buildRaisedRent(),
+            }),
+          ],
+        })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({
+          rentalObjectCodes: ['306-007-05-0403A'],
+          rentAtByRentalObjectCode: { ' 306-007-05-0403a ': MOVE_IN_DAY },
+        })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].rent.amount).toBe(RENT_ON_MOVE_IN_DAY)
+      expect(res.body.content[0].rent.asOf).toBe(
+        new Date(MOVE_IN_DAY).toISOString()
+      )
+    })
+
+    it('warns when a move-in day is given for a code that no returned rental object has', async () => {
+      // Arrange
+      const warnSpy = jest.spyOn(logger, 'warn')
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'code-1',
+              rent: buildRaisedRent(),
+            }),
+          ],
+        })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({
+          rentalObjectCodes: ['code-1'],
+          rentAtByRentalObjectCode: {
+            'code-1': MOVE_IN_DAY,
+            'not-returned': MOVE_IN_DAY,
+          },
+        })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(warnSpy).toHaveBeenCalledWith(
+        { unmatchedRentAtCount: 1, rentAtCount: 2 },
+        expect.stringContaining('match no returned rental object')
+      )
     })
 
     it('ignores a move-in day given for a parking space', async () => {

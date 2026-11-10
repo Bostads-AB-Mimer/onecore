@@ -429,6 +429,9 @@ interface RentalObjectAvailabilityInfo {
 interface RentalObjectRent {
   amount: number
   vat: number
+  // The day the total (amount and vat) is the rent of. Today, unless the
+  // total was recalculated for the day a new tenant would move in.
+  asOf?: Date
   rows: Array<RentalObjectRentRow>
 }
 

@@ -183,9 +183,19 @@ A rental object vacant from a later day must show the rent of that day
 (AVTAL-489). `mapTenfastRentalObjectToAvailabilityInfo` passes Tenfast's total
 on as it is and marks each row with `includedInRent`. `withRentAt`
 (`rental-object-availability-helpers.ts`) then recomputes the total from the
-rows for a later day, in the routes. When no included row is in force that day
-(next year's rows not entered yet) it keeps Tenfast's total instead of
-answering 0.
+rows for a later day, in the routes. `rent.asOf` says which day the total is
+the rent of. A row without the flag counts as included: only an explicit
+`false` leaves a row out.
+
+`withRentAt` keeps Tenfast's total (and `asOf` today) when the rows for the
+day look incomplete, so a sum would be too low:
+
+- **No included row is in force that day.**
+- **A charge in force today has ended by then, and no row of the same article
+  takes over.** That is what missing next-year rows look like when other rows
+  remain. A negative row that ends is trusted: on production (2026-11-10) the
+  rows ending without a successor were rent discounts ("Hyresrabatt
+  2026-2028", 63 of 4,000 bostad), which are meant to end.
 
 The day comes from:
 

@@ -436,6 +436,14 @@ export const routes = (router: KoaRouter) => {
    *                           type: number
    *                         vat:
    *                           type: number
+   *                         asOf:
+   *                           type: string
+   *                           format: date-time
+   *                           description: |
+   *                             The day the total (amount, vat) is the rent of.
+   *                             Today when the total was not recalculated for
+   *                             the move-in day, which also happens when the
+   *                             rows for that day look incomplete.
    *                         rows:
    *                           type: array
    *                           items:
@@ -764,7 +772,10 @@ export const routes = (router: KoaRouter) => {
    *                   The day to give the rent total for (yyyy-mm-dd), per
    *                   rental object code, for rental objects that are not
    *                   parking spaces. A code left out, today or earlier gives
-   *                   the rent of today. Ignored for parking spaces.
+   *                   the rent of today. Ignored for parking spaces. Codes
+   *                   are matched without regard to case or surrounding
+   *                   blanks. rent.asOf in the response says which day each
+   *                   total is the rent of.
    *                 example: { "ABC123": "2027-01-16" }
    *     responses:
    *       '200':
@@ -812,7 +823,14 @@ export const routes = (router: KoaRouter) => {
         .body as leasing.v1.RentalObjectAvailabilitiesRequest
 
       const includeRentalObjectCodes = body.rentalObjectCodes ?? []
-      const rentAtByRentalObjectCode = body.rentAtByRentalObjectCode ?? {}
+      // Codes are matched without regard to case or surrounding blanks, so a
+      // day isn't dropped over how the caller wrote the code.
+      const normalizeCode = (code: string) => code.trim().toUpperCase()
+      const rentAtByCode = new Map(
+        Object.entries(body.rentAtByRentalObjectCode ?? {}).map(
+          ([code, rentAt]) => [normalizeCode(code), new Date(rentAt)]
+        )
+      )
 
       // Get both parking space info from xpand and availability info from tenfast in parallel
       const [parkingSpaceResult, rentalObjectAvailabilitiesResponse] =
@@ -877,20 +895,28 @@ export const routes = (router: KoaRouter) => {
           // For other rental objects vacantFrom is left undefined, since we
           // have no block info to determine it from. The caller gives the
           // move-in day to get the rent for.
-          const rentAt = Object.hasOwn(
-            rentAtByRentalObjectCode,
-            availabilityInfo.rentalObjectCode
-          )
-            ? new Date(
-                rentAtByRentalObjectCode[availabilityInfo.rentalObjectCode]
-              )
-            : undefined
           return withRentAt(
             { ...availabilityInfo, vacantFrom: undefined },
-            rentAt
+            rentAtByCode.get(normalizeCode(availabilityInfo.rentalObjectCode))
           )
         }
       )
+
+      // A day given for a code that no returned rental object has was not
+      // applied to anything, which the response can't show.
+      const returnedCodes = new Set(
+        content.map((availabilityInfo) =>
+          normalizeCode(availabilityInfo.rentalObjectCode)
+        )
+      )
+      const unmatchedRentAtCount = [...rentAtByCode.keys()].filter(
+        (code) => !returnedCodes.has(code)
+      ).length
+      if (unmatchedRentAtCount > 0)
+        logger.warn(
+          { unmatchedRentAtCount, rentAtCount: rentAtByCode.size },
+          'rental-objects/availabilities: rentAtByRentalObjectCode has codes that match no returned rental object'
+        )
 
       ctx.status = 200
       ctx.body = { content, ...metadata }

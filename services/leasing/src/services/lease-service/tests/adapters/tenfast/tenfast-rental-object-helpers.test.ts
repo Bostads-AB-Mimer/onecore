@@ -267,7 +267,15 @@ describe('tenfast-rental-object-helpers', () => {
       expect(result.rent.vat).toBe(250)
     })
 
-    it('marks rows as part of the rent total only when Tenfast says so', () => {
+    it('gives the total as the rent of today', () => {
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        factory.tenfastRentalObject.build()
+      )
+      expect(result.rent.asOf).toEqual(TODAY)
+    })
+
+    it('marks rows Tenfast leaves out of the rent total', () => {
       const rentalObject = factory.tenfastRentalObject.build({
         hyror: [
           factory.tenfastInvoiceRow.build({ includeInContract: true }),
@@ -282,7 +290,7 @@ describe('tenfast-rental-object-helpers', () => {
       expect(result.rent.rows.map((row) => row.includedInRent)).toEqual([
         true,
         false,
-        false,
+        true,
       ])
     })
   })

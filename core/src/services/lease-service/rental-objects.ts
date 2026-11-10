@@ -238,6 +238,14 @@ export const routes = (router: KoaRouter) => {
    *                           type: number
    *                         vat:
    *                           type: number
+   *                         asOf:
+   *                           type: string
+   *                           format: date-time
+   *                           description: |
+   *                             The day the total (amount, vat) is the rent of.
+   *                             Today when the total was not recalculated for
+   *                             the move-in day, which also happens when the
+   *                             rows for that day look incomplete.
    *                         rows:
    *                           type: array
    *                           items:
@@ -500,7 +508,10 @@ export const routes = (router: KoaRouter) => {
    *                   The day to give the rent total for (yyyy-mm-dd), per
    *                   rental object code, for rental objects that are not
    *                   parking spaces. A code left out, today or earlier gives
-   *                   the rent of today. Ignored for parking spaces.
+   *                   the rent of today. Ignored for parking spaces. Codes
+   *                   are matched without regard to case or surrounding
+   *                   blanks. rent.asOf in the response says which day each
+   *                   total is the rent of.
    *                 example: { "ABC123": "2027-01-16" }
    *     responses:
    *       '200':
@@ -528,6 +539,14 @@ export const routes = (router: KoaRouter) => {
    *                             type: number
    *                           vat:
    *                             type: number
+   *                           asOf:
+   *                             type: string
+   *                             format: date-time
+   *                             description: |
+   *                               The day the total (amount, vat) is the rent
+   *                               of. Today when the total was not recalculated
+   *                               for the move-in day, which also happens when
+   *                               the rows for that day look incomplete.
    *                           rows:
    *                             type: array
    *                             items:

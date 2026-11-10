@@ -182,7 +182,10 @@ const getRentalObjectAvailabilities = async (
     )
     if (response.status === 400) {
       logger.warn(
-        { rentalObjectCodes, rentAtByRentalObjectCode },
+        {
+          rentalObjectCodeCount: rentalObjectCodes?.length ?? 0,
+          rentAtCount: Object.keys(rentAtByRentalObjectCode ?? {}).length,
+        },
         'leasing-adapter.getRentalObjectAvailabilities: invalid request'
       )
       return { ok: false, err: 'invalid-request' }

@@ -136,12 +136,13 @@ export const getVacantFrom = (leases: LeaseStageInfo[]): Date | undefined => {
  * Whether the rent row is part of the rent total. Tenfast's total (hyra) is
  * the sum of the rows in force today that have includeInContract set (checked
  * against 1,140 objects on production, 2026-11-10). withRentAt applies the
- * same rule for a later date. Every row there had the flag, so a row without
- * it is not known to count and is left out.
+ * same rule for a later date. Every row there had the flag. A row without it
+ * counts, as RentalObjectRentRow.includedInRent says: only a row Tenfast marks
+ * as left out is left out.
  */
 export const isIncludedInRent = (
   row: Pick<TenfastInvoiceRow, 'includeInContract'>
-): boolean => row.includeInContract === true
+): boolean => row.includeInContract !== false
 
 export const mapTenfastRentalObjectToAvailabilityInfo = (
   includeVAT: boolean,
@@ -149,6 +150,8 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
   tagsById: Map<string, TenfastTag> = new Map()
 ): RentalObjectAvailabilityInfo => {
   const vacantFrom = getVacantFrom(tenfastRentalObject.avtal ?? [])
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
 
   return {
     rentalObjectCode: tenfastRentalObject.externalId,
@@ -166,6 +169,9 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
         ? (tenfastRentalObject.hyra ?? 0)
         : (tenfastRentalObject.hyraExcludingVat ?? 0),
       vat: includeVAT ? (tenfastRentalObject.hyraVat ?? 0) : 0,
+      // Tenfast's total is the rent of today. withRentAt moves it to a later
+      // day when it recalculates the total.
+      asOf: today,
       rows: (tenfastRentalObject.hyror ?? []).map((hyra) => ({
         code: hyra.article ?? '',
         description: hyra.label || '',
