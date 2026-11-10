@@ -13,6 +13,8 @@ import {
   RelationErrorResponseBodySchema_APIv1,
   RelationRoleTypeSchema_APIv1,
   RelationsResponseBodySchema_APIv1,
+  SyncContactToLeasingErrorResponseBodySchema_APIv1,
+  SyncContactToLeasingResponseBodySchema_APIv1,
 } from './schema'
 import {
   generateRouteMetadata,
@@ -670,6 +672,62 @@ export const routes = (router: OkapiRouter, config: Config) => {
       }
 
       ctx.status = 204
+    }
+  )
+
+  // Gated on contacts:write by requiredRolesFor (POST under /v1/contacts).
+  router.post(
+    '/v1/contacts/:contactCode/sync-to-leasing',
+    {
+      summary: 'Make leasing pull the current data of a contact',
+      description:
+        'Asks leasing to fetch the contact from ONECore again and update its ' +
+        'tenant, e.g. after a tenant was stored with outdated or redacted ' +
+        'data. Changes nothing in the contacts service. `skipped` is true ' +
+        'when leasing has no tenant for the contact code. 502 sync-failed ' +
+        'means leasing answered with an error; 502 leasing-unreachable means ' +
+        'it could not be reached, so whether the tenant was updated is ' +
+        'unknown. Both are safe to retry.',
+      tags: ['Contacts'],
+      params: {
+        contactCode: {
+          description: 'Contact Code',
+          schema: z.string(),
+        },
+      },
+      response: {
+        200: SyncContactToLeasingResponseBodySchema_APIv1,
+        502: SyncContactToLeasingErrorResponseBodySchema_APIv1,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { contactCode } = ctx.params
+
+      // The adapter logs the failure itself, with the status leasing gave.
+      const result = await leasingAdapter.syncContactToLeasing(contactCode)
+
+      if (!result.ok) {
+        ctx.status = 502
+        ctx.body = {
+          error:
+            result.err === 'sync-failed'
+              ? 'sync-failed'
+              : 'leasing-unreachable',
+          ...metadata,
+        }
+        return
+      }
+
+      logger.info(
+        { contactCode, skipped: result.data.skipped },
+        'contacts.syncToLeasing'
+      )
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(
+        { skipped: result.data.skipped },
+        metadata
+      )
     }
   )
 

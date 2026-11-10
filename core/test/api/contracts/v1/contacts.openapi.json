@@ -3511,6 +3511,80 @@
         ]
       }
     },
+    "/v1/contacts/{contactCode}/sync-to-leasing": {
+      "post": {
+        "summary": "Make leasing pull the current data of a contact",
+        "description": "Asks leasing to fetch the contact from ONECore again and update its tenant, e.g. after a tenant was stored with outdated or redacted data. Changes nothing in the contacts service. `skipped` is true when leasing has no tenant for the contact code. 502 sync-failed means leasing answered with an error; 502 leasing-unreachable means it could not be reached, so whether the tenant was updated is unknown. Both are safe to retry.",
+        "tags": [
+          "Contacts"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "object",
+                      "properties": {
+                        "skipped": {
+                          "type": "boolean",
+                          "description": "True when leasing has no tenant for the contact code, so there was nothing to update."
+                        }
+                      },
+                      "required": [
+                        "skipped"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "content"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "sync-failed",
+                        "leasing-unreachable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "contactCode",
+            "description": "Contact Code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
     "/v1/contacts/by-phone-number/{phoneNumber}": {
       "get": {
         "summary": "List contacts by phone number",

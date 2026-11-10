@@ -256,3 +256,31 @@ export const RelationErrorResponseBodySchema_APIv1 = z.object({
   error: RelationErrorCodeSchema_APIv1,
   detail: z.string().optional(),
 })
+
+export const SyncContactToLeasingResponseBodySchema_APIv1 = z.object({
+  content: z.object({
+    skipped: z
+      .boolean()
+      .describe(
+        'True when leasing has no tenant for the contact code, so there was nothing to update.'
+      ),
+  }),
+})
+
+/**
+ * - `sync-failed`: leasing answered with an error, so the tenant was not
+ *   updated.
+ * - `leasing-unreachable`: leasing could not be reached or did not answer in
+ *   time; whether the tenant was updated is unknown.
+ *
+ * Both are safe to retry: a sync only makes leasing pull the current contact
+ * data again.
+ */
+export const SyncContactToLeasingErrorCodeSchema_APIv1 = z.enum([
+  'sync-failed',
+  'leasing-unreachable',
+])
+
+export const SyncContactToLeasingErrorResponseBodySchema_APIv1 = z.object({
+  error: SyncContactToLeasingErrorCodeSchema_APIv1,
+})
