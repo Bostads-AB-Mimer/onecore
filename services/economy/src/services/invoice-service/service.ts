@@ -5,6 +5,7 @@ import {
 } from './adapters/invoice-data-db-adapter'
 import {
   getRoundOffInformation,
+  RoundOffInformationNotFoundError,
   enrichInvoiceWithAccounting,
   getActiveRentalBlocksWithAccounting,
   getRentalSpecificRules,
@@ -20,7 +21,7 @@ import {
   uploadFile as uploadFileToXledger,
 } from '../common/adapters/xledger-adapter'
 import { economy, Invoice, InvoiceRow, PaymentStatus } from '@onecore/types'
-import { logger } from '@onecore/utilities'
+import { errorMessage, logger } from '@onecore/utilities'
 import {
   getInvoiceRows,
   getPropertyCodeAndCostCentreForLease,
@@ -481,9 +482,9 @@ const prepareInvoicesForAccounting = async (
   invoices: InvoiceWithAccounting[]
 ): Promise<{
   invoices: InvoiceWithAccounting[]
-  errors: { invoiceNumber: string; error: string }[]
+  errors: economy.RentalInvoiceExportError[]
 }> => {
-  const errors: { invoiceNumber: string; error: string }[] = []
+  const errors: economy.RentalInvoiceExportError[] = []
   const prepared: InvoiceWithAccounting[] = []
 
   const counterPartCustomers = await getCounterPartCustomers()
@@ -505,14 +506,29 @@ const prepareInvoicesForAccounting = async (
         invoice.roundOffAccount = roundOffInformation.account
         invoice.roundOffCostCode ??= roundOffInformation.costCode
       }
-    } catch (error) {
-      let message
-      if (error instanceof Error) {
-        message = error.message
+    } catch (err: unknown) {
+      if (err instanceof RoundOffInformationNotFoundError) {
+        logger.error(
+          { invoiceNumber: invoice.invoiceId, year: err.year },
+          'Round-off account missing for invoice'
+        )
+        errors.push({
+          invoiceNumber: invoice.invoiceId,
+          code: 'missing-round-off-account',
+          error: err.message,
+        })
       } else {
-        message = String(error)
+        const message = errorMessage(err)
+        logger.error(
+          { invoiceNumber: invoice.invoiceId, error: message },
+          'Could not add accounting to invoice'
+        )
+        errors.push({
+          invoiceNumber: invoice.invoiceId,
+          code: 'accounting-failed',
+          error: message,
+        })
       }
-      errors.push({ invoiceNumber: invoice.invoiceId, error: message })
       continue
     }
 
@@ -542,10 +558,10 @@ export const exportRentalInvoicesAccounting = async (
 ): Promise<{
   exportedInvoices: InvoiceWithAccounting[]
   skippedInvoices: InvoiceWithAccounting[]
-  errors: { invoiceNumber: string; error: string }[]
+  errors: economy.RentalInvoiceExportError[]
 }> => {
   try {
-    const errors: { invoiceNumber: string; error: string }[] = []
+    const errors: economy.RentalInvoiceExportError[] = []
     const CHUNK_SIZE = 1000 // 100
     const invoices: InvoiceWithAccounting[] = []
     const skippedInvoices: InvoiceWithAccounting[] = []
@@ -655,7 +671,7 @@ export const exportRentalInvoicesAccountingByOcr = async (
 ): Promise<{
   exportedInvoices: InvoiceWithAccounting[]
   skippedInvoices: InvoiceWithAccounting[]
-  errors: { invoiceNumber: string; error: string }[]
+  errors: economy.RentalInvoiceExportError[]
 }> => {
   const company = config.companies.find(
     (company) => company.xpandId.localeCompare(companyId) === 0

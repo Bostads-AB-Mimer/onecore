@@ -567,9 +567,13 @@ export const getInvoiceArticle = async (
     }
 
     return { ok: true, data: parsedResponse.data }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+  } catch (err: unknown) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { articleId, status, error: errorMessage(err) },
+      'tenfast-adapter.getInvoiceArticle'
+    )
+    return { ok: false, err: 'request-failed' }
   }
 }
 
@@ -1050,10 +1054,10 @@ const enrichInvoiceRowsWithAccounting = async (
   invoice: Invoice
 ): Promise<{
   invoiceRows: InvoiceRowWithAccounting[]
-  errors: { invoiceNumber: string; error: string }[]
+  errors: economy.RentalInvoiceExportError[]
 }> => {
   const invoiceRowsWithAccounting: InvoiceRowWithAccounting[] = []
-  const errors: { invoiceNumber: string; error: string }[] = []
+  const errors: economy.RentalInvoiceExportError[] = []
 
   for (const invoiceRow of invoice.invoiceRows) {
     const invoiceRowWithAccounting: InvoiceRowWithAccounting = {
@@ -1069,6 +1073,7 @@ const enrichInvoiceRowsWithAccounting = async (
       )
       errors.push({
         invoiceNumber: invoice.invoiceId,
+        code: 'missing-rent-article',
         error: 'Minst en hyresrad på avin saknar hyresartikel',
       })
       continue
@@ -1077,16 +1082,28 @@ const enrichInvoiceRowsWithAccounting = async (
     const articleResult = await getInvoiceArticle(invoiceRow.rentArticle)
     if (!articleResult.ok) {
       logger.error(
-        { article: invoiceRow.rentArticle, error: articleResult.err },
+        {
+          invoiceNumber: invoice.invoiceId,
+          article: invoiceRow.rentArticle,
+          error: articleResult.err,
+        },
         'Could not get article information'
       )
-      errors.push({
-        invoiceNumber: invoice.invoiceId,
-        error:
-          articleResult.err === 'not-found'
-            ? `Hyresartikeln ${invoiceRow.rentArticle} finns inte i Tenfast`
-            : `Kunde inte hämta hyresartikeln ${invoiceRow.rentArticle} från Tenfast`,
-      })
+      errors.push(
+        articleResult.err === 'not-found'
+          ? {
+              invoiceNumber: invoice.invoiceId,
+              code: 'rent-article-not-found',
+              rentArticle: invoiceRow.rentArticle,
+              error: `Hyresartikeln ${invoiceRow.rentArticle} finns inte i Tenfast`,
+            }
+          : {
+              invoiceNumber: invoice.invoiceId,
+              code: 'rent-article-fetch-failed',
+              rentArticle: invoiceRow.rentArticle,
+              error: `Kunde inte hämta hyresartikeln ${invoiceRow.rentArticle} från Tenfast`,
+            }
+      )
       continue
     }
 
@@ -1096,6 +1113,8 @@ const enrichInvoiceRowsWithAccounting = async (
       logger.error({ article }, 'Rent article has no account configurations')
       errors.push({
         invoiceNumber: invoice.invoiceId,
+        code: 'rent-article-missing-accounts',
+        rentArticle: article.code ?? invoiceRow.rentArticle,
         error: `Hyresartikeln ${article.code} har inga konton`,
       })
       continue
@@ -1116,6 +1135,8 @@ const enrichInvoiceRowsWithAccounting = async (
       )
       errors.push({
         invoiceNumber: invoice.invoiceId,
+        code: 'rent-article-missing-income-account',
+        rentArticle: article.code ?? invoiceRow.rentArticle,
         error: `Hyresartikeln ${article.code} har inget konto för kategorin Intäkter`,
       })
       continue
@@ -1155,6 +1176,8 @@ const enrichInvoiceRowsWithAccounting = async (
       )
       errors.push({
         invoiceNumber: invoice.invoiceId,
+        code: 'missing-rental-object',
+        rentArticle: invoiceRowWithAccounting.rentArticleName,
         error: `Minst en hyresrad på avin saknar hyresobjekt (hyresartikel ${invoiceRowWithAccounting.rentArticleName})`,
       })
       continue
@@ -1175,12 +1198,12 @@ export const getInvoicesNotExported = async (
   AdapterResult<
     {
       invoices: InvoiceWithAccounting[]
-      errors: { invoiceNumber: string; error: string }[] | undefined
+      errors: economy.RentalInvoiceExportError[] | undefined
     },
     string
   >
 > => {
-  const errors: { invoiceNumber: string; error: string }[] = []
+  const errors: economy.RentalInvoiceExportError[] = []
 
   try {
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
@@ -1244,7 +1267,7 @@ export const getInvoicesNotExported = async (
 
 const transformExportedInvoiceRecords = async (
   records: z.infer<typeof TenfastInvoicesByExportedResponseSchema>['records'],
-  errors: { invoiceNumber: string; error: string }[]
+  errors: economy.RentalInvoiceExportError[]
 ): Promise<InvoiceWithAccounting[]> => {
   const invoices: InvoiceWithAccounting[] = []
   for (const invoiceResult of records) {
@@ -1291,12 +1314,12 @@ export const getInvoicesByOcr = async (
   AdapterResult<
     {
       invoices: InvoiceWithAccounting[]
-      errors: { invoiceNumber: string; error: string }[] | undefined
+      errors: economy.RentalInvoiceExportError[] | undefined
     },
     string
   >
 > => {
-  const errors: { invoiceNumber: string; error: string }[] = []
+  const errors: economy.RentalInvoiceExportError[] = []
 
   try {
     const allInvoices: InvoiceWithAccounting[] = []
@@ -1317,7 +1340,8 @@ export const getInvoicesByOcr = async (
         )
         errors.push({
           invoiceNumber: ocrNumber,
-          error: `Tenfast returned status ${result.status}`,
+          code: 'invoice-fetch-failed',
+          error: `Tenfast svarade med status ${result.status}`,
         })
         continue
       }
@@ -1331,14 +1355,19 @@ export const getInvoicesByOcr = async (
           { error: parsedResponse.error, ocrNumber },
           'Error parsing Tenfast invoice'
         )
-        errors.push({ invoiceNumber: ocrNumber, error: 'schema-error' })
+        errors.push({
+          invoiceNumber: ocrNumber,
+          code: 'invoice-fetch-failed',
+          error: 'Avin från Tenfast har ett oväntat format',
+        })
         continue
       }
 
       if (parsedResponse.data.records.length === 0) {
         errors.push({
           invoiceNumber: ocrNumber,
-          error: 'Invoice not found in Tenfast',
+          code: 'invoice-not-found',
+          error: 'Avin finns inte i Tenfast',
         })
         continue
       }

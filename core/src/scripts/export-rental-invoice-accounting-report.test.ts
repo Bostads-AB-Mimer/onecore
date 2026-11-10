@@ -1,7 +1,11 @@
+import { economy } from '@onecore/types'
+
 import {
   addBatchToReport,
   buildExportReportEmail,
   createCompanyExportReport,
+  groupExportErrors,
+  summarizeExportErrorsForLog,
 } from './export-rental-invoice-accounting-report'
 
 const startedAt = new Date('2026-11-04T05:00:00Z')
@@ -17,7 +21,11 @@ const emptyBatch = {
 describe('addBatchToReport', () => {
   it('sums counts across batches and keeps one entry per repeated error', () => {
     const report = createCompanyExportReport('001')
-    const error = { invoiceNumber: '9', error: 'Saknar konto' }
+    const error: economy.RentalInvoiceExportError = {
+      invoiceNumber: '9',
+      code: 'accounting-failed',
+      error: 'Saknar konto',
+    }
 
     addBatchToReport(report, {
       ...emptyBatch,
@@ -100,7 +108,13 @@ describe('buildExportReportEmail', () => {
     const report = createCompanyExportReport('001')
     addBatchToReport(report, {
       ...emptyBatch,
-      errors: [{ invoiceNumber: '9', error: 'Saknar konto' }],
+      errors: [
+        {
+          invoiceNumber: '9',
+          code: 'accounting-failed',
+          error: 'Saknar konto',
+        },
+      ],
     })
 
     const { subject, body } = buildExportReportEmail(
@@ -110,8 +124,40 @@ describe('buildExportReportEmail', () => {
     )
 
     expect(subject).toBe('Fel i körning: export av hyresavier till Xledger')
-    expect(body).toContain('Avier med fel (exporterades inte):')
+    expect(body).toContain('Avier med fel (exporterades inte): 1')
+    expect(body).toContain('Konteringen misslyckades (1 avi):')
     expect(body).toContain('- 9: Saknar konto')
+  })
+
+  it('groups errors by rent article and caps the listed invoices', () => {
+    const report = createCompanyExportReport('001')
+    const invoiceNumbers = Array.from({ length: 12 }, (_, i) => `${i + 1}`)
+    addBatchToReport(report, {
+      ...emptyBatch,
+      errors: [
+        ...invoiceNumbers.map((invoiceNumber) => ({
+          invoiceNumber,
+          code: 'rent-article-not-found' as const,
+          rentArticle: 'A1',
+          error: 'Hyresartikeln A1 finns inte i Tenfast',
+        })),
+        {
+          invoiceNumber: '13',
+          code: 'rent-article-not-found',
+          rentArticle: 'A2',
+          error: 'Hyresartikeln A2 finns inte i Tenfast',
+        },
+      ],
+    })
+
+    const { body } = buildExportReportEmail([report], startedAt, finishedAt)
+
+    expect(body).toContain('Avier med fel (exporterades inte): 13')
+    expect(body).toContain('Hyresartikeln finns inte i Tenfast (13 avier):')
+    expect(body).toContain(
+      '- Hyresartikel A1: 12 avier (1, 2, 3, 4, 5, 6, 7, 8, 9, 10 och 2 till)'
+    )
+    expect(body).toContain('- Hyresartikel A2: 1 avi (13)')
   })
 
   it('names the uploaded files after a partial upload', () => {
@@ -146,5 +192,73 @@ describe('buildExportReportEmail', () => {
     expect(body).toContain(
       'Körningen avbröts: exporten misslyckades. Xpand timeout'
     )
+  })
+})
+
+describe('groupExportErrors', () => {
+  it('counts each invoice once per code, largest group first', () => {
+    const groups = groupExportErrors([
+      {
+        invoiceNumber: '1',
+        code: 'missing-rental-object',
+        rentArticle: 'HYRA',
+        error: 'Saknar hyresobjekt',
+      },
+      {
+        invoiceNumber: '2',
+        code: 'rent-article-not-found',
+        rentArticle: 'A1',
+        error: 'Finns inte',
+      },
+      {
+        invoiceNumber: '2',
+        code: 'rent-article-not-found',
+        rentArticle: 'A2',
+        error: 'Finns inte',
+      },
+      {
+        invoiceNumber: '3',
+        code: 'rent-article-not-found',
+        rentArticle: 'A1',
+        error: 'Finns inte',
+      },
+    ])
+
+    expect(groups.map((group) => group.code)).toEqual([
+      'rent-article-not-found',
+      'missing-rental-object',
+    ])
+    expect(groups[0].invoiceNumbers).toEqual(['2', '3'])
+    expect(groups[0].byRentArticle).toEqual(
+      new Map([
+        ['A1', ['2', '3']],
+        ['A2', ['2']],
+      ])
+    )
+  })
+})
+
+describe('summarizeExportErrorsForLog', () => {
+  it('reports invoice counts per code and rent article', () => {
+    expect(
+      summarizeExportErrorsForLog([
+        {
+          invoiceNumber: '1',
+          code: 'rent-article-not-found',
+          rentArticle: 'A1',
+          error: 'Finns inte',
+        },
+        {
+          invoiceNumber: '2',
+          code: 'rent-article-not-found',
+          rentArticle: 'A1',
+          error: 'Finns inte',
+        },
+        { invoiceNumber: '3', code: 'accounting-failed', error: 'Fel' },
+      ])
+    ).toEqual({
+      'rent-article-not-found': { invoices: 2, rentArticles: { A1: 2 } },
+      'accounting-failed': { invoices: 1, rentArticles: {} },
+    })
   })
 })
