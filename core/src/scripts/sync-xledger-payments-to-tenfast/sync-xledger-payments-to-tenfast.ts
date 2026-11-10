@@ -129,23 +129,17 @@ async function notifyRejectedPayments(
   return true
 }
 
-// Starting from Xledger's latest payment skips every payment before it, so
-// without a cursor the job only does that when explicitly told to. Otherwise
-// a new or emptied state volume would silently skip payments.
-const START_FROM_LATEST_ENV = 'XLEDGER_PAYMENT_SYNC_START_FROM_LATEST'
-
-type SyncOptions = { startFromLatest: boolean }
-
-const defaultOptions = (): SyncOptions => ({
-  startFromLatest: process.env[START_FROM_LATEST_ENV] === 'true',
-})
-
-async function notifyStartedFromLatest(cursor: string) {
+// A missing cursor looks the same on the first run as on a new or emptied
+// state volume, where starting from the latest payment skips every payment
+// since the last good run. This message is how someone notices the latter.
+// Returns whether it was sent.
+async function notifyStartedFromLatest(cursor: string): Promise<boolean> {
   if (!config.emailAddresses.economy) {
-    logger.warn(
-      'config.emailAddresses.economy is not set — skipping start-from-latest notification'
+    logger.error(
+      { cursor },
+      'config.emailAddresses.economy is not set — cannot report that the sync started from the latest payment'
     )
-    return
+    return false
   }
 
   const result = await sendEmail({
@@ -154,9 +148,7 @@ async function notifyStartedFromLatest(cursor: string) {
     body: [
       `Synkronisering av betalningar från Xledger till Tenfast saknade sparad markör och startade från Xledgers senaste betalning (markör ${cursor}).`,
       '',
-      'Betalningar före den har inte registrerats i Tenfast. Om det inte var en planerad första körning behöver de betalningarna hanteras manuellt.',
-      '',
-      `Ta bort ${START_FROM_LATEST_ENV} från jobbet så att en saknad markör stoppar synken i stället för att starta om den.`,
+      'Betalningar före den har inte registrerats i Tenfast. Om det inte var den första körningen behöver betalningarna sedan förra lyckade körningen hanteras manuellt.',
     ].join('\n'),
   })
 
@@ -165,7 +157,9 @@ async function notifyStartedFromLatest(cursor: string) {
       { err: result.err, statusCode: result.statusCode, cursor },
       'failed to send start-from-latest notification'
     )
+    return false
   }
+  return true
 }
 
 // First run: start from Xledger's latest payment. Earlier payments are not
@@ -184,7 +178,11 @@ async function startFromLatestCursor(store: CursorStore) {
     { lastCursor: latest.data },
     'latest cursor saved, starting from here on next run'
   )
-  await notifyStartedFromLatest(latest.data)
+  if (!(await notifyStartedFromLatest(latest.data))) {
+    throw new Error(
+      `Sync started from Xledger's latest payment (cursor ${latest.data}) but this could not be reported by email`
+    )
+  }
 }
 
 async function fetchPaymentsAfter(cursor: string) {
@@ -255,17 +253,9 @@ async function recordPayment(event: PaymentSyncEvent): Promise<RecordOutcome> {
   )
 }
 
-async function syncPayments(
-  store: CursorStore = fileCursorStore,
-  options: SyncOptions = defaultOptions()
-) {
+async function syncPayments(store: CursorStore = fileCursorStore) {
   const cursor = await store.read()
   if (!cursor) {
-    if (!options.startFromLatest) {
-      throw new Error(
-        `No saved payment sync cursor. If this is the first run, set ${START_FROM_LATEST_ENV}=true to start from Xledger's latest payment (earlier payments are not synced), then remove it.`
-      )
-    }
     return startFromLatestCursor(store)
   }
 
