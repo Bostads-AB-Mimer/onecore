@@ -9,11 +9,15 @@ import {
   enrichInvoiceWithAccounting,
   getActiveRentalBlocksWithAccounting,
   getRentalSpecificRules,
+  getInvoicesByContactCode as getXpandInvoicesByContactCode,
+  getInvoiceRows as getXpandInvoiceListRows,
 } from './adapters/xpand-db-adapter'
 import {
   getAllInvoicePaymentEvents,
   getInvoiceByInvoiceNumber,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
+  getInvoicesByInvoiceNumbers as getXledgerInvoicesByInvoiceNumbers,
+  ParsedXledgerInvoice,
   getPeriodInformationFromDateStrings,
   setInvoiceRowsTaxRule,
   transformContact,
@@ -136,28 +140,222 @@ export const getLeaseDetails = async (invoiceIds: string[]) => {
   )
 }
 
+// A loss is recorded in Xledger as a transaction on this account.
+const LOSS_ACCOUNT_CODE = '1529'
+
+// Mimer's company code in Xpand.
+const XPAND_MIMER_COMPANY_ID = '001'
+
+const normalizeContactCode = (contactCode: string) =>
+  contactCode.trim().toUpperCase()
+
+// Keeps the first entry per invoice id, like Array.find would.
+const firstByInvoiceId = <T>(items: T[], getInvoiceId: (item: T) => string) => {
+  const byId = new Map<string, T>()
+  for (const item of items) {
+    const invoiceId = getInvoiceId(item)
+    if (!byId.has(invoiceId)) {
+      byId.set(invoiceId, item)
+    }
+  }
+  return byId
+}
+
+/*
+ * Replaces Xpand invoices with their Xledger counterpart, looked up by invoice
+ * number. Xledger owns payment status, debt collection, remaining amount and
+ * the invoice PDF, but its transform carries no lease context — leaseIds is
+ * empty and transactionTypeName generated — so those values are kept from the
+ * Xpand invoice.
+ *
+ * Mirrors the contact-scoped merge: one Xledger invoice yields exactly one
+ * result, even if several Xpand rows share its invoice number.
+ */
+const enrichFromXledgerByNumber = (
+  xpandInvoices: Invoice[],
+  xledgerInvoices: ParsedXledgerInvoice[]
+): Invoice[] => {
+  const lossInvoiceIds = new Set<string>()
+  const regularById = new Map<string, ParsedXledgerInvoice>()
+  for (const parsed of xledgerInvoices) {
+    if (parsed.invoice.accountCode === LOSS_ACCOUNT_CODE) {
+      lossInvoiceIds.add(parsed.invoice.invoiceId)
+    } else if (!regularById.has(parsed.invoice.invoiceId)) {
+      regularById.set(parsed.invoice.invoiceId, parsed)
+    }
+  }
+
+  const enrichedInvoiceIds = new Set<string>()
+  const result: Invoice[] = []
+  for (const xpandInvoice of xpandInvoices) {
+    const xledgerInvoice = regularById.get(xpandInvoice.invoiceId)
+    const isExpectedLoss = lossInvoiceIds.has(xpandInvoice.invoiceId)
+
+    if (!xledgerInvoice) {
+      // An invoice can be recorded in Xledger as a loss only, with no
+      // regular transaction row to enrich from.
+      result.push(
+        isExpectedLoss ? { ...xpandInvoice, expectedLoss: true } : xpandInvoice
+      )
+      continue
+    }
+
+    if (enrichedInvoiceIds.has(xpandInvoice.invoiceId)) {
+      continue
+    }
+    enrichedInvoiceIds.add(xpandInvoice.invoiceId)
+
+    result.push(
+      withInvoiceDeferral(
+        {
+          ...xledgerInvoice.invoice,
+          leaseIds: xpandInvoice.leaseIds,
+          transactionType: xpandInvoice.transactionType,
+          transactionTypeName: xpandInvoice.transactionTypeName,
+          fromDate: xpandInvoice.fromDate ?? xledgerInvoice.invoice.fromDate,
+          toDate: xpandInvoice.toDate ?? xledgerInvoice.invoice.toDate,
+          ...(isExpectedLoss ? { expectedLoss: true } : {}),
+        },
+        { defermentEndDate: xledgerInvoice.defermentEndDate }
+      )
+    )
+  }
+
+  return result
+}
+
+// Upper bound on how long the invoice list waits for each Xpand call (customer
+// card, Mina sidor, credit check). The invoice-list DB client already cancels
+// a single query after 10 s; a call can run a few queries, so this caps the
+// whole call and also covers waiting for a connection.
+const XPAND_TIMEOUT_MS = 15_000
+
+class XpandTimeoutError extends Error {}
+
+const withXpandTimeout = <T>(promise: Promise<T>): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new XpandTimeoutError('Xpand did not answer in time')),
+      XPAND_TIMEOUT_MS
+    )
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
+// The adapter logs its own failures, including the DB client's own request
+// timeout. Only this outer timeout is logged here.
+const logXpandFailure = (err: unknown, contactCode: string, what: string) => {
+  if (err instanceof XpandTimeoutError) {
+    logger.error(
+      { contactCode, timeoutMs: XPAND_TIMEOUT_MS },
+      `getInvoicesByContactCode: ${what} timed out`
+    )
+  } else {
+    logger.warn(
+      { contactCode },
+      `getInvoicesByContactCode: ${what} unavailable`
+    )
+  }
+}
+
+// Xpand is best-effort: when it is unavailable the list is still returned from
+// Xledger and Tenfast. Returns undefined in that case, so the caller can skip
+// the other Xpand queries.
+const getXpandInvoicesIfAvailable = async (
+  contactCode: string,
+  from?: Date
+): Promise<Invoice[] | undefined> => {
+  try {
+    return (
+      (await withXpandTimeout(
+        getXpandInvoicesByContactCode(contactCode, { from })
+      )) ?? []
+    )
+  } catch (err: unknown) {
+    logXpandFailure(err, contactCode, 'Xpand invoices')
+    return undefined
+  }
+}
+
+/*
+ * Invoices for a shared lease billed to the other lease holder (MIM-1160) are
+ * missed by the contact-scoped Xledger lookup, so their Xledger data is
+ * fetched by invoice number instead. Best-effort: falls back to the plain
+ * Xpand invoices.
+ */
+const enrichHouseholdInvoices = async (
+  householdInvoices: Invoice[],
+  contactCode: string
+): Promise<Invoice[]> => {
+  if (householdInvoices.length === 0) {
+    return householdInvoices
+  }
+
+  try {
+    const xledgerByNumber = await getXledgerInvoicesByInvoiceNumbers(
+      householdInvoices.map((invoice) => invoice.invoiceId)
+    )
+    return enrichFromXledgerByNumber(householdInvoices, xledgerByNumber)
+  } catch {
+    logger.warn(
+      { contactCode },
+      'getInvoicesByContactCode: could not enrich household invoices from Xledger, returning them from Xpand'
+    )
+    return householdInvoices
+  }
+}
+
+// Returns undefined when Xpand is unavailable, so the caller keeps the rows
+// the invoices already have. The adapter logs the failure itself.
+const getXpandInvoiceRowsByInvoiceId = async (
+  invoiceIds: string[],
+  contactCode: string
+): Promise<Map<string, InvoiceRow[]> | undefined> => {
+  try {
+    const rows = await withXpandTimeout(
+      getXpandInvoiceListRows(XPAND_MIMER_COMPANY_ID, invoiceIds)
+    )
+    const rowsByInvoiceId = new Map<string, InvoiceRow[]>()
+    for (const row of rows) {
+      const invoiceRows = rowsByInvoiceId.get(row.invoiceNumber) ?? []
+      invoiceRows.push(row)
+      rowsByInvoiceId.set(row.invoiceNumber, invoiceRows)
+    }
+    return rowsByInvoiceId
+  } catch (err: unknown) {
+    logXpandFailure(err, contactCode, 'Xpand invoice rows')
+    return undefined
+  }
+}
+
+/*
+ * A contact's invoices from Xledger, Tenfast and Xpand.
+ *
+ * Xledger is the base list. Tenfast adds invoices not yet in Xledger, Xpand
+ * adds invoices that predate Xledger (the contact's own, and those billed to
+ * a co-holder on a shared lease). For the period and the invoice rows,
+ * Tenfast takes precedence over Xpand, and Xpand over Xledger.
+ */
 export const getInvoicesByContactCode = async (
   contactCode: string,
   filters?: { from?: Date }
-) => {
-  const xledgerInvoices =
-    (await getXledgerInvoicesByContactCode(contactCode, {
-      from: filters?.from,
-    })) ?? []
-  const tenfastInvoices = await getTenfastInvoicesByContactCode(contactCode, {
-    from: filters?.from,
-  })
-
-  const xledgerInvoiceIds = xledgerInvoices.map(
-    (parsed) => parsed.invoice.invoiceId
-  )
+): Promise<Invoice[]> => {
+  const from = filters?.from
+  const [xledgerResult, tenfastInvoices, xpandResult] = await Promise.all([
+    getXledgerInvoicesByContactCode(contactCode, { from }),
+    getTenfastInvoicesByContactCode(contactCode, { from }),
+    getXpandInvoicesIfAvailable(contactCode, from),
+  ])
+  const xledgerInvoices = xledgerResult ?? []
+  const isXpandAvailable = xpandResult !== undefined
+  const xpandInvoices = xpandResult ?? []
 
   const regularInvoices: typeof xledgerInvoices = []
   const losses: typeof xledgerInvoices = []
 
   xledgerInvoices.forEach((parsed) => {
-    // A loss is recorded as a transaction on account 1529
-    if (parsed.invoice.accountCode === '1529') {
+    if (parsed.invoice.accountCode === LOSS_ACCOUNT_CODE) {
       losses.push(parsed)
     } else {
       regularInvoices.push(parsed)
@@ -174,42 +372,98 @@ export const getInvoicesByContactCode = async (
     }
   })
 
-  // If invoice exists in tenfast, use period (fromDate, toDate) from tenfast invoice
-  // Otherwise use period from xledger invoice
-  return regularInvoices
-    .map((parsed) => {
-      const tenfastInvoice = tenfastInvoices.find(
-        (invoice) => invoice.invoice.invoiceId === parsed.invoice.invoiceId
-      )
+  const xledgerInvoiceIds = new Set(
+    xledgerInvoices.map((parsed) => parsed.invoice.invoiceId)
+  )
+  const tenfastById = firstByInvoiceId(
+    tenfastInvoices,
+    (parsed) => parsed.invoice.invoiceId
+  )
+  const xpandById = firstByInvoiceId(
+    xpandInvoices,
+    (invoice) => invoice.invoiceId
+  )
 
-      const invoice = {
-        ...parsed.invoice,
-        ...(tenfastInvoice?.invoice.fromDate &&
-          tenfastInvoice.invoice.toDate && {
-            fromDate: tenfastInvoice.invoice.fromDate,
-            toDate: tenfastInvoice.invoice.toDate,
-          }),
-        ...(tenfastInvoice && {
-          invoiceRows: tenfastInvoice.invoice.invoiceRows,
-        }),
-      }
-
-      return withInvoiceDeferral(invoice, {
-        defermentEndDate: parsed.defermentEndDate,
-        tenfastDeferral: tenfastInvoice?.tenfastDeferral,
-      })
-    })
-    .concat(
-      tenfastInvoices
-        .filter(
-          (parsed) => !xledgerInvoiceIds.includes(parsed.invoice.invoiceId)
-        )
-        .map((parsed) =>
-          withInvoiceDeferral(parsed.invoice, {
-            tenfastDeferral: parsed.tenfastDeferral,
-          })
-        )
+  const xledgerBasedInvoices = regularInvoices.map((parsed) => {
+    const tenfastParsed = tenfastById.get(parsed.invoice.invoiceId)
+    const tenfastInvoice = tenfastParsed?.invoice
+    const xpandInvoice = xpandById.get(parsed.invoice.invoiceId)
+    const periodSource = [tenfastInvoice, xpandInvoice].find(
+      (source) => source?.fromDate && source.toDate
     )
+
+    const invoice = {
+      ...parsed.invoice,
+      ...(periodSource && {
+        fromDate: periodSource.fromDate,
+        toDate: periodSource.toDate,
+      }),
+      ...(tenfastInvoice && { invoiceRows: tenfastInvoice.invoiceRows }),
+    }
+
+    return withInvoiceDeferral(invoice, {
+      defermentEndDate: parsed.defermentEndDate,
+      tenfastDeferral: tenfastParsed?.tenfastDeferral,
+    })
+  })
+
+  const tenfastOnlyInvoices = tenfastInvoices
+    .filter((parsed) => !xledgerInvoiceIds.has(parsed.invoice.invoiceId))
+    .map((parsed) =>
+      withInvoiceDeferral(parsed.invoice, {
+        tenfastDeferral: parsed.tenfastDeferral,
+      })
+    )
+
+  const xpandOnlyInvoices = xpandInvoices.filter(
+    (invoice) =>
+      !xledgerInvoiceIds.has(invoice.invoiceId) &&
+      !tenfastById.has(invoice.invoiceId)
+  )
+  // The contact's own Xpand-only invoices predate Xledger, so looking them up
+  // there would only add round trips that return nothing.
+  const isBilledToOtherContact = (invoice: Invoice) =>
+    normalizeContactCode(invoice.reference) !==
+    normalizeContactCode(contactCode)
+  const ownXpandOnlyInvoices = xpandOnlyInvoices.filter(
+    (invoice) => !isBilledToOtherContact(invoice)
+  )
+
+  // Invoices in Tenfast keep Tenfast's rows; all others get Xpand's rows.
+  const invoiceIdsNeedingXpandRows = [
+    ...new Set(
+      regularInvoices
+        .map((parsed) => parsed.invoice.invoiceId)
+        .filter((invoiceId) => !tenfastById.has(invoiceId))
+        .concat(xpandOnlyInvoices.map((invoice) => invoice.invoiceId))
+    ),
+  ]
+
+  const [householdInvoices, xpandRowsByInvoiceId] = await Promise.all([
+    enrichHouseholdInvoices(
+      xpandOnlyInvoices.filter(isBilledToOtherContact),
+      contactCode
+    ),
+    // Xpand didn't answer the invoice lookup: don't wait for it a second time.
+    isXpandAvailable
+      ? getXpandInvoiceRowsByInvoiceId(invoiceIdsNeedingXpandRows, contactCode)
+      : undefined,
+  ])
+
+  const withXpandRows = (invoice: Invoice): Invoice =>
+    xpandRowsByInvoiceId && !tenfastById.has(invoice.invoiceId)
+      ? {
+          ...invoice,
+          invoiceRows: xpandRowsByInvoiceId.get(invoice.invoiceId) ?? [],
+        }
+      : invoice
+
+  return [
+    ...xledgerBasedInvoices,
+    ...tenfastOnlyInvoices,
+    ...ownXpandOnlyInvoices,
+    ...householdInvoices,
+  ].map(withXpandRows)
 }
 
 type DeferInvoiceError = economy.DeferralErrorCode | 'unknown'
