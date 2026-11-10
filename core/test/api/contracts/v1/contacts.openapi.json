@@ -3511,13 +3511,23 @@
         ]
       }
     },
-    "/v1/contacts/{contactCode}/sync-to-leasing": {
+    "/v1/contacts/sync-to-leasing": {
       "post": {
-        "summary": "Make leasing pull the current data of a contact",
-        "description": "Asks leasing to fetch the contact from ONECore again and update its tenant, e.g. after a tenant was stored with outdated or redacted data. Changes nothing in the contacts service. `skipped` is true when leasing has no tenant for the contact code. 502 sync-failed means leasing answered with an error; 502 leasing-unreachable means it could not be reached, so whether the tenant was updated is unknown. Both are safe to retry.",
+        "summary": "Make leasing pull the current data of a list of contacts",
+        "description": "Asks leasing to fetch each contact from ONECore again and update its tenant, e.g. after tenants were stored with outdated or redacted data. Changes nothing in the contacts service. Answers 200 with an outcome per contact code once every code has been tried — check `failed`: synced, skipped (leasing has no tenant for the code), sync-failed (leasing answered with an error) or leasing-unreachable (whether the tenant was updated is unknown). Every outcome is safe to retry.",
         "tags": [
           "Contacts"
         ],
+        "requestBody": {
+          "description": "",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncContactsToLeasingRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -3529,13 +3539,47 @@
                     "content": {
                       "type": "object",
                       "properties": {
+                        "results": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "contactCode": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "synced",
+                                  "skipped",
+                                  "sync-failed",
+                                  "leasing-unreachable"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "contactCode",
+                              "status"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "synced": {
+                          "type": "integer"
+                        },
                         "skipped": {
-                          "type": "boolean",
-                          "description": "True when leasing has no tenant for the contact code, so there was nothing to update."
+                          "type": "integer"
+                        },
+                        "failed": {
+                          "type": "integer",
+                          "description": "Codes with status sync-failed or leasing-unreachable."
                         }
                       },
                       "required": [
-                        "skipped"
+                        "results",
+                        "synced",
+                        "skipped",
+                        "failed"
                       ],
                       "additionalProperties": false
                     }
@@ -3548,8 +3592,8 @@
               }
             }
           },
-          "502": {
-            "description": "Bad Gateway",
+          "400": {
+            "description": "Bad Request",
             "content": {
               "application/json": {
                 "schema": {
@@ -3558,9 +3602,11 @@
                     "error": {
                       "type": "string",
                       "enum": [
-                        "sync-failed",
-                        "leasing-unreachable"
+                        "invalid-request"
                       ]
+                    },
+                    "detail": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -3571,18 +3617,7 @@
               }
             }
           }
-        },
-        "parameters": [
-          {
-            "name": "contactCode",
-            "description": "Contact Code",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ]
+        }
       }
     },
     "/v1/contacts/by-phone-number/{phoneNumber}": {
@@ -5166,6 +5201,25 @@
         "required": [
           "relatedContactCode",
           "roleType"
+        ],
+        "additionalProperties": false
+      },
+      "SyncContactsToLeasingRequest": {
+        "type": "object",
+        "properties": {
+          "contactCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "maxItems": 500,
+            "description": "Contact codes to sync, at most 500. Duplicates are synced once."
+          }
+        },
+        "required": [
+          "contactCodes"
         ],
         "additionalProperties": false
       },

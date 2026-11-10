@@ -13,8 +13,10 @@ import {
   RelationErrorResponseBodySchema_APIv1,
   RelationRoleTypeSchema_APIv1,
   RelationsResponseBodySchema_APIv1,
-  SyncContactToLeasingErrorResponseBodySchema_APIv1,
-  SyncContactToLeasingResponseBodySchema_APIv1,
+  SyncContactToLeasingStatusSchema_APIv1,
+  SyncContactsToLeasingErrorResponseBodySchema_APIv1,
+  SyncContactsToLeasingRequestBodySchema_APIv1,
+  SyncContactsToLeasingResponseBodySchema_APIv1,
 } from './schema'
 import {
   generateRouteMetadata,
@@ -34,6 +36,15 @@ import { AdapterResult } from '@/adapters/types'
 import { ProcessStatus } from '@/common/types'
 import type { Contact } from '@onecore/contacts/domain'
 import { ParameterizedContext } from 'koa'
+import { runWithConcurrency } from '@/utils/concurrency'
+
+// Each sync is a leasing call that waits on the external leasing system, so
+// keep only a few in flight at once.
+const SYNC_TO_LEASING_CONCURRENCY = 5
+
+type SyncToLeasingStatus = z.infer<
+  typeof SyncContactToLeasingStatusSchema_APIv1
+>
 
 /**
  * Status a create failure maps to.
@@ -677,57 +688,88 @@ export const routes = (router: OkapiRouter, config: Config) => {
 
   // Gated on contacts:write by requiredRolesFor (POST under /v1/contacts).
   router.post(
-    '/v1/contacts/:contactCode/sync-to-leasing',
+    '/v1/contacts/sync-to-leasing',
     {
-      summary: 'Make leasing pull the current data of a contact',
+      summary: 'Make leasing pull the current data of a list of contacts',
       description:
-        'Asks leasing to fetch the contact from ONECore again and update its ' +
-        'tenant, e.g. after a tenant was stored with outdated or redacted ' +
-        'data. Changes nothing in the contacts service. `skipped` is true ' +
-        'when leasing has no tenant for the contact code. 502 sync-failed ' +
-        'means leasing answered with an error; 502 leasing-unreachable means ' +
-        'it could not be reached, so whether the tenant was updated is ' +
-        'unknown. Both are safe to retry.',
+        'Asks leasing to fetch each contact from ONECore again and update its ' +
+        'tenant, e.g. after tenants were stored with outdated or redacted ' +
+        'data. Changes nothing in the contacts service. Answers 200 with an ' +
+        'outcome per contact code once every code has been tried — check ' +
+        '`failed`: synced, skipped (leasing has no tenant for the code), ' +
+        'sync-failed (leasing answered with an error) or leasing-unreachable ' +
+        '(whether the tenant was updated is unknown). Every outcome is safe ' +
+        'to retry.',
       tags: ['Contacts'],
-      params: {
-        contactCode: {
-          description: 'Contact Code',
-          schema: z.string(),
-        },
+      body: {
+        name: 'SyncContactsToLeasingRequest',
+        schema: SyncContactsToLeasingRequestBodySchema_APIv1,
       },
       response: {
-        200: SyncContactToLeasingResponseBodySchema_APIv1,
-        502: SyncContactToLeasingErrorResponseBodySchema_APIv1,
+        200: SyncContactsToLeasingResponseBodySchema_APIv1,
+        400: SyncContactsToLeasingErrorResponseBodySchema_APIv1,
       },
     },
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const { contactCode } = ctx.params
 
-      // The adapter logs the failure itself, with the status leasing gave.
-      const result = await leasingAdapter.syncContactToLeasing(contactCode)
+      // OkapiRouter does not validate the body, so it is parsed here.
+      const parsed = SyncContactsToLeasingRequestBodySchema_APIv1.safeParse(
+        ctx.request.body
+      )
 
-      if (!result.ok) {
-        ctx.status = 502
+      if (!parsed.success) {
+        ctx.status = 400
         ctx.body = {
-          error:
-            result.err === 'sync-failed'
-              ? 'sync-failed'
-              : 'leasing-unreachable',
+          error: 'invalid-request',
+          detail: parsed.error.issues
+            .map((i) => `${i.path.join('.')}: ${i.message}`)
+            .join('; '),
           ...metadata,
         }
         return
       }
 
-      logger.info(
-        { contactCode, skipped: result.data.skipped },
-        'contacts.syncToLeasing'
+      const contactCodes = [...new Set(parsed.data.contactCodes)]
+
+      // The adapter logs each failure itself, with the status leasing gave.
+      const results = await runWithConcurrency(
+        contactCodes,
+        async (
+          contactCode
+        ): Promise<{ contactCode: string; status: SyncToLeasingStatus }> => {
+          const result = await leasingAdapter.syncContactToLeasing(contactCode)
+          const status: SyncToLeasingStatus = result.ok
+            ? result.data.skipped
+              ? 'skipped'
+              : 'synced'
+            : result.err === 'sync-failed'
+              ? 'sync-failed'
+              : 'leasing-unreachable'
+          return { contactCode, status }
+        },
+        SYNC_TO_LEASING_CONCURRENCY
       )
+
+      const count = (statuses: SyncToLeasingStatus[]) =>
+        results.filter((r) => statuses.includes(r.status)).length
+      const summary = {
+        synced: count(['synced']),
+        skipped: count(['skipped']),
+        failed: count(['sync-failed', 'leasing-unreachable']),
+      }
+
+      if (summary.failed > 0) {
+        logger.warn(
+          { ...summary, metadata },
+          'contacts.syncToLeasing: some contacts failed'
+        )
+      } else {
+        logger.info({ ...summary, metadata }, 'contacts.syncToLeasing')
+      }
+
       ctx.status = 200
-      ctx.body = makeSuccessResponseBody(
-        { skipped: result.data.skipped },
-        metadata
-      )
+      ctx.body = makeSuccessResponseBody({ results, ...summary }, metadata)
     }
   )
 

@@ -5,10 +5,10 @@ describe('requiredRolesFor', () => {
     expect(requiredRolesFor('/v1/contacts', 'POST')).toEqual(['contacts:write'])
   })
 
-  it('gates making leasing re-pull a contact on contacts:write alone', () => {
-    expect(requiredRolesFor('/v1/contacts/P1/sync-to-leasing', 'POST')).toEqual(
-      ['contacts:write']
-    )
+  it('gates making leasing re-pull contacts on contacts:write alone', () => {
+    expect(requiredRolesFor('/v1/contacts/sync-to-leasing', 'POST')).toEqual([
+      'contacts:write',
+    ])
   })
 
   // Relations are reversible, so they sit with the other caseworker writes
