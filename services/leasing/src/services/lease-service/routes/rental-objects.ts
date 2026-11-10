@@ -3,12 +3,12 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import * as xpandAdapter from '../adapters/xpand/rental-object-adapter'
 
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
-import z from 'zod'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
-import { RentalObjectAvailabilityInfo } from '@onecore/types'
+import { leasing, RentalObjectAvailabilityInfo } from '@onecore/types'
 import {
   determineVacantFrom,
   hasIndefiniteActiveBlock,
+  withRentAt,
 } from '../helpers/rental-object-availability-helpers'
 import { mapToOnecoreRentalObjectRent } from '../helpers/tenfast'
 import listingTextContentAdapter from '../adapters/listing-text-content-adapter'
@@ -120,20 +120,27 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const availabilityByCode = new Map(
+      rentalObjectAvailabilitiesResponse.data.map((availability) => [
+        availability.rentalObjectCode,
+        availability,
+      ])
+    )
+
     parkingSpaceResult.data.forEach((ps) => {
-      const availability = rentalObjectAvailabilitiesResponse.data.find(
-        (availability) => availability.rentalObjectCode === ps.rentalObjectCode
-      )
+      const availability = availabilityByCode.get(ps.rentalObjectCode)
 
       // Match availability info to rental object and enrich availability info with
       // vacantFrom based on block end date and end date of last active lease
       if (availability) {
-        ps.availabilityInfo = availability
-
-        ps.availabilityInfo.vacantFrom = determineVacantFrom(
-          ps.availabilityInfo.vacantFrom,
+        const vacantFrom = determineVacantFrom(
+          availability.vacantFrom,
           ps.blockStartDate,
           ps.blockEndDate
+        )
+        ps.availabilityInfo = withRentAt(
+          { ...availability, vacantFrom },
+          vacantFrom
         )
       }
     })
@@ -191,7 +198,7 @@ export const routes = (router: KoaRouter) => {
 
       if (availabilityResult.ok) {
         //Enrich availability info with vacantFrom based on block end date and end date of last active lease
-        availabilityResult.data.vacantFrom = determineVacantFrom(
+        const vacantFrom = determineVacantFrom(
           availabilityResult.data.vacantFrom,
           result.data.blockStartDate,
           result.data.blockEndDate
@@ -201,7 +208,10 @@ export const routes = (router: KoaRouter) => {
         ctx.body = {
           content: {
             ...result.data,
-            availabilityInfo: availabilityResult.data,
+            availabilityInfo: withRentAt(
+              { ...availabilityResult.data, vacantFrom },
+              vacantFrom
+            ),
           },
           ...metadata,
         }
@@ -337,10 +347,14 @@ export const routes = (router: KoaRouter) => {
     // Berika availability info med vacantFrom baserat på block end date och end date
     vacantRentalObjects.forEach((ps) => {
       if (ps.availabilityInfo) {
-        ps.availabilityInfo.vacantFrom = determineVacantFrom(
+        const vacantFrom = determineVacantFrom(
           ps.availabilityInfo.vacantFrom,
           ps.blockStartDate,
           ps.blockEndDate
+        )
+        ps.availabilityInfo = withRentAt(
+          { ...ps.availabilityInfo, vacantFrom },
+          vacantFrom
         )
       }
     })
@@ -372,9 +386,32 @@ export const routes = (router: KoaRouter) => {
    * /rental-objects/by-code/{rentalObjectCode}/availability:
    *   get:
    *     summary: Get a rental object availability by code
-   *     description: Fetches a rental object availability by Rental Object Code.
+   *     description: |
+   *       Fetches a rental object availability by Rental Object Code.
+   *       The rent total (rent.amount, rent.vat) is the rent of today, unless
+   *       a later move-in day is known. For a parking space that day is its
+   *       vacantFrom. For other rental objects vacantFrom is not set, so the
+   *       caller gives the day as rentAt. The total is then the sum of the
+   *       rent rows in force that day with includedInRent set.
    *     tags:
    *       - RentalObject
+   *     parameters:
+   *       - in: path
+   *         name: rentalObjectCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental object code of the availability to fetch.
+   *       - in: query
+   *         name: rentAt
+   *         required: false
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: |
+   *           The day to give the rent total for (yyyy-mm-dd), for rental
+   *           objects that are not parking spaces. Left out, today or earlier
+   *           gives the rent of today. Ignored for parking spaces.
    *     responses:
    *       '200':
    *         description: Successfully retrieved the rental object availability.
@@ -420,6 +457,19 @@ export const routes = (router: KoaRouter) => {
    *                                 type: string
    *                                 format: date-time
    *                                 nullable: true
+   *                               includedInRent:
+   *                                 type: boolean
+   *                                 description: False for a row that is not part of the rent total, such as an optional add-on.
+   *       '400':
+   *         description: rentAt is not a valid day (error invalid-rent-at).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   enum: [invalid-rent-at]
    *       '500':
    *         description: Internal server error. Failed to fetch rental object availability.
    *         content:
@@ -446,6 +496,16 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const rentalObjectCode = ctx.params.rentalObjectCode
+
+      const query = leasing.v1.RentalObjectAvailabilityQuerySchema.safeParse(
+        ctx.query
+      )
+      if (!query.success) {
+        ctx.status = 400
+        ctx.body = { error: 'invalid-rent-at', ...metadata }
+        return
+      }
+      const rentAt = query.data.rentAt ? new Date(query.data.rentAt) : undefined
 
       // Get parking space by rental object code from xpand to be able to determine
       // vacantFrom based on block end date and end date of last active lease
@@ -476,21 +536,25 @@ export const routes = (router: KoaRouter) => {
         )
 
       if (availabilityResult.ok) {
-        if (availabilityResult.data) {
-          if (parkingSpace) {
-            // Enrich availability info with vacantFrom based on block end date and end date of last active lease
-            availabilityResult.data.vacantFrom = determineVacantFrom(
+        // For a parking space, vacantFrom is based on block end date and end
+        // date of last active lease. For other rental objects it is left
+        // undefined, since we have no block info to determine it from.
+        const vacantFrom = parkingSpace
+          ? determineVacantFrom(
               availabilityResult.data.vacantFrom,
-              parkingSpace?.blockStartDate,
-              parkingSpace?.blockEndDate
+              parkingSpace.blockStartDate,
+              parkingSpace.blockEndDate
             )
-          } //Set VacantFrom to undefined for rental objects that is not parking spaces sincewe don't have block info for those rental objects to be able to determine vacantFrom
-          else availabilityResult.data.vacantFrom = undefined
-        }
+          : undefined
 
         ctx.status = 200
         ctx.body = {
-          content: availabilityResult.data,
+          content: withRentAt(
+            { ...availabilityResult.data, vacantFrom },
+            // The move-in day: our own for a parking space, the caller's for
+            // other rental objects.
+            parkingSpace ? vacantFrom : rentAt
+          ),
           ...metadata,
         }
         return
@@ -669,7 +733,13 @@ export const routes = (router: KoaRouter) => {
    * /rental-objects/availability:
    *   post:
    *     summary: Get availability for rental objects
-   *     description: Fetches availability for rental objects by Rental Object Codes.
+   *     description: |
+   *       Fetches availability for rental objects by Rental Object Codes.
+   *       The rent total (rent.amount, rent.vat) is the rent of today, unless
+   *       a later move-in day is known. For a parking space that day is its
+   *       vacantFrom. For other rental objects vacantFrom is not set, so the
+   *       caller gives the day in rentAtByRentalObjectCode. The total is then
+   *       the sum of the rent rows in force that day with includedInRent set.
    *     tags:
    *       - Lease service
    *     requestBody:
@@ -685,6 +755,17 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                 description: Array of rental object codes to include.
    *                 example: ["ABC123", "DEF456", "GHI789"]
+   *               rentAtByRentalObjectCode:
+   *                 type: object
+   *                 additionalProperties:
+   *                   type: string
+   *                   format: date
+   *                 description: |
+   *                   The day to give the rent total for (yyyy-mm-dd), per
+   *                   rental object code, for rental objects that are not
+   *                   parking spaces. A code left out, today or earlier gives
+   *                   the rent of today. Ignored for parking spaces.
+   *                 example: { "ABC123": "2027-01-16" }
    *     responses:
    *       '200':
    *         description: Successfully retrieved the rental object availability.
@@ -695,6 +776,8 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 availability:
    *                   type: number
+   *       '400':
+   *         description: The request body is invalid, such as a rentAtByRentalObjectCode value that is not a valid day.
    *       '500':
    *         description: Internal server error. Failed to fetch rental object.
    *         content:
@@ -718,19 +801,18 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  const RentalObjectsRentRequestSchema = z.object({
-    rentalObjectCodes: z.array(z.string()).optional(),
-  })
   router.post(
     '/rental-objects/availabilities',
-    parseRequestBody(RentalObjectsRentRequestSchema),
+    parseRequestBody(leasing.v1.RentalObjectAvailabilitiesRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
+      // Parsed by parseRequestBody above; koa's ctx doesn't carry its type.
       const body = ctx.request
-        .body as typeof RentalObjectsRentRequestSchema._type
+        .body as leasing.v1.RentalObjectAvailabilitiesRequest
 
       const includeRentalObjectCodes = body.rentalObjectCodes ?? []
+      const rentAtByRentalObjectCode = body.rentAtByRentalObjectCode ?? {}
 
       // Get both parking space info from xpand and availability info from tenfast in parallel
       const [parkingSpaceResult, rentalObjectAvailabilitiesResponse] =
@@ -768,30 +850,50 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      rentalObjectAvailabilitiesResponse.data.forEach((availabilityInfo) => {
-        const parkingSpace =
-          parkingSpaceResult.ok &&
-          parkingSpaceResult.data.find(
-            (ps) => ps.rentalObjectCode === availabilityInfo.rentalObjectCode
+      const parkingSpaceByCode = new Map(
+        (parkingSpaceResult.ok ? parkingSpaceResult.data : []).map((ps) => [
+          ps.rentalObjectCode,
+          ps,
+        ])
+      )
+
+      const content = rentalObjectAvailabilitiesResponse.data.map(
+        (availabilityInfo) => {
+          const parkingSpace = parkingSpaceByCode.get(
+            availabilityInfo.rentalObjectCode
           )
 
-        // Match availability info to rental object and enrich availability info with
-        // vacantFrom based on block end date and end date of last active lease
-        if (parkingSpace) {
-          availabilityInfo.vacantFrom = determineVacantFrom(
-            availabilityInfo.vacantFrom,
-            parkingSpace.blockStartDate,
-            parkingSpace.blockEndDate
+          // For a parking space, vacantFrom is based on block end date and
+          // end date of last active lease, and the rent is the rent that day.
+          if (parkingSpace) {
+            const vacantFrom = determineVacantFrom(
+              availabilityInfo.vacantFrom,
+              parkingSpace.blockStartDate,
+              parkingSpace.blockEndDate
+            )
+            return withRentAt({ ...availabilityInfo, vacantFrom }, vacantFrom)
+          }
+
+          // For other rental objects vacantFrom is left undefined, since we
+          // have no block info to determine it from. The caller gives the
+          // move-in day to get the rent for.
+          const rentAt = Object.hasOwn(
+            rentAtByRentalObjectCode,
+            availabilityInfo.rentalObjectCode
           )
-        } // Set VacantFrom to undefined for rental objects that is not parking spaces since we don't have block info for those rental objects to be able to determine vacantFrom
-        else availabilityInfo.vacantFrom = undefined
-      })
+            ? new Date(
+                rentAtByRentalObjectCode[availabilityInfo.rentalObjectCode]
+              )
+            : undefined
+          return withRentAt(
+            { ...availabilityInfo, vacantFrom: undefined },
+            rentAt
+          )
+        }
+      )
 
       ctx.status = 200
-      ctx.body = {
-        content: rentalObjectAvailabilitiesResponse.data,
-        ...metadata,
-      }
+      ctx.body = { content, ...metadata }
     }
   )
 }

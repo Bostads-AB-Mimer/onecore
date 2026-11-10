@@ -288,6 +288,7 @@ describe('mapToOnecoreRentalObjectRent', () => {
           label: 'Hyra bostad',
           from: toYearMonthDayString(new Date('2026-01-01')),
           to: toYearMonthDayString(new Date('2026-12-31')),
+          includeInContract: true,
         }),
       ],
     })
@@ -303,9 +304,20 @@ describe('mapToOnecoreRentalObjectRent', () => {
           vatPercentage: 0.25,
           fromDate: new Date('2026-01-01'),
           toDate: new Date('2026-12-31'),
+          includedInRent: true,
         },
       ],
     })
+  })
+
+  it('marks a row Tenfast leaves out of the rent total', () => {
+    const rentalObject = factory.tenfastRentalObject.build({
+      hyror: [factory.tenfastInvoiceRow.build({ includeInContract: false })],
+    })
+
+    expect(
+      mapToOnecoreRentalObjectRent(rentalObject).rows[0].includedInRent
+    ).toBe(false)
   })
 
   it('falls back to empty strings and undefined dates for missing row fields', () => {
@@ -330,6 +342,7 @@ describe('mapToOnecoreRentalObjectRent', () => {
         vatPercentage: 0,
         fromDate: undefined,
         toDate: undefined,
+        includedInRent: false,
       },
     ])
   })

@@ -439,6 +439,9 @@ interface RentalObjectRentRow {
   vatPercentage: number
   fromDate?: Date
   toDate?: Date
+  // False for a row that is not part of the rent total, such as an optional
+  // add-on the tenant chooses when signing. Missing means it is part of it.
+  includedInRent?: boolean
 }
 
 interface MaintenanceUnitInfo {

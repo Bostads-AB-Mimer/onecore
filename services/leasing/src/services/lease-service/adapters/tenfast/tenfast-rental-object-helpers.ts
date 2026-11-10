@@ -1,7 +1,12 @@
 import { RentalObjectAvailabilityInfo, RentalTag } from '@onecore/types'
 import currency from 'currency.js'
 import { logger } from '@onecore/utilities'
-import { TenfastLease, TenfastRentalObject, TenfastTag } from './schemas'
+import {
+  TenfastInvoiceRow,
+  TenfastLease,
+  TenfastRentalObject,
+  TenfastTag,
+} from './schemas'
 
 // Lease stages (Tenfast's avtal.stage) in force: running, terminating with or
 // without signed notice, or signed to start later.
@@ -127,6 +132,17 @@ export const getVacantFrom = (leases: LeaseStageInfo[]): Date | undefined => {
   return today
 }
 
+/**
+ * Whether the rent row is part of the rent total. Tenfast's total (hyra) is
+ * the sum of the rows in force today that have includeInContract set (checked
+ * against 1,140 objects on production, 2026-11-10). withRentAt applies the
+ * same rule for a later date. Every row there had the flag, so a row without
+ * it is not known to count and is left out.
+ */
+export const isIncludedInRent = (
+  row: Pick<TenfastInvoiceRow, 'includeInContract'>
+): boolean => row.includeInContract === true
+
 export const mapTenfastRentalObjectToAvailabilityInfo = (
   includeVAT: boolean,
   tenfastRentalObject: TenfastRentalObject,
@@ -159,6 +175,7 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
         vatPercentage: includeVAT ? hyra.vat : 0,
         fromDate: hyra.from != undefined ? new Date(hyra.from) : undefined,
         toDate: hyra.to != undefined ? new Date(hyra.to) : undefined,
+        includedInRent: isIncludedInRent(hyra),
       })),
     },
   }

@@ -17,6 +17,9 @@ export const TenfastInvoiceRowSchema = z.object({
   to: YearMonthDayStringSchema.optional().nullable(),
   article: z.string().nullable(),
   label: z.string().nullable(),
+  // False for a row left out of Tenfast's rent total (hyra) and of new
+  // leases by default, such as the optional home insurance.
+  includeInContract: z.boolean().nullish(),
   _id: z.string(),
 })
 

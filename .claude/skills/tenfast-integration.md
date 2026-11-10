@@ -163,6 +163,41 @@ reference descending and limited to 10** per object. `getRentalObject`
 (single GET) is still fine for callers that don't need leases, such as rent
 articles and rent rows.
 
+## The rent total on a rental object is the rent of today
+
+`hyra`, `hyraExcludingVat` and `hyraVat` on a hyresobjekt are computed by
+Tenfast for today: the sum of the rows in `hyror` that are in force today
+(`from`/`to`, both days included) and have `includeInContract: true`. Checked
+against 1,140 objects on production on 2026-11-10 (bostad, parkering, lokal):
+every total matched. No endpoint takes a date, so Tenfast can't give the rent
+for another day.
+
+- **`includeInContract: false`** marks a row outside the total, such as the
+  optional home insurance. `consolidationLabel` ("Summarad" in the Tenfast UI)
+  only merges rows into one line on the invoice and says nothing about the
+  total.
+- **Future rows are in `hyror` already.** A rent raised at the turn of the
+  year is a row ending 12-31 and a new row from 01-01.
+
+A rental object vacant from a later day must show the rent of that day
+(AVTAL-489). `mapTenfastRentalObjectToAvailabilityInfo` passes Tenfast's total
+on as it is and marks each row with `includedInRent`. `withRentAt`
+(`rental-object-availability-helpers.ts`) then recomputes the total from the
+rows for a later day, in the routes. When no included row is in force that day
+(next year's rows not entered yet) it keeps Tenfast's total instead of
+answering 0.
+
+The day comes from:
+
+- **Parking spaces:** the day is the final `vacantFrom`, after
+  `determineVacantFrom` has weighed in the Xpand block.
+- **Other rental objects:** leasing has no `vacantFrom` for them, so the
+  caller gives the day (`rentAt` on the by-code availability route,
+  `rentAtByRentalObjectCode` on the batch route).
+
+`includeInContract` is read only. `createLease` and `importLease` strip it
+before sending the rental object's rows to Tenfast.
+
 ## `cancellation.requested` vs `cancellation.cancelled` — easy to get backwards
 
 On a lease's `cancellation` object:

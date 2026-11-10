@@ -15,6 +15,32 @@ routes(router)
 app.use(bodyParser())
 app.use(router.routes())
 
+// A rent that is raised at the turn of a year far ahead, so the rent of today
+// (amount, as Tenfast gives it) differs from the rent on MOVE_IN_DAY.
+const MOVE_IN_DAY = '2100-01-16'
+const RENT_TODAY = 1000
+const RENT_ON_MOVE_IN_DAY = 1500
+const buildRaisedRent = () =>
+  factory.rentalObjectRent.build({
+    amount: RENT_TODAY,
+    rows: [
+      {
+        description: 'Rent',
+        amount: RENT_TODAY,
+        vatPercentage: 0,
+        toDate: new Date('2099-12-31'),
+        includedInRent: true,
+      },
+      {
+        description: 'Rent',
+        amount: RENT_ON_MOVE_IN_DAY,
+        vatPercentage: 0,
+        fromDate: new Date('2100-01-01'),
+        includedInRent: true,
+      },
+    ],
+  })
+
 describe('parking spaces', () => {
   afterEach(() => jest.clearAllMocks())
 
@@ -164,6 +190,37 @@ describe('parking spaces', () => {
       expect(res.body.content[0].availabilityInfo.vacantFrom).toBeUndefined()
     })
 
+    it('gives the rent on the day the parking space is vacant from', async () => {
+      // Arrange
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpaces').mockResolvedValue({
+        ok: true,
+        data: [factory.rentalObject.build({ rentalObjectCode: 'code-1' })],
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'code-1',
+              vacantFrom: new Date(MOVE_IN_DAY),
+              rent: buildRaisedRent(),
+            }),
+          ],
+        })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/parking-spaces')
+        .send({ includeRentalObjectCodes: ['code-1'] })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].availabilityInfo.rent.amount).toBe(
+        RENT_ON_MOVE_IN_DAY
+      )
+    })
+
     it('should not set availability if availability is not found for parking space', async () => {
       // Arrange
       const parkingSpace = factory.rentalObject.build({
@@ -282,6 +339,36 @@ describe('parking spaces', () => {
 
       expect(res.status).toBe(200)
       expect(res.body.content.availabilityInfo.vacantFrom).toBeUndefined()
+    })
+
+    it('gives the rent on the day the parking space is vacant from', async () => {
+      // Arrange
+      const rentalObjectCode = 'R1003'
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValueOnce({
+        ok: true,
+        data: factory.rentalObject.build({ rentalObjectCode }),
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.rentalObjectAvailabilityInfo.build({
+            rentalObjectCode,
+            vacantFrom: new Date(MOVE_IN_DAY),
+            rent: buildRaisedRent(),
+          }),
+        })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/parking-spaces/by-code/${rentalObjectCode}`
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content.availabilityInfo.rent.amount).toBe(
+        RENT_ON_MOVE_IN_DAY
+      )
     })
 
     it('should respond with 200 and not include availability if availability is not found', async () => {
@@ -430,6 +517,38 @@ describe('parking spaces', () => {
       expect(res.status).toBe(200)
       expect(new Date(res.body.content[0].availabilityInfo.vacantFrom)).toEqual(
         expectedVacantFrom
+      )
+    })
+
+    it('gives the rent on the day the parking space is vacant from', async () => {
+      // Arrange
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'code-1',
+              vacantFrom: new Date(MOVE_IN_DAY),
+              rent: buildRaisedRent(),
+            }),
+          ],
+        })
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpaces').mockResolvedValue({
+        ok: true,
+        data: [factory.rentalObject.build({ rentalObjectCode: 'code-1' })],
+      })
+      jest
+        .spyOn(listingTextContentAdapter, 'getRentalObjectCodesWithTextContent')
+        .mockResolvedValue({ ok: true, data: [] })
+
+      // Act
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].availabilityInfo.rent.amount).toBe(
+        RENT_ON_MOVE_IN_DAY
       )
     })
 
@@ -786,6 +905,99 @@ describe('parking spaces', () => {
       )
     })
 
+    describe('rent on the move-in day', () => {
+      const rentalObjectCode = 'R1003'
+      const mockAvailability = (vacantFrom?: Date) =>
+        jest
+          .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+          .mockResolvedValueOnce({
+            ok: true,
+            data: factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode,
+              vacantFrom,
+              rent: buildRaisedRent(),
+            }),
+          })
+      const mockNotAParkingSpace = () =>
+        jest
+          .spyOn(rentalObjectAdapter, 'getParkingSpace')
+          .mockResolvedValueOnce({ ok: false, err: 'parking-space-not-found' })
+      const mockParkingSpace = () =>
+        jest
+          .spyOn(rentalObjectAdapter, 'getParkingSpace')
+          .mockResolvedValueOnce({
+            ok: true,
+            data: factory.rentalObject.build({ rentalObjectCode }),
+          })
+
+      it('gives the rent on rentAt for a rental object that is not a parking space', async () => {
+        mockNotAParkingSpace()
+        mockAvailability()
+
+        const res = await request(app.callback()).get(
+          `/rental-objects/by-code/${rentalObjectCode}/availability?rentAt=${MOVE_IN_DAY}`
+        )
+
+        expect(res.status).toBe(200)
+        expect(res.body.content.rent.amount).toBe(RENT_ON_MOVE_IN_DAY)
+        expect(res.body.content.vacantFrom).toBeUndefined()
+      })
+
+      it('gives the rent of today without rentAt', async () => {
+        mockNotAParkingSpace()
+        mockAvailability()
+
+        const res = await request(app.callback()).get(
+          `/rental-objects/by-code/${rentalObjectCode}/availability`
+        )
+
+        expect(res.status).toBe(200)
+        expect(res.body.content.rent.amount).toBe(RENT_TODAY)
+      })
+
+      it('gives the rent on vacantFrom for a parking space', async () => {
+        mockParkingSpace()
+        mockAvailability(new Date(MOVE_IN_DAY))
+
+        const res = await request(app.callback()).get(
+          `/rental-objects/by-code/${rentalObjectCode}/availability`
+        )
+
+        expect(res.status).toBe(200)
+        expect(res.body.content.rent.amount).toBe(RENT_ON_MOVE_IN_DAY)
+      })
+
+      it('ignores rentAt for a parking space', async () => {
+        mockParkingSpace()
+        mockAvailability(new Date())
+
+        const res = await request(app.callback()).get(
+          `/rental-objects/by-code/${rentalObjectCode}/availability?rentAt=${MOVE_IN_DAY}`
+        )
+
+        expect(res.status).toBe(200)
+        expect(res.body.content.rent.amount).toBe(RENT_TODAY)
+      })
+
+      it.each(['2100-13-01', '16/1 2100', ''])(
+        'responds with 400 when rentAt is "%s"',
+        async (rentAt) => {
+          const parkingSpaceSpy = jest.spyOn(
+            rentalObjectAdapter,
+            'getParkingSpace'
+          )
+
+          const res = await request(app.callback())
+            .get(`/rental-objects/by-code/${rentalObjectCode}/availability`)
+            .query({ rentAt })
+
+          expect(res.status).toBe(400)
+          expect(res.body.error).toBe('invalid-rent-at')
+          expect(parkingSpaceSpy).not.toHaveBeenCalled()
+        }
+      )
+    })
+
     it('should call tenfastAdapter.getAvailabilityForRentalObject with the correct rentalObjectCode', async () => {
       // Arrange
       const rentalObjectCode = 'R1003'
@@ -1010,6 +1222,101 @@ describe('parking spaces', () => {
       expect(res.body.content[0].vacantFrom).toBeUndefined()
     })
 
+    it('gives each rental object the rent on its own move-in day', async () => {
+      // Arrange: a parking space, and two other rental objects of which one
+      // has a move-in day
+      const build = (rentalObjectCode: string, vacantFrom?: Date) =>
+        factory.rentalObjectAvailabilityInfo.build({
+          rentalObjectCode,
+          vacantFrom,
+          rent: buildRaisedRent(),
+        })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [factory.rentalObject.build({ rentalObjectCode: 'parking' })],
+        })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            build('parking', new Date(MOVE_IN_DAY)),
+            build('with-day'),
+            build('without-day'),
+          ],
+        })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({
+          rentalObjectCodes: ['parking', 'with-day', 'without-day'],
+          rentAtByRentalObjectCode: { 'with-day': MOVE_IN_DAY },
+        })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(
+        res.body.content.map(
+          (availability: { rent: { amount: number } }) =>
+            availability.rent.amount
+        )
+      ).toEqual([RENT_ON_MOVE_IN_DAY, RENT_ON_MOVE_IN_DAY, RENT_TODAY])
+    })
+
+    it('ignores a move-in day given for a parking space', async () => {
+      // Arrange: vacant today according to its leases
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [factory.rentalObject.build({ rentalObjectCode: 'parking' })],
+        })
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'parking',
+              vacantFrom: new Date(),
+              rent: buildRaisedRent(),
+            }),
+          ],
+        })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({
+          rentalObjectCodes: ['parking'],
+          rentAtByRentalObjectCode: { parking: MOVE_IN_DAY },
+        })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content[0].rent.amount).toBe(RENT_TODAY)
+    })
+
+    it('responds with 400 when a move-in day is not a valid day', async () => {
+      // Arrange
+      const spy = jest.spyOn(tenfastAdapter, 'getRentalObjectAvailabilityInfo')
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({
+          rentalObjectCodes: ['code-1'],
+          rentAtByRentalObjectCode: { 'code-1': '2100-13-01' },
+        })
+
+      // Assert
+      expect(res.status).toBe(400)
+      expect(spy).not.toHaveBeenCalled()
+    })
+
     it('should call getRentalObjectAvailabilityInfo with the provided rentalObjectCodes', async () => {
       // Arrange
       const rentalObjectCodes = ['code-1', 'code-2']
@@ -1045,6 +1352,7 @@ describe('parking spaces', () => {
             label: 'Hyra bostad',
             from: toYearMonthDayString(new Date('2026-01-01')),
             to: undefined,
+            includeInContract: true,
           }),
         ],
       })
@@ -1071,6 +1379,7 @@ describe('parking spaces', () => {
               amount: 1000,
               vatPercentage: 0,
               fromDate: new Date('2026-01-01').toISOString(),
+              includedInRent: true,
             },
           ],
         },

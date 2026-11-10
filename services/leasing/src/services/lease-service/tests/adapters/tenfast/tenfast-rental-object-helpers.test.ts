@@ -266,6 +266,25 @@ describe('tenfast-rental-object-helpers', () => {
       expect(result.rent.amount).toBe(1250)
       expect(result.rent.vat).toBe(250)
     })
+
+    it('marks rows as part of the rent total only when Tenfast says so', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        hyror: [
+          factory.tenfastInvoiceRow.build({ includeInContract: true }),
+          factory.tenfastInvoiceRow.build({ includeInContract: false }),
+          factory.tenfastInvoiceRow.build(),
+        ],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
+      expect(result.rent.rows.map((row) => row.includedInRent)).toEqual([
+        true,
+        false,
+        false,
+      ])
+    })
   })
 
   describe('rentalTags in mapTenfastRentalObjectToAvailabilityInfo', () => {
