@@ -141,6 +141,27 @@ describe('Payment Sync Service', () => {
       expect(res.status).toBe(404)
     })
 
+    it('responds with 409 and the reason when Tenfast rejects the payment', async () => {
+      jest
+        .spyOn(tenfastAdapter, 'recordPaymentForInvoice')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: 'payment-rejected',
+          statusCode: 400,
+          detail: 'Invoice is voided',
+        })
+
+      const res = await request(app.callback())
+        .post('/invoices/55123456/payments')
+        .send(validBody)
+
+      expect(res.status).toBe(409)
+      expect(res.body).toEqual({
+        error: 'payment-rejected',
+        reason: 'Invoice is voided',
+      })
+    })
+
     it('responds with 200 on success', async () => {
       jest
         .spyOn(tenfastAdapter, 'recordPaymentForInvoice')

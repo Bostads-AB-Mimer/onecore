@@ -125,7 +125,14 @@ export type CounterPartCustomers = {
 
 export type AdapterResult<T, E> =
   | { ok: true; data: T; statusCode?: number }
-  | { ok: false; err: E; statusCode?: number }
+  | {
+      ok: false
+      err: E
+      statusCode?: number
+      // Human-readable context from the upstream system, e.g. Tenfast's
+      // message when it refuses a request. Advisory only: branch on `err`.
+      detail?: string
+    }
 
 export const xledgerDateString = (date: Date | null | undefined) => {
   if (date) {
