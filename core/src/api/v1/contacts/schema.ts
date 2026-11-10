@@ -256,3 +256,75 @@ export const RelationErrorResponseBodySchema_APIv1 = z.object({
   error: RelationErrorCodeSchema_APIv1,
   detail: z.string().optional(),
 })
+
+// Each code is one leasing call that waits on the external leasing system
+// (a second or two each, five at a time), and the whole list is synced before
+// the request is answered. The cap keeps that within an ordinary request
+// timeout; send larger lists in several requests.
+export const MAX_SYNC_TO_LEASING_CONTACT_CODES = 50
+
+// A code becomes a path segment of the leasing call, so only the characters a
+// contact code is made of are let through. Upper-cased because Xpand compares
+// codes ignoring case: "p242036" and "P242036" are the same contact.
+const SyncToLeasingContactCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z0-9]+$/, 'must be letters and digits only')
+  .max(20)
+
+export const SyncContactsToLeasingRequestBodySchema_APIv1 = z.object({
+  contactCodes: z
+    .array(SyncToLeasingContactCodeSchema)
+    .min(1)
+    .max(MAX_SYNC_TO_LEASING_CONTACT_CODES)
+    .describe(
+      `Contact codes to sync, at most ${MAX_SYNC_TO_LEASING_CONTACT_CODES}. Duplicates are synced once.`
+    ),
+})
+
+/**
+ * Outcome per contact code:
+ * - `synced`: leasing pulled the current contact data and updated its tenant.
+ * - `skipped`: leasing has no tenant for the code, so there was nothing to
+ *   update.
+ * - `sync-failed`: leasing answered with an error; the tenant was not updated.
+ * - `leasing-unreachable`: leasing could not be reached or did not answer in
+ *   time; whether the tenant was updated is unknown.
+ * - `not-attempted`: leasing stopped answering earlier in the request, so this
+ *   code was never sent; the tenant was not updated.
+ *
+ * Every outcome is safe to retry: a sync only makes leasing pull the current
+ * contact data again.
+ */
+export const SyncContactToLeasingStatusSchema_APIv1 = z.enum([
+  'synced',
+  'skipped',
+  'sync-failed',
+  'leasing-unreachable',
+  'not-attempted',
+])
+
+export const SyncContactsToLeasingResponseBodySchema_APIv1 = z.object({
+  content: z.object({
+    results: z.array(
+      z.object({
+        contactCode: z.string(),
+        status: SyncContactToLeasingStatusSchema_APIv1,
+      })
+    ),
+    synced: z.number().int(),
+    skipped: z.number().int(),
+    failed: z
+      .number()
+      .int()
+      .describe(
+        'Codes with status sync-failed, leasing-unreachable or not-attempted.'
+      ),
+  }),
+})
+
+export const SyncContactsToLeasingErrorResponseBodySchema_APIv1 = z.object({
+  error: z.literal('invalid-request'),
+  detail: z.string().optional(),
+})
