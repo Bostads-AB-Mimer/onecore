@@ -74,17 +74,28 @@ const getAllVacantParkingSpaces = async (): Promise<
 }
 
 const getRentalObjectAvailabilityByCode = async (
-  rentalObjectCode: string
+  rentalObjectCode: string,
+  // The day to give the rent total for (yyyy-mm-dd). Left out gives the rent
+  // of today.
+  rentAt?: string
 ): Promise<
   AdapterResult<
     RentalObjectAvailabilityInfo,
-    'availability-not-found' | 'unknown'
+    'availability-not-found' | 'invalid-rent-at' | 'unknown'
   >
 > => {
   try {
     const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/rental-objects/by-code/${rentalObjectCode}/availability`
+      `${tenantsLeasesServiceUrl}/rental-objects/by-code/${rentalObjectCode}/availability`,
+      { params: { rentAt }, validateStatus: (status) => status < 500 }
     )
+    if (response.status === 400) {
+      logger.warn(
+        { rentalObjectCode, rentAt },
+        'leasing-adapter.getRentalObjectAvailabilityByCode: invalid rentAt'
+      )
+      return { ok: false, err: 'invalid-rent-at' }
+    }
     if (response.status === 404) {
       logger.error(
         { rentalObjectCode },
@@ -153,18 +164,32 @@ const getRentalObjectLegacyRentByCode = async (
 }
 
 const getRentalObjectAvailabilities = async (
-  rentalObjectCodes?: string[]
+  rentalObjectCodes?: string[],
+  // The day to give the rent total for (yyyy-mm-dd), per rental object code.
+  // A code left out gets the rent of today.
+  rentAtByRentalObjectCode?: Record<string, string>
 ): Promise<
   AdapterResult<
     RentalObjectAvailabilityInfo[],
-    'availabilities-not-found' | 'unknown'
+    'availabilities-not-found' | 'invalid-request' | 'unknown'
   >
 > => {
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/rental-objects/availabilities`,
-      { rentalObjectCodes }
+      { rentalObjectCodes, rentAtByRentalObjectCode },
+      { validateStatus: (status) => status < 500 }
     )
+    if (response.status === 400) {
+      logger.warn(
+        {
+          rentalObjectCodeCount: rentalObjectCodes?.length ?? 0,
+          rentAtCount: Object.keys(rentAtByRentalObjectCode ?? {}).length,
+        },
+        'leasing-adapter.getRentalObjectAvailabilities: invalid request'
+      )
+      return { ok: false, err: 'invalid-request' }
+    }
     if (response.status === 404) {
       logger.error(
         { rentalObjectCodes },

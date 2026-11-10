@@ -1,7 +1,12 @@
 import { RentalObjectAvailabilityInfo, RentalTag } from '@onecore/types'
 import currency from 'currency.js'
 import { logger } from '@onecore/utilities'
-import { TenfastLease, TenfastRentalObject, TenfastTag } from './schemas'
+import {
+  TenfastInvoiceRow,
+  TenfastLease,
+  TenfastRentalObject,
+  TenfastTag,
+} from './schemas'
 
 // Lease stages (Tenfast's avtal.stage) in force: running, terminating with or
 // without signed notice, or signed to start later.
@@ -127,12 +132,26 @@ export const getVacantFrom = (leases: LeaseStageInfo[]): Date | undefined => {
   return today
 }
 
+/**
+ * Whether the rent row is part of the rent total. Tenfast's total (hyra) is
+ * the sum of the rows in force today that have includeInContract set (checked
+ * against 3,070 objects on production, 2026-11-10). withRentAt applies the
+ * same rule for a later date. Every row there had the flag. A row without it
+ * counts, as RentalObjectRentRow.includedInRent says: only a row Tenfast marks
+ * as left out is left out.
+ */
+export const isIncludedInRent = (
+  row: Pick<TenfastInvoiceRow, 'includeInContract'>
+): boolean => row.includeInContract !== false
+
 export const mapTenfastRentalObjectToAvailabilityInfo = (
   includeVAT: boolean,
   tenfastRentalObject: TenfastRentalObject,
   tagsById: Map<string, TenfastTag> = new Map()
 ): RentalObjectAvailabilityInfo => {
   const vacantFrom = getVacantFrom(tenfastRentalObject.avtal ?? [])
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
 
   return {
     rentalObjectCode: tenfastRentalObject.externalId,
@@ -150,6 +169,9 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
         ? (tenfastRentalObject.hyra ?? 0)
         : (tenfastRentalObject.hyraExcludingVat ?? 0),
       vat: includeVAT ? (tenfastRentalObject.hyraVat ?? 0) : 0,
+      // Tenfast's total is the rent of today. withRentAt moves it to a later
+      // day when it recalculates the total.
+      asOf: today,
       rows: (tenfastRentalObject.hyror ?? []).map((hyra) => ({
         code: hyra.article ?? '',
         description: hyra.label || '',
@@ -159,6 +181,7 @@ export const mapTenfastRentalObjectToAvailabilityInfo = (
         vatPercentage: includeVAT ? hyra.vat : 0,
         fromDate: hyra.from != undefined ? new Date(hyra.from) : undefined,
         toDate: hyra.to != undefined ? new Date(hyra.to) : undefined,
+        includedInRent: isIncludedInRent(hyra),
       })),
     },
   }
