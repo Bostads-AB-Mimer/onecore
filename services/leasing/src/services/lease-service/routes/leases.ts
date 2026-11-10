@@ -20,6 +20,8 @@ import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-se
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
 import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import * as tenfastHelpers from '../helpers/tenfast'
+import * as endedLeaseAdapter from '../adapters/xpand/ended-lease-adapter'
+import { mergeTenfastFirst } from '../helpers/merge-tenfast-first'
 import config from '../../../common/config'
 import { TenfastLease, toYearMonthDayString } from '../adapters/tenfast/schemas'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
@@ -44,6 +46,28 @@ function isKoaHttpError(error: unknown): error is KoaHttpErrorLike {
     'status' in error &&
     typeof (error as { status: unknown }).status === 'number'
   )
+}
+
+const includesEnded = (statuses?: string[]) =>
+  !statuses || statuses.length === 0 || statuses.includes('ended')
+
+// A failed Xpand read must not break the page: log it and show Tenfast leases only.
+const getEndedXpandLeases = async (
+  promise:
+    | ReturnType<typeof endedLeaseAdapter.getEndedLeasesByContactCode>
+    | undefined,
+  metadata: object
+): Promise<Lease[]> => {
+  if (!promise) return []
+  const result = await promise
+  if (!result.ok) {
+    logger.error(
+      { error: result.err, metadata },
+      'Error fetching ended leases from Xpand'
+    )
+    return []
+  }
+  return result.data
 }
 
 export const routes = (router: KoaRouter) => {
@@ -782,7 +806,7 @@ export const routes = (router: KoaRouter) => {
    * /leases/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get leases by contact code
-   *     description: Retrieve leases associated with a contact by contact code.
+   *     description: Retrieve leases associated with a contact by contact code. Ended leases from before the move to Tenfast are read from Xpand and included.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -843,6 +867,10 @@ export const routes = (router: KoaRouter) => {
 
     const subletLeasesPromise = queryParams.data.includeSubletLeases
       ? tenfastAdapter.getSubletLeases(ctx.params.contactCode, filters)
+      : undefined
+
+    const endedXpandPromise = includesEnded(filters?.status)
+      ? endedLeaseAdapter.getEndedLeasesByContactCode(ctx.params.contactCode)
       : undefined
 
     // TODO: NON-TENANT-CONTACTS/LEASE
@@ -915,8 +943,9 @@ export const routes = (router: KoaRouter) => {
       )
     }
 
-    const onecoreLeases = leases.map((lease) =>
-      tenfastHelpers.mapToOnecoreLease(lease)
+    const onecoreLeases = mergeTenfastFirst(
+      leases.map((lease) => tenfastHelpers.mapToOnecoreLease(lease)),
+      await getEndedXpandLeases(endedXpandPromise, metadata)
     )
 
     ctx.status = 200
@@ -928,7 +957,7 @@ export const routes = (router: KoaRouter) => {
    * /leases/by-rental-object-code/{rentalObjectCode}:
    *   get:
    *     summary: Get leases by rental object code
-   *     description: Retrieve leases associated with a rental object by rental object code.
+   *     description: Retrieve leases associated with a rental object by rental object code. Ended leases from before the move to Tenfast are read from Xpand and included.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -971,6 +1000,12 @@ export const routes = (router: KoaRouter) => {
         ctx.body = { error: queryParams.error.issues, ...metadata }
         return
       }
+
+      const endedXpandPromise = includesEnded(queryParams.data?.status)
+        ? endedLeaseAdapter.getEndedLeasesByRentalObjectCode(
+            ctx.params.rentalObjectCode
+          )
+        : undefined
 
       // TODO: TenFAST route is coming to get avtal by hyresobjekt
       // EDIT: or is it?
@@ -1023,8 +1058,9 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const onecoreLeases = getLeases.data.map((lease) =>
-        tenfastHelpers.mapToOnecoreLease(lease)
+      const onecoreLeases = mergeTenfastFirst(
+        getLeases.data.map((lease) => tenfastHelpers.mapToOnecoreLease(lease)),
+        await getEndedXpandLeases(endedXpandPromise, metadata)
       )
 
       ctx.status = 200
@@ -1068,7 +1104,7 @@ export const routes = (router: KoaRouter) => {
    * /leases/{id}:
    *   get:
    *     summary: Get detailed lease by lease ID
-   *     description: Retrieve lease details by lease ID.
+   *     description: Retrieve lease details by lease ID. Falls back to ended leases from before the move to Tenfast, read from Xpand, when Tenfast has no such lease.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -1104,6 +1140,16 @@ export const routes = (router: KoaRouter) => {
 
       if (!getLease.ok) {
         if (getLease.err === 'not-found') {
+          const ended = await endedLeaseAdapter.getEndedLeaseById(
+            ctx.params.leaseId
+          )
+
+          if (ended.ok) {
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(ended.data, metadata)
+            return
+          }
+
           ctx.status = 404
           ctx.body = {
             error: 'Lease not found',
