@@ -48,6 +48,10 @@ const db = knex({
   client: 'mssql',
 })
 
+export const closeDb = () => {
+  db.destroy()
+}
+
 export const enrichInvoiceWithAccounting = async (
   invoice: InvoiceWithAccounting
 ): Promise<InvoiceWithAccounting> => {
