@@ -67,6 +67,27 @@ afterEach(nock.cleanAll)
 
 describe('syncPayments', () => {
   describe('bootstrap (no saved cursor)', () => {
+    const startFromLatest = { startFromLatest: true }
+    const originalEconomy = config.emailAddresses.economy
+
+    afterEach(() => {
+      config.emailAddresses.economy = originalEconomy
+    })
+
+    it('throws without asking Xledger when starting from the latest payment is not enabled', async () => {
+      const store = makeStore()
+      const xledgerScope = nock(ECONOMY_URL)
+        .get('/payments/latest-cursor')
+        .reply(200, { content: 'cursor-seed' })
+
+      await expect(
+        syncPayments(store, { startFromLatest: false })
+      ).rejects.toThrow('No saved payment sync cursor')
+
+      expect(xledgerScope.isDone()).toBe(false)
+      expect(store.saves).toEqual([])
+    })
+
     it('fetches the latest cursor from Xledger, saves it, and exits without processing payments', async () => {
       const store = makeStore()
 
@@ -74,16 +95,36 @@ describe('syncPayments', () => {
         .get('/payments/latest-cursor')
         .reply(200, { content: 'cursor-seed' })
 
-      await syncPayments(store)
+      await syncPayments(store, startFromLatest)
 
       expect(store.cursor).toBe('cursor-seed')
       expect(nock.pendingMocks()).toHaveLength(0)
     })
 
+    it('emails the economy address that the sync started from the latest payment', async () => {
+      config.emailAddresses.economy = 'economy@example.com'
+      nock(ECONOMY_URL)
+        .get('/payments/latest-cursor')
+        .reply(200, { content: 'cursor-seed' })
+
+      let capturedBody = ''
+      const emailScope = nock(COMM_URL)
+        .post('/send-email', (body) => {
+          capturedBody = JSON.stringify(body)
+          return true
+        })
+        .reply(200, {})
+
+      await syncPayments(makeStore(), startFromLatest)
+
+      expect(emailScope.isDone()).toBe(true)
+      expect(capturedBody).toContain('cursor-seed')
+    })
+
     it('throws when the latest cursor fetch fails', async () => {
       nock(ECONOMY_URL).get('/payments/latest-cursor').reply(500)
 
-      await expect(syncPayments(makeStore())).rejects.toThrow(
+      await expect(syncPayments(makeStore(), startFromLatest)).rejects.toThrow(
         'Failed to fetch latest cursor from Xledger'
       )
     })
@@ -93,7 +134,7 @@ describe('syncPayments', () => {
         .get('/payments/latest-cursor')
         .reply(200, { content: null })
 
-      await expect(syncPayments(makeStore())).rejects.toThrow(
+      await expect(syncPayments(makeStore(), startFromLatest)).rejects.toThrow(
         'No cursor found in Xledger'
       )
     })

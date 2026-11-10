@@ -129,10 +129,49 @@ async function notifyRejectedPayments(
   return true
 }
 
+// Starting from Xledger's latest payment skips every payment before it, so
+// without a cursor the job only does that when explicitly told to. Otherwise
+// a new or emptied state volume would silently skip payments.
+const START_FROM_LATEST_ENV = 'XLEDGER_PAYMENT_SYNC_START_FROM_LATEST'
+
+type SyncOptions = { startFromLatest: boolean }
+
+const defaultOptions = (): SyncOptions => ({
+  startFromLatest: process.env[START_FROM_LATEST_ENV] === 'true',
+})
+
+async function notifyStartedFromLatest(cursor: string) {
+  if (!config.emailAddresses.economy) {
+    logger.warn(
+      'config.emailAddresses.economy is not set — skipping start-from-latest notification'
+    )
+    return
+  }
+
+  const result = await sendEmail({
+    to: config.emailAddresses.economy,
+    subject: 'Betalningssynken startade om: sync-xledger-payments-to-tenfast',
+    body: [
+      `Synkronisering av betalningar från Xledger till Tenfast saknade sparad markör och startade från Xledgers senaste betalning (markör ${cursor}).`,
+      '',
+      'Betalningar före den har inte registrerats i Tenfast. Om det inte var en planerad första körning behöver de betalningarna hanteras manuellt.',
+      '',
+      `Ta bort ${START_FROM_LATEST_ENV} från jobbet så att en saknad markör stoppar synken i stället för att starta om den.`,
+    ].join('\n'),
+  })
+
+  if (!result.ok) {
+    logger.error(
+      { err: result.err, statusCode: result.statusCode, cursor },
+      'failed to send start-from-latest notification'
+    )
+  }
+}
+
 // First run: start from Xledger's latest payment. Earlier payments are not
 // synced.
 async function startFromLatestCursor(store: CursorStore) {
-  logger.info('no saved cursor, fetching latest cursor from Xledger')
+  logger.warn('no saved cursor, fetching latest cursor from Xledger')
   const latest = await getLatestPaymentCursor()
   if (!latest.ok) {
     throw new Error('Failed to fetch latest cursor from Xledger')
@@ -141,10 +180,11 @@ async function startFromLatestCursor(store: CursorStore) {
     throw new Error('No cursor found in Xledger — ledger may be empty')
   }
   await store.save(latest.data)
-  logger.info(
+  logger.warn(
     { lastCursor: latest.data },
     'latest cursor saved, starting from here on next run'
   )
+  await notifyStartedFromLatest(latest.data)
 }
 
 async function fetchPaymentsAfter(cursor: string) {
@@ -215,9 +255,17 @@ async function recordPayment(event: PaymentSyncEvent): Promise<RecordOutcome> {
   )
 }
 
-async function syncPayments(store: CursorStore = fileCursorStore) {
+async function syncPayments(
+  store: CursorStore = fileCursorStore,
+  options: SyncOptions = defaultOptions()
+) {
   const cursor = await store.read()
   if (!cursor) {
+    if (!options.startFromLatest) {
+      throw new Error(
+        `No saved payment sync cursor. If this is the first run, set ${START_FROM_LATEST_ENV}=true to start from Xledger's latest payment (earlier payments are not synced), then remove it.`
+      )
+    }
     return startFromLatestCursor(store)
   }
 
