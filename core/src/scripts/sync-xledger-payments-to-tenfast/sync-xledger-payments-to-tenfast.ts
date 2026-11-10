@@ -1,6 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { logger } from '@onecore/utilities'
+import { errorMessage, logger } from '@onecore/utilities'
 import { PaymentSyncEvent } from '@onecore/types'
 import {
   getLatestPaymentCursor,
@@ -19,14 +19,31 @@ const getStateFile = () =>
   path.join(process.env.DATA_DIR ?? '/data', 'last-xledger-payment-sync.txt')
 
 export const fileCursorStore: CursorStore = {
+  // Only a missing file means no cursor has been saved. Anything else must
+  // stop the run: read as "no cursor" it would restart the sync from
+  // Xledger's latest payment and silently skip every payment in between.
   async read() {
+    const stateFile = getStateFile()
+    let content: string
     try {
-      const content = await fs.readFile(getStateFile(), 'utf-8')
-      const cursor = content.trim()
-      return cursor.length > 0 ? cursor : null
-    } catch {
-      return null
+      content = await fs.readFile(stateFile, 'utf-8')
+    } catch (err: unknown) {
+      // fs rejects with a NodeJS.ErrnoException; same check as
+      // shared/last-timestamp.ts (instanceof Error fails across Jest realms).
+      if ((err as { code?: string }).code === 'ENOENT') {
+        return null
+      }
+      throw new Error(
+        `Could not read payment sync cursor from ${stateFile}: ${errorMessage(err)}`
+      )
     }
+
+    const cursor = content.trim()
+    // save() writes atomically, so an empty file is corruption, not a first run.
+    if (cursor.length === 0) {
+      throw new Error(`Payment sync cursor file ${stateFile} is empty`)
+    }
+    return cursor
   },
   // Saved after every payment, so write to a temp file and rename it over the
   // state file: a crash mid-write must never leave an empty cursor, which

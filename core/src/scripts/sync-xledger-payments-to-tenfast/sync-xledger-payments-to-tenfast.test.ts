@@ -509,6 +509,22 @@ describe('fileCursorStore', () => {
     expect(await fileCursorStore.read()).toBeNull()
   })
 
+  it('throws when the cursor file exists but cannot be read', async () => {
+    // A directory in place of the file gives EISDIR, standing in for any
+    // read error other than a missing file.
+    await fs.mkdir(path.join(dataDir, 'last-xledger-payment-sync.txt'))
+
+    await expect(fileCursorStore.read()).rejects.toThrow(
+      'Could not read payment sync cursor'
+    )
+  })
+
+  it('throws when the cursor file is empty', async () => {
+    await fs.writeFile(path.join(dataDir, 'last-xledger-payment-sync.txt'), '')
+
+    await expect(fileCursorStore.read()).rejects.toThrow('is empty')
+  })
+
   it('reads back the latest saved cursor and leaves no temp file behind', async () => {
     await fileCursorStore.save('c1')
     await fileCursorStore.save('c2')
