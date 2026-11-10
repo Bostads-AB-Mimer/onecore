@@ -329,7 +329,16 @@ describe('parkingspaces', () => {
 
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
         mockedApplicantWithoutLeases.contactCode,
-        { status: ['current', 'upcoming', 'about-to-end'] }
+        {
+          status: [
+            'current',
+            'upcoming',
+            'about-to-end',
+            'preliminary-terminated',
+            'pending-signature',
+            'not-sent',
+          ],
+        }
       )
     })
 

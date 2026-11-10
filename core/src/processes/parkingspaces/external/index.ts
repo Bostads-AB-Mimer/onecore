@@ -124,11 +124,20 @@ export const createLeaseForExternalParkingSpace = async (
 
     let creditCheck = false
 
-    // Applicants with a current or upcoming lease (any object type) count as
+    // Applicants with any lease that has not ended (any object type) count as
     // existing tenants and get the internal payment-history check.
     const applicantLeases = await getLeasesByContactCode(
       applicantContact.contactCode,
-      { status: ['current', 'upcoming', 'about-to-end'] }
+      {
+        status: [
+          'current',
+          'upcoming',
+          'about-to-end',
+          'preliminary-terminated',
+          'pending-signature',
+          'not-sent',
+        ],
+      }
     )
     const applicantHasNoLease = applicantLeases.length === 0
 
