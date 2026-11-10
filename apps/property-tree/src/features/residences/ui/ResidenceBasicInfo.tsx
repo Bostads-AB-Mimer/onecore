@@ -23,12 +23,12 @@ const RESIDENCE_CITY = 'Västerås'
 interface ResidenceBasicInfoProps {
   residence: components['schemas']['ResidenceDetails']
   building?: components['schemas']['Building']
-  lease: components['schemas']['Lease']
+  lease?: components['schemas']['Lease']
   objectRent?: number
 }
 
 const requiresSpecialHandling = (
-  lease: components['schemas']['Lease']
+  lease: components['schemas']['Lease'] | undefined
 ): boolean => {
   // Flag for a tenant requiring special handling
   const tenant = lease?.tenants?.[0]

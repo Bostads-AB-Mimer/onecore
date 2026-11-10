@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
+import { findActiveLease } from '@/entities/lease'
+
 import {
   facilityService,
   leaseService,
@@ -25,9 +27,7 @@ export function useFacilityDetails(rentalId: string | undefined) {
     enabled: !!facility?.rentalInformation?.rentalId,
   })
 
-  const currentLease = leasesQuery.data?.find(
-    (lease) => lease.status === 'Current'
-  )
+  const currentLease = findActiveLease(leasesQuery.data)
 
   // The rental object's configured rent from Tenfast — independent of leases,
   // so it is available for vacant objects too
