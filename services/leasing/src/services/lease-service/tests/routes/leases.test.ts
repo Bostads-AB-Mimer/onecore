@@ -14,6 +14,15 @@ import * as factory from '../factories'
 import config from '../../../../common/config'
 import { schemas } from '@onecore/types'
 
+jest.mock('../../adapters/xpand/ended-lease-adapter', () => ({
+  getEndedLeasesByContactCode: jest.fn(async () => ({ ok: true, data: [] })),
+  getEndedLeasesByRentalObjectCode: jest.fn(async () => ({
+    ok: true,
+    data: [],
+  })),
+  getEndedLeaseById: jest.fn(async () => ({ ok: false, err: 'not-found' })),
+}))
+
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)

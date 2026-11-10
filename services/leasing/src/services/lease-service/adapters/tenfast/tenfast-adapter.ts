@@ -292,10 +292,14 @@ export const importLease = async (
       betalningsOffset: '1d',
       betalasForskott: true,
       // this might be changed later to just pass entire rentalObject.hyror
-      hyror: (rentalObject.hyror ?? []).map(({ _id, ...rest }) => ({
-        ...rest,
-        hyresobjekt: rentalObject._id,
-      })),
+      hyror: (rentalObject.hyror ?? []).map(
+        // includeInContract is read for the rent total only and is not sent
+        // back, so Tenfast keeps deciding it for the lease's rows.
+        ({ _id, includeInContract: _includeInContract, ...rest }) => ({
+          ...rest,
+          hyresobjekt: rentalObject._id,
+        })
+      ),
       method: 'import',
       signed: true,
     }
@@ -1213,9 +1217,14 @@ function buildLeaseRequestData(
   // Confirmed with product (AVTAL-326, 2026-10): existing VAT on a rental
   // object's own rows must not be stripped just because this particular
   // lease doesn't itself require VAT.
+  // includeInContract is read for the rent total only and is not sent back,
+  // so Tenfast keeps deciding it for the lease's rows.
+  const rentalObjectRows = (rentalObject.hyror ?? []).map(
+    ({ includeInContract: _includeInContract, ...row }) => row
+  )
   const hyror = includeVAT
-    ? applyVatToRentRows(rentalObject.hyror ?? [], articles)
-    : (rentalObject.hyror ?? [])
+    ? applyVatToRentRows(rentalObjectRows, articles)
+    : rentalObjectRows
 
   return {
     hyresgaster: [tenant?._id],

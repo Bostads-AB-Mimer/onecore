@@ -55,7 +55,7 @@ const normalizeObjectType = (type: string): string =>
  * calculateStatus would classify them as "Gällande" and they'd leak into
  * search results. Xpand's own UI hides them; excluded here from all searches.
  */
-const XPAND_HYOBT_AVTALSMALL = '1'
+export const XPAND_HYOBT_AVTALSMALL = '1'
 
 export interface LeaseSearchOptions {
   forExport?: boolean

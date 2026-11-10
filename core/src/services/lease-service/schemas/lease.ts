@@ -68,6 +68,9 @@ export const RentalObjectRentSchema = z.object({
       vatPercentage: z.number(),
       fromDate: z.coerce.date().optional(),
       toDate: z.coerce.date().optional(),
+      // False for a row that is not part of the rent total, such as an
+      // optional add-on the tenant chooses when signing.
+      includedInRent: z.boolean().optional(),
     })
   ),
 })

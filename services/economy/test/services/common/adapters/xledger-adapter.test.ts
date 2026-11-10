@@ -332,6 +332,93 @@ describe(adapter.getInvoicesByContactCode, () => {
   })
 })
 
+type CapturedGraphQlBody = {
+  query: string
+  variables: {
+    first: number
+    filter: {
+      invoiceNumber_in: string[]
+      headerTransactionSourceDbId_in: number[]
+    }
+  }
+}
+
+describe(adapter.getInvoicesByInvoiceNumbers, () => {
+  it('returns [] without calling Xledger when given no invoice numbers', async () => {
+    // Act
+    // No nock interceptor registered — an HTTP call would throw.
+    const result = await adapter.getInvoicesByInvoiceNumbers([])
+
+    // Assert
+    expect(result).toEqual([])
+  })
+
+  it('requests a page size well above the invoice-number chunk size', async () => {
+    // Arrange
+    // One invoice number can match several transaction rows, so `first` must
+    // exceed the chunk size or Xledger silently truncates the result.
+    const bodies: CapturedGraphQlBody[] = []
+    nock(origin)
+      .post(pathname, (body: CapturedGraphQlBody) => {
+        bodies.push(body)
+        return true
+      })
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+
+    // Act
+    await adapter.getInvoicesByInvoiceNumbers(['552012345678'])
+
+    // Assert
+    expect(bodies[0].variables.first).toBeGreaterThanOrEqual(1000)
+  })
+
+  it('passes invoice numbers as GraphQL variables, not into the query document', async () => {
+    // Arrange
+    const bodies: CapturedGraphQlBody[] = []
+    nock(origin)
+      .post(pathname, (body: CapturedGraphQlBody) => {
+        bodies.push(body)
+        return true
+      })
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+    // The second value would break the query if it were interpolated.
+    const invoiceNumbers = ['552012345678', '1" ) { x }', '12345K']
+
+    // Act
+    const result = await adapter.getInvoicesByInvoiceNumbers(invoiceNumbers)
+
+    // Assert
+    expect(result).toEqual([])
+    expect(bodies[0].variables.filter.invoiceNumber_in).toEqual(invoiceNumbers)
+    expect(bodies[0].query).not.toContain('552012345678')
+    // Without the source filter the same invoice number also matches payment
+    // and credit transaction rows.
+    expect(bodies[0].variables.filter.headerTransactionSourceDbId_in).toEqual(
+      expect.arrayContaining([600, 797, 3536])
+    )
+  })
+
+  it('splits many invoice numbers into several requests', async () => {
+    // Arrange
+    const requests: string[][] = []
+    nock(origin)
+      .post(pathname, (body: CapturedGraphQlBody) => {
+        requests.push(body.variables.filter.invoiceNumber_in)
+        return true
+      })
+      .times(3)
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+    const invoiceNumbers = Array.from({ length: 120 }, (_, i) => String(i))
+
+    // Act
+    await adapter.getInvoicesByInvoiceNumbers(invoiceNumbers)
+
+    // Assert
+    expect(requests.flat()).toEqual(invoiceNumbers)
+    expect(requests.every((chunk) => chunk.length <= 50)).toBe(true)
+  })
+})
+
 describe(adapter.getInvoicePaymentEvents, () => {
   it('returns null when customer does not exist', async () => {
     nock(origin).post(pathname).reply(200, {

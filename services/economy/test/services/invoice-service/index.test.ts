@@ -7,6 +7,7 @@ import * as xledgerAdapter from '@src/services/common/adapters/xledger-adapter'
 import * as tenfastAdapter from '@src/common/adapters/tenfast/tenfast-adapter'
 import * as invoiceService from '@src/services/invoice-service/service'
 import * as commonXpandAdapter from '@src/services/common/adapters/xpand-db-adapter'
+import * as xpandAdapter from '@src/services/invoice-service/adapters/xpand-db-adapter'
 import { routes } from '@src/services/invoice-service'
 
 import * as factory from '@test/factories'
@@ -28,6 +29,15 @@ app.use(router.routes())
 
 describe('Invoice Service', () => {
   describe('GET /invoices/bycontactcode/:contactCode', () => {
+    beforeEach(() => {
+      // No Xpand invoices or rows unless a test says otherwise. The merge
+      // itself is covered in get-invoices-by-contact-code.test.ts.
+      jest
+        .spyOn(xpandAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValue(undefined)
+      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValue([])
+    })
+
     it('responds with 400 if invalid query params', async () => {
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456?from=invalid`
@@ -78,6 +88,13 @@ describe('Invoice Service', () => {
         .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
         .mockResolvedValueOnce([parsedTenfast(invoice_2)])
 
+      // Invoices not in Tenfast get their rows from Xpand.
+      jest.spyOn(xpandAdapter, 'getInvoiceRows').mockResolvedValueOnce(
+        factory.invoiceRow.buildList(1, {
+          invoiceNumber: invoice_1.invoiceId,
+        })
+      )
+
       const res = await request(app.callback()).get(
         `/invoices/bycontactcode/P123456`
       )
@@ -109,7 +126,7 @@ describe('Invoice Service', () => {
       ).not.toThrow()
     })
 
-    it('uses fromDate and toDate from Xpand if available', async () => {
+    it('uses fromDate and toDate from Tenfast when the invoice is in Tenfast', async () => {
       const invoiceId = 'foo'
       const tenfastInvoice = factory.invoice.build({
         invoiceId,
@@ -145,7 +162,7 @@ describe('Invoice Service', () => {
       )
     })
 
-    it('uses fromDate and toDate from Xledger if xpand not available', async () => {
+    it('uses fromDate and toDate from Xledger when the invoice is in neither Tenfast nor Xpand', async () => {
       const invoiceId = 'foo'
       const xledgerInvoice = factory.invoice.build({
         invoiceId,

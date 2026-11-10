@@ -1191,6 +1191,7 @@ describe(tenfastAdapter.createLease, () => {
     const rentRow = factory.tenfastInvoiceRow.build({
       article: 'some-article-id',
       vat: 0.25,
+      includeInContract: false,
     })
     const mockRentalObject = factory.tenfastRentalObject.build({
       hyror: [rentRow],
@@ -1222,6 +1223,8 @@ describe(tenfastAdapter.createLease, () => {
     ).toBe(false)
     expect(leaseRequestData.hyror[0].article).toBe('some-article-id')
     expect(leaseRequestData.hyror[0].vat).toBe(0.25)
+    // Read for the rent total only, never sent back to Tenfast.
+    expect(leaseRequestData.hyror[0]).not.toHaveProperty('includeInContract')
     expect(leaseRequestData.vatEnabled).toBe(false)
   })
 
@@ -1562,7 +1565,10 @@ describe(tenfastAdapter.importLease, () => {
       data: mockTenant,
     })
 
-    const mockRentalObject = factory.tenfastRentalObject.build()
+    // includeInContract is read for the rent total only, never sent back.
+    const mockRentalObject = factory.tenfastRentalObject.build({
+      hyror: [factory.tenfastInvoiceRow.build({ includeInContract: false })],
+    })
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
       data: mockRentalObject,
@@ -1597,10 +1603,12 @@ describe(tenfastAdapter.importLease, () => {
       forskottAvisering: '2v',
       betalningsOffset: '1d',
       betalasForskott: true,
-      hyror: (mockRentalObject.hyror ?? []).map(({ _id, ...rest }) => ({
-        ...rest,
-        hyresobjekt: mockRentalObject._id,
-      })),
+      hyror: (mockRentalObject.hyror ?? []).map(
+        ({ _id, includeInContract: _includeInContract, ...rest }) => ({
+          ...rest,
+          hyresobjekt: mockRentalObject._id,
+        })
+      ),
       method: 'import',
       signed: true,
     })

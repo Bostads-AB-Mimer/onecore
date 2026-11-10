@@ -101,7 +101,7 @@ describe('parkingspaces', () => {
         .spyOn(leasingAdapter, 'getContactByContactCode')
         .mockResolvedValue({ ok: true, data: mockedApplicantWithoutLeases })
       getLeasesForContactCodeSpy = jest
-        .spyOn(leasingAdapter, 'getLeasesForContactCode')
+        .spyOn(leasingAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([])
       getCreditInformationSpy = jest
         .spyOn(leasingAdapter, 'getCreditInformation')
@@ -329,7 +329,16 @@ describe('parkingspaces', () => {
 
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
         mockedApplicantWithoutLeases.contactCode,
-        expect.objectContaining({ includeUpcomingLeases: true })
+        {
+          status: [
+            'current',
+            'upcoming',
+            'about-to-end',
+            'preliminary-terminated',
+            'pending-signature',
+            'not-sent',
+          ],
+        }
       )
     })
 

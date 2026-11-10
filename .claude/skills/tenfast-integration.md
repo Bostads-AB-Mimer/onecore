@@ -163,6 +163,59 @@ reference descending and limited to 10** per object. `getRentalObject`
 (single GET) is still fine for callers that don't need leases, such as rent
 articles and rent rows.
 
+## The rent total on a rental object is the rent of today
+
+`hyra`, `hyraExcludingVat` and `hyraVat` on a hyresobjekt are computed by
+Tenfast for today: the sum of the rows in `hyror` that are in force today
+(`from`/`to`, both days included) and have `includeInContract: true`. Checked
+on production on 2026-11-10 (bostad, parkering, lokal): the rent `withRentAt`
+sums for the next day matched Tenfast's total on 3,069 of the 3,070 objects
+with rows, and the last one had a row changing at midnight. No endpoint takes
+a date, so Tenfast can't give the rent for another day.
+
+- **`includeInContract: false`** marks a row outside the total, such as the
+  optional home insurance. `consolidationLabel` ("Summarad" in the Tenfast UI)
+  only merges rows into one line on the invoice and says nothing about the
+  total.
+- **Future rows are in `hyror` already.** A rent raised at the turn of the
+  year is a row ending 12-31 and a new row from 01-01.
+
+A rental object vacant from a later day must show the rent of that day
+(AVTAL-489). `mapTenfastRentalObjectToAvailabilityInfo` passes Tenfast's total
+on as it is and marks each row with `includedInRent`. `withRentAt`
+(`rental-object-availability-helpers.ts`) then recomputes the total from the
+rows for a later day, in the routes. `rent.asOf` says which day the total is
+the rent of. A row without the flag counts as included: only an explicit
+`false` leaves a row out.
+
+`withRentAt` keeps Tenfast's total (and `asOf` today) when the rows for the
+day look incomplete, so a sum would be too low:
+
+- **No included row is in force that day.**
+- **A charge in force today has ended by then, and no row of the same article
+  takes over.** That is what missing next-year rows look like when other rows
+  remain. Taking over means starting after today: rows often share an article
+  (a rent and its index supplement on 135 of 256 lokaler), and a sibling
+  already in force is not a successor. A negative row that ends is trusted:
+  on production (2026-11-10) the rows ending without a successor were rent
+  discounts ("Hyresrabatt 2026-2028", 63 of 4,000 bostad), which are meant to
+  end.
+
+Run for move-in day 2027-01-16 on 7,727 production objects with rows
+(2026-11-10): 33 rents changed, 2 fell back, none came out as 0, under half or
+over double today's.
+
+The day comes from:
+
+- **Parking spaces:** the day is the final `vacantFrom`, after
+  `determineVacantFrom` has weighed in the Xpand block.
+- **Other rental objects:** leasing has no `vacantFrom` for them, so the
+  caller gives the day (`rentAt` on the by-code availability route,
+  `rentAtByRentalObjectCode` on the batch route).
+
+`includeInContract` is read only. `createLease` and `importLease` strip it
+before sending the rental object's rows to Tenfast.
+
 ## `cancellation.requested` vs `cancellation.cancelled` — easy to get backwards
 
 On a lease's `cancellation` object:
