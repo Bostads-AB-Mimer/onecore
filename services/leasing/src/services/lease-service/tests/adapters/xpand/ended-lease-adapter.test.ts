@@ -1,9 +1,11 @@
 import { LeaseStatus } from '@onecore/types'
+import { z } from 'zod'
 
 import * as endedLeaseAdapter from '../../../adapters/xpand/ended-lease-adapter'
 
 const mockCalls: Array<{ method: string; args: unknown[] }> = []
 let mockRows: unknown[] = []
+let mockError: Error | undefined
 
 jest.mock('knex', () => () => {
   const builder: any = new Proxy(
@@ -11,7 +13,10 @@ jest.mock('knex', () => () => {
     {
       get: (_t, method: string) => {
         if (method === 'then') {
-          return (resolve: (rows: unknown[]) => unknown) => resolve(mockRows)
+          return (
+            resolve: (rows: unknown[]) => unknown,
+            reject: (err: Error) => unknown
+          ) => (mockError ? reject(mockError) : resolve(mockRows))
         }
         return (...args: unknown[]) => {
           mockCalls.push({ method, args })
@@ -44,6 +49,9 @@ const endedRow = {
   rentalObjectCode: '123-456-789  ',
 }
 
+const callsTo = (method: string) =>
+  mockCalls.filter((c) => c.method === method).map((c) => c.args)
+
 const queryText = () => JSON.stringify(mockCalls.map((c) => c.args))
 
 const unwrap = (r: any): any => (r && 'ok' in r ? r.data : r)
@@ -51,6 +59,7 @@ const unwrap = (r: any): any => (r && 'ok' in r ? r.data : r)
 beforeEach(() => {
   mockCalls.length = 0
   mockRows = [endedRow]
+  mockError = undefined
 })
 
 describe.each([
@@ -77,15 +86,23 @@ describe.each([
   it('excludes voided leases (makuldatum set, M in the lease id)', async () => {
     await run()
 
-    expect(queryText()).toContain('makuldatum')
-    expect(queryText()).toContain('%M%')
+    expect(callsTo('whereNull')).toContainEqual(['hyobj.makuldatum'])
+    expect(callsTo('whereNot')).toContainEqual([
+      'hyobj.hyobjben',
+      'like',
+      '%M%',
+    ])
   })
 
   it('only reads leases whose last debit date has passed', async () => {
     await run()
 
-    expect(queryText()).toContain('hyobj.sistadeb')
-    expect(queryText()).toContain('hyobj.deletemark')
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    expect(callsTo('whereNotNull')).toContainEqual(['hyobj.sistadeb'])
+    expect(callsTo('where')).toContainEqual(['hyobj.sistadeb', '<', today])
+    expect(callsTo('where')).toContainEqual(['hyobj.deletemark', 0])
   })
 
   it('filters on the given code', async () => {
@@ -107,11 +124,76 @@ describe('getEndedLeaseById', () => {
     expect(queryText()).toContain('%M%')
   })
 
+  it('reports an unknown error when the query fails', async () => {
+    mockError = new Error('connection lost')
+
+    const result: any = await endedLeaseAdapter.getEndedLeaseById('123/01')
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
   it('reports a miss when no row matches', async () => {
     mockRows = []
 
     const result: any = await endedLeaseAdapter.getEndedLeaseById('nope/01')
 
     expect(result).toEqual({ ok: false, err: 'not-found' })
+  })
+})
+
+describe('getEndedLeasesByContactCode holders', () => {
+  it('selects leases the contact holds without cutting co-holders', async () => {
+    mockRows = [endedRow, { ...endedRow, contactCode: 'P999999  ' }]
+
+    const result: any =
+      await endedLeaseAdapter.getEndedLeasesByContactCode('P123456')
+
+    expect(callsTo('whereIn')[0][0]).toBe('hyobj.keyhyobj')
+    expect(callsTo('where')).toContainEqual(['holder.cmctckod', 'P123456'])
+    expect(callsTo('where')).not.toContainEqual(['cmctc.cmctckod', 'P123456'])
+    expect(result.data[0].tenantContactIds).toEqual(['P123456', 'P999999'])
+  })
+})
+
+describe('SQL NULL columns', () => {
+  // Same optional/date rules as the Lease schema core applies to this response
+  const optionalDate = z.coerce.date().optional()
+  const responseShape = z.object({
+    leaseId: z.string(),
+    noticeGivenBy: z.string().optional(),
+    noticeTimeTenant: z.union([z.string(), z.number()]).optional(),
+    leaseEndDate: optionalDate,
+    noticeDate: optionalDate,
+    preferredMoveOutDate: optionalDate,
+    terminationDate: optionalDate,
+    contractDate: optionalDate,
+    lastDebitDate: optionalDate,
+    approvalDate: optionalDate,
+  })
+
+  it('maps to undefined, so the lease parses and has no 1970 dates', async () => {
+    mockRows = [
+      {
+        ...endedRow,
+        noticeGivenBy: null,
+        noticeDate: null,
+        noticeTimeTenant: null,
+        preferredMoveOutDate: null,
+        terminationDate: null,
+        contractDate: null,
+        approvalDate: null,
+        toDate: null,
+      },
+    ]
+
+    const result: any = await endedLeaseAdapter.getEndedLeaseById('x/01')
+    const lease = JSON.parse(JSON.stringify(result.data))
+    const parsed = responseShape.safeParse(lease)
+
+    expect(Object.values(result.data)).not.toContain(null)
+    expect(parsed.success).toBe(true)
+    expect(parsed.data?.terminationDate).toBeUndefined()
+    expect(parsed.data?.noticeDate).toBeUndefined()
+    expect(parsed.data?.leaseEndDate).toBeUndefined()
   })
 })

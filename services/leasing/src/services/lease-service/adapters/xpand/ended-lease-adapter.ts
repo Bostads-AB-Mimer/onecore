@@ -46,12 +46,37 @@ const baseQuery = (): Knex.QueryBuilder => {
     .where('hyobj.sistadeb', '<', today)
 }
 
+type EndedLeaseRow = {
+  leaseId: string
+  leaseType: string | null
+  noticeGivenBy: string | null
+  contractDate: Date | null
+  lastDebitDate: Date | null
+  approvalDate: Date | null
+  noticeDate: Date | null
+  fromDate: Date | null
+  toDate: Date | null
+  noticeTimeTenant: string | null
+  preferredMoveOutDate: Date | null
+  terminationDate: Date | null
+  contactCode: string | null
+}
+
+// The shared Lease schemas reject null, so SQL NULLs must become undefined.
+const nullsToUndefined = (row: EndedLeaseRow): EndedLeaseRow =>
+  Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key, value ?? undefined])
+  ) as EndedLeaseRow
+
 // One row per lease and holder; fold the holders into tenantContactIds.
-const toLeases = (rows: any[]): Lease[] => {
-  const byLeaseId = new Map<string, { row: any; contactIds: string[] }>()
+const toLeases = (rows: EndedLeaseRow[]): Lease[] => {
+  const byLeaseId = new Map<
+    string,
+    { row: EndedLeaseRow; contactIds: string[] }
+  >()
 
   for (const raw of rows) {
-    const row = trimRow(raw)
+    const row = nullsToUndefined(trimRow(raw))
     const entry = byLeaseId.get(row.leaseId)
     if (entry) {
       if (row.contactCode) entry.contactIds.push(row.contactCode)
@@ -73,7 +98,17 @@ export const getEndedLeasesByContactCode = async (
   contactCode: string
 ): Promise<AdapterResult<Lease[], unknown>> => {
   try {
-    const rows = await baseQuery().where('cmctc.cmctckod', contactCode)
+    // Select every lease the contact holds, so co-holders stay in tenantContactIds.
+    const rows: EndedLeaseRow[] = await baseQuery().whereIn(
+      'hyobj.keyhyobj',
+      function () {
+        this.select('hyavk.keyhyobj')
+          .from('hyavk')
+          .innerJoin('cmctc as holder', 'holder.keycmctc', 'hyavk.keycmctc')
+          .where('hyavk.keyhyakt', 'INNEHAVARE')
+          .where('holder.cmctckod', contactCode)
+      }
+    )
     return { ok: true, data: toLeases(rows) }
   } catch (err) {
     logger.error({ err }, 'ended-lease-adapter.getEndedLeasesByContactCode')
@@ -85,7 +120,7 @@ export const getEndedLeasesByRentalObjectCode = async (
   rentalObjectCode: string
 ): Promise<AdapterResult<Lease[], unknown>> => {
   try {
-    const rows = await baseQuery()
+    const rows: EndedLeaseRow[] = await baseQuery()
       .innerJoin('hykop', function () {
         this.on('hykop.keyhyobj', '=', 'hyobj.keyhyobj').andOn(
           'hykop.ordning',
@@ -107,13 +142,18 @@ export const getEndedLeasesByRentalObjectCode = async (
 
 export const getEndedLeaseById = async (
   leaseId: string
-): Promise<{ ok: true; data: Lease } | { ok: false; err: 'not-found' }> => {
+): Promise<
+  { ok: true; data: Lease } | { ok: false; err: 'not-found' | 'unknown' }
+> => {
   try {
-    const rows = await baseQuery().where('hyobj.hyobjben', leaseId)
+    const rows: EndedLeaseRow[] = await baseQuery().where(
+      'hyobj.hyobjben',
+      leaseId
+    )
     const [lease] = toLeases(rows)
     return lease ? { ok: true, data: lease } : { ok: false, err: 'not-found' }
   } catch (err) {
     logger.error({ err }, 'ended-lease-adapter.getEndedLeaseById')
-    return { ok: false, err: 'not-found' }
+    return { ok: false, err: 'unknown' }
   }
 }

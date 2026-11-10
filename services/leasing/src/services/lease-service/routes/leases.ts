@@ -943,9 +943,24 @@ export const routes = (router: KoaRouter) => {
       )
     }
 
+    // Dedupe Xpand against every Tenfast lease, not just the status-filtered ones.
+    const tenfastIds = new Set(leases.map((lease) => lease.externalId))
+    if (endedXpandPromise && filters && contact.ok && contact.data) {
+      const allTenfast = await tenfastAdapter.getLeasesByTenantId(
+        contact.data._id
+      )
+      if (allTenfast.ok) {
+        allTenfast.data.forEach((lease) => tenfastIds.add(lease.externalId))
+      }
+    }
+
+    const endedXpandLeases = (
+      await getEndedXpandLeases(endedXpandPromise, metadata)
+    ).filter((lease) => !tenfastIds.has(lease.leaseId.trim()))
+
     const onecoreLeases = mergeTenfastFirst(
       leases.map((lease) => tenfastHelpers.mapToOnecoreLease(lease)),
-      await getEndedXpandLeases(endedXpandPromise, metadata)
+      endedXpandLeases
     )
 
     ctx.status = 200
@@ -1014,16 +1029,22 @@ export const routes = (router: KoaRouter) => {
       )
 
       // TODO: Clean this up
-      if (!property.ok && property.err === 'could-not-find-rental-object') {
-        ctx.status = 404
-        ctx.body = {
-          error: 'Not found',
-          ...metadata,
-        }
-        return
-      }
+      const tenfastHasNoRentalObject =
+        (!property.ok && property.err === 'could-not-find-rental-object') ||
+        (property.ok && property.data === null)
 
-      if (property.ok && property.data === null) {
+      if (tenfastHasNoRentalObject) {
+        const endedXpandLeases = await getEndedXpandLeases(
+          endedXpandPromise,
+          metadata
+        )
+
+        if (endedXpandLeases.length > 0) {
+          ctx.status = 200
+          ctx.body = makeSuccessResponseBody(endedXpandLeases, metadata)
+          return
+        }
+
         ctx.status = 404
         ctx.body = {
           error: 'Not found',
@@ -1147,6 +1168,15 @@ export const routes = (router: KoaRouter) => {
           if (ended.ok) {
             ctx.status = 200
             ctx.body = makeSuccessResponseBody(ended.data, metadata)
+            return
+          }
+
+          if (ended.err === 'unknown') {
+            ctx.status = 500
+            ctx.body = {
+              error: ended.err,
+              ...metadata,
+            }
             return
           }
 

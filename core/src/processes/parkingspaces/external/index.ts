@@ -11,7 +11,7 @@ import {
   getCreditInformation,
   getActiveListingByRentalObjectCode,
   getTenantByContactCode,
-  getLeasesForContactCode,
+  getLeasesByContactCode,
   getParkingSpaceByCode,
   updateListingStatus,
 } from '../../../adapters/leasing-adapter'
@@ -126,13 +126,9 @@ export const createLeaseForExternalParkingSpace = async (
 
     // Applicants with a current or upcoming lease (any object type) count as
     // existing tenants and get the internal payment-history check.
-    const applicantLeases = await getLeasesForContactCode(
+    const applicantLeases = await getLeasesByContactCode(
       applicantContact.contactCode,
-      {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
-        includeContacts: false,
-      }
+      { status: ['current', 'upcoming', 'about-to-end'] }
     )
     const applicantHasNoLease = applicantLeases.length === 0
 
