@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { logger } from '@onecore/utilities'
 import assert from 'node:assert'
 import {
   getTenantByContactCode,
@@ -83,18 +84,56 @@ describe('Tenfast Adapter', () => {
       })
     })
 
-    it('should return error when request fails with non-200 status', async () => {
-      mockAxios.request.mockResolvedValue({
-        status: 500,
-        statusText: 'Internal Server Error',
-      })
+    it('lets a 404 through instead of throwing, so a contact missing in Tenfast gives null', async () => {
+      // Arrange
+      mockAxios.request.mockResolvedValue({ status: 404, data: 'Not Found' })
 
+      // Act
+      await getTenantByContactCode('P135129')
+
+      // Assert
+      const [config] = mockAxios.request.mock.calls[0]
+      expect(config.validateStatus?.(404)).toBe(true)
+      expect(config.validateStatus?.(200)).toBe(true)
+      expect(config.validateStatus?.(500)).toBe(false)
+    })
+
+    it('logs the status and message, not the raw request error, when the request fails', async () => {
+      // Arrange
+      const requestError = Object.assign(new Error('Request failed'), {
+        response: { status: 502 },
+        config: { headers: { 'api-token': 'secret-token' } },
+      })
+      mockAxios.request.mockRejectedValue(requestError)
+      mockAxios.isAxiosError.mockReturnValueOnce(true)
+
+      // Act
       const result = await getTenantByContactCode('P999999')
 
+      // Assert
+      assert(!result.ok)
+      expect(logger.error).toHaveBeenCalledWith(
+        { contactCode: 'P999999', status: 502, error: 'Request failed' },
+        'tenfast-adapter.getTenantByContactCode'
+      )
+      expect(
+        JSON.stringify(jest.mocked(logger.error).mock.calls)
+      ).not.toContain('secret-token')
+    })
+
+    it('returns an error when Tenfast answers with a server error', async () => {
+      // Arrange
+      mockAxios.request.mockRejectedValue(
+        new Error('Request failed with status code 500')
+      )
+
+      // Act
+      const result = await getTenantByContactCode('P999999')
+
+      // Assert
       expect(result).toEqual({
         ok: false,
-        err: 'Internal Server Error',
-        statusCode: 500,
+        err: 'Request failed with status code 500',
       })
     })
 

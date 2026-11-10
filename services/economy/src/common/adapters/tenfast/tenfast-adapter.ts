@@ -97,18 +97,15 @@ export const getTenantByContactCode = async (
   try {
     const tenantResponse = await makeTenfastRequest(
       `/v1/hyresvard/extras/hyresgaster/${encodeURIComponent(contactCode)}`,
-      { params: { hyresvard: companyId } }
+      {
+        params: { hyresvard: companyId },
+        // 404 is a contact Tenfast doesn't have (e.g. leases ended before
+        // Tenfast), not a failure, so it must reach the null branch below.
+        validateStatus: (status) => status === 200 || status === 404,
+      }
     )
 
     if (tenantResponse.status === 404) return { ok: true, data: null }
-
-    if (tenantResponse.status !== 200) {
-      return {
-        ok: false,
-        err: tenantResponse.statusText,
-        statusCode: tenantResponse.status,
-      }
-    }
 
     const parsed = TenfastTenantSchema.safeParse(tenantResponse.data)
     if (!parsed.success) {
@@ -117,9 +114,15 @@ export const getTenantByContactCode = async (
     }
 
     return { ok: true, data: parsed.data }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+  } catch (err: unknown) {
+    // Never the raw error: an AxiosError carries the request headers,
+    // including the API token.
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { contactCode, status, error: errorMessage(err) },
+      'tenfast-adapter.getTenantByContactCode'
+    )
+    return { ok: false, err: errorMessage(err) }
   }
 }
 
