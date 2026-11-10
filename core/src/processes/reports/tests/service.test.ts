@@ -15,7 +15,7 @@ import { Invoice, RentInvoiceRow } from '@onecore/types'
 const xledgerInvoiceFactory = Factory.define<Invoice>(({ sequence }) => ({
   invoiceId: sequence.toString(),
   matchId: sequence,
-  leaseId: 'TEST-LEASE-001',
+  leaseIds: ['TEST-LEASE-001'],
   amount: 0,
   paidAmount: 0,
   reference: 'REF123',

@@ -1,23 +1,36 @@
 import { useMemo, useState } from 'react'
 import {
+  AlertTriangle,
+  Ban,
+  CalendarClock,
   ChevronDown,
   ChevronRight,
   Clock,
   ExternalLink,
   Filter,
-  Home,
   Inbox,
-  Mail,
-  MessageSquare,
   Search,
 } from 'lucide-react'
 
+import {
+  ChannelBadge,
+  channelLabel,
+  RECIPIENT_STATUS_META,
+  RecipientStatusBadge,
+  useScheduleConfig,
+} from '@/entities/dispatch'
 import { useTenantCommunication } from '@/entities/tenant'
 
 import type { CustomerMessage } from '@/services/api/core/communicationService'
 
+import { useToast } from '@/shared/hooks/useToast'
+import { formatTimestamp } from '@/shared/lib/formatters'
 import { linkToWorkOrderInOdoo } from '@/shared/lib/odooUtils'
-import { Badge } from '@/shared/ui/Badge'
+import {
+  formatScheduleTimestamp,
+  scheduleSendErrorText,
+  validateScheduleDate,
+} from '@/shared/lib/schedule'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent } from '@/shared/ui/Card'
 import {
@@ -28,6 +41,7 @@ import {
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { Input } from '@/shared/ui/Input'
 import { TabLayout } from '@/shared/ui/layout/TabLayout'
+import { ScheduleDateTimePicker } from '@/shared/ui/ScheduleDateTimePicker'
 import {
   Select,
   SelectContent,
@@ -38,86 +52,6 @@ import {
 
 type Channel = CustomerMessage['dispatch']['channel']
 type ChannelFilter = Channel | 'all'
-type Status = CustomerMessage['recipient']['status']
-
-const formatTimestamp = (iso: string): string =>
-  new Date(iso).toLocaleString('sv-SE', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-
-const CHANNEL_META: Record<
-  Channel,
-  { label: string; icon: typeof MessageSquare; className: string }
-> = {
-  sms: {
-    label: 'SMS',
-    icon: MessageSquare,
-    className: 'bg-blue-50 text-blue-700 border-blue-200',
-  },
-  email: {
-    label: 'E-post',
-    icon: Mail,
-    className: 'bg-purple-50 text-purple-700 border-purple-200',
-  },
-  // Published to Mina sidor with no SMS/e-post notification (MIM-1957).
-  'my-pages': {
-    label: 'Mina sidor',
-    icon: Home,
-    className: 'bg-teal-50 text-teal-700 border-teal-200',
-  },
-}
-
-const channelLabel = (channel: Channel) => CHANNEL_META[channel].label
-
-function ChannelBadge({ channel }: { channel: Channel }) {
-  const { label, icon: Icon, className } = CHANNEL_META[channel]
-  return (
-    <Badge variant="outline" className={`gap-1 px-2 py-0.5 ${className}`}>
-      <Icon className="h-3 w-3" />
-      {label}
-    </Badge>
-  )
-}
-
-const STATUS_META: Record<Status, { label: string; className: string }> = {
-  delivered: {
-    label: 'Levererat',
-    className: 'bg-green-50 text-green-700 border-green-200',
-  },
-  sent: {
-    label: 'Skickat',
-    className: 'bg-green-50 text-green-700 border-green-200',
-  },
-  received: {
-    label: 'Mottaget',
-    className: 'bg-blue-50 text-blue-700 border-blue-200',
-  },
-  pending: {
-    label: 'Väntar',
-    className: 'bg-amber-50 text-amber-700 border-amber-200',
-  },
-  failed: {
-    label: 'Misslyckades',
-    className: 'bg-red-50 text-red-700 border-red-200',
-  },
-  bounced: {
-    label: 'Studsade',
-    className: 'bg-red-50 text-red-700 border-red-200',
-  },
-}
-
-function StatusBadge({ status }: { status: Status }) {
-  const meta = STATUS_META[status]
-  return (
-    <Badge variant="outline" className={`px-2 py-0.5 ${meta.className}`}>
-      {meta.label}
-    </Badge>
-  )
-}
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -128,7 +62,31 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function MessageRow({ message }: { message: CustomerMessage }) {
+// Maps schedule-management error codes forwarded by core (409 'conflict',
+// 404 'not-found', and upstream 400 codes) to user-facing Swedish.
+const scheduleErrorMessage = (error: unknown): string => {
+  const code =
+    error && typeof error === 'object'
+      ? (error as { error?: string }).error
+      : undefined
+  return scheduleSendErrorText(code) ?? 'Ett fel uppstod.'
+}
+
+interface MessageRowProps {
+  message: CustomerMessage
+  onCancelSchedule: (dispatchId: string) => Promise<void>
+  onReschedule: (dispatchId: string, sendAt: string) => Promise<void>
+  isCancelling: boolean
+  isRescheduling: boolean
+}
+
+function MessageRow({
+  message,
+  onCancelSchedule,
+  onReschedule,
+  isCancelling,
+  isRescheduling,
+}: MessageRowProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { dispatch, recipient } = message
   const workOrderCode = dispatch.workOrderCode
@@ -140,6 +98,42 @@ function MessageRow({ message }: { message: CustomerMessage }) {
       ? 'Meddelande Mina sidor'
       : channelLabel(dispatch.channel))
 
+  // Cancel/reschedule work for SMS and email alike now that our own worker
+  // owns the schedule; the service rejects anything already claimed.
+  const canManageSchedule =
+    recipient.status === 'scheduled' &&
+    new Date(dispatch.sendAt).getTime() > Date.now()
+
+  // Rules from the service; the picker is hidden until they are loaded and
+  // when scheduling is switched off (cancel still works then). A failed fetch
+  // shows a hint instead, so it never reads as "scheduling off".
+  const { data: scheduleConfig, isError: scheduleConfigError } =
+    useScheduleConfig()
+  const canReschedule = scheduleConfig?.enabled === true
+
+  const [rescheduleAt, setRescheduleAt] = useState<Date | null>(
+    () => new Date(dispatch.sendAt)
+  )
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const rescheduleError = scheduleConfig
+    ? validateScheduleDate(rescheduleAt, scheduleConfig)
+    : null
+
+  const handleRescheduleClick = async () => {
+    if (rescheduleError || !rescheduleAt) return
+    await onReschedule(dispatch.id, rescheduleAt.toISOString())
+  }
+
+  const handleCancelClick = async () => {
+    // Two-click confirm: first click arms, second executes.
+    if (!confirmCancel) {
+      setConfirmCancel(true)
+      return
+    }
+    setConfirmCancel(false)
+    await onCancelSchedule(dispatch.id)
+  }
+
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card className="transition-all duration-200 hover:shadow-sm">
@@ -150,7 +144,7 @@ function MessageRow({ message }: { message: CustomerMessage }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   <ChannelBadge channel={dispatch.channel} />
                   <h3 className="font-medium text-foreground">{title}</h3>
-                  <StatusBadge status={recipient.status} />
+                  <RecipientStatusBadge status={recipient.status} />
                   {workOrderCode && (
                     <Button
                       variant="link"
@@ -176,7 +170,7 @@ function MessageRow({ message }: { message: CustomerMessage }) {
               </div>
               <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground shrink-0">
                 <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span>{formatTimestamp(dispatch.triggeredAt)}</span>
+                <span>{formatTimestamp(dispatch.sendAt)}</span>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                   {isOpen ? (
                     <ChevronDown className="h-4 w-4" />
@@ -202,12 +196,15 @@ function MessageRow({ message }: { message: CustomerMessage }) {
                 <DetailRow label="Mottagare" value={recipient.toAddress} />
                 <DetailRow
                   label="Status"
-                  value={STATUS_META[recipient.status].label}
+                  value={RECIPIENT_STATUS_META[recipient.status].label}
                 />
                 <DetailRow
                   label="Kanal"
                   value={channelLabel(dispatch.channel)}
                 />
+                {dispatch.templateName && (
+                  <DetailRow label="Mall" value={dispatch.templateName} />
+                )}
                 {dispatch.subject && (
                   <DetailRow label="Ämne" value={dispatch.subject} />
                 )}
@@ -222,6 +219,68 @@ function MessageRow({ message }: { message: CustomerMessage }) {
                   <DetailRow label="Fel" value={recipient.error} />
                 )}
               </div>
+
+              {canManageSchedule && (
+                <div className="mt-4 pt-4 border-t space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                    <CalendarClock className="h-4 w-4" />
+                    Hantera schemalagt utskick
+                  </h4>
+                  {dispatch.recipientCount > 1 && (
+                    <div className="flex items-start gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-800">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span className="text-sm">
+                        Utskicket har {dispatch.recipientCount} mottagare —
+                        avbokning och ombokning gäller alla mottagare, inte bara
+                        denna kund.
+                      </span>
+                    </div>
+                  )}
+                  {scheduleConfigError && (
+                    <p className="text-sm text-muted-foreground">
+                      Kunde inte hämta regler för schemaläggning
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {canReschedule && scheduleConfig && (
+                      <>
+                        <ScheduleDateTimePicker
+                          value={rescheduleAt}
+                          onChange={setRescheduleAt}
+                          config={scheduleConfig}
+                          disabled={isRescheduling}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleRescheduleClick}
+                          disabled={!!rescheduleError || isRescheduling}
+                        >
+                          {isRescheduling ? 'Bokar om...' : 'Boka om'}
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={handleCancelClick}
+                      disabled={isCancelling}
+                    >
+                      <Ban className="h-4 w-4 mr-1" />
+                      {isCancelling
+                        ? 'Avbokar...'
+                        : confirmCancel
+                          ? 'Bekräfta avbokning'
+                          : 'Avboka utskick'}
+                    </Button>
+                  </div>
+                  {canReschedule && rescheduleError && (
+                    <p className="text-sm text-destructive">
+                      {rescheduleError}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </CollapsibleContent>
@@ -237,9 +296,47 @@ interface TenantCommunicationTabContentProps {
 export function TenantCommunicationTabContent({
   contactCode,
 }: TenantCommunicationTabContentProps) {
-  const { data, isLoading, error } = useTenantCommunication(contactCode)
+  const {
+    data,
+    isLoading,
+    error,
+    cancelDispatch,
+    cancellingDispatchId,
+    rescheduleDispatch,
+    reschedulingDispatchId,
+  } = useTenantCommunication(contactCode)
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all')
+
+  const handleCancelSchedule = async (dispatchId: string) => {
+    try {
+      await cancelDispatch(dispatchId)
+      toast({ title: 'Utskicket avbokades' })
+    } catch (err) {
+      toast({
+        title: 'Kunde inte avboka utskicket',
+        description: scheduleErrorMessage(err),
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleReschedule = async (dispatchId: string, sendAt: string) => {
+    try {
+      await rescheduleDispatch({ dispatchId, sendAt })
+      toast({
+        title: 'Utskicket ombokades',
+        description: `Skickas ${formatScheduleTimestamp(sendAt)}`,
+      })
+    } catch (err) {
+      toast({
+        title: 'Kunde inte boka om utskicket',
+        description: scheduleErrorMessage(err),
+        variant: 'destructive',
+      })
+    }
+  }
 
   const allMessages = useMemo(() => data ?? [], [data])
 
@@ -321,7 +418,14 @@ export function TenantCommunicationTabContent({
       ) : (
         <div className="space-y-3">
           {filteredMessages.map((message) => (
-            <MessageRow key={message.recipient.id} message={message} />
+            <MessageRow
+              key={message.recipient.id}
+              message={message}
+              onCancelSchedule={handleCancelSchedule}
+              onReschedule={handleReschedule}
+              isCancelling={cancellingDispatchId === message.dispatch.id}
+              isRescheduling={reschedulingDispatchId === message.dispatch.id}
+            />
           ))}
         </div>
       )}

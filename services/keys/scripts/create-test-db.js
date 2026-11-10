@@ -24,7 +24,7 @@ try {
 console.log(`Creating test database: ${DB_NAME}`)
 
 const sql = `IF DB_ID('${DB_NAME}') IS NULL CREATE DATABASE [${DB_NAME}]`
-const cmd = `docker exec onecore-sql /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "${PASSWORD}" -Q "${sql}"`
+const cmd = `docker exec onecore-sql /opt/mssql-tools/bin/sqlcmd -S localhost -C -U sa -P "${PASSWORD}" -Q "${sql}"`
 
 for (let i = 1; i <= MAX_RETRIES; i++) {
   try {

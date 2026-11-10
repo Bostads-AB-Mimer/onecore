@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addDays,
   addMonths,
@@ -25,10 +25,20 @@ import { ApiError } from '@/services/api/core/base-api'
 import {
   moveInOutService,
   type MoveInOutSortKey,
+  toVacantFilter,
 } from '@/services/api/moveInOutService'
-import type { MoveInOutRow, PaginatedResponse } from '@/services/types'
+import { MoveInOutStatusLabels } from '@/components/shared/tables/StatusBadges'
+import type {
+  MoveInOutRow,
+  MoveInOutStatus,
+  PaginatedResponse,
+} from '@/services/types'
 
 type Mode = 'both' | 'out' | 'in'
+
+// Drops hand-edited or outdated values instead of sending them to core (400)
+const STATUSES = Object.keys(MoveInOutStatusLabels)
+const isStatus = (s: string): s is MoveInOutStatus => STATUSES.includes(s)
 
 const PAGE_SIZE = 100
 const CLEARED = 'none'
@@ -53,6 +63,7 @@ export default function MoveInOut() {
   const pagination = useUrlPagination(PAGE_SIZE)
   const { searchParams, updateUrlParams, setPaginationMeta } = pagination
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   // Missing param = this month's default; CLEARED = the user emptied the input
   const defaults = monthRanges(new Date())
@@ -67,6 +78,8 @@ export default function MoveInOut() {
   const startTo = readDate('startTo')
   const mode = (searchParams.get('mode') as Mode | null) || 'both'
   const q = searchParams.get('q') || ''
+  const statuses = searchParams.getAll('status').filter(isStatus)
+  const vacant = toVacantFilter(searchParams.get('vacant'))
   const sortKey =
     (searchParams.get('sort') as MoveInOutSortKey | null) || 'lastDebitDate'
   const sortOrder =
@@ -107,6 +120,8 @@ export default function MoveInOut() {
       startTo,
       mode,
       q,
+      statuses,
+      vacant,
       sortKey,
       sortOrder,
       page,
@@ -118,6 +133,8 @@ export default function MoveInOut() {
         ...(hasEnd ? { endDateFrom: endFrom, endDateTo: endTo } : {}),
         ...(hasStart ? { startDateFrom: startFrom, startDateTo: startTo } : {}),
         ...(q ? { q } : {}),
+        ...(statuses.length > 0 ? { status: statuses } : {}),
+        ...(vacant ? { vacant: vacant === 'true' } : {}),
         sortBy: sortKey,
         sortOrder,
         page,
@@ -244,13 +261,25 @@ export default function MoveInOut() {
         error={
           isError
             ? error?.status === 503
-              ? 'Nyckeltjänsten startar, försök igen om någon minut'
+              ? error.message
               : 'Kunde inte ladda in- och utflyttar'
             : null
         }
         sortKey={sortKey}
         sortOrder={sortOrder}
         onSortChange={handleSortChange}
+        statusFilter={statuses}
+        onStatusFilterChange={(next) =>
+          updateUrlParams({ status: next, page: '1' })
+        }
+        searchActive={q !== ''}
+        vacantFilter={vacant}
+        onVacantFilterChange={(next) =>
+          updateUrlParams({ vacant: next, page: '1' })
+        }
+        onNoteSaved={() =>
+          queryClient.invalidateQueries({ queryKey: ['move-in-out'] })
+        }
       />
 
       <PaginationControls

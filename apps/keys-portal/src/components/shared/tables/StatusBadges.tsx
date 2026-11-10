@@ -428,31 +428,34 @@ export function KeySystemTypeBadge({ type }: KeySystemTypeBadgeProps) {
 // Move-in / move-out Status Badge
 // ============================================
 
+// Key order is the handover order and drives the status filter list
 export const MoveInOutStatusLabels: Record<MoveInOutStatus, string> = {
-  UNKNOWN: 'Okänt',
   NOT_RETURNED: 'Ej återlämnat',
   LOANED_TO_OTHER: 'Utlånat till annan',
+  RETURNED_AWAITING_LOAN: 'Återlämnat, ej utlånat',
   CREATED: 'Lån skapat',
+  PARTIAL: 'Delvis utlämnat',
   HANDED_OUT: 'Utlämnat',
   RETURNED_VACANT: 'Återlämnat, vakant',
-  NO_KEYS: 'Inga nycklar',
   NO_LOANS: 'Inget lån',
-  PARTIAL: 'Delvis utlämnat',
+  NO_KEYS: 'Inga nycklar',
+  UNKNOWN: 'Okänt',
 }
 
 const moveInOutVariant: Record<
   MoveInOutStatus,
   'destructive' | 'warning' | 'success' | 'secondary' | 'outline'
 > = {
-  UNKNOWN: 'warning',
   NOT_RETURNED: 'destructive',
   LOANED_TO_OTHER: 'destructive',
+  RETURNED_AWAITING_LOAN: 'warning',
   CREATED: 'warning',
+  PARTIAL: 'secondary',
   HANDED_OUT: 'success',
   RETURNED_VACANT: 'success',
-  NO_KEYS: 'outline',
   NO_LOANS: 'outline',
-  PARTIAL: 'secondary',
+  NO_KEYS: 'outline',
+  UNKNOWN: 'warning',
 }
 
 /** Badge for the derived key status of a move-in/move-out row */

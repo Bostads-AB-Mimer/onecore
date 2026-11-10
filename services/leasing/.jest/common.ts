@@ -1,7 +1,11 @@
+const utilities = jest.requireActual('@onecore/utilities')
 jest.mock('@onecore/utilities', () => {
   return {
     logger: {
       info: () => {
+        return
+      },
+      warn: () => {
         return
       },
       error: () => {
@@ -9,6 +13,10 @@ jest.mock('@onecore/utilities', () => {
       },
     },
     generateRouteMetadata: jest.fn(() => ({})),
+    makeSuccessResponseBody: utilities.makeSuccessResponseBody,
+    buildPaginatedResponse: utilities.buildPaginatedResponse,
+    buildPaginationLinks: utilities.buildPaginationLinks,
+    parsePaginationParams: utilities.parsePaginationParams,
     redactHeaders: jest.fn((headers) => headers ?? {}),
   }
 })

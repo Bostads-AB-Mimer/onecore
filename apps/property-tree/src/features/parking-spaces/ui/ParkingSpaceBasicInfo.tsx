@@ -8,12 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 interface ParkingSpaceBasicInfoProps {
   parkingSpace: components['schemas']['ParkingSpace']
   rent?: number
+  isRented?: boolean
+  isLoadingLease?: boolean
   isLoadingRent?: boolean
 }
 
 export const ParkingSpaceBasicInfo = ({
   parkingSpace,
   rent,
+  isRented,
+  isLoadingLease,
   isLoadingRent,
 }: ParkingSpaceBasicInfoProps) => {
   const isMobile = useIsMobile()
@@ -57,12 +61,12 @@ export const ParkingSpaceBasicInfo = ({
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               <p className="font-medium">
-                {isLoadingRent ? (
+                {isLoadingLease ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Laddar...
                   </span>
-                ) : rent ? (
+                ) : isRented ? (
                   'Uthyrd'
                 ) : (
                   'Vakant'
@@ -70,7 +74,7 @@ export const ParkingSpaceBasicInfo = ({
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Månadshyra</p>
+              <p className="text-sm text-muted-foreground">Hyra för objekt</p>
               <p className="font-medium">
                 {isLoadingRent ? (
                   <span className="inline-flex items-center gap-2">

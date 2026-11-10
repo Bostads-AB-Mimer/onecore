@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import { formatDate, LeaseStatusBadge } from '@/entities/lease'
+import { formatDate, LeaseNumber, LeaseStatusBadge } from '@/entities/lease'
 
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
 
@@ -14,7 +14,11 @@ export const leaseColumns = [
     className: 'px-2',
     sortKey: 'leaseId',
     render: (lease: LeaseSearchResult) => (
-      <span className="font-medium">{lease.leaseId}</span>
+      <span className="font-medium">
+        <LeaseNumber externalUrl={lease.externalUrl}>
+          {lease.leaseId}
+        </LeaseNumber>
+      </span>
     ),
   },
   {
@@ -44,6 +48,7 @@ export const leaseColumns = [
     key: 'contacts',
     label: 'Hyresgäst',
     className: 'px-2',
+    sortKey: 'tenantName',
     render: (lease: LeaseSearchResult) => {
       if (!lease.contacts || lease.contacts.length === 0) {
         return <span className="text-muted-foreground">-</span>
@@ -52,12 +57,19 @@ export const leaseColumns = [
         <div className="space-y-1">
           {lease.contacts.map((contact) => (
             <div key={contact.contactCode}>
-              <Link
-                to={paths.tenant(contact.contactCode)}
-                className="font-medium text-primary hover:underline"
-              >
-                {contact.name}
-              </Link>
+              <div className="flex items-center gap-1.5">
+                <Link
+                  to={paths.tenant(contact.contactCode)}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {contact.name}
+                </Link>
+                {contact.contactType === 'subletTenant' && (
+                  <span className="rounded bg-muted px-1 py-0.5 text-xs text-muted-foreground">
+                    Andrahand
+                  </span>
+                )}
+              </div>
               <div className="text-sm text-muted-foreground">
                 {contact.contactCode}
               </div>

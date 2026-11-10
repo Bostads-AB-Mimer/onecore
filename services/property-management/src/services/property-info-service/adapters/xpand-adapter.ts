@@ -1,4 +1,4 @@
-import { loggedAxios as axios, logger } from '@onecore/utilities'
+import { logger } from '@onecore/utilities'
 import knex from 'knex'
 import {
   RentalPropertyInfo,
@@ -32,7 +32,9 @@ function trimRow(obj: any): any {
   )
 }
 
-const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
+export const transformFromDbRentalPropertyInfo = (
+  row: any
+): RentalPropertyInfo => {
   let property: ApartmentInfo | CommercialSpaceInfo | ParkingSpaceInfo
   let rentalPropertyType: string
 
@@ -58,8 +60,8 @@ const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
           area: row.apartment_area,
           estateCode: row.estate_code,
           estate: row.estate,
-          buildingCode: row.building_code,
-          building: row.building,
+          buildingCode: row.building_code ?? '',
+          building: row.building ?? '',
         }
         break
       }
@@ -75,8 +77,8 @@ const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
           entrance: row.entrance,
           estateCode: row.estate_code,
           estate: row.estate,
-          buildingCode: row.building_code,
-          building: row.building,
+          buildingCode: row.building_code ?? '',
+          building: row.building ?? '',
         }
         break
       }
@@ -104,6 +106,26 @@ const transformFromDbRentalPropertyInfo = (row: any): RentalPropertyInfo => {
     id: row.rental_property_id,
     type: rentalPropertyType,
     property: property,
+    districtCode: row.districtCode,
+    district: row.district,
+    marketAreaCode: row.marketAreaCode,
+    marketArea: row.marketArea,
+    building: {
+      buildingCode: row.building_code,
+      building: row.building,
+      constructionYear: row.building_construction_year,
+      renovationYear: row.building_renovation_year,
+      assessmentYear: row.building_assessment_year,
+      buildingTypeCode: row.building_type_code,
+      buildingTypeCaption: row.building_type_caption,
+    },
+    address: {
+      street: row.street,
+      street2: row.street2,
+      postalCode: row.postal_code,
+      city: row.city,
+      number: '',
+    },
   }
 }
 
@@ -148,12 +170,30 @@ const getRentalPropertyInfo = async (
       'balgh.uppgang as floor',
       'balgh.hiss as has_elevator',
       'balgh.hygienutr as wash_space',
-      'cmvalboa.value as apartment_area'
+      'cmvalboa.value as apartment_area',
+      'babuf.fencode as districtCode',
+      'bafen.distrikt as district',
+      'babya.code as marketAreaCode',
+      'babya.caption as marketArea',
+      'babyg.byggnadsar as building_construction_year',
+      'babyg.ombyggar as building_renovation_year',
+      'babyg.assyear as building_assessment_year',
+      'babyt.code as building_type_code',
+      'babyt.caption as building_type_caption',
+      'cmadr.adress1 as street',
+      'cmadr.adress2 as street2',
+      'cmadr.adress3 as postal_code',
+      'cmadr.adress4 as city'
     )
     .innerJoin('cmobt', 'cmobj.keycmobt', 'cmobt.keycmobt')
     .innerJoin('hyinf', 'cmobj.keycmobj', 'hyinf.keycmobj')
     .innerJoin('hyint', 'hyinf.keyhyint', 'hyint.keyhyint')
     .innerJoin('babuf', 'cmobj.keycmobj', 'babuf.keycmobj')
+    .leftJoin('bafen', 'babuf.fencode', 'bafen.code')
+    .leftJoin('babyg', 'babuf.bygcode', 'babyg.code')
+    .leftJoin('babyt', 'babyg.keybabyt', 'babyt.keybabyt')
+    .leftJoin('bafst', 'babuf.keyobjfst', 'bafst.keycmobj')
+    .leftJoin('babya', 'bafst.keybabya', 'babya.keybabya')
     .leftJoin('balgh', 'cmobj.keycmobj', 'balgh.keycmobj')
     .leftJoin('balgt', 'balgh.keybalgt', 'balgt.keybalgt')
     .leftJoin('cmval as cmvalboa', function () {
@@ -165,6 +205,7 @@ const getRentalPropertyInfo = async (
     })
     .leftJoin('balok', 'cmobj.keycmobj', 'balok.keycmobj')
     .leftJoin('balot', 'balok.keybalot', 'balot.keybalot')
+    .leftJoin('cmadr', 'cmobj.keycmobj', 'cmadr.keycode')
     .where('hyinf.hyresid', rentalPropertyId)
 
   if (!row || row.length === 0) {

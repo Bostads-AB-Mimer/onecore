@@ -198,8 +198,9 @@ export function deriveStatus(input: {
         ? 'HANDED_OUT'
         : 'CREATED'
     }
-  } else if (!incoming && outgoingLoans.length > 0) {
-    status = 'RETURNED_VACANT'
+  } else if (outgoingLoans.length > 0) {
+    // Everything is back; a new tenant still needs a loan
+    status = incoming ? 'RETURNED_AWAITING_LOAN' : 'RETURNED_VACANT'
   } else {
     status = 'NO_LOANS'
   }

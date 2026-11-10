@@ -11,8 +11,16 @@ import { ObjectPageLayout, ViewLayout } from '@/shared/ui/layout'
 
 export function ParkingSpacePage() {
   const { rentalId } = useParams()
-  const { data, isLoading, error, leases, leasesIsLoading, currentRent } =
-    useParkingSpace(rentalId)
+  const {
+    data,
+    isLoading,
+    error,
+    leases,
+    leasesIsLoading,
+    currentLease,
+    objectRent,
+    objectRentIsLoading,
+  } = useParkingSpace(rentalId)
 
   return (
     <ViewLayout>
@@ -27,14 +35,17 @@ export function ParkingSpacePage() {
           <>
             <ParkingSpaceBasicInfo
               parkingSpace={parkingSpace}
-              rent={currentRent}
-              isLoadingRent={leasesIsLoading}
+              rent={objectRent?.rent.amount}
+              isRented={!!currentLease}
+              isLoadingLease={leasesIsLoading}
+              isLoadingRent={objectRentIsLoading}
             />
 
             <ParkingSpaceTabs
               parkingSpace={parkingSpace}
               leases={leases}
               leasesIsLoading={leasesIsLoading}
+              currentLease={currentLease}
             />
           </>
         )}

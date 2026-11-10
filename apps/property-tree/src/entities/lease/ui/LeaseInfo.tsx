@@ -3,20 +3,49 @@ import { Calendar } from 'lucide-react'
 import type { Lease } from '@/services/api/core/leaseService'
 
 import { formatDate } from '../lib/formatting'
+import { LeaseNumber } from './LeaseNumber'
 
 interface LeaseInfoProps {
-  lease: Pick<Lease, 'leaseId' | 'leaseStartDate'> &
-    Partial<Pick<Lease, 'lastDebitDate' | 'preferredMoveOutDate'>>
+  lease: Pick<Lease, 'leaseId' | 'leaseStartDate' | 'externalUrl'> &
+    Partial<Pick<Lease, 'lastDebitDate' | 'preferredMoveOutDate' | 'rentRows'>>
+}
+
+const getLeaseRent = (rentRows: Lease['rentRows']) => {
+  if (!rentRows || rentRows.length === 0) return null
+
+  const now = new Date()
+  const activeRows = rentRows.filter(
+    (row) =>
+      (!row.from || new Date(row.from) <= now) &&
+      (!row.to || new Date(row.to) >= now)
+  )
+  if (activeRows.length === 0) return null
+
+  return activeRows.reduce((sum, row) => sum + row.amount, 0)
 }
 
 export function LeaseInfo({ lease }: LeaseInfoProps) {
+  const leaseRent = getLeaseRent(lease.rentRows)
+
   return (
     <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <p className="text-sm text-muted-foreground">Kontraktsnummer</p>
-          <p className="font-medium">{lease.leaseId}</p>
+          <p className="font-medium">
+            <LeaseNumber externalUrl={lease.externalUrl}>
+              {lease.leaseId}
+            </LeaseNumber>
+          </p>
         </div>
+        {leaseRent !== null && (
+          <div>
+            <p className="text-sm text-muted-foreground">Hyra för kontrakt</p>
+            <p className="font-medium">
+              {`${Math.round(leaseRent).toLocaleString('sv-SE')} kr/mån`}
+            </p>
+          </div>
+        )}
         <div>
           <p className="text-sm text-muted-foreground">Inflyttningsdatum</p>
           <div className="flex items-center gap-2">

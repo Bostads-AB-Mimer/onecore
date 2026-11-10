@@ -7,13 +7,19 @@ import {
   InvoiceTransactionType,
   MiscellaneousInvoice,
   MiscellaneousInvoiceBaseItem,
+  PaymentSyncEvent,
 } from '@onecore/types'
 
-export const InvoiceFactory = Factory.define<Invoice>(() => {
+export const InvoiceFactory = Factory.define<Invoice>((options) => {
+  const invoiceId =
+    options.params.invoiceId ?? `55230331503045${options.sequence}`
+
   return {
-    invoiceId: '552303315030452',
-    leaseId: '705-025-03-0205/01',
+    invoiceId,
+    leaseIds: ['705-025-03-0205/01'],
     reference: 'P123456',
+    recipientContactCode: 'P123456',
+    recipientName: 'Test Tenant',
     amount: 7687.77,
     fromDate: new Date('2023-03-01T00:00:00.000Z'),
     toDate: new Date('2023-03-31T00:00:00.000Z'),
@@ -25,7 +31,10 @@ export const InvoiceFactory = Factory.define<Invoice>(() => {
     transactionTypeName: 'HYRA',
     type: 'Regular',
     source: 'legacy',
-    invoiceRows: [],
+    invoiceRows: InvoiceRowFactory.buildList(1, {
+      invoiceNumber: invoiceId,
+      amount: 7687.77,
+    }),
     credit: null,
   }
 })
@@ -88,5 +97,12 @@ export const InvoicePaymentEventFactory = Factory.define<InvoicePaymentEvent>(
     type: 'OCR',
     matchId: sequence,
     slTransactionType: 'ELECTRONIC_PAYMENT',
+  })
+)
+
+export const PaymentSyncEventFactory = Factory.define<PaymentSyncEvent>(
+  ({ sequence }) => ({
+    ...InvoicePaymentEventFactory.build({ matchId: sequence }),
+    cursor: `cursor-${sequence}`,
   })
 )

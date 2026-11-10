@@ -1,11 +1,14 @@
 import KoaRouter from '@koa/router'
+import {
+  logger,
+  generateRouteMetadata,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
+import { LeaseType, property } from '@onecore/types'
 import { z } from 'zod'
 
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
-
-import { logger, generateRouteMetadata } from '@onecore/utilities'
-import { property } from '@onecore/types'
 import { registerSchema } from '../../utils/openapi'
 import * as schemas from './schemas'
 import { calculateResidenceStatus } from './calculate-residence-status'
@@ -54,6 +57,7 @@ export const routes = (router: KoaRouter) => {
   registerSchema('Property', schemas.PropertySchema)
   registerSchema('Residence', schemas.ResidenceSchema)
   registerSchema('ResidenceDetails', schemas.ResidenceDetailsSchema)
+  registerSchema('ResidenceMedia', property.ResidenceMediaSchema)
   registerSchema('ResidenceSummary', schemas.ResidenceSummarySchema)
   registerSchema('Staircase', schemas.StaircaseSchema)
   registerSchema('Room', schemas.RoomSchema)
@@ -1074,6 +1078,84 @@ export const routes = (router: KoaRouter) => {
       content: schemas.ResidenceDetailsSchema.parse({ ...residence, status }),
       ...metadata,
     }
+  })
+
+  /**
+   * @swagger
+   * /residences/by-rental-id/{rentalId}/media:
+   *   get:
+   *     summary: Get published photos and energy declaration for a residence
+   *     description: |
+   *       Returns 200 with an empty list when nothing is published. imageLevel
+   *       is 'shared' when the photos are published for a coarser code level
+   *       and may show the building rather than this residence.
+   *     tags:
+   *       - Property base Service
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Rental id of the residence
+   *     responses:
+   *       200:
+   *         description: The published media, empty when nothing is published.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required:
+   *                 - content
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ResidenceMedia'
+   *       400:
+   *         description: The rental id does not have the residence code format.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: invalid-rental-id
+   *       500:
+   *         description: Internal server error.
+   *       503:
+   *         description: The public media host could not be reached.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: media-unavailable
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/residences/by-rental-id/:rentalId/media', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await propertyBaseAdapter.getResidenceMedia(
+      ctx.params.rentalId
+    )
+
+    if (result.ok) {
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+      return
+    }
+
+    if (result.err === 'invalid-rental-id') {
+      ctx.status = 400
+    } else if (result.err === 'media-unavailable') {
+      ctx.status = 503
+    } else {
+      ctx.status = 500
+    }
+    ctx.body = { reason: result.err, ...metadata }
   })
 
   /**
@@ -2511,19 +2593,16 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       try {
-        const leases = await leasingAdapter.getLeasesForContactCode(
+        const leases = await leasingAdapter.getLeasesByContactCode(
           ctx.params.contactCode,
           {
-            includeUpcomingLeases: true,
-            includeTerminatedLeases: false,
-            includeContacts: false,
+            status: ['current', 'upcoming'],
           }
         )
+
+        // TODO: This (Promise.all) doesn't work as intended because getMaintenanceUnitsForRentalProperty is not going to throw an error bc of AdapterResult
         const promises = leases
-          .filter(
-            (lease) =>
-              lease.type.toLocaleLowerCase().trimEnd() === 'bostadskontrakt'
-          )
+          .filter((lease) => lease.type === LeaseType.HousingContract)
           .map((lease) =>
             propertyBaseAdapter.getMaintenanceUnitsForRentalProperty(
               lease.rentalPropertyId

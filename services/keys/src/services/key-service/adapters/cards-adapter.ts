@@ -145,6 +145,10 @@ export async function getCardById(cardId: string): Promise<Card | null> {
 
 const DAX_CONCURRENCY = 5
 const ID_FILTER_CHUNK = 200
+// DAX takes seconds per 100 objects; card changes may show up to 10 min late
+const CARDS_CACHE_TTL_MS = 10 * 60 * 1000
+
+const cardsCache = new Map<string, { at: number; cards: Card[] }>()
 
 export interface CardsBatchResult {
   cards: Record<string, Card[]>
@@ -174,14 +178,48 @@ async function fetchOwnersByName(
 }
 
 /**
- * Cards for many rental objects. Owner ids come from the in-memory
- * card-owner mirror and are fetched with DAX idfilter in chunks of 200.
- * An owner missing or archived in the response is re-resolved by name and
- * the mirror is updated for it. Objects whose DAX lookups fail are reported
- * in `unresolved` rather than guessed as having no cards.
- * Throws MirrorNotReadyError until the first sync has run.
+ * Cards for many rental objects, cached per object for 10 minutes.
+ * Unresolved objects are not cached, so they are retried on the next call.
  */
 export async function getCardsByRentalObjects(
+  rentalObjectCodes: string[]
+): Promise<CardsBatchResult> {
+  const now = Date.now()
+  const cards: Record<string, Card[]> = {}
+  const missing: string[] = []
+  for (const code of rentalObjectCodes) {
+    const hit = cardsCache.get(code)
+    if (hit && now - hit.at < CARDS_CACHE_TTL_MS) cards[code] = hit.cards
+    else missing.push(code)
+  }
+  if (missing.length === 0) return { cards, unresolved: [] }
+
+  const fetched = await fetchCardsByRentalObjects(missing)
+  const unresolved = new Set(fetched.unresolved)
+  for (const [code, entry] of cardsCache) {
+    if (now - entry.at >= CARDS_CACHE_TTL_MS) cardsCache.delete(code)
+  }
+  for (const code of missing) {
+    cards[code] = fetched.cards[code]
+    if (!unresolved.has(code))
+      cardsCache.set(code, { at: now, cards: fetched.cards[code] })
+  }
+  return { cards, unresolved: fetched.unresolved }
+}
+
+/** Test helper */
+export function clearCardsCache(): void {
+  cardsCache.clear()
+}
+
+/**
+ * Owner ids come from the in-memory card-owner mirror and are fetched with
+ * DAX idfilter in chunks of 200. An owner missing or archived in the response
+ * is re-resolved by name and the mirror is updated for it. Objects whose DAX
+ * lookups fail are reported in `unresolved` rather than guessed as having no
+ * cards. Throws MirrorNotReadyError until the first sync has run.
+ */
+async function fetchCardsByRentalObjects(
   rentalObjectCodes: string[]
 ): Promise<CardsBatchResult> {
   const cards: Record<string, Card[]> = {}

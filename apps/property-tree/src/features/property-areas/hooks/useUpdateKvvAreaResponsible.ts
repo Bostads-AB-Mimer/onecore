@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { kvvAreaService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
+
 import { toast } from '@/shared/hooks/useToast'
 
 type CostCenterTree = components['schemas']['CostCenterTree']
@@ -56,7 +57,6 @@ export function useUpdateKvvAreaResponsible() {
                       username: newResponsibleUser.username,
                       firstName: newResponsibleUser.firstName,
                       lastName: newResponsibleUser.lastName,
-                      email: newResponsibleUser.email,
                       mobilePhone:
                         newResponsibleUser.attributes?.mobilePhone?.[0],
                       employeeId:

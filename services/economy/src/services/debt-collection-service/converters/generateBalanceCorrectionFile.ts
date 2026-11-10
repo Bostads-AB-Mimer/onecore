@@ -59,14 +59,24 @@ const createPostsForBalanceCorrection = (
           rightPad(balanceCorrection.contactCode, 16, ' '),
           rightPad(balanceCorrection.reference, 20, ' '),
           getDateString(balanceCorrection.lastDebitDate),
-          rightPad(balanceCorrection.rentalProperty.address, 36, ' '),
           rightPad(
-            balanceCorrection.rentalProperty.postalCode?.replaceAll(' ', '') ??
-              '',
+            balanceCorrection.rentalProperty.address?.street ?? '',
+            36,
+            ' '
+          ),
+          rightPad(
+            balanceCorrection.rentalProperty.address?.postalCode?.replaceAll(
+              ' ',
+              ''
+            ) ?? '',
             5,
             ' '
           ),
-          rightPad(balanceCorrection.rentalProperty.city ?? '', 28, ' '),
+          rightPad(
+            balanceCorrection.rentalProperty.address?.city ?? '',
+            28,
+            ' '
+          ),
           '99',
         ],
         ''

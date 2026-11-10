@@ -1,5 +1,6 @@
 import configPackage from '@iteam/config'
 import dotenv from 'dotenv'
+import { MimerCompany } from './types/typesv2'
 dotenv.config()
 
 type SftpConfig = {
@@ -11,6 +12,7 @@ type SftpConfig = {
   glDirectory?: string
   arDirectory?: string
   useSshDss?: boolean
+  hostFingerprint?: string
 }
 
 export interface Config {
@@ -42,6 +44,13 @@ export interface Config {
       maxConcurrency: number
     }
   }
+  stralfors: {
+    baseUrl: string
+    clientId: string
+    clientSecret: string
+    retryBackoffMs: number
+    maxRetries: number
+  }
   procurementInvoices: {
     importDirectory: string
     exportDirectory: string
@@ -67,6 +76,22 @@ export interface Config {
   infobip: {
     baseUrl: string
     apiKey: string
+  }
+  tenfast: {
+    baseUrl: string
+    apiKey: string
+    companyId: string
+  }
+  companies: MimerCompany[]
+  // Article codes that are exempt from the requirement of having a rental
+  // object (hyresobjekt) on an invoice row with accounting.
+  rentalObjectRequirementExceptions: string[]
+  // Accounts that are never part of rental loss accounting. Rental loss rows
+  // with one of them as income or cost account are left out of the file.
+  rentalLossExcludedAccounts: string[]
+  stralforsExport: {
+    sftp: SftpConfig
+    notificationEmail: string
   }
   health: {
     xledger: {
@@ -126,6 +151,10 @@ const config = configPackage({
     economyDatabase: {
       port: 1438,
     },
+    stralfors: {
+      retryBackoffMs: 500,
+      maxRetries: 10,
+    },
     procurementInvoices: {
       importDirectory: './procurement-invoices/invoices',
       exportDirectory: './procurement-invoices/export',
@@ -162,6 +191,16 @@ const config = configPackage({
       baseUrl: '',
       apiKey: '',
     },
+    tenfast: {
+      baseUrl: '',
+      apiKey: '',
+      companyId: '',
+    },
+    // JSON array of MimerCompany, set via the COMPANIES env var
+    companies: '[]',
+    rentalObjectRequirementExceptions: ['FAKT AVG'],
+    // 2425 Hemförsäkring is not rental loss
+    rentalLossExcludedAccounts: ['2425'],
     health: {
       xledger: {
         systemName: 'xledger',
@@ -176,14 +215,26 @@ const config = configPackage({
         minimumMinutesBetweenRequests: 5,
       },
     },
+    stralforsExport: {
+      sftp: {
+        host: '',
+        username: '',
+        password: '',
+        port: 22,
+        directory: 'TEST',
+        hostFingerprint: '',
+      },
+      notificationEmail: '',
+    },
   },
 })
 
-export default {
+const resolvedConfig = {
   port: config.get('port'),
   xpandDatabase: config.get('xpandDatabase'),
   economyDatabase: config.get('economyDatabase'),
   xledger: config.get('xledger'),
+  stralfors: config.get('stralfors'),
   procurementInvoices: config.get('procurementInvoices'),
   rentalInvoices: config.get('rentalInvoices'),
   debtCollection: config.get('debtCollection'),
@@ -191,5 +242,49 @@ export default {
     'scriptNotificationEmailAddresses'
   ),
   infobip: config.get('infobip'),
+  tenfast: config.get('tenfast'),
+  companies: JSON.parse(config.get('companies')),
+  rentalObjectRequirementExceptions: config.get(
+    'rentalObjectRequirementExceptions'
+  ),
+  rentalLossExcludedAccounts: config.get('rentalLossExcludedAccounts'),
+  stralforsExport: config.get('stralforsExport'),
   health: config.get('health'),
 } as Config
+
+export default resolvedConfig
+
+/**
+ * Determines whether an invoice row with the given rental article code is
+ * exempt from the requirement of having a rental object (hyresobjekt).
+ * Comparison is case-insensitive and ignores surrounding whitespace.
+ */
+export const isRentalObjectRequirementException = (
+  rentArticleName: string | undefined | null
+): boolean => {
+  if (!rentArticleName) {
+    return false
+  }
+
+  const normalized = rentArticleName.trim().toUpperCase()
+
+  return resolvedConfig.rentalObjectRequirementExceptions.some(
+    (code) => code.trim().toUpperCase() === normalized
+  )
+}
+
+/**
+ * Determines whether an account is excluded from rental loss accounting
+ * (see rentalLossExcludedAccounts).
+ */
+export const isRentalLossExcludedAccount = (
+  account: number | string | undefined | null
+): boolean => {
+  if (account === undefined || account === null) {
+    return false
+  }
+
+  return resolvedConfig.rentalLossExcludedAccounts.some(
+    (excluded) => excluded.trim() === account.toString().trim()
+  )
+}

@@ -44,6 +44,9 @@ export interface Config {
   economyService: {
     url: string
   }
+  exportRentalInvoiceAccounting: {
+    companyIds: string[]
+  }
   inspectionService: {
     url: string
   }
@@ -76,6 +79,16 @@ export interface Config {
     economy: string
     bosociala: string
     dev: string
+    xpandSync: string
+  }
+  homeInsurance: {
+    sftp: {
+      host: string
+      port: number
+      username: string
+      password: string
+      directory: string
+    }
   }
   scanner: {
     allowedIps: string[]
@@ -130,6 +143,9 @@ const config = configPackage({
     economyService: {
       url: 'http://localhost:5080',
     },
+    exportRentalInvoiceAccounting: {
+      companyIds: ['001'],
+    },
     inspectionService: {
       url: 'http://localhost:5090',
     },
@@ -160,6 +176,16 @@ const config = configPackage({
       tenantDefault: '',
       economy: '',
       bosociala: '',
+      xpandSync: '',
+    },
+    homeInsurance: {
+      sftp: {
+        host: '',
+        port: 22,
+        username: '',
+        password: '',
+        directory: '',
+      },
     },
     scanner: {
       allowedIps: [],
@@ -222,6 +248,7 @@ export default {
   communicationService: config.get('communicationService'),
   workOrderService: config.get('workOrderService'),
   economyService: config.get('economyService'),
+  exportRentalInvoiceAccounting: config.get('exportRentalInvoiceAccounting'),
   inspectionService: config.get('inspectionService'),
   minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),
@@ -232,5 +259,6 @@ export default {
   keysService: config.get('keysService'),
   fileStorageService: config.get('fileStorageService'),
   scanner: config.get('scanner'),
+  homeInsurance: config.get('homeInsurance'),
   infobip: config.get('infobip'),
 } as Config

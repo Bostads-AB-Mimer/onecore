@@ -1,0 +1,223 @@
+import {
+  Lease,
+  LeaseStatus,
+  LeaseRentRow,
+  LeaseType,
+  RentalObject,
+  RentalObjectRent,
+} from '@onecore/types'
+import { logger } from '@onecore/utilities'
+
+import config from '../../../common/config'
+import {
+  TenfastLease,
+  TenfastInvoiceRow,
+  TenfastRentalObject,
+} from '../adapters/tenfast/schemas'
+
+// Parsed Tenfast UI base URL, cached per configured value so an invalid
+// value is only parsed and logged once instead of once per mapped lease.
+let parsedAppUrl: { appUrl: string; base: URL | undefined } | undefined
+
+const getTenfastAppBaseUrl = (): URL | undefined => {
+  const appUrl = config.tenfast.appUrl
+  if (!appUrl) return undefined
+  if (parsedAppUrl?.appUrl === appUrl) return parsedAppUrl.base
+
+  let base: URL | undefined
+  try {
+    // A trailing slash keeps any path in appUrl when resolving below
+    base = new URL(appUrl.endsWith('/') ? appUrl : `${appUrl}/`)
+  } catch (err: unknown) {
+    logger.warn({ appUrl, err }, 'tenfast.appUrl invalid')
+  }
+
+  parsedAppUrl = { appUrl, base }
+  return base
+}
+
+/**
+ * Build a link to a lease in the Tenfast web UI from its internal Tenfast id.
+ * Returns undefined when no valid Tenfast UI URL is configured, so a config
+ * error only hides the link instead of failing the lease mapping.
+ */
+export const buildTenfastLeaseUrl = (
+  tenfastLeaseId: string
+): string | undefined => {
+  const base = getTenfastAppBaseUrl()
+  if (!base) return undefined
+
+  // Relative path (no leading slash) so it is appended to the base path
+  // instead of replacing it
+  return new URL(
+    `hyresvard/avtal/${encodeURIComponent(tenfastLeaseId)}`,
+    base
+  ).toString()
+}
+
+/**
+ * Map TenFAST rental object type to LeaseType enum.
+ * TenFAST uses lowercase Swedish: 'bostad', 'parkering', 'lokal', etc.
+ */
+const TENFAST_TYP_TO_LEASE_TYPE: Partial<Record<string, LeaseType>> = {
+  bostad: LeaseType.HousingContract,
+  parkering: LeaseType.ParkingSpaceContract,
+  lokal: LeaseType.CommercialTenantContract,
+  garage: LeaseType.GarageContract,
+  // Tenfast sends 'förråd'. Xpand types förråd leases as Lokalkontrakt, and
+  // consumers (Odoo, keys-portal, lease search) only count that as a facility.
+  förråd: LeaseType.CommercialTenantContract,
+  forrad: LeaseType.CommercialTenantContract,
+  mark: LeaseType.OtherContract,
+  ovrigt: LeaseType.OtherContract,
+}
+
+export const mapTenfastTypToLeaseType = (
+  typ: string | undefined
+): LeaseType => {
+  if (!typ) return LeaseType.OtherContract
+  return TENFAST_TYP_TO_LEASE_TYPE[typ.toLowerCase()] ?? LeaseType.OtherContract
+}
+
+export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
+  const { stage } = lease
+
+  switch (stage) {
+    case 'signingInProgress':
+      return LeaseStatus.PendingSignature
+    case 'upcoming':
+      return LeaseStatus.Upcoming
+    case 'active':
+      return LeaseStatus.Current
+    case 'preTermination':
+    case 'terminationSigningInProgress':
+      return LeaseStatus.PreliminaryTerminated
+    case 'terminationScheduled':
+      return LeaseStatus.AboutToEnd
+    case 'archived':
+    case 'terminated':
+      return LeaseStatus.Ended
+    case 'draft':
+      return LeaseStatus.NotSent
+    default:
+      logger.warn(
+        { stage, leaseId: lease.externalId },
+        'calculateLeaseStatus: Unknown Tenfast stage'
+      )
+      return LeaseStatus.Ended
+  }
+}
+
+export const mapToOnecoreRentalObjectRent = (
+  rentalObject: TenfastRentalObject
+): RentalObjectRent => ({
+  amount: rentalObject.hyraExcludingVat ?? 0,
+  vat: rentalObject.hyraVat ?? 0,
+  rows: (rentalObject.hyror ?? []).map((row) => ({
+    code: row.article ?? '',
+    description: row.label ?? '',
+    amount: row.amount,
+    vatPercentage: row.vat,
+    fromDate: row.from ? new Date(row.from) : undefined,
+    toDate: row.to ? new Date(row.to) : undefined,
+  })),
+})
+
+const mapToOnecoreRentalObject = (
+  rentalObject: TenfastRentalObject
+): RentalObject | undefined => {
+  // Only map if we have populated fields (not just a reference)
+  if (!rentalObject.postadress) {
+    return undefined
+  }
+
+  return {
+    rentalObjectCode: rentalObject.externalId,
+    address: rentalObject.postadress,
+    availabilityInfo: {
+      rentalObjectCode: rentalObject.externalId,
+      rentalTenureType: {
+        id: rentalObject.category.code,
+        name: rentalObject.category.label,
+      },
+      rent: mapToOnecoreRentalObjectRent(rentalObject),
+    },
+    residentialAreaCaption: rentalObject.stadsdel ?? '',
+    residentialAreaCode: rentalObject.stadsdel ?? '',
+    objectTypeCaption: rentalObject.subType ?? rentalObject.typ ?? '',
+    objectTypeCode: rentalObject.typ ?? '',
+    boaArea: rentalObject.kvm ?? undefined,
+    braArea: rentalObject.kvm ?? undefined,
+  }
+}
+
+// tenantContactIds: string[] | undefined // Kanske vi vill ha external id
+// tenants: Contact[] | undefined
+// // sublet: Information om andrahandsuthyrning
+// // hyresrader vill vi ha också
+// rentalPropertyId: string
+// type: string // Typ av kontrakt, bostadskontrakt, parkeringsplatskontrakt.
+// noticeGivenBy: string | undefined // Vem har gjort uppsägningen?
+// noticeDate: Date | undefined // När gjordes uppsägningen?
+// noticeTimeTenant: string | undefined // Uppsägningstid i antal månader
+// preferredMoveOutDate: Date | undefined // När vill den här hyresgästen flytta ut?
+// terminationDate: Date | undefined // När bekräftades uppsägningen av mimer?
+// contractDate: Date | undefined // När skapades kontraktet?
+// lastDebitDate: Date | undefined // Sista betaldatum
+// approvalDate: Date | undefined // När godkände mimer kontraktet?
+
+// Until the tenant signs a notice, Tenfast keeps the end date on the signing
+// request and leaves endDate empty on the lease.
+export const getLeaseEndDate = (lease: TenfastLease): Date | undefined => {
+  if (lease.endDate) return lease.endDate
+  if (lease.stage !== 'terminationSigningInProgress') return undefined
+  return lease.simplesignTermination?.preliminaryEndDate ?? undefined
+}
+
+export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
+  const rentalObject = lease.hyresobjekt[0]
+  const endDate = getLeaseEndDate(lease)
+
+  const stadsdel = rentalObject?.stadsdel ?? rentalObject?.fastighet?.stadsdel
+
+  return {
+    leaseId: lease.externalId,
+    leaseNumber: lease.externalId.split('/')[1],
+    externalUrl: buildTenfastLeaseUrl(lease._id),
+    leaseStartDate: lease.startDate,
+    leaseEndDate: endDate,
+    status: calculateLeaseStatus(lease),
+    noticeGivenBy: lease.cancellation.cancelledByType ?? undefined,
+    noticeDate: lease.cancellation.handledAt ?? undefined,
+    noticeTimeTenant: lease.uppsagningstid,
+    preferredMoveOutDate: lease.cancellation.preferredMoveOutDate ?? undefined,
+    terminationDate: lease.cancellation.handledAt ?? undefined,
+    contractDate: lease.signedAt ?? undefined,
+    lastDebitDate: endDate,
+    approvalDate: lease.signedAt ?? undefined,
+    residentialArea: stadsdel
+      ? { code: stadsdel, caption: stadsdel }
+      : undefined,
+    tenantContactIds: lease.hyresgaster.map((tenant) => tenant.externalId),
+    subletContactId: lease.andraHandHG?.externalId ?? undefined,
+    tenants: undefined,
+    rentalPropertyId: lease.hyresobjekt[0]?.externalId ?? 'missing',
+    rentalObject: rentalObject
+      ? mapToOnecoreRentalObject(rentalObject)
+      : undefined,
+    type: mapTenfastTypToLeaseType(rentalObject?.typ),
+    rentRows: lease.hyror.map(mapToOnecoreRentRow),
+  }
+}
+
+export const mapToOnecoreRentRow = (row: TenfastInvoiceRow): LeaseRentRow => {
+  return {
+    id: row._id,
+    amount: row.amount,
+    articleId: row.article ?? '',
+    label: row.label ?? '',
+    vat: row.vat,
+    from: row.from ?? undefined,
+    to: row.to ?? undefined,
+  }
+}

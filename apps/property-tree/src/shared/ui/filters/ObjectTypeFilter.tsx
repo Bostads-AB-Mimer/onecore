@@ -33,10 +33,10 @@ interface ObjectTypeFilterProps {
   selectedObjectTypes: string[]
   onObjectTypeChange: (values: string[]) => void
   /** Which objectType value triggers the parking subtype expansion (e.g. 'parkering') */
-  parkingOptionValue: string
-  loadParkingSpaceTypes: () => Promise<ParkingSpaceTypeOption[]>
-  selectedParkingSpaceTypes: string[]
-  onParkingSpaceTypeChange: (values: string[]) => void
+  parkingOptionValue?: string
+  loadParkingSpaceTypes?: () => Promise<ParkingSpaceTypeOption[]>
+  selectedParkingSpaceTypes?: string[]
+  onParkingSpaceTypeChange?: (values: string[]) => void
   placeholder?: string
   className?: string
 }
@@ -47,7 +47,7 @@ export function ObjectTypeFilter({
   onObjectTypeChange,
   parkingOptionValue,
   loadParkingSpaceTypes,
-  selectedParkingSpaceTypes,
+  selectedParkingSpaceTypes = [],
   onParkingSpaceTypeChange,
   placeholder = 'Objekttyp',
   className,
@@ -74,7 +74,7 @@ export function ObjectTypeFilter({
 
   // Lazy-load parking space types when the dropdown/sheet is first opened
   useEffect(() => {
-    if (!open || parkingSpaceTypes.length > 0) return
+    if (!open || !loadParkingSpaceTypes || parkingSpaceTypes.length > 0) return
     let cancelled = false
     loadParkingSpaceTypes().then((types) => {
       if (!cancelled) setParkingSpaceTypes(types)
@@ -124,7 +124,7 @@ export function ObjectTypeFilter({
         value === parkingOptionValue &&
         selectedParkingSpaceTypes.length > 0
       ) {
-        onParkingSpaceTypeChange([])
+        onParkingSpaceTypeChange?.([])
       }
     } else {
       onObjectTypeChange(selectedObjectTypes.filter((v) => v !== value))
@@ -132,10 +132,14 @@ export function ObjectTypeFilter({
   }
 
   const toggleParkingSpaceType = (code: string, checked: boolean) => {
+    if (!onParkingSpaceTypeChange) return
     if (checked) {
       onParkingSpaceTypeChange([...selectedParkingSpaceTypes, code])
       // Checking a specific subtype clears the "all parking" parent selection
-      if (selectedObjectTypes.includes(parkingOptionValue)) {
+      if (
+        parkingOptionValue &&
+        selectedObjectTypes.includes(parkingOptionValue)
+      ) {
         onObjectTypeChange(
           selectedObjectTypes.filter((v) => v !== parkingOptionValue)
         )
@@ -149,7 +153,7 @@ export function ObjectTypeFilter({
 
   const clearAll = () => {
     onObjectTypeChange([])
-    onParkingSpaceTypeChange([])
+    onParkingSpaceTypeChange?.([])
   }
 
   const triggerButton = (

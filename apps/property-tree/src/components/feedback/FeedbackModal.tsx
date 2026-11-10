@@ -1,15 +1,20 @@
 import * as React from 'react'
 import { Loader2, Upload, X } from 'lucide-react'
+
+import { useCreateFeedback } from '@/entities/tenant/hooks/useCreateFeedback'
+import { useUser } from '@/entities/user'
+
+import { useFeedbackModal } from '@/shared/hooks/useFeedbackModal'
+import { useToast } from '@/shared/hooks/useToast'
+import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/shared/ui/Dialog'
-import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
-import { Textarea } from '@/shared/ui/Textarea'
 import { Label } from '@/shared/ui/Label'
 import {
   Select,
@@ -18,10 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/Select'
-import { useFeedbackModal } from '@/shared/hooks/useFeedbackModal'
-import { useCreateFeedback } from '@/entities/tenant/hooks/useCreateFeedback'
-import { useUser } from '@/entities/user'
-import { useToast } from '@/shared/hooks/useToast'
+import { Textarea } from '@/shared/ui/Textarea'
 
 const LABEL_IDS = {
   bug: '1e656430-7ee7-4104-9e6d-7b1e0c60c343',

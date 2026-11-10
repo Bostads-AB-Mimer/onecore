@@ -11,10 +11,13 @@ import {
   ClipboardList,
   Contact,
   FileText,
+  Gauge,
   Home,
   LayoutGrid,
+  LayoutTemplate,
   ListOrdered,
   Receipt,
+  Send,
   Settings,
   ShieldX,
 } from 'lucide-react'
@@ -57,6 +60,16 @@ function SidebarNavigationContent() {
   const [isForetagExpanded, setIsForetagExpanded] = React.useState(false)
 
   const isPropertiesActive = location.pathname === routes.properties
+
+  // Utskick group: open while on either of its pages, collapsible otherwise.
+  const isOnUtskickPage =
+    location.pathname === routes.dispatchCentre ||
+    location.pathname === routes.messageTemplates
+  const [isUtskickExpanded, setIsUtskickExpanded] =
+    React.useState(isOnUtskickPage)
+  React.useEffect(() => {
+    if (isOnUtskickPage) setIsUtskickExpanded(true)
+  }, [isOnUtskickPage])
 
   // Auto-expand logic
   const shouldAutoExpandFastighetsdata =
@@ -157,11 +170,59 @@ function SidebarNavigationContent() {
           icon={FileText}
           label="Hyreskontrakt"
         />
+        {/* UTSKICK - collapsible with Mallar nested under it */}
+        <Collapsible
+          open={isUtskickExpanded}
+          onOpenChange={setIsUtskickExpanded}
+          className="group/utskick-collapsible"
+        >
+          <SidebarGroup>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === routes.dispatchCentre}
+                    tooltip="Utskick"
+                  >
+                    <Link to={routes.dispatchCentre}>
+                      <Send />
+                      <span>Utskick</span>
+                      <ChevronRight className="ml-auto transition-transform group-data-[state=open]/utskick-collapsible:rotate-90" />
+                    </Link>
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <SidebarGroupContent className="ml-4">
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            location.pathname === routes.messageTemplates
+                          }
+                          tooltip="Mallar"
+                        >
+                          <Link to={routes.messageTemplates}>
+                            <LayoutTemplate />
+                            <span>Mallar</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        </Collapsible>
         <SidebarNavLink
           to={routes.inspections}
           icon={ClipboardList}
           label="Besiktningar"
         />
+        <SidebarNavLink to={routes.imd} icon={Gauge} label="IMD" />
         <SidebarNavLink
           to={routes.economy}
           icon={Receipt}

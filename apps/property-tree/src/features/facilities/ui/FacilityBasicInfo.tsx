@@ -10,6 +10,7 @@ interface FacilityBasicInfoProps {
   rent?: number
   isRented?: boolean
   isLoadingLease?: boolean
+  isLoadingRent?: boolean
 }
 
 export const FacilityBasicInfo = ({
@@ -17,6 +18,7 @@ export const FacilityBasicInfo = ({
   rent,
   isRented,
   isLoadingLease,
+  isLoadingRent,
 }: FacilityBasicInfoProps) => {
   const isMobile = useIsMobile()
 
@@ -72,9 +74,9 @@ export const FacilityBasicInfo = ({
               </p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Månadshyra</p>
+              <p className="text-sm text-muted-foreground">Hyra för objekt</p>
               <p className="font-medium">
-                {isLoadingLease ? (
+                {isLoadingRent ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Laddar...

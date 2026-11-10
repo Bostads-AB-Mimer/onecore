@@ -7,13 +7,19 @@ import {
   ParkingSpaceAcceptOfferEmail,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
+  InvoiceNotificationEmail,
+  LeaseTerminationConfirmationEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
+import { EmailAttachment } from '@onecore/types'
 import { EmailV4Message, EmailV4Response } from './types'
+import { ProviderResponseError } from './provider-error'
 import {
   AcceptParkingSpaceOfferTemplateId,
   AdditionalParkingSpaceOfferTemplateId,
+  InvoiceNotificationEmailTemplateId,
+  LeaseTerminationConfirmationTemplateId,
   NonScoredParkingSpaceApprovedTemplateId,
   NonScoredParkingSpaceDeniedTemplateId,
   ParkingSpaceAssignedToOtherTemplateId,
@@ -26,6 +32,7 @@ import {
   formatToSwedishCurrency,
   getParkingSpaceImageUrl,
 } from './parking-space-formatting'
+import { buildLeaseTerminationPlaceholders } from './lease-termination-placeholders'
 
 // Response from POSTing to Infobip's /email/4/messages (outbound email send).
 // Order of `messages` matches the destinations array passed in.
@@ -38,8 +45,10 @@ const EMAIL_SENDER = 'Bostads Mimer AB <noreply@mimer.nu>'
 // epic-mim-1838.dev.mimer.nu / api.mimer.nu) and filter each Infobip
 // delivery-report subscription to its own application, so environments
 // only receive reports for their own sends (stops cross-env PII fan-out).
+// `signal` lets the scheduled-sends worker bound the call.
 const sendEmailV4 = async (
-  messages: EmailV4Message[]
+  messages: EmailV4Message[],
+  signal?: AbortSignal
 ): Promise<EmailV4Response> => {
   const baseUrl = config.infobip.baseUrl.replace(/\/$/, '') // Remove trailing slash
   const url = `${baseUrl}/email/4/messages`
@@ -52,6 +61,7 @@ const sendEmailV4 = async (
 
   const response = await fetch(url, {
     method: 'POST',
+    signal,
     headers: {
       Authorization: `App ${apiKey}`,
       'Content-Type': 'application/json',
@@ -61,12 +71,87 @@ const sendEmailV4 = async (
 
   if (!response.ok) {
     const errorBody = await response.text()
+    throw new ProviderResponseError('infobip-email', response.status, errorBody)
+  }
+
+  return response.json() as Promise<EmailV4Response>
+}
+
+// Uses /email/3/send (multipart) for template emails with attachments.
+// Constructs multipart body manually to avoid undici adding ;charset=UTF-8
+// to the Content-Type boundary, which Infobip rejects.
+const sendTemplateEmailWithAttachments = async (params: {
+  to: string
+  placeholders: string
+  templateId: number
+  attachments: EmailAttachment[]
+}): Promise<void> => {
+  const baseUrl = config.infobip.baseUrl.replace(/\/$/, '')
+  const url = `${baseUrl}/email/3/send`
+  const apiKey = config.infobip.apiKey
+  const crlf = '\r\n'
+  const boundary = `----InfobipBoundary${Date.now()}`
+  const enc = new TextEncoder()
+
+  const formFields: Record<string, string> = {
+    from: EMAIL_SENDER,
+    to: params.to,
+    templateId: String(params.templateId),
+    placeholders: params.placeholders,
+  }
+
+  const parts: Uint8Array[] = []
+
+  for (const [name, value] of Object.entries(formFields)) {
+    parts.push(
+      enc.encode(
+        `--${boundary}${crlf}` +
+          `Content-Disposition: form-data; name="${name}"${crlf}${crlf}` +
+          `${value}${crlf}`
+      )
+    )
+  }
+
+  for (const att of params.attachments) {
+    parts.push(
+      enc.encode(
+        `--${boundary}${crlf}` +
+          `Content-Disposition: form-data; name="attachment"; filename="${att.filename}"${crlf}` +
+          `Content-Type: ${att.contentType}${crlf}${crlf}`
+      )
+    )
+    const binary = atob(att.content)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    parts.push(bytes)
+    parts.push(enc.encode(crlf))
+  }
+
+  parts.push(enc.encode(`--${boundary}--${crlf}`))
+
+  const totalLength = parts.reduce((sum, p) => sum + p.length, 0)
+  const body = new Uint8Array(totalLength)
+  let offset = 0
+  for (const part of parts) {
+    body.set(part, offset)
+    offset += part.length
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `App ${apiKey}`,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  })
+
+  if (!response.ok) {
+    const errorBody = await response.text()
     throw new Error(
       `Infobip Email API error: ${response.status} - ${errorBody}`
     )
   }
-
-  return response.json() as Promise<EmailV4Response>
 }
 
 export const sendEmail = async (message: Email) => {
@@ -85,7 +170,7 @@ export const sendEmail = async (message: Email) => {
       { to: message.to, subject: message.subject },
       'Sending email complete'
     )
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -125,7 +210,7 @@ export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -164,7 +249,7 @@ export const sendParkingSpaceAcceptOffer = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -203,7 +288,7 @@ export const sendNonScoredParkingSpaceApproved = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -240,7 +325,7 @@ export const sendNonScoredParkingSpaceDenied = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -267,7 +352,7 @@ export const sendParkingSpaceAssignedToOther = async (
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -298,7 +383,7 @@ export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
       },
     ])
 
-    return { data: response }
+    return response
   } catch (error) {
     logger.error(error)
     throw error
@@ -309,30 +394,117 @@ export const sendBulkEmail = async (email: {
   emails: string[]
   subject: string
   text: string
+  signal?: AbortSignal
 }) => {
   logger.info(
-    { recipientCount: email.emails.length, baseUrl: config.infobip.baseUrl },
+    {
+      recipientCount: email.emails.length,
+      baseUrl: config.infobip.baseUrl,
+    },
     'Sending bulk email'
   )
 
   try {
-    const response = await sendEmailV4([
-      {
-        sender: EMAIL_SENDER,
-        destinations: email.emails.map((addr) => ({
-          to: [{ destination: addr }],
-        })),
-        content: { subject: email.subject, text: email.text },
-      },
-    ])
+    const response = await sendEmailV4(
+      [
+        {
+          sender: EMAIL_SENDER,
+          destinations: email.emails.map((addr) => ({
+            to: [{ destination: addr }],
+          })),
+          content: { subject: email.subject, text: email.text },
+        },
+      ],
+      email.signal
+    )
 
     logger.info(
       { recipientCount: email.emails.length },
-      'Bulk email sent successfully'
+      'Bulk email submitted to Infobip'
     )
+    return response
+  } catch (error) {
+    logger.error({ err: error }, 'email-adapter.sendBulkEmail')
+    throw error
+  }
+}
+
+export const sendInvoiceNotificationEmail = async (
+  email: InvoiceNotificationEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl },
+    'Sending invoice notification email'
+  )
+
+  try {
+    const placeholders = JSON.stringify({
+      firstName: email.firstName,
+      address: email.address,
+      invoiceNumber: email.invoiceNumber,
+      dueDate: dateFormatter.format(new Date(email.dueDate)),
+      totalAmount: formatToSwedishCurrency(email.totalAmount),
+    })
+
+    if (email.attachments && email.attachments.length > 0) {
+      await sendTemplateEmailWithAttachments({
+        to: email.to,
+        placeholders,
+        templateId: InvoiceNotificationEmailTemplateId,
+        attachments: email.attachments,
+      })
+      return { data: null }
+    }
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [{ to: [{ destination: email.to, placeholders }] }],
+        content: { templateId: InvoiceNotificationEmailTemplateId },
+      },
+    ])
+
     return { data: response }
   } catch (error) {
-    logger.error(error, 'Error sending bulk email')
+    logger.error(error)
+    throw error
+  }
+}
+
+export const sendLeaseTerminationConfirmation = async (
+  email: LeaseTerminationConfirmationEmail
+) => {
+  logger.info(
+    { baseUrl: config.infobip.baseUrl, leaseId: email.leaseId },
+    'Sending lease termination confirmation email'
+  )
+
+  if (!LeaseTerminationConfirmationTemplateId) {
+    throw new Error(
+      'Lease termination confirmation Infobip template id is not configured'
+    )
+  }
+
+  try {
+    const placeholders = JSON.stringify(
+      buildLeaseTerminationPlaceholders(email)
+    )
+
+    const response = await sendEmailV4([
+      {
+        sender: EMAIL_SENDER,
+        destinations: [
+          {
+            to: [{ destination: email.to, placeholders }],
+          },
+        ],
+        content: { templateId: LeaseTerminationConfirmationTemplateId },
+      },
+    ])
+
+    return response
+  } catch (error) {
+    logger.error(error)
     throw error
   }
 }

@@ -52,8 +52,13 @@ describe('toOwnerRows', () => {
   })
 })
 
+const resetCards = () => {
+  mirror.reset()
+  cardsAdapter.clearCardsCache()
+}
+
 describe('getCardsByRentalObjects', () => {
-  afterEach(mirror.reset)
+  afterEach(resetCards)
 
   it('fetches mirrored owners with idfilter and re-resolves suspects by name', async () => {
     mirror.replaceAll([
@@ -126,8 +131,78 @@ describe('getCardsByRentalObjects', () => {
   })
 })
 
+describe('getCardsByRentalObjects cache', () => {
+  afterEach(resetCards)
+
+  const mirrorTwo = () =>
+    mirror.replaceAll([
+      { cardOwnerId: 'o1', name: '101-001-01-0001' },
+      { cardOwnerId: 'o2', name: '101-001-01-0002' },
+    ])
+  const answerAll = () =>
+    jest.spyOn(daxAdapter, 'searchCardOwners').mockImplementation(async (p) =>
+      (p.idfilter ?? '').split(',').map((id) =>
+        owner(id, `101-001-01-000${id.slice(1)}`, {
+          cards: [card(`c-${id}`)] as never,
+        })
+      )
+    )
+
+  it('serves cached objects without DAX and fetches only the rest', async () => {
+    mirrorTwo()
+    const searchSpy = answerAll()
+
+    await cardsAdapter.getCardsByRentalObjects(['101-001-01-0001'])
+    const { cards } = await cardsAdapter.getCardsByRentalObjects([
+      '101-001-01-0001',
+      '101-001-01-0002',
+    ])
+
+    expect(cards['101-001-01-0001'].map((c) => c.cardId)).toEqual(['c-o1'])
+    expect(cards['101-001-01-0002'].map((c) => c.cardId)).toEqual(['c-o2'])
+    expect(searchSpy.mock.calls.map(([p]) => p.idfilter)).toEqual(['o1', 'o2'])
+  })
+
+  it('fetches again after 10 minutes', async () => {
+    mirrorTwo()
+    const searchSpy = answerAll()
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(0)
+
+    await cardsAdapter.getCardsByRentalObjects(['101-001-01-0001'])
+    nowSpy.mockReturnValue(10 * 60 * 1000 - 1)
+    await cardsAdapter.getCardsByRentalObjects(['101-001-01-0001'])
+    expect(searchSpy).toHaveBeenCalledTimes(1)
+
+    nowSpy.mockReturnValue(10 * 60 * 1000)
+    await cardsAdapter.getCardsByRentalObjects(['101-001-01-0001'])
+    expect(searchSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not cache objects whose DAX lookup failed', async () => {
+    mirrorTwo()
+    const searchSpy = jest
+      .spyOn(daxAdapter, 'searchCardOwners')
+      .mockRejectedValueOnce(new Error('DAX down'))
+    answerAll()
+
+    const first = await cardsAdapter.getCardsByRentalObjects([
+      '101-001-01-0001',
+    ])
+    expect(first.unresolved).toEqual(['101-001-01-0001'])
+
+    const second = await cardsAdapter.getCardsByRentalObjects([
+      '101-001-01-0001',
+    ])
+    expect(second.unresolved).toEqual([])
+    expect(second.cards['101-001-01-0001'].map((c) => c.cardId)).toEqual([
+      'c-o1',
+    ])
+    expect(searchSpy).toHaveBeenCalledTimes(2)
+  })
+})
+
 describe('getCardsByRentalObjects failures', () => {
-  afterEach(mirror.reset)
+  afterEach(resetCards)
 
   it('reports objects as unresolved when the idfilter chunk fails, without fan-out', async () => {
     mirror.replaceAll([

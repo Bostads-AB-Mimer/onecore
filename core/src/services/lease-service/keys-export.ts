@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import axios from 'axios'
 import {
   createExcelFromPaginated,
   formatDateForExcel,
@@ -12,6 +13,8 @@ import { leasing, LeaseStatusLabel } from '@onecore/types'
 
 import { KeysApi } from '../../adapters/keys-adapter'
 import * as leasingAdapter from '../../adapters/leasing-adapter'
+import { enrichLeaseContacts } from '../../adapters/contacts-adapter/lease-query'
+import * as utils from '../../utils'
 
 const querySchema = z.object({
   property: z.string().min(1),
@@ -38,7 +41,7 @@ async function enrichLeasesWithKeys(
   let empty = 0
   let withKeys = 0
 
-  await runWithConcurrency(
+  await utils.concurrency.runWithConcurrency(
     enriched,
     async (lease) => {
       if (!lease.rentalObjectCode) return
@@ -140,7 +143,11 @@ export const routes = (router: KoaRouter) => {
               : {}),
           })
 
-          const enriched = await enrichLeasesWithKeys(response.content)
+          const withContacts = await enrichLeaseContacts(
+            response.content,
+            'leases/keys-export'
+          )
+          const enriched = await enrichLeasesWithKeys(withContacts)
           return { ...response, content: enriched }
         },
         {
@@ -221,6 +228,11 @@ export const routes = (router: KoaRouter) => {
       setExcelDownloadHeaders(ctx, `nycklar-${filenameSuffix}`)
       ctx.body = buffer
     } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error(
         { err, property, buildingCode },
         'leases-keys-export: failed to build Excel'

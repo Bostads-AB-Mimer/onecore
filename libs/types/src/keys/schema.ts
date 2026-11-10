@@ -551,16 +551,18 @@ export const KeyLoanWithDetailsSchema = KeyLoanSchema.extend({
 })
 
 // Move-in / move-out overview (core aggregation of leases + keys + loans)
+// Ordered by handover step, then the states outside the flow
 export const MoveInOutStatusSchema = z.enum([
-  'UNKNOWN',
   'NOT_RETURNED',
   'LOANED_TO_OTHER',
+  'RETURNED_AWAITING_LOAN',
   'CREATED',
+  'PARTIAL',
   'HANDED_OUT',
   'RETURNED_VACANT',
-  'NO_KEYS',
   'NO_LOANS',
-  'PARTIAL',
+  'NO_KEYS',
+  'UNKNOWN',
 ])
 
 export const MoveInOutTenantSchema = z.object({

@@ -6,35 +6,34 @@ const InvoiceTransactionTypeSchema = z.nativeEnum(InvoiceTransactionType)
 const PaymentStatusSchema = z.nativeEnum(PaymentStatus)
 
 export const InvoiceRowSchema = z.object({
-  account: z.string(),
   amount: z.number(),
-  company: z.string(),
-  contactCode: z.string(),
   deduction: z.number(),
-  freeCode: z.string().nullable(),
   fromDate: z.string(),
   invoiceDate: z.string(),
   invoiceDueDate: z.string(),
   invoiceNumber: z.string(),
   invoiceRowText: z.string().nullable(),
-  invoiceTotalAmount: z.number(),
   printGroup: z.string().nullable(),
-  printGroupLabel: z.string().nullable(),
-  projectCode: z.string().nullable(),
   rentArticle: z.string().nullable(),
   roundoff: z.number(),
-  rowType: z.number(),
-  tenantName: z.string(),
+  rowType: z.number(), // TODO We will hopefully not need this anymore when we are using Tenfast for invoice rows
   toDate: z.string(),
   totalAmount: z.number(),
   vat: z.number(),
+  rentalObject: z.string().optional(),
+})
+
+export const InvoiceDeferralSchema = z.object({
+  endDate: z.coerce.date(),
+  reason: z.string(),
+  madeBy: z.string(),
 })
 
 export const InvoicePaymentEventSchema = z.object({
   type: z.string(),
   invoiceId: z.string(),
   matchId: z.number(),
-  amount: z.number().min(0),
+  amount: z.number(),
   paymentDate: z.coerce.date(),
   text: z.string().nullable(),
   // TODO: type these when we know what they are
@@ -45,21 +44,31 @@ export const InvoicePaymentEventSchema = z.object({
   slTransactionType: z.string().nullable(),
 })
 
+// A payment from the Xledger payment feed together with the feed cursor that
+// points at it, so the Tenfast sync can save its position after each payment.
+export const PaymentSyncEventSchema = InvoicePaymentEventSchema.extend({
+  cursor: z.string(),
+})
+
 export const InvoiceSchema = z.object({
   invoiceId: z.string(),
-  leaseId: z.string(),
+  externalId: z.string().optional(),
+  leaseIds: z.string().array(),
   amount: z.number(),
+  recipientContactCode: z.string().optional(),
+  recipientName: z.string().optional(),
   reference: z.string(),
   fromDate: z.coerce.date(),
   toDate: z.coerce.date(),
   invoiceDate: z.coerce.date(),
   expirationDate: z.coerce.date().optional(),
-  defermentDate: z.coerce.date().optional(),
+  deferral: InvoiceDeferralSchema.optional(),
   debitStatus: z.number(),
   paymentStatus: PaymentStatusSchema,
   transactionType: InvoiceTransactionTypeSchema,
   transactionTypeName: z.string(),
   paidAmount: z.number().optional(),
+  roundoff: z.number().optional(),
   daysSinceLastDebitDate: z.number().optional(),
   description: z.string().optional(),
   sentToDebtCollection: z.coerce.date().optional(),
@@ -71,6 +80,10 @@ export const InvoiceSchema = z.object({
   credit: z.object({ originalInvoiceId: z.string() }).nullable(),
   accountCode: z.string().optional(),
   expectedLoss: z.boolean().optional(),
+  totalVat6: z.number().optional(),
+  totalVat12: z.number().optional(),
+  totalVat25: z.number().optional(),
+  totalVat: z.number().optional(),
   matchId: z.number().optional(), // TODO ska denna finnas i Invoice?
   costCentre: z.string().optional(), // TODO ska denna finnas i Invoice?
 })

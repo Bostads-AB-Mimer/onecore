@@ -19,14 +19,18 @@ import {
   CreateLinearErrandRequest,
   LinearIssue,
   LinearLabel,
+  InvoiceNotificationEmail,
+  LeaseTerminationConfirmationEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 import { AdapterResult } from '../types'
 
 export * from './log-reads'
 export * from './delivery-reports'
+export * from './dispatch-schedule'
 export * as guides from './guides'
 export * from './release-notes'
+export * from './message-templates'
 
 export const sendNotificationToContact = async (
   recipientContact: Contact,
@@ -430,15 +434,40 @@ export const sendInspectionProtocolEmail = async (
   }
 }
 
+// leasing-adapter sets a process-wide validateStatus (<500); 4xx must throw
+// here so bulkSendError forwards the reason instead of returning ok: true.
+const throwOnNon2xx = {
+  validateStatus: (status: number) => status >= 200 && status < 300,
+}
+
+// Forwards the communication service's error code (`reason`, e.g.
+// TOO_MANY_RECIPIENTS or the sendAt validation codes) instead of flattening
+// to 'error', so the frontend can show what actually went wrong.
+const bulkSendError = (
+  err: unknown
+): { ok: false; err: string; statusCode: number } => {
+  if (axios.isAxiosError(err) && err.response) {
+    const reason = (err.response.data as { reason?: string } | undefined)
+      ?.reason
+    return {
+      ok: false,
+      err: reason ?? 'error',
+      statusCode: err.response.status,
+    }
+  }
+  return { ok: false, err: 'error', statusCode: 500 }
+}
+
 export const sendBulkSms = async (
   body: BulkSms
 ): Promise<
-  AdapterResult<{ content: BulkSmsResult; warnings?: string[] }, 'error'>
+  AdapterResult<{ content: BulkSmsResult; warnings?: string[] }, string>
 > => {
   try {
     const result = await axios.post(
       `${config.communicationService.url}/sendBulkSms`,
-      body
+      body,
+      throwOnNon2xx
     )
 
     // warnings is a sibling of content (non-blocking issues, e.g. the SMS
@@ -448,22 +477,20 @@ export const sendBulkSms = async (
       data: { content: result.data.content, warnings: result.data.warnings },
     }
   } catch (err) {
-    if (axios.isAxiosError(err) && err.response) {
-      return { ok: false, err: 'error', statusCode: err.response.status }
-    }
-    return { ok: false, err: 'error', statusCode: 500 }
+    return bulkSendError(err)
   }
 }
 
 export const sendBulkEmail = async (
   body: BulkEmail
 ): Promise<
-  AdapterResult<{ content: BulkEmailResult; warnings?: string[] }, 'error'>
+  AdapterResult<{ content: BulkEmailResult; warnings?: string[] }, string>
 > => {
   try {
     const result = await axios.post(
       `${config.communicationService.url}/sendBulkEmail`,
-      body
+      body,
+      throwOnNon2xx
     )
 
     // warnings is a sibling of content (non-blocking issues, e.g. the email
@@ -473,24 +500,24 @@ export const sendBulkEmail = async (
       data: { content: result.data.content, warnings: result.data.warnings },
     }
   } catch (err) {
-    if (axios.isAxiosError(err) && err.response) {
-      return { ok: false, err: 'error', statusCode: err.response.status }
-    }
-    return { ok: false, err: 'error', statusCode: 500 }
+    return bulkSendError(err)
   }
 }
 
-export const sendEmail = async ({
-  to,
-  subject,
-  body,
-  attachments,
-}: {
-  to: string
-  subject: string
-  body: string
-  attachments?: { data: Buffer; name: string }[]
-}) => {
+export const sendEmail = async (
+  {
+    to,
+    subject,
+    body,
+    attachments,
+  }: {
+    to: string
+    subject: string
+    body: string
+    attachments?: { data: Buffer; name: string }[]
+  },
+  opts: { timeoutMs?: number } = {}
+) => {
   try {
     const form = new FormData()
 
@@ -506,7 +533,8 @@ export const sendEmail = async ({
 
     const result = await axios.postForm(
       `${config.communicationService.url}/send-email`,
-      form
+      form,
+      { timeout: opts.timeoutMs }
     )
 
     if (result.status !== 200) {
@@ -514,7 +542,8 @@ export const sendEmail = async ({
     }
 
     return { ok: true, data: result.data.content }
-  } catch (e) {
+  } catch (err) {
+    logger.error(err)
     return { ok: false, err: 'error', statusCode: 500 }
   }
 }
@@ -574,5 +603,70 @@ export const getLinearLabels = async (): Promise<
       return { ok: false, err: 'error', statusCode: err.response.status }
     }
     return { ok: false, err: 'error', statusCode: 500 }
+  }
+}
+
+/** Communication validates endDate as YYYY-MM-DD; JSON.stringify(Date) emits ISO datetime. */
+const leaseTerminationConfirmationWirePayload = (
+  email: LeaseTerminationConfirmationEmail
+) => ({
+  ...email,
+  endDate: email.endDate.toISOString().slice(0, 10),
+})
+
+export const sendLeaseTerminationConfirmationEmail = async (
+  email: LeaseTerminationConfirmationEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    if (process.env.NODE_ENV !== 'production')
+      email.to = config.emailAddresses.tenantDefault
+
+    const result = await axios.post(
+      `${config.communicationService.url}/sendLeaseTerminationConfirmation`,
+      leaseTerminationConfirmationWirePayload(email)
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service when sending lease termination confirmation'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: null }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending lease termination confirmation to ${email.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}
+
+export const sendInvoiceNotificationEmail = async (
+  email: InvoiceNotificationEmail
+): Promise<AdapterResult<null, 'unknown'>> => {
+  try {
+    const result = await axios.post(
+      `${config.communicationService.url}/send-invoice-notification-email`,
+      email
+    )
+
+    if (result.status !== 204) {
+      logger.error(
+        { status: result.status, data: result.data },
+        'Unexpected response from communication service when sending invoice notification'
+      )
+      return { ok: false, err: 'unknown', statusCode: result.status }
+    }
+
+    return { ok: true, data: null }
+  } catch (error) {
+    logger.error(
+      error,
+      `Error sending invoice notification email to ${email.to}`
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }

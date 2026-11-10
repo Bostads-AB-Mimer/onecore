@@ -127,8 +127,12 @@ export interface paths {
         200: {
           content: never
         }
-        /** @description Unauthorized */
+        /** @description Unauthorized, or the token is expired or can't be verified */
         401: {
+          content: never
+        }
+        /** @description Keycloak's signing keys can't be fetched, so the token can't be verified */
+        503: {
           content: never
         }
       }
@@ -177,7 +181,7 @@ export interface paths {
         401: {
           content: never
         }
-        /** @description Forbidden — insufficient permissions to query role members */
+        /** @description Forbidden — the user lacks the api-access role */
         403: {
           content: never
         }
@@ -189,8 +193,12 @@ export interface paths {
         500: {
           content: never
         }
-        /** @description Keycloak unreachable */
+        /** @description Keycloak's admin API is unreachable, so the users can't be listed */
         502: {
+          content: never
+        }
+        /** @description Keycloak's signing keys can't be fetched, so the token can't be verified */
+        503: {
           content: never
         }
       }
@@ -359,6 +367,147 @@ export interface paths {
       }
     }
   }
+  '/communication-log/customers/{contactCode}/messages': {
+    /**
+     * Get the communication timeline for a customer
+     * @description Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Customer id (contactCode) */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description Array of (dispatch + recipient) pairs, newest first */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CustomerMessage'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches': {
+    /**
+     * Search and list dispatches
+     * @description Paginated dispatch search. Filters by content (q), channel, messageType, derived status, source (manual/automatic), sendAt range, contactCode, minRecipients, and audience codes (district/building/area). Newest first by default.
+     */
+    get: {
+      parameters: {
+        query?: {
+          q?: string
+          channel?: string[]
+          messageType?: string[]
+          status?: string[]
+          source?: 'manual' | 'automatic'
+          sendAtFrom?: string
+          sendAtTo?: string
+          contactCode?: string
+          minRecipients?: number
+          audienceDistrictNames?: string[]
+          audienceBuildingCodes?: string[]
+          audienceAreaCodes?: string[]
+          sortBy?: 'sendAt' | 'recipientCount' | 'createdAt'
+          sortOrder?: 'asc' | 'desc'
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Paginated dispatches */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['DispatchListItem'][]
+              _meta: components['schemas']['PaginationMeta']
+              _links: components['schemas']['PaginationLinks'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}/recipients': {
+    /**
+     * Paginated recipients of a dispatch
+     * @description Page through a dispatch's recipients, optionally filtered by status or a toAddress/contactCode substring. Use instead of the full dispatch-by-id read for large bulks.
+     */
+    get: {
+      parameters: {
+        query?: {
+          status?: string[]
+          q?: string
+          page?: number
+          limit?: number
+        }
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Paginated recipients */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageRecipient'][]
+              _meta: components['schemas']['PaginationMeta']
+              _links: components['schemas']['PaginationLinks'][]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/dispatches/{id}': {
+    /** Get a dispatch and its recipients by dispatch id */
+    get: {
+      parameters: {
+        path: {
+          /** @description Dispatch id (UUID) */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Dispatch + recipients */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['DispatchWithRecipients']
+            }
+          }
+        }
+        /** @description Dispatch not found */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   security: {}
   '/sendBulkSms': {
     /**
@@ -375,6 +524,11 @@ export interface paths {
               phoneNumber: string
             }[]
             text: string
+            /**
+             * Format: date-time
+             * @description ISO 8601 instant with offset/Z. Schedules the send (max 90 days ahead); omit for immediate.
+             */
+            sendAt?: string
             logMeta?: {
               audienceCriteria?: {
                 [key: string]: unknown
@@ -422,6 +576,11 @@ export interface paths {
             }[]
             subject: string
             text: string
+            /**
+             * Format: date-time
+             * @description ISO 8601 instant with offset/Z. Schedules the send (max 5 days ahead, Infobip's email limit); omit for immediate.
+             */
+            sendAt?: string
             logMeta?: {
               audienceCriteria?: {
                 [key: string]: unknown
@@ -480,26 +639,37 @@ export interface paths {
       }
     }
   }
-  '/communication-log/customers/{contactCode}/messages': {
+  '/communication-log/dispatches/{id}/cancel': {
     /**
-     * Get the communication timeline for a customer
-     * @description Returns every message_recipient row owned by the given contactCode, each paired with its parent dispatch. Newest first.
+     * Cancel a scheduled dispatch
+     * @description Marks the dispatch's still-scheduled recipients as cancelled so the scheduled-sends worker never sends them. Works for SMS and email alike, also on a partly processed dispatch. Idempotent for already-cancelled dispatches.
      */
-    get: {
+    post: {
       parameters: {
         path: {
-          /** @description Customer id (contactCode) */
-          contactCode: string
+          /** @description Dispatch id (UUID) */
+          id: string
         }
       }
       responses: {
-        /** @description Array of (dispatch + recipient) pairs, newest first */
+        /** @description Cancelled */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['CustomerMessage'][]
+              content?: {
+                dispatchId?: string
+                cancelledRecipients?: number
+              }
             }
           }
+        }
+        /** @description Dispatch not found */
+        404: {
+          content: never
+        }
+        /** @description No scheduled recipient is left (ALREADY_PROCESSED); nothing was changed */
+        409: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -508,27 +678,74 @@ export interface paths {
       }
     }
   }
-  '/communication-log/dispatches/{id}': {
-    /** Get a dispatch and its recipients by dispatch id */
-    get: {
+  '/communication-log/dispatches/{id}/reschedule': {
+    /**
+     * Move a scheduled dispatch to a new send time
+     * @description Updates the dispatch's sendAt, earlier or later, for SMS and email alike. The new time must follow the rules in /communication-log/schedule-config (future, within max days ahead, on a 10-minute slot, outside blocked hours). Only while no recipient has been claimed or sent.
+     */
+    post: {
       parameters: {
         path: {
           /** @description Dispatch id (UUID) */
           id: string
         }
       }
+      requestBody: {
+        content: {
+          'application/json': {
+            /**
+             * Format: date-time
+             * @description New send time as ISO 8601 instant with offset/Z.
+             */
+            sendAt: string
+          }
+        }
+      }
       responses: {
-        /** @description Dispatch + recipients */
+        /** @description Rescheduled */
         200: {
           content: {
             'application/json': {
-              content?: components['schemas']['DispatchWithRecipients']
+              content?: {
+                dispatchId?: string
+                sendAt?: string
+              }
             }
           }
+        }
+        /** @description sendAt breaks a scheduling rule (SCHEDULING_DISABLED, SEND_AT_IN_PAST, SEND_AT_TOO_FAR_AHEAD, SEND_AT_OFF_SLOT, SEND_AT_IN_BLOCKED_HOURS, SEND_AT_TOO_SOON) */
+        400: {
+          content: never
         }
         /** @description Dispatch not found */
         404: {
           content: never
+        }
+        /** @description A recipient was already claimed or sent (ALREADY_PROCESSED); nothing was changed */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/communication-log/schedule-config': {
+    /**
+     * Scheduling rules for scheduled sends
+     * @description The rules the communication service enforces on sendAt, so a picker can offer only valid times. enabled=false hides scheduling entirely. Times are wall-clock in timeZone.
+     */
+    get: {
+      responses: {
+        /** @description Scheduling rules */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ScheduleConfig']
+            }
+          }
         }
         /** @description Internal server error */
         500: {
@@ -799,7 +1016,9 @@ export interface paths {
               content?: {
                 rentalObjectCode?: string
                 address?: string
-                monthlyRent?: number
+                rent?: {
+                  amount?: number
+                }
                 propertyCaption?: string
                 propertyCode?: string
                 residentialAreaCode?: string
@@ -853,7 +1072,9 @@ export interface paths {
               content?: {
                 rentalObjectCode?: string
                 address?: string
-                monthlyRent?: number
+                rent?: {
+                  amount?: number
+                }
                 propertyCaption?: string
                 propertyCode?: string
                 residentialAreaCode?: string
@@ -870,6 +1091,181 @@ export interface paths {
           }
         }
         /** @description Internal server error. Failed to fetch rental object. */
+        500: {
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/rental-objects/by-code/{rentalObjectCode}/availability': {
+    /**
+     * Get availability for a rental object
+     * @description Fetches availability for a rental object by Rental Object Code.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code of the availability to fetch. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the rental object availability. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                rentalObjectCode?: string
+                /** Format: date-time */
+                vacantFrom?: string | null
+                rent?: {
+                  amount?: number
+                  vat?: number
+                  rows?: Record<string, never>[]
+                }
+              }
+            }
+          }
+        }
+        /** @description Not found. The availability of the specified rental object was not found. */
+        404: {
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error. Failed to fetch rental object availability. */
+        500: {
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/rental-objects/by-code/{rentalObjectCode}/rent': {
+    /**
+     * Get rent for a rental object
+     * @description Fetches the rental object's configured rent from Tenfast, independent of any lease. Works for vacant objects.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to fetch rent for. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the rental object rent. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectRentInfo']
+            }
+          }
+        }
+        /** @description Not found. The specified rental object was not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. Failed to fetch rental object rent. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/by-code/{rentalObjectCode}/rent-legacy': {
+    /**
+     * Get legacy (Xpand) rent for a rental object
+     * @description Fetches the rental object's rent rows from Xpand, converted to monthly amounts. Used to compare against Tenfast during the transition.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to fetch legacy rent for. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the legacy rental object rent. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['RentalObjectRentInfo']
+            }
+          }
+        }
+        /** @description Not found. No rent rows exist in Xpand for the specified rental object. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. Failed to fetch legacy rental object rent. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/rental-objects/availabilities': {
+    /**
+     * Get availabilities for rental objects
+     * @description Fetches availabilities for rental objects by Rental Object Codes.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @description Array of rental object codes to include.
+             * @example [
+             *   "ABC123",
+             *   "DEF456",
+             *   "GHI789"
+             * ]
+             */
+            rentalObjectCodes?: string[]
+          }
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved the rental object availabilities. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                rentalObjectCode?: string
+                /** Format: date-time */
+                vacantFrom?: string | null
+                rent?: {
+                  amount?: number
+                  vat?: number
+                  rows?: Record<string, never>[]
+                }
+              }[]
+            }
+          }
+        }
+        /** @description Not found. The availability of the specified rental object was not found. */
+        404: {
+          content: {
+            'application/json': {
+              /** @description The error message. */
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error. Failed to fetch rental object availabilities. */
         500: {
           content: {
             'application/json': {
@@ -997,6 +1393,10 @@ export interface paths {
       responses: {
         /** @description Offer creation successful. */
         201: {
+          content: never
+        }
+        /** @description No eligible applicant found for the listing. */
+        404: {
           content: never
         }
         /** @description Internal server error. Failed to create the offer. */
@@ -1131,6 +1531,474 @@ export interface paths {
       }
     }
   }
+  '/leases/building-managers': {
+    /**
+     * Get all building managers
+     * @description Returns a list of all building managers (Kvartersvärd) with their code, name and district.
+     */
+    get: {
+      responses: {
+        /** @description List of building managers */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                code?: string
+                name?: string
+                district?: string
+              }[]
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/for-csc': {
+    /**
+     * Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
+     * @description Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
+     */
+    get: {
+      responses: {
+        /** @description Successfully retrieved upcoming move-ins */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['CustomerScoreCardInfoSchema'][]
+              _meta?: Record<string, never>
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/search': {
+    /**
+     * Search and filter leases
+     * @description Search leases with comprehensive filtering options.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, PNR, contact code) */
+          q?: string
+          /** @description Search by tenant name */
+          name?: string
+          /** @description Search by rental object address */
+          address?: string
+          /** @description Object types (bostad, parkering, lokal, ovrigt) */
+          objectType?: string[]
+          /** @description Contract status filter */
+          status?: (
+            | 'current'
+            | 'active'
+            | 'upcoming'
+            | 'abouttoend'
+            | 'ended'
+            | 'pendingsignature'
+            | 'preliminaryterminated'
+            | 'notsent'
+          )[]
+          /** @description Lease type filter */
+          leaseType?: string[]
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[]
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string
+          /** @description Property/estate names */
+          property?: string[]
+          /** @description Building codes */
+          buildingCodes?: string[]
+          /** @description Area codes (Område) */
+          areaCodes?: string[]
+          /** @description District names */
+          districtNames?: string[]
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
+          buildingManager?: string[]
+          /** @description Page number */
+          page?: number
+          /** @description Items per page */
+          limit?: number
+          /** @description Sort field */
+          sortBy?:
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
+            | 'tenantName'
+          /** @description Sort direction */
+          sortOrder?: 'asc' | 'desc'
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved lease search results with pagination */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['LeaseSearchResult'][]
+              _meta?: components['schemas']['PaginationMeta']
+              _links?: components['schemas']['PaginationLinks'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/by-rental-object-code/{rentalObjectCode}': {
+    /**
+     * Get leases with related entities for a specific rental object code.
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
+          status?: string
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean
+        }
+        path: {
+          /** @description Rental object code of the building/residence to fetch leases for. */
+          rentalObjectCode: string
+        }
+      }
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: {
+            'application/json': Record<string, never>
+          }
+        }
+      }
+    }
+  }
+  '/leases/by-pnr/{pnr}': {
+    /**
+     * Get leases with related entities for a specific Personal Number (PNR)
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
+          status?: string
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean
+        }
+        path: {
+          /** @description Personal Number (PNR) of the individual to fetch leases for. */
+          pnr: string
+        }
+      }
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/leases/by-contact-code/{contactCode}': {
+    /**
+     * Get leases with related entities for a specific contact code
+     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses. */
+          status?: string
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean
+          /** @description Also return leases where the contact is the current sublet tenant (andrahandshyresgäst). */
+          includeSubletLeases?: boolean
+        }
+        path: {
+          /** @description Contact code of the individual to fetch leases for. */
+          contactCode: string
+        }
+      }
+      responses: {
+        /** @description Successful response with leases and related entities */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
+      }
+    }
+  }
+  '/leases/export': {
+    /**
+     * Export leases to Excel
+     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string
+          /** @description Search by tenant name */
+          name?: string
+          /** @description Search by rental object address */
+          address?: string
+          /** @description Object types (e.g., residence, parking) */
+          objectType?: string[]
+          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
+          status?: string[]
+          /** @description Lease type filter */
+          leaseType?: string[]
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[]
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string
+          /** @description Property/estate names */
+          property?: string[]
+          /** @description Building codes */
+          buildingCodes?: string[]
+          /** @description Area codes (Område) */
+          areaCodes?: string[]
+          /** @description District names */
+          districtNames?: string[]
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
+          buildingManager?: string[]
+          /** @description Sort field */
+          sortBy?:
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
+            | 'tenantName'
+          /** @description Sort direction */
+          sortOrder?: 'asc' | 'desc'
+        }
+      }
+      responses: {
+        /** @description Excel file download */
+        200: {
+          content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/{id}': {
+    /**
+     * Get lease by ID
+     * @description Retrieves lease details along with related entities based on the provided ID.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Whether to include contact information in the response */
+          includeContacts?: boolean
+        }
+        path: {
+          /** @description The ID of the lease to retrieve. */
+          id: string
+        }
+      }
+      responses: {
+        /** @description Successful response with the requested lease and related entities */
+        200: {
+          content: {
+            'application/json': {
+              data?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/leases/batch': {
+    /**
+     * Get multiple leases by id
+     * @description Retrieves leases for a batch of lease ids in a single call.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            leaseIds: string[]
+          }
+        }
+      }
+      responses: {
+        /** @description Successful response with the requested leases */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['Lease'][]
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/{leaseId}/home-insurance': {
+    /** Get home insurance for a lease */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string
+        }
+      }
+      responses: {
+        /** @description Home insurance retrieved. */
+        200: {
+          content: never
+        }
+        /** @description Lease or home insurance not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+    /** Add home insurance to a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string
+        }
+      }
+      responses: {
+        /** @description Successfully added home insurance. */
+        201: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/{leaseId}/home-insurance/offer': {
+    /** Get home insurance offer for a lease */
+    get: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string
+        }
+      }
+      responses: {
+        /** @description Home insurance offer retrieved. */
+        200: {
+          content: never
+        }
+        /** @description Lease or rental object not found. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/leases/{leaseId}/home-insurance/cancel': {
+    /** Cancel home insurance for a lease */
+    post: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /**
+             * Format: date-time
+             * @description Desired end date for home insurance.
+             */
+            endDate: string
+          }
+        }
+      }
+      responses: {
+        /** @description Home insurance cancelled. */
+        200: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/leases/keys-export': {
     /**
      * Export all leases for a property as Excel, enriched with key name(s)
@@ -1164,78 +2032,6 @@ export interface paths {
       }
     }
   }
-  '/leases/search': {
-    /**
-     * Search and filter leases
-     * @description Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          q?: string
-          /** @description Object types (e.g., residence, parking)) */
-          objectType?: string[]
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ('0' | '1' | '2' | '3')[]
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string
-          /** @description Property/estate names */
-          property?: string[]
-          /** @description Building codes */
-          buildingCodes?: string[]
-          /** @description Area codes (Område) */
-          areaCodes?: string[]
-          /** @description District names */
-          districtNames?: string[]
-          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
-          buildingManager?: string[]
-          /** @description Page number */
-          page?: number
-          /** @description Items per page */
-          limit?: number
-          /** @description Include Upphört (ended) contracts. Excluded by default for performance. */
-          includeEnded?: boolean
-          /** @description Sort field */
-          sortBy?:
-            | 'leaseStartDate'
-            | 'lastDebitDate'
-            | 'leaseId'
-            | 'address'
-            | 'objectType'
-            | 'rentalObjectCode'
-          /** @description Sort direction */
-          sortOrder?: 'asc' | 'desc'
-        }
-      }
-      responses: {
-        /** @description Successfully retrieved lease search results with pagination */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['LeaseSearchResult'][]
-              _meta?: components['schemas']['PaginationMeta']
-              _links?: components['schemas']['PaginationLinks'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
   '/leases/parking-space-types': {
     /**
      * Get all parking space types
@@ -1261,52 +2057,6 @@ export interface paths {
       }
     }
   }
-  '/leases/export': {
-    /**
-     * Export leases to Excel
-     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          q?: string
-          /** @description Object types (e.g., residence, parking) */
-          objectType?: string[]
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ('0' | '1' | '2' | '3')[]
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string
-          /** @description Property/estate names */
-          property?: string[]
-          /** @description Building codes */
-          buildingCodes?: string[]
-          /** @description Area codes (Område) */
-          areaCodes?: string[]
-          /** @description District names */
-          districtNames?: string[]
-          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
-          buildingManager?: string[]
-        }
-      }
-      responses: {
-        /** @description Excel file download */
-        200: {
-          content: never
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
   '/contacts/from-lease-search': {
     /**
      * Get contacts matching lease search filters
@@ -1317,10 +2067,27 @@ export interface paths {
         query?: {
           /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
           q?: string
+          /** @description Search by tenant name */
+          name?: string
+          /** @description Search by rental object address */
+          address?: string
           /** @description Object types (e.g., residence, parking) */
           objectType?: string[]
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: ('0' | '1' | '2' | '3')[]
+          /** @description Contract status filter */
+          status?: (
+            | 'current'
+            | 'active'
+            | 'upcoming'
+            | 'abouttoend'
+            | 'ended'
+            | 'pendingsignature'
+            | 'preliminaryterminated'
+            | 'notsent'
+          )[]
+          /** @description Lease type filter */
+          leaseType?: string[]
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[]
           /** @description Minimum start date (YYYY-MM-DD) */
           startDateFrom?: string
           /** @description Maximum start date (YYYY-MM-DD) */
@@ -1339,6 +2106,17 @@ export interface paths {
           districtNames?: string[]
           /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
           buildingManager?: string[]
+          /** @description Sort field */
+          sortBy?:
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
+            | 'tenantName'
+          /** @description Sort direction */
+          sortOrder?: 'asc' | 'desc'
         }
       }
       responses: {
@@ -1357,102 +2135,59 @@ export interface paths {
       }
     }
   }
-  '/leases/by-rental-property-id/{rentalPropertyId}': {
+  '/leases/by-lease-id/{leaseId}/preliminary-termination': {
     /**
-     * Get leases with related entities for a specific rental property id
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified rental property id.
+     * Preliminary termination of a lease
+     * @description Initiates a preliminary termination for the specified lease.
      */
-    get: {
+    post: {
       parameters: {
-        query?: {
-          /** @description Whether to include upcoming leases in the response */
-          includeUpcomingLeases?: boolean
-          /** @description Whether to include terminated leases in the response */
-          includeTerminatedLeases?: boolean
-          /** @description Whether to include contact information in the response */
-          includeContacts?: boolean
-          /** @description Whether to include rent information in the response */
-          includeRentInfo?: boolean
-        }
         path: {
-          /** @description Rental roperty id of the building/residence to fetch leases for. */
-          rentalPropertyId: string
+          /** @description The unique identifier of the lease to terminate. */
+          leaseId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description The contact code of the tenant */
+            contactCode: string
+            /**
+             * Format: date-time
+             * @description The last debit date for the lease
+             */
+            lastDebitDate: string
+            /**
+             * Format: date-time
+             * @description The desired move-out date
+             */
+            desiredMoveDate: string
+            /**
+             * @description The reason for the termination
+             * @default Uppsägning av hyresgäst
+             */
+            reason?: string
+          }
         }
       }
       responses: {
-        /** @description Successful response with leases and related entities */
+        /** @description Preliminary termination initiated successfully */
         200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Lease'][]
-            }
-          }
-        }
-        /** @description Invalid query parameters */
-        400: {
           content: {
             'application/json': Record<string, never>
           }
         }
-      }
-    }
-  }
-  '/leases/by-pnr/{pnr}': {
-    /**
-     * Get leases with related entities for a specific Personal Number (PNR)
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified Personal Number (PNR).
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Whether to include upcoming leases in the response */
-          includeUpcomingLeases?: boolean
-          /** @description Whether to include terminated leases in the response */
-          includeTerminatedLeases?: boolean
+        /** @description Invalid request body or tenant missing valid email address */
+        400: {
+          content: never
         }
-        path: {
-          /** @description Personal Number (PNR) of the individual to fetch leases for. */
-          pnr: string
+        /** @description Lease not found */
+        404: {
+          content: never
         }
-      }
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Lease'][]
-            }
-          }
-        }
-      }
-    }
-  }
-  '/leases/by-contact-code/{contactCode}': {
-    /**
-     * Get leases with related entities for a specific contact code
-     * @description Retrieves lease information along with related entities (such as tenants, properties, etc.) for the specified contact code.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Whether to include upcoming leases in the response */
-          includeUpcomingLeases?: boolean
-          /** @description Whether to include terminated leases in the response */
-          includeTerminatedLeases?: boolean
-        }
-        path: {
-          /** @description Contact code of the individual to fetch leases for. */
-          contactCode: string
-        }
-      }
-      responses: {
-        /** @description Successful response with leases and related entities */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Lease'][]
-            }
-          }
+        /** @description Internal server error. Failed to terminate lease. */
+        500: {
+          content: never
         }
       }
     }
@@ -1886,30 +2621,6 @@ export interface paths {
       }
     }
   }
-  '/leases/{id}': {
-    /**
-     * Get lease by ID
-     * @description Retrieves lease details along with related entities based on the provided ID.
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the lease to retrieve. */
-          id: string
-        }
-      }
-      responses: {
-        /** @description Successful response with the requested lease and related entities */
-        200: {
-          content: {
-            'application/json': {
-              content?: components['schemas']['Lease']
-            }
-          }
-        }
-      }
-    }
-  }
   '/offers/{offerId}/accept': {
     /**
      * Accept an offer
@@ -1925,6 +2636,10 @@ export interface paths {
       responses: {
         /** @description Offer accepted successful. */
         202: {
+          content: never
+        }
+        /** @description The rental object is not available from the lease start date, so no lease was created. error is rental-object-not-available. */
+        409: {
           content: never
         }
         /** @description Internal server error. Failed to accept the offer. */
@@ -1952,30 +2667,6 @@ export interface paths {
           content: never
         }
         /** @description Internal server error. Failed to deny the offer. */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
-  '/offers/{offerId}/expire': {
-    /**
-     * Expire an offer
-     * @description Expires an offer
-     */
-    get: {
-      parameters: {
-        path: {
-          /** @description The ID of the offer to expire */
-          offerId: string
-        }
-      }
-      responses: {
-        /** @description Offer expired successful. */
-        202: {
-          content: never
-        }
-        /** @description Internal server error. Failed to expire the offer. */
         500: {
           content: never
         }
@@ -2417,6 +3108,10 @@ export interface paths {
               message?: string
             }
           }
+        }
+        /** @description The rental object is not available from the start date, so no lease was created. error is rental-object-not-available. */
+        409: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -3681,6 +4376,68 @@ export interface paths {
       }
     }
   }
+  '/work-orders/{workOrderId}/close-request': {
+    /**
+     * Request, on the tenant's behalf, that a work order be closed
+     * @description Asks for the Odoo work order to be closed. The handler of the case
+     * decides in Odoo; nothing is closed here. Used by Mina sidor via the
+     * .NET API. Staff close with /work-orders/{workOrderId}/close.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The Odoo id of the work order. */
+          workOrderId: string
+        }
+      }
+      requestBody?: {
+        content: {
+          'application/json': {
+            /** @description Optional reason from the tenant, shown to the handler. */
+            reason?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Close request recorded. */
+        200: {
+          content: {
+            'application/json': {
+              /** @example Close requested for work order with ID {workOrderId} */
+              message?: string
+            }
+          }
+        }
+        /** @description The request body is malformed, or the reason is longer than 1000 characters. */
+        400: {
+          content: never
+        }
+        /** @description Refused. A request is already pending, or the work order is closed or hidden from Mina sidor. */
+        409: {
+          content: {
+            'application/json': {
+              /** @example close-request-conflict */
+              error?: string
+              /**
+               * @description Why Odoo refused, so the caller can tell the tenant.
+               * @enum {string}
+               */
+              reason?: 'already_pending' | 'closed' | 'hidden'
+            }
+          }
+        }
+        /** @description Internal server error. The work-order service or Odoo failed. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Failed to request close of work order with ID {workOrderId} */
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/work-orders/send-sms': {
     /**
      * Send SMS for a work order
@@ -3694,6 +4451,8 @@ export interface paths {
             phoneNumber?: string
             /** @description The message to be sent via SMS. */
             text?: string
+            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand. */
+            workOrderCode?: string
           }
         }
       }
@@ -3743,6 +4502,8 @@ export interface paths {
             subject?: string
             /** @description The message to be sent in the email. */
             text?: string
+            /** @description od-<odoo id> of the errand, used to link the communication-log entry to the Odoo errand. */
+            workOrderCode?: string
           }
         }
       }
@@ -3773,6 +4534,42 @@ export interface paths {
               text?: string
             }
           }
+        }
+      }
+    }
+  }
+  '/work-orders/log-my-pages-message': {
+    /**
+     * Log a message published to a tenant's Mina sidor
+     * @description Records a work-order message that was published to Mina sidor without an SMS or email notification. Nothing is sent — the message is already visible to the tenant by existing in Odoo; this only writes the communication log entry. Called by Odoo.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description od-<odoo id> of the errand, e.g. od-12345. */
+            workOrderCode: string
+            /** @description The tenant the message was published to. */
+            contactCode: string
+            /** @description The message body. */
+            text: string
+            /** @description The Odoo user who published the message. */
+            triggeredByUser?: string
+          }
+        }
+      }
+      responses: {
+        /** @description Log entry written. */
+        200: {
+          content: never
+        }
+        /** @description Bad request. Missing or invalid parameters. */
+        400: {
+          content: never
+        }
+        /** @description Failed to write the log entry. */
+        500: {
+          content: never
         }
       }
     }
@@ -4695,6 +5492,54 @@ export interface paths {
       }
     }
   }
+  '/residences/by-rental-id/{rentalId}/media': {
+    /**
+     * Get published photos and energy declaration for a residence
+     * @description Returns 200 with an empty list when nothing is published. imageLevel
+     * is 'shared' when the photos are published for a coarser code level
+     * and may show the building rather than this residence.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Rental id of the residence */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description The published media, empty when nothing is published. */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['ResidenceMedia']
+            }
+          }
+        }
+        /** @description The rental id does not have the residence code format. */
+        400: {
+          content: {
+            'application/json': {
+              /** @example invalid-rental-id */
+              reason?: string
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+        /** @description The public media host could not be reached. */
+        503: {
+          content: {
+            'application/json': {
+              /** @example media-unavailable */
+              reason?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/residences/by-rental-id/{rentalId}/malar-energi-facility-id': {
     /**
      * Update or add a residence's Mälarenergi facility id.
@@ -4925,6 +5770,38 @@ export interface paths {
               error?: string
             }
           }
+        }
+      }
+    }
+  }
+  '/residences/rental-blocks/rental-ids': {
+    /**
+     * Rental ids carrying a matching rental block
+     * @description Lean bulk lookup - distinct rental ids only, no pagination or enrichment. Used by Odoo to render the "Spärr skadedjur" badge on every kanban card from a single call.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by block reason caption (supports multiple values) */
+          blockReason?: string[]
+          /** @description true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, all blocks. */
+          active?: boolean
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved rental ids */
+        200: {
+          content: {
+            'application/json': components['schemas']['RentalIdsWithBlockResponse']
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
         }
       }
     }
@@ -7703,6 +8580,278 @@ export interface paths {
       }
     }
   }
+  '/invoices/{invoiceId}/deferral': {
+    /**
+     * Set a grace period (anstånd) on an invoice
+     * @description Grant an invoice deferral by setting a new due date and reason. Requires the invoice-deferral role.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description The invoice OCR number */
+          invoiceId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /**
+             * Format: date
+             * @description New due date (YYYY-MM-DD)
+             */
+            endDate: string
+            /** @description Reason for the deferral */
+            reason: string
+          }
+        }
+      }
+      responses: {
+        /** @description Deferral registered successfully */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                ok?: boolean
+              }
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description Invoice not found */
+        404: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              code: 'invoice-not-found'
+            }
+          }
+        }
+        /** @description Invoice not eligible for deferral */
+        422: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              code: 'invoice-not-eligible'
+            }
+          }
+        }
+        /** @description Deferral could not be completed */
+        500: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              code: 'xledger-failed' | 'tenfast-failed'
+            }
+          }
+        }
+      }
+    }
+  }
+  '/invoices/notify-batch': {
+    /**
+     * Send invoice notification emails for a selection of invoices
+     * @description For each OCR number, fetches invoice data and PDF from economy, contact info from leasing, then sends a notification email with the invoice PDF attached.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description List of invoice OCR numbers */
+            ocrs: string[]
+          }
+        }
+      }
+      responses: {
+        /** @description Notifications processed */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                sent?: string[]
+                failed?: Record<string, never>[]
+                totalSent?: number
+                totalFailed?: number
+              }
+            }
+          }
+        }
+        /** @description Invalid request */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/imd/process': {
+    /**
+     * Process IMD CSV data
+     * @description Accepts raw IMD CSV data, enriches it with lease information from Xpand, and returns Tenfast-ready CSV output along with a CSV of unprocessed rows.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description Raw semicolon-delimited IMD CSV content */
+            csv: string
+          }
+        }
+      }
+      responses: {
+        /** @description Successfully processed IMD data. */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                totalRows: number
+                numEnriched: number
+                numUnprocessed: number
+                enrichedCsv: string
+                unprocessedCsv: string
+              }
+            }
+          }
+        }
+        /** @description Invalid request body or invalid CSV content. */
+        400: {
+          content: {
+            'application/json': {
+              error?: string
+              /**
+               * @description Present when the request body is valid but the CSV content is invalid.
+               * @enum {string}
+               */
+              reason?: 'invalid-csv'
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/invoice-channels': {
+    /**
+     * Look up invoice channels for recipients
+     * @description Returns the invoice delivery channels for each provided recipient.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description List of recipients to look up */
+            recipients: {
+              recipientId: string
+              /** @enum {string} */
+              recipientType: 'individual' | 'organization'
+            }[]
+          }
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved invoice channels. */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                candidates: {
+                  referenceId: string
+                  availableInChannels: string[]
+                  notAvailableInChannels: string[]
+                }[]
+                channelErrors?: {
+                  channel: string
+                  error: string
+                }[]
+              }
+            }
+          }
+        }
+        /** @description Invalid request body. */
+        400: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/autogiro-consent/{nationalRegistrationNumber}': {
+    /**
+     * Get autogiro consent for tenant
+     * @description Returns autogiro consent by national registration number.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The tenant's national registration number */
+          nationalRegistrationNumber: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved autogiro consent. */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                _id: string
+                hyresgast: string
+                hyresvardBankgiro: string
+                payerNumber: number
+                /** Format: date-time */
+                fixedDueDay: string | null
+                isCompany: boolean
+                payerSSN: string
+                /** @enum {string} */
+                status: 'ACTIVE' | 'MANUAL'
+                /** Format: date-time */
+                statusChangedAt: string
+                extra: {
+                  nameAndAddress1: string
+                  mismatch: string | null
+                }
+                payerBankAccountNumber: string
+              }
+            }
+          }
+        }
+        /** @description No autogiro consent found for the given national registration number. */
+        404: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+        /** @description Internal server error. */
+        500: {
+          content: {
+            'application/json': {
+              error?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/files': {
     /** List files with optional prefix */
     get: {
@@ -8293,8 +9442,9 @@ export interface paths {
      * returns one row per rental object with the outgoing and incoming tenant,
      * key/card counts, loan return and handout dates, and a derived status.
      * Give endDateFrom+endDateTo for move-outs, startDateFrom+startDateTo for
-     * move-ins, or both for the union. Search and sort apply to the whole result;
-     * key and card data (DAX) is fetched only for the requested page.
+     * move-ins, or both for the union. Search, filters and sort apply to the whole
+     * result. Key and card data (DAX) is fetched only for the requested page,
+     * unless `status` is given: then it is fetched for every object in the range.
      */
     get: {
       parameters: {
@@ -8305,6 +9455,10 @@ export interface paths {
           startDateTo?: string
           /** @description Matches rental object code, address, tenant name or contact code. */
           q?: string
+          /** @description Keep rows with any of these statuses. Repeat the param for several. */
+          status?: components['schemas']['MoveInOutStatus'][]
+          /** @description true keeps rows with no incoming tenant, false keeps rows with one. */
+          vacant?: boolean
           sortBy?: 'rentalObjectCode' | 'lastDebitDate' | 'leaseStartDate'
           sortOrder?: 'asc' | 'desc'
           /** @description When true, adds a `timings` block with per-phase durations. */
@@ -8332,7 +9486,7 @@ export interface paths {
             'application/json': components['schemas']['ErrorResponse']
           }
         }
-        /** @description Keys service is syncing its DAX card owner mirror; retry later */
+        /** @description Keys service is syncing its DAX card owner mirror, or the lease search cache is warming up. Retry after the seconds given in Retry-After. */
         503: {
           content: never
         }
@@ -11001,7 +12155,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          /** @description Wildcard search string */
+          /** @description Search string. Every word must match the contact code or a name field (substring), or the whole string must match an invoice address line. A word of six or more digits also matches the national id by prefix, in ten- or twelve-digit form. Repeat the parameter to require several strings to match. */
           q?: string[]
           /** @description Filter on contact type */
           type?: 'individual' | 'organisation'
@@ -11049,11 +12203,240 @@ export interface paths {
         }
       }
     }
+    /**
+     * Create a contact
+     * @description Creates a contact, then optionally records an application profile and enrols the customer in the requested waiting lists. NOT TRANSACTIONAL. The contact is created in Xpand and cannot be removed. Once it exists this endpoint always answers 201, reporting any later step that failed under `warnings` — those steps are idempotent and should be completed on the created contact rather than by creating it again.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['CreateContactRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                contactCode: string
+                contact:
+                  | (
+                      | {
+                          contactCode: string
+                          protectedIdentity: boolean
+                          communication: {
+                            phoneNumbers: {
+                              phoneNumber: string
+                              /** @enum {string} */
+                              type:
+                                | 'work'
+                                | 'home'
+                                | 'mobile'
+                                | 'direct-line'
+                                | 'fax'
+                                | 'pager'
+                                | 'unspecified'
+                              comment?: string
+                              isPrimary: boolean
+                            }[]
+                            emailAddresses: {
+                              emailAddress: string
+                              type: string
+                              isPrimary: boolean
+                            }[]
+                            specialAttention: boolean
+                          }
+                          addresses: {
+                            careOf?: string
+                            street: string | null
+                            zipCode: string | null
+                            city: string | null
+                            region: string | null
+                            country: string | null
+                          }[]
+                          relatedContacts?: {
+                            contactCode: string
+                            /** @enum {string} */
+                            role:
+                              | 'trustee'
+                              | 'administrator'
+                              | 'trusteeFor'
+                              | 'administratorFor'
+                              | 'otherInvoiceRecipient'
+                              | 'otherInvoiceRecipientFor'
+                            fullName: string
+                            firstName: string
+                            lastName: string
+                          }[]
+                          /** @enum {string} */
+                          type: 'individual'
+                          personal: {
+                            nationalRegistrationNumber: string | null
+                            birthDate: string | null
+                            firstName: string | null
+                            lastName: string | null
+                            fullName: string
+                          }
+                        }
+                      | {
+                          contactCode: string
+                          protectedIdentity: boolean
+                          communication: {
+                            phoneNumbers: {
+                              phoneNumber: string
+                              /** @enum {string} */
+                              type:
+                                | 'work'
+                                | 'home'
+                                | 'mobile'
+                                | 'direct-line'
+                                | 'fax'
+                                | 'pager'
+                                | 'unspecified'
+                              comment?: string
+                              isPrimary: boolean
+                            }[]
+                            emailAddresses: {
+                              emailAddress: string
+                              type: string
+                              isPrimary: boolean
+                            }[]
+                            specialAttention: boolean
+                          }
+                          addresses: {
+                            careOf?: string
+                            street: string | null
+                            zipCode: string | null
+                            city: string | null
+                            region: string | null
+                            country: string | null
+                          }[]
+                          relatedContacts?: {
+                            contactCode: string
+                            /** @enum {string} */
+                            role:
+                              | 'trustee'
+                              | 'administrator'
+                              | 'trusteeFor'
+                              | 'administratorFor'
+                              | 'otherInvoiceRecipient'
+                              | 'otherInvoiceRecipientFor'
+                            fullName: string
+                            firstName: string
+                            lastName: string
+                          }[]
+                          /** @enum {string} */
+                          type: 'organisation'
+                          organisation: {
+                            organisationNumber: string
+                            name: string
+                          }
+                        }
+                    )
+                  | null
+                applicationProfile: {
+                  /** @enum {string} */
+                  status: 'created' | 'skipped' | 'failed'
+                  error?: string
+                }
+                waitingLists: {
+                  /** @enum {number} */
+                  waitingListType: 1 | 2 | 3
+                  /** @enum {string} */
+                  status: 'created' | 'skipped' | 'failed'
+                  error?: string
+                }[]
+              }
+              warnings?: string[]
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Unprocessable Entity */
+        422: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+        /** @description Service Unavailable */
+        503: {
+          content: {
+            'application/json': {
+              error: string
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/contacts/by-codes': {
+    /**
+     * Get multiple contacts by their contact codes
+     * @description Fetch a batch of contacts by providing a comma-separated list of contact codes.
+     */
+    get: {
+      parameters: {
+        query: {
+          /** @description Comma-separated list of contact codes */
+          codes: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['ContactV1'][]
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              _links?: unknown
+            }
+          }
+        }
+      }
+    }
   }
   '/v1/contacts/batch': {
     /**
      * Batch lookup of contacts by contact code
-     * @description Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, or `includeAddress` to include those joins. Missing contact codes are simply absent from the response.
+     * @description Lean by default — returns base contact fields with empty phone/email/address arrays. Set `includePhone`, `includeEmail`, `includeAddress`, or `includeRelations` to include those joins. Missing contact codes are simply absent from the response.
      */
     get: {
       parameters: {
@@ -11066,6 +12449,8 @@ export interface paths {
           includeEmail?: boolean
           /** @description Include addresses in the response. */
           includeAddress?: boolean
+          /** @description Include related contacts (god man/förvaltare and annan fakturamottagare, both directions) in the response. */
+          includeRelations?: boolean
         }
       }
       responses: {
@@ -11143,6 +12528,261 @@ export interface paths {
           content: {
             'application/json': {
               _links?: unknown
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/contacts/{contactCode}/relations': {
+    /**
+     * Add a related contact (god man, förvaltare, annan fakturamottagare)
+     * @description Adds a relation from the contact to another contact. A contact has at most one god man or förvaltare (409 guardian-exists, detail = the existing guardian's contact code). The acting user is recorded from the token. Returns the contact's relations after the change. 502 propagation-failed means the relation was not saved because Tenfast or Xledger could not be updated; detail is `economy` or `tenfast` — an internal stage name for diagnostics only, never to be shown to a caseworker verbatim. 502 rollback-failed is the opposite and must not be retried: the relation was saved, Tenfast was not told, and undoing the write failed too — it is flagged for manual repair. 502 outcome-unknown means the contacts service never answered, so whether the relation was saved is unknown; it is flagged for manual checking and must not be retried blindly.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description Contact Code */
+          contactCode: string
+        }
+      }
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['AddRelationRequest']
+        }
+      }
+      responses: {
+        /** @description Created */
+        201: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                relations: {
+                  contactCode: string
+                  /** @enum {string} */
+                  role:
+                    | 'trustee'
+                    | 'administrator'
+                    | 'trusteeFor'
+                    | 'administratorFor'
+                    | 'otherInvoiceRecipient'
+                    | 'otherInvoiceRecipientFor'
+                  fullName: string
+                  firstName: string
+                  lastName: string
+                }[]
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Unprocessable Entity */
+        422: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/v1/contacts/{contactCode}/relations/{roleType}/{relatedContactCode}': {
+    /**
+     * Remove a related contact
+     * @description Ends the relation from the contact to the related contact in the given role. History is kept in the contacts service. The acting user is recorded from the token. 502 propagation-failed means the relation could not be removed because Tenfast could not be updated; detail is always `tenfast` here (there is no economy stage on removal) — an internal stage name for diagnostics only, never to be shown to a caseworker verbatim. 502 rollback-failed is the opposite and must not be retried: the relation was removed, Tenfast was not told, and putting it back failed too — it is flagged for manual repair. 502 outcome-unknown means the contacts service never answered, so whether the relation was removed is unknown; it is flagged for manual checking and must not be retried blindly.
+     */
+    delete: {
+      parameters: {
+        path: {
+          /** @description Contact Code */
+          contactCode: string
+          /** @description Relation role */
+          roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
+          /** @description Related Contact Code */
+          relatedContactCode: string
+        }
+      }
+      responses: {
+        /** @description No Content */
+        204: {
+          content: {
+            'application/json': unknown
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'subject-not-found'
+                | 'related-not-found'
+                | 'self-relation'
+                | 'guardian-exists'
+                | 'duplicate-relation'
+                | 'relation-not-found'
+                | 'invalid-role-type'
+                | 'missing-deleted-by'
+                | 'invalid-request'
+                | 'contacts-service-error'
+                | 'propagation-failed'
+                | 'rollback-failed'
+                | 'outcome-unknown'
+              detail?: string
             }
           }
         }
@@ -11239,23 +12879,183 @@ export interface paths {
       }
     }
   }
+  '/v1/tenant-notifications/lease-termination-confirmation': {
+    /**
+     * Send a lease termination confirmation email
+     * @description Triggers a lease termination confirmation email on behalf of an integration (e.g. Tenfast) after a parking space or garage lease is terminated. Only `leaseId` is used: OneCore looks up the lease (end date, type, preferred move-out date, rental object address, holders) and each holder in the contacts service, then emails every holder with an email address. Any other body fields are ignored. The 200 body says how many holders were emailed and which were skipped for lack of a valid email address. Requires `Idempotency-Key` for safe retries. OneCore owns delivery and the communication log. Requires `tenant-notifications:lease-termination` or `api-access`.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['SendLeaseTerminationConfirmationRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              _links?: unknown
+              content: {
+                /** @enum {boolean} */
+                sent: true
+                sentCount: number
+                skippedContactCodes: string[]
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error: 'missing-idempotency-key' | 'invalid-request'
+              detail?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error: 'lease-not-found'
+              detail?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error: 'idempotency-conflict' | 'request-in-progress'
+              detail?: string
+            }
+          }
+        }
+        /** @description Unprocessable Entity */
+        422: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                | 'missing-end-date'
+                | 'unsupported-rental-type'
+                | 'contact-not-found'
+                | 'no-recipient'
+              detail?: string
+            }
+          }
+        }
+        /** @description Bad Gateway */
+        502: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error:
+                'lease-lookup-failed' | 'contact-lookup-failed' | 'send-failed'
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 export type webhooks = Record<string, never>
 
 export interface components {
   schemas: {
+    CustomerScoreCardInfoSchema: {
+      object_ref_nr: string
+      division_1011: string
+      object_real_estate?: string
+      object_real_estate_year_construction?: number
+      object_real_estate_year_reconstruction?: number
+      real_estate_type: string
+      division_1048: string
+      division_1242: string
+      division_1140: string
+      object_type: string
+      object_street_1: string
+      object_zip: string
+      object_city: string
+      division_1501: string
+      respondent_name_first: string
+      respondent_name_last: string
+      respondent_email: string
+      respondent_phone: string
+      postal_street_1: string
+      postal_street_2?: string
+      postal_zip: string
+      postal_city: string
+      division_1038: string
+      division_1037?: string
+      contract_start_date: string
+      contract_end_date?: string
+      contract_type: string
+    }
     Lease: {
       leaseId: string
       leaseNumber: string
+      /** Format: uri */
+      externalUrl?: string
       /** Format: date-time */
       leaseStartDate: string
       /** Format: date-time */
       leaseEndDate?: string
       /** @enum {string} */
-      status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
+      status:
+        | 'Current'
+        | 'Upcoming'
+        | 'AboutToEnd'
+        | 'Ended'
+        | 'PreliminaryTerminated'
+        | 'PendingSignature'
+        | 'NotSent'
       tenantContactIds?: string[]
+      subletContactId?: string
       rentalPropertyId: string
+      rentalObject?: {
+        rentalObjectCode: string
+        address: string
+        availabilityInfo?: {
+          rentalObjectCode: string
+          /** Format: date-time */
+          vacantFrom?: string
+          rent: {
+            amount: number
+            vat: number
+            rows: {
+              code?: string
+              description: string
+              amount: number
+              vatPercentage: number
+              /** Format: date-time */
+              fromDate?: string
+              /** Format: date-time */
+              toDate?: string
+            }[]
+          }
+          rentalTenureType: {
+            id: string
+            name: string
+          }
+          rentalTags?: {
+            id: string
+            name: string
+          }[]
+        }
+        residentialAreaCaption: string
+        residentialAreaCode: string
+        objectTypeCaption: string
+        objectTypeCode: string
+        boaArea?: number
+        braArea?: number
+      }
       rentalProperty?: {
         rentalPropertyId: string
         apartmentNumber: number
@@ -11316,6 +13116,15 @@ export interface components {
         code: string
         caption: string
       }
+      rentRows?: {
+        id: string
+        amount: number
+        articleId: string
+        label: string
+        vat: number
+        from?: string
+        to?: string
+      }[]
       tenants?: {
         contactCode: string
         contactKey: string
@@ -11340,6 +13149,9 @@ export interface components {
         emailAddress?: string | null
         isTenant: boolean
         specialAttention?: boolean
+        protectedIdentity: boolean
+        /** @enum {string} */
+        protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
         parkingSpaceWaitingList?: {
           /** Format: date-time */
           queueTime: string
@@ -11355,21 +13167,41 @@ export interface components {
     }
     LeaseSearchResult: {
       leaseId: string
+      /** Format: uri */
+      externalUrl?: string
       objectTypeCode: string
-      leaseType: string
+      /** @enum {string} */
+      leaseType:
+        | 'Bostadskontrakt'
+        | 'Campuskontrakt'
+        | 'Garagekontrakt'
+        | 'Kooperativ hyresrätt'
+        | 'Lokalkontrakt'
+        | 'Omförhandlingskontrakt'
+        | 'Övrigt'
+        | 'P-Platskontrakt'
+        | 'Korttidsuthyrning'
       contacts: {
         name: string
         contactCode: string
         email: string | null
         phone: string | null
+        /** @enum {string} */
+        contactType?: 'tenant' | 'subletTenant'
       }[]
       address: string | null
+      postalCode: string | null
+      city: string | null
       /** Format: date-time */
       startDate: string | null
       /** Format: date-time */
+      endDate: string | null
+      /** Format: date-time */
       lastDebitDate: string | null
+      /** Format: date-time */
+      signedAt: string | null
       /** @enum {number} */
-      status: 0 | 1 | 2 | 3
+      status: 0 | 1 | 2 | 3 | 4 | 5 | 6
       rentalObjectCode: string | null
       property?: string | null
       buildingCode?: string | null
@@ -11384,6 +13216,8 @@ export interface components {
       contactCode: string
       email: string | null
       phone: string | null
+      /** @enum {string} */
+      contactType?: 'tenant' | 'subletTenant'
     }
     PaginationMeta: {
       totalRecords: number
@@ -11420,6 +13254,26 @@ export interface components {
       emailAddress?: string | null
       isTenant: boolean
       specialAttention?: boolean
+      protectedIdentity: boolean
+      /** @enum {string} */
+      protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
+    }
+    RentalObjectRentInfo: {
+      rentalObjectCode: string
+      rent: {
+        amount: number
+        vat: number
+        rows: {
+          code?: string
+          description: string
+          amount: number
+          vatPercentage: number
+          /** Format: date-time */
+          fromDate?: string
+          /** Format: date-time */
+          toDate?: string
+        }[]
+      }
     }
     ListingTextContent: {
       /** Format: uuid */
@@ -11702,6 +13556,7 @@ export interface components {
       status: string
       maintenanceTeam?: string | null
       hiddenFromMyPages?: boolean
+      closeRequestPending: boolean
       workOrderRows: {
         description: string | null
         locationCode: string | null
@@ -12013,6 +13868,13 @@ export interface components {
       areaSize: number | null
       malarEnergiFacilityId: string | null
     }
+    ResidenceMedia: {
+      images: string[]
+      /** @enum {string|null} */
+      imageLevel: 'residence' | 'shared' | null
+      /** Format: uri */
+      energyDeclarationUrl: string | null
+    }
     ResidenceSummary: {
       id: string
       code: string
@@ -12262,6 +14124,9 @@ export interface components {
         code: string | null
         name: string | null
       }
+    }
+    RentalIdsWithBlockResponse: {
+      content: string[]
     }
     FacilitySearchResult: {
       /** @description Unique identifier for the search result */
@@ -14181,6 +16046,18 @@ export interface components {
       offset?: number
       limit?: number
     }
+    /** @enum {string} */
+    MoveInOutStatus:
+      | 'NOT_RETURNED'
+      | 'LOANED_TO_OTHER'
+      | 'RETURNED_AWAITING_LOAN'
+      | 'CREATED'
+      | 'PARTIAL'
+      | 'HANDED_OUT'
+      | 'RETURNED_VACANT'
+      | 'NO_LOANS'
+      | 'NO_KEYS'
+      | 'UNKNOWN'
     MoveInOutRow: {
       rentalObjectCode: string
       address: string | null
@@ -14206,15 +16083,16 @@ export interface components {
       incomingLoanPickedUpAt: string | null
       /** @enum {string} */
       status:
-        | 'UNKNOWN'
         | 'NOT_RETURNED'
         | 'LOANED_TO_OTHER'
+        | 'RETURNED_AWAITING_LOAN'
         | 'CREATED'
+        | 'PARTIAL'
         | 'HANDED_OUT'
         | 'RETURNED_VACANT'
-        | 'NO_KEYS'
         | 'NO_LOANS'
-        | 'PARTIAL'
+        | 'NO_KEYS'
+        | 'UNKNOWN'
       notes: string[]
     }
     PaginatedResponse: {
@@ -14472,14 +16350,61 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */
         leaseEndDate?: string
         /** @enum {string} */
-        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
+        status:
+          | 'Current'
+          | 'Upcoming'
+          | 'AboutToEnd'
+          | 'Ended'
+          | 'PreliminaryTerminated'
+          | 'PendingSignature'
+          | 'NotSent'
         tenantContactIds?: string[]
+        subletContactId?: string
         rentalPropertyId: string
+        rentalObject?: {
+          rentalObjectCode: string
+          address: string
+          availabilityInfo?: {
+            rentalObjectCode: string
+            /** Format: date-time */
+            vacantFrom?: string
+            rent: {
+              amount: number
+              vat: number
+              rows: {
+                code?: string
+                description: string
+                amount: number
+                vatPercentage: number
+                /** Format: date-time */
+                fromDate?: string
+                /** Format: date-time */
+                toDate?: string
+              }[]
+            }
+            rentalTenureType: {
+              id: string
+              name: string
+            }
+            rentalTags?: {
+              id: string
+              name: string
+            }[]
+          }
+          residentialAreaCaption: string
+          residentialAreaCode: string
+          objectTypeCaption: string
+          objectTypeCode: string
+          boaArea?: number
+          braArea?: number
+        }
         rentalProperty?: {
           rentalPropertyId: string
           apartmentNumber: number
@@ -14540,6 +16465,15 @@ export interface components {
           code: string
           caption: string
         }
+        rentRows?: {
+          id: string
+          amount: number
+          articleId: string
+          label: string
+          vat: number
+          from?: string
+          to?: string
+        }[]
         tenants?: {
           contactCode: string
           contactKey: string
@@ -14564,6 +16498,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -14782,14 +16719,61 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */
         leaseEndDate?: string
         /** @enum {string} */
-        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
+        status:
+          | 'Current'
+          | 'Upcoming'
+          | 'AboutToEnd'
+          | 'Ended'
+          | 'PreliminaryTerminated'
+          | 'PendingSignature'
+          | 'NotSent'
         tenantContactIds?: string[]
+        subletContactId?: string
         rentalPropertyId: string
+        rentalObject?: {
+          rentalObjectCode: string
+          address: string
+          availabilityInfo?: {
+            rentalObjectCode: string
+            /** Format: date-time */
+            vacantFrom?: string
+            rent: {
+              amount: number
+              vat: number
+              rows: {
+                code?: string
+                description: string
+                amount: number
+                vatPercentage: number
+                /** Format: date-time */
+                fromDate?: string
+                /** Format: date-time */
+                toDate?: string
+              }[]
+            }
+            rentalTenureType: {
+              id: string
+              name: string
+            }
+            rentalTags?: {
+              id: string
+              name: string
+            }[]
+          }
+          residentialAreaCaption: string
+          residentialAreaCode: string
+          objectTypeCaption: string
+          objectTypeCode: string
+          boaArea?: number
+          braArea?: number
+        }
         rentalProperty?: {
           rentalPropertyId: string
           apartmentNumber: number
@@ -14850,6 +16834,15 @@ export interface components {
           code: string
           caption: string
         }
+        rentRows?: {
+          id: string
+          amount: number
+          articleId: string
+          label: string
+          vat: number
+          from?: string
+          to?: string
+        }[]
         tenants?: {
           contactCode: string
           contactKey: string
@@ -14874,6 +16867,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -15184,14 +17180,61 @@ export interface components {
       lease: {
         leaseId: string
         leaseNumber: string
+        /** Format: uri */
+        externalUrl?: string
         /** Format: date-time */
         leaseStartDate: string
         /** Format: date-time */
         leaseEndDate?: string
         /** @enum {string} */
-        status: 'Current' | 'Upcoming' | 'AboutToEnd' | 'Ended'
+        status:
+          | 'Current'
+          | 'Upcoming'
+          | 'AboutToEnd'
+          | 'Ended'
+          | 'PreliminaryTerminated'
+          | 'PendingSignature'
+          | 'NotSent'
         tenantContactIds?: string[]
+        subletContactId?: string
         rentalPropertyId: string
+        rentalObject?: {
+          rentalObjectCode: string
+          address: string
+          availabilityInfo?: {
+            rentalObjectCode: string
+            /** Format: date-time */
+            vacantFrom?: string
+            rent: {
+              amount: number
+              vat: number
+              rows: {
+                code?: string
+                description: string
+                amount: number
+                vatPercentage: number
+                /** Format: date-time */
+                fromDate?: string
+                /** Format: date-time */
+                toDate?: string
+              }[]
+            }
+            rentalTenureType: {
+              id: string
+              name: string
+            }
+            rentalTags?: {
+              id: string
+              name: string
+            }[]
+          }
+          residentialAreaCaption: string
+          residentialAreaCode: string
+          objectTypeCaption: string
+          objectTypeCode: string
+          boaArea?: number
+          braArea?: number
+        }
         rentalProperty?: {
           rentalPropertyId: string
           apartmentNumber: number
@@ -15252,6 +17295,15 @@ export interface components {
           code: string
           caption: string
         }
+        rentRows?: {
+          id: string
+          amount: number
+          articleId: string
+          label: string
+          vat: number
+          from?: string
+          to?: string
+        }[]
         tenants?: {
           contactCode: string
           contactKey: string
@@ -15276,6 +17328,9 @@ export interface components {
           emailAddress?: string | null
           isTenant: boolean
           specialAttention?: boolean
+          protectedIdentity: boolean
+          /** @enum {string} */
+          protectedIdentityDetails?: 'shown' | 'withheld' | 'unavailable'
           parkingSpaceWaitingList?: {
             /** Format: date-time */
             queueTime: string
@@ -15593,6 +17648,10 @@ export interface components {
       invalid: string[]
       totalSent: number
       totalInvalid: number
+      /** @description Present when scheduled: dispatch id (cancel/reschedule handle) */
+      dispatchId?: string
+      /** @description Present when scheduled: target send time as ISO instant */
+      scheduledFor?: string
     }
     BulkEmailResult: {
       /** @description Email addresses that received email */
@@ -15601,6 +17660,20 @@ export interface components {
       invalid: string[]
       totalSent: number
       totalInvalid: number
+      /** @description Present when scheduled: dispatch id (cancel/reschedule handle) */
+      dispatchId?: string
+      /** @description Present when scheduled: target send time as ISO instant */
+      scheduledFor?: string
+    }
+    ScheduleConfig: {
+      enabled: boolean
+      timeZone: string
+      slotMinutes: number
+      blockedHours: {
+        from: string
+        until: string
+      }
+      maxDaysAhead: number
     }
     CustomerMessage: {
       dispatch: {
@@ -15609,7 +17682,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'my-pages'
         fromAddress: string
         subject: string | null
         body: string
@@ -15617,13 +17690,14 @@ export interface components {
         provider: string
         triggeredByUser: string | null
         /** Format: date-time */
-        triggeredAt: string
+        sendAt: string
         recipientCount: number
         audienceCriteria: string | null
         /** Format: uuid */
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
       }
@@ -15636,7 +17710,15 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced'
+          | 'received'
+          | 'scheduled'
+          | 'sending'
+          | 'cancelled'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -15652,7 +17734,7 @@ export interface components {
         /** @enum {string} */
         direction: 'outbound' | 'inbound'
         /** @enum {string} */
-        channel: 'sms' | 'email'
+        channel: 'sms' | 'email' | 'my-pages'
         fromAddress: string
         subject: string | null
         body: string
@@ -15660,13 +17742,14 @@ export interface components {
         provider: string
         triggeredByUser: string | null
         /** Format: date-time */
-        triggeredAt: string
+        sendAt: string
         recipientCount: number
         audienceCriteria: string | null
         /** Format: uuid */
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
       }
@@ -15679,7 +17762,15 @@ export interface components {
         toAddress: string
         /** @enum {string} */
         status:
-          'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'received'
+          | 'pending'
+          | 'sent'
+          | 'delivered'
+          | 'failed'
+          | 'bounced'
+          | 'received'
+          | 'scheduled'
+          | 'sending'
+          | 'cancelled'
         /** Format: date-time */
         statusUpdatedAt: string
         externalMessageId: string | null
@@ -15687,6 +17778,78 @@ export interface components {
         /** Format: date-time */
         createdAt: string
       }[]
+    }
+    DispatchListItem: {
+      /** Format: uuid */
+      id: string
+      /** @enum {string} */
+      direction: 'outbound' | 'inbound'
+      /** @enum {string} */
+      channel: 'sms' | 'email' | 'my-pages'
+      fromAddress: string
+      subject: string | null
+      body: string
+      messageType: string
+      provider: string
+      triggeredByUser: string | null
+      /** Format: date-time */
+      sendAt: string
+      recipientCount: number
+      /** Format: uuid */
+      inReplyToDispatchId: string | null
+      /** Format: uuid */
+      templateId: string | null
+      workOrderCode: string | null
+      /** Format: date-time */
+      createdAt: string
+      /** @enum {string} */
+      status:
+        | 'scheduled'
+        | 'sending'
+        | 'delivered'
+        | 'partially_delivered'
+        | 'failed'
+        | 'cancelled'
+      statusSummary: {
+        pending: number
+        sent: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        delivered: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        failed: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        bounced: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        received: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        scheduled: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        sending: components['schemas']['DispatchListItem']['statusSummary']['pending']
+        cancelled: components['schemas']['DispatchListItem']['statusSummary']['pending']
+      }
+      audience: {
+        type: string
+        value: string
+      }[]
+    }
+    MessageRecipient: {
+      /** Format: uuid */
+      id: string
+      /** Format: uuid */
+      dispatchId: string
+      contactCode: string | null
+      toAddress: string
+      /** @enum {string} */
+      status:
+        | 'pending'
+        | 'sent'
+        | 'delivered'
+        | 'failed'
+        | 'bounced'
+        | 'received'
+        | 'scheduled'
+        | 'sending'
+        | 'cancelled'
+      /** Format: date-time */
+      statusUpdatedAt: string
+      externalMessageId: string | null
+      error: string | null
+      /** Format: date-time */
+      createdAt: string
     }
     ReleaseNote: {
       /** Format: uuid */
@@ -16010,24 +18173,17 @@ export interface components {
       /** Format: date-time */
       guideUpdatedAt: string
     }
+    /** @description The parts of a Keycloak user that clients need to show and pick users. */
     KeycloakUser: {
       id: string
       username: string
       firstName?: string
       lastName?: string
-      email?: string
-      emailVerified?: boolean
-      /** @description Open-ended map of custom user attributes. Keys are realm-configurable; each value is an array of strings. */
+      /** @description The user attributes employeeId and mobilePhone, when set. Each value is an array of strings. */
       attributes?: {
-        [key: string]: string[]
+        employeeId?: string[]
+        mobilePhone?: string[]
       }
-      /** Format: int64 */
-      createdTimestamp?: number
-      enabled?: boolean
-      totp?: boolean
-      disableableCredentialTypes?: string[]
-      requiredActions?: string[]
-      notBefore?: number
     }
     RentalPropertyResponse: {
       content?: {
@@ -16063,9 +18219,75 @@ export interface components {
         }
       }
     }
+    CreateContactRequest: {
+      nationalId: string
+      firstName: string
+      lastName: string
+      addresses: {
+        careOf?: string
+        street: string
+        zipCode: string
+        city: string
+        country?: string
+      }[]
+      emailAddresses: {
+        /** Format: email */
+        emailAddress: string
+        /**
+         * @default private
+         * @enum {string}
+         */
+        type?: 'private' | 'work' | 'unspecified'
+        /** @default true */
+        isPrimary?: boolean
+      }[]
+      /** @default [] */
+      phoneNumbers?: {
+        phoneNumber: string
+        /**
+         * @default mobile
+         * @enum {string}
+         */
+        type?: 'mobile' | 'home' | 'work'
+        /** @default false */
+        isPrimary?: boolean
+      }[]
+      applicationProfile?: {
+        /** @enum {string} */
+        housingType:
+          | 'LIVES_WITH_FAMILY'
+          | 'LODGER'
+          | 'RENTAL'
+          | 'SUB_RENTAL'
+          | 'OWNS_HOUSE'
+          | 'OWNS_FLAT'
+          | 'OWNS_ROW_HOUSE'
+          | 'OTHER'
+        landlord: string | null
+        numAdults: number
+        numChildren: number
+        housingTypeDescription: string | null
+        housingReference: {
+          email: string | null
+          phone: string | null
+        }
+      }
+      /** @default [] */
+      waitingLists?: (1 | 2 | 3)[]
+    }
+    AddRelationRequest: {
+      relatedContactCode: string
+      /** @enum {string} */
+      roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
+    }
+    SendLeaseTerminationConfirmationRequest: {
+      leaseId: string
+      correlationId?: string
+    }
     ContactV1:
       | {
           contactCode: string
+          protectedIdentity: boolean
           communication: {
             phoneNumbers: {
               phoneNumber: string
@@ -16096,6 +18318,20 @@ export interface components {
             region: string | null
             country: string | null
           }[]
+          relatedContacts?: {
+            contactCode: string
+            /** @enum {string} */
+            role:
+              | 'trustee'
+              | 'administrator'
+              | 'trusteeFor'
+              | 'administratorFor'
+              | 'otherInvoiceRecipient'
+              | 'otherInvoiceRecipientFor'
+            fullName: string
+            firstName: string
+            lastName: string
+          }[]
           /** @enum {string} */
           type: 'individual'
           personal: {
@@ -16105,13 +18341,10 @@ export interface components {
             lastName: string | null
             fullName: string
           }
-          trustee?: {
-            contactCode: string
-            fullName?: string
-          }
         }
       | {
           contactCode: string
+          protectedIdentity: boolean
           communication: {
             phoneNumbers: {
               phoneNumber: string
@@ -16141,6 +18374,20 @@ export interface components {
             city: string | null
             region: string | null
             country: string | null
+          }[]
+          relatedContacts?: {
+            contactCode: string
+            /** @enum {string} */
+            role:
+              | 'trustee'
+              | 'administrator'
+              | 'trusteeFor'
+              | 'administratorFor'
+              | 'otherInvoiceRecipient'
+              | 'otherInvoiceRecipientFor'
+            fullName: string
+            firstName: string
+            lastName: string
           }[]
           /** @enum {string} */
           type: 'organisation'

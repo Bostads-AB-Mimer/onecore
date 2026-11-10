@@ -1,6 +1,15 @@
 import KoaRouter from '@koa/router'
 import { z } from 'zod'
-import { generateRouteMetadata, logger } from '@onecore/utilities'
+import {
+  errorName,
+  generateRouteMetadata,
+  logger,
+  redactedMessage,
+} from '@onecore/utilities'
+import {
+  SyncContactToWorkOrderSchema,
+  SyncContactToWorkOrderUndoSchema,
+} from '@onecore/types'
 import * as odooAdapter from './adapters/odoo-adapter'
 import {
   CloseWorkOrderRequestSchema,
@@ -1661,6 +1670,193 @@ export const routes = (router: KoaRouter) => {
         }
       }
     }
+  })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/sync:
+   *   post:
+   *     summary: Sync a contact to Odoo
+   *     description: Updates tenant records in Odoo that match the provided contact code. If no matching tenants are found, the operation is skipped.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The contact code to sync
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - contactCode
+   *               - fullName
+   *             properties:
+   *               contactCode:
+   *                 type: string
+   *               fullName:
+   *                 type: string
+   *               emailAddress:
+   *                 type: string
+   *                 nullable: true
+   *               phoneNumber:
+   *                 type: string
+   *                 nullable: true
+   *     responses:
+   *       200:
+   *         description: Contact synced successfully to Odoo
+   *       400:
+   *         description: Invalid request body
+   *       500:
+   *         description: Failed to sync contact to Odoo
+   */
+  router.post('(.*)/contacts/:contactCode/sync', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parseResult = SyncContactToWorkOrderSchema.safeParse(ctx.request.body)
+
+    if (!parseResult.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid request body',
+        details: parseResult.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    const body = parseResult.data
+    const { contactCode } = ctx.params as { contactCode: string }
+
+    if (body.contactCode !== contactCode) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Path contactCode must match body contactCode',
+        ...metadata,
+      }
+      return
+    }
+
+    try {
+      const result = await odooAdapter.syncContact(body)
+
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: 'Failed to sync contact to Odoo',
+          details: result.err,
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = {
+        content: result.data && { updatedCount: result.data.updatedCount },
+        skipped: result.data === null,
+        ...(result.data && { undo: { tenants: result.data.previous } }),
+        ...metadata,
+      }
+    } catch (err: unknown) {
+      logger.error(
+        {
+          contactCode,
+          errorName: errorName(err),
+          message: redactedMessage(err, [
+            body.fullName,
+            body.emailAddress,
+            body.phoneNumber,
+          ]),
+        },
+        'Error syncing contact to Odoo'
+      )
+      ctx.status = 500
+      ctx.body = {
+        error: 'Internal server error',
+        ...metadata,
+      }
+    }
+  })
+
+  /**
+   * @swagger
+   * /contacts/{contactCode}/undo-sync:
+   *   post:
+   *     summary: Restore tenant values in Odoo after a failed contact sync
+   *     description: Writes back the values a contact sync replaced, as returned in its undo object. Tenants that no longer exist are skipped.
+   *     tags: [Contacts]
+   *     parameters:
+   *       - in: path
+   *         name: contactCode
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - tenants
+   *             properties:
+   *               tenants:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required: [id, fullName, emailAddress, phoneNumber]
+   *                   properties:
+   *                     id:
+   *                       type: integer
+   *                     fullName:
+   *                       type: string
+   *                     emailAddress:
+   *                       type: string
+   *                       nullable: true
+   *                     phoneNumber:
+   *                       type: string
+   *                       nullable: true
+   *     responses:
+   *       200:
+   *         description: Tenants restored
+   *       400:
+   *         description: Invalid request body, or a tenant belongs to another contact
+   *       500:
+   *         description: Failed to restore tenants in Odoo
+   */
+  router.post('(.*)/contacts/:contactCode/undo-sync', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { contactCode } = ctx.params as { contactCode: string }
+    const parseResult = SyncContactToWorkOrderUndoSchema.safeParse(
+      ctx.request.body
+    )
+
+    if (!parseResult.success) {
+      ctx.status = 400
+      ctx.body = { error: 'Invalid request body', ...metadata }
+      return
+    }
+
+    const result = await odooAdapter.restoreContact(
+      contactCode,
+      parseResult.data.tenants
+    )
+
+    if (!result.ok) {
+      logger.error(
+        { contactCode, err: result.err },
+        'Error undoing contact sync'
+      )
+      ctx.status = result.err === 'foreign-tenant' ? 400 : 500
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
   })
 
   /**

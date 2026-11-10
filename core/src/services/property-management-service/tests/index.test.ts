@@ -19,11 +19,12 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
+import { MaintenanceUnitInfo } from '@onecore/types'
+
 import { routes } from '../index'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as factory from '../../../../test/factories'
-import { MaintenanceUnitInfo } from '@onecore/types'
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -128,7 +129,7 @@ describe('rental-property-service index', () => {
 
     it('should return all maintenance units', async () => {
       const getLeasesForContactCodeSpy = jest
-        .spyOn(leasingAdapter, 'getLeasesForContactCode')
+        .spyOn(leasingAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([leaseMock])
       const getMaintenanceUnitsForRentalPropertySpy = jest
         .spyOn(
@@ -144,9 +145,7 @@ describe('rental-property-service index', () => {
       expect(res.status).toBe(200)
       expect(res.body.content).toEqual(maintenanceUnitInfoMock)
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
-        includeContacts: false,
+        status: ['current', 'upcoming'],
       })
       expect(getMaintenanceUnitsForRentalPropertySpy).toHaveBeenCalledWith(
         leaseMock.rentalPropertyId
@@ -155,7 +154,7 @@ describe('rental-property-service index', () => {
 
     it('should return an empty list if there are no leases', async () => {
       const getLeasesForContactCodeSpy = jest
-        .spyOn(leasingAdapter, 'getLeasesForContactCode')
+        .spyOn(leasingAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([])
 
       const res = await request(app.callback()).get(
@@ -166,9 +165,7 @@ describe('rental-property-service index', () => {
       expect(res.body.content).toEqual([])
       expect(res.body.reason).toBe('No maintenance units found')
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith('P965339', {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
-        includeContacts: false,
+        status: ['current', 'upcoming'],
       })
     })
   })
