@@ -154,15 +154,57 @@ export interface paths {
       }
     }
   }
-  '/workOrders/residenceId/{residenceId}': {
+  '/workOrders/rentalId/{rentalId}': {
     /**
-     * Get work orders by residence id
-     * @description Retrieves work orders based on the provided residence id.
+     * Get work orders by rental id
+     * @description Retrieves Odoo work orders for a rental object (Lägenhet, Lokal or Bilplats).
+     * Building-wide and maintenance unit work orders are excluded.
+     * Lokal and Bilplats work orders created before Odoo 1.0.118 are not found.
      */
     get: {
       parameters: {
         path: {
-          /** @description The residence id to filter work orders. */
+          /** @description The rental object code to filter work orders. */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved work orders. */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                workOrders?: components['schemas']['WorkOrder'][]
+              }
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+        /** @description Internal server error. Failed to retrieve work orders. */
+        500: {
+          content: {
+            'application/json': {
+              /** @example Internal server error */
+              error?: string
+              /** @description Route metadata */
+              metadata?: Record<string, never>
+            }
+          }
+        }
+      }
+    }
+  }
+  '/workOrders/residenceId/{residenceId}': {
+    /**
+     * Get work orders by residence id
+     * @deprecated
+     * @description Deprecated alias of /workOrders/rentalId/{rentalId}, kept for callers outside core. Use /workOrders/rentalId/{rentalId} instead.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental object code to filter work orders. */
           residenceId: string
         }
       }
