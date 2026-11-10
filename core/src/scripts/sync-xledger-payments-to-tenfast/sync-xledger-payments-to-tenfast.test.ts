@@ -526,9 +526,28 @@ describe('syncPayments with payments Tenfast rejects', () => {
     nock(COMM_URL).post('/send-email').reply(500, {})
 
     await expect(syncPayments(store)).rejects.toThrow(
-      '1 payment(s) rejected by Tenfast could not be reported by email: INV-1'
+      '1 payment(s) rejected by Tenfast could not be reported by email: invoice INV-1, 1500 paid 2026-10-28: Invoice is voided'
     )
     expect(store.cursor).toBe('c2')
+  })
+
+  it('reports both the run failure and the rejected payments when a later payment fails and the email cannot be sent', async () => {
+    const store = makeStore('cursor-start')
+    twoPayments()
+    rejectPayment('INV-1', 'Invoice is voided')
+    nock(ECONOMY_URL).post('/invoices/INV-2/payments').reply(500, {})
+    nock(COMM_URL).post('/send-email').reply(500, {})
+
+    const run = syncPayments(store)
+
+    await expect(run).rejects.toThrow(
+      'Failed to record payment for invoice INV-2 in Tenfast: unknown. Also, 1 payment(s) rejected by Tenfast could not be reported by email: invoice INV-1, 1500 paid 2026-10-28: Invoice is voided'
+    )
+    await expect(run).rejects.toHaveProperty(
+      'cause.message',
+      'Failed to record payment for invoice INV-2 in Tenfast: unknown'
+    )
+    expect(store.cursor).toBe('c1')
   })
 
   it('fails the run when no economy address is configured to report rejected payments to', async () => {

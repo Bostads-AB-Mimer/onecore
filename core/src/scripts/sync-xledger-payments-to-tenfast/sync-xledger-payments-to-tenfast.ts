@@ -87,6 +87,9 @@ async function notifySyncFailure(err: unknown) {
 
 type RejectedPayment = { event: PaymentSyncEvent; reason: string }
 
+const describeRejectedPayment = ({ event, reason }: RejectedPayment) =>
+  `invoice ${event.invoiceId}, ${Math.abs(event.amount)} paid ${event.paymentDate.toISOString().slice(0, 10)}: ${reason}`
+
 // A rejected payment is skipped and never tried again, so this message is the
 // only way someone learns to book it by hand. Returns whether it was sent.
 async function notifyRejectedPayments(
@@ -265,7 +268,7 @@ async function syncPayments(store: CursorStore = fileCursorStore) {
   // skipped without asking again.
   const notInTenfast = new Set<string>()
   const rejected: RejectedPayment[] = []
-  let rejectedReported = true
+  let runError: unknown = null
 
   try {
     // Payments are recorded in Xledger order and the cursor is saved after
@@ -288,18 +291,26 @@ async function syncPayments(store: CursorStore = fileCursorStore) {
     if (lastCursor) {
       await store.save(lastCursor)
     }
-  } finally {
-    // Rejected payments are behind the saved cursor and won't be tried again,
-    // so report them even when the run fails part-way.
-    if (rejected.length > 0) {
-      rejectedReported = await notifyRejectedPayments(rejected)
-    }
+  } catch (err: unknown) {
+    runError = err
   }
 
+  // Rejected payments are behind the saved cursor and won't be tried again,
+  // so report them even when the run failed part-way.
+  const rejectedReported =
+    rejected.length === 0 || (await notifyRejectedPayments(rejected))
+
   if (!rejectedReported) {
+    // The failure notification is now the only report left, so it must carry
+    // the rejected payments as well as any error that stopped the run.
+    const unreported = `${rejected.length} payment(s) rejected by Tenfast could not be reported by email: ${rejected.map(describeRejectedPayment).join('; ')}`
     throw new Error(
-      `${rejected.length} payment(s) rejected by Tenfast could not be reported by email: ${rejected.map(({ event }) => event.invoiceId).join(', ')}`
+      runError ? `${errorMessage(runError)}. Also, ${unreported}` : unreported,
+      { cause: runError ?? undefined }
     )
+  }
+  if (runError) {
+    throw runError
   }
 
   logger.info(
