@@ -64,8 +64,44 @@ describe('POST /v1/contacts/sync-to-leasing', () => {
     })
   })
 
-  it('syncs a duplicated or padded code once', async () => {
-    const res = await sync({ contactCodes: ['P242036', ' P242036 '] })
+  it('stops sending codes once leasing stops answering', async () => {
+    mockSync.mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
+    const contactCodes = Array.from({ length: 20 }, (_, i) => `P${i}`)
+
+    const res = await sync({ contactCodes })
+
+    expect(res.status).toBe(200)
+    expect(mockSync.mock.calls.length).toBeLessThan(contactCodes.length)
+    const statuses: string[] = res.body.content.results.map(
+      (r: { status: string }) => r.status
+    )
+    expect(statuses).toHaveLength(contactCodes.length)
+    expect(statuses[0]).toBe('leasing-unreachable')
+    expect(statuses[statuses.length - 1]).toBe('not-attempted')
+    expect(statuses.filter((s) => s === 'leasing-unreachable')).toHaveLength(
+      mockSync.mock.calls.length
+    )
+    expect(res.body.content.failed).toBe(contactCodes.length)
+  })
+
+  it('keeps going when leasing answers with errors', async () => {
+    mockSync.mockResolvedValue({
+      ok: false,
+      err: 'sync-failed',
+      statusCode: 500,
+    })
+    const contactCodes = Array.from({ length: 20 }, (_, i) => `P${i}`)
+
+    const res = await sync({ contactCodes })
+
+    expect(mockSync).toHaveBeenCalledTimes(contactCodes.length)
+    expect(res.body.content.failed).toBe(contactCodes.length)
+  })
+
+  it('syncs a duplicated, padded or lower-cased code once', async () => {
+    const res = await sync({
+      contactCodes: ['P242036', ' P242036 ', 'p242036'],
+    })
 
     expect(res.status).toBe(200)
     expect(mockSync).toHaveBeenCalledTimes(1)
@@ -81,6 +117,9 @@ describe('POST /v1/contacts/sync-to-leasing', () => {
     ['an empty list', { contactCodes: [] }],
     ['a blank code', { contactCodes: ['P000001', '  '] }],
     ['a non-string code', { contactCodes: [123] }],
+    ['a code that is a path', { contactCodes: ['x/../../leases/1#'] }],
+    ['a code with a query', { contactCodes: ['P000001?a=b'] }],
+    ['an overlong code', { contactCodes: ['P'.repeat(21)] }],
   ])('answers 400 for %s without syncing', async (_, body) => {
     const res = await sync(body)
 

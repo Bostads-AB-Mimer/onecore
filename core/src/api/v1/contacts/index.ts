@@ -42,6 +42,11 @@ import { runWithConcurrency } from '@/utils/concurrency'
 // keep only a few in flight at once.
 const SYNC_TO_LEASING_CONCURRENCY = 5
 
+// This many unanswered calls in a row means leasing is down rather than one
+// contact being slow, so the rest of the list is not sent: each further call
+// would only wait out the adapter's timeout.
+const SYNC_TO_LEASING_MAX_UNREACHABLE_IN_A_ROW = 3
+
 type SyncToLeasingStatus = z.infer<
   typeof SyncContactToLeasingStatusSchema_APIv1
 >
@@ -697,9 +702,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
         'data. Changes nothing in the contacts service. Answers 200 with an ' +
         'outcome per contact code once every code has been tried — check ' +
         '`failed`: synced, skipped (leasing has no tenant for the code), ' +
-        'sync-failed (leasing answered with an error) or leasing-unreachable ' +
-        '(whether the tenant was updated is unknown). Every outcome is safe ' +
-        'to retry.',
+        'sync-failed (leasing answered with an error), leasing-unreachable ' +
+        '(whether the tenant was updated is unknown) or not-attempted ' +
+        '(leasing stopped answering, so the code was never sent). Every ' +
+        'outcome is safe to retry.',
       tags: ['Contacts'],
       body: {
         name: 'SyncContactsToLeasingRequest',
@@ -732,12 +738,17 @@ export const routes = (router: OkapiRouter, config: Config) => {
 
       const contactCodes = [...new Set(parsed.data.contactCodes)]
 
+      let unreachableInARow = 0
+      let leasingIsDown = false
+
       // The adapter logs each failure itself, with the status leasing gave.
       const results = await runWithConcurrency(
         contactCodes,
         async (
           contactCode
         ): Promise<{ contactCode: string; status: SyncToLeasingStatus }> => {
+          if (leasingIsDown) return { contactCode, status: 'not-attempted' }
+
           const result = await leasingAdapter.syncContactToLeasing(contactCode)
           const status: SyncToLeasingStatus = result.ok
             ? result.data.skipped
@@ -746,6 +757,14 @@ export const routes = (router: OkapiRouter, config: Config) => {
             : result.err === 'sync-failed'
               ? 'sync-failed'
               : 'leasing-unreachable'
+
+          // Any answer from leasing, even an error, shows it is up.
+          unreachableInARow =
+            status === 'leasing-unreachable' ? unreachableInARow + 1 : 0
+          if (unreachableInARow >= SYNC_TO_LEASING_MAX_UNREACHABLE_IN_A_ROW) {
+            leasingIsDown = true
+          }
+
           return { contactCode, status }
         },
         SYNC_TO_LEASING_CONCURRENCY
@@ -756,7 +775,7 @@ export const routes = (router: OkapiRouter, config: Config) => {
       const summary = {
         synced: count(['synced']),
         skipped: count(['skipped']),
-        failed: count(['sync-failed', 'leasing-unreachable']),
+        failed: count(['sync-failed', 'leasing-unreachable', 'not-attempted']),
       }
 
       if (summary.failed > 0) {

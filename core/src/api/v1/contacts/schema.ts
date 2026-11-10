@@ -257,13 +257,25 @@ export const RelationErrorResponseBodySchema_APIv1 = z.object({
   detail: z.string().optional(),
 })
 
-// Each code is one leasing call (and a Tenfast pull behind it), so a request
-// is capped; send larger lists in several requests.
-export const MAX_SYNC_TO_LEASING_CONTACT_CODES = 500
+// Each code is one leasing call that waits on the external leasing system
+// (a second or two each, five at a time), and the whole list is synced before
+// the request is answered. The cap keeps that within an ordinary request
+// timeout; send larger lists in several requests.
+export const MAX_SYNC_TO_LEASING_CONTACT_CODES = 50
+
+// A code becomes a path segment of the leasing call, so only the characters a
+// contact code is made of are let through. Upper-cased because Xpand compares
+// codes ignoring case: "p242036" and "P242036" are the same contact.
+const SyncToLeasingContactCodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z0-9]+$/, 'must be letters and digits only')
+  .max(20)
 
 export const SyncContactsToLeasingRequestBodySchema_APIv1 = z.object({
   contactCodes: z
-    .array(z.string().trim().min(1))
+    .array(SyncToLeasingContactCodeSchema)
     .min(1)
     .max(MAX_SYNC_TO_LEASING_CONTACT_CODES)
     .describe(
@@ -279,6 +291,8 @@ export const SyncContactsToLeasingRequestBodySchema_APIv1 = z.object({
  * - `sync-failed`: leasing answered with an error; the tenant was not updated.
  * - `leasing-unreachable`: leasing could not be reached or did not answer in
  *   time; whether the tenant was updated is unknown.
+ * - `not-attempted`: leasing stopped answering earlier in the request, so this
+ *   code was never sent; the tenant was not updated.
  *
  * Every outcome is safe to retry: a sync only makes leasing pull the current
  * contact data again.
@@ -288,6 +302,7 @@ export const SyncContactToLeasingStatusSchema_APIv1 = z.enum([
   'skipped',
   'sync-failed',
   'leasing-unreachable',
+  'not-attempted',
 ])
 
 export const SyncContactsToLeasingResponseBodySchema_APIv1 = z.object({
@@ -303,7 +318,9 @@ export const SyncContactsToLeasingResponseBodySchema_APIv1 = z.object({
     failed: z
       .number()
       .int()
-      .describe('Codes with status sync-failed or leasing-unreachable.'),
+      .describe(
+        'Codes with status sync-failed, leasing-unreachable or not-attempted.'
+      ),
   }),
 })
 

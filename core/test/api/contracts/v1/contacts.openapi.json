@@ -3514,7 +3514,7 @@
     "/v1/contacts/sync-to-leasing": {
       "post": {
         "summary": "Make leasing pull the current data of a list of contacts",
-        "description": "Asks leasing to fetch each contact from ONECore again and update its tenant, e.g. after tenants were stored with outdated or redacted data. Changes nothing in the contacts service. Answers 200 with an outcome per contact code once every code has been tried — check `failed`: synced, skipped (leasing has no tenant for the code), sync-failed (leasing answered with an error) or leasing-unreachable (whether the tenant was updated is unknown). Every outcome is safe to retry.",
+        "description": "Asks leasing to fetch each contact from ONECore again and update its tenant, e.g. after tenants were stored with outdated or redacted data. Changes nothing in the contacts service. Answers 200 with an outcome per contact code once every code has been tried — check `failed`: synced, skipped (leasing has no tenant for the code), sync-failed (leasing answered with an error), leasing-unreachable (whether the tenant was updated is unknown) or not-attempted (leasing stopped answering, so the code was never sent). Every outcome is safe to retry.",
         "tags": [
           "Contacts"
         ],
@@ -3553,7 +3553,8 @@
                                   "synced",
                                   "skipped",
                                   "sync-failed",
-                                  "leasing-unreachable"
+                                  "leasing-unreachable",
+                                  "not-attempted"
                                 ]
                               }
                             },
@@ -3572,7 +3573,7 @@
                         },
                         "failed": {
                           "type": "integer",
-                          "description": "Codes with status sync-failed or leasing-unreachable."
+                          "description": "Codes with status sync-failed, leasing-unreachable or not-attempted."
                         }
                       },
                       "required": [
@@ -5211,11 +5212,12 @@
             "type": "array",
             "items": {
               "type": "string",
-              "minLength": 1
+              "pattern": "^[A-Z0-9]+$",
+              "maxLength": 20
             },
             "minItems": 1,
-            "maxItems": 500,
-            "description": "Contact codes to sync, at most 500. Duplicates are synced once."
+            "maxItems": 50,
+            "description": "Contact codes to sync, at most 50. Duplicates are synced once."
           }
         },
         "required": [
