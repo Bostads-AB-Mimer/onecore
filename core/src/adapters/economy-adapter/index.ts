@@ -688,10 +688,17 @@ export async function getPaymentsSince(
   }
 }
 
+export type RecordInvoicePaymentError =
+  'not-found' | 'payment-rejected' | 'unknown'
+
+/**
+ * For 'payment-rejected', `detail` is Tenfast's reason for refusing the
+ * payment.
+ */
 export async function recordInvoicePayment(
   invoiceId: string,
   payment: { amount: number; dateTime: Date; method: string }
-): Promise<AdapterResult<null, 'not-found' | 'unknown'>> {
+): Promise<AdapterResult<null, RecordInvoicePaymentError>> {
   try {
     const response = await axios.post(
       `${config.economyService.url}/invoices/${encodeURIComponent(invoiceId)}/payments`,
@@ -699,7 +706,10 @@ export async function recordInvoicePayment(
         amount: payment.amount,
         dateTime: payment.dateTime.toISOString(),
         method: payment.method,
-      }
+      },
+      // Handle every status here instead of relying on the process-wide
+      // axios default set by leasing-adapter.
+      { validateStatus: () => true }
     )
 
     if (response.status === 200) {
@@ -708,14 +718,30 @@ export async function recordInvoicePayment(
     if (response.status === 404) {
       return { ok: false, err: 'not-found', statusCode: 404 }
     }
-
-    logger.error(response.data, 'economy-adapter.recordInvoicePayment')
-    return { ok: false, err: 'unknown', statusCode: response.status }
-  } catch (err: any) {
-    if (axios.isAxiosError(err) && err.response?.status === 404) {
-      return { ok: false, err: 'not-found', statusCode: 404 }
+    if (response.status === 409) {
+      const body = economy.RecordPaymentRejectedResponseSchema.safeParse(
+        response.data
+      )
+      if (body.success) {
+        return {
+          ok: false,
+          err: 'payment-rejected',
+          statusCode: 409,
+          detail: body.data.reason,
+        }
+      }
     }
-    logger.error(err, 'economy-adapter.recordInvoicePayment')
+
+    logger.error(
+      { status: response.status, error: response.data },
+      'economy-adapter.recordInvoicePayment'
+    )
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: unknown) {
+    logger.error(
+      { error: errorMessage(err) },
+      'economy-adapter.recordInvoicePayment'
+    )
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }
