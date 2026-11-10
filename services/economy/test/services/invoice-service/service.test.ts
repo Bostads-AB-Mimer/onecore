@@ -56,6 +56,9 @@ jest.mock(
 )
 
 jest.mock('@src/services/invoice-service/adapters/xpand-db-adapter', () => ({
+  RoundOffInformationNotFoundError: jest.requireActual(
+    '@src/services/invoice-service/adapters/xpand-db-adapter'
+  ).RoundOffInformationNotFoundError,
   getRoundOffInformation: jest.fn(),
   enrichInvoiceWithAccounting: jest.fn(),
   getActiveRentalBlocksWithAccounting: jest.fn(),
@@ -114,6 +117,7 @@ import {
 } from '@src/services/invoice-service/adapters/invoice-data-db-adapter'
 import {
   getRoundOffInformation,
+  RoundOffInformationNotFoundError,
   enrichInvoiceWithAccounting,
   getActiveRentalBlocksWithAccounting,
   getRentalSpecificRules,
@@ -663,7 +667,11 @@ describe('Rental Invoice Accounting', () => {
 
       expect(result.exportedInvoices.map((i) => i.invoiceId)).toEqual(['good'])
       expect(result.errors).toEqual([
-        { invoiceNumber: 'bad', error: 'enrich failed' },
+        {
+          invoiceNumber: 'bad',
+          code: 'accounting-failed',
+          error: 'enrich failed',
+        },
       ])
     })
 
@@ -699,9 +707,7 @@ describe('Rental Invoice Accounting', () => {
       })
       ;(enrichInvoiceWithAccounting as jest.Mock).mockResolvedValue(undefined)
       mockGetRoundOffInformation.mockRejectedValue(
-        new Error(
-          'Konto för öresutjämning (ORESUTJ) saknas i Xpand för år 2026'
-        )
+        new RoundOffInformationNotFoundError('2026')
       )
 
       const result = await exportRentalInvoicesAccounting('001')
@@ -710,6 +716,7 @@ describe('Rental Invoice Accounting', () => {
       expect(result.errors).toEqual([
         {
           invoiceNumber: 'rounded',
+          code: 'missing-round-off-account',
           error: 'Konto för öresutjämning (ORESUTJ) saknas i Xpand för år 2026',
         },
       ])

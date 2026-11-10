@@ -1889,6 +1889,7 @@ describe(getInvoicesNotExported, () => {
     expect(result.data.errors).toEqual([
       {
         invoiceNumber: record.ocrNumber,
+        code: 'missing-rent-article',
         error: 'Minst en hyresrad på avin saknar hyresartikel',
       },
     ])
@@ -1907,6 +1908,8 @@ describe(getInvoicesNotExported, () => {
     expect(result.data.errors).toEqual([
       {
         invoiceNumber: record.ocrNumber,
+        code: 'rent-article-not-found',
+        rentArticle: 'a-1',
         error: 'Hyresartikeln a-1 finns inte i Tenfast',
       },
     ])
@@ -1927,6 +1930,8 @@ describe(getInvoicesNotExported, () => {
     expect(result.data.errors).toEqual([
       {
         invoiceNumber: record.ocrNumber,
+        code: 'rent-article-fetch-failed',
+        rentArticle: 'a-1',
         error: 'Kunde inte hämta hyresartikeln a-1 från Tenfast',
       },
     ])
