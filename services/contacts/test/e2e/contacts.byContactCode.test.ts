@@ -65,7 +65,7 @@ describe('/contacts/:contactCode', () => {
           phoneNumbers: [
             {
               phoneNumber: 'redacted',
-              isPrimary: false,
+              isPrimary: true,
               type: 'unspecified',
             },
           ],

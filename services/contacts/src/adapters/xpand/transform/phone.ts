@@ -329,7 +329,9 @@ export const transformPhoneNumber = (
   return extractedNumbers.map((num, i) => ({
     phoneNumber: num.extracted,
     type: toPhoneNumberType(pn.phoneType),
-    isPrimary: i > 0 ? Boolean(pn.isPrimaryPhone) : false,
+    // The row's main flag belongs to its first number; any further numbers
+    // written into the same field are extras.
+    isPrimary: i === 0 && Boolean(pn.isPrimaryPhone),
     comment: extractPhoneNumberComment(
       pn.phoneNumber,
       num.literal ?? num.extracted
