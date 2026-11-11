@@ -123,9 +123,7 @@ const buildColumns = (
     label: 'Tillgänglig från',
     render: (a) => (
       <>
-        {/* availableFrom overrides the computed vacantFrom when a leasing
-            officer has set one via "Redigera annons". */}
-        {formatDate(a.listing?.availableFrom ?? a.vacantFrom)}
+        {formatDate(a.vacantFrom)}
         {a.block?.reason && (
           <span className="block text-xs text-muted-foreground">
             Spärr: {a.block.reason}

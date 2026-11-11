@@ -586,6 +586,31 @@ describe('POST /listings/summaries', () => {
 })
 
 describe('PATCH /listings/:listingId', () => {
+  it('responds with 400 for a non-numeric listingId', async () => {
+    const spy = jest.spyOn(listingAdapter, 'updateListing')
+
+    const res = await request(app.callback())
+      .patch('/listings/not-a-number')
+      .send({ reviewedAt: new Date().toISOString() })
+
+    expect(res.status).toBe(400)
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it.each(['0x10', '1e2', '1.5'])(
+    'responds with 400 for a non-decimal-looking listingId (%s)',
+    async (listingId) => {
+      const spy = jest.spyOn(listingAdapter, 'updateListing')
+
+      const res = await request(app.callback())
+        .patch(`/listings/${listingId}`)
+        .send({ reviewedAt: new Date().toISOString() })
+
+      expect(res.status).toBe(400)
+      expect(spy).not.toHaveBeenCalled()
+    }
+  )
+
   it('responds with 200 on success', async () => {
     const listing = factory.listing.build({ id: 1337 })
     const spy = jest

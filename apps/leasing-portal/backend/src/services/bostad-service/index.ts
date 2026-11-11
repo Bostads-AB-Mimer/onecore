@@ -115,8 +115,8 @@ export const routes = (router: OkapiRouter, { coreClient }: AppModules) => {
       summary: 'Update a listing',
       description:
         'Partially updates publishedFrom, publishedTo, reviewedAt, ' +
-        'reviewedBy, availableFrom and tentativeAvailableFrom on a ' +
-        'listing. Passthrough to core.',
+        'reviewedBy and tentativeAvailableFrom on a listing. ' +
+        'Passthrough to core.',
       tags: ['Bostad'],
       params: {
         listingId: {

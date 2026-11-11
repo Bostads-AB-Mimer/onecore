@@ -249,7 +249,6 @@ interface Listing {
   listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
   reviewedAt?: Date | null // "Granskad – redo att publicera", set by the reviewer
   reviewedBy?: string | null
-  availableFrom?: Date | null // Overrides the computed vacancy date when set
   tentativeAvailableFrom?: Date | null // "Eventuellt tillgänglig från"
   applicants?: Applicant[]
   rentalObject: RentalObject

@@ -39,6 +39,14 @@ export function useCreateListing() {
         description: describeBffError(error),
         variant: 'destructive',
       })
+
+      // 409 means someone else already created a listing for this apartment
+      // since the list was last fetched (it's cached for 5 minutes). Without
+      // this, the row keeps showing no listing and "Redigera annons" stays
+      // stuck disabled until the cache expires on its own.
+      if (error instanceof BffRequestError && error.status === 409) {
+        queryClient.invalidateQueries({ queryKey: vacantApartmentsQueryKey })
+      }
     },
   })
 }

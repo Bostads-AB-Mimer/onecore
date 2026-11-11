@@ -1058,7 +1058,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Update listing publish/review fields
    *     tags:
    *       - Lease service
-   *     description: Partially updates a listing's publishedFrom, publishedTo, reviewedAt, reviewedBy, availableFrom and tentativeAvailableFrom fields.
+   *     description: Partially updates a listing's publishedFrom, publishedTo, reviewedAt, reviewedBy and tentativeAvailableFrom fields.
    *     parameters:
    *       - in: path
    *         name: listingId
@@ -1088,10 +1088,6 @@ export const routes = (router: KoaRouter) => {
    *               reviewedBy:
    *                 type: string
    *                 nullable: true
-   *               availableFrom:
-   *                 type: string
-   *                 format: date-time
-   *                 nullable: true
    *               tentativeAvailableFrom:
    *                 type: string
    *                 format: date-time
@@ -1111,8 +1107,22 @@ export const routes = (router: KoaRouter) => {
     parseRequestBody(leasing.UpdateListingSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
+      // Plain-digits check first — Number() alone would also accept hex
+      // (0x10) and exponential (1e2) notation as "integers".
+      const listingId = /^\d+$/.test(ctx.params.listingId)
+        ? Number(ctx.params.listingId)
+        : NaN
+      if (!Number.isInteger(listingId)) {
+        ctx.status = 400
+        ctx.body = {
+          error: UpdateListingErrorCodes.InvalidListingId,
+          ...metadata,
+        }
+        return
+      }
+
       const result = await listingAdapter.updateListing(
-        Number(ctx.params.listingId),
+        listingId,
         ctx.request.body
       )
 

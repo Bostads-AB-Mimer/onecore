@@ -15,7 +15,6 @@ export interface UpdateListingInput {
   publishedTo?: string | null
   reviewedAt?: string | null
   reviewedBy?: string | null
-  availableFrom?: string | null
   tentativeAvailableFrom?: string | null
 }
 

@@ -30,15 +30,12 @@ import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { CalendarIcon } from 'lucide-react'
 
-import { useLeasingHost } from '../../host/useLeasingHost'
-
 import { useUpdateListing } from './useUpdateListing'
 import type { VacantApartment } from './useVacantApartments'
 
 interface ListingFormValues {
   publishedTo: Date | undefined
   publishUntilFurtherNotice: boolean
-  availableFrom: Date | undefined
   tentativeAvailableFrom: Date | undefined
   reviewed: boolean
 }
@@ -68,13 +65,6 @@ const defaultValues = (apartment: VacantApartment): ListingFormValues => ({
   // regardless of whether that's because the officer chose "tillsvidare" or
   // because the listing hasn't had an end date set at all yet.
   publishUntilFurtherNotice: !apartment.listing?.publishedTo,
-  // availableFrom overrides the computed vacantFrom when set; prefill with
-  // the override if one exists, otherwise the computed value (as before).
-  availableFrom: apartment.listing?.availableFrom
-    ? new Date(apartment.listing.availableFrom)
-    : apartment.vacantFrom
-      ? new Date(apartment.vacantFrom)
-      : undefined,
   tentativeAvailableFrom: apartment.listing?.tentativeAvailableFrom
     ? new Date(apartment.listing.tentativeAvailableFrom)
     : undefined,
@@ -90,7 +80,6 @@ export function EditListingDialog({
   apartment,
   onClose,
 }: EditListingDialogProps) {
-  const { user } = useLeasingHost()
   const updateListing = useUpdateListing()
   const form = useForm<ListingFormValues>({
     // apartment is only ever null before the early `return null` below, so
@@ -112,20 +101,13 @@ export function EditListingDialog({
   }
 
   const onSubmit = (values: ListingFormValues) => {
-    // No listing exists yet to edit — creating one is a separate flow, not
-    // built here (the menu item that opens this dialog is disabled until then).
+    // The menu item that opens this dialog creates a draft listing first if
+    // the apartment doesn't have one yet (see VacantApartmentsTable's
+    // handleEdit), so this should never actually be missing here — just a
+    // type-narrowing guard.
     if (!apartment.listing) return
 
     const alreadyPublished = !!apartment.listing.publishedFrom
-
-    // Only persist availableFrom as an override when it actually diverges
-    // from the computed vacantFrom — otherwise every save would freeze a
-    // stale snapshot of the computed value as a permanent override.
-    const computedVacantFrom = apartment.vacantFrom
-      ? new Date(apartment.vacantFrom).getTime()
-      : null
-    const availableFromChanged =
-      (values.availableFrom?.getTime() ?? null) !== computedVacantFrom
 
     updateListing.mutate(
       {
@@ -139,21 +121,15 @@ export function EditListingDialog({
               ? toDateOnlyString(values.publishedTo)
               : null,
         }),
-        availableFrom: availableFromChanged
-          ? values.availableFrom
-            ? toDateOnlyString(values.availableFrom)
-            : null
-          : null,
         tentativeAvailableFrom: values.tentativeAvailableFrom
           ? toDateOnlyString(values.tentativeAvailableFrom)
           : null,
         reviewedAt: values.reviewed
           ? (apartment.listing.reviewedAt ?? new Date().toISOString())
           : null,
-        reviewedBy: values.reviewed
-          ? (apartment.listing.reviewedBy ??
-            [user.email, user.name, user.id].find(Boolean))
-          : null,
+        // reviewedBy is derived server-side from the authenticated caller —
+        // the value sent here is ignored, but reviewedAt alone decides
+        // whether core clears or sets it.
       },
       { onSuccess: onClose }
     )
@@ -307,42 +283,14 @@ export function EditListingDialog({
                 )}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {/* Prefilled with the computed vacantFrom (AVTAL-343); saving
-                      without changing it keeps relying on that computed value
-                      instead of freezing it as a permanent override. */}
-                  <FormField
-                    control={form.control}
-                    name="availableFrom"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Tillgänglig från</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full justify-start text-left font-normal"
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {field.value
-                                  ? format(field.value, 'd MMMM yyyy', {
-                                      locale: sv,
-                                    })
-                                  : 'Välj datum'}
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </FormItem>
-                    )}
+                  {/* Computed (block end date + end date of the last active
+                      lease, see determineVacantFrom) — not editable. A
+                      vacancy date earlier than this is enforced by a block
+                      instead, which the letting process already honors
+                      (AVTAL-215), so there is no separate override here. */}
+                  <Field
+                    label="Tillgänglig från"
+                    value={formatDate(apartment.vacantFrom)}
                   />
                   {/* No computed fallback — an unconfirmed earlier move-out
                       date. */}

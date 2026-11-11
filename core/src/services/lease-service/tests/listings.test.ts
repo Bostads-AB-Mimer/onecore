@@ -957,3 +957,227 @@ describe('POST /listings/:listingId/offers', () => {
     expect(res.body.error).toBe(CreateOfferErrorCodes.NoListing)
   })
 })
+
+describe('POST /listings', () => {
+  it('responds with 201 on success', async () => {
+    const listing = factory.listing.build({ id: 1337 })
+    const spy = jest
+      .spyOn(tenantLeaseAdapter, 'createNewListing')
+      .mockResolvedValueOnce({ ok: true, data: listing })
+
+    const res = await request(app.callback()).post('/listings').send({
+      rentalObjectCode: 'R1001',
+      listingCategory: 'APARTMENT',
+    })
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rentalObjectCode: 'R1001',
+        listingCategory: 'APARTMENT',
+      })
+    )
+    expect(res.status).toBe(201)
+    expect(res.body.content).toEqual(
+      JSON.parse(JSON.stringify(listing)) // dates round-trip through JSON as strings
+    )
+  })
+
+  it('responds with 400 for a listingCategory other than APARTMENT', async () => {
+    const spy = jest.spyOn(tenantLeaseAdapter, 'createNewListing')
+
+    const res = await request(app.callback()).post('/listings').send({
+      rentalObjectCode: 'R1001',
+      listingCategory: 'PARKING_SPACE',
+    })
+
+    expect(res.status).toBe(400)
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('responds with 409 when an active listing already exists', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'createNewListing')
+      .mockResolvedValueOnce({ ok: false, err: 'conflict' })
+
+    const res = await request(app.callback()).post('/listings').send({
+      rentalObjectCode: 'R1001',
+      listingCategory: 'APARTMENT',
+    })
+
+    expect(res.status).toBe(409)
+  })
+
+  it('responds with 500 on an unexpected adapter error', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'createNewListing')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback()).post('/listings').send({
+      rentalObjectCode: 'R1001',
+      listingCategory: 'APARTMENT',
+    })
+
+    expect(res.status).toBe(500)
+  })
+})
+
+describe('PATCH /listings/:listingId', () => {
+  const TEST_USER = {
+    email: 'reviewer@mimer.se',
+    name: 'Rut Reviewer',
+    preferred_username: 'rutr',
+  }
+  let mockUser: Partial<typeof TEST_USER> | undefined = TEST_USER
+
+  const appWithUser = new Koa()
+  const routerWithUser = new KoaRouter()
+  routes(routerWithUser)
+  appWithUser.use(bodyParser())
+  appWithUser.use((ctx, next) => {
+    ctx.state.user = mockUser
+    return next()
+  })
+  appWithUser.use(routerWithUser.routes())
+
+  beforeEach(() => {
+    mockUser = TEST_USER
+  })
+
+  it('responds with 400 for a non-numeric listingId', async () => {
+    const listing = factory.listing.build({ id: 1337 })
+    const spy = jest
+      .spyOn(tenantLeaseAdapter, 'updateListing')
+      .mockResolvedValueOnce({ ok: true, data: listing })
+
+    const res = await request(appWithUser.callback())
+      .patch('/listings/not-a-number')
+      .send({ reviewedAt: new Date().toISOString() })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('invalid-listing-id')
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it.each(['0x10', '1e2', '1.5'])(
+    'responds with 400 for a non-decimal-looking listingId (%s)',
+    async (listingId) => {
+      const spy = jest.spyOn(tenantLeaseAdapter, 'updateListing')
+
+      const res = await request(appWithUser.callback())
+        .patch(`/listings/${listingId}`)
+        .send({ reviewedAt: new Date().toISOString() })
+
+      expect(res.status).toBe(400)
+      expect(spy).not.toHaveBeenCalled()
+    }
+  )
+
+  it('falls back to preferred_username when name is an empty string', async () => {
+    const listing = factory.listing.build({ id: 1337 })
+    const spy = jest
+      .spyOn(tenantLeaseAdapter, 'updateListing')
+      .mockResolvedValueOnce({ ok: true, data: listing })
+
+    mockUser = { name: '', preferred_username: 'rutr', email: 'r@mimer.se' }
+    await request(appWithUser.callback())
+      .patch('/listings/1337')
+      .send({ reviewedAt: new Date().toISOString() })
+
+    expect(spy).toHaveBeenCalledWith(
+      1337,
+      expect.objectContaining({ reviewedBy: 'rutr' })
+    )
+  })
+
+  it('clears reviewedAt too when only reviewedBy is sent, instead of leaving a reviewed-by-nobody row', async () => {
+    const listing = factory.listing.build({ id: 1337 })
+    const spy = jest
+      .spyOn(tenantLeaseAdapter, 'updateListing')
+      .mockResolvedValueOnce({ ok: true, data: listing })
+
+    await request(appWithUser.callback())
+      .patch('/listings/1337')
+      .send({ reviewedBy: 'someone-the-client-made-up' })
+
+    expect(spy).toHaveBeenCalledWith(
+      1337,
+      expect.objectContaining({ reviewedAt: null, reviewedBy: null })
+    )
+  })
+
+  it('sets reviewedBy from the authenticated user, ignoring the client-supplied value', async () => {
+    const listing = factory.listing.build({ id: 1337 })
+    const spy = jest
+      .spyOn(tenantLeaseAdapter, 'updateListing')
+      .mockResolvedValueOnce({ ok: true, data: listing })
+
+    await request(appWithUser.callback())
+      .patch('/listings/1337')
+      .send({
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: 'someone-the-client-made-up',
+      })
+
+    expect(spy).toHaveBeenCalledWith(
+      1337,
+      expect.objectContaining({ reviewedBy: 'Rut Reviewer' })
+    )
+  })
+
+  it('falls back to preferred_username, then email, when name is missing', async () => {
+    const listing = factory.listing.build({ id: 1337 })
+    const spy = jest
+      .spyOn(tenantLeaseAdapter, 'updateListing')
+      .mockResolvedValue({ ok: true, data: listing })
+
+    mockUser = { preferred_username: 'rutr', email: 'reviewer@mimer.se' }
+    await request(appWithUser.callback())
+      .patch('/listings/1337')
+      .send({ reviewedAt: new Date().toISOString() })
+
+    expect(spy).toHaveBeenCalledWith(
+      1337,
+      expect.objectContaining({ reviewedBy: 'rutr' })
+    )
+
+    mockUser = { email: 'reviewer@mimer.se' }
+    await request(appWithUser.callback())
+      .patch('/listings/1337')
+      .send({ reviewedAt: new Date().toISOString() })
+
+    expect(spy).toHaveBeenLastCalledWith(
+      1337,
+      expect.objectContaining({ reviewedBy: 'reviewer@mimer.se' })
+    )
+  })
+
+  it('clears reviewedBy when reviewedAt is cleared, regardless of the client-supplied value', async () => {
+    const listing = factory.listing.build({ id: 1337 })
+    const spy = jest
+      .spyOn(tenantLeaseAdapter, 'updateListing')
+      .mockResolvedValueOnce({ ok: true, data: listing })
+
+    await request(appWithUser.callback())
+      .patch('/listings/1337')
+      .send({ reviewedAt: null, reviewedBy: 'someone-the-client-made-up' })
+
+    expect(spy).toHaveBeenCalledWith(
+      1337,
+      expect.objectContaining({ reviewedAt: null, reviewedBy: null })
+    )
+  })
+
+  it('leaves reviewedBy untouched when the request does not mention review at all', async () => {
+    const listing = factory.listing.build({ id: 1337 })
+    const spy = jest
+      .spyOn(tenantLeaseAdapter, 'updateListing')
+      .mockResolvedValueOnce({ ok: true, data: listing })
+
+    await request(appWithUser.callback())
+      .patch('/listings/1337')
+      .send({ publishedTo: new Date().toISOString() })
+
+    const [, update] = spy.mock.calls[0]
+    expect(update).not.toHaveProperty('reviewedBy')
+  })
+})

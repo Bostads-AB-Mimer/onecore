@@ -16,9 +16,6 @@ export const ListingSchema = z.object({
   listingCategory: z.enum(['PARKING_SPACE', 'APARTMENT', 'STORAGE']),
   reviewedAt: z.coerce.date().nullable().optional(),
   reviewedBy: z.string().nullable().optional(),
-  // Overrides the computed vacancy date (vacantFrom, from Tenfast lease
-  // data) when set; null means "use the computed value".
-  availableFrom: z.coerce.date().nullable().optional(),
   // Unconfirmed earlier move-out date ("Eventuellt tillgänglig från"), no
   // computed equivalent.
   tentativeAvailableFrom: z.coerce.date().nullable().optional(),
@@ -50,7 +47,6 @@ export const UpdateListingSchema = z.object({
   publishedTo: z.coerce.date().nullable().optional(),
   reviewedAt: z.coerce.date().nullable().optional(),
   reviewedBy: z.string().nullable().optional(),
-  availableFrom: z.coerce.date().nullable().optional(),
   tentativeAvailableFrom: z.coerce.date().nullable().optional(),
 })
 
