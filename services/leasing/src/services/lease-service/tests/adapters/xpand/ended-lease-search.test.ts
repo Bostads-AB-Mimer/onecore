@@ -86,7 +86,7 @@ describe('getAllEndedLeasesForSearch', () => {
 
   it('labels a parking lease "Parkering"', async () => {
     mockRows = [
-      { ...baseRow, objectTypeCode: 'babps', leaseType: 'Bilplatskontrakt' },
+      { ...baseRow, objectTypeCode: 'babps', leaseType: 'P-Platskontrakt ' },
     ]
     const [lease] = await run()
     expect(lease.objectTypeCode).toBe('Parkering')
