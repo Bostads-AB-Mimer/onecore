@@ -176,7 +176,7 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include Upphört (ended) contracts. Excluded by default for performance.
+   *         description: Include Upphört (ended) contracts, including those that ended in Xpand before Tenfast. Excluded by default for performance.
    *       - in: query
    *         name: sortBy
    *         schema:
@@ -376,11 +376,13 @@ export const routes = (router: KoaRouter) => {
    *         description: District names
    *     responses:
    *       200:
-   *         description: Successfully retrieved leases.
+   *         description: Successfully retrieved leases. With ended in status, also holds leases that ended in Xpand before the move to Tenfast.
    *       400:
    *         description: Invalid query parameters
    *       500:
    *         description: Internal server error
+   *       503:
+   *         description: A lease cache is still loading. Retry after the Retry-After header.
    */
   router.get('(.*)/leases/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
@@ -447,7 +449,7 @@ export const routes = (router: KoaRouter) => {
    * /leases/search:
    *   get:
    *     summary: Search and filter leases
-   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges.
+   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges. When status includes ended or includeEnded is true, results also hold leases that ended in Xpand before the move to Tenfast; Tenfast wins when both hold the same lease.
    *     tags: [Leases]
    *     parameters:
    *       - in: query
@@ -519,6 +521,12 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: District names (stadsdel)
    *       - in: query
+   *         name: includeEnded
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include ended (Upphört) leases, including those that ended in Xpand before Tenfast.
+   *       - in: query
    *         name: page
    *         schema:
    *           type: integer
@@ -575,6 +583,8 @@ export const routes = (router: KoaRouter) => {
    *         description: Invalid query parameters
    *       500:
    *         description: Internal server error
+   *       503:
+   *         description: A lease cache is still loading (Tenfast, or Xpand ended leases when ended is requested). Retry after the Retry-After header.
    */
   router.get('(.*)/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
