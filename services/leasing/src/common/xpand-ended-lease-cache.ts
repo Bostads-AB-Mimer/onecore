@@ -13,6 +13,7 @@ export const FIRST_LOAD_RETRY_MS = 30_000
 let leases: leasing.v1.LeaseSearchResult[] = []
 let ready = false
 let ongoingLoad: Promise<void> | null = null
+let retryTimer: ReturnType<typeof setTimeout> | null = null
 
 async function load(loadFn: LoadFn): Promise<void> {
   const started = Date.now()
@@ -25,8 +26,11 @@ async function load(loadFn: LoadFn): Promise<void> {
       { err: result.err, keptRows: leases.length },
       'xpand-ended-lease-cache: load failed, keeping previous data'
     )
-    if (!ready) {
-      setTimeout(() => reload(loadFn).catch(() => {}), FIRST_LOAD_RETRY_MS)
+    if (!ready && !retryTimer) {
+      retryTimer = setTimeout(() => {
+        retryTimer = null
+        reload(loadFn).catch(() => {})
+      }, FIRST_LOAD_RETRY_MS)
     }
     return
   }

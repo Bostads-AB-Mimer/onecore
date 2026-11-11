@@ -88,6 +88,17 @@ describe('xpand-ended-lease-cache', () => {
     expect(loadFn).toHaveBeenCalledTimes(2)
   })
 
+  it('keeps one retry cycle when the nightly reload also fails', async () => {
+    const loadFn = jest.fn().mockResolvedValue({ ok: false, err: 'down' })
+
+    await cache.startXpandEndedLeaseCache(loadFn)
+    await jest.advanceTimersByTimeAsync(DAY_MS)
+    const callsAfterDay = loadFn.mock.calls.length
+    await jest.advanceTimersByTimeAsync(cache.FIRST_LOAD_RETRY_MS * 10)
+
+    expect(loadFn.mock.calls.length - callsAfterDay).toBeLessThanOrEqual(10)
+  })
+
   it('keeps the previous data when a reload fails', async () => {
     const loadFn = jest
       .fn()

@@ -124,6 +124,22 @@ describe('lease search with ended Xpand leases', () => {
       expect(ids(rows).sort()).toEqual(['tenfast-current', 'xpand-ended'])
     })
 
+    it('picks up new rows after either cache reloads', async () => {
+      const tenfastRows = [makeResult('tenfast-current')]
+      mockedTenfastGetAll.mockReturnValue(tenfastRows)
+      expect(ids(await search({ status: ['ended'] }))).toEqual(['xpand-ended'])
+
+      xpandCache.getAll.mockReturnValue([makeXpandEnded('xpand-reloaded')])
+      expect(ids(await search({ status: ['ended'] }))).toEqual([
+        'xpand-reloaded',
+      ])
+
+      mockedTenfastGetAll.mockReturnValue([
+        makeResult('xpand-reloaded', { status: LeaseStatus.Current }),
+      ])
+      expect(ids(await search({ status: ['ended'] }))).toEqual([])
+    })
+
     it('does not add Xpand leases to a default search', async () => {
       const rows = await search({})
       expect(ids(rows)).toEqual(['tenfast-current'])
