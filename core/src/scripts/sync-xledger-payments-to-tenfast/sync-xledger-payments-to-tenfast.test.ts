@@ -67,17 +67,71 @@ afterEach(nock.cleanAll)
 
 describe('syncPayments', () => {
   describe('bootstrap (no saved cursor)', () => {
+    const originalEconomy = config.emailAddresses.economy
+
+    beforeEach(() => {
+      config.emailAddresses.economy = 'economy@example.com'
+    })
+
+    afterEach(() => {
+      config.emailAddresses.economy = originalEconomy
+    })
+
     it('fetches the latest cursor from Xledger, saves it, and exits without processing payments', async () => {
       const store = makeStore()
 
       nock(ECONOMY_URL)
         .get('/payments/latest-cursor')
         .reply(200, { content: 'cursor-seed' })
+      nock(COMM_URL).post('/send-email').reply(200, {})
 
       await syncPayments(store)
 
       expect(store.cursor).toBe('cursor-seed')
       expect(nock.pendingMocks()).toHaveLength(0)
+    })
+
+    it('emails the economy address that the sync started from the latest payment', async () => {
+      nock(ECONOMY_URL)
+        .get('/payments/latest-cursor')
+        .reply(200, { content: 'cursor-seed' })
+
+      let capturedBody = ''
+      const emailScope = nock(COMM_URL)
+        .post('/send-email', (body) => {
+          capturedBody = JSON.stringify(body)
+          return true
+        })
+        .reply(200, {})
+
+      await syncPayments(makeStore())
+
+      expect(emailScope.isDone()).toBe(true)
+      expect(capturedBody).toContain('cursor-seed')
+    })
+
+    it('keeps the saved cursor but fails the run when the email cannot be sent', async () => {
+      const store = makeStore()
+      nock(ECONOMY_URL)
+        .get('/payments/latest-cursor')
+        .reply(200, { content: 'cursor-seed' })
+      nock(COMM_URL).post('/send-email').reply(500, {})
+
+      await expect(syncPayments(store)).rejects.toThrow(
+        'could not be reported by email'
+      )
+      expect(store.cursor).toBe('cursor-seed')
+    })
+
+    it('fails the run when no economy address is configured', async () => {
+      config.emailAddresses.economy = ''
+      nock(ECONOMY_URL)
+        .get('/payments/latest-cursor')
+        .reply(200, { content: 'cursor-seed' })
+
+      await expect(syncPayments(makeStore())).rejects.toThrow(
+        'could not be reported by email'
+      )
     })
 
     it('throws when the latest cursor fetch fails', async () => {
@@ -372,6 +426,144 @@ describe('syncPayments', () => {
   })
 })
 
+describe('syncPayments with payments Tenfast rejects', () => {
+  const originalEconomy = config.emailAddresses.economy
+
+  beforeEach(() => {
+    config.emailAddresses.economy = 'economy@example.com'
+  })
+
+  afterEach(() => {
+    config.emailAddresses.economy = originalEconomy
+  })
+
+  const rejectPayment = (invoiceId: string, reason: string) =>
+    nock(ECONOMY_URL)
+      .post(`/invoices/${invoiceId}/payments`)
+      .reply(409, { error: 'payment-rejected', reason })
+
+  const twoPayments = () =>
+    nock(ECONOMY_URL)
+      .get('/payments/since')
+      .query({ after: 'cursor-start' })
+      .reply(
+        200,
+        makePaymentsResponse({
+          events: [
+            makePaymentEvent({
+              invoiceId: 'INV-1',
+              amount: -1500,
+              paymentDate: '2026-10-28T00:00:00.000Z',
+              cursor: 'c1',
+            }),
+            makePaymentEvent({ invoiceId: 'INV-2', cursor: 'c2' }),
+          ],
+          lastCursor: 'c2',
+        })
+      )
+
+  it('skips a rejected payment, records the ones after it and advances the cursor', async () => {
+    const store = makeStore('cursor-start')
+    twoPayments()
+    rejectPayment('INV-1', 'Invoice is voided')
+    nock(ECONOMY_URL)
+      .post('/invoices/INV-2/payments')
+      .reply(200, { content: null })
+    nock(COMM_URL).post('/send-email').reply(200, {})
+
+    await syncPayments(store)
+
+    expect(nock.pendingMocks()).toHaveLength(0)
+    expect(store.saves).toEqual(['c1', 'c2', 'c2'])
+  })
+
+  it('sends one email listing every rejected payment with its reason', async () => {
+    twoPayments()
+    rejectPayment('INV-1', 'Invoice is voided')
+    rejectPayment('INV-2', 'Accounting period is locked')
+
+    let capturedBody = ''
+    const emailScope = nock(COMM_URL)
+      .post('/send-email', (body) => {
+        capturedBody = JSON.stringify(body)
+        return true
+      })
+      .reply(200, {})
+
+    await syncPayments(makeStore('cursor-start'))
+
+    expect(emailScope.isDone()).toBe(true)
+    expect(capturedBody).toContain(
+      'Faktura INV-1: 1500 kr, betalningsdatum 2026-10-28. Orsak: Invoice is voided'
+    )
+    expect(capturedBody).toContain(
+      'Faktura INV-2: 1000 kr, betalningsdatum 2026-04-01. Orsak: Accounting period is locked'
+    )
+  })
+
+  it('reports rejected payments even when a later payment fails the run', async () => {
+    const store = makeStore('cursor-start')
+    twoPayments()
+    rejectPayment('INV-1', 'Invoice is voided')
+    nock(ECONOMY_URL).post('/invoices/INV-2/payments').reply(500, {})
+    const emailScope = nock(COMM_URL).post('/send-email').reply(200, {})
+
+    await expect(syncPayments(store)).rejects.toThrow(
+      'Failed to record payment for invoice INV-2 in Tenfast'
+    )
+
+    expect(emailScope.isDone()).toBe(true)
+    expect(store.cursor).toBe('c1')
+  })
+
+  it('fails the run when the rejected payments email cannot be sent', async () => {
+    const store = makeStore('cursor-start')
+    twoPayments()
+    rejectPayment('INV-1', 'Invoice is voided')
+    nock(ECONOMY_URL)
+      .post('/invoices/INV-2/payments')
+      .reply(200, { content: null })
+    nock(COMM_URL).post('/send-email').reply(500, {})
+
+    await expect(syncPayments(store)).rejects.toThrow(
+      '1 payment(s) rejected by Tenfast could not be reported by email: invoice INV-1, 1500 paid 2026-10-28: Invoice is voided'
+    )
+    expect(store.cursor).toBe('c2')
+  })
+
+  it('reports both the run failure and the rejected payments when a later payment fails and the email cannot be sent', async () => {
+    const store = makeStore('cursor-start')
+    twoPayments()
+    rejectPayment('INV-1', 'Invoice is voided')
+    nock(ECONOMY_URL).post('/invoices/INV-2/payments').reply(500, {})
+    nock(COMM_URL).post('/send-email').reply(500, {})
+
+    const run = syncPayments(store)
+
+    await expect(run).rejects.toThrow(
+      'Failed to record payment for invoice INV-2 in Tenfast: unknown. Also, 1 payment(s) rejected by Tenfast could not be reported by email: invoice INV-1, 1500 paid 2026-10-28: Invoice is voided'
+    )
+    await expect(run).rejects.toHaveProperty(
+      'cause.message',
+      'Failed to record payment for invoice INV-2 in Tenfast: unknown'
+    )
+    expect(store.cursor).toBe('c1')
+  })
+
+  it('fails the run when no economy address is configured to report rejected payments to', async () => {
+    config.emailAddresses.economy = ''
+    twoPayments()
+    rejectPayment('INV-1', 'Invoice is voided')
+    nock(ECONOMY_URL)
+      .post('/invoices/INV-2/payments')
+      .reply(200, { content: null })
+
+    await expect(syncPayments(makeStore('cursor-start'))).rejects.toThrow(
+      'could not be reported by email'
+    )
+  })
+})
+
 describe('fileCursorStore', () => {
   const originalDataDir = process.env.DATA_DIR
   let dataDir: string
@@ -388,6 +580,22 @@ describe('fileCursorStore', () => {
 
   it('returns null when no cursor has been saved', async () => {
     expect(await fileCursorStore.read()).toBeNull()
+  })
+
+  it('throws when the cursor file exists but cannot be read', async () => {
+    // A directory in place of the file gives EISDIR, standing in for any
+    // read error other than a missing file.
+    await fs.mkdir(path.join(dataDir, 'last-xledger-payment-sync.txt'))
+
+    await expect(fileCursorStore.read()).rejects.toThrow(
+      'Could not read payment sync cursor'
+    )
+  })
+
+  it('throws when the cursor file is empty', async () => {
+    await fs.writeFile(path.join(dataDir, 'last-xledger-payment-sync.txt'), '')
+
+    await expect(fileCursorStore.read()).rejects.toThrow('is empty')
   })
 
   it('reads back the latest saved cursor and leaves no temp file behind', async () => {
