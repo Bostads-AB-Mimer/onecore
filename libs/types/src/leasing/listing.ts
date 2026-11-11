@@ -16,6 +16,9 @@ export const ListingSchema = z.object({
   listingCategory: z.enum(['PARKING_SPACE', 'APARTMENT', 'STORAGE']),
   reviewedAt: z.coerce.date().nullable().optional(),
   reviewedBy: z.string().nullable().optional(),
+  // Unconfirmed earlier move-out date ("Eventuellt tillgänglig från"), no
+  // computed equivalent.
+  tentativeAvailableFrom: z.coerce.date().nullable().optional(),
 })
 
 export type ListingRecord = z.infer<typeof ListingSchema>
@@ -36,6 +39,18 @@ export const RentalObjectListingSummarySchema = z.object({
 export type RentalObjectListingSummary = z.infer<
   typeof RentalObjectListingSummarySchema
 >
+
+// Partial update of a listing's publish/review fields. Rental-type-agnostic,
+// same as the rest of the listing writes (create, status update, delete).
+export const UpdateListingSchema = z.object({
+  publishedFrom: z.coerce.date().nullable().optional(),
+  publishedTo: z.coerce.date().nullable().optional(),
+  reviewedAt: z.coerce.date().nullable().optional(),
+  reviewedBy: z.string().nullable().optional(),
+  tentativeAvailableFrom: z.coerce.date().nullable().optional(),
+})
+
+export type UpdateListing = z.infer<typeof UpdateListingSchema>
 
 export const GetListingSummariesRequestSchema = z.object({
   rentalObjects: z

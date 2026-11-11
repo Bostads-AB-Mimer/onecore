@@ -21,6 +21,7 @@ type Row = {
   propertyName: string | null
   buildingCode: string | null
   buildingName: string | null
+  buildingConstructionYear: number | null
   marketAreaCode: string | null
   marketAreaName: string | null
   residenceTypeCode: string | null
@@ -48,7 +49,13 @@ const toItem = (row: Row): ResidenceBatchItem => ({
       }
     : null,
   property: codeAndName(row.propertyCode, row.propertyName),
-  building: codeAndName(row.buildingCode, row.buildingName),
+  building: row.buildingCode
+    ? {
+        code: row.buildingCode,
+        name: row.buildingName,
+        constructionYear: row.buildingConstructionYear,
+      }
+    : null,
   marketArea: codeAndName(row.marketAreaCode, row.marketAreaName),
   residenceType: row.residenceTypeCode
     ? {
@@ -90,6 +97,7 @@ export const getResidencesByRentalIds = async (
             b.fstcaption AS propertyName,
             b.bygcode    AS buildingCode,
             b.bygcaption AS buildingName,
+            byg.byggnadsar AS buildingConstructionYear,
             ya.code      AS marketAreaCode,
             ya.caption   AS marketAreaName,
             gt.code      AS residenceTypeCode,
@@ -104,6 +112,16 @@ export const getResidencesByRentalIds = async (
           LEFT JOIN dbo.hyinf hi ON hi.keycmobj = b.keycmobj
           LEFT JOIN dbo.bafst fst ON fst.keycmobj = b.keyobjfst
           LEFT JOIN dbo.babya ya ON ya.keybabya = fst.keybabya
+          -- keyobjbyg can be null (see e.g. the economy service's
+          -- getPropertyCodeAndCostCentreForLease), and even when set can be a
+          -- stale/orphaned reference, so prefer it but still fall back to
+          -- the denormalized bygcode match rather than getting no row at all.
+          OUTER APPLY (
+            SELECT TOP 1 byg2.*
+            FROM dbo.babyg byg2
+            WHERE byg2.keycmobj = b.keyobjbyg OR byg2.code = b.bygcode
+            ORDER BY CASE WHEN byg2.keycmobj = b.keyobjbyg THEN 0 ELSE 1 END
+          ) byg
           OUTER APPLY (
             SELECT TOP 1 adr.adress1, adr.adress2, adr.adress3, adr.adress4
             FROM dbo.cmadr adr

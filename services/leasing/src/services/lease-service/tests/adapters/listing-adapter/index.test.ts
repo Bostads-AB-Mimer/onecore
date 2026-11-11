@@ -399,4 +399,128 @@ describe('listing-adapter', () => {
         expect(listing2FromDatabase?.status).toEqual(ListingStatus.Expired)
       }))
   })
+
+  describe(listingAdapter.updateListing, () => {
+    it('returns not-found for a listing that does not exist', () =>
+      withContext(async (ctx) => {
+        const result = await listingAdapter.updateListing(
+          1337,
+          { reviewedAt: new Date() },
+          ctx.db
+        )
+        expect(result).toEqual({ ok: false, err: 'not-found' })
+      }))
+
+    it('returns no-fields when the update has no recognized fields', () =>
+      withContext(async (ctx) => {
+        const listing = await listingAdapter.createListing(
+          factory.listingWithoutRentalObject.build(),
+          ctx.db
+        )
+        assert(listing.ok)
+
+        const result = await listingAdapter.updateListing(
+          listing.data.id,
+          {},
+          ctx.db
+        )
+        expect(result).toEqual({ ok: false, err: 'no-fields' })
+      }))
+
+    it('clears reviewedAt/reviewedBy when publishedTo changes without re-confirming the review', () =>
+      withContext(async (ctx) => {
+        const listing = await listingAdapter.createListing(
+          factory.listingWithoutRentalObject.build({
+            publishedTo: new Date('2027-01-31'),
+          }),
+          ctx.db
+        )
+        assert(listing.ok)
+
+        const reviewed = await listingAdapter.updateListing(
+          listing.data.id,
+          {
+            reviewedAt: new Date('2027-01-01'),
+            reviewedBy: 'someone@mimer.se',
+          },
+          ctx.db
+        )
+        assert(reviewed.ok)
+        expect(reviewed.data.reviewedAt).not.toBeNull()
+
+        const result = await listingAdapter.updateListing(
+          listing.data.id,
+          { publishedTo: new Date('2027-02-28') },
+          ctx.db
+        )
+        assert(result.ok)
+        expect(result.data.reviewedAt).toBeNull()
+        expect(result.data.reviewedBy).toBeNull()
+      }))
+
+    it('keeps reviewedAt/reviewedBy when publishedTo is sent but unchanged', () =>
+      withContext(async (ctx) => {
+        const listing = await listingAdapter.createListing(
+          factory.listingWithoutRentalObject.build({
+            publishedTo: new Date('2027-01-10'),
+          }),
+          ctx.db
+        )
+        assert(listing.ok)
+
+        const reviewed = await listingAdapter.updateListing(
+          listing.data.id,
+          {
+            reviewedAt: new Date('2027-01-01'),
+            reviewedBy: 'someone@mimer.se',
+          },
+          ctx.db
+        )
+        assert(reviewed.ok)
+
+        // Same calendar day, different time-of-day — should not count as a change.
+        const result = await listingAdapter.updateListing(
+          listing.data.id,
+          { publishedTo: new Date('2027-01-10T08:00:00Z') },
+          ctx.db
+        )
+        assert(result.ok)
+        expect(result.data.reviewedAt).not.toBeNull()
+        expect(result.data.reviewedBy).toEqual('someone@mimer.se')
+      }))
+
+    it('keeps the new reviewedAt/reviewedBy when the same request re-confirms the review alongside a date change', () =>
+      withContext(async (ctx) => {
+        const listing = await listingAdapter.createListing(
+          factory.listingWithoutRentalObject.build({
+            publishedTo: new Date('2027-01-10'),
+          }),
+          ctx.db
+        )
+        assert(listing.ok)
+
+        const reviewed = await listingAdapter.updateListing(
+          listing.data.id,
+          {
+            reviewedAt: new Date('2027-01-01'),
+            reviewedBy: 'first@mimer.se',
+          },
+          ctx.db
+        )
+        assert(reviewed.ok)
+
+        const result = await listingAdapter.updateListing(
+          listing.data.id,
+          {
+            publishedTo: new Date('2027-03-01'),
+            reviewedAt: new Date('2027-03-02'),
+            reviewedBy: 'second@mimer.se',
+          },
+          ctx.db
+        )
+        assert(result.ok)
+        expect(result.data.reviewedAt).toEqual(new Date('2027-03-02'))
+        expect(result.data.reviewedBy).toEqual('second@mimer.se')
+      }))
+  })
 })

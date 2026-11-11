@@ -1,14 +1,22 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   BulkActionBar,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   ResponsiveTable,
   type ResponsiveTableColumn,
   Skeleton,
   useRowSelection,
 } from '@onecore/ui'
+import { MoreHorizontal } from 'lucide-react'
 
 import { QueryError } from '../QueryError'
+import { EditListingDialog } from './EditListingDialog'
+import { useCreateListing } from './useCreateListing'
 import {
   useVacantApartments,
   type VacantApartment,
@@ -35,23 +43,51 @@ function ListingBadge({ listing }: { listing: VacantApartment['listing'] }) {
   if (listing.reviewedAt) {
     return <Badge variant="success">Redo att publicera</Badge>
   }
-  return <Badge variant="secondary">Utkast</Badge>
+  return <Badge variant="priority-medium">Behöver granskning</Badge>
 }
 
-const COLUMNS: ResponsiveTableColumn<VacantApartment>[] = [
-  {
-    key: 'rentalObjectCode',
-    label: 'Objektsnummer',
-    className: 'font-mono',
-    render: (a) => a.rentalObjectCode,
-  },
+// Approximated from the design's colors with the variants @onecore/ui already
+// has — not a 1:1 palette match, but close enough without adding new ones.
+const TENURE_BADGE_VARIANTS: Record<
+  string,
+  'outline' | 'priority-medium' | 'priority-high' | 'success'
+> = {
+  Standard: 'outline',
+  Student: 'priority-medium',
+  'Co-living': 'priority-high',
+  Trygghetsboende: 'success',
+}
+
+function TenureBadge({
+  tenure,
+}: {
+  tenure: VacantApartment['rentalTenureType']
+}) {
+  const label = tenureLabel(tenure)
+  return (
+    <Badge variant={TENURE_BADGE_VARIANTS[label] ?? 'outline'}>{label}</Badge>
+  )
+}
+
+const buildColumns = (
+  onEdit: (apartment: VacantApartment) => void,
+  creatingFor: Set<string>
+): ResponsiveTableColumn<VacantApartment>[] => [
   {
     key: 'address',
     label: 'Adress',
-    render: (a) => a.address?.street ?? '–',
+    render: (a) => (
+      <>
+        {a.address?.street ?? '–'}
+        <span className="block text-xs text-muted-foreground">
+          {a.rentalObjectCode}
+        </span>
+      </>
+    ),
   },
   { key: 'area', label: 'Område', render: (a) => a.marketAreaName ?? '–' },
   { key: 'type', label: 'Typ', render: (a) => a.residenceTypeName ?? '–' },
+  { key: 'rooms', label: 'Rum', render: (a) => a.roomCount ?? '–' },
   {
     key: 'size',
     label: 'Yta',
@@ -60,21 +96,27 @@ const COLUMNS: ResponsiveTableColumn<VacantApartment>[] = [
   { key: 'rent', label: 'Hyra', render: (a) => formatRent(a.rent) },
   {
     key: 'tenure',
-    label: 'Upplåtelseform',
-    render: (a) => (
-      <>
-        {tenureLabel(a.rentalTenureType)}
-        {a.rentalTags.length > 0 && (
-          <span className="mt-1 flex flex-wrap gap-1">
-            {a.rentalTags.map((tag) => (
-              <Badge key={tag.id} variant="outline">
-                {tag.name}
-              </Badge>
-            ))}
-          </span>
-        )}
-      </>
-    ),
+    label: 'Hyresobjektstyp',
+    render: (a) => <TenureBadge tenure={a.rentalTenureType} />,
+  },
+  {
+    key: 'rentalMethod',
+    label: 'Senaste uthyrningsmetod',
+    // A separate Tenfast fact from rentalTenureType, not another value for
+    // the same column — e.g. "Poängfri" alongside a "Student" tenure type.
+    // An apartment can carry more than one tag, so render all of them.
+    render: (a) =>
+      a.rentalTags.length > 0 ? (
+        <span className="flex flex-wrap gap-1">
+          {a.rentalTags.map((tag) => (
+            <Badge key={tag.id} variant="secondary">
+              {tag.name}
+            </Badge>
+          ))}
+        </span>
+      ) : (
+        '–'
+      ),
   },
   {
     key: 'vacantFrom',
@@ -92,13 +134,47 @@ const COLUMNS: ResponsiveTableColumn<VacantApartment>[] = [
   },
   {
     key: 'listing',
-    label: 'Annons',
+    label: 'Status',
     render: (a) => <ListingBadge listing={a.listing} />,
   },
   {
     key: 'attempts',
     label: 'Tidigare försök',
     render: (a) => a.closedListingsSinceLastLease,
+  },
+  {
+    key: 'actions',
+    label: '',
+    className: 'w-10',
+    render: (a) => (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Fler alternativ"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {/* Not built yet — see UTH-356. */}
+          <DropdownMenuItem disabled>Publicera</DropdownMenuItem>
+          {/* Creates a draft listing first if the apartment doesn't have one yet. */}
+          <DropdownMenuItem
+            disabled={creatingFor.has(a.rentalObjectCode)}
+            onClick={() => onEdit(a)}
+          >
+            Redigera annons
+          </DropdownMenuItem>
+          {/* No deletion flow exists yet. */}
+          <DropdownMenuItem disabled className="text-destructive">
+            Ta bort
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ),
   },
 ]
 
@@ -111,6 +187,38 @@ export function VacantApartmentsTable() {
   // Rows leave this list when they get a listing; a stale tick must not linger.
   const { clear } = selection
   useEffect(() => clear(), [data, clear])
+
+  const [editing, setEditing] = useState<VacantApartment | null>(null)
+  // Per-row in-flight tracking — createListing is one shared mutation, so its
+  // own isPending/variables only ever reflect the most recently started call
+  // and would incorrectly re-enable an earlier row's menu item.
+  const { mutate: createListing } = useCreateListing()
+  const [creatingFor, setCreatingFor] = useState<Set<string>>(new Set())
+
+  const handleEdit = useCallback(
+    (apartment: VacantApartment) => {
+      if (apartment.listing) {
+        setEditing(apartment)
+        return
+      }
+      setCreatingFor((prev) => new Set(prev).add(apartment.rentalObjectCode))
+      createListing(apartment.rentalObjectCode, {
+        onSuccess: (listing) => setEditing({ ...apartment, listing }),
+        onSettled: () =>
+          setCreatingFor((prev) => {
+            const next = new Set(prev)
+            next.delete(apartment.rentalObjectCode)
+            return next
+          }),
+      })
+    },
+    [createListing]
+  )
+
+  const columns = useMemo(
+    () => buildColumns(handleEdit, creatingFor),
+    [handleEdit, creatingFor]
+  )
 
   if (isError) return <QueryError error={error} />
 
@@ -128,7 +236,7 @@ export function VacantApartmentsTable() {
     <>
       <ResponsiveTable
         data={data}
-        columns={COLUMNS}
+        columns={columns}
         keyExtractor={getId}
         selection={selection}
         emptyMessage="Inga lediga lägenheter att publicera"
@@ -139,6 +247,7 @@ export function VacantApartmentsTable() {
         onClear={selection.clear}
         actions={[]}
       />
+      <EditListingDialog apartment={editing} onClose={() => setEditing(null)} />
     </>
   )
 }

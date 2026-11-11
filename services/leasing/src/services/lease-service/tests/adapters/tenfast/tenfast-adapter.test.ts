@@ -301,45 +301,55 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
   })
 
   it('includes rental objects whose current lease has been given notice, with vacantFrom the day after its end date', async () => {
-    // Arrange
-    const terminatingLease = factory.tenfastLease.build({
-      externalId: '110-707-00-0004/07',
-      startDate: new Date('2025-01-01'),
-      endDate: new Date('2026-10-31'),
-      stage: 'terminationScheduled',
-      cancellation: {
-        cancelled: false,
-        requested: true,
-        doneAutomatically: false,
-        receivedCancellationAt: new Date('2026-07-22'),
-        notifiedAt: null,
-        handledAt: new Date('2026-07-23'),
-        handledBy: null,
-        preferredMoveOutDate: new Date('2026-10-31'),
-        cancelledByType: null,
-      },
-      hyresobjekt: [
-        factory.tenfastRentalObject.build({
-          externalId: 'R2002',
-          avtal: undefined,
-        }),
-      ],
-    })
-    mockTenfastResponses({ givenNotice: [terminatingLease] })
+    // vacantFrom is max(today, dayAfterLeaseEnd) — freeze "today" to before
+    // the lease's end date below, or this assertion goes stale and starts
+    // failing for real once the calendar catches up to the hardcoded date.
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-10-15T00:00:00.000Z'))
 
-    // Act
-    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
-      tenfastAdapter.RentalObjectType.ParkingSpace
-    )
+    try {
+      // Arrange
+      const terminatingLease = factory.tenfastLease.build({
+        externalId: '110-707-00-0004/07',
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2026-10-31'),
+        stage: 'terminationScheduled',
+        cancellation: {
+          cancelled: false,
+          requested: true,
+          doneAutomatically: false,
+          receivedCancellationAt: new Date('2026-07-22'),
+          notifiedAt: null,
+          handledAt: new Date('2026-07-23'),
+          handledBy: null,
+          preferredMoveOutDate: new Date('2026-10-31'),
+          cancelledByType: null,
+        },
+        hyresobjekt: [
+          factory.tenfastRentalObject.build({
+            externalId: 'R2002',
+            avtal: undefined,
+          }),
+        ],
+      })
+      mockTenfastResponses({ givenNotice: [terminatingLease] })
 
-    // Assert
-    expect(result.ok).toBe(true)
-    if (!result.ok) return
-    expect(result.data).toHaveLength(1)
-    expect(result.data![0].rentalObjectCode).toBe('R2002')
-    expect(result.data![0].vacantFrom).toEqual(
-      new Date('2026-11-01T00:00:00.000Z')
-    )
+      // Act
+      const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+        tenfastAdapter.RentalObjectType.ParkingSpace
+      )
+
+      // Assert
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      expect(result.data).toHaveLength(1)
+      expect(result.data![0].rentalObjectCode).toBe('R2002')
+      expect(result.data![0].vacantFrom).toEqual(
+        new Date('2026-11-01T00:00:00.000Z')
+      )
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('excludes a rental object given notice if it has already been re-let (an upcoming lease exists)', async () => {

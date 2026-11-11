@@ -27,6 +27,7 @@ function transformFromDbListing(row: DbListing): ListingWithoutRentalObject {
     listingCategory: row.ListingCategory,
     reviewedAt: row.ReviewedAt ?? null,
     reviewedBy: row.ReviewedBy ?? null,
+    tentativeAvailableFrom: row.TentativeAvailableFrom ?? null,
   }
 }
 
@@ -63,6 +64,7 @@ const createListing = async (
         ListingCategory: listingData.listingCategory,
         ReviewedAt: listingData.reviewedAt ?? null,
         ReviewedBy: listingData.reviewedBy ?? null,
+        TentativeAvailableFrom: listingData.tentativeAvailableFrom ?? null,
       })
       .returning('*')
 
@@ -116,6 +118,7 @@ const createMultipleListings = async (
       ListingCategory: listingData.listingCategory,
       ReviewedAt: listingData.reviewedAt ?? null,
       ReviewedBy: listingData.reviewedBy ?? null,
+      TentativeAvailableFrom: listingData.tentativeAvailableFrom ?? null,
     }))
 
     const insertedRows = await dbConnection<DbListing>('Listing')
@@ -657,6 +660,74 @@ const updateListingStatuses = async (
   }
 }
 
+// Compared by day, not exact instant — a stored date and an incoming one
+// can both mean "this calendar day" but differ in time-of-day/timezone.
+const toDayString = (date: Date | null | undefined): string | null =>
+  date ? date.toISOString().slice(0, 10) : null
+
+const updateListing = async (
+  listingId: number,
+  data: leasing.UpdateListing,
+  dbConnection: Knex = db
+): Promise<
+  AdapterResult<
+    ListingWithoutRentalObject,
+    'not-found' | 'no-fields' | 'unknown'
+  >
+> => {
+  try {
+    const existing = await dbConnection<DbListing>('Listing')
+      .where('Id', listingId)
+      .first()
+
+    if (!existing) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    const updateFields: Partial<DbListing> = {}
+    if ('publishedFrom' in data)
+      updateFields.PublishedFrom = data.publishedFrom ?? null
+    if ('publishedTo' in data)
+      updateFields.PublishedTo = data.publishedTo ?? null
+    if ('reviewedAt' in data) updateFields.ReviewedAt = data.reviewedAt ?? null
+    if ('reviewedBy' in data) updateFields.ReviewedBy = data.reviewedBy ?? null
+    if ('tentativeAvailableFrom' in data)
+      updateFields.TentativeAvailableFrom = data.tentativeAvailableFrom ?? null
+
+    // A review only vouches for the date it was given alongside. If this
+    // request changes publishedTo and doesn't also re-confirm the review
+    // itself, the old review no longer applies.
+    const datesChanged =
+      'publishedTo' in data &&
+      toDayString(data.publishedTo) !== toDayString(existing.PublishedTo)
+
+    if (datesChanged && !('reviewedAt' in data) && existing.ReviewedAt) {
+      updateFields.ReviewedAt = null
+      updateFields.ReviewedBy = null
+    }
+
+    // knex throws on an empty .update({}) — a request with no recognized
+    // fields is a client error, not a server error.
+    if (Object.keys(updateFields).length === 0) {
+      return { ok: false, err: 'no-fields' }
+    }
+
+    const updatedRows = await dbConnection<DbListing>('Listing')
+      .where('Id', listingId)
+      .update(updateFields)
+      .returning('*')
+
+    if (updatedRows.length === 0) {
+      return { ok: false, err: 'not-found' }
+    }
+
+    return { ok: true, data: transformFromDbListing(updatedRows[0]) }
+  } catch (err) {
+    logger.error({ err }, 'listingAdapter.updateListing')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 const deleteListing = async (
   listingId: number,
   dbConnection = db
@@ -693,5 +764,6 @@ export {
   updateApplicantStatus,
   getExpiredListings,
   updateListingStatuses,
+  updateListing,
   deleteListing,
 }

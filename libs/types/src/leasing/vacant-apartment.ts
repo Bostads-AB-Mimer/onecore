@@ -25,6 +25,7 @@ export const VacantApartmentSchema = z.object({
   propertyCode: z.string().nullable(),
   propertyName: z.string().nullable(),
   buildingCode: z.string().nullable(),
+  constructionYear: z.number().nullable(), // Byggnadsår, from the building (babyg)
   marketAreaCode: z.string().nullable(),
   marketAreaName: z.string().nullable(), // "Område" in the UI
   residenceTypeName: z.string().nullable(), // "3 rum och kök"

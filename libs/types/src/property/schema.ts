@@ -167,7 +167,9 @@ export const ResidenceBatchItemSchema = z.object({
   apartmentNumber: z.string().nullable(), // hyinf.lmnr, "Nummer" in the UI
   address: ResidenceAddressSchema.nullable(),
   property: CodeAndNameSchema.nullable(),
-  building: CodeAndNameSchema.nullable(),
+  building: CodeAndNameSchema.extend({
+    constructionYear: z.number().nullable(), // babyg.byggnadsar
+  }).nullable(),
   marketArea: CodeAndNameSchema.nullable(), // babya, "Område"
   residenceType: z
     .object({

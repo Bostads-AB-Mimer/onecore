@@ -4753,6 +4753,7 @@ export interface components {
       building: {
         code: string
         name: string | null
+        constructionYear: number | null
       } | null
       marketArea: {
         code: string

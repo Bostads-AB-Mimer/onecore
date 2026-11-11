@@ -13,11 +13,14 @@ import {
   GetActiveOfferByListingIdErrorCodes,
   Listing,
   ListingStatus,
+  UpdateListingErrorCodes,
+  leasing,
 } from '@onecore/types'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as internalParkingSpaceProcesses from '../../processes/parkingspaces/internal'
+import { parseRequestBody } from '../../middlewares/parse-request-body'
 import {
   getRentalObjectForListing,
   getRentalObjectsForListings,
@@ -194,6 +197,86 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 500
     }
   })
+
+  /**
+   * @swagger
+   * /listings:
+   *   post:
+   *     summary: Create a draft listing
+   *     tags:
+   *       - Lease service
+   *     description: Creates a new Draft listing for an apartment rental object, ready to be edited and reviewed before publishing.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [rentalObjectCode, listingCategory]
+   *             properties:
+   *               rentalObjectCode:
+   *                 type: string
+   *               listingCategory:
+   *                 type: string
+   *                 enum: [APARTMENT]
+   *     responses:
+   *       '201':
+   *         description: Listing created successfully.
+   *       '409':
+   *         description: An active listing already exists for this rental object.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/listings',
+    // Apartment-only: the hardcoded rentalRule below is a placeholder
+    // pending real derivation logic for apartments (see comment on it).
+    // Parking spaces and storage already get theirs from elsewhere (see
+    // internal-portal's useRentalRules) and would silently get the wrong
+    // value — SCORED — if this endpoint accepted them too.
+    parseRequestBody(
+      z.object({
+        rentalObjectCode: z.string(),
+        listingCategory: z.literal('APARTMENT'),
+      })
+    ),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const body = ctx.request.body as {
+        rentalObjectCode: string
+        listingCategory: 'APARTMENT'
+      }
+
+      const result = await leasingAdapter.createNewListing({
+        rentalObjectCode: body.rentalObjectCode,
+        listingCategory: body.listingCategory,
+        status: ListingStatus.Draft,
+        // No rentalRule derivation rule exists for apartments yet, so this
+        // is a placeholder default pending that design.
+        rentalRule: 'SCORED',
+      })
+
+      if (!result.ok) {
+        if (result.err === 'conflict') {
+          ctx.status = 409
+          ctx.body = {
+            error: 'Active listing already exists for this rental object',
+            ...metadata,
+          }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = { error: 'Failed to create listing', ...metadata }
+        return
+      }
+
+      ctx.status = 201
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 
   /**
    * @swagger
@@ -381,6 +464,114 @@ export const routes = (router: KoaRouter) => {
     ctx.status = 200
     ctx.body = { ...metadata }
   })
+
+  /**
+   * @swagger
+   * /listings/{listingId}:
+   *   patch:
+   *     summary: Update listing publish/review fields
+   *     tags:
+   *       - Lease service
+   *     description: Partially updates a listing's publishedFrom, publishedTo, reviewedAt, reviewedBy and tentativeAvailableFrom fields.
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: ID of the listing to update.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               publishedFrom:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               publishedTo:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               reviewedAt:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               reviewedBy:
+   *                 type: string
+   *                 nullable: true
+   *               tentativeAvailableFrom:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *     responses:
+   *       '200':
+   *         description: Successfully updated listing.
+   *       '404':
+   *         description: Listing not found.
+   *       '500':
+   *         description: Internal server error.
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.patch(
+    '/listings/:listingId',
+    parseRequestBody(leasing.UpdateListingSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      // Plain-digits check first — Number() alone would also accept hex
+      // (0x10) and exponential (1e2) notation as "integers".
+      const listingId = /^\d+$/.test(ctx.params.listingId)
+        ? Number(ctx.params.listingId)
+        : NaN
+      if (!Number.isInteger(listingId)) {
+        ctx.status = 400
+        ctx.body = {
+          error: UpdateListingErrorCodes.InvalidListingId,
+          ...metadata,
+        }
+        return
+      }
+
+      const body = ctx.request.body as z.infer<
+        typeof leasing.UpdateListingSchema
+      >
+
+      // reviewedBy always comes from the authenticated caller, never the
+      // client-supplied value — otherwise any caller could claim to be
+      // anyone. Only set when the request actually touches reviewedAt or
+      // reviewedBy, so an unrelated field update doesn't overwrite an
+      // existing review. The two always travel together once either is
+      // touched, so a reviewedBy-only request can't leave a stale reviewedAt
+      // behind (or vice versa).
+      const update =
+        'reviewedAt' in body || 'reviewedBy' in body
+          ? {
+              ...body,
+              reviewedAt: body.reviewedAt ?? null,
+              reviewedBy: body.reviewedAt
+                ? ctx.state.user?.name ||
+                  ctx.state.user?.preferred_username ||
+                  ctx.state.user?.email ||
+                  null
+                : null,
+            }
+          : body
+
+      const result = await leasingAdapter.updateListing(listingId, update)
+
+      if (!result.ok) {
+        ctx.status = result.statusCode ?? 500
+        ctx.body = { ...metadata, error: result.err }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
+    }
+  )
 
   /**
    * @swagger

@@ -4,6 +4,7 @@ import {
   DetailedApplicant,
   Listing,
   ListingStatus,
+  UpdateListingErrorCodes,
   UpdateListingStatusErrorCodes,
   leasing,
 } from '@onecore/types'
@@ -1047,6 +1048,104 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = { ...metadata }
+    }
+  )
+
+  /**
+   * @swagger
+   * /listings/{listingId}:
+   *   patch:
+   *     summary: Update listing publish/review fields
+   *     tags:
+   *       - Lease service
+   *     description: Partially updates a listing's publishedFrom, publishedTo, reviewedAt, reviewedBy and tentativeAvailableFrom fields.
+   *     parameters:
+   *       - in: path
+   *         name: listingId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: ID of the listing to update.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               publishedFrom:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               publishedTo:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               reviewedAt:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *               reviewedBy:
+   *                 type: string
+   *                 nullable: true
+   *               tentativeAvailableFrom:
+   *                 type: string
+   *                 format: date-time
+   *                 nullable: true
+   *     responses:
+   *       '200':
+   *         description: Successfully updated listing.
+   *       '400':
+   *         description: No recognized fields present in the request body.
+   *       '404':
+   *         description: Listing not found.
+   *       '500':
+   *         description: Internal server error.
+   */
+  router.patch(
+    '(.*)/listings/:listingId',
+    parseRequestBody(leasing.UpdateListingSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      // Plain-digits check first — Number() alone would also accept hex
+      // (0x10) and exponential (1e2) notation as "integers".
+      const listingId = /^\d+$/.test(ctx.params.listingId)
+        ? Number(ctx.params.listingId)
+        : NaN
+      if (!Number.isInteger(listingId)) {
+        ctx.status = 400
+        ctx.body = {
+          error: UpdateListingErrorCodes.InvalidListingId,
+          ...metadata,
+        }
+        return
+      }
+
+      const result = await listingAdapter.updateListing(
+        listingId,
+        ctx.request.body
+      )
+
+      if (!result.ok) {
+        if (result.err === 'not-found') {
+          ctx.status = 404
+          ctx.body = { error: UpdateListingErrorCodes.NotFound, ...metadata }
+          return
+        }
+
+        if (result.err === 'no-fields') {
+          ctx.status = 400
+          ctx.body = { error: UpdateListingErrorCodes.NoFields, ...metadata }
+          return
+        }
+
+        ctx.status = 500
+        ctx.body = { error: UpdateListingErrorCodes.Unknown, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = { content: result.data, ...metadata }
     }
   )
 }
