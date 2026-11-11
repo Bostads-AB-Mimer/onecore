@@ -8,6 +8,7 @@ type LoadFn = () => Promise<
 >
 
 const RELOAD_INTERVAL_MS = 24 * 60 * 60 * 1000
+export const FIRST_LOAD_RETRY_MS = 30_000
 
 let leases: leasing.v1.LeaseSearchResult[] = []
 let ready = false
@@ -24,6 +25,9 @@ async function load(loadFn: LoadFn): Promise<void> {
       { err: result.err, keptRows: leases.length },
       'xpand-ended-lease-cache: load failed, keeping previous data'
     )
+    if (!ready) {
+      setTimeout(() => reload(loadFn).catch(() => {}), FIRST_LOAD_RETRY_MS)
+    }
     return
   }
   leases = result.data

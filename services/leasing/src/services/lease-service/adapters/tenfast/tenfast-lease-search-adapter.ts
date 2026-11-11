@@ -169,6 +169,13 @@ function wantsEnded(params: leasing.v1.LeaseSearchQueryParams): boolean {
   )
 }
 
+// Both caches swap in a new array on every sync, so array identity marks a change.
+let mergedPool: {
+  tenfastRows: leasing.v1.LeaseSearchResult[]
+  xpandRows: leasing.v1.LeaseSearchResult[]
+  rows: leasing.v1.LeaseSearchResult[]
+} | null = null
+
 function buildSearchPool(
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
@@ -182,7 +189,18 @@ function buildSearchPool(
     })
   }
 
-  return mergeTenfastFirst(tenfastRows, xpandEndedLeaseCache.getAll())
+  const xpandRows = xpandEndedLeaseCache.getAll()
+  if (
+    mergedPool?.tenfastRows !== tenfastRows ||
+    mergedPool.xpandRows !== xpandRows
+  ) {
+    mergedPool = {
+      tenfastRows,
+      xpandRows,
+      rows: mergeTenfastFirst(tenfastRows, xpandRows),
+    }
+  }
+  return mergedPool.rows
 }
 
 export async function fetchAllLeasesForExport(

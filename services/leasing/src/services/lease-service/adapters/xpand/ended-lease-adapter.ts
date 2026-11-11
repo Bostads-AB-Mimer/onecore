@@ -9,27 +9,12 @@ import { trimRow } from '../utils'
 import transformFromXPandDb from '../../helpers/transformFromXPandDb'
 import { parseLeaseType } from '../../helpers/lease-type-parser'
 
-const baseQuery = (): Knex.QueryBuilder => {
+const endedLeaseQuery = (): Knex.QueryBuilder => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
   return xpandDb
     .from('hyobj')
-    .select(
-      'hyobj.hyobjben as leaseId',
-      'hyhav.hyhavben as leaseType',
-      'hyobj.uppsagtav as noticeGivenBy',
-      'hyobj.avtalsdat as contractDate',
-      'hyobj.sistadeb as lastDebitDate',
-      'hyobj.godkdatum as approvalDate',
-      'hyobj.uppsdatum as noticeDate',
-      'hyobj.fdate as fromDate',
-      'hyobj.tdate as toDate',
-      'hyobj.uppstidg as noticeTimeTenant',
-      'hyobj.onskflytt as preferredMoveOutDate',
-      'hyobj.makuldatum as terminationDate',
-      'cmctc.cmctckod as contactCode'
-    )
     .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
     .innerJoin('hyavk', function () {
       this.on('hyavk.keyhyobj', '=', 'hyobj.keyhyobj').andOn(
@@ -46,6 +31,23 @@ const baseQuery = (): Knex.QueryBuilder => {
     .whereNotNull('hyobj.sistadeb')
     .where('hyobj.sistadeb', '<', today)
 }
+
+const baseQuery = (): Knex.QueryBuilder =>
+  endedLeaseQuery().select(
+    'hyobj.hyobjben as leaseId',
+    'hyhav.hyhavben as leaseType',
+    'hyobj.uppsagtav as noticeGivenBy',
+    'hyobj.avtalsdat as contractDate',
+    'hyobj.sistadeb as lastDebitDate',
+    'hyobj.godkdatum as approvalDate',
+    'hyobj.uppsdatum as noticeDate',
+    'hyobj.fdate as fromDate',
+    'hyobj.tdate as toDate',
+    'hyobj.uppstidg as noticeTimeTenant',
+    'hyobj.onskflytt as preferredMoveOutDate',
+    'hyobj.makuldatum as terminationDate',
+    'cmctc.cmctckod as contactCode'
+  )
 
 type EndedLeaseRow = {
   leaseId: string
@@ -185,7 +187,12 @@ const toSearchResults = (
 
     const existing = byLeaseId.get(row.leaseId)
     if (existing) {
-      if (contact) existing.contacts.push(contact)
+      if (
+        contact &&
+        !existing.contacts.some((c) => c.contactCode === contact.contactCode)
+      ) {
+        existing.contacts.push(contact)
+      }
       continue
     }
 
@@ -218,8 +225,12 @@ export const getAllEndedLeasesForSearch = async (): Promise<
   AdapterResult<leasing.v1.LeaseSearchResult[], unknown>
 > => {
   try {
-    const rows: EndedLeaseSearchRow[] = await baseQuery()
+    const rows: EndedLeaseSearchRow[] = await endedLeaseQuery()
       .select(
+        'hyobj.hyobjben as leaseId',
+        'hyhav.hyhavben as leaseType',
+        'hyobj.sistadeb as lastDebitDate',
+        'cmctc.cmctckod as contactCode',
         'cmobj.keycmobt as objectTypeCode',
         'hyobj.fdate as startDate',
         'cmadr.adress1 as address',
@@ -241,11 +252,9 @@ export const getAllEndedLeasesForSearch = async (): Promise<
       .innerJoin('cmobj', 'cmobj.keycmobj', 'hykop.keycmobj')
       .innerJoin('babuf', 'babuf.keycmobj', 'hykop.keycmobj')
       .leftJoin('cmadr', function () {
-        this.on('cmadr.keycode', '=', 'hykop.keycmobj').andOn(
-          'cmadr.keydbtbl',
-          '=',
-          xpandDb.raw('?', ['_RQA11RNMA'])
-        )
+        this.on('cmadr.keycode', '=', 'hykop.keycmobj')
+          .andOn('cmadr.keydbtbl', '=', xpandDb.raw('?', ['_RQA11RNMA']))
+          .andOn('cmadr.keycmtyp', '=', xpandDb.raw('?', ['adrpost']))
       })
       .leftJoin('bafen', 'bafen.code', 'babuf.fencode')
     return { ok: true, data: toSearchResults(rows) }

@@ -107,6 +107,14 @@ describe('getAllEndedLeasesForSearch', () => {
     ])
   })
 
+  it('lists a holder once when the join repeats their row', async () => {
+    mockRows = [baseRow, { ...baseRow }]
+    const leases = await run()
+
+    expect(leases).toHaveLength(1)
+    expect(leases[0].contacts).toHaveLength(1)
+  })
+
   it('returns one result per lease', async () => {
     mockRows = [baseRow, { ...baseRow, leaseId: '123-456-789/02 ' }]
     const leases = await run()

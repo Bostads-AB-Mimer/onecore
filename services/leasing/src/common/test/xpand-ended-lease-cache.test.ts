@@ -58,6 +58,36 @@ describe('xpand-ended-lease-cache', () => {
     expect(cache.isReady()).toBe(false)
   })
 
+  it('retries a failed first load until it succeeds', async () => {
+    const loadFn = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: false, err: 'down' })
+      .mockRejectedValueOnce(new Error('down'))
+      .mockResolvedValueOnce({ ok: true, data: [makeLease('L1')] })
+
+    await cache.startXpandEndedLeaseCache(loadFn)
+    await jest.advanceTimersByTimeAsync(cache.FIRST_LOAD_RETRY_MS)
+    expect(cache.isReady()).toBe(false)
+    await jest.advanceTimersByTimeAsync(cache.FIRST_LOAD_RETRY_MS)
+
+    expect(loadFn).toHaveBeenCalledTimes(3)
+    expect(cache.isReady()).toBe(true)
+    expect(cache.getAll().map((l) => l.leaseId)).toEqual(['L1'])
+  })
+
+  it('does not retry early once a load has succeeded', async () => {
+    const loadFn = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, data: [makeLease('L1')] })
+      .mockResolvedValue({ ok: false, err: 'down' })
+
+    await cache.startXpandEndedLeaseCache(loadFn)
+    await jest.advanceTimersByTimeAsync(DAY_MS)
+    await jest.advanceTimersByTimeAsync(cache.FIRST_LOAD_RETRY_MS * 10)
+
+    expect(loadFn).toHaveBeenCalledTimes(2)
+  })
+
   it('keeps the previous data when a reload fails', async () => {
     const loadFn = jest
       .fn()
