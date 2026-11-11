@@ -370,6 +370,21 @@ describe('Tenfast Adapter', () => {
       })
     })
 
+    it('sends from without an upper bound so invoices for future periods are included', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: TenfastInvoicesByTenantIdResponseFactory.build(),
+      })
+
+      await getInvoicesForTenant('tenant-123', new Date('2026-10-01'))
+
+      const [config] = mockAxios.request.mock.calls[0]
+      expect(config.params).toEqual(
+        expect.objectContaining({ from: '2026-10-01' })
+      )
+      expect(config.params).not.toHaveProperty('to')
+    })
+
     it('maps tenfast deferral source when grace period is present on invoice', async () => {
       const mockInvoices = [
         TenfastInvoiceFactory.build({

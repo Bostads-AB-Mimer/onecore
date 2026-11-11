@@ -192,8 +192,10 @@ export const getInvoicesForTenant = async (
         hyresvard: companyId,
         hyresgast: tenantId,
         paginate: 'false',
+        // No `to`: Tenfast applies from/to to the invoice period, not the
+        // invoice date. Rent is invoiced in advance, so an upper bound of today
+        // would drop next month's invoice.
         from: from ? dateToDateString(from) : undefined,
-        to: from ? dateToDateString(new Date()) : undefined,
       },
     })
     if (result.status !== 200) {
