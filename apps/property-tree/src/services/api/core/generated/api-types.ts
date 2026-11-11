@@ -949,7 +949,7 @@ export interface paths {
     }
     /**
      * Create a draft listing
-     * @description Creates a new Draft listing for a rental object, ready to be edited and reviewed before publishing.
+     * @description Creates a new Draft listing for an apartment rental object, ready to be edited and reviewed before publishing.
      */
     post: {
       requestBody: {
@@ -957,7 +957,7 @@ export interface paths {
           'application/json': {
             rentalObjectCode: string
             /** @enum {string} */
-            listingCategory: 'PARKING_SPACE' | 'APARTMENT' | 'STORAGE'
+            listingCategory: 'APARTMENT'
           }
         }
       }
@@ -1011,7 +1011,7 @@ export interface paths {
     }
     /**
      * Update listing publish/review fields
-     * @description Partially updates a listing's publishedFrom, publishedTo, reviewedAt, reviewedBy, availableFrom and tentativeAvailableFrom fields.
+     * @description Partially updates a listing's publishedFrom, publishedTo, reviewedAt, reviewedBy and tentativeAvailableFrom fields.
      */
     patch: {
       parameters: {
@@ -1030,8 +1030,6 @@ export interface paths {
             /** Format: date-time */
             reviewedAt?: string | null
             reviewedBy?: string | null
-            /** Format: date-time */
-            availableFrom?: string | null
             /** Format: date-time */
             tentativeAvailableFrom?: string | null
           }
@@ -12482,8 +12480,6 @@ export interface components {
         /** Format: date-time */
         reviewedAt?: string | null
         reviewedBy?: string | null
-        /** Format: date-time */
-        availableFrom?: string | null
         /** Format: date-time */
         tentativeAvailableFrom?: string | null
       } | null
