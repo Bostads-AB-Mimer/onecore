@@ -532,6 +532,14 @@ describe('Tenfast Adapter', () => {
       expect(result).toEqual({ ok: false, err: 'pagination-error' })
     })
 
+    it('returns request-failed when the request itself fails', async () => {
+      mockAxios.request.mockRejectedValue(new Error('socket hang up'))
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      expect(result).toEqual({ ok: false, err: 'request-failed' })
+    })
+
     it('maps tenfast deferral source when grace period is present on invoice', async () => {
       const mockInvoices = [
         TenfastInvoiceFactory.build({

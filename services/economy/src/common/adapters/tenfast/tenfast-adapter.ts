@@ -154,7 +154,8 @@ const TENFAST_INVOICES_PAGE_SIZE = 1000
 // ends can't loop forever. Far above any real result set.
 const TENFAST_MAX_PAGES = 100
 
-type TenfastPagesError = 'request-failed' | 'schema-error' | 'pagination-error'
+export type TenfastPagesError =
+  'request-failed' | 'schema-error' | 'pagination-error'
 
 /**
  * Fetches every page of a paginated Tenfast list endpoint.
@@ -235,7 +236,7 @@ const fetchAllTenfastPages = async <T>(
 export const getInvoicesForTenant = async (
   tenantId: string,
   from?: Date
-): Promise<AdapterResult<ParsedTenfastInvoice[], string>> => {
+): Promise<AdapterResult<ParsedTenfastInvoice[], TenfastPagesError>> => {
   try {
     const pagesResult = await fetchAllTenfastPages(
       '/v1/hyresvard/hyror',
@@ -269,7 +270,7 @@ export const getInvoicesForTenant = async (
       { tenantId, status, error: errorMessage(err) },
       'tenfast-adapter.getInvoicesForTenant'
     )
-    return { ok: false, err: errorMessage(err) }
+    return { ok: false, err: 'request-failed' }
   }
 }
 
