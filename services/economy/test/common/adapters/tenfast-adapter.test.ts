@@ -376,7 +376,7 @@ describe('Tenfast Adapter', () => {
       })
     })
 
-    it('sends from without an upper bound so invoices for future periods are included', async () => {
+    it('sends from with a far-future to, so the filter applies and invoices for future periods are included', async () => {
       mockAxios.request.mockResolvedValue({
         status: 200,
         data: TenfastInvoicesByTenantIdResponseFactory.build(),
@@ -384,10 +384,23 @@ describe('Tenfast Adapter', () => {
 
       await getInvoicesForTenant('tenant-123', new Date('2026-10-01'))
 
+      // Tenfast ignores `from` when `to` is missing.
       const [config] = mockAxios.request.mock.calls[0]
       expect(config.params).toEqual(
-        expect.objectContaining({ from: '2026-10-01' })
+        expect.objectContaining({ from: '2026-10-01', to: '2099-12-31' })
       )
+    })
+
+    it('sends no date range when from is not given', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: TenfastInvoicesByTenantIdResponseFactory.build(),
+      })
+
+      await getInvoicesForTenant('tenant-123')
+
+      const [config] = mockAxios.request.mock.calls[0]
+      expect(config.params).not.toHaveProperty('from')
       expect(config.params).not.toHaveProperty('to')
     })
 
@@ -437,6 +450,8 @@ describe('Tenfast Adapter', () => {
           hyresgast: 'tenant-123',
           limit: 1000,
           from: '2026-10-01',
+          // Without `to` Tenfast would ignore `from` on this page.
+          to: '2099-12-31',
           paginate: 'cursor-1',
         })
       )

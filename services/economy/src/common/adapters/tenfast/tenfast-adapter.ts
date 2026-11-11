@@ -150,6 +150,10 @@ const getRentalObjectById = async (
 // Largest page size Tenfast accepts on /v1/hyresvard/hyror.
 const TENFAST_INVOICES_PAGE_SIZE = 1000
 
+// `to` for a date range with no upper bound. Tenfast has no open-ended range
+// and recommends a date far in the future instead.
+const TENFAST_OPEN_ENDED_TO = '2099-12-31'
+
 // Upper bound on the pages fetched in one walk, so a cursor chain that never
 // ends can't loop forever. Far above any real result set.
 const TENFAST_MAX_PAGES = 100
@@ -244,10 +248,12 @@ export const getInvoicesForTenant = async (
         hyresvard: companyId,
         hyresgast: tenantId,
         limit: TENFAST_INVOICES_PAGE_SIZE,
-        // No `to`: Tenfast applies from/to to the invoice period, not the
-        // invoice date. Rent is invoiced in advance, so an upper bound of
-        // today would drop next month's invoice.
-        from: from ? dateToDateString(from) : undefined,
+        // Tenfast ignores `from` unless `to` is sent with it. Both apply to
+        // the invoice period, not the invoice date, and rent is invoiced in
+        // advance, so an upper bound of today would drop next month's invoice.
+        ...(from
+          ? { from: dateToDateString(from), to: TENFAST_OPEN_ENDED_TO }
+          : {}),
       },
       TenfastInvoicesByTenantIdResponseSchema,
       { tenantId }
