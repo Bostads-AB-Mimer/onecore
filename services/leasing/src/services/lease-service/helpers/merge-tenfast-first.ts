@@ -1,9 +1,12 @@
-import { Lease } from '@onecore/types'
+const normalise = (id: string) => id.trim().toLowerCase()
 
-export const mergeTenfastFirst = (
-  tenfast: Lease[],
-  xpand: Lease[]
-): Lease[] => {
-  const tenfastIds = new Set(tenfast.map((l) => l.leaseId.trim()))
-  return [...tenfast, ...xpand.filter((l) => !tenfastIds.has(l.leaseId.trim()))]
+export const mergeTenfastFirst = <T extends { leaseId: string }>(
+  tenfast: T[],
+  xpand: T[]
+): T[] => {
+  const tenfastIds = new Set(tenfast.map((l) => normalise(l.leaseId)))
+  return [
+    ...tenfast,
+    ...xpand.filter((l) => !tenfastIds.has(normalise(l.leaseId))),
+  ]
 }

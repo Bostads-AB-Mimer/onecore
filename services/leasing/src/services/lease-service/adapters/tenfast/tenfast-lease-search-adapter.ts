@@ -9,6 +9,8 @@ import {
 import { TenfastLease } from './schemas'
 import * as tenfastAdapter from './tenfast-adapter'
 import * as leaseCache from '../../../../common/lease-cache'
+import * as xpandEndedLeaseCache from '../../../../common/xpand-ended-lease-cache'
+import { mergeTenfastFirst } from '../../helpers/merge-tenfast-first'
 import type { DeltaSyncResult } from '../../../../common/lease-cache'
 import {
   mapTenfastTypToLeaseType,
@@ -160,6 +162,29 @@ async function resolveXpandRentalObjectCodes(
   return new Set(codes)
 }
 
+function wantsEnded(params: leasing.v1.LeaseSearchQueryParams): boolean {
+  if (params.includeEnded === true) return true
+  return (params.status ?? []).some(
+    (s) => STATUS_PARAM_TO_LEASE_STATUS[s.toLowerCase()] === LeaseStatus.Ended
+  )
+}
+
+function buildSearchPool(
+  params: leasing.v1.LeaseSearchQueryParams,
+  ctx: Context
+): leasing.v1.LeaseSearchResult[] {
+  const tenfastRows = leaseCache.getAll()
+  if (!wantsEnded(params)) return tenfastRows
+
+  if (!xpandEndedLeaseCache.isReady()) {
+    ctx.throw(503, 'Ended Xpand leases are loading — retry shortly', {
+      headers: { 'Retry-After': '30' },
+    })
+  }
+
+  return mergeTenfastFirst(tenfastRows, xpandEndedLeaseCache.getAll())
+}
+
 export async function fetchAllLeasesForExport(
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
@@ -175,11 +200,13 @@ export async function fetchAllLeasesForExport(
 
   await leaseCache.refreshIfStale(STALE_THRESHOLD_MS, STALE_SYNC_TIMEOUT_MS)
 
+  const pool = buildSearchPool(params, ctx)
+
   const rentalObjectCodes = await resolveXpandRentalObjectCodes(params)
   if (rentalObjectCodes && rentalObjectCodes.size === 0) return []
 
   const filtered = applyCacheFilters(
-    leaseCache.getAll(),
+    pool,
     params,
     rentalObjectCodes ?? undefined
   )
@@ -401,6 +428,8 @@ async function searchLeasesFromCache(
   const page = Math.max(1, params.page ?? 1)
   const limit = Math.max(1, params.limit ?? 20)
 
+  const pool = buildSearchPool(params, ctx)
+
   const xpandStart = Date.now()
   const rentalObjectCodes = await resolveXpandRentalObjectCodes(params)
   const xpandMs = Date.now() - xpandStart
@@ -419,7 +448,7 @@ async function searchLeasesFromCache(
 
   const filterStart = Date.now()
   const filtered = applyCacheFilters(
-    leaseCache.getAll(),
+    pool,
     params,
     rentalObjectCodes ?? undefined
   )

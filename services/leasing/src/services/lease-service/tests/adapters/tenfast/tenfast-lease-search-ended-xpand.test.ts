@@ -3,6 +3,7 @@ import { leasing, LeaseType, LeaseStatus } from '@onecore/types'
 import * as tenfastLeaseSearchAdapter from '../../../adapters/tenfast/tenfast-lease-search-adapter'
 import * as xpandLeaseSearchAdapter from '../../../adapters/xpand/lease-search-adapter'
 import * as leaseCache from '../../../../../common/lease-cache'
+import * as xpandEndedLeaseCache from '../../../../../common/xpand-ended-lease-cache'
 
 jest.mock('../../../../../common/lease-cache', () => ({
   getAll: jest.fn(),
@@ -10,14 +11,10 @@ jest.mock('../../../../../common/lease-cache', () => ({
   ensureReady: jest.fn().mockResolvedValue(true),
 }))
 
-jest.mock(
-  '../../../../../common/xpand-ended-lease-cache',
-  () => ({
-    getAll: jest.fn(),
-    isReady: jest.fn(),
-  }),
-  { virtual: true }
-)
+jest.mock('../../../../../common/xpand-ended-lease-cache', () => ({
+  getAll: jest.fn(),
+  isReady: jest.fn(),
+}))
 
 jest.mock('../../../adapters/xpand/lease-search-adapter', () => ({
   getRentalObjectCodesByBuildingManager: jest.fn(),
@@ -31,8 +28,7 @@ jest.mock('../../../adapters/xpand/tenant-lease-adapter', () => ({
   getContacts: jest.fn().mockResolvedValue([]),
 }))
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const xpandCache = require('../../../../../common/xpand-ended-lease-cache') as {
+const xpandCache = xpandEndedLeaseCache as unknown as {
   getAll: jest.Mock
   isReady: jest.Mock
 }
@@ -90,8 +86,16 @@ const mockCtx = {
   }),
 } as any
 
-const search = async (params: leasing.v1.LeaseSearchQueryParams) =>
-  (await tenfastLeaseSearchAdapter.searchLeases(params, mockCtx)).content
+type SearchParams = Partial<leasing.v1.LeaseSearchQueryParams>
+
+const paged = (params: SearchParams): leasing.v1.LeaseSearchQueryParams => ({
+  page: 1,
+  limit: 100,
+  ...params,
+})
+
+const search = async (params: SearchParams) =>
+  (await tenfastLeaseSearchAdapter.searchLeases(paged(params), mockCtx)).content
 
 const ids = (rows: leasing.v1.LeaseSearchResult[]) => rows.map((r) => r.leaseId)
 
@@ -237,7 +241,10 @@ describe('lease search with ended Xpand leases', () => {
     it('answers 503 when the Xpand cache is not ready and ended is requested', async () => {
       xpandCache.isReady.mockReturnValue(false)
       await expect(
-        tenfastLeaseSearchAdapter.searchLeases({ status: ['ended'] }, mockCtx)
+        tenfastLeaseSearchAdapter.searchLeases(
+          paged({ status: ['ended'] }),
+          mockCtx
+        )
       ).rejects.toMatchObject({ status: 503 })
       expect(mockCtx.throw).toHaveBeenCalledWith(
         503,
@@ -266,7 +273,7 @@ describe('lease search with ended Xpand leases', () => {
   describe('fetchAllLeasesForExport', () => {
     it('includes Xpand leases when ended is requested', async () => {
       const rows = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
-        { status: ['ended'] },
+        paged({ status: ['ended'] }),
         mockCtx
       )
       expect(ids(rows)).toEqual(['xpand-ended'])
@@ -274,7 +281,7 @@ describe('lease search with ended Xpand leases', () => {
 
     it('leaves Xpand leases out when ended is not requested', async () => {
       const rows = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
-        {},
+        paged({}),
         mockCtx
       )
       expect(ids(rows)).toEqual(['tenfast-current'])
@@ -284,7 +291,7 @@ describe('lease search with ended Xpand leases', () => {
       xpandCache.isReady.mockReturnValue(false)
       await expect(
         tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
-          { status: ['ended'] },
+          paged({ status: ['ended'] }),
           mockCtx
         )
       ).rejects.toMatchObject({ status: 503 })
