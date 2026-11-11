@@ -552,10 +552,10 @@ export const routes = (router: KoaRouter) => {
               ...body,
               reviewedAt: body.reviewedAt ?? null,
               reviewedBy: body.reviewedAt
-                ? (ctx.state.user?.name ||
+                ? ctx.state.user?.name ||
                   ctx.state.user?.preferred_username ||
                   ctx.state.user?.email ||
-                  null)
+                  null
                 : null,
             }
           : body

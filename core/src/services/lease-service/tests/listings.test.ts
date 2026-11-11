@@ -1111,12 +1111,10 @@ describe('PATCH /listings/:listingId', () => {
       .spyOn(tenantLeaseAdapter, 'updateListing')
       .mockResolvedValueOnce({ ok: true, data: listing })
 
-    await request(appWithUser.callback())
-      .patch('/listings/1337')
-      .send({
-        reviewedAt: new Date().toISOString(),
-        reviewedBy: 'someone-the-client-made-up',
-      })
+    await request(appWithUser.callback()).patch('/listings/1337').send({
+      reviewedAt: new Date().toISOString(),
+      reviewedBy: 'someone-the-client-made-up',
+    })
 
     expect(spy).toHaveBeenCalledWith(
       1337,
