@@ -699,7 +699,7 @@ const syncContactToLeasing = async (
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
       logger.error(
-        { status: err.response.status, data: err.response.data },
+        { status: err.response.status },
         'leasing-adapter.syncContactToLeasing'
       )
       return { ok: false, err: 'sync-failed', statusCode: err.response.status }
@@ -790,10 +790,7 @@ const syncLease = async (
     return syncLeaseFailure(response.status, response.data)
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
-      logger.error(
-        { status: err.response.status, data: err.response.data },
-        'leasing-adapter.syncLease'
-      )
+      logger.error({ status: err.response.status }, 'leasing-adapter.syncLease')
       return syncLeaseFailure(err.response.status, err.response.data)
     }
     logger.error({ err }, 'leasing-adapter.syncLease')

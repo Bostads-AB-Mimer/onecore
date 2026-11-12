@@ -232,7 +232,6 @@ const getListings = async (
       logger.error(
         {
           status: response.status,
-          data: response.data,
           query: queryParams.toString(),
         },
         `Error getting listings from leasing`
@@ -278,7 +277,6 @@ const createMultipleListings = async (
     logger.error(
       {
         status: response.status,
-        data: response.data,
         listingsCount: listingsData.length,
       },
       'Unexpected response when creating multiple listings'

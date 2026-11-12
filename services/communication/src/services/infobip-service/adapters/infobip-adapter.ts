@@ -73,7 +73,7 @@ export const sendInspectionProtocolEmail = async (
 
   if (response.status !== 200) {
     logger.error(
-      { status: response.status, body: response.body, to: email.to },
+      { status: response.status },
       'Error sending inspection protocol email'
     )
     throw new Error(

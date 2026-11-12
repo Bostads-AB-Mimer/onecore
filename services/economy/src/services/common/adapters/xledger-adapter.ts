@@ -142,7 +142,7 @@ const makeXledgerRequest = async (
       result.data.map((error: any) => error.message).join('\n')
     )
     logger.error(
-      result.data,
+      { err: error },
       `Error making Xledger request\n${stringifyGraphQlQuery(query)}\n(${getCallerFromError(error)})`
     )
     throw error
