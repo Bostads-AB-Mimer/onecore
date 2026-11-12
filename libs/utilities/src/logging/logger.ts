@@ -9,6 +9,7 @@ import {
   storage,
   getCorrelationId as getCorrelationIdFromStorage,
 } from './loggingStorage'
+import { toElasticLine } from './elastic-fields'
 
 import {
   ConnectionOptions,
@@ -86,6 +87,10 @@ const streamToElastic = pinoElastic({
 streamToElastic.on('error', (error: any) => console.log(error))
 streamToElastic.on('insertError', (error: any) => console.log(error))
 
+const filteredStreamToElastic = {
+  write: (line: string) => streamToElastic.write(toElasticLine(line)),
+}
+
 const prettyStream = pretty({
   colorize: true,
   ignore: 'application,request',
@@ -94,6 +99,7 @@ const prettyStream = pretty({
 })
 
 const pinoOptions = {
+  serializers: { error: pino.stdSerializers.err },
   mixin() {
     return { correlationId: getCorrelationIdFromStorage() }
   },
@@ -108,7 +114,7 @@ const childProperties = {
 
 export const logger = pino(
   pinoOptions,
-  multistream([{ stream: prettyStream }, { stream: streamToElastic }])
+  multistream([{ stream: prettyStream }, { stream: filteredStreamToElastic }])
 ).child(childProperties)
 
 const getCorrelationId = (
