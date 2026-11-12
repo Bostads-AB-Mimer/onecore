@@ -1,5 +1,7 @@
 import { skipToken, useQuery } from '@tanstack/react-query'
 
+import { ACTIVE_LEASE_SEARCH_STATUSES } from '@/entities/lease'
+
 import { leaseSearchService } from '@/services/api/core/leaseSearchService'
 import type {
   RentalObjectSummary,
@@ -10,9 +12,10 @@ import { TREE_GC_TIME, TREE_STALE_TIME } from './usePropertyTreeData'
 
 export type { RentalObjectSummary, RentalObjectType }
 
-// The lease search silently clamps limit to 100 (libs/types lease-search),
-// so this is the largest page we can ask for.
-const PAGE_SIZE = 100
+// The lease search silently clamps limit to 500 (libs/types lease-search),
+// so this is the largest page we can ask for. A property with fewer matching
+// leases is read in one request, with no page boundary to lose a lease at.
+const PAGE_SIZE = 500
 
 export interface OccupantTenant {
   contactCode: string
@@ -37,15 +40,12 @@ export async function fetchPropertyTenants(
   let fetched = 0
   let page = 1
   for (;;) {
-    // Gällande (0), uppsagt (2) and preliminärt uppsagt (4): a tenant under
-    // notice, confirmed or not, still lives there until the lease ends, so the
-    // object is occupied, not vakant.
-    // Kommande (1) hasn't moved in and upphört (3) has already left.
+    // The same leases the object pages count as active: a tenant under notice,
+    // confirmed or not, still lives there until the lease ends, so the object
+    // is occupied, not vacant. An upcoming tenant hasn't moved in and an ended
+    // lease's tenant has already left.
     const result = await leaseSearchService.search(
-      {
-        property: [designation],
-        status: ['current', 'abouttoend', 'preliminaryterminated'],
-      },
+      { property: [designation], status: ACTIVE_LEASE_SEARCH_STATUSES },
       page,
       PAGE_SIZE
     )
@@ -73,7 +73,7 @@ export async function fetchPropertyTenants(
 
 /** Current tenants for all of a property's objects, keyed by object code.
  * On the tree's TTL: rows mount and unmount as branches open and close, and
- * each miss is one sequential lease page per 100 leases. */
+ * each miss is one sequential lease page per 500 leases. */
 export function usePropertyTenants(designation: string | undefined) {
   return useQuery({
     queryKey: ['propertyTenants', designation],
