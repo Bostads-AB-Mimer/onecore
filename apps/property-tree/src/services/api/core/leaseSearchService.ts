@@ -109,26 +109,8 @@ async function getContactsByFilters(
   return data.content ?? []
 }
 
-async function exportLeasesToExcel(
-  params: LeaseSearchQueryParams
-): Promise<Blob> {
-  const { data, error } = await GET('/leases/export', {
-    params: {
-      query: params,
-    },
-    parseAs: 'blob',
-  })
-
-  if (error) throw error
-
-  // openapi-typescript types binary responses as `string`, but parseAs:'blob'
-  // makes openapi-fetch return an actual Blob at runtime.
-  return data as unknown as Blob
-}
-
 export const leaseSearchService = {
   search,
   getParkingSpaceTypes,
   getContactsByFilters,
-  exportLeasesToExcel,
 }

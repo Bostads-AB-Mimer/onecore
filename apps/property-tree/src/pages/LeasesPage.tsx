@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
 import { usePropertySearch } from '@/features/properties'
 import { useCostCenters } from '@/features/property-areas'
 
-import { useLeaseFilters } from '@/entities/lease'
+import {
+  leaseStatusOptions,
+  useLeaseFilters,
+  useStartLeaseExport,
+} from '@/entities/lease'
 
 import { ApiError } from '@/services/api/core/baseApi'
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
@@ -50,19 +54,9 @@ const objectTypeOptions = [
 //   { label: 'P-Platskontrakt', value: 'P-Platskontrakt' },
 // ] as const
 
-const statusOptions = [
-  { label: 'Gällande', value: 'current' },
-  { label: 'Kommande', value: 'upcoming' },
-  { label: 'Uppsagd', value: 'abouttoend' },
-  { label: 'Upphört', value: 'ended' },
-  { label: 'Prel. uppsagt', value: 'preliminaryterminated' },
-  { label: 'Inväntar signering', value: 'pendingsignature' },
-  { label: 'Ej skickat', value: 'notsent' },
-] as const
-
 const LeasesPage = () => {
   const cardRef = useRef<HTMLDivElement>(null)
-  const [isExporting, setIsExporting] = useState(false)
+  const startExport = useStartLeaseExport()
   const filters = useLeaseFilters()
   const searchProperties = usePropertySearch()
   const { data: costCenters } = useCostCenters()
@@ -83,27 +77,10 @@ const LeasesPage = () => {
     cardRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const handleExport = async () => {
+  const handleExport = () => {
     if (!filters.meta?.totalRecords || filters.meta.totalRecords === 0) return
 
-    setIsExporting(true)
-    try {
-      const blob = await filters.exportToExcel(filters.searchParams)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `hyreskontrakt-${new Date().toISOString().split('T')[0]}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      setTimeout(() => {
-        URL.revokeObjectURL(url)
-        a.remove()
-      }, 1000)
-    } catch {
-      // Export errors are visible to the user via the button state resetting
-    } finally {
-      setIsExporting(false)
-    }
+    startExport.mutate(filters.searchParams)
   }
 
   const {
@@ -194,9 +171,11 @@ const LeasesPage = () => {
               variant="outline"
               size="sm"
               onClick={handleExport}
-              disabled={isExporting || (filters.meta?.totalRecords ?? 0) === 0}
+              disabled={
+                startExport.isPending || (filters.meta?.totalRecords ?? 0) === 0
+              }
             >
-              {isExporting ? (
+              {startExport.isPending ? (
                 <>
                   <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   Exporterar...
@@ -240,7 +219,7 @@ const LeasesPage = () => {
               />
 
               <MultiSelectFilterDropdown
-                options={statusOptions.map((o) => ({
+                options={leaseStatusOptions.map((o) => ({
                   label: o.label,
                   value: o.value,
                 }))}
