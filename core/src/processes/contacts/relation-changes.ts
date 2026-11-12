@@ -356,7 +356,7 @@ const alarmRollbackFailed = async (params: {
       logger.error({ err: sent.err }, 'relationChanges.rollbackAlarmMailFailed')
     }
   } catch (emailErr) {
-    logger.error({ emailErr }, 'relationChanges.rollbackAlarmMailFailed')
+    logger.error({ err: emailErr }, 'relationChanges.rollbackAlarmMailFailed')
   }
 }
 

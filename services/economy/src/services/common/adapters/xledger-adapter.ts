@@ -429,7 +429,7 @@ export const getCustomer = async (contactCode: string) => {
   const result = await makeXledgerRequest(query)
 
   if (result.data?.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   return result.data?.customers?.edges?.[0]?.node ?? null
@@ -625,7 +625,7 @@ export const getCustomers = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const customers = result.data.customers.edges.map((e: any) =>
@@ -670,7 +670,7 @@ export const getProjects = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const projects = result.data.projects.edges.map((e: any) =>
@@ -719,7 +719,7 @@ export const getContacts = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const contacts = result.data.contacts.edges.map((e: any) =>

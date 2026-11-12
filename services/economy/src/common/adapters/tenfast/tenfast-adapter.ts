@@ -571,7 +571,7 @@ const fetchTenfastInvoiceByOcr = async (
 
     if (result.status !== 200) {
       logger.info(
-        { ocr, status: result.status, data: result.data },
+        { ocr, status: result.status },
         'deferral: Tenfast OCR lookup returned unexpected status'
       )
       return { ok: false, err: 'unknown' }

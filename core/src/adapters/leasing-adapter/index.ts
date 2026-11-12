@@ -376,7 +376,7 @@ const getTenantByContactCode = async (
       // A 404 without a recognized leasing error type is not a business
       // outcome — e.g. a proxy/gateway 404 or a misrouted service URL.
       logger.error(
-        { status: res.status, body: res.data },
+        { status: res.status },
         'leasing-adapter.getTenantByContactCode: unrecognized 404 response'
       )
       return { ok: false, err: 'unknown' }
@@ -585,7 +585,7 @@ const preliminaryTerminateLease = async (
     }
 
     logger.error(
-      { status: response.status, data: response.data },
+      { status: response.status },
       'Failed to preliminary terminate lease'
     )
     return { ok: false, err: 'termination-failed' }
@@ -863,7 +863,7 @@ const syncRentalObjectType = async (
     }
 
     logger.error(
-      { rentalObjectCode, status: response.status, body: response.data },
+      { rentalObjectCode, status: response.status },
       'leasing-adapter.syncRentalObjectType'
     )
     return { ok: false, err: 'sync-failed', statusCode: response.status }

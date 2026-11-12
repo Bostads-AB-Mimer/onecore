@@ -42,7 +42,7 @@ async function notify(subject: string, body: string): Promise<void> {
   try {
     await sendEmail(recipient, subject, body)
   } catch (emailErr) {
-    logger.error({ emailErr }, 'failed to send notification')
+    logger.error({ err: emailErr }, 'failed to send notification')
   }
 }
 

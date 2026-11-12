@@ -307,7 +307,7 @@ export async function submitMiscellaneousInvoice(
     }
 
     logger.error(
-      { status: response.status, body: response.data },
+      { status: response.status },
       'economy-adapter.submitMiscellaneousInvoice'
     )
     return { ok: false, err: SubmitMiscellaneousInvoiceErrorCodes.Unknown }

@@ -1349,7 +1349,7 @@ export const routes = (router: KoaRouter) => {
 
       if (createLeaseTenfastResult.ok) {
         logger.info(
-          { result: createLeaseTenfastResult.data },
+          { leaseId: createLeaseTenfastResult.data },
           'Lease created in tenFAST'
         )
         ctx.body = {
