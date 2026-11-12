@@ -695,8 +695,8 @@ const transformToInvoice = (
       invoiceDate: tenfastInvoice.activatedAt
         ? new Date(tenfastInvoice.activatedAt)
         : // expectedInvoiceDate is no longer returned for some invoices
-          // (e.g. credited ones), fall back to the due date.
-          new Date(tenfastInvoice.expectedInvoiceDate ?? tenfastInvoice.due),
+        // (e.g. credited ones), fall back to the due date.
+        new Date(tenfastInvoice.expectedInvoiceDate ?? tenfastInvoice.due),
       expirationDate: new Date(tenfastInvoice.due),
       paidAmount: tenfastInvoice.amountPaid,
       remainingAmount,
@@ -1124,17 +1124,17 @@ const enrichInvoiceRowsWithAccounting = async (
       errors.push(
         articleResult.err === 'not-found'
           ? {
-              invoiceNumber: invoice.invoiceId,
-              code: 'rent-article-not-found',
-              rentArticle: invoiceRow.rentArticle,
-              error: `Hyresartikeln ${invoiceRow.rentArticle} finns inte i Tenfast`,
-            }
+            invoiceNumber: invoice.invoiceId,
+            code: 'rent-article-not-found',
+            rentArticle: invoiceRow.rentArticle,
+            error: `Hyresartikeln ${invoiceRow.rentArticle} finns inte i Tenfast`,
+          }
           : {
-              invoiceNumber: invoice.invoiceId,
-              code: 'rent-article-fetch-failed',
-              rentArticle: invoiceRow.rentArticle,
-              error: `Kunde inte hämta hyresartikeln ${invoiceRow.rentArticle} från Tenfast`,
-            }
+            invoiceNumber: invoice.invoiceId,
+            code: 'rent-article-fetch-failed',
+            rentArticle: invoiceRow.rentArticle,
+            error: `Kunde inte hämta hyresartikeln ${invoiceRow.rentArticle} från Tenfast`,
+          }
       )
       continue
     }
@@ -1185,7 +1185,7 @@ const enrichInvoiceRowsWithAccounting = async (
         : undefined
     invoiceRowWithAccounting.projectCode =
       accountConfiguration.projectCode &&
-      accountConfiguration.projectCode !== ''
+        accountConfiguration.projectCode !== ''
         ? accountConfiguration.projectCode
         : undefined
     invoiceRowWithAccounting.freeCode = accountConfiguration.freeText
@@ -1241,12 +1241,10 @@ export const getInvoicesNotExported = async (
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
         isManuallyExported: 'false',
+        isCancelled: 'false',
         status: 'issued',
         limit: maxCount,
         hyresvard: company.tenfastId,
-        /*paginate:
-          'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
-        //ocrNumber: '552606000000733',
       },
     })
 
