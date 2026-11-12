@@ -75,8 +75,14 @@ export class IgnoreErrorConnection extends UndiciConnection {
   }
 }
 
+const monthlyIndex = () => {
+  const now = new Date()
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0')
+  return `onecore-logging-${now.getUTCFullYear()}.${month}`
+}
+
 const streamToElastic = pinoElastic({
-  index: 'onecore-logging',
+  index: monthlyIndex,
   node: process.env.ELASTICSEARCH_LOGGING_HOST || 'http://localhost:9200',
   esVersion: 8,
   flushBytes: 100,
