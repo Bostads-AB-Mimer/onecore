@@ -5,6 +5,8 @@ import {
   fetchAllLeasesForCache,
   fetchLeasesUpdatedSinceForCache,
 } from './services/lease-service/adapters/tenfast/tenfast-lease-search-adapter'
+import { startXpandEndedLeaseCache } from './common/xpand-ended-lease-cache'
+import { getAllEndedLeasesForSearch } from './services/lease-service/adapters/xpand/ended-lease-adapter'
 
 const PORT = process.env.PORT || 5020
 app.listen(PORT, () => {
@@ -12,3 +14,4 @@ app.listen(PORT, () => {
 })
 
 startLeaseCache(fetchAllLeasesForCache, fetchLeasesUpdatedSinceForCache)
+startXpandEndedLeaseCache(getAllEndedLeasesForSearch).catch(() => {})
