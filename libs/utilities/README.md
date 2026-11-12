@@ -22,12 +22,19 @@ import { logger } from 'onecore-utilities'
 
 logger.warn(aMessage)
 logger.info(anObject, aMessage)
+logger.error({ err }, aMessage)
 ```
+
+All services write to one Elasticsearch index per month, `onecore-logging-YYYY.MM`. Elasticsearch maps every new field name it sees, and an index takes at most 1,000 fields; lines that would add more are dropped. So log named, fixed fields only:
+
+- Never pass a whole record, request, response or upstream body as the first argument. Pick the few fields you need: `{ status, error }`, ids, counts.
+- Errors under `err` or `error` (and a bare error passed as the first argument) are reduced to `type`, `message`, `stack`, `status` and `code`. A string becomes `{ message }`. Response bodies, headers and request config are never logged.
+- Never log credentials or personal data.
 
 #### Koa request logging
 
 `loggerMiddlewares.pre` will log the start of all incoming requests.<br>
-`loggerMiddlewares.post` will log the completion of all incoming requests.
+`loggerMiddlewares.post` will log the completion of all incoming requests, with `request.path`, `request.method`, `request.status` and, for a signed-in caller, `request.user.id`.
 
 ```
 import { loggerMiddlewares } from 'onecore-utilities'
@@ -46,7 +53,7 @@ Set environment variable `APPLICATION_NAME` to the name of the application.
 
 ### loggedAxios
 
-A standard Axios with interceptors for request and response that logs all requests and their completions to logger, with a subset of fields from the Axios request and response objects and a correlationId.
+A standard Axios with interceptors for request and response that logs all requests and their completions to logger, with the url, method, status and correlationId. Headers and bodies are not logged.
 
 #### Configuration
 

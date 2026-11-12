@@ -691,7 +691,10 @@ const syncContactToLeasing = async (
       return { ok: true, data: { skipped: response.data?.skipped === true } }
     }
 
-    logger.error({ status: response.status }, 'leasing-adapter.syncContactToLeasing')
+    logger.error(
+      { status: response.status },
+      'leasing-adapter.syncContactToLeasing'
+    )
     return { ok: false, err: 'sync-failed', statusCode: response.status }
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
