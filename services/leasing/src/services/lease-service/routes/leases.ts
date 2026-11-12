@@ -18,6 +18,7 @@ import {
 
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import { filterByStatus } from '../adapters/tenfast/filters'
 import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import * as tenfastHelpers from '../helpers/tenfast'
 import * as endedLeaseAdapter from '../adapters/xpand/ended-lease-adapter'
@@ -985,10 +986,10 @@ export const routes = (router: KoaRouter) => {
    *         name: status
    *         schema:
    *           type: string
-   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended, pending-signature, preliminary-terminated, not-sent. Default is all statuses.
    *     responses:
    *       200:
-   *         description: Successfully retrieved leases.
+   *         description: Successfully retrieved leases. Empty when the rental object has no leases matching the status filter.
    *         content:
    *           application/json:
    *             schema:
@@ -999,8 +1000,30 @@ export const routes = (router: KoaRouter) => {
    *                   items:
    *                     type: object
    *                     description: Lease details.
+   *       400:
+   *         description: Invalid status filter.
+   *       404:
+   *         description: The rental object does not exist in Tenfast and has no ended leases in Xpand.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: rental-object-not-found
    *       500:
    *         description: Internal server error. Failed to retrieve leases.
+   *       503:
+   *         description: The rental object lookup in Tenfast failed, so it is unknown whether the object has leases.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: could-not-fetch-rental-object
    */
   router.get(
     '(.*)/leases/by-rental-object-code/:rentalObjectCode',
@@ -1016,24 +1039,32 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const endedXpandPromise = includesEnded(queryParams.data?.status)
+      const statuses = queryParams.data.status
+
+      const endedXpandPromise = includesEnded(statuses)
         ? endedLeaseAdapter.getEndedLeasesByRentalObjectCode(
             ctx.params.rentalObjectCode
           )
         : undefined
 
-      // TODO: TenFAST route is coming to get avtal by hyresobjekt
-      // EDIT: or is it?
-      const property = await tenfastAdapter.getRentalObject(
+      const rentalObject = await tenfastAdapter.getRentalObject(
         ctx.params.rentalObjectCode
       )
 
-      // TODO: Clean this up
-      const tenfastHasNoRentalObject =
-        (!property.ok && property.err === 'could-not-find-rental-object') ||
-        (property.ok && property.data === null)
+      // A failed lookup says nothing about whether the object exists, so it
+      // must not fall through to the 404 below: callers read that as "no
+      // leases" and would show a rented object as vacant. The adapter has
+      // already logged the failure.
+      if (!rentalObject.ok) {
+        // 503 when Tenfast could not be reached or answered with an error,
+        // 500 when it answered with something we could not read.
+        ctx.status =
+          rentalObject.err === 'could-not-fetch-rental-object' ? 503 : 500
+        ctx.body = { error: rentalObject.err, ...metadata }
+        return
+      }
 
-      if (tenfastHasNoRentalObject) {
+      if (rentalObject.data === null) {
         const endedXpandLeases = await getEndedXpandLeases(
           endedXpandPromise,
           metadata
@@ -1046,28 +1077,14 @@ export const routes = (router: KoaRouter) => {
         }
 
         ctx.status = 404
-        ctx.body = {
-          error: 'Not found',
-          ...metadata,
-        }
+        ctx.body = { error: 'rental-object-not-found', ...metadata }
         return
       }
 
-      if (!property.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: property.err,
-          ...metadata,
-        }
-        return
-      }
-
-      if (!property.data) {
-        throw 'ffs'
-      }
-
+      // Fetched without a status filter: Xpand is deduped against every
+      // Tenfast lease, not just the ones the filter keeps.
       const getLeases = await tenfastAdapter.getLeasesByRentalPropertyId(
-        property.data._id
+        rentalObject.data._id
       )
 
       if (!getLeases.ok) {
@@ -1079,9 +1096,20 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const onecoreLeases = mergeTenfastFirst(
-        getLeases.data.map((lease) => tenfastHelpers.mapToOnecoreLease(lease)),
+      const tenfastIds = new Set(
+        getLeases.data.map((lease) => lease.externalId)
+      )
+      const endedXpandLeases = (
         await getEndedXpandLeases(endedXpandPromise, metadata)
+      ).filter((lease) => !tenfastIds.has(lease.leaseId.trim()))
+
+      const tenfastLeases = statuses
+        ? filterByStatus(getLeases.data, statuses)
+        : getLeases.data
+
+      const onecoreLeases = mergeTenfastFirst(
+        tenfastLeases.map((lease) => tenfastHelpers.mapToOnecoreLease(lease)),
+        endedXpandLeases
       )
 
       ctx.status = 200

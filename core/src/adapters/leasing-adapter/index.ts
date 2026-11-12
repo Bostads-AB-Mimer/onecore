@@ -135,9 +135,18 @@ const getLeasesForPropertyId = async (
       includeNonTenantContacts: options.includeNonTenantContacts.toString(),
     }),
   })
+  // Explicit validateStatus: the process-wide default (<500) would let other
+  // 4xx through with no content, which callers would read as "no leases".
   const leasesResponse = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`
+    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`,
+    { validateStatus: (status) => status === 200 || status === 404 }
   )
+
+  // Leasing answers 404 for a rental object it has no leases for.
+  if (leasesResponse.status === 404) {
+    return []
+  }
+
   return leasesResponse.data.content
 }
 

@@ -56,7 +56,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     })
   })
 
-  it('should return error "could-not-find-rental-object" when status is not 200 or 404', async () => {
+  it('should return error "could-not-fetch-rental-object" when status is not 200 or 404', async () => {
     // Arrange
     const mockResponse = {
       status: 500,
@@ -70,7 +70,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     // Assert
     expect(result).toEqual({
       ok: false,
-      err: 'could-not-find-rental-object',
+      err: 'could-not-fetch-rental-object',
     })
   })
 
@@ -92,7 +92,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     })
   })
 
-  it('should return error "could-not-find-rental-object" when request throws an exception', async () => {
+  it('should return error "could-not-fetch-rental-object" when request throws an exception', async () => {
     // Arrange
     ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
@@ -102,7 +102,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     // Assert
     expect(result).toEqual({
       ok: false,
-      err: 'could-not-find-rental-object',
+      err: 'could-not-fetch-rental-object',
     })
   })
 })
@@ -1333,7 +1333,7 @@ describe(tenfastAdapter.createLease, () => {
 
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: false,
-      err: 'could-not-find-rental-object',
+      err: 'could-not-fetch-rental-object',
     })
 
     const contact = factory.contact.build()
@@ -1698,7 +1698,7 @@ describe(tenfastAdapter.importLease, () => {
 
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: false,
-      err: 'could-not-find-rental-object',
+      err: 'could-not-fetch-rental-object',
     })
 
     const result = await tenfastAdapter.importLease(
