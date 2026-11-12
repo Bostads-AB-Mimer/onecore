@@ -3,6 +3,10 @@ import { Outlet } from 'react-router-dom'
 import { GuideSheet } from '@/widgets/guide-sheet'
 import { SidebarNavigation } from '@/widgets/sidebar'
 
+import {
+  LeaseExportsSheet,
+  LeaseExportsSheetProvider,
+} from '@/features/lease-exports'
 import { CommandPalette } from '@/features/search'
 
 import { FeedbackModalProvider } from '@/shared/hooks/useFeedbackModal'
@@ -24,9 +28,11 @@ export function AppLayout() {
   return (
     <FeedbackModalProvider>
       <GuideSheetProvider>
-        <SidebarProvider>
-          <AppLayoutContent />
-        </SidebarProvider>
+        <LeaseExportsSheetProvider>
+          <SidebarProvider>
+            <AppLayoutContent />
+          </SidebarProvider>
+        </LeaseExportsSheetProvider>
       </GuideSheetProvider>
     </FeedbackModalProvider>
   )
@@ -52,6 +58,7 @@ function AppLayoutContent() {
       <Toaster />
       <FeedbackModal />
       <GuideSheet />
+      <LeaseExportsSheet />
     </div>
   )
 }
