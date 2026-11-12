@@ -1306,22 +1306,9 @@ export interface paths {
     /**
      * Get availability for a rental object
      * @description Fetches availability for a rental object by Rental Object Code.
-     * The rent total (rent.amount, rent.vat) is the rent of today, unless
-     * a later move-in day is known. For a parking space that day is its
-     * vacantFrom. For other rental objects vacantFrom is not set, so the
-     * caller gives the day as rentAt. The total is then the sum of the
-     * rent rows in force that day with includedInRent set.
      */
     get: {
       parameters: {
-        query?: {
-          /**
-           * @description The day to give the rent total for (yyyy-mm-dd), for rental
-           * objects that are not parking spaces. Left out, today or earlier
-           * gives the rent of today. Ignored for parking spaces.
-           */
-          rentAt?: string
-        }
         path: {
           /** @description The rental object code of the availability to fetch. */
           rentalObjectCode: string
@@ -1339,26 +1326,9 @@ export interface paths {
                 rent?: {
                   amount?: number
                   vat?: number
-                  /**
-                   * Format: date-time
-                   * @description The day the total (amount, vat) is the rent of.
-                   * Today when the total was not recalculated for
-                   * the move-in day, which also happens when the
-                   * rows for that day look incomplete.
-                   */
-                  asOf?: string
                   rows?: Record<string, never>[]
                 }
               }
-            }
-          }
-        }
-        /** @description rentAt is not a valid day (error invalid-rent-at). */
-        400: {
-          content: {
-            'application/json': {
-              /** @enum {string} */
-              error?: 'invalid-rent-at'
             }
           }
         }
@@ -1451,11 +1421,6 @@ export interface paths {
     /**
      * Get availabilities for rental objects
      * @description Fetches availabilities for rental objects by Rental Object Codes.
-     * The rent total (rent.amount, rent.vat) is the rent of today, unless
-     * a later move-in day is known. For a parking space that day is its
-     * vacantFrom. For other rental objects vacantFrom is not set, so the
-     * caller gives the day in rentAtByRentalObjectCode. The total is then
-     * the sum of the rent rows in force that day with includedInRent set.
      */
     post: {
       requestBody?: {
@@ -1470,22 +1435,6 @@ export interface paths {
              * ]
              */
             rentalObjectCodes?: string[]
-            /**
-             * @description The day to give the rent total for (yyyy-mm-dd), per
-             * rental object code, for rental objects that are not
-             * parking spaces. A code left out, today or earlier gives
-             * the rent of today. Ignored for parking spaces. Codes
-             * are matched without regard to case or surrounding
-             * blanks. rent.asOf in the response says which day each
-             * total is the rent of.
-             *
-             * @example {
-             *   "ABC123": "2027-01-16"
-             * }
-             */
-            rentAtByRentalObjectCode?: {
-              [key: string]: string
-            }
           }
         }
       }
@@ -1501,37 +1450,9 @@ export interface paths {
                 rent?: {
                   amount?: number
                   vat?: number
-                  /**
-                   * Format: date-time
-                   * @description The day the total (amount, vat) is the rent
-                   * of. Today when the total was not recalculated
-                   * for the move-in day, which also happens when
-                   * the rows for that day look incomplete.
-                   */
-                  asOf?: string
                   rows?: Record<string, never>[]
                 }
               }[]
-            }
-          }
-        }
-        /**
-         * @description The request body is invalid, such as a rentAtByRentalObjectCode
-         * value that is not a valid day. The body lists the invalid
-         * fields (status and data). If only the leasing service rejects
-         * the request, the body is an error code instead (error).
-         */
-        400: {
-          content: {
-            'application/json': {
-              /** @enum {string} */
-              status?: 'error'
-              data?: {
-                message?: string
-                path?: string[]
-              }[]
-              /** @enum {string} */
-              error?: 'invalid-request'
             }
           }
         }
@@ -13068,54 +12989,6 @@ export interface paths {
       }
     }
   }
-  '/v1/contacts/sync-to-leasing': {
-    /**
-     * Make leasing pull the current data of a list of contacts
-     * @description Asks leasing to fetch each contact from ONECore again and update its tenant, e.g. after tenants were stored with outdated or redacted data. Changes nothing in the contacts service. Answers 200 with an outcome per contact code once every code has been tried — check `failed`: synced, skipped (leasing has no tenant for the code), sync-failed (leasing answered with an error), leasing-unreachable (whether the tenant was updated is unknown) or not-attempted (leasing stopped answering, so the code was never sent). Every outcome is safe to retry.
-     */
-    post: {
-      requestBody?: {
-        content: {
-          'application/json': components['schemas']['SyncContactsToLeasingRequest']
-        }
-      }
-      responses: {
-        /** @description OK */
-        200: {
-          content: {
-            'application/json': {
-              content: {
-                results: {
-                  contactCode: string
-                  /** @enum {string} */
-                  status:
-                    | 'synced'
-                    | 'skipped'
-                    | 'sync-failed'
-                    | 'leasing-unreachable'
-                    | 'not-attempted'
-                }[]
-                synced: number
-                skipped: number
-                /** @description Codes with status sync-failed, leasing-unreachable or not-attempted. */
-                failed: number
-              }
-            }
-          }
-        }
-        /** @description Bad Request */
-        400: {
-          content: {
-            'application/json': {
-              /** @enum {string} */
-              error: 'invalid-request'
-              detail?: string
-            }
-          }
-        }
-      }
-    }
-  }
   '/v1/contacts/by-phone-number/{phoneNumber}': {
     /** List contacts by phone number */
     get: {
@@ -13365,7 +13238,6 @@ export interface components {
               fromDate?: string
               /** Format: date-time */
               toDate?: string
-              includedInRent?: boolean
             }[]
           }
           rentalTenureType: {
@@ -13600,7 +13472,6 @@ export interface components {
           fromDate?: string
           /** Format: date-time */
           toDate?: string
-          includedInRent?: boolean
         }[]
       }
     }
@@ -16716,7 +16587,6 @@ export interface components {
                 fromDate?: string
                 /** Format: date-time */
                 toDate?: string
-                includedInRent?: boolean
               }[]
             }
             rentalTenureType: {
@@ -17086,7 +16956,6 @@ export interface components {
                 fromDate?: string
                 /** Format: date-time */
                 toDate?: string
-                includedInRent?: boolean
               }[]
             }
             rentalTenureType: {
@@ -17548,7 +17417,6 @@ export interface components {
                 fromDate?: string
                 /** Format: date-time */
                 toDate?: string
-                includedInRent?: boolean
               }[]
             }
             rentalTenureType: {
@@ -18638,10 +18506,6 @@ export interface components {
       relatedContactCode: string
       /** @enum {string} */
       roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
-    }
-    SyncContactsToLeasingRequest: {
-      /** @description Contact codes to sync, at most 50. Duplicates are synced once. */
-      contactCodes: string[]
     }
     SendLeaseTerminationConfirmationRequest: {
       leaseId: string
