@@ -87,18 +87,11 @@ function mapTenfastLeaseToSearchResult(
   }
 }
 
-// UI param value → LeaseType enum values that match.
-// 'ovrigt' is a catch-all for anything not bostad/parkering/lokal.
-const KNOWN_NON_OVRIGT_TYPES = new Set([
-  LeaseType.HousingContract,
-  LeaseType.ParkingSpaceContract,
-  LeaseType.CommercialTenantContract,
-])
-
-const OBJECT_TYPE_PARAM_TO_LEASE_TYPES: Record<string, LeaseType[]> = {
-  bostad: [LeaseType.HousingContract],
-  parkering: [LeaseType.ParkingSpaceContract],
-  lokal: [LeaseType.CommercialTenantContract],
+// objectTypeCode label → UI objectType param; any other label counts as 'ovrigt'.
+const OBJECT_TYPE_LABEL_TO_PARAM: Record<string, string> = {
+  Bostad: 'bostad',
+  Parkering: 'parkering',
+  Lokal: 'lokal',
 }
 
 const STATUS_PARAM_TO_LEASE_STATUS: Record<string, LeaseStatus> = {
@@ -162,11 +155,14 @@ async function resolveXpandRentalObjectCodes(
   return new Set(codes)
 }
 
-function wantsEnded(params: leasing.v1.LeaseSearchQueryParams): boolean {
-  if (params.includeEnded === true) return true
+function statusNamesEnded(params: leasing.v1.LeaseSearchQueryParams): boolean {
   return (params.status ?? []).some(
     (s) => STATUS_PARAM_TO_LEASE_STATUS[s.toLowerCase()] === LeaseStatus.Ended
   )
+}
+
+function wantsEnded(params: leasing.v1.LeaseSearchQueryParams): boolean {
+  return params.includeEnded === true || statusNamesEnded(params)
 }
 
 // Both caches swap in a new array on every sync, so array identity marks a change.
@@ -184,9 +180,13 @@ function buildSearchPool(
   if (!wantsEnded(params)) return tenfastRows
 
   if (!xpandEndedLeaseCache.isReady()) {
-    ctx.throw(503, 'Ended Xpand leases are loading — retry shortly', {
-      headers: { 'Retry-After': '30' },
-    })
+    if (statusNamesEnded(params)) {
+      ctx.throw(503, 'Ended Xpand leases are loading — retry shortly', {
+        headers: { 'Retry-After': '30' },
+      })
+    }
+    logger.warn('Ended Xpand leases not loaded, serving Tenfast rows only')
+    return tenfastRows
   }
 
   const xpandRows = xpandEndedLeaseCache.getAll()
@@ -374,14 +374,9 @@ function applyCacheFilters(
 
     if (params.objectType && params.objectType.length > 0) {
       const paramTypes = params.objectType.map((t) => t.toLowerCase())
-      const includesOvrigt = paramTypes.includes('ovrigt')
-      const allowedTypes = new Set(
-        paramTypes.flatMap((t) => OBJECT_TYPE_PARAM_TO_LEASE_TYPES[t] ?? [])
-      )
-      if (lease.leaseType === undefined) return false
-      const matches =
-        allowedTypes.has(lease.leaseType) ||
-        (includesOvrigt && !KNOWN_NON_OVRIGT_TYPES.has(lease.leaseType))
+      const rowType =
+        OBJECT_TYPE_LABEL_TO_PARAM[lease.objectTypeCode] ?? 'ovrigt'
+      const matches = paramTypes.includes(rowType)
       if (!matches) return false
     }
 
@@ -439,6 +434,40 @@ function applyCacheFilters(
   })
 }
 
+const SORTED_MEMO_SIZE = 5
+
+const sortedMemo: {
+  pool: leasing.v1.LeaseSearchResult[]
+  key: string
+  rows: leasing.v1.LeaseSearchResult[]
+}[] = []
+
+function getFilteredSorted(
+  pool: leasing.v1.LeaseSearchResult[],
+  params: leasing.v1.LeaseSearchQueryParams,
+  rentalObjectCodes: Set<string> | null
+): leasing.v1.LeaseSearchResult[] {
+  const { page: _page, limit: _limit, ...rest } = params
+  const key = JSON.stringify([
+    rest,
+    rentalObjectCodes ? [...rentalObjectCodes].sort() : null,
+  ])
+  const hit = sortedMemo.findIndex((m) => m.pool === pool && m.key === key)
+  if (hit >= 0) {
+    const [entry] = sortedMemo.splice(hit, 1)
+    sortedMemo.unshift(entry)
+    return entry.rows
+  }
+
+  const rows = applySorting(
+    applyCacheFilters(pool, params, rentalObjectCodes ?? undefined),
+    params
+  )
+  sortedMemo.unshift({ pool, key, rows })
+  sortedMemo.length = Math.min(sortedMemo.length, SORTED_MEMO_SIZE)
+  return rows
+}
+
 async function searchLeasesFromCache(
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
@@ -465,12 +494,7 @@ async function searchLeasesFromCache(
   }
 
   const filterStart = Date.now()
-  const filtered = applyCacheFilters(
-    pool,
-    params,
-    rentalObjectCodes ?? undefined
-  )
-  const sorted = applySorting(filtered, params)
+  const sorted = getFilteredSorted(pool, params, rentalObjectCodes)
   const filterMs = Date.now() - filterStart
 
   const totalCount = sorted.length

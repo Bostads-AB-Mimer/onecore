@@ -382,7 +382,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    *       503:
-   *         description: A lease cache is still loading. Retry after the Retry-After header.
+   *         description: A lease cache is still loading, or status includes ended and the Xpand ended leases are not loaded yet. Retry after the Retry-After header.
    */
   router.get('(.*)/leases/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
@@ -584,7 +584,7 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Internal server error
    *       503:
-   *         description: A lease cache is still loading (Tenfast, or Xpand ended leases when ended is requested). Retry after the Retry-After header.
+   *         description: A lease cache is still loading, or status includes ended and the Xpand ended leases are not loaded yet. Retry after the Retry-After header. With only includeEnded=true and no Xpand ended leases loaded, the response holds Tenfast leases only.
    */
   router.get('(.*)/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [

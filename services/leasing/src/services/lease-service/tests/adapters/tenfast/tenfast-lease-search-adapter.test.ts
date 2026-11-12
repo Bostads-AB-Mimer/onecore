@@ -401,6 +401,7 @@ describe('tenfast-lease-search-adapter', () => {
           leaseType: LeaseType.HousingContract,
         }),
         makeLeaseResult('parkering-lease', {
+          objectTypeCode: 'Parkering',
           leaseType: LeaseType.ParkingSpaceContract,
         }),
       ])
@@ -420,9 +421,11 @@ describe('tenfast-lease-search-adapter', () => {
           leaseType: LeaseType.HousingContract,
         }),
         makeLeaseResult('parkering-lease', {
+          objectTypeCode: 'Parkering',
           leaseType: LeaseType.ParkingSpaceContract,
         }),
         makeLeaseResult('lokal-lease', {
+          objectTypeCode: 'Lokal',
           leaseType: LeaseType.CommercialTenantContract,
         }),
       ])
