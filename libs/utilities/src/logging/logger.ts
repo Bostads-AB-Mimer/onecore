@@ -161,7 +161,9 @@ export const middlewares = {
         {
           request: {
             path: ctx.path,
-            user: ctx.state?.user,
+            ...(ctx.state?.user?.id !== undefined && {
+              user: { id: ctx.state.user.id },
+            }),
             method: ctx.method,
             status: ctx.status,
           },
