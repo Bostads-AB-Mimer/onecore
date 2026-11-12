@@ -164,5 +164,13 @@
     "path": "apps/keycloak-theme",
     "docker": true,
     "imageName": "keycloak-theme"
+  },
+  {
+    "name": "keycloak-bankid-provider",
+    "label": "ONECore Keycloak BankID Provider",
+    "package": "@onecore/keycloak-bankid-provider",
+    "path": "apps/keycloak-bankid-provider",
+    "docker": true,
+    "imageName": "keycloak-bankid-provider"
   }
 ]

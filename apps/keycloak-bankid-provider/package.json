@@ -1,0 +1,14 @@
+{
+  "name": "@onecore/keycloak-bankid-provider",
+  "version": "1.0.0",
+  "description": "Mimer BankID identity provider for Keycloak (Java, built with Maven in Docker)",
+  "private": true,
+  "scripts": {
+    "build": "docker run --rm -v \"$PWD\":/src -v keycloak-bankid-provider-m2:/root/.m2 -w /src maven:3.9-eclipse-temurin-21 mvn -B -q package -DskipTests",
+    "test": "docker run --rm -v \"$PWD\":/src -v keycloak-bankid-provider-m2:/root/.m2 -w /src maven:3.9-eclipse-temurin-21 mvn -B test",
+    "test:e2e": "./local/run.sh",
+    "lint": "echo 'Java: no linter, the compiler in build covers it'",
+    "prettier": "echo 'Java: not formatted by prettier'",
+    "typecheck": "echo 'Java: types are checked by the compiler in build'"
+  }
+}
