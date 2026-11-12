@@ -87,7 +87,7 @@ describe('runLeaseExport', () => {
     jest.useFakeTimers({ now: NOW })
     registry = createLeaseExportRegistry({
       now: () => new Date(),
-      failedTtlMs: 1000,
+      finishedTtlMs: 1000,
     })
     phases = []
     leaseCounts = []
@@ -267,6 +267,7 @@ describe('runLeaseExport', () => {
       status: 'failed',
       failureReason: 'export-failed',
     })
+    expect(utilities.logger.error).not.toHaveBeenCalled()
   })
 
   it('fails with export-failed when the upload fails', async () => {
@@ -281,6 +282,7 @@ describe('runLeaseExport', () => {
       status: 'failed',
       failureReason: 'export-failed',
     })
+    expect(utilities.logger.error).not.toHaveBeenCalled()
   })
 
   it('fails with export-failed when buildingManager cannot be resolved', async () => {

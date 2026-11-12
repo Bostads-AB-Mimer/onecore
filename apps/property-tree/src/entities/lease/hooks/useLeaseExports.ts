@@ -6,9 +6,15 @@ import {
 } from '@/services/api/core/leaseExportService'
 import type { LeaseSearchQueryParams } from '@/services/api/core/leaseSearchService'
 
+import { toast } from '@/shared/hooks/useToast'
+
 export async function downloadLeaseExport(exportId: string): Promise<void> {
-  const url = await leaseExportService.getDownloadUrl(exportId)
-  window.location.assign(url)
+  try {
+    const url = await leaseExportService.getDownloadUrl(exportId)
+    window.location.assign(url)
+  } catch {
+    toast({ variant: 'destructive', title: 'Filen kunde inte hämtas' })
+  }
 }
 
 const LEASE_EXPORTS_KEY = ['leaseExports']

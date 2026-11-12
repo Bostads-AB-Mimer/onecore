@@ -1,14 +1,14 @@
 import { createLeaseExportRegistry } from '../lease-exports/registry'
 
 const DAY_MS = 24 * 60 * 60 * 1000
-const FAILED_TTL_MS = 7 * DAY_MS
+const FINISHED_TTL_MS = 7 * DAY_MS
 
 describe('lease export registry', () => {
   let current: Date
   const makeRegistry = () =>
     createLeaseExportRegistry({
       now: () => current,
-      failedTtlMs: FAILED_TTL_MS,
+      finishedTtlMs: FINISHED_TTL_MS,
     })
 
   beforeEach(() => {
@@ -110,7 +110,7 @@ describe('lease export registry', () => {
     expect(jobs.every((j) => j.userId === 'user-a')).toBe(true)
   })
 
-  it('drops failed jobs older than the TTL but keeps newer ones and done jobs', () => {
+  it('drops failed and done jobs older than the TTL but keeps newer ones', () => {
     const registry = makeRegistry()
     const failed = registry.claim('user-a', {})
     if (!failed.ok) throw new Error('unreachable')
@@ -120,15 +120,15 @@ describe('lease export registry', () => {
     if (!done.ok) throw new Error('unreachable')
     registry.complete(done.job.id, 'k')
 
-    current = new Date(current.getTime() + FAILED_TTL_MS - 1000)
-    expect(registry.listForUser('user-a').map((j) => j.id)).toContain(
-      failed.job.id
+    current = new Date(current.getTime() + FINISHED_TTL_MS - 1000)
+    expect(registry.listForUser('user-a').map((j) => j.id)).toEqual(
+      expect.arrayContaining([failed.job.id, done.job.id])
     )
 
     current = new Date(current.getTime() + 2000)
     const ids = registry.listForUser('user-a').map((j) => j.id)
     expect(ids).not.toContain(failed.job.id)
-    expect(ids).toContain(done.job.id)
+    expect(ids).not.toContain(done.job.id)
   })
 
   it('updates phase and leaseCount with setPhase', () => {

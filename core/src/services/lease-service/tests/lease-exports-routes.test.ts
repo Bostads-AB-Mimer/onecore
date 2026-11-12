@@ -265,6 +265,26 @@ describe('GET /lease-exports', () => {
     })
   })
 
+  it('lists an export once while its upload has landed but the job still runs', async () => {
+    const claim = leaseExportRegistry.claim('user-a', { status: 'ended' })
+    if (!claim.ok) throw new Error('claim failed')
+    storage.push(
+      storedFile(
+        `lease-exports/user-a/${claim.job.id}/hyreskontrakt-2026-11-12.xlsx`,
+        NOW
+      )
+    )
+
+    const res = await request(app.callback()).get('/lease-exports').set(asUserA)
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toHaveLength(1)
+    expect(res.body.content[0]).toMatchObject({
+      id: claim.job.id,
+      status: 'running',
+    })
+  })
+
   it('answers 500, not an empty list, when listing stored files fails', async () => {
     jest
       .spyOn(fileStorageAdapter, 'listFiles')

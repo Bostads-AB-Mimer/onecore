@@ -31,7 +31,7 @@ export type LeaseExportRegistry = {
   setPhase: (id: string, phase: LeaseExportPhase, leaseCount?: number) => void
   complete: (id: string, storageKey: string) => void
   fail: (id: string, reason: LeaseExportFailureReason) => void
-  /** Newest first. Drops failed entries older than the TTL. */
+  /** Newest first. Drops finished entries older than the TTL. */
   listForUser: (userId: string) => LeaseExportJob[]
   clear: () => void
 }
@@ -39,16 +39,16 @@ export type LeaseExportRegistry = {
 /** In-process registry. Swap for shared storage when Core runs multi-instance. */
 export const createLeaseExportRegistry = (opts: {
   now?: () => Date
-  failedTtlMs: number
+  finishedTtlMs: number
 }): LeaseExportRegistry => {
   const now = opts.now ?? (() => new Date())
   const jobs = new Map<string, LeaseExportJob>()
 
-  const purgeExpiredFailed = () => {
-    const cutoff = now().getTime() - opts.failedTtlMs
+  const purgeExpiredFinished = () => {
+    const cutoff = now().getTime() - opts.finishedTtlMs
     for (const [id, job] of jobs) {
       if (
-        job.status === 'failed' &&
+        job.status !== 'running' &&
         job.finishedAt &&
         job.finishedAt.getTime() <= cutoff
       ) {
@@ -103,7 +103,7 @@ export const createLeaseExportRegistry = (opts: {
       job.finishedAt = now()
     },
     listForUser(userId) {
-      purgeExpiredFailed()
+      purgeExpiredFinished()
       return [...jobs.values()]
         .filter((job) => job.userId === userId)
         .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
@@ -114,8 +114,8 @@ export const createLeaseExportRegistry = (opts: {
   }
 }
 
-const FAILED_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const FINISHED_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 export const leaseExportRegistry = createLeaseExportRegistry({
-  failedTtlMs: FAILED_TTL_MS,
+  finishedTtlMs: FINISHED_TTL_MS,
 })

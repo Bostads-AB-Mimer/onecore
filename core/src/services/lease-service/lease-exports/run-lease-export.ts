@@ -61,7 +61,14 @@ export const leaseExportRowMapper = (lease: leasing.v1.LeaseSearchResult) => ({
   status: LeaseStatusLabel[lease.status] ?? String(lease.status),
 })
 
-class ExportFailure extends Error {}
+class ExportFailure extends Error {
+  constructor(
+    message: string,
+    readonly alreadyLogged = false
+  ) {
+    super(message)
+  }
+}
 
 export async function runLeaseExport(
   job: LeaseExportJob,
@@ -76,7 +83,7 @@ export async function runLeaseExport(
     if (!resolved.emptyResult) {
       const exportQuery = await resolvePersonnummerInQuery(resolved.query)
       const result = await leasingAdapter.getLeasesForExport(exportQuery)
-      if (!result.ok) throw new ExportFailure(result.err)
+      if (!result.ok) throw new ExportFailure(result.err, true)
       leases = result.data
     }
 
@@ -98,12 +105,16 @@ export async function runLeaseExport(
       buffer,
       XLSX_CONTENT_TYPE
     )
-    if (!upload.ok) throw new ExportFailure(upload.err)
+    if (!upload.ok) throw new ExportFailure(upload.err, true)
 
     registry.complete(job.id, storageKey)
   } catch (err: unknown) {
     if (axios.isAxiosError(err) && err.response?.status === 503) {
       registry.fail(job.id, 'lease-service-warming-up')
+      return
+    }
+    if (err instanceof ExportFailure && err.alreadyLogged) {
+      registry.fail(job.id, 'export-failed')
       return
     }
     const logged = axios.isAxiosError(err)

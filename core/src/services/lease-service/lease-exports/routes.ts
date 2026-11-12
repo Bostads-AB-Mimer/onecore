@@ -374,7 +374,9 @@ export const routes = (router: KoaRouter) => {
     const jobsById = new Map(jobs.map((job) => [job.id, job]))
     const exports = [
       ...jobs.filter((job) => job.status !== 'done').map(fromJob),
-      ...stored.data.map((s) => fromStoredFile(s, jobsById.get(s.exportId))),
+      ...stored.data
+        .filter((s) => jobsById.get(s.exportId)?.status !== 'running')
+        .map((s) => fromStoredFile(s, jobsById.get(s.exportId))),
     ].sort(
       (a, b) =>
         new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
