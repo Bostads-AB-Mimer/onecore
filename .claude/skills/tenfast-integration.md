@@ -111,10 +111,15 @@ Go by lease stage instead, which doesn't depend on those fixes: `avtal/search` t
 (`filter[stage]=upcoming,draft,signingInProgress`, `CLAIMING_STAGES` in
 `tenfast-rental-object-helpers.ts`). `getAvailabilityForVacantRentalObjects`
 uses that search to keep objects with a next tenant's lease, signed or not,
-out of the publish list. Don't rely only on `includeAvtal` for this, because
+out of the publish list. One exception (AVTAL-517): an `upcoming` lease that
+has been given notice and has an end date does not claim the object. Its end
+date is added to the object's leases instead, so `vacantFrom` is the day after
+the latest end. Don't rely only on `includeAvtal` for this, because
 it returns an object's 10 latest leases. The search is parsed with a lenient
-schema (`hyresobjekt[].externalId` only), because drafts can lack fields
-`TenfastLeaseSchema` requires. The object's own leases are also checked with
+schema (stage, end date, cancellation and `hyresobjekt[].externalId`), because
+drafts can lack fields `TenfastLeaseSchema` requires. An end date or
+cancellation that can't be read is dropped, so that lease still claims the
+object. The object's own leases are also checked with
 `isClaimingLease`, which counts an unknown or missing stage as claiming.
 
 The same rule guards writes and single objects. `getLeaseStagesForRentalObject`
@@ -247,8 +252,16 @@ vacant), so an unreadable lease never makes an object vacant.
   A lease past its end date can stay in force until Tenfast moves it to
   `terminated` (AVTAL-408).
 
+An `upcoming` lease claims the object on top of this (`isClaimingLease`),
+unless notice has been given on it (`cancellation.requested`, not withdrawn)
+and it has an end date (AVTAL-517). Then the object is vacant the day after
+the latest end among the leases in force, so the time between two leases is
+never offered. Only notice counts: an upcoming fixed-term lease without
+notice, a draft and a lease out for signing still claim the object.
+
 `determineVacantFrom` keeps undefined as undefined, whatever the Xpand block
-says. Rule decided in AVTAL-343.
+says. Rule decided in AVTAL-343, with the exception for upcoming leases in
+AVTAL-517.
 
 On Tenfast test (2,229 objects, 2026-10-14), `endDate` was set exactly when
 notice had been given, both on terminating and on upcoming leases. No lease

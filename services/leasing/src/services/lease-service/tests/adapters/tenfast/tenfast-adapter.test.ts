@@ -263,7 +263,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     // Arrange
     const upcomingLease = factory.tenfastLease.build({
       startDate: new Date('2026-06-01'), // starts in the future
-      endDate: new Date('2027-06-01'),
+      endDate: null, // until further notice
       stage: 'upcoming',
     })
     const rentalObjectWithUpcoming = factory.tenfastRentalObject.build({
@@ -448,6 +448,146 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     mockTenfastResponses({
       givenNotice: [terminatingLease],
       claimed: [upcomingLease],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(0)
+  })
+
+  it('includes a rental object given notice whose upcoming lease is also given notice, vacant the day after the upcoming lease ends', async () => {
+    // Arrange — 307-705-00-0033 on production (AVTAL-517)
+    const hyresobjekt = [
+      factory.tenfastRentalObject.build({
+        externalId: 'R2010',
+        avtal: undefined,
+      }),
+    ]
+    const terminatingLease = factory.tenfastLease.build({
+      externalId: '307-705-00-0033/12',
+      stage: 'terminationScheduled',
+      endDate: new Date('2099-12-31'),
+      hyresobjekt,
+    })
+    const terminatedUpcomingLease = factory.tenfastLease.build({
+      externalId: '307-705-00-0033/13',
+      stage: 'upcoming',
+      endDate: new Date('2100-01-31'),
+      cancellation: { requested: true },
+      hyresobjekt,
+    })
+    mockTenfastResponses({
+      givenNotice: [terminatingLease],
+      claimed: [terminatedUpcomingLease],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        rentalObjectCode: 'R2010',
+        vacantFrom: new Date('2100-02-01T00:00:00.000Z'),
+      }),
+    ])
+  })
+
+  it('includes a vacant rental object whose only upcoming lease has an end date, even if its own leases miss it', async () => {
+    // Arrange — includeAvtal only returns an object's 10 latest leases.
+    const rentalObject = factory.tenfastRentalObject.build({
+      externalId: 'R2011',
+      avtal: [],
+    })
+    mockTenfastResponses({
+      vacantOrSoonVacant: [rentalObject],
+      claimed: [
+        {
+          stage: 'upcoming',
+          endDate: '2099-12-31T00:00:00.000Z',
+          cancellation: { requested: true, cancelled: false },
+          hyresobjekt: [{ externalId: 'R2011' }],
+        },
+      ],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        rentalObjectCode: 'R2011',
+        vacantFrom: new Date('2100-01-01T00:00:00.000Z'),
+      }),
+    ])
+  })
+
+  it('excludes a rental object whose upcoming lease has an end date that cannot be read', async () => {
+    // Arrange — the lease is kept without an end rather than failing the list.
+    const claimed = factory.tenfastRentalObject.build({
+      externalId: 'R2013',
+      avtal: [],
+    })
+    const free = factory.tenfastRentalObject.build({
+      externalId: 'R2014',
+      avtal: [],
+    })
+    mockTenfastResponses({
+      vacantOrSoonVacant: [claimed, free],
+      claimed: [
+        {
+          stage: 'upcoming',
+          endDate: 'not-a-date',
+          cancellation: { requested: true, cancelled: null },
+          hyresobjekt: [{ externalId: 'R2013' }],
+        },
+      ],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toEqual([
+      expect.objectContaining({ rentalObjectCode: 'R2014' }),
+    ])
+  })
+
+  it('excludes a rental object with a terminated upcoming lease if a draft follows it', async () => {
+    // Arrange
+    const rentalObject = factory.tenfastRentalObject.build({
+      externalId: 'R2012',
+      avtal: [],
+    })
+    mockTenfastResponses({
+      vacantOrSoonVacant: [rentalObject],
+      claimed: [
+        {
+          stage: 'upcoming',
+          endDate: '2099-12-31T00:00:00.000Z',
+          hyresobjekt: [{ externalId: 'R2012' }],
+        },
+        { stage: 'draft', hyresobjekt: [{ externalId: 'R2012' }] },
+      ],
     })
 
     // Act

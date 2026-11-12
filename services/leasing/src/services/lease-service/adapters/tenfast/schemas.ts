@@ -320,12 +320,29 @@ export const TenfastPaginatedLeaseResponseSchema = z.object({
   totalCount: z.number(),
 })
 
-// Only which rental objects each lease is on. Lenient on purpose: draft
-// leases can lack fields TenfastLeaseSchema requires, and one unparseable
-// lease must not fail the whole list.
+// A lease read only for its stage and end. Parsed partially so an incomplete
+// draft can't fail the parse. An end date or cancellation that can't be read
+// is dropped rather than failing the list: the lease then counts as having no
+// end, so the object is not shown as vacant.
+const TenfastLeaseStageSchema = z.object({
+  externalId: z.string().optional(),
+  stage: z.string().optional(),
+  endDate: optionalDateField.catch(null),
+  cancellation: z
+    .object({
+      requested: z.boolean().optional().nullable(),
+      cancelled: z.boolean().optional(),
+    })
+    .optional()
+    .catch(undefined),
+})
+
+// Leases with their stage and end, and which rental objects each is on.
+// Lenient on purpose: draft leases can lack fields TenfastLeaseSchema
+// requires, and one unparseable lease must not fail the whole list.
 export const TenfastPaginatedLeaseRentalObjectsResponseSchema = z.object({
   records: z.array(
-    z.object({
+    TenfastLeaseStageSchema.extend({
       hyresobjekt: z
         .array(z.object({ externalId: z.string().optional() }))
         .optional(),
@@ -336,23 +353,10 @@ export const TenfastPaginatedLeaseRentalObjectsResponseSchema = z.object({
   totalCount: z.number(),
 })
 
-// Leases of one rental object, read only for their stage and end. Parsed
-// partially so an incomplete draft can't fail the parse (and so block a
-// lease being created on a free object).
+// Leases of one rental object, parsed partially so an incomplete draft can't
+// block a lease being created on a free object.
 export const TenfastPaginatedLeaseStagesResponseSchema = z.object({
-  records: z.array(
-    z.object({
-      externalId: z.string().optional(),
-      stage: z.string().optional(),
-      endDate: optionalDateField,
-      cancellation: z
-        .object({
-          requested: z.boolean().optional().nullable(),
-          cancelled: z.boolean().optional(),
-        })
-        .optional(),
-    })
-  ),
+  records: z.array(TenfastLeaseStageSchema),
   prev: z.string().nullable(),
   next: z.string().nullable(),
   totalCount: z.number(),
