@@ -793,58 +793,71 @@ export const getAvailabilityForVacantRentalObjects = async (
     }
   }
 
-  type ClaimedRentalObjectIdsResult =
-    | { ok: true; ids: Set<string> }
+  type NextLeasesResult =
+    | {
+        ok: true
+        claimedIds: Set<string>
+        endingLeasesByRentalObjectId: Map<string, LeaseStageInfo[]>
+      }
     | { ok: false; err: 'could-not-find-claimed-leases' }
 
-  // Rental objects a next tenant already has a lease for (CLAIMING_STAGES:
-  // signed and upcoming, or still a draft or out for signing), which must not
-  // be published as available. Searched for directly rather than read from
-  // each object's own leases: a terminationScheduled lease's record has no
-  // visibility into other leases on the object, and includeAvtal only returns
-  // an object's 10 latest. Tenfast's `reserved` state isn't used: it isn't
-  // always recomputed when a lease changes, and voided leases count as
-  // reserved (both confirmed by Tenfast as bugs, 2026-11).
+  // The leases a next tenant has for a rental object (CLAIMING_STAGES: signed
+  // and upcoming, or still a draft or out for signing), split in two. Those
+  // that claim the object (isClaimingLease) give the objects which must not be
+  // published as available. An upcoming lease that already has an end doesn't
+  // claim the object but moves its vacantFrom, so those are kept per object.
+  // Searched for directly rather than read from each object's own leases: a
+  // terminationScheduled lease's record has no visibility into other leases on
+  // the object, and includeAvtal only returns an object's 10 latest. Tenfast's
+  // `reserved` state isn't used: it isn't always recomputed when a lease
+  // changes, and voided leases count as reserved (both confirmed by Tenfast as
+  // bugs, 2026-11).
   // filter[stage] takes a comma-separated list.
-  const fetchClaimedRentalObjectIds =
-    async (): Promise<ClaimedRentalObjectIdsResult> => {
-      try {
-        const leases = await fetchAllPages(
-          (paginate) =>
-            `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=${CLAIMING_STAGES.join(',')}&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt&paginate=${paginate}`,
-          TenfastPaginatedLeaseRentalObjectsResponseSchema
-        )
-        return {
-          ok: true,
-          ids: new Set(
-            leases.flatMap((lease) =>
-              (lease.hyresobjekt ?? []).flatMap((ro) =>
-                ro.externalId ? [ro.externalId] : []
-              )
-            )
-          ),
+  const fetchNextLeases = async (): Promise<NextLeasesResult> => {
+    try {
+      const leases = await fetchAllPages(
+        (paginate) =>
+          `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=${CLAIMING_STAGES.join(',')}&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt&paginate=${paginate}`,
+        TenfastPaginatedLeaseRentalObjectsResponseSchema
+      )
+      const claimedIds = new Set<string>()
+      const endingLeasesByRentalObjectId = new Map<string, LeaseStageInfo[]>()
+      for (const { hyresobjekt, ...lease } of leases) {
+        const claiming = isClaimingLease(lease)
+        for (const { externalId } of hyresobjekt ?? []) {
+          if (!externalId) continue
+          if (claiming) {
+            claimedIds.add(externalId)
+            continue
+          }
+          const endingLeases = endingLeasesByRentalObjectId.get(externalId)
+          if (endingLeases) endingLeases.push(lease)
+          else endingLeasesByRentalObjectId.set(externalId, [lease])
         }
-      } catch (err) {
-        return handleTenfastError(err, 'could-not-find-claimed-leases')
       }
+      return { ok: true, claimedIds, endingLeasesByRentalObjectId }
+    } catch (err) {
+      return handleTenfastError(err, 'could-not-find-claimed-leases')
     }
+  }
 
   try {
     const [
       tagsById,
       vacantOrSoonVacantResult,
       terminatingLeasesResult,
-      claimedRentalObjectIdsResult,
+      nextLeasesResult,
     ] = await Promise.all([
       getTags(),
       fetchVacantOrSoonVacant(),
       fetchTerminatingLeases(),
-      fetchClaimedRentalObjectIds(),
+      fetchNextLeases(),
     ])
 
     if (!vacantOrSoonVacantResult.ok) return vacantOrSoonVacantResult
     if (!terminatingLeasesResult.ok) return terminatingLeasesResult
-    if (!claimedRentalObjectIdsResult.ok) return claimedRentalObjectIdsResult
+    if (!nextLeasesResult.ok) return nextLeasesResult
+    const { claimedIds, endingLeasesByRentalObjectId } = nextLeasesResult
 
     // Exclude records already claimed by a next tenant. Hidden rather than
     // flagged, as decided with the product owner (AVTAL-215): leasing watches
@@ -852,17 +865,14 @@ export const getAvailabilityForVacantRentalObjects = async (
     // so one with a lease we can't read is never offered (isClaimingLease).
     const availableRecords = vacantOrSoonVacantResult.records.filter(
       (record) =>
-        !claimedRentalObjectIdsResult.ids.has(record.externalId) &&
+        !claimedIds.has(record.externalId) &&
         !(record.avtal ?? []).some(isClaimingLease)
     )
 
     const recordsFromTerminatingLeases = terminatingLeasesResult.leases.flatMap(
       (lease) =>
         (lease.hyresobjekt ?? [])
-          .filter(
-            (rentalObject) =>
-              !claimedRentalObjectIdsResult.ids.has(rentalObject.externalId)
-          )
+          .filter((rentalObject) => !claimedIds.has(rentalObject.externalId))
           .map((rentalObject) => ({
             ...rentalObject,
             avtal: [lease],
@@ -882,10 +892,23 @@ export const getAvailabilityForVacantRentalObjects = async (
       return true
     })
 
+    // An upcoming lease that already has an end is added to the object's
+    // leases, so vacantFrom is the day after the latest end (AVTAL-517). It
+    // may be there already from includeAvtal, which doesn't change the date.
     return {
       ok: true,
       data: combinedRecords.map((record) =>
-        mapTenfastRentalObjectToAvailabilityInfo(false, record, tagsById)
+        mapTenfastRentalObjectToAvailabilityInfo(
+          false,
+          {
+            ...record,
+            avtal: [
+              ...(record.avtal ?? []),
+              ...(endingLeasesByRentalObjectId.get(record.externalId) ?? []),
+            ],
+          },
+          tagsById
+        )
       ),
     }
   } catch (err: any) {

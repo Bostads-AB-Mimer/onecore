@@ -38,19 +38,33 @@ export type LeaseStageInfo = Partial<
   }
 >
 
-// Lease stages through which a next tenant has claimed the object: signed to
-// start later, or not signed yet (a draft, or out for signing).
+// Lease stages through which a next tenant can have claimed the object: signed
+// to start later, or not signed yet (a draft, or out for signing).
 export const CLAIMING_STAGES = ['upcoming', 'draft', 'signingInProgress']
+
+// Whether the lease ends on its end date. A notice that was withdrawn
+// (`requested` and `cancelled`) counts as no end, in case the end date is left
+// behind.
+const hasEnd = (
+  lease: LeaseStageInfo
+): lease is LeaseStageInfo & { endDate: Date } =>
+  Boolean(lease.endDate) &&
+  !(lease.cancellation?.requested && lease.cancellation?.cancelled)
 
 /**
  * Whether the lease claims the rental object for a next tenant, so the object
- * must not be offered again. A lease whose stage is missing or unknown counts
- * as claiming, so an object is never offered on a lease we can't read.
+ * must not be offered again. A signed lease to come (upcoming) that has been
+ * given notice and so has an end does not claim the object: the object is
+ * free again after that end (see getVacantFrom), as decided with the product
+ * owner (AVTAL-517). Only notice counts here, unlike for a lease in force: an
+ * upcoming fixed-term lease, or one whose cancellation can't be read, still
+ * claims the object. A draft or a lease out for signing always claims it. A
+ * lease whose stage is missing or unknown counts as claiming, so an object is
+ * never offered on a lease we can't read.
  */
-export const isClaimingLease = (lease: {
-  stage?: string
-  externalId?: string
-}): boolean => {
+export const isClaimingLease = (lease: LeaseStageInfo): boolean => {
+  if (lease.stage === 'upcoming')
+    return !(lease.cancellation?.requested && hasEnd(lease))
   if (lease.stage && CLAIMING_STAGES.includes(lease.stage)) return true
   if (
     lease.stage &&
@@ -74,9 +88,8 @@ export const isClaimingLease = (lease: {
  *
  * Tenfast sets endDate when notice is given (and for fixed-term leases), but
  * not until the tenant has signed it: a lease whose notice awaits signing has
- * no end, so the object stays taken if the tenant never signs. A notice that
- * was withdrawn (`requested` and `cancelled`) counts as no end, in case the
- * end date is left behind. Leases on a rental object are parsed
+ * no end, so the object stays taken if the tenant never signs. A withdrawn
+ * notice counts as no end (see hasEnd). Leases on a rental object are parsed
  * partially, so stage and cancellation may be missing: a lease whose stage is
  * missing or unknown counts as in force without an end, so an object is never
  * shown as vacant on a lease we can't read.
@@ -95,9 +108,7 @@ export const getLeasedUntil = (
       return 'indefinite'
     }
 
-    const noticeWithdrawn =
-      lease.cancellation?.requested && lease.cancellation?.cancelled
-    if (!lease.endDate || noticeWithdrawn) return 'indefinite'
+    if (!hasEnd(lease)) return 'indefinite'
     endDates.push(new Date(lease.endDate))
   }
   if (endDates.length === 0) return null
@@ -108,7 +119,9 @@ export const getLeasedUntil = (
 /**
  * The first day the rental object is free for a new lease (UTC midnight), or
  * undefined if it is not vacant at all: leased until further notice, or
- * claimed by a next tenant (see isClaimingLease).
+ * claimed by a next tenant (see isClaimingLease). With a lease to come that
+ * already has an end, it is the day after the latest end: the time between two
+ * leases is never offered.
  */
 export const getVacantFrom = (leases: LeaseStageInfo[]): Date | undefined => {
   if (leases.some(isClaimingLease)) return undefined
