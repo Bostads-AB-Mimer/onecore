@@ -127,5 +127,5 @@ describe('setExcelDownloadHeaders', () => {
  * (await import('exceljs')) for lazy-loading to improve cold-start performance.
  *
  * Jest doesn't support dynamic imports without --experimental-vm-modules flag.
- * These functions are tested via integration tests through the /leases/export endpoint.
+ * These functions are not covered by automated tests here; callers mock them.
  */

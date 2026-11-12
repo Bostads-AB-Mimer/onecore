@@ -98,6 +98,8 @@ No `as` or `!` without a comment saying why; use `catch (err: unknown)`. `satisf
 - `leasing-adapter` sets `axios.defaults.validateStatus` (<500) for the whole process: set `validateStatus` explicitly on any axios call you write.
 - Keep vendor names (Tenfast, Xledger) out of core routes, types and config — they belong inside a service's own adapters.
 - Use `makeSuccessResponseBody` for response bodies.
+- A storage prefix owned by one API (`guide/`, `lease-exports/`) is refused on every `/files` route and hidden from every listing, after the same key normalisation as `isGuideKey`.
+- Register new `/leases/<word>` routes before `/leases/:id`, or give them their own top-level path.
 
 ### Services (`services/`)
 

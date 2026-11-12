@@ -1970,73 +1970,6 @@ export interface paths {
       }
     }
   }
-  '/leases/export': {
-    /**
-     * Export leases to Excel
-     * @description Export lease search results to Excel file. Uses same filters as /leases/search but without pagination.
-     */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
-          q?: string
-          /** @description Search by tenant name */
-          name?: string
-          /** @description Search by rental object address */
-          address?: string
-          /** @description Object types (e.g., residence, parking) */
-          objectType?: string[]
-          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
-          status?: string[]
-          /** @description Lease type filter */
-          leaseType?: string[]
-          /** @description Parking space type filter */
-          parkingSpaceType?: string[]
-          /** @description Minimum start date (YYYY-MM-DD) */
-          startDateFrom?: string
-          /** @description Maximum start date (YYYY-MM-DD) */
-          startDateTo?: string
-          /** @description Minimum end date (YYYY-MM-DD) */
-          endDateFrom?: string
-          /** @description Maximum end date (YYYY-MM-DD) */
-          endDateTo?: string
-          /** @description Property/estate names */
-          property?: string[]
-          /** @description Building codes */
-          buildingCodes?: string[]
-          /** @description Area codes (Område) */
-          areaCodes?: string[]
-          /** @description District names */
-          districtNames?: string[]
-          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
-          buildingManager?: string[]
-          /** @description Sort field */
-          sortBy?:
-            | 'leaseStartDate'
-            | 'lastDebitDate'
-            | 'leaseId'
-            | 'address'
-            | 'objectType'
-            | 'rentalObjectCode'
-            | 'tenantName'
-          /** @description Sort direction */
-          sortOrder?: 'asc' | 'desc'
-        }
-      }
-      responses: {
-        /** @description Excel file download */
-        200: {
-          content: {
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
-          }
-        }
-        /** @description Internal server error */
-        500: {
-          content: never
-        }
-      }
-    }
-  }
   '/leases/{id}': {
     /**
      * Get lease by ID
@@ -3564,6 +3497,153 @@ export interface paths {
         /** @description Internal server error */
         500: {
           content: never
+        }
+      }
+    }
+  }
+  '/lease-exports': {
+    /**
+     * List the caller's lease exports
+     * @description Lists the caller's running, failed and finished lease exports, newest first. Finished exports come from file storage and are kept 7 days; older ones are deleted on this call.
+     */
+    get: {
+      responses: {
+        /** @description The caller's lease exports */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['LeaseExport'][]
+            }
+          }
+        }
+        /** @description Listing stored exports failed */
+        500: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              reason?: 'lease-export-storage-failed'
+            }
+          }
+        }
+      }
+    }
+    /**
+     * Start a lease export to Excel in the background
+     * @description Starts exporting the leases that match the filters to an Excel file in file storage. Uses the same filters as /leases/search but without pagination. Answers at once; poll GET /lease-exports for progress. One running export per user. Stored exports older than 7 days are deleted.
+     */
+    post: {
+      parameters: {
+        query?: {
+          /** @description Free-text search (contract ID, tenant name, PNR, contact code, address) */
+          q?: string
+          /** @description Search by tenant name */
+          name?: string
+          /** @description Search by rental object address */
+          address?: string
+          /** @description Object types (e.g., residence, parking) */
+          objectType?: string[]
+          /** @description Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended) */
+          status?: string[]
+          /** @description Lease type filter */
+          leaseType?: string[]
+          /** @description Parking space type filter */
+          parkingSpaceType?: string[]
+          /** @description Minimum start date (YYYY-MM-DD) */
+          startDateFrom?: string
+          /** @description Maximum start date (YYYY-MM-DD) */
+          startDateTo?: string
+          /** @description Minimum end date (YYYY-MM-DD) */
+          endDateFrom?: string
+          /** @description Maximum end date (YYYY-MM-DD) */
+          endDateTo?: string
+          /** @description Property/estate names */
+          property?: string[]
+          /** @description Building codes */
+          buildingCodes?: string[]
+          /** @description Area codes (Område) */
+          areaCodes?: string[]
+          /** @description District names */
+          districtNames?: string[]
+          /** @description Keycloak user IDs of property managers (kvartersvärdar) — core resolves these to KVV-area codes before filtering */
+          buildingManager?: string[]
+          /** @description Sort field */
+          sortBy?:
+            | 'leaseStartDate'
+            | 'lastDebitDate'
+            | 'leaseId'
+            | 'address'
+            | 'objectType'
+            | 'rentalObjectCode'
+            | 'tenantName'
+          /** @description Sort direction */
+          sortOrder?: 'asc' | 'desc'
+        }
+      }
+      responses: {
+        /** @description Export started */
+        202: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['LeaseExport']
+            }
+          }
+        }
+        /** @description The caller already has an export running */
+        409: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              reason?: 'lease-export-already-running'
+              /** @description Id of the export that is running */
+              exportId?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/lease-exports/{exportId}/url': {
+    /**
+     * Get a download URL for one of the caller's finished lease exports
+     * @description Signs a download URL valid for 300 seconds. Only the caller's own finished exports can be signed.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description Id of the export */
+          exportId: string
+        }
+      }
+      responses: {
+        /** @description Signed download URL */
+        200: {
+          content: {
+            'application/json': {
+              content?: {
+                url: string
+                /** Format: date-time */
+                expiresAt: string
+              }
+            }
+          }
+        }
+        /** @description No finished export with that id for the caller */
+        404: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              reason?: 'lease-export-not-found'
+            }
+          }
+        }
+        /** @description File storage failed */
+        500: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              reason?: 'lease-export-storage-failed'
+            }
+          }
         }
       }
     }
@@ -9073,7 +9153,7 @@ export interface paths {
         400: {
           content: never
         }
-        /** @description Guide image prefix — use the /guides routes. Guide images are also omitted from every other listing. */
+        /** @description Guide image or lease export prefix — use the /guides or /lease-exports routes. Both are also omitted from every other listing. */
         403: {
           content: never
         }
@@ -9105,7 +9185,7 @@ export interface paths {
         400: {
           content: never
         }
-        /** @description Guide image key — use the /guides routes */
+        /** @description Guide image or lease export key — use the /guides or /lease-exports routes */
         403: {
           content: never
         }
@@ -9142,7 +9222,7 @@ export interface paths {
         400: {
           content: never
         }
-        /** @description Guide image — use the /guides routes */
+        /** @description Guide image or lease export — use the /guides or /lease-exports routes */
         403: {
           content: never
         }
@@ -9175,7 +9255,7 @@ export interface paths {
             }
           }
         }
-        /** @description Guide image — use the /guides routes */
+        /** @description Guide image or lease export — use the /guides or /lease-exports routes */
         403: {
           content: never
         }
@@ -9204,7 +9284,7 @@ export interface paths {
         204: {
           content: never
         }
-        /** @description Guide image — use the /guides routes */
+        /** @description Guide image or lease export — use the /guides or /lease-exports routes */
         403: {
           content: never
         }
@@ -9237,7 +9317,7 @@ export interface paths {
             }
           }
         }
-        /** @description Guide image — use the /guides routes */
+        /** @description Guide image or lease export — use the /guides or /lease-exports routes */
         403: {
           content: never
         }
@@ -13736,6 +13816,30 @@ export interface components {
             url: string
           }
       )[]
+    }
+    LeaseExport: {
+      id: string
+      /** @enum {string} */
+      status: 'running' | 'done' | 'failed'
+      /** @enum {string|null} */
+      phase:
+        | 'fetching-leases'
+        | 'fetching-contacts'
+        | 'building-file'
+        | 'saving-file'
+        | null
+      statusFilter: string[]
+      leaseCount: number | null
+      /** Format: date-time */
+      startedAt: string
+      /** Format: date-time */
+      finishedAt: string | null
+      fileName: string | null
+      sizeBytes: number | null
+      /** Format: date-time */
+      expiresAt: string | null
+      /** @enum {string|null} */
+      failureReason: 'lease-service-warming-up' | 'export-failed' | null
     }
     WorkOrder: {
       accessCaption: string

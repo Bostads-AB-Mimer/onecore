@@ -197,7 +197,6 @@ export function useLeaseFilters() {
     error,
     failureCount,
     failureReason,
-    exportToExcel,
   } = useLeaseSearch(searchParams, filters.page, PAGE_SIZE)
 
   const totalPages = meta?.totalRecords
@@ -296,7 +295,6 @@ export function useLeaseFilters() {
     error,
     failureCount,
     failureReason,
-    exportToExcel,
 
     // Search params (for bulk messaging fetchAllContacts)
     searchParams,

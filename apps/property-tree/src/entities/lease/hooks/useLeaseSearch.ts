@@ -60,10 +60,6 @@ export function useLeaseSearch(
     leaseSearchQuery.data?._meta?.totalRecords,
   ])
 
-  const exportToExcel = (exportParams: LeaseSearchQueryParams) => {
-    return leaseSearchService.exportLeasesToExcel(exportParams)
-  }
-
   return {
     data: leaseSearchQuery.data?.content,
     meta: leaseSearchQuery.data?._meta,
@@ -72,6 +68,5 @@ export function useLeaseSearch(
     error: leaseSearchQuery.error,
     failureCount: leaseSearchQuery.failureCount,
     failureReason: leaseSearchQuery.failureReason,
-    exportToExcel,
   }
 }
