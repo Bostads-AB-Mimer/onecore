@@ -10,8 +10,6 @@ import {
   TenfastInvoicesByExportedResponseSchema,
   TenfastTenantSchema,
   TenfastInvoiceSchema,
-  TenfastRentalLossHyraSchema,
-  TenfastRentalLossSchema,
   TenfastRentalLoss,
   TenfastRentalLossHyra,
   TenfastRentalLossResponseSchema,
@@ -1290,12 +1288,10 @@ export const getInvoicesNotExported = async (
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
         isManuallyExported: 'false',
+        isCancelled: 'false',
         status: 'issued',
         limit: maxCount,
         hyresvard: company.tenfastId,
-        /*paginate:
-          'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
-        //ocrNumber: '552606000000733',
       },
     })
 
