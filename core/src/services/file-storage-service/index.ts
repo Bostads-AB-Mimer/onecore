@@ -9,23 +9,33 @@ import { fileStorageSchemas } from '@onecore/types'
 
 import * as fileStorageAdapter from '../../adapters/file-storage-adapter'
 import { GUIDE_STORAGE_PREFIX } from '../guides-service/constants'
+import { LEASE_EXPORT_STORAGE_PREFIX } from '../lease-service/lease-exports/constants'
 
 // Guide images are created, read and removed through /guides, which keeps the
 // metadata rows in the communication service in sync and hides draft images
-// from readers. Reaching them through the generic file routes would orphan
-// those rows or hand out URLs for draft images, so every /files route refuses
-// them.
+// from readers. Lease exports are stored per user and handed out only through
+// /lease-exports. Reaching either through the generic file routes would leak
+// or orphan them, so every /files route refuses them.
 //
 // Storage backends map several spellings onto the same object key: SeaweedFS
 // turns backslashes into slashes and collapses leading slashes, and "./" or
 // ".." segments may be resolved as well. The key is normalized the same way
 // before the prefix check so the guard does not depend on the backend.
+const normalizeKey = (key: string) =>
+  path.posix.normalize(key.replace(/\\/g, '/')).replace(/^\/+/, '')
+
 export const isGuideKey = (key: string) =>
-  path.posix
-    .normalize(key.replace(/\\/g, '/'))
-    .replace(/^\/+/, '')
-    .startsWith(GUIDE_STORAGE_PREFIX)
+  normalizeKey(key).startsWith(GUIDE_STORAGE_PREFIX)
+
+export const isLeaseExportKey = (key: string): boolean =>
+  normalizeKey(key).startsWith(LEASE_EXPORT_STORAGE_PREFIX)
+
 const GUIDE_KEY_REFUSAL = { error: 'guide-files-managed-via-guides-api' }
+const LEASE_EXPORT_KEY_REFUSAL = {
+  error: 'lease-export-files-managed-via-lease-exports-api',
+}
+
+const isProtectedKey = (key: string) => isGuideKey(key) || isLeaseExportKey(key)
 
 const asStrings = (value: unknown): string[] =>
   (Array.isArray(value) ? value : [value]).filter(
@@ -34,7 +44,7 @@ const asStrings = (value: unknown): string[] =>
 
 // Runs before every /files handler and checks each place a key can arrive:
 // the :fileName path param, the list prefix and the upload body.
-const refuseGuideKeys: KoaRouter.Middleware = async (ctx, next) => {
+const refuseProtectedKeys: KoaRouter.Middleware = async (ctx, next) => {
   const body: unknown = ctx.request.body
   const keys = [
     ...asStrings(ctx.params.fileName),
@@ -46,6 +56,11 @@ const refuseGuideKeys: KoaRouter.Middleware = async (ctx, next) => {
   if (keys.some(isGuideKey)) {
     ctx.status = 403
     ctx.body = GUIDE_KEY_REFUSAL
+    return
+  }
+  if (keys.some(isLeaseExportKey)) {
+    ctx.status = 403
+    ctx.body = LEASE_EXPORT_KEY_REFUSAL
     return
   }
   await next()
@@ -117,13 +132,13 @@ export const routes = (router: KoaRouter) => {
    *       400:
    *         description: Invalid query parameters
    *       403:
-   *         description: Guide image prefix — use the /guides routes. Guide images are also omitted from every other listing.
+   *         description: Guide image or lease export prefix — use the /guides or /lease-exports routes. Both are also omitted from every other listing.
    *       500:
    *         description: Server error
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files', refuseGuideKeys, async (ctx) => {
+  router.get('(.*)/files', refuseProtectedKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     // Validate query parameters
@@ -149,10 +164,9 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    // A prefix that does not start with guide/ can still match guide images
-    // (no prefix at all, or a partial one such as "g"), so they are filtered
-    // out of every listing.
-    const files = result.data.filter((file) => !isGuideKey(file.name))
+    // A prefix outside the protected ones can still match their keys (no
+    // prefix at all, or a partial one such as "g"), so they are filtered out.
+    const files = result.data.filter((file) => !isProtectedKey(file.name))
 
     ctx.status = 200
     ctx.body = makeSuccessResponseBody({ files }, metadata)
@@ -184,13 +198,13 @@ export const routes = (router: KoaRouter) => {
    *       400:
    *         description: Invalid request
    *       403:
-   *         description: Guide image key — use the /guides routes
+   *         description: Guide image or lease export key — use the /guides or /lease-exports routes
    *       500:
    *         description: Server error
    *     security:
    *       - bearerAuth: []
    */
-  router.post('(.*)/files/upload', refuseGuideKeys, async (ctx) => {
+  router.post('(.*)/files/upload', refuseProtectedKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
     // Validate request body
@@ -258,7 +272,7 @@ export const routes = (router: KoaRouter) => {
    *       400:
    *         description: Invalid query parameters
    *       403:
-   *         description: Guide image — use the /guides routes
+   *         description: Guide image or lease export — use the /guides or /lease-exports routes
    *       404:
    *         description: File not found
    *       500:
@@ -266,7 +280,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files/:fileName/url', refuseGuideKeys, async (ctx) => {
+  router.get('(.*)/files/:fileName/url', refuseProtectedKeys, async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { fileName } = ctx.params
 
@@ -321,7 +335,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/FileMetadata'
    *       403:
-   *         description: Guide image — use the /guides routes
+   *         description: Guide image or lease export — use the /guides or /lease-exports routes
    *       404:
    *         description: File not found
    *       500:
@@ -329,21 +343,25 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files/:fileName/metadata', refuseGuideKeys, async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { fileName } = ctx.params
+  router.get(
+    '(.*)/files/:fileName/metadata',
+    refuseProtectedKeys,
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { fileName } = ctx.params
 
-    const result = await fileStorageAdapter.getFileMetadata(fileName)
+      const result = await fileStorageAdapter.getFileMetadata(fileName)
 
-    if (!result.ok) {
-      ctx.status = result.err === 'not_found' ? 404 : 500
-      ctx.body = { error: result.err }
-      return
+      if (!result.ok) {
+        ctx.status = result.err === 'not_found' ? 404 : 500
+        ctx.body = { error: result.err }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
     }
-
-    ctx.status = 200
-    ctx.body = makeSuccessResponseBody(result.data, metadata)
-  })
+  )
 
   /**
    * @swagger
@@ -363,7 +381,7 @@ export const routes = (router: KoaRouter) => {
    *       204:
    *         description: File deleted successfully
    *       403:
-   *         description: Guide image — use the /guides routes
+   *         description: Guide image or lease export — use the /guides or /lease-exports routes
    *       404:
    *         description: File not found
    *       500:
@@ -371,7 +389,7 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  router.delete('(.*)/files/:fileName', refuseGuideKeys, async (ctx) => {
+  router.delete('(.*)/files/:fileName', refuseProtectedKeys, async (ctx) => {
     const { fileName } = ctx.params
 
     const result = await fileStorageAdapter.deleteFile(fileName)
@@ -410,25 +428,29 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/FileExistsResponse'
    *       403:
-   *         description: Guide image — use the /guides routes
+   *         description: Guide image or lease export — use the /guides or /lease-exports routes
    *       500:
    *         description: Server error
    *     security:
    *       - bearerAuth: []
    */
-  router.get('(.*)/files/:fileName/exists', refuseGuideKeys, async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { fileName } = ctx.params
+  router.get(
+    '(.*)/files/:fileName/exists',
+    refuseProtectedKeys,
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { fileName } = ctx.params
 
-    const result = await fileStorageAdapter.fileExists(fileName)
+      const result = await fileStorageAdapter.fileExists(fileName)
 
-    if (!result.ok) {
-      ctx.status = 500
-      ctx.body = { error: result.err }
-      return
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = { error: result.err }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ exists: result.data }, metadata)
     }
-
-    ctx.status = 200
-    ctx.body = makeSuccessResponseBody({ exists: result.data }, metadata)
-  })
+  )
 }
