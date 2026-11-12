@@ -4,6 +4,7 @@ import {
   downloadLeaseExport,
   leaseExportFailureText,
   leaseExportLabel,
+  leaseExportPhases,
 } from '@/entities/lease'
 
 import type { LeaseExport } from '@/services/api/core/leaseExportService'
@@ -13,13 +14,7 @@ import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 
-const PHASES = [
-  { phase: 'fetching-leases', label: 'Hämtar kontrakt' },
-  { phase: 'fetching-contacts', label: 'Hämtar kontaktuppgifter' },
-  { phase: 'building-file', label: 'Skapar fil' },
-  { phase: 'saving-file', label: 'Sparar fil' },
-  { phase: null, label: 'Klar' },
-] as const
+const PHASES = [...leaseExportPhases, { phase: null, label: 'Klar' }] as const
 
 const PILL = 'px-2.5 py-0.5'
 

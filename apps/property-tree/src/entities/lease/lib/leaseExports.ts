@@ -2,6 +2,20 @@ import type { LeaseExport } from '@/services/api/core/leaseExportService'
 
 import { leaseStatusOptions } from './leaseStatusOptions'
 
+export const leaseExportPhases = [
+  { phase: 'fetching-leases', label: 'Hämtar kontrakt' },
+  { phase: 'fetching-contacts', label: 'Hämtar kontaktuppgifter' },
+  { phase: 'building-file', label: 'Skapar fil' },
+  { phase: 'saving-file', label: 'Sparar fil' },
+] as const satisfies ReadonlyArray<{
+  phase: NonNullable<LeaseExport['phase']>
+  label: string
+}>
+
+export function leaseExportPhaseLabel(phase: LeaseExport['phase']): string {
+  return leaseExportPhases.find((p) => p.phase === phase)?.label ?? 'Exporterar'
+}
+
 type ExportWithStatus = Pick<LeaseExport, 'id' | 'status'>
 
 export function findSettledExports<T extends ExportWithStatus>(
