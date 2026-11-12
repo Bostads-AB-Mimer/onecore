@@ -1015,127 +1015,19 @@ describe('leases routes', () => {
   })
 
   describe('GET /leases/export', () => {
-    it('resolves buildingManager to kvvAreaCodes before calling leasing', async () => {
+    it('responds with 404 now that exports run through /lease-exports', async () => {
       ;(utilities.createExcelExport as jest.Mock).mockResolvedValue(
         Buffer.from('excel')
       )
-      const lookupSpy = jest
-        .spyOn(propertyBaseAdapter, 'listKvvAreas')
-        .mockResolvedValue({
-          ok: true,
-          data: [factory.kvvAreaWithCostCenter.build({ code: 'KVV21' })],
-        })
-      const exportSpy = jest
-        .spyOn(tenantLeaseAdapter, 'getLeasesForExport')
-        .mockResolvedValue({
-          ok: true,
-          data: [buildLeaseSearchResult({ contacts: [] })],
-        })
-
-      const res = await request(app.callback()).get(
-        '/leases/export?buildingManager=user-1'
-      )
-
-      expect(res.status).toBe(200)
-      expect(lookupSpy).toHaveBeenCalledWith({ responsibleUserIds: ['user-1'] })
-      expect(exportSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ kvvAreaCodes: ['KVV21'] })
-      )
-      expect(exportSpy).toHaveBeenCalledWith(
-        expect.not.objectContaining({ buildingManager: expect.anything() })
-      )
-    })
-
-    it('returns 503 when the lease cache is warming up', async () => {
-      jest.spyOn(tenantLeaseAdapter, 'getLeasesForExport').mockRejectedValue(
-        Object.assign(new Error('Service Unavailable'), {
-          isAxiosError: true,
-          response: { status: 503 },
-        })
-      )
-
-      const res = await request(app.callback()).get('/leases/export')
-
-      expect(res.status).toBe(503)
-      expect(res.body.error).toBe('Lease service is warming up')
-    })
-
-    it('resolves a personnummer in q to a contact code before calling leasing', async () => {
-      ;(utilities.createExcelExport as jest.Mock).mockResolvedValue(
-        Buffer.from('excel')
-      )
-      jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
-        ok: true,
-        data: factory.contactsServiceContact.build({ contactCode: 'P158770' }),
-      })
+      jest.spyOn(tenantLeaseAdapter, 'getLease').mockResolvedValue(null)
       const exportSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLeasesForExport')
         .mockResolvedValue({ ok: true, data: [] })
 
-      const res = await request(app.callback()).get(
-        '/leases/export?q=198001011234'
-      )
-
-      expect(res.status).toBe(200)
-      expect(exportSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ q: 'P158770' })
-      )
-    })
-
-    it('enriches contacts from contacts-service before building the export', async () => {
-      ;(utilities.createExcelExport as jest.Mock).mockResolvedValue(
-        Buffer.from('excel')
-      )
-      jest.spyOn(tenantLeaseAdapter, 'getLeasesForExport').mockResolvedValue({
-        ok: true,
-        data: [
-          buildLeaseSearchResult({
-            contacts: [
-              {
-                contactCode: 'P158770',
-                name: 'Andra Handen',
-                email: 'fran-tenfast@example.com',
-                phone: '0701112233',
-              },
-            ],
-          }),
-        ],
-      })
-      jest.spyOn(contactsAdapter, 'getByContactCodeBatch').mockResolvedValue({
-        ok: true,
-        data: [
-          factory.contactsServiceContact.build({
-            contactCode: 'P158770',
-            communication: {
-              emailAddresses: [
-                {
-                  emailAddress: 'fran-contacts-service@example.com',
-                  isPrimary: true,
-                  type: 'unspecified',
-                },
-              ],
-              phoneNumbers: [
-                {
-                  phoneNumber: '0709998877',
-                  isPrimary: true,
-                  type: 'unspecified',
-                },
-              ],
-              specialAttention: false,
-            },
-          }),
-        ],
-      })
-
       const res = await request(app.callback()).get('/leases/export')
 
-      expect(res.status).toBe(200)
-      const exportArgs = (utilities.createExcelExport as jest.Mock).mock
-        .calls[0][0]
-      expect(exportArgs.data[0].contacts[0].email).toBe(
-        'fran-contacts-service@example.com'
-      )
-      expect(exportArgs.data[0].contacts[0].phone).toBe('0709998877')
+      expect(res.status).toBe(404)
+      expect(exportSpy).not.toHaveBeenCalled()
     })
   })
 
