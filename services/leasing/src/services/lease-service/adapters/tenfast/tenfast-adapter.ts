@@ -489,12 +489,17 @@ export async function getLeasesUpdatedSince(
   }
 }
 
+/**
+ * Looks up one rental object by its code. An object Tenfast does not have is
+ * `{ ok: true, data: null }`; `could-not-fetch-rental-object` means the lookup
+ * itself failed (timeout, 5xx, network), so the object may well exist.
+ */
 export const getRentalObject = async (
   rentalObjectCode: string
 ): Promise<
   AdapterResult<
     TenfastRentalObject | null,
-    'could-not-find-rental-object' | 'could-not-parse-rental-object'
+    'could-not-fetch-rental-object' | 'could-not-parse-rental-object'
   >
 > => {
   try {
@@ -511,7 +516,7 @@ export const getRentalObject = async (
           error: rentalObjectResponse.data.error,
           status: rentalObjectResponse.status,
         },
-        'could-not-find-rental-object'
+        'could-not-fetch-rental-object'
       )
 
     const parsed = TenfastRentalObjectSchema.safeParse(
@@ -521,8 +526,8 @@ export const getRentalObject = async (
       return handleTenfastError(parsed.error, 'could-not-parse-rental-object')
 
     return { ok: true, data: parsed.data }
-  } catch (err: any) {
-    return handleTenfastError(err, 'could-not-find-rental-object')
+  } catch (err: unknown) {
+    return handleTenfastError(err, 'could-not-fetch-rental-object')
   }
 }
 

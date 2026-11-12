@@ -146,6 +146,54 @@ describe(leasingAdapter.getLeasesByRentalObjectCode, () => {
   })
 })
 
+describe(leasingAdapter.getLeasesForPropertyId, () => {
+  const options = {
+    includeUpcomingLeases: true,
+    includeTerminatedLeases: false,
+    includeContacts: false,
+  }
+
+  it('returns the leases on 200', async () => {
+    nock(serviceUrl)
+      .get('/leases/by-rental-object-code/705-011-03-0102')
+      .query(true)
+      .reply(200, { content: [factory.lease.build()] })
+
+    const result = await leasingAdapter.getLeasesForPropertyId(
+      '705-011-03-0102',
+      options
+    )
+
+    expect(result).toHaveLength(1)
+  })
+
+  it('returns an empty list when leasing has no leases for the rental object', async () => {
+    nock(serviceUrl)
+      .get('/leases/by-rental-object-code/no-leases')
+      .query(true)
+      .reply(404, { error: 'rental-object-not-found' })
+
+    const result = await leasingAdapter.getLeasesForPropertyId(
+      'no-leases',
+      options
+    )
+
+    expect(result).toEqual([])
+  })
+
+  // A failed lookup must not be read as "no leases": the object may be rented.
+  it.each([400, 500, 503])('throws when leasing answers %i', async (status) => {
+    nock(serviceUrl)
+      .get('/leases/by-rental-object-code/705-011-03-0102')
+      .query(true)
+      .reply(status, { error: 'could-not-fetch-rental-object' })
+
+    await expect(
+      leasingAdapter.getLeasesForPropertyId('705-011-03-0102', options)
+    ).rejects.toThrow()
+  })
+})
+
 describe(leasingAdapter.getLeasesByContactCode, () => {
   const { contactCode } = factory.contact.build()
 

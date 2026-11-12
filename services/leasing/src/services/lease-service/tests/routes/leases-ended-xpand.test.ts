@@ -214,16 +214,10 @@ describe('GET /leases/by-rental-object-code/:rentalObjectCode with Xpand ended l
     expect(ids(res)).toEqual(['111-111-111/01'])
   })
 
-  it.each([
-    [
-      'Tenfast has no such rental object',
-      { ok: false, err: 'could-not-find-rental-object' },
-    ],
-    ['Tenfast returns no rental object', { ok: true, data: null }],
-  ])('returns Xpand ended leases when %s', async (_name, tenfastResult) => {
+  it('returns Xpand ended leases when Tenfast has no such rental object', async () => {
     jest
       .spyOn(tenfastAdapter, 'getRentalObject')
-      .mockResolvedValue(tenfastResult as any)
+      .mockResolvedValue({ ok: true, data: null })
     jest
       .spyOn(endedLeaseAdapter, 'getEndedLeasesByRentalObjectCode')
       .mockResolvedValue({ ok: true, data: [xpandLease('222-222-222/02')] })
@@ -237,7 +231,7 @@ describe('GET /leases/by-rental-object-code/:rentalObjectCode with Xpand ended l
   it('keeps the 404 when Tenfast and Xpand both miss the rental object', async () => {
     jest
       .spyOn(tenfastAdapter, 'getRentalObject')
-      .mockResolvedValue({ ok: false, err: 'could-not-find-rental-object' })
+      .mockResolvedValue({ ok: true, data: null })
     jest
       .spyOn(endedLeaseAdapter, 'getEndedLeasesByRentalObjectCode')
       .mockResolvedValue({ ok: true, data: [] })
@@ -245,6 +239,76 @@ describe('GET /leases/by-rental-object-code/:rentalObjectCode with Xpand ended l
     const res = await request(app.callback()).get(url())
 
     expect(res.status).toBe(404)
+    expect(res.body.error).toBe('rental-object-not-found')
+  })
+
+  it.each([
+    ['could-not-fetch-rental-object', 503],
+    ['could-not-parse-rental-object', 500],
+  ] as const)(
+    'answers %s with %i instead of "not found" when the Tenfast lookup fails',
+    async (err, status) => {
+      jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValue({ ok: false, err })
+      const getLeasesSpy = jest.spyOn(
+        tenfastAdapter,
+        'getLeasesByRentalPropertyId'
+      )
+      // Xpand having ended leases must not turn the failure into a 200.
+      jest
+        .spyOn(endedLeaseAdapter, 'getEndedLeasesByRentalObjectCode')
+        .mockResolvedValue({ ok: true, data: [xpandLease('222-222-222/02')] })
+
+      const res = await request(app.callback()).get(url())
+
+      expect(res.status).toBe(status)
+      expect(res.body.error).toBe(err)
+      expect(getLeasesSpy).not.toHaveBeenCalled()
+    }
+  )
+
+  it('returns only the Tenfast leases that match the status filter', async () => {
+    mockTenfast([
+      factory.tenfastLease.build({
+        externalId: '111-111-111/01',
+        stage: 'active',
+      }),
+      factory.tenfastLease.build({
+        externalId: '111-111-111/02',
+        stage: 'upcoming',
+      }),
+      factory.tenfastLease.build({
+        externalId: '111-111-111/03',
+        stage: 'terminated',
+      }),
+    ])
+
+    const res = await request(app.callback()).get(
+      url('?status=current,upcoming')
+    )
+
+    expect(res.status).toBe(200)
+    expect(ids(res)).toEqual(['111-111-111/01', '111-111-111/02'])
+  })
+
+  it('does not show a current Tenfast lease as ended when filtering on ended', async () => {
+    mockTenfast([
+      factory.tenfastLease.build({
+        externalId: '111-111-111/01',
+        stage: 'active',
+      }),
+    ])
+    jest
+      .spyOn(endedLeaseAdapter, 'getEndedLeasesByRentalObjectCode')
+      .mockResolvedValue({
+        ok: true,
+        data: [xpandLease('111-111-111/01'), xpandLease('222-222-222/02')],
+      })
+
+    const res = await request(app.callback()).get(url('?status=ended'))
+
+    expect(ids(res)).toEqual(['222-222-222/02'])
   })
 
   it('skips Xpand when the status filter excludes ended', async () => {
