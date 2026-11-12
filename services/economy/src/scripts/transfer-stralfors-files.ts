@@ -116,7 +116,15 @@ export async function transferStralforsFiles(): Promise<void> {
       config.stralforsExport.sftp.hostFingerprint
     ),
   }
-  logger.info(sftpConfig, 'SFTP connection config')
+  logger.info(
+    {
+      host: sftpConfig.host,
+      port: sftpConfig.port,
+      directory: sftpConfig.directory,
+      hostFingerprintConfigured: sftpConfig.hostFingerprintConfigured,
+    },
+    'SFTP connection config'
+  )
   try {
     await sftpClient.connect({
       host: config.stralforsExport.sftp.host,

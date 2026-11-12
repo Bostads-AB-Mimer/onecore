@@ -691,7 +691,7 @@ const syncContactToLeasing = async (
       return { ok: true, data: { skipped: response.data?.skipped === true } }
     }
 
-    logger.error(response.data, 'leasing-adapter.syncContactToLeasing')
+    logger.error({ status: response.status }, 'leasing-adapter.syncContactToLeasing')
     return { ok: false, err: 'sync-failed', statusCode: response.status }
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
@@ -783,7 +783,7 @@ const syncLease = async (
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'leasing-adapter.syncLease')
+    logger.error({ status: response.status }, 'leasing-adapter.syncLease')
     return syncLeaseFailure(response.status, response.data)
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {

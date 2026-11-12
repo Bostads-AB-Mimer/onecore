@@ -138,7 +138,7 @@ export async function postChannelLookup(recipients: economy.LookupRecipient[]) {
   )
 
   if (response.error) {
-    logger.error(response.error, 'stralfors-adapter.postChannelLookup')
+    logger.error({ err: response.error }, 'stralfors-adapter.postChannelLookup')
     throw response.error
   }
 

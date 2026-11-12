@@ -282,7 +282,17 @@ const alarmRollbackFailed = async (params: {
       }
     | { kind: 'write-outcome-unknown' }
 }): Promise<void> => {
-  logger.error(params, 'relationChanges.rollbackFailed')
+  logger.error(
+    {
+      action: params.action,
+      kind: params.outcome.kind,
+      economyCustomerTouched: params.economyCustomerTouched,
+      contactCode: params.relation.contactCode,
+      relatedContactCode: params.relation.relatedContactCode,
+      roleType: params.relation.roleType,
+    },
+    'relationChanges.rollbackFailed'
+  )
 
   if (!config.emailAddresses.xpandSync) {
     logger.warn(

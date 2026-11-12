@@ -42,7 +42,7 @@ export const sendEmailInfobipSdk = async (
       result.sent.push(to)
     } else {
       result.errors.push(to)
-      logger.error(response, 'Error sending email')
+      logger.error({ status: response.status }, 'Error sending email')
       throw new Error(response.body)
     }
   }

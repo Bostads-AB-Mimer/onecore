@@ -73,7 +73,7 @@ export async function getInvoiceByInvoiceId(
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'economy-adapter.getInvoiceByInvoiceId')
+    logger.error({ status: response.status }, 'economy-adapter.getInvoiceByInvoiceId')
     return { ok: false, err: 'unknown' }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoiceByInvoiceId')
@@ -98,7 +98,7 @@ export async function getInvoiceByOcr(
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'economy-adapter.getInvoiceByOcr')
+    logger.error({ status: response.status }, 'economy-adapter.getInvoiceByOcr')
     return { ok: false, err: 'unknown' }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoiceByOcr')
@@ -122,7 +122,7 @@ export async function getInvoicePaymentEvents(
       return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
-    logger.error(response.data, 'economy-adapter.getInvoicePaymentEvents')
+    logger.error({ status: response.status }, 'economy-adapter.getInvoicePaymentEvents')
     return { ok: false, err: 'unknown', statusCode: 500 }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoicePaymentEvents')
@@ -149,7 +149,7 @@ export async function getInvoicesByContactCode(
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'economy-adapter.getInvoicesByContactCode')
+    logger.error({ status: response.status }, 'economy-adapter.getInvoicesByContactCode')
     return { ok: false, err: 'unknown' }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoicesByContactCode')
@@ -337,7 +337,7 @@ export async function getInvoices({
         hasNextPage = pageInfo?.hasNextPage
         after = pageInfo?.endCursor
       } else {
-        logger.error(response.data, 'economy-adapter.getInvoices')
+        logger.error({ status: response.status }, 'economy-adapter.getInvoices')
         return { ok: false, err: 'unknown', statusCode: 500 }
       }
     }
@@ -378,7 +378,7 @@ export async function getMiscellaneousInvoices({
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'economy-adapter.getMiscellaneousInvoices')
+    logger.error({ status: response.status }, 'economy-adapter.getMiscellaneousInvoices')
     return { ok: false, err: 'unknown', statusCode: 500 }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getMiscellaneousInvoices')
@@ -401,7 +401,7 @@ export async function getRentInvoiceRows(
       if (response.status === 200) {
         allRows = allRows.concat(response.data.content)
       } else {
-        logger.error(response.data, 'economy-adapter.getRentInvoiceRows')
+        logger.error({ status: response.status }, 'economy-adapter.getRentInvoiceRows')
         return { ok: false, err: 'unknown', statusCode: 500 }
       }
     }
@@ -449,7 +449,7 @@ export async function deferInvoice(params: {
       }
     }
 
-    logger.error(response.data, 'economy-adapter.deferInvoice')
+    logger.error({ status: response.status }, 'economy-adapter.deferInvoice')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: unknown) {
     logger.error(err, 'economy-adapter.deferInvoice')
@@ -496,7 +496,7 @@ export async function getPaymentEvents(
       if (response.status === 200) {
         allEvents = allEvents.concat(response.data.content)
       } else {
-        logger.error(response.data, 'economy-adapter.getPaymentEvents')
+        logger.error({ status: response.status }, 'economy-adapter.getPaymentEvents')
         return { ok: false, err: 'unknown', statusCode: 500 }
       }
     }
@@ -527,7 +527,7 @@ export async function getLeaseDetailsForInvoices(
       if (response.status === 200) {
         allLeaseDetails = allLeaseDetails.concat(response.data.content)
       } else {
-        logger.error(response.data, 'economy-adapter.getLeaseDetailsForInvoice')
+        logger.error({ status: response.status }, 'economy-adapter.getLeaseDetailsForInvoice')
         return { ok: false, err: 'unknown', statusCode: 500 }
       }
     }
@@ -560,7 +560,7 @@ export async function processIMD(
       return { ok: false, err: 'invalid-csv', statusCode: 400 }
     }
 
-    logger.error(response.data, 'economy-adapter.processIMD')
+    logger.error({ status: response.status }, 'economy-adapter.processIMD')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err) {
     logger.error(err, 'economy-adapter.processIMD')
@@ -596,7 +596,7 @@ export async function getInvoiceChannels(
         data: parsed.data,
       }
     }
-    logger.error(response.data, 'economy-adapter.getInvoiceChannels')
+    logger.error({ status: response.status }, 'economy-adapter.getInvoiceChannels')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoiceChannels')
@@ -632,7 +632,7 @@ export async function getAutogiroConsent(
       return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
-    logger.error(response.data, 'economy-adapter.getAutogiroConsent')
+    logger.error({ status: response.status }, 'economy-adapter.getAutogiroConsent')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getAutogiroConsent')
@@ -658,7 +658,7 @@ export async function getLatestPaymentCursor(): Promise<
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
     }
-    logger.error(response.data, 'economy-adapter.getLatestPaymentCursor')
+    logger.error({ status: response.status }, 'economy-adapter.getLatestPaymentCursor')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getLatestPaymentCursor')
@@ -680,7 +680,7 @@ export async function getPaymentsSince(
       return { ok: true, data: parsed }
     }
 
-    logger.error(response.data, 'economy-adapter.getPaymentsSince')
+    logger.error({ status: response.status }, 'economy-adapter.getPaymentsSince')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getPaymentsSince')
@@ -709,7 +709,7 @@ export async function recordInvoicePayment(
       return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
-    logger.error(response.data, 'economy-adapter.recordInvoicePayment')
+    logger.error({ status: response.status }, 'economy-adapter.recordInvoicePayment')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     if (axios.isAxiosError(err) && err.response?.status === 404) {
