@@ -5,15 +5,12 @@ import {
   logger,
   makeSuccessResponseBody,
   createExcelExport,
-  joinField,
-  formatDateForExcel,
   setExcelDownloadHeaders,
 } from '@onecore/utilities'
 import {
   leasing,
   schemas,
   LeaseStatus,
-  LeaseStatusLabel,
   CustomerScoreCardInfoSchema,
 } from '@onecore/types'
 import z from 'zod'
@@ -36,6 +33,10 @@ import {
   resolvePersonnummerInQuery,
   enrichLeaseContacts,
 } from '../../adapters/contacts-adapter/lease-query'
+import {
+  leaseExportColumns,
+  leaseExportRowMapper,
+} from './lease-exports/run-lease-export'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { registerSchema } from '../../utils/openapi'
 
@@ -1058,45 +1059,9 @@ export const routes = (router: KoaRouter) => {
 
       const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({
         sheetName: 'Hyreskontrakt',
-        columns: [
-          { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
-          { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
-          { header: 'Hyresgäst', key: 'tenantName', width: 30 },
-          { header: 'Kundnummer', key: 'contactCode', width: 18 },
-          { header: 'E-post', key: 'email', width: 30 },
-          { header: 'Telefon', key: 'phone', width: 15 },
-          { header: 'Objekttyp', key: 'objectType', width: 12 },
-          { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
-          { header: 'Adress', key: 'address', width: 35 },
-          { header: 'Fastighet', key: 'property', width: 20 },
-          { header: 'Distrikt', key: 'district', width: 15 },
-          { header: 'Startdatum', key: 'startDate', width: 12 },
-          { header: 'Slutdatum', key: 'endDate', width: 12 },
-          { header: 'Status', key: 'status', width: 15 },
-        ],
+        columns: leaseExportColumns,
         data: enrichedLeases,
-        rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
-          leaseId: lease.leaseId,
-          rentalObjectCode: lease.rentalObjectCode || '',
-          tenantName: joinField(lease.contacts, (c) =>
-            c.contactType === 'subletTenant' ? `${c.name} (andrahand)` : c.name
-          ),
-          contactCode: joinField(lease.contacts, (c) =>
-            c.contactType === 'subletTenant'
-              ? `${c.contactCode} (andrahand)`
-              : c.contactCode
-          ),
-          email: joinField(lease.contacts, (c) => c.email),
-          phone: joinField(lease.contacts, (c) => c.phone),
-          objectType: lease.parkingSpaceType || lease.objectTypeCode,
-          leaseType: lease.leaseType,
-          address: lease.address || '',
-          property: lease.property || '',
-          district: lease.districtName || '',
-          startDate: formatDateForExcel(lease.startDate),
-          endDate: formatDateForExcel(lease.lastDebitDate),
-          status: LeaseStatusLabel[lease.status] ?? String(lease.status),
-        }),
+        rowMapper: leaseExportRowMapper,
       })
 
       setExcelDownloadHeaders(ctx, 'hyreskontrakt')
