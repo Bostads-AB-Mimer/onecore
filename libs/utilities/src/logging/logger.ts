@@ -5,6 +5,7 @@ const { multistream } = pms
 import pretty from 'pino-pretty'
 import Koa from 'koa'
 import { randomUUID } from 'crypto'
+import { serializeError } from './error-fields'
 import {
   storage,
   getCorrelationId as getCorrelationIdFromStorage,
@@ -94,6 +95,7 @@ const prettyStream = pretty({
 })
 
 const pinoOptions = {
+  serializers: { err: serializeError, error: serializeError },
   mixin() {
     return { correlationId: getCorrelationIdFromStorage() }
   },
