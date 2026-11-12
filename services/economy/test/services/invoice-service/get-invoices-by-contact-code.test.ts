@@ -117,6 +117,94 @@ describe(getInvoicesByContactCode, () => {
     )
   })
 
+  describe('with a from date', () => {
+    // Local time, like the from date the route parses.
+    const from = new Date(2026, 9, 1, 14, 30)
+
+    it('fetches every Tenfast invoice, because Tenfast cannot filter on the invoice date', async () => {
+      // Act
+      await getInvoicesByContactCode(contactCode, { from })
+
+      // Assert
+      expect(getTenfastInvoices).toHaveBeenCalledWith(contactCode)
+      expect(getXledgerInvoices).toHaveBeenCalledWith(contactCode, { from })
+    })
+
+    it('keeps the Tenfast rows and period of a retroactive invoice whose period ended before from', async () => {
+      // Arrange
+      const invoiceId = '552000000001'
+      const tenfastRows = factory.invoiceRow.buildList(1, {
+        invoiceNumber: invoiceId,
+      })
+      // Invoiced in October for a period in August.
+      const tenfastInvoice = factory.invoice.build({
+        invoiceId,
+        source: 'next',
+        invoiceDate: new Date(2026, 9, 15),
+        fromDate: new Date('2026-08-01T00:00:00.000Z'),
+        toDate: new Date('2026-08-31T00:00:00.000Z'),
+        invoiceRows: tenfastRows,
+      })
+      getXledgerInvoices.mockResolvedValueOnce([
+        parsed(
+          xledgerInvoice({ invoiceId, invoiceDate: new Date(2026, 9, 15) })
+        ),
+      ])
+      getTenfastInvoices.mockResolvedValueOnce([parsed(tenfastInvoice)])
+
+      // Act
+      const result = await getInvoicesByContactCode(contactCode, { from })
+
+      // Assert
+      expect(result).toHaveLength(1)
+      expect(result[0].invoiceRows).toEqual(tenfastRows)
+      expect(result[0].fromDate).toEqual(tenfastInvoice.fromDate)
+      expect(result[0].toDate).toEqual(tenfastInvoice.toDate)
+    })
+
+    it('leaves out a Tenfast-only invoice that was invoiced before from', async () => {
+      // Arrange
+      const tenfastOnly = (invoiceId: string, invoiceDate: Date) =>
+        parsed(
+          factory.invoice.build({ invoiceId, source: 'next', invoiceDate })
+        )
+      getTenfastInvoices.mockResolvedValueOnce([
+        tenfastOnly('552000000001', new Date(2026, 8, 30, 23, 59)),
+        // Earlier in the day than from: the filter is on the date, as in Xledger.
+        tenfastOnly('552000000002', new Date(2026, 9, 1, 8, 0)),
+        tenfastOnly('552000000003', new Date(2026, 10, 15)),
+      ])
+
+      // Act
+      const result = await getInvoicesByContactCode(contactCode, { from })
+
+      // Assert
+      expect(result.map((invoice) => invoice.invoiceId)).toEqual([
+        '552000000002',
+        '552000000003',
+      ])
+    })
+
+    it('returns every Tenfast-only invoice when no from date is given', async () => {
+      // Arrange
+      getTenfastInvoices.mockResolvedValueOnce([
+        parsed(
+          factory.invoice.build({
+            invoiceId: '552000000001',
+            source: 'next',
+            invoiceDate: new Date(2020, 0, 1),
+          })
+        ),
+      ])
+
+      // Act
+      const result = await getInvoicesByContactCode(contactCode)
+
+      // Assert
+      expect(result).toHaveLength(1)
+    })
+  })
+
   it('uses the period from Xpand for an Xledger invoice that is not in Tenfast', async () => {
     // Arrange
     const invoiceId = '552000000001'

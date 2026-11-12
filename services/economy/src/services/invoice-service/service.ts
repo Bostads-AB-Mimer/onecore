@@ -329,6 +329,18 @@ const getXpandInvoiceRowsByInvoiceId = async (
   }
 }
 
+// Same meaning as Xledger's `invoiceDate_gte`: invoiced on the day of `from`
+// or later.
+const isInvoicedOnOrAfter = (invoice: Invoice, from?: Date): boolean => {
+  if (!from) return true
+  const startOfDay = new Date(
+    from.getFullYear(),
+    from.getMonth(),
+    from.getDate()
+  )
+  return invoice.invoiceDate >= startOfDay
+}
+
 /*
  * A contact's invoices from Xledger, Tenfast and Xpand.
  *
@@ -336,6 +348,11 @@ const getXpandInvoiceRowsByInvoiceId = async (
  * adds invoices that predate Xledger (the contact's own, and those billed to
  * a co-holder on a shared lease). For the period and the invoice rows,
  * Tenfast takes precedence over Xpand, and Xpand over Xledger.
+ *
+ * `from` is the earliest invoice date. Tenfast can only filter on the invoice
+ * period, so its whole list is fetched: every Xledger invoice can then find
+ * its Tenfast rows and period, and `from` is applied here to the invoices
+ * that are only in Tenfast.
  */
 export const getInvoicesByContactCode = async (
   contactCode: string,
@@ -344,7 +361,7 @@ export const getInvoicesByContactCode = async (
   const from = filters?.from
   const [xledgerResult, tenfastInvoices, xpandResult] = await Promise.all([
     getXledgerInvoicesByContactCode(contactCode, { from }),
-    getTenfastInvoicesByContactCode(contactCode, { from }),
+    getTenfastInvoicesByContactCode(contactCode),
     getXpandInvoicesIfAvailable(contactCode, from),
   ])
   const xledgerInvoices = xledgerResult ?? []
@@ -408,7 +425,11 @@ export const getInvoicesByContactCode = async (
   })
 
   const tenfastOnlyInvoices = tenfastInvoices
-    .filter((parsed) => !xledgerInvoiceIds.has(parsed.invoice.invoiceId))
+    .filter(
+      (parsed) =>
+        !xledgerInvoiceIds.has(parsed.invoice.invoiceId) &&
+        isInvoicedOnOrAfter(parsed.invoice, from)
+    )
     .map((parsed) =>
       withInvoiceDeferral(parsed.invoice, {
         tenfastDeferral: parsed.tenfastDeferral,
@@ -616,19 +637,20 @@ export const getInvoiceDetailsForContactCode = async (
   }
 
   const tenfastInvoicesResult = await getInvoicesForTenant(
-    tenfastTenantResult.data._id,
-    from
+    tenfastTenantResult.data._id
   )
   if (!tenfastInvoicesResult.ok) {
     return []
   }
 
   return enrichInvoices(
-    tenfastInvoicesResult.data.map((parsed) =>
-      withInvoiceDeferral(parsed.invoice, {
-        tenfastDeferral: parsed.tenfastDeferral,
-      })
-    )
+    tenfastInvoicesResult.data
+      .filter((parsed) => isInvoicedOnOrAfter(parsed.invoice, from))
+      .map((parsed) =>
+        withInvoiceDeferral(parsed.invoice, {
+          tenfastDeferral: parsed.tenfastDeferral,
+        })
+      )
   )
 }
 
