@@ -20,7 +20,7 @@ export interface OccupantTenant {
 }
 
 interface PropertyTenants {
-  /** rentalObjectCode → contacts on the current (Gällande) leases. */
+  /** rentalObjectCode → the tenants who rent the object now. */
   tenantsByCode: Record<string, OccupantTenant[]>
 }
 
@@ -30,18 +30,22 @@ interface PropertyTenants {
  * audience. Termination is the paging itself — `fetched` only grows, so it
  * reaches totalRecords, and an empty page ends it either way.
  */
-async function fetchPropertyTenants(
+export async function fetchPropertyTenants(
   designation: string
 ): Promise<PropertyTenants> {
   const tenantsByCode: Record<string, OccupantTenant[]> = {}
   let fetched = 0
   let page = 1
   for (;;) {
-    // Gällande (0) AND uppsagt (2): someone who has given notice still lives
-    // there until the lease ends, so the object is occupied, not vakant.
+    // Gällande (0), uppsagt (2) and preliminärt uppsagt (4): a tenant under
+    // notice, confirmed or not, still lives there until the lease ends, so the
+    // object is occupied, not vakant.
     // Kommande (1) hasn't moved in and upphört (3) has already left.
     const result = await leaseSearchService.search(
-      { property: [designation], status: ['current', 'ended'] },
+      {
+        property: [designation],
+        status: ['current', 'abouttoend', 'preliminaryterminated'],
+      },
       page,
       PAGE_SIZE
     )
