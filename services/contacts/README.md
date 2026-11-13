@@ -49,16 +49,24 @@ An individual with `cmctc.lagsokt` set has a protected identity. Every contact c
 `protectedIdentity: boolean`, and a protected individual is redacted (name and national id become
 `'redacted'`; addresses, phone numbers and email addresses are dropped) **unless** they are:
 
-- **a tenant** — `INNEHAVARE` on a lease (`hyavk`) that is current, upcoming, or ended at most
-  `FINAL_INVOICE_GRACE_DAYS` (60) ago, so final invoices can still be sent; or
+- **a tenant** — on a lease in Tenfast that is current, upcoming, terminated, or ended at most 60
+  days ago, so final invoices can still be sent. Tenfast is the master for leases and this service
+  may not call it, so **core** decides: it checks the lease in Tenfast (via leasing) and asks again
+  with `/contacts/batch?verifiedTenants=true`, which returns the requested contacts unredacted
+  (`revealProtectedTenants` in `core/src/processes/contacts`). Leases in Xpand (`hyavk`) do not
+  count; or
 - **an annan fakturamottagare** — the related side of an active `annan_fakturamottagare` row in
-  `contact_relation`.
+  `contact_relation`, decided here from this service's own database.
 
 Our protected tenants are already anonymised in Xpand, and invoicing needs their name and address.
+Every read through core passes through `revealProtectedTenants`; a direct read of this service
+without `verifiedTenants` returns protected tenants redacted. If the lease lookup fails, the
+contact stays redacted (fails closed).
 Names of related contacts (`relatedContacts`) are always redacted for protected identities.
 Leasing's legacy contact model still hides the identity of every protected identity; core's
 `/contacts/:contactCode` and `/tenants/by-contact-code/:contactCode` fill it in from this service
-(`withProtectedIdentityDetails`), so the kundkort follows the same rule. They also set
+(`withProtectedIdentityDetails` with `tenantAwareContactLookup`), so the kundkort follows the same
+rule. They also set
 `protectedIdentityDetails` (`shown`, `withheld`, or `unavailable` when this service could not be
 reached — the details then stay hidden) so the UI does not mistake a failed lookup for the rule.
 

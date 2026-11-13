@@ -10,8 +10,6 @@ import {
   setExcelDownloadHeaders,
 } from '@onecore/utilities'
 import {
-  Contact,
-  Lease,
   leasing,
   schemas,
   LeaseStatus,
@@ -32,13 +30,13 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
+import { mapLeasesWithTenants } from './helpers/lease-tenants'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
 import {
   resolvePersonnummerInQuery,
   enrichLeaseContacts,
 } from '../../adapters/contacts-adapter/lease-query'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
-import { AdapterResult } from '@/adapters/types'
 import { registerSchema } from '../../utils/openapi'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
@@ -206,7 +204,6 @@ export const routes = (router: KoaRouter) => {
             logger.error(
               {
                 status: rentalPropertyResult.status,
-                data: rentalPropertyResult.data,
                 rentalObjectCode,
               },
               'Failed to fetch rental property data'
@@ -621,7 +618,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const patchedLeases = await patchLeasesWithContacts(leases)
+      const patchedLeases = await mapLeasesWithTenants(leases)
 
       if (!patchedLeases.ok) {
         ctx.status = 500
@@ -634,7 +631,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       const parsedPatchedLeases = LeaseSchema.array().safeParse(
-        patchedLeases.data.map(mapLease)
+        patchedLeases.data
       )
       if (!parsedPatchedLeases.success) {
         logger.error(
@@ -741,7 +738,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const patchedLeases = await patchLeasesWithContacts(leases)
+      const patchedLeases = await mapLeasesWithTenants(leases)
       if (!patchedLeases.ok) {
         ctx.status = 500
         ctx.body = {
@@ -752,7 +749,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       const parsedPatchedLeases = LeaseSchema.array().safeParse(
-        patchedLeases.data.map(mapLease)
+        patchedLeases.data
       )
       if (!parsedPatchedLeases.success) {
         logger.error(
@@ -858,7 +855,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const patchedLeases = await patchLeasesWithContacts(leases)
+      const patchedLeases = await mapLeasesWithTenants(leases)
       if (!patchedLeases.ok) {
         ctx.status = 500
         ctx.body = {
@@ -869,7 +866,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       const parsedPatchedLeases = LeaseSchema.array().safeParse(
-        patchedLeases.data.map(mapLease)
+        patchedLeases.data
       )
       if (!parsedPatchedLeases.success) {
         logger.error(
@@ -892,52 +889,6 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
-
-  async function patchLeasesWithContacts(
-    leases: Lease[]
-  ): Promise<AdapterResult<Lease[], 'no-contact' | 'unknown'>> {
-    for (const lease of leases) {
-      let contacts: (Contact & { leaseContactType?: string })[] = []
-
-      for (const contactCode of lease.tenantContactIds ?? []) {
-        const contact =
-          await leasingAdapter.getContactByContactCode(contactCode)
-        if (!contact.ok || !contact.data) {
-          return { ok: false, err: 'no-contact' }
-        }
-        contacts.push(contact.data)
-      }
-
-      if (lease.subletContactId) {
-        const contact = await leasingAdapter.getContactByContactCode(
-          lease.subletContactId
-        )
-        if (contact.ok) {
-          const leaseContactType: leasing.v1.LeaseContactType = 'subletTenant'
-          contacts.push({ ...contact.data, leaseContactType })
-        } else if (contact.err === 'not-found') {
-          logger.error(
-            { contactCode: lease.subletContactId, leaseId: lease.leaseId },
-            'Sublet contact not found, returning lease without it'
-          )
-        } else {
-          logger.error(
-            {
-              error: contact.err,
-              contactCode: lease.subletContactId,
-              leaseId: lease.leaseId,
-            },
-            'Failed to fetch sublet contact'
-          )
-          return { ok: false, err: 'no-contact' }
-        }
-      }
-
-      lease.tenants = contacts
-    }
-
-    return { ok: true, data: leases }
-  }
 
   /**
    * @swagger
@@ -1256,7 +1207,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const patchedLease = await patchLeasesWithContacts([lease])
+      const patchedLease = await mapLeasesWithTenants([lease])
 
       if (!patchedLease.ok) {
         ctx.status = 500
@@ -1268,9 +1219,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       const [leaseWithContacts] = patchedLease.data
-      const parsedLeaseWithContacts = LeaseSchema.safeParse(
-        mapLease(leaseWithContacts)
-      )
+      const parsedLeaseWithContacts = LeaseSchema.safeParse(leaseWithContacts)
       if (!parsedLeaseWithContacts.success) {
         logger.error(
           { issues: parsedLeaseWithContacts.error.issues, metadata },

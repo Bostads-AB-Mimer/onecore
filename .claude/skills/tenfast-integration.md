@@ -111,10 +111,15 @@ Go by lease stage instead, which doesn't depend on those fixes: `avtal/search` t
 (`filter[stage]=upcoming,draft,signingInProgress`, `CLAIMING_STAGES` in
 `tenfast-rental-object-helpers.ts`). `getAvailabilityForVacantRentalObjects`
 uses that search to keep objects with a next tenant's lease, signed or not,
-out of the publish list. Don't rely only on `includeAvtal` for this, because
+out of the publish list. One exception (AVTAL-517): an `upcoming` lease that
+has been given notice and has an end date does not claim the object. Its end
+date is added to the object's leases instead, so `vacantFrom` is the day after
+the latest end. Don't rely only on `includeAvtal` for this, because
 it returns an object's 10 latest leases. The search is parsed with a lenient
-schema (`hyresobjekt[].externalId` only), because drafts can lack fields
-`TenfastLeaseSchema` requires. The object's own leases are also checked with
+schema (stage, end date, cancellation and `hyresobjekt[].externalId`), because
+drafts can lack fields `TenfastLeaseSchema` requires. An end date or
+cancellation that can't be read is dropped, so that lease still claims the
+object. The object's own leases are also checked with
 `isClaimingLease`, which counts an unknown or missing stage as claiming.
 
 The same rule guards writes and single objects. `getLeaseStagesForRentalObject`
@@ -163,6 +168,65 @@ reference descending and limited to 10** per object. `getRentalObject`
 (single GET) is still fine for callers that don't need leases, such as rent
 articles and rent rows.
 
+## The rent total on a rental object is the rent of today
+
+`hyra`, `hyraExcludingVat` and `hyraVat` on a hyresobjekt are computed by
+Tenfast for today: the sum of the rows in `hyror` that are in force today
+(`from`/`to`, both days included) and have `includeInContract: true`. Checked
+on production on 2026-11-10 (bostad, parkering, lokal): the rent `withRentAt`
+sums for the next day matched Tenfast's total on 3,069 of the 3,070 objects
+with rows, and the last one had a row changing at midnight. No endpoint takes
+a date, so Tenfast can't give the rent for another day.
+
+- **`includeInContract: false`** marks a row outside the total, such as the
+  optional home insurance. `consolidationLabel` ("Summarad" in the Tenfast UI)
+  only merges rows into one line on the invoice and says nothing about the
+  total. It must be in `TenfastInvoiceRowSchema`: `z.object` strips unknown
+  keys, and new leases lost the label when it was missing.
+- **Future rows are in `hyror` already.** A rent raised at the turn of the
+  year is a row ending 12-31 and a new row from 01-01.
+
+A rental object vacant from a later day must show the rent of that day
+(AVTAL-489). `mapTenfastRentalObjectToAvailabilityInfo` passes Tenfast's total
+on as it is and marks each row with `includedInRent`. `withRentAt`
+(`rental-object-availability-helpers.ts`) then recomputes the total from the
+rows for a later day, in the routes. `rent.asOf` says which day the total is
+the rent of. A row without the flag counts as included: only an explicit
+`false` leaves a row out.
+
+`withRentAt` keeps Tenfast's total (and `asOf` today) when the rows for the
+day look incomplete, so a sum would be too low:
+
+- **No included row is in force that day.**
+- **A charge in force today has ended by then, and no row of the same article
+  takes over.** That is what missing next-year rows look like when other rows
+  remain. Taking over means starting after today: rows often share an article
+  (a rent and its index supplement on 135 of 256 lokaler), and a sibling
+  already in force is not a successor. A negative row that ends is trusted:
+  on production (2026-11-10) the rows ending without a successor were rent
+  discounts ("Hyresrabatt 2026-2028", 63 of 4,000 bostad), which are meant to
+  end.
+
+Run for move-in day 2027-01-16 on 7,727 production objects with rows
+(2026-11-10): 33 rents changed, 2 fell back, none came out as 0, under half or
+over double today's.
+
+The day comes from:
+
+- **Parking spaces:** the day is the final `vacantFrom`, after
+  `determineVacantFrom` has weighed in the Xpand block.
+- **Other rental objects:** leasing has no `vacantFrom` for them, so the
+  caller gives the day (`rentAt` on the by-code availability route,
+  `rentAtByRentalObjectCode` on the batch route).
+
+`includeInContract` is read only. `createLease` and `importLease` strip it
+before sending the rental object's rows to Tenfast. `consolidationLabel` is
+sent along with each row.
+
+Both `createLease` and `importLease` set `aviseringsTyp: 'stralfors'`
+(`NEW_LEASE_NOTIFICATION_TYPE`). Leaving it out, as `importLease` used to, gives
+"Aviseras ej" in Tenfast.
+
 ## `cancellation.requested` vs `cancellation.cancelled` — easy to get backwards
 
 On a lease's `cancellation` object:
@@ -194,8 +258,16 @@ vacant), so an unreadable lease never makes an object vacant.
   A lease past its end date can stay in force until Tenfast moves it to
   `terminated` (AVTAL-408).
 
+An `upcoming` lease claims the object on top of this (`isClaimingLease`),
+unless notice has been given on it (`cancellation.requested`, not withdrawn)
+and it has an end date (AVTAL-517). Then the object is vacant the day after
+the latest end among the leases in force, so the time between two leases is
+never offered. Only notice counts: an upcoming fixed-term lease without
+notice, a draft and a lease out for signing still claim the object.
+
 `determineVacantFrom` keeps undefined as undefined, whatever the Xpand block
-says. Rule decided in AVTAL-343.
+says. Rule decided in AVTAL-343, with the exception for upcoming leases in
+AVTAL-517.
 
 On Tenfast test (2,229 objects, 2026-10-14), `endDate` was set exactly when
 notice had been given, both on terminating and on upcoming leases. No lease

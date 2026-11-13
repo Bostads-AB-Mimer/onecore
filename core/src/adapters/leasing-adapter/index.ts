@@ -135,9 +135,18 @@ const getLeasesForPropertyId = async (
       includeNonTenantContacts: options.includeNonTenantContacts.toString(),
     }),
   })
+  // Explicit validateStatus: the process-wide default (<500) would let other
+  // 4xx through with no content, which callers would read as "no leases".
   const leasesResponse = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`
+    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`,
+    { validateStatus: (status) => status === 200 || status === 404 }
   )
+
+  // Leasing answers 404 for a rental object it has no leases for.
+  if (leasesResponse.status === 404) {
+    return []
+  }
+
   return leasesResponse.data.content
 }
 
@@ -367,7 +376,7 @@ const getTenantByContactCode = async (
       // A 404 without a recognized leasing error type is not a business
       // outcome — e.g. a proxy/gateway 404 or a misrouted service URL.
       logger.error(
-        { status: res.status, body: res.data },
+        { status: res.status },
         'leasing-adapter.getTenantByContactCode: unrecognized 404 response'
       )
       return { ok: false, err: 'unknown' }
@@ -576,7 +585,7 @@ const preliminaryTerminateLease = async (
     }
 
     logger.error(
-      { status: response.status, data: response.data },
+      { status: response.status },
       'Failed to preliminary terminate lease'
     )
     return { ok: false, err: 'termination-failed' }
@@ -682,12 +691,15 @@ const syncContactToLeasing = async (
       return { ok: true, data: { skipped: response.data?.skipped === true } }
     }
 
-    logger.error(response.data, 'leasing-adapter.syncContactToLeasing')
+    logger.error(
+      { status: response.status },
+      'leasing-adapter.syncContactToLeasing'
+    )
     return { ok: false, err: 'sync-failed', statusCode: response.status }
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
       logger.error(
-        { status: err.response.status, data: err.response.data },
+        { status: err.response.status },
         'leasing-adapter.syncContactToLeasing'
       )
       return { ok: false, err: 'sync-failed', statusCode: err.response.status }
@@ -774,14 +786,11 @@ const syncLease = async (
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'leasing-adapter.syncLease')
+    logger.error({ status: response.status }, 'leasing-adapter.syncLease')
     return syncLeaseFailure(response.status, response.data)
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
-      logger.error(
-        { status: err.response.status, data: err.response.data },
-        'leasing-adapter.syncLease'
-      )
+      logger.error({ status: err.response.status }, 'leasing-adapter.syncLease')
       return syncLeaseFailure(err.response.status, err.response.data)
     }
     logger.error({ err }, 'leasing-adapter.syncLease')
@@ -854,7 +863,7 @@ const syncRentalObjectType = async (
     }
 
     logger.error(
-      { rentalObjectCode, status: response.status, body: response.data },
+      { rentalObjectCode, status: response.status },
       'leasing-adapter.syncRentalObjectType'
     )
     return { ok: false, err: 'sync-failed', statusCode: response.status }

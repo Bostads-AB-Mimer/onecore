@@ -111,8 +111,8 @@ const MESSAGE_FIELDS: string[] = [
 const WorkOrderUrl = (workOrderId: number): string =>
   `${Config.odoo.url}/web#id=${workOrderId}&model=maintenance.request&view_type=form`
 
-export const getWorkOrdersByResidenceId = async (
-  residenceId: string
+export const getWorkOrdersByRentalId = async (
+  rentalId: string
 ): Promise<WorkOrder[]> => {
   try {
     await odoo.connect()
@@ -120,7 +120,13 @@ export const getWorkOrdersByResidenceId = async (
     const odooWorkOrders = await odoo.searchRead<OdooWorkOrder>(
       'maintenance.request',
       [
-        ['rental_property_id', '=', residenceId],
+        // Prefix-notation OR over where Odoo stores the rentalId for a
+        // Lägenhet, a Lokal and a Bilplats; the trailing clauses are ANDed.
+        '|',
+        '|',
+        ['rental_property_id.rental_property_id', '=', rentalId],
+        ['facility_id.rental_property_id', '=', rentalId],
+        ['parking_space_id.rental_property_id', '=', rentalId],
         ['building_code', '=', false],
         ['maintenance_unit_code', '=', false],
       ],
@@ -145,7 +151,7 @@ export const getWorkOrdersByResidenceId = async (
 
     return workOrders
   } catch (err) {
-    logger.error({ err }, 'odoo-adapter.getWorkOrdersByResidenceId')
+    logger.error({ err }, 'odoo-adapter.getWorkOrdersByRentalId')
     throw err
   }
 }

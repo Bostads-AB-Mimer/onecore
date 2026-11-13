@@ -34,10 +34,10 @@ export const sendEmail = async (
 
       const response = await infobip.channels.email.send(infobipOptions)
       if (response.status === 200) {
-        logger.info({ to, subject }, 'Sending email complete')
+        logger.info({ subject }, 'Sending email complete')
       } else {
         logger.error(
-          { to, subject, body: response.body },
+          { subject, status: response.status },
           'Error sending email'
         )
         throw new Error(response.body)

@@ -5,6 +5,7 @@ const { multistream } = pms
 import pretty from 'pino-pretty'
 import Koa from 'koa'
 import { randomUUID } from 'crypto'
+import { serializeError } from './error-fields'
 import {
   storage,
   getCorrelationId as getCorrelationIdFromStorage,
@@ -74,8 +75,14 @@ export class IgnoreErrorConnection extends UndiciConnection {
   }
 }
 
+const monthlyIndex = () => {
+  const now = new Date()
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0')
+  return `onecore-logging-${now.getUTCFullYear()}.${month}`
+}
+
 const streamToElastic = pinoElastic({
-  index: 'onecore-logging',
+  index: monthlyIndex,
   node: process.env.ELASTICSEARCH_LOGGING_HOST || 'http://localhost:9200',
   esVersion: 8,
   flushBytes: 100,
@@ -94,6 +101,7 @@ const prettyStream = pretty({
 })
 
 const pinoOptions = {
+  serializers: { err: serializeError, error: serializeError },
   mixin() {
     return { correlationId: getCorrelationIdFromStorage() }
   },
@@ -159,7 +167,9 @@ export const middlewares = {
         {
           request: {
             path: ctx.path,
-            user: ctx.state?.user,
+            ...(ctx.state?.user?.id !== undefined && {
+              user: { id: ctx.state.user.id },
+            }),
             method: ctx.method,
             status: ctx.status,
           },

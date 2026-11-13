@@ -396,7 +396,14 @@ export const denyOffer = async (
     )
 
     if (createOffer.processStatus === ProcessStatus.failed) {
-      logger.info(createOffer, 'Could not create new offer for this listing.')
+      logger.info(
+        {
+          listingId: offer.listingId,
+          httpStatus: createOffer.httpStatus,
+          error: createOffer.error,
+        },
+        'Could not create new offer for this listing.'
+      )
       log.push(
         `Could not create new offer for this listing: ${createOffer.error}`
       )

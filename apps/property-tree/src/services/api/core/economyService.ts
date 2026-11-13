@@ -89,7 +89,7 @@ async function getInvoiceChannels(recipient: economy.LookupRecipient) {
 }
 
 async function getAutogiroConsent(nationalRegistrationNumber: string) {
-  const { data, error } = await GET(
+  const { data, error, response } = await GET(
     '/autogiro-consent/{nationalRegistrationNumber}',
     {
       params: {
@@ -98,6 +98,8 @@ async function getAutogiroConsent(nationalRegistrationNumber: string) {
     }
   )
 
+  // 404 means the tenant has no autogiro consent, which is a normal answer
+  if (response.status === 404) return null
   if (error) throw error
 
   return data.content

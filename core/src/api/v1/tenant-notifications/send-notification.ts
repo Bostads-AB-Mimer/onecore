@@ -8,7 +8,6 @@ import {
 } from '@onecore/types'
 import type { Contact } from '@onecore/contacts/schema'
 import { logger } from '@onecore/utilities'
-import axios from 'axios'
 import { z } from 'zod'
 
 import * as communicationAdapter from '../../../adapters/communication-adapter'
@@ -21,6 +20,8 @@ import {
   tenantNotificationIdempotencyStore,
 } from './idempotency'
 import { SendLeaseTerminationConfirmationErrorCodes } from './schema'
+import { errorLogFields } from '../../../utils/error-log'
+import { revealProtectedTenantList } from '../../../processes/contacts'
 
 /** The integration's request plus server-set audit attribution. */
 export type LeaseTerminationNotification =
@@ -39,12 +40,6 @@ type Recipient = {
   contact: Contact
   emailAddress: string
 }
-
-// `{ status, error }` for the log — never the raw AxiosError (AGENTS.md).
-const errorLogFields = (err: unknown) => ({
-  status: axios.isAxiosError(err) ? err.response?.status : undefined,
-  error: err instanceof Error ? err.message : String(err),
-})
 
 // sv-SE formats as YYYY-MM-DD. Lease dates are Swedish calendar dates: a
 // Tenfast date at Swedish midnight arrives as 23:00Z the day before, so
@@ -230,6 +225,9 @@ const getHolders = async (
       includeEmail: true,
       includeAddress: true,
     })
+    // A protected holder is a tenant on this very lease, so they get the
+    // email too (their data in Xpand is already anonymised).
+    .then((r) => revealProtectedTenantList(r))
     .catch((err: unknown) => {
       logger.error(
         { leaseId, ...errorLogFields(err) },

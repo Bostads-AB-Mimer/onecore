@@ -122,7 +122,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/facilities/by-rental-id/:rentalId', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info(metadata, `GET /facilities/by-rental-id/${ctx.params.rentalId}`)
+    logger.info(`GET /facilities/by-rental-id/${ctx.params.rentalId}`)
 
     try {
       const facility = await getFacilityByRentalId(ctx.params.rentalId)

@@ -192,7 +192,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         log.push(`Sökande placerad i kö för parkeringsplats`)
       } else {
         logger.error(
-          result,
+          { status: result.status, statusText: result.statusText },
           `Could not add applicant to parking space waiting list`
         )
 

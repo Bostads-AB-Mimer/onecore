@@ -35,7 +35,7 @@ async function sendErrorNotification(
     attachments,
   })
   if (!result.ok) {
-    logger.error(result.err, 'Failed to send scan error notification')
+    logger.error({ err: result.err }, 'Failed to send scan error notification')
   }
 }
 

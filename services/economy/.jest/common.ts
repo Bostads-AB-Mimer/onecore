@@ -19,5 +19,6 @@ jest.mock('@onecore/utilities', () => {
     errorMessage: utilities.errorMessage,
     errorName: utilities.errorName,
     redactedMessage: utilities.redactedMessage,
+    chunk: utilities.chunk,
   }
 })

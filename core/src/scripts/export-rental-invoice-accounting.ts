@@ -7,7 +7,9 @@ import {
   addBatchToReport,
   buildExportReportEmail,
   CompanyExportReport,
+  countFailedInvoices,
   createCompanyExportReport,
+  summarizeExportErrorsForLog,
 } from './export-rental-invoice-accounting-report'
 
 const exportRentalInvoiceAccountingForCompany = async (
@@ -40,6 +42,7 @@ const exportRentalInvoiceAccountingForCompany = async (
         successfulInvoices: successfulInvoices.length,
         skippedInvoices: skippedInvoices.length,
         errors: errors.length,
+        errorsByCode: summarizeExportErrorsForLog(errors),
         markFailures: markFailures.length,
       },
       'Exported batch of rental invoice accounting'
@@ -52,6 +55,19 @@ const exportRentalInvoiceAccountingForCompany = async (
     }
 
     batch++
+  }
+
+  // Failed invoices come back in every batch, so this is logged once per
+  // company. Each error is also logged by the economy service.
+  if (report.errors.size > 0) {
+    logger.warn(
+      {
+        companyId,
+        failedInvoices: countFailedInvoices(report.errors.values()),
+        errorsByCode: summarizeExportErrorsForLog(report.errors.values()),
+      },
+      'Rental invoices left out of the accounting export'
+    )
   }
 
   logger.info(

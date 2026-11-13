@@ -14,6 +14,10 @@ export {
 } from './lib/formatting'
 
 // Status utilities and constants
+export {
+  ACTIVE_LEASE_SEARCH_STATUSES,
+  findActiveLease,
+} from './lib/activeLease'
 export { getStatusBadge, LeaseStatus } from './lib/status'
 
 // Property utilities

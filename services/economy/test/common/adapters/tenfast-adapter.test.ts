@@ -1,10 +1,12 @@
 import axios from 'axios'
+import { logger } from '@onecore/utilities'
 import assert from 'node:assert'
 import {
   getTenantByContactCode,
   getRentalProperty,
   getLease,
   getInvoicesForTenant,
+  getInvoicesByContactCode,
   getInvoiceByOcr,
   getInvoiceArticle,
   getActiveLeasesByRentalObjectCodes,
@@ -82,18 +84,56 @@ describe('Tenfast Adapter', () => {
       })
     })
 
-    it('should return error when request fails with non-200 status', async () => {
-      mockAxios.request.mockResolvedValue({
-        status: 500,
-        statusText: 'Internal Server Error',
-      })
+    it('lets a 404 through instead of throwing, so a contact missing in Tenfast gives null', async () => {
+      // Arrange
+      mockAxios.request.mockResolvedValue({ status: 404, data: 'Not Found' })
 
+      // Act
+      await getTenantByContactCode('P135129')
+
+      // Assert
+      const [config] = mockAxios.request.mock.calls[0]
+      expect(config.validateStatus?.(404)).toBe(true)
+      expect(config.validateStatus?.(200)).toBe(true)
+      expect(config.validateStatus?.(500)).toBe(false)
+    })
+
+    it('logs the status and message, not the raw request error, when the request fails', async () => {
+      // Arrange
+      const requestError = Object.assign(new Error('Request failed'), {
+        response: { status: 502 },
+        config: { headers: { 'api-token': 'secret-token' } },
+      })
+      mockAxios.request.mockRejectedValue(requestError)
+      mockAxios.isAxiosError.mockReturnValueOnce(true)
+
+      // Act
       const result = await getTenantByContactCode('P999999')
 
+      // Assert
+      assert(!result.ok)
+      expect(logger.error).toHaveBeenCalledWith(
+        { contactCode: 'P999999', status: 502, error: 'Request failed' },
+        'tenfast-adapter.getTenantByContactCode'
+      )
+      expect(
+        JSON.stringify(jest.mocked(logger.error).mock.calls)
+      ).not.toContain('secret-token')
+    })
+
+    it('returns an error when Tenfast answers with a server error', async () => {
+      // Arrange
+      mockAxios.request.mockRejectedValue(
+        new Error('Request failed with status code 500')
+      )
+
+      // Act
+      const result = await getTenantByContactCode('P999999')
+
+      // Assert
       expect(result).toEqual({
         ok: false,
-        err: 'Internal Server Error',
-        statusCode: 500,
+        err: 'Request failed with status code 500',
       })
     })
 
@@ -297,9 +337,15 @@ describe('Tenfast Adapter', () => {
           params: expect.objectContaining({
             hyresvard: 'test-hyresvard-id',
             hyresgast: 'tenant-123',
-            paginate: 'false',
+            limit: 1000,
           }),
         })
+      )
+      // `paginate` is a cursor in Tenfast, so the first page is requested
+      // without it.
+      expect(mockAxios.request).toHaveBeenCalledTimes(1)
+      expect(mockAxios.request.mock.calls[0][0].params).not.toHaveProperty(
+        'paginate'
       )
 
       assert(result.ok)
@@ -328,6 +374,170 @@ describe('Tenfast Adapter', () => {
         vat: 0,
         printGroup: 'Hyra bostad',
       })
+    })
+
+    it('sends from without an upper bound so invoices for future periods are included', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: TenfastInvoicesByTenantIdResponseFactory.build(),
+      })
+
+      await getInvoicesForTenant('tenant-123', new Date('2026-10-01'))
+
+      const [config] = mockAxios.request.mock.calls[0]
+      expect(config.params).toEqual(
+        expect.objectContaining({ from: '2026-10-01' })
+      )
+      expect(config.params).not.toHaveProperty('to')
+    })
+
+    it('follows the next cursor until every page of invoices is fetched', async () => {
+      const buildInvoice = (ocrNumber: string) =>
+        TenfastInvoiceFactory.build({
+          ocrNumber,
+          hyror: [TenfastInvoiceRowFactory.build()],
+        })
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [buildInvoice('55000001')],
+            next: 'cursor-1',
+            totalCount: 2,
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [buildInvoice('55000002')],
+            prev: 'cursor-0',
+            next: null,
+            totalCount: 2,
+          }),
+        })
+
+      const result = await getInvoicesForTenant(
+        'tenant-123',
+        new Date('2026-10-01')
+      )
+
+      assert(result.ok)
+      expect(result.data.map(({ invoice }) => invoice.invoiceId)).toEqual([
+        '55000001',
+        '55000002',
+      ])
+      expect(mockAxios.request).toHaveBeenCalledTimes(2)
+      const [firstPage, secondPage] = mockAxios.request.mock.calls.map(
+        ([config]) => config.params
+      )
+      expect(firstPage).not.toHaveProperty('paginate')
+      expect(secondPage).toEqual(
+        expect.objectContaining({
+          hyresvard: 'test-hyresvard-id',
+          hyresgast: 'tenant-123',
+          limit: 1000,
+          from: '2026-10-01',
+          paginate: 'cursor-1',
+        })
+      )
+    })
+
+    it('fails instead of returning a partial list when a later page fails', async () => {
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            next: 'cursor-1',
+            totalCount: 2,
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 500,
+          statusText: 'Internal Server Error',
+          data: { records: [{ hyresgast: 'tenant data' }] },
+        })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      expect(result).toEqual({ ok: false, err: 'request-failed' })
+      // The adapter asks axios to resolve every status, so a failed page
+      // really does arrive as a response like the one mocked above.
+      const [config] = mockAxios.request.mock.calls[1]
+      expect(config.validateStatus?.(500)).toBe(true)
+      // The response body can hold tenant data and must stay out of the log.
+      expect(JSON.stringify(jest.mocked(logger.warn).mock.calls)).not.toContain(
+        'tenant data'
+      )
+    })
+
+    it('keeps fetching while Tenfast returns a next cursor, even past totalCount', async () => {
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            next: 'cursor-1',
+            // An invoice created between the two pages is not counted here.
+            totalCount: 1,
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            next: null,
+            totalCount: 2,
+          }),
+        })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      assert(result.ok)
+      expect(result.data).toHaveLength(2)
+    })
+
+    it('fails when Tenfast returns the same cursor again instead of duplicating invoices', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: TenfastInvoicesByTenantIdResponseFactory.build({
+          next: 'cursor-1',
+          totalCount: 5,
+        }),
+      })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      expect(result).toEqual({ ok: false, err: 'pagination-error' })
+      expect(mockAxios.request).toHaveBeenCalledTimes(2)
+    })
+
+    it('fails when a page is empty although more pages are announced', async () => {
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            next: 'cursor-1',
+            totalCount: 3,
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [],
+            next: 'cursor-2',
+            totalCount: 3,
+          }),
+        })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      expect(result).toEqual({ ok: false, err: 'pagination-error' })
+    })
+
+    it('returns request-failed when the request itself fails', async () => {
+      mockAxios.request.mockRejectedValue(new Error('socket hang up'))
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      expect(result).toEqual({ ok: false, err: 'request-failed' })
     })
 
     it('maps tenfast deferral source when grace period is present on invoice', async () => {
@@ -420,6 +630,138 @@ describe('Tenfast Adapter', () => {
       assert(result.ok)
       expect(result.data).toHaveLength(1)
       expect(result.data[0].invoice.invoiceId).toBe('55123456')
+    })
+  })
+
+  describe(getInvoicesByContactCode, () => {
+    // Tenfast references an article on an invoice row by its internal id.
+    const articleId = '6af2c8b04b883398396c10bd'
+
+    const mockTenfast = (articleResponse: { status: number; data: unknown }) =>
+      mockAxios.request.mockImplementation(async (config: { url?: string }) => {
+        if (config.url?.includes('/extras/hyresgaster/')) {
+          return { status: 200, data: TenfastTenantFactory.build() }
+        }
+        if (config.url?.includes('/articles/')) {
+          return articleResponse
+        }
+        return {
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [
+              TenfastInvoiceFactory.build({
+                hyror: [
+                  TenfastInvoiceRowFactory.build({ article: articleId }),
+                  TenfastInvoiceRowFactory.build({ article: articleId }),
+                ],
+              }),
+            ],
+          }),
+        }
+      })
+
+    it('shows the article code instead of the Tenfast article id on invoice rows', async () => {
+      // Arrange
+      mockTenfast({
+        status: 200,
+        data: TenfastRentArticleFactory.build({
+          _id: articleId,
+          code: 'HYRAB',
+        }),
+      })
+
+      // Act
+      const invoices = await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const rows = invoices[0].invoice.invoiceRows
+      expect(rows.map((row) => row.rentArticle)).toEqual(['HYRAB', 'HYRAB'])
+    })
+
+    it('looks up each article once, even when several rows use it', async () => {
+      // Arrange
+      mockTenfast({
+        status: 200,
+        data: TenfastRentArticleFactory.build({
+          _id: articleId,
+          code: 'HYRAB',
+        }),
+      })
+
+      // Act
+      await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const articleRequests = mockAxios.request.mock.calls.filter(([config]) =>
+        config.url?.includes('/articles/')
+      )
+      expect(articleRequests).toHaveLength(1)
+    })
+
+    it('keeps the article id when the article cannot be fetched', async () => {
+      // Arrange
+      mockTenfast({ status: 404, data: {} })
+
+      // Act
+      const invoices = await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const rows = invoices[0].invoice.invoiceRows
+      expect(rows.map((row) => row.rentArticle)).toEqual([articleId, articleId])
+    })
+
+    it('gives each row the code of its own article and leaves rows without an article alone', async () => {
+      // Arrange
+      const feeArticleId = '6af2c8b04b883398396c10d0'
+      const missingArticleId = '6af2c8b04b883398396c10ff'
+      const codeById: Record<string, string> = {
+        [articleId]: 'HYRAB',
+        [feeArticleId]: 'HYRESSATT',
+      }
+      mockAxios.request.mockImplementation(async (config: { url?: string }) => {
+        if (config.url?.includes('/extras/hyresgaster/')) {
+          return { status: 200, data: TenfastTenantFactory.build() }
+        }
+        if (config.url?.includes('/articles/')) {
+          const id = config.url.split('/articles/')[1]
+          return codeById[id]
+            ? {
+                status: 200,
+                data: TenfastRentArticleFactory.build({
+                  _id: id,
+                  code: codeById[id],
+                }),
+              }
+            : { status: 404, data: {} }
+        }
+        return {
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [
+              TenfastInvoiceFactory.build({
+                hyror: [
+                  TenfastInvoiceRowFactory.build({ article: articleId }),
+                  TenfastInvoiceRowFactory.build({ article: feeArticleId }),
+                  TenfastInvoiceRowFactory.build({ article: missingArticleId }),
+                  TenfastInvoiceRowFactory.build({ article: null }),
+                ],
+              }),
+            ],
+          }),
+        }
+      })
+
+      // Act
+      const invoices = await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const rows = invoices[0].invoice.invoiceRows
+      expect(rows.map((row) => row.rentArticle)).toEqual([
+        'HYRAB',
+        'HYRESSATT',
+        missingArticleId,
+        null,
+      ])
     })
   })
 
@@ -1889,6 +2231,7 @@ describe(getInvoicesNotExported, () => {
     expect(result.data.errors).toEqual([
       {
         invoiceNumber: record.ocrNumber,
+        code: 'missing-rent-article',
         error: 'Minst en hyresrad på avin saknar hyresartikel',
       },
     ])
@@ -1907,6 +2250,8 @@ describe(getInvoicesNotExported, () => {
     expect(result.data.errors).toEqual([
       {
         invoiceNumber: record.ocrNumber,
+        code: 'rent-article-not-found',
+        rentArticle: 'a-1',
         error: 'Hyresartikeln a-1 finns inte i Tenfast',
       },
     ])
@@ -1927,6 +2272,8 @@ describe(getInvoicesNotExported, () => {
     expect(result.data.errors).toEqual([
       {
         invoiceNumber: record.ocrNumber,
+        code: 'rent-article-fetch-failed',
+        rentArticle: 'a-1',
         error: 'Kunde inte hämta hyresartikeln a-1 från Tenfast',
       },
     ])
