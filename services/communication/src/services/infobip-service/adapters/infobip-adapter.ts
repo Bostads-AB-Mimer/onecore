@@ -42,7 +42,7 @@ export const sendEmailInfobipSdk = async (
       result.sent.push(to)
     } else {
       result.errors.push(to)
-      logger.error(response, 'Error sending email')
+      logger.error({ status: response.status }, 'Error sending email')
       throw new Error(response.body)
     }
   }
@@ -73,7 +73,7 @@ export const sendInspectionProtocolEmail = async (
 
   if (response.status !== 200) {
     logger.error(
-      { status: response.status, body: response.body, to: email.to },
+      { status: response.status },
       'Error sending inspection protocol email'
     )
     throw new Error(

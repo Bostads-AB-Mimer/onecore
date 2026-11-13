@@ -204,7 +204,6 @@ export const routes = (router: KoaRouter) => {
             logger.error(
               {
                 status: rentalPropertyResult.status,
-                data: rentalPropertyResult.data,
                 rentalObjectCode,
               },
               'Failed to fetch rental property data'

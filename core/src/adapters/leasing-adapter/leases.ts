@@ -124,7 +124,6 @@ export const createLease = async (
           contactId,
           fromDate,
           status: result.status,
-          data: result.data,
         },
         'Unknown error when creating lease'
       )
@@ -256,7 +255,7 @@ export const getHomeInsuranceExport = async (): Promise<
 
     if (response.status !== 200) {
       logger.error(
-        { status: response.status, data: response.data },
+        { status: response.status },
         'leases/lf-export returned unexpected status'
       )
       return { ok: false, err: 'unknown' }
