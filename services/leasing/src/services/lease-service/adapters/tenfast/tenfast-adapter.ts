@@ -22,6 +22,7 @@ import {
   TenfastArticleSchema,
   TenfastArticle,
   TenfastContactRelationsSchema,
+  NotificationTypeSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -37,6 +38,11 @@ import {
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
+
+// Every lease we create or import in Tenfast is invoiced through Strålfors
+// (print/distribution). Without it Tenfast defaults to "Aviseras ej".
+const NEW_LEASE_NOTIFICATION_TYPE: z.infer<typeof NotificationTypeSchema> =
+  'stralfors'
 
 type SchemaError = { tag: 'schema-error'; error: z.ZodError }
 
@@ -287,6 +293,7 @@ export const importLease = async (
       hyresobjekt: [rentalObject._id],
       startDate: fromDate.toISOString(),
       avtalsbyggare: false,
+      aviseringsTyp: NEW_LEASE_NOTIFICATION_TYPE,
       aviseringsFrekvens: '1m',
       forskottAvisering: '2v',
       betalningsOffset: '1d',
@@ -1260,7 +1267,7 @@ function buildLeaseRequestData(
     avtalsbyggare: true,
     hyror,
     startDate: fromDate.toISOString(),
-    aviseringsTyp: 'none',
+    aviseringsTyp: NEW_LEASE_NOTIFICATION_TYPE,
     uppsagningstid: '3m',
     aviseringsFrekvens: '1m',
     forskottAvisering: '2v', //specifies how far in advance the rent invoice should be created

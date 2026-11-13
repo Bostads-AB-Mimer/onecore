@@ -181,7 +181,8 @@ a date, so Tenfast can't give the rent for another day.
 - **`includeInContract: false`** marks a row outside the total, such as the
   optional home insurance. `consolidationLabel` ("Summarad" in the Tenfast UI)
   only merges rows into one line on the invoice and says nothing about the
-  total.
+  total. It must be in `TenfastInvoiceRowSchema`: `z.object` strips unknown
+  keys, and new leases lost the label when it was missing.
 - **Future rows are in `hyror` already.** A rent raised at the turn of the
   year is a row ending 12-31 and a new row from 01-01.
 
@@ -219,7 +220,12 @@ The day comes from:
   `rentAtByRentalObjectCode` on the batch route).
 
 `includeInContract` is read only. `createLease` and `importLease` strip it
-before sending the rental object's rows to Tenfast.
+before sending the rental object's rows to Tenfast. `consolidationLabel` is
+sent along with each row.
+
+Both `createLease` and `importLease` set `aviseringsTyp: 'stralfors'`
+(`NEW_LEASE_NOTIFICATION_TYPE`). Leaving it out, as `importLease` used to, gives
+"Aviseras ej" in Tenfast.
 
 ## `cancellation.requested` vs `cancellation.cancelled` — easy to get backwards
 
