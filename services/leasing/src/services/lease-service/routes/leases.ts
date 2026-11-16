@@ -1,5 +1,5 @@
 import KoaRouter from '@koa/router'
-import { Lease, leasing, schemas } from '@onecore/types'
+import { Lease, leasing } from '@onecore/types'
 import { mapLeasesToLfExportRows } from '../services/lf-export'
 import { z } from 'zod'
 import {
@@ -14,6 +14,8 @@ import {
   logger,
   generateRouteMetadata,
   makeSuccessResponseBody,
+  buildPaginationLinks,
+  PaginatedResponse,
 } from '@onecore/utilities'
 
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
@@ -24,8 +26,35 @@ import * as tenfastHelpers from '../helpers/tenfast'
 import * as endedLeaseAdapter from '../adapters/xpand/ended-lease-adapter'
 import { mergeTenfastFirst } from '../helpers/merge-tenfast-first'
 import config from '../../../common/config'
-import { TenfastLease, toYearMonthDayString } from '../adapters/tenfast/schemas'
+import {
+  TenfastInvoiceRow,
+  TenfastLease,
+  toYearMonthDayString,
+  YearMonthDayStringSchema,
+} from '../adapters/tenfast/schemas'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import {
+  checkHomeInsuranceWrite,
+  hasOpenOrUpcomingHomeInsuranceRow,
+  HomeInsuranceReplacementRow,
+  HomeInsuranceWriteCheck,
+  planHomeInsuranceCancel,
+  planHomeInsuranceEnd,
+  selectCurrentHomeInsuranceRow,
+  toHomeInsuranceRow,
+} from '../services/home-insurance'
+import { homeInsuranceCache } from '../services/home-insurance-cache'
+import {
+  homeInsuranceListLinkParams,
+  listAllHomeInsuranceItems,
+  listHomeInsuranceItems,
+} from '../services/home-insurance-list'
+import { getLeaseStatuses } from '../services/lease-statuses'
+
+// Seconds a client waits before asking again while the home insurance list
+// or the lease cache loads for the first time.
+const HOME_INSURANCE_LIST_RETRY_AFTER_SECONDS = '30'
+const LEASE_CACHE_RETRY_AFTER_SECONDS = '30'
 
 /**
  * @swagger
@@ -69,6 +98,176 @@ const getEndedXpandLeases = async (
     return []
   }
   return result.data
+}
+
+type HomeInsuranceError = {
+  status: number
+  error: leasing.HomeInsuranceErrorCode
+}
+
+// A failed read of the lease. The adapter has logged it.
+const homeInsuranceLeaseReadError = (err: unknown): HomeInsuranceError =>
+  err === 'not-found'
+    ? { status: 404, error: 'lease-not-found' }
+    : { status: 503, error: 'upstream-failed' }
+
+// row-changed: a row the write was to remove is no longer on the lease.
+type HomeInsuranceRowsWriteError =
+  tenfastAdapter.UpdateLeaseInvoiceRowsError | 'row-changed'
+
+// A failed write of the lease's rent rows. It has been logged.
+const homeInsuranceRowsWriteError = (
+  err: HomeInsuranceRowsWriteError
+): HomeInsuranceError => {
+  if (err === 'not-found') return { status: 404, error: 'lease-not-found' }
+  if (err === 'row-changed') {
+    return { status: 409, error: 'home-insurance-row-changed' }
+  }
+  return { status: 503, error: 'upstream-failed' }
+}
+
+/**
+ * Writes the lease's home insurance rent rows. Tenfast refuses the whole
+ * write with 400, and adds nothing, when a row in rowsToDelete is no longer
+ * on the lease (checked against Tenfast test). That is how a write at the
+ * same time on the same row shows, so it can never leave a duplicate row.
+ * The 400 has no code that says so, and its message is not matched: the
+ * lease is read again instead. A row to remove that is gone gives
+ * row-changed; otherwise the 400 is a real failure.
+ */
+const writeHomeInsuranceRows = async (params: {
+  leaseId: string
+  rowsToDelete: string[]
+  rowsToAdd: HomeInsuranceReplacementRow[]
+}): Promise<{ ok: true } | { ok: false; err: HomeInsuranceRowsWriteError }> => {
+  const { leaseId, rowsToDelete } = params
+  const write = await tenfastAdapter.updateLeaseInvoiceRows(params)
+  if (write.ok) return { ok: true }
+  // The adapter has logged everything but a 400.
+  if (write.err !== 'bad-request') return { ok: false, err: write.err }
+
+  if (rowsToDelete.length > 0) {
+    const lease = await tenfastAdapter.getLeaseByExternalId(leaseId)
+    if (!lease.ok) {
+      logger.error(
+        { leaseId, error: lease.err },
+        'home-insurance: Tenfast refused the rows, and the lease could not be read again to find out why'
+      )
+      return { ok: false, err: 'upstream-failed' }
+    }
+
+    const rowIds = new Set(lease.data.hyror.map((row) => row._id))
+    if (rowsToDelete.some((rowId) => !rowIds.has(rowId))) {
+      homeInsuranceCache.replaceLease(lease.data)
+      logger.warn(
+        { leaseId, rowsToDelete },
+        'home-insurance: a row to replace was changed by someone else'
+      )
+      return { ok: false, err: 'row-changed' }
+    }
+  }
+
+  logger.error({ leaseId }, 'home-insurance: Tenfast refused the rows')
+  return { ok: false, err: 'bad-request' }
+}
+
+const sendHomeInsuranceError = (
+  ctx: { status: number; body: unknown },
+  { status, error }: HomeInsuranceError,
+  metadata: object
+) => {
+  ctx.status = status
+  ctx.body = { error, ...metadata }
+}
+
+/**
+ * The leases with home insurance from the list cache. Answers 503 itself
+ * (cache-warming with Retry-After, or upstream-failed) and returns undefined
+ * when they cannot be read.
+ */
+const readHomeInsuranceListLeases = async (
+  ctx: {
+    status: number
+    body: unknown
+    set: (field: string, value: string) => void
+  },
+  metadata: object
+): Promise<TenfastLease[] | undefined> => {
+  const cached = await homeInsuranceCache.getLeases()
+  if (cached.ok) return cached.leases
+
+  const error: leasing.HomeInsuranceListErrorCode = cached.err
+  if (error === 'cache-warming') {
+    ctx.set('Retry-After', HOME_INSURANCE_LIST_RETRY_AFTER_SECONDS)
+  }
+  ctx.status = 503
+  ctx.body = { error, ...metadata }
+  return undefined
+}
+
+/**
+ * Reads the lease again after a write to its home insurance rows, puts it in
+ * the list cache, and checks that the rows are what the write meant to leave.
+ * Tenfast has no conditional write, so this is how a write made at the same
+ * time is found. When the lease cannot be read again, the list cache reloads
+ * on its next read.
+ */
+const readBackHomeInsuranceWrite = async (params: {
+  leaseId: string
+  rowsBefore: TenfastInvoiceRow[]
+  removedRowIds: string[]
+  written: HomeInsuranceReplacementRow | null
+}): Promise<
+  { ok: true; check: HomeInsuranceWriteCheck } | { ok: false; err: unknown }
+> => {
+  const leaseAfter = await tenfastAdapter.getLeaseByExternalId(params.leaseId)
+  if (!leaseAfter.ok) {
+    homeInsuranceCache.invalidate()
+    return { ok: false, err: leaseAfter.err }
+  }
+
+  homeInsuranceCache.replaceLease(leaseAfter.data)
+  return {
+    ok: true,
+    check: checkHomeInsuranceWrite({
+      rowsBefore: params.rowsBefore,
+      rowsAfter: leaseAfter.data.hyror,
+      articleId: config.tenfast.leaseRentRows.homeInsurance.articleId,
+      removedRowIds: params.removedRowIds,
+      written: params.written,
+    }),
+  }
+}
+
+/**
+ * Logs what the read-back of a Mina sidor write found. The write itself has
+ * succeeded and Mina sidor needs 200 for it, so the answer stays 200. A
+ * mismatch means a row was added at the same time, such as two adds on a
+ * lease without a home insurance row (nothing to remove, so Tenfast cannot
+ * refuse either); it is logged with the ids of the rows added, for someone to
+ * remove a duplicate by hand.
+ */
+const logMinaSidorHomeInsuranceReadBack = (
+  readBack: Awaited<ReturnType<typeof readBackHomeInsuranceWrite>>,
+  context: { leaseId: string; route: string }
+) => {
+  if (!readBack.ok) {
+    logger.warn(
+      { ...context, error: readBack.err },
+      'home-insurance: written, but the lease could not be read again to check the write'
+    )
+    return
+  }
+  if (!readBack.check.ok) {
+    logger.error(
+      {
+        ...context,
+        reason: readBack.check.reason,
+        addedRowIds: readBack.check.addedRowIds,
+      },
+      'home-insurance: the rows after the write are not what it meant to leave, check the lease for a duplicate row'
+    )
+  }
 }
 
 export const routes = (router: KoaRouter) => {
@@ -1160,6 +1359,390 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /leases/home-insurances:
+   *   get:
+   *     summary: List home insurance rows for staff
+   *     description: >
+   *       Lists home insurance rent rows on leases in states active, upcoming,
+   *       preTermination and terminationScheduled, filtered, sorted and paged.
+   *       rows=lf lists the rows of the Länsförsäkringar file, one per lease.
+   *       rows=all lists every home insurance row, including company tenants,
+   *       negative amounts and rows without a first day, for quality checks.
+   *       Items carry the tenant's contactCode only, never a name or personal
+   *       identity number. The leases are held in memory per pod for up to
+   *       five minutes; writes through this service show at once on the pod
+   *       that made them.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: Matches leaseId, rentalObjectCode, contactCode and the rental object's address, ignoring case.
+   *       - in: query
+   *         name: contactCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: false
+   *         description: Only rows whose contactCode is one of these, comma-separated or repeated. Given but empty, it matches nothing.
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: ['G', 'K', '*']
+   *         style: form
+   *         explode: false
+   *         description: Only rows with one of these Länsförsäkringar statuses (G in force, K lease to come, * the row has an end date).
+   *       - in: query
+   *         name: rows
+   *         schema:
+   *           type: string
+   *           enum: [lf, all]
+   *           default: lf
+   *       - in: query
+   *         name: sameDate
+   *         schema:
+   *           type: boolean
+   *         description: Only rows whose first and last day are the same day. Meant for rows=all.
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseId, leaseStatus, leaseFromDate, leaseToDate, rentalObjectCode, address, rowFromDate, rowToDate, monthlyAmount, contactCode]
+   *           default: leaseId
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: asc
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 500
+   *           default: 50
+   *     responses:
+   *       200:
+   *         description: One page of the list. No match gives an empty content array. Empty values sort last; ties are ordered by leaseId and rowId.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       leaseId:
+   *                         type: string
+   *                       leaseStatus:
+   *                         type: string
+   *                         enum: ['G', 'K', '*']
+   *                       leaseStage:
+   *                         type: integer
+   *                         description: The lease's LeaseStatus.
+   *                       leaseFromDate:
+   *                         type: string
+   *                         format: date
+   *                       leaseToDate:
+   *                         type: string
+   *                         format: date
+   *                         nullable: true
+   *                       rentalObjectCode:
+   *                         type: string
+   *                         nullable: true
+   *                       numberOfRooms:
+   *                         type: number
+   *                         nullable: true
+   *                       squareMeters:
+   *                         type: number
+   *                         nullable: true
+   *                       address:
+   *                         type: string
+   *                         nullable: true
+   *                       postalCode:
+   *                         type: string
+   *                         nullable: true
+   *                       city:
+   *                         type: string
+   *                         nullable: true
+   *                       rowId:
+   *                         type: string
+   *                       rowFromDate:
+   *                         type: string
+   *                         format: date
+   *                         nullable: true
+   *                       rowToDate:
+   *                         type: string
+   *                         format: date
+   *                         nullable: true
+   *                       monthlyAmount:
+   *                         type: number
+   *                       articleText:
+   *                         type: string
+   *                       contactCode:
+   *                         type: string
+   *                         nullable: true
+   *                       isCompany:
+   *                         type: boolean
+   *                 _meta:
+   *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                     count:
+   *                       type: integer
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       400:
+   *         description: Invalid query parameters (error invalid-query).
+   *       503:
+   *         description: >
+   *           The leases are loading from Tenfast for the first time (error
+   *           cache-warming, retry after the Retry-After header), or Tenfast
+   *           could not be read (error upstream-failed).
+   */
+  router.get('(.*)/leases/home-insurances', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const query = leasing.HomeInsuranceListQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!query.success) {
+      const error: leasing.HomeInsuranceListErrorCode = 'invalid-query'
+      ctx.status = 400
+      ctx.body = { error, details: query.error.issues, ...metadata }
+      return
+    }
+
+    const leases = await readHomeInsuranceListLeases(ctx, metadata)
+    if (!leases) return
+
+    const params = query.data
+    const { content, totalRecords } = listHomeInsuranceItems(
+      leases,
+      config.tenfast.leaseRentRows.homeInsurance.articleId,
+      params
+    )
+    const body: PaginatedResponse<leasing.HomeInsuranceListItem> = {
+      content,
+      _meta: {
+        totalRecords,
+        page: params.page,
+        limit: params.limit,
+        count: content.length,
+      },
+      _links: buildPaginationLinks(
+        ctx,
+        params.page,
+        params.limit,
+        Math.ceil(totalRecords / params.limit),
+        homeInsuranceListLinkParams(params)
+      ),
+    }
+
+    ctx.status = 200
+    ctx.body = body
+  })
+
+  /**
+   * @swagger
+   * /leases/home-insurances/all:
+   *   get:
+   *     summary: List every matching home insurance row for staff, unpaged
+   *     description: >
+   *       The items of GET /leases/home-insurances that match the query, all
+   *       of them and in the same order, from one read of the cache, for an
+   *       export. Takes the same query parameters except page and limit.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: contactCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: ['G', 'K', '*']
+   *       - in: query
+   *         name: rows
+   *         schema:
+   *           type: string
+   *           enum: [lf, all]
+   *           default: lf
+   *       - in: query
+   *         name: sameDate
+   *         schema:
+   *           type: boolean
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           default: leaseId
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: asc
+   *     responses:
+   *       200:
+   *         description: Every matching item, as in GET /leases/home-insurances. No match gives an empty content array.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       400:
+   *         description: Invalid query parameters (error invalid-query).
+   *       503:
+   *         description: >
+   *           The leases are loading from Tenfast for the first time (error
+   *           cache-warming, retry after the Retry-After header), or Tenfast
+   *           could not be read (error upstream-failed).
+   */
+  router.get('(.*)/leases/home-insurances/all', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const query = leasing.HomeInsuranceListAllQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!query.success) {
+      const error: leasing.HomeInsuranceListErrorCode = 'invalid-query'
+      ctx.status = 400
+      ctx.body = { error, details: query.error.issues, ...metadata }
+      return
+    }
+
+    const leases = await readHomeInsuranceListLeases(ctx, metadata)
+    if (!leases) return
+
+    ctx.status = 200
+    ctx.body = makeSuccessResponseBody<leasing.HomeInsuranceListItem[]>(
+      listAllHomeInsuranceItems(
+        leases,
+        config.tenfast.leaseRentRows.homeInsurance.articleId,
+        query.data
+      ),
+      metadata
+    )
+  })
+
+  /**
+   * @swagger
+   * /leases/statuses:
+   *   post:
+   *     summary: Get the status of many leases
+   *     description: >
+   *       The status of each lease, read from the lease cache in one go. A
+   *       lease the cache does not hold, such as an archived one, is read
+   *       from Tenfast. If any of those reads fails the answer is 503, never
+   *       a list with the lease left out.
+   *     tags: [Leases]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [leaseIds]
+   *             properties:
+   *               leaseIds:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *     responses:
+   *       200:
+   *         description: The status of each lease Tenfast has, and the lease IDs it has no lease for.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     statuses:
+   *                       type: array
+   *                       items:
+   *                         type: object
+   *                         properties:
+   *                           leaseId:
+   *                             type: string
+   *                           status:
+   *                             type: integer
+   *                             description: The lease's LeaseStatus.
+   *                     notFoundLeaseIds:
+   *                       type: array
+   *                       items:
+   *                         type: string
+   *       400:
+   *         description: The request body is invalid.
+   *       503:
+   *         description: >
+   *           The lease cache is loading for the first time (error
+   *           cache-warming, retry after the Retry-After header), or a lease
+   *           could not be read from Tenfast (error upstream-failed).
+   */
+  router.post(
+    '(.*)/leases/statuses',
+    parseRequestBody(leasing.LeaseStatusesRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      const result = await getLeaseStatuses(ctx.request.body.leaseIds)
+      if (!result.ok) {
+        if (result.err === 'cache-warming') {
+          ctx.set('Retry-After', LEASE_CACHE_RETRY_AFTER_SECONDS)
+        }
+        ctx.status = 503
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody<leasing.LeaseStatusesResponse>(
+        result.data,
+        metadata
+      )
+    }
+  )
+
+  /**
+   * @swagger
    * /leases/{id}:
    *   get:
    *     summary: Get detailed lease by lease ID
@@ -1522,11 +2105,13 @@ export const routes = (router: KoaRouter) => {
    *       201:
    *         description: Successfully added home insurance rent row.
    *       404:
-   *         description: Lease not found.
+   *         description: Lease not found (error lease-not-found).
+   *       409:
+   *         description: The ended home insurance rent row this add replaces was changed by someone else at the same time (error home-insurance-row-changed).
    *       422:
-   *         description: Home insurance rent row already exists for this lease.
-   *       500:
-   *         description: Internal server error.
+   *         description: The current home insurance rent row of the lease has no end date (error home-insurance-already-exists).
+   *       503:
+   *         description: Tenfast could not be read or written (error upstream-failed).
    */
   router.post(
     '(.*)/leases/:leaseId/home-insurance',
@@ -1538,73 +2123,71 @@ export const routes = (router: KoaRouter) => {
       )
 
       if (!getCurrentLease.ok) {
-        if (getCurrentLease.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = {
-            error: 'Lease not found',
-            ...metadata,
-          }
-
-          return
-        } else {
-          ctx.status = 500
-          ctx.body = {
-            error: getCurrentLease.err,
-            ...metadata,
-          }
-
-          return
-        }
-      }
-
-      const existingHomeInsurance = getCurrentLease.data.hyror.find(
-        (row) =>
-          row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
-      )
-
-      if (existingHomeInsurance && existingHomeInsurance.to == null) {
-        ctx.status = 422
-        ctx.body = {
-          error:
-            'Home insurance already exists and is not cancelled for this lease',
-          ...metadata,
-        }
-
+        sendHomeInsuranceError(
+          ctx,
+          homeInsuranceLeaseReadError(getCurrentLease.err),
+          metadata
+        )
         return
       }
 
-      const updateHomeInsuranceResult =
-        await tenfastAdapter.updateLeaseInvoiceRows({
-          leaseId: ctx.params.leaseId,
-          rowsToDelete: existingHomeInsurance?._id
-            ? [existingHomeInsurance._id]
-            : [],
-          rowsToAdd: [
-            {
-              amount: ctx.request.body.monthlyAmount,
-              article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-              label: 'Hemförsäkring',
-              vat: 0, // No VAT on insurance
-              from: toYearMonthDayString(ctx.request.body.from),
-            },
-          ],
-        })
+      const articleId = config.tenfast.leaseRentRows.homeInsurance.articleId
+
+      // Any open-ended row, or a row still to start, already insures the
+      // lease, even when the row in force today has an end date.
+      if (
+        hasOpenOrUpcomingHomeInsuranceRow(getCurrentLease.data.hyror, articleId)
+      ) {
+        sendHomeInsuranceError(
+          ctx,
+          { status: 422, error: 'home-insurance-already-exists' },
+          metadata
+        )
+        return
+      }
+
+      const existingHomeInsurance = selectCurrentHomeInsuranceRow(
+        getCurrentLease.data.hyror,
+        articleId
+      )
+      const removedRowIds = existingHomeInsurance
+        ? [existingHomeInsurance._id]
+        : []
+      const written: HomeInsuranceReplacementRow = {
+        amount: ctx.request.body.monthlyAmount,
+        article: articleId,
+        label: 'Hemförsäkring',
+        vat: 0, // No VAT on insurance
+        from: toYearMonthDayString(ctx.request.body.from),
+      }
+
+      const updateHomeInsuranceResult = await writeHomeInsuranceRows({
+        leaseId: ctx.params.leaseId,
+        rowsToDelete: removedRowIds,
+        rowsToAdd: [written],
+      })
 
       if (!updateHomeInsuranceResult.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: updateHomeInsuranceResult.err,
-          ...metadata,
-        }
-
+        sendHomeInsuranceError(
+          ctx,
+          homeInsuranceRowsWriteError(updateHomeInsuranceResult.err),
+          metadata
+        )
         return
       }
 
-      ctx.status = 201
-      ctx.body = makeSuccessResponseBody(
-        updateHomeInsuranceResult.data,
-        metadata
+      logMinaSidorHomeInsuranceReadBack(
+        await readBackHomeInsuranceWrite({
+          leaseId: ctx.params.leaseId,
+          rowsBefore: getCurrentLease.data.hyror,
+          removedRowIds,
+          written,
+        }),
+        { leaseId: ctx.params.leaseId, route: 'add' }
       )
+
+      ctx.status = 201
+      ctx.body = makeSuccessResponseBody(null, metadata)
     }
   )
 
@@ -1613,7 +2196,11 @@ export const routes = (router: KoaRouter) => {
    * /leases/{leaseId}/home-insurance:
    *   get:
    *     summary: Get home insurance for a lease
-   *     description: Returns home insurance details for a lease.
+   *     description: >
+   *       Returns the lease's current home insurance rent row: the row in
+   *       force today, else the next one to start, else the one that ended
+   *       last. rowId identifies the row for PATCH
+   *       /leases/{leaseId}/home-insurance/rows/{rowId}.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -1625,10 +2212,28 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Successfully retrieved home insurance.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     rowId:
+   *                       type: string
+   *                     monthlyAmount:
+   *                       type: number
+   *                     from:
+   *                       type: string
+   *                       format: date
+   *                     to:
+   *                       type: string
+   *                       format: date
    *       404:
-   *         description: Lease or home insurance not found.
-   *       500:
-   *         description: Internal server error.
+   *         description: Lease not found (error lease-not-found), or the lease has no home insurance rent row (error home-insurance-row-not-found).
+   *       503:
+   *         description: Tenfast could not be read (error upstream-failed).
    */
   router.get('(.*)/leases/:leaseId/home-insurance', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -1638,62 +2243,53 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!getCurrentLease.ok) {
-      if (getCurrentLease.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = {
-          error: 'Lease not found',
-          ...metadata,
-        }
-
-        return
-      }
-
-      ctx.status = 500
-      ctx.body = {
-        error: getCurrentLease.err,
-        ...metadata,
-      }
-
+      sendHomeInsuranceError(
+        ctx,
+        homeInsuranceLeaseReadError(getCurrentLease.err),
+        metadata
+      )
       return
     }
 
-    const homeInsuranceRow = getCurrentLease.data.hyror.find(
-      (row) =>
-        row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+    const homeInsuranceRow = selectCurrentHomeInsuranceRow(
+      getCurrentLease.data.hyror,
+      config.tenfast.leaseRentRows.homeInsurance.articleId
     )
 
     if (!homeInsuranceRow) {
-      ctx.status = 404
-      ctx.body = {
-        error: 'Home insurance not found',
-        ...metadata,
-      }
+      sendHomeInsuranceError(
+        ctx,
+        { status: 404, error: 'home-insurance-row-not-found' },
+        metadata
+      )
       return
     }
 
     ctx.status = 200
-    ctx.body = makeSuccessResponseBody<
-      z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
-    >(
-      {
-        monthlyAmount: homeInsuranceRow.amount,
-        from: homeInsuranceRow.from ?? undefined,
-        to: homeInsuranceRow.to ?? undefined,
-      },
+    ctx.body = makeSuccessResponseBody<leasing.HomeInsuranceRow>(
+      toHomeInsuranceRow(homeInsuranceRow),
       metadata
     )
   })
 
   /**
    * @swagger
-   * /leases/{id}/home-insurance/cancel:
+   * /leases/{leaseId}/home-insurance/cancel:
    *   post:
    *     summary: Cancel lease home insurance
-   *     description: Cancel lease home insurance.
+   *     description: >
+   *       Ends the lease's home insurance on endDate. The rent row in force on
+   *       endDate is replaced with a copy that has that last day, and rows
+   *       that would start after it are removed. Without a row in force on
+   *       endDate, the first row to start after it is ended on its own first
+   *       day, so the lease always keeps one row. After the write the lease is
+   *       read again, and rows that differ from what the write meant are
+   *       logged. Called from Mina sidor, which needs 200 on every successful
+   *       write.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
-   *         name: id
+   *         name: leaseId
    *         required: true
    *         schema:
    *           type: string
@@ -1710,14 +2306,18 @@ export const routes = (router: KoaRouter) => {
    *               endDate:
    *                 type: string
    *                 format: date-time
-   *                 description: Desired end date for home insurance.
+   *                 description: The last day the home insurance is in force.
    *     responses:
    *       200:
-   *         description: Successfully deleted home insurance.
+   *         description: The home insurance rent row now ends on endDate, or on its first day if endDate is before it. content is null.
+   *       400:
+   *         description: The request body is invalid.
    *       404:
-   *         description: Lease not found.
-   *       500:
-   *         description: Internal server error.
+   *         description: Lease not found (error lease-not-found), or the lease has no home insurance rent row (error home-insurance-row-not-found).
+   *       409:
+   *         description: A row to end or remove was changed by someone else at the same time (error home-insurance-row-changed). Nothing was written; try again.
+   *       503:
+   *         description: Tenfast could not be read or written (error upstream-failed).
    */
   router.post(
     '(.*)/leases/:leaseId/home-insurance/cancel',
@@ -1729,64 +2329,275 @@ export const routes = (router: KoaRouter) => {
         ctx.params.leaseId
       )
       if (!lease.ok) {
-        if (lease.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = {
-            error: 'Lease not found',
-            ...metadata,
-          }
-          return
-        }
-
-        ctx.status = 500
-        ctx.body = {
-          error: lease.err,
-          ...metadata,
-        }
+        sendHomeInsuranceError(
+          ctx,
+          homeInsuranceLeaseReadError(lease.err),
+          metadata
+        )
         return
       }
 
-      const homeInsuranceRow = lease.data.hyror.find(
-        (row) =>
-          row.article === config.tenfast.leaseRentRows.homeInsurance.articleId
+      // The row in force on endDate ends on it, never before its first
+      // day, and rows that would start after it are removed. One row is
+      // always kept: Mina sidor shows a lease to come without a home
+      // insurance row as insured. Days are compared as yyyy-mm-dd strings.
+      const plan = planHomeInsuranceCancel(
+        lease.data.hyror,
+        config.tenfast.leaseRentRows.homeInsurance.articleId,
+        toYearMonthDayString(ctx.request.body.endDate)
       )
 
-      if (!homeInsuranceRow || !homeInsuranceRow.article) {
-        ctx.status = 404
-        ctx.body = {
-          error: 'Home insurance not found',
-          ...metadata,
-        }
+      if (!plan) {
+        sendHomeInsuranceError(
+          ctx,
+          { status: 404, error: 'home-insurance-row-not-found' },
+          metadata
+        )
         return
       }
 
-      const replaceLeaseInvoiceRow =
-        await tenfastAdapter.updateLeaseInvoiceRows({
-          leaseId: ctx.params.leaseId,
-          rowsToDelete: [homeInsuranceRow._id],
-          rowsToAdd: [
-            {
-              amount: homeInsuranceRow.amount,
-              vat: homeInsuranceRow.vat,
-              article: homeInsuranceRow.article,
-              label: homeInsuranceRow.label,
-              from: homeInsuranceRow.from ?? undefined,
-              to: toYearMonthDayString(ctx.request.body.endDate),
-            },
-          ],
-        })
+      const replaceLeaseInvoiceRow = await writeHomeInsuranceRows({
+        leaseId: ctx.params.leaseId,
+        rowsToDelete: plan.rowsToDelete,
+        rowsToAdd: [plan.written],
+      })
 
       if (!replaceLeaseInvoiceRow.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: replaceLeaseInvoiceRow.err,
-          ...metadata,
-        }
+        sendHomeInsuranceError(
+          ctx,
+          homeInsuranceRowsWriteError(replaceLeaseInvoiceRow.err),
+          metadata
+        )
         return
       }
+
+      logMinaSidorHomeInsuranceReadBack(
+        await readBackHomeInsuranceWrite({
+          leaseId: ctx.params.leaseId,
+          rowsBefore: lease.data.hyror,
+          removedRowIds: plan.rowsToDelete,
+          written: plan.written,
+        }),
+        { leaseId: ctx.params.leaseId, route: 'cancel' }
+      )
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(null, metadata)
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/home-insurance/rows/{rowId}:
+   *   patch:
+   *     summary: End a home insurance rent row
+   *     description: >
+   *       For staff. Ends the given home insurance rent row on endDate.
+   *       action cancel removes the row when endDate is on or before its first
+   *       day, and otherwise ends it on endDate. action set-end ends it on
+   *       endDate, which may not be before its first day. Ending a row
+   *       replaces it with a new row with a new rowId. If the row has been
+   *       changed by someone else, Tenfast refuses the write and the answer
+   *       is 409 with nothing written. After the write the lease is read
+   *       again: the old row must be gone and the home insurance rows must be
+   *       exactly the ones before plus the written row, or the answer is 409
+   *       (someone else changed the rows at the same time) or 503 (the lease
+   *       could not be read again).
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *       - in: path
+   *         name: rowId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rowId of the home insurance rent row, as last read.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - endDate
+   *               - action
+   *             properties:
+   *               endDate:
+   *                 type: string
+   *                 format: date
+   *                 description: The last day the home insurance is in force, as yyyy-mm-dd.
+   *               action:
+   *                 type: string
+   *                 enum: [cancel, set-end]
+   *     responses:
+   *       200:
+   *         description: The row was removed (action deleted, row null) or ended (action ended, row is the new row).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     action:
+   *                       type: string
+   *                       enum: [deleted, ended]
+   *                     row:
+   *                       type: object
+   *                       nullable: true
+   *                       properties:
+   *                         rowId:
+   *                           type: string
+   *                         monthlyAmount:
+   *                           type: number
+   *                         from:
+   *                           type: string
+   *                           format: date
+   *                         to:
+   *                           type: string
+   *                           format: date
+   *       400:
+   *         description: >
+   *           The request body is invalid, endDate is before the row's first
+   *           day with action set-end (error end-date-before-start), or the row
+   *           already ends on endDate (error end-date-unchanged).
+   *       404:
+   *         description: Lease not found (error lease-not-found), or the lease has no home insurance rent row (error home-insurance-row-not-found).
+   *       409:
+   *         description: >
+   *           The lease has home insurance rent rows but none with this rowId,
+   *           the row was changed by someone else before the write (nothing
+   *           written), or the rows were changed by someone else during it
+   *           (error home-insurance-row-changed). Read the row again.
+   *       503:
+   *         description: Tenfast could not be read or written, or the lease could not be read again after the write (error upstream-failed).
+   */
+  router.patch(
+    '(.*)/leases/:leaseId/home-insurance/rows/:rowId',
+    parseRequestBody(leasing.UpdateHomeInsuranceRowRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { leaseId, rowId } = ctx.params
+      const { action } = ctx.request.body
+      // Only brands the day: parseRequestBody has already checked that
+      // endDate is a yyyy-mm-dd date, so this parse cannot throw.
+      const endDate = YearMonthDayStringSchema.parse(ctx.request.body.endDate)
+      const articleId = config.tenfast.leaseRentRows.homeInsurance.articleId
+
+      const lease = await tenfastAdapter.getLeaseByExternalId(leaseId)
+      if (!lease.ok) {
+        sendHomeInsuranceError(
+          ctx,
+          homeInsuranceLeaseReadError(lease.err),
+          metadata
+        )
+        return
+      }
+
+      const homeInsuranceRows = lease.data.hyror.filter(
+        (row) => row.article === articleId
+      )
+      if (homeInsuranceRows.length === 0) {
+        sendHomeInsuranceError(
+          ctx,
+          { status: 404, error: 'home-insurance-row-not-found' },
+          metadata
+        )
+        return
+      }
+
+      const row = homeInsuranceRows.find((candidate) => candidate._id === rowId)
+      if (!row) {
+        sendHomeInsuranceError(
+          ctx,
+          { status: 409, error: 'home-insurance-row-changed' },
+          metadata
+        )
+        return
+      }
+
+      const plan = planHomeInsuranceEnd(row, endDate, action)
+      if (plan.kind === 'error') {
+        sendHomeInsuranceError(
+          ctx,
+          { status: 400, error: plan.error },
+          metadata
+        )
+        return
+      }
+
+      const written = plan.kind === 'replace' ? plan.row : null
+      const write = await writeHomeInsuranceRows({
+        leaseId,
+        rowsToDelete: [row._id],
+        rowsToAdd: written ? [written] : [],
+      })
+      if (!write.ok) {
+        sendHomeInsuranceError(
+          ctx,
+          homeInsuranceRowsWriteError(write.err),
+          metadata
+        )
+        return
+      }
+
+      // The write decides, not a check before it: read the lease again and
+      // make sure the rows are what this write meant to leave.
+      const readBack = await readBackHomeInsuranceWrite({
+        leaseId,
+        rowsBefore: lease.data.hyror,
+        removedRowIds: [row._id],
+        written,
+      })
+      if (!readBack.ok) {
+        logger.error(
+          { leaseId, rowId, action, error: readBack.err },
+          'PATCH home-insurance row: written, but the lease could not be read again to check the write'
+        )
+        sendHomeInsuranceError(
+          ctx,
+          { status: 503, error: 'upstream-failed' },
+          metadata
+        )
+        return
+      }
+
+      const check = readBack.check
+      if (!check.ok) {
+        // The write has gone through, but someone else changed the rows at
+        // the same time, such as by adding a row. A second write on this row
+        // cannot cause it: Tenfast refuses that one. addedRowIds names the
+        // rows to look at.
+        logger.error(
+          {
+            leaseId,
+            rowId,
+            action,
+            reason: check.reason,
+            addedRowIds: check.addedRowIds,
+          },
+          'PATCH home-insurance row: the rows after the write are not what it meant to leave, check the lease'
+        )
+        sendHomeInsuranceError(
+          ctx,
+          { status: 409, error: 'home-insurance-row-changed' },
+          metadata
+        )
+        return
+      }
+
+      const body: leasing.UpdateHomeInsuranceRowResponse = check.row
+        ? { action: 'ended', row: toHomeInsuranceRow(check.row) }
+        : { action: 'deleted', row: null }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(body, metadata)
     }
   )
 

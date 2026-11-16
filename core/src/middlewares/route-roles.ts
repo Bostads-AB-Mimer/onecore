@@ -59,5 +59,26 @@ export const requiredRolesFor = (rawPath: string, method: string): string[] => {
     return ['invoice-channels:read', 'api-access']
   }
 
+  // Staff home insurance tools. Not api-access: every api-access holder
+  // would then see the tenants and their insurance, and could end rows.
+  // The list and its export carry tenant names and personal identity
+  // numbers. Matched on every method, so a route added later under these
+  // paths is gated too. The lease ID may hold an encoded slash, and an
+  // unencoded one must not slip past, hence .+ rather than [^/]+.
+  if (/^\/leases\/home-insurances(\/|$)/.test(path)) {
+    return ['home-insurance:read']
+  }
+
+  if (/^\/leases\/.+\/home-insurance\/rows(\/|$)/.test(path)) {
+    return ['home-insurance:write']
+  }
+
+  // The list of open invoices names tenants next to what they owe. Not
+  // api-access, for the same reason as the home insurance list. Matched on
+  // every method, so its export and a route added later are gated too.
+  if (/^\/reports\/open-invoices(\/|$)/.test(path)) {
+    return ['open-invoices:read']
+  }
+
   return ['api-access']
 }

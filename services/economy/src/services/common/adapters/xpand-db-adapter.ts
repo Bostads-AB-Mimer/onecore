@@ -1,7 +1,9 @@
 import knex from 'knex'
 import { RentInvoiceRow } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 import config from '../../../common/config'
+import { AdapterResult } from '../../../common/types'
 import trimStrings from '../../../utils/trimStrings'
 
 const db = knex({
@@ -149,4 +151,108 @@ export const getPropertyCodeAndCostCentreForLease = async (
   }
 
   return null
+}
+
+// Codes per query. Each one is a bound parameter, and SQL Server takes at
+// most 2100, and a VALUES list at most 1000 rows.
+const COST_CENTRE_CHUNK_SIZE = 1000
+
+// Rental object codes are far shorter. A longer one can't be in babuf, and
+// CAST would cut it to a code that might be.
+const MAX_RENTAL_OBJECT_CODE_LENGTH = 30
+
+// Xpand compares codes ignoring case and trailing blanks, so key the result
+// the same way.
+export const rentalObjectCodeKey = (code: string): string =>
+  code.trim().toUpperCase()
+
+/**
+ * The cost centre of each rental object, keyed by rentalObjectCodeKey. The
+ * same lookups as getPropertyCodeAndCostCentreForLease, for many objects in
+ * one query per 1000 codes: through the building when the object has one,
+ * else through its area, else through its property, the latest year first.
+ * An object with no cost centre is left out.
+ */
+export const getCostCentresByRentalObjectCodes = async (
+  rentalObjectCodes: string[]
+): Promise<AdapterResult<Map<string, string>, 'unknown'>> => {
+  const codes = [
+    ...new Set(
+      rentalObjectCodes
+        .map((code) => code.trim())
+        .filter(
+          (code) =>
+            code.length > 0 && code.length <= MAX_RENTAL_OBJECT_CODE_LENGTH
+        )
+    ),
+  ]
+
+  try {
+    const costCentres = new Map<string, string>()
+
+    for (let i = 0; i < codes.length; i += COST_CENTRE_CHUNK_SIZE) {
+      const chunk = codes.slice(i, i + COST_CENTRE_CHUNK_SIZE)
+      // Only placeholders are put into the SQL, never a code. CAST to
+      // VARCHAR, since knex sends strings as NVARCHAR and babuf.hyresid is
+      // VARCHAR: comparing the two makes SQL Server scan the whole table.
+      const values = chunk
+        .map(() => `(CAST(? AS VARCHAR(${MAX_RENTAL_OBJECT_CODE_LENGTH})))`)
+        .join(', ')
+
+      const rows: { rentalObjectCode: string; costCentre: string | null }[] =
+        await db
+          .raw(
+            `
+            WITH codes (code) AS (SELECT code FROM (VALUES ${values}) AS v (code)),
+            candidates AS (
+              SELECT babuf.hyresid, repsk.p2 AS costCentre, repsk.year, 1 AS priority
+              FROM babuf
+              INNER JOIN codes ON codes.code = babuf.hyresid
+              INNER JOIN babyg ON babyg.keycmobj = babuf.keyobjbyg
+              INNER JOIN repsk ON repsk.keycode = babyg.keybabyg
+              WHERE babuf.keyobjbyg IS NOT NULL
+              UNION ALL
+              SELECT babuf.hyresid, repsk.p2, repsk.year, 2
+              FROM babuf
+              INNER JOIN codes ON codes.code = babuf.hyresid
+              INNER JOIN repsk ON repsk.keycode = babuf.keyobjyta
+              WHERE babuf.keyobjbyg IS NULL AND babuf.keyobjyta IS NOT NULL
+              UNION ALL
+              SELECT babuf.hyresid, repsk.p2, repsk.year, 3
+              FROM babuf
+              INNER JOIN codes ON codes.code = babuf.hyresid
+              INNER JOIN repsk ON repsk.p3 = babuf.fstcode
+              WHERE babuf.fstcode IS NOT NULL
+            ),
+            ranked AS (
+              SELECT hyresid, costCentre,
+                ROW_NUMBER() OVER (PARTITION BY hyresid ORDER BY priority, year DESC) AS rowNumber
+              FROM candidates
+            )
+            SELECT hyresid AS rentalObjectCode, costCentre
+            FROM ranked
+            WHERE rowNumber = 1
+            `,
+            chunk
+          )
+          .then(trimStrings)
+
+      for (const row of rows) {
+        if (row.rentalObjectCode && row.costCentre) {
+          costCentres.set(
+            rentalObjectCodeKey(row.rentalObjectCode),
+            row.costCentre
+          )
+        }
+      }
+    }
+
+    return { ok: true, data: costCentres }
+  } catch (err: unknown) {
+    logger.error(
+      { err, codeCount: codes.length },
+      'xpand-db-adapter.getCostCentresByRentalObjectCodes'
+    )
+    return { ok: false, err: 'unknown' }
+  }
 }

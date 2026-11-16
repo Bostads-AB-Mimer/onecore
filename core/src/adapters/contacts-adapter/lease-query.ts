@@ -1,9 +1,41 @@
 import { leasing } from '@onecore/types'
+import type { Contact } from '@onecore/contacts/domain'
 import { logger } from '@onecore/utilities'
 import { contactsAdapter } from './index'
 import { LeaseQuery } from '../property-base-adapter/lease-query'
 
 const PERSONNUMMER_PATTERN = /^(\d{10}|\d{6}-\d{4}|\d{12}|\d{8}-\d{4})$/
+
+export type PersonnummerResolution =
+  | { kind: 'not-personnummer' }
+  | { kind: 'found'; contactCode: string }
+  | { kind: 'not-found' }
+  | { kind: 'failed' }
+
+/**
+ * If `q` is a personnummer, looks up its contact code in the contacts
+ * service. A failed lookup is told apart from a personnummer with no
+ * contact, so a caller can fail closed instead of searching on the number.
+ * A lookup that throws is left to the caller.
+ */
+export async function resolvePersonnummer(
+  q: string
+): Promise<PersonnummerResolution> {
+  if (!PERSONNUMMER_PATTERN.test(q)) return { kind: 'not-personnummer' }
+
+  const contactResult = await contactsAdapter.getByNationalId(q)
+  if (contactResult.ok) {
+    return { kind: 'found', contactCode: contactResult.data.contactCode }
+  }
+  if (contactResult.err === 'not-found') return { kind: 'not-found' }
+
+  // Without the number itself: it is the person's identity.
+  logger.error(
+    { status: contactResult.statusCode, error: contactResult.err },
+    'resolvePersonnummer: contact lookup failed'
+  )
+  return { kind: 'failed' }
+}
 
 /**
  * If `q` is a personnummer, resolves it to the matching contact code so
@@ -14,13 +46,30 @@ export async function resolvePersonnummerInQuery(
 ): Promise<LeaseQuery> {
   const raw = query.q
   const q = Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '')
-  if (!PERSONNUMMER_PATTERN.test(q)) return query
 
-  const contactResult = await contactsAdapter.getByNationalId(q)
-  if (!contactResult.ok) return query
+  const resolution = await resolvePersonnummer(q)
+  if (resolution.kind !== 'found') return query
 
-  return { ...query, q: contactResult.data.contactCode }
+  return { ...query, q: resolution.contactCode }
 }
+
+type ContactCommunication = Pick<Contact, 'communication'>
+
+/** The contact's primary email address, else its first, else null. */
+export const primaryEmailAddress = ({
+  communication,
+}: ContactCommunication): string | null =>
+  communication.emailAddresses.find((e) => e.isPrimary)?.emailAddress ??
+  communication.emailAddresses[0]?.emailAddress ??
+  null
+
+/** The contact's primary phone number, else its first, else null. */
+export const primaryPhoneNumber = ({
+  communication,
+}: ContactCommunication): string | null =>
+  communication.phoneNumbers.find((p) => p.isPrimary)?.phoneNumber ??
+  communication.phoneNumbers[0]?.phoneNumber ??
+  null
 
 // Defers to contacts-service when it has a record, including null — a
 // protected contact is never omitted, only returned with empty fields.
@@ -71,17 +120,7 @@ export async function enrichLeaseContacts<
   const contactMap = new Map(
     contactsResult.data.map((c) => [
       c.contactCode.trim(),
-      {
-        email:
-          c.communication.emailAddresses.find((e) => e.isPrimary)
-            ?.emailAddress ??
-          c.communication.emailAddresses[0]?.emailAddress ??
-          null,
-        phone:
-          c.communication.phoneNumbers.find((p) => p.isPrimary)?.phoneNumber ??
-          c.communication.phoneNumbers[0]?.phoneNumber ??
-          null,
-      },
+      { email: primaryEmailAddress(c), phone: primaryPhoneNumber(c) },
     ])
   )
 

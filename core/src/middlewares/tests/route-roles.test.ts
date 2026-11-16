@@ -63,6 +63,53 @@ describe('requiredRolesFor', () => {
     ])
   })
 
+  it('gates the home insurance list and export on home-insurance:read alone', () => {
+    expect(requiredRolesFor('/leases/home-insurances', 'GET')).toEqual([
+      'home-insurance:read',
+    ])
+    expect(requiredRolesFor('/Leases/Home-Insurances/Export', 'GET')).toEqual([
+      'home-insurance:read',
+    ])
+  })
+
+  it('gates changing a home insurance row on home-insurance:write alone', () => {
+    // A lease ID with an encoded slash, and one sent unencoded.
+    expect(
+      requiredRolesFor(
+        '/leases/705-001-01-0101%2F1/home-insurance/rows/abc',
+        'PATCH'
+      )
+    ).toEqual(['home-insurance:write'])
+    expect(
+      requiredRolesFor(
+        '/leases/705-001-01-0101/1/home-insurance/rows/abc',
+        'PATCH'
+      )
+    ).toEqual(['home-insurance:write'])
+  })
+
+  it('gates the open invoice list and export on open-invoices:read alone', () => {
+    expect(requiredRolesFor('/reports/open-invoices', 'GET')).toEqual([
+      'open-invoices:read',
+    ])
+    expect(requiredRolesFor('/Reports/Open-Invoices/Export', 'GET')).toEqual([
+      'open-invoices:read',
+    ])
+    // Only the exact path, not one that merely starts the same.
+    expect(requiredRolesFor('/reports/open-invoices-other', 'GET')).toEqual([
+      'api-access',
+    ])
+  })
+
+  it('leaves the Mina sidor home insurance routes on api-access', () => {
+    expect(requiredRolesFor('/leases/123/home-insurance', 'GET')).toEqual([
+      'api-access',
+    ])
+    expect(
+      requiredRolesFor('/leases/123/home-insurance/cancel', 'POST')
+    ).toEqual(['api-access'])
+  })
+
   it('falls back to api-access', () => {
     expect(requiredRolesFor('/leases/1', 'GET')).toEqual(['api-access'])
     expect(requiredRolesFor('/v1/contacts/P1', 'PUT')).toEqual(['api-access'])

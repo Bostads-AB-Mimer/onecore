@@ -663,3 +663,64 @@ export const TenfastRentalLossResponseSchema = z.array(TenfastRentalLossSchema)
 
 export type TenfastRentalLossHyra = z.infer<typeof TenfastRentalLossHyraSchema>
 export type TenfastRentalLoss = z.infer<typeof TenfastRentalLossSchema>
+
+// An invoice from /v1/hyresvard/hyror/search, for the list of open invoices.
+// Lean and lenient on purpose: only the fields the list reads, and the
+// tenants, rental objects and leases may come back either populated or as
+// bare ids. The response has not been checked against Tenfast test yet, so
+// everything but the amounts, due date and state is optional.
+const TenfastSearchInvoiceExternalRefSchema = z.union([
+  z.string(),
+  z.object({
+    externalId: z.string().nullish(),
+    isCompany: z.boolean().nullish(),
+  }),
+])
+
+export const TenfastSearchInvoiceSchema = z.object({
+  _id: z.string(),
+  // The invoice number. Tenfast has sent it as both a string and a number.
+  reference: z
+    .union([z.string(), z.number()])
+    .nullish()
+    .transform((value) => (value == null ? null : String(value))),
+  ocrNumber: z.string().nullish(),
+  activatedAt: z.string().nullish(),
+  expectedInvoiceDate: z.string().nullish(),
+  createdAt: z.string().nullish(),
+  due: z.string(),
+  amount: z.number(),
+  amountPaid: z.number(),
+  state: TenfastInvoiceStateSchema,
+  // The tenants, rental objects and leases as they were when the invoice
+  // was sent.
+  snapshot: z
+    .object({
+      hyresgaster: z.array(TenfastSearchInvoiceExternalRefSchema).nullish(),
+      hyresobjekt: z.array(TenfastSearchInvoiceExternalRefSchema).nullish(),
+      avtal: z.array(TenfastSearchInvoiceExternalRefSchema).nullish(),
+    })
+    .nullish(),
+  avtal: z
+    .array(
+      z.union([
+        z.string(),
+        z.object({
+          externalId: z.string().nullish(),
+          hyresgaster: z.array(TenfastSearchInvoiceExternalRefSchema).nullish(),
+        }),
+      ])
+    )
+    .nullish(),
+})
+
+export const TenfastSearchInvoicesResponseSchema = z.object({
+  records: z.array(TenfastSearchInvoiceSchema),
+  // Missing or null on the last page.
+  next: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? null),
+})
+
+export type TenfastSearchInvoice = z.infer<typeof TenfastSearchInvoiceSchema>

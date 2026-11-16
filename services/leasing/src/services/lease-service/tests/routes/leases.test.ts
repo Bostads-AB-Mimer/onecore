@@ -3,13 +3,21 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import nock from 'nock'
-import { LeaseStatus, LeaseType } from '@onecore/types'
+import { LeaseStatus, LeaseType, leasing } from '@onecore/types'
+import { logger } from '@onecore/utilities'
 
 import { routes } from '../../index'
 import * as tenfastAdapter from '../../adapters/tenfast/tenfast-adapter'
 import * as tenantLeaseAdapter from '../../adapters/xpand/tenant-lease-adapter'
-import { toYearMonthDayString } from '../../adapters/tenfast/schemas'
+import {
+  TenfastInvoiceRow,
+  YearMonthDayStringSchema,
+} from '../../adapters/tenfast/schemas'
 import * as tenfastLeaseSearchAdapter from '../../adapters/tenfast/tenfast-lease-search-adapter'
+import {
+  homeInsuranceCache,
+  HomeInsuranceCacheRead,
+} from '../../services/home-insurance-cache'
 import * as factory from '../factories'
 import config from '../../../../common/config'
 import { schemas } from '@onecore/types'
@@ -463,8 +471,30 @@ describe('POST /leases/:leaseId/preliminary-termination', () => {
   })
 })
 
+const HOME_INSURANCE_ARTICLE_ID =
+  config.tenfast.leaseRentRows.homeInsurance.articleId
+
+const day = (value: string) => YearMonthDayStringSchema.parse(value)
+
+const homeInsuranceRow = (
+  overrides: Partial<TenfastInvoiceRow> = {}
+): TenfastInvoiceRow =>
+  factory.tenfastInvoiceRow.build({
+    article: HOME_INSURANCE_ARTICLE_ID,
+    label: 'Hemförsäkring',
+    amount: 93,
+    vat: 0,
+    ...overrides,
+  })
+
+const mockLeaseRead = (hyror: TenfastInvoiceRow[]) =>
+  jest.spyOn(tenfastAdapter, 'getLeaseByExternalId').mockResolvedValueOnce({
+    ok: true,
+    data: factory.tenfastLease.build({ hyror }),
+  })
+
 describe('POST /leases/:leaseId/home-insurance', () => {
-  it('returns 404 when lease is not found', async () => {
+  it('returns 404 lease-not-found when lease is not found', async () => {
     jest
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: false, err: 'not-found' })
@@ -474,10 +504,10 @@ describe('POST /leases/:leaseId/home-insurance', () => {
       .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(404)
-    expect(result.body.error).toBe('Lease not found')
+    expect(result.body.error).toBe('lease-not-found')
   })
 
-  it('returns 500 when fetching lease fails', async () => {
+  it('returns 503 upstream-failed when fetching lease fails', async () => {
     jest
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
@@ -486,60 +516,41 @@ describe('POST /leases/:leaseId/home-insurance', () => {
       .post('/leases/123/home-insurance')
       .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
-    expect(result.status).toBe(500)
+    expect(result.status).toBe(503)
+    expect(result.body.error).toBe('upstream-failed')
   })
 
   it('returns 422 when home insurance already exists and is not cancelled', async () => {
-    const leaseWithHomeInsurance = factory.tenfastLease.build({
-      hyror: [
-        factory.tenfastInvoiceRow.build({
-          article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-        }),
-      ],
-    })
-
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
-      .mockResolvedValueOnce({ ok: true, data: leaseWithHomeInsurance })
+    mockLeaseRead([homeInsuranceRow()])
 
     const result = await request(app.callback())
       .post('/leases/123/home-insurance')
       .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
     expect(result.status).toBe(422)
-    expect(result.body.error).toBe(
-      'Home insurance already exists and is not cancelled for this lease'
-    )
+    expect(result.body.error).toBe('home-insurance-already-exists')
   })
 
-  it('returns 500 when creating rent row fails', async () => {
-    const leaseWithoutHomeInsurance = factory.tenfastLease.build({
-      hyror: [],
-    })
-
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
-      .mockResolvedValueOnce({ ok: true, data: leaseWithoutHomeInsurance })
-
+  it('returns 503 upstream-failed when creating rent row fails', async () => {
+    mockLeaseRead([])
     jest
       .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
-      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+      .mockResolvedValueOnce({ ok: false, err: 'upstream-failed' })
 
     const result = await request(app.callback())
       .post('/leases/123/home-insurance')
       .send({ from: new Date('2024-01-01'), monthlyAmount: 100 })
 
-    expect(result.status).toBe(500)
+    expect(result.status).toBe(503)
+    expect(result.body.error).toBe('upstream-failed')
   })
 
   it('adds home insurance rent row with correct article, amount and vat', async () => {
-    const leaseWithoutHomeInsurance = factory.tenfastLease.build({
-      hyror: [],
-    })
-
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
-      .mockResolvedValueOnce({ ok: true, data: leaseWithoutHomeInsurance })
+    mockLeaseRead([])
+    // The lease as read back after the write.
+    mockLeaseRead([
+      homeInsuranceRow({ from: day('2024-01-01'), to: null, amount: 100 }),
+    ])
 
     const createInvoiceRowSpy = jest
       .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
@@ -557,7 +568,7 @@ describe('POST /leases/:leaseId/home-insurance', () => {
         rowsToAdd: expect.arrayContaining([
           expect.objectContaining({
             amount: 100,
-            article: config.tenfast.leaseRentRows.homeInsurance.articleId,
+            article: HOME_INSURANCE_ARTICLE_ID,
             label: 'Hemförsäkring',
             vat: 0,
           }),
@@ -569,7 +580,7 @@ describe('POST /leases/:leaseId/home-insurance', () => {
 })
 
 describe('GET /leases/:leaseId/home-insurance', () => {
-  it('returns 404 when lease is not found', async () => {
+  it('returns 404 lease-not-found when lease is not found', async () => {
     jest
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: false, err: 'not-found' })
@@ -579,10 +590,10 @@ describe('GET /leases/:leaseId/home-insurance', () => {
     )
 
     expect(result.status).toBe(404)
-    expect(result.body.error).toBe('Lease not found')
+    expect(result.body.error).toBe('lease-not-found')
   })
 
-  it('returns 500 when fetching lease fails', async () => {
+  it('returns 503 upstream-failed when fetching lease fails', async () => {
     jest
       .spyOn(tenfastAdapter, 'getLeaseByExternalId')
       .mockResolvedValueOnce({ ok: false, err: 'unknown' })
@@ -591,45 +602,42 @@ describe('GET /leases/:leaseId/home-insurance', () => {
       '/leases/123/home-insurance'
     )
 
-    expect(result.status).toBe(500)
+    expect(result.status).toBe(503)
+    expect(result.body.error).toBe('upstream-failed')
   })
 
-  it('returns 404 when rent row is missing', async () => {
-    const leaseWithoutHomeInsurance = factory.tenfastLease.build({
-      hyror: [],
-    })
-
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
-      .mockResolvedValueOnce({ ok: true, data: leaseWithoutHomeInsurance })
+  it('returns 404 home-insurance-row-not-found when rent row is missing', async () => {
+    mockLeaseRead([])
 
     const result = await request(app.callback()).get(
       '/leases/123/home-insurance'
     )
 
     expect(result.status).toBe(404)
-    expect(result.body.error).toBe('Home insurance not found')
+    expect(result.body.error).toBe('home-insurance-row-not-found')
   })
 
-  it('returns home insurance with dates', async () => {
-    const homeInsuranceRow = factory.tenfastInvoiceRow.build({
-      article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-      from: toYearMonthDayString(new Date('2024-01-01')),
-      to: toYearMonthDayString(new Date('2024-12-01')),
+  it('returns the row in force with its rowId, not an ended row listed before it', async () => {
+    const current = homeInsuranceRow({
+      _id: 'current',
+      from: day('2021-01-01'),
+      to: null,
     })
-    const leaseWithHomeInsurance = factory.tenfastLease.build({
-      hyror: [homeInsuranceRow],
-    })
-
-    jest
-      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
-      .mockResolvedValueOnce({ ok: true, data: leaseWithHomeInsurance })
+    mockLeaseRead([
+      homeInsuranceRow({ from: day('2020-01-01'), to: day('2020-12-31') }),
+      current,
+    ])
 
     const result = await request(app.callback()).get(
       '/leases/123/home-insurance'
     )
 
     expect(result.status).toBe(200)
+    expect(leasing.HomeInsuranceRowSchema.parse(result.body.content)).toEqual({
+      rowId: 'current',
+      monthlyAmount: current.amount,
+      from: '2021-01-01',
+    })
     expect(() =>
       schemas.v1.LeaseHomeInsuranceSchema.parse(result.body.content)
     ).not.toThrow()
@@ -637,67 +645,375 @@ describe('GET /leases/:leaseId/home-insurance', () => {
 })
 
 describe('POST /leases/:leaseId/home-insurance/cancel', () => {
-  it('cancels and returns null', async () => {
-    const homeInsuranceRow = factory.tenfastInvoiceRow.build({
-      article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-    })
-    jest.spyOn(tenfastAdapter, 'getLeaseByExternalId').mockResolvedValueOnce({
-      ok: true,
-      data: factory.tenfastLease.build({
-        hyror: [homeInsuranceRow],
-      }),
-    })
+  it('ends the row on endDate and returns null', async () => {
+    const row = homeInsuranceRow({ from: day('2024-01-01'), to: null })
+    mockLeaseRead([row])
+    mockLeaseRead([{ ...row, _id: 'new', to: day('2024-10-01') }])
 
     const replaceInvoiceRowSpy = jest
       .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
       .mockResolvedValueOnce({ ok: true, data: null })
 
-    const endDate = new Date('2024-10-01')
+    // Mina sidor sends the day without a time zone.
     const result = await request(app.callback())
       .post('/leases/123/home-insurance/cancel')
-      .send({ endDate })
+      .send({ endDate: '2024-10-01T00:00:00' })
 
     expect(result.status).toBe(200)
     expect(result.body.content).toEqual(null)
     expect(replaceInvoiceRowSpy).toHaveBeenCalledWith({
       leaseId: '123',
-      rowsToDelete: [homeInsuranceRow._id],
+      rowsToDelete: [row._id],
       rowsToAdd: [
         {
-          amount: homeInsuranceRow.amount,
-          vat: homeInsuranceRow.vat,
-          article: homeInsuranceRow.article,
-          label: homeInsuranceRow.label,
-          from: homeInsuranceRow.from ?? undefined,
-          to: toYearMonthDayString(endDate),
+          amount: row.amount,
+          vat: row.vat,
+          article: row.article,
+          label: row.label,
+          from: '2024-01-01',
+          to: '2024-10-01',
         },
       ],
     })
   })
 
-  it('returns 500 on error', async () => {
-    jest.spyOn(tenfastAdapter, 'getLeaseByExternalId').mockResolvedValueOnce({
-      ok: true,
-      data: factory.tenfastLease.build({
-        hyror: [
-          factory.tenfastInvoiceRow.build({
-            article: config.tenfast.leaseRentRows.homeInsurance.articleId,
-          }),
-        ],
-      }),
-    })
-
+  it('keeps the row and ends it on its first day when endDate is before it', async () => {
+    const row = homeInsuranceRow({ from: day('2026-12-01'), to: null })
+    mockLeaseRead([row])
+    mockLeaseRead([{ ...row, _id: 'new', to: day('2026-12-01') }])
     const replaceInvoiceRowSpy = jest
       .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
-      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+      .mockResolvedValueOnce({ ok: true, data: null })
 
     const result = await request(app.callback())
       .post('/leases/123/home-insurance/cancel')
-      .send({ endDate: new Date('2024-10-01') })
+      .send({ endDate: '2026-11-15T00:00:00' })
 
-    expect(result.status).toBe(500)
+    expect(result.status).toBe(200)
+    expect(replaceInvoiceRowSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rowsToDelete: [row._id],
+        rowsToAdd: [
+          expect.objectContaining({ from: '2026-12-01', to: '2026-12-01' }),
+        ],
+      })
+    )
+  })
 
+  it('still answers 200 but logs the new rows when the rows after the write differ', async () => {
+    // Someone else ended the row at the same time, so the lease now holds
+    // both writes' rows.
+    const row = homeInsuranceRow({
+      _id: 'row',
+      from: day('2024-01-01'),
+      to: null,
+    })
+    mockLeaseRead([row])
+    mockLeaseRead([
+      { ...row, _id: 'theirs', to: day('2024-11-30') },
+      { ...row, _id: 'ours', to: day('2024-10-01') },
+    ])
+    jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: true, data: null })
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation()
+
+    const result = await request(app.callback())
+      .post('/leases/123/home-insurance/cancel')
+      .send({ endDate: '2024-10-01T00:00:00' })
+
+    expect(result.status).toBe(200)
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leaseId: '123',
+        addedRowIds: ['theirs', 'ours'],
+      }),
+      expect.any(String)
+    )
+  })
+
+  it('returns 400 when endDate is missing', async () => {
+    const result = await request(app.callback())
+      .post('/leases/123/home-insurance/cancel')
+      .send({})
+
+    expect(result.status).toBe(400)
+  })
+
+  it('returns 404 lease-not-found when lease is not found', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const result = await request(app.callback())
+      .post('/leases/123/home-insurance/cancel')
+      .send({ endDate: '2024-10-01T00:00:00' })
+
+    expect(result.status).toBe(404)
+    expect(result.body.error).toBe('lease-not-found')
+  })
+
+  it('returns 404 home-insurance-row-not-found when the lease has no row', async () => {
+    mockLeaseRead([])
+
+    const result = await request(app.callback())
+      .post('/leases/123/home-insurance/cancel')
+      .send({ endDate: '2024-10-01T00:00:00' })
+
+    expect(result.status).toBe(404)
+    expect(result.body.error).toBe('home-insurance-row-not-found')
+  })
+
+  it('returns 409 home-insurance-row-changed when Tenfast refuses the write because the row is gone', async () => {
+    const row = homeInsuranceRow({ _id: 'old', from: day('2024-01-01') })
+    mockLeaseRead([row])
+    // Someone else replaced the row before this write.
+    mockLeaseRead([{ ...row, _id: 'theirs' }])
+    jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: false, err: 'bad-request' })
+
+    const result = await request(app.callback())
+      .post('/leases/123/home-insurance/cancel')
+      .send({ endDate: '2024-10-01T00:00:00' })
+
+    expect(result.status).toBe(409)
+    expect(result.body.error).toBe('home-insurance-row-changed')
+  })
+
+  it('returns 503 upstream-failed when the write fails', async () => {
+    mockLeaseRead([homeInsuranceRow()])
+    const replaceInvoiceRowSpy = jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: false, err: 'upstream-failed' })
+
+    const result = await request(app.callback())
+      .post('/leases/123/home-insurance/cancel')
+      .send({ endDate: '2024-10-01T00:00:00' })
+
+    expect(result.status).toBe(503)
+    expect(result.body.error).toBe('upstream-failed')
     expect(replaceInvoiceRowSpy).toHaveBeenCalled()
+  })
+})
+
+describe('PATCH /leases/:leaseId/home-insurance/rows/:rowId', () => {
+  const old = homeInsuranceRow({
+    _id: 'old',
+    from: day('2026-12-01'),
+    to: null,
+  })
+
+  const patch = (body: object, rowId = 'old') =>
+    request(app.callback())
+      .patch(`/leases/123/home-insurance/rows/${rowId}`)
+      .send(body)
+
+  it('ends the row on endDate and returns the new row', async () => {
+    const written = { ...old, _id: 'new', to: day('2027-03-31') }
+    mockLeaseRead([old])
+    mockLeaseRead([written])
+    const updateSpy = jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    const result = await patch({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(200)
+    expect(
+      leasing.UpdateHomeInsuranceRowResponseSchema.parse(result.body.content)
+    ).toEqual({
+      action: 'ended',
+      row: {
+        rowId: 'new',
+        monthlyAmount: old.amount,
+        from: '2026-12-01',
+        to: '2027-03-31',
+      },
+    })
+    expect(updateSpy).toHaveBeenCalledWith({
+      leaseId: '123',
+      rowsToDelete: ['old'],
+      rowsToAdd: [
+        {
+          amount: old.amount,
+          vat: old.vat,
+          article: old.article,
+          label: old.label,
+          from: '2026-12-01',
+          to: '2027-03-31',
+        },
+      ],
+    })
+  })
+
+  it('removes the row when cancelled on or before its first day', async () => {
+    mockLeaseRead([old])
+    mockLeaseRead([])
+    const updateSpy = jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    const result = await patch({ endDate: '2026-12-01', action: 'cancel' })
+
+    expect(result.status).toBe(200)
+    expect(result.body.content).toEqual({ action: 'deleted', row: null })
+    expect(updateSpy).toHaveBeenCalledWith({
+      leaseId: '123',
+      rowsToDelete: ['old'],
+      rowsToAdd: [],
+    })
+  })
+
+  it('returns 400 for an endDate with a time, unlike the Mina sidor cancel', async () => {
+    const readSpy = jest.spyOn(tenfastAdapter, 'getLeaseByExternalId')
+
+    const result = await patch({
+      endDate: '2027-03-31T00:00:00',
+      action: 'cancel',
+    })
+
+    expect(result.status).toBe(400)
+    expect(readSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns 400 end-date-before-start for set-end before the first day', async () => {
+    mockLeaseRead([old])
+    const updateSpy = jest.spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+
+    const result = await patch({ endDate: '2026-11-30', action: 'set-end' })
+
+    expect(result.status).toBe(400)
+    expect(result.body.error).toBe('end-date-before-start')
+    expect(updateSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 lease-not-found when lease is not found', async () => {
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const result = await patch({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(404)
+    expect(result.body.error).toBe('lease-not-found')
+  })
+
+  it('returns 404 home-insurance-row-not-found when the lease has no row', async () => {
+    mockLeaseRead([factory.tenfastInvoiceRow.build()])
+
+    const result = await patch({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(404)
+    expect(result.body.error).toBe('home-insurance-row-not-found')
+  })
+
+  it('returns 409 home-insurance-row-changed when no row has the rowId', async () => {
+    mockLeaseRead([{ ...old, _id: 'other' }])
+    const updateSpy = jest.spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+
+    const result = await patch({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(409)
+    expect(result.body.error).toBe('home-insurance-row-changed')
+    expect(updateSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 lease-not-found when Tenfast has no lease on the write', async () => {
+    mockLeaseRead([old])
+    jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const result = await patch({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(404)
+    expect(result.body.error).toBe('lease-not-found')
+  })
+
+  it('returns 409 home-insurance-row-changed, with nothing written, when Tenfast refuses the write because the row is gone', async () => {
+    mockLeaseRead([old])
+    // Someone else replaced the row between this read and the write.
+    mockLeaseRead([{ ...old, _id: 'theirs', to: day('2027-01-31') }])
+    const updateSpy = jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: false, err: 'bad-request' })
+
+    const result = await patch({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(409)
+    expect(result.body.error).toBe('home-insurance-row-changed')
+    expect(updateSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 503 upstream-failed when Tenfast refuses the write and the lease cannot be read again', async () => {
+    mockLeaseRead([old])
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+    jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: false, err: 'bad-request' })
+
+    const result = await patch({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(503)
+    expect(result.body.error).toBe('upstream-failed')
+  })
+
+  it('returns 503 upstream-failed when Tenfast refuses the write and the row is still there', async () => {
+    mockLeaseRead([old])
+    // A 400 is looked into by reading the lease again: the row is still there.
+    mockLeaseRead([old])
+    jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: false, err: 'bad-request' })
+
+    const result = await patch({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(503)
+    expect(result.body.error).toBe('upstream-failed')
+  })
+
+  it('returns 409 home-insurance-row-changed when someone else changed the rows during the write', async () => {
+    // Someone else ended the row first; Tenfast then took the stale id and
+    // added this write's row next to theirs.
+    mockLeaseRead([old])
+    mockLeaseRead([
+      { ...old, _id: 'theirs', to: day('2027-01-31') },
+      { ...old, _id: 'ours', to: day('2027-03-31') },
+    ])
+    jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: true, data: null })
+    const errorSpy = jest.spyOn(logger, 'error')
+
+    const result = await patch({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(409)
+    expect(result.body.error).toBe('home-insurance-row-changed')
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    // The rows the write may have duplicated, for someone to look at.
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ addedRowIds: ['theirs', 'ours'] }),
+      expect.any(String)
+    )
+  })
+
+  it('returns 503 upstream-failed when the lease cannot be read after the write', async () => {
+    mockLeaseRead([old])
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+    jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: true, data: null })
+
+    const result = await patch({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(503)
+    expect(result.body.error).toBe('upstream-failed')
   })
 })
 
@@ -1125,5 +1441,288 @@ describe('GET /leases/lf-export', () => {
 
     expect(res.status).toBe(500)
     expect(res.body.error).toBe('unknown')
+  })
+})
+
+describe('GET /leases/home-insurances', () => {
+  const tenant = factory.tenfastTenant.build({
+    externalId: 'P000001',
+    idbeteckning: '199001011234',
+    name: { first: 'Anna', last: 'Svensson' },
+    phone: '0701234567',
+    invoiceEmail: 'anna@example.com',
+  })
+  const leaseWithRow = (externalId: string, address: string) =>
+    factory.tenfastLease.build({
+      externalId,
+      stage: 'active',
+      hyresgaster: [tenant],
+      hyresobjekt: [
+        factory.tenfastRentalObject.build({
+          externalId: `RO-${externalId}`,
+          postadress: address,
+        }),
+      ],
+      hyror: [homeInsuranceRow({ _id: `row-${externalId}`, to: null })],
+    })
+  const leases = [
+    leaseWithRow('L3', 'Ängsvägen 1'),
+    leaseWithRow('L1', 'Zetagatan 1'),
+    leaseWithRow('L2', 'Andgatan 1'),
+  ]
+
+  const mockCache = (read: HomeInsuranceCacheRead) =>
+    jest.spyOn(homeInsuranceCache, 'getLeases').mockResolvedValueOnce(read)
+
+  it('returns a page of items, sorted and filtered, with links that keep the query', async () => {
+    mockCache({ ok: true, leases })
+    const leaseByIdSpy = jest.spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+
+    const res = await request(app.callback()).get(
+      '/leases/home-insurances?sortBy=address&sortOrder=asc&limit=2&status=G'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body._meta).toEqual({
+      totalRecords: 3,
+      page: 1,
+      limit: 2,
+      count: 2,
+    })
+    expect(
+      res.body.content.map(
+        (item: unknown) =>
+          leasing.HomeInsuranceListItemSchema.parse(item).address
+      )
+    ).toEqual(['Andgatan 1', 'Zetagatan 1'])
+    const next = res.body._links.find(
+      (link: { rel: string }) => link.rel === 'next'
+    )
+    expect(next.href).toContain('page=2')
+    expect(next.href).toContain('sortBy=address')
+    expect(next.href).toContain('status=G')
+    // Not taken for GET /leases/:leaseId.
+    expect(leaseByIdSpy).not.toHaveBeenCalled()
+  })
+
+  it('carries the contactCode and no person data', async () => {
+    mockCache({ ok: true, leases })
+
+    const res = await request(app.callback()).get('/leases/home-insurances')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content[0].contactCode).toBe('P000001')
+    const body = JSON.stringify(res.body)
+    expect(body).not.toContain('199001011234')
+    expect(body).not.toContain('Svensson')
+    expect(body).not.toContain('0701234567')
+    expect(body).not.toContain('anna@example.com')
+  })
+
+  it('returns 200 with an empty list when nothing matches', async () => {
+    mockCache({ ok: true, leases })
+
+    const res = await request(app.callback()).get(
+      '/leases/home-insurances?q=no-such-lease'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([])
+    expect(res.body._meta.totalRecords).toBe(0)
+  })
+
+  it('returns 400 invalid-query for a sort on a person field', async () => {
+    const cacheSpy = jest.spyOn(homeInsuranceCache, 'getLeases')
+
+    const res = await request(app.callback()).get(
+      '/leases/home-insurances?sortBy=fullName'
+    )
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('invalid-query')
+    expect(cacheSpy).not.toHaveBeenCalled()
+  })
+
+  it('returns 503 cache-warming with Retry-After while the list loads', async () => {
+    mockCache({ ok: false, err: 'cache-warming' })
+
+    const res = await request(app.callback()).get('/leases/home-insurances')
+
+    expect(res.status).toBe(503)
+    expect(res.headers['retry-after']).toBe('30')
+    expect(res.body.error).toBe('cache-warming')
+  })
+})
+
+describe('GET /leases/home-insurances/all', () => {
+  const leaseWithRow = (externalId: string) =>
+    factory.tenfastLease.build({
+      externalId,
+      stage: 'active',
+      hyror: [homeInsuranceRow({ _id: `row-${externalId}`, to: null })],
+    })
+  const leases = Array.from({ length: 600 }, (_, index) =>
+    leaseWithRow(`L${String(index).padStart(3, '0')}`)
+  )
+
+  it('returns every matching item, sorted, from one read of the cache', async () => {
+    const cacheSpy = jest
+      .spyOn(homeInsuranceCache, 'getLeases')
+      .mockResolvedValueOnce({ ok: true, leases })
+
+    const res = await request(app.callback()).get(
+      '/leases/home-insurances/all?rows=all&sortOrder=desc'
+    )
+
+    expect(res.status).toBe(200)
+    // More than the list's largest page.
+    expect(res.body.content).toHaveLength(600)
+    expect(res.body.content[0].leaseId).toBe('L599')
+    expect(res.body._meta).toBeUndefined()
+    expect(cacheSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns 400 invalid-query for an invalid query', async () => {
+    const res = await request(app.callback()).get(
+      '/leases/home-insurances/all?rows=some'
+    )
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('invalid-query')
+  })
+
+  it('returns 503 cache-warming with Retry-After while the list loads', async () => {
+    jest
+      .spyOn(homeInsuranceCache, 'getLeases')
+      .mockResolvedValueOnce({ ok: false, err: 'cache-warming' })
+
+    const res = await request(app.callback()).get('/leases/home-insurances/all')
+
+    expect(res.status).toBe(503)
+    expect(res.headers['retry-after']).toBe('30')
+    expect(res.body.error).toBe('cache-warming')
+  })
+})
+
+describe('POST /leases/statuses', () => {
+  const cachedLease = (
+    leaseId: string,
+    status: LeaseStatus
+  ): leasing.v1.LeaseSearchResult => ({
+    leaseId,
+    objectTypeCode: 'Bostad',
+    leaseType: LeaseType.HousingContract,
+    contacts: [],
+    address: null,
+    postalCode: null,
+    city: null,
+    startDate: null,
+    endDate: null,
+    lastDebitDate: null,
+    signedAt: null,
+    status,
+    rentalObjectCode: null,
+  })
+
+  it('returns the status of each lease and the ones Tenfast does not have', async () => {
+    jest
+      .spyOn(tenfastLeaseSearchAdapter, 'readFreshLeaseCache')
+      .mockResolvedValueOnce([cachedLease('L1', LeaseStatus.Current)])
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+      .mockResolvedValueOnce({ ok: false, err: 'not-found' })
+
+    const res = await request(app.callback())
+      .post('/leases/statuses')
+      .send({ leaseIds: ['L1', 'L2'] })
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual({
+      statuses: [{ leaseId: 'L1', status: LeaseStatus.Current }],
+      notFoundLeaseIds: ['L2'],
+    })
+  })
+
+  it('returns 400 when leaseIds is missing', async () => {
+    const res = await request(app.callback()).post('/leases/statuses').send({})
+
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 503 cache-warming with Retry-After while the lease cache loads', async () => {
+    jest
+      .spyOn(tenfastLeaseSearchAdapter, 'readFreshLeaseCache')
+      .mockResolvedValueOnce(undefined)
+
+    const res = await request(app.callback())
+      .post('/leases/statuses')
+      .send({ leaseIds: ['L1'] })
+
+    expect(res.status).toBe(503)
+    expect(res.headers['retry-after']).toBe('30')
+    expect(res.body.error).toBe('cache-warming')
+  })
+
+  it('returns 503 upstream-failed when a lease cannot be read', async () => {
+    jest.spyOn(logger, 'error').mockImplementation()
+    jest
+      .spyOn(tenfastLeaseSearchAdapter, 'readFreshLeaseCache')
+      .mockResolvedValueOnce([])
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByLeaseId')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+    const res = await request(app.callback())
+      .post('/leases/statuses')
+      .send({ leaseIds: ['L1'] })
+
+    expect(res.status).toBe(503)
+    expect(res.body.error).toBe('upstream-failed')
+  })
+})
+
+describe('home insurance list write-through', () => {
+  it('makes the list reload and still answers 200 when the lease cannot be read after a cancel', async () => {
+    mockLeaseRead([homeInsuranceRow({ from: day('2024-01-01'), to: null })])
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+    jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: true, data: null })
+    const invalidateSpy = jest.spyOn(homeInsuranceCache, 'invalidate')
+
+    const result = await request(app.callback())
+      .post('/leases/123/home-insurance/cancel')
+      .send({ endDate: '2024-10-01T00:00:00' })
+
+    expect(result.status).toBe(200)
+    expect(invalidateSpy).toHaveBeenCalled()
+  })
+
+  it('puts the lease as read after a PATCH in the list, also when the check fails', async () => {
+    const old = homeInsuranceRow({
+      _id: 'old',
+      from: day('2026-12-01'),
+      to: null,
+    })
+    const after = factory.tenfastLease.build({
+      hyror: [{ ...old, _id: 'other', to: day('2027-01-31') }],
+    })
+    mockLeaseRead([old])
+    jest
+      .spyOn(tenfastAdapter, 'getLeaseByExternalId')
+      .mockResolvedValueOnce({ ok: true, data: after })
+    jest
+      .spyOn(tenfastAdapter, 'updateLeaseInvoiceRows')
+      .mockResolvedValueOnce({ ok: true, data: null })
+    const replaceSpy = jest.spyOn(homeInsuranceCache, 'replaceLease')
+
+    const result = await request(app.callback())
+      .patch('/leases/123/home-insurance/rows/old')
+      .send({ endDate: '2027-03-31', action: 'set-end' })
+
+    expect(result.status).toBe(409)
+    expect(replaceSpy).toHaveBeenCalledWith(after)
   })
 })

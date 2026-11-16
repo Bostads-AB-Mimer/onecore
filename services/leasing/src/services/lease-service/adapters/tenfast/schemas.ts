@@ -1,7 +1,7 @@
 import { format } from 'date-fns'
 import { z } from 'zod'
 
-const YearMonthDayStringSchema = z.string().brand<'yyyy-mm-dd'>()
+export const YearMonthDayStringSchema = z.string().brand<'yyyy-mm-dd'>()
 
 export type YearMonthDayString = z.infer<typeof YearMonthDayStringSchema>
 

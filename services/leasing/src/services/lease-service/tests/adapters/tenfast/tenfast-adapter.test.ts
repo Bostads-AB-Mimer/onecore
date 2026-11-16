@@ -3018,16 +3018,51 @@ describe(tenfastAdapter.getLeaseByExternalId, () => {
   })
 
   describe(tenfastAdapter.updateLeaseInvoiceRows, () => {
-    it('returns unknown when request throws an exception', async () => {
-      ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
-
-      const result = await tenfastAdapter.updateLeaseInvoiceRows({
+    const update = () =>
+      tenfastAdapter.updateLeaseInvoiceRows({
         leaseId: '123-456/01',
-        rowsToDelete: [],
+        rowsToDelete: ['foo'],
         rowsToAdd: [],
       })
 
-      expect(result).toEqual({ ok: false, err: 'unknown' })
+    it('returns upstream-failed when request throws an exception', async () => {
+      ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
+
+      expect(await update()).toEqual({ ok: false, err: 'upstream-failed' })
+    })
+
+    it('returns not-found when Tenfast answers 404', async () => {
+      ;(request as jest.Mock).mockResolvedValue({ status: 404, data: {} })
+
+      expect(await update()).toEqual({ ok: false, err: 'not-found' })
+    })
+
+    it('returns bad-request and logs a warning when Tenfast answers 400', async () => {
+      // A 400 can be a row to delete that is already gone; the caller decides
+      // whether it is a failure and logs it then.
+      const errorSpy = jest.spyOn(logger, 'error')
+      const warnSpy = jest.spyOn(logger, 'warn')
+      ;(request as jest.Mock).mockResolvedValue({
+        status: 400,
+        data: { error: 'All rowsToDelete must exist in the avtal' },
+      })
+
+      expect(await update()).toEqual({ ok: false, err: 'bad-request' })
+      expect(warnSpy).toHaveBeenCalledWith(
+        {
+          leaseId: '123-456/01',
+          status: 400,
+          error: { error: 'All rowsToDelete must exist in the avtal' },
+        },
+        'tenfast-adapter.updateLeaseInvoiceRows: rows refused'
+      )
+      expect(errorSpy).not.toHaveBeenCalled()
+    })
+
+    it('returns upstream-failed on any other answer', async () => {
+      ;(request as jest.Mock).mockResolvedValue({ status: 403, data: {} })
+
+      expect(await update()).toEqual({ ok: false, err: 'upstream-failed' })
     })
 
     it('returns null when request is successful', async () => {

@@ -52,6 +52,32 @@ import * as factory from '../../../../test/factories'
 import { Lease as LeaseSchema } from '../schemas/lease'
 import * as utilities from '@onecore/utilities'
 import { PaginatedResponse } from '@onecore/utilities'
+import { requireRole } from '../../../middlewares/keycloak-auth'
+import { requiredRolesFor } from '../../../middlewares/route-roles'
+
+const buildHomeInsuranceListItem = (
+  overrides: Partial<leasing.HomeInsuranceListItem> = {}
+): leasing.HomeInsuranceListItem => ({
+  leaseId: '705-001-01-0101/1',
+  leaseStatus: 'G',
+  leaseStage: LeaseStatus.Current,
+  leaseFromDate: '2024-01-01',
+  leaseToDate: null,
+  rentalObjectCode: '705-001-01-0101',
+  numberOfRooms: 2,
+  squareMeters: 55,
+  address: 'Testgatan 1',
+  postalCode: '72216',
+  city: 'Västerås',
+  rowId: 'row-1',
+  rowFromDate: '2024-01-01',
+  rowToDate: null,
+  monthlyAmount: 80,
+  articleText: 'Hemförsäkring',
+  contactCode: 'P158770',
+  isCompany: false,
+  ...overrides,
+})
 
 const buildPaginatedResponse = <T>(
   content: T[] = []
@@ -556,24 +582,30 @@ describe('leases routes', () => {
   })
 
   describe('GET /leases/:leaseId/home-insurance', () => {
-    it('responds with 404 when lease is missing', async () => {
+    it.each([
+      ['lease-not-found', 404],
+      ['upstream-failed', 503],
+      ['unknown', 500],
+    ] as const)('answers %s with %i', async (err, status) => {
       const getHomeInsuranceSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
-        .mockResolvedValue({ ok: false, err: 'not-found' })
+        .mockResolvedValue({ ok: false, err })
 
       const res = await request(app.callback()).get(
         '/leases/1337/home-insurance'
       )
 
-      expect(res.status).toBe(404)
+      expect(res.status).toBe(status)
+      expect(res.body.error).toBe(err)
       expect(getHomeInsuranceSpy).toHaveBeenCalledWith('1337')
     })
 
-    it('responds with home insurance', async () => {
+    it('responds with home insurance and its rowId', async () => {
       const responsePayload = {
+        rowId: 'row-1',
         monthlyAmount: 123,
-        from: '2024-01',
-        to: '2024-12',
+        from: '2024-01-01',
+        to: '2024-12-31',
       }
       const getHomeInsuranceSpy = jest
         .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
@@ -585,6 +617,8 @@ describe('leases routes', () => {
 
       expect(res.status).toBe(200)
       expect(getHomeInsuranceSpy).toHaveBeenCalledWith('1337')
+      expect(res.body.content).toEqual(responsePayload)
+      // Mina sidor reads it with the old schema.
       expect(() =>
         schemas.v1.LeaseHomeInsuranceSchema.parse(res.body.content)
       ).not.toThrow()
@@ -689,44 +723,38 @@ describe('leases routes', () => {
   })
 
   describe('POST /leases/:leaseId/home-insurance/cancel', () => {
-    it('returns 500 when adapter returns error', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLease')
-        .mockResolvedValueOnce(leaseMock)
+    it.each([
+      ['lease-not-found', 404],
+      ['invalid-request', 400],
+      ['upstream-failed', 503],
+      ['unknown', 500],
+    ] as const)(
+      "passes leasing's %s on as %i, without checks of its own",
+      async (err, status) => {
+        const getLeaseSpy = jest.spyOn(tenantLeaseAdapter, 'getLease')
+        const getHomeInsuranceSpy = jest.spyOn(
+          tenantLeaseAdapter,
+          'getLeaseHomeInsurance'
+        )
+        const cancelHomeInsuranceSpy = jest
+          .spyOn(tenantLeaseAdapter, 'cancelLeaseHomeInsurance')
+          .mockResolvedValue({ ok: false, err })
 
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
-        .mockResolvedValueOnce({
-          ok: true,
-          data: { monthlyAmount: 123, from: '2024-01', to: '2024-12' },
+        const res = await request(app.callback())
+          .post('/leases/1337/home-insurance/cancel')
+          .send({ endDate: new Date('2024-10-01') })
+
+        expect(res.status).toBe(status)
+        expect(res.body.error).toBe(err)
+        expect(cancelHomeInsuranceSpy).toHaveBeenCalledWith('1337', {
+          endDate: expect.any(Date),
         })
+        expect(getLeaseSpy).not.toHaveBeenCalled()
+        expect(getHomeInsuranceSpy).not.toHaveBeenCalled()
+      }
+    )
 
-      const cancelHomeInsuranceSpy = jest
-        .spyOn(tenantLeaseAdapter, 'cancelLeaseHomeInsurance')
-        .mockResolvedValue({ ok: false, err: 'unknown' })
-
-      const res = await request(app.callback())
-        .post('/leases/1337/home-insurance/cancel')
-        .send({ endDate: new Date('2024-10-01') })
-
-      expect(res.status).toBe(500)
-      expect(cancelHomeInsuranceSpy).toHaveBeenCalledWith('1337', {
-        endDate: expect.any(Date),
-      })
-    })
-
-    it('deletes home insurance', async () => {
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLease')
-        .mockResolvedValueOnce(leaseMock)
-
-      jest
-        .spyOn(tenantLeaseAdapter, 'getLeaseHomeInsurance')
-        .mockResolvedValueOnce({
-          ok: true,
-          data: { monthlyAmount: 123, from: '2024-01', to: '2024-12' },
-        })
-
+    it('cancels home insurance', async () => {
       const cancelHomeInsuranceSpy = jest
         .spyOn(tenantLeaseAdapter, 'cancelLeaseHomeInsurance')
         .mockResolvedValueOnce({ ok: true, data: null })
@@ -740,6 +768,386 @@ describe('leases routes', () => {
         endDate: expect.any(Date),
       })
       expect(res.body.content).toBeNull()
+    })
+  })
+
+  describe('GET /leases/home-insurances', () => {
+    const listPage = (
+      items: leasing.HomeInsuranceListItem[],
+      totalRecords = items.length
+    ) => ({
+      ok: true as const,
+      data: {
+        content: items,
+        _meta: {
+          totalRecords,
+          page: 1,
+          limit: 50,
+          count: items.length,
+        },
+        _links: [],
+      },
+    })
+
+    it('lists rows with the person fields from the contacts service', async () => {
+      const getLeaseSpy = jest.spyOn(tenantLeaseAdapter, 'getLease')
+      const listSpy = jest
+        .spyOn(tenantLeaseAdapter, 'listHomeInsurances')
+        .mockResolvedValue(listPage([buildHomeInsuranceListItem()], 120))
+      jest.spyOn(contactsAdapter, 'getByContactCodeBatch').mockResolvedValue({
+        ok: true,
+        data: [factory.domainContact.build({ contactCode: 'P158770' })],
+      })
+
+      const res = await request(app.callback()).get(
+        '/leases/home-insurances?status=G&rows=all'
+      )
+
+      expect(res.status).toBe(200)
+      // Routed to the list, not to GET /leases/:id.
+      expect(getLeaseSpy).not.toHaveBeenCalled()
+      expect(listSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: ['G'],
+          rows: 'all',
+          page: 1,
+          limit: 50,
+        })
+      )
+      expect(res.body.content).toEqual([
+        expect.objectContaining({
+          ...buildHomeInsuranceListItem(),
+          fullName: 'Kansen, Knut',
+          nationalIdNumber: '199001011234',
+        }),
+      ])
+      expect(res.body._meta.totalRecords).toBe(120)
+      const next = res.body._links.find(
+        (link: { rel: string }) => link.rel === 'next'
+      )
+      expect(next.href).toContain('/leases/home-insurances?page=2&limit=50')
+      expect(next.href).toContain('status=G')
+      expect(next.href).toContain('rows=all')
+    })
+
+    it('searches a personnummer by its contact code', async () => {
+      jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
+        ok: true,
+        data: factory.domainContact.build({ contactCode: 'P158770' }),
+      })
+      const listSpy = jest
+        .spyOn(tenantLeaseAdapter, 'listHomeInsurances')
+        .mockResolvedValue(listPage([]))
+
+      const res = await request(app.callback()).get(
+        '/leases/home-insurances?q=199001011234&contactCodes=P999999'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([])
+      // The client's own contactCodes is ignored.
+      expect(listSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: undefined, contactCodes: ['P158770'] })
+      )
+    })
+
+    it('answers 503 when a personnummer cannot be looked up', async () => {
+      jest
+        .spyOn(contactsAdapter, 'getByNationalId')
+        .mockResolvedValue({ ok: false, err: 'unknown', statusCode: 500 })
+      const listSpy = jest.spyOn(tenantLeaseAdapter, 'listHomeInsurances')
+
+      const res = await request(app.callback()).get(
+        '/leases/home-insurances?q=199001011234'
+      )
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('upstream-failed')
+      expect(listSpy).not.toHaveBeenCalled()
+    })
+
+    it('answers 400 on invalid query parameters', async () => {
+      const listSpy = jest.spyOn(tenantLeaseAdapter, 'listHomeInsurances')
+
+      const res = await request(app.callback()).get(
+        '/leases/home-insurances?limit=501'
+      )
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('invalid-query')
+      expect(listSpy).not.toHaveBeenCalled()
+    })
+
+    it("answers cache-warming with 503 and leasing's Retry-After", async () => {
+      jest.spyOn(tenantLeaseAdapter, 'listHomeInsurances').mockResolvedValue({
+        ok: false,
+        err: 'cache-warming',
+        statusCode: 503,
+        retryAfter: '12',
+      })
+
+      const res = await request(app.callback()).get('/leases/home-insurances')
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('cache-warming')
+      expect(res.headers['retry-after']).toBe('12')
+    })
+
+    it('answers unknown with 500', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'listHomeInsurances')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get('/leases/home-insurances')
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('unknown')
+    })
+  })
+
+  describe('GET /leases/home-insurances/export', () => {
+    it('exports every matching row, from one call to leasing, in the Länsförsäkringar columns', async () => {
+      const listSpy = jest
+        .spyOn(tenantLeaseAdapter, 'listAllHomeInsurances')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            buildHomeInsuranceListItem({ rowId: 'row-1' }),
+            buildHomeInsuranceListItem({ rowId: 'row-2' }),
+          ],
+        })
+      const batchSpy = jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({
+          ok: true,
+          data: [factory.domainContact.build({ contactCode: 'P158770' })],
+        })
+      ;(utilities.createExcelExport as jest.Mock).mockResolvedValue(
+        Buffer.from('xlsx')
+      )
+
+      const res = await request(app.callback()).get(
+        '/leases/home-insurances/export?status=K'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toContain('spreadsheetml')
+      expect(res.headers['content-disposition']).toContain('hemforsakringar')
+      // One snapshot of leasing's list, not page by page.
+      expect(listSpy).toHaveBeenCalledTimes(1)
+      expect(listSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ['K'] })
+      )
+      // One contacts lookup for all rows.
+      expect(batchSpy).toHaveBeenCalledTimes(1)
+
+      const exportArgs = (utilities.createExcelExport as jest.Mock).mock
+        .calls[0][0]
+      expect(exportArgs.columns).toHaveLength(18)
+      expect(exportArgs.rowMapper(exportArgs.data[0])).toMatchObject({
+        leaseId: '705-001-01-0101/1',
+        fullName: 'Kansen, Knut',
+        nationalIdNumber: '199001011234',
+        monthlyAmount: 80,
+        leaseStatus: 'G',
+      })
+    })
+
+    it('logs no request URL, which can hold a personnummer, when the file cannot be built', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'listAllHomeInsurances')
+        .mockResolvedValue({ ok: true, data: [buildHomeInsuranceListItem()] })
+      jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({ ok: true, data: [] })
+      jest
+        .spyOn(contactsAdapter, 'getByNationalId')
+        .mockResolvedValue({ ok: false, err: 'not-found', statusCode: 404 })
+      ;(utilities.createExcelExport as jest.Mock).mockRejectedValue(
+        new Error('out of memory')
+      )
+      const errorSpy = jest
+        .spyOn(utilities.logger, 'error')
+        .mockImplementation()
+
+      const res = await request(app.callback()).get(
+        '/leases/home-insurances/export?q=199001011234'
+      )
+
+      expect(res.status).toBe(500)
+      expect(JSON.stringify(errorSpy.mock.calls)).not.toContain('199001011234')
+    })
+
+    it('answers 503 instead of a file when leasing is warming up', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'listAllHomeInsurances')
+        .mockResolvedValue({
+          ok: false,
+          err: 'cache-warming',
+          statusCode: 503,
+        })
+
+      const res = await request(app.callback()).get(
+        '/leases/home-insurances/export'
+      )
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('cache-warming')
+      expect(res.headers['retry-after']).toBe('30')
+      expect(utilities.createExcelExport).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('PATCH /leases/:leaseId/home-insurance/rows/:rowId', () => {
+    it('ends the row and answers with the new row', async () => {
+      const infoSpy = jest.spyOn(utilities.logger, 'info')
+      const updateSpy = jest
+        .spyOn(tenantLeaseAdapter, 'updateLeaseHomeInsuranceRow')
+        .mockResolvedValue({
+          ok: true,
+          data: {
+            action: 'ended',
+            row: {
+              rowId: 'row-2',
+              monthlyAmount: 80,
+              from: '2024-01-01',
+              to: '2024-12-31',
+            },
+          },
+        })
+
+      const res = await request(app.callback())
+        .patch('/leases/705-001-01-0101%2F1/home-insurance/rows/row-1')
+        .send({ endDate: '2024-12-31', action: 'set-end' })
+
+      expect(res.status).toBe(200)
+      expect(updateSpy).toHaveBeenCalledWith('705-001-01-0101/1', 'row-1', {
+        endDate: '2024-12-31',
+        action: 'set-end',
+      })
+      expect(res.body.content.row.rowId).toBe('row-2')
+      // Exact, so no tenant data can slip into the audit log.
+      expect(infoSpy).toHaveBeenCalledWith(
+        {
+          leaseId: '705-001-01-0101/1',
+          rowId: 'row-1',
+          action: 'set-end',
+          endDate: '2024-12-31',
+          outcome: 'ended',
+          newRowId: 'row-2',
+          user: null,
+        },
+        'Home insurance row update'
+      )
+    })
+
+    it('answers 400 on an invalid body without calling leasing', async () => {
+      const updateSpy = jest.spyOn(
+        tenantLeaseAdapter,
+        'updateLeaseHomeInsuranceRow'
+      )
+
+      const res = await request(app.callback())
+        .patch('/leases/1337/home-insurance/rows/row-1')
+        .send({ endDate: '2024-13-01', action: 'remove' })
+
+      expect(res.status).toBe(400)
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['end-date-before-start', 400],
+      ['lease-not-found', 404],
+      ['home-insurance-row-changed', 409],
+      ['upstream-failed', 503],
+      ['unknown', 500],
+    ] as const)(
+      "passes leasing's %s on as %i and logs the outcome",
+      async (err, status) => {
+        const infoSpy = jest.spyOn(utilities.logger, 'info')
+        jest
+          .spyOn(tenantLeaseAdapter, 'updateLeaseHomeInsuranceRow')
+          .mockResolvedValue({ ok: false, err })
+
+        const res = await request(app.callback())
+          .patch('/leases/1337/home-insurance/rows/row-1')
+          .send({ endDate: '2024-12-31', action: 'cancel' })
+
+        expect(res.status).toBe(status)
+        expect(res.body.error).toBe(err)
+        expect(res.body.reason).toEqual(expect.any(String))
+        expect(infoSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ outcome: err, newRowId: null }),
+          'Home insurance row update'
+        )
+      }
+    )
+  })
+
+  describe('home insurance staff roles', () => {
+    const appWithRoles = (roles: string[]) => {
+      const roleApp = new Koa()
+      const roleRouter = new KoaRouter()
+      routes(roleRouter)
+      roleApp.use(bodyParser())
+      roleApp.use(async (ctx, next) => {
+        ctx.state.user = {
+          preferred_username: 'staff1',
+          realm_access: { roles },
+        }
+        await next()
+      })
+      roleApp.use(async (ctx, next) =>
+        requireRole(requiredRolesFor(ctx.path, ctx.method))(ctx, next)
+      )
+      roleApp.use(roleRouter.routes())
+      return roleApp
+    }
+
+    it('answers the list with 403 without home-insurance:read', async () => {
+      const listSpy = jest.spyOn(tenantLeaseAdapter, 'listHomeInsurances')
+
+      const res = await request(
+        appWithRoles(['api-access', 'home-insurance:write']).callback()
+      ).get('/leases/home-insurances')
+
+      expect(res.status).toBe(403)
+      expect(listSpy).not.toHaveBeenCalled()
+    })
+
+    it('answers the PATCH with 403 without home-insurance:write', async () => {
+      const updateSpy = jest.spyOn(
+        tenantLeaseAdapter,
+        'updateLeaseHomeInsuranceRow'
+      )
+
+      const res = await request(
+        appWithRoles(['api-access', 'home-insurance:read']).callback()
+      )
+        .patch('/leases/1337/home-insurance/rows/row-1')
+        .send({ endDate: '2024-12-31', action: 'cancel' })
+
+      expect(res.status).toBe(403)
+      expect(updateSpy).not.toHaveBeenCalled()
+    })
+
+    it('lets a home-insurance:write holder change a row and logs who did it', async () => {
+      const infoSpy = jest.spyOn(utilities.logger, 'info')
+      jest
+        .spyOn(tenantLeaseAdapter, 'updateLeaseHomeInsuranceRow')
+        .mockResolvedValue({ ok: true, data: { action: 'deleted', row: null } })
+
+      const res = await request(
+        appWithRoles(['home-insurance:write']).callback()
+      )
+        .patch('/leases/1337/home-insurance/rows/row-1')
+        .send({ endDate: '2024-12-31', action: 'cancel' })
+
+      expect(res.status).toBe(200)
+      expect(infoSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ user: 'staff1', outcome: 'deleted' }),
+        'Home insurance row update'
+      )
     })
   })
 

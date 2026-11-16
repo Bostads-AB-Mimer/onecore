@@ -203,6 +203,22 @@ function buildSearchPool(
   return mergedPool.rows
 }
 
+/**
+ * Every Tenfast lease in the lease cache, synced first if the cache is stale.
+ * Undefined while the cache loads for the first time.
+ */
+export async function readFreshLeaseCache(): Promise<
+  leasing.v1.LeaseSearchResult[] | undefined
+> {
+  if (leaseCache.getAll().length === 0) {
+    const ready = await leaseCache.ensureReady(STALE_SYNC_TIMEOUT_MS)
+    if (!ready) return undefined
+  }
+
+  await leaseCache.refreshIfStale(STALE_THRESHOLD_MS, STALE_SYNC_TIMEOUT_MS)
+  return leaseCache.getAll()
+}
+
 export async function fetchAllLeasesForExport(
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context

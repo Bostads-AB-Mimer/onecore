@@ -1,6 +1,10 @@
 import ExcelJs from 'exceljs'
 import { BosocialaObject, InvoicePaymentSummary } from '../types'
 import { LeaseStatus, schemas } from '@onecore/types'
+import {
+  HOME_INSURANCE_LF_COLUMNS,
+  toHomeInsuranceLfCells,
+} from './home-insurance-columns'
 
 const DateFormat = 'yyyy-mm-dd'
 const ColumnWidth = 20
@@ -109,9 +113,13 @@ const transformInvoicePaymentSummary = (
   }
 }
 
-type BosocialaRow = {
+/**
+ * A row of the unpaid invoice report (Bosociala), also used by the list of
+ * open invoices so both files have the same columns.
+ */
+export type BosocialaRow = {
   invoiceId: string
-  invoiceDate: Date
+  invoiceDate: Date | undefined
   expirationDate: Date | undefined
   invoiceAmount: number
   remainingAmount: number
@@ -124,6 +132,52 @@ type BosocialaRow = {
   costCentre: string | undefined
 }
 
+export const BOSOCIALA_COLUMNS: readonly {
+  header: string
+  key: keyof BosocialaRow
+  width?: number
+  style?: { numFmt: string }
+}[] = [
+  { header: 'Fakturanummer', key: 'invoiceId' },
+  {
+    header: 'Fakturadatum',
+    key: 'invoiceDate',
+    style: { numFmt: DateFormat },
+    width: ColumnWidth,
+  },
+  {
+    header: 'Förfallodatum',
+    key: 'expirationDate',
+    style: { numFmt: DateFormat },
+    width: ColumnWidth,
+  },
+  { header: 'Totalbelopp', key: 'invoiceAmount' },
+  {
+    header: 'Skuld',
+    key: 'remainingAmount',
+    width: ColumnWidth,
+  },
+  { header: 'Dagar sen förfallodatum', key: 'daysSinceExpirationDate' },
+  { header: 'Objektsnummer', key: 'rentalPropertyId' },
+  { header: 'Namn', key: 'tenantName' },
+  { header: 'Kod', key: 'tenantContactCode' },
+  { header: 'Adress', key: 'address' },
+  { header: 'Status', key: 'leaseStatus' },
+  { header: 'Kostnadsställe', key: 'costCentre' },
+]
+
+// The lease status as the unpaid invoice reports show it. An ended lease is
+// shown as Uppsagt, as in Xpand's list, rather than Upphört.
+export const REPORT_LEASE_STATUS_LABELS: Record<LeaseStatus, string> = {
+  [LeaseStatus.Current]: 'Gällande',
+  [LeaseStatus.Upcoming]: 'Kommande',
+  [LeaseStatus.AboutToEnd]: 'Uppsagt',
+  [LeaseStatus.Ended]: 'Uppsagt',
+  [LeaseStatus.PreliminaryTerminated]: 'Preliminärt uppsagt',
+  [LeaseStatus.PendingSignature]: 'Väntar på signering',
+  [LeaseStatus.NotSent]: 'Ej skickat',
+}
+
 export const convertBosocialaToXlsx = async (bosociala: BosocialaObject[]) => {
   const workbook = new ExcelJs.Workbook()
   const worksheet = workbook.addWorksheet('Bosociala', {
@@ -132,34 +186,7 @@ export const convertBosocialaToXlsx = async (bosociala: BosocialaObject[]) => {
     },
   })
 
-  worksheet.columns = [
-    { header: 'Fakturanummer', key: 'invoiceId' },
-    {
-      header: 'Fakturadatum',
-      key: 'invoiceDate',
-      style: { numFmt: DateFormat },
-      width: ColumnWidth,
-    },
-    {
-      header: 'Förfallodatum',
-      key: 'expirationDate',
-      style: { numFmt: DateFormat },
-      width: ColumnWidth,
-    },
-    { header: 'Totalbelopp', key: 'invoiceAmount' },
-    {
-      header: 'Skuld',
-      key: 'remainingAmount',
-      width: ColumnWidth,
-    },
-    { header: 'Dagar sen förfallodatum', key: 'daysSinceExpirationDate' },
-    { header: 'Objektsnummer', key: 'rentalPropertyId' },
-    { header: 'Namn', key: 'tenantName' },
-    { header: 'Kod', key: 'tenantContactCode' },
-    { header: 'Adress', key: 'address' },
-    { header: 'Status', key: 'leaseStatus' },
-    { header: 'Kostnadsställe', key: 'costCentre' },
-  ]
+  worksheet.columns = [...BOSOCIALA_COLUMNS]
 
   bosociala.forEach((bo) => {
     worksheet.addRow(transformBosociala(bo))
@@ -170,16 +197,6 @@ export const convertBosocialaToXlsx = async (bosociala: BosocialaObject[]) => {
 }
 
 const transformBosociala = (bosocial: BosocialaObject): BosocialaRow => {
-  const Status: Record<LeaseStatus, string> = {
-    [LeaseStatus.Current]: 'Gällande',
-    [LeaseStatus.Upcoming]: 'Kommande',
-    [LeaseStatus.AboutToEnd]: 'Uppsagt',
-    [LeaseStatus.Ended]: 'Uppsagt',
-    [LeaseStatus.PreliminaryTerminated]: 'Preliminärt uppsagt',
-    [LeaseStatus.PendingSignature]: 'Väntar på signering',
-    [LeaseStatus.NotSent]: 'Ej skickat',
-  }
-
   return {
     invoiceId: bosocial.invoiceId,
     invoiceDate: bosocial.invoiceDate,
@@ -191,7 +208,9 @@ const transformBosociala = (bosocial: BosocialaObject): BosocialaRow => {
     costCentre: bosocial.costCentre,
     daysSinceExpirationDate: bosocial.daysSinceExpirationDate,
     rentalPropertyId: bosocial.lease?.rentalPropertyId ?? '',
-    leaseStatus: bosocial.lease ? Status[bosocial.lease.status] : '',
+    leaseStatus: bosocial.lease
+      ? REPORT_LEASE_STATUS_LABELS[bosocial.lease.status]
+      : '',
     tenantName: bosocial.contact?.fullName ?? '',
     tenantContactCode: bosocial.contact?.contactCode ?? '',
     address: bosocial.contact?.address?.street ?? '',
@@ -211,52 +230,36 @@ export const convertHomeInsuranceToXlsx = async (
     properties: { defaultColWidth: ColumnWidth },
   })
 
-  worksheet.addRow([
-    'Kontraktsnummer',
-    'Personnummer',
-    'Namn',
-    'Adress',
-    'Postnr',
-    'Ort',
-    'Antal Rum',
-    'Kvadratmeter',
-    'Kontrakt Fr.o.m',
-    'Kontrakt T.o.m',
-    'Telefon',
-    'E-post',
-    'Hyresrad Fr.o.m',
-    'Hyresrad T.o.m',
-    'Årshyra',
-    'Hyresobjekt, hyresid',
-    'Status',
-    'Avitext',
-  ])
+  worksheet.addRow(HOME_INSURANCE_LF_COLUMNS.map((column) => column.header))
 
   const headerRow = worksheet.getRow(1)
   headerRow.font = { bold: true }
   headerRow.commit()
 
   rows.forEach((row) => {
-    worksheet.addRow([
-      row.leaseId,
-      row.nationalIdNumber,
-      row.fullName,
-      row.address,
-      row.postalCode,
-      row.city,
-      row.numberOfRooms,
-      row.squareMeters,
-      toDateString(row.leaseFromDate),
-      toDateString(row.leaseToDate),
-      row.phoneNumber,
-      row.email,
-      toDateString(row.rowFromDate),
-      toDateString(row.rowToDate),
-      row.annualRent,
-      row.rentalObjectCode,
-      row.leaseStatus,
-      row.articleText,
-    ])
+    worksheet.addRow(
+      toHomeInsuranceLfCells({
+        leaseId: row.leaseId,
+        nationalIdNumber: row.nationalIdNumber,
+        fullName: row.fullName,
+        address: row.address,
+        postalCode: row.postalCode,
+        city: row.city,
+        numberOfRooms: row.numberOfRooms,
+        squareMeters: row.squareMeters,
+        leaseFromDate: toDateString(row.leaseFromDate),
+        leaseToDate: toDateString(row.leaseToDate),
+        phoneNumber: row.phoneNumber,
+        email: row.email,
+        rowFromDate: toDateString(row.rowFromDate),
+        rowToDate: toDateString(row.rowToDate),
+        // Misnamed in the export row: it holds the monthly amount.
+        monthlyAmount: row.annualRent,
+        rentalObjectCode: row.rentalObjectCode,
+        leaseStatus: row.leaseStatus,
+        articleText: row.articleText,
+      })
+    )
   })
 
   const buffer = await workbook.xlsx.writeBuffer()

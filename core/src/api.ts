@@ -9,6 +9,7 @@ import { routes as inspectionRoutes } from './services/inspection-service'
 import { routes as fileStorageRoutes } from './services/file-storage-service'
 import { routes as communicationRoutes } from './services/communication-service'
 import { routes as guidesRoutes } from './services/guides-service'
+import { routes as reportsRoutes } from './services/reports-service'
 
 import { routes as keyRoutes } from './services/keys-service'
 import { updateSwaggerSchemas } from './swagger'
@@ -27,6 +28,7 @@ inspectionRoutes(router)
 fileStorageRoutes(router)
 communicationRoutes(router)
 guidesRoutes(router)
+reportsRoutes(router)
 
 updateSwaggerSchemas()
 
