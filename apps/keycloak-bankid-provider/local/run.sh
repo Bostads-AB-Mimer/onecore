@@ -1,17 +1,26 @@
 #!/usr/bin/env bash
-# End-to-end check of the plugin against a stand-in for Entra + Mimer BankID (mock/server.mjs):
-# builds the JAR, starts two clustered Keycloak nodes (docker-compose.yml), sets up a tenant realm
-# with the BankID identity provider, runs the login cases in drive.py and tears everything down.
+# Local checks of the plugin on the same Keycloak image and mode as auth.dev.mimer.nu.
 #
-#   ./run.sh          run the cases, then stop and remove everything
-#   ./run.sh --keep   leave Keycloak (http://localhost:18081, admin/admin) and the mock running
-#   ./run.sh down     stop and remove what --keep left behind
+#   ./run.sh                 mock: nine login cases against a stand-in for Entra + Mimer BankID
+#                            (mock/server.mjs) on two clustered nodes, then remove everything
+#   ./run.sh --keep          same, but leave Keycloak (http://localhost:18081, admin/admin) and the mock running
+#   ./run.sh real <pnr>      one real BankID login against Mimer BankID TEST; prints a URL to open
+#   ./run.sh down            stop everything and delete the vault files (always run this after `real`)
 #
-# Needs Docker, Node 22 and python3. Nothing here talks to a real Mimer BankID or any cluster.
+# Mock mode needs Docker, Node 22 and python3 and talks to no real system.
+#
+# Real mode needs a test BankID (demo.bankid.com) for <pnr> in the BankID app's test mode, and
+# reads the MimerMinaSidor TEST settings (read-only) from the webapi secret in the epic environment:
+#   BANKID_KUBE_CONTEXT    default onecore-dev
+#   BANKID_KUBE_NAMESPACE  default epic-mim-2086
+#   BANKID_SECRET_FILE     default ~/.config/mimer/bankid-test-client-secret; when it exists, the client
+#                          secret comes from this file instead of the cluster (to try a new value first)
+# Secrets only ever land in local/vault/ (git-ignored), which `down` deletes. Nothing is written to the cluster.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 MOCK_PID_FILE=vault/.mock.pid
+K=http://localhost:18081
 
 down() {
   docker compose down -v >/dev/null 2>&1 || true
@@ -19,27 +28,82 @@ down() {
   rm -rf vault
 }
 
-if [[ "${1:-}" == "down" ]]; then
-  down
-  echo "Stopped."
-  exit 0
+MODE=mock KEEP=0
+case "${1:-}" in
+  down) down; echo "Stopped, vault files deleted."; exit 0 ;;
+  --keep) KEEP=1 ;;
+  real)
+    MODE=real KEEP=1
+    PNR="${2:?usage: ./run.sh real <12-digit test personnummer>}"
+    [[ "$PNR" =~ ^[0-9]{12}$ ]] || { echo "personnummer must be 12 digits"; exit 1; }
+    ;;
+  "") ;;
+  *) echo "usage: ./run.sh [--keep | real <pnr> | down]"; exit 1 ;;
+esac
+# On failure the real secrets must not stay behind either, so only a successful `real` keeps running
+trap 'status=$?; [[ $KEEP == 1 && $status == 0 ]] || down' EXIT
+
+mkdir -p vault && chmod 700 vault
+# Keycloak's file vault reads ${vault.<key>} from <realm>_<key>.
+SECRET_VAULT=vault/mimer-contacts_bankid-client-secret
+APIM_VAULT=vault/mimer-contacts_bankid-apim-key
+
+if [[ $MODE == real ]]; then
+  CTX=${BANKID_KUBE_CONTEXT:-onecore-dev}
+  NS=${BANKID_KUBE_NAMESPACE:-epic-mim-2086}
+  SECRET_FILE=${BANKID_SECRET_FILE:-$HOME/.config/mimer/bankid-test-client-secret}
+  val() { kubectl --context "$CTX" -n "$NS" get secret webapi-secrets -o "jsonpath={.data.BankIdConfiguration__$1}" | base64 -d; }
+
+  echo "Reading Mimer BankID TEST settings from $CTX/$NS webapi-secrets"
+  GATEWAY_URL=$(val ApiUrl)
+  AUTHORITY=$(val Authority)
+  CLIENT_ID=$(val ClientId)
+  SCOPE=$(val Scopes | cut -d, -f1)
+  A=${AUTHORITY%/}
+  TOKEN_URL=$([[ $A == */oauth2/v2.0/token ]] && echo "$A" || echo "$A/oauth2/v2.0/token")
+  ( umask 077; val OcpApimSubscriptionKey > $APIM_VAULT )
+  if [[ -s $SECRET_FILE ]]; then
+    echo "Client secret: $SECRET_FILE"
+    ( umask 077; tr -d '\r\n' < "$SECRET_FILE" > $SECRET_VAULT )
+  else
+    echo "Client secret: cluster (no $SECRET_FILE)"
+    ( umask 077; val Secret > $SECRET_VAULT )
+  fi
+
+  # Fail fast on the Entra step before waiting for Keycloak. The secret is read from the file by
+  # curl, so it never appears on a command line; only the status and the AADSTS code are shown.
+  echo "Checking the client secret with Entra"
+  resp=$(curl -s -w '\n%{http_code}' "$TOKEN_URL" -d grant_type=client_credentials \
+    --data-urlencode "client_id=$CLIENT_ID" --data-urlencode "scope=$SCOPE" \
+    --data-urlencode "client_secret@$SECRET_VAULT")
+  code=$(tail -n1 <<<"$resp")
+  if [[ $code != 200 ]]; then
+    aad=$(sed '$d' <<<"$resp" | jq -r '.error_description // ""' 2>/dev/null | grep -o 'AADSTS[0-9]*' | head -1 || true)
+    echo "Entra rejected the client credentials: HTTP $code ${aad:-}"
+    exit 1
+  fi
+  echo "Entra accepted the client secret"
+else
+  GATEWAY_URL=http://host.docker.internal:4010/api/
+  TOKEN_URL=http://host.docker.internal:4010/oauth2/v2.0/token
+  CLIENT_ID=mimer-minasidor-test
+  SCOPE=api://mimer-bankid/.default
+  # What the mock expects
+  printf 'secret-from-vault' > $SECRET_VAULT
+  printf 'apim-from-vault' > $APIM_VAULT
 fi
-KEEP=$([[ "${1:-}" == "--keep" ]] && echo 1 || echo 0)
-[[ $KEEP == 1 ]] || trap down EXIT
+# Keycloak in the container runs as another user and must be able to read the vault
+chmod 644 vault/mimer-contacts_*
 
 echo "Building the plugin (also runs the unit tests)"
 docker run --rm -v "$PWD/..":/src -v keycloak-bankid-provider-m2:/root/.m2 -w /src \
   maven:3.9-eclipse-temurin-21 mvn -q -B package
 
-# Keycloak's file vault reads ${vault.<key>} from <realm>_<key>. Values are what the mock expects.
-mkdir -p vault && chmod 700 vault
-printf 'secret-from-vault' > vault/mimer-contacts_bankid-client-secret
-printf 'apim-from-vault' > vault/mimer-contacts_bankid-apim-key
-chmod 644 vault/mimer-contacts_*
-
-node mock/server.mjs > vault/mock.log 2>&1 &
-echo $! > $MOCK_PID_FILE
-disown
+if [[ $MODE == mock ]]; then
+  node mock/server.mjs > vault/mock.log 2>&1 &
+  echo $! > $MOCK_PID_FILE
+  disown
+fi
 
 wait_up() { # service port
   for _ in $(seq 1 100); do
@@ -50,15 +114,16 @@ wait_up() { # service port
 }
 
 # One node at a time: two nodes bootstrapping an empty database at once fail with
-# "Session not bound to a realm".
+# "Session not bound to a realm". Real mode needs only one.
 echo "Starting Keycloak node 1"
 docker compose up -d keycloak 2>/dev/null
 wait_up keycloak 18081
-echo "Starting Keycloak node 2"
-docker compose up -d keycloak2 2>/dev/null
-wait_up keycloak2 18082
+if [[ $MODE == mock ]]; then
+  echo "Starting Keycloak node 2"
+  docker compose up -d keycloak2 2>/dev/null
+  wait_up keycloak2 18082
+fi
 
-K=http://localhost:18081
 T=$(curl -s $K/realms/master/protocol/openid-connect/token -d grant_type=password -d client_id=admin-cli \
   -d username=admin -d password=admin | jq -r .access_token)
 auth=(-H "Authorization: Bearer $T" -H 'Content-Type: application/json')
@@ -75,8 +140,9 @@ curl -s "${auth[@]}" $K/admin/realms/mimer-contacts/users/profile \
         | .attributes |= map(select(.name != "firstName" and .name != "lastName"))
         | .attributes |= map(if .name == "email" then del(.required) else . end)' \
   | curl -s -o /dev/null "${auth[@]}" -X PUT $K/admin/realms/mimer-contacts/users/profile -d @-
+# example.com: where a real login lands, so the code is visible in the address bar
 api POST /mimer-contacts/clients \
-  '{"clientId":"mina-sidor","publicClient":true,"standardFlowEnabled":true,"redirectUris":["http://localhost:3000/*"]}'
+  '{"clientId":"mina-sidor","publicClient":true,"standardFlowEnabled":true,"redirectUris":["http://localhost:3000/*","https://example.com/*"]}'
 
 # First broker login: only link to an existing user with the same username, never create one.
 api POST /mimer-contacts/authentication/flows '{"alias":"bankid-first-login","providerId":"basic-flow","topLevel":true,"builtIn":false}'
@@ -87,17 +153,28 @@ curl -s "${auth[@]}" $K/admin/realms/mimer-contacts/authentication/flows/bankid-
   | jq -c '.[] | .requirement = "REQUIRED"' \
   | while read -r e; do api PUT /mimer-contacts/authentication/flows/bankid-first-login/executions "$e"; done
 
-# host.docker.internal: Keycloak runs in Docker and calls the mock on the host.
-api POST /mimer-contacts/identity-provider/instances '{
-  "alias":"bankid","displayName":"BankID","providerId":"mimer-bankid","enabled":true,
-  "trustEmail":false,"storeToken":false,"firstBrokerLoginFlowAlias":"bankid-first-login",
-  "config":{"syncMode":"IMPORT",
-    "gatewayUrl":"http://host.docker.internal:4010/api/",
-    "tokenUrl":"http://host.docker.internal:4010/oauth2/v2.0/token",
-    "clientId":"mimer-minasidor-test","scope":"api://mimer-bankid/.default",
-    "clientSecret":"${vault.bankid-client-secret}","apimKey":"${vault.bankid-apim-key}"}}'
-api POST /mimer-contacts/users '{"username":"199001011234","enabled":true}'
+# Mock mode: host.docker.internal, since Keycloak runs in Docker and calls the mock on the host.
+api POST /mimer-contacts/identity-provider/instances "$(jq -nc \
+  --arg g "$GATEWAY_URL" --arg t "$TOKEN_URL" --arg c "$CLIENT_ID" --arg s "$SCOPE" \
+  '{alias:"bankid",displayName:"BankID",providerId:"mimer-bankid",enabled:true,
+    trustEmail:false,storeToken:false,firstBrokerLoginFlowAlias:"bankid-first-login",
+    config:{syncMode:"IMPORT",gatewayUrl:$g,tokenUrl:$t,clientId:$c,scope:$s,
+      clientSecret:"${vault.bankid-client-secret}",apimKey:"${vault.bankid-apim-key}"}}')"
 
+if [[ $MODE == real ]]; then
+  api POST /mimer-contacts/users "{\"username\":\"$PNR\",\"enabled\":true}"
+  echo
+  echo "Open this in your browser and scan the QR code with the test BankID app:"
+  echo "  $K/realms/mimer-contacts/protocol/openid-connect/auth?client_id=mina-sidor&redirect_uri=https%3A%2F%2Fexample.com%2Fcb&response_type=code&scope=openid&kc_idp_hint=bankid"
+  echo
+  echo "Success: you land on https://example.com/cb?...&code=..."
+  echo "Cancel in the BankID app: you are back on the Keycloak login page."
+  echo "Plugin logs: (cd $(pwd) && docker compose logs -f keycloak | grep -i bankid)"
+  echo "When done: ./run.sh down   (stops Keycloak and deletes the secrets in local/vault/)"
+  exit 0
+fi
+
+api POST /mimer-contacts/users '{"username":"199001011234","enabled":true}'
 echo
 python3 -I drive.py
 

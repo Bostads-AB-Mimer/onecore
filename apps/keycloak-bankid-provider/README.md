@@ -59,5 +59,11 @@ reused callback, forged state, and Mimer BankID down at start. It exits non-zero
 in the wrong place and removes everything afterwards (`--keep` leaves it running). It needs Docker,
 Node 22 and python3, and talks to no real system.
 
+`local/run.sh real <12-digit test personnummer>` does one real login against Mimer BankID TEST
+with a test BankID from demo.bankid.com. It reads the MimerMinaSidor TEST settings read-only from
+the epic environment's `webapi-secrets` (see the script header for overrides, including a local
+file for a new client secret), checks the client secret with Entra first, and prints a URL to
+open. `local/run.sh down` stops it and deletes the local copies of the secrets.
+
 `keycloak.version` in `pom.xml` must match the cluster's Keycloak. Rebuild and rerun
 `local/run.sh` on every Keycloak upgrade: the broker SPI is not a stable public API.
