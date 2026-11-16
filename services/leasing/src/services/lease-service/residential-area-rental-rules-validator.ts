@@ -1,4 +1,9 @@
-import { DetailedApplicant, ResidentialArea } from '@onecore/types'
+import {
+  DetailedApplicant,
+  Lease,
+  LeaseStatus,
+  ResidentialArea,
+} from '@onecore/types'
 
 //todo: we might need to consider and validate if a housing contract is ending
 //todo: if so we need datetime logic for checkin contract end dates etc
@@ -44,15 +49,30 @@ const isHousingContractsOfApplicantInSameAreaAsListing = (
   return false
 }
 
+// A parking space lease under notice, given notice on or ended does not count
+// when the rental rules choose between Additional and Replace. Replace means
+// "I will give notice on my current space", so a space the tenant has already
+// given notice on must not force it.
+const parkingSpaceLeaseStatusesNotCounted = [
+  LeaseStatus.PreliminaryTerminated,
+  LeaseStatus.AboutToEnd,
+  LeaseStatus.Ended,
+]
+
+const getParkingSpaceContractsCountedByRentalRules = (
+  parkingSpaceContracts: Lease[] | undefined
+): Lease[] =>
+  (parkingSpaceContracts ?? []).filter(
+    (lease) => !parkingSpaceLeaseStatusesNotCounted.includes(lease.status)
+  )
+
 const doesApplicantHaveParkingSpaceContractsInSameAreaAsListing = (
   districtCode: string,
   applicant: Pick<DetailedApplicant, 'parkingSpaceContracts'>
 ) => {
-  if (!applicant.parkingSpaceContracts) {
-    return false
-  }
-
-  return applicant.parkingSpaceContracts.some(
+  return getParkingSpaceContractsCountedByRentalRules(
+    applicant.parkingSpaceContracts
+  ).some(
     (parkingSpaceContract) =>
       parkingSpaceContract.residentialArea?.code === districtCode
   )
@@ -62,4 +82,5 @@ export {
   isListingInAreaWithSpecificRentalRules,
   isHousingContractsOfApplicantInSameAreaAsListing,
   doesApplicantHaveParkingSpaceContractsInSameAreaAsListing,
+  getParkingSpaceContractsCountedByRentalRules,
 }

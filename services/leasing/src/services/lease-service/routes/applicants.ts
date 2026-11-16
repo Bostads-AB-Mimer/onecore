@@ -14,6 +14,7 @@ import * as propertyRentalRulesValidator from '../property-rental-rules-validato
 import { getTenant } from '../get-tenant'
 import {
   doesApplicantHaveParkingSpaceContractsInSameAreaAsListing,
+  getParkingSpaceContractsCountedByRentalRules,
   isHousingContractsOfApplicantInSameAreaAsListing,
   isListingInAreaWithSpecificRentalRules,
 } from '../residential-area-rental-rules-validator'
@@ -485,8 +486,13 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
+        const parkingSpaceContracts =
+          getParkingSpaceContractsCountedByRentalRules(
+            contact.data.parkingSpaceContracts
+          )
+
         //if subject has no parking space contracts but is a tenant in the property
-        if (!contact.data.parkingSpaceContracts?.length) {
+        if (!parkingSpaceContracts.length) {
           //subject is eligible for parking space, applicationType for application should be 'additonal'
           ctx.status = 200
           ctx.body = {
@@ -498,10 +504,9 @@ export const routes = (router: KoaRouter) => {
           return
         }
 
-        const getParkingSpacePropertyInfo =
-          contact.data.parkingSpaceContracts.map((lease) =>
-            getEstateCodeFromXpandByRentalObjectCode(lease.rentalPropertyId)
-          )
+        const getParkingSpacePropertyInfo = parkingSpaceContracts.map((lease) =>
+          getEstateCodeFromXpandByRentalObjectCode(lease.rentalPropertyId)
+        )
 
         const parkingSpaceEstateCodes = await Promise.all(
           getParkingSpacePropertyInfo

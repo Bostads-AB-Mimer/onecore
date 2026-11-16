@@ -198,27 +198,18 @@ const assignPriorityToApplicantBasedOnRentalRules = (
   }
 }
 
-//helper function to filter all non-terminated and all still active contracts with a last debit date
+// A lease is active or upcoming until its last debit date (the lease end
+// date for Tenfast leases) has passed. terminationDate is deliberately not
+// used: for Tenfast leases it holds cancellation.handledAt, the day the notice
+// was handled, which can be months before the lease ends. Voided leases never
+// get here, because getLeasesByTenantId leaves out the voided stage. An ended
+// lease (archived or terminated in Tenfast) never counts, even when its end
+// date is missing or still ahead.
 const isLeaseActiveOrUpcoming = (lease: Lease): boolean => {
-  const currentDate = new Date()
-  const terminationDate = lease.terminationDate
-    ? new Date(lease.terminationDate)
-    : null
+  if (lease.status === LeaseStatus.Ended) return false
+  if (!lease.lastDebitDate) return true
 
-  const lastDebitDate = lease.lastDebitDate
-    ? new Date(lease.lastDebitDate)
-    : null
-
-  //determine if lastDebitDate and terminationDate is set
-  //if so, the date(s) needs to be in the future for the lease to be active
-  const isCurrentDateEarlierThanLastDebitDate =
-    !lastDebitDate || currentDate < lastDebitDate
-  const isCurrentDateBeforeTerminationDate =
-    !terminationDate || currentDate < terminationDate
-
-  return (
-    isCurrentDateEarlierThanLastDebitDate && isCurrentDateBeforeTerminationDate
-  )
+  return new Date() < new Date(lease.lastDebitDate)
 }
 
 const parseLeasesForHousingContracts = (
