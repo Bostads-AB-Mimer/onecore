@@ -30,7 +30,7 @@ registration and contact_code code can run against it. Point core at it with:
 AUTH__KEYCLOAK__URL=http://localhost:18080
 AUTH__KEYCLOAK__CONTACTS__CLIENT_SECRET=mina-sidor-secret
 AUTH__KEYCLOAK__CONTACTS__PROVISIONING__CLIENT_SECRET=provisioning-secret
-AUTH__KEYCLOAK__CONTACTS__SET_PASSWORD_REDIRECT_URI=http://localhost:3000/
+AUTH__KEYCLOAK__CONTACTS__SET_PASSWORD_REDIRECT_URI=https://localhost:3000/mina-sidor/
 ```
 
 `AUTH__KEYCLOAK__URL` is also where core checks staff tokens (the `onecore` realm),

@@ -60,7 +60,7 @@ echo "== clients"
 # the mapper core would "repair" contact_code on every login and the claim would still be missing.
 api POST "/$R/clients" '{"clientId": "mina-sidor", "publicClient": false, "secret": "mina-sidor-secret",
   "standardFlowEnabled": true, "directAccessGrantsEnabled": false,
-  "redirectUris": ["http://localhost:3000/*"], "webOrigins": ["http://localhost:3000"],
+  "redirectUris": ["http://localhost:3000/*", "https://localhost:3000/*"], "webOrigins": ["http://localhost:3000", "https://localhost:3000"],
   "attributes": {"pkce.code.challenge.method": "S256"},
   "protocolMappers": [{"name": "contact_code", "protocol": "openid-connect",
     "protocolMapper": "oidc-usermodel-attribute-mapper",
