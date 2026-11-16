@@ -126,6 +126,21 @@ describe(adapter.getInvoicesByContactCode, () => {
     expect(result).toBeNull()
   })
 
+  it('returns null when Xledger finds no customer with the code', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          customers: {
+            edges: [],
+          },
+        },
+      })
+
+    const result = await adapter.getInvoicesByContactCode('P12345')
+    expect(result).toBeNull()
+  })
+
   it('returns [] when customer exists but has no invoices', async () => {
     // First POST: customers query → return a dbId
     nock(origin)

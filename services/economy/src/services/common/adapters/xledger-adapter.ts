@@ -580,7 +580,7 @@ const getCustomerDbId = async (contactCode: string): Promise<string | null> => {
 
   const result = await makeXledgerRequest(query)
 
-  return result.data?.customers?.edges?.[0].node.dbId ?? null
+  return result.data?.customers?.edges?.[0]?.node?.dbId ?? null
 }
 
 export const getCustomers = async (
