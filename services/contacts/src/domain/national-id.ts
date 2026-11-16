@@ -84,6 +84,63 @@ export const getBirthDateFromNationalId = (input: string): string | null => {
 }
 
 /**
+ * What Xpand puts in `birthdate` when it doesn't know it. It says nothing about
+ * the century.
+ */
+const PLACEHOLDER_BIRTH_DATE = '1900-01-01'
+
+export type CenturyMatch = 'same' | 'different' | 'unknown'
+
+/**
+ * Whether a contact found by personnummer belongs to someone born in the same
+ * century as the person being looked up.
+ *
+ * Ten digits leave out the century, so a contact stored as `9005059846` matches
+ * people born in both 1990 and 1890. Its century is then taken from:
+ *
+ * 1. `birthDate`, but only when it is the date in the number. A placeholder or
+ *    a date that doesn't fit the number tells us nothing.
+ * 2. A `+` separator in the stored value: the person was 100 or older when it
+ *    was written.
+ *
+ * @param twelveDigits The personnummer being looked up, `YYYYMMDDNNNN`.
+ * @param stored The contact's personnummer as Xpand stores it.
+ * @param birthDate The contact's `birthdate` as `YYYY-MM-DD`, or null.
+ * @returns 'unknown' when neither source says anything about the century.
+ */
+export const storedCenturyMatches = (
+  twelveDigits: string,
+  stored: string,
+  birthDate: string | null
+): CenturyMatch => {
+  const lookedUp = getBirthDateFromNationalId(twelveDigits)
+  if (!lookedUp) return 'unknown'
+
+  if (stored.replace(/\D/g, '').length === 12) {
+    return getBirthDateFromNationalId(stored) === lookedUp
+      ? 'same'
+      : 'different'
+  }
+
+  // YY-MM-DD: the part of the date that ten digits do carry.
+  if (
+    birthDate &&
+    birthDate !== PLACEHOLDER_BIRTH_DATE &&
+    birthDate.slice(2) === lookedUp.slice(2)
+  ) {
+    return birthDate === lookedUp ? 'same' : 'different'
+  }
+
+  if (stored.includes('+')) {
+    // The library reads `+` as 100 or older and picks the century from that.
+    const fromPlus = getBirthDateFromNationalId(stored)
+    if (fromPlus) return fromPlus === lookedUp ? 'same' : 'different'
+  }
+
+  return 'unknown'
+}
+
+/**
  * Age in whole years on the Swedish calendar date of `today`, or null when the
  * input is not a valid identity number.
  *
