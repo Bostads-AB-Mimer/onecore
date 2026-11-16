@@ -92,8 +92,9 @@ export class XledgerUnavailableError extends Error {
   }
 }
 
-// Xledger is down or the request never reached it.
-const UNAVAILABLE_STATUSES = new Set([502, 503, 504])
+// Xledger is down or the request never reached it. 504 is left out since it
+// may also mean a slow query, and retrying that only adds load.
+const UNAVAILABLE_STATUSES = new Set([502, 503])
 const UNAVAILABLE_CODES = new Set(['ECONNREFUSED', 'ECONNRESET'])
 
 const getUnavailableStatus = (
@@ -174,6 +175,8 @@ const makeXledgerRequest = async (
             ? 'Xledger unavailable, giving up'
             : 'Xledger unavailable, waiting and retrying'
       )
+      // A write may have been applied, so it must not look like "try again later".
+      if (!retryable) throw err
       if (isLast) throw new XledgerUnavailableError(unavailable.status)
     } finally {
       releaseSlot()

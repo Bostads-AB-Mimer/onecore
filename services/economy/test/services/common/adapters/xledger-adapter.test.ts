@@ -151,11 +151,24 @@ describe('makeXledgerRequest when Xledger is unavailable', () => {
     expect(extra.isDone()).toBe(false)
   })
 
-  it.each([502, 504])('retries a read after a %i', async (status) => {
-    nock(origin).post(pathname).reply(status)
+  it('retries a read after a 502', async () => {
+    nock(origin).post(pathname).reply(502)
     nock(origin).post(pathname).reply(200, matchIdBody)
 
     await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+  })
+
+  it('does not retry a 504, since it may mean a slow query', async () => {
+    nock(origin).post(pathname).reply(504)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    const result = adapter.getInvoiceMatchId('1')
+
+    await expect(result).rejects.not.toBeInstanceOf(
+      adapter.XledgerUnavailableError
+    )
+    await expect(result).rejects.toThrow(/status code 504/)
+    expect(extra.isDone()).toBe(false)
   })
 
   it.each(['ECONNREFUSED', 'ECONNRESET'])(
@@ -895,9 +908,12 @@ describe(adapter.updateInvoiceDeferralDate, () => {
     const mutation = nock(origin).post(pathname).reply(503)
     const retry = nock(origin).post(pathname).reply(200, mutationReply)
 
-    await expect(
-      adapter.updateInvoiceDeferralDate(invoiceNumber, newDueDate)
-    ).rejects.toBeInstanceOf(adapter.XledgerUnavailableError)
+    const result = adapter.updateInvoiceDeferralDate(invoiceNumber, newDueDate)
+
+    await expect(result).rejects.not.toBeInstanceOf(
+      adapter.XledgerUnavailableError
+    )
+    await expect(result).rejects.toThrow(/status code 503/)
     expect(mutation.isDone()).toBe(true)
     expect(retry.isDone()).toBe(false)
   })
