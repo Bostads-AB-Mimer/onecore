@@ -5,10 +5,13 @@
 #   Mail (password reset, set password): http://localhost:18025
 #   Clients as core uses them (config auth.keycloak.contacts): mina-sidor / mina-sidor-secret and
 #   mimer-contacts-provisioning / provisioning-secret, with Mina sidor (and the set-password
-#   link's redirect URI) at http://localhost:3000/
+#   link's redirect URI) at https://localhost:3000/mina-sidor/
+# Also creates "onecore-local", standing in for core's staff realm, with the .NET API's service
+# client mimernu-webapi / webapi-secret, so the whole login and registration chain runs locally.
 set -euo pipefail
 KC=http://localhost:18080
 R=mimer-contacts
+CORE_R=onecore-local
 OUT=$(mktemp)
 trap 'rm -f "$OUT"' EXIT
 
@@ -27,7 +30,7 @@ api() { # method path [json]
 }
 
 echo "== realm"
-for r in $R fake-bankid; do curl -s -o /dev/null -X DELETE -H "Authorization: Bearer $(tok)" "$KC/admin/realms/$r" || true; done
+for r in $R fake-bankid $CORE_R; do curl -s -o /dev/null -X DELETE -H "Authorization: Bearer $(tok)" "$KC/admin/realms/$r" || true; done
 # Swedish only: one supported locale hides the language picker. Internationalization must stay
 # enabled, otherwise Keycloak falls back to English instead of the default locale.
 # Duplicate e-mails allowed: people in one household register with a shared address, and
@@ -58,6 +61,7 @@ echo "== clients"
 # The OIDC client of Mina sidor. Core's set-password e-mail ends on one of its redirect URIs.
 # Its tokens carry the contact_code claim, single-valued, which core reads at login. Without
 # the mapper core would "repair" contact_code on every login and the claim would still be missing.
+# The .NET API accepts these tokens only with its own audience (KeycloakConfiguration:Audience).
 api POST "/$R/clients" '{"clientId": "mina-sidor", "publicClient": false, "secret": "mina-sidor-secret",
   "standardFlowEnabled": true, "directAccessGrantsEnabled": false,
   "redirectUris": ["http://localhost:3000/*", "https://localhost:3000/*"], "webOrigins": ["http://localhost:3000", "https://localhost:3000"],
@@ -66,7 +70,9 @@ api POST "/$R/clients" '{"clientId": "mina-sidor", "publicClient": false, "secre
     "protocolMapper": "oidc-usermodel-attribute-mapper",
     "config": {"user.attribute": "contact_code", "claim.name": "contact_code", "jsonType.label": "String",
       "multivalued": "false", "access.token.claim": "true", "id.token.claim": "true",
-      "userinfo.token.claim": "true"}}]}'
+      "userinfo.token.claim": "true"}},
+    {"name": "webapi audience", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
+     "config": {"included.custom.audience": "webapi", "access.token.claim": "true", "id.token.claim": "false"}}]}'
 # Core's admin client: reads users and sets contact_code at login, creates users and sends the
 # set-password e-mail at registration.
 api POST "/$R/clients" '{"clientId": "mimer-contacts-provisioning", "publicClient": false,
@@ -100,5 +106,26 @@ api POST "/$R/identity-provider/instances" "{
     \"tokenUrl\": \"$KC/realms/fake-bankid/protocol/openid-connect/token\",
     \"clientId\": \"mimer-broker\", \"clientSecret\": \"broker-secret\", \"clientAuthMethod\": \"client_secret_post\",
     \"defaultScope\": \"openid\"}}"
+
+echo "== $CORE_R (core's staff realm: core checks service tokens here, at AUTH__KEYCLOAK__URL)"
+api POST "" "{\"realm\": \"$CORE_R\", \"enabled\": true}"
+# The .NET API's service client. It calls core with its id and secret as Basic Auth, and core
+# exchanges them for a token in this realm. api-access is the baseline, contacts:register lets
+# it register applicants, contact-auth lets it exchange tenant tokens (/auth/contacts/*).
+# Without contact-auth, login fails with 403 from core and the .NET API answers the callback with 502.
+core_roles=(api-access contacts:register contact-auth)
+for role in "${core_roles[@]}"; do api POST "/$CORE_R/roles" "{\"name\": \"$role\"}"; done
+api POST "/$CORE_R/clients" '{"clientId": "mimernu-webapi", "publicClient": false, "secret": "webapi-secret",
+  "serviceAccountsEnabled": true, "standardFlowEnabled": false, "directAccessGrantsEnabled": false}'
+api GET "/$CORE_R/clients?clientId=mimernu-webapi"
+webapi=$(jq -r '.[0].id' "$OUT")
+api GET "/$CORE_R/clients/$webapi/service-account-user"
+webapi_user=$(jq -r .id "$OUT")
+roles='[]'
+for role in "${core_roles[@]}"; do
+  api GET "/$CORE_R/roles/$role"
+  roles=$(jq --slurpfile r "$OUT" '. + $r' <<<"$roles")
+done
+api POST "/$CORE_R/users/$webapi_user/role-mappings/realm" "$roles"
 
 echo "done: $KC/realms/$R/account"

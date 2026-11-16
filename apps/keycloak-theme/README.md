@@ -23,19 +23,33 @@ pnpm preview:stop
 - Login: http://localhost:18080/realms/mimer-contacts/account (`198501011236` / `Test1234!`)
 - Mail (password reset, set password): http://localhost:18025
 
-The local realm also has the clients core uses, with the same names as in dev, so core's
-registration and contact_code code can run against it. Point core at it with:
+The local realm also has the clients core uses, with the same names as in dev, so the
+whole registration and login chain (Mina sidor and the .NET API in Keycloak mode, core,
+contacts and leasing) can run against it. Point core at it with:
 
 ```sh
 AUTH__KEYCLOAK__URL=http://localhost:18080
+AUTH__KEYCLOAK__REALM=onecore-local
 AUTH__KEYCLOAK__CONTACTS__CLIENT_SECRET=mina-sidor-secret
 AUTH__KEYCLOAK__CONTACTS__PROVISIONING__CLIENT_SECRET=provisioning-secret
 AUTH__KEYCLOAK__CONTACTS__SET_PASSWORD_REDIRECT_URI=https://localhost:3000/mina-sidor/
 ```
 
-`AUTH__KEYCLOAK__URL` is also where core checks staff tokens (the `onecore` realm),
-which this Keycloak doesn't have, so set it only for a core run that exercises the
-tenant realm.
+`AUTH__KEYCLOAK__URL` is also where core checks staff and service tokens, so the script
+creates `onecore-local` to stand in for the `onecore` realm. It holds only the .NET API's
+service client, `mimernu-webapi` / `webapi-secret`, with the realm roles `api-access`,
+`contacts:register` and `contact-auth`. Staff logins (internal portal, property tree)
+don't work against it. In the .NET API's user-secrets:
+
+```sh
+KeycloakConfiguration:Enabled=true
+KeycloakConfiguration:Authority=http://localhost:18080/realms/mimer-contacts
+OneCoreConfiguration:ContactAuthClientId=mimernu-webapi
+OneCoreConfiguration:ContactAuthClientSecret=webapi-secret
+```
+
+and in Mina sidor's `.env`, `VUE_APP_KEYCLOAK_URL=http://localhost:18080`, served with
+`pnpm run serve -- --https`.
 
 ### What a shared realm needs
 
@@ -50,8 +64,10 @@ and prod, `mimer-contacts` is set up by hand, so check each of these there:
   Keycloak 26 drops an undeclared attribute without an error. First name, last name and
   e-mail not required, or a new user is stopped at an "update profile" page.
 - **`mina-sidor` client:** a single-valued user-attribute mapper for `contact_code`
-  into the access token. Core's `AUTH__KEYCLOAK__CONTACTS__SET_PASSWORD_REDIRECT_URI`
-  must be one of its valid redirect URIs, or Keycloak refuses the set-password e-mail.
+  into the access token, and an audience mapper adding `webapi` (the .NET API's
+  `KeycloakConfiguration:Audience`), or the .NET API rejects the token. Core's
+  `AUTH__KEYCLOAK__CONTACTS__SET_PASSWORD_REDIRECT_URI` must be one of its valid
+  redirect URIs, or Keycloak refuses the set-password e-mail.
 - **`mimer-contacts-provisioning` client:** service account with `realm-management`
   `view-users` and `manage-users`.
 
