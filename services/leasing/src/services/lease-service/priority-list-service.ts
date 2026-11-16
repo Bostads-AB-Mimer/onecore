@@ -207,6 +207,8 @@ const assignPriorityToApplicantBasedOnRentalRules = (
 // date is missing or still ahead.
 const isLeaseActiveOrUpcoming = (lease: Lease): boolean => {
   if (lease.status === LeaseStatus.Ended) return false
+  // No end date: the lease counts. That includes a lease under notice
+  // (AboutToEnd) without an end date, until Tenfast archives it.
   if (!lease.lastDebitDate) return true
 
   return new Date() < new Date(lease.lastDebitDate)

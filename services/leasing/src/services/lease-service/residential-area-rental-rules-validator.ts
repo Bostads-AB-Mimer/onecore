@@ -49,10 +49,13 @@ const isHousingContractsOfApplicantInSameAreaAsListing = (
   return false
 }
 
-// A parking space lease under notice, given notice on or ended does not count
-// when the rental rules choose between Additional and Replace. Replace means
-// "I will give notice on my current space", so a space the tenant has already
-// given notice on must not force it.
+// A parking space lease the tenant has given notice on does not count when
+// the rental rules choose between Additional and Replace. Replace means "I will
+// give notice on my current space", so a space the tenant has already given
+// notice on must not force it. That includes a notice not yet signed
+// (PreliminaryTerminated), as agreed with product.
+// Ended is a guard only: getTenant already drops ended leases through
+// isLeaseActiveOrUpcoming.
 const parkingSpaceLeaseStatusesNotCounted = [
   LeaseStatus.PreliminaryTerminated,
   LeaseStatus.AboutToEnd,
