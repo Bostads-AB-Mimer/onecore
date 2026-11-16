@@ -2255,6 +2255,8 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: A technical error has occured.
+   *       '503':
+   *         description: The internal credit check could not be done because invoices are temporarily unavailable. error is fetch-invoices-failed. Trying again later may work.
    *     security:
    *       - bearerAuth: []
    */
@@ -2365,6 +2367,8 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: A technical error has occured.
+   *       '503':
+   *         description: The internal credit check could not be done because invoices are temporarily unavailable (errorCode service-unavailable). Trying again later may work.
    *     security:
    *       - bearerAuth: []
    */

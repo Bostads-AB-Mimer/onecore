@@ -164,6 +164,7 @@ export const createLeaseForExternalParkingSpace = async (
         logger.error(
           {
             err: debtCollectionInvoices.err,
+            status: debtCollectionInvoices.statusCode,
             rentalObjectCode: listing.rentalObjectCode,
             contactCode: applicantContact.contactCode,
           },
@@ -172,7 +173,8 @@ export const createLeaseForExternalParkingSpace = async (
         return {
           processStatus: ProcessStatus.failed,
           error: 'fetch-invoices-failed',
-          httpStatus: 500,
+          // 503 tells the caller that trying again later may work.
+          httpStatus: debtCollectionInvoices.err === 'unavailable' ? 503 : 500,
           response: {
             message: `Could not fetch invoices for applicant.`,
           },

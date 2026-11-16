@@ -116,6 +116,72 @@ describe('makeXledgerRequest rate limiting', () => {
   })
 })
 
+describe('makeXledgerRequest when Xledger is unavailable', () => {
+  const defaultPolicy = { ...adapter.xledgerRequestPolicy }
+
+  beforeEach(() => {
+    adapter.setXledgerRequestPolicy({
+      baseDelayMs: 1,
+      maxDelayMs: 5,
+      unavailableMaxAttempts: 3,
+    })
+  })
+
+  afterEach(() => {
+    adapter.setXledgerRequestPolicy(defaultPolicy)
+  })
+
+  it('retries after a 503 and succeeds', async () => {
+    nock(origin).post(pathname).reply(503)
+    nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+    expect(nock.isDone()).toBe(true)
+  })
+
+  it('gives up after unavailableMaxAttempts with XledgerUnavailableError', async () => {
+    const scope = nock(origin).post(pathname).times(3).reply(503)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    const result = adapter.getInvoiceMatchId('1')
+
+    await expect(result).rejects.toBeInstanceOf(adapter.XledgerUnavailableError)
+    await expect(result).rejects.toMatchObject({ status: 503 })
+    expect(scope.isDone()).toBe(true)
+    expect(extra.isDone()).toBe(false)
+  })
+
+  it.each([502, 504])('retries a read after a %i', async (status) => {
+    nock(origin).post(pathname).reply(status)
+    nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+  })
+
+  it.each(['ECONNREFUSED', 'ECONNRESET'])(
+    'retries a read after %s',
+    async (code) => {
+      nock(origin).post(pathname).replyWithError({ code })
+      nock(origin).post(pathname).reply(200, matchIdBody)
+
+      await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+    }
+  )
+
+  it('rethrows other errors unchanged', async () => {
+    nock(origin).post(pathname).reply(400)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    const result = adapter.getInvoiceMatchId('1')
+
+    await expect(result).rejects.not.toBeInstanceOf(
+      adapter.XledgerUnavailableError
+    )
+    await expect(result).rejects.toThrow(/status code 400/)
+    expect(extra.isDone()).toBe(false)
+  })
+})
+
 describe(adapter.getInvoicesByContactCode, () => {
   it('returns null when customer does not exist', async () => {
     nock(origin).post(pathname).reply(200, {
@@ -822,6 +888,19 @@ describe(adapter.updateInvoiceDeferralDate, () => {
       updateArTransactions: { edges: [{ node: { dbId: 298929893 } }] },
     },
   }
+
+  it('does not retry the mutation when Xledger is unavailable, since it may have been applied', async () => {
+    nock(origin).post(pathname).reply(200, mockDbIdResponse)
+    nock(origin).post(pathname).reply(200, mockInvoiceResponse(null))
+    const mutation = nock(origin).post(pathname).reply(503)
+    const retry = nock(origin).post(pathname).reply(200, mutationReply)
+
+    await expect(
+      adapter.updateInvoiceDeferralDate(invoiceNumber, newDueDate)
+    ).rejects.toBeInstanceOf(adapter.XledgerUnavailableError)
+    expect(mutation.isDone()).toBe(true)
+    expect(retry.isDone()).toBe(false)
+  })
 
   it('sends "Anstånd till YYYY-MM-DD" as text variable when invoice has no existing text', async () => {
     let mutationBody: any

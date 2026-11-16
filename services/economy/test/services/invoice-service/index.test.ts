@@ -46,6 +46,38 @@ describe('Invoice Service', () => {
       expect(res.status).toBe(400)
     })
 
+    it('responds with 503 and xledger-unavailable when Xledger is unavailable', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
+        .mockRejectedValueOnce(new xledgerAdapter.XledgerUnavailableError(503))
+      jest
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([])
+
+      const res = await request(app.callback()).get(
+        `/invoices/bycontactcode/P123456`
+      )
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('xledger-unavailable')
+    })
+
+    it('responds with 500 on other errors', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
+        .mockRejectedValueOnce(new Error('Something broke'))
+      jest
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([])
+
+      const res = await request(app.callback()).get(
+        `/invoices/bycontactcode/P123456`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBeUndefined()
+    })
+
     it('responds with invoices', async () => {
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
