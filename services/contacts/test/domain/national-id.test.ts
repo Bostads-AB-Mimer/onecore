@@ -138,6 +138,18 @@ describe('storedCenturyMatches', () => {
     expect(storedCenturyMatches(BORN_2005, '200505059816', null)).toBe('same')
   })
 
+  // The SQL strips spaces before matching, the parser rejects them. Twelve
+  // digits carry the century, so comparing the digits is enough.
+  it('is the same for a twelve-digit contact the parser rejects', () => {
+    expect(storedCenturyMatches(BORN_2005, '20050505 9816', null)).toBe('same')
+  })
+
+  it('is different for a twelve-digit contact from another century', () => {
+    expect(storedCenturyMatches(BORN_2005, '190505059816', null)).toBe(
+      'different'
+    )
+  })
+
   it('takes the century from birthdate when it is the date in the number', () => {
     expect(storedCenturyMatches(BORN_1905, STORED_TEN, '1905-05-05')).toBe(
       'same'

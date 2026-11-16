@@ -118,11 +118,18 @@ export const loginContactCandidates = async (
       r.storedNationalId,
       r.birthDate
     )
+    // Code only: the personnummer stays out of the logs.
     if (match === 'unknown') {
-      // Code only: the personnummer stays out of the logs.
       logger.warn(
         { contactCode: r.contactCode.trim() },
         'loginContactCandidates: ten-digit personnummer without a known century, kept as a candidate'
+      )
+    } else if (match === 'different') {
+      // Expected, but it can leave a person with no login contact while the
+      // duplicate check still blocks creating one. This line explains that.
+      logger.info(
+        { contactCode: r.contactCode.trim() },
+        'loginContactCandidates: ten-digit personnummer from another century, left out'
       )
     }
     return match !== 'different'

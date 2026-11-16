@@ -116,10 +116,12 @@ export const storedCenturyMatches = (
   const lookedUp = getBirthDateFromNationalId(twelveDigits)
   if (!lookedUp) return 'unknown'
 
-  if (stored.replace(/\D/g, '').length === 12) {
-    return getBirthDateFromNationalId(stored) === lookedUp
-      ? 'same'
-      : 'different'
+  // Twelve digits carry the century. Compared as digits, not parsed: the SQL
+  // strips separators and spaces before matching, but the parser rejects a
+  // value with a space and would drop a correct contact.
+  const storedDigits = stored.replace(/\D/g, '')
+  if (storedDigits.length === 12) {
+    return storedDigits === twelveDigits ? 'same' : 'different'
   }
 
   // YY-MM-DD: the part of the date that ten digits do carry.
