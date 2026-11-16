@@ -394,8 +394,15 @@ export const TenfastAutogiroConsentSchema = z.object({
   payerBankAccountNumber: z.string(),
 })
 
+// A search also returns cancelled consents, and those can lack the payer fields
+// (seen in prod Nov 2026), so records are first read for their status only and
+// the active consent is then parsed with TenfastAutogiroConsentSchema.
 export const TenfastAutogiroConsentResponseSchema = z.object({
-  records: z.array(TenfastAutogiroConsentSchema),
+  records: z.array(
+    z
+      .object({ status: z.enum(['ACTIVE', 'MANUAL', 'CANCELLED']) })
+      .passthrough()
+  ),
   prev: z.string().nullable(),
   next: z.string().nullable(),
   totalCount: z.number(),

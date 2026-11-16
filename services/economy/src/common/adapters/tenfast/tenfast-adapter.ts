@@ -25,6 +25,7 @@ import {
   TenfastOutboundExportListSchema,
   TenfastOutboundExport,
   TenfastAutogiroConsentResponseSchema,
+  TenfastAutogiroConsentSchema,
   TenfastAutogiroConsent,
   isVisibleTenfastInvoice,
   TenfastInvoice,
@@ -1664,45 +1665,76 @@ export const getAutogiroConsentByNationalRegistrationNumber = async (
   nationalRegistrationNumber: string
 ): Promise<AdapterResult<TenfastAutogiroConsent | null, string>> => {
   try {
-    // payerSSN in autogiro consent has a dash before the last 4 digits, we need to add it to nationalRegistrationNumber if missing
-    const formattedNationalRegistrationNumber =
-      nationalRegistrationNumber.includes('-')
-        ? nationalRegistrationNumber
-        : `${nationalRegistrationNumber.slice(0, -4)}-${nationalRegistrationNumber.slice(-4)}`
-
-    const autogiroConsentResponse = await makeTenfastRequest(
-      '/v1/hyresvard/autogiro/consents/search',
-      {
-        params: {
-          'filter[payerSSN]': formattedNationalRegistrationNumber,
-          limit: 1,
-        },
-      }
+    const responses = await Promise.all(
+      payerSsnForms(nationalRegistrationNumber).map((payerSSN) =>
+        makeTenfastRequest('/v1/hyresvard/autogiro/consents/search', {
+          // More than one, so an older cancelled consent cannot hide an
+          // active one.
+          params: { 'filter[payerSSN]': payerSSN, limit: 10 },
+        })
+      )
     )
-    if (autogiroConsentResponse.status !== 200) {
-      return {
-        ok: false,
-        err: autogiroConsentResponse.statusText,
-        statusCode: autogiroConsentResponse.status,
-      }
+
+    const failed = responses.find((response) => response.status !== 200)
+    if (failed) {
+      return { ok: false, err: failed.statusText, statusCode: failed.status }
     }
 
-    const parsedResponse = TenfastAutogiroConsentResponseSchema.safeParse(
-      autogiroConsentResponse.data
+    const records = []
+    for (const response of responses) {
+      const parsed = TenfastAutogiroConsentResponseSchema.safeParse(
+        response.data
+      )
+      if (!parsed.success) {
+        logger.warn(JSON.stringify(parsed.error, null, 2))
+        return { ok: false, err: 'schema-error' }
+      }
+      records.push(...parsed.data.records)
+    }
+
+    const activeConsent = records.find(
+      (record) => record.status !== 'CANCELLED'
     )
-    if (!parsedResponse.success) {
-      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+    if (!activeConsent) return { ok: true, data: null }
+
+    const parsedConsent = TenfastAutogiroConsentSchema.safeParse(activeConsent)
+    if (!parsedConsent.success) {
+      logger.warn(JSON.stringify(parsedConsent.error, null, 2))
       return { ok: false, err: 'schema-error' }
     }
 
-    return {
-      ok: true,
-      data: parsedResponse.data.records[0] ?? null,
-    }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+    return { ok: true, data: parsedConsent.data }
+  } catch (err: unknown) {
+    // Never the raw error: an AxiosError carries the request headers,
+    // including the API token.
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { status, error: errorMessage(err) },
+      'tenfast-adapter.getAutogiroConsentByNationalRegistrationNumber'
+    )
+    return { ok: false, err: errorMessage(err) }
   }
+}
+
+/**
+ * The payerSSN forms to search autogiro consents by. Tenfast stores payerSSN
+ * with a dash before the last four digits, mostly as YYYYMMDD-NNNN but for a
+ * few consents as YYMMDD-NNNN (2 of 500 sampled in prod, Nov 2026), so a
+ * twelve-digit number is searched in both forms.
+ */
+export const payerSsnForms = (nationalRegistrationNumber: string): string[] => {
+  const digits = nationalRegistrationNumber.replace(/[^0-9]/g, '')
+  const withDash = (value: string) => `${value.slice(0, -4)}-${value.slice(-4)}`
+
+  if (digits.length === 12) {
+    return [withDash(digits), withDash(digits.slice(2))]
+  }
+
+  return [
+    nationalRegistrationNumber.includes('-')
+      ? nationalRegistrationNumber
+      : withDash(nationalRegistrationNumber),
+  ]
 }
 
 const emptyToUndefined = (

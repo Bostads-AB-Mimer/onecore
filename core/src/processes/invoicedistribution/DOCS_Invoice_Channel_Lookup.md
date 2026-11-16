@@ -15,16 +15,23 @@ flowchart LR
 A[Start: Kundkort ->
 Betalningsflik öppnas] --> B{Har Autogiro-<br/>medgivande?}
 B --> |Yes| C[Visa: Autogiro]
+B --> |Fel vid hämtning| X[Visa: Kunde inte hämtas]
 B --> |No| D(Hämta Aviseringskanal<br/>från Strålfors)
+D --> |Fel vid hämtning| X
 D --> E{availableInChannels<br/>innehåller e-faktura?}
 E --> |Yes| F[Visa: E-faktura]
-E --> |No| H{availableInChannels<br/>innehåller Kivra?}
+E --> |No| EB{Fel på<br/>e-faktura B2B?}
+EB --> |Yes| X
+EB --> |"No (fel på B2C ignoreras)"| H{availableInChannels<br/>innehåller Kivra?}
 H --> |Yes| I[Visa: Kivra]
-H --> |No| G[Visa: Pappersfaktura]
+H --> |No| K{Fel på Kivra?}
+K --> |Yes| X
+K --> |No| G[Visa: Pappersfaktura]
 C --> O[End]
 F --> O
 I --> O
 G --> O
+X --> O
 ```
 
 ## Sekvensdiagram
@@ -73,8 +80,10 @@ sequenceDiagram
 
 ## Att känna till
 
-- Uppslaget svarar bara på vilka kanaler mottagaren **finns** i, inte vilken Strålfors kommer att använda, och `availableInChannels` kommer inte i prioritetsordning (t.ex. `["Kivra", "eInvoiceB2C"]`). `property-tree` tillämpar därför Strålfors egen prioritering, e-faktura (`eInvoiceB2C`/`eInvoiceB2B`) → Kivra → pappersfaktura, så att etiketten visar det aviseringssätt kunden faktiskt får (`features/tenants/lib/invoiceDeliveryMethod.ts`).
-- **Felfall i UI:t.** Går det inte att avgöra aviseringssättet visas "Kunde inte hämtas" i stället för ett gissat värde. Det gäller när autogiro-förfrågan misslyckas, när kanalslagningen misslyckas för en kund utan autogiromedgivande, och när Strålfors rapporterar fel (`channelErrors`) för en kanal med högre prioritet än den bästa tillgängliga (t.ex. Kivra tillgänglig men fel på e-faktura). En kund med autogiromedgivande visas som "Autogiro" även om kanalslagningen misslyckas. Att medgivande saknas (404) räknas inte som ett fel.
+- Uppslaget svarar bara på vilka kanaler mottagaren **finns** i, inte vilken Strålfors kommer att använda, och `availableInChannels` kommer inte i prioritetsordning (t.ex. `["Kivra", "eInvoiceB2C"]`). `property-tree` tillämpar därför Strålfors egen prioritering, e-faktura (`eInvoiceB2C`/`eInvoiceB2B`) → Kivra → pappersfaktura, så att etiketten visar det aviseringssätt kunden får och faktureras för (`features/tenants/lib/invoiceDeliveryMethod.ts`).
+- **Felfall i UI:t.** Går det inte att avgöra aviseringssättet visas "Kunde inte hämtas" i stället för ett gissat värde. Det gäller när autogiro-förfrågan misslyckas, när kanalslagningen misslyckas för en kund utan autogiromedgivande, och när Strålfors rapporterar fel (`channelErrors`) för en kanal med högre prioritet än den bästa tillgängliga (t.ex. Kivra ej tillgänglig men fel på Kivra, eller Kivra tillgänglig men fel på e-faktura B2B). En kund med autogiromedgivande visas som "Autogiro" även om kanalslagningen misslyckas. Att medgivande saknas (404) räknas inte som ett fel.
+- **Fel på e-faktura B2C ignoreras.** Strålfors svarar med ett fel för `eInvoiceB2C` (från Eurodoc: "Lookup Nets 2 for NETS secondary aliases accepts norwegian issuers only") i stället för "ej tillgänglig" för alla privatpersoner som inte har e-faktura (uppmätt i prod november 2026, AVTAL-536). Tenfast bortser från felet när de väljer kanal och fakturaavgift, så property-tree gör detsamma och visar nästa tillgängliga kanal (Kivra eller pappersfaktura). Det som visas stämmer då med det kunden faktureras för. Strålfors ger ingen felkod, så alla fel på B2C ignoreras, även ett verkligt avbrott: en kund med e-faktura visas då med nästa kanal, precis som Tenfast fakturerar. Undantaget tas bort när Strålfors svarar "ej tillgänglig" för dessa mottagare.
+- **Autogiromedgivandet hämtas från Tenfast** (`/v1/hyresvard/autogiro/consents/search`, sökt på `payerSSN`). Tenfast lagrar oftast `payerSSN` som `ÅÅÅÅMMDD-NNNN` men för några medgivanden som `ÅÅMMDD-NNNN` (2 av 500 i prod november 2026), så ett tolvsiffrigt personnummer söks i båda formerna. Uppsagda medgivanden (`CANCELLED`) räknas inte som autogiro. En okänd status ger fel, inte "inget medgivande".
 - Det här är ett rent uppslag — det skickar ingen faktura och påverkar inte vilken kanal Strålfors faktiskt använder när en fil väl skickas (se [Överför Filer till Strålfors](./DOCS_Transfer_Files_to_Stralfors.md)).
 - `recipientId` skickas in som personnummer/organisationsnummer från UI:t; Economy strippar bort allt utom siffror innan det skickas vidare till Strålfors.
 - **Kanalslagningen styr även om en fakturaavgift läggs på avin.** Tenfast hämtar kanalinformationen via samma `/invoice-channels`-endpoint som property-tree använder (autentiserat med en egen roll, `invoice-channels:read`), och avgör själva utifrån svaret om en fakturaavgift (t.ex. för pappersfaktura) ska läggas på, enligt Mimers inställning för det aktuella aviseringssättet. Onecore gör alltså den faktiska Strålfors-slagningen även i det här fallet — men beräknar, ser eller påverkar inte avgiften själv, bara vilken kanal som väljs.
