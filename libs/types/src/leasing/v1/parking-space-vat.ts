@@ -27,12 +27,15 @@ export type ParkingSpaceVatDecision = z.infer<
 >
 
 // Swedish text for staff, per reason. The reason decides VAT, so the text
-// covers both.
+// covers both. Housing contracts reach Tenfast from Xpand only once signed,
+// so the VAT texts say that an unsigned contract can be why none is seen.
 export const ParkingSpaceVatDecisionLabel: Record<
   ParkingSpaceVatReason,
   string
 > = {
   'housing-contract-in-area': 'Ingen moms – bostadskontrakt finns i området',
-  'no-housing-contract-in-area': 'Moms – inget bostadskontrakt i området',
-  'not-a-tenant': 'Moms – kunden är inte hyresgäst',
+  'no-housing-contract-in-area':
+    'Moms – inget signerat bostadskontrakt i området. Ett osignerat kontrakt i Xpand syns inte förrän det är signerat.',
+  'not-a-tenant':
+    'Moms – kunden har inget kontrakt i Tenfast. Ett osignerat kontrakt i Xpand syns inte förrän det är signerat.',
 }
