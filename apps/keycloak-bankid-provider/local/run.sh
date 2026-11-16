@@ -10,11 +10,15 @@
 # Mock mode needs Docker, Node 22 and python3 and talks to no real system.
 #
 # Real mode needs a test BankID (demo.bankid.com) for <pnr> in the BankID app's test mode, and
-# reads the MimerMinaSidor TEST settings (read-only) from the webapi secret in the epic environment:
+# reads the Mimer BankID TEST settings (read-only) from the webapi secret in the epic environment.
+# Those are Mina sidor's client; Keycloak's own client is used by overriding the three below:
 #   BANKID_KUBE_CONTEXT    default onecore-dev
 #   BANKID_KUBE_NAMESPACE  default epic-mim-2086
+#   BANKID_CLIENT_ID       Entra client id; default: the cluster's BankIdConfiguration__ClientId
 #   BANKID_SECRET_FILE     default ~/.config/mimer/bankid-test-client-secret; when it exists, the client
-#                          secret comes from this file instead of the cluster (to try a new value first)
+#                          secret comes from this file instead of the cluster
+#   BANKID_APIM_KEY_FILE   default ~/.config/mimer/bankid-test-apim-key; when it exists, the APIM
+#                          subscription key comes from this file instead of the cluster
 # Secrets only ever land in local/vault/ (git-ignored), which `down` deletes. Nothing is written to the cluster.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -52,16 +56,24 @@ if [[ $MODE == real ]]; then
   CTX=${BANKID_KUBE_CONTEXT:-onecore-dev}
   NS=${BANKID_KUBE_NAMESPACE:-epic-mim-2086}
   SECRET_FILE=${BANKID_SECRET_FILE:-$HOME/.config/mimer/bankid-test-client-secret}
+  APIM_KEY_FILE=${BANKID_APIM_KEY_FILE:-$HOME/.config/mimer/bankid-test-apim-key}
   val() { kubectl --context "$CTX" -n "$NS" get secret webapi-secrets -o "jsonpath={.data.BankIdConfiguration__$1}" | base64 -d; }
 
   echo "Reading Mimer BankID TEST settings from $CTX/$NS webapi-secrets"
   GATEWAY_URL=$(val ApiUrl)
   AUTHORITY=$(val Authority)
-  CLIENT_ID=$(val ClientId)
+  CLIENT_ID=${BANKID_CLIENT_ID:-$(val ClientId)}
+  echo "Client id: $CLIENT_ID"
   SCOPE=$(val Scopes | cut -d, -f1)
   A=${AUTHORITY%/}
   TOKEN_URL=$([[ $A == */oauth2/v2.0/token ]] && echo "$A" || echo "$A/oauth2/v2.0/token")
-  ( umask 077; val OcpApimSubscriptionKey > $APIM_VAULT )
+  if [[ -s $APIM_KEY_FILE ]]; then
+    echo "APIM key: $APIM_KEY_FILE"
+    ( umask 077; tr -d '\r\n' < "$APIM_KEY_FILE" > $APIM_VAULT )
+  else
+    echo "APIM key: cluster (no $APIM_KEY_FILE)"
+    ( umask 077; val OcpApimSubscriptionKey > $APIM_VAULT )
+  fi
   if [[ -s $SECRET_FILE ]]; then
     echo "Client secret: $SECRET_FILE"
     ( umask 077; tr -d '\r\n' < "$SECRET_FILE" > $SECRET_VAULT )
@@ -70,8 +82,8 @@ if [[ $MODE == real ]]; then
     ( umask 077; val Secret > $SECRET_VAULT )
   fi
 
-  # Fail fast on the Entra step before waiting for Keycloak. The secret is read from the file by
-  # curl, so it never appears on a command line; only the status and the AADSTS code are shown.
+  # Fail fast before waiting for Keycloak. Secrets are read from files by curl, so they never appear
+  # on a command line; only HTTP statuses and the AADSTS code are shown.
   echo "Checking the client secret with Entra"
   resp=$(curl -s -w '\n%{http_code}' "$TOKEN_URL" -d grant_type=client_credentials \
     --data-urlencode "client_id=$CLIENT_ID" --data-urlencode "scope=$SCOPE" \
@@ -83,6 +95,24 @@ if [[ $MODE == real ]]; then
     exit 1
   fi
   echo "Entra accepted the client secret"
+
+  # Reading a transaction that does not exist proves the rest without creating anything:
+  # 404 = token, role Transaction.Read, ValidClients entry and APIM key all accepted.
+  echo "Checking access to Mimer BankID"
+  token=$(sed '$d' <<<"$resp" | jq -r .access_token)
+  code=$(curl -s -o /dev/null -w '%{http_code}' -H @- \
+    "${GATEWAY_URL%/}/transactions/00000000-0000-0000-0000-000000000000" <<EOH
+Authorization: Bearer $token
+Ocp-Apim-Subscription-Key: $(cat $APIM_VAULT)
+EOH
+  )
+  unset token
+  case $code in
+    404) echo "Mimer BankID accepted the client" ;;
+    401) echo "Mimer BankID answered 401: APIM subscription key or token not accepted"; exit 1 ;;
+    403) echo "Mimer BankID answered 403: client lacks Transaction.Read or is not in ValidClients (bankid-api release)"; exit 1 ;;
+    *) echo "Mimer BankID answered HTTP $code"; exit 1 ;;
+  esac
 else
   GATEWAY_URL=http://host.docker.internal:4010/api/
   TOKEN_URL=http://host.docker.internal:4010/oauth2/v2.0/token
