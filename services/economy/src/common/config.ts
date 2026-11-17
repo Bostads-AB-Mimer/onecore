@@ -38,6 +38,7 @@ export interface Config {
     sftp: SftpConfig
     requestPolicy: {
       maxAttempts: number
+      unavailableMaxAttempts: number
       baseDelayMs: number
       maxDelayMs: number
       timeoutMs: number
@@ -181,6 +182,9 @@ const config = configPackage({
       // Timeout is generous: the invoices tab can take >15 s for tenants with many leases.
       requestPolicy: {
         maxAttempts: 5,
+        // Xledger is down for a moment now and then. A planned outage lasts
+        // longer, so this only covers the short blips.
+        unavailableMaxAttempts: 3,
         baseDelayMs: 1000,
         maxDelayMs: 10_000,
         timeoutMs: 60_000,

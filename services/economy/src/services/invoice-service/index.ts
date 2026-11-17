@@ -17,6 +17,7 @@ import {
   getInvoicePaymentEvents,
   getMiscellaneousInvoices,
   submitMiscellaneousInvoice,
+  XledgerUnavailableError,
 } from '../common/adapters/xledger-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
@@ -316,14 +317,22 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(invoices, metadata)
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(
         { err: error, contactCode: contactCode },
         'Error getting invoices for contact code'
       )
+      if (error instanceof XledgerUnavailableError) {
+        ctx.status = 503
+        ctx.body = {
+          error: 'xledger-unavailable',
+          message: error.message,
+        }
+        return
+      }
       ctx.status = 500
       ctx.body = {
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
       }
     }
   })

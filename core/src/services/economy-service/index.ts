@@ -15,6 +15,24 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import config from '../../common/config'
 
+const invoicesErrorStatus: Record<
+  economyAdapter.GetInvoicesByContactCodeError,
+  number
+> = {
+  'not-found': 404,
+  unavailable: 503,
+  unknown: 500,
+}
+
+const invoicesErrorText: Record<
+  economyAdapter.GetInvoicesByContactCodeError,
+  string
+> = {
+  'not-found': 'Not found',
+  unavailable: 'Service unavailable',
+  unknown: 'Unknown error',
+}
+
 /**
  * @swagger
  * openapi: 3.0.0
@@ -53,7 +71,11 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!result.ok) {
-      ctx.status = result.err === 'not-found' ? 404 : 500
+      ctx.status = invoicesErrorStatus[result.err]
+      ctx.body = {
+        error: invoicesErrorText[result.err],
+        reason: result.err,
+      }
       return
     } else {
       ctx.status = 200
@@ -112,9 +134,10 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!result.ok) {
-      ctx.status = result.err === 'not-found' ? 404 : 500
+      ctx.status = invoicesErrorStatus[result.err]
       ctx.body = {
-        error: result.err === 'not-found' ? 'Not found' : 'Unknown error',
+        error: invoicesErrorText[result.err],
+        reason: result.err,
       }
       return
     } else {

@@ -139,7 +139,7 @@ export async function getInvoicePaymentEvents(
 export async function getInvoicesByContactCode(
   contactCode: string,
   filters?: { from?: Date }
-): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
+): Promise<AdapterResult<Invoice[], GetInvoicesByContactCodeError>> {
   const url = `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
   try {
     const response = await axios.get(url, {
@@ -148,23 +148,39 @@ export async function getInvoicesByContactCode(
     })
 
     if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
+      return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
     }
 
+    // The invoice source is temporarily down. Economy has already logged it
+    // as an error, so a warning is enough here.
+    if (response.status === 503) {
+      logger.warn(
+        { status: response.status },
+        'economy-adapter.getInvoicesByContactCode: invoice source unavailable'
+      )
+      return { ok: false, err: 'unavailable', statusCode: 503 }
+    }
+
     logger.error(
       { status: response.status },
       'economy-adapter.getInvoicesByContactCode'
     )
-    return { ok: false, err: 'unknown' }
-  } catch (err: any) {
-    logger.error(err, 'economy-adapter.getInvoicesByContactCode')
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: unknown) {
+    logger.error(
+      { error: errorMessage(err) },
+      'economy-adapter.getInvoicesByContactCode'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
+
+export type GetInvoicesByContactCodeError =
+  'not-found' | 'unavailable' | 'unknown'
 
 export type ImportInvoicesError = 'partial-upload' | 'export-failed' | 'unknown'
 
@@ -222,10 +238,14 @@ export async function importInvoices(
 export async function getInvoicesSentToDebtCollection(
   contactCode: string,
   from?: Date
-): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
+): Promise<AdapterResult<Invoice[], GetInvoicesByContactCodeError>> {
   const invoicesResult = await getInvoicesByContactCode(contactCode, { from })
   if (!invoicesResult.ok) {
-    return { ok: false, err: invoicesResult.err }
+    return {
+      ok: false,
+      err: invoicesResult.err,
+      statusCode: invoicesResult.statusCode,
+    }
   }
 
   // reference is the paying contact's code: cmctc.cmctckod from Xpand,

@@ -109,7 +109,8 @@ sequenceDiagram
     end
 
     break when fetching Invoices for Internal Credit Check fails
-        Core-->User: show error message
+        Note over Economy: Xledger down: retried, then 503
+        Core-->User: fetch-invoices-failed, 503 when invoices are temporarily unavailable, otherwise 500
     end
 
     alt Is Applicant Eligible for Lease

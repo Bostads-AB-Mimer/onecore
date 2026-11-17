@@ -44,7 +44,9 @@ describe('parkingspaces', () => {
       any
     >
     let getInvoicesSentToDebtCollectionSpy: jest.SpyInstance<
-      Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>>,
+      Promise<
+        AdapterResult<Invoice[], economyAdapter.GetInvoicesByContactCodeError>
+      >,
       [contactCode: string, from?: Date],
       any
     >
@@ -380,6 +382,37 @@ describe('parkingspaces', () => {
       expect(result.processStatus).toBe(ProcessStatus.failed)
       expect(result.httpStatus).toBe(400)
     })
+
+    it.each([
+      ['unavailable' as const, 503],
+      ['unknown' as const, 500],
+    ])(
+      'fails with fetch-invoices-failed and %s gives %i when invoices cannot be fetched',
+      async (err, httpStatus) => {
+        getContactSpy.mockResolvedValue({
+          ok: true,
+          data: mockedApplicantWithLeases,
+        })
+        getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
+        getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
+          ok: false,
+          err,
+          statusCode: httpStatus,
+        })
+
+        const result =
+          await parkingProcesses.createLeaseForExternalParkingSpace(
+            'foo',
+            'bar',
+            '2034-04-21'
+          )
+
+        if (result.processStatus !== ProcessStatus.failed)
+          throw new Error('expected the process to fail')
+        expect(result.error).toBe('fetch-invoices-failed')
+        expect(result.httpStatus).toBe(httpStatus)
+      }
+    )
 
     it('creates a contract if external credit check succeeds', async () => {
       createContractSpy.mockReset()
