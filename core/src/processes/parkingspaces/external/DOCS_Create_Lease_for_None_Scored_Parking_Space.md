@@ -22,7 +22,10 @@ F --> |Yes| H[Perform Internal Credit Check<br/>Debt Collection Invoices]
 L --> I{Is Applicant Eligible for Lease?}
 H --> I
 I --> |No| M[Send Notification to Applicant]
-I --> |Yes| T[Determine VAT Rate]
+I --> |Yes| S[Get Tenant's Housing Contracts]
+S --> U{Was the Lookup Successful?}
+U --> |No| O
+U --> |Yes| T[Determine VAT:<br/>no VAT with a housing contract<br/>in the residential area]
 T --> J[Create Lease]
 J --> K{Was Lease Created?}
 K --> |No| O
@@ -113,9 +116,16 @@ sequenceDiagram
     alt Is Applicant Eligible for Lease
         Core ->> Leasing: Get Tenant
         Leasing ->> XPandDB: Get Contact and Estate Codes
-        XPandDB -->> Leasing: Tenant
-        Leasing -->> Core: Tenant
-        note over Core: Determine VAT rate from tenant<br/>and residential area rules.
+        XPandDB -->> Leasing: Contact
+        Leasing ->> Tenfast: Get Leases
+        Tenfast -->> Leasing: Leases
+        Leasing -->> Core: Tenant, or 404: not a tenant, no tenant in Tenfast,<br/>no leases, or no valid housing contract
+
+        break when the Tenant lookup fails for any other reason (technical error)
+            Core-->User: 500 get-tenant-failed, no lease created
+        end
+
+        note over Core: VAT: none if the tenant has a current or upcoming<br/>housing contract in the parking space's residential area,<br/>otherwise VAT. A housing contract that has not reached<br/>Tenfast yet is not seen, so the lease gets VAT. That<br/>holds also when the contact has no tenant in Tenfast.
 
         note over Core: Start date: the one given, otherwise the day<br/>the parking space is free (vacantFrom, or today).
         Core ->> Leasing: Create Lease
@@ -141,7 +151,8 @@ sequenceDiagram
         Communication -->> User: Success Notification
         Core ->> Communication: Notify Leasing Team of Success
         Communication -->> LeasingTeam: Success Notification
-        Core -->> User: Lease Created
+        Core -->> User: Lease Created, with the VAT decision and its reason
+        note over User: The internal portal shows the VAT decision<br/>and writes it into the listing comment.
     else
         Core ->> Communication: Notify Applicant of Failure
         Communication -->> User: Failure Notification

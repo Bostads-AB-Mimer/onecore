@@ -27,6 +27,9 @@ type NonEmptyArray<T> = [T, ...T[]]
 const NOT_TENANT_ERRORS: GetTenantError[] = [
   'contact-not-found',
   'contact-not-tenant',
+  // An Xpand lease holder (ended leases count too) who has no tenant in
+  // Tenfast, e.g. a former tenant from before the Tenfast import.
+  'tenfast-tenant-not-found',
   'contact-leases-not-found',
   'no-valid-housing-contract',
 ]

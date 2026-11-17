@@ -594,6 +594,97 @@ describe('parkingspaces', () => {
       )
     })
 
+    describe('VAT decision', () => {
+      const createLease = () =>
+        parkingProcesses.createLeaseForExternalParkingSpace(
+          'foo',
+          'bar',
+          '2034-04-21'
+        )
+
+      it('creates the lease without VAT and says why when the tenant has a housing contract in the area', async () => {
+        getTenantByContactCodeSpy.mockResolvedValue({
+          ok: true,
+          data: mockedTenantWithHousingContractInSameArea,
+        })
+
+        const result = await createLease()
+
+        expect(createContractSpy).toHaveBeenLastCalledWith(
+          expect.any(String),
+          expect.any(String),
+          expect.any(String),
+          '001',
+          false
+        )
+        expect(result.response).toEqual(
+          expect.objectContaining({
+            vat: { includeVAT: false, reason: 'housing-contract-in-area' },
+          })
+        )
+      })
+
+      it.each([
+        [
+          'the tenant has housing only in another area',
+          {
+            ok: true as const,
+            data: mockedTenantWithHousingContractInDifferentArea,
+          },
+          'no-housing-contract-in-area',
+        ],
+        [
+          'the tenant has no valid housing contract',
+          { ok: false as const, err: 'no-valid-housing-contract' as const },
+          'no-housing-contract-in-area',
+        ],
+        [
+          'the contact is not a tenant',
+          { ok: false as const, err: 'contact-not-tenant' as const },
+          'not-a-tenant',
+        ],
+      ])(
+        'creates the lease with VAT and says why when %s',
+        async (_, tenantResult, reason) => {
+          getTenantByContactCodeSpy.mockResolvedValue(tenantResult)
+
+          const result = await createLease()
+
+          expect(createContractSpy).toHaveBeenLastCalledWith(
+            expect.any(String),
+            expect.any(String),
+            expect.any(String),
+            '001',
+            true
+          )
+          expect(result.response).toEqual(
+            expect.objectContaining({ vat: { includeVAT: true, reason } })
+          )
+        }
+      )
+
+      it.each(['unknown', 'contact-not-found'] as const)(
+        'creates no lease and returns get-tenant-failed when the tenant lookup fails with %s',
+        async (err) => {
+          createContractSpy.mockClear()
+          updateListingStatusSpy.mockClear()
+          getTenantByContactCodeSpy.mockResolvedValue({ ok: false, err })
+
+          const result = await createLease()
+
+          expect(result).toEqual(
+            expect.objectContaining({
+              processStatus: ProcessStatus.failed,
+              error: 'get-tenant-failed',
+              httpStatus: 500,
+            })
+          )
+          expect(createContractSpy).not.toHaveBeenCalled()
+          expect(updateListingStatusSpy).not.toHaveBeenCalled()
+        }
+      )
+    })
+
     it('does not create a contract if internal credit check fails', async () => {
       createContractSpy.mockReset()
       getContactSpy.mockResolvedValue({

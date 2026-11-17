@@ -365,11 +365,13 @@ const getTenantByContactCode = async (
       if (res.data?.type === 'no-valid-housing-contract') {
         return { ok: false, err: 'no-valid-housing-contract' }
       }
-      // 'contact-not-tenant' and 'contact-leases-not-found' both mean the
-      // contact has no tenancy.
+      // 'contact-not-tenant', 'contact-leases-not-found' and
+      // 'tenfast-tenant-not-found' (no tenant in Tenfast, e.g. a former
+      // tenant) all mean the contact has no tenancy.
       if (
         res.data?.type === 'contact-not-tenant' ||
-        res.data?.type === 'contact-leases-not-found'
+        res.data?.type === 'contact-leases-not-found' ||
+        res.data?.type === 'tenfast-tenant-not-found'
       ) {
         return { ok: false, err: 'contact-not-tenant' }
       }
