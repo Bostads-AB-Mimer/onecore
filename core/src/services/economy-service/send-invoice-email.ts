@@ -67,9 +67,52 @@ const sendEmail = async (params: {
   return result.ok ? { ok: true } : { ok: false, err: 'send-failed' }
 }
 
+type Recipient = { emailAddress: string; firstName: string }
+
+/*
+ * Who an invoice email goes to, from a contacts-service lookup. A protected
+ * identity the contacts service still returns redacted is not emailed, so the
+ * path fails closed.
+ */
+const toRecipient = (
+  contactResult: Awaited<
+    ReturnType<typeof tenantAwareContactLookup.getByContactCode>
+  >
+):
+  | { ok: true; data: Recipient }
+  | { ok: false; err: SendInvoiceEmailFailure } => {
+  if (!contactResult.ok) {
+    return {
+      ok: false,
+      err:
+        contactResult.err === 'not-found'
+          ? 'contact-not-found'
+          : 'contact-unknown',
+    }
+  }
+
+  const contact = contactResult.data
+  if (isRedactedProtectedIdentity(contact)) {
+    return { ok: false, err: 'protected-identity' }
+  }
+
+  const emailAddress =
+    contact.communication.emailAddresses.find((e) => e.isPrimary)
+      ?.emailAddress ?? contact.communication.emailAddresses[0]?.emailAddress
+  if (!emailAddress) return { ok: false, err: 'no-email' }
+
+  const firstName =
+    contact.type === 'individual'
+      ? (contact.personal.firstName ?? contact.personal.fullName)
+      : contact.organisation.name
+
+  return { ok: true, data: { emailAddress, firstName } }
+}
+
 /*
  * Emails a rent notice to the first tenant on its lease, with the PDF that
- * belongs to its OCR number attached.
+ * belongs to its OCR number attached. Contact details come from the contacts
+ * service; a protected identity that is not revealed is not emailed.
  */
 export const sendRentNoticeEmail = async (
   ocr: string
@@ -105,24 +148,13 @@ export const sendRentNoticeEmail = async (
   const contactCode = lease.tenantContactIds?.[0]
   if (!contactCode) return { ok: false, err: 'no-contact-code' }
 
-  const contactResult =
-    await leasingAdapter.getContactByContactCode(contactCode)
-  if (!contactResult.ok) {
-    return {
-      ok: false,
-      err:
-        contactResult.err === 'not-found'
-          ? 'contact-not-found'
-          : 'contact-unknown',
-    }
-  }
-
-  const contact = contactResult.data
-  if (!contact.emailAddress) return { ok: false, err: 'no-email' }
+  const recipient = toRecipient(
+    await tenantAwareContactLookup.getByContactCode(contactCode)
+  )
+  if (!recipient.ok) return recipient
 
   return sendEmail({
-    emailAddress: contact.emailAddress,
-    firstName: contact.firstName,
+    ...recipient.data,
     address: lease.rentalObject?.address ?? '',
     invoice,
     pdf: pdfResult.data.data,
@@ -153,34 +185,11 @@ export const sendMiscellaneousInvoiceEmail = async (
       }[fileResult.err],
     }
   }
-  if (!contactResult.ok) {
-    return {
-      ok: false,
-      err:
-        contactResult.err === 'not-found'
-          ? 'contact-not-found'
-          : 'contact-unknown',
-    }
-  }
-
-  const contact = contactResult.data
-  if (isRedactedProtectedIdentity(contact)) {
-    return { ok: false, err: 'protected-identity' }
-  }
-
-  const emailAddress =
-    contact.communication.emailAddresses.find((e) => e.isPrimary)
-      ?.emailAddress ?? contact.communication.emailAddresses[0]?.emailAddress
-  if (!emailAddress) return { ok: false, err: 'no-email' }
-
-  const firstName =
-    contact.type === 'individual'
-      ? (contact.personal.firstName ?? contact.personal.fullName)
-      : contact.organisation.name
+  const recipient = toRecipient(contactResult)
+  if (!recipient.ok) return recipient
 
   return sendEmail({
-    emailAddress,
-    firstName,
+    ...recipient.data,
     // A miscellaneous invoice is not tied to a rental object.
     address: '',
     invoice,

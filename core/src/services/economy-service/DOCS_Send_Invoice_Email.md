@@ -5,7 +5,9 @@ Invoices in the tenant ledger (property-tree) can be downloaded and emailed to t
 - **Download rent notice**: `GET /invoices/{ocr}/pdf`. Shown when the invoice has `hasRentNoticePdf`, which economy sets on invoices found in the rent system with an OCR number. Miscellaneous invoices keep their own "Se PDF" link (`invoiceFileUrl`). Invoices from the old system have no PDF.
 - **Email invoice**: `POST /invoices/{invoiceId}/send`. Works for rent notices with a PDF and for miscellaneous invoices with a ledger file.
 
-`POST /invoices/notify-batch` runs the same rent notice branch (`sendRentNoticeEmail`) for many OCR numbers. It reports failures as strings in `failed[]`, the same strings as before.
+`POST /invoices/notify-batch` runs the same rent notice branch (`sendRentNoticeEmail`) for many OCR numbers. It reports failures as strings in `failed[]`, the same strings as before (`toNotifyBatchError`); a tenant whose protected identity is still redacted is reported as `protected-identity`.
+
+Both branches take the recipient from the contacts service (`tenantAwareContactLookup`), never from leasing, and fail closed: a protected identity that is not revealed is not emailed. The email goes to the primary address, falling back to the first one. The greeting uses the first name (full name if missing) of a person, or the name of an organisation.
 
 Outside production every email goes to `config.emailAddresses.tenantDefault`.
 
@@ -30,9 +32,10 @@ flowchart TD
     C -->|Regular: rent notice| R1[In parallel: economy GET /invoices/by-ocr/:ocr<br/>and GET /invoices/:ocr/pdf]
     R1 -->|invoice or PDF missing| E404P
     R1 -->|error| E500
-    R1 --> R2[First lease id → leasing getLease → first tenant → leasing contact]
+    R1 --> R2[First lease id → leasing getLease → first tenant<br/>→ contacts service lookup of the tenant]
     R2 -->|no lease id / lease / tenant / contact| E422R
     R2 -->|contact lookup failed| E500
+    R2 -->|protected identity still redacted| E422R
     R2 -->|no email address| E422E
     R2 --> S
 

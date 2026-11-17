@@ -23,6 +23,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
+import type { Contact } from '@onecore/contacts/domain'
 import { economy } from '@onecore/types'
 
 import { requireRole } from '../../../middlewares/keycloak-auth'
@@ -30,6 +31,7 @@ import { routes } from '../index'
 import * as economyAdapter from '../../../adapters/economy-adapter'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import * as communicationAdapter from '../../../adapters/communication-adapter'
+import { tenantAwareContactLookup } from '../../../processes/contacts/protected-tenants'
 
 const INVOICE_DEFERRAL_ROLE = 'invoice-deferral'
 
@@ -356,10 +358,33 @@ describe('economy-service routes', () => {
       rentalObject: { address: 'Testgatan 1' },
     }
 
-    const mockContact = {
-      firstName: 'Anna',
-      emailAddress: 'anna@example.com',
-    }
+    // Only the fields the notification reads.
+    const mockContact = (
+      overrides: Partial<{
+        emails: { emailAddress: string; isPrimary: boolean }[]
+        protectedIdentity: boolean
+        fullName: string
+      }> = {}
+    ) =>
+      ({
+        contactCode: 'P174691',
+        type: 'individual',
+        protectedIdentity: overrides.protectedIdentity ?? false,
+        personal: {
+          firstName: 'Anna',
+          lastName: 'Andersson',
+          fullName: overrides.fullName ?? 'Anna Andersson',
+        },
+        communication: {
+          emailAddresses: (
+            overrides.emails ?? [
+              { emailAddress: 'anna@example.com', isPrimary: true },
+            ]
+          ).map((e) => ({ ...e, type: 'private' })),
+          phoneNumbers: [],
+          specialAttention: false,
+        },
+      }) as unknown as Contact
 
     const mockPdf = {
       data: Buffer.from('%PDF-1.4 mock'),
@@ -375,8 +400,8 @@ describe('economy-service routes', () => {
         .mockResolvedValue({ ok: true, data: mockPdf })
       jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease as any)
       jest
-        .spyOn(leasingAdapter, 'getContactByContactCode')
-        .mockResolvedValue({ ok: true, data: mockContact as any })
+        .spyOn(tenantAwareContactLookup, 'getByContactCode')
+        .mockResolvedValue({ ok: true, data: mockContact() })
       jest
         .spyOn(communicationAdapter, 'sendInvoiceNotificationEmail')
         .mockResolvedValue({ ok: true, data: null })
@@ -470,10 +495,9 @@ describe('economy-service routes', () => {
         .spyOn(economyAdapter, 'getInvoicePdf')
         .mockResolvedValue({ ok: true, data: mockPdf })
       jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease as any)
-      jest.spyOn(leasingAdapter, 'getContactByContactCode').mockResolvedValue({
-        ok: true,
-        data: { firstName: 'Anna', emailAddress: undefined } as any,
-      })
+      jest
+        .spyOn(tenantAwareContactLookup, 'getByContactCode')
+        .mockResolvedValue({ ok: true, data: mockContact({ emails: [] }) })
 
       const res = await request(app.callback())
         .post('/invoices/notify-batch')
@@ -485,6 +509,73 @@ describe('economy-service routes', () => {
       ])
     })
 
+    it('emails the primary address of the tenant from the contacts service', async () => {
+      setupHappyPath()
+
+      await request(app.callback())
+        .post('/invoices/notify-batch')
+        .send({ ocrs: ['552606001476999'] })
+
+      expect(tenantAwareContactLookup.getByContactCode).toHaveBeenCalledWith(
+        'P174691'
+      )
+      expect(
+        communicationAdapter.sendInvoiceNotificationEmail
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          firstName: 'Anna',
+          address: 'Testgatan 1',
+        })
+      )
+    })
+
+    it('adds to failed when the tenant is a protected identity returned redacted', async () => {
+      setupHappyPath()
+      jest
+        .spyOn(tenantAwareContactLookup, 'getByContactCode')
+        .mockResolvedValue({
+          ok: true,
+          data: mockContact({
+            protectedIdentity: true,
+            fullName: 'redacted',
+            emails: [{ emailAddress: 'redacted', isPrimary: true }],
+          }),
+        })
+
+      const res = await request(app.callback())
+        .post('/invoices/notify-batch')
+        .send({ ocrs: ['552606001476999'] })
+
+      expect(res.status).toBe(200)
+      expect(res.body.content.failed).toEqual([
+        { ocr: '552606001476999', error: 'protected-identity' },
+      ])
+      expect(
+        communicationAdapter.sendInvoiceNotificationEmail
+      ).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['not-found', 'not-found'],
+      ['unknown', 'unknown'],
+    ] as const)(
+      'adds to failed when the contact lookup answers %s',
+      async (lookupError, batchError) => {
+        setupHappyPath()
+        jest
+          .spyOn(tenantAwareContactLookup, 'getByContactCode')
+          .mockResolvedValue({ ok: false, err: lookupError })
+
+        const res = await request(app.callback())
+          .post('/invoices/notify-batch')
+          .send({ ocrs: ['552606001476999'] })
+
+        expect(res.body.content.failed).toEqual([
+          { ocr: '552606001476999', error: batchError },
+        ])
+      }
+    )
+
     it('adds to failed when invoice has no expiration date', async () => {
       jest.spyOn(economyAdapter, 'getInvoiceByOcr').mockResolvedValue({
         ok: true,
@@ -495,8 +586,8 @@ describe('economy-service routes', () => {
         .mockResolvedValue({ ok: true, data: mockPdf })
       jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease as any)
       jest
-        .spyOn(leasingAdapter, 'getContactByContactCode')
-        .mockResolvedValue({ ok: true, data: mockContact as any })
+        .spyOn(tenantAwareContactLookup, 'getByContactCode')
+        .mockResolvedValue({ ok: true, data: mockContact() })
 
       const res = await request(app.callback())
         .post('/invoices/notify-batch')
@@ -519,8 +610,8 @@ describe('economy-service routes', () => {
         .mockResolvedValueOnce({ ok: true, data: mockPdf })
       jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(mockLease as any)
       jest
-        .spyOn(leasingAdapter, 'getContactByContactCode')
-        .mockResolvedValue({ ok: true, data: mockContact as any })
+        .spyOn(tenantAwareContactLookup, 'getByContactCode')
+        .mockResolvedValue({ ok: true, data: mockContact() })
       jest
         .spyOn(communicationAdapter, 'sendInvoiceNotificationEmail')
         .mockResolvedValue({ ok: true, data: null })

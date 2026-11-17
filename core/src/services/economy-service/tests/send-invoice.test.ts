@@ -112,6 +112,8 @@ describe('POST /invoices/:invoiceId/send', () => {
   afterEach(() => jest.restoreAllMocks())
 
   describe('a rent notice', () => {
+    let getContact: jest.SpyInstance
+
     beforeEach(() => {
       jest
         .spyOn(economyAdapter, 'getInvoiceByInvoiceId')
@@ -119,17 +121,14 @@ describe('POST /invoices/:invoiceId/send', () => {
       jest
         .spyOn(economyAdapter, 'getInvoiceByOcr')
         .mockResolvedValue({ ok: true, data: rentNotice })
-      jest
-        .spyOn(economyAdapter, 'getInvoicePdf')
-        .mockResolvedValue({
-          ok: true,
-          data: { data: pdf, contentDisposition: '' },
-        })
-      jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(lease)
-      jest.spyOn(leasingAdapter, 'getContactByContactCode').mockResolvedValue({
+      jest.spyOn(economyAdapter, 'getInvoicePdf').mockResolvedValue({
         ok: true,
-        data: { firstName: 'Anna', emailAddress: 'anna@example.com' } as never,
+        data: { data: pdf, contentDisposition: '' },
       })
+      jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue(lease)
+      getContact = jest
+        .spyOn(tenantAwareContactLookup, 'getByContactCode')
+        .mockResolvedValue({ ok: true, data: individual() })
     })
 
     it('is emailed with the rent notice PDF attached', async () => {
@@ -140,6 +139,7 @@ describe('POST /invoices/:invoiceId/send', () => {
       expect(economyAdapter.getInvoicePdf).toHaveBeenCalledWith(
         rentNotice.invoiceId
       )
+      expect(getContact).toHaveBeenCalledWith('P174691')
       expect(sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           firstName: 'Anna',
@@ -180,15 +180,42 @@ describe('POST /invoices/:invoiceId/send', () => {
     })
 
     it('answers 422 no-email when the tenant has no email address', async () => {
-      jest.spyOn(leasingAdapter, 'getContactByContactCode').mockResolvedValue({
+      getContact.mockResolvedValue({
         ok: true,
-        data: { firstName: 'Anna', emailAddress: undefined } as never,
+        data: individual({ emails: [] }),
       })
 
       const res = await send(rentNotice.invoiceId)
 
       expect(res.status).toBe(422)
       expect(res.body.reason).toBe('no-email')
+      expect(sendEmail).not.toHaveBeenCalled()
+    })
+
+    it('does not email a protected identity the contacts service returned redacted', async () => {
+      getContact.mockResolvedValue({
+        ok: true,
+        data: individual({
+          protectedIdentity: true,
+          fullName: 'redacted',
+          emails: [{ emailAddress: 'redacted', isPrimary: true }],
+        }),
+      })
+
+      const res = await send(rentNotice.invoiceId)
+
+      expect(res.status).toBe(422)
+      expect(res.body.reason).toBe('no-recipient')
+      expect(sendEmail).not.toHaveBeenCalled()
+    })
+
+    it('does not email when the contact lookup fails', async () => {
+      getContact.mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await send(rentNotice.invoiceId)
+
+      expect(res.status).toBe(500)
+      expect(res.body.reason).toBe('unknown')
       expect(sendEmail).not.toHaveBeenCalled()
     })
 
