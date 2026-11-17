@@ -1290,6 +1290,34 @@ describe('leases routes', () => {
       expect(res.body.reason).toEqual(['limit must be a valid number'])
     })
 
+    it('looks up at most 20 leases at once', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(
+          buildPaginatedResponse(Array.from({ length: 50 }, validLease))
+        )
+      let inFlight = 0
+      let maxInFlight = 0
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockImplementation(async () => {
+          inFlight++
+          maxInFlight = Math.max(maxInFlight, inFlight)
+          await new Promise((resolve) => setImmediate(resolve))
+          inFlight--
+          return { ok: true, data: validContact() }
+        })
+      jest
+        .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+        .mockResolvedValue({ status: 200, data: validRentalProperty() })
+
+      const res = await request(app.callback()).get('/leases/for-csc')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(50)
+      expect(maxInFlight).toBe(20)
+    })
+
     it('asks for 500 leases per page by default', async () => {
       const searchSpy = jest
         .spyOn(tenantLeaseAdapter, 'searchLeases')

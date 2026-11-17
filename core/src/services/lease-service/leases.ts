@@ -38,12 +38,16 @@ import {
 } from '../../adapters/contacts-adapter/lease-query'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { registerSchema } from '../../utils/openapi'
+import { runWithConcurrency } from '../../utils/concurrency'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 
 // Same cap as the lease search in leasing. Each lease on a page gets a contact
 // and a rental object lookup, so a full page makes about 1000 calls.
 const CSC_MAX_PAGE_SIZE = 500
+// Leases looked up at once, so a full page doesn't send all its lookups to
+// leasing and property-management in one burst.
+const CSC_LOOKUP_CONCURRENCY = 20
 
 export const routes = (router: KoaRouter) => {
   // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
@@ -185,8 +189,9 @@ export const routes = (router: KoaRouter) => {
       }
 
       //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
-      const parsedContent = await Promise.all(
-        leaseSearchResult.content.map(async (lease) => {
+      const parsedContent = await runWithConcurrency(
+        leaseSearchResult.content,
+        async (lease) => {
           const rentalObjectCode =
             lease.leaseId.split('/')[0] != ''
               ? lease.leaseId.split('/')[0]
@@ -321,7 +326,8 @@ export const routes = (router: KoaRouter) => {
             )
             return null
           }
-        })
+        },
+        CSC_LOOKUP_CONCURRENCY
       )
 
       const filteredLeases = parsedContent.filter(Boolean)
