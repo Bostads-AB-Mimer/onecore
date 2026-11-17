@@ -40,7 +40,7 @@ Går objektinformationen inte att hämta räknas raden som ett **fel** och hamna
 
 Vid `create` är fakturamottagaren den **andra fakturamottagaren** om hyresgästen har en, annars hyresgästen själv. Mottagaren synkas alltid till Xledger — **skapas** om kunden saknas — och måste finnas som kund innan avtalet skapas i Tenfast.
 
-Hyresgästen hämtas från Contacts, med relationer. Har hen en annan fakturamottagare hämtas den kontakten i sin helhet och skickas, även om hen aldrig varit hyresgäst. Annars skickas hyresgästen som Contacts returnerade den; hen hämtas inte en andra gång. En hyresgäst med skyddad identitet som ännu inte visas öppet skickas som Contacts returnerar den, alltså med namnet `redacted` och utan adress, e-post och telefon.
+Hyresgästen hämtas från Contacts, med relationer. Har hen en annan fakturamottagare hämtas den kontakten i sin helhet och skickas, även om hen aldrig varit hyresgäst. Annars skickas hyresgästen; hen hämtas inte en andra gång. En hyresgäst med skyddad identitet visas öppet när hen redan har ett avtal i Tenfast (se [Synka Kontakter](../sync-contacts/DOCS_Sync_Contacts.md)) och skickas då med riktiga uppgifter. En helt ny hyresgäst med skyddad identitet har inget avtal i Tenfast än och skickas med namnet `redacted` och utan adress, e-post och telefon.
 
 Misslyckas det avbryts hela avtalssynken och raden köas. Misslyckas i stället Tenfast-steget efteråt återställs en uppdaterad kund till sina gamla värden; en nyskapad kund får vara kvar (se [Steg och återställning](../DOCS_Sync_Overview.md#steg-och-återställning)). Avvisar Economy mottagaren (4xx) skapas avtalet inte förrän mottagaren rättats i Xpand; varje återförsök hämtar mottagaren på nytt.
 

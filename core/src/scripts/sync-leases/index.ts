@@ -7,7 +7,10 @@ import {
 } from '../../adapters/leasing-adapter'
 import { getRentalPropertyInfoFromXpand } from '../../adapters/property-management-adapter'
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
-import { syncInvoiceRecipientToEconomy } from '../../processes/contacts'
+import {
+  revealProtectedTenant,
+  syncInvoiceRecipientToEconomy,
+} from '../../processes/contacts'
 import type { ContactLookup } from '../../processes/contacts/sync-invoice-recipient'
 import { undoContactSyncInEconomy } from '../../adapters/economy-adapter'
 import { runSyncSteps, syncStep, SyncStep } from '../../processes/sync-steps'
@@ -52,8 +55,8 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
 
   if (lease.action === 'create') {
     const contactsAdapter = makeContactsAdapter(config.contactsService.url)
-    const contactResult = await contactsAdapter.getByContactCode(
-      lease.contactCode
+    const contactResult = await revealProtectedTenant(
+      await contactsAdapter.getByContactCode(lease.contactCode)
     )
     if (!contactResult.ok) {
       throw new Error(

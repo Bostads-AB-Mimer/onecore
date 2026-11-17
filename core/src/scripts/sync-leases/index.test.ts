@@ -14,6 +14,8 @@ import * as propertyManagementAdapter from '../../adapters/property-management-a
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as contactsAdapter from '../../adapters/contacts-adapter'
 import * as economyAdapter from '../../adapters/economy-adapter'
+import * as leasesAdapter from '../../adapters/leasing-adapter/leases'
+import { LeaseStatus } from '@onecore/types'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -515,6 +517,53 @@ describe('syncLeases', () => {
       expect(syncContactToEconomySpy).toHaveBeenCalledTimes(1)
       expect(getByContactCode).toHaveBeenCalledTimes(1)
       expect(getByContactCode).toHaveBeenCalledWith(lease.contactCode)
+    })
+
+    it('a protected tenant who already holds a Tenfast lease is sent to economy unredacted', async () => {
+      const { lease, getByContactCode } = setupCreateWithoutRecipient()
+      const redacted = factory.contactsServiceContact.build({
+        contactCode: lease.contactCode,
+        relatedContacts: [],
+        protectedIdentity: true,
+        personal: {
+          nationalId: 'redacted',
+          birthDate: 'redacted',
+          firstName: 'redacted',
+          lastName: 'redacted',
+          fullName: 'redacted',
+        },
+      })
+      const unredacted = factory.contactsServiceContact.build({
+        contactCode: lease.contactCode,
+        protectedIdentity: true,
+      })
+      getByContactCode.mockResolvedValue({ ok: true, data: redacted })
+      jest
+        .spyOn(contactsAdapter.contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({ ok: true, data: [unredacted] })
+      jest
+        .spyOn(leasesAdapter, 'getLeasesByContactCode')
+        .mockResolvedValue([
+          factory.lease.build({ status: LeaseStatus.Current }),
+        ])
+      const syncContactToEconomySpy = jest
+        .spyOn(economyAdapter, 'syncContactToEconomy')
+        .mockResolvedValue({ ok: true, data: { skipped: false } })
+      jest.spyOn(leasingAdapter, 'syncLease').mockResolvedValue({
+        ok: true,
+        data: { action: 'created', leaseId: lease.leaseId },
+      })
+
+      await syncLeases({ stateFile, queueFile })
+
+      expect(syncContactToEconomySpy).toHaveBeenCalledWith(
+        lease.contactCode,
+        expect.objectContaining({
+          fullName: unredacted.personal.fullName,
+          street: unredacted.addresses[0].street,
+        }),
+        { create: true }
+      )
     })
 
     it('economy fails for the tenant — lease not synced, row queued, one mail', async () => {
