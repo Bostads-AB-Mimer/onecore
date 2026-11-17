@@ -14,6 +14,7 @@ import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as economyAdapter from '../../adapters/economy-adapter'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import config from '../../common/config'
+import { filenameFromContentDisposition } from '../../utils/content-disposition'
 import {
   SendInvoiceEmailFailure,
   sendMiscellaneousInvoiceEmail,
@@ -128,13 +129,13 @@ export const routes = (router: KoaRouter) => {
     }
 
     ctx.status = 200
-    ctx.set('Content-Type', 'application/pdf')
-    ctx.set(
-      'Content-Disposition',
-      (
-        result.data.contentDisposition || 'attachment; filename="invoice.pdf"'
-      ).replace(/[\r\n]/g, '')
+    // attachment() quotes and encodes the filename. The upstream header is
+    // passed on unquoted, which browsers reject when the name has a comma.
+    ctx.attachment(
+      filenameFromContentDisposition(result.data.contentDisposition) ??
+        'invoice.pdf'
     )
+    ctx.set('Content-Type', 'application/pdf')
     ctx.body = result.data.data
   })
 

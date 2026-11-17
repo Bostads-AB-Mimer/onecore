@@ -77,8 +77,31 @@ describe('economy-service routes', () => {
 
       expect(res.status).toBe(200)
       expect(res.headers['content-type']).toMatch('application/pdf')
-      expect(res.headers['content-disposition']).toBe(contentDisposition)
+      expect(res.headers['content-disposition']).toBe(
+        'attachment; filename="Hyresavi.pdf"'
+      )
       expect(Buffer.from(res.body)).toEqual(pdfBuffer)
+    })
+
+    it('quotes an upstream filename that browsers would reject', async () => {
+      jest.spyOn(economyAdapter, 'getInvoicePdf').mockResolvedValueOnce({
+        ok: true,
+        data: {
+          data: pdfBuffer,
+          contentDisposition:
+            'attachment; filename=Hyresavi 2026-11-30 - Avtal(1298, 1299).pdf',
+        },
+      })
+
+      const res = await request(app.callback()).get(
+        '/invoices/552606001476999/pdf'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toMatch('application/pdf')
+      expect(res.headers['content-disposition']).toBe(
+        'attachment; filename="Hyresavi 2026-11-30 - Avtal(1298, 1299).pdf"'
+      )
     })
 
     it('returns 404 when invoice is not found', async () => {
