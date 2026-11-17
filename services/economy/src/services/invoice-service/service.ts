@@ -642,7 +642,7 @@ const enrichInvoices = async (invoices: Invoice[]): Promise<Invoice[]> => {
   }, [])
 
   const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticleForDisplay(id))
+    [...new Set(articleIds)].map((id) => getInvoiceArticleForDisplay(id))
   )
   const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
     if (ar.ok) {
@@ -679,7 +679,7 @@ const enrichInvoiceRowsWithText = async (
   }, [])
 
   const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticleForDisplay(id))
+    [...new Set(articleIds)].map((id) => getInvoiceArticleForDisplay(id))
   )
   const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
     if (ar.ok) {

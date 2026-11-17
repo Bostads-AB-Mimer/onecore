@@ -659,7 +659,8 @@ export const getInvoiceArticle = async (
 // Articles change rarely, and the customer card and Mina sidor look up the
 // same ones on every load. Only for showing an article's code and title: the
 // accounting export calls getInvoiceArticle directly, since it books on the
-// article's current account configuration.
+// article's current account configuration. The cached article is shared by
+// every caller, so it must not be changed.
 const ARTICLE_CACHE_TTL_MS = 60 * 60 * 1000
 const articleCache = new Map<
   string,
