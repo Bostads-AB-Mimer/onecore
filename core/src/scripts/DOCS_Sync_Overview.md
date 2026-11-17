@@ -14,13 +14,13 @@ Det här dokumentet beskriver vad som synkas, när, och vad som händer om någo
 
 ## Vad synkas
 
-| Ändring i Xpand                                  | `cmlog`-rad som läses                       | Tenfast                                   | Xledger                                                                                         | Odoo                                         |
-| ------------------------------------------------ | ------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Kontaktuppgifter (namn, e-post, telefon, adress) | `Kontakt …`                                 | Hyresgästen hämtar nya uppgifter          | Befintlig kund uppdateras (namn, adress, e-post)                                                | Hyresgäst uppdateras (namn, e-post, telefon) |
-| Kontrakt undertecknat                            | `Hyreskontrakt …`, fältet `Undertecknat`    | Avtalet skapas, med hyresgäst och PDF     | Fakturamottagaren (annan fakturamottagare, annars hyresgästen) skapas eller uppdateras som kund | –                                            |
-| Kontrakt uppsagt                                 | `Hyreskontrakt …`, fältet `Uppsagt datum`   | Avtalet sägs upp, uppsägnings-PDF bifogas | –                                                                                               | –                                            |
-| Kontrakt makulerat                               | `Hyreskontrakt …`, fältet `Makulerat datum` | Avtalet makuleras                         | –                                                                                               | –                                            |
-| Hyresobjektstyp ändrad                           | `Hyresobjekt …`, fältet `Hyresobjekttyp`    | Hyresobjektets kategori sätts             | –                                                                                               | –                                            |
+| Ändring i Xpand                                  | `cmlog`-rad som läses                       | Tenfast                                   | Xledger                                            | Odoo                                         |
+| ------------------------------------------------ | ------------------------------------------- | ----------------------------------------- | -------------------------------------------------- | -------------------------------------------- |
+| Kontaktuppgifter (namn, e-post, telefon, adress) | `Kontakt …`                                 | Hyresgästen hämtar nya uppgifter          | Befintlig kund uppdateras (namn, adress, e-post)   | Hyresgäst uppdateras (namn, e-post, telefon) |
+| Kontrakt undertecknat                            | `Hyreskontrakt …`, fältet `Undertecknat`    | Avtalet skapas, med hyresgäst och PDF     | Fakturamottagaren skapas eller uppdateras som kund | –                                            |
+| Kontrakt uppsagt                                 | `Hyreskontrakt …`, fältet `Uppsagt datum`   | Avtalet sägs upp, uppsägnings-PDF bifogas | –                                                  | –                                            |
+| Kontrakt makulerat                               | `Hyreskontrakt …`, fältet `Makulerat datum` | Avtalet makuleras                         | –                                                  | –                                            |
+| Hyresobjektstyp ändrad                           | `Hyresobjekt …`, fältet `Hyresobjekttyp`    | Hyresobjektets kategori sätts             | –                                                  | –                                            |
 
 Avtalssynken tar bara med lägenheter och förråd — se [Synka Avtal](./sync-leases/DOCS_Sync_Leases.md#vilka-objekt-som-är-i-scope). Ingenting synkas åt andra hållet, från Tenfast, Xledger eller Odoo tillbaka till Xpand.
 
@@ -90,7 +90,7 @@ En rad som misslyckas läggs i `/data/failed-rows.jsonl` på jobbets PVC, med fe
 
 ### Steg och återställning
 
-En rad som skriver till flera system gör det i steg, i ordning, via [`processes/sync-steps`](../processes/sync-steps/index.ts): kontakter Xledger → Odoo → Tenfast, avtal Xledger (fakturamottagare) → Tenfast. Ett avtals fakturamottagare måste finnas som kund i Xledger innan avtalet skapas i Tenfast; `sync-leases` skapar kunder, `sync-contacts` uppdaterar bara befintliga. En rad räknas som synkad bara när alla steg lyckats. Misslyckas ett steg körs inga fler, och de steg som redan skrivit återställs i omvänd ordning med värdena de ersatte. Raden köas som vanligt och hela raden körs om vid nästa försök.
+En rad som skriver till flera system gör det i steg, i ordning, via [`processes/sync-steps`](../processes/sync-steps/index.ts): kontakter Xledger → Odoo → Tenfast, avtal Xledger (fakturamottagare) → Tenfast. En rad räknas som synkad bara när alla steg lyckats. Misslyckas ett steg körs inga fler, och de steg som redan skrivit återställs i omvänd ordning med värdena de ersatte. Raden köas som vanligt och hela raden körs om vid nästa försök.
 
 - **Två saker återställs inte med flit:** en kund som just skapats i Xledger, och en hyresgäst som Tenfast importerat vid tecknande. Nästa försök återanvänder dem.
 - **Tenfast återställs aldrig.** Det är sista steget i båda synkarna, så inget kommer efter som kan misslyckas.
