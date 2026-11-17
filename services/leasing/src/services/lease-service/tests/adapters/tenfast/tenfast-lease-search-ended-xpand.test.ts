@@ -420,4 +420,47 @@ describe('lease search with ended Xpand leases', () => {
       ).rejects.toMatchObject({ status: 503 })
     })
   })
+
+  describe('fetchContactsForLeaseSearch', () => {
+    const tenant = (contactCode: string): leasing.v1.ContactInfo => ({
+      name: 'Test Tenant',
+      contactCode,
+      email: null,
+      phone: null,
+      contactType: 'tenant',
+    })
+
+    const contactCodes = async (params: SearchParams) =>
+      (
+        await tenfastLeaseSearchAdapter.fetchContactsForLeaseSearch(
+          paged(params),
+          mockCtx
+        )
+      ).map((c) => c.contactCode)
+
+    beforeEach(() => {
+      mockedTenfastGetAll.mockReturnValue([
+        makeResult('tenfast-current', { contacts: [tenant('P000001')] }),
+      ])
+      xpandCache.getAll.mockReturnValue([
+        makeXpandEnded('xpand-ended', { contacts: [tenant('P000002')] }),
+      ])
+    })
+
+    it('leaves out contacts on ended Xpand leases when ended is not requested', async () => {
+      expect(await contactCodes({ status: ['current'] })).toEqual(['P000001'])
+      expect(await contactCodes({})).toEqual(['P000001'])
+    })
+
+    it('returns contacts on ended Xpand leases when the list shows them', async () => {
+      expect(await contactCodes({ status: ['ended'] })).toEqual(['P000002'])
+    })
+
+    it('answers 503 when the Xpand cache is not ready and ended is requested', async () => {
+      xpandCache.isReady.mockReturnValue(false)
+      await expect(contactCodes({ status: ['ended'] })).rejects.toMatchObject({
+        status: 503,
+      })
+    })
+  })
 })
