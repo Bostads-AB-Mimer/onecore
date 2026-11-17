@@ -2,6 +2,8 @@
 
 En sökande ansöker om en icke-poängsatt bilplats (först till kvarn), antingen direkt via Mina Sidor eller å sökandens vägnar av en handläggare via Uthyrningsgränssnittet. Processen validerar annons och sökande, gör en automatisk kreditkontroll (extern via Creditsafe, eller intern via betalningshistorik om sökanden redan har ett kontrakt) och skapar kontraktet i Tenfast vid godkännande. Sökanden och uthyrningsteamet notifieras om utfallet oavsett utgång.
 
+Tenfast samaviserar bilplatsen med hyresgästens andra avtal redan när den skapas, innan den är signerad. Den kommer med på avin först när den har signerats. Se [Samavisering](../../invoicedistribution/DOCS_Co_Invoicing.md).
+
 ## Flödesdiagram
 
 Processens beslutslogik: vilka kontroller som styr om flödet går vidare till nästa steg, och vad som händer vid godkännande, nekande eller fel. System- och integrationsdetaljer är medvetet utelämnade här — se sekvensdiagrammet nedan för det.
