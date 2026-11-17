@@ -139,7 +139,11 @@ const getAdditionalColumns = async (
       ]
     if (!specificRule) {
       logger.error(
-        row,
+        {
+          contractCode,
+          invoiceNumber: row.invoiceNumber,
+          fromDate: row.fromDate,
+        },
         'Could not find cost code and property for normal rent row'
       )
       return {

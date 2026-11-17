@@ -81,6 +81,40 @@ export const retryDelayMs = (attempt: number, random = Math.random) => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+/**
+ * Thrown when Xledger could not be reached or answered that it is down, so
+ * callers can tell "try again later" apart from other failures.
+ */
+export class XledgerUnavailableError extends Error {
+  constructor(readonly status?: number) {
+    super(`Xledger unavailable${status ? ` (status ${status})` : ''}`)
+    this.name = 'XledgerUnavailableError'
+  }
+}
+
+// Xledger is down or the request never reached it. 504 is left out since it
+// may also mean a slow query, and retrying that only adds load.
+const UNAVAILABLE_STATUSES = new Set([502, 503])
+const UNAVAILABLE_CODES = new Set(['ECONNREFUSED', 'ECONNRESET'])
+
+const getUnavailableStatus = (
+  err: unknown
+): { status?: number } | undefined => {
+  if (!axios.isAxiosError(err)) return undefined
+  const status = err.response?.status
+  if (status !== undefined) {
+    return UNAVAILABLE_STATUSES.has(status) ? { status } : undefined
+  }
+  return err.code && UNAVAILABLE_CODES.has(err.code) ? {} : undefined
+}
+
+// Only reads are retried. A write may already have been applied when Xledger
+// (or a gateway in front of it) answers with an error, so a retry could, for
+// example, create a miscellaneous invoice twice. Every write in this adapter
+// is a GraphQL mutation or a file upload.
+const isRead = (query: XledgerGraphQlQuery, attachment?: unknown) =>
+  !attachment && !/^\s*mutation\b/.test(query.query)
+
 let inFlight = 0
 const waiting: Array<() => void> = []
 
@@ -103,23 +137,55 @@ const makeXledgerRequest = async (
   query: XledgerGraphQlQuery,
   attachment?: any // TODO formidable file PersistentFileStorage
 ): Promise<any> => {
-  const { maxAttempts } = xledgerRequestPolicy
+  const { maxAttempts, unavailableMaxAttempts } = xledgerRequestPolicy
+  let unavailableAttempts = 0
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     await acquireSlot()
-    let result: XledgerResponse
+    let result: XledgerResponse | undefined
     try {
       result = await makeXledgerHttpRequest(query, attachment)
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.code === 'ECONNABORTED') {
         logger.warn(
           { attempt, timeoutMs: xledgerRequestPolicy.timeoutMs, inFlight },
           `Xledger request timed out\n${stringifyGraphQlQuery(query)}`
         )
       }
-      throw err
+      const unavailable = getUnavailableStatus(err)
+      if (!unavailable) throw err
+
+      unavailableAttempts++
+      const retryable = isRead(query, attachment)
+      const isLast =
+        !retryable ||
+        unavailableAttempts >= unavailableMaxAttempts ||
+        attempt === maxAttempts
+      logger.warn(
+        {
+          attempt: unavailableAttempts,
+          maxAttempts: unavailableMaxAttempts,
+          status: unavailable.status,
+          code: axios.isAxiosError(err) ? err.code : undefined,
+          retryable,
+        },
+        !retryable
+          ? 'Xledger unavailable, not retrying a write since it may have been applied'
+          : isLast
+            ? 'Xledger unavailable, giving up'
+            : 'Xledger unavailable, waiting and retrying'
+      )
+      // A write may have been applied, so it must not look like "try again later".
+      if (!retryable) throw err
+      if (isLast) throw new XledgerUnavailableError(unavailable.status)
     } finally {
       releaseSlot()
+    }
+
+    // No result means Xledger was unavailable and we try again.
+    if (!result) {
+      await sleep(retryDelayMs(unavailableAttempts))
+      continue
     }
 
     if (result.status === 'ok') {
@@ -142,7 +208,7 @@ const makeXledgerRequest = async (
       result.data.map((error: any) => error.message).join('\n')
     )
     logger.error(
-      result.data,
+      { err: error },
       `Error making Xledger request\n${stringifyGraphQlQuery(query)}\n(${getCallerFromError(error)})`
     )
     throw error
@@ -429,7 +495,7 @@ export const getCustomer = async (contactCode: string) => {
   const result = await makeXledgerRequest(query)
 
   if (result.data?.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   return result.data?.customers?.edges?.[0]?.node ?? null
@@ -580,7 +646,7 @@ const getCustomerDbId = async (contactCode: string): Promise<string | null> => {
 
   const result = await makeXledgerRequest(query)
 
-  return result.data?.customers?.edges?.[0].node.dbId ?? null
+  return result.data?.customers?.edges?.[0]?.node?.dbId ?? null
 }
 
 export const getCustomers = async (
@@ -625,7 +691,7 @@ export const getCustomers = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const customers = result.data.customers.edges.map((e: any) =>
@@ -670,7 +736,7 @@ export const getProjects = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const projects = result.data.projects.edges.map((e: any) =>
@@ -719,7 +785,7 @@ export const getContacts = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const contacts = result.data.contacts.edges.map((e: any) =>

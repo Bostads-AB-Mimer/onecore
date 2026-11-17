@@ -1,9 +1,6 @@
 import { logger, middlewares } from './logging/logger'
 export { errorHandler, etagMiddleware } from './middlewares/index'
-import loggedAxios, {
-  setExclusionFilters,
-  redactHeaders,
-} from './logging/loggedAxios'
+import loggedAxios, { setExclusionFilters } from './logging/loggedAxios'
 import { storage, getCorrelationId } from './logging/loggingStorage'
 import {
   generateRouteMetadata,
@@ -32,7 +29,6 @@ export {
   makeSuccessResponseBody,
   axiosTypes,
   setExclusionFilters as setAxiosExclusionFilters,
-  redactHeaders,
   storage as loggingStorage,
   getCorrelationId,
   middlewares as loggerMiddlewares,

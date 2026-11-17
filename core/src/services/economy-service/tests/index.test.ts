@@ -106,6 +106,52 @@ describe('economy-service routes', () => {
     })
   })
 
+  describe('GET /invoices/by-contact-code/:contactCode', () => {
+    it.each([
+      ['not-found' as const, 404],
+      ['unavailable' as const, 503],
+      ['unknown' as const, 500],
+    ])('returns %s as %i with the reason', async (err, status) => {
+      jest
+        .spyOn(economyAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce({ ok: false, err })
+
+      const res = await request(app.callback()).get(
+        '/invoices/by-contact-code/P123456'
+      )
+
+      expect(res.status).toBe(status)
+      expect(res.body.reason).toBe(err)
+    })
+  })
+
+  describe('GET /invoices/:contactCode/credit-check', () => {
+    it('returns 503 with the reason when invoices are unavailable', async () => {
+      jest
+        .spyOn(economyAdapter, 'getInvoicesSentToDebtCollection')
+        .mockResolvedValueOnce({ ok: false, err: 'unavailable' })
+
+      const res = await request(app.callback()).get(
+        '/invoices/P123456/credit-check'
+      )
+
+      expect(res.status).toBe(503)
+      expect(res.body.reason).toBe('unavailable')
+    })
+
+    it('returns 500 on unknown error', async () => {
+      jest
+        .spyOn(economyAdapter, 'getInvoicesSentToDebtCollection')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/invoices/P123456/credit-check'
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+
   describe('PUT /invoices/:invoiceId/deferral', () => {
     beforeEach(() => {
       jest.clearAllMocks()

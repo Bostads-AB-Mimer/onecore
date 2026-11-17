@@ -53,7 +53,8 @@ God man och förvaltare läses men används inte av scriptet. De når Tenfast n�
 5. Avtalet skapas som importerat och signerat (`method: "import"`, `signed: true`), med:
    - Xpands kontraktsnummer som `externalId` — nyckeln som `terminate` och `void` senare slår upp på,
    - startdatum från Xpand,
-   - hyresrader kopierade från hyresobjektet i Tenfast,
+   - hyresrader kopierade från hyresobjektet i Tenfast, med radens `consolidationLabel` (summering på avin),
+   - avisering via Strålfors (`aviseringsTyp: "stralfors"`) — utan den sätter Tenfast "Aviseras ej",
    - månadsavisering, två veckor i förskott.
 6. Det signerade kontraktet hämtas som PDF ur Xpands dokumentarkiv och laddas upp på avtalet, om avtalet inte redan har en fil i Tenfast. **Steget kan inte fälla synken**: saknas PDF:en eller misslyckas uppladdningen räknas avtalet som skapat och teamet får ett mejl om att bifoga den för hand, när alla steg för raden lyckats. Raden köas inte, eftersom en köad `create` håller tillbaka avtalets senare händelser.
 

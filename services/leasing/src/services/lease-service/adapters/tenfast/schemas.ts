@@ -20,6 +20,9 @@ export const TenfastInvoiceRowSchema = z.object({
   // False for a row left out of Tenfast's rent total (hyra) and of new
   // leases by default, such as the optional home insurance.
   includeInContract: z.boolean().nullish(),
+  // Merges rows into one line on the invoice ("Summarad" in Tenfast). Doesn't
+  // affect the rent total. Copied to the lease's rows when a lease is created.
+  consolidationLabel: z.string().nullish(),
   _id: z.string(),
 })
 

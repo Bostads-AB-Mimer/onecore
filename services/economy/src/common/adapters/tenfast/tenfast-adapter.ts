@@ -569,7 +569,7 @@ const fetchTenfastInvoiceByOcr = async (
 
     if (result.status !== 200) {
       logger.info(
-        { ocr, status: result.status, data: result.data },
+        { ocr, status: result.status },
         'deferral: Tenfast OCR lookup returned unexpected status'
       )
       return { ok: false, err: 'unknown' }
@@ -808,7 +808,6 @@ export const setGracePeriod = async (params: {
     logger.error(
       {
         status: res.status,
-        data: res.data,
         ocr: params.invoiceOcr,
         tenfastInvoiceId: result.data._id,
       },
@@ -860,7 +859,7 @@ export const recordPaymentForInvoice = async (params: {
     }
 
     logger.error(
-      { status: res.status, data: res.data },
+      { status: res.status },
       'tenfast-adapter.recordPaymentForInvoice: unexpected status'
     )
     return { ok: false, err: 'unknown' }

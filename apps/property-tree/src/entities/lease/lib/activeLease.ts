@@ -1,3 +1,4 @@
+import type { LeaseStatusFilter } from '@/services/api/core/leaseSearchService'
 import type { Lease } from '@/services/api/core/leaseService'
 
 // Statuses where the tenant still occupies and pays for the object, in order of
@@ -8,6 +9,21 @@ const ACTIVE_LEASE_STATUSES = [
   'PreliminaryTerminated',
   'AboutToEnd',
 ] as const satisfies readonly Lease['status'][]
+
+// The lease search names each status by its own token. Typed per active
+// status, so a status added above does not compile until it has a token here.
+const SEARCH_TOKEN_BY_ACTIVE_STATUS: Record<
+  (typeof ACTIVE_LEASE_STATUSES)[number],
+  LeaseStatusFilter
+> = {
+  Current: 'current',
+  PreliminaryTerminated: 'preliminaryterminated',
+  AboutToEnd: 'abouttoend',
+}
+
+/** The lease search status filter for the leases findActiveLease counts. */
+export const ACTIVE_LEASE_SEARCH_STATUSES: LeaseStatusFilter[] =
+  ACTIVE_LEASE_STATUSES.map((status) => SEARCH_TOKEN_BY_ACTIVE_STATUS[status])
 
 /**
  * Picks the lease that is in force for a rental object right now. Upcoming,

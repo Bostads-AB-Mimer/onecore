@@ -281,7 +281,7 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/vacant-parkingspaces', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    logger.info(metadata, 'Fetching all vacant parking spaces')
+    logger.info('Fetching all vacant parking spaces')
 
     //Get all vacant rental objects of type parking space from tenfast
     let availabilityResult =

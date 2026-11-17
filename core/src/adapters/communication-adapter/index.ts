@@ -140,7 +140,7 @@ export const sendParkingSpaceOfferEmail = async (
     // the route status and this check (the other offer routes use 204).
     if (result.status !== 204) {
       logger.error(
-        { status: result.status, data: result.data },
+        { status: result.status },
         'Unexpected response from communication service'
       )
       return { ok: false, err: 'unknown', statusCode: result.status }
@@ -178,7 +178,7 @@ export const sendParkingSpaceAcceptOfferEmail = async (
 
     if (result.status !== 204) {
       logger.error(
-        { status: result.status, data: result.data },
+        { status: result.status },
         'Unexpected response from communication service'
       )
       return { ok: false, err: 'unknown', statusCode: result.status }
@@ -216,7 +216,7 @@ export const sendNonScoredParkingSpaceApprovedEmail = async (
 
     if (result.status !== 204) {
       logger.error(
-        { status: result.status, data: result.data },
+        { status: result.status },
         'Unexpected response from communication service'
       )
       return { ok: false, err: 'unknown', statusCode: result.status }
@@ -254,7 +254,7 @@ export const sendNonScoredParkingSpaceDeniedEmail = async (
 
     if (result.status !== 204) {
       logger.error(
-        { status: result.status, data: result.data },
+        { status: result.status },
         'Unexpected response from communication service'
       )
       return { ok: false, err: 'unknown', statusCode: result.status }
@@ -418,7 +418,7 @@ export const sendInspectionProtocolEmail = async (
 
     if (result.status !== 204) {
       logger.error(
-        { status: result.status, data: result.data },
+        { status: result.status },
         'Unexpected response from communication service'
       )
       return { ok: false, err: 'unknown', statusCode: result.status }
@@ -628,7 +628,7 @@ export const sendLeaseTerminationConfirmationEmail = async (
 
     if (result.status !== 204) {
       logger.error(
-        { status: result.status, data: result.data },
+        { status: result.status },
         'Unexpected response from communication service when sending lease termination confirmation'
       )
       return { ok: false, err: 'unknown', statusCode: result.status }
@@ -655,7 +655,7 @@ export const sendInvoiceNotificationEmail = async (
 
     if (result.status !== 204) {
       logger.error(
-        { status: result.status, data: result.data },
+        { status: result.status },
         'Unexpected response from communication service when sending invoice notification'
       )
       return { ok: false, err: 'unknown', statusCode: result.status }

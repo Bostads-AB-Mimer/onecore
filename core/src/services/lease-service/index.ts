@@ -2227,12 +2227,38 @@ export const routes = (router: KoaRouter) => {
    *               format: date-time
    *               description: Start date of the lease.
    *     responses:
-   *       '201':
+   *       '200':
    *         description: Lease successfully created
    *         content:
    *           application/json:
    *             schema:
    *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     leaseId:
+   *                       type: string
+   *                     message:
+   *                       type: string
+   *                     creditCheckType:
+   *                       type: string
+   *                       enum: [extern, intern]
+   *                     vat:
+   *                       type: object
+   *                       description: >
+   *                         Whether the lease got VAT, and why. No VAT when the
+   *                         tenant has a current or upcoming housing contract
+   *                         in the parking space's residential area.
+   *                       properties:
+   *                         includeVAT:
+   *                           type: boolean
+   *                         reason:
+   *                           type: string
+   *                           enum:
+   *                             - housing-contract-in-area
+   *                             - no-housing-contract-in-area
+   *                             - not-a-tenant
    *       '400':
    *         description: Bad request
    *         content:
@@ -2248,15 +2274,29 @@ export const routes = (router: KoaRouter) => {
    *           The rental object is not available from the start date, so no
    *           lease was created. error is rental-object-not-available.
    *       '500':
-   *         description: Internal server error
+   *         description: >
+   *           Internal server error. error is get-tenant-failed when the
+   *           applicant's housing contracts could not be fetched to decide VAT;
+   *           no lease was created then.
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
-   *                 message:
+   *                 error:
    *                   type: string
-   *                   example: A technical error has occured.
+   *                   enum:
+   *                     - get-tenant-failed
+   *                     - fetch-invoices-failed
+   *                     - create-lease-failed
+   *                     - internal-error
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     message:
+   *                       type: string
+   *       '503':
+   *         description: The internal credit check could not be done because invoices are temporarily unavailable. error is fetch-invoices-failed. Trying again later may work.
    *     security:
    *       - bearerAuth: []
    */
@@ -2367,6 +2407,8 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: A technical error has occured.
+   *       '503':
+   *         description: The internal credit check could not be done because invoices are temporarily unavailable (errorCode service-unavailable). Trying again later may work.
    *     security:
    *       - bearerAuth: []
    */

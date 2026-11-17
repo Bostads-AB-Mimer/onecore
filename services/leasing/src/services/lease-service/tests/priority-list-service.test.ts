@@ -17,6 +17,52 @@ const currentDate = new Date()
 const thirtyDaysInThePastDate = addDays(currentDate, -30)
 const thirtyDaysInTheFutureDate = addDays(currentDate, 30)
 
+describe(isLeaseActiveOrUpcoming, () => {
+  it('keeps a terminated lease that still runs, even when terminationDate has passed', () => {
+    // For Tenfast leases terminationDate is cancellation.handledAt: the day
+    // the notice was handled, not the day the lease ends.
+    const lease = factory.lease.build({
+      type: leaseTypes.housingContract,
+      leaseStartDate: parseISO('2023-06-01T00:00:00.000Z'),
+      terminationDate: thirtyDaysInThePastDate,
+      lastDebitDate: thirtyDaysInTheFutureDate,
+      status: LeaseStatus.AboutToEnd,
+    })
+
+    expect(isLeaseActiveOrUpcoming(lease)).toBe(true)
+  })
+
+  it('drops a lease whose last debit date has passed', () => {
+    const lease = factory.lease.build({
+      lastDebitDate: thirtyDaysInThePastDate,
+      status: LeaseStatus.Ended,
+    })
+
+    expect(isLeaseActiveOrUpcoming(lease)).toBe(false)
+  })
+
+  it('keeps a lease without a last debit date', () => {
+    const lease = factory.lease.build({
+      lastDebitDate: undefined,
+      terminationDate: undefined,
+    })
+
+    expect(isLeaseActiveOrUpcoming(lease)).toBe(true)
+  })
+
+  it.each([
+    ['without a last debit date', undefined],
+    ['with a last debit date still ahead', thirtyDaysInTheFutureDate],
+  ])('drops an ended lease %s', (_, lastDebitDate) => {
+    const lease = factory.lease.build({
+      lastDebitDate,
+      status: LeaseStatus.Ended,
+    })
+
+    expect(isLeaseActiveOrUpcoming(lease)).toBe(false)
+  })
+})
+
 describe('parseLeasesForHousingContract', () => {
   it('should return 1 housing contract if only 1 active housing contract', async () => {
     const terminatedHousingContract = factory.lease

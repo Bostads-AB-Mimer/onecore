@@ -396,7 +396,14 @@ export const denyOffer = async (
     )
 
     if (createOffer.processStatus === ProcessStatus.failed) {
-      logger.info(createOffer, 'Could not create new offer for this listing.')
+      logger.info(
+        {
+          listingId: offer.listingId,
+          httpStatus: createOffer.httpStatus,
+          error: createOffer.error,
+        },
+        'Could not create new offer for this listing.'
+      )
       log.push(
         `Could not create new offer for this listing: ${createOffer.error}`
       )
@@ -450,7 +457,7 @@ const endFailingProcess = (
   if (error) log.push(error)
 
   logger.debug(log)
-  logger.error(error ?? processErrorCode, details)
+  logger.error({ err: error, errorCode: processErrorCode }, details)
 
   communicationAdapter.sendNotificationToRole(
     'dev',

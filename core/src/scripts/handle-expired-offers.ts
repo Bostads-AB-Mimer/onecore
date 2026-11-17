@@ -23,7 +23,11 @@ const handleExpiredOffersScript = async () => {
           )
         } else {
           logger.error(
-            result,
+            {
+              listingId: listingId,
+              httpStatus: result.httpStatus,
+              error: result.error,
+            },
             'Could not restart offer batch for listing ' + listingId
           )
         }
