@@ -372,7 +372,7 @@ const replaceRentArticleIdsWithCodes = async (
   const codeById = new Map(
     await Promise.all(
       articleIds.map(async (articleId) => {
-        const result = await getInvoiceArticleForDisplay(articleId)
+        const result = await getInvoiceArticle(articleId)
         return [articleId, result.ok ? result.data.code : undefined] as const
       })
     )
@@ -654,36 +654,6 @@ export const getInvoiceArticle = async (
     )
     return { ok: false, err: 'request-failed' }
   }
-}
-
-// Articles change rarely, and the customer card and Mina sidor look up the
-// same ones on every load. Only for showing an article's code and title: the
-// accounting export calls getInvoiceArticle directly, since it books on the
-// article's current account configuration. The cached article is shared by
-// every caller, so it must not be changed.
-const ARTICLE_CACHE_TTL_MS = 60 * 60 * 1000
-const articleCache = new Map<
-  string,
-  { article: TenfastRentArticle; expiresAt: number }
->()
-
-export const getInvoiceArticleForDisplay = async (
-  articleId: string
-): Promise<AdapterResult<TenfastRentArticle, string>> => {
-  const cached = articleCache.get(articleId)
-  if (cached && cached.expiresAt > Date.now()) {
-    return { ok: true, data: cached.article }
-  }
-
-  const result = await getInvoiceArticle(articleId)
-  // Only successful lookups are kept, so a failed one is tried again next time.
-  if (result.ok) {
-    articleCache.set(articleId, {
-      article: result.data,
-      expiresAt: Date.now() + ARTICLE_CACHE_TTL_MS,
-    })
-  }
-  return result
 }
 
 /*const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
