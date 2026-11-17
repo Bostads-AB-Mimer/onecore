@@ -1200,7 +1200,7 @@ describe('leases routes', () => {
       expect(res.body.error).toBe('Lease service is warming up')
     })
 
-    it('calls searchLeases with objectType bostad and status Current', async () => {
+    it('calls searchLeases with objectType bostad and status Current and AboutToEnd', async () => {
       const searchSpy = jest
         .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([]))
@@ -1210,9 +1210,57 @@ describe('leases routes', () => {
       expect(searchSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           objectType: 'bostad',
-          status: 'Current',
+          status: ['Current', 'AboutToEnd'],
         })
       )
+    })
+
+    it('sets contract_end_date for a lease under notice', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue(
+        buildPaginatedResponse([
+          {
+            ...validLease(),
+            // JSON from leasing carries the date as an ISO string.
+            endDate: '2027-01-31T00:00:00.000Z' as unknown as Date,
+          },
+        ])
+      )
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValue({ ok: true, data: validContact() })
+      jest
+        .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+        .mockResolvedValue({ status: 200, data: validRentalProperty() })
+
+      const res = await request(app.callback()).get('/leases/for-csc')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0].contract_end_date).toBe(
+        '2027-01-31T00:00:00.000Z'
+      )
+    })
+
+    it('returns the lease when the rental object has no building info', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([validLease()]))
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValue({ ok: true, data: validContact() })
+      const { building: _, ...withoutBuilding } = validRentalProperty()
+      jest
+        .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+        .mockResolvedValue({ status: 200, data: withoutBuilding })
+
+      const res = await request(app.callback()).get('/leases/for-csc')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(
+        res.body.content[0].object_real_estate_year_construction
+      ).toBeUndefined()
+      expect(res.body.content[0].real_estate_type).toBe('')
     })
 
     it('enforces max limit of 500 even if higher value is passed as query param', async () => {
@@ -1249,7 +1297,10 @@ describe('leases routes', () => {
       )
 
       expect(searchSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ objectType: 'bostad', status: 'Current' })
+        expect.objectContaining({
+          objectType: 'bostad',
+          status: ['Current', 'AboutToEnd'],
+        })
       )
     })
 

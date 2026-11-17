@@ -107,7 +107,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
    *     tags:
    *       - Lease service
-   *     description: Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates. The filtering runs after paging, so a page can hold fewer rows than `limit` while more pages remain; page until `_meta.page * _meta.limit >= _meta.totalRecords`.
+   *     description: Returns a list of current residential leases, including contact and rental object info. A lease under notice counts as current until it ends, and contract_end_date is set only for those. Filters out protected identities, deceased tenants, and certain property types/estates. The filtering runs after paging, so a page can hold fewer rows than `limit` while more pages remain; page until `_meta.page * _meta.limit >= _meta.totalRecords`.
    *     parameters:
    *       - in: query
    *         name: page
@@ -161,12 +161,17 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
-      // Filter leases on object type 'Bostad' and current leases but allow additional filtering by query params, ie for paging
+      // Filter leases on object type 'Bostad' and current leases but allow additional filtering by query params, ie for paging.
+      // A lease under notice (AboutToEnd) is still current until it ends, and
+      // it is the only kind that has an end date for contract_end_date.
       const leaseSearchParams = {
         limit: String(CSC_MAX_PAGE_SIZE),
         ...ctx.query,
         objectType: 'bostad',
-        status: LeaseStatus[LeaseStatus.Current],
+        status: [
+          LeaseStatus[LeaseStatus.Current],
+          LeaseStatus[LeaseStatus.AboutToEnd],
+        ],
       }
 
       if (Number(leaseSearchParams.limit) > CSC_MAX_PAGE_SIZE)
@@ -305,11 +310,11 @@ export const routes = (router: KoaRouter) => {
             division_1011: rentalObjectData.districtCode ?? '',
             object_real_estate: rentalObjectData.property.estate,
             object_real_estate_year_construction:
-              rentalObjectData.building.constructionYear ?? undefined,
+              rentalObjectData.building?.constructionYear ?? undefined,
             object_real_estate_year_reconstruction:
-              rentalObjectData.building.renovationYear ?? undefined,
+              rentalObjectData.building?.renovationYear ?? undefined,
             real_estate_type:
-              rentalObjectData.building.buildingTypeCaption ?? '',
+              rentalObjectData.building?.buildingTypeCaption ?? '',
             division_1048: rentalObjectData.district ?? '',
             division_1242: rentalObjectData.marketArea ?? '',
             division_1140: rentalObjectData.property.rentalTypeCode,
