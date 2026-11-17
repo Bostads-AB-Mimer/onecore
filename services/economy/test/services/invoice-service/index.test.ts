@@ -248,6 +248,10 @@ describe('Invoice Service', () => {
           factory.invoice.build({ invoiceId: 'test-invoice-id' })
         ),
       })
+      jest.spyOn(tenfastAdapter, 'getInvoiceArticle').mockResolvedValueOnce({
+        ok: true,
+        data: factory.TenfastRentArticleFactory.build({ _id: '1234567890' }),
+      })
 
       const res = await request(app.callback()).get(`/invoices/12345`)
 
@@ -264,6 +268,10 @@ describe('Invoice Service', () => {
       jest.spyOn(tenfastAdapter, 'getInvoiceByOcr').mockResolvedValueOnce({
         ok: true,
         data: parsedTenfast(factory.invoice.build()),
+      })
+      jest.spyOn(tenfastAdapter, 'getInvoiceArticle').mockResolvedValueOnce({
+        ok: true,
+        data: factory.TenfastRentArticleFactory.build({ _id: '1234567890' }),
       })
 
       const res = await request(app.callback()).get(`/invoices/12345K`)
