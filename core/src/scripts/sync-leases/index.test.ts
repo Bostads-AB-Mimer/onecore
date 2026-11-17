@@ -532,6 +532,8 @@ describe('syncLeases', () => {
           lastName: 'redacted',
           fullName: 'redacted',
         },
+        addresses: [],
+        communication: { phoneNumbers: [], emailAddresses: [] },
       })
       const unredacted = factory.contactsServiceContact.build({
         contactCode: lease.contactCode,
