@@ -76,6 +76,8 @@ export const InvoiceSchema = z.object({
   source: z.enum(['legacy', 'next']),
   invoiceRows: z.array(InvoiceRowSchema),
   invoiceFileUrl: z.string().optional(),
+  // Set when the rent notice PDF can be fetched via /invoices/{ocr}/pdf
+  hasRentNoticePdf: z.boolean().optional(),
   remainingAmount: z.number().optional(),
   credit: z.object({ originalInvoiceId: z.string() }).nullable(),
   accountCode: z.string().optional(),

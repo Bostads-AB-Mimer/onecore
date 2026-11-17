@@ -28,3 +28,19 @@ export function downloadFileFromBase64(
   document.body.removeChild(link)
   window.URL.revokeObjectURL(url)
 }
+
+/**
+ * Saves a blob as a file
+ * @param blob - The file contents
+ * @param filename - The name to save the file as
+ */
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}

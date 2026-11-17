@@ -17,6 +17,20 @@ export function isDeferralErrorCode(
   return DeferralErrorCodes.some((code) => code === value)
 }
 
+// Why POST /invoices/{invoiceId}/send could not email the invoice.
+export const SendInvoiceEmailErrorCodes = [
+  'invoice-not-found',
+  'pdf-not-found',
+  'no-recipient',
+  'no-email',
+  'missing-due-date',
+  'send-failed',
+  'unknown',
+] as const
+
+export type SendInvoiceEmailErrorCode =
+  (typeof SendInvoiceEmailErrorCodes)[number]
+
 export const XledgerDeferralRequestSchema = z.object({
   endDate: z.string().regex(isoDateRegex, 'endDate must be YYYY-MM-DD'),
 })

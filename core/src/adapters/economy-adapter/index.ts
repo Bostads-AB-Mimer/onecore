@@ -56,6 +56,47 @@ export async function getInvoicePdf(
   }
 }
 
+const InvoiceFileNotFoundBodySchema = z.object({
+  reason: z.enum(['invoice-not-found', 'file-not-found']),
+})
+
+// The PDF Xledger keeps for an invoice, e.g. a miscellaneous invoice.
+export async function getInvoiceFile(
+  invoiceNumber: string
+): Promise<
+  AdapterResult<Buffer, 'invoice-not-found' | 'file-not-found' | 'unknown'>
+> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/invoices/${encodeURIComponent(invoiceNumber)}/file`,
+      { responseType: 'arraybuffer', validateStatus: () => true }
+    )
+
+    if (response.status === 404) {
+      const body = InvoiceFileNotFoundBodySchema.parse(
+        JSON.parse(Buffer.from(response.data).toString('utf-8'))
+      )
+      return { ok: false, err: body.reason }
+    }
+
+    if (response.status !== 200) {
+      logger.error(
+        { invoiceNumber, status: response.status },
+        'economy-adapter.getInvoiceFile'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: Buffer.from(response.data) }
+  } catch (err: unknown) {
+    logger.error(
+      { invoiceNumber, error: errorMessage(err) },
+      'economy-adapter.getInvoiceFile'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function getInvoiceByInvoiceId(
   invoiceId: string
 ): Promise<AdapterResult<Invoice, 'not-found' | 'unknown'>> {

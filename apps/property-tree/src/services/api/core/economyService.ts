@@ -10,7 +10,7 @@ import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscella
 import { XledgerContact } from '@onecore/types/src/types'
 
 import { ApiError, GET, POST, PUT } from './baseApi'
-import type { paths } from './generated/api-types'
+import type { components, paths } from './generated/api-types'
 
 // TODO: Fix the @ts-expect-error by updating the OpenAPI spec
 // Economy service is not properly set up for swagger generation :(
@@ -261,6 +261,41 @@ async function updateInvoiceDeferralDate(params: {
   if (error) throw error
 }
 
+// Null when there is no rent notice PDF for the invoice.
+async function getInvoicePdf(invoiceId: string): Promise<Blob | null> {
+  const { data, error, response } = await GET('/invoices/{ocr}/pdf', {
+    params: { path: { ocr: invoiceId } },
+    parseAs: 'blob',
+  })
+
+  if (response.status === 404) return null
+  if (error || !response.ok) {
+    throw new ApiError(
+      response.status,
+      `Failed to download invoice PDF (status ${response.status})`
+    )
+  }
+
+  // openapi-typescript types binary responses as `string`, but parseAs:'blob'
+  // makes openapi-fetch return an actual Blob at runtime.
+  return data as unknown as Blob
+}
+
+export type SendInvoiceError = components['schemas']['SendInvoiceEmailError']
+
+async function sendInvoiceToCustomer(invoiceId: string): Promise<void> {
+  const { error, response } = await POST('/invoices/{invoiceId}/send', {
+    params: { path: { invoiceId } },
+  })
+
+  // Branch on the raw status: a failed response without a body has no
+  // `error`, and must not be read as sent.
+  if (!response.ok) {
+    const sendError: SendInvoiceError = { reason: error?.reason ?? 'unknown' }
+    throw sendError
+  }
+}
+
 export const economyService = {
   getInvoicesByContactCode,
   getInvoiceByNumber,
@@ -273,4 +308,6 @@ export const economyService = {
   getXledgerContacts,
   getXledgerProjects,
   updateInvoiceDeferralDate,
+  getInvoicePdf,
+  sendInvoiceToCustomer,
 }

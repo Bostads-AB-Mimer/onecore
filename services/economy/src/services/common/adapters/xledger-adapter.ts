@@ -1387,6 +1387,44 @@ export async function getInvoiceByInvoiceNumber(
   }
 }
 
+/*
+ * Downloads the PDF Xledger keeps for an invoice (e.g. a miscellaneous
+ * invoice). invoiceFile.url is a link Xledger hands out that opens without an
+ * Xledger login, so no auth header is sent with it.
+ */
+export async function getInvoiceFile(
+  invoiceNumber: string
+): Promise<
+  AdapterResult<Buffer, 'invoice-not-found' | 'file-not-found' | 'unknown'>
+> {
+  try {
+    const parsed = await getInvoiceByInvoiceNumber(invoiceNumber)
+    if (!parsed) return { ok: false, err: 'invoice-not-found' }
+
+    const fileUrl = parsed.invoice.invoiceFileUrl
+    if (!fileUrl) return { ok: false, err: 'file-not-found' }
+
+    const response = await axios.get(fileUrl, {
+      responseType: 'arraybuffer',
+      validateStatus: () => true,
+    })
+
+    if (response.status === 404) return { ok: false, err: 'file-not-found' }
+    if (response.status !== 200) {
+      logger.error(
+        { invoiceNumber, status: response.status },
+        'xledger-adapter.getInvoiceFile'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: Buffer.from(response.data) }
+  } catch (err: unknown) {
+    logger.error({ err, invoiceNumber }, 'xledger-adapter.getInvoiceFile')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function getInvoiceMatchId(invoiceNumber: string) {
   const q = {
     query: gql`

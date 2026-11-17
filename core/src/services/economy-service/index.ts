@@ -1,5 +1,6 @@
 import KoaRouter from '@koa/router'
 import {
+  errorMessage,
   generateRouteMetadata,
   logger,
   makeSuccessResponseBody,
@@ -11,9 +12,15 @@ import {
 } from '@onecore/types'
 import * as communicationAdapter from '../../adapters/communication-adapter'
 import * as economyAdapter from '../../adapters/economy-adapter'
-import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import config from '../../common/config'
+import {
+  SendInvoiceEmailFailure,
+  sendMiscellaneousInvoiceEmail,
+  sendRentNoticeEmail,
+  toNotifyBatchError,
+  toSendInvoiceEmailError,
+} from './send-invoice-email'
 
 const invoicesErrorStatus: Record<
   economyAdapter.GetInvoicesByContactCodeError,
@@ -83,6 +90,35 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  /**
+   * @swagger
+   * /invoices/{ocr}/pdf:
+   *   get:
+   *     tags:
+   *       - Economy service
+   *     summary: Download the rent notice PDF for an invoice
+   *     parameters:
+   *       - in: path
+   *         name: ocr
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The OCR number of the rent notice
+   *     responses:
+   *       '200':
+   *         description: The rent notice PDF
+   *         content:
+   *           application/pdf:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       '404':
+   *         description: There is no rent notice with this OCR number
+   *       '500':
+   *         description: The PDF could not be fetched
+   *     security:
+   *       - bearerAuth: []
+   */
   router.get('/invoices/:ocr/pdf', async (ctx) => {
     const result = await economyAdapter.getInvoicePdf(ctx.params.ocr)
 
@@ -460,6 +496,122 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /invoices/{invoiceId}/send:
+   *   post:
+   *     tags:
+   *       - Economy service
+   *     summary: Email an invoice to the customer
+   *     description: |
+   *       Emails the invoice with its PDF attached. A rent notice goes to the
+   *       first tenant on its lease with the rent notice PDF. A miscellaneous
+   *       invoice goes to the customer it is billed to with the PDF from the
+   *       ledger. Outside production the email goes to the test inbox.
+   *     parameters:
+   *       - in: path
+   *         name: invoiceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The invoice number (the OCR number for a rent notice)
+   *     responses:
+   *       '200':
+   *         description: The email was sent
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [content]
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   required: [sent]
+   *                   properties:
+   *                     sent:
+   *                       type: boolean
+   *       '404':
+   *         description: The invoice or its PDF was not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/SendInvoiceEmailError'
+   *       '422':
+   *         description: The invoice has no recipient, the recipient has no email address, or the invoice has no due date
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/SendInvoiceEmailError'
+   *       '500':
+   *         description: The email could not be sent
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/SendInvoiceEmailError'
+   *     security:
+   *       - bearerAuth: []
+   * components:
+   *   schemas:
+   *     SendInvoiceEmailError:
+   *       type: object
+   *       required: [reason]
+   *       properties:
+   *         reason:
+   *           type: string
+   *           enum:
+   *             - invoice-not-found
+   *             - pdf-not-found
+   *             - no-recipient
+   *             - no-email
+   *             - missing-due-date
+   *             - send-failed
+   *             - unknown
+   */
+  router.post('/invoices/:invoiceId/send', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const { invoiceId } = ctx.params
+
+    const fail = (failure: SendInvoiceEmailFailure) => {
+      const { status, reason } = toSendInvoiceEmailError(failure)
+      // Adapters log their own failures; a 404/422 is not a server failure.
+      if (status < 500) {
+        logger.warn({ invoiceId, failure }, 'economy-service.sendInvoice')
+      }
+      ctx.status = status
+      ctx.body = { reason, ...metadata }
+    }
+
+    try {
+      const invoiceResult =
+        await economyAdapter.getInvoiceByInvoiceId(invoiceId)
+      if (!invoiceResult.ok) {
+        return fail(
+          invoiceResult.err === 'not-found'
+            ? 'invoice-not-found'
+            : 'invoice-unknown'
+        )
+      }
+
+      const invoice = invoiceResult.data
+      const result =
+        invoice.type === 'Other'
+          ? await sendMiscellaneousInvoiceEmail(invoice)
+          : await sendRentNoticeEmail(invoiceId)
+
+      if (!result.ok) return fail(result.err)
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ sent: true }, metadata)
+    } catch (err: unknown) {
+      logger.error(
+        { invoiceId, error: errorMessage(err) },
+        'economy-service.sendInvoice'
+      )
+      ctx.status = 500
+      ctx.body = { reason: 'unknown', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
    * /invoices/notify-batch:
    *   post:
    *     tags:
@@ -500,6 +652,13 @@ export const routes = (router: KoaRouter) => {
    *                       type: array
    *                       items:
    *                         type: object
+   *                         required: [ocr, error]
+   *                         properties:
+   *                           ocr:
+   *                             type: string
+   *                           error:
+   *                             type: string
+   *                             description: not-found, unknown, pdf-not-found, pdf-unknown, no-lease-id, lease-not-found, no-contact-code, no-email or missing-expiration-date
    *                     totalSent:
    *                       type: number
    *                     totalFailed:
@@ -543,64 +702,9 @@ export const routes = (router: KoaRouter) => {
       ocr: string
     ): Promise<{ ocr: string; sent: boolean; error?: string }> => {
       try {
-        const [invoiceResult, pdfResult] = await Promise.all([
-          economyAdapter.getInvoiceByOcr(ocr),
-          economyAdapter.getInvoicePdf(ocr),
-        ])
-
-        if (!invoiceResult.ok)
-          return { ocr, sent: false, error: invoiceResult.err }
-        if (!pdfResult.ok)
-          return { ocr, sent: false, error: `pdf-${pdfResult.err}` }
-
-        const invoice = invoiceResult.data
-        const leaseId = invoice.leaseIds[0]
-        if (!leaseId) return { ocr, sent: false, error: 'no-lease-id' }
-
-        const lease = await leasingAdapter.getLease(leaseId)
-        if (!lease) return { ocr, sent: false, error: 'lease-not-found' }
-
-        const contactCode = lease.tenantContactIds?.[0]
-        if (!contactCode) return { ocr, sent: false, error: 'no-contact-code' }
-
-        const contactResult =
-          await leasingAdapter.getContactByContactCode(contactCode)
-        if (!contactResult.ok)
-          return { ocr, sent: false, error: contactResult.err }
-
-        const contact = contactResult.data
-        if (!contact.emailAddress)
-          return { ocr, sent: false, error: 'no-email' }
-
-        if (!invoice.expirationDate)
-          return { ocr, sent: false, error: 'missing-expiration-date' }
-        const dueDate = new Date(invoice.expirationDate)
-          .toISOString()
-          .split('T')[0]
-
-        const emailTo =
-          process.env.NODE_ENV !== 'production'
-            ? config.emailAddresses.tenantDefault
-            : contact.emailAddress
-
-        const result = await communicationAdapter.sendInvoiceNotificationEmail({
-          to: emailTo,
-          firstName: contact.firstName,
-          address: lease.rentalObject?.address ?? '',
-          invoiceNumber: invoice.invoiceId,
-          dueDate,
-          totalAmount: String(invoice.amount),
-          attachments: [
-            {
-              filename: `faktura-${ocr}.pdf`,
-              content: pdfResult.data.data.toString('base64'),
-              contentType: 'application/pdf',
-            },
-          ],
-        })
-
+        const result = await sendRentNoticeEmail(ocr)
         if (result.ok) return { ocr, sent: true }
-        return { ocr, sent: false, error: result.err }
+        return { ocr, sent: false, error: toNotifyBatchError(result.err) }
       } catch (err) {
         logger.error(
           { ocr, err },
