@@ -57,7 +57,7 @@ God man och förvaltare läses men används inte av scriptet. De når Tenfast n�
    - avisering via Strålfors (`aviseringsTyp: "stralfors"`) — utan den sätter Tenfast "Aviseras ej",
    - månadsavisering, två veckor i förskott.
 
-   Tenfast samaviserar avtalet automatiskt med hyresgästens andra avtal när hyresgästerna och aviseringsinställningarna matchar. Synken skickar inget om samavisering. Se [Samavisering](../../processes/invoicedistribution/DOCS_Co_Invoicing.md).
+   Tenfast samaviserar avtalet automatiskt med hyresgästens andra avtal när hyresgästerna och aviseringsinställningarna matchar. Synken skickar inget om samavisering. Avtalet är redan signerat, så det kan bli huvudavtal direkt. Se [Samavisering](../../processes/invoicedistribution/DOCS_Co_Invoicing.md).
 
 6. Det signerade kontraktet hämtas som PDF ur Xpands dokumentarkiv och laddas upp på avtalet, om avtalet inte redan har en fil i Tenfast. **Steget kan inte fälla synken**: saknas PDF:en eller misslyckas uppladdningen räknas avtalet som skapat och teamet får ett mejl om att bifoga den för hand, när alla steg för raden lyckats. Raden köas inte, eftersom en köad `create` håller tillbaka avtalets senare händelser.
 

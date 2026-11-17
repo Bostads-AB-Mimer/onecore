@@ -4,7 +4,7 @@ _Del av [processöversikten](./DOCS_Overview.md) för poängsatta bilplatser._
 
 En sökande accepterar ett erbjudande om en poängsatt bilplats, skapat av [Create Offer](./DOCS_Create_Offer_for_Scored_Parking_Space.md)-processen — antingen själv via Mina Sidor eller å sökandens vägnar av en handläggare via Uthyrningsgränssnittet. Processen kontrollerar att erbjudandet är aktivt, att sökanden fortfarande är hyresgäst och uppfyller områdes- och fastighetsspecifika uthyrningsregler, och skapar därefter kontraktet. Eventuella andra aktiva erbjudanden till samma sökande [nekas](./DOCS_Deny_Offer.md) automatiskt — vilket i sin tur skapar ett nytt erbjudande till nästa sökande på de annonserna.
 
-Tenfast samaviserar bilplatsen med hyresgästens andra avtal redan när den skapas, innan den är signerad. Den kommer med på avin först när den har signerats. Se [Samavisering](../../invoicedistribution/DOCS_Co_Invoicing.md).
+Tenfast samaviserar bilplatsen med hyresgästens andra avtal om hyresgästerna och aviseringsinställningarna matchar. Det sker redan när bilplatsen skapas, innan den är signerad, men den kommer med på avin först när den har signerats. Se [Samavisering](../../invoicedistribution/DOCS_Co_Invoicing.md).
 
 ## Flödesdiagram
 
