@@ -641,8 +641,9 @@ const enrichInvoices = async (invoices: Invoice[]): Promise<Invoice[]> => {
     return acc
   }, [])
 
+  // One lookup per article, even when several rows use it.
   const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticle(id))
+    [...new Set(articleIds)].map((id) => getInvoiceArticle(id))
   )
   const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
     if (ar.ok) {
@@ -678,8 +679,9 @@ const enrichInvoiceRowsWithText = async (
     return acc
   }, [])
 
+  // One lookup per article, even when several rows use it.
   const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticle(id))
+    [...new Set(articleIds)].map((id) => getInvoiceArticle(id))
   )
   const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
     if (ar.ok) {
