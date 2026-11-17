@@ -85,7 +85,7 @@ jest.mock('@src/services/common/adapters/xledger-adapter', () => ({
 
 jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () => ({
   getInvoiceByOcr: jest.fn(),
-  getInvoiceArticle: jest.fn(),
+  getInvoiceArticleForDisplay: jest.fn(),
   getAutogiroConsentByNationalRegistrationNumber: jest.fn(),
   getInvoicesNotExported: jest.fn(),
   getRentalLosses: jest.fn(),
@@ -106,7 +106,7 @@ import {
 } from '@src/services/common/adapters/xledger-adapter'
 import {
   getInvoiceByOcr,
-  getInvoiceArticle,
+  getInvoiceArticleForDisplay,
   getAutogiroConsentByNationalRegistrationNumber,
   getInvoicesNotExported,
   getRentalLosses,
@@ -127,7 +127,7 @@ import { TenfastAutogiroConsentFactory } from '@test/factories'
 // Assign the mocked functions
 const mockGetInvoiceByInvoiceNumber = getInvoiceByInvoiceNumber as jest.Mock
 const mockGetInvoiceByOcr = getInvoiceByOcr as jest.Mock
-const mockGetInvoiceArticle = getInvoiceArticle as jest.Mock
+const mockGetInvoiceArticleForDisplay = getInvoiceArticleForDisplay as jest.Mock
 const mockGetAutogiroConsent =
   getAutogiroConsentByNationalRegistrationNumber as jest.Mock
 const mockGetInvoicesNotExported = getInvoicesNotExported as jest.Mock
@@ -190,13 +190,13 @@ describe('Rental Invoice Service', () => {
     beforeEach(() => {
       mockGetInvoiceByInvoiceNumber.mockReset()
       mockGetInvoiceByOcr.mockReset()
-      mockGetInvoiceArticle.mockReset()
+      mockGetInvoiceArticleForDisplay.mockReset()
     })
 
     it('should return invoice details with enriched invoice rows when all data is available', async () => {
       mockGetInvoiceByInvoiceNumber.mockResolvedValue(mockXledgerInvoice)
       mockGetInvoiceByOcr.mockResolvedValue(mockTenfastInvoiceResult)
-      mockGetInvoiceArticle
+      mockGetInvoiceArticleForDisplay
         .mockResolvedValueOnce({ ok: true, data: mockArticles[0] })
         .mockResolvedValueOnce({ ok: true, data: mockArticles[1] })
 
@@ -204,8 +204,8 @@ describe('Rental Invoice Service', () => {
 
       expect(getInvoiceByInvoiceNumber).toHaveBeenCalledWith('55123456')
       expect(getInvoiceByOcr).toHaveBeenCalledWith('test-invoice-id')
-      expect(getInvoiceArticle).toHaveBeenCalledWith('HYRAB')
-      expect(getInvoiceArticle).toHaveBeenCalledWith('PARK')
+      expect(getInvoiceArticleForDisplay).toHaveBeenCalledWith('HYRAB')
+      expect(getInvoiceArticleForDisplay).toHaveBeenCalledWith('PARK')
 
       expect(result).toEqual({
         ...mockXledgerInvoice.invoice,
@@ -260,7 +260,7 @@ describe('Rental Invoice Service', () => {
 
       expect(getInvoiceByInvoiceNumber).toHaveBeenCalledWith('55123456')
       expect(getInvoiceByOcr).toHaveBeenCalledWith('test-invoice-id')
-      expect(getInvoiceArticle).not.toHaveBeenCalled()
+      expect(getInvoiceArticleForDisplay).not.toHaveBeenCalled()
       expect(result).toEqual(mockXledgerInvoice.invoice)
     })
 
@@ -289,15 +289,15 @@ describe('Rental Invoice Service', () => {
 
       mockGetInvoiceByInvoiceNumber.mockResolvedValue(mockXledgerInvoice)
       mockGetInvoiceByOcr.mockResolvedValue(mockTenfastResultWithoutArticles)
-      mockGetInvoiceArticle.mockResolvedValue({
+      mockGetInvoiceArticleForDisplay.mockResolvedValue({
         ok: true,
         data: mockArticles[0],
       })
 
       const result = await getInvoiceDetails('55123456')
 
-      expect(mockGetInvoiceArticle).toHaveBeenCalledTimes(1)
-      expect(mockGetInvoiceArticle).toHaveBeenCalledWith('HYRAB')
+      expect(mockGetInvoiceArticleForDisplay).toHaveBeenCalledTimes(1)
+      expect(mockGetInvoiceArticleForDisplay).toHaveBeenCalledWith('HYRAB')
 
       expect(result).toEqual({
         ...mockXledgerInvoice.invoice,
@@ -321,13 +321,13 @@ describe('Rental Invoice Service', () => {
     it('should handle failed article lookups gracefully', async () => {
       mockGetInvoiceByInvoiceNumber.mockResolvedValue(mockXledgerInvoice)
       mockGetInvoiceByOcr.mockResolvedValue(mockTenfastInvoiceResult)
-      mockGetInvoiceArticle
+      mockGetInvoiceArticleForDisplay
         .mockResolvedValueOnce({ ok: false, err: 'Article not found' })
         .mockResolvedValueOnce({ ok: true, data: mockArticles[1] })
 
       const result = await getInvoiceDetails('55123456')
 
-      expect(getInvoiceArticle).toHaveBeenCalledTimes(2)
+      expect(getInvoiceArticleForDisplay).toHaveBeenCalledTimes(2)
 
       expect(result).toEqual({
         ...mockXledgerInvoice.invoice,
@@ -373,15 +373,15 @@ describe('Rental Invoice Service', () => {
 
       mockGetInvoiceByInvoiceNumber.mockResolvedValue(mockXledgerInvoice)
       mockGetInvoiceByOcr.mockResolvedValue(mockTenfastResultWithDuplicates)
-      mockGetInvoiceArticle
+      mockGetInvoiceArticleForDisplay
         .mockResolvedValueOnce({ ok: true, data: mockArticles[0] })
         .mockResolvedValueOnce({ ok: true, data: mockArticles[0] })
 
       const result = await getInvoiceDetails('55123456')
 
-      // Should call getInvoiceArticle for each unique article ID
-      expect(mockGetInvoiceArticle).toHaveBeenCalledTimes(2)
-      expect(mockGetInvoiceArticle).toHaveBeenCalledWith('HYRAB')
+      // Should call getInvoiceArticleForDisplay for each unique article ID
+      expect(mockGetInvoiceArticleForDisplay).toHaveBeenCalledTimes(2)
+      expect(mockGetInvoiceArticleForDisplay).toHaveBeenCalledWith('HYRAB')
 
       expect(result).toEqual({
         ...mockXledgerInvoice.invoice,

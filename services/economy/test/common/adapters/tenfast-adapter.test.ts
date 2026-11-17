@@ -9,6 +9,7 @@ import {
   getInvoicesByContactCode,
   getInvoiceByOcr,
   getInvoiceArticle,
+  getInvoiceArticleForDisplay,
   getActiveLeasesByRentalObjectCodes,
   recordPaymentForInvoice,
   getInvoicePdf,
@@ -635,7 +636,12 @@ describe('Tenfast Adapter', () => {
 
   describe(getInvoicesByContactCode, () => {
     // Tenfast references an article on an invoice row by its internal id.
-    const articleId = '6af2c8b04b883398396c10bd'
+    // A new id per test, since looked-up articles are cached for the whole file.
+    let articleSequence = 0
+    let articleId: string
+    beforeEach(() => {
+      articleId = `6af2c8b04b883398396c1${String(articleSequence++).padStart(3, '0')}`
+    })
 
     const mockTenfast = (articleResponse: { status: number; data: unknown }) =>
       mockAxios.request.mockImplementation(async (config: { url?: string }) => {
@@ -911,6 +917,80 @@ describe('Tenfast Adapter', () => {
 
       assert(!result.ok)
       expect(result.err).toBe('schema-error')
+    })
+  })
+
+  describe(getInvoiceArticleForDisplay, () => {
+    // The cache lives for the whole test file, so each test uses its own ids.
+    const articleRequests = () =>
+      mockAxios.request.mock.calls.filter(([config]) =>
+        String(config?.url).includes('/articles/')
+      ).length
+
+    beforeEach(() => {
+      mockAxios.request.mockReset()
+    })
+
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
+    it('fetches an article once and reuses it on the next lookup', async () => {
+      const article = TenfastRentArticleFactory.build({ _id: 'cache-hit' })
+      mockAxios.request.mockResolvedValue({ status: 200, data: article })
+
+      const first = await getInvoiceArticleForDisplay('cache-hit')
+      const second = await getInvoiceArticleForDisplay('cache-hit')
+
+      expect(first).toEqual({ ok: true, data: article })
+      expect(second).toEqual({ ok: true, data: article })
+      expect(articleRequests()).toBe(1)
+    })
+
+    it('fetches each article id on its own', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: TenfastRentArticleFactory.build(),
+      })
+
+      await getInvoiceArticleForDisplay('cache-miss-a')
+      await getInvoiceArticleForDisplay('cache-miss-b')
+
+      expect(articleRequests()).toBe(2)
+    })
+
+    it('fetches the article again once the cached one has expired', async () => {
+      const now = Date.now()
+      const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now)
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: TenfastRentArticleFactory.build({ _id: 'cache-ttl' }),
+      })
+
+      await getInvoiceArticleForDisplay('cache-ttl')
+      dateSpy.mockReturnValue(now + 59 * 60 * 1000)
+      await getInvoiceArticleForDisplay('cache-ttl')
+      expect(articleRequests()).toBe(1)
+
+      dateSpy.mockReturnValue(now + 61 * 60 * 1000)
+      await getInvoiceArticleForDisplay('cache-ttl')
+      expect(articleRequests()).toBe(2)
+    })
+
+    it('does not keep a failed lookup', async () => {
+      mockAxios.request
+        .mockResolvedValueOnce({ status: 404, data: {} })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastRentArticleFactory.build({ _id: 'cache-fail' }),
+        })
+
+      const first = await getInvoiceArticleForDisplay('cache-fail')
+      const second = await getInvoiceArticleForDisplay('cache-fail')
+
+      expect(first.ok).toBe(false)
+      expect(second.ok).toBe(true)
+      expect(articleRequests()).toBe(2)
     })
   })
 

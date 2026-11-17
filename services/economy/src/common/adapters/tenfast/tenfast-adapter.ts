@@ -372,7 +372,7 @@ const replaceRentArticleIdsWithCodes = async (
   const codeById = new Map(
     await Promise.all(
       articleIds.map(async (articleId) => {
-        const result = await getInvoiceArticle(articleId)
+        const result = await getInvoiceArticleForDisplay(articleId)
         return [articleId, result.ok ? result.data.code : undefined] as const
       })
     )
@@ -656,27 +656,33 @@ export const getInvoiceArticle = async (
   }
 }
 
-let rentArticles: TenfastRentArticle[]
+// Articles change rarely, and the customer card and Mina sidor look up the
+// same ones on every load. Only for showing an article's code and title: the
+// accounting export calls getInvoiceArticle directly, since it books on the
+// article's current account configuration.
+const ARTICLE_CACHE_TTL_MS = 60 * 60 * 1000
+const articleCache = new Map<
+  string,
+  { article: TenfastRentArticle; expiresAt: number }
+>()
 
-const retrieveRentArticles = async () => {
-  const result = await makeTenfastRequest(`/v1/hyresvard/articles`)
-
-  if (result.status !== 200) {
-    logger.error(result.status)
-    throw new Error('Could not retrieve rent articles from Tenfast')
+export const getInvoiceArticleForDisplay = async (
+  articleId: string
+): Promise<AdapterResult<TenfastRentArticle, string>> => {
+  const cached = articleCache.get(articleId)
+  if (cached && cached.expiresAt > Date.now()) {
+    return { ok: true, data: cached.article }
   }
 
-  const correctArticles = result.data.filter((article: any) => article.category)
-
-  const parsedResponse = z
-    .array(TenfastRentArticleSchema)
-    .safeParse(correctArticles)
-  if (!parsedResponse.success) {
-    logger.error(parsedResponse)
-    throw new Error('Could not retrieve rent articles from Tenfast')
+  const result = await getInvoiceArticle(articleId)
+  // Only successful lookups are kept, so a failed one is tried again next time.
+  if (result.ok) {
+    articleCache.set(articleId, {
+      article: result.data,
+      expiresAt: Date.now() + ARTICLE_CACHE_TTL_MS,
+    })
   }
-
-  rentArticles = parsedResponse.data
+  return result
 }
 
 /*const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {

@@ -53,7 +53,7 @@ import { TenfastRentArticle } from '@src/common/adapters/tenfast/schemas'
 import { AdapterResult } from '@src/common/types'
 import { withInvoiceDeferral } from '@src/common/invoice-deferral'
 import {
-  getInvoiceArticle,
+  getInvoiceArticleForDisplay,
   getInvoiceByOcr,
   setGracePeriod,
   getInvoicesByContactCode as getTenfastInvoicesByContactCode,
@@ -642,7 +642,7 @@ const enrichInvoices = async (invoices: Invoice[]): Promise<Invoice[]> => {
   }, [])
 
   const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticle(id))
+    articleIds.map((id) => getInvoiceArticleForDisplay(id))
   )
   const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
     if (ar.ok) {
@@ -679,7 +679,7 @@ const enrichInvoiceRowsWithText = async (
   }, [])
 
   const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticle(id))
+    articleIds.map((id) => getInvoiceArticleForDisplay(id))
   )
   const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
     if (ar.ok) {
