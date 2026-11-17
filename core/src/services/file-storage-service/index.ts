@@ -199,6 +199,8 @@ export const routes = (router: KoaRouter) => {
    *         description: Invalid request
    *       403:
    *         description: Guide image or lease export key — use the /guides or /lease-exports routes
+   *       413:
+   *         description: File too large for storage
    *       500:
    *         description: Server error
    *     security:
@@ -230,7 +232,12 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!result.ok) {
-      ctx.status = result.err === 'bad_request' ? 400 : 500
+      ctx.status =
+        result.err === 'bad_request'
+          ? 400
+          : result.err === 'payload_too_large'
+            ? 413
+            : 500
       ctx.body = { error: result.err }
       return
     }

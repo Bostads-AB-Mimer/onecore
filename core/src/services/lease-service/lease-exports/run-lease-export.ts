@@ -105,7 +105,8 @@ export async function runLeaseExport(
       buffer,
       XLSX_CONTENT_TYPE
     )
-    if (!upload.ok) throw new ExportFailure(upload.err, true)
+    if (!upload.ok)
+      throw new ExportFailure(upload.err, upload.err === 'unknown')
 
     registry.complete(job.id, storageKey)
   } catch (err: unknown) {
