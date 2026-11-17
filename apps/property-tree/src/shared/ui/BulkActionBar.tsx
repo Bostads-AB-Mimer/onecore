@@ -5,6 +5,8 @@ import { Button } from '@/shared/ui/Button'
 
 interface BulkActionBarProps {
   selectedCount: number
+  /** Some of the selected items are on other pages than the one shown */
+  includesOtherPages?: boolean
   onClear: () => void
   onSendSms: () => void
   onSendEmail?: () => void
@@ -14,6 +16,7 @@ interface BulkActionBarProps {
 
 export function BulkActionBar({
   selectedCount,
+  includesOtherPages,
   onClear,
   onSendSms,
   onSendEmail,
@@ -33,6 +36,12 @@ export function BulkActionBar({
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium">
             {selectedCount.toLocaleString('sv-SE')} valda
+            {includesOtherPages && (
+              <span className="font-normal text-muted-foreground">
+                {' '}
+                (även på andra sidor)
+              </span>
+            )}
           </span>
           <button
             onClick={onClear}

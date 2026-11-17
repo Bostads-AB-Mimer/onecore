@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
 import { usePropertySearch } from '@/features/properties'
 import { useCostCenters } from '@/features/property-areas'
 
-import { useLeaseFilters } from '@/entities/lease'
+import { PAGE_SIZE_OPTIONS, useLeaseFilters } from '@/entities/lease'
 
 import { ApiError } from '@/services/api/core/baseApi'
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
@@ -83,6 +83,11 @@ const LeasesPage = () => {
     cardRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  const handlePageSizeChange = (newPageSize: number) => {
+    filters.setPageSize(newPageSize)
+    cardRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   const handleExport = async () => {
     if (!filters.meta?.totalRecords || filters.meta.totalRecords === 0) return
 
@@ -146,6 +151,12 @@ const LeasesPage = () => {
   useEffect(() => {
     clearSelection()
   }, [filters.searchParams, clearSelection])
+
+  const selectionIncludesOtherPages = useMemo(() => {
+    if (allResultsSelected) return false
+    const idsOnPage = new Set(filters.leases.map((lease) => lease.leaseId))
+    return selectedLeaseIds.some((id) => !idsOnPage.has(id))
+  }, [allResultsSelected, filters.leases, selectedLeaseIds])
 
   const selectColumn = {
     key: 'select',
@@ -394,12 +405,15 @@ const LeasesPage = () => {
             pageSize={filters.pageSize}
             onPageChange={handlePageChange}
             isFetching={filters.isFetching}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onPageSizeChange={handlePageSizeChange}
           />
         </CardContent>
       </Card>
 
       <BulkActionBar
         selectedCount={selectedCount}
+        includesOtherPages={selectionIncludesOtherPages}
         onClear={clearSelection}
         onSendSms={handleOpenSmsModal}
         onSendEmail={handleOpenEmailModal}
