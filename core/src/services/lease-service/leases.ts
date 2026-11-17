@@ -41,9 +41,9 @@ import { registerSchema } from '../../utils/openapi'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 
-// The lease search in leasing caps limit at 100 anyway. It also keeps the
-// contact and rental object lookups per page (two per lease) to about 200.
-const CSC_MAX_PAGE_SIZE = 100
+// Same cap as the lease search in leasing. Each lease on a page gets a contact
+// and a rental object lookup, so a full page makes about 1000 calls.
+const CSC_MAX_PAGE_SIZE = 500
 
 export const routes = (router: KoaRouter) => {
   // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
@@ -115,9 +115,9 @@ export const routes = (router: KoaRouter) => {
    *         name: limit
    *         schema:
    *           type: integer
-   *           default: 100
-   *           maximum: 100
-   *         description: Leases per page, before filtering. Values above 100 count as 100, values below 1 as 1.
+   *           default: 500
+   *           maximum: 500
+   *         description: Leases per page, before filtering. Values above 500 count as 500, values below 1 as 1.
    *     responses:
    *       '200':
    *         description: Successfully retrieved residential leases for the CSC report

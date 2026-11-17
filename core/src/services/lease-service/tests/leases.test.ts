@@ -1215,7 +1215,7 @@ describe('leases routes', () => {
       )
     })
 
-    it('enforces max limit of 100 even if higher value is passed as query param', async () => {
+    it('enforces max limit of 500 even if higher value is passed as query param', async () => {
       const searchSpy = jest
         .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([]))
@@ -1223,7 +1223,7 @@ describe('leases routes', () => {
       await request(app.callback()).get('/leases/for-csc?limit=9999')
 
       expect(searchSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ limit: '100' })
+        expect.objectContaining({ limit: '500' })
       )
     })
 
@@ -1290,7 +1290,7 @@ describe('leases routes', () => {
       expect(res.body.reason).toEqual(['limit must be a valid number'])
     })
 
-    it('asks for 100 leases per page by default', async () => {
+    it('asks for 500 leases per page by default', async () => {
       const searchSpy = jest
         .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([]))
@@ -1298,7 +1298,7 @@ describe('leases routes', () => {
       await request(app.callback()).get('/leases/for-csc')
 
       expect(searchSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ limit: '100' })
+        expect.objectContaining({ limit: '500' })
       )
     })
 
