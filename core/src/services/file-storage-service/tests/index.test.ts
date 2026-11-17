@@ -224,3 +224,119 @@ describe('guide files are not reachable through /files', () => {
     expect(deleteSpy).not.toHaveBeenCalled()
   })
 })
+
+describe('lease export files are not reachable through /files', () => {
+  const exportKey = 'lease-exports/u1/x.xlsx'
+  const refusal = 'lease-export-files-managed-via-lease-exports-api'
+
+  it('refuses GET /files/:fileName/url for a lease export', async () => {
+    const spy = jest.spyOn(fileStorageAdapter, 'getFileUrl').mockResolvedValue({
+      ok: true,
+      data: { url: 'https://storage/lease-exports/u1/x.xlsx', expiresIn: 3600 },
+    })
+
+    const res = await request(app.callback()).get(
+      `/files/${encodeURIComponent(exportKey)}/url`
+    )
+
+    expect(res.status).toBe(403)
+    expect(res.body.error).toBe(refusal)
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it.each(['lease-exports/', '\\lease-exports/', '/./lease-exports/'])(
+    'refuses to list files under the prefix %s',
+    async (prefix) => {
+      const listSpy = jest
+        .spyOn(fileStorageAdapter, 'listFiles')
+        .mockResolvedValue({ ok: true, data: [file(exportKey)] })
+
+      const res = await request(app.callback()).get('/files').query({ prefix })
+
+      expect(res.status).toBe(403)
+      expect(res.body.error).toBe(refusal)
+      expect(listSpy).not.toHaveBeenCalled()
+    }
+  )
+
+  it('refuses to upload to a lease export key', async () => {
+    const uploadSpy = jest
+      .spyOn(fileStorageAdapter, 'uploadFile')
+      .mockResolvedValue({
+        ok: true,
+        data: { fileName: exportKey, message: 'uploaded' },
+      })
+
+    const res = await request(app.callback())
+      .post('/files/upload')
+      .send({
+        fileName: exportKey,
+        fileData: Buffer.from('x').toString('base64'),
+        contentType:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+
+    expect(res.status).toBe(403)
+    expect(res.body.error).toBe(refusal)
+    expect(uploadSpy).not.toHaveBeenCalled()
+  })
+
+  it('refuses to delete a lease export', async () => {
+    const deleteSpy = jest
+      .spyOn(fileStorageAdapter, 'deleteFile')
+      .mockResolvedValue({ ok: true, data: undefined })
+
+    const res = await request(app.callback()).delete(
+      `/files/${encodeURIComponent(exportKey)}`
+    )
+
+    expect(res.status).toBe(403)
+    expect(res.body.error).toBe(refusal)
+    expect(deleteSpy).not.toHaveBeenCalled()
+  })
+
+  it('refuses GET /files/:fileName/metadata for a lease export', async () => {
+    const spy = jest
+      .spyOn(fileStorageAdapter, 'getFileMetadata')
+      .mockResolvedValue({
+        ok: true,
+        data: file(exportKey),
+      })
+
+    const res = await request(app.callback()).get(
+      `/files/${encodeURIComponent(exportKey)}/metadata`
+    )
+
+    expect(res.status).toBe(403)
+    expect(res.body.error).toBe(refusal)
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('refuses GET /files/:fileName/exists for a lease export', async () => {
+    const spy = jest
+      .spyOn(fileStorageAdapter, 'fileExists')
+      .mockResolvedValue({ ok: true, data: true })
+
+    const res = await request(app.callback()).get(
+      `/files/${encodeURIComponent(exportKey)}/exists`
+    )
+
+    expect(res.status).toBe(403)
+    expect(res.body.error).toBe(refusal)
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('omits lease exports from a listing without a prefix', async () => {
+    jest.spyOn(fileStorageAdapter, 'listFiles').mockResolvedValue({
+      ok: true,
+      data: [file(exportKey), file('inspection/1.pdf')],
+    })
+
+    const res = await request(app.callback()).get('/files')
+
+    expect(res.status).toBe(200)
+    expect(res.body.content.files.map((f: FileListItem) => f.name)).toEqual([
+      'inspection/1.pdf',
+    ])
+  })
+})

@@ -13,6 +13,7 @@ import {
 import { ReleaseNotesModal } from '@/widgets/dashboard'
 
 import { useAuth } from '@/features/auth'
+import { LeaseExportsButton } from '@/features/lease-exports'
 import { GlobalSearchBar, useCommandPalette } from '@/features/search'
 
 import { useUser } from '@/entities/user'
@@ -104,6 +105,7 @@ export function AppHeader({ onMenuClick, hideMobileSearch }: AppHeaderProps) {
               <span className="sr-only">Toggle Search</span>
             </Button>
           )}
+          <LeaseExportsButton />
           <Button
             variant="ghost"
             onClick={() => setIsReleaseNotesOpen(true)}

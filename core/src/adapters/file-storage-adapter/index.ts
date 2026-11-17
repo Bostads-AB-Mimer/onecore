@@ -9,11 +9,23 @@ import type {
 import { AdapterResult } from '../types'
 import config from '../../common/config'
 
+const isSuccessStatus = (status: number) => status >= 200 && status < 300
+
+const errorSummary = (err: unknown) =>
+  axios.isAxiosError(err)
+    ? { status: err.response?.status, message: err.message }
+    : { message: err instanceof Error ? err.message : String(err) }
+
 export async function uploadFile(
   fileName: string,
   fileBuffer: Buffer,
   contentType: string
-): Promise<AdapterResult<FileUploadResponse, 'unknown' | 'bad_request'>> {
+): Promise<
+  AdapterResult<
+    FileUploadResponse,
+    'unknown' | 'bad_request' | 'payload_too_large'
+  >
+> {
   try {
     const fileData = fileBuffer.toString('base64')
 
@@ -28,6 +40,7 @@ export async function uploadFile(
         headers: {
           'Content-Type': 'application/json',
         },
+        validateStatus: isSuccessStatus,
       }
     )
 
@@ -35,13 +48,25 @@ export async function uploadFile(
       return { ok: true, data: response.data }
     }
 
+    logger.error({ fileName }, 'file-storage-adapter.uploadFile: empty body')
     return { ok: false, err: 'unknown' }
   } catch (err: unknown) {
-    const axiosErr = err as { response?: { status?: number } }
-    if (axiosErr.response?.status === 400) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    if (status === 400) {
+      logger.warn({ fileName }, 'file-storage-adapter.uploadFile: bad request')
       return { ok: false, err: 'bad_request' }
     }
-    logger.error({ err, fileName }, 'file-storage-adapter.uploadFile')
+    if (status === 413) {
+      logger.warn(
+        { fileName },
+        'file-storage-adapter.uploadFile: payload too large'
+      )
+      return { ok: false, err: 'payload_too_large' }
+    }
+    logger.error(
+      { err: errorSummary(err), fileName },
+      'file-storage-adapter.uploadFile'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -55,20 +80,26 @@ export async function getFileUrl(
       `${config.fileStorageService.url}/files/${encodeURIComponent(fileName)}/url`,
       {
         params: { expirySeconds },
+        validateStatus: isSuccessStatus,
       }
     )
 
-    if (response.data) {
+    if (response.data?.url) {
       return { ok: true, data: response.data }
     }
 
+    logger.error({ fileName }, 'file-storage-adapter.getFileUrl: no url')
     return { ok: false, err: 'unknown' }
   } catch (err: unknown) {
-    const axiosErr = err as { response?: { status?: number } }
-    if (axiosErr.response?.status === 404) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    if (status === 404) {
+      logger.warn({ fileName }, 'file-storage-adapter.getFileUrl: not found')
       return { ok: false, err: 'not_found' }
     }
-    logger.error({ err, fileName }, 'file-storage-adapter.getFileUrl')
+    logger.error(
+      { err: errorSummary(err), fileName },
+      'file-storage-adapter.getFileUrl'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
