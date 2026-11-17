@@ -1275,6 +1275,112 @@ describe('leases routes', () => {
       )
     })
 
+    it('passes a limit below the cap and the page through', async () => {
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      await request(app.callback()).get('/leases/for-csc?limit=50&page=3')
+
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: '50', page: '3' })
+      )
+    })
+
+    it('keeps objectType and status even if the query sets them', async () => {
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      await request(app.callback()).get(
+        '/leases/for-csc?objectType=parkering&status=Ended'
+      )
+
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          objectType: 'bostad',
+          status: ['Current', 'AboutToEnd'],
+        })
+      )
+    })
+
+    it('returns _meta on an empty page, so clients can stop paging', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue({
+        content: [],
+        _meta: { totalRecords: 120, page: 3, limit: 100, count: 0 },
+        _links: [],
+      })
+
+      const res = await request(app.callback()).get('/leases/for-csc?page=3')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([])
+      expect(res.body._meta).toEqual({
+        totalRecords: 120,
+        page: 3,
+        limit: 100,
+        count: 0,
+      })
+    })
+
+    it('returns 400 when leasing rejects the query parameters', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockRejectedValue(
+        Object.assign(new Error('Bad Request'), {
+          isAxiosError: true,
+          response: {
+            status: 400,
+            data: { details: ['limit must be a valid number'] },
+          },
+        })
+      )
+
+      const res = await request(app.callback()).get('/leases/for-csc?limit=abc')
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid query parameters')
+      expect(res.body.reason).toEqual(['limit must be a valid number'])
+    })
+
+    it('looks up at most 20 leases at once', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(
+          buildPaginatedResponse(Array.from({ length: 50 }, validLease))
+        )
+      let inFlight = 0
+      let maxInFlight = 0
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockImplementation(async () => {
+          inFlight++
+          maxInFlight = Math.max(maxInFlight, inFlight)
+          await new Promise((resolve) => setImmediate(resolve))
+          inFlight--
+          return { ok: true, data: validContact() }
+        })
+      jest
+        .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+        .mockResolvedValue({ status: 200, data: validRentalProperty() })
+
+      const res = await request(app.callback()).get('/leases/for-csc')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(50)
+      expect(maxInFlight).toBe(20)
+    })
+
+    it('asks for 500 leases per page by default', async () => {
+      const searchSpy = jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([]))
+
+      await request(app.callback()).get('/leases/for-csc')
+
+      expect(searchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: '500' })
+      )
+    })
+
     it('filters out lease with no contacts', async () => {
       jest
         .spyOn(tenantLeaseAdapter, 'searchLeases')
