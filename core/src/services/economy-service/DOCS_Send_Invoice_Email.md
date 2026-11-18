@@ -15,7 +15,9 @@ Outside production every email goes to `config.emailAddresses.tenantDefault`.
 
 ```mermaid
 flowchart TD
-    A[POST /invoices/:invoiceId/send] --> R1[In parallel: economy GET /invoices/by-ocr/:invoiceId<br/>and GET /invoices/:invoiceId/pdf]
+    A[POST /invoices/:invoiceId/send] --> T{body invoiceType}
+    T -->|Other| B
+    T -->|Regular or not given| R1[In parallel: economy GET /invoices/by-ocr/:invoiceId<br/>and GET /invoices/:invoiceId/pdf]
     R1 -->|rent notice found, PDF missing| E404P[404 pdf-not-found]
     R1 -->|error| E500[500 unknown]
     R1 -->|rent notice found| R2[First lease id → leasing getLease → first tenant<br/>→ contacts service lookup of the tenant]
@@ -45,6 +47,8 @@ flowchart TD
 ```
 
 The rent system is asked first (`sendInvoiceEmail`): a rent notice is there before it reaches the ledger, and that one lookup returns everything the email needs. The ledger is only asked about invoices the rent system does not have.
+
+A miscellaneous invoice is never in the rent system. The app knows the invoice's type and sends it as `invoiceType`; for `Other` core goes straight to the ledger. The value only saves the lookup: the type the ledger reports decides whether the invoice is emailed as a miscellaneous invoice.
 
 404 and 422 are logged at `warn` by the route. 500s are logged by the adapter that failed.
 

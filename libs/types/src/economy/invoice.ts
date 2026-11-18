@@ -31,6 +31,13 @@ export const SendInvoiceEmailErrorCodes = [
 export type SendInvoiceEmailErrorCode =
   (typeof SendInvoiceEmailErrorCodes)[number]
 
+/** Request body for POST /invoices/{invoiceId}/send. */
+export const SendInvoiceEmailRequestSchema = z.object({
+  // The invoice's type, when the caller already knows it. A miscellaneous
+  // invoice ('Other') is never a rent notice, so core skips that lookup.
+  invoiceType: z.enum(['Regular', 'Other']).optional(),
+})
+
 export const XledgerDeferralRequestSchema = z.object({
   endDate: z.string().regex(isoDateRegex, 'endDate must be YYYY-MM-DD'),
 })

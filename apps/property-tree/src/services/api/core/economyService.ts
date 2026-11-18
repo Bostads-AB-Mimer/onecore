@@ -283,9 +283,14 @@ async function getInvoicePdf(invoiceId: string): Promise<Blob | null> {
 
 export type SendInvoiceError = components['schemas']['SendInvoiceEmailError']
 
-async function sendInvoiceToCustomer(invoiceId: string): Promise<void> {
+// invoiceType lets core skip the rent notice lookup for a miscellaneous invoice.
+async function sendInvoiceToCustomer(params: {
+  invoiceId: string
+  invoiceType: Invoice['type']
+}): Promise<void> {
   const { error, response } = await POST('/invoices/{invoiceId}/send', {
-    params: { path: { invoiceId } },
+    params: { path: { invoiceId: params.invoiceId } },
+    body: { invoiceType: params.invoiceType },
   })
 
   // Branch on the raw status: a failed response without a body has no

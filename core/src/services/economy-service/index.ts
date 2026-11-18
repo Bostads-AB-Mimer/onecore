@@ -514,6 +514,17 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The invoice number (the OCR number for a rent notice)
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               invoiceType:
+   *                 type: string
+   *                 enum: [Regular, Other]
+   *                 description: The invoice's type, when the caller knows it. For Other (a miscellaneous invoice) the rent notice lookup is skipped.
    *     responses:
    *       '200':
    *         description: The email was sent
@@ -529,6 +540,8 @@ export const routes = (router: KoaRouter) => {
    *                   properties:
    *                     sent:
    *                       type: boolean
+   *       '400':
+   *         description: The request body is invalid
    *       '404':
    *         description: The invoice or its PDF was not found
    *         content:
@@ -566,35 +579,42 @@ export const routes = (router: KoaRouter) => {
    *             - send-failed
    *             - unknown
    */
-  router.post('/invoices/:invoiceId/send', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { invoiceId } = ctx.params
+  router.post(
+    '/invoices/:invoiceId/send',
+    parseRequestBody(economy.SendInvoiceEmailRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { invoiceId } = ctx.params
 
-    const fail = (failure: SendInvoiceEmailFailure) => {
-      const { status, reason } = toSendInvoiceEmailError(failure)
-      // Adapters log their own failures; a 404/422 is not a server failure.
-      if (status < 500) {
-        logger.warn({ invoiceId, failure }, 'economy-service.sendInvoice')
+      const fail = (failure: SendInvoiceEmailFailure) => {
+        const { status, reason } = toSendInvoiceEmailError(failure)
+        // Adapters log their own failures; a 404/422 is not a server failure.
+        if (status < 500) {
+          logger.warn({ invoiceId, failure }, 'economy-service.sendInvoice')
+        }
+        ctx.status = status
+        ctx.body = { reason, ...metadata }
       }
-      ctx.status = status
-      ctx.body = { reason, ...metadata }
-    }
 
-    try {
-      const result = await sendInvoiceEmail(invoiceId)
-      if (!result.ok) return fail(result.err)
+      try {
+        const result = await sendInvoiceEmail(
+          invoiceId,
+          ctx.request.body.invoiceType
+        )
+        if (!result.ok) return fail(result.err)
 
-      ctx.status = 200
-      ctx.body = makeSuccessResponseBody({ sent: true }, metadata)
-    } catch (err: unknown) {
-      logger.error(
-        { invoiceId, error: errorMessage(err) },
-        'economy-service.sendInvoice'
-      )
-      ctx.status = 500
-      ctx.body = { reason: 'unknown', ...metadata }
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody({ sent: true }, metadata)
+      } catch (err: unknown) {
+        logger.error(
+          { invoiceId, error: errorMessage(err) },
+          'economy-service.sendInvoice'
+        )
+        ctx.status = 500
+        ctx.body = { reason: 'unknown', ...metadata }
+      }
     }
-  })
+  )
 
   /**
    * @swagger

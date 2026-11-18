@@ -8892,6 +8892,17 @@ export interface paths {
           invoiceId: string
         }
       }
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @description The invoice's type, when the caller knows it. For Other (a miscellaneous invoice) the rent notice lookup is skipped.
+             * @enum {string}
+             */
+            invoiceType?: 'Regular' | 'Other'
+          }
+        }
+      }
       responses: {
         /** @description The email was sent */
         200: {
@@ -8902,6 +8913,10 @@ export interface paths {
               }
             }
           }
+        }
+        /** @description The request body is invalid */
+        400: {
+          content: never
         }
         /** @description The invoice or its PDF was not found */
         404: {
@@ -8927,7 +8942,7 @@ export interface paths {
   '/invoices/notify-batch': {
     /**
      * Send invoice notification emails for a selection of invoices
-     * @description For each OCR number, fetches invoice data and PDF from economy, contact info from leasing, then sends a notification email with the invoice PDF attached.
+     * @description For each OCR number, fetches invoice data and PDF from economy, the lease from leasing and the tenant's contact info from the contacts service, then sends a notification email with the invoice PDF attached.
      */
     post: {
       requestBody: {
@@ -8947,7 +8962,7 @@ export interface paths {
                 sent?: string[]
                 failed?: {
                   ocr: string
-                  /** @description not-found, unknown, pdf-not-found, pdf-unknown, no-lease-id, lease-not-found, no-contact-code, no-email or missing-expiration-date */
+                  /** @description not-found, unknown, pdf-not-found, pdf-unknown, no-lease-id, lease-not-found, no-contact-code, protected-identity, no-email or missing-expiration-date */
                   error: string
                 }[]
                 totalSent?: number

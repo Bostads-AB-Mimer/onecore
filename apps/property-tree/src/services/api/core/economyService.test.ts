@@ -55,6 +55,11 @@ describe('economyService.getInvoicePdf', () => {
 })
 
 describe('economyService.sendInvoiceToCustomer', () => {
+  const rentNotice = {
+    invoiceId: '552000000001',
+    invoiceType: 'Regular',
+  } as const
+
   afterEach(() => vi.resetAllMocks())
 
   it('resolves when the invoice was sent', async () => {
@@ -63,8 +68,12 @@ describe('economyService.sendInvoiceToCustomer', () => {
     )
 
     await expect(
-      economyService.sendInvoiceToCustomer('552000000001')
+      economyService.sendInvoiceToCustomer(rentNotice)
     ).resolves.toBeUndefined()
+    expect(baseApi.POST).toHaveBeenCalledWith('/invoices/{invoiceId}/send', {
+      params: { path: { invoiceId: '552000000001' } },
+      body: { invoiceType: 'Regular' },
+    })
   })
 
   it('rejects with the reason core gave', async () => {
@@ -73,7 +82,7 @@ describe('economyService.sendInvoiceToCustomer', () => {
     )
 
     await expect(
-      economyService.sendInvoiceToCustomer('552000000001')
+      economyService.sendInvoiceToCustomer(rentNotice)
     ).rejects.toEqual({ reason: 'no-email' })
   })
 
@@ -81,7 +90,7 @@ describe('economyService.sendInvoiceToCustomer', () => {
     vi.mocked(baseApi.POST).mockResolvedValue(respond(502))
 
     await expect(
-      economyService.sendInvoiceToCustomer('552000000001')
+      economyService.sendInvoiceToCustomer(rentNotice)
     ).rejects.toEqual({ reason: 'unknown' })
   })
 })

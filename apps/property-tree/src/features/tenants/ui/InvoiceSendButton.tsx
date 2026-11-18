@@ -52,7 +52,7 @@ export const InvoiceSendButton = ({ invoice }: Props) => {
   }
 
   const handleSend = () => {
-    sendInvoice.mutate(invoice.invoiceId, {
+    sendInvoice.mutate(invoice, {
       onSuccess: () => {
         handleOpenChange(false)
         toast({

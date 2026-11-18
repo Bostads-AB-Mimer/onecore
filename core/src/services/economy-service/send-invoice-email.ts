@@ -202,13 +202,21 @@ export const sendMiscellaneousInvoiceEmail = async (
  * notice exists in the rent system before it reaches the ledger, and that
  * lookup already returns everything the email needs. Only an invoice the rent
  * system does not know is looked up in the ledger.
+ *
+ * A miscellaneous invoice is never in the rent system, so a caller that knows
+ * the invoice is one passes `knownType` and the rent notice lookup is skipped.
+ * `knownType` only saves that lookup: the type the ledger reports still
+ * decides whether the invoice is emailed as a miscellaneous invoice.
  */
 export const sendInvoiceEmail = async (
-  invoiceId: string
+  invoiceId: string,
+  knownType?: Invoice['type']
 ): Promise<SendInvoiceEmailResult> => {
-  const rentNoticeResult = await sendRentNoticeEmail(invoiceId)
-  if (rentNoticeResult.ok || rentNoticeResult.err !== 'invoice-not-found') {
-    return rentNoticeResult
+  if (knownType !== 'Other') {
+    const rentNoticeResult = await sendRentNoticeEmail(invoiceId)
+    if (rentNoticeResult.ok || rentNoticeResult.err !== 'invoice-not-found') {
+      return rentNoticeResult
+    }
   }
 
   const invoiceResult = await economyAdapter.getInvoiceByInvoiceId(invoiceId)

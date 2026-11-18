@@ -107,8 +107,8 @@ const notInRentSystem = () => {
     .mockResolvedValue({ ok: false, err: 'not-found' })
 }
 
-const send = (invoiceId: string) =>
-  request(app.callback()).post(`/invoices/${invoiceId}/send`)
+const send = (invoiceId: string, body?: { invoiceType: unknown }) =>
+  request(app.callback()).post(`/invoices/${invoiceId}/send`).send(body)
 
 describe('POST /invoices/:invoiceId/send', () => {
   let sendEmail: jest.SpyInstance
@@ -302,6 +302,19 @@ describe('POST /invoices/:invoiceId/send', () => {
       )
     })
 
+    it('skips the rent notice lookup when the caller says it is a miscellaneous invoice', async () => {
+      const res = await send(miscellaneousInvoice.invoiceId, {
+        invoiceType: 'Other',
+      })
+
+      expect(res.status).toBe(200)
+      expect(economyAdapter.getInvoiceByOcr).not.toHaveBeenCalled()
+      expect(economyAdapter.getInvoicePdf).not.toHaveBeenCalled()
+      expect(sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ invoiceNumber: '1234567' })
+      )
+    })
+
     it('answers 404 pdf-not-found when the ledger has no file', async () => {
       jest
         .spyOn(economyAdapter, 'getInvoiceFile')
@@ -365,6 +378,28 @@ describe('POST /invoices/:invoiceId/send', () => {
 
     expect(res.status).toBe(404)
     expect(res.body.reason).toBe('pdf-not-found')
+    expect(sendEmail).not.toHaveBeenCalled()
+  })
+
+  it('does not email a rent notice as a miscellaneous invoice when the caller gives the wrong type', async () => {
+    notInRentSystem()
+    jest
+      .spyOn(economyAdapter, 'getInvoiceByInvoiceId')
+      .mockResolvedValue({ ok: true, data: rentNotice })
+    const getInvoiceFile = jest.spyOn(economyAdapter, 'getInvoiceFile')
+
+    const res = await send(rentNotice.invoiceId, { invoiceType: 'Other' })
+
+    expect(res.status).toBe(404)
+    expect(res.body.reason).toBe('pdf-not-found')
+    expect(getInvoiceFile).not.toHaveBeenCalled()
+    expect(sendEmail).not.toHaveBeenCalled()
+  })
+
+  it('answers 400 for an invoice type that does not exist', async () => {
+    const res = await send(rentNotice.invoiceId, { invoiceType: 'Rent' })
+
+    expect(res.status).toBe(400)
     expect(sendEmail).not.toHaveBeenCalled()
   })
 
