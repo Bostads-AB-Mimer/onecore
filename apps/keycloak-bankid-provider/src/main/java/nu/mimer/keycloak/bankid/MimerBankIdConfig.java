@@ -2,6 +2,7 @@ package nu.mimer.keycloak.bankid;
 
 import static org.keycloak.common.util.UriUtils.checkUrl;
 
+import java.io.IOException;
 import java.util.regex.Pattern;
 import org.keycloak.models.IdentityProviderModel;
 import org.keycloak.models.RealmModel;
@@ -43,6 +44,17 @@ public class MimerBankIdConfig extends IdentityProviderModel {
 
     public String getApimKey() {
         return getConfig().get("apimKey");
+    }
+
+    /**
+     * The value, or an error naming the setting. A guard at login time for settings that
+     * {@link #validate} already refuses when the provider is saved.
+     */
+    static String required(String name, String value) throws IOException {
+        if (value == null || value.isBlank()) {
+            throw new IOException(name + " is not set");
+        }
+        return value;
     }
 
     /**

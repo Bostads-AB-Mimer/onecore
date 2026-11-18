@@ -1,6 +1,5 @@
 package nu.mimer.keycloak.bankid;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
@@ -9,6 +8,7 @@ import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import nu.mimer.keycloak.bankid.Transaction.Outcome;
 import org.jboss.logging.Logger;
 import org.keycloak.broker.provider.AbstractIdentityProvider;
 import org.keycloak.broker.provider.AuthenticationRequest;
@@ -150,7 +150,7 @@ public class MimerBankIdIdentityProvider extends AbstractIdentityProvider<MimerB
                 return callback.error(provider.getConfig(), LOGIN_FAILED);
             }
 
-            JsonNode tx;
+            Transaction tx;
             try {
                 tx = provider.client().get(transactionId);
             } catch (Exception e) {
@@ -158,24 +158,23 @@ public class MimerBankIdIdentityProvider extends AbstractIdentityProvider<MimerB
                 return callback.error(provider.getConfig(), LOGIN_FAILED);
             }
 
-            switch (TransactionCheck.evaluate(tx)) {
-                case CANCELLED:
-                    return callback.cancelled(provider.getConfig());
-                case REJECTED:
-                    LOG.warnf("Mimer BankID transaction %s rejected: method=%s status=%s hint=%s", transactionId,
-                            tx.path("method").asText(), tx.path("status").asText(),
-                            tx.path("processingInfo").path("hintCode").asText());
-                    return callback.error(provider.getConfig(), LOGIN_FAILED);
-                default:
-                    break;
-            }
+            return switch (tx.outcome()) {
+                case Outcome.Cancelled cancelled -> callback.cancelled(provider.getConfig());
+                case Outcome.Rejected rejected -> {
+                    LOG.warnf("Mimer BankID transaction %s rejected: %s", transactionId, rejected.reason());
+                    yield callback.error(provider.getConfig(), LOGIN_FAILED);
+                }
+                case Outcome.Accepted accepted -> callback.authenticated(identity(accepted.personalNumber(), authSession));
+            };
+        }
 
-            String pnr = TransactionCheck.personalNumber(tx);
-            BrokeredIdentityContext identity = new BrokeredIdentityContext(pnr, provider.getConfig());
-            identity.setUsername(pnr);
+        /** The personnummer becomes the brokered username; the realm's first-login flow links it to the user. */
+        private BrokeredIdentityContext identity(String personalNumber, AuthenticationSessionModel authSession) {
+            BrokeredIdentityContext identity = new BrokeredIdentityContext(personalNumber, provider.getConfig());
+            identity.setUsername(personalNumber);
             identity.setIdp(provider);
             identity.setAuthenticationSession(authSession);
-            return callback.authenticated(identity);
+            return identity;
         }
 
         /** Keycloak's error page, as {@code ErrorPage.error} renders it (that class is not part of the SPI). */

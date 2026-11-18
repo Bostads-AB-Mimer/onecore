@@ -17,8 +17,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import java.io.IOException;
@@ -38,7 +36,6 @@ import org.mockito.ArgumentCaptor;
 
 class MimerBankIdIdentityProviderTest {
 
-    private static final ObjectMapper M = new ObjectMapper();
     private static final String PNR = "199001011234";
 
     private final KeycloakSession session = mock(KeycloakSession.class);
@@ -71,9 +68,8 @@ class MimerBankIdIdentityProviderTest {
         when(authSession.getAuthNote(NOTE_TX)).thenReturn(tx);
     }
 
-    private static JsonNode tx(String status, String pnr) throws Exception {
-        return M.readTree("{\"method\":\"Auth\",\"status\":\"" + status + "\",\"processingInfo\":{\"completionData\":"
-                + "{\"user\":{\"personalNumber\":\"" + pnr + "\"}}}}");
+    private static Transaction tx(String status, String pnr) {
+        return new Transaction("Auth", status, null, pnr);
     }
 
     @Test
@@ -129,6 +125,15 @@ class MimerBankIdIdentityProviderTest {
         when(client.get("tx-1")).thenReturn(tx("Cancelled", PNR));
         endpoint.back("s", "tx-1");
         verify(callback).cancelled(config);
+    }
+
+    @Test
+    void rejectedFailsWithOurMessage() throws Exception {
+        loginStartedWith("tx-1");
+        when(client.get("tx-1")).thenReturn(new Transaction("Auth", "Failed", "TransactionRiskBlocked", null));
+        assertSame(callbackAnswer, endpoint.back("s", "tx-1"));
+        verify(callback).error(config, LOGIN_FAILED);
+        verify(callback, never()).authenticated(any());
     }
 
     @Test
@@ -195,6 +200,13 @@ class MimerBankIdIdentityProviderTest {
         assertEquals(303, res.getStatus());
         assertEquals("https://bankid/t/tx-1/", res.getLocation().toString());
         verify(authSession).setAuthNote(NOTE_TX, "tx-1");
+    }
+
+    @Test
+    void returnUrlKeepsStateOnBrokerEndpoint() {
+        String url = MimerBankIdIdentityProvider.returnUrl(
+                "https://auth.dev.mimer.nu/realms/mimer-contacts/broker/bankid/endpoint", "abc.def-ghi_jkl");
+        assertEquals("https://auth.dev.mimer.nu/realms/mimer-contacts/broker/bankid/endpoint/return?state=abc.def-ghi_jkl", url);
     }
 
     @Test
