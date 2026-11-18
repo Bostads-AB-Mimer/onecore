@@ -1,6 +1,7 @@
 import {
   LoginContactCandidate,
   pickLoginContact,
+  rankLoginContacts,
 } from '@src/domain/login-contact'
 
 const candidate = (
@@ -10,6 +11,7 @@ const candidate = (
   currentTenant: false,
   queueTime: false,
   xpandUser: false,
+  isActive: false,
   createdAt: new Date('2020-01-01'),
   ...overrides,
 })
@@ -126,5 +128,42 @@ describe('pickLoginContact', () => {
     ])
 
     expect(choice?.contactCode).toBe('P1')
+  })
+})
+
+describe('rankLoginContacts', () => {
+  it('orders every candidate as pickLoginContact chooses, best first', () => {
+    const candidates = [
+      candidate({ contactCode: 'P3', supplierOnly: true }),
+      candidate({ contactCode: 'P1', currentTenant: true }),
+      candidate({ contactCode: 'P2', queueTime: true }),
+    ]
+
+    expect(rankLoginContacts(candidates).map((c) => c.contactCode)).toEqual(
+      pickLoginContact(candidates)?.candidates
+    )
+  })
+
+  it('does not rank by isActive, so login keeps its choice', () => {
+    const ranked = rankLoginContacts([
+      candidate({ contactCode: 'P2', isActive: true }),
+      candidate({ contactCode: 'P1', currentTenant: true, isActive: false }),
+    ])
+
+    expect(ranked.map((c) => [c.contactCode, c.isActive])).toEqual([
+      ['P1', false],
+      ['P2', true],
+    ])
+  })
+
+  it('leaves its input alone', () => {
+    const candidates = [
+      candidate({ contactCode: 'P2' }),
+      candidate({ contactCode: 'P1', currentTenant: true }),
+    ]
+
+    rankLoginContacts(candidates)
+
+    expect(candidates.map((c) => c.contactCode)).toEqual(['P2', 'P1'])
   })
 })

@@ -1,22 +1,20 @@
-import axios, { isAxiosError } from 'axios'
+import { isAxiosError } from 'axios'
 import { decodeJwt } from 'jose'
-import Personnummer from 'personnummer'
 import { logger } from '@onecore/utilities'
 
-import config from '../../common/config'
 import { contactsAdapter } from '../../adapters/contacts-adapter'
 import type { AdapterResult } from '../../adapters/types'
 import { httpStatusForContactsKeycloakError } from './contacts-keycloak-errors'
 import {
+  CONTACT_CODE_ATTRIBUTE,
+  connectContactsKeycloakAdmin,
+  isContactsProvisioningConfigured,
+  toContactsUsername,
+} from './contacts-keycloak-provisioning'
+import {
   type ContactsTokenResponse,
-  contactsKeycloakAdminUrl,
-  contactsKeycloakRequestConfig,
-  contactsOAuthPostConfig,
   refreshContactsAccessToken,
-  tokenEndpointUrl,
 } from './keycloak-contacts'
-
-const CONTACT_CODE_ATTRIBUTE = 'contact_code'
 
 /**
  * Upper bound on the whole step. webapi gives up on /auth/contacts/token after 15 s, and the
@@ -43,18 +41,6 @@ export class ContactCodeError extends Error {
   }
 }
 
-type KeycloakUserRepresentation = {
-  id: string
-  username: string
-  attributes?: Record<string, string[]>
-  [key: string]: unknown
-}
-
-export function isContactsProvisioningConfigured(): boolean {
-  const { clientId, clientSecret } = config.auth.keycloak.contacts.provisioning
-  return Boolean(clientId && clientSecret)
-}
-
 /**
  * The contact_code claim as a single value. A user attribute mapper set to multivalued puts a
  * one-element array in the token; without accepting that, every login would look like a missing
@@ -71,19 +57,6 @@ function readContactCodeClaim(value: unknown): string | undefined {
     return value[0]
   }
   return undefined
-}
-
-/**
- * The Keycloak username as a twelve-digit personnummer, or null when it is not one.
- *
- * Only a valid personnummer (or samordningsnummer) is ever looked up, so a username that is
- * something else costs no call to the contacts service. Twelve digits is the form Xpand stores
- * for nearly all private individuals.
- */
-function personnummerFromUsername(username: string): string | null {
-  const options = { allowCoordinationNumber: true, allowInterimNumber: false }
-  if (!Personnummer.valid(username, options)) return null
-  return Personnummer.parse(username, options).format(true)
 }
 
 /** null when the contacts service has no such contact. */
@@ -109,28 +82,12 @@ async function findContact<T>(
   )
 }
 
-async function keycloak<T>(request: () => Promise<{ data: T }>): Promise<T> {
+async function keycloak<T>(request: Promise<T>): Promise<T> {
   try {
-    return (await request()).data
+    return await request
   } catch (error) {
     throw new ContactCodeError('keycloak_unavailable', error)
   }
-}
-
-async function getProvisioningToken(): Promise<string> {
-  const { clientId, clientSecret } = config.auth.keycloak.contacts.provisioning
-  const tokens = await keycloak(() =>
-    axios.post<{ access_token: string }>(
-      tokenEndpointUrl(),
-      new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: clientId,
-        client_secret: clientSecret,
-      }).toString(),
-      contactsOAuthPostConfig
-    )
-  )
-  return tokens.access_token
 }
 
 /** The attribute was just set, so only a refreshed token carries it. */
@@ -176,17 +133,11 @@ async function setContactCode(
     throw new ContactCodeError('provisioning_not_configured')
   }
 
-  const adminToken = await getProvisioningToken()
-  const userUrl = `${contactsKeycloakAdminUrl()}/users/${encodeURIComponent(claims.sub)}`
-  const adminConfig = {
-    ...contactsKeycloakRequestConfig,
-    headers: { Authorization: `Bearer ${adminToken}` },
-  }
-
-  const user = await keycloak(() =>
-    axios.get<KeycloakUserRepresentation>(userUrl, adminConfig)
-  )
-  const personnummer = personnummerFromUsername(user.username)
+  const admin = await keycloak(connectContactsKeycloakAdmin())
+  const user = await keycloak(admin.getUser(claims.sub))
+  // The username is the personnummer. Only a valid one is ever looked up: the contacts
+  // service's by-nid lookup matches anything for an input without digits.
+  const personnummer = toContactsUsername(user.username)
   if (!personnummer) {
     logger.warn(
       { sub: claims.sub },
@@ -210,21 +161,7 @@ async function setContactCode(
     },
     'Setting contact_code on mimer-contacts user'
   )
-  // With the declarative user profile, attributes missing from a PUT are removed, so the whole
-  // representation goes back with only contact_code changed.
-  await keycloak(() =>
-    axios.put(
-      userUrl,
-      {
-        ...user,
-        attributes: {
-          ...user.attributes,
-          [CONTACT_CODE_ATTRIBUTE]: [contact.contactCode],
-        },
-      },
-      adminConfig
-    )
-  )
+  await keycloak(admin.setContactCode(user, contact.contactCode))
 
   return refreshWithContactCode(tokens.refresh_token)
 }

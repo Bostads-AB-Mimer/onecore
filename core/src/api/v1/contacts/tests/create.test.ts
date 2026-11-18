@@ -125,6 +125,17 @@ describe('POST /v1/contacts', () => {
     expect(res.body.content.waitingLists).toEqual([])
   })
 
+  it('drops ageRule, so staff get the contacts service default', async () => {
+    const res = await request(app.callback())
+      .post('/v1/contacts')
+      .send(body({ ageRule: 'birth-year' }))
+
+    expect(res.status).toBe(201)
+    expect(mockCreateContact).toHaveBeenCalledWith(
+      expect.not.objectContaining({ ageRule: expect.anything() })
+    )
+  })
+
   it('rejects an invalid body before touching anything', async () => {
     const res = await request(app.callback())
       .post('/v1/contacts')
