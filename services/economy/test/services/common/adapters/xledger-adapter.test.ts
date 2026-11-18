@@ -1334,3 +1334,85 @@ describe(adapter.getMiscellaneousInvoices, () => {
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })
+
+describe(adapter.getInvoiceFile, () => {
+  const fileUrl = 'https://files.xledger.example.com/invoice/12345.pdf'
+  const invoiceNode = (invoiceFile: { url: string } | null) => ({
+    data: {
+      arTransactions: {
+        edges: [
+          {
+            node: {
+              invoiceNumber: '12345',
+              invoiceDate: '2025-01-01',
+              invoiceRemaining: 100,
+              subledger: { code: 'P12345', description: 'Test Tenant' },
+              period: { fromDate: '2025-01-01', toDate: '2025-01-01' },
+              dueDate: '2025-01-31',
+              text: null,
+              headerTransactionSourceDbId: 600,
+              amount: 100,
+              invoiceFile,
+            },
+          },
+        ],
+      },
+    },
+  })
+
+  it('downloads the file Xledger links to', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, invoiceNode({ url: fileUrl }))
+    nock('https://files.xledger.example.com')
+      .get('/invoice/12345.pdf')
+      .reply(200, Buffer.from('%PDF-1.4 mock'))
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: true, data: Buffer.from('%PDF-1.4 mock') })
+  })
+
+  it('returns invoice-not-found when Xledger has no such invoice', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: false, err: 'invoice-not-found' })
+  })
+
+  it('returns file-not-found when the invoice has no file', async () => {
+    // Arrange
+    nock(origin).post(pathname).reply(200, invoiceNode(null))
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: false, err: 'file-not-found' })
+  })
+
+  it('returns unknown when the file download fails', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, invoiceNode({ url: fileUrl }))
+    nock('https://files.xledger.example.com')
+      .get('/invoice/12345.pdf')
+      .reply(403)
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})

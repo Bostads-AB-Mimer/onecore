@@ -443,6 +443,45 @@ describe('Invoice Service', () => {
     })
   })
 
+  describe('GET /invoices/:invoiceNumber/file', () => {
+    it('returns 200 with the pdf bytes', async () => {
+      const pdfBuffer = Buffer.from('%PDF-1.4 mock')
+      jest
+        .spyOn(xledgerAdapter, 'getInvoiceFile')
+        .mockResolvedValueOnce({ ok: true, data: pdfBuffer })
+
+      const res = await request(app.callback()).get('/invoices/1234567/file')
+
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toMatch('application/pdf')
+      expect(Buffer.from(res.body).equals(pdfBuffer)).toBe(true)
+    })
+
+    it.each(['invoice-not-found', 'file-not-found'] as const)(
+      'returns 404 with reason %s',
+      async (reason) => {
+        jest
+          .spyOn(xledgerAdapter, 'getInvoiceFile')
+          .mockResolvedValueOnce({ ok: false, err: reason })
+
+        const res = await request(app.callback()).get('/invoices/1234567/file')
+
+        expect(res.status).toBe(404)
+        expect(res.body.reason).toBe(reason)
+      }
+    )
+
+    it('returns 500 when the download fails', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getInvoiceFile')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get('/invoices/1234567/file')
+
+      expect(res.status).toBe(500)
+    })
+  })
+
   describe('GET /invoices/:invoiceId/pdf', () => {
     const pdfBuffer = Buffer.from('%PDF-1.4 mock')
     const contentDisposition = 'attachment; filename=Hyresavi.pdf'

@@ -13,6 +13,7 @@ import {
 
 import {
   getAllInvoicesWithMatchIds,
+  getInvoiceFile,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   getMiscellaneousInvoices,
@@ -354,6 +355,59 @@ export const routes = (router: KoaRouter) => {
       ).replace(/[\r\n]/g, '')
     )
     ctx.body = result.data.data
+  })
+
+  /**
+   * @swagger
+   * /invoices/{invoiceNumber}/file:
+   *   get:
+   *     summary: Download the PDF Xledger keeps for an invoice
+   *     description: Used for miscellaneous invoices. Rent notices are fetched via /invoices/{ocr}/pdf.
+   *     tags:
+   *       - Invoices
+   *     parameters:
+   *       - in: path
+   *         name: invoiceNumber
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: The invoice PDF
+   *         content:
+   *           application/pdf:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       404:
+   *         description: The invoice or its file was not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   enum: [invoice-not-found, file-not-found]
+   *       500:
+   *         description: The file could not be downloaded
+   */
+  router.get('(.*)/invoices/:invoiceNumber/file', async (ctx) => {
+    const result = await getInvoiceFile(ctx.params.invoiceNumber)
+
+    if (!result.ok) {
+      if (result.err === 'unknown') {
+        ctx.status = 500
+        return
+      }
+      ctx.status = 404
+      ctx.body = { reason: result.err }
+      return
+    }
+
+    ctx.status = 200
+    ctx.set('Content-Type', 'application/pdf')
+    ctx.body = result.data
   })
 
   router.get('(.*)/invoices/by-ocr/:ocr', async (ctx) => {
