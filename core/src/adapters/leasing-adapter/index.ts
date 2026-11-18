@@ -365,11 +365,13 @@ const getTenantByContactCode = async (
       if (res.data?.type === 'no-valid-housing-contract') {
         return { ok: false, err: 'no-valid-housing-contract' }
       }
-      // 'contact-not-tenant' and 'contact-leases-not-found' both mean the
-      // contact has no tenancy.
+      // 'contact-not-tenant', 'contact-leases-not-found' and
+      // 'tenfast-tenant-not-found' (no tenant in Tenfast, e.g. a former
+      // tenant) all mean the contact has no tenancy.
       if (
         res.data?.type === 'contact-not-tenant' ||
-        res.data?.type === 'contact-leases-not-found'
+        res.data?.type === 'contact-leases-not-found' ||
+        res.data?.type === 'tenfast-tenant-not-found'
       ) {
         return { ok: false, err: 'contact-not-tenant' }
       }
@@ -626,9 +628,18 @@ const preliminaryTerminateLease = async (
     return { ok: false, err: 'unknown' }
   }
 }
+const ContactsByFiltersResponseSchema = z.object({
+  content: z.array(leasing.v1.ContactInfoSchema),
+})
+
 const getContactsByFilters = async (
   queryParams: Record<string, string | string[] | undefined>
-): Promise<AdapterResult<{ content: leasing.v1.ContactInfo[] }, 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    leasing.v1.ContactInfo[],
+    'invalid-request' | 'service-unavailable' | 'schema-error' | 'unknown'
+  >
+> => {
   try {
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/contacts/from-lease-search`,
@@ -637,12 +648,39 @@ const getContactsByFilters = async (
         paramsSerializer: {
           indexes: null,
         },
+        // Explicit validateStatus: the process-wide default (<500) would hand
+        // a 400 error body back as if it were the list of contacts.
+        validateStatus: (status) => status === 200,
       }
     )
 
-    return { ok: true, data: response.data }
-  } catch (err) {
-    logger.error({ err }, 'leasingAdapter.getContactsByFilters')
+    return {
+      ok: true,
+      data: ContactsByFiltersResponseSchema.parse(response.data).content,
+    }
+  } catch (err: unknown) {
+    if (err instanceof z.ZodError) {
+      logger.error(
+        { issues: err.issues },
+        'leasingAdapter.getContactsByFilters: unexpected response shape'
+      )
+      return { ok: false, err: 'schema-error' }
+    }
+
+    const status = err instanceof AxiosError ? err.response?.status : undefined
+
+    if (status === 400) {
+      return { ok: false, err: 'invalid-request', statusCode: 400 }
+    }
+    // The lease cache is still loading; leasing sends Retry-After.
+    if (status === 503) {
+      return { ok: false, err: 'service-unavailable', statusCode: 503 }
+    }
+
+    logger.error(
+      { status, error: err instanceof Error ? err.message : String(err) },
+      'leasingAdapter.getContactsByFilters'
+    )
     return { ok: false, err: 'unknown' }
   }
 }

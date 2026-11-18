@@ -244,13 +244,11 @@ function SidebarNavigationContent() {
           label="Guider"
           matchPrefix
         />
-        {/* Temporarily hidden from the nav while the feature is finalized.
-            The route still works, so the page is reachable via /forvaltningsomraden. */}
-        {/* <SidebarNavLink
+        <SidebarNavLink
           to={routes.propertyAreas}
           icon={LayoutGrid}
           label="Förvaltningsområden"
-        /> */}
+        />
       </SidebarContent>
     </Sidebar>
   )

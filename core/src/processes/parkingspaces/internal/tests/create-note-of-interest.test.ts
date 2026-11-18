@@ -346,6 +346,45 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
     expect(result.httpStatus).toBe(400)
   })
 
+  it.each([
+    ['unavailable' as const, 503, 503, 'service-unavailable'],
+    ['unknown' as const, 500, 500, 'internal-error'],
+  ])(
+    'returns %s from the invoice lookup as %i',
+    async (err, statusCode, httpStatus, errorCode) => {
+      getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
+        ok: true,
+        data: mockedListing,
+      })
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: mockedRentalObject,
+      })
+      getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
+      getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
+      getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
+        ok: false,
+        err,
+        statusCode,
+      })
+
+      const result =
+        await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
+          'foo',
+          'bar',
+          'Additional'
+        )
+
+      if (result.processStatus !== ProcessStatus.failed)
+        throw new Error('expected the process to fail')
+      expect(result.httpStatus).toBe(httpStatus)
+      expect(result.error).toBe(errorCode)
+      expect(result.response.message).toBe(
+        `Failed to get invoices for contact P12345: ${statusCode} ${err}`
+      )
+    }
+  )
+
   it('adds applicant to waiting list if not in it already', async () => {
     getContactSpy.mockResolvedValue({
       ok: true,

@@ -36,9 +36,9 @@ Garagekontrakt plockas alltså upp ur loggen men faller bort här. Bilplatser ha
 
 Går objektinformationen inte att hämta räknas raden som ett **fel** och hamnar i felkön — till skillnad från "utanför scope". Det gäller även Xpands fjärde sort, Övrigt (`bahyr`), som Property Management svarar på med serverfel: raden köas och ges upp efter 30 dagar, fast objektet aldrig skulle till Tenfast. Om sådana objekt har kontrakt är inte kontrollerat.
 
-## Annan fakturamottagare
+## Fakturamottagare
 
-Vid `create` hämtas hyresgästen från Contacts, med relationer. Har hen en **annan fakturamottagare** hämtas den kontakten i sin helhet och synkas till Xledger — **skapas** om kunden saknas. Mottagaren måste finnas som kund innan avtalet börjar aviseras, även om hen aldrig varit hyresgäst. Misslyckas det avbryts hela avtalssynken och raden köas. Misslyckas i stället Tenfast-steget efteråt återställs en uppdaterad kund till sina gamla värden; en nyskapad kund får vara kvar (se [Steg och återställning](../DOCS_Sync_Overview.md#steg-och-återställning)). Avvisar Economy mottagaren (4xx) skapas avtalet inte förrän mottagaren rättats i Xpand; varje återförsök hämtar mottagaren på nytt.
+Vid `create` är fakturamottagaren hyresgästens **annan fakturamottagare** om hen har en, annars hyresgästen själv. Mottagaren synkas till Xledger — **skapas** om kunden saknas — innan avtalet skapas i Tenfast. En annan fakturamottagare hämtas i sin helhet från Contacts, även om hen aldrig varit hyresgäst. En helt ny hyresgäst med skyddad identitet har inget avtal i Tenfast än och skapas därför som `redacted`, utan adress och e-post. Misslyckas synken avbryts hela avtalssynken och raden köas. Misslyckas i stället Tenfast-steget efteråt återställs en uppdaterad kund till sina gamla värden; en nyskapad kund får vara kvar (se [Steg och återställning](../DOCS_Sync_Overview.md#steg-och-återställning)). Avvisar Economy mottagaren (4xx) skapas avtalet inte förrän mottagaren rättats i Xpand; varje återförsök hämtar mottagaren på nytt.
 
 God man och förvaltare läses men används inte av scriptet. De når Tenfast när hyresgästen importeras (se nedan), eftersom Tenfast då hämtar kontakten med relationer från ONECore.
 
@@ -56,6 +56,9 @@ God man och förvaltare läses men används inte av scriptet. De når Tenfast n�
    - hyresrader kopierade från hyresobjektet i Tenfast, med radens `consolidationLabel` (summering på avin),
    - avisering via Strålfors (`aviseringsTyp: "stralfors"`) — utan den sätter Tenfast "Aviseras ej",
    - månadsavisering, två veckor i förskott.
+
+   Tenfast samaviserar avtalet automatiskt med hyresgästens andra avtal när hyresgästerna och aviseringsinställningarna matchar. Synken skickar inget om samavisering. Avtalet är redan signerat, så det kan bli huvudavtal direkt. Se [Samavisering](../../processes/invoicedistribution/DOCS_Co_Invoicing.md).
+
 6. Det signerade kontraktet hämtas som PDF ur Xpands dokumentarkiv och laddas upp på avtalet, om avtalet inte redan har en fil i Tenfast. **Steget kan inte fälla synken**: saknas PDF:en eller misslyckas uppladdningen räknas avtalet som skapat och teamet får ett mejl om att bifoga den för hand, när alla steg för raden lyckats. Raden köas inte, eftersom en köad `create` håller tillbaka avtalets senare händelser.
 
 ### terminate — avtalet sägs upp
@@ -111,14 +114,12 @@ Bq --> |Yes| C{Residence or<br/>Storage?}
 C --> |No| S[Skip — Out of Scope,<br/>Counted as Synced]
 C --> |Yes| D{Action}
 D --> |create| E(Get Tenant with<br/>Relations)
-E --> Eq{Other Invoice<br/>Recipient?}
-Eq --> |Yes| F(Create or Update<br/>Recipient in Xledger)
-Eq --> |No| G
+E --> F(Create or Update Invoice<br/>Receiver in Xledger)
 F --> Fq{OK?}
 Fq --> |No| Q
 Fq --> |Yes| G(Create Lease in Tenfast<br/>unless it Exists,<br/>Attach Signed PDF)
-G --> Gq{Failed after<br/>Recipient Updated?}
-Gq --> |Yes| Ux[Undo Recipient<br/>in Xledger]
+G --> Gq{Failed after<br/>Customer Updated?}
+Gq --> |Yes| Ux[Undo Customer<br/>in Xledger]
 Ux --> Q
 D --> |terminate| H(Terminate Lease in Tenfast,<br/>Attach Termination PDF)
 D --> |void| I(Void Lease in Tenfast)
@@ -175,13 +176,15 @@ sequenceDiagram
             opt Action is create
                 Core ->> Contacts: GET /contacts/{contactCode}
                 Contacts -->> Core: Contact with relations
-                opt Has other invoice recipient
+                alt Has other invoice recipient
                     Core ->> Contacts: GET /contacts/{recipientCode}
                     Contacts -->> Core: Recipient with address
-                    Core ->> Economy: POST /customers/{code}/sync?create=true
-                    Economy ->> Xledger: Create or update customer
-                    Economy -->> Core: OK
+                    Core ->> Economy: POST /customers/{recipientCode}/sync?create=true
+                else Tenant is the invoice receiver
+                    Core ->> Economy: POST /customers/{contactCode}/sync?create=true
                 end
+                Economy ->> Xledger: Create or update customer
+                Economy -->> Core: OK
             end
 
             Core ->> Leasing: POST /leases/sync<br/>{leaseId, action, contactCode on create}

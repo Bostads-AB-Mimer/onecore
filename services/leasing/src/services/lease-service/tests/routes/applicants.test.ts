@@ -2,6 +2,7 @@ import request from 'supertest'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
+import { LeaseStatus } from '@onecore/types'
 
 import * as factory from '../factories'
 import * as listingAdapter from '../../adapters/listing-adapter'
@@ -270,6 +271,41 @@ describe('GET applicants/validatePropertyRentalRules/:contactCode/:rentalObjectC
     expect(getTenantSpy).toHaveBeenCalled()
   })
 
+  it('responds with applicationType Additional if the parking space in the same property as listing is under notice', async () => {
+    const currentHousingContractRentalObjectCode =
+      'CURRENT_HOUSING_CONTRACT_RENTAL_OBJECT_CODE'
+    const parkingSpaceRentalObjectCode = 'PARKING_SPACE_RENTAL_OBJECT_CODE'
+
+    const tenant = factory.tenant.build({
+      currentHousingContract: factory.lease.build({
+        rentalPropertyId: currentHousingContractRentalObjectCode,
+      }),
+      upcomingHousingContract: undefined,
+      parkingSpaceContracts: [
+        factory.lease.build({
+          type: leaseTypes.parkingspaceContract,
+          rentalPropertyId: parkingSpaceRentalObjectCode,
+          status: LeaseStatus.AboutToEnd,
+        }),
+      ],
+    })
+
+    jest
+      .spyOn(estateCodeAdapter, 'getEstateCodeFromXpandByRentalObjectCode')
+      .mockResolvedValue({ estateCode: '24104', type: 'foo' })
+
+    jest
+      .spyOn(getTenantService, 'getTenant')
+      .mockResolvedValueOnce({ ok: true, data: tenant })
+
+    const res = await request(app.callback()).get(
+      `/applicants/validatePropertyRentalRules/${tenant.contactCode}/${parkingSpaceRentalObjectCode}`
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.applicationType).toBe('Additional')
+  })
+
   it('responds with 200 if user already has parking space but not in the same property as listing', async () => {
     const listing = factory.listing.build()
     const applicant = factory.applicant
@@ -466,5 +502,31 @@ describe('GET applicants/validateResidentialAreaRentalRules/:contactCode/:distri
         'Subject already have an active parking space contract in the listings residential area. Subject is eligible to apply to parking space with applicationType replace.',
     })
     expect(getTenantSpy).toHaveBeenCalled()
+  })
+
+  it('responds with applicationType Additional if the parking space in the same area as listing is under notice', async () => {
+    const tenant = factory.tenant.build({
+      currentHousingContract: factory.lease.build({
+        residentialArea: { code: 'OXB' },
+      }),
+      upcomingHousingContract: undefined,
+      parkingSpaceContracts: [
+        factory.lease.build({
+          residentialArea: { code: 'OXB' },
+          status: LeaseStatus.AboutToEnd,
+        }),
+      ],
+    })
+
+    jest
+      .spyOn(getTenantService, 'getTenant')
+      .mockResolvedValueOnce({ ok: true, data: tenant })
+
+    const res = await request(app.callback()).get(
+      `/applicants/validateResidentialAreaRentalRules/${tenant.contactCode}/OXB`
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.applicationType).toBe('Additional')
   })
 })

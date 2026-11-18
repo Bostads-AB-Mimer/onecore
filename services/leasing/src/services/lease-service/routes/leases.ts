@@ -6,10 +6,7 @@ import {
   getContacts,
   getContactByContactCode,
 } from '../adapters/xpand/tenant-lease-adapter'
-import {
-  searchLeases,
-  getParkingSpaceTypes,
-} from '../adapters/xpand/lease-search-adapter'
+import { getParkingSpaceTypes } from '../adapters/xpand/lease-search-adapter'
 import {
   logger,
   generateRouteMetadata,
@@ -656,28 +653,45 @@ export const routes = (router: KoaRouter) => {
    * /contacts/from-lease-search:
    *   get:
    *     summary: Get unique contacts matching lease filters
-   *     description: Returns deduplicated contacts for all leases matching the given filters. Uses same filters as /leases/search but without pagination.
+   *     description: Returns the contacts on every lease that /leases/search lists for the same filters, one per contact code and without pagination. Reads the same leases as /leases/search, so the two always agree. Phone and email are not filled in for tenants; the caller gets them from the contacts service.
    *     tags: [Leases]
    *     parameters:
    *       - in: query
    *         name: q
    *         schema:
    *           type: string
-   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *         description: Free-text search (contract ID, rental object code, address, contact code, tenant name)
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
+   *         description: Search by tenant name
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Search by rental object address
    *       - in: query
    *         name: objectType
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Object type codes
+   *         description: Object type codes (bostad, parkering, lokal, ovrigt)
    *       - in: query
    *         name: status
    *         schema:
    *           type: array
    *           items:
    *             type: string
+   *             enum: [current, active, upcoming, abouttoend, ended, pendingsignature, preliminaryterminated, notsent]
    *         description: Contract status filter
+   *       - in: query
+   *         name: includeEnded
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include ended (Upphört) leases, including those that ended in Xpand before Tenfast.
    *       - in: query
    *         name: startDateFrom
    *         schema:
@@ -735,10 +749,14 @@ export const routes = (router: KoaRouter) => {
    *         description: Invalid query parameters
    *       500:
    *         description: Internal server error
+   *       503:
+   *         description: A lease cache is still loading, or status includes ended and the Xpand ended leases are not loaded yet. Retry after the Retry-After header.
    */
   router.get('(.*)/contacts/from-lease-search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
+      'name',
+      'address',
       'objectType',
       'status',
       'startDateFrom',
@@ -767,41 +785,23 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      // Reuse searchLeases with paging to collect all unique contacts
-      const contactMap = new Map<string, leasing.v1.ContactInfo>()
-      let page = 1
-      const batchSize = 500
-      let totalCount: number | undefined
-
-      while (true) {
-        const paginationCtx = Object.create(ctx)
-        paginationCtx.query = {
-          ...ctx.query,
-          page: String(page),
-          limit: String(batchSize),
-        }
-
-        const result = await searchLeases(queryParams.data, paginationCtx, {
-          totalCount,
-        })
-
-        totalCount = result._meta.totalRecords
-
-        for (const lease of result.content) {
-          for (const contact of lease.contacts ?? []) {
-            if (!contactMap.has(contact.contactCode)) {
-              contactMap.set(contact.contactCode, contact)
-            }
-          }
-        }
-
-        if (page * batchSize >= totalCount) break
-        page++
-      }
+      const contacts =
+        await tenfastLeaseSearchAdapter.fetchContactsForLeaseSearch(
+          queryParams.data,
+          ctx
+        )
 
       ctx.status = 200
-      ctx.body = { content: Array.from(contactMap.values()), ...metadata }
+      ctx.body = { content: contacts, ...metadata }
     } catch (error: unknown) {
+      // Set by hand — a re-thrown error hits errorHandler(), which always
+      // forces status 500 regardless of the error's own status.
+      if (isKoaHttpError(error)) {
+        if (error.headers) ctx.set(error.headers)
+        ctx.status = error.status
+        ctx.body = { error: error.message, ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error fetching contacts by filters')
       ctx.status = 500
       ctx.body = {

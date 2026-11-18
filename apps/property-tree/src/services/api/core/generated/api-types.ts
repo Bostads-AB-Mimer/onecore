@@ -8780,6 +8780,33 @@ export interface paths {
       }
     }
   }
+  '/invoices/{ocr}/pdf': {
+    /** Download the rent notice PDF for an invoice */
+    get: {
+      parameters: {
+        path: {
+          /** @description The OCR number of the rent notice */
+          ocr: string
+        }
+      }
+      responses: {
+        /** @description The rent notice PDF */
+        200: {
+          content: {
+            'application/pdf': string
+          }
+        }
+        /** @description There is no rent notice with this OCR number */
+        404: {
+          content: never
+        }
+        /** @description The PDF could not be fetched */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/invoices/{invoiceId}/deferral': {
     /**
      * Set a grace period (anstånd) on an invoice
@@ -8850,10 +8877,72 @@ export interface paths {
       }
     }
   }
+  '/invoices/{invoiceId}/send': {
+    /**
+     * Email an invoice to the customer
+     * @description Emails the invoice with its PDF attached. A rent notice goes to the
+     * first tenant on its lease with the rent notice PDF. A miscellaneous
+     * invoice goes to the customer it is billed to with the PDF from the
+     * ledger. Outside production the email goes to the test inbox.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The invoice number (the OCR number for a rent notice) */
+          invoiceId: string
+        }
+      }
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @description The invoice's type, when the caller knows it. For Other (a miscellaneous invoice) the rent notice lookup is skipped.
+             * @enum {string}
+             */
+            invoiceType?: 'Regular' | 'Other'
+          }
+        }
+      }
+      responses: {
+        /** @description The email was sent */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                sent: boolean
+              }
+            }
+          }
+        }
+        /** @description The request body is invalid */
+        400: {
+          content: never
+        }
+        /** @description The invoice or its PDF was not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['SendInvoiceEmailError']
+          }
+        }
+        /** @description The invoice has no recipient, the recipient has no email address, or the invoice has no due date */
+        422: {
+          content: {
+            'application/json': components['schemas']['SendInvoiceEmailError']
+          }
+        }
+        /** @description The email could not be sent */
+        500: {
+          content: {
+            'application/json': components['schemas']['SendInvoiceEmailError']
+          }
+        }
+      }
+    }
+  }
   '/invoices/notify-batch': {
     /**
      * Send invoice notification emails for a selection of invoices
-     * @description For each OCR number, fetches invoice data and PDF from economy, contact info from leasing, then sends a notification email with the invoice PDF attached.
+     * @description For each OCR number, fetches invoice data and PDF from economy, the lease from leasing and the tenant's contact info from the contacts service, then sends a notification email with the invoice PDF attached.
      */
     post: {
       requestBody: {
@@ -8871,7 +8960,11 @@ export interface paths {
             'application/json': {
               content?: {
                 sent?: string[]
-                failed?: Record<string, never>[]
+                failed?: {
+                  ocr: string
+                  /** @description not-found, unknown, pdf-not-found, pdf-unknown, no-lease-id, lease-not-found, no-contact-code, protected-identity, no-email or missing-expiration-date */
+                  error: string
+                }[]
                 totalSent?: number
                 totalFailed?: number
               }
@@ -18445,6 +18538,17 @@ export interface components {
           templated?: boolean
         }
       }
+    }
+    SendInvoiceEmailError: {
+      /** @enum {string} */
+      reason:
+        | 'invoice-not-found'
+        | 'pdf-not-found'
+        | 'no-recipient'
+        | 'no-email'
+        | 'missing-due-date'
+        | 'send-failed'
+        | 'unknown'
     }
     CreateContactRequest: {
       nationalId: string

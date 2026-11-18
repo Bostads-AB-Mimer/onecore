@@ -457,7 +457,7 @@ const endFailingProcess = (
   if (error) log.push(error)
 
   logger.debug(log)
-  logger.error(error ?? processErrorCode, details)
+  logger.error({ err: error, errorCode: processErrorCode }, details)
 
   communicationAdapter.sendNotificationToRole(
     'dev',

@@ -329,6 +329,11 @@ const getXpandInvoiceRowsByInvoiceId = async (
   }
 }
 
+// A rent notice PDF is fetched from Tenfast by OCR. Credited Tenfast invoices
+// have no OCR (invoiceId is ''), so there is nothing to look up.
+const hasRentNoticePdf = (tenfastInvoice: Invoice): boolean =>
+  tenfastInvoice.invoiceId !== ''
+
 /*
  * A contact's invoices from Xledger, Tenfast and Xpand.
  *
@@ -398,7 +403,10 @@ export const getInvoicesByContactCode = async (
         fromDate: periodSource.fromDate,
         toDate: periodSource.toDate,
       }),
-      ...(tenfastInvoice && { invoiceRows: tenfastInvoice.invoiceRows }),
+      ...(tenfastInvoice && {
+        invoiceRows: tenfastInvoice.invoiceRows,
+        hasRentNoticePdf: hasRentNoticePdf(tenfastInvoice),
+      }),
     }
 
     return withInvoiceDeferral(invoice, {
@@ -410,9 +418,13 @@ export const getInvoicesByContactCode = async (
   const tenfastOnlyInvoices = tenfastInvoices
     .filter((parsed) => !xledgerInvoiceIds.has(parsed.invoice.invoiceId))
     .map((parsed) =>
-      withInvoiceDeferral(parsed.invoice, {
-        tenfastDeferral: parsed.tenfastDeferral,
-      })
+      withInvoiceDeferral(
+        {
+          ...parsed.invoice,
+          hasRentNoticePdf: hasRentNoticePdf(parsed.invoice),
+        },
+        { tenfastDeferral: parsed.tenfastDeferral }
+      )
     )
 
   const xpandOnlyInvoices = xpandInvoices.filter(

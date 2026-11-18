@@ -448,7 +448,8 @@ export const routes = (router: KoaRouter) => {
    *         description: >
    *           No tenant found for this contact code. The response body `type`
    *           distinguishes the cause: `contact-not-found`, `contact-not-tenant`,
-   *           `contact-leases-not-found` or `no-valid-housing-contract`.
+   *           `tenfast-tenant-not-found`, `contact-leases-not-found` or
+   *           `no-valid-housing-contract`.
    *       500:
    *         description: Internal server error. Failed to retrieve Tenant information.
    */
@@ -499,6 +500,18 @@ export const routes = (router: KoaRouter) => {
           title: 'Contact has no leases',
           status: 404,
           detail: 'No leases found for contact.',
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      if (result.err === 'tenfast-tenant-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          type: result.err,
+          title: 'Contact has no tenant in Tenfast',
+          status: 404,
+          detail: 'No tenant found in Tenfast for contact.',
           ...metadata,
         } satisfies RouteErrorResponse
         return

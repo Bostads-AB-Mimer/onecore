@@ -53,7 +53,28 @@ describe('economy-adapter', () => {
 
     const result = await economyAdapter.getInvoicesByContactCode('P123456')
 
-    expect(result).toEqual({ ok: false, err: 'unknown' })
+    expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
+  })
+
+  it('returns unavailable when economy responds 503', async () => {
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(503, { error: 'xledger-unavailable' })
+
+    const result = await economyAdapter.getInvoicesByContactCode('P123456')
+
+    expect(result).toEqual({ ok: false, err: 'unavailable', statusCode: 503 })
+  })
+
+  it('passes the error and status code on to the credit check', async () => {
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(503, { error: 'xledger-unavailable' })
+
+    const result =
+      await economyAdapter.getInvoicesSentToDebtCollection('P123456')
+
+    expect(result).toEqual({ ok: false, err: 'unavailable', statusCode: 503 })
   })
 
   describe(economyAdapter.getInvoiceByInvoiceId, () => {
