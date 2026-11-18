@@ -7,6 +7,8 @@
 #   ./run.sh real <pnr>      one real BankID login against Mimer BankID TEST; prints a URL to open
 #   ./run.sh down            stop everything and delete the vault files (always run this after `real`)
 #
+# Starting refuses while an earlier run (`--keep` or `real`) is still up; run `down` first.
+#
 # Mock mode needs Docker, Node 22 and python3 and talks to no real system.
 #
 # Real mode needs a test BankID (demo.bankid.com) for <pnr> in the BankID app's test mode, and
@@ -44,6 +46,20 @@ case "${1:-}" in
   "") ;;
   *) echo "usage: ./run.sh [--keep | real <pnr> | down]"; exit 1 ;;
 esac
+
+# Checked before the trap below is set: a start that fails half-way would otherwise run `down`
+# and take the earlier run, which someone may still be testing in, down with it.
+if [[ -n "$(docker compose ps -q 2>/dev/null)" || -f $MOCK_PID_FILE ]]; then
+  echo "A previous run is still up. Stop it first with: ./run.sh down"
+  exit 1
+fi
+for port in 18081 18082 4010; do
+  if (: </dev/tcp/127.0.0.1/$port) 2>/dev/null; then
+    echo "Port $port is already in use by something else; free it and try again."
+    exit 1
+  fi
+done
+
 # On failure the real secrets must not stay behind either, so only a successful `real` keeps running
 trap 'status=$?; [[ $KEEP == 1 && $status == 0 ]] || down' EXIT
 
