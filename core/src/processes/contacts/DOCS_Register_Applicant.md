@@ -6,7 +6,7 @@ Registreringen skapar kontakten, sparar boendeprofilen, ställer kontakten i kö
 
 Två regler styr allt:
 
-- **Aldrig en andra kontakt för ett personnummer.** Finns personen redan rörs ingenting, inte heller i Keycloak.
+- **Aldrig en andra kontakt för ett personnummer.** Finns personen redan ändras ingenting, inte heller i Keycloak. Keycloak läses bara, för att se vilken kontakt inloggningen använder.
 - **Inte transaktionell.** Kontakten skapas i Xpand och går inte att ta bort. När den väl finns blir svaret alltid `created`, och varje senare steg som misslyckas blir en varning.
 
 ## Före processen: routen
@@ -31,9 +31,12 @@ flowchart TD
 A[Valid body, personnummer as 12 digits] --> L(Look up person contacts)
 L --> Lo{Result}
 Lo --> |Lookup failed| F1[503 person-lookup-failed<br/>nothing created]
-Lo --> |First contact active| E[200 existing<br/>nothing changed]
-Lo --> |First contact inactive| I[200 inactive<br/>nothing changed]
+Lo --> |Some| B(Which contact login uses:<br/>Keycloak user's contact_code)
 Lo --> |None| C(Create contact in Xpand<br/>via contacts)
+B --> Bo{Login contact}
+Bo --> |Active| E[200 existing<br/>nothing changed]
+Bo --> |Inactive, or outside<br/>the person contacts| I[200 inactive<br/>nothing changed]
+Bo --> |Keycloak or contacts<br/>did not answer| F1
 
 C --> Co{Result}
 Co --> |duplicate-contact| L2(Look up person contacts again)
@@ -42,8 +45,8 @@ Co --> |Any other error| F2[Error status from the create mapping<br/>nothing cre
 Co --> |Created| S
 
 L2 --> L2o{Result}
-L2o --> |First contact active| E
-L2o --> |First contact inactive, or none:<br/>company, deleted or GDPR row| I
+L2o --> |Some| B
+L2o --> |None: company,<br/>deleted or GDPR row| I
 L2o --> |Lookup failed| F1
 
 S[Contact exists] --> P(Profile and queues<br/>shared process)
@@ -102,9 +105,13 @@ Processen frågar contacts-tjänsten (`GET /contacts/by-nid/:nid/person-contacts
 
 Kontakterna kommer i den ordning inloggningen rangordnar dem, och var och en är markerad aktiv eller inaktiv. Aktiv betyder att kontaktens Sökande-roll används, vilket webapi kräver för att släppa in personen.
 
-**Den första kontakten avgör.** Inloggningen använder bara den, och nekar den om den är inaktiv. Är den aktiv svarar registreringen `existing`, annars `inactive`. En aktiv kontakt längre ner hjälper inte: att be personen logga in skulle bara sluta med ett nej.
+**Kontakten som inloggningen använder avgör**, och den väljs som vid inloggning. Är den aktiv svarar registreringen `existing`, annars `inactive`.
 
-Svarar tjänsten inte, eller med något oväntat, blir svaret 503 `person-lookup-failed` och ingenting skapas.
+- **Har personen redan en inloggning** (en Keycloak-användare med personnumret som användarnamn) med en enda `contact_code` som pekar på en levande kontakt, behåller inloggningen den koden var den än står i listan. Den kontakten avgör. Står koden i listan vet vi redan att den lever. Annars frågas contacts-tjänsten med `excludeDeleted`, samma kontroll som vid inloggning.
+- **Annars avgör den första kontakten** i listan: ingen inloggning, ingen kod, flera koder (som inloggningen läser som saknad kod) eller en kod som pekar på en raderad eller saknad kontakt (som inloggningen byter ut). En aktiv kontakt längre ner hjälper då inte: att be personen logga in skulle bara sluta med ett nej.
+- **Pekar inloggningen på en levande kontakt som inte är en av personkontakterna**, till exempel ett företag, skulle inloggningen visa en kontakt som inte är personens egen. Svaret blir `inactive`, så att kundtjänst tittar på det, och koden loggas.
+
+Keycloak läses bara när det finns personkontakter, så att skapa en ny kontakt aldrig väntar på Keycloak. Svarar contacts-tjänsten eller Keycloak inte, eller med något oväntat, blir svaret 503 `person-lookup-failed` och ingenting skapas.
 
 ## Loggning
 

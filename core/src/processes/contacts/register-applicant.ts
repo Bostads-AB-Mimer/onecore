@@ -5,11 +5,13 @@ import type { CreateContactRequestBody } from '@onecore/contacts/schema'
 import {
   contactsAdapter,
   type CreateContactError,
+  type PersonContact,
 } from '../../adapters/contacts-adapter'
 import {
   CONTACT_CODE_ATTRIBUTE,
   connectContactsKeycloakAdmin,
   describeKeycloakFailure,
+  type MimerContactsUser,
 } from '../../services/auth-service/contacts-keycloak-provisioning'
 import type {
   RegisterContactRequestBody,
@@ -37,7 +39,8 @@ export type RegisterApplicantResult =
   /** The person can log in: the contact login uses is active. Nothing was changed. */
   | { outcome: 'existing' }
   /**
-   * The person has a contact but cannot log in with it: the contact login uses is inactive, or
+   * The person has a contact but cannot log in with it: the contact login uses is inactive, the
+   * login is bound to a live contact that is not one of this personnummer's person contacts, or
    * the duplicate check matched a row that is not a person contact (a company, a deleted
    * contact, a GDPR placeholder). Nothing was changed; kundtjänst has to help.
    */
@@ -100,12 +103,67 @@ const isLiveContact = async (code: string): Promise<boolean> => {
   throw new BoundContactLookupError()
 }
 
+const contactCodesOf = (user: MimerContactsUser): string[] =>
+  (user.attributes?.[CONTACT_CODE_ATTRIBUTE] ?? []).filter(Boolean)
+
+/**
+ * The contact_code login keeps for a user with these codes, or undefined when login would
+ * replace them. Login reads a multivalued contact_code as missing, so only a single code that
+ * names a live contact is kept.
+ *
+ * @param isListed a code known to name a live contact without asking the contacts service
+ * @throws BoundContactLookupError as isLiveContact
+ */
+const codeLoginKeeps = async (
+  codes: string[],
+  isListed: (code: string) => boolean = () => false
+): Promise<string | undefined> => {
+  if (codes.length !== 1) return undefined
+  const [code] = codes
+  return isListed(code) || (await isLiveContact(code)) ? code : undefined
+}
+
+/**
+ * The person contact login would use, or 'elsewhere' when the login keeps a live contact that
+ * is none of them.
+ *
+ * Login keeps a contact_code that names a live contact, wherever it is ranked, and only falls
+ * back to the first person contact when there is none. So an existing login decides first.
+ *
+ * @param contacts at least one, in the order login ranks them
+ * @throws when Keycloak or the contacts service gives no clear answer
+ */
+const contactLoginUses = async (
+  username: string,
+  contacts: [PersonContact, ...PersonContact[]]
+): Promise<PersonContact | 'elsewhere'> => {
+  const admin = await connectContactsKeycloakAdmin()
+  const user = await admin.findUserByUsername(username)
+  // Xpand codes can be space-padded; Keycloak holds whatever was written to it.
+  const listed = (code: string) =>
+    contacts.find((c) => c.contactCode.trim() === code.trim())
+  const kept =
+    user && (await codeLoginKeeps(contactCodesOf(user), (c) => !!listed(c)))
+  if (!kept) return contacts[0]
+  const contact = listed(kept)
+  if (contact) return contact
+  logger.warn(
+    { boundContactCode: kept },
+    'registerApplicant.loginBoundOutsidePersonContacts'
+  )
+  return 'elsewhere'
+}
+
 /**
  * Whether the personnummer already has a person contact, and whether login accepts it.
  *
- * The contacts come in the order login prefers them, and login only ever uses the first, so
- * that one decides. An active contact further down would not let the person in, and telling
- * them to log in would only end in a refusal.
+ * The contacts come in the order login prefers them. For a person without a login, or whose
+ * login names no live contact, login uses the first, so that one decides: an active contact
+ * further down would not let the person in, and telling them to log in would only end in a
+ * refusal. A login bound to a live contact decides instead, because login keeps it.
+ *
+ * Keycloak is only read when there are person contacts, so creating a contact never waits on
+ * it. Reading is all this does there; nothing is changed.
  */
 const findExisting = async (nationalId: string): Promise<Existing> => {
   const result = await contactsAdapter.getPersonContactsByNationalId(nationalId)
@@ -117,8 +175,21 @@ const findExisting = async (nationalId: string): Promise<Existing> => {
     )
     return { outcome: 'failed', error: 'person-lookup-failed' }
   }
-  const [loginContact] = result.data
-  if (!loginContact) return { outcome: 'none' }
+  const [first, ...rest] = result.data
+  if (!first) return { outcome: 'none' }
+
+  let loginContact: PersonContact | 'elsewhere'
+  try {
+    loginContact = await contactLoginUses(nationalId, [first, ...rest])
+  } catch (error: unknown) {
+    logger.error(
+      describeKeycloakFailure(error),
+      'registerApplicant.loginBindingLookupFailed'
+    )
+    return { outcome: 'failed', error: 'person-lookup-failed' }
+  }
+  // Login would show a contact that is not this personnummer's, so a person has to look.
+  if (loginContact === 'elsewhere') return { outcome: 'inactive' }
   return loginContact.isActive
     ? { outcome: 'existing' }
     : { outcome: 'inactive' }
@@ -178,9 +249,7 @@ const setUpLogin = async (
         if (created === 'conflict') {
           const user = await admin.findUserByUsername(username)
           if (!user) throw new EmailTakenError()
-          const existingCodes = (
-            user.attributes?.[CONTACT_CODE_ATTRIBUTE] ?? []
-          ).filter(Boolean)
+          const existingCodes = contactCodesOf(user)
           if (existingCodes.includes(contactCode)) {
             // An earlier try set the code on a user that was already there and lost the answer.
             if (userExistedBefore) return 'exists'
@@ -191,13 +260,7 @@ const setUpLogin = async (
           } else {
             userExistedBefore = true
             if (existingCodes.length > 0) {
-              // Login reads a multivalued contact_code as missing and replaces it, so only a
-              // single live code stays bound.
-              const [boundCode] = existingCodes
-              if (
-                existingCodes.length === 1 &&
-                (await isLiveContact(boundCode))
-              ) {
+              if (await codeLoginKeeps(existingCodes)) {
                 logger.warn(
                   { contactCode, existingContactCodes: existingCodes },
                   'registerApplicant.existingLoginHasOtherContactCode'
@@ -237,8 +300,8 @@ const setUpLogin = async (
  * Registers a new applicant: creates the contact, its application profile and queues, and a
  * Keycloak login with a set-password e-mail.
  *
- * Never creates a second contact for a personnummer, and never touches Keycloak for someone
- * who already has a contact.
+ * Never creates a second contact for a personnummer, and never changes Keycloak for someone
+ * who already has a contact (it only reads their login, to see which contact it uses).
  *
  * NOT TRANSACTIONAL. The contact is created in Xpand and cannot be removed. Once it exists the
  * result is always 'created', and each later step that fails becomes a warning:

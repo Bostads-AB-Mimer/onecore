@@ -127,6 +127,8 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
    *         description: |
    *           Nothing was created. `content` is `{outcome: "existing"}` (the person can log in) or
    *           `{outcome: "inactive"}` (they have a contact but cannot log in with it; send them to kundtjänst).
+   *           Which contact login uses is decided as at login: an existing login bound to a live contact
+   *           keeps it, otherwise the first-ranked person contact.
    *       '400':
    *         description: Invalid body (invalid-request)
    *       '422':
@@ -137,7 +139,7 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
    *           contacts service did not answer, so the contact may exist without profile, queues or login. Do not
    *           retry; send the person to kundtjänst.
    *       '503':
-   *         description: Registration is not configured on this environment (registration-not-configured), existing contacts could not be checked (person-lookup-failed), or Xpand is unavailable
+   *         description: Registration is not configured on this environment (registration-not-configured), existing contacts or the contact their login uses could not be checked (person-lookup-failed), or Xpand is unavailable
    */
   router.post('(.*)/auth/contacts/register', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)

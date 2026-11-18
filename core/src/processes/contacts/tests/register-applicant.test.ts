@@ -130,6 +130,18 @@ describe('registerApplicant', () => {
   })
 
   describe('when the personnummer already has contacts', () => {
+    const expectKeycloakUnchanged = () => {
+      expect(admin.createPersonUser).not.toHaveBeenCalled()
+      expect(admin.setContactCode).not.toHaveBeenCalled()
+      expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+    }
+    const loginBoundTo = (...codes: string[]) =>
+      admin.findUserByUsername.mockResolvedValue({
+        id: 'user-9',
+        username: nationalId,
+        attributes: { contact_code: codes },
+      })
+
     it("answers 'existing' when the contact login uses is active, and changes nothing", async () => {
       lookup.mockResolvedValue(activeContact)
 
@@ -137,8 +149,9 @@ describe('registerApplicant', () => {
         outcome: 'existing',
       })
       expect(lookup).toHaveBeenCalledWith(nationalId)
+      expect(admin.findUserByUsername).toHaveBeenCalledWith(nationalId)
       expect(createContact).not.toHaveBeenCalled()
-      expect(connect).not.toHaveBeenCalled()
+      expectKeycloakUnchanged()
     })
 
     it("answers 'inactive' when every person contact is inactive", async () => {
@@ -148,17 +161,97 @@ describe('registerApplicant', () => {
         outcome: 'inactive',
       })
       expect(createContact).not.toHaveBeenCalled()
-      expect(connect).not.toHaveBeenCalled()
+      expectKeycloakUnchanged()
     })
 
-    it("answers 'inactive' when only a contact further down is active, since login uses the first", async () => {
+    it("answers 'inactive' when only a contact further down is active and there is no login, since login uses the first", async () => {
       lookup.mockResolvedValue(activeFurtherDown)
 
       await expect(registerApplicant(application)).resolves.toEqual({
         outcome: 'inactive',
       })
       expect(createContact).not.toHaveBeenCalled()
-      expect(connect).not.toHaveBeenCalled()
+      expectKeycloakUnchanged()
+    })
+
+    describe('and a login is bound to a contact', () => {
+      it("answers 'existing' when it is the active contact further down, which login keeps", async () => {
+        lookup.mockResolvedValue(activeFurtherDown)
+        loginBoundTo('P000002')
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'existing',
+        })
+        // A listed contact is live, so there is nothing to ask the contacts service.
+        expect(getByContactCode).not.toHaveBeenCalled()
+        expect(createContact).not.toHaveBeenCalled()
+        expectKeycloakUnchanged()
+      })
+
+      it("answers 'inactive' when it is an inactive contact although the first is active", async () => {
+        lookup.mockResolvedValue(activeContact)
+        loginBoundTo('P000001')
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'inactive',
+        })
+      })
+
+      it('matches a space-padded code', async () => {
+        lookup.mockResolvedValue(activeFurtherDown)
+        loginBoundTo('P000002 ')
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'existing',
+        })
+      })
+
+      it('lets the first contact decide when the bound contact is deleted or missing, since login replaces it', async () => {
+        lookup.mockResolvedValue(activeContact)
+        loginBoundTo('P000009')
+        getByContactCode.mockResolvedValue({
+          ok: false,
+          err: 'not-found',
+          statusCode: 404,
+        })
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'existing',
+        })
+        expect(getByContactCode).toHaveBeenCalledWith('P000009', {
+          excludeDeleted: true,
+        })
+      })
+
+      it('lets the first contact decide for a multivalued contact_code, which login reads as missing', async () => {
+        lookup.mockResolvedValue(activeFurtherDown)
+        loginBoundTo('P000002', 'P000001')
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'inactive',
+        })
+        expect(getByContactCode).not.toHaveBeenCalled()
+      })
+
+      it("answers 'inactive' and logs the code when login keeps a live contact that is none of the person contacts", async () => {
+        lookup.mockResolvedValue(activeContact)
+        loginBoundTo('F000009')
+        getByContactCode.mockResolvedValue({
+          ok: true,
+          // Only that it resolves matters here, not what the contact holds.
+          data: { contactCode: 'F000009' } as Contact,
+        })
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'inactive',
+        })
+        expect(logger.warn).toHaveBeenCalledWith(
+          { boundContactCode: 'F000009' },
+          'registerApplicant.loginBoundOutsidePersonContacts'
+        )
+        expect(createContact).not.toHaveBeenCalled()
+        expectKeycloakUnchanged()
+      })
     })
 
     it('fails without creating anything when the lookup fails', async () => {
@@ -170,6 +263,33 @@ describe('registerApplicant', () => {
       })
       expect(createContact).not.toHaveBeenCalled()
       expect(connect).not.toHaveBeenCalled()
+    })
+
+    it('fails without creating anything when Keycloak cannot say which contact the login uses', async () => {
+      lookup.mockResolvedValue(activeContact)
+      admin.findUserByUsername.mockRejectedValue(new Error('ECONNREFUSED'))
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'failed',
+        error: 'person-lookup-failed',
+      })
+      expect(createContact).not.toHaveBeenCalled()
+    })
+
+    it('fails without creating anything when the contacts service cannot say whether the bound contact is live', async () => {
+      lookup.mockResolvedValue(activeContact)
+      loginBoundTo('P000009')
+      getByContactCode.mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+        statusCode: 500,
+      })
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'failed',
+        error: 'person-lookup-failed',
+      })
+      expect(createContact).not.toHaveBeenCalled()
     })
   })
 
@@ -232,7 +352,10 @@ describe('registerApplicant', () => {
         outcome: 'existing',
       })
       expect(lookup).toHaveBeenCalledTimes(2)
-      expect(connect).not.toHaveBeenCalled()
+      // Read to see which contact the login uses, never changed.
+      expect(admin.createPersonUser).not.toHaveBeenCalled()
+      expect(admin.setContactCode).not.toHaveBeenCalled()
+      expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
     })
 
     it("answers 'inactive' when the duplicate check matches a row that is no person contact", async () => {
