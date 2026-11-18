@@ -23,6 +23,9 @@ export { getStatusBadge, LeaseStatus } from './lib/status'
 // Property utilities
 export { getPropertyIdentifier } from './lib/property'
 
+// Pagination
+export { PAGE_SIZE_OPTIONS } from './lib/pageSize'
+
 // Sorting utilities
 export { sortLeasesByStatus } from './lib/sorting'
 
