@@ -6,12 +6,12 @@
  * course, there are always exceptions).
  */
 import KoaRouter from '@koa/router'
+import { leasing } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { RentalObjectRentInfo } from './schemas/lease'
-import z from 'zod'
 
 export const routes = (router: KoaRouter) => {
   /**
@@ -188,7 +188,13 @@ export const routes = (router: KoaRouter) => {
    * /rental-objects/by-code/{rentalObjectCode}/availability:
    *   get:
    *     summary: Get availability for a rental object
-   *     description: Fetches availability for a rental object by Rental Object Code.
+   *     description: |
+   *       Fetches availability for a rental object by Rental Object Code.
+   *       The rent total (rent.amount, rent.vat) is the rent of today, unless
+   *       a later move-in day is known. For a parking space that day is its
+   *       vacantFrom. For other rental objects vacantFrom is not set, so the
+   *       caller gives the day as rentAt. The total is then the sum of the
+   *       rent rows in force that day with includedInRent set.
    *     tags:
    *       - Lease service
    *     parameters:
@@ -198,6 +204,16 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: string
    *         description: The rental object code of the availability to fetch.
+   *       - in: query
+   *         name: rentAt
+   *         required: false
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: |
+   *           The day to give the rent total for (yyyy-mm-dd), for rental
+   *           objects that are not parking spaces. Left out, today or earlier
+   *           gives the rent of today. Ignored for parking spaces.
    *     responses:
    *       '200':
    *         description: Successfully retrieved the rental object availability.
@@ -222,10 +238,28 @@ export const routes = (router: KoaRouter) => {
    *                           type: number
    *                         vat:
    *                           type: number
+   *                         asOf:
+   *                           type: string
+   *                           format: date-time
+   *                           description: |
+   *                             The day the total (amount, vat) is the rent of.
+   *                             Today when the total was not recalculated for
+   *                             the move-in day, which also happens when the
+   *                             rows for that day look incomplete.
    *                         rows:
    *                           type: array
    *                           items:
    *                             type: object
+   *       '400':
+   *         description: rentAt is not a valid day (error invalid-rent-at).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   enum: [invalid-rent-at]
    *       '500':
    *         description: Internal server error. Failed to fetch rental object availability.
    *         content:
@@ -254,12 +288,28 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
       const rentalObjectCode = ctx.params.rentalObjectCode
-      const result =
-        await leasingAdapter.getRentalObjectAvailabilityByCode(rentalObjectCode)
+
+      const query = leasing.v1.RentalObjectAvailabilityQuerySchema.safeParse(
+        ctx.query
+      )
+      if (!query.success) {
+        ctx.status = 400
+        ctx.body = { error: 'invalid-rent-at', ...metadata }
+        return
+      }
+
+      const result = await leasingAdapter.getRentalObjectAvailabilityByCode(
+        rentalObjectCode,
+        query.data.rentAt
+      )
 
       if (!result.ok && result.err === 'availability-not-found') {
         ctx.status = 404
         ctx.body = { error: 'Availability not found', ...metadata }
+        return
+      } else if (!result.ok && result.err === 'invalid-rent-at') {
+        ctx.status = 400
+        ctx.body = { error: 'invalid-rent-at', ...metadata }
         return
       } else if (!result.ok) {
         ctx.status = 500
@@ -427,7 +477,13 @@ export const routes = (router: KoaRouter) => {
    * /rental-objects/availabilities:
    *   post:
    *     summary: Get availabilities for rental objects
-   *     description: Fetches availabilities for rental objects by Rental Object Codes.
+   *     description: |
+   *       Fetches availabilities for rental objects by Rental Object Codes.
+   *       The rent total (rent.amount, rent.vat) is the rent of today, unless
+   *       a later move-in day is known. For a parking space that day is its
+   *       vacantFrom. For other rental objects vacantFrom is not set, so the
+   *       caller gives the day in rentAtByRentalObjectCode. The total is then
+   *       the sum of the rent rows in force that day with includedInRent set.
    *     tags:
    *       - Lease service
    *     requestBody:
@@ -443,6 +499,20 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                 description: Array of rental object codes to include.
    *                 example: ["ABC123", "DEF456", "GHI789"]
+   *               rentAtByRentalObjectCode:
+   *                 type: object
+   *                 additionalProperties:
+   *                   type: string
+   *                   format: date
+   *                 description: |
+   *                   The day to give the rent total for (yyyy-mm-dd), per
+   *                   rental object code, for rental objects that are not
+   *                   parking spaces. A code left out, today or earlier gives
+   *                   the rent of today. Ignored for parking spaces. Codes
+   *                   are matched without regard to case or surrounding
+   *                   blanks. rent.asOf in the response says which day each
+   *                   total is the rent of.
+   *                 example: { "ABC123": "2027-01-16" }
    *     responses:
    *       '200':
    *         description: Successfully retrieved the rental object availabilities.
@@ -469,10 +539,46 @@ export const routes = (router: KoaRouter) => {
    *                             type: number
    *                           vat:
    *                             type: number
+   *                           asOf:
+   *                             type: string
+   *                             format: date-time
+   *                             description: |
+   *                               The day the total (amount, vat) is the rent
+   *                               of. Today when the total was not recalculated
+   *                               for the move-in day, which also happens when
+   *                               the rows for that day look incomplete.
    *                           rows:
    *                             type: array
    *                             items:
    *                               type: object
+   *       '400':
+   *         description: |
+   *           The request body is invalid, such as a rentAtByRentalObjectCode
+   *           value that is not a valid day. The body lists the invalid
+   *           fields (status and data). If only the leasing service rejects
+   *           the request, the body is an error code instead (error).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 status:
+   *                   type: string
+   *                   enum: [error]
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       message:
+   *                         type: string
+   *                       path:
+   *                         type: array
+   *                         items:
+   *                           type: string
+   *                 error:
+   *                   type: string
+   *                   enum: [invalid-request]
    *       '500':
    *         description: Internal server error. Failed to fetch rental object availabilities.
    *         content:
@@ -496,25 +602,28 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
-  const RentalObjectsRentRequestSchema = z.object({
-    rentalObjectCodes: z.array(z.string()).optional(),
-  })
   router.post(
     '/rental-objects/availabilities',
-    parseRequestBody(RentalObjectsRentRequestSchema),
+    parseRequestBody(leasing.v1.RentalObjectAvailabilitiesRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
+      // Parsed by parseRequestBody above; koa's ctx doesn't carry its type.
       const body = ctx.request
-        .body as typeof RentalObjectsRentRequestSchema._type
+        .body as leasing.v1.RentalObjectAvailabilitiesRequest
 
       const result = await leasingAdapter.getRentalObjectAvailabilities(
-        body.rentalObjectCodes ?? []
+        body.rentalObjectCodes ?? [],
+        body.rentAtByRentalObjectCode
       )
 
       if (!result.ok && result.err === 'availabilities-not-found') {
         ctx.status = 404
         ctx.body = { error: 'Availabilities not found', ...metadata }
+        return
+      } else if (!result.ok && result.err === 'invalid-request') {
+        ctx.status = 400
+        ctx.body = { error: 'invalid-request', ...metadata }
         return
       } else if (!result.ok) {
         ctx.status = 500

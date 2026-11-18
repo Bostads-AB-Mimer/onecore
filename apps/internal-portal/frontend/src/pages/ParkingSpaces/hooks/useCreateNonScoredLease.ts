@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { leasing } from '@onecore/types'
 
 import { RequestError } from '../../../types'
 
@@ -24,25 +25,37 @@ export enum CreateNonScoredLeaseErrorCodes {
   FetchInvoicesFailed = 'fetch-invoices-failed',
   CreateLeaseFailed = 'create-lease-failed',
   RentalObjectNotAvailable = 'rental-object-not-available',
+  GetTenantFailed = 'get-tenant-failed',
   Unknown = 'unknown',
+}
+
+export type CreatedNonScoredLease = {
+  leaseId?: string
+  // Missing if core gave no valid VAT decision; the lease exists anyway.
+  vat?: leasing.v1.ParkingSpaceVatDecision
 }
 
 export const useCreateNonScoredLease = (listingId: number) => {
   const queryClient = useQueryClient()
   return useMutation<
-    unknown,
+    CreatedNonScoredLease,
     RequestError<CreateNonScoredLeaseErrorCodes>,
     CreateNonScoredLeaseParams
   >({
     mutationFn: (params: CreateNonScoredLeaseParams) =>
       axios
-        .post<unknown>(`${backendUrl}/listings/non-scored-lease`, params, {
-          headers: {
-            Accept: 'application/json',
-            'Access-Control-Allow-Credentials': true,
-          },
-          withCredentials: true,
-        })
+        .post<{ content?: CreatedNonScoredLease }>(
+          `${backendUrl}/listings/non-scored-lease`,
+          params,
+          {
+            headers: {
+              Accept: 'application/json',
+              'Access-Control-Allow-Credentials': true,
+            },
+            withCredentials: true,
+          }
+        )
+        .then((response) => response.data.content ?? {})
         .catch((error) => {
           return Promise.reject(mapCreateNonScoredLeaseError(error))
         }),
@@ -156,6 +169,14 @@ export const useCreateNonScoredLease = (listingId: number) => {
           errorHeading: 'Ej ledig',
           errorMessage:
             'Bilplatsen är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt på den (utkast, skickat för påskrift eller signerat), kanske för samma sökande. Inget nytt kontrakt skapades.',
+        }
+      case CreateNonScoredLeaseErrorCodes.GetTenantFailed:
+        return {
+          status: 500,
+          errorCode: CreateNonScoredLeaseErrorCodes.GetTenantFailed,
+          errorHeading: 'Kunde inte avgöra moms',
+          errorMessage:
+            'Ett tekniskt fel inträffade när kundens bostadskontrakt skulle hämtas för att avgöra moms. Inget kontrakt skapades. Försök igen.',
         }
       default: {
         return defaultError

@@ -1901,7 +1901,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const q = ctx.query.q as string
 
-    logger.info(metadata, `GET /residences/search?q=${q}`)
+    logger.info(`GET /residences/search?q=${q}`)
 
     if (!q) {
       ctx.status = 400
@@ -2671,7 +2671,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { rentalId } = ctx.params
 
-    logger.info(metadata, `GET /facilities/by-rental-id/${rentalId}`)
+    logger.info(`GET /facilities/by-rental-id/${rentalId}`)
 
     try {
       const result = await propertyBaseAdapter.getFacilityByRentalId(rentalId)
@@ -2742,7 +2742,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { code } = ctx.params
 
-    logger.info(metadata, `GET /maintenance-units/by-property-code/${code}`)
+    logger.info(`GET /maintenance-units/by-property-code/${code}`)
 
     try {
       const result =
@@ -2807,7 +2807,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { code } = ctx.params
 
-    logger.info(metadata, `GET /maintenance-units/by-code/${code}`)
+    logger.info(`GET /maintenance-units/by-code/${code}`)
 
     try {
       const result = await propertyBaseAdapter.getMaintenanceUnitByCode(code)
@@ -2873,7 +2873,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const q = ctx.query.q as string
 
-    logger.info(metadata, `GET /maintenance-units/search?q=${q}`)
+    logger.info(`GET /maintenance-units/search?q=${q}`)
 
     if (!q) {
       ctx.status = 400
@@ -2946,7 +2946,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { propertyCode } = ctx.params
 
-    logger.info(metadata, `GET /facilities/by-property-code/${propertyCode}`)
+    logger.info(`GET /facilities/by-property-code/${propertyCode}`)
 
     try {
       const result =
@@ -3017,7 +3017,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const { buildingCode } = ctx.params
 
-    logger.info(metadata, `GET /facilities/by-building-code/${buildingCode}`)
+    logger.info(`GET /facilities/by-building-code/${buildingCode}`)
 
     try {
       const result =
@@ -3088,7 +3088,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const q = ctx.query.q as string
 
-    logger.info(metadata, `GET /facilities/search?q=${q}`)
+    logger.info(`GET /facilities/search?q=${q}`)
 
     if (!q) {
       ctx.status = 400
@@ -3161,7 +3161,7 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
     const q = ctx.query.q as string
 
-    logger.info(metadata, `GET /parking-spaces/search?q=${q}`)
+    logger.info(`GET /parking-spaces/search?q=${q}`)
 
     if (!q) {
       ctx.status = 400

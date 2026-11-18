@@ -194,7 +194,66 @@ describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
       )
 
       // Assert
-      expect(spy).toHaveBeenCalledWith(rentalObjectCode)
+      expect(spy).toHaveBeenCalledWith(rentalObjectCode, undefined)
+    })
+
+    it('passes rentAt on to the leasing adapter', async () => {
+      // Arrange
+      const rentalObjectCode = 'R1003'
+      const spy = jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilityByCode')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.rentalObjectAvailabilityInfo.build({
+            rentalObjectCode,
+          }),
+        })
+
+      // Act
+      const res = await request(app.callback()).get(
+        `/rental-objects/by-code/${rentalObjectCode}/availability?rentAt=2100-01-16`
+      )
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(spy).toHaveBeenCalledWith(rentalObjectCode, '2100-01-16')
+    })
+
+    it.each(['2100-13-01', '16/1 2100', ''])(
+      'responds with 400 without calling leasing when rentAt is "%s"',
+      async (rentAt) => {
+        // Arrange
+        const spy = jest.spyOn(
+          leasingAdapter,
+          'getRentalObjectAvailabilityByCode'
+        )
+
+        // Act
+        const res = await request(app.callback())
+          .get('/rental-objects/by-code/R1003/availability')
+          .query({ rentAt })
+
+        // Assert
+        expect(res.status).toBe(400)
+        expect(res.body).toMatchObject({ error: 'invalid-rent-at' })
+        expect(spy).not.toHaveBeenCalled()
+      }
+    )
+
+    it('responds with 400 when leasing rejects rentAt', async () => {
+      // Arrange
+      jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilityByCode')
+        .mockResolvedValueOnce({ ok: false, err: 'invalid-rent-at' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/R1003/availability?rentAt=2100-01-16'
+      )
+
+      // Assert
+      expect(res.status).toBe(400)
+      expect(res.body).toMatchObject({ error: 'invalid-rent-at' })
     })
   })
 
@@ -277,7 +336,61 @@ describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
         .send({ rentalObjectCodes })
 
       // Assert
-      expect(spy).toHaveBeenCalledWith(rentalObjectCodes)
+      expect(spy).toHaveBeenCalledWith(rentalObjectCodes, undefined)
+    })
+
+    it('passes rentAtByRentalObjectCode on to the leasing adapter', async () => {
+      // Arrange
+      const rentalObjectCodes = ['R1001', 'R1002']
+      const rentAtByRentalObjectCode = { R1001: '2100-01-16' }
+      const spy = jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilities')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes, rentAtByRentalObjectCode })
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(spy).toHaveBeenCalledWith(
+        rentalObjectCodes,
+        rentAtByRentalObjectCode
+      )
+    })
+
+    it('responds with 400 without calling leasing when a day in rentAtByRentalObjectCode is not valid', async () => {
+      // Arrange
+      const spy = jest.spyOn(leasingAdapter, 'getRentalObjectAvailabilities')
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({
+          rentalObjectCodes: ['R1001'],
+          rentAtByRentalObjectCode: { R1001: '2100-13-01' },
+        })
+
+      // Assert
+      expect(res.status).toBe(400)
+      expect(spy).not.toHaveBeenCalled()
+    })
+
+    it('responds with 400 when leasing rejects the request', async () => {
+      // Arrange
+      jest
+        .spyOn(leasingAdapter, 'getRentalObjectAvailabilities')
+        .mockResolvedValueOnce({ ok: false, err: 'invalid-request' })
+
+      // Act
+      const res = await request(app.callback())
+        .post('/rental-objects/availabilities')
+        .send({ rentalObjectCodes: ['R1001'] })
+
+      // Assert
+      expect(res.status).toBe(400)
+      expect(res.body).toMatchObject({ error: 'invalid-request' })
     })
 
     it('should handle missing rentalObjectCodes as empty array', async () => {

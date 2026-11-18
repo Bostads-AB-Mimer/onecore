@@ -134,7 +134,12 @@ describe('/contacts/batch', () => {
 
       expect(response.status).toBe(200)
       const byCode = Object.fromEntries(
-        response.data.content.contacts.map((c: { contactCode: string; relatedContacts: unknown }) => [c.contactCode, c.relatedContacts])
+        response.data.content.contacts.map(
+          (c: { contactCode: string; relatedContacts: unknown }) => [
+            c.contactCode,
+            c.relatedContacts,
+          ]
+        )
       )
       expect(byCode['P000555']).toContainEqual({
         contactCode: 'P000444',
@@ -144,6 +149,35 @@ describe('/contacts/batch', () => {
         lastName: 'McTestface',
       })
       expect(byCode['P000333']).toEqual([])
+    })
+  })
+
+  describe('verifiedTenants flag', () => {
+    // P000999 has a protected identity and is not an invoice recipient.
+    const fetchProtected = async (params: Record<string, unknown>) => {
+      const response = await httpClient.get('/contacts/batch', {
+        params: { code: ['P000999'], ...params },
+      })
+      expect(response.status).toBe(200)
+      return response.data.content.contacts[0]
+    }
+
+    it('redacts a protected identity without the flag', async () => {
+      const contact = await fetchProtected({})
+
+      expect(contact.protectedIdentity).toBe(true)
+      expect(contact.personal.fullName).toBe('redacted')
+    })
+
+    it('returns a protected identity unredacted when the caller verified the tenant', async () => {
+      const contact = await fetchProtected({
+        verifiedTenants: true,
+        includeAddress: true,
+      })
+
+      expect(contact.protectedIdentity).toBe(true)
+      expect(contact.personal.fullName).toBe('Hittepåberg Mollgan')
+      expect(contact.personal.nationalId).not.toBe('redacted')
     })
   })
 

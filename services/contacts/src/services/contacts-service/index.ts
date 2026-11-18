@@ -339,6 +339,15 @@ export const routes = (
             'fakturamottagare, both directions) in the response.',
           schema: z.optional(z.boolean()),
         },
+        verifiedTenants: {
+          description:
+            'The caller has verified that every requested contact is a ' +
+            'tenant on a lease in Tenfast (current, upcoming, or recently ' +
+            'ended). Protected identities are then returned unredacted — ' +
+            'their data in Xpand is already anonymised. Only core sets this, ' +
+            'after checking Tenfast.',
+          schema: z.optional(z.boolean()),
+        },
       },
       response: {
         200: GetContactsResponseBodySchema,
@@ -367,6 +376,7 @@ export const routes = (
         includeEmail: isTrue(ctx.query.includeEmail),
         includeAddress: isTrue(ctx.query.includeAddress),
         includeRelations: isTrue(ctx.query.includeRelations),
+        verifiedTenants: isTrue(ctx.query.verifiedTenants),
       })
 
       ctx.status = 200

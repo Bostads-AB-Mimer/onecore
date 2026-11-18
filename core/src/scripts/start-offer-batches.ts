@@ -27,7 +27,11 @@ const startOfferBatches = async () => {
           )
         } else {
           logger.error(
-            result,
+            {
+              listingId: listing.id,
+              httpStatus: result.httpStatus,
+              error: result.error,
+            },
             'Could not start offer batch for listing ' + listing.id
           )
         }

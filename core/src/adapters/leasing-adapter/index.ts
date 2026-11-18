@@ -135,9 +135,18 @@ const getLeasesForPropertyId = async (
       includeNonTenantContacts: options.includeNonTenantContacts.toString(),
     }),
   })
+  // Explicit validateStatus: the process-wide default (<500) would let other
+  // 4xx through with no content, which callers would read as "no leases".
   const leasesResponse = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`
+    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`,
+    { validateStatus: (status) => status === 200 || status === 404 }
   )
+
+  // Leasing answers 404 for a rental object it has no leases for.
+  if (leasesResponse.status === 404) {
+    return []
+  }
+
   return leasesResponse.data.content
 }
 
@@ -356,18 +365,20 @@ const getTenantByContactCode = async (
       if (res.data?.type === 'no-valid-housing-contract') {
         return { ok: false, err: 'no-valid-housing-contract' }
       }
-      // 'contact-not-tenant' and 'contact-leases-not-found' both mean the
-      // contact has no tenancy.
+      // 'contact-not-tenant', 'contact-leases-not-found' and
+      // 'tenfast-tenant-not-found' (no tenant in Tenfast, e.g. a former
+      // tenant) all mean the contact has no tenancy.
       if (
         res.data?.type === 'contact-not-tenant' ||
-        res.data?.type === 'contact-leases-not-found'
+        res.data?.type === 'contact-leases-not-found' ||
+        res.data?.type === 'tenfast-tenant-not-found'
       ) {
         return { ok: false, err: 'contact-not-tenant' }
       }
       // A 404 without a recognized leasing error type is not a business
       // outcome — e.g. a proxy/gateway 404 or a misrouted service URL.
       logger.error(
-        { status: res.status, body: res.data },
+        { status: res.status },
         'leasing-adapter.getTenantByContactCode: unrecognized 404 response'
       )
       return { ok: false, err: 'unknown' }
@@ -576,7 +587,7 @@ const preliminaryTerminateLease = async (
     }
 
     logger.error(
-      { status: response.status, data: response.data },
+      { status: response.status },
       'Failed to preliminary terminate lease'
     )
     return { ok: false, err: 'termination-failed' }
@@ -617,9 +628,18 @@ const preliminaryTerminateLease = async (
     return { ok: false, err: 'unknown' }
   }
 }
+const ContactsByFiltersResponseSchema = z.object({
+  content: z.array(leasing.v1.ContactInfoSchema),
+})
+
 const getContactsByFilters = async (
   queryParams: Record<string, string | string[] | undefined>
-): Promise<AdapterResult<{ content: leasing.v1.ContactInfo[] }, 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    leasing.v1.ContactInfo[],
+    'invalid-request' | 'service-unavailable' | 'schema-error' | 'unknown'
+  >
+> => {
   try {
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/contacts/from-lease-search`,
@@ -628,12 +648,39 @@ const getContactsByFilters = async (
         paramsSerializer: {
           indexes: null,
         },
+        // Explicit validateStatus: the process-wide default (<500) would hand
+        // a 400 error body back as if it were the list of contacts.
+        validateStatus: (status) => status === 200,
       }
     )
 
-    return { ok: true, data: response.data }
-  } catch (err) {
-    logger.error({ err }, 'leasingAdapter.getContactsByFilters')
+    return {
+      ok: true,
+      data: ContactsByFiltersResponseSchema.parse(response.data).content,
+    }
+  } catch (err: unknown) {
+    if (err instanceof z.ZodError) {
+      logger.error(
+        { issues: err.issues },
+        'leasingAdapter.getContactsByFilters: unexpected response shape'
+      )
+      return { ok: false, err: 'schema-error' }
+    }
+
+    const status = err instanceof AxiosError ? err.response?.status : undefined
+
+    if (status === 400) {
+      return { ok: false, err: 'invalid-request', statusCode: 400 }
+    }
+    // The lease cache is still loading; leasing sends Retry-After.
+    if (status === 503) {
+      return { ok: false, err: 'service-unavailable', statusCode: 503 }
+    }
+
+    logger.error(
+      { status, error: err instanceof Error ? err.message : String(err) },
+      'leasingAdapter.getContactsByFilters'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
@@ -682,12 +729,15 @@ const syncContactToLeasing = async (
       return { ok: true, data: { skipped: response.data?.skipped === true } }
     }
 
-    logger.error(response.data, 'leasing-adapter.syncContactToLeasing')
+    logger.error(
+      { status: response.status },
+      'leasing-adapter.syncContactToLeasing'
+    )
     return { ok: false, err: 'sync-failed', statusCode: response.status }
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
       logger.error(
-        { status: err.response.status, data: err.response.data },
+        { status: err.response.status },
         'leasing-adapter.syncContactToLeasing'
       )
       return { ok: false, err: 'sync-failed', statusCode: err.response.status }
@@ -774,14 +824,11 @@ const syncLease = async (
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'leasing-adapter.syncLease')
+    logger.error({ status: response.status }, 'leasing-adapter.syncLease')
     return syncLeaseFailure(response.status, response.data)
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
-      logger.error(
-        { status: err.response.status, data: err.response.data },
-        'leasing-adapter.syncLease'
-      )
+      logger.error({ status: err.response.status }, 'leasing-adapter.syncLease')
       return syncLeaseFailure(err.response.status, err.response.data)
     }
     logger.error({ err }, 'leasing-adapter.syncLease')
@@ -854,7 +901,7 @@ const syncRentalObjectType = async (
     }
 
     logger.error(
-      { rentalObjectCode, status: response.status, body: response.data },
+      { rentalObjectCode, status: response.status },
       'leasing-adapter.syncRentalObjectType'
     )
     return { ok: false, err: 'sync-failed', statusCode: response.status }

@@ -56,6 +56,47 @@ export async function getInvoicePdf(
   }
 }
 
+const InvoiceFileNotFoundBodySchema = z.object({
+  reason: z.enum(['invoice-not-found', 'file-not-found']),
+})
+
+// The PDF Xledger keeps for an invoice, e.g. a miscellaneous invoice.
+export async function getInvoiceFile(
+  invoiceNumber: string
+): Promise<
+  AdapterResult<Buffer, 'invoice-not-found' | 'file-not-found' | 'unknown'>
+> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/invoices/${encodeURIComponent(invoiceNumber)}/file`,
+      { responseType: 'arraybuffer', validateStatus: () => true }
+    )
+
+    if (response.status === 404) {
+      const body = InvoiceFileNotFoundBodySchema.parse(
+        JSON.parse(Buffer.from(response.data).toString('utf-8'))
+      )
+      return { ok: false, err: body.reason }
+    }
+
+    if (response.status !== 200) {
+      logger.error(
+        { invoiceNumber, status: response.status },
+        'economy-adapter.getInvoiceFile'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: Buffer.from(response.data) }
+  } catch (err: unknown) {
+    logger.error(
+      { invoiceNumber, error: errorMessage(err) },
+      'economy-adapter.getInvoiceFile'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function getInvoiceByInvoiceId(
   invoiceId: string
 ): Promise<AdapterResult<Invoice, 'not-found' | 'unknown'>> {
@@ -73,7 +114,10 @@ export async function getInvoiceByInvoiceId(
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'economy-adapter.getInvoiceByInvoiceId')
+    logger.error(
+      { status: response.status },
+      'economy-adapter.getInvoiceByInvoiceId'
+    )
     return { ok: false, err: 'unknown' }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoiceByInvoiceId')
@@ -98,7 +142,7 @@ export async function getInvoiceByOcr(
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'economy-adapter.getInvoiceByOcr')
+    logger.error({ status: response.status }, 'economy-adapter.getInvoiceByOcr')
     return { ok: false, err: 'unknown' }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoiceByOcr')
@@ -122,7 +166,10 @@ export async function getInvoicePaymentEvents(
       return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
-    logger.error(response.data, 'economy-adapter.getInvoicePaymentEvents')
+    logger.error(
+      { status: response.status },
+      'economy-adapter.getInvoicePaymentEvents'
+    )
     return { ok: false, err: 'unknown', statusCode: 500 }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoicePaymentEvents')
@@ -133,7 +180,7 @@ export async function getInvoicePaymentEvents(
 export async function getInvoicesByContactCode(
   contactCode: string,
   filters?: { from?: Date }
-): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
+): Promise<AdapterResult<Invoice[], GetInvoicesByContactCodeError>> {
   const url = `${config.economyService.url}/invoices/bycontactcode/${contactCode}`
   try {
     const response = await axios.get(url, {
@@ -142,20 +189,39 @@ export async function getInvoicesByContactCode(
     })
 
     if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
+      return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'economy-adapter.getInvoicesByContactCode')
-    return { ok: false, err: 'unknown' }
-  } catch (err: any) {
-    logger.error(err, 'economy-adapter.getInvoicesByContactCode')
+    // The invoice source is temporarily down. Economy has already logged it
+    // as an error, so a warning is enough here.
+    if (response.status === 503) {
+      logger.warn(
+        { status: response.status },
+        'economy-adapter.getInvoicesByContactCode: invoice source unavailable'
+      )
+      return { ok: false, err: 'unavailable', statusCode: 503 }
+    }
+
+    logger.error(
+      { status: response.status },
+      'economy-adapter.getInvoicesByContactCode'
+    )
+    return { ok: false, err: 'unknown', statusCode: response.status }
+  } catch (err: unknown) {
+    logger.error(
+      { error: errorMessage(err) },
+      'economy-adapter.getInvoicesByContactCode'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
+
+export type GetInvoicesByContactCodeError =
+  'not-found' | 'unavailable' | 'unknown'
 
 export type ImportInvoicesError = 'partial-upload' | 'export-failed' | 'unknown'
 
@@ -213,10 +279,14 @@ export async function importInvoices(
 export async function getInvoicesSentToDebtCollection(
   contactCode: string,
   from?: Date
-): Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>> {
+): Promise<AdapterResult<Invoice[], GetInvoicesByContactCodeError>> {
   const invoicesResult = await getInvoicesByContactCode(contactCode, { from })
   if (!invoicesResult.ok) {
-    return { ok: false, err: invoicesResult.err }
+    return {
+      ok: false,
+      err: invoicesResult.err,
+      statusCode: invoicesResult.statusCode,
+    }
   }
 
   // reference is the paying contact's code: cmctc.cmctckod from Xpand,
@@ -298,7 +368,7 @@ export async function submitMiscellaneousInvoice(
     }
 
     logger.error(
-      { status: response.status, body: response.data },
+      { status: response.status },
       'economy-adapter.submitMiscellaneousInvoice'
     )
     return { ok: false, err: SubmitMiscellaneousInvoiceErrorCodes.Unknown }
@@ -337,7 +407,7 @@ export async function getInvoices({
         hasNextPage = pageInfo?.hasNextPage
         after = pageInfo?.endCursor
       } else {
-        logger.error(response.data, 'economy-adapter.getInvoices')
+        logger.error({ status: response.status }, 'economy-adapter.getInvoices')
         return { ok: false, err: 'unknown', statusCode: 500 }
       }
     }
@@ -378,7 +448,10 @@ export async function getMiscellaneousInvoices({
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'economy-adapter.getMiscellaneousInvoices')
+    logger.error(
+      { status: response.status },
+      'economy-adapter.getMiscellaneousInvoices'
+    )
     return { ok: false, err: 'unknown', statusCode: 500 }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getMiscellaneousInvoices')
@@ -401,7 +474,10 @@ export async function getRentInvoiceRows(
       if (response.status === 200) {
         allRows = allRows.concat(response.data.content)
       } else {
-        logger.error(response.data, 'economy-adapter.getRentInvoiceRows')
+        logger.error(
+          { status: response.status },
+          'economy-adapter.getRentInvoiceRows'
+        )
         return { ok: false, err: 'unknown', statusCode: 500 }
       }
     }
@@ -449,7 +525,7 @@ export async function deferInvoice(params: {
       }
     }
 
-    logger.error(response.data, 'economy-adapter.deferInvoice')
+    logger.error({ status: response.status }, 'economy-adapter.deferInvoice')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: unknown) {
     logger.error(err, 'economy-adapter.deferInvoice')
@@ -496,7 +572,10 @@ export async function getPaymentEvents(
       if (response.status === 200) {
         allEvents = allEvents.concat(response.data.content)
       } else {
-        logger.error(response.data, 'economy-adapter.getPaymentEvents')
+        logger.error(
+          { status: response.status },
+          'economy-adapter.getPaymentEvents'
+        )
         return { ok: false, err: 'unknown', statusCode: 500 }
       }
     }
@@ -527,7 +606,10 @@ export async function getLeaseDetailsForInvoices(
       if (response.status === 200) {
         allLeaseDetails = allLeaseDetails.concat(response.data.content)
       } else {
-        logger.error(response.data, 'economy-adapter.getLeaseDetailsForInvoice')
+        logger.error(
+          { status: response.status },
+          'economy-adapter.getLeaseDetailsForInvoice'
+        )
         return { ok: false, err: 'unknown', statusCode: 500 }
       }
     }
@@ -560,7 +642,7 @@ export async function processIMD(
       return { ok: false, err: 'invalid-csv', statusCode: 400 }
     }
 
-    logger.error(response.data, 'economy-adapter.processIMD')
+    logger.error({ status: response.status }, 'economy-adapter.processIMD')
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err) {
     logger.error(err, 'economy-adapter.processIMD')
@@ -596,7 +678,10 @@ export async function getInvoiceChannels(
         data: parsed.data,
       }
     }
-    logger.error(response.data, 'economy-adapter.getInvoiceChannels')
+    logger.error(
+      { status: response.status },
+      'economy-adapter.getInvoiceChannels'
+    )
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getInvoiceChannels')
@@ -632,7 +717,10 @@ export async function getAutogiroConsent(
       return { ok: false, err: 'not-found', statusCode: 404 }
     }
 
-    logger.error(response.data, 'economy-adapter.getAutogiroConsent')
+    logger.error(
+      { status: response.status },
+      'economy-adapter.getAutogiroConsent'
+    )
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getAutogiroConsent')
@@ -658,7 +746,10 @@ export async function getLatestPaymentCursor(): Promise<
     if (response.status === 200) {
       return { ok: true, data: response.data.content }
     }
-    logger.error(response.data, 'economy-adapter.getLatestPaymentCursor')
+    logger.error(
+      { status: response.status },
+      'economy-adapter.getLatestPaymentCursor'
+    )
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getLatestPaymentCursor')
@@ -680,7 +771,10 @@ export async function getPaymentsSince(
       return { ok: true, data: parsed }
     }
 
-    logger.error(response.data, 'economy-adapter.getPaymentsSince')
+    logger.error(
+      { status: response.status },
+      'economy-adapter.getPaymentsSince'
+    )
     return { ok: false, err: 'unknown', statusCode: response.status }
   } catch (err: any) {
     logger.error(err, 'economy-adapter.getPaymentsSince')
@@ -733,7 +827,7 @@ export async function recordInvoicePayment(
     }
 
     logger.error(
-      { status: response.status, error: response.data },
+      { status: response.status },
       'economy-adapter.recordInvoicePayment'
     )
     return { ok: false, err: 'unknown', statusCode: response.status }

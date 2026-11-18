@@ -14,6 +14,7 @@ import {
   TenfastInvoiceRow,
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
+import { isIncludedInRent } from '../adapters/tenfast/tenfast-rental-object-helpers'
 
 // Parsed Tenfast UI base URL, cached per configured value so an invalid
 // value is only parsed and logged once instead of once per mapped lease.
@@ -120,6 +121,7 @@ export const mapToOnecoreRentalObjectRent = (
     vatPercentage: row.vat,
     fromDate: row.from ? new Date(row.from) : undefined,
     toDate: row.to ? new Date(row.to) : undefined,
+    includedInRent: isIncludedInRent(row),
   })),
 })
 

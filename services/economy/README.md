@@ -20,6 +20,17 @@ According to .env.template.
 
 ---
 
+## Rental Invoice Accounting
+
+Accounting for rental invoices is exported to Xledger by two scripts. Each one handles invoices from its own rental system:
+
+- `src/scripts/import-rental-invoices.ts` handles invoices created in Xpand. It runs as the `import-rental-invoices` cronjob. It imports invoices that are not yet exported into a batch in `invoice_data`, writes contact, aggregate and ledger CSV files and uploads them to Xledger. Then it records the invoices in `invoice_import_status`. Arguments: `[companyIds] [earliestStartDate] [dryRun]`, by default `001,006` and `2025-10-01`. With `dryRun`, the files are written to `RENTAL_INVOICES__EXPORT_DIRECTORY` but nothing is uploaded or marked as imported. Code: `src/services/xpand-rental-invoice-service`.
+- Invoices created in Tenfast are exported by the `export-rental-invoice-accounting` cronjob. It runs `core/src/scripts/export-rental-invoice-accounting.ts`, which calls this service. Invoices are marked as exported in Tenfast. Code: `exportRentalInvoicesAccounting` in `src/services/invoice-service`. For local runs, use `src/scripts/export-rental-invoices-accounting.ts`.
+
+The two scripts do not share any state about which invoices are exported.
+
+---
+
 ## Debt Collection
 
 ### Process

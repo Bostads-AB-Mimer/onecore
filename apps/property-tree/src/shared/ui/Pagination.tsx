@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,6 +8,13 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/Button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/Select'
 
 interface PaginationProps {
   currentPage: number
@@ -15,6 +23,9 @@ interface PaginationProps {
   pageSize: number
   onPageChange: (page: number) => void
   isFetching?: boolean
+  /** Rows-per-page choices. The selector shows only with onPageSizeChange. */
+  pageSizeOptions?: readonly number[]
+  onPageSizeChange?: (pageSize: number) => void
 }
 
 export const Pagination = ({
@@ -24,8 +35,18 @@ export const Pagination = ({
   pageSize,
   onPageChange,
   isFetching,
+  pageSizeOptions,
+  onPageSizeChange,
 }: PaginationProps) => {
-  if (totalPages <= 1) return null
+  const pageSizeLabelId = useId()
+  const pageSizeSelect =
+    onPageSizeChange && pageSizeOptions && pageSizeOptions.length > 0
+      ? { options: pageSizeOptions, onChange: onPageSizeChange }
+      : null
+
+  // With a page size selector the bar stays on a single page, so the user can
+  // switch back to a smaller page size.
+  if (totalPages <= 1 && (!pageSizeSelect || totalRecords === 0)) return null
 
   const startRecord = (currentPage - 1) * pageSize + 1
   const endRecord = Math.min(currentPage * pageSize, totalRecords)
@@ -63,73 +84,100 @@ export const Pagination = ({
         )}
       </div>
 
-      <div className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(1)}
-          disabled={currentPage === 1 || isFetching}
-          className="h-8 w-8 p-0"
-          title="Första sidan"
-        >
-          <ChevronsLeft className="h-4 w-4" />
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1 || isFetching}
-          className="h-8 w-8 p-0"
-          title="Föregående sida"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
-        {getPageNumbers().map((page, index) =>
-          page === 'ellipsis' ? (
-            <span
-              key={`ellipsis-${index}`}
-              className="px-2 text-muted-foreground"
+      {pageSizeSelect && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span id={pageSizeLabelId}>Rader per sida</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => pageSizeSelect.onChange(Number(value))}
+            disabled={isFetching}
+          >
+            <SelectTrigger
+              className="h-8 w-[80px]"
+              aria-labelledby={pageSizeLabelId}
             >
-              ...
-            </span>
-          ) : (
-            <Button
-              key={page}
-              variant={currentPage === page ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onPageChange(page)}
-              disabled={isFetching}
-              className="h-8 w-8 p-0"
-            >
-              {page}
-            </Button>
-          )
-        )}
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeSelect.options.map((option) => (
+                <SelectItem key={option} value={String(option)}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages || isFetching}
-          className="h-8 w-8 p-0"
-          title="Nästa sida"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      {totalPages > 1 && (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(1)}
+            disabled={currentPage === 1 || isFetching}
+            className="h-8 w-8 p-0"
+            title="Första sidan"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onPageChange(totalPages)}
-          disabled={currentPage === totalPages || isFetching}
-          className="h-8 w-8 p-0"
-          title="Sista sidan"
-        >
-          <ChevronsRight className="h-4 w-4" />
-        </Button>
-      </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1 || isFetching}
+            className="h-8 w-8 p-0"
+            title="Föregående sida"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          {getPageNumbers().map((page, index) =>
+            page === 'ellipsis' ? (
+              <span
+                key={`ellipsis-${index}`}
+                className="px-2 text-muted-foreground"
+              >
+                ...
+              </span>
+            ) : (
+              <Button
+                key={page}
+                variant={currentPage === page ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => onPageChange(page)}
+                disabled={isFetching}
+                className="h-8 w-8 p-0"
+              >
+                {page}
+              </Button>
+            )
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages || isFetching}
+            className="h-8 w-8 p-0"
+            title="Nästa sida"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(totalPages)}
+            disabled={currentPage === totalPages || isFetching}
+            className="h-8 w-8 p-0"
+            title="Sista sidan"
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

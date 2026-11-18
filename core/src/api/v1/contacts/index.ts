@@ -13,6 +13,10 @@ import {
   RelationErrorResponseBodySchema_APIv1,
   RelationRoleTypeSchema_APIv1,
   RelationsResponseBodySchema_APIv1,
+  SyncContactToLeasingStatusSchema_APIv1,
+  SyncContactsToLeasingErrorResponseBodySchema_APIv1,
+  SyncContactsToLeasingRequestBodySchema_APIv1,
+  SyncContactsToLeasingResponseBodySchema_APIv1,
 } from './schema'
 import {
   generateRouteMetadata,
@@ -23,7 +27,13 @@ import {
 import { paginatedResponseSchema, WaitingListType } from '@onecore/types'
 
 import { makeContactsAdapter } from '../../../adapters/contacts-adapter'
-import { addRelation, removeRelation } from '../../../processes/contacts'
+import {
+  addRelation,
+  removeRelation,
+  revealProtectedTenant,
+  revealProtectedTenantList,
+  revealProtectedTenants,
+} from '../../../processes/contacts'
 import * as leasingAdapter from '../../../adapters/leasing-adapter'
 import { makeClientApplicationProfileRequestParams } from '../../../services/lease-service/helpers/application-profile'
 import { transformContact, transformContacts } from './transform'
@@ -32,6 +42,20 @@ import { AdapterResult } from '@/adapters/types'
 import { ProcessStatus } from '@/common/types'
 import type { Contact } from '@onecore/contacts/domain'
 import { ParameterizedContext } from 'koa'
+import { runWithConcurrency } from '@/utils/concurrency'
+
+// Each sync is a leasing call that waits on the external leasing system, so
+// keep only a few in flight at once.
+const SYNC_TO_LEASING_CONCURRENCY = 5
+
+// This many unanswered calls in a row means leasing is down rather than one
+// contact being slow, so the rest of the list is not sent: each further call
+// would only wait out the adapter's timeout.
+const SYNC_TO_LEASING_MAX_UNREACHABLE_IN_A_ROW = 3
+
+type SyncToLeasingStatus = z.infer<
+  typeof SyncContactToLeasingStatusSchema_APIv1
+>
 
 /**
  * Status a create failure maps to.
@@ -65,6 +89,9 @@ export const routes = (router: OkapiRouter, config: Config) => {
   const contactsServiceUrl = config.contactsService.url
 
   const contactsAdapter = makeContactsAdapter(contactsServiceUrl)
+  // Protected identities with a lease in Tenfast are returned unredacted, so
+  // every read below passes through these (see revealProtectedTenants).
+  const revealDeps = { contacts: contactsAdapter }
 
   const encodeError = (
     ctx: ParameterizedContext,
@@ -321,7 +348,9 @@ export const routes = (router: OkapiRouter, config: Config) => {
         ctx.status = 200
         ctx.body = {
           ...response.data,
-          content: transformContacts(response.data.content),
+          content: transformContacts(
+            await revealProtectedTenants(response.data.content, revealDeps)
+          ),
         }
       } else {
         const metadata = generateRouteMetadata(ctx)
@@ -371,7 +400,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
         return
       }
 
-      const result = await contactsAdapter.getByContactCodes(codes)
+      const result = await revealProtectedTenantList(
+        await contactsAdapter.getByContactCodes(codes),
+        revealDeps
+      )
 
       if (result.ok) {
         ctx.status = 200
@@ -435,12 +467,15 @@ export const routes = (router: OkapiRouter, config: Config) => {
         includeRelations,
       } = ctx.query
 
-      const response = await contactsAdapter.getByContactCodeBatch(code, {
-        includePhone,
-        includeEmail,
-        includeAddress,
-        includeRelations,
-      })
+      const response = await revealProtectedTenantList(
+        await contactsAdapter.getByContactCodeBatch(code, {
+          includePhone,
+          includeEmail,
+          includeAddress,
+          includeRelations,
+        }),
+        revealDeps
+      )
 
       encodeListResponse(ctx, response)
     }
@@ -465,7 +500,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
     async (ctx) => {
       const { contactCode } = ctx.params
 
-      const response = await contactsAdapter.getByContactCode(contactCode)
+      const response = await revealProtectedTenant(
+        await contactsAdapter.getByContactCode(contactCode),
+        revealDeps
+      )
 
       encodeSingleResponse(ctx, response)
     }
@@ -490,8 +528,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
     async (ctx) => {
       const { contactCode } = ctx.params
 
-      const response =
-        await contactsAdapter.getByTrusteeOfContactCode(contactCode)
+      const response = await revealProtectedTenant(
+        await contactsAdapter.getByTrusteeOfContactCode(contactCode),
+        revealDeps
+      )
 
       encodeSingleResponse(ctx, response)
     }
@@ -673,6 +713,107 @@ export const routes = (router: OkapiRouter, config: Config) => {
     }
   )
 
+  // Gated on contacts:write by requiredRolesFor (POST under /v1/contacts).
+  router.post(
+    '/v1/contacts/sync-to-leasing',
+    {
+      summary: 'Make leasing pull the current data of a list of contacts',
+      description:
+        'Asks leasing to fetch each contact from ONECore again and update its ' +
+        'tenant, e.g. after tenants were stored with outdated or redacted ' +
+        'data. Changes nothing in the contacts service. Answers 200 with an ' +
+        'outcome per contact code once every code has been tried — check ' +
+        '`failed`: synced, skipped (leasing has no tenant for the code), ' +
+        'sync-failed (leasing answered with an error), leasing-unreachable ' +
+        '(whether the tenant was updated is unknown) or not-attempted ' +
+        '(leasing stopped answering, so the code was never sent). Every ' +
+        'outcome is safe to retry.',
+      tags: ['Contacts'],
+      body: {
+        name: 'SyncContactsToLeasingRequest',
+        schema: SyncContactsToLeasingRequestBodySchema_APIv1,
+      },
+      response: {
+        200: SyncContactsToLeasingResponseBodySchema_APIv1,
+        400: SyncContactsToLeasingErrorResponseBodySchema_APIv1,
+      },
+    },
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      // OkapiRouter does not validate the body, so it is parsed here.
+      const parsed = SyncContactsToLeasingRequestBodySchema_APIv1.safeParse(
+        ctx.request.body
+      )
+
+      if (!parsed.success) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'invalid-request',
+          detail: parsed.error.issues
+            .map((i) => `${i.path.join('.')}: ${i.message}`)
+            .join('; '),
+          ...metadata,
+        }
+        return
+      }
+
+      const contactCodes = [...new Set(parsed.data.contactCodes)]
+
+      let unreachableInARow = 0
+      let leasingIsDown = false
+
+      // The adapter logs each failure itself, with the status leasing gave.
+      const results = await runWithConcurrency(
+        contactCodes,
+        async (
+          contactCode
+        ): Promise<{ contactCode: string; status: SyncToLeasingStatus }> => {
+          if (leasingIsDown) return { contactCode, status: 'not-attempted' }
+
+          const result = await leasingAdapter.syncContactToLeasing(contactCode)
+          const status: SyncToLeasingStatus = result.ok
+            ? result.data.skipped
+              ? 'skipped'
+              : 'synced'
+            : result.err === 'sync-failed'
+              ? 'sync-failed'
+              : 'leasing-unreachable'
+
+          // Any answer from leasing, even an error, shows it is up.
+          unreachableInARow =
+            status === 'leasing-unreachable' ? unreachableInARow + 1 : 0
+          if (unreachableInARow >= SYNC_TO_LEASING_MAX_UNREACHABLE_IN_A_ROW) {
+            leasingIsDown = true
+          }
+
+          return { contactCode, status }
+        },
+        SYNC_TO_LEASING_CONCURRENCY
+      )
+
+      const count = (statuses: SyncToLeasingStatus[]) =>
+        results.filter((r) => statuses.includes(r.status)).length
+      const summary = {
+        synced: count(['synced']),
+        skipped: count(['skipped']),
+        failed: count(['sync-failed', 'leasing-unreachable', 'not-attempted']),
+      }
+
+      if (summary.failed > 0) {
+        logger.warn(
+          { ...summary, metadata },
+          'contacts.syncToLeasing: some contacts failed'
+        )
+      } else {
+        logger.info({ ...summary, metadata }, 'contacts.syncToLeasing')
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody({ results, ...summary }, metadata)
+    }
+  )
+
   router.get(
     '/v1/contacts/by-phone-number/:phoneNumber',
     {
@@ -692,7 +833,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
     async (ctx) => {
       const { phoneNumber } = ctx.params
 
-      const response = await contactsAdapter.listByPhoneNumber(phoneNumber)
+      const response = await revealProtectedTenantList(
+        await contactsAdapter.listByPhoneNumber(phoneNumber),
+        revealDeps
+      )
 
       encodeListResponse(ctx, response)
     }
@@ -717,7 +861,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
     async (ctx) => {
       const { emailAddress } = ctx.params
 
-      const response = await contactsAdapter.listByEmailAddress(emailAddress)
+      const response = await revealProtectedTenantList(
+        await contactsAdapter.listByEmailAddress(emailAddress),
+        revealDeps
+      )
 
       encodeListResponse(ctx, response)
     }
@@ -742,7 +889,10 @@ export const routes = (router: OkapiRouter, config: Config) => {
     async (ctx) => {
       const { nid } = ctx.params
 
-      const response = await contactsAdapter.getByNationalId(nid)
+      const response = await revealProtectedTenant(
+        await contactsAdapter.getByNationalId(nid),
+        revealDeps
+      )
 
       encodeSingleResponse(ctx, response)
     }

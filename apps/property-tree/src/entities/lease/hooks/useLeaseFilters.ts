@@ -10,13 +10,12 @@ import {
 import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
 import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFilterDropdown'
 
+import { DEFAULT_PAGE_SIZE, parsePageSize } from '../lib/pageSize'
 import { useLeaseSearch } from './useLeaseSearch'
 
 type PropertyManager = Awaited<
   ReturnType<typeof authService.getUsersByRole>
 >[number]
-
-const PAGE_SIZE = 100
 
 const FILTER_KEYS = [
   'objectType',
@@ -70,10 +69,23 @@ const SINGLE_SELECT_FILTERS = [
 export function useLeaseFilters() {
   const filters = useUrlFilters({
     filterKeys: FILTER_KEYS,
-    pageSize: PAGE_SIZE,
+    pageSize: DEFAULT_PAGE_SIZE,
   })
 
-  const { searchParams: urlSearchParams } = filters
+  const { searchParams: urlSearchParams, updateUrlParams } = filters
+
+  // Not in FILTER_KEYS: "Rensa filter" keeps the chosen page size.
+  const pageSize = parsePageSize(urlSearchParams.get('pageSize'))
+  const setPageSize = useCallback(
+    (size: number) => {
+      const next = parsePageSize(String(size))
+      updateUrlParams({
+        pageSize: next === DEFAULT_PAGE_SIZE ? undefined : next,
+        page: undefined,
+      })
+    },
+    [updateUrlParams]
+  )
 
   // Wrap setFilterValues to enforce single-select for certain filters
   const setFilterValues = useCallback(
@@ -198,13 +210,12 @@ export function useLeaseFilters() {
     failureCount,
     failureReason,
     exportToExcel,
-  } = useLeaseSearch(searchParams, filters.page, PAGE_SIZE)
+  } = useLeaseSearch(searchParams, filters.page, pageSize)
 
   const totalPages = meta?.totalRecords
-    ? Math.ceil(meta.totalRecords / PAGE_SIZE)
+    ? Math.ceil(meta.totalRecords / pageSize)
     : 1
 
-  const { updateUrlParams } = filters
   const handleSort = useCallback(
     (key: string, order: 'asc' | 'desc' | undefined) => {
       updateUrlParams({
@@ -260,7 +271,8 @@ export function useLeaseFilters() {
   return {
     ...filters,
     setFilterValues, // Override with exclusive-filter-aware version
-    pageSize: PAGE_SIZE,
+    pageSize,
+    setPageSize,
 
     // Resolved filter values
     selectedObjectTypes,

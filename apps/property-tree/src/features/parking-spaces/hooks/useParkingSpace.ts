@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
+import { findActiveLease } from '@/entities/lease'
+
 import {
   leaseService,
   parkingSpaceService,
@@ -24,9 +26,7 @@ export function useParkingSpace(rentalId: string | undefined) {
     enabled: !!parkingSpace?.rentalId,
   })
 
-  const currentLease =
-    leasesQuery.data?.find((lease) => lease.status === 'Current') ??
-    leasesQuery.data?.find((lease) => lease.status === 'AboutToEnd')
+  const currentLease = findActiveLease(leasesQuery.data)
 
   // The rental object's configured rent from Tenfast — independent of leases,
   // so it is available for vacant objects too

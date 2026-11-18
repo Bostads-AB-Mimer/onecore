@@ -14,7 +14,12 @@ import {
   RadioGroup,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { CreateNoteOfInterestErrorCodes, Listing, Tenant } from '@onecore/types'
+import {
+  CreateNoteOfInterestErrorCodes,
+  leasing,
+  Listing,
+  Tenant,
+} from '@onecore/types'
 import { toast } from 'react-toastify'
 import { LoadingButton, TabContext, TabPanel } from '@mui/lab'
 
@@ -94,8 +99,9 @@ export const CreateApplicantForListing = (props: Props) => {
 
   const onCreateNonScoredLease = (params: CreateNonScoredLeaseParams) => {
     createNonScoredLease.mutate(params, {
-      onSuccess: () => {
-        // Show success toast with navigation option
+      onSuccess: ({ vat }) => {
+        // Show success toast with navigation option. The VAT decision is
+        // shown so staff can check it before sending the lease for signing.
         const toastId = toast.success(
           <div
             style={{
@@ -105,7 +111,15 @@ export const CreateApplicantForListing = (props: Props) => {
               wordBreak: 'keep-all',
             }}
           >
-            <span>Bilplatskontrakt skapat och tilldelat</span>
+            <span>
+              Bilplatskontrakt skapat och tilldelat
+              {vat && (
+                <>
+                  <br />
+                  {leasing.v1.ParkingSpaceVatDecisionLabel[vat.reason]}
+                </>
+              )}
+            </span>
             <Button
               size="small"
               variant="dark"
@@ -118,7 +132,9 @@ export const CreateApplicantForListing = (props: Props) => {
             </Button>
           </div>,
           {
-            autoClose: 8000,
+            // A lease with VAT stays on screen until closed, so the VAT is
+            // not missed before the lease is sent for signing.
+            autoClose: vat?.includeVAT ? false : 8000,
             hideProgressBar: false,
           }
         )

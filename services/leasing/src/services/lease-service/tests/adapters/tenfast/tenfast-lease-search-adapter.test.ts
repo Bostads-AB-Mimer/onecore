@@ -401,6 +401,7 @@ describe('tenfast-lease-search-adapter', () => {
           leaseType: LeaseType.HousingContract,
         }),
         makeLeaseResult('parkering-lease', {
+          objectTypeCode: 'Parkering',
           leaseType: LeaseType.ParkingSpaceContract,
         }),
       ])
@@ -420,9 +421,11 @@ describe('tenfast-lease-search-adapter', () => {
           leaseType: LeaseType.HousingContract,
         }),
         makeLeaseResult('parkering-lease', {
+          objectTypeCode: 'Parkering',
           leaseType: LeaseType.ParkingSpaceContract,
         }),
         makeLeaseResult('lokal-lease', {
+          objectTypeCode: 'Lokal',
           leaseType: LeaseType.CommercialTenantContract,
         }),
       ])
@@ -779,6 +782,167 @@ describe('tenfast-lease-search-adapter', () => {
       await expect(
         tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
           { page: 1, limit: 500 },
+          mockCtx
+        )
+      ).rejects.toMatchObject({ status: 503 })
+    })
+  })
+
+  describe('fetchContactsForLeaseSearch', () => {
+    const contact = (
+      contactCode: string,
+      name: string
+    ): leasing.v1.ContactInfo => ({
+      name,
+      contactCode,
+      email: null,
+      phone: null,
+      contactType: 'tenant',
+    })
+
+    // One lease per status the list can filter on, each with its own tenant.
+    // 'ended' also reads the Xpand ended leases and is covered in
+    // tenfast-lease-search-ended-xpand.test.ts.
+    const leasesByStatus: [string, LeaseStatus, string][] = [
+      ['current', LeaseStatus.Current, 'P000010'],
+      ['upcoming', LeaseStatus.Upcoming, 'P000020'],
+      ['abouttoend', LeaseStatus.AboutToEnd, 'P000030'],
+      ['pendingsignature', LeaseStatus.PendingSignature, 'P000050'],
+      ['preliminaryterminated', LeaseStatus.PreliminaryTerminated, 'P000060'],
+      ['notsent', LeaseStatus.NotSent, 'P000070'],
+    ]
+
+    const contactCodesInList = async (
+      params: Partial<leasing.v1.LeaseSearchQueryParams>
+    ) => {
+      const list = await tenfastLeaseSearchAdapter.searchLeases(
+        { page: 1, limit: 500, ...params },
+        mockCtx
+      )
+      return [
+        ...new Set(
+          list.content.flatMap(
+            (lease) => lease.contacts?.map((c) => c.contactCode) ?? []
+          )
+        ),
+      ].sort()
+    }
+
+    const contactCodesForSelectAll = async (
+      params: Partial<leasing.v1.LeaseSearchQueryParams>
+    ) => {
+      const contacts =
+        await tenfastLeaseSearchAdapter.fetchContactsForLeaseSearch(
+          { page: 1, limit: 20, ...params },
+          mockCtx
+        )
+      return contacts.map((c) => c.contactCode).sort()
+    }
+
+    beforeEach(() => {
+      mockedGetAll.mockReturnValue(
+        leasesByStatus.map(([param, status, contactCode]) =>
+          makeLeaseResult(`lease-${param}`, {
+            status,
+            contacts: [contact(contactCode, `Tenant ${param}`)],
+          })
+        )
+      )
+    })
+
+    it.each(leasesByStatus)(
+      'returns only the contacts on the listed leases for status %s',
+      async (param, _status, contactCode) => {
+        const selectAll = await contactCodesForSelectAll({ status: [param] })
+
+        expect(selectAll).toEqual([contactCode])
+        expect(selectAll).toEqual(await contactCodesInList({ status: [param] }))
+      }
+    )
+
+    it('narrows the contacts by tenant name, same as the list', async () => {
+      const params = { name: 'tenant notsent' }
+
+      const selectAll = await contactCodesForSelectAll(params)
+
+      expect(selectAll).toEqual(['P000070'])
+      expect(selectAll).toEqual(await contactCodesInList(params))
+    })
+
+    it('returns a contact once when it is on several leases', async () => {
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('lease-1', {
+          contacts: [contact('P000001', 'Anna'), contact('P000002', 'Bob')],
+        }),
+        makeLeaseResult('lease-2', { contacts: [contact('P000001', 'Anna')] }),
+      ])
+
+      const contacts =
+        await tenfastLeaseSearchAdapter.fetchContactsForLeaseSearch(
+          { page: 1, limit: 20 },
+          mockCtx
+        )
+
+      expect(contacts).toEqual([
+        contact('P000001', 'Anna'),
+        contact('P000002', 'Bob'),
+      ])
+    })
+
+    it('returns a contact once when its code differs only in case or padding', async () => {
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('lease-1', { contacts: [contact('P000001', 'Anna')] }),
+        makeLeaseResult('lease-2', { contacts: [contact('p000001 ', 'Anna')] }),
+      ])
+
+      const contacts =
+        await tenfastLeaseSearchAdapter.fetchContactsForLeaseSearch(
+          { page: 1, limit: 20, sortBy: 'leaseId', sortOrder: 'asc' },
+          mockCtx
+        )
+
+      expect(contacts).toEqual([contact('P000001', 'Anna')])
+    })
+
+    it('returns contacts from every lease, not just the first page', async () => {
+      mockedGetAll.mockReturnValue(
+        Array.from({ length: 45 }, (_, i) =>
+          makeLeaseResult(`lease-${i}`, {
+            contacts: [
+              contact(`P${String(i).padStart(6, '0')}`, `Tenant ${i}`),
+            ],
+          })
+        )
+      )
+
+      const contacts =
+        await tenfastLeaseSearchAdapter.fetchContactsForLeaseSearch(
+          { page: 1, limit: 20 },
+          mockCtx
+        )
+
+      expect(contacts).toHaveLength(45)
+    })
+
+    it('returns no contacts when an Xpand-bridged filter matches no rental object', async () => {
+      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([])
+
+      const contacts =
+        await tenfastLeaseSearchAdapter.fetchContactsForLeaseSearch(
+          { page: 1, limit: 20, districtNames: ['Nowhere'] },
+          mockCtx
+        )
+
+      expect(contacts).toEqual([])
+    })
+
+    it('throws 503 when the cache is empty and does not warm up in time, same as searchLeases', async () => {
+      mockedGetAll.mockReturnValue([])
+      mockedEnsureReady.mockResolvedValue(false)
+
+      await expect(
+        tenfastLeaseSearchAdapter.fetchContactsForLeaseSearch(
+          { page: 1, limit: 20 },
           mockCtx
         )
       ).rejects.toMatchObject({ status: 503 })

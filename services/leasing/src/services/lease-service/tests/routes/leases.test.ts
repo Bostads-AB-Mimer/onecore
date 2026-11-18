@@ -14,6 +14,15 @@ import * as factory from '../factories'
 import config from '../../../../common/config'
 import { schemas } from '@onecore/types'
 
+jest.mock('../../adapters/xpand/ended-lease-adapter', () => ({
+  getEndedLeasesByContactCode: jest.fn(async () => ({ ok: true, data: [] })),
+  getEndedLeasesByRentalObjectCode: jest.fn(async () => ({
+    ok: true,
+    data: [],
+  })),
+  getEndedLeaseById: jest.fn(async () => ({ ok: false, err: 'not-found' })),
+}))
+
 const app = new Koa()
 const router = new KoaRouter()
 routes(router)
@@ -1077,6 +1086,66 @@ describe('GET /leases/search', () => {
     expect(res.status).toBe(503)
     expect(res.headers['retry-after']).toBe('30')
     expect(res.body.error).toBe('Lease cache is warming up — retry shortly')
+  })
+})
+
+describe('GET /contacts/from-lease-search', () => {
+  it('returns the contacts from the Tenfast lease search for the same filters', async () => {
+    const contacts = [
+      {
+        name: 'Test',
+        contactCode: 'P123456',
+        email: null,
+        phone: null,
+        contactType: 'tenant' as const,
+      },
+    ]
+    const contactsSpy = jest
+      .spyOn(tenfastLeaseSearchAdapter, 'fetchContactsForLeaseSearch')
+      .mockResolvedValueOnce(contacts)
+
+    const res = await request(app.callback()).get(
+      '/contacts/from-lease-search?status=pendingsignature&name=Test&property=KOLMILAN%201'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual(contacts)
+    expect(contactsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: ['pendingsignature'],
+        name: 'Test',
+        property: ['KOLMILAN 1'],
+      }),
+      expect.anything()
+    )
+  })
+
+  it('returns 503 with Retry-After header when the cache is warming up', async () => {
+    jest
+      .spyOn(tenfastLeaseSearchAdapter, 'fetchContactsForLeaseSearch')
+      .mockRejectedValueOnce(
+        Object.assign(new Error('Lease cache is warming up — retry shortly'), {
+          status: 503,
+          headers: { 'Retry-After': '30' },
+        })
+      )
+
+    const res = await request(app.callback()).get('/contacts/from-lease-search')
+
+    expect(res.status).toBe(503)
+    expect(res.headers['retry-after']).toBe('30')
+    expect(res.body.error).toBe('Lease cache is warming up — retry shortly')
+  })
+
+  it('returns 500 when the lookup throws', async () => {
+    jest
+      .spyOn(tenfastLeaseSearchAdapter, 'fetchContactsForLeaseSearch')
+      .mockRejectedValueOnce(new Error('Xpand is down'))
+
+    const res = await request(app.callback()).get('/contacts/from-lease-search')
+
+    expect(res.status).toBe(500)
+    expect(res.body.content).toBeUndefined()
   })
 })
 

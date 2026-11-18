@@ -2,6 +2,7 @@ import {
   errorMessage,
   errorName,
   redactedMessage,
+  serializeError,
 } from '../../src/logging/error-fields'
 
 describe('errorName', () => {
@@ -28,5 +29,20 @@ describe('redactedMessage', () => {
     expect(
       redactedMessage(err, ['Anna', 'Anna Berg', 'anna@example.com', null, ''])
     ).toBe('[redacted] <[redacted]> rejected: [redacted]')
+  })
+})
+
+describe('serializeError', () => {
+  it('keeps the message of the cause', () => {
+    const cause = new Error('connect ECONNREFUSED 127.0.0.1:5050')
+    const err = new TypeError('fetch failed', { cause })
+
+    const serialized = serializeError(err) as Record<string, unknown>
+
+    expect(serialized.message).toBe(
+      'fetch failed: connect ECONNREFUSED 127.0.0.1:5050'
+    )
+    expect(serialized.stack).toContain('caused by:')
+    expect(Object.keys(serialized).sort()).toEqual(['message', 'stack', 'type'])
   })
 })

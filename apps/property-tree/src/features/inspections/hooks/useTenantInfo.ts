@@ -1,26 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { isSubletTenant } from '@/entities/tenant'
-
 import { type Lease, leaseService } from '@/services/api/core/leaseService'
 
-import type { TenantInfoCardData } from '../types'
-
-const buildTenantInfo = (
-  lease: Lease | undefined
-): TenantInfoCardData | undefined => {
-  const tenant = lease?.tenants?.find((t) => !isSubletTenant(t))
-  if (!lease || !tenant) return undefined
-
-  return {
-    contactCode: tenant.contactCode,
-    fullName: tenant.fullName ?? '',
-    moveInDate: lease.leaseStartDate,
-    moveOutDate:
-      lease.terminationDate ?? lease.preferredMoveOutDate ?? lease.leaseEndDate,
-    isAboutToLeave: lease.status === 'AboutToEnd',
-  }
-}
+import { buildTenantInfo } from '../lib/buildTenantInfo'
 
 export function useTenantInfo(
   residenceId: string | undefined,

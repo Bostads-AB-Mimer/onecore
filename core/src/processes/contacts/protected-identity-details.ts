@@ -1,8 +1,6 @@
 import { logger } from '@onecore/utilities'
 import { ContactLookup } from './sync-invoice-recipient'
-
-// The value the contacts service puts in every personal field it redacts.
-const REDACTED = 'redacted'
+import { REDACTED } from './protected-tenants'
 
 /**
  * What became of a protected identity's details:
@@ -28,8 +26,9 @@ type LegacyIdentity = {
 /**
  * Fills in the identity fields leasing hides for every protected identity,
  * taking them from the contacts service — the only source allowed to decide
- * what of a protected identity may be shown. It lifts redaction for tenants
- * and invoice recipients, whose data in Xpand is already anonymised.
+ * what of a protected identity may be shown. Pass `tenantAwareContactLookup`
+ * so redaction is lifted for tenants (checked against Tenfast) and invoice
+ * recipients, whose data in Xpand is already anonymised.
  *
  * A protected identity gets `protectedIdentityDetails` so clients can tell
  * withheld details from a failed lookup. Fails closed: if the contacts
