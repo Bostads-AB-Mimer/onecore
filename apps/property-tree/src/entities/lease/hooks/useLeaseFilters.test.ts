@@ -131,3 +131,41 @@ describe('useLeaseFilters page size', () => {
     expect(result.hasActiveFilters).toBe(false)
   })
 })
+
+describe('useLeaseFilters object type / parking space type', () => {
+  it('two setFilterValues calls in the same tick lose the first write', () => {
+    // Demonstrates the bug this card fixes: ObjectTypeFilter used to call
+    // onObjectTypeChange and onParkingSpaceTypeChange back to back, and both
+    // built their new URL from the same pre-update searchParams snapshot.
+    render('/leases')
+
+    act(() => {
+      result.setFilterValues('objectType', ['parkering'])
+      result.setFilterValues('parkingSpaceType', [])
+    })
+
+    expect(location.getAll('objectType')).toEqual([])
+  })
+
+  it('setObjectAndParkingSpaceType writes both filters in one step', () => {
+    render('/leases')
+
+    act(() => {
+      result.setObjectAndParkingSpaceType(['bostad'], ['KALLGAR'])
+    })
+
+    expect(location.getAll('objectType')).toEqual(['bostad'])
+    expect(location.getAll('parkingSpaceType')).toEqual(['KALLGAR'])
+  })
+
+  it('setObjectAndParkingSpaceType clears both filters together', () => {
+    render('/leases?objectType=parkering&parkingSpaceType=KALLGAR')
+
+    act(() => {
+      result.setObjectAndParkingSpaceType([], [])
+    })
+
+    expect(location.has('objectType')).toBe(false)
+    expect(location.has('parkingSpaceType')).toBe(false)
+  })
+})

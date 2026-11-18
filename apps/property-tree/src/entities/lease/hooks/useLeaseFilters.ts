@@ -111,6 +111,20 @@ export function useLeaseFilters() {
     [urlSearchParams, filters]
   )
 
+  // objectType and parkingSpaceType are mutually exclusive ("Bilplats" vs a
+  // specific subtype) — write both in one step so clearing one and setting
+  // the other doesn't lose either change. See ObjectTypeFilter's
+  // onObjectAndParkingSpaceTypeChange prop.
+  const setObjectAndParkingSpaceType = useCallback(
+    (objectTypes: string[], parkingSpaceTypes: string[]) => {
+      filters.setMultipleFilterValues({
+        objectType: objectTypes,
+        parkingSpaceType: parkingSpaceTypes,
+      })
+    },
+    [filters]
+  )
+
   const selectedObjectTypes = useMemo(
     () => urlSearchParams.getAll('objectType'),
     [urlSearchParams]
@@ -271,6 +285,7 @@ export function useLeaseFilters() {
   return {
     ...filters,
     setFilterValues, // Override with exclusive-filter-aware version
+    setObjectAndParkingSpaceType,
     pageSize,
     setPageSize,
 
