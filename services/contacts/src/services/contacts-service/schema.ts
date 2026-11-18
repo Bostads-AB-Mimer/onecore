@@ -254,24 +254,20 @@ export const CreateContactErrorResponseBodySchema = z.object({
 /* -------------------------------------------------------------------------
  * Person contacts for a personnummer
  *
- * What registration needs to decide between "log in", "contact customer
- * service" and "create": the person contacts for the number, in the order
- * login prefers them, each with whether login accepts it.
+ * The person contacts for the number, ranked as /login-contact ranks them,
+ * each with whether its Sökande role is in use.
  * ---------------------------------------------------------------------- */
 
 export const PersonContactSchema = z.object({
   contactCode: z.string(),
-  /** The Sökande role is in use; login refuses the contact otherwise. */
+  /** The contact's Sökande role is in use. */
   isActive: z.boolean(),
 })
 
 export const GetPersonContactsResponseBodySchema =
   ONECoreHateOASResponseBodySchema.extend({
     content: z.object({
-      /**
-       * Login picks the first for a user with no live contact_code yet, who can
-       * then log in exactly when it is active. A live contact_code is kept.
-       */
+      /** Ranked as /login-contact ranks them; the first is what it returns. */
       contacts: z.array(PersonContactSchema),
     }),
   })

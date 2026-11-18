@@ -191,20 +191,14 @@ export interface ContactsRepository {
   ) => Promise<Contact | null>
 
   /**
-   * Every person contact for a personnummer, each with whether the person can
-   * log in with it, in the order login prefers them.
+   * Every person contact for a personnummer, each with whether its Sökande
+   * role is in use.
    *
-   * The same contacts `getLoginContactByNationalIdNumber` chooses among: P
-   * codes, not deleted, either stored form of the number. Unlike the duplicate
-   * check (`existsByNationalIdNumber`), which matches every row, deleted ones
-   * and companies included.
-   *
-   * The first is the contact login picks for a user whose Keycloak account has
-   * no live `contact_code` yet, the case for someone who has not logged in
-   * before: they can log in exactly when it is active, and a later active
-   * contact does not help them. A `contact_code` that already names a live
-   * contact is never replaced, so a user who has one logs in as that contact,
-   * whatever its place here.
+   * These are the contacts `getLoginContactByNationalIdNumber` chooses among
+   * (P codes, not deleted, either stored form of the number), in the same
+   * order, so the first is the contact it returns. The duplicate check
+   * (`existsByNationalIdNumber`) is broader: it also matches deleted contacts
+   * and companies.
    *
    * @param nid - The national ID number in any common notation.
    *

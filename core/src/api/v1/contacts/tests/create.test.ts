@@ -125,7 +125,7 @@ describe('POST /v1/contacts', () => {
     expect(res.body.content.waitingLists).toEqual([])
   })
 
-  it('always creates with 16 on the day, even when asked for birth-year', async () => {
+  it('drops ageRule, so staff get the contacts service default', async () => {
     const res = await request(app.callback())
       .post('/v1/contacts')
       .send(body({ ageRule: 'birth-year' }))
