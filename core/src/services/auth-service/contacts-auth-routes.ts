@@ -19,6 +19,7 @@ import {
   readRefreshTokenFromBody,
 } from './contacts-auth-dto'
 import { ContactCodeError, ensureContactCode } from './contacts-contact-code'
+import { registerContactsRegistrationRoute } from './contacts-registration-route'
 
 /**
  * Short, so that the code exchange, ensureContactCode's budget and this logout together stay
@@ -31,6 +32,8 @@ const LOGOUT_AFTER_FAILED_LOGIN_TIMEOUT_MS = 3000
  * Returns token JSON for webapi — does not set browser cookies on core.
  */
 export const registerContactsAuthRoutes = (router: KoaRouter) => {
+  registerContactsRegistrationRoute(router)
+
   /**
    * @swagger
    * /auth/contacts/token:

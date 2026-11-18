@@ -4,13 +4,10 @@ import z from 'zod'
 import { ContactsRepository } from '@src/adapters/contact-adapter'
 import { ContactWriter } from '@src/adapters/contact-writer'
 import { AdapterResult } from '@src/adapters/types'
+import { createKeyedLock } from '@src/common/keyed-lock'
+import { isOldEnough, MINIMUM_AGE } from '@src/domain/age-rule'
 import { Contact } from '@src/domain/contact'
-import {
-  getAgeFromNationalId,
-  NationalIdForms,
-  parseNationalId,
-} from '@src/domain/national-id'
-import { swedishYear } from '@src/domain/swedish-time'
+import { parseNationalId } from '@src/domain/national-id'
 import { generateInitialPassword } from './password'
 import {
   CreateContactAgeRuleSchema,
@@ -31,33 +28,16 @@ export type CreateContactResult = {
 }
 
 /**
- * Minimum age for a contact we provision a web account for.
+ * Serialises creates per national ID, from the duplicate check to the end of
+ * the write. Without it two requests for one number (a double click, a retry
+ * from webapi, a caseworker and the person at once) both pass the duplicate
+ * check while Xpand's slow SOAP create is still running, and both create a
+ * contact.
  *
- * Mirrors the public registration flow, which refuses applicants under 16.
+ * In-process only, which covers every create because the contacts service runs
+ * as a single replica. Running more replicas needs a lock they share.
  */
-const MINIMUM_AGE = 16
-
-/**
- * Whether the person is old enough under the caller's rule. `birth-year` lets
- * someone in from the calendar year they turn 16; the default is 16 on the day.
- * Both count in Swedish time, so the day and the year turn at midnight in
- * Sweden, as they do for core's own registration check.
- *
- * The year is read from the twelve-digit form: a samordningsnummer only offsets
- * the day, so its first four digits are still the birth year.
- */
-const isOldEnough = (
-  forms: NationalIdForms,
-  rule: CreateContactAgeRule,
-  today: Date
-): boolean => {
-  if (rule === 'birth-year') {
-    const birthYear = Number(forms.twelveDigits.slice(0, 4))
-    return swedishYear(today) - birthYear >= MINIMUM_AGE
-  }
-  const age = getAgeFromNationalId(forms.twelveDigits, today)
-  return age !== null && age >= MINIMUM_AGE
-}
+const withNationalIdLock = createKeyedLock()
 
 export type CreateContactDependencies = {
   contactsRepository: ContactsRepository
@@ -88,7 +68,7 @@ export const createContact = async (
   }
 
   const ageRule = request.ageRule ?? 'exact-age'
-  if (!isOldEnough(forms, ageRule, new Date())) {
+  if (!isOldEnough(forms.twelveDigits, ageRule, new Date())) {
     return {
       ok: false,
       err: 'invalid-national-id',
@@ -99,9 +79,26 @@ export const createContact = async (
     }
   }
 
-  const existing = await contactsRepository.existsByNationalIdNumber(
-    forms.twelveDigits
+  return withNationalIdLock(forms.twelveDigits, () =>
+    createUnlessDuplicate(
+      { contactsRepository, contactWriter },
+      request,
+      forms.twelveDigits
+    )
   )
+}
+
+/**
+ * The duplicate check and the write. Must only run under the national ID's
+ * lock, so a second request for the number sees the first one's contact.
+ */
+const createUnlessDuplicate = async (
+  { contactsRepository, contactWriter }: CreateContactDependencies,
+  request: CreateContactRequest,
+  twelveDigits: string
+): Promise<AdapterResult<CreateContactResult, CreateContactError>> => {
+  const existing =
+    await contactsRepository.existsByNationalIdNumber(twelveDigits)
 
   if (existing) {
     return { ok: false, err: 'duplicate-contact', detail: existing }
@@ -112,7 +109,7 @@ export const createContact = async (
     request.emailAddresses[0]
 
   const created = await contactWriter.createContact({
-    nationalId: forms.twelveDigits,
+    nationalId: twelveDigits,
     firstName: request.firstName,
     lastName: request.lastName,
     addresses: request.addresses,
@@ -124,7 +121,7 @@ export const createContact = async (
     credentials: {
       // The upstream convention: the web account's username is the identity
       // number, matching how the public site registers applicants.
-      name: forms.twelveDigits,
+      name: twelveDigits,
       email: primaryEmail.emailAddress,
       password: generateInitialPassword(),
     },
@@ -151,9 +148,8 @@ export const createContact = async (
     created.err === 'xpand-malformed-response' ||
     created.err === 'xpand-unavailable'
   ) {
-    const recovered = await contactsRepository.existsByNationalIdNumber(
-      forms.twelveDigits
-    )
+    const recovered =
+      await contactsRepository.existsByNationalIdNumber(twelveDigits)
 
     if (recovered) {
       logger.warn(

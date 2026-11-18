@@ -72,6 +72,12 @@ export interface Config {
           clientId: string
           clientSecret: string
         }
+        /**
+         * Where the set-password e-mail's link ends, on Mina sidor. Must be one of the
+         * clientId client's valid redirect URIs, or Keycloak refuses to send the e-mail.
+         * Empty turns registration off.
+         */
+        setPasswordRedirectUri: string
       }
     }
   }
@@ -176,6 +182,7 @@ const config = configPackage({
             clientId: 'mimer-contacts-provisioning',
             clientSecret: '',
           },
+          setPasswordRedirectUri: '',
         },
       },
     },

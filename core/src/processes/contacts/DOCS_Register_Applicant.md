@@ -1,0 +1,118 @@
+# Registrering av ny sökande
+
+`registerApplicant` i [`register-applicant.ts`](./register-applicant.ts) registrerar en ny sökande från Mina sidor. Den anropas av `POST /auth/contacts/register` ([`contacts-registration-route.ts`](../../services/auth-service/contacts-registration-route.ts)), som webapi anropar med rollen `contacts:register`.
+
+Registreringen skapar kontakten, sparar boendeprofilen, ställer kontakten i köerna och skapar inloggningen i Keycloak-realmen `mimer-contacts` med ett mejl där personen väljer lösenord. Ett lösenord passerar aldrig Mina sidor, webapi eller core.
+
+Två regler styr allt:
+
+- **Aldrig en andra kontakt för ett personnummer.** Finns personen redan ändras ingenting, inte heller i Keycloak. Keycloak läses bara, för att se vilken kontakt inloggningen använder.
+- **Inte transaktionell.** Kontakten skapas i Xpand och går inte att ta bort. När den väl finns blir svaret alltid `created`, och varje senare steg som misslyckas blir en varning.
+
+## Före processen: routen
+
+Routen gör det som kan avgöras utan att fråga någon annan tjänst, innan något skapas:
+
+| Kontroll                                                                                              | Svar                                                        |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Keycloak-URL, realm, mina-sidor-klienten, provisioning-klienten eller `setPasswordRedirectUri` saknas | 503 `registration-not-configured`                           |
+| Kroppen följer inte schemat                                                                           | 400 `invalid-request` med fältnamnen, aldrig det som skrevs |
+| Inte ett giltigt personnummer eller samordningsnummer                                                 | 422 `invalid-national-id`                                   |
+| Fyller inte 16 i år                                                                                   | 422 `too-young`                                             |
+
+Åldersregeln går på födelseår, inte exakt ålder: man får registrera sig från det kalenderår man fyller 16, som Mina sidor alltid har lovat. Året räknas i svensk tid, inte i containerns UTC. Routen och contacts-tjänsten använder samma funktion, `isOldEnough` från `@onecore/contacts/schema`, och processen skapar kontakten med `ageRule: 'birth-year'`, så de två kan inte komma fram till olika svar. Skapa från property-tree behåller exakt 16 år.
+
+Personnumret normaliseras till tolv siffror med `toContactsUsername`, samma form och samma funktion som Keycloak-användarnamnet läses med vid inloggning.
+
+## Flödesdiagram
+
+```mermaid
+flowchart TD
+A[Valid body, personnummer as 12 digits] --> L(Look up person contacts)
+L --> Lo{Result}
+Lo --> |Lookup failed| F1[503 person-lookup-failed<br/>nothing created]
+Lo --> |Some| B(Which contact login uses:<br/>Keycloak user's contact_code)
+Lo --> |None| C(Create contact in Xpand<br/>via contacts)
+B --> Bo{Login contact}
+Bo --> |Active| E[200 existing<br/>nothing changed]
+Bo --> |Inactive, or outside<br/>the person contacts| I[200 inactive<br/>nothing changed]
+Bo --> |Keycloak or contacts<br/>did not answer| F1
+
+C --> Co{Result}
+Co --> |duplicate-contact| L2(Look up person contacts again)
+Co --> |contacts-service-error:<br/>no answer| U[502 contact-outcome-unknown<br/>contact may exist]
+Co --> |Any other error| F2[Error status from the create mapping<br/>nothing created]
+Co --> |Created| S
+
+L2 --> L2o{Result}
+L2o --> |Some| B
+L2o --> |None: company,<br/>deleted or GDPR row| I
+L2o --> |Lookup failed| F1
+
+S[Contact exists] --> P(Profile and queues<br/>shared process)
+S --> K(Keycloak login<br/>two tries)
+P --> W
+K --> W
+W[Collect warnings] --> R[201 created<br/>contactCode, warnings]
+```
+
+`contact-outcome-unknown` betyder att contacts-tjänsten aldrig svarade, till exempel vid en timeout, eller svarade med något okänt. Tjänsten kan ha skapat kontakten ändå. Ett nytt försök skulle svara `existing` för någon som saknar profil, köer och inloggning, så webapi ska skicka personen till kundtjänst i stället för att be dem försöka igen. Tvetydiga svar från Xpand (`xpand-unavailable`, `xpand-malformed-response`) reder contacts-tjänsten själv ut genom att slå upp numret igen. Når de core fanns ingen kontakt.
+
+`duplicate-contact` betyder att contacts dubblettkontroll hittade en rad med numret, som matchar alla rader, även raderade och företag. Antingen registrerade någon numret precis innan (ett dubbelklick, eller webapi som försöker igen), eller så är raden ingen personkontakt. Contacts-tjänsten kör dubblettkontrollen och skapandet ett i taget per personnummer, så två samtidiga anrop kan inte båda skapa en kontakt: det andra väntar och får `duplicate-contact`. Låset finns bara i processen och räcker eftersom contacts-tjänsten körs med en replika. Felets `detail` innehåller den befintliga kontaktkoden och lämnar aldrig processen.
+
+## Keycloak-inloggningen
+
+```mermaid
+flowchart TD
+A[Create user: username = personnummer,<br/>email, emailVerified false,<br/>contact_code, account_type person] --> Ao{Keycloak}
+Ao --> |201| N[New user] --> M(Send set-password e-mail<br/>UPDATE_PASSWORD, back to Mina sidor)
+Ao --> |409| U(Find user by username)
+U --> Uo{Found?}
+Uo --> |No: the e-mail is taken| X[login-setup-failed<br/>no retry]
+Uo --> |Has this contact_code:<br/>an earlier try created it| M
+Uo --> |No contact_code| Fl(Set contact_code<br/>password and e-mail untouched)
+Uo --> |Has this contact_code,<br/>but an earlier try found the user already there| D
+Uo --> |Another contact_code| Lv{Live contact?<br/>excludeDeleted}
+Lv --> |Yes| Lg(Log the mismatch<br/>contact_code untouched)
+Lv --> |No: deleted or missing| D
+Lv --> |Lookup failed| T
+Fl --> D[login-exists<br/>no e-mail]
+Lg --> D3[login-bound-to-other-contact<br/>no e-mail]
+M --> D2[Done]
+Ao --> |Other error| T{Second try?}
+T --> |No| A
+T --> |Yes| X2[login-setup-failed]
+```
+
+- **En befintlig användare får aldrig mejlet.** Annars kunde vem som helst ta över ett konto genom att skriva sin egen e-post i formuläret. Svaret får varningen `login-exists`, så att webapi inte ber personen leta efter ett mejl som aldrig kommer.
+- **En befintlig kontaktkod byts aldrig här**, av samma skäl: formuläret ska inte kunna flytta någon annans inloggning till en ny kontakt. Koden kontrolleras på samma sätt som vid inloggning (`excludeDeleted`). Pekar den på en levande kontakt loggas skillnaden och svaret får varningen `login-bound-to-other-contact`: inloggningen behåller koden, och den gamla kontakten kan inte ha personnumret, för då hade skapandet nekats, så inloggningen visar den tills någon ändrar koden för hand. Pekar den på en borttagen eller saknad kontakt blir svaret `login-exists`, eftersom inloggningen då byter till den nya kontakten. En GDPR-rensad kontakt som inte är markerad som borttagen räknas som levande. Går det inte att slå upp koden görs ett nytt försök, och sedan blir det `login-setup-failed`.
+- **Ett nytt försök skapar inte användaren igen.** Användar-id:t sparas mellan försöken, så bara steget som föll görs om.
+- **En användare med just den här kontaktkoden** skapades av ett försök som aldrig fick svar, till exempel vid en timeout. Den räknas som ny och får mejlet. Undantaget är när ett tidigare försök redan hittade användaren och satte koden men tappade svaret: då är det en befintlig användare, som får `login-exists` och inget mejl.
+
+## Varningar
+
+| Varning                        | Orsak                                                                                                     | Hur personen kommer vidare                                                                                                                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `application-profile-failed`   | Boendeprofilen sparades inte                                                                              | Fyller i den under Mina sidor                                                                                                                               |
+| `waiting-lists-failed`         | Minst en kö lades inte till                                                                               | Väljer köer under Mina sidor                                                                                                                                |
+| `login-setup-failed`           | Ingen Keycloak-användare eller inget mejl efter två försök                                                | Kundtjänst, eller nattkörningen som skapar användaren. En ny registrering svarar `existing`. Finns användaren men mejlet uteblev fungerar "Glömt lösenord". |
+| `login-exists`                 | Det fanns redan en inloggning för personnumret, så inget mejl skickades                                   | Loggar in, eller använder "Glömt lösenord" om lösenord aldrig valts                                                                                         |
+| `login-bound-to-other-contact` | Inloggningen för personnumret hör till en annan levande kontakt och behåller den, så inget mejl skickades | Kundtjänst. Inloggningen skulle visa den gamla kontakten, inte den nya                                                                                      |
+
+## Uppslagningen av personkontakter
+
+Processen frågar contacts-tjänsten (`GET /contacts/by-nid/:nid/person-contacts`) efter alla personkontakter för personnumret: P-koder som inte är raderade, med numret lagrat i någon av formerna. Företag och raderade kontakter räknas inte, men dubblettkontrollen vid skapandet hittar dem ändå.
+
+Kontakterna kommer i den ordning inloggningen rangordnar dem, och var och en är markerad aktiv eller inaktiv. Aktiv betyder att kontaktens Sökande-roll används, vilket webapi kräver för att släppa in personen.
+
+**Kontakten som inloggningen använder avgör**, och den väljs som vid inloggning. Är den aktiv svarar registreringen `existing`, annars `inactive`.
+
+- **Har personen redan en inloggning** (en Keycloak-användare med personnumret som användarnamn) med en enda `contact_code` som pekar på en levande kontakt, behåller inloggningen den koden var den än står i listan. Den kontakten avgör. Står koden i listan vet vi redan att den lever. Annars frågas contacts-tjänsten med `excludeDeleted`, samma kontroll som vid inloggning.
+- **Annars avgör den första kontakten** i listan: ingen inloggning, ingen kod, flera koder (som inloggningen läser som saknad kod) eller en kod som pekar på en raderad eller saknad kontakt (som inloggningen byter ut). En aktiv kontakt längre ner hjälper då inte: att be personen logga in skulle bara sluta med ett nej.
+- **Pekar inloggningen på en levande kontakt som inte är en av personkontakterna**, till exempel ett företag, skulle inloggningen visa en kontakt som inte är personens egen. Svaret blir `inactive`, så att kundtjänst tittar på det, och koden loggas.
+
+Keycloak läses bara när det finns personkontakter, så att skapa en ny kontakt aldrig väntar på Keycloak. Svarar contacts-tjänsten eller Keycloak inte, eller med något oväntat, blir svaret 503 `person-lookup-failed` och ingenting skapas.
+
+## Loggning
+
+Personnummer, e-post och kroppen loggas aldrig. Loggarna innehåller kontaktkoden, utfall och varningar, och för Keycloak-fel bara HTTP-status och felkod.
