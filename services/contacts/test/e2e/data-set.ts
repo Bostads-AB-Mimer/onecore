@@ -29,3 +29,22 @@ export const filterDataSet = (
     return true
   })
 }
+
+// See the login contact fixtures at the end of seed.sql.
+export const LOGIN_CONTACT_DATA_SET = [
+  'P920001',
+  'P920002',
+  'P920003',
+  'P920004',
+  'F920005',
+  'P920006',
+  'P920007',
+  'P920008',
+  'P920009',
+  'P920010',
+  'P920011',
+  'P920012',
+  'P920013',
+  'P920014',
+  'P920015',
+]

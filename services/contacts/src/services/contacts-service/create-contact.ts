@@ -5,9 +5,15 @@ import { ContactsRepository } from '@src/adapters/contact-adapter'
 import { ContactWriter } from '@src/adapters/contact-writer'
 import { AdapterResult } from '@src/adapters/types'
 import { Contact } from '@src/domain/contact'
-import { getAgeFromNationalId, parseNationalId } from '@src/domain/national-id'
+import {
+  getAgeFromNationalId,
+  NationalIdForms,
+  parseNationalId,
+} from '@src/domain/national-id'
+import { swedishYear } from '@src/domain/swedish-time'
 import { generateInitialPassword } from './password'
 import {
+  CreateContactAgeRuleSchema,
   CreateContactErrorCodeSchema,
   CreateContactRequestBodySchema,
 } from './schema'
@@ -16,6 +22,7 @@ export type CreateContactRequest = z.infer<
   typeof CreateContactRequestBodySchema
 >
 export type CreateContactError = z.infer<typeof CreateContactErrorCodeSchema>
+export type CreateContactAgeRule = z.infer<typeof CreateContactAgeRuleSchema>
 
 export type CreateContactResult = {
   contactCode: string
@@ -29,6 +36,28 @@ export type CreateContactResult = {
  * Mirrors the public registration flow, which refuses applicants under 16.
  */
 const MINIMUM_AGE = 16
+
+/**
+ * Whether the person is old enough under the caller's rule. `birth-year` lets
+ * someone in from the calendar year they turn 16; the default is 16 on the day.
+ * Both count in Swedish time, so the day and the year turn at midnight in
+ * Sweden, as they do for core's own registration check.
+ *
+ * The year is read from the twelve-digit form: a samordningsnummer only offsets
+ * the day, so its first four digits are still the birth year.
+ */
+const isOldEnough = (
+  forms: NationalIdForms,
+  rule: CreateContactAgeRule,
+  today: Date
+): boolean => {
+  if (rule === 'birth-year') {
+    const birthYear = Number(forms.twelveDigits.slice(0, 4))
+    return swedishYear(today) - birthYear >= MINIMUM_AGE
+  }
+  const age = getAgeFromNationalId(forms.twelveDigits, today)
+  return age !== null && age >= MINIMUM_AGE
+}
 
 export type CreateContactDependencies = {
   contactsRepository: ContactsRepository
@@ -58,12 +87,15 @@ export const createContact = async (
     }
   }
 
-  const age = getAgeFromNationalId(request.nationalId)
-  if (age !== null && age < MINIMUM_AGE) {
+  const ageRule = request.ageRule ?? 'exact-age'
+  if (!isOldEnough(forms, ageRule, new Date())) {
     return {
       ok: false,
       err: 'invalid-national-id',
-      detail: `Kunden måste vara minst ${MINIMUM_AGE} år.`,
+      detail:
+        ageRule === 'birth-year'
+          ? `Kunden måste fylla minst ${MINIMUM_AGE} år i år.`
+          : `Kunden måste vara minst ${MINIMUM_AGE} år.`,
     }
   }
 

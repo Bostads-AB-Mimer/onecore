@@ -1,5 +1,7 @@
 import Personnummer from 'personnummer'
 
+import { swedishDate } from './swedish-time'
+
 /**
  * The two digit-only forms a Swedish personal identity number can take.
  *
@@ -82,11 +84,26 @@ export const getBirthDateFromNationalId = (input: string): string | null => {
 }
 
 /**
- * Age in whole years, or null when the input is not a valid identity number.
+ * Age in whole years on the Swedish calendar date of `today`, or null when the
+ * input is not a valid identity number.
+ *
+ * Not `Personnummer#getAge()`: that compares the clock with the birth date as
+ * UTC midnight, so in Sweden a birthday only counts from 01:00 or 02:00. Both
+ * dates are compared as `YYYY-MM-DD` instead, so a birthday counts from
+ * midnight Swedish time. Someone born on 29 February gets a year older on
+ * 1 March in other years.
  *
  * Used to enforce the minimum age for housing applicants.
  */
-export const getAgeFromNationalId = (input: string): number | null => {
-  if (!Personnummer.valid(input, PARSE_OPTIONS)) return null
-  return Personnummer.parse(input, PARSE_OPTIONS).getAge()
+export const getAgeFromNationalId = (
+  input: string,
+  today: Date
+): number | null => {
+  const birthDate = getBirthDateFromNationalId(input)
+  if (!birthDate) return null
+
+  const todayDate = swedishDate(today)
+  const years = Number(todayDate.slice(0, 4)) - Number(birthDate.slice(0, 4))
+  // MM-DD compares correctly as a string, being fixed-width.
+  return todayDate.slice(5) < birthDate.slice(5) ? years - 1 : years
 }

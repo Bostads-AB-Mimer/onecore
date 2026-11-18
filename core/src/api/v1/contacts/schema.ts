@@ -154,10 +154,11 @@ export const CreateContactWaitingListResultSchema = z.object({
  * applicant needs.
  *
  * The contact fields are reused verbatim from the contacts service rather than
- * redeclared, so the two contracts cannot drift apart.
+ * redeclared, so the two contracts cannot drift apart. All but `ageRule`: staff
+ * always create with 16 on the day, and the field is stripped if sent.
  */
 export const CreateContactRequestBodySchema_APIv1 =
-  CreateContactRequestBodySchema.extend({
+  CreateContactRequestBodySchema.omit({ ageRule: true }).extend({
     /**
      * Household and housing reference. Stored in ONECore's own application
      * profile, not in Xpand. Omit for a customer who does not need one.

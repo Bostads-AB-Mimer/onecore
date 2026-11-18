@@ -84,15 +84,45 @@ describe('getBirthDateFromNationalId', () => {
 })
 
 describe('getAgeFromNationalId', () => {
-  it('returns a plausible age for a valid number', () => {
-    const age = getAgeFromNationalId(VALID_TWELVE)
+  /** Born 29 February 2008, so their birthday is missing in other years. */
+  const LEAP_DAY = '200802292383'
 
-    expect(age).not.toBeNull()
-    expect(age).toBeGreaterThan(16)
-    expect(age).toBeLessThan(120)
+  it('counts whole years on the given date', () => {
+    expect(
+      getAgeFromNationalId(VALID_TWELVE, new Date('2026-07-28T12:00:00Z'))
+    ).toBe(35)
+    expect(
+      getAgeFromNationalId(VALID_TWELVE, new Date('2026-07-29T12:00:00Z'))
+    ).toBe(36)
+  })
+
+  it('reads the birth date of a samordningsnummer', () => {
+    expect(
+      getAgeFromNationalId(VALID_COORDINATION, new Date('2026-07-29T12:00:00Z'))
+    ).toBe(36)
+  })
+
+  it('turns a year older at midnight in Sweden, not in UTC', () => {
+    // 00:30 on 29 July in Sweden (CEST), still 28 July in UTC.
+    expect(
+      getAgeFromNationalId(VALID_TWELVE, new Date('2026-07-28T22:30:00Z'))
+    ).toBe(36)
+    // 23:30 on 28 July in Sweden: the day before, in both time zones.
+    expect(
+      getAgeFromNationalId(VALID_TWELVE, new Date('2026-07-28T21:30:00Z'))
+    ).toBe(35)
+  })
+
+  it('makes someone born on 29 February a year older on 1 March in other years', () => {
+    expect(
+      getAgeFromNationalId(LEAP_DAY, new Date('2026-02-28T12:00:00Z'))
+    ).toBe(17)
+    expect(
+      getAgeFromNationalId(LEAP_DAY, new Date('2026-03-01T12:00:00Z'))
+    ).toBe(18)
   })
 
   it('returns null for an invalid number', () => {
-    expect(getAgeFromNationalId('199007292388')).toBeNull()
+    expect(getAgeFromNationalId('199007292388', new Date())).toBeNull()
   })
 })

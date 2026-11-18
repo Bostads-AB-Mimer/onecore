@@ -1,25 +1,6 @@
 import { AxiosInstance } from 'axios'
 import { makeTestAppFixture, TestApp } from './app-fixture'
-import { FULL_TEST_DATA_SET } from './data-set'
-
-// See the login contact fixtures at the end of seed.sql.
-const LOGIN_CONTACT_DATA_SET = [
-  'P920001',
-  'P920002',
-  'P920003',
-  'P920004',
-  'F920005',
-  'P920006',
-  'P920007',
-  'P920008',
-  'P920009',
-  'P920010',
-  'P920011',
-  'P920012',
-  'P920013',
-  'P920014',
-  'P920015',
-]
+import { FULL_TEST_DATA_SET, LOGIN_CONTACT_DATA_SET } from './data-set'
 
 describe('GET /contacts/by-nid/:nid/login-contact', () => {
   let testApp: TestApp | undefined

@@ -25,7 +25,7 @@ import { transformDbContactRows } from './transform'
 import { DbContactRow } from './db-model'
 import { contactExists } from './contact-lookup-query'
 import { loginContactCandidates } from './login-contact-query'
-import { pickLoginContact } from '@src/domain/login-contact'
+import { pickLoginContact, rankLoginContacts } from '@src/domain/login-contact'
 import {
   relatedContactsFor,
   relatedContactsForMany,
@@ -279,6 +279,28 @@ export const xpandContactsRepository = (
       }
 
       return getByContactCode(choice.contactCode)
+    },
+
+    getPersonContactsByNationalIdNumber: async (nid: NationalIdNumber) => {
+      const forms = parseNationalId(nid)
+      if (!forms) return null
+
+      try {
+        const candidates = await loginContactCandidates(
+          db.get(),
+          forms,
+          new Date()
+        )
+        return rankLoginContacts(candidates).map(
+          ({ contactCode, isActive }) => ({ contactCode, isActive })
+        )
+      } catch (err: unknown) {
+        logger.error(
+          { err },
+          'contactsRepository.getPersonContactsByNationalIdNumber'
+        )
+        throw err
+      }
     },
 
     /**
