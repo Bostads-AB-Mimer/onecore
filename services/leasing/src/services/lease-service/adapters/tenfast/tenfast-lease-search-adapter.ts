@@ -584,10 +584,15 @@ async function findMatchingLeases(
   ])
   const xpandMs = Date.now() - xpandStart
 
-  if (
-    (rentalObjectCodes && rentalObjectCodes.size === 0) ||
-    (parkingSpaceObjectCodes && parkingSpaceObjectCodes.size === 0)
-  ) {
+  // Only rentalObjectCodes can short-circuit here: it's AND-ed uniformly
+  // over every row regardless of type, so an empty set really does mean no
+  // lease can match. parkingSpaceObjectCodes instead unions with objectType
+  // inside applyCacheFilters (Bostad + a type gives housing leases too), so
+  // an empty set there must still flow through — short-circuiting on it
+  // would turn "Bostad + a type that matches no parking space" into zero
+  // results instead of every housing lease. applyCacheFilters already
+  // handles an empty parkingSpaceObjectCodes set correctly on its own.
+  if (rentalObjectCodes && rentalObjectCodes.size === 0) {
     logger.info(
       { xpandMs },
       'lease-cache: xpand filter returned no codes, skipping cache search'

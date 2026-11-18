@@ -557,6 +557,38 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result._meta.totalRecords).toBe(0)
     })
 
+    it('returns every housing lease when Bostad is combined with a parkingSpaceType that resolves to no rental objects', async () => {
+      // Regression test: a type that only exists in company 999 (excluded
+      // by the Xpand helper's company filter) must not make the whole
+      // search return nothing — Bostad should still match its own leases.
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValueOnce(
+        new Map()
+      )
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('bostad-lease-1', { rentalObjectCode: 'ROC-001' }),
+        makeLeaseResult('bostad-lease-2', { rentalObjectCode: 'ROC-002' }),
+        makeLeaseResult('parkering-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-200',
+        }),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          objectType: ['bostad'],
+          parkingSpaceType: ['__company-999-only__'],
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(2)
+      const ids = result.content.map((l) => l.leaseId)
+      expect(ids).toContain('bostad-lease-1')
+      expect(ids).toContain('bostad-lease-2')
+    })
+
     it('intersects parkingSpaceType with districtNames', async () => {
       mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValueOnce(
         new Map([
