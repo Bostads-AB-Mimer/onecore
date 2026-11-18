@@ -4,8 +4,8 @@
 # Generates the files theme/ does not commit (git-ignored, so `pnpm preview` mounts a complete theme):
 #   - js/normalize-login-id.global.js: src/ bundled with the personnummer library
 #   - fonts/: the Bison and Graphik files from internal-portal, so both apps ship the same fonts
-#   - messages_en.properties: a copy of the Swedish texts, so our own keys never show as raw key
-#     names when the realm has internationalization off (Keycloak then resolves English)
+#   - messages_en.properties (login and email): a copy of the Swedish texts, so our own texts are
+#     used when the realm has internationalization off (Keycloak then resolves English)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -16,7 +16,9 @@ mkdir -p "$LOGIN/resources/js" "$LOGIN/resources/fonts"
 tsup src/normalize-login-id.ts --format iife --target es2017 --silent \
   --out-dir "$LOGIN/resources/js"
 cp "$FONTS/Bison-Bold.woff2" "$FONTS/Graphik-Bold.woff2" "$FONTS/Graphik-Regular.woff2" "$LOGIN/resources/fonts/"
-cp "$LOGIN/messages/messages_sv.properties" "$LOGIN/messages/messages_en.properties"
+for type in login email; do
+  cp "theme/mimer/$type/messages/messages_sv.properties" "theme/mimer/$type/messages/messages_en.properties"
+done
 
 # Reproducible JAR: fixed timestamps, sorted entries and no extra file attributes, so the
 # image layer only changes when the theme does

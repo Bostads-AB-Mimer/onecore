@@ -2,7 +2,7 @@
   "themes": [
     {
       "name": "mimer",
-      "types": ["login"]
+      "types": ["login", "email"]
     }
   ]
 }
