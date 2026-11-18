@@ -72,6 +72,13 @@ describe('GET /contacts/by-nid/:nid/person-contacts', () => {
     expect(await contactsFor('900505-9846')).toEqual(expected)
   })
 
+  it('leaves out a ten-digit contact born in another century', async () => {
+    // P920016 shares the last ten digits but its birthdate is in 1905.
+    expect(await contactsFor('200505059816')).toEqual([
+      { contactCode: 'P920017', isActive: false },
+    ])
+  })
+
   it('answers 200 with an empty list for a personnummer without contacts', async () => {
     expect(await contactsFor('199007292387')).toEqual([])
   })

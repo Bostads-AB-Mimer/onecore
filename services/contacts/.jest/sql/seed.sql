@@ -458,6 +458,13 @@ UPDATE cmctc SET keycmctc2 = '_0J4157DDD     ', forvtyp = 2 WHERE cmctckod = 'RE
 -- 199005059846: P920009 is stored in the ten-digit form with a hyphen.
 -- 195512129858: P920010 is a deleted tenant, P920011 the live contact → P920011.
 -- 196611119865: P920012's lease has ended, P920013 has queue time → P920013.
+-- 200505059816: P920016 is stored as 050505-9816 with birthdate 1905-05-05 and
+--               holds a lease, P920017 is the 2005 person → P920017. Looking
+--               up 190505059816 finds P920016.
+-- 191006069825: P920018 is stored as 100606+9825 without birthdate; the "+"
+--               makes it 1910, so 201006069825 has no contact.
+-- 200303039838: P920019 is stored as 030303-9838 with the 1900-01-01
+--               placeholder birthdate, which says nothing → still P920019.
 INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, persorgnr, keysyusr, createdate, deletemark, lcidcivno, timestamp) VALUES
   ('_LGNC920001    ', '_LGNO920001    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920001', 'Login TenantOld', '195001019800', '_LGNU920001    ', '2018-03-01', 0, 1053, 'LGN9200001'),
   ('_LGNC920002    ', '_LGNO920002    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920002', 'Login QueueNew', '195001019800', '_LGNU920002    ', '2023-03-01', 0, 1053, 'LGN9200002'),
@@ -474,6 +481,11 @@ INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, c
   ('_LGNC920013    ', '_LGNO920013    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920013', 'Login Queue', '196611119865', NULL, '2024-03-01', 0, 1053, 'LGN9200013'),
   ('_LGNC920014    ', '_LGNO920014    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920014', 'Login FormerCustomer', '197707079872', NULL, '2015-03-01', 0, 1053, 'LGN9200014'),
   ('_LGNC920015    ', '_LGNO920015    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920015', 'Login Refund', '197707079872', NULL, '2024-03-01', 0, 1053, 'LGN9200015');
+INSERT INTO cmctc (keycmctc, keycmobj, keycmctk, keysyloc, keylrpmt, cmctckod, cmctcben, persorgnr, birthdate, createdate, deletemark, lcidcivno, timestamp) VALUES
+  ('_LGNC920016    ', '_LGNO920016    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920016', 'Login Born1905', '050505-9816', '1905-05-05', '2010-03-01', 0, 1053, 'LGN9200016'),
+  ('_LGNC920017    ', '_LGNO920017    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920017', 'Login Born2005', '200505059816', '2005-05-05', '2024-03-01', 0, 1053, 'LGN9200017'),
+  ('_LGNC920018    ', '_LGNO920018    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920018', 'Login PlusSign', '100606+9825', NULL, '2010-03-01', 0, 1053, 'LGN9200018'),
+  ('_LGNC920019    ', '_LGNO920019    ', '_0EI00000P     ', '00001          ', '00001          ', 'P920019', 'Login Placeholder', '030303-9838', '1900-01-01', '2021-03-01', 0, 1053, 'LGN9200019');
 
 -- Roles: Sökande (_0DE0O2500) on the customers, Leverantör (_0DE0O1STV) alone
 -- on the supplier contacts. croused = 1 marks the Sökande role in use (active).
@@ -508,6 +520,8 @@ INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKLGN0003    ', '_OBJ000021     ', keycmctc, 'INNEHAVARE', '2018-04-01', NULL FROM cmctc WHERE cmctckod = 'P920010';
 INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
 SELECT '_AVKLGN0004    ', '_OBJ000022     ', keycmctc, 'INNEHAVARE', '2018-04-01', NULL FROM cmctc WHERE cmctckod = 'P920012';
+INSERT INTO hyavk (keyhyavk, keyhyobj, keycmctc, keyhyakt, fdate, tdate)
+SELECT '_AVKLGN0005    ', '_OBJ000021     ', keycmctc, 'INNEHAVARE', '2018-04-01', NULL FROM cmctc WHERE cmctckod = 'P920016';
 
 INSERT INTO bkqte (keybkqte, keybkkty, keycmctc, quetime, timestamp)
 SELECT '_QTELGN0002    ', NULL, keycmctc, '2023-03-01', 'LGNQ920002' FROM cmctc WHERE cmctckod = 'P920002';

@@ -2,6 +2,7 @@ import {
   getAgeFromNationalId,
   getBirthDateFromNationalId,
   parseNationalId,
+  storedCenturyMatches,
 } from '@src/domain/national-id'
 
 // Checksum-valid number used only in these unit tests. Nothing here reaches a
@@ -124,5 +125,79 @@ describe('getAgeFromNationalId', () => {
 
   it('returns null for an invalid number', () => {
     expect(getAgeFromNationalId('199007292388', new Date())).toBeNull()
+  })
+})
+
+describe('storedCenturyMatches', () => {
+  // The same ten digits, born in 1905 and in 2005.
+  const BORN_1905 = '190505059816'
+  const BORN_2005 = '200505059816'
+  const STORED_TEN = '050505-9816'
+
+  it('is the same for a twelve-digit contact with the same number', () => {
+    expect(storedCenturyMatches(BORN_2005, '200505059816', null)).toBe('same')
+  })
+
+  // The SQL strips spaces before matching, the parser rejects them. Twelve
+  // digits carry the century, so comparing the digits is enough.
+  it('is the same for a twelve-digit contact the parser rejects', () => {
+    expect(storedCenturyMatches(BORN_2005, '20050505 9816', null)).toBe('same')
+  })
+
+  it('is different for a twelve-digit contact from another century', () => {
+    expect(storedCenturyMatches(BORN_2005, '190505059816', null)).toBe(
+      'different'
+    )
+  })
+
+  it('takes the century from birthdate when it is the date in the number', () => {
+    expect(storedCenturyMatches(BORN_1905, STORED_TEN, '1905-05-05')).toBe(
+      'same'
+    )
+    expect(storedCenturyMatches(BORN_2005, STORED_TEN, '1905-05-05')).toBe(
+      'different'
+    )
+  })
+
+  it('reads a coordination number against the real birth date', () => {
+    // Day 65 in the number is the 5th.
+    expect(
+      storedCenturyMatches('200505659854', '050565-9854', '1905-05-05')
+    ).toBe('different')
+    expect(
+      storedCenturyMatches('190505659854', '050565-9854', '1905-05-05')
+    ).toBe('same')
+  })
+
+  it('ignores the 1900-01-01 placeholder', () => {
+    expect(
+      storedCenturyMatches('200001019843', '000101-9843', '1900-01-01')
+    ).toBe('unknown')
+  })
+
+  it('ignores a birthdate that is not the date in the number', () => {
+    expect(storedCenturyMatches(BORN_2005, STORED_TEN, '1967-03-12')).toBe(
+      'unknown'
+    )
+  })
+
+  it('falls back to a + separator: 100 or older', () => {
+    expect(storedCenturyMatches('191006069825', '100606+9825', null)).toBe(
+      'same'
+    )
+    expect(storedCenturyMatches('201006069825', '100606+9825', null)).toBe(
+      'different'
+    )
+  })
+
+  it('prefers birthdate over the separator', () => {
+    expect(
+      storedCenturyMatches('201006069825', '100606+9825', '2010-06-06')
+    ).toBe('same')
+  })
+
+  it('is unknown without birthdate or +', () => {
+    expect(storedCenturyMatches(BORN_2005, STORED_TEN, null)).toBe('unknown')
+    expect(storedCenturyMatches(BORN_1905, '0505059816', null)).toBe('unknown')
   })
 })

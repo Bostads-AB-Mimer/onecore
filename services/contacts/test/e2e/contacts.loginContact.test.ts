@@ -55,6 +55,24 @@ describe('GET /contacts/by-nid/:nid/login-contact', () => {
     expect(await loginContactCode('199005059846')).toBe('P920009')
   })
 
+  it('leaves out a ten-digit contact whose birthdate is in another century', async () => {
+    // P920016 holds a lease and would otherwise win, but was born in 1905.
+    expect(await loginContactCode('200505059816')).toBe('P920017')
+    expect(await loginContactCode('190505059816')).toBe('P920016')
+  })
+
+  it('reads the century from a + separator when there is no birthdate', async () => {
+    expect(await loginContactCode('191006069825')).toBe('P920018')
+    expect(await loginContactCode('201006069825')).toBe(404)
+  })
+
+  it('keeps a ten-digit contact whose century is unknown', async () => {
+    // P920009 has no birthdate and no +, so both centuries still find it.
+    expect(await loginContactCode('189005059846')).toBe('P920009')
+    // P920019's birthdate is the 1900-01-01 placeholder.
+    expect(await loginContactCode('200303039838')).toBe('P920019')
+  })
+
   it('accepts the personnummer in any common notation', async () => {
     expect(await loginContactCode('19500101-9800')).toBe('P920001')
     expect(await loginContactCode('5001019800')).toBe('P920001')

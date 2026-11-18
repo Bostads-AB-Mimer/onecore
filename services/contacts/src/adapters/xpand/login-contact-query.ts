@@ -1,6 +1,7 @@
 import { Knex } from 'knex'
+import { logger } from '@onecore/utilities'
 import { LoginContactCandidate } from '@src/domain/login-contact'
-import { NationalIdForms } from '@src/domain/national-id'
+import { NationalIdForms, storedCenturyMatches } from '@src/domain/national-id'
 import { NORMALISED_NATIONAL_ID_SQL } from './query'
 import { INNEHAVARE, RENSAD_GDPR } from './relation-sql'
 
@@ -15,6 +16,9 @@ export const APPLICANT_ROLE = '_0DE0O2500'
 
 type CandidateRow = {
   contactCode: string
+  storedNationalId: string
+  /** `YYYY-MM-DD`, or null. */
+  birthDate: string | null
   supplierOnly: number
   currentTenant: number
   queueTime: number
@@ -40,6 +44,12 @@ type CandidateRow = {
  *
  * Active means the Sökande role is in use. A tenant without that role is not
  * active: being a tenant does not let anyone log in.
+ *
+ * A contact stored with ten digits matches people born a hundred years apart,
+ * so one born in another century is left out (see `storedCenturyMatches`).
+ * One whose century can't be told stays a candidate, and is logged. The
+ * duplicate check before creating a contact deliberately does not do this:
+ * there, a false match is the safe mistake.
  */
 export const loginContactCandidates = async (
   db: Knex,
@@ -56,6 +66,9 @@ export const loginContactCandidates = async (
     .whereRaw('TRIM(cmctc.cmctckod) <> ?', [RENSAD_GDPR])
     .select(
       'cmctc.cmctckod as contactCode',
+      'cmctc.persorgnr as storedNationalId',
+      // Style 23 is YYYY-MM-DD: a plain date, so no timezone gets involved.
+      db.raw('CONVERT(char(10), cmctc.birthdate, 23) AS birthDate'),
       'cmctc.createdate as createdAt',
       db.raw(
         `CASE WHEN EXISTS (
@@ -99,7 +112,30 @@ export const loginContactCandidates = async (
       )
     )
 
-  return rows.map((r) => ({
+  const sameCentury = rows.filter((r) => {
+    const match = storedCenturyMatches(
+      forms.twelveDigits,
+      r.storedNationalId,
+      r.birthDate
+    )
+    // Code only: the personnummer stays out of the logs.
+    if (match === 'unknown') {
+      logger.warn(
+        { contactCode: r.contactCode.trim() },
+        'loginContactCandidates: ten-digit personnummer without a known century, kept as a candidate'
+      )
+    } else if (match === 'different') {
+      // Expected, but it can leave a person with no login contact while the
+      // duplicate check still blocks creating one. This line explains that.
+      logger.info(
+        { contactCode: r.contactCode.trim() },
+        'loginContactCandidates: ten-digit personnummer from another century, left out'
+      )
+    }
+    return match !== 'different'
+  })
+
+  return sameCentury.map((r) => ({
     contactCode: r.contactCode.trim(),
     supplierOnly: r.supplierOnly === 1,
     currentTenant: r.currentTenant === 1,
