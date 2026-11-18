@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>nu.mimer.keycloak</groupId>
+  <artifactId>mimer-bankid-provider</artifactId>
+  <version>0.1.0</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <keycloak.version>26.3.3</keycloak.version>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <!-- Keycloak's own versions for everything it ships (JAX-RS, jboss-logging, Jackson, JUnit, Mockito),
+       so a Keycloak upgrade is one property. -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency><groupId>org.keycloak</groupId><artifactId>keycloak-parent</artifactId><version>${keycloak.version}</version><type>pom</type><scope>import</scope></dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency><groupId>org.keycloak</groupId><artifactId>keycloak-core</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.keycloak</groupId><artifactId>keycloak-server-spi</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.keycloak</groupId><artifactId>keycloak-server-spi-private</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>jakarta.ws.rs</groupId><artifactId>jakarta.ws.rs-api</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.jboss.logging</groupId><artifactId>jboss-logging</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+    <dependency><groupId>org.mockito</groupId><artifactId>mockito-core</artifactId><scope>test</scope></dependency>
+    <!-- A JAX-RS implementation, so tests can build Response objects -->
+    <dependency><groupId>org.jboss.resteasy</groupId><artifactId>resteasy-core</artifactId><scope>test</scope></dependency>
+  </dependencies>
+
+  <build>
+    <finalName>mimer-bankid-provider</finalName>
+    <plugins>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.13.0</version></plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version>
+        <!-- Mockito attaches its agent at runtime; say so, instead of a warning on every run -->
+        <configuration><argLine>-XX:+EnableDynamicAgentLoading</argLine></configuration>
+      </plugin>
+      <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.4.2</version></plugin>
+    </plugins>
+  </build>
+</project>

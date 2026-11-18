@@ -4,10 +4,13 @@ import z from 'zod'
 import { ContactsRepository } from '@src/adapters/contact-adapter'
 import { ContactWriter } from '@src/adapters/contact-writer'
 import { AdapterResult } from '@src/adapters/types'
+import { createKeyedLock } from '@src/common/keyed-lock'
+import { isOldEnough, MINIMUM_AGE } from '@src/domain/age-rule'
 import { Contact } from '@src/domain/contact'
-import { getAgeFromNationalId, parseNationalId } from '@src/domain/national-id'
+import { parseNationalId } from '@src/domain/national-id'
 import { generateInitialPassword } from './password'
 import {
+  CreateContactAgeRuleSchema,
   CreateContactErrorCodeSchema,
   CreateContactRequestBodySchema,
 } from './schema'
@@ -16,6 +19,7 @@ export type CreateContactRequest = z.infer<
   typeof CreateContactRequestBodySchema
 >
 export type CreateContactError = z.infer<typeof CreateContactErrorCodeSchema>
+export type CreateContactAgeRule = z.infer<typeof CreateContactAgeRuleSchema>
 
 export type CreateContactResult = {
   contactCode: string
@@ -24,11 +28,16 @@ export type CreateContactResult = {
 }
 
 /**
- * Minimum age for a contact we provision a web account for.
+ * Serialises creates per national ID, from the duplicate check to the end of
+ * the write. Without it two requests for one number (a double click, a retry
+ * from webapi, a caseworker and the person at once) both pass the duplicate
+ * check while Xpand's slow SOAP create is still running, and both create a
+ * contact.
  *
- * Mirrors the public registration flow, which refuses applicants under 16.
+ * In-process only, which covers every create because the contacts service runs
+ * as a single replica. Running more replicas needs a lock they share.
  */
-const MINIMUM_AGE = 16
+const withNationalIdLock = createKeyedLock()
 
 export type CreateContactDependencies = {
   contactsRepository: ContactsRepository
@@ -58,18 +67,38 @@ export const createContact = async (
     }
   }
 
-  const age = getAgeFromNationalId(request.nationalId)
-  if (age !== null && age < MINIMUM_AGE) {
+  const ageRule = request.ageRule ?? 'exact-age'
+  if (!isOldEnough(forms.twelveDigits, ageRule, new Date())) {
     return {
       ok: false,
       err: 'invalid-national-id',
-      detail: `Kunden måste vara minst ${MINIMUM_AGE} år.`,
+      detail:
+        ageRule === 'birth-year'
+          ? `Kunden måste fylla minst ${MINIMUM_AGE} år i år.`
+          : `Kunden måste vara minst ${MINIMUM_AGE} år.`,
     }
   }
 
-  const existing = await contactsRepository.existsByNationalIdNumber(
-    forms.twelveDigits
+  return withNationalIdLock(forms.twelveDigits, () =>
+    createUnlessDuplicate(
+      { contactsRepository, contactWriter },
+      request,
+      forms.twelveDigits
+    )
   )
+}
+
+/**
+ * The duplicate check and the write. Must only run under the national ID's
+ * lock, so a second request for the number sees the first one's contact.
+ */
+const createUnlessDuplicate = async (
+  { contactsRepository, contactWriter }: CreateContactDependencies,
+  request: CreateContactRequest,
+  twelveDigits: string
+): Promise<AdapterResult<CreateContactResult, CreateContactError>> => {
+  const existing =
+    await contactsRepository.existsByNationalIdNumber(twelveDigits)
 
   if (existing) {
     return { ok: false, err: 'duplicate-contact', detail: existing }
@@ -80,7 +109,7 @@ export const createContact = async (
     request.emailAddresses[0]
 
   const created = await contactWriter.createContact({
-    nationalId: forms.twelveDigits,
+    nationalId: twelveDigits,
     firstName: request.firstName,
     lastName: request.lastName,
     addresses: request.addresses,
@@ -92,7 +121,7 @@ export const createContact = async (
     credentials: {
       // The upstream convention: the web account's username is the identity
       // number, matching how the public site registers applicants.
-      name: forms.twelveDigits,
+      name: twelveDigits,
       email: primaryEmail.emailAddress,
       password: generateInitialPassword(),
     },
@@ -119,9 +148,8 @@ export const createContact = async (
     created.err === 'xpand-malformed-response' ||
     created.err === 'xpand-unavailable'
   ) {
-    const recovered = await contactsRepository.existsByNationalIdNumber(
-      forms.twelveDigits
-    )
+    const recovered =
+      await contactsRepository.existsByNationalIdNumber(twelveDigits)
 
     if (recovered) {
       logger.warn(

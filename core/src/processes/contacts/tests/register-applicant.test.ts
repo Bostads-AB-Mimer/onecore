@@ -1,0 +1,608 @@
+import { logger } from '@onecore/utilities'
+import { WaitingListType } from '@onecore/types'
+import type { Contact } from '@onecore/contacts/schema'
+
+import { contactsAdapter } from '../../../adapters/contacts-adapter'
+import {
+  connectContactsKeycloakAdmin,
+  type ContactsKeycloakAdmin,
+} from '../../../services/auth-service/contacts-keycloak-provisioning'
+import type { RegisterContactRequestBody } from '../../../services/auth-service/contacts-registration-schema'
+import {
+  type NewContactProfileAndWaitingListsResult,
+  setUpNewContactProfileAndWaitingLists,
+} from '../new-contact-profile-and-waiting-lists'
+import { registerApplicant } from '../register-applicant'
+
+jest.mock('@onecore/utilities', () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+}))
+
+jest.mock('../../../adapters/contacts-adapter', () => ({
+  contactsAdapter: {
+    createContact: jest.fn(),
+    getPersonContactsByNationalId: jest.fn(),
+    getByContactCode: jest.fn(),
+  },
+}))
+
+jest.mock('../new-contact-profile-and-waiting-lists', () => ({
+  setUpNewContactProfileAndWaitingLists: jest.fn(),
+}))
+
+jest.mock(
+  '../../../services/auth-service/contacts-keycloak-provisioning',
+  () => ({
+    ...jest.requireActual(
+      '../../../services/auth-service/contacts-keycloak-provisioning'
+    ),
+    connectContactsKeycloakAdmin: jest.fn(),
+  })
+)
+
+const lookup =
+  contactsAdapter.getPersonContactsByNationalId as jest.MockedFunction<
+    typeof contactsAdapter.getPersonContactsByNationalId
+  >
+const createContact = contactsAdapter.createContact as jest.MockedFunction<
+  typeof contactsAdapter.createContact
+>
+const getByContactCode =
+  contactsAdapter.getByContactCode as jest.MockedFunction<
+    typeof contactsAdapter.getByContactCode
+  >
+const setUp = setUpNewContactProfileAndWaitingLists as jest.MockedFunction<
+  typeof setUpNewContactProfileAndWaitingLists
+>
+const connect = connectContactsKeycloakAdmin as jest.MockedFunction<
+  typeof connectContactsKeycloakAdmin
+>
+
+const nationalId = '200801011234'
+const emailAddress = 'kim@example.com'
+const contactCode = 'P123456'
+
+const application: RegisterContactRequestBody = {
+  nationalId,
+  firstName: 'Kim',
+  lastName: 'Andersson',
+  address: { street: 'Storgatan 1', zipCode: '72211', city: 'Västerås' },
+  emailAddress,
+  phoneNumbers: [
+    { phoneNumber: '0701234567', type: 'mobile', isPrimary: true },
+  ],
+  waitingLists: [WaitingListType.Housing],
+}
+
+// In the order login prefers them: login uses the first.
+const noContacts = { ok: true as const, data: [] }
+const activeContact = {
+  ok: true as const,
+  data: [
+    { contactCode: 'P000002', isActive: true },
+    { contactCode: 'P000001', isActive: false },
+  ],
+}
+const activeFurtherDown = {
+  ok: true as const,
+  data: [
+    { contactCode: 'P000001', isActive: false },
+    { contactCode: 'P000002', isActive: true },
+  ],
+}
+const inactiveContact = {
+  ok: true as const,
+  data: [{ contactCode: 'P000001', isActive: false }],
+}
+
+const setUpResult = (
+  overrides: Partial<NewContactProfileAndWaitingListsResult> = {}
+): NewContactProfileAndWaitingListsResult => ({
+  applicationProfile: { status: 'skipped' },
+  waitingLists: [
+    { waitingListType: WaitingListType.Housing, status: 'created' },
+  ],
+  warnings: [],
+  ...overrides,
+})
+
+const fakeAdmin = (): jest.Mocked<ContactsKeycloakAdmin> => ({
+  getUser: jest.fn(),
+  findUserByUsername: jest.fn().mockResolvedValue(null),
+  createPersonUser: jest.fn().mockResolvedValue({ id: 'user-1' }),
+  setContactCode: jest.fn().mockResolvedValue(undefined),
+  sendSetPasswordEmail: jest.fn().mockResolvedValue(undefined),
+})
+
+describe('registerApplicant', () => {
+  let admin: jest.Mocked<ContactsKeycloakAdmin>
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    admin = fakeAdmin()
+    connect.mockResolvedValue(admin)
+    lookup.mockResolvedValue(noContacts)
+    createContact.mockResolvedValue({
+      ok: true,
+      data: { contactCode, contact: null },
+    })
+    setUp.mockResolvedValue(setUpResult())
+  })
+
+  describe('when the personnummer already has contacts', () => {
+    const expectKeycloakUnchanged = () => {
+      expect(admin.createPersonUser).not.toHaveBeenCalled()
+      expect(admin.setContactCode).not.toHaveBeenCalled()
+      expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+    }
+    const loginBoundTo = (...codes: string[]) =>
+      admin.findUserByUsername.mockResolvedValue({
+        id: 'user-9',
+        username: nationalId,
+        attributes: { contact_code: codes },
+      })
+
+    it("answers 'existing' when the contact login uses is active, and changes nothing", async () => {
+      lookup.mockResolvedValue(activeContact)
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'existing',
+      })
+      expect(lookup).toHaveBeenCalledWith(nationalId)
+      expect(admin.findUserByUsername).toHaveBeenCalledWith(nationalId)
+      expect(createContact).not.toHaveBeenCalled()
+      expectKeycloakUnchanged()
+    })
+
+    it("answers 'inactive' when every person contact is inactive", async () => {
+      lookup.mockResolvedValue(inactiveContact)
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'inactive',
+      })
+      expect(createContact).not.toHaveBeenCalled()
+      expectKeycloakUnchanged()
+    })
+
+    it("answers 'inactive' when only a contact further down is active and there is no login, since login uses the first", async () => {
+      lookup.mockResolvedValue(activeFurtherDown)
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'inactive',
+      })
+      expect(createContact).not.toHaveBeenCalled()
+      expectKeycloakUnchanged()
+    })
+
+    describe('and a login is bound to a contact', () => {
+      it("answers 'existing' when it is the active contact further down, which login keeps", async () => {
+        lookup.mockResolvedValue(activeFurtherDown)
+        loginBoundTo('P000002')
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'existing',
+        })
+        // A listed contact is live, so there is nothing to ask the contacts service.
+        expect(getByContactCode).not.toHaveBeenCalled()
+        expect(createContact).not.toHaveBeenCalled()
+        expectKeycloakUnchanged()
+      })
+
+      it("answers 'inactive' when it is an inactive contact although the first is active", async () => {
+        lookup.mockResolvedValue(activeContact)
+        loginBoundTo('P000001')
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'inactive',
+        })
+      })
+
+      it('matches a space-padded code', async () => {
+        lookup.mockResolvedValue(activeFurtherDown)
+        loginBoundTo('P000002 ')
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'existing',
+        })
+      })
+
+      it('lets the first contact decide when the bound contact is deleted or missing, since login replaces it', async () => {
+        lookup.mockResolvedValue(activeContact)
+        loginBoundTo('P000009')
+        getByContactCode.mockResolvedValue({
+          ok: false,
+          err: 'not-found',
+          statusCode: 404,
+        })
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'existing',
+        })
+        expect(getByContactCode).toHaveBeenCalledWith('P000009', {
+          excludeDeleted: true,
+        })
+      })
+
+      it('lets the first contact decide for a multivalued contact_code, which login reads as missing', async () => {
+        lookup.mockResolvedValue(activeFurtherDown)
+        loginBoundTo('P000002', 'P000001')
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'inactive',
+        })
+        expect(getByContactCode).not.toHaveBeenCalled()
+      })
+
+      it("answers 'inactive' and logs the code when login keeps a live contact that is none of the person contacts", async () => {
+        lookup.mockResolvedValue(activeContact)
+        loginBoundTo('F000009')
+        getByContactCode.mockResolvedValue({
+          ok: true,
+          // Only that it resolves matters here, not what the contact holds.
+          data: { contactCode: 'F000009' } as Contact,
+        })
+
+        await expect(registerApplicant(application)).resolves.toEqual({
+          outcome: 'inactive',
+        })
+        expect(logger.warn).toHaveBeenCalledWith(
+          { boundContactCode: 'F000009' },
+          'registerApplicant.loginBoundOutsidePersonContacts'
+        )
+        expect(createContact).not.toHaveBeenCalled()
+        expectKeycloakUnchanged()
+      })
+    })
+
+    it('fails without creating anything when the lookup fails', async () => {
+      lookup.mockResolvedValue({ ok: false, err: 'contacts-service-error' })
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'failed',
+        error: 'person-lookup-failed',
+      })
+      expect(createContact).not.toHaveBeenCalled()
+      expect(connect).not.toHaveBeenCalled()
+    })
+
+    it('fails without creating anything when Keycloak cannot say which contact the login uses', async () => {
+      lookup.mockResolvedValue(activeContact)
+      admin.findUserByUsername.mockRejectedValue(new Error('ECONNREFUSED'))
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'failed',
+        error: 'person-lookup-failed',
+      })
+      expect(createContact).not.toHaveBeenCalled()
+    })
+
+    it('fails without creating anything when the contacts service cannot say whether the bound contact is live', async () => {
+      lookup.mockResolvedValue(activeContact)
+      loginBoundTo('P000009')
+      getByContactCode.mockResolvedValue({
+        ok: false,
+        err: 'unknown',
+        statusCode: 500,
+      })
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'failed',
+        error: 'person-lookup-failed',
+      })
+      expect(createContact).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('when creating the contact', () => {
+    it('sends one address, one primary private e-mail and the phone numbers', async () => {
+      await registerApplicant(application)
+
+      expect(createContact).toHaveBeenCalledWith({
+        nationalId,
+        firstName: 'Kim',
+        lastName: 'Andersson',
+        addresses: [application.address],
+        emailAddresses: [{ emailAddress, type: 'private', isPrimary: true }],
+        phoneNumbers: application.phoneNumbers,
+        ageRule: 'birth-year',
+      })
+    })
+
+    it('passes a create failure through and does nothing more', async () => {
+      createContact.mockResolvedValue({
+        ok: false,
+        err: 'xpand-unavailable',
+        statusCode: 503,
+      })
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'failed',
+        error: 'xpand-unavailable',
+      })
+      expect(setUp).not.toHaveBeenCalled()
+      expect(connect).not.toHaveBeenCalled()
+    })
+
+    it("answers 'contact-outcome-unknown' when the contacts service did not answer, since the contact may exist", async () => {
+      createContact.mockResolvedValue({
+        ok: false,
+        err: 'contacts-service-error',
+      })
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'failed',
+        error: 'contact-outcome-unknown',
+      })
+      expect(setUp).not.toHaveBeenCalled()
+      expect(connect).not.toHaveBeenCalled()
+    })
+
+    it("answers 'existing' when the duplicate check fires because someone registered in between", async () => {
+      lookup
+        .mockResolvedValueOnce(noContacts)
+        .mockResolvedValueOnce(activeContact)
+      createContact.mockResolvedValue({
+        ok: false,
+        err: 'duplicate-contact',
+        statusCode: 409,
+        detail: 'P000002',
+      })
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'existing',
+      })
+      expect(lookup).toHaveBeenCalledTimes(2)
+      // Read to see which contact the login uses, never changed.
+      expect(admin.createPersonUser).not.toHaveBeenCalled()
+      expect(admin.setContactCode).not.toHaveBeenCalled()
+      expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+    })
+
+    it("answers 'inactive' when the duplicate check matches a row that is no person contact", async () => {
+      lookup.mockResolvedValue(noContacts)
+      createContact.mockResolvedValue({
+        ok: false,
+        err: 'duplicate-contact',
+        statusCode: 409,
+        detail: 'F000001',
+      })
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'inactive',
+      })
+      expect(lookup).toHaveBeenCalledTimes(2)
+      expect(connect).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('after the contact is created', () => {
+    it('sets up profile and queues, creates the login and sends the e-mail', async () => {
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'created',
+        contactCode,
+        warnings: [],
+      })
+
+      expect(setUp).toHaveBeenCalledWith(contactCode, {
+        applicationProfile: undefined,
+        waitingLists: [WaitingListType.Housing],
+      })
+      expect(admin.createPersonUser).toHaveBeenCalledWith({
+        username: nationalId,
+        email: emailAddress,
+        contactCode,
+      })
+      expect(admin.sendSetPasswordEmail).toHaveBeenCalledWith('user-1')
+    })
+
+    it('reports a failed profile and failed queues as warnings', async () => {
+      setUp.mockResolvedValue(
+        setUpResult({
+          applicationProfile: { status: 'failed', error: 'unknown' },
+          waitingLists: [
+            { waitingListType: WaitingListType.Housing, status: 'failed' },
+            { waitingListType: WaitingListType.Storage, status: 'created' },
+          ],
+        })
+      )
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'created',
+        contactCode,
+        warnings: ['application-profile-failed', 'waiting-lists-failed'],
+      })
+    })
+  })
+
+  describe('setting up the login', () => {
+    it("only fills in contact_code on a user that already has the username, sends no e-mail and warns 'login-exists'", async () => {
+      const user = { id: 'user-9', username: nationalId }
+      admin.createPersonUser.mockResolvedValue('conflict')
+      admin.findUserByUsername.mockResolvedValue(user)
+
+      await expect(registerApplicant(application)).resolves.toMatchObject({
+        outcome: 'created',
+        warnings: ['login-exists'],
+      })
+      expect(admin.setContactCode).toHaveBeenCalledWith(user, contactCode)
+      expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+    })
+
+    describe('when the existing user carries another contact_code', () => {
+      beforeEach(() => {
+        admin.createPersonUser.mockResolvedValue('conflict')
+        admin.findUserByUsername.mockResolvedValue({
+          id: 'user-9',
+          username: nationalId,
+          attributes: { contact_code: ['P000009'] },
+        })
+      })
+
+      it("leaves a live one alone, logs the mismatch and warns 'login-bound-to-other-contact'", async () => {
+        getByContactCode.mockResolvedValue({
+          ok: true,
+          // Only that it resolves matters here, not what the contact holds.
+          data: { contactCode: 'P000009' } as Contact,
+        })
+
+        await expect(registerApplicant(application)).resolves.toMatchObject({
+          outcome: 'created',
+          warnings: ['login-bound-to-other-contact'],
+        })
+        // The same check as the contact_code repair at login.
+        expect(getByContactCode).toHaveBeenCalledWith('P000009', {
+          excludeDeleted: true,
+        })
+        expect(admin.setContactCode).not.toHaveBeenCalled()
+        expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+        expect(logger.warn).toHaveBeenCalledWith(
+          { contactCode, existingContactCodes: ['P000009'] },
+          'registerApplicant.existingLoginHasOtherContactCode'
+        )
+      })
+
+      it("warns 'login-exists' when it names a deleted or missing contact, which login replaces", async () => {
+        getByContactCode.mockResolvedValue({
+          ok: false,
+          err: 'not-found',
+          statusCode: 404,
+        })
+
+        await expect(registerApplicant(application)).resolves.toMatchObject({
+          outcome: 'created',
+          warnings: ['login-exists'],
+        })
+        expect(admin.setContactCode).not.toHaveBeenCalled()
+        expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+      })
+
+      it("warns 'login-exists' for a multivalued contact_code, which login reads as missing", async () => {
+        admin.findUserByUsername.mockResolvedValue({
+          id: 'user-9',
+          username: nationalId,
+          attributes: { contact_code: ['P000009', 'P000010'] },
+        })
+
+        await expect(registerApplicant(application)).resolves.toMatchObject({
+          warnings: ['login-exists'],
+        })
+        expect(getByContactCode).not.toHaveBeenCalled()
+        expect(admin.setContactCode).not.toHaveBeenCalled()
+      })
+
+      it("warns 'login-setup-failed' when the contacts service cannot say, rather than guessing", async () => {
+        getByContactCode.mockResolvedValue({
+          ok: false,
+          err: 'unknown',
+          statusCode: 500,
+        })
+
+        await expect(registerApplicant(application)).resolves.toMatchObject({
+          outcome: 'created',
+          warnings: ['login-setup-failed'],
+        })
+        expect(getByContactCode).toHaveBeenCalledTimes(2)
+        expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+      })
+    })
+
+    it("still warns 'login-exists' and sends no e-mail when the answer to filling in contact_code was lost", async () => {
+      const user = { id: 'user-9', username: nationalId }
+      admin.createPersonUser.mockResolvedValue('conflict')
+      // The first PUT goes through but its answer is lost, so the retry finds the code set.
+      admin.findUserByUsername
+        .mockResolvedValueOnce(user)
+        .mockResolvedValueOnce({
+          ...user,
+          attributes: { contact_code: [contactCode] },
+        })
+      admin.setContactCode.mockRejectedValueOnce(new Error('socket hang up'))
+
+      await expect(registerApplicant(application)).resolves.toMatchObject({
+        outcome: 'created',
+        warnings: ['login-exists'],
+      })
+      expect(admin.setContactCode).toHaveBeenCalledTimes(1)
+      expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+    })
+
+    it('still sends the e-mail when the existing user is the one an earlier try created', async () => {
+      admin.createPersonUser
+        .mockRejectedValueOnce(new Error('timeout'))
+        .mockResolvedValueOnce('conflict')
+      admin.findUserByUsername.mockResolvedValue({
+        id: 'user-1',
+        username: nationalId,
+        attributes: { contact_code: [contactCode] },
+      })
+
+      await expect(registerApplicant(application)).resolves.toMatchObject({
+        warnings: [],
+      })
+      expect(admin.setContactCode).not.toHaveBeenCalled()
+      expect(admin.sendSetPasswordEmail).toHaveBeenCalledWith('user-1')
+    })
+
+    it('retries the e-mail without creating the user again', async () => {
+      admin.sendSetPasswordEmail
+        .mockRejectedValueOnce(new Error('smtp down'))
+        .mockResolvedValueOnce(undefined)
+
+      await expect(registerApplicant(application)).resolves.toMatchObject({
+        warnings: [],
+      })
+      expect(admin.createPersonUser).toHaveBeenCalledTimes(1)
+      expect(admin.sendSetPasswordEmail).toHaveBeenCalledTimes(2)
+    })
+
+    it("warns 'login-setup-failed' after the retry fails too", async () => {
+      admin.sendSetPasswordEmail.mockRejectedValue(new Error('smtp down'))
+
+      await expect(registerApplicant(application)).resolves.toEqual({
+        outcome: 'created',
+        contactCode,
+        warnings: ['login-setup-failed'],
+      })
+      expect(admin.sendSetPasswordEmail).toHaveBeenCalledTimes(2)
+    })
+
+    it("warns 'login-setup-failed' when Keycloak cannot be reached at all", async () => {
+      connect.mockRejectedValue(new Error('ECONNREFUSED'))
+
+      await expect(registerApplicant(application)).resolves.toMatchObject({
+        outcome: 'created',
+        warnings: ['login-setup-failed'],
+      })
+      expect(connect).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not retry when another user holds the e-mail address', async () => {
+      admin.createPersonUser.mockResolvedValue('conflict')
+      admin.findUserByUsername.mockResolvedValue(null)
+
+      await expect(registerApplicant(application)).resolves.toMatchObject({
+        warnings: ['login-setup-failed'],
+      })
+      expect(admin.createPersonUser).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('never logs the personnummer or the e-mail address', async () => {
+    admin.sendSetPasswordEmail.mockRejectedValue(new Error('smtp down'))
+    setUp.mockResolvedValue(
+      setUpResult({ applicationProfile: { status: 'failed' } })
+    )
+
+    await registerApplicant(application)
+    lookup.mockResolvedValue({ ok: false, err: 'contacts-service-error' })
+    await registerApplicant(application)
+
+    const logged = JSON.stringify([
+      ...(logger.info as jest.Mock).mock.calls,
+      ...(logger.warn as jest.Mock).mock.calls,
+      ...(logger.error as jest.Mock).mock.calls,
+    ])
+    expect(logged).not.toContain(nationalId)
+    expect(logged).not.toContain(emailAddress)
+  })
+})

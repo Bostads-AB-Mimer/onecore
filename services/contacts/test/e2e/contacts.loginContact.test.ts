@@ -1,25 +1,6 @@
 import { AxiosInstance } from 'axios'
 import { makeTestAppFixture, TestApp } from './app-fixture'
-import { FULL_TEST_DATA_SET } from './data-set'
-
-// See the login contact fixtures at the end of seed.sql.
-const LOGIN_CONTACT_DATA_SET = [
-  'P920001',
-  'P920002',
-  'P920003',
-  'P920004',
-  'F920005',
-  'P920006',
-  'P920007',
-  'P920008',
-  'P920009',
-  'P920010',
-  'P920011',
-  'P920012',
-  'P920013',
-  'P920014',
-  'P920015',
-]
+import { FULL_TEST_DATA_SET, LOGIN_CONTACT_DATA_SET } from './data-set'
 
 describe('GET /contacts/by-nid/:nid/login-contact', () => {
   let testApp: TestApp | undefined
@@ -72,6 +53,24 @@ describe('GET /contacts/by-nid/:nid/login-contact', () => {
 
   it('finds a contact stored in the ten-digit form with a hyphen', async () => {
     expect(await loginContactCode('199005059846')).toBe('P920009')
+  })
+
+  it('leaves out a ten-digit contact whose birthdate is in another century', async () => {
+    // P920016 holds a lease and would otherwise win, but was born in 1905.
+    expect(await loginContactCode('200505059816')).toBe('P920017')
+    expect(await loginContactCode('190505059816')).toBe('P920016')
+  })
+
+  it('reads the century from a + separator when there is no birthdate', async () => {
+    expect(await loginContactCode('191006069825')).toBe('P920018')
+    expect(await loginContactCode('201006069825')).toBe(404)
+  })
+
+  it('keeps a ten-digit contact whose century is unknown', async () => {
+    // P920009 has no birthdate and no +, so both centuries still find it.
+    expect(await loginContactCode('189005059846')).toBe('P920009')
+    // P920019's birthdate is the 1900-01-01 placeholder.
+    expect(await loginContactCode('200303039838')).toBe('P920019')
   })
 
   it('accepts the personnummer in any common notation', async () => {
