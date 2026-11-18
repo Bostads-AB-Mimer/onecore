@@ -80,7 +80,9 @@ export const toLeaseTenant = (
       firstName: null,
       lastName: null,
       fullName: contact.organisation.name,
-      nationalRegistrationNumber: contact.organisation.organisationNumber,
+      // Required by the lease schema; an organisation with no number in Xpand
+      // arrives as null from the contacts service and gets ''.
+      nationalRegistrationNumber: contact.organisation.organisationNumber ?? '',
       birthDate: null,
     }
   }
