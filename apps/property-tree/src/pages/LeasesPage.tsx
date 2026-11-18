@@ -247,6 +247,15 @@ const LeasesPage = () => {
                 onObjectTypeChange={(vals) =>
                   filters.setFilterValues('objectType', vals)
                 }
+                parkingOptionValue="parkering"
+                loadParkingSpaceTypes={filters.loadParkingSpaceTypes}
+                selectedParkingSpaceTypes={filters.selectedParkingSpaceTypes}
+                onParkingSpaceTypeChange={(vals) =>
+                  filters.setFilterValues('parkingSpaceType', vals)
+                }
+                onObjectAndParkingSpaceTypeChange={
+                  filters.setObjectAndParkingSpaceType
+                }
                 placeholder="Objekttyp"
               />
 

@@ -24,6 +24,7 @@ import {
   getRentalObjectCodesByBuildingCodes,
   getRentalObjectCodesByAreaCodes,
   getRentalObjectCodesByDistrictNames,
+  getParkingSpaceTypesByRentalObjectCode,
 } from '../xpand/lease-search-adapter'
 
 const STALE_THRESHOLD_MS = 60_000
@@ -155,6 +156,30 @@ async function resolveXpandRentalObjectCodes(
   return new Set(codes)
 }
 
+/**
+ * Resolves the parkingSpaceType filter to the set of rental object codes
+ * that have one of the chosen types. Returns null when the filter is absent
+ * (don't restrict by type), and an empty set when it is present but matches
+ * no parking space — those are different outcomes, so callers must check
+ * `!== undefined`/`!== null` rather than truthiness.
+ *
+ * Kept separate from resolveXpandRentalObjectCodes: that set is AND-ed
+ * across every Xpand-bridged filter, so merging the two would make
+ * Bostad + a parking-space type return nothing.
+ */
+async function resolveParkingSpaceObjectCodes(
+  params: leasing.v1.LeaseSearchQueryParams
+): Promise<Set<string> | null> {
+  if (!params.parkingSpaceType || params.parkingSpaceType.length === 0) {
+    return null
+  }
+
+  const typesByCode = await getParkingSpaceTypesByRentalObjectCode(
+    params.parkingSpaceType
+  )
+  return new Set(typesByCode.keys())
+}
+
 function statusNamesEnded(params: leasing.v1.LeaseSearchQueryParams): boolean {
   return (params.status ?? []).some(
     (s) => STATUS_PARAM_TO_LEASE_STATUS[s.toLowerCase()] === LeaseStatus.Ended
@@ -214,7 +239,27 @@ export async function fetchAllLeasesForExport(
     'lease-cache: export served from cache'
   )
 
-  return rows
+  // Looked up once for every parking space, not once per row — the pool can
+  // hold ~145,000 ended Xpand rows with Status "Upphört". If Xpand is down,
+  // export without the type rather than failing the whole export: the
+  // column falls back to "Parkering", same as before this card.
+  let parkingSpaceTypesByCode: Map<string, string>
+  try {
+    parkingSpaceTypesByCode = await getParkingSpaceTypesByRentalObjectCode()
+  } catch (err) {
+    logger.error(
+      { err },
+      'lease-cache: export: parking-space type lookup failed'
+    )
+    return rows
+  }
+
+  return rows.map((row) => {
+    const typeName = row.rentalObjectCode
+      ? parkingSpaceTypesByCode.get(row.rentalObjectCode)
+      : undefined
+    return typeName ? { ...row, parkingSpaceType: typeName } : row
+  })
 }
 
 /**
@@ -362,8 +407,11 @@ const applySorting = (
 function applyCacheFilters(
   leases: leasing.v1.LeaseSearchResult[],
   params: leasing.v1.LeaseSearchQueryParams,
-  rentalObjectCodes?: Set<string>
+  rentalObjectCodes?: Set<string>,
+  parkingSpaceObjectCodes?: Set<string>
 ): leasing.v1.LeaseSearchResult[] {
+  const hasParkingSpaceTypeFilter = parkingSpaceObjectCodes !== undefined
+
   return leases.filter((lease) => {
     if (
       rentalObjectCodes &&
@@ -381,12 +429,29 @@ function applyCacheFilters(
       if (!allowed.has(lease.status)) return false
     }
 
-    if (params.objectType && params.objectType.length > 0) {
-      const paramTypes = params.objectType.map((t) => t.toLowerCase())
+    if (
+      (params.objectType && params.objectType.length > 0) ||
+      hasParkingSpaceTypeFilter
+    ) {
       const rowType =
         OBJECT_TYPE_LABEL_TO_PARAM[lease.objectTypeCode] ?? 'ovrigt'
-      const matches = paramTypes.includes(rowType)
-      if (!matches) return false
+
+      // "Bilplats" and a parking-space type can't both be chosen in the UI,
+      // but a stale saved link could still send both — a parking-space type
+      // filter always replaces plain "parkering" matching.
+      const objectTypeParams = (params.objectType ?? [])
+        .map((t) => t.toLowerCase())
+        .filter((t) => !hasParkingSpaceTypeFilter || t !== 'parkering')
+
+      const matchesObjectType =
+        objectTypeParams.length > 0 && objectTypeParams.includes(rowType)
+
+      const matchesParkingSpaceType =
+        hasParkingSpaceTypeFilter &&
+        !!lease.rentalObjectCode &&
+        parkingSpaceObjectCodes!.has(lease.rentalObjectCode)
+
+      if (!matchesObjectType && !matchesParkingSpaceType) return false
     }
 
     if (params.q) {
@@ -454,12 +519,14 @@ const sortedMemo: {
 function getFilteredSorted(
   pool: leasing.v1.LeaseSearchResult[],
   params: leasing.v1.LeaseSearchQueryParams,
-  rentalObjectCodes: Set<string> | null
+  rentalObjectCodes: Set<string> | null,
+  parkingSpaceObjectCodes: Set<string> | null
 ): leasing.v1.LeaseSearchResult[] {
   const { page: _page, limit: _limit, ...rest } = params
   const key = JSON.stringify([
     rest,
     rentalObjectCodes ? [...rentalObjectCodes].sort() : null,
+    parkingSpaceObjectCodes ? [...parkingSpaceObjectCodes].sort() : null,
   ])
   const hit = sortedMemo.findIndex((m) => m.pool === pool && m.key === key)
   if (hit >= 0) {
@@ -469,7 +536,12 @@ function getFilteredSorted(
   }
 
   const rows = applySorting(
-    applyCacheFilters(pool, params, rentalObjectCodes ?? undefined),
+    applyCacheFilters(
+      pool,
+      params,
+      rentalObjectCodes ?? undefined,
+      parkingSpaceObjectCodes ?? undefined
+    ),
     params
   )
   sortedMemo.unshift({ pool, key, rows })
@@ -506,10 +578,16 @@ async function findMatchingLeases(
   const pool = buildSearchPool(params, ctx)
 
   const xpandStart = Date.now()
-  const rentalObjectCodes = await resolveXpandRentalObjectCodes(params)
+  const [rentalObjectCodes, parkingSpaceObjectCodes] = await Promise.all([
+    resolveXpandRentalObjectCodes(params),
+    resolveParkingSpaceObjectCodes(params),
+  ])
   const xpandMs = Date.now() - xpandStart
 
-  if (rentalObjectCodes && rentalObjectCodes.size === 0) {
+  if (
+    (rentalObjectCodes && rentalObjectCodes.size === 0) ||
+    (parkingSpaceObjectCodes && parkingSpaceObjectCodes.size === 0)
+  ) {
     logger.info(
       { xpandMs },
       'lease-cache: xpand filter returned no codes, skipping cache search'
@@ -518,7 +596,12 @@ async function findMatchingLeases(
   }
 
   const filterStart = Date.now()
-  const rows = getFilteredSorted(pool, params, rentalObjectCodes)
+  const rows = getFilteredSorted(
+    pool,
+    params,
+    rentalObjectCodes,
+    parkingSpaceObjectCodes
+  )
   const filterMs = Date.now() - filterStart
 
   return { rows, xpandMs, filterMs }

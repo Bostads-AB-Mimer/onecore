@@ -36,7 +36,8 @@ export function useLeaseSearch(
     params.districtNames?.length ||
     params.buildingManager?.length ||
     params.buildingCodes?.length ||
-    params.areaCodes?.length
+    params.areaCodes?.length ||
+    params.parkingSpaceType?.length
   )
 
   useEffect(() => {

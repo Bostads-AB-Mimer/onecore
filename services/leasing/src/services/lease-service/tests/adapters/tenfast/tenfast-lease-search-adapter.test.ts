@@ -19,6 +19,7 @@ jest.mock('../../../adapters/xpand/lease-search-adapter', () => ({
   getRentalObjectCodesByAreaCodes: jest.fn(),
   getRentalObjectCodesByDistrictNames: jest.fn(),
   getRentalObjectCodesByKvvAreaCodes: jest.fn(),
+  getParkingSpaceTypesByRentalObjectCode: jest.fn(),
 }))
 
 jest.mock('../../../adapters/xpand/tenant-lease-adapter', () => ({
@@ -60,6 +61,11 @@ const mockedGetRentalObjectCodesByDistrictNames =
 const mockedGetRentalObjectCodesByKvvAreaCodes =
   xpandLeaseSearchAdapter.getRentalObjectCodesByKvvAreaCodes as jest.MockedFunction<
     typeof xpandLeaseSearchAdapter.getRentalObjectCodesByKvvAreaCodes
+  >
+
+const mockedGetParkingSpaceTypesByRentalObjectCode =
+  xpandLeaseSearchAdapter.getParkingSpaceTypesByRentalObjectCode as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getParkingSpaceTypesByRentalObjectCode
   >
 
 const makeLeaseResult = (
@@ -441,6 +447,170 @@ describe('tenfast-lease-search-adapter', () => {
       expect(ids).toContain('parkering-lease')
     })
 
+    // parkingSpaceType
+    it('filters by parkingSpaceType only', async () => {
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValueOnce(
+        new Map([['ROC-100', 'Kallgarage']])
+      )
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('kallgarage-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-100',
+        }),
+        makeLeaseResult('other-parking-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-200',
+        }),
+        makeLeaseResult('bostad-lease'),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { parkingSpaceType: ['KALLGAR'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(mockedGetParkingSpaceTypesByRentalObjectCode).toHaveBeenCalledWith(
+        ['KALLGAR']
+      )
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('kallgarage-lease')
+    })
+
+    it('combines objectType and parkingSpaceType as a union (Bostad + Kallgarage)', async () => {
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValueOnce(
+        new Map([['ROC-100', 'Kallgarage']])
+      )
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('bostad-lease', { rentalObjectCode: 'ROC-001' }),
+        makeLeaseResult('kallgarage-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-100',
+        }),
+        makeLeaseResult('other-parking-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-200',
+        }),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          objectType: ['bostad'],
+          parkingSpaceType: ['KALLGAR'],
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(2)
+      const ids = result.content.map((l) => l.leaseId)
+      expect(ids).toContain('bostad-lease')
+      expect(ids).toContain('kallgarage-lease')
+    })
+
+    it('a parkingSpaceType filter replaces plain "parkering" matching, even if both are sent', async () => {
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValueOnce(
+        new Map([['ROC-100', 'Kallgarage']])
+      )
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('kallgarage-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-100',
+        }),
+        makeLeaseResult('other-parking-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-200',
+        }),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          objectType: ['parkering'],
+          parkingSpaceType: ['KALLGAR'],
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('kallgarage-lease')
+    })
+
+    it('returns empty when parkingSpaceType matches no rental objects', async () => {
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValueOnce(
+        new Map()
+      )
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('parkering-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-200',
+        }),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { parkingSpaceType: ['__no_match__'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(0)
+      expect(result._meta.totalRecords).toBe(0)
+    })
+
+    it('intersects parkingSpaceType with districtNames', async () => {
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValueOnce(
+        new Map([
+          ['ROC-100', 'Kallgarage'],
+          ['ROC-300', 'Kallgarage'],
+        ])
+      )
+      mockedGetRentalObjectCodesByDistrictNames.mockResolvedValueOnce([
+        'ROC-100',
+      ])
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('in-district', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-100',
+        }),
+        makeLeaseResult('outside-district', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-300',
+        }),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          districtNames: ['Distrikt Norr'],
+          parkingSpaceType: ['KALLGAR'],
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('in-district')
+    })
+
+    it('a lease without a rental object code never matches a parkingSpaceType filter', async () => {
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValueOnce(
+        new Map([['ROC-100', 'Kallgarage']])
+      )
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('no-rental-object-code', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: null,
+        }),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { parkingSpaceType: ['KALLGAR'], page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(0)
+    })
+
     // Date ranges
     it('filters by startDate range', async () => {
       mockedGetAll.mockReturnValue([
@@ -750,6 +920,7 @@ describe('tenfast-lease-search-adapter', () => {
   describe('fetchAllLeasesForExport', () => {
     beforeEach(() => {
       mockedGetAll.mockReturnValue([makeLeaseResult('default-lease')])
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValue(new Map())
     })
 
     it('refreshes a stale cache before reading it, same as searchLeases', async () => {
@@ -785,6 +956,54 @@ describe('tenfast-lease-search-adapter', () => {
           mockCtx
         )
       ).rejects.toMatchObject({ status: 503 })
+    })
+
+    it('fills parkingSpaceType on parking rows from a single Xpand lookup, without mutating cached rows', async () => {
+      const cachedParkingLease = makeLeaseResult('parking-lease', {
+        objectTypeCode: 'Parkering',
+        rentalObjectCode: 'ROC-100',
+      })
+      const cachedHousingLease = makeLeaseResult('housing-lease', {
+        rentalObjectCode: 'ROC-900',
+      })
+      mockedGetAll.mockReturnValue([cachedParkingLease, cachedHousingLease])
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValueOnce(
+        new Map([['ROC-100', 'Kallgarage']])
+      )
+
+      const result = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+        { page: 1, limit: 500 },
+        mockCtx
+      )
+
+      expect(
+        mockedGetParkingSpaceTypesByRentalObjectCode
+      ).toHaveBeenCalledWith()
+      const parkingRow = result.find((l) => l.leaseId === 'parking-lease')
+      const housingRow = result.find((l) => l.leaseId === 'housing-lease')
+      expect(parkingRow?.parkingSpaceType).toBe('Kallgarage')
+      expect(housingRow?.parkingSpaceType).toBeUndefined()
+      expect(cachedParkingLease.parkingSpaceType).toBeUndefined()
+    })
+
+    it('exports without parkingSpaceType when the Xpand lookup fails, rather than failing the export', async () => {
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('parking-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-100',
+        }),
+      ])
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockRejectedValueOnce(
+        new Error('Xpand unreachable')
+      )
+
+      const result = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+        { page: 1, limit: 500 },
+        mockCtx
+      )
+
+      expect(result).toHaveLength(1)
+      expect(result[0].parkingSpaceType).toBeUndefined()
     })
   })
 

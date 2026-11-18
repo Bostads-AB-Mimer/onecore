@@ -90,6 +90,13 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: Object type codes (balgh, babps, balok)
    *       - in: query
+   *         name: parkingSpaceType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Parking-space type codes (babpt.code), from GET /leases/parking-space-types
+   *       - in: query
    *         name: status
    *         schema:
    *           type: array
@@ -328,6 +335,13 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: Object type codes
    *       - in: query
+   *         name: parkingSpaceType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Parking-space type codes (babpt.code), from GET /leases/parking-space-types
+   *       - in: query
    *         name: status
    *         schema:
    *           type: array
@@ -472,6 +486,13 @@ export const routes = (router: KoaRouter) => {
    *           items:
    *             type: string
    *         description: Object type codes (bostad, parkering, lokal, ovrigt)
+   *       - in: query
+   *         name: parkingSpaceType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Parking-space type codes (babpt.code), from GET /leases/parking-space-types
    *       - in: query
    *         name: status
    *         schema:

@@ -90,8 +90,6 @@ export const routes = (router: KoaRouter) => {
   areaTextContentRoutes(router)
   keysExportRoutes(router)
 
-  leasesRoutes(router)
-
   /**
    * @swagger
    * /leases/parking-space-types:
@@ -139,6 +137,10 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  // Must be registered before leasesRoutes: /leases/:id would otherwise
+  // swallow /leases/parking-space-types.
+  leasesRoutes(router)
 
   /**
    * @swagger
