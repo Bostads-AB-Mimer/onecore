@@ -1,5 +1,6 @@
 import { logger } from '@onecore/utilities'
 import { WaitingListType } from '@onecore/types'
+import type { Contact } from '@onecore/contacts/schema'
 
 import { contactsAdapter } from '../../../adapters/contacts-adapter'
 import {
@@ -21,6 +22,7 @@ jest.mock('../../../adapters/contacts-adapter', () => ({
   contactsAdapter: {
     createContact: jest.fn(),
     getPersonContactsByNationalId: jest.fn(),
+    getByContactCode: jest.fn(),
   },
 }))
 
@@ -45,6 +47,10 @@ const lookup =
 const createContact = contactsAdapter.createContact as jest.MockedFunction<
   typeof contactsAdapter.createContact
 >
+const getByContactCode =
+  contactsAdapter.getByContactCode as jest.MockedFunction<
+    typeof contactsAdapter.getByContactCode
+  >
 const setUp = setUpNewContactProfileAndWaitingLists as jest.MockedFunction<
   typeof setUpNewContactProfileAndWaitingLists
 >
@@ -299,24 +305,102 @@ describe('registerApplicant', () => {
       expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
     })
 
-    it("leaves another contact_code on an existing user alone, logs the mismatch and warns 'login-bound-to-other-contact'", async () => {
-      admin.createPersonUser.mockResolvedValue('conflict')
-      admin.findUserByUsername.mockResolvedValue({
-        id: 'user-9',
-        username: nationalId,
-        attributes: { contact_code: ['P000009'] },
+    describe('when the existing user carries another contact_code', () => {
+      beforeEach(() => {
+        admin.createPersonUser.mockResolvedValue('conflict')
+        admin.findUserByUsername.mockResolvedValue({
+          id: 'user-9',
+          username: nationalId,
+          attributes: { contact_code: ['P000009'] },
+        })
       })
+
+      it("leaves a live one alone, logs the mismatch and warns 'login-bound-to-other-contact'", async () => {
+        getByContactCode.mockResolvedValue({
+          ok: true,
+          // Only that it resolves matters here, not what the contact holds.
+          data: { contactCode: 'P000009' } as Contact,
+        })
+
+        await expect(registerApplicant(application)).resolves.toMatchObject({
+          outcome: 'created',
+          warnings: ['login-bound-to-other-contact'],
+        })
+        // The same check as the contact_code repair at login.
+        expect(getByContactCode).toHaveBeenCalledWith('P000009', {
+          excludeDeleted: true,
+        })
+        expect(admin.setContactCode).not.toHaveBeenCalled()
+        expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+        expect(logger.warn).toHaveBeenCalledWith(
+          { contactCode, existingContactCodes: ['P000009'] },
+          'registerApplicant.existingLoginHasOtherContactCode'
+        )
+      })
+
+      it("warns 'login-exists' when it names a deleted or missing contact, which login replaces", async () => {
+        getByContactCode.mockResolvedValue({
+          ok: false,
+          err: 'not-found',
+          statusCode: 404,
+        })
+
+        await expect(registerApplicant(application)).resolves.toMatchObject({
+          outcome: 'created',
+          warnings: ['login-exists'],
+        })
+        expect(admin.setContactCode).not.toHaveBeenCalled()
+        expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+      })
+
+      it("warns 'login-exists' for a multivalued contact_code, which login reads as missing", async () => {
+        admin.findUserByUsername.mockResolvedValue({
+          id: 'user-9',
+          username: nationalId,
+          attributes: { contact_code: ['P000009', 'P000010'] },
+        })
+
+        await expect(registerApplicant(application)).resolves.toMatchObject({
+          warnings: ['login-exists'],
+        })
+        expect(getByContactCode).not.toHaveBeenCalled()
+        expect(admin.setContactCode).not.toHaveBeenCalled()
+      })
+
+      it("warns 'login-setup-failed' when the contacts service cannot say, rather than guessing", async () => {
+        getByContactCode.mockResolvedValue({
+          ok: false,
+          err: 'unknown',
+          statusCode: 500,
+        })
+
+        await expect(registerApplicant(application)).resolves.toMatchObject({
+          outcome: 'created',
+          warnings: ['login-setup-failed'],
+        })
+        expect(getByContactCode).toHaveBeenCalledTimes(2)
+        expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
+      })
+    })
+
+    it("still warns 'login-exists' and sends no e-mail when the answer to filling in contact_code was lost", async () => {
+      const user = { id: 'user-9', username: nationalId }
+      admin.createPersonUser.mockResolvedValue('conflict')
+      // The first PUT goes through but its answer is lost, so the retry finds the code set.
+      admin.findUserByUsername
+        .mockResolvedValueOnce(user)
+        .mockResolvedValueOnce({
+          ...user,
+          attributes: { contact_code: [contactCode] },
+        })
+      admin.setContactCode.mockRejectedValueOnce(new Error('socket hang up'))
 
       await expect(registerApplicant(application)).resolves.toMatchObject({
         outcome: 'created',
-        warnings: ['login-bound-to-other-contact'],
+        warnings: ['login-exists'],
       })
-      expect(admin.setContactCode).not.toHaveBeenCalled()
+      expect(admin.setContactCode).toHaveBeenCalledTimes(1)
       expect(admin.sendSetPasswordEmail).not.toHaveBeenCalled()
-      expect(logger.warn).toHaveBeenCalledWith(
-        { contactCode, existingContactCodes: ['P000009'] },
-        'registerApplicant.existingLoginHasOtherContactCode'
-      )
     })
 
     it('still sends the e-mail when the existing user is the one an earlier try created', async () => {

@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios'
 import { logger } from '@onecore/utilities'
 import type { CreateContactRequestBody } from '@onecore/contacts/schema'
 
@@ -52,6 +53,11 @@ class EmailTakenError extends Error {
   readonly name = 'EmailTakenError'
 }
 
+/** The contacts service could not say whether the code on an existing login names a live contact. */
+class BoundContactLookupError extends Error {
+  readonly name = 'BoundContactLookupError'
+}
+
 type Existing =
   | { outcome: 'none' }
   | { outcome: 'existing' }
@@ -63,13 +69,36 @@ type LoginSetup =
   /** The username already had a user, which keeps its password and gets no e-mail. */
   | 'exists'
   /**
-   * As 'exists', but the user carries another contact's code and keeps it. That contact cannot
-   * have this personnummer (the create would have been refused), yet the contact_code repair at
-   * login keeps any code that still resolves, deleted and GDPR-purged contacts included. So the
-   * login names the old contact until someone changes it by hand.
+   * As 'exists', but the user carries another live contact's code and keeps it. That contact
+   * cannot have this personnummer (the create would have been refused), yet the contact_code
+   * repair at login keeps any code that names a live contact. So the login names the old
+   * contact until someone changes it by hand. A code naming a deleted or missing contact is
+   * 'exists' instead, because login replaces it with the new contact.
    */
   | 'bound-to-other-contact'
   | 'failed'
+
+/**
+ * Whether login would keep this contact_code: the same check as the contact_code repair at
+ * login, so a deleted contact counts as gone.
+ *
+ * @throws BoundContactLookupError when the contacts service gives no clear answer, so an
+ *   unknown binding is never reported as one login will repair.
+ */
+const isLiveContact = async (code: string): Promise<boolean> => {
+  try {
+    const result = await contactsAdapter.getByContactCode(code, {
+      excludeDeleted: true,
+    })
+    if (result.ok) return true
+    if (result.err === 'not-found') return false
+  } catch (error: unknown) {
+    // Whether the adapter returns or throws a 404 depends on the process-wide axios defaults
+    // (see contacts-contact-code.ts), so both mean no such contact.
+    if (isAxiosError(error) && error.response?.status === 404) return false
+  }
+  throw new BoundContactLookupError()
+}
 
 /**
  * Whether the personnummer already has a person contact, and whether login accepts it.
@@ -121,7 +150,8 @@ const toCreateContactBody = (
  * A user that already has the username keeps its password and e-mail and only gets a
  * missing contact_code filled in, because the e-mail typed into the form must not be able to
  * take over someone else's login. For the same reason a contact_code it already has is never
- * replaced here, only reported as 'bound-to-other-contact'.
+ * replaced here: a live one is reported as 'bound-to-other-contact', and one naming a deleted
+ * or missing contact is left for login to replace.
  */
 const setUpLogin = async (
   username: string,
@@ -131,6 +161,9 @@ const setUpLogin = async (
   // Kept across tries, so a retry neither creates the user twice nor skips the e-mail.
   let userId: string | undefined
   let sendEmail = false
+  // Kept across tries, so a retry after a contact_code PUT whose answer was lost still knows
+  // the user was there before this registration and must get no e-mail.
+  let userExistedBefore = false
 
   for (let attempt = 1; attempt <= LOGIN_SETUP_ATTEMPTS; attempt++) {
     try {
@@ -148,18 +181,34 @@ const setUpLogin = async (
           const existingCodes = (
             user.attributes?.[CONTACT_CODE_ATTRIBUTE] ?? []
           ).filter(Boolean)
-          // A user that already carries the contact code created a moment ago is one an
-          // earlier try created without seeing the answer, so it still needs its e-mail.
           if (existingCodes.includes(contactCode)) {
+            // An earlier try set the code on a user that was already there and lost the answer.
+            if (userExistedBefore) return 'exists'
+            // Otherwise an earlier try created the user without seeing the answer, so it
+            // still needs its e-mail.
             userId = user.id
             sendEmail = true
           } else {
+            userExistedBefore = true
             if (existingCodes.length > 0) {
-              logger.warn(
+              // Login reads a multivalued contact_code as missing and replaces it, so only a
+              // single live code stays bound.
+              const [boundCode] = existingCodes
+              if (
+                existingCodes.length === 1 &&
+                (await isLiveContact(boundCode))
+              ) {
+                logger.warn(
+                  { contactCode, existingContactCodes: existingCodes },
+                  'registerApplicant.existingLoginHasOtherContactCode'
+                )
+                return 'bound-to-other-contact'
+              }
+              logger.info(
                 { contactCode, existingContactCodes: existingCodes },
-                'registerApplicant.existingLoginHasOtherContactCode'
+                'registerApplicant.existingLoginHasStaleContactCode'
               )
-              return 'bound-to-other-contact'
+              return 'exists'
             }
             await admin.setContactCode(user, contactCode)
             return 'exists'

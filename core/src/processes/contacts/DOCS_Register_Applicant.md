@@ -68,7 +68,11 @@ U --> Uo{Found?}
 Uo --> |No: the e-mail is taken| X[login-setup-failed<br/>no retry]
 Uo --> |Has this contact_code:<br/>an earlier try created it| M
 Uo --> |No contact_code| Fl(Set contact_code<br/>password and e-mail untouched)
-Uo --> |Another contact_code| Lg(Log the mismatch<br/>contact_code untouched)
+Uo --> |Has this contact_code,<br/>but an earlier try found the user already there| D
+Uo --> |Another contact_code| Lv{Live contact?<br/>excludeDeleted}
+Lv --> |Yes| Lg(Log the mismatch<br/>contact_code untouched)
+Lv --> |No: deleted or missing| D
+Lv --> |Lookup failed| T
 Fl --> D[login-exists<br/>no e-mail]
 Lg --> D3[login-bound-to-other-contact<br/>no e-mail]
 M --> D2[Done]
@@ -78,19 +82,19 @@ T --> |Yes| X2[login-setup-failed]
 ```
 
 - **En befintlig användare får aldrig mejlet.** Annars kunde vem som helst ta över ett konto genom att skriva sin egen e-post i formuläret. Svaret får varningen `login-exists`, så att webapi inte ber personen leta efter ett mejl som aldrig kommer.
-- **En befintlig kontaktkod byts aldrig här**, av samma skäl: formuläret ska inte kunna flytta någon annans inloggning till en ny kontakt. Skillnaden loggas och svaret får varningen `login-bound-to-other-contact`. Reparationen vid inloggning löser det inte: den byter bara en kod som inte går att slå upp, och borttagna eller GDPR-rensade kontakter går fortfarande att slå upp. Den gamla kontakten kan inte ha personnumret, för då hade skapandet nekats, men inloggningen visar den tills någon ändrar koden för hand.
+- **En befintlig kontaktkod byts aldrig här**, av samma skäl: formuläret ska inte kunna flytta någon annans inloggning till en ny kontakt. Koden kontrolleras på samma sätt som vid inloggning (`excludeDeleted`). Pekar den på en levande kontakt loggas skillnaden och svaret får varningen `login-bound-to-other-contact`: inloggningen behåller koden, och den gamla kontakten kan inte ha personnumret, för då hade skapandet nekats, så inloggningen visar den tills någon ändrar koden för hand. Pekar den på en borttagen eller saknad kontakt blir svaret `login-exists`, eftersom inloggningen då byter till den nya kontakten. En GDPR-rensad kontakt som inte är markerad som borttagen räknas som levande. Går det inte att slå upp koden görs ett nytt försök, och sedan blir det `login-setup-failed`.
 - **Ett nytt försök skapar inte användaren igen.** Användar-id:t sparas mellan försöken, så bara steget som föll görs om.
-- **En användare med just den här kontaktkoden** skapades av ett försök som aldrig fick svar, till exempel vid en timeout. Den räknas som ny och får mejlet.
+- **En användare med just den här kontaktkoden** skapades av ett försök som aldrig fick svar, till exempel vid en timeout. Den räknas som ny och får mejlet. Undantaget är när ett tidigare försök redan hittade användaren och satte koden men tappade svaret: då är det en befintlig användare, som får `login-exists` och inget mejl.
 
 ## Varningar
 
-| Varning                        | Orsak                                                                                             | Hur personen kommer vidare                                                                                                                                  |
-| ------------------------------ | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `application-profile-failed`   | Boendeprofilen sparades inte                                                                      | Fyller i den under Mina sidor                                                                                                                               |
-| `waiting-lists-failed`         | Minst en kö lades inte till                                                                       | Väljer köer under Mina sidor                                                                                                                                |
-| `login-setup-failed`           | Ingen Keycloak-användare eller inget mejl efter två försök                                        | Kundtjänst, eller nattkörningen som skapar användaren. En ny registrering svarar `existing`. Finns användaren men mejlet uteblev fungerar "Glömt lösenord". |
-| `login-exists`                 | Det fanns redan en inloggning för personnumret, så inget mejl skickades                           | Loggar in, eller använder "Glömt lösenord" om lösenord aldrig valts                                                                                         |
-| `login-bound-to-other-contact` | Inloggningen för personnumret hör till en annan kontakt och behåller den, så inget mejl skickades | Kundtjänst. Inloggningen skulle visa den gamla kontakten, inte den nya                                                                                      |
+| Varning                        | Orsak                                                                                                     | Hur personen kommer vidare                                                                                                                                  |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `application-profile-failed`   | Boendeprofilen sparades inte                                                                              | Fyller i den under Mina sidor                                                                                                                               |
+| `waiting-lists-failed`         | Minst en kö lades inte till                                                                               | Väljer köer under Mina sidor                                                                                                                                |
+| `login-setup-failed`           | Ingen Keycloak-användare eller inget mejl efter två försök                                                | Kundtjänst, eller nattkörningen som skapar användaren. En ny registrering svarar `existing`. Finns användaren men mejlet uteblev fungerar "Glömt lösenord". |
+| `login-exists`                 | Det fanns redan en inloggning för personnumret, så inget mejl skickades                                   | Loggar in, eller använder "Glömt lösenord" om lösenord aldrig valts                                                                                         |
+| `login-bound-to-other-contact` | Inloggningen för personnumret hör till en annan levande kontakt och behåller den, så inget mejl skickades | Kundtjänst. Inloggningen skulle visa den gamla kontakten, inte den nya                                                                                      |
 
 ## Uppslagningen av personkontakter
 

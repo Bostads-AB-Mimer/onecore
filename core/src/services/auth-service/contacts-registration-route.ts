@@ -109,7 +109,7 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
    *               waitingLists:
    *                 type: array
    *                 items: { type: integer, enum: [1, 2, 3] }
-   *                 description: 1 parking space, 2 housing (Bostad, Nyproduktion, Kooperativ and Ungdom), 3 storage
+   *                 description: 1 parking space, 2 housing (Bostad, Nyproduktion, Kooperativ and Ungdom), 3 storage. A repeated type is enrolled once.
    *               applicationProfile:
    *                 type: object
    *                 description: Household and housing reference, as for the client application profile
@@ -120,8 +120,9 @@ export const registerContactsRegistrationRoute = (router: KoaRouter) => {
    *           `application-profile-failed`, `waiting-lists-failed`, `login-setup-failed` (no login or no e-mail;
    *           kundtjänst or the nightly sync creates it), `login-exists` (a login with this personnummer
    *           already existed, so no e-mail was sent; the person logs in or uses "Glömt lösenord") and
-   *           `login-bound-to-other-contact` (that login belongs to another contact and keeps it, so it would
-   *           not show the new one; send the person to kundtjänst).
+   *           `login-bound-to-other-contact` (that login belongs to another live contact and keeps it, so it
+   *           would not show the new one; send the person to kundtjänst). A login bound to a deleted or
+   *           missing contact gives `login-exists`, because login moves it to the new contact.
    *       '200':
    *         description: |
    *           Nothing was created. `content` is `{outcome: "existing"}` (the person can log in) or

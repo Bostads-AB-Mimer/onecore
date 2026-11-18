@@ -218,6 +218,29 @@ describe('POST /auth/contacts/register', () => {
     )
   })
 
+  it('enrols a repeated waiting-list type once', async () => {
+    register.mockResolvedValue({
+      outcome: 'created',
+      contactCode: 'P123456',
+      warnings: [],
+    })
+
+    await post({
+      ...body,
+      waitingLists: [
+        WaitingListType.Housing,
+        WaitingListType.ParkingSpace,
+        WaitingListType.Housing,
+      ],
+    })
+
+    expect(register).toHaveBeenCalledWith(
+      expect.objectContaining({
+        waitingLists: [WaitingListType.Housing, WaitingListType.ParkingSpace],
+      })
+    )
+  })
+
   it.each(['existing', 'inactive'] as const)(
     "answers 200 with outcome '%s' and no contact code",
     async (outcome) => {

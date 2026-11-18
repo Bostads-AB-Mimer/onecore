@@ -25,8 +25,15 @@ export const RegisterContactRequestBodySchema =
     address: CreateContactAddressSchema,
     emailAddress: z.string().email(),
     phoneNumbers: z.array(CreateContactPhoneNumberSchema).max(3).default([]),
-    /** Queue time starts at enrolment, so a queue left out here costs real seniority. */
-    waitingLists: z.array(z.nativeEnum(WaitingListType)).default([]),
+    /**
+     * Queue time starts at enrolment, so a queue left out here costs real seniority. A repeated
+     * type is dropped: enrolling twice in one queue fails the second time, which would report
+     * 'waiting-lists-failed' for a registration that worked.
+     */
+    waitingLists: z
+      .array(z.nativeEnum(WaitingListType))
+      .default([])
+      .transform((types) => [...new Set(types)]),
     applicationProfile: UpdateApplicationProfileRequestParams.optional(),
   })
 
@@ -45,9 +52,10 @@ export const RegistrationWarningSchema = z.enum([
    */
   'login-exists',
   /**
-   * A login with this personnummer already existed but belongs to another contact, which it
-   * keeps, so no e-mail was sent. Logging in would show that contact, not the new one, so the
-   * person needs kundtjänst.
+   * A login with this personnummer already existed but belongs to another live contact, which
+   * it keeps, so no e-mail was sent. Logging in would show that contact, not the new one, so the
+   * person needs kundtjänst. A login bound to a deleted or missing contact gets 'login-exists'
+   * instead, because login moves it to the new contact.
    */
   'login-bound-to-other-contact',
 ])
