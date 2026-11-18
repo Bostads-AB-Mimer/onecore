@@ -18,6 +18,7 @@ export type SendInvoiceEmailFailure =
   | 'no-lease-id'
   | 'lease-not-found'
   | 'no-contact-code'
+  | 'contact-not-on-lease'
   | 'contact-not-found'
   | 'contact-unknown'
   | 'protected-identity'
@@ -109,13 +110,21 @@ const toRecipient = (
   return { ok: true, data: { emailAddress, firstName } }
 }
 
+// Contact codes can differ in case and padding between systems.
+const sameContactCode = (a: string, b: string) =>
+  a.trim().toUpperCase() === b.trim().toUpperCase()
+
 /*
- * Emails a rent notice to the first tenant on its lease, with the PDF that
- * belongs to its OCR number attached. Contact details come from the contacts
- * service; a protected identity that is not revealed is not emailed.
+ * Emails a rent notice to a tenant on its lease, with the PDF that belongs to
+ * its OCR number attached. A rent notice on a shared lease is in every
+ * tenant's ledger, so `recipientContactCode` says which tenant to email; it
+ * must be a tenant on the lease. Without it the first tenant is emailed.
+ * Contact details come from the contacts service; a protected identity that
+ * is not revealed is not emailed.
  */
 export const sendRentNoticeEmail = async (
-  ocr: string
+  ocr: string,
+  recipientContactCode?: string
 ): Promise<SendInvoiceEmailResult> => {
   const [invoiceResult, pdfResult] = await Promise.all([
     economyAdapter.getInvoiceByOcr(ocr),
@@ -145,8 +154,17 @@ export const sendRentNoticeEmail = async (
   const lease = await leasingAdapter.getLease(leaseId)
   if (!lease) return { ok: false, err: 'lease-not-found' }
 
-  const contactCode = lease.tenantContactIds?.[0]
-  if (!contactCode) return { ok: false, err: 'no-contact-code' }
+  const tenantContactCodes = lease.tenantContactIds ?? []
+  if (tenantContactCodes.length === 0) {
+    return { ok: false, err: 'no-contact-code' }
+  }
+
+  const contactCode = recipientContactCode
+    ? tenantContactCodes.find((code) =>
+        sameContactCode(code, recipientContactCode)
+      )
+    : tenantContactCodes[0]
+  if (!contactCode) return { ok: false, err: 'contact-not-on-lease' }
 
   const recipient = toRecipient(
     await tenantAwareContactLookup.getByContactCode(contactCode)
@@ -207,13 +225,19 @@ export const sendMiscellaneousInvoiceEmail = async (
  * the invoice is one passes `knownType` and the rent notice lookup is skipped.
  * `knownType` only saves that lookup: the type the ledger reports still
  * decides whether the invoice is emailed as a miscellaneous invoice.
+ *
+ * `recipientContactCode` picks the tenant a rent notice goes to. A
+ * miscellaneous invoice always goes to the customer it is billed to.
  */
 export const sendInvoiceEmail = async (
   invoiceId: string,
-  knownType?: Invoice['type']
+  options: { knownType?: Invoice['type']; recipientContactCode?: string } = {}
 ): Promise<SendInvoiceEmailResult> => {
-  if (knownType !== 'Other') {
-    const rentNoticeResult = await sendRentNoticeEmail(invoiceId)
+  if (options.knownType !== 'Other') {
+    const rentNoticeResult = await sendRentNoticeEmail(
+      invoiceId,
+      options.recipientContactCode
+    )
     if (rentNoticeResult.ok || rentNoticeResult.err !== 'invoice-not-found') {
       return rentNoticeResult
     }
@@ -251,6 +275,7 @@ export const toSendInvoiceEmailError = (
     case 'no-lease-id':
     case 'lease-not-found':
     case 'no-contact-code':
+    case 'contact-not-on-lease':
     case 'contact-not-found':
     case 'protected-identity':
       return { status: 422, reason: 'no-recipient' }

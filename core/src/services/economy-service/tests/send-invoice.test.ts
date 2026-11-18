@@ -107,8 +107,10 @@ const notInRentSystem = () => {
     .mockResolvedValue({ ok: false, err: 'not-found' })
 }
 
-const send = (invoiceId: string, body?: { invoiceType: unknown }) =>
-  request(app.callback()).post(`/invoices/${invoiceId}/send`).send(body)
+const send = (
+  invoiceId: string,
+  body?: { invoiceType?: unknown; contactCode?: unknown }
+) => request(app.callback()).post(`/invoices/${invoiceId}/send`).send(body)
 
 describe('POST /invoices/:invoiceId/send', () => {
   let sendEmail: jest.SpyInstance
@@ -192,6 +194,41 @@ describe('POST /invoices/:invoiceId/send', () => {
       expect(res.body.reason).toBe('unknown')
       expect(getLedgerInvoice).not.toHaveBeenCalled()
       expect(sendEmail).not.toHaveBeenCalled()
+    })
+
+    describe('on a lease with two tenants', () => {
+      beforeEach(() => {
+        jest.spyOn(leasingAdapter, 'getLease').mockResolvedValue({
+          ...lease,
+          tenantContactIds: ['P174691', 'P200002'],
+        } as unknown as Lease)
+      })
+
+      it('is emailed to the tenant whose ledger it was sent from', async () => {
+        const res = await send(rentNotice.invoiceId, {
+          contactCode: 'p200002 ',
+        })
+
+        expect(res.status).toBe(200)
+        expect(getContact).toHaveBeenCalledWith('P200002')
+        expect(getContact).toHaveBeenCalledTimes(1)
+      })
+
+      it('is emailed to the first tenant when no contact is given', async () => {
+        const res = await send(rentNotice.invoiceId)
+
+        expect(res.status).toBe(200)
+        expect(getContact).toHaveBeenCalledWith('P174691')
+      })
+
+      it('answers 422 no-recipient for a contact that is not a tenant on the lease', async () => {
+        const res = await send(rentNotice.invoiceId, { contactCode: 'P999999' })
+
+        expect(res.status).toBe(422)
+        expect(res.body.reason).toBe('no-recipient')
+        expect(getContact).not.toHaveBeenCalled()
+        expect(sendEmail).not.toHaveBeenCalled()
+      })
     })
 
     it('answers 404 pdf-not-found when there is no rent notice PDF', async () => {
@@ -313,6 +350,16 @@ describe('POST /invoices/:invoiceId/send', () => {
       expect(sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({ invoiceNumber: '1234567' })
       )
+    })
+
+    it('is emailed to the customer it is billed to, whatever contact is given', async () => {
+      const res = await send(miscellaneousInvoice.invoiceId, {
+        invoiceType: 'Other',
+        contactCode: 'P999999',
+      })
+
+      expect(res.status).toBe(200)
+      expect(getContact).toHaveBeenCalledWith('P174691')
     })
 
     it('answers 404 pdf-not-found when the ledger has no file', async () => {

@@ -10,10 +10,15 @@ export type { SendInvoiceError }
 
 // Emailing an invoice changes no data the app shows, so nothing is invalidated.
 export const useSendInvoiceToCustomer = () =>
-  useMutation<void, SendInvoiceError, Invoice>({
-    mutationFn: (invoice) =>
+  useMutation<
+    void,
+    SendInvoiceError,
+    { invoice: Invoice; contactCode?: string }
+  >({
+    mutationFn: ({ invoice, contactCode }) =>
       economyService.sendInvoiceToCustomer({
         invoiceId: invoice.invoiceId,
         invoiceType: invoice.type,
+        contactCode,
       }),
   })

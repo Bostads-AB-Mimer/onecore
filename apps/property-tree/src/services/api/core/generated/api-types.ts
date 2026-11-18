@@ -8881,7 +8881,8 @@ export interface paths {
     /**
      * Email an invoice to the customer
      * @description Emails the invoice with its PDF attached. A rent notice goes to the
-     * first tenant on its lease with the rent notice PDF. A miscellaneous
+     * tenant given as contactCode, or the first tenant on its lease, with
+     * the rent notice PDF. A miscellaneous
      * invoice goes to the customer it is billed to with the PDF from the
      * ledger. Outside production the email goes to the test inbox.
      */
@@ -8900,6 +8901,8 @@ export interface paths {
              * @enum {string}
              */
             invoiceType?: 'Regular' | 'Other'
+            /** @description The tenant a rent notice is emailed to, for a lease with several tenants. Must be a tenant on the lease. Without it the first tenant is emailed. Not used for a miscellaneous invoice. */
+            contactCode?: string
           }
         }
       }

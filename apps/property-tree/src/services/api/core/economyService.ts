@@ -283,14 +283,17 @@ async function getInvoicePdf(invoiceId: string): Promise<Blob | null> {
 
 export type SendInvoiceError = components['schemas']['SendInvoiceEmailError']
 
-// invoiceType lets core skip the rent notice lookup for a miscellaneous invoice.
+// invoiceType lets core skip the rent notice lookup for a miscellaneous
+// invoice. contactCode is the contact whose ledger the invoice is sent from,
+// so a rent notice on a shared lease goes to that tenant.
 async function sendInvoiceToCustomer(params: {
   invoiceId: string
   invoiceType: Invoice['type']
+  contactCode?: string
 }): Promise<void> {
   const { error, response } = await POST('/invoices/{invoiceId}/send', {
     params: { path: { invoiceId: params.invoiceId } },
-    body: { invoiceType: params.invoiceType },
+    body: { invoiceType: params.invoiceType, contactCode: params.contactCode },
   })
 
   // Branch on the raw status: a failed response without a body has no

@@ -36,6 +36,10 @@ export const SendInvoiceEmailRequestSchema = z.object({
   // The invoice's type, when the caller already knows it. A miscellaneous
   // invoice ('Other') is never a rent notice, so core skips that lookup.
   invoiceType: z.enum(['Regular', 'Other']).optional(),
+  // The contact whose ledger the invoice is sent from. A rent notice on a
+  // shared lease is in every tenant's ledger; this picks which of them gets
+  // the email. Without it the first tenant on the lease does.
+  contactCode: z.string().trim().min(1).optional(),
 })
 
 export const XledgerDeferralRequestSchema = z.object({

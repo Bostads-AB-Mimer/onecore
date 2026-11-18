@@ -384,7 +384,10 @@ export const InvoicesTable = (props: Props) => {
             </Button>
           )}
           <InvoicePdfDownloadButton invoice={invoice} />
-          <InvoiceSendButton invoice={invoice} />
+          <InvoiceSendButton
+            invoice={invoice}
+            contactCode={props.contactCode}
+          />
         </div>
         {props.contactCode && (
           <InvoiceDeferralAction
