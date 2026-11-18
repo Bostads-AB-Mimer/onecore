@@ -821,16 +821,24 @@ export const setGracePeriod = async (params: {
 }
 
 // Tenfast's error bodies are not documented: take its message when there is
-// one, and fall back to the raw body so the reason is never lost.
+// one. The reason is logged and emailed, so never fall back to the raw body
+// (DEV-128) and cap its length in case Tenfast sends a whole page as text.
 const TenfastErrorBodySchema = z.union([
-  z.object({ message: z.string() }).transform((body) => body.message),
-  z.object({ error: z.string() }).transform((body) => body.error),
+  z.object({ message: z.string().min(1) }).transform((body) => body.message),
+  z.object({ error: z.string().min(1) }).transform((body) => body.error),
   z.string().min(1),
 ])
 
-const tenfastErrorReason = (data: unknown): string => {
+const MAX_TENFAST_REASON_LENGTH = 200
+
+const tenfastErrorReason = (data: unknown, status: number): string => {
   const parsed = TenfastErrorBodySchema.safeParse(data)
-  return parsed.success ? parsed.data : (JSON.stringify(data) ?? '')
+  if (!parsed.success) {
+    return `Tenfast responded with HTTP ${status}`
+  }
+  return parsed.data.length > MAX_TENFAST_REASON_LENGTH
+    ? `${parsed.data.slice(0, MAX_TENFAST_REASON_LENGTH)}…`
+    : parsed.data
 }
 
 export type RecordPaymentError =
@@ -885,7 +893,7 @@ export const recordPaymentForInvoice = async (params: {
     // voided invoice (400) or a payment date in a locked accounting period
     // (403). The caller decides whether to skip the payment.
     if (res.status === 400 || res.status === 403) {
-      const reason = tenfastErrorReason(res.data)
+      const reason = tenfastErrorReason(res.data, res.status)
       logger.warn(
         { ocr: params.ocr, status: res.status, reason },
         'tenfast-adapter.recordPaymentForInvoice: payment rejected by Tenfast'

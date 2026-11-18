@@ -1398,7 +1398,11 @@ describe(recordPaymentForInvoice, () => {
       'Accounting period is locked',
     ],
     [400, 'Bad request', 'Bad request'],
-    [403, { code: 42 }, '{"code":42}'],
+    // Never the raw body: it is logged and emailed (DEV-128).
+    [403, { code: 42 }, 'Tenfast responded with HTTP 403'],
+    [400, { message: '' }, 'Tenfast responded with HTTP 400'],
+    [400, '', 'Tenfast responded with HTTP 400'],
+    [400, 'x'.repeat(250), `${'x'.repeat(200)}…`],
   ])(
     'returns payment-rejected with the reason when transaction POST returns %i',
     async (status, data, reason) => {
