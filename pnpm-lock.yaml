@@ -362,6 +362,8 @@ importers:
         specifier: 0.25.6
         version: 0.25.6(@vitest/ui@0.25.6)(jsdom@20.0.3)
 
+  apps/keycloak-bankid-provider: {}
+
   apps/keycloak-theme:
     devDependencies:
       '@eslint/js':

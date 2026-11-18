@@ -63,7 +63,9 @@ should list the proxy, so that a client-sent `X-Forwarded-For` is not taken as i
 
 ## Build and test
 
-Maven in Docker, so no local Java is needed:
+Maven runs in Docker, so no local Java is needed. `pnpm run --filter @onecore/keycloak-bankid-provider`
+with `build`, `test` or `test:e2e` (= `local/run.sh`); `lint`, `prettier` and `typecheck` are
+no-ops for CI. By hand:
 
 ```sh
 docker run --rm -v "$PWD":/src -v keycloak-bankid-provider-m2:/root/.m2 -w /src \
@@ -93,3 +95,10 @@ open. `local/run.sh down` stops it and deletes the local copies of the secrets.
 
 `keycloak.version` in `pom.xml` must match the cluster's Keycloak. Rebuild and rerun
 `local/run.sh` on every Keycloak upgrade: the broker SPI is not a stable public API.
+
+## Image
+
+CI builds `ghcr.io/bostads-ab-mimer/onecore/keycloak-bankid-provider` from `Dockerfile` (repo root
+as context), like `apps/keycloak-theme`. The image holds only `/provider/mimer-bankid-provider.jar`
+and runs as user 1001; used as an init container, its default command copies the JAR into
+`/providers/`. The image build runs the unit tests.
