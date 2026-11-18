@@ -1037,6 +1037,34 @@ describe('tenfast-lease-search-adapter', () => {
       expect(result).toHaveLength(1)
       expect(result[0].parkingSpaceType).toBeUndefined()
     })
+
+    it('includes every housing lease when Bostad is combined with a parkingSpaceType that resolves to no rental objects, same as searchLeases', async () => {
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('bostad-lease-1', { rentalObjectCode: 'ROC-001' }),
+        makeLeaseResult('bostad-lease-2', { rentalObjectCode: 'ROC-002' }),
+        makeLeaseResult('parkering-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-200',
+        }),
+      ])
+      // Default from beforeEach already resolves to an empty Map for both
+      // the filtered (filter) and unfiltered (export column) lookups.
+
+      const result = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+        {
+          objectType: ['bostad'],
+          parkingSpaceType: ['__company-999-only__'],
+          page: 1,
+          limit: 500,
+        },
+        mockCtx
+      )
+
+      expect(result).toHaveLength(2)
+      const ids = result.map((l) => l.leaseId)
+      expect(ids).toContain('bostad-lease-1')
+      expect(ids).toContain('bostad-lease-2')
+    })
   })
 
   describe('fetchContactsForLeaseSearch', () => {
@@ -1185,6 +1213,32 @@ describe('tenfast-lease-search-adapter', () => {
         )
 
       expect(contacts).toEqual([])
+    })
+
+    it('includes contacts from every housing lease when Bostad is combined with a parkingSpaceType that resolves to no rental objects, same as searchLeases', async () => {
+      mockedGetParkingSpaceTypesByRentalObjectCode.mockResolvedValue(new Map())
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('bostad-lease-1', {
+          rentalObjectCode: 'ROC-001',
+          contacts: [contact('P000001', 'Anna')],
+        }),
+        makeLeaseResult('bostad-lease-2', {
+          rentalObjectCode: 'ROC-002',
+          contacts: [contact('P000002', 'Bob')],
+        }),
+        makeLeaseResult('parkering-lease', {
+          objectTypeCode: 'Parkering',
+          rentalObjectCode: 'ROC-200',
+          contacts: [contact('P000003', 'Cecilia')],
+        }),
+      ])
+
+      const selectAll = await contactCodesForSelectAll({
+        objectType: ['bostad'],
+        parkingSpaceType: ['__company-999-only__'],
+      })
+
+      expect(selectAll).toEqual(['P000001', 'P000002'])
     })
 
     it('throws 503 when the cache is empty and does not warm up in time, same as searchLeases', async () => {
