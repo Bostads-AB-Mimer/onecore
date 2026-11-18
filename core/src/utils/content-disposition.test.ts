@@ -21,6 +21,22 @@ describe(filenameFromContentDisposition, () => {
     ).toBe('a.pdf')
   })
 
+  it('restores a UTF-8 filename that was read as latin1', () => {
+    const asReadByNode = Buffer.from('Hyresavi Västerås.pdf', 'utf8').toString(
+      'latin1'
+    )
+
+    expect(
+      filenameFromContentDisposition(`attachment; filename=${asReadByNode}`)
+    ).toBe('Hyresavi Västerås.pdf')
+  })
+
+  it('keeps a filename that really is latin1', () => {
+    expect(
+      filenameFromContentDisposition('attachment; filename=Västerås.pdf')
+    ).toBe('Västerås.pdf')
+  })
+
   it('returns undefined without a filename', () => {
     expect(filenameFromContentDisposition('attachment')).toBeUndefined()
     expect(filenameFromContentDisposition('')).toBeUndefined()

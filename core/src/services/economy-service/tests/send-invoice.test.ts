@@ -97,6 +97,16 @@ const individual = (
     },
   }) as unknown as Contact
 
+// The rent system has no invoice with this number.
+const notInRentSystem = () => {
+  jest
+    .spyOn(economyAdapter, 'getInvoiceByOcr')
+    .mockResolvedValue({ ok: false, err: 'not-found' })
+  jest
+    .spyOn(economyAdapter, 'getInvoicePdf')
+    .mockResolvedValue({ ok: false, err: 'not-found' })
+}
+
 const send = (invoiceId: string) =>
   request(app.callback()).post(`/invoices/${invoiceId}/send`)
 
@@ -115,9 +125,6 @@ describe('POST /invoices/:invoiceId/send', () => {
     let getContact: jest.SpyInstance
 
     beforeEach(() => {
-      jest
-        .spyOn(economyAdapter, 'getInvoiceByInvoiceId')
-        .mockResolvedValue({ ok: true, data: rentNotice })
       jest
         .spyOn(economyAdapter, 'getInvoiceByOcr')
         .mockResolvedValue({ ok: true, data: rentNotice })
@@ -155,6 +162,36 @@ describe('POST /invoices/:invoiceId/send', () => {
           ],
         })
       )
+    })
+
+    it('is emailed without a ledger lookup, so it works before the rent notice reaches the ledger', async () => {
+      const getLedgerInvoice = jest.spyOn(
+        economyAdapter,
+        'getInvoiceByInvoiceId'
+      )
+
+      const res = await send(rentNotice.invoiceId)
+
+      expect(res.status).toBe(200)
+      expect(getLedgerInvoice).not.toHaveBeenCalled()
+      expect(economyAdapter.getInvoiceByOcr).toHaveBeenCalledTimes(1)
+    })
+
+    it('answers 500 unknown without a ledger lookup when the rent notice lookup fails', async () => {
+      jest
+        .spyOn(economyAdapter, 'getInvoiceByOcr')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+      const getLedgerInvoice = jest.spyOn(
+        economyAdapter,
+        'getInvoiceByInvoiceId'
+      )
+
+      const res = await send(rentNotice.invoiceId)
+
+      expect(res.status).toBe(500)
+      expect(res.body.reason).toBe('unknown')
+      expect(getLedgerInvoice).not.toHaveBeenCalled()
+      expect(sendEmail).not.toHaveBeenCalled()
     })
 
     it('answers 404 pdf-not-found when there is no rent notice PDF', async () => {
@@ -233,6 +270,7 @@ describe('POST /invoices/:invoiceId/send', () => {
     let getContact: jest.SpyInstance
 
     beforeEach(() => {
+      notInRentSystem()
       jest
         .spyOn(economyAdapter, 'getInvoiceByInvoiceId')
         .mockResolvedValue({ ok: true, data: miscellaneousInvoice })
@@ -262,14 +300,6 @@ describe('POST /invoices/:invoiceId/send', () => {
           ],
         })
       )
-    })
-
-    it('does not look up the rent notice', async () => {
-      const getInvoicePdf = jest.spyOn(economyAdapter, 'getInvoicePdf')
-
-      await send(miscellaneousInvoice.invoiceId)
-
-      expect(getInvoicePdf).not.toHaveBeenCalled()
     })
 
     it('answers 404 pdf-not-found when the ledger has no file', async () => {
@@ -325,7 +355,21 @@ describe('POST /invoices/:invoiceId/send', () => {
     })
   })
 
+  it('answers 404 pdf-not-found for a rent notice that is only in the ledger', async () => {
+    notInRentSystem()
+    jest
+      .spyOn(economyAdapter, 'getInvoiceByInvoiceId')
+      .mockResolvedValue({ ok: true, data: rentNotice })
+
+    const res = await send(rentNotice.invoiceId)
+
+    expect(res.status).toBe(404)
+    expect(res.body.reason).toBe('pdf-not-found')
+    expect(sendEmail).not.toHaveBeenCalled()
+  })
+
   it('answers 404 invoice-not-found for an unknown invoice', async () => {
+    notInRentSystem()
     jest
       .spyOn(economyAdapter, 'getInvoiceByInvoiceId')
       .mockResolvedValue({ ok: false, err: 'not-found' })

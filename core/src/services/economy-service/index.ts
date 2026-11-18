@@ -17,7 +17,7 @@ import config from '../../common/config'
 import { filenameFromContentDisposition } from '../../utils/content-disposition'
 import {
   SendInvoiceEmailFailure,
-  sendMiscellaneousInvoiceEmail,
+  sendInvoiceEmail,
   sendRentNoticeEmail,
   toNotifyBatchError,
   toSendInvoiceEmailError,
@@ -581,22 +581,7 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const invoiceResult =
-        await economyAdapter.getInvoiceByInvoiceId(invoiceId)
-      if (!invoiceResult.ok) {
-        return fail(
-          invoiceResult.err === 'not-found'
-            ? 'invoice-not-found'
-            : 'invoice-unknown'
-        )
-      }
-
-      const invoice = invoiceResult.data
-      const result =
-        invoice.type === 'Other'
-          ? await sendMiscellaneousInvoiceEmail(invoice)
-          : await sendRentNoticeEmail(invoiceId)
-
+      const result = await sendInvoiceEmail(invoiceId)
       if (!result.ok) return fail(result.err)
 
       ctx.status = 200
@@ -618,7 +603,7 @@ export const routes = (router: KoaRouter) => {
    *     tags:
    *       - Economy service
    *     summary: Send invoice notification emails for a selection of invoices
-   *     description: For each OCR number, fetches invoice data and PDF from economy, contact info from leasing, then sends a notification email with the invoice PDF attached.
+   *     description: For each OCR number, fetches invoice data and PDF from economy, the lease from leasing and the tenant's contact info from the contacts service, then sends a notification email with the invoice PDF attached.
    *     requestBody:
    *       required: true
    *       content:
@@ -659,7 +644,7 @@ export const routes = (router: KoaRouter) => {
    *                             type: string
    *                           error:
    *                             type: string
-   *                             description: not-found, unknown, pdf-not-found, pdf-unknown, no-lease-id, lease-not-found, no-contact-code, no-email or missing-expiration-date
+   *                             description: not-found, unknown, pdf-not-found, pdf-unknown, no-lease-id, lease-not-found, no-contact-code, protected-identity, no-email or missing-expiration-date
    *                     totalSent:
    *                       type: number
    *                     totalFailed:

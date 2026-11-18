@@ -15,35 +15,36 @@ Outside production every email goes to `config.emailAddresses.tenantDefault`.
 
 ```mermaid
 flowchart TD
-    A[POST /invoices/:invoiceId/send] --> B[economy GET /invoices/:invoiceId]
-    B -->|404| E404I[404 invoice-not-found]
-    B -->|error| E500[500 unknown]
-    B --> C{invoice.type}
-
-    C -->|Other: miscellaneous invoice| M1[In parallel: contacts service lookup of invoice.reference<br/>and economy GET /invoices/:invoiceId/file]
-    M1 -->|file: invoice or file missing| E404P[404 pdf-not-found / invoice-not-found]
-    M1 -->|file: download failed| E500
-    M1 -->|contact not found| E422R[422 no-recipient]
-    M1 -->|contact lookup failed| E500
-    M1 -->|protected identity still redacted| E422R
-    M1 -->|no email address| E422E[422 no-email]
-    M1 --> S
-
-    C -->|Regular: rent notice| R1[In parallel: economy GET /invoices/by-ocr/:ocr<br/>and GET /invoices/:ocr/pdf]
-    R1 -->|invoice or PDF missing| E404P
-    R1 -->|error| E500
-    R1 --> R2[First lease id → leasing getLease → first tenant<br/>→ contacts service lookup of the tenant]
-    R2 -->|no lease id / lease / tenant / contact| E422R
+    A[POST /invoices/:invoiceId/send] --> R1[In parallel: economy GET /invoices/by-ocr/:invoiceId<br/>and GET /invoices/:invoiceId/pdf]
+    R1 -->|rent notice found, PDF missing| E404P[404 pdf-not-found]
+    R1 -->|error| E500[500 unknown]
+    R1 -->|rent notice found| R2[First lease id → leasing getLease → first tenant<br/>→ contacts service lookup of the tenant]
+    R2 -->|no lease id / lease / tenant / contact| E422R[422 no-recipient]
     R2 -->|contact lookup failed| E500
     R2 -->|protected identity still redacted| E422R
-    R2 -->|no email address| E422E
+    R2 -->|no email address| E422E[422 no-email]
     R2 --> S
+
+    R1 -->|not a rent notice in the rent system| B[economy GET /invoices/:invoiceId]
+    B -->|404| E404I[404 invoice-not-found]
+    B -->|error| E500
+    B -->|Regular: rent notice from the old system| E404P
+    B -->|Other: miscellaneous invoice| M1[In parallel: contacts service lookup of invoice.reference<br/>and economy GET /invoices/:invoiceId/file]
+    M1 -->|file: invoice or file missing| E404F[404 pdf-not-found / invoice-not-found]
+    M1 -->|file: download failed| E500
+    M1 -->|contact not found| E422R
+    M1 -->|contact lookup failed| E500
+    M1 -->|protected identity still redacted| E422R
+    M1 -->|no email address| E422E
+    M1 --> S
 
     S{expirationDate?} -->|missing| E422D[422 missing-due-date]
     S --> T[communication send-invoice-notification-email<br/>with faktura-invoiceId.pdf attached]
     T -->|failed| E500S[500 send-failed]
     T --> OK[200 sent: true]
 ```
+
+The rent system is asked first (`sendInvoiceEmail`): a rent notice is there before it reaches the ledger, and that one lookup returns everything the email needs. The ledger is only asked about invoices the rent system does not have.
 
 404 and 422 are logged at `warn` by the route. 500s are logged by the adapter that failed.
 

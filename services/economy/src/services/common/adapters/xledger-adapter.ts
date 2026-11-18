@@ -1397,15 +1397,22 @@ export async function getInvoiceFile(
 ): Promise<
   AdapterResult<Buffer, 'invoice-not-found' | 'file-not-found' | 'unknown'>
 > {
+  let parsed: ParsedXledgerInvoice | null
   try {
-    const parsed = await getInvoiceByInvoiceNumber(invoiceNumber)
-    if (!parsed) return { ok: false, err: 'invoice-not-found' }
+    parsed = await getInvoiceByInvoiceNumber(invoiceNumber)
+  } catch {
+    // getInvoiceByInvoiceNumber has already logged the failure.
+    return { ok: false, err: 'unknown' }
+  }
+  if (!parsed) return { ok: false, err: 'invoice-not-found' }
 
-    const fileUrl = parsed.invoice.invoiceFileUrl
-    if (!fileUrl) return { ok: false, err: 'file-not-found' }
+  const fileUrl = parsed.invoice.invoiceFileUrl
+  if (!fileUrl) return { ok: false, err: 'file-not-found' }
 
+  try {
     const response = await axios.get(fileUrl, {
       responseType: 'arraybuffer',
+      timeout: xledgerRequestPolicy.timeoutMs,
       validateStatus: () => true,
     })
 

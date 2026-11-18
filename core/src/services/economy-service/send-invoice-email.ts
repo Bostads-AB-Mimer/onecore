@@ -197,6 +197,40 @@ export const sendMiscellaneousInvoiceEmail = async (
   })
 }
 
+/*
+ * Emails one invoice of either kind. The rent notice lookup goes first: a rent
+ * notice exists in the rent system before it reaches the ledger, and that
+ * lookup already returns everything the email needs. Only an invoice the rent
+ * system does not know is looked up in the ledger.
+ */
+export const sendInvoiceEmail = async (
+  invoiceId: string
+): Promise<SendInvoiceEmailResult> => {
+  const rentNoticeResult = await sendRentNoticeEmail(invoiceId)
+  if (rentNoticeResult.ok || rentNoticeResult.err !== 'invoice-not-found') {
+    return rentNoticeResult
+  }
+
+  const invoiceResult = await economyAdapter.getInvoiceByInvoiceId(invoiceId)
+  if (!invoiceResult.ok) {
+    return {
+      ok: false,
+      err:
+        invoiceResult.err === 'not-found'
+          ? 'invoice-not-found'
+          : 'invoice-unknown',
+    }
+  }
+
+  // A rent notice that is only in the ledger comes from the old rent system
+  // and has no PDF.
+  if (invoiceResult.data.type !== 'Other') {
+    return { ok: false, err: 'pdf-not-found' }
+  }
+
+  return sendMiscellaneousInvoiceEmail(invoiceResult.data)
+}
+
 /** The status and public reason the send route answers with for a failure. */
 export const toSendInvoiceEmailError = (
   failure: SendInvoiceEmailFailure
