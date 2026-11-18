@@ -4,7 +4,6 @@ import static nu.mimer.keycloak.bankid.TransactionCheck.Outcome.ACCEPTED;
 import static nu.mimer.keycloak.bankid.TransactionCheck.Outcome.CANCELLED;
 import static nu.mimer.keycloak.bankid.TransactionCheck.Outcome.REJECTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,6 +49,7 @@ class TransactionCheckTest {
     void cancelIsCancelled() throws Exception {
         assertEquals(CANCELLED, TransactionCheck.evaluate(tx("Auth", "Cancelled", null, null)));
         assertEquals(CANCELLED, TransactionCheck.evaluate(tx("Auth", "Failed", "UserCancel", null)));
+        assertEquals(CANCELLED, TransactionCheck.evaluate(tx("Auth", "Failed", "userCancel", null)));
     }
 
     @Test
@@ -57,6 +57,5 @@ class TransactionCheckTest {
         String url = MimerBankIdIdentityProvider.returnUrl(
                 "https://auth.dev.mimer.nu/realms/mimer-contacts/broker/bankid/endpoint", "abc.def-ghi_jkl");
         assertEquals("https://auth.dev.mimer.nu/realms/mimer-contacts/broker/bankid/endpoint/return?state=abc.def-ghi_jkl", url);
-        assertTrue(url.contains("/broker/bankid/endpoint"));
     }
 }

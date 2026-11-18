@@ -40,10 +40,10 @@ public class MimerBankIdIdentityProviderFactory
                 .property().name("tokenUrl").label("Entra token URL").type(ProviderConfigProperty.STRING_TYPE).add()
                 .property().name("clientId").label("Client id").type(ProviderConfigProperty.STRING_TYPE).add()
                 .property().name("clientSecret").label("Client secret")
-                    .helpText("Use ${vault.<key>}").type(ProviderConfigProperty.PASSWORD).secret(true).add()
+                    .helpText("Must be ${vault.<key>}").type(ProviderConfigProperty.PASSWORD).secret(true).add()
                 .property().name("scope").label("Scope").type(ProviderConfigProperty.STRING_TYPE).add()
                 .property().name("apimKey").label("APIM subscription key")
-                    .helpText("Use ${vault.<key>}").type(ProviderConfigProperty.PASSWORD).secret(true).add()
+                    .helpText("Must be ${vault.<key>}").type(ProviderConfigProperty.PASSWORD).secret(true).add()
                 .build();
     }
 }

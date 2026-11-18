@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Local checks of the plugin on the same Keycloak image and mode as auth.dev.mimer.nu.
 #
-#   ./run.sh                 mock: nine login cases against a stand-in for Entra + Mimer BankID
+#   ./run.sh                 mock: twelve login cases and a config check against a stand-in for Entra + Mimer BankID
 #                            (mock/server.mjs) on two clustered nodes, then remove everything
 #   ./run.sh --keep          same, but leave Keycloak (http://localhost:18081, admin/admin) and the mock running
 #   ./run.sh real <pnr>      one real BankID login against Mimer BankID TEST; prints a URL to open
@@ -13,9 +13,9 @@
 #
 # Real mode needs a test BankID (demo.bankid.com) for <pnr> in the BankID app's test mode, and
 # reads the Mimer BankID TEST settings (read-only) from the webapi secret in the epic environment.
-# Those are Mina sidor's client; Keycloak's own client is used by overriding the three below:
+# Those are Mina sidor's client; Keycloak's own client is used by overriding BANKID_CLIENT_ID and the files below:
 #   BANKID_KUBE_CONTEXT    default onecore-dev
-#   BANKID_KUBE_NAMESPACE  default epic-mim-2086
+#   BANKID_KUBE_NAMESPACE  required: the epic environment's namespace (epic-<epic key>)
 #   BANKID_CLIENT_ID       Entra client id; default: the cluster's BankIdConfiguration__ClientId
 #   BANKID_SECRET_FILE     default ~/.config/mimer/bankid-test-client-secret; when it exists, the client
 #                          secret comes from this file instead of the cluster
@@ -64,13 +64,16 @@ done
 trap 'status=$?; [[ $KEEP == 1 && $status == 0 ]] || down' EXIT
 
 mkdir -p vault && chmod 700 vault
+# Docker Desktop (macOS) ignores host permissions on mounts; native Docker on Linux does not, and
+# Keycloak runs as uid 1001 there. Let it through the directory, without listing it, to the files below.
+if [[ $(uname) == Linux ]]; then chmod 711 vault; fi
 # Keycloak's file vault reads ${vault.<key>} from <realm>_<key>.
 SECRET_VAULT=vault/mimer-contacts_bankid-client-secret
 APIM_VAULT=vault/mimer-contacts_bankid-apim-key
 
 if [[ $MODE == real ]]; then
   CTX=${BANKID_KUBE_CONTEXT:-onecore-dev}
-  NS=${BANKID_KUBE_NAMESPACE:-epic-mim-2086}
+  NS=${BANKID_KUBE_NAMESPACE:?set BANKID_KUBE_NAMESPACE to the epic environment namespace, e.g. epic-<epic key>}
   SECRET_FILE=${BANKID_SECRET_FILE:-$HOME/.config/mimer/bankid-test-client-secret}
   APIM_KEY_FILE=${BANKID_APIM_KEY_FILE:-$HOME/.config/mimer/bankid-test-apim-key}
   val() { kubectl --context "$CTX" -n "$NS" get secret webapi-secrets -o "jsonpath={.data.BankIdConfiguration__$1}" | base64 -d; }
@@ -222,7 +225,15 @@ fi
 
 api POST /mimer-contacts/users '{"username":"199001011234","enabled":true}'
 echo
+
+# Saving the provider with a plaintext secret must be refused (MimerBankIdConfig.validate)
+code=$(curl -s -o /dev/null -w '%{http_code}' "${auth[@]}" -X POST $K/admin/realms/mimer-contacts/identity-provider/instances \
+  -d '{"alias":"bankid-plaintext","providerId":"mimer-bankid","config":{"gatewayUrl":"http://x/api/","tokenUrl":"http://x/token","clientId":"c","scope":"s","clientSecret":"plaintext","apimKey":"${vault.bankid-apim-key}"}}')
+validate_ok=$([[ $code == 400 ]] && echo PASS || echo FAIL)
+echo "$validate_ok plaintext secret refused on save: HTTP $code"
+
 python3 -I drive.py
+[[ $validate_ok == PASS ]] || exit 1
 
 if [[ $KEEP == 1 ]]; then
   echo

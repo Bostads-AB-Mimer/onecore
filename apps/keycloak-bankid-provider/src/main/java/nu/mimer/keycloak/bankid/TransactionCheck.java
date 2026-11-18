@@ -19,7 +19,8 @@ public final class TransactionCheck {
         }
         String status = tx.path("status").asText("");
         String hint = tx.path("processingInfo").path("hintCode").asText("");
-        if ("Cancelled".equals(status) || ("Failed".equals(status) && "UserCancel".equals(hint))) {
+        // BankID's own hint codes are camelCase (userCancel); accept either casing.
+        if ("Cancelled".equals(status) || ("Failed".equals(status) && "userCancel".equalsIgnoreCase(hint))) {
             return Outcome.CANCELLED;
         }
         if (!"Auth".equals(tx.path("method").asText(""))) {

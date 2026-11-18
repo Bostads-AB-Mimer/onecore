@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -13,7 +14,10 @@ import org.keycloak.broker.provider.AbstractIdentityProvider;
 import org.keycloak.broker.provider.AuthenticationRequest;
 import org.keycloak.broker.provider.BrokeredIdentityContext;
 import org.keycloak.broker.provider.IdentityProvider;
+import org.keycloak.events.Errors;
 import org.keycloak.events.EventBuilder;
+import org.keycloak.events.EventType;
+import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.FederatedIdentityModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -34,6 +38,9 @@ public class MimerBankIdIdentityProvider extends AbstractIdentityProvider<MimerB
     static final String NOTE_TX = "mimer-bankid.transaction-id";
     /** Message key in the login theme. */
     static final String LOGIN_FAILED = "bankidLoginFailed";
+    /** Keycloak's own message keys, the same ones its OAuth2 brokers show for these cases. */
+    static final String MISSING_STATE = "identityProviderMissingStateMessage";
+    static final String UNEXPECTED_ERROR = "identityProviderUnexpectedErrorMessage";
     private static final Logger LOG = Logger.getLogger(MimerBankIdIdentityProvider.class);
 
     public MimerBankIdIdentityProvider(KeycloakSession session, MimerBankIdConfig config) {
@@ -48,12 +55,21 @@ public class MimerBankIdIdentityProvider extends AbstractIdentityProvider<MimerB
         return brokerEndpoint + "/return?state=" + URLEncoder.encode(encodedState, StandardCharsets.UTF_8);
     }
 
+    /** Exception type and message for a log line; a bare NPE message is just "null". */
+    static String describe(Exception e) {
+        return e.getClass().getSimpleName() + (e.getMessage() == null ? "" : ": " + e.getMessage());
+    }
+
+    MimerBankIdClient client() {
+        return new MimerBankIdClient(session, getConfig());
+    }
+
     @Override
     public Response performLogin(AuthenticationRequest request) {
         String endUserIp = session.getContext().getConnection().getRemoteAddr();
         String returnTo = returnUrl(request.getRedirectUri(), request.getState().getEncoded());
         try {
-            MimerBankIdClient.Created tx = new MimerBankIdClient(session, getConfig()).createAuth(endUserIp, returnTo);
+            MimerBankIdClient.Created tx = client().createAuth(endUserIp, returnTo);
             request.getAuthenticationSession().setAuthNote(NOTE_TX, tx.id());
             LOG.debugf("Created Mimer BankID transaction %s", tx.id());
             return Response.seeOther(URI.create(tx.accessUrl())).build();
@@ -61,7 +77,7 @@ public class MimerBankIdIdentityProvider extends AbstractIdentityProvider<MimerB
             // Throwing here would end on Keycloak's "could not send authentication request" page.
             // Going through our own return endpoint without a transaction ends in callback.error
             // instead, which puts the user back on the login page with our message.
-            LOG.warnf("Could not create Mimer BankID transaction: %s", e.getMessage());
+            LOG.warnf("Could not create Mimer BankID transaction: %s", describe(e));
             request.getAuthenticationSession().removeAuthNote(NOTE_TX);
             return Response.seeOther(URI.create(returnTo)).build();
         }
@@ -69,7 +85,7 @@ public class MimerBankIdIdentityProvider extends AbstractIdentityProvider<MimerB
 
     @Override
     public Object callback(RealmModel realm, IdentityProvider.AuthenticationCallback callback, EventBuilder event) {
-        return new Endpoint(this, callback);
+        return new Endpoint(this, callback, event);
     }
 
     @Override
@@ -80,18 +96,48 @@ public class MimerBankIdIdentityProvider extends AbstractIdentityProvider<MimerB
     public static class Endpoint {
         private final MimerBankIdIdentityProvider provider;
         private final IdentityProvider.AuthenticationCallback callback;
+        private final EventBuilder event;
 
-        Endpoint(MimerBankIdIdentityProvider provider, IdentityProvider.AuthenticationCallback callback) {
+        Endpoint(MimerBankIdIdentityProvider provider, IdentityProvider.AuthenticationCallback callback, EventBuilder event) {
             this.provider = provider;
             this.callback = callback;
+            this.event = event;
         }
 
+        /**
+         * Error handling mirrors Keycloak's own OAuth2 broker endpoint: Keycloak's answers for a stale,
+         * reused or already finished login pass through as they are (an expired page, or a redirect back
+         * to the app), anything unexpected ends on an error page instead of a raw 500.
+         */
         @GET
         @Path("/return")
         public Response back(@QueryParam("state") String state, @QueryParam("transaction_id") String transactionId) {
-            // Throws a Keycloak error page itself when state is missing, stale or from another browser.
-            AuthenticationSessionModel authSession = callback.getAndVerifyAuthenticationSession(state);
+            if (state == null) {
+                LOG.warn("Mimer BankID return without state");
+                return errorPage(MISSING_STATE);
+            }
+            AuthenticationSessionModel authSession;
+            try {
+                authSession = callback.getAndVerifyAuthenticationSession(state);
+            } catch (WebApplicationException e) {
+                return e.getResponse();
+            } catch (RuntimeException e) {
+                // e.g. a state that is not base64url
+                LOG.warnf("Mimer BankID return with an unreadable state: %s", describe(e));
+                return errorPage(UNEXPECTED_ERROR);
+            }
+            provider.session.getContext().setAuthenticationSession(authSession);
+            try {
+                return finish(authSession, transactionId);
+            } catch (WebApplicationException e) {
+                return e.getResponse();
+            } catch (RuntimeException e) {
+                LOG.error("Mimer BankID return failed", e);
+                return errorPage(UNEXPECTED_ERROR);
+            }
+        }
 
+        private Response finish(AuthenticationSessionModel authSession, String transactionId) {
             // One use per transaction: the note goes whatever happens next.
             String expected = authSession.getAuthNote(NOTE_TX);
             authSession.removeAuthNote(NOTE_TX);
@@ -106,9 +152,9 @@ public class MimerBankIdIdentityProvider extends AbstractIdentityProvider<MimerB
 
             JsonNode tx;
             try {
-                tx = new MimerBankIdClient(provider.session, provider.getConfig()).get(transactionId);
+                tx = provider.client().get(transactionId);
             } catch (Exception e) {
-                LOG.warnf("Could not read Mimer BankID transaction %s: %s", transactionId, e.getMessage());
+                LOG.warnf("Could not read Mimer BankID transaction %s: %s", transactionId, describe(e));
                 return callback.error(provider.getConfig(), LOGIN_FAILED);
             }
 
@@ -130,6 +176,15 @@ public class MimerBankIdIdentityProvider extends AbstractIdentityProvider<MimerB
             identity.setIdp(provider);
             identity.setAuthenticationSession(authSession);
             return callback.authenticated(identity);
+        }
+
+        /** Keycloak's error page, as {@code ErrorPage.error} renders it (that class is not part of the SPI). */
+        private Response errorPage(String message) {
+            event.event(EventType.IDENTITY_PROVIDER_LOGIN);
+            event.error(Errors.IDENTITY_PROVIDER_LOGIN_FAILURE);
+            return provider.session.getProvider(LoginFormsProvider.class)
+                    .setError(message)
+                    .createErrorPage(Response.Status.BAD_GATEWAY);
         }
     }
 }
