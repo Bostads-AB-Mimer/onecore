@@ -1,6 +1,8 @@
 package nu.mimer.keycloak.bankid;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -31,6 +33,7 @@ class MimerBankIdClientTest {
     @BeforeEach
     void setUp() {
         when(session.vault()).thenReturn(vault);
+        config.setInternalId("idp-realm-a");
         config.getConfig().put("tokenUrl", "https://login.example/token");
         config.getConfig().put("clientId", "client");
         config.getConfig().put("scope", "api://bankid/.default");
@@ -85,6 +88,28 @@ class MimerBankIdClientTest {
         MimerBankIdClient.TOKENS.put(client.tokenKey(),
                 new MimerBankIdClient.CachedToken("cached", System.currentTimeMillis() + 3_600_000));
         assertEquals("cached", client.token());
+    }
+
+    @Test
+    void cachedTokenIsNotSharedWithAnotherIdentityProvider() throws Exception {
+        MimerBankIdClient.TOKENS.put(client.tokenKey(),
+                new MimerBankIdClient.CachedToken("realm-a-token", System.currentTimeMillis() + 3_600_000));
+        // Another realm's provider naming the same token URL, client and scope: it must miss the
+        // cache and fetch its own token with its own secret.
+        MimerBankIdConfig other = new MimerBankIdConfig();
+        other.setInternalId("idp-realm-b");
+        other.getConfig().putAll(config.getConfig());
+        MimerBankIdClient otherClient = new MimerBankIdClient(session, other);
+
+        assertNotEquals(client.tokenKey(), otherClient.tokenKey());
+        assertNull(MimerBankIdClient.TOKENS.get(otherClient.tokenKey()));
+    }
+
+    @Test
+    void providerWithoutInternalIdGetsNoCachedToken() {
+        config.setInternalId(null);
+        IOException e = assertThrows(IOException.class, client::token);
+        assertEquals("identity provider internal id is not set", e.getMessage());
     }
 
     @Test

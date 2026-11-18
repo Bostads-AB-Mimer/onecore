@@ -6,8 +6,8 @@ client credentials). Provider id `mimer-bankid`; the tenant realm uses it under 
 
 ## Flow
 
-1. **Start** (`performLogin`): get an Entra token (cached per node until a minute before it
-   expires), `POST transactions` with `method: Auth`, the browser's IP as `endUserIp` and
+1. **Start** (`performLogin`): get an Entra token (cached per node and per identity provider
+   instance until a minute before it expires, so realms never share one), `POST transactions` with `method: Auth`, the browser's IP as `endUserIp` and
    `…/broker/bankid/endpoint/return?state=…` as `redirectUrl`. The transaction id goes in an
    auth note, then the browser goes to the transaction's `accessUrl`.
 2. **Back** (`GET …/endpoint/return`):

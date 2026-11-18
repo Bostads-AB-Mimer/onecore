@@ -1,5 +1,7 @@
 # Local check of the plugin: two clustered Keycloak nodes on the same image and mode as auth.dev.mimer.nu,
 # with the JAR and a file vault mounted. Used by ./run.sh.
+# Ports are bound to loopback: in `real` mode the admin (admin/admin) can repoint the IdP's URLs and so
+# receive the Mimer BankID TEST secrets from the vault, so nothing else on the network may reach it.
 name: keycloak-bankid-provider
 services:
   db:
@@ -8,7 +10,7 @@ services:
   keycloak:
     image: bitnamilegacy/keycloak:26.3.3-debian-12-r0
     depends_on: [db]
-    ports: ['18081:8080']
+    ports: ['127.0.0.1:18081:8080']
     extra_hosts: ['host.docker.internal:host-gateway']
     environment:
       KEYCLOAK_PRODUCTION: 'false'
@@ -40,7 +42,7 @@ services:
   keycloak2:
     image: bitnamilegacy/keycloak:26.3.3-debian-12-r0
     depends_on: [db, keycloak]
-    ports: ['18082:8080']
+    ports: ['127.0.0.1:18082:8080']
     extra_hosts: ['host.docker.internal:host-gateway']
     environment:
       KEYCLOAK_PRODUCTION: 'false'

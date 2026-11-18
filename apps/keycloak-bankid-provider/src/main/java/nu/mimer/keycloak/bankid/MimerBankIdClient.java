@@ -13,9 +13,13 @@ import org.keycloak.vault.VaultStringSecret;
 /**
  * HTTP calls to Entra (client credentials) and Mimer BankID's transaction API.
  *
- * <p>One Entra access token is cached per node and per token URL, client id and scope, until a
- * minute before it expires. A 401 from Mimer BankID drops it, so a revoked token heals on the
- * next login instead of failing until it would have expired.
+ * <p>One Entra access token is cached per node, per identity provider instance and per token URL,
+ * client id and scope, until a minute before it expires. A 401 from Mimer BankID drops it, so a
+ * revoked token heals on the next login instead of failing until it would have expired.
+ *
+ * <p>The cache is static, so every realm on the node shares it. Keying on the identity provider's
+ * internal id (unique across realms) keeps one realm's token from being handed to another realm's
+ * provider that names the same client but never proved it knows the secret.
  */
 public class MimerBankIdClient {
 
@@ -67,8 +71,9 @@ public class MimerBankIdClient {
         return okJson(res, "get transaction", true);
     }
 
-    String tokenKey() {
-        return config.getTokenUrl() + "|" + config.getClientId() + "|" + config.getScope();
+    String tokenKey() throws IOException {
+        String idp = required("identity provider internal id", config.getInternalId());
+        return idp + "|" + config.getTokenUrl() + "|" + config.getClientId() + "|" + config.getScope();
     }
 
     String token() throws IOException {
