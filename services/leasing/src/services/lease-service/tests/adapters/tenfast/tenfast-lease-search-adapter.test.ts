@@ -113,12 +113,16 @@ const mockXpandParkingSpaces = (
       )
   )
 
+// Pinned here, not imported, so a change to the garage list fails a test.
 const GARAGE_TYPE_CODES = [
-  'VARMG',
-  'KALLG',
-  'KGAREL',
-  'TERMOG',
-  'CENTG',
+  'VARMGAR',
+  'VARMGAR LADD',
+  'KALLGAR',
+  'KALLGAREL',
+  'KALLGAR LADD',
+  'CENTGAR',
+  'CENTGAR LADD',
+  'TERMOGAR',
   'MCGAR',
   'GARAGE',
 ]
@@ -1332,8 +1336,8 @@ describe('tenfast-lease-search-adapter', () => {
 
     beforeEach(() => {
       mockXpandParkingSpaces({
-        'G-VARM': { code: 'VARMG', caption: 'Varmgarage' },
-        'G-KALL': { code: 'KALLG', caption: 'Kallgarage' },
+        'G-VARM': { code: 'VARMGAR', caption: 'Varmgarage' },
+        'G-KALL': { code: 'KALLGAR', caption: 'Kallgarage' },
         'P-UTAN-EL': { code: 'PPLUEL', caption: 'P-plats utan el' },
         'P-CARPORT': { code: 'CPORT', caption: 'Carport' },
       })
@@ -1441,7 +1445,7 @@ describe('tenfast-lease-search-adapter', () => {
 
     it('matches the codes ignoring padding and case', async () => {
       mockXpandParkingSpaces({
-        'g-varm  ': { code: 'VARMG', caption: 'Varmgarage' },
+        'g-varm  ': { code: 'VARMGAR', caption: 'Varmgarage' },
       })
       mockedGetAll.mockReturnValue([parking('padded', ' G-VARM ')])
 
@@ -1483,7 +1487,7 @@ describe('tenfast-lease-search-adapter', () => {
     it('AND-s the contract type with a parking-space type', async () => {
       const result = await search({
         leaseType: ['Garagekontrakt'],
-        parkingSpaceType: ['KALLG', 'PPLUEL'],
+        parkingSpaceType: ['KALLGAR', 'PPLUEL'],
       })
 
       expect(result.content.map((l) => l.leaseId)).toEqual(['cold-garage'])

@@ -130,7 +130,7 @@ describe('lease search with ended Xpand leases', () => {
     // The export always looks up the garage spaces; one garage keeps the
     // "no garage at all" warning out of tests that count warnings.
     mockXpandParkingSpaces({
-      'GARAGE-0': { code: 'VARMG', caption: 'Varmgarage' },
+      'GARAGE-0': { code: 'VARMGAR', caption: 'Varmgarage' },
     })
   })
 
@@ -145,8 +145,8 @@ describe('lease search with ended Xpand leases', () => {
     beforeEach(() => {
       // Spaces GARAGE-1 and GARAGE-2 have a garage type today.
       mockXpandParkingSpaces({
-        'GARAGE-1': { code: 'VARMG', caption: 'Varmgarage' },
-        'GARAGE-2': { code: 'KALLG', caption: 'Kallgarage' },
+        'GARAGE-1': { code: 'VARMGAR', caption: 'Varmgarage' },
+        'GARAGE-2': { code: 'KALLGAR', caption: 'Kallgarage' },
         'OPEN-1': { code: 'PPLUEL', caption: 'P-plats utan el' },
       })
       mockedTenfastGetAll.mockReturnValue([

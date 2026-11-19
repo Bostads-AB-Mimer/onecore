@@ -85,16 +85,20 @@ export const mapTenfastTypToLeaseType = (
  * parking-space types count as garage is a OneCore rule (AVTAL-566): Tenfast
  * has no contract type and calls every parking lease P-Platskontrakt, so a
  * parking lease on a space with one of these types is a Garagekontrakt.
- * Matched on code, never on caption.
+ * Matched on code, never on caption. Codes as they are in babpt; carports
+ * are open and stay P-Platskontrakt.
  */
 export const GARAGE_PARKING_SPACE_TYPE_CODES = [
-  'VARMG',
-  'KALLG',
-  'KGAREL',
-  'TERMOG',
-  'CENTG',
-  'MCGAR',
-  'GARAGE',
+  'VARMGAR', // Varmgarage
+  'VARMGAR LADD', // Varmgarage med laddbox
+  'KALLGAR', // Kallgarage
+  'KALLGAREL', // Kallgarage med el
+  'KALLGAR LADD', // Kallgarage med laddbox
+  'CENTGAR', // Centralgarage
+  'CENTGAR LADD', // Centralgarage med laddbox
+  'TERMOGAR', // Termogarage
+  'MCGAR', // Motorcykelgarage
+  'GARAGE', // Garage
 ]
 
 // Xpand codes are space-padded and SQL compares them ignoring case and
