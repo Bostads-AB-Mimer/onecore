@@ -56,7 +56,9 @@ describe('endHomeInsuranceErrorMessage', () => {
 
     expect(
       endHomeInsuranceErrorMessage(error(409, 'home-insurance-row-changed'))
-    ).toBe('Raden har ändrats, ladda om.')
+    ).toBe(
+      'Din ändring sparades inte: någon annan hade ändrat raden innan. Listan visar nu raden som den är.'
+    )
     expect(endHomeInsuranceErrorMessage(error(400))).toBe(
       'Uppgifterna är ogiltiga. Kontrollera datumet.'
     )

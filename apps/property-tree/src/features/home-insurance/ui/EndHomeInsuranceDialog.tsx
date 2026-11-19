@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { CalendarIcon } from 'lucide-react'
 
@@ -65,6 +65,7 @@ export function EndHomeInsuranceDialog({
   isUpcomingLease,
 }: Props) {
   const [open, setOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const endInsurance = useEndHomeInsurance()
 
   const form = useForm<EndHomeInsuranceFormValues>({
@@ -160,7 +161,7 @@ export function EndHomeInsuranceDialog({
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Sista dag (T.o.m.)</FormLabel>
-                  <Popover>
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -181,8 +182,22 @@ export function EndHomeInsuranceDialog({
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
+                        // Closed on pick: an error or warning showing below
+                        // grows the dialog, which moved the open calendar.
+                        onSelect={(date) => {
+                          field.onChange(date)
+                          setCalendarOpen(false)
+                        }}
+                        // A day before Fr.o.m. removes the row just as Fr.o.m.
+                        // itself does (Säg upp), or is refused (Ändra T.o.m.).
+                        // The schema still checks it.
+                        disabled={
+                          row.from ? { before: parseISO(row.from) } : undefined
+                        }
+                        // Always six weeks: a month of five weeks made the
+                        // popover shorter, and it flipped side in the dialog.
+                        fixedWeeks
+                        autoFocus
                       />
                     </PopoverContent>
                   </Popover>
@@ -209,8 +224,17 @@ export function EndHomeInsuranceDialog({
               >
                 Avbryt
               </Button>
-              <Button type="submit" disabled={endInsurance.isPending}>
-                {endInsurance.isPending ? 'Sparar...' : 'Spara'}
+              {/* Says what saving does: removing the row cannot be undone here. */}
+              <Button
+                type="submit"
+                variant={willDelete ? 'destructive' : 'default'}
+                disabled={endInsurance.isPending}
+              >
+                {endInsurance.isPending
+                  ? 'Sparar...'
+                  : willDelete
+                    ? 'Ta bort raden'
+                    : 'Spara'}
               </Button>
             </DialogFooter>
           </form>

@@ -64,7 +64,10 @@ const codeMessages: Record<string, string> = {
   ...planErrorMessages,
   'lease-not-found': 'Kontraktet hittades inte.',
   'home-insurance-row-not-found': 'Kontraktet har ingen hemförsäkring.',
-  'home-insurance-row-changed': 'Raden har ändrats, ladda om.',
+  // Says whose change stands: the other one. The rows are reloaded after
+  // every attempt, so the list already shows the row as it is now.
+  'home-insurance-row-changed':
+    'Din ändring sparades inte: någon annan hade ändrat raden innan. Listan visar nu raden som den är.',
   // upstream-failed can also mean the write went through but could not be
   // checked afterwards, and unknown that leasing answered unexpectedly or not
   // at all: either way the row may have changed.
