@@ -95,13 +95,11 @@ describe('POST /miscellaneous-invoices', () => {
       .attach('attachment', Buffer.from('%PDF-1.4'), 'underlag.pdf')
 
   beforeEach(() => {
-    jest
-      .spyOn(economyAdapter, 'submitMiscellaneousInvoice')
-      .mockResolvedValue({
-        ok: false,
-        err: SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound,
-        statusCode: 404,
-      })
+    jest.spyOn(economyAdapter, 'submitMiscellaneousInvoice').mockResolvedValue({
+      ok: false,
+      err: SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound,
+      statusCode: 404,
+    })
   })
 
   it('responds with 200 and the created invoice, passing the parsed invoice and file to the helper', async () => {
