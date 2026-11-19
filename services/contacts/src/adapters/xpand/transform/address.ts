@@ -12,19 +12,36 @@ const STREET_ADDR_REGEX = /^([^0-9]+(\s[^0-9])*)\s?\.?([0-9 ]+)/
 const CITY_COUNTRY_LINE_REGEX = /^[\s\p{P}]*\p{L}/u
 
 /**
- * Regex for leading and trailing punctuation and whitespace
+ * Regex for leading punctuation and whitespace
  */
-const EDGE_PUNCTUATION_REGEX = /^[\s\p{P}]+|[\s\p{P}]+$/gu
+const LEADING_PUNCTUATION_REGEX = /^[\s\p{P}]+/u
+
+/**
+ * Regex for trailing punctuation and whitespace
+ */
+const TRAILING_PUNCTUATION_REGEX = /[\s\p{P}]+$/u
 
 /**
  * Regex for identifying a line holding a zip code followed by a city
  */
-const ZIP_CITY_LINE_REGEX = /^\s*[0-9]{3}\s?[0-9]{2}\s+(\p{L}.*)$/u
+const ZIP_CITY_LINE_REGEX = /^\s*(?:[0-9]{3}\s?[0-9]{2}|[0-9]{4})\s+(\p{L}.*)$/u
 
 /**
  * Regex for identifying a country name found in the city position
  */
 const COUNTRY_NAME_REGEX = /^(sverige|sweden)$/i
+
+/**
+ * Strips leading punctuation and whitespace, and trailing punctuation
+ * and whitespace unless it closes a bracket opened in the text
+ */
+const stripEdgePunctuation = (text: string): string => {
+  const start = text.replace(LEADING_PUNCTUATION_REGEX, '').trimEnd()
+  const closesBracket =
+    (start.includes('(') && start.endsWith(')')) ||
+    (start.includes('[') && start.endsWith(']'))
+  return closesBracket ? start : start.replace(TRAILING_PUNCTUATION_REGEX, '')
+}
 
 /**
  * Iteration state for parsing c/o addresses
@@ -100,15 +117,15 @@ export const extractAddress = (
         } else if (result.state === 'expect-city') {
           const zipCity = line.match(ZIP_CITY_LINE_REGEX)
           if (zipCity) {
-            result.address.city = zipCity[1].replace(EDGE_PUNCTUATION_REGEX, '')
+            result.address.city = stripEdgePunctuation(zipCity[1])
             result.state = 'expect-country'
           } else if (line.match(CITY_COUNTRY_LINE_REGEX)) {
-            result.address.city = line.replace(EDGE_PUNCTUATION_REGEX, '')
+            result.address.city = stripEdgePunctuation(line)
             result.state = 'expect-country'
           }
         } else if (result.state === 'expect-country') {
           if (line.match(CITY_COUNTRY_LINE_REGEX)) {
-            result.address.country = line.replace(EDGE_PUNCTUATION_REGEX, '')
+            result.address.country = stripEdgePunctuation(line)
             result.state = 'done'
           }
         }
