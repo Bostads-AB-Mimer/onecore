@@ -24,7 +24,7 @@ const TRAILING_PUNCTUATION_REGEX = /[\s\p{P}]+$/u
 /**
  * Regex for identifying a line holding a zip code followed by a city
  */
-const ZIP_CITY_LINE_REGEX = /^\s*(?:[0-9]{3}\s?[0-9]{2}|[0-9]{4})\s+(\p{L}.*)$/u
+const ZIP_CITY_LINE_REGEX = /^\s*([0-9]{3}\s?[0-9]{2}|[0-9]{4})\s+(\p{L}.*)$/u
 
 /**
  * Regex for identifying a country name found in the city position
@@ -116,8 +116,12 @@ export const extractAddress = (
           }
         } else if (result.state === 'expect-city') {
           const zipCity = line.match(ZIP_CITY_LINE_REGEX)
-          if (zipCity) {
-            result.address.city = stripEdgePunctuation(zipCity[1])
+          if (
+            zipCity &&
+            zipCity[1].replace(/\s/g, '') ===
+              result.address.zipCode?.replace(/\s/g, '')
+          ) {
+            result.address.city = stripEdgePunctuation(zipCity[2])
             result.state = 'expect-country'
           } else if (line.match(CITY_COUNTRY_LINE_REGEX)) {
             result.address.city = stripEdgePunctuation(line)
