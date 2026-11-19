@@ -95,3 +95,46 @@ describe('economyService.sendInvoiceToCustomer', () => {
     ).rejects.toEqual({ reason: 'unknown' })
   })
 })
+
+describe('economyService.submitMiscellaneousInvoice', () => {
+  const invoice = {
+    invoiceRows: [{ price: '100' }],
+  } as unknown as Parameters<
+    typeof economyService.submitMiscellaneousInvoice
+  >[0]
+
+  afterEach(() => vi.resetAllMocks())
+
+  it('rejects with ApiError 502 and the code when the customer cannot be created', async () => {
+    vi.mocked(baseApi.POST).mockResolvedValue(
+      respond(502, { error: { type: 'customer-creation-failed' } })
+    )
+
+    await expect(
+      economyService.submitMiscellaneousInvoice(invoice)
+    ).rejects.toMatchObject({
+      status: 502,
+      message: 'customer-creation-failed',
+    })
+  })
+
+  it('rejects with a generic ApiError when a failed response has no body', async () => {
+    vi.mocked(baseApi.POST).mockResolvedValue(respond(500))
+
+    await expect(
+      economyService.submitMiscellaneousInvoice(invoice)
+    ).rejects.toMatchObject({
+      status: 500,
+      message: 'Failed to submit miscellaneous invoice (status 500)',
+    })
+  })
+
+  it('returns the data on success', async () => {
+    const data = { content: { ok: true } }
+    vi.mocked(baseApi.POST).mockResolvedValue(respond(200, { data }))
+
+    await expect(
+      economyService.submitMiscellaneousInvoice(invoice)
+    ).resolves.toBe(data)
+  })
+})
