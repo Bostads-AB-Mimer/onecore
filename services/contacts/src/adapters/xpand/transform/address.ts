@@ -9,7 +9,12 @@ const STREET_ADDR_REGEX = /^([^0-9]+(\s[^0-9])*)\s?\.?([0-9 ]+)/
 /**
  * Regex for identifying a city or country line
  */
-const CITY_COUNTRY_LINE_REGEX = /^[\p{L}\p{N}_\s]/u
+const CITY_COUNTRY_LINE_REGEX = /^[\s\p{P}]*\p{L}/u
+
+/**
+ * Regex for leading and trailing punctuation and whitespace
+ */
+const EDGE_PUNCTUATION_REGEX = /^[\s\p{P}]+|[\s\p{P}]+$/gu
 
 /**
  * Iteration state for parsing c/o addresses
@@ -84,12 +89,12 @@ export const extractAddress = (
           }
         } else if (result.state === 'expect-city') {
           if (line.match(CITY_COUNTRY_LINE_REGEX)) {
-            result.address.city = line.trim()
+            result.address.city = line.replace(EDGE_PUNCTUATION_REGEX, '')
             result.state = 'expect-country'
           }
         } else if (result.state === 'expect-country') {
           if (line.match(CITY_COUNTRY_LINE_REGEX)) {
-            result.address.country = line.trim()
+            result.address.country = line.replace(EDGE_PUNCTUATION_REGEX, '')
             result.state = 'done'
           }
         }

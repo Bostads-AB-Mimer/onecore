@@ -121,6 +121,66 @@ describe('extractAddress', () => {
         full: 'Testgatan 2, 723 40, älvsjö, sverige',
       },
     ],
+    [
+      {
+        lines: ['Testgatan 1', null, '123 45', '2 tr', 'ÖREBRO', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 1',
+        zipCode: '123 45',
+        city: 'ÖREBRO',
+        country: 'SVERIGE',
+        full: 'Testgatan 1, 123 45, 2 tr, ÖREBRO, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 3', null, '123 45', '"ÖREBRO', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 3',
+        zipCode: '123 45',
+        city: 'ÖREBRO',
+        country: 'SVERIGE',
+        full: 'Testgatan 3, 123 45, "ÖREBRO, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 4', null, '123 45', '(Älvsjö)', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 4',
+        zipCode: '123 45',
+        city: 'Älvsjö',
+        country: 'SVERIGE',
+        full: 'Testgatan 4, 123 45, (Älvsjö), SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 5', null, '123 45', '-ÖREBRO', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 5',
+        zipCode: '123 45',
+        city: 'ÖREBRO',
+        country: 'SVERIGE',
+        full: 'Testgatan 5, 123 45, -ÖREBRO, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 6', null, '123 45', '-', 'VÄSTERÅS', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 6',
+        zipCode: '123 45',
+        city: 'VÄSTERÅS',
+        country: 'SVERIGE',
+        full: 'Testgatan 6, 123 45, -, VÄSTERÅS, SVERIGE',
+      },
+    ],
   ] as AddressTestCase[])(
     'should process "%o" and extract address "%s"',
     (input, expected) => {
