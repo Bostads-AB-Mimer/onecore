@@ -1,9 +1,12 @@
+import type { Contact } from '@onecore/contacts/domain'
+
 import * as factory from '../../../../test/factories'
 import {
   LeaseTenantDeps,
   mapLeasesWithTenants,
   toLeaseTenant,
 } from '../helpers/lease-tenants'
+import { Lease as LeaseSchema } from '../schemas/lease'
 
 const redactedContact = (contactCode: string) =>
   factory.contactsServiceContact.build({
@@ -104,6 +107,18 @@ describe('toLeaseTenant', () => {
     })
   })
 
+  it('falls back to an empty number for an organisation without one', () => {
+    expect(
+      toLeaseTenant(
+        factory.contactsServiceOrganisationWithoutNumber('I000001'),
+        true
+      )
+    ).toMatchObject({
+      fullName: 'Bolaget AB',
+      nationalRegistrationNumber: '',
+    })
+  })
+
   it('maps an unparseable birth date to null', () => {
     const contact = factory.contactsServiceContact.build()
     contact.personal.birthDate = 'not a date'
@@ -145,9 +160,7 @@ describe('toLeaseTenant', () => {
 })
 
 describe('mapLeasesWithTenants', () => {
-  const makeDeps = (
-    contacts: ReturnType<typeof factory.contactsServiceContact.build>[]
-  ) => {
+  const makeDeps = (contacts: Contact[]) => {
     const deps: LeaseTenantDeps = {
       contacts: {
         getByContactCodeBatch: jest
@@ -281,6 +294,26 @@ describe('mapLeasesWithTenants', () => {
         },
       ],
     })
+  })
+
+  it('returns leases the response schema accepts when a holder is an organisation without a number', async () => {
+    const person = factory.contactsServiceContact.build()
+    const organisation =
+      factory.contactsServiceOrganisationWithoutNumber('I000001')
+
+    const result = await mapLeasesWithTenants(
+      [
+        factory.lease.build({ tenantContactIds: [person.contactCode] }),
+        factory.lease.build({ tenantContactIds: [organisation.contactCode] }),
+      ],
+      makeDeps([person, organisation])
+    )
+
+    const leases = result.ok ? result.data : []
+    expect(leases).toHaveLength(2)
+    // One such holder used to fail the schema check for every lease of the
+    // rental object, so the routes answered 500 instead of the leases.
+    expect(LeaseSchema.array().safeParse(leases).error?.issues).toBeUndefined()
   })
 
   it('fails with no-contact when a first-hand tenant is missing', async () => {

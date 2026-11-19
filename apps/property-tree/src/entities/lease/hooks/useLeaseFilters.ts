@@ -10,6 +10,7 @@ import {
 import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
 import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFilterDropdown'
 
+import { isLeaseTypeFilter } from '../lib/leaseType'
 import { DEFAULT_PAGE_SIZE, parsePageSize } from '../lib/pageSize'
 import { useLeaseSearch } from './useLeaseSearch'
 
@@ -111,6 +112,20 @@ export function useLeaseFilters() {
     [urlSearchParams, filters]
   )
 
+  // objectType and parkingSpaceType are mutually exclusive ("Bilplats" vs a
+  // specific subtype) — write both in one step so clearing one and setting
+  // the other doesn't lose either change. See ObjectTypeFilter's
+  // onObjectAndParkingSpaceTypeChange prop.
+  const setObjectAndParkingSpaceType = useCallback(
+    (objectTypes: string[], parkingSpaceTypes: string[]) => {
+      filters.setMultipleFilterValues({
+        objectType: objectTypes,
+        parkingSpaceType: parkingSpaceTypes,
+      })
+    },
+    [filters]
+  )
+
   const selectedObjectTypes = useMemo(
     () => urlSearchParams.getAll('objectType'),
     [urlSearchParams]
@@ -119,8 +134,10 @@ export function useLeaseFilters() {
     () => urlSearchParams.getAll('status').filter(isLeaseStatusFilter),
     [urlSearchParams]
   )
+  // A saved link may hold a contract type the filter no longer offers
+  // (e.g. Campuskontrakt); dropped rather than sent as a hidden filter.
   const selectedLeaseTypes = useMemo(
-    () => urlSearchParams.getAll('leaseType'),
+    () => urlSearchParams.getAll('leaseType').filter(isLeaseTypeFilter),
     [urlSearchParams]
   )
   const selectedTenantName = urlSearchParams.get('tenantName') || ''
@@ -271,6 +288,7 @@ export function useLeaseFilters() {
   return {
     ...filters,
     setFilterValues, // Override with exclusive-filter-aware version
+    setObjectAndParkingSpaceType,
     pageSize,
     setPageSize,
 

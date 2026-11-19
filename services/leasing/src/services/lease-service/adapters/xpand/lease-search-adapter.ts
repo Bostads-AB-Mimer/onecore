@@ -27,6 +27,53 @@ export const getParkingSpaceTypes = async (): Promise<
   }
 }
 
+// Xpand does not delete-mark or date-expire sold properties, and company 999
+// ("SÅLDA FASTIGHETER") can carry more than one type per parking space.
+// Limiting to the operating companies means every code has exactly one type.
+const PARKING_SPACE_OPERATING_COMPANIES = ['001', '006']
+
+/**
+ * Rental object code (babuf.hyresid) -> parking-space type caption
+ * (babpt.caption), for parking spaces in the operating companies.
+ *
+ * Pass typeCodes to limit the lookup to those type(s) — used to resolve the
+ * set of rental object codes for a chosen filter. Called with no argument,
+ * it returns every parking space's type, for the export column.
+ */
+export const getParkingSpaceTypesByRentalObjectCode = async (
+  typeCodes?: string[]
+): Promise<Map<string, string>> => {
+  try {
+    const query = xpandDb
+      .from('babuf')
+      .innerJoin('babps', 'babps.keycmobj', 'babuf.keycmobj')
+      .innerJoin('babpt', 'babpt.keybabpt', 'babps.keybabpt')
+      .select('babuf.hyresid as rentalObjectCode', 'babpt.caption as typeName')
+      .where('babuf.deletemark', '=', 0)
+      .whereIn('babuf.cmpcode', PARKING_SPACE_OPERATING_COMPANIES)
+      .whereNotNull('babuf.hyresid')
+      .where('babuf.hyresid', '!=', '')
+
+    if (typeCodes && typeCodes.length > 0) {
+      query.whereIn(
+        'babpt.code',
+        typeCodes.map((code) => code.trim())
+      )
+    }
+
+    const rows: { rentalObjectCode: string; typeName: string }[] = await query
+
+    const map = new Map<string, string>()
+    for (const row of rows) {
+      map.set(row.rentalObjectCode.trim(), row.typeName.trim())
+    }
+    return map
+  } catch (err) {
+    logger.error({ err }, 'getParkingSpaceTypesByRentalObjectCode')
+    throw err
+  }
+}
+
 /**
  * Get distinct rental object codes (hyresid) managed by
  * the given building manager name(s).

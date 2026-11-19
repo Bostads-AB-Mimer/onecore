@@ -58,6 +58,7 @@ describe('economyService.sendInvoiceToCustomer', () => {
   const rentNotice = {
     invoiceId: '552000000001',
     invoiceType: 'Regular',
+    contactCode: 'P174691',
   } as const
 
   afterEach(() => vi.resetAllMocks())
@@ -72,7 +73,7 @@ describe('economyService.sendInvoiceToCustomer', () => {
     ).resolves.toBeUndefined()
     expect(baseApi.POST).toHaveBeenCalledWith('/invoices/{invoiceId}/send', {
       params: { path: { invoiceId: '552000000001' } },
-      body: { invoiceType: 'Regular' },
+      body: { invoiceType: 'Regular', contactCode: 'P174691' },
     })
   })
 

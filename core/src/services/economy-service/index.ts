@@ -504,7 +504,8 @@ export const routes = (router: KoaRouter) => {
    *     summary: Email an invoice to the customer
    *     description: |
    *       Emails the invoice with its PDF attached. A rent notice goes to the
-   *       first tenant on its lease with the rent notice PDF. A miscellaneous
+   *       tenant given as contactCode, or the first tenant on its lease, with
+   *       the rent notice PDF. A miscellaneous
    *       invoice goes to the customer it is billed to with the PDF from the
    *       ledger. Outside production the email goes to the test inbox.
    *     parameters:
@@ -525,6 +526,9 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *                 enum: [Regular, Other]
    *                 description: The invoice's type, when the caller knows it. For Other (a miscellaneous invoice) the rent notice lookup is skipped.
+   *               contactCode:
+   *                 type: string
+   *                 description: The tenant a rent notice is emailed to, for a lease with several tenants. Must be a tenant on the lease. Without it the first tenant is emailed. Not used for a miscellaneous invoice.
    *     responses:
    *       '200':
    *         description: The email was sent
@@ -597,10 +601,10 @@ export const routes = (router: KoaRouter) => {
       }
 
       try {
-        const result = await sendInvoiceEmail(
-          invoiceId,
-          ctx.request.body.invoiceType
-        )
+        const result = await sendInvoiceEmail(invoiceId, {
+          knownType: ctx.request.body.invoiceType,
+          recipientContactCode: ctx.request.body.contactCode,
+        })
         if (!result.ok) return fail(result.err)
 
         ctx.status = 200

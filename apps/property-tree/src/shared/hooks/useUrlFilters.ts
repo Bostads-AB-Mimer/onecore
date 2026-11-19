@@ -80,6 +80,25 @@ export function useUrlFilters({
     [searchParams, setSearchParams]
   )
 
+  // Same as setFilterValues, but for several keys against one snapshot of
+  // searchParams. Two separate setFilterValues calls in the same handler
+  // both read the pre-update searchParams, so the second call's write
+  // discards the first's — use this instead when a filter clears another
+  // one in the same action (e.g. choosing a parking-space type clears the
+  // plain "Bilplats" object-type selection, or vice versa).
+  const setMultipleFilterValues = useCallback(
+    (updates: Record<string, string[]>) => {
+      const newParams = new URLSearchParams(searchParams)
+      for (const [key, values] of Object.entries(updates)) {
+        newParams.delete(key)
+        values.forEach((v) => newParams.append(key, v))
+      }
+      newParams.delete('page')
+      setSearchParams(newParams)
+    },
+    [searchParams, setSearchParams]
+  )
+
   // --- Date range filters ---
   const setDateRange = useCallback(
     (
@@ -137,6 +156,7 @@ export function useUrlFilters({
     // Multi-value filters
     getFilterValues,
     setFilterValues,
+    setMultipleFilterValues,
 
     // Date ranges
     setDateRange,

@@ -90,20 +90,20 @@ export function withRentAt(
 }
 
 /**
- * Returns true if the rental object has an indefinite block (no end date)
- * that has already started. Such a block has no way to determine a future
- * vacant-from date, so the rental object should be excluded from vacancy
- * listings entirely — unlike a block with an end date, which should still
- * be listed with a computed vacant-from date (see determineVacantFrom).
+ * Returns true if the rental object has an indefinite block (no end date),
+ * whether it has started or starts later. Such a block has no way to
+ * determine a vacant-from date, so the rental object should be excluded from
+ * vacancy listings entirely — unlike a block with an end date, which should
+ * still be listed with a computed vacant-from date (see determineVacantFrom).
+ *
+ * A block that starts later counts too: a parking space lease runs until
+ * further notice, so a tenant who moves in before the block starts would
+ * have a lease the block cuts off. The Xpand adapter reports the block
+ * without an end date whenever there is one, so a block running today with
+ * an indefinite one after it is excluded as well.
  */
-export function hasIndefiniteActiveBlock(ps: RentalObject): boolean {
-  if (!ps.blockStartDate || ps.blockEndDate) return false
-  const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
-  const start = new Date(ps.blockStartDate)
-  start.setUTCHours(0, 0, 0, 0)
-  // Active if start is today or earlier
-  return start <= today
+export function hasIndefiniteBlock(ps: RentalObject): boolean {
+  return Boolean(ps.blockStartDate) && !ps.blockEndDate
 }
 
 /**

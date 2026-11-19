@@ -35,9 +35,11 @@ const canSendInvoice = (invoice: Invoice) =>
 
 type Props = {
   invoice: Invoice
+  // The contact whose ledger the invoice is shown in.
+  contactCode?: string
 }
 
-export const InvoiceSendButton = ({ invoice }: Props) => {
+export const InvoiceSendButton = ({ invoice, contactCode }: Props) => {
   const [open, setOpen] = useState(false)
   const { toast } = useToast()
   const sendInvoice = useSendInvoiceToCustomer()
@@ -46,21 +48,35 @@ export const InvoiceSendButton = ({ invoice }: Props) => {
     return null
   }
 
+  const close = () => {
+    setOpen(false)
+    sendInvoice.reset()
+  }
+
   const handleOpenChange = (next: boolean) => {
-    setOpen(next)
-    if (!next) sendInvoice.reset()
+    if (next) {
+      setOpen(true)
+      return
+    }
+    // Closing while sending would drop the running request: no toast or
+    // error, and the invoice could be sent again. Stay open until it is done.
+    if (sendInvoice.isPending) return
+    close()
   }
 
   const handleSend = () => {
-    sendInvoice.mutate(invoice, {
-      onSuccess: () => {
-        handleOpenChange(false)
-        toast({
-          title: 'Fakturan skickad',
-          description: `Faktura ${invoice.invoiceId} har mejlats till kunden.`,
-        })
-      },
-    })
+    sendInvoice.mutate(
+      { invoice, contactCode },
+      {
+        onSuccess: () => {
+          close()
+          toast({
+            title: 'Fakturan skickad',
+            description: `Faktura ${invoice.invoiceId} har mejlats till kunden.`,
+          })
+        },
+      }
+    )
   }
 
   return (

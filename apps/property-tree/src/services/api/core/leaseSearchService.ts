@@ -25,7 +25,7 @@ export type LeaseSearchQueryParams = {
   name?: string
   objectType?: string[]
   status?: LeaseStatusFilter[]
-  leaseType?: string[]
+  leaseType?: LeaseSearchResult['leaseType'][]
   parkingSpaceType?: string[]
   startDateFrom?: string
   startDateTo?: string
