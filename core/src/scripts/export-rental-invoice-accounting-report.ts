@@ -166,6 +166,7 @@ const errorCodeDescriptions: Record<
   'accounting-failed': 'Konteringen misslyckades',
   'invoice-not-found': 'Avin finns inte i Tenfast',
   'invoice-fetch-failed': 'Avin kunde inte hämtas från Tenfast',
+  'missing-customer': 'Kunden finns inte i Xledger',
 }
 
 // Keeps the email readable when a broken article affects many invoices; the

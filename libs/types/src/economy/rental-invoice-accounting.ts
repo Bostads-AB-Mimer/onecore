@@ -22,6 +22,8 @@ export const RentalInvoiceExportErrorCodeSchema = z.enum([
   'invoice-not-found',
   // The invoice asked for by OCR number could not be fetched from Tenfast.
   'invoice-fetch-failed',
+  // The invoice recipient has no customer in the accounting system yet.
+  'missing-customer',
 ])
 
 export const RentalInvoiceExportErrorSchema = z.object({
@@ -48,6 +50,8 @@ export const ImportInvoicesResponseSchema = z.object({
   // Invoices that were uploaded to Xledger but could not be marked as
   // exported in Tenfast. They must be marked manually before the next run.
   markFailures: z.array(MarkInvoiceAsExportedFailureSchema),
+  // Recipients of the held-back 'missing-customer' invoices, each listed once.
+  missingCustomerCodes: z.array(z.string()).default([]),
 })
 
 export const ImportInvoicesErrorResponseSchema = z.object({

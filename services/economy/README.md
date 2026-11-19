@@ -27,6 +27,13 @@ Accounting for rental invoices is exported to Xledger by two scripts. Each one h
 - `src/scripts/import-rental-invoices.ts` handles invoices created in Xpand. It runs as the `import-rental-invoices` cronjob. It imports invoices that are not yet exported into a batch in `invoice_data`, writes contact, aggregate and ledger CSV files and uploads them to Xledger. Then it records the invoices in `invoice_import_status`. Arguments: `[companyIds] [earliestStartDate] [dryRun]`, by default `001,006` and `2025-10-01`. With `dryRun`, the files are written to `RENTAL_INVOICES__EXPORT_DIRECTORY` but nothing is uploaded or marked as imported. Code: `src/services/xpand-rental-invoice-service`.
 - Invoices created in Tenfast are exported by the `export-rental-invoice-accounting` cronjob. It runs `core/src/scripts/export-rental-invoice-accounting.ts`, which calls this service. Invoices are marked as exported in Tenfast. Code: `exportRentalInvoicesAccounting` in `src/services/invoice-service`. For local runs, use `src/scripts/export-rental-invoices-accounting.ts`.
 
+Every external recipient (contact code not starting with `I`) of an exported Tenfast invoice must exist as a customer in Xledger:
+
+- `GET /accounting/invoice-recipients/:companyId/missing-customers` lists the external recipients of every invoice not yet exported that Xledger has no customer for. Core calls it before the export and creates the missing customers.
+- `POST /accounting/import-invoices/:companyId` looks up the external recipients of each batch in Xledger before adding accounting. Invoices whose recipient is missing are held back: they are not uploaded or marked as exported, each gets a `missing-customer` error, and the response lists their recipients once in `missingCustomerCodes`. They are exported by a later call once the customer exists. If the lookup fails, the call fails with `export-failed` and nothing is uploaded. The debug route by OCR has no such check.
+
+Before creating a missing Xledger customer from Core, check that it exists: `/customers/:code/sync` with `create=true` also updates existing customers.
+
 The two scripts do not share any state about which invoices are exported.
 
 ---

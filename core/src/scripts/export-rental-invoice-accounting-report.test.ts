@@ -16,6 +16,7 @@ const emptyBatch = {
   successfulInvoices: [],
   skippedInvoices: [],
   markFailures: [],
+  missingCustomerCodes: [],
 }
 
 describe('addBatchToReport', () => {

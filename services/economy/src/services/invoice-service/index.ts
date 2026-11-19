@@ -172,6 +172,7 @@ export const routes = (router: KoaRouter) => {
           (invoice) => invoice.invoiceId
         ),
         markFailures,
+        missingCustomerCodes: invoicesResult.missingCustomerCodes,
       } satisfies economy.ImportInvoicesResponse
     } catch (err: unknown) {
       if (err instanceof PartialCsvUploadError) {

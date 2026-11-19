@@ -875,6 +875,53 @@ export const getInvoiceRecipientsMissingAsCustomers = async (
   }
 }
 
+const holdBackInvoicesWithMissingCustomer = async (
+  invoices: InvoiceWithAccounting[]
+): Promise<{
+  invoices: InvoiceWithAccounting[]
+  errors: economy.RentalInvoiceExportError[]
+  missingCustomerCodes: string[]
+}> => {
+  const recipientCodes = [
+    ...new Set(
+      invoices.flatMap((invoice) =>
+        invoice.recipientContactCode
+          ? [invoice.recipientContactCode.trim()]
+          : []
+      )
+    ),
+  ]
+  if (recipientCodes.length === 0) {
+    return { invoices, errors: [], missingCustomerCodes: [] }
+  }
+
+  const existing = new Set(await getExistingCustomerCodes(recipientCodes))
+  const missingCustomerCodes = recipientCodes.filter(
+    (code) => !existing.has(code)
+  )
+  if (missingCustomerCodes.length === 0) {
+    return { invoices, errors: [], missingCustomerCodes }
+  }
+
+  const missing = new Set(missingCustomerCodes)
+  const errors: economy.RentalInvoiceExportError[] = []
+  const kept: InvoiceWithAccounting[] = []
+  for (const invoice of invoices) {
+    const code = invoice.recipientContactCode?.trim()
+    if (code && missing.has(code)) {
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        code: 'missing-customer',
+        error: `Customer ${code} is missing in Xledger`,
+      })
+    } else {
+      kept.push(invoice)
+    }
+  }
+
+  return { invoices: kept, errors, missingCustomerCodes }
+}
+
 export const exportRentalInvoicesAccounting = async (
   companyId: string,
   numberOfChunks: number = 1
@@ -882,12 +929,14 @@ export const exportRentalInvoicesAccounting = async (
   exportedInvoices: InvoiceWithAccounting[]
   skippedInvoices: InvoiceWithAccounting[]
   errors: economy.RentalInvoiceExportError[]
+  missingCustomerCodes: string[]
 }> => {
   try {
     const errors: economy.RentalInvoiceExportError[] = []
     const CHUNK_SIZE = 1000 // 100
     const invoices: InvoiceWithAccounting[] = []
     const skippedInvoices: InvoiceWithAccounting[] = []
+    const missingCustomerCodes = new Set<string>()
 
     const company = config.companies.find(
       (company) => company.xpandId.localeCompare(companyId) === 0
@@ -935,8 +984,16 @@ export const exportRentalInvoicesAccounting = async (
           exportedInvoices: [],
           skippedInvoices,
           errors,
+          missingCustomerCodes: [...missingCustomerCodes],
         }
       }
+
+      const heldBack = await holdBackInvoicesWithMissingCustomer(chunkInvoices)
+      errors.push(...heldBack.errors)
+      heldBack.missingCustomerCodes.forEach((code) =>
+        missingCustomerCodes.add(code)
+      )
+      chunkInvoices = heldBack.invoices
 
       const prepared = await prepareInvoicesForAccounting(
         company,
@@ -973,6 +1030,7 @@ export const exportRentalInvoicesAccounting = async (
       exportedInvoices: invoices,
       skippedInvoices,
       errors,
+      missingCustomerCodes: [...missingCustomerCodes],
     }
   } catch (error: any) {
     logger.error(error, 'Error importing invoices')
