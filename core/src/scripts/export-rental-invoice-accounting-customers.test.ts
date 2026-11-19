@@ -15,7 +15,9 @@ afterEach(() => {
 
 const COMPANY_ID = '001'
 
-const lookupOf = (contacts: Contact[]): ContactLookup & {
+const lookupOf = (
+  contacts: Contact[]
+): ContactLookup & {
   getByContactCode: jest.Mock
 } => ({
   getByContactCode: jest.fn(async (contactCode: string) => {
@@ -141,7 +143,9 @@ describe('createInvoiceRecipients', () => {
     expect(report).toEqual({
       created: [found.contactCode],
       updated: [],
-      failed: [{ contactCode: missing.contactCode, reason: 'contact-not-found' }],
+      failed: [
+        { contactCode: missing.contactCode, reason: 'contact-not-found' },
+      ],
     })
   })
 
