@@ -73,6 +73,258 @@ describe('extractAddress', () => {
         country: '',
       },
     ],
+    [
+      {
+        lines: ['Testgatan 18', null, '123 45', 'ÖREBRO', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 18',
+        zipCode: '123 45',
+        city: 'ÖREBRO',
+        country: 'SVERIGE',
+        full: 'Testgatan 18, 123 45, ÖREBRO, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testvägen 1', null, '184 30', 'ÅKERSBERGA'],
+      },
+      {
+        street: 'Testvägen 1',
+        zipCode: '184 30',
+        city: 'ÅKERSBERGA',
+        country: '',
+        full: 'Testvägen 1, 184 30, ÅKERSBERGA',
+      },
+    ],
+    [
+      {
+        lines: ['Teststrasse 1', null, '1010', 'WIEN', 'ÖSTERRIKE'],
+      },
+      {
+        street: 'Teststrasse 1',
+        zipCode: '1010',
+        city: 'WIEN',
+        country: 'ÖSTERRIKE',
+        full: 'Teststrasse 1, 1010, WIEN, ÖSTERRIKE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 2', null, '723 40', 'älvsjö', 'sverige'],
+      },
+      {
+        street: 'Testgatan 2',
+        zipCode: '723 40',
+        city: 'älvsjö',
+        country: 'sverige',
+        full: 'Testgatan 2, 723 40, älvsjö, sverige',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 1', null, '123 45', '2 tr', 'ÖREBRO', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 1',
+        zipCode: '123 45',
+        city: 'ÖREBRO',
+        country: 'SVERIGE',
+        full: 'Testgatan 1, 123 45, 2 tr, ÖREBRO, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 3', null, '123 45', '"ÖREBRO', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 3',
+        zipCode: '123 45',
+        city: 'ÖREBRO',
+        country: 'SVERIGE',
+        full: 'Testgatan 3, 123 45, "ÖREBRO, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 4', null, '123 45', '(Älvsjö)', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 4',
+        zipCode: '123 45',
+        city: 'Älvsjö',
+        country: 'SVERIGE',
+        full: 'Testgatan 4, 123 45, (Älvsjö), SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 5', null, '123 45', '-ÖREBRO', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 5',
+        zipCode: '123 45',
+        city: 'ÖREBRO',
+        country: 'SVERIGE',
+        full: 'Testgatan 5, 123 45, -ÖREBRO, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 6', null, '123 45', '-', 'VÄSTERÅS', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 6',
+        zipCode: '123 45',
+        city: 'VÄSTERÅS',
+        country: 'SVERIGE',
+        full: 'Testgatan 6, 123 45, -, VÄSTERÅS, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 7', null, '72345', '72345 VÄSTERÅS', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 7',
+        zipCode: '72345',
+        city: 'VÄSTERÅS',
+        country: 'SVERIGE',
+        full: 'Testgatan 7, 72345, 72345 VÄSTERÅS, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 8', null, '723 45', '723 45 Västerås', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 8',
+        zipCode: '723 45',
+        city: 'Västerås',
+        country: 'SVERIGE',
+        full: 'Testgatan 8, 723 45, 723 45 Västerås, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 9', null, '72345', '72345', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 9',
+        zipCode: '72345',
+        city: '',
+        country: 'SVERIGE',
+        full: 'Testgatan 9, 72345, 72345, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 10', null, '123 45', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 10',
+        zipCode: '123 45',
+        city: '',
+        country: 'SVERIGE',
+        full: 'Testgatan 10, 123 45, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 11', null, '123 45', 'sweden'],
+      },
+      {
+        street: 'Testgatan 11',
+        zipCode: '123 45',
+        city: '',
+        country: 'sweden',
+        full: 'Testgatan 11, 123 45, sweden',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 12', null, '123 45', 'Stockholm (Testby)', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 12',
+        zipCode: '123 45',
+        city: 'Stockholm (Testby)',
+        country: 'SVERIGE',
+        full: 'Testgatan 12, 123 45, Stockholm (Testby), SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 13', null, '123 45', 'TESTBY', 'Korea (Rep.)'],
+      },
+      {
+        street: 'Testgatan 13',
+        zipCode: '123 45',
+        city: 'TESTBY',
+        country: 'Korea (Rep.)',
+        full: 'Testgatan 13, 123 45, TESTBY, Korea (Rep.)',
+      },
+    ],
+    [
+      {
+        lines: ['Teststrasse 1', null, '1010', '1010 WIEN', 'ÖSTERRIKE'],
+      },
+      {
+        street: 'Teststrasse 1',
+        zipCode: '1010',
+        city: 'WIEN',
+        country: 'ÖSTERRIKE',
+        full: 'Teststrasse 1, 1010, 1010 WIEN, ÖSTERRIKE',
+      },
+    ],
+    [
+      {
+        lines: ['Testveien 1', null, '0150', '0150 OSLO', 'NORGE'],
+      },
+      {
+        street: 'Testveien 1',
+        zipCode: '0150',
+        city: 'OSLO',
+        country: 'NORGE',
+        full: 'Testveien 1, 0150, 0150 OSLO, NORGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 14', null, '123 45', '"ÖREBRO"', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 14',
+        zipCode: '123 45',
+        city: 'ÖREBRO',
+        country: 'SVERIGE',
+        full: 'Testgatan 14, 123 45, "ÖREBRO", SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 15', null, '123 45', '1102 lgh', 'ÖREBRO', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 15',
+        zipCode: '123 45',
+        city: 'ÖREBRO',
+        country: 'SVERIGE',
+        full: 'Testgatan 15, 123 45, 1102 lgh, ÖREBRO, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 16', null, '12345', '123 45 TESTBY', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 16',
+        zipCode: '12345',
+        city: 'TESTBY',
+        country: 'SVERIGE',
+        full: 'Testgatan 16, 12345, 123 45 TESTBY, SVERIGE',
+      },
+    ],
   ] as AddressTestCase[])(
     'should process "%o" and extract address "%s"',
     (input, expected) => {
