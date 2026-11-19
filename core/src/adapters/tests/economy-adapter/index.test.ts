@@ -488,14 +488,32 @@ describe('economy-adapter', () => {
     })
 
     it('returns unknown on a network error', async () => {
-      nock(config.economyService.url)
-        .get(path)
-        .replyWithError('socket hang up')
+      nock(config.economyService.url).get(path).replyWithError('socket hang up')
 
       const result =
         await economyAdapter.getInvoiceRecipientsMissingAsCustomers('001')
 
       expect(result).toStrictEqual({ ok: false, err: 'unknown' })
+    })
+  })
+
+  describe('importInvoices', () => {
+    it('defaults missingCustomerCodes to [] when the economy service leaves it out', async () => {
+      nock(config.economyService.url)
+        .post('/accounting/import-invoices/001')
+        .reply(200, {
+          errors: [],
+          successfulInvoices: ['1'],
+          skippedInvoices: [],
+          markFailures: [],
+        })
+
+      const result = await economyAdapter.importInvoices('001')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: { successfulInvoices: ['1'], missingCustomerCodes: [] },
+      })
     })
   })
 })

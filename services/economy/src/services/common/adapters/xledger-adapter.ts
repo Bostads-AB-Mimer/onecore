@@ -747,11 +747,17 @@ export const getExistingCustomerCodes = async (
         },
       })
 
-      const { edges, pageInfo } = result.data.customers
-      existing.push(...edges.map((e: any) => String(e.node.code).trim()))
+      const {
+        edges,
+        pageInfo,
+      }: {
+        edges: { cursor: string; node: { code: string } }[]
+        pageInfo: { hasNextPage: boolean }
+      } = result.data.customers
+      existing.push(...edges.map((edge) => String(edge.node.code).trim()))
 
       if (!pageInfo.hasNextPage || edges.length === 0) break
-      after = edges.at(-1).cursor
+      after = edges[edges.length - 1].cursor
     }
   }
 

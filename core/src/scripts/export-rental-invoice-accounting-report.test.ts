@@ -350,7 +350,9 @@ describe('customers in the report', () => {
     expect(after).toEqual(before)
     expect(
       after.body.some((line) =>
-        /kunder i Xledger|kontaktregistret|kontrolleras/i.test(line)
+        /kunder i Xledger|kontaktregistret|kontrolleras|uppdaterade|kunde inte skapas/i.test(
+          line
+        )
       )
     ).toBe(false)
   })
