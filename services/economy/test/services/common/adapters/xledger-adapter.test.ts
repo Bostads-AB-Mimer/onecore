@@ -195,6 +195,105 @@ describe('makeXledgerRequest when Xledger is unavailable', () => {
   })
 })
 
+type CustomerCodesBody = {
+  variables: { filter: { code_in: string[] }; after?: string }
+}
+
+describe('getExistingCustomerCodes', () => {
+  const defaultPolicy = { ...adapter.xledgerRequestPolicy }
+
+  beforeEach(() => {
+    adapter.setXledgerRequestPolicy({ baseDelayMs: 1, maxDelayMs: 5 })
+  })
+
+  afterEach(() => {
+    adapter.setXledgerRequestPolicy(defaultPolicy)
+  })
+
+  const customersReply = (codes: string[], hasNextPage = false) => ({
+    data: {
+      customers: {
+        edges: codes.map((code) => ({ cursor: `c-${code}`, node: { code } })),
+        pageInfo: { hasNextPage },
+      },
+    },
+  })
+
+  it('sends codes in chunks of 100 and returns the codes Xledger knows', async () => {
+    const requests: string[][] = []
+    nock(origin)
+      .post(pathname, (body: CustomerCodesBody) => {
+        requests.push(body.variables.filter.code_in)
+        return true
+      })
+      .times(2)
+      .reply(200, (_uri, body) => {
+        const known = (body as CustomerCodesBody).variables.filter.code_in
+        return customersReply(known.filter((c) => c === 'P1' || c === 'P150'))
+      })
+    const codes = Array.from({ length: 150 }, (_, i) => `P${i + 1}`)
+
+    const result = await adapter.getExistingCustomerCodes(codes)
+
+    expect(requests.map((r) => r.length)).toEqual([100, 50])
+    expect(requests.flat()).toEqual(codes)
+    expect([...result].sort()).toEqual(['P1', 'P150'])
+  })
+
+  it('follows the cursor when Xledger has more pages', async () => {
+    const afters: (string | undefined)[] = []
+    nock(origin)
+      .post(pathname, (body: CustomerCodesBody) => {
+        afters.push(body.variables.after)
+        return true
+      })
+      .reply(200, customersReply(['P1'], true))
+    nock(origin)
+      .post(pathname, (body: CustomerCodesBody) => {
+        afters.push(body.variables.after)
+        return true
+      })
+      .reply(200, customersReply(['P2'], false))
+
+    const result = await adapter.getExistingCustomerCodes(['P1', 'P2'])
+
+    expect(afters).toEqual([undefined, 'c-P1'])
+    expect(result).toEqual(['P1', 'P2'])
+  })
+
+  it('returns [] without calling Xledger when given no codes', async () => {
+    const scope = nock(origin).post(pathname).reply(200, customersReply([]))
+
+    await expect(adapter.getExistingCustomerCodes([])).resolves.toEqual([])
+    expect(scope.isDone()).toBe(false)
+  })
+
+  it('rejects when Xledger answers with an error that is not a rate limit', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        errors: [{ code: 'BAD_REQUEST.SOMETHING_ELSE', message: 'Nope' }],
+      })
+
+    await expect(adapter.getExistingCustomerCodes(['P1'])).rejects.toThrow()
+  })
+
+  it.each([
+    'BAD_REQUEST.BURST_LIMIT_REACHED',
+    'BAD_REQUEST.CONCURRENCY_LIMIT_REACHED',
+  ])('retries once after %s', async (code) => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, { errors: [{ code, message: 'Rate limited' }] })
+    nock(origin).post(pathname).reply(200, customersReply(['P1']))
+
+    await expect(adapter.getExistingCustomerCodes(['P1'])).resolves.toEqual([
+      'P1',
+    ])
+    expect(nock.isDone()).toBe(true)
+  })
+})
+
 describe(adapter.getInvoicesByContactCode, () => {
   it('returns null when customer does not exist', async () => {
     nock(origin).post(pathname).reply(200, {

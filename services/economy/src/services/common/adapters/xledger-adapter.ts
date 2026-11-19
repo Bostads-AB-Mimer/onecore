@@ -92,6 +92,12 @@ export class XledgerUnavailableError extends Error {
   }
 }
 
+const RETRY_ERROR_CODES = new Set([
+  'BAD_REQUEST.BURST_RATE_LIMIT_REACHED',
+  'BAD_REQUEST.BURST_LIMIT_REACHED',
+  'BAD_REQUEST.CONCURRENCY_LIMIT_REACHED',
+])
+
 // Xledger is down or the request never reached it. 504 is left out since it
 // may also mean a slow query, and retrying that only adds load.
 const UNAVAILABLE_STATUSES = new Set([502, 503])
@@ -250,9 +256,7 @@ const makeXledgerHttpRequest = async (
 
   if (result.status === 200) {
     if (result.data && result.data.errors) {
-      if (
-        result.data.errors[0].code === 'BAD_REQUEST.BURST_RATE_LIMIT_REACHED'
-      ) {
+      if (RETRY_ERROR_CODES.has(result.data.errors[0].code)) {
         return { status: 'retry', data: {} }
       } else {
         return { status: 'error', data: result.data.errors, query: query.query }
@@ -705,6 +709,53 @@ export const getCustomers = async (
   }
 
   return customers
+}
+
+const CUSTOMER_CODE_CHUNK_SIZE = 100
+
+export const getExistingCustomerCodes = async (
+  contactCodes: string[]
+): Promise<string[]> => {
+  const query = gql`
+    query ($first: Int!, $filter: Customer_Filter, $after: String) {
+      customers(first: $first, filter: $filter, after: $after) {
+        edges {
+          cursor
+          node {
+            code
+          }
+        }
+        pageInfo {
+          hasNextPage
+        }
+      }
+    }
+  `
+  const existing: string[] = []
+
+  for (let i = 0; i < contactCodes.length; i += CUSTOMER_CODE_CHUNK_SIZE) {
+    const chunk = contactCodes.slice(i, i + CUSTOMER_CODE_CHUNK_SIZE)
+    let after: string | undefined
+
+    for (;;) {
+      const result = await makeXledgerRequest({
+        query,
+        variables: {
+          first: CUSTOMER_CODE_CHUNK_SIZE,
+          filter: { code_in: chunk },
+          after,
+        },
+      })
+
+      const { edges, pageInfo } = result.data.customers
+      existing.push(...edges.map((e: any) => String(e.node.code).trim()))
+
+      if (!pageInfo.hasNextPage || edges.length === 0) break
+      after = edges.at(-1).cursor
+    }
+  }
+
+  return existing
 }
 
 export const getProjects = async (
