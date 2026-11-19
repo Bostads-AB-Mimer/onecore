@@ -1,6 +1,10 @@
 import { economy } from '@onecore/types'
 
 import { ImportInvoicesError } from '../adapters/economy-adapter'
+import {
+  CustomerCreationReport,
+  mergeCustomerReports,
+} from './export-rental-invoice-accounting-customers'
 
 export type CompanyExportReport = {
   companyId: string
@@ -12,6 +16,7 @@ export type CompanyExportReport = {
   markFailures: economy.MarkInvoiceAsExportedFailure[]
   // Set when the run for the company stopped before all batches were done.
   failure?: { err: ImportInvoicesError; detail?: string }
+  customers: CustomerCreationReport
 }
 
 export const createCompanyExportReport = (
@@ -22,6 +27,7 @@ export const createCompanyExportReport = (
   skippedCount: 0,
   errors: new Map(),
   markFailures: [],
+  customers: { created: [], updated: [], failed: [] },
 })
 
 export const addBatchToReport = (
@@ -30,6 +36,10 @@ export const addBatchToReport = (
 ): void => {
   report.exportedCount += batch.successfulInvoices.length
   report.skippedCount += batch.skippedInvoices.length
+  const exported = new Set(batch.successfulInvoices)
+  for (const [key, error] of report.errors) {
+    if (exported.has(error.invoiceNumber)) report.errors.delete(key)
+  }
   for (const error of batch.errors) {
     const key = [
       error.invoiceNumber,
@@ -40,6 +50,13 @@ export const addBatchToReport = (
     report.errors.set(key, error)
   }
   report.markFailures.push(...batch.markFailures)
+}
+
+export const addCustomersToReport = (
+  report: CompanyExportReport,
+  customers: CustomerCreationReport
+): void => {
+  report.customers = mergeCustomerReports(report.customers, customers)
 }
 
 export type ExportErrorGroup = {
@@ -123,7 +140,9 @@ export const summarizeExportErrorsForLog = (
 const hasProblems = (report: CompanyExportReport) =>
   report.failure !== undefined ||
   report.errors.size > 0 ||
-  report.markFailures.length > 0
+  report.markFailures.length > 0 ||
+  report.customers.failed.length > 0 ||
+  report.customers.lookupFailure !== undefined
 
 const formatTimestamp = (date: Date) =>
   date.toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' })
@@ -174,10 +193,54 @@ const errorCodeDescriptions: Record<
 const MAX_LISTED_INVOICES = 10
 const MAX_LISTED_ERRORS = 50
 
-const listInvoiceNumbers = (invoiceNumbers: string[]) => {
-  const listed = invoiceNumbers.slice(0, MAX_LISTED_INVOICES).join(', ')
-  const rest = invoiceNumbers.length - MAX_LISTED_INVOICES
+const listCapped = (values: string[]) => {
+  const listed = values.slice(0, MAX_LISTED_INVOICES).join(', ')
+  const rest = values.length - MAX_LISTED_INVOICES
   return rest > 0 ? `${listed} och ${rest} till` : listed
+}
+
+const customerFailureDescriptions: Record<
+  CustomerCreationReport['failed'][number]['reason'],
+  string
+> = {
+  'contact-not-found': 'Kunder som saknas i kontaktregistret',
+  'sync-failed': 'Kunder som inte kunde skapas i Xledger',
+}
+
+const describeCustomers = (customers: CustomerCreationReport): string[] => {
+  const lines: string[] = []
+
+  if (customers.lookupFailure !== undefined) {
+    lines.push(
+      `Kunderna kunde inte kontrolleras mot Xledger: ${customers.lookupFailure}`
+    )
+  }
+  if (customers.created.length > 0) {
+    lines.push(
+      `Nya kunder i Xledger: ${customers.created.length}`,
+      `- ${listCapped(customers.created)}`
+    )
+  }
+  if (customers.updated.length > 0) {
+    lines.push(
+      `Befintliga kunder uppdaterade i Xledger: ${customers.updated.length}`,
+      `- ${listCapped(customers.updated)}`
+    )
+  }
+  for (const reason of Object.keys(
+    customerFailureDescriptions
+  ) as (keyof typeof customerFailureDescriptions)[]) {
+    const codes = customers.failed
+      .filter((failure) => failure.reason === reason)
+      .map((failure) => failure.contactCode)
+    if (codes.length > 0) {
+      lines.push(
+        `${customerFailureDescriptions[reason]}: ${codes.length} (${listCapped(codes)})`
+      )
+    }
+  }
+
+  return lines.length > 0 ? ['', ...lines] : []
 }
 
 const pluralInvoices = (count: number) =>
@@ -193,7 +256,7 @@ const describeErrorGroup = (group: ExportErrorGroup): string[] => {
   )
   for (const [article, invoiceNumbers] of articles) {
     lines.push(
-      `- Hyresartikel ${article}: ${pluralInvoices(invoiceNumbers.length)} (${listInvoiceNumbers(invoiceNumbers)})`
+      `- Hyresartikel ${article}: ${pluralInvoices(invoiceNumbers.length)} (${listCapped(invoiceNumbers)})`
     )
   }
 
@@ -222,6 +285,8 @@ const describeCompany = (report: CompanyExportReport): string[] => {
     `Exporterade avier: ${report.exportedCount}`,
     `Överhoppade avier (interna kunder): ${report.skippedCount}`,
   ]
+
+  lines.push(...describeCustomers(report.customers))
 
   if (report.failure) {
     lines.push('', ...describeFailure(report.failure))
