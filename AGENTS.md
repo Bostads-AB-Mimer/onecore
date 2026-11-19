@@ -57,6 +57,7 @@ Always use `pnpm` — never `npm` or `yarn`.
 - New non-trivial logic (utilities, adapters, helpers) must ship with unit tests.
 - NEVER use `any` typing. If types need to be generated, stop and prompt the user — never add temporary `any`.
 - Errors keep their meaning end to end: use typed error codes, never decide by matching message text, and never report or log a failed or unknown outcome as success.
+- Retry or resend a write to an external system (e.g. Xledger) only after a definite rejection such as customer-not-found — never after an unknown outcome, since the write may have been applied.
 - A lookup of one specific resource that doesn't exist returns 404 with a specific error code. A search or list with no matches returns 200 with an empty array — never 404. A 404 is not a server failure, so the service logs it at `warn` or lower. If the caller expected the resource to exist (e.g. a code taken from another record), the caller logs it with `logger.error`. Keep `logger.error` for real failures, logged once.
 - Remove code your change supersedes in the same PR, not just unused imports.
 - Filter, sort and paginate at the data source. Run independent calls in parallel. No N+1 or repeated identical queries.
