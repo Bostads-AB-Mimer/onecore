@@ -276,6 +276,65 @@ export async function importInvoices(
   }
 }
 
+export type GetInvoiceRecipientsMissingAsCustomersError =
+  'unknown-company' | 'tenfast-failed' | 'xledger-failed' | 'unknown'
+
+/**
+ * Lists the external recipients of a company's unexported invoices that are
+ * missing as customers in the economy system. `detail` is the reason given
+ * by the economy service.
+ */
+export async function getInvoiceRecipientsMissingAsCustomers(
+  companyId: string
+): Promise<
+  AdapterResult<
+    economy.InvoiceRecipientsMissingAsCustomersResponse,
+    GetInvoiceRecipientsMissingAsCustomersError
+  >
+> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/accounting/invoice-recipients/${encodeURIComponent(companyId)}/missing-customers`,
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      return {
+        ok: true,
+        data: economy.InvoiceRecipientsMissingAsCustomersResponseSchema.parse(
+          response.data
+        ),
+      }
+    }
+
+    const errorBody =
+      economy.InvoiceRecipientsMissingAsCustomersErrorResponseSchema.safeParse(
+        response.data
+      )
+    logger.error(
+      { status: response.status, error: errorBody.data?.error },
+      'economy-adapter.getInvoiceRecipientsMissingAsCustomers'
+    )
+
+    if (!errorBody.success) {
+      return { ok: false, err: 'unknown', statusCode: response.status }
+    }
+
+    return {
+      ok: false,
+      err: errorBody.data.error,
+      statusCode: response.status,
+      detail: errorBody.data.reason,
+    }
+  } catch (err: unknown) {
+    logger.error(
+      { error: errorMessage(err) },
+      'economy-adapter.getInvoiceRecipientsMissingAsCustomers'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function getInvoicesSentToDebtCollection(
   contactCode: string,
   from?: Date

@@ -439,4 +439,63 @@ describe('economy-adapter', () => {
       })
     })
   })
+
+  describe('getInvoiceRecipientsMissingAsCustomers', () => {
+    const path = '/accounting/invoice-recipients/001/missing-customers'
+
+    it('returns the parsed body on 200', async () => {
+      nock(config.economyService.url)
+        .get(path)
+        .reply(200, { recipients: 2, missingCustomerCodes: ['P2'] })
+
+      const result =
+        await economyAdapter.getInvoiceRecipientsMissingAsCustomers('001')
+
+      expect(result).toStrictEqual({
+        ok: true,
+        data: { recipients: 2, missingCustomerCodes: ['P2'] },
+      })
+    })
+
+    it('returns unknown-company with the status on 404', async () => {
+      nock(config.economyService.url)
+        .get(path)
+        .reply(404, { error: 'unknown-company', reason: 'No company 001' })
+
+      const result =
+        await economyAdapter.getInvoiceRecipientsMissingAsCustomers('001')
+
+      expect(result).toMatchObject({
+        ok: false,
+        err: 'unknown-company',
+        statusCode: 404,
+      })
+    })
+
+    it('returns xledger-failed on 502', async () => {
+      nock(config.economyService.url)
+        .get(path)
+        .reply(502, { error: 'xledger-failed', reason: 'lookup failed' })
+
+      const result =
+        await economyAdapter.getInvoiceRecipientsMissingAsCustomers('001')
+
+      expect(result).toMatchObject({
+        ok: false,
+        err: 'xledger-failed',
+        statusCode: 502,
+      })
+    })
+
+    it('returns unknown on a network error', async () => {
+      nock(config.economyService.url)
+        .get(path)
+        .replyWithError('socket hang up')
+
+      const result =
+        await economyAdapter.getInvoiceRecipientsMissingAsCustomers('001')
+
+      expect(result).toStrictEqual({ ok: false, err: 'unknown' })
+    })
+  })
 })
