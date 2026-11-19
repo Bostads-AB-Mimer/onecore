@@ -529,6 +529,23 @@ const TenfastExportLeaseSchema = z
   })
   .passthrough()
 
+export const TenfastInvoiceRecipientsPageSchema = z.object({
+  records: z.array(
+    z.object({
+      avtal: z
+        .array(
+          z.object({
+            hyresgaster: z
+              .array(z.object({ externalId: z.string() }))
+              .default([]),
+          })
+        )
+        .default([]),
+    })
+  ),
+  next: z.string().nullable().default(null),
+})
+
 export const TenfastInvoicesByExportedResponseSchema = z.object({
   records: z.array(
     TenfastInvoiceSchema.extend({

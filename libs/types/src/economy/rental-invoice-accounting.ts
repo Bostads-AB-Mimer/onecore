@@ -57,6 +57,23 @@ export const ImportInvoicesErrorResponseSchema = z.object({
   uploadedFiles: z.array(z.string()).optional(),
 })
 
+export const InvoiceRecipientsMissingAsCustomersResponseSchema = z.object({
+  recipients: z.number(),
+  missingCustomerCodes: z.array(z.string()),
+})
+
+export const InvoiceRecipientsMissingAsCustomersErrorResponseSchema = z.object({
+  error: z.enum(['unknown-company', 'tenfast-failed', 'xledger-failed']),
+  reason: z.string(),
+})
+
+export type InvoiceRecipientsMissingAsCustomersResponse = z.infer<
+  typeof InvoiceRecipientsMissingAsCustomersResponseSchema
+>
+export type InvoiceRecipientsMissingAsCustomersErrorResponse = z.infer<
+  typeof InvoiceRecipientsMissingAsCustomersErrorResponseSchema
+>
+
 export type RentalInvoiceExportErrorCode = z.infer<
   typeof RentalInvoiceExportErrorCodeSchema
 >
