@@ -6,6 +6,7 @@ import { AdapterResult } from '../../adapters/types'
 import { tenantAwareContactLookup } from '../../processes/contacts/protected-tenants'
 import * as syncInvoiceRecipient from '../../processes/contacts/sync-invoice-recipient'
 import type { ContactLookup } from '../../processes/contacts/sync-invoice-recipient'
+import { errorLogFields } from '../../utils/error-log'
 
 export const submitMiscellaneousInvoiceCreatingCustomer = async (
   invoice: economy.MiscellaneousInvoicePayload,
@@ -33,7 +34,7 @@ export const submitMiscellaneousInvoiceCreatingCustomer = async (
     .syncInvoiceRecipientToEconomy(deps.contacts, contactCode)
     .catch((err: unknown) => {
       logger.error(
-        { contactCode, error: err instanceof Error ? err.message : err },
+        { contactCode, ...errorLogFields(err) },
         'submitMiscellaneousInvoiceCreatingCustomer.syncThrew'
       )
       return { ok: false as const, err: 'sync-failed' as const }
