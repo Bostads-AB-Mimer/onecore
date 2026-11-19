@@ -7,6 +7,11 @@ import { DbAddress } from '../db-model'
 const STREET_ADDR_REGEX = /^([^0-9]+(\s[^0-9])*)\s?\.?([0-9 ]+)/
 
 /**
+ * Regex for identifying a city or country line
+ */
+const CITY_COUNTRY_LINE_REGEX = /^[\p{L}\p{N}_\s]/u
+
+/**
  * Iteration state for parsing c/o addresses
  */
 type CoParseState = {
@@ -78,12 +83,12 @@ export const extractAddress = (
             result.state = 'expect-city'
           }
         } else if (result.state === 'expect-city') {
-          if (line.match(/^[\w\s]+/)) {
+          if (line.match(CITY_COUNTRY_LINE_REGEX)) {
             result.address.city = line.trim()
             result.state = 'expect-country'
           }
         } else if (result.state === 'expect-country') {
-          if (line.match(/^[\w\s]+/)) {
+          if (line.match(CITY_COUNTRY_LINE_REGEX)) {
             result.address.country = line.trim()
             result.state = 'done'
           }

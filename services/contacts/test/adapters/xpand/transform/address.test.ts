@@ -73,6 +73,54 @@ describe('extractAddress', () => {
         country: '',
       },
     ],
+    [
+      {
+        lines: ['Testgatan 18', null, '123 45', 'ÖREBRO', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 18',
+        zipCode: '123 45',
+        city: 'ÖREBRO',
+        country: 'SVERIGE',
+        full: 'Testgatan 18, 123 45, ÖREBRO, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testvägen 1', null, '184 30', 'ÅKERSBERGA'],
+      },
+      {
+        street: 'Testvägen 1',
+        zipCode: '184 30',
+        city: 'ÅKERSBERGA',
+        country: '',
+        full: 'Testvägen 1, 184 30, ÅKERSBERGA',
+      },
+    ],
+    [
+      {
+        lines: ['Teststrasse 1', null, '1010', 'WIEN', 'ÖSTERRIKE'],
+      },
+      {
+        street: 'Teststrasse 1',
+        zipCode: '1010',
+        city: 'WIEN',
+        country: 'ÖSTERRIKE',
+        full: 'Teststrasse 1, 1010, WIEN, ÖSTERRIKE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 2', null, '723 40', 'älvsjö', 'sverige'],
+      },
+      {
+        street: 'Testgatan 2',
+        zipCode: '723 40',
+        city: 'älvsjö',
+        country: 'sverige',
+        full: 'Testgatan 2, 723 40, älvsjö, sverige',
+      },
+    ],
   ] as AddressTestCase[])(
     'should process "%o" and extract address "%s"',
     (input, expected) => {
