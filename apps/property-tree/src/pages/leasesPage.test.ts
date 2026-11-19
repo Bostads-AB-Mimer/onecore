@@ -148,6 +148,19 @@ describe('LeasesPage on a phone', () => {
     ).toBe('checked')
   })
 
+  it('shows Välj alla as partly selected when only some leases are', () => {
+    render(true)
+
+    click(container.querySelector('[aria-label="Välj 100-001-02/1"]'))
+
+    const selectAll = Array.from(container.querySelectorAll('label')).find(
+      (label) => label.textContent?.startsWith('Välj alla 30 träffar')
+    )
+    expect(selectAll?.querySelector('button')?.getAttribute('data-state')).toBe(
+      'indeterminate'
+    )
+  })
+
   it('shows the phone-only Välj alla only on phones', () => {
     render(false)
 

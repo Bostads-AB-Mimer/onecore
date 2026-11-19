@@ -382,7 +382,13 @@ const LeasesPage = () => {
               )}
               {isMobile && (
                 <LeaseMobileSelectAll
-                  checked={allResultsSelected || selectedLeaseIds.length > 0}
+                  checked={
+                    allResultsSelected
+                      ? true
+                      : selectedLeaseIds.length > 0
+                        ? 'indeterminate'
+                        : false
+                  }
                   onToggle={toggleSelectAll}
                   totalCount={filters.meta?.totalRecords ?? 0}
                   pageCount={filters.leases.length}

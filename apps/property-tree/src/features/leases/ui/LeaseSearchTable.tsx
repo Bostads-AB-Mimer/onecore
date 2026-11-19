@@ -75,7 +75,8 @@ export function LeaseMobileCard({
 }
 
 interface LeaseMobileSelectAllProps {
-  checked: boolean
+  /** 'indeterminate' when some, but not all, hits are selected */
+  checked: boolean | 'indeterminate'
   onToggle: () => void
   /** Number of leases matching the search, across all pages */
   totalCount: number
