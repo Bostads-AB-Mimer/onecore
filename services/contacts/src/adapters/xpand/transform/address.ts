@@ -17,6 +17,16 @@ const CITY_COUNTRY_LINE_REGEX = /^[\s\p{P}]*\p{L}/u
 const EDGE_PUNCTUATION_REGEX = /^[\s\p{P}]+|[\s\p{P}]+$/gu
 
 /**
+ * Regex for identifying a line holding a zip code followed by a city
+ */
+const ZIP_CITY_LINE_REGEX = /^\s*[0-9]{3}\s?[0-9]{2}\s+(\p{L}.*)$/u
+
+/**
+ * Regex for identifying a country name found in the city position
+ */
+const COUNTRY_NAME_REGEX = /^(sverige|sweden)$/i
+
+/**
  * Iteration state for parsing c/o addresses
  */
 type CoParseState = {
@@ -88,7 +98,11 @@ export const extractAddress = (
             result.state = 'expect-city'
           }
         } else if (result.state === 'expect-city') {
-          if (line.match(CITY_COUNTRY_LINE_REGEX)) {
+          const zipCity = line.match(ZIP_CITY_LINE_REGEX)
+          if (zipCity) {
+            result.address.city = zipCity[1].replace(EDGE_PUNCTUATION_REGEX, '')
+            result.state = 'expect-country'
+          } else if (line.match(CITY_COUNTRY_LINE_REGEX)) {
             result.address.city = line.replace(EDGE_PUNCTUATION_REGEX, '')
             result.state = 'expect-country'
           }
@@ -117,7 +131,12 @@ export const extractAddress = (
     }
   )
 
-  return address.address as ContactAddress
+  const result = address.address as ContactAddress
+  if (!result.country && COUNTRY_NAME_REGEX.test(result.city ?? '')) {
+    result.country = result.city
+    result.city = ''
+  }
+  return result
 }
 
 /**

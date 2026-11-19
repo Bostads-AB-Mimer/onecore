@@ -181,6 +181,66 @@ describe('extractAddress', () => {
         full: 'Testgatan 6, 123 45, -, VÄSTERÅS, SVERIGE',
       },
     ],
+    [
+      {
+        lines: ['Testgatan 7', null, '72345', '72345 VÄSTERÅS', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 7',
+        zipCode: '72345',
+        city: 'VÄSTERÅS',
+        country: 'SVERIGE',
+        full: 'Testgatan 7, 72345, 72345 VÄSTERÅS, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 8', null, '723 45', '723 45 Västerås', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 8',
+        zipCode: '723 45',
+        city: 'Västerås',
+        country: 'SVERIGE',
+        full: 'Testgatan 8, 723 45, 723 45 Västerås, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 9', null, '72345', '72345', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 9',
+        zipCode: '72345',
+        city: '',
+        country: 'SVERIGE',
+        full: 'Testgatan 9, 72345, 72345, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 10', null, '123 45', 'SVERIGE'],
+      },
+      {
+        street: 'Testgatan 10',
+        zipCode: '123 45',
+        city: '',
+        country: 'SVERIGE',
+        full: 'Testgatan 10, 123 45, SVERIGE',
+      },
+    ],
+    [
+      {
+        lines: ['Testgatan 11', null, '123 45', 'sweden'],
+      },
+      {
+        street: 'Testgatan 11',
+        zipCode: '123 45',
+        city: '',
+        country: 'sweden',
+        full: 'Testgatan 11, 123 45, sweden',
+      },
+    ],
   ] as AddressTestCase[])(
     'should process "%o" and extract address "%s"',
     (input, expected) => {
