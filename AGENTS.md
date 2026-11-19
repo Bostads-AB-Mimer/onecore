@@ -62,6 +62,7 @@ Always use `pnpm` — never `npm` or `yarn`.
 - Filter, sort and paginate at the data source. Run independent calls in parallel. No N+1 or repeated identical queries.
 - Check-then-write is a race: decide inside the transaction or rely on a unique index and map the violation to 409. Never hold a transaction open across a network call. Enforce invariants on every write path (create, update, move, re-parent).
 - Xpand char codes are space-padded and SQL compares them ignoring trailing blanks and case — JavaScript doesn't. Trim and normalise both sides before comparing, and handle NULL.
+- Xpand text is Swedish: a regex over it must not use `\w` or `[a-z]` for letters, since `\w` stays ASCII even with the `u` flag and misses Å, Ä and Ö. Use `\p{L}` with `u`.
 - Keep the diff to the change: no unrelated generated-type, lockfile or notes churn. Don't add backward-compatibility machinery for internal tools unless asked.
 - When you change a flow, update its `DOCS_*.md`, `ARCHITECTURE.md` and any `.claude/skills` file that describes it, including failure branches.
 
