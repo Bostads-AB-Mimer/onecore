@@ -22,6 +22,7 @@ import {
   toNotifyBatchError,
   toSendInvoiceEmailError,
 } from './send-invoice-email'
+import { submitMiscellaneousInvoiceCreatingCustomer } from './submit-miscellaneous-invoice'
 
 const invoicesErrorStatus: Record<
   economyAdapter.GetInvoicesByContactCodeError,
@@ -188,7 +189,7 @@ export const routes = (router: KoaRouter) => {
 
   router.post('/miscellaneous-invoices', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
-    const result = await economyAdapter.submitMiscellaneousInvoice(
+    const result = await submitMiscellaneousInvoiceCreatingCustomer(
       JSON.parse(ctx.request.body.invoice),
       ctx.request.files?.attachment
     )
@@ -196,15 +197,28 @@ export const routes = (router: KoaRouter) => {
     if (!result.ok) {
       if (
         result.err ===
-        SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
+        SubmitMiscellaneousInvoiceErrorCodes.CustomerCreationFailed
       ) {
-        ctx.status = 404
+        ctx.status = 502
         ctx.body = {
           type: result.err,
-          title: 'Customer not found in Xledger',
-          status: 404,
-          detail:
-            'The contact does not exist as a customer (subledger) in Xledger.',
+          title:
+            'The customer could not be created, so the invoice was not sent',
+          status: 502,
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      if (
+        result.err ===
+        SubmitMiscellaneousInvoiceErrorCodes.CustomerNotFoundAfterCreate
+      ) {
+        ctx.status = 502
+        ctx.body = {
+          type: result.err,
+          title: 'The customer was created but is not yet available; try again',
+          status: 502,
           ...metadata,
         } satisfies RouteErrorResponse
         return
