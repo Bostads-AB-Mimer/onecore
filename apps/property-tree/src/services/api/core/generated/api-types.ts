@@ -1306,9 +1306,22 @@ export interface paths {
     /**
      * Get availability for a rental object
      * @description Fetches availability for a rental object by Rental Object Code.
+     * The rent total (rent.amount, rent.vat) is the rent of today, unless
+     * a later move-in day is known. For a parking space that day is its
+     * vacantFrom. For other rental objects vacantFrom is not set, so the
+     * caller gives the day as rentAt. The total is then the sum of the
+     * rent rows in force that day with includedInRent set.
      */
     get: {
       parameters: {
+        query?: {
+          /**
+           * @description The day to give the rent total for (yyyy-mm-dd), for rental
+           * objects that are not parking spaces. Left out, today or earlier
+           * gives the rent of today. Ignored for parking spaces.
+           */
+          rentAt?: string
+        }
         path: {
           /** @description The rental object code of the availability to fetch. */
           rentalObjectCode: string
@@ -1326,9 +1339,26 @@ export interface paths {
                 rent?: {
                   amount?: number
                   vat?: number
+                  /**
+                   * Format: date-time
+                   * @description The day the total (amount, vat) is the rent of.
+                   * Today when the total was not recalculated for
+                   * the move-in day, which also happens when the
+                   * rows for that day look incomplete.
+                   */
+                  asOf?: string
                   rows?: Record<string, never>[]
                 }
               }
+            }
+          }
+        }
+        /** @description rentAt is not a valid day (error invalid-rent-at). */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error?: 'invalid-rent-at'
             }
           }
         }
@@ -1421,6 +1451,11 @@ export interface paths {
     /**
      * Get availabilities for rental objects
      * @description Fetches availabilities for rental objects by Rental Object Codes.
+     * The rent total (rent.amount, rent.vat) is the rent of today, unless
+     * a later move-in day is known. For a parking space that day is its
+     * vacantFrom. For other rental objects vacantFrom is not set, so the
+     * caller gives the day in rentAtByRentalObjectCode. The total is then
+     * the sum of the rent rows in force that day with includedInRent set.
      */
     post: {
       requestBody?: {
@@ -1435,6 +1470,22 @@ export interface paths {
              * ]
              */
             rentalObjectCodes?: string[]
+            /**
+             * @description The day to give the rent total for (yyyy-mm-dd), per
+             * rental object code, for rental objects that are not
+             * parking spaces. A code left out, today or earlier gives
+             * the rent of today. Ignored for parking spaces. Codes
+             * are matched without regard to case or surrounding
+             * blanks. rent.asOf in the response says which day each
+             * total is the rent of.
+             *
+             * @example {
+             *   "ABC123": "2027-01-16"
+             * }
+             */
+            rentAtByRentalObjectCode?: {
+              [key: string]: string
+            }
           }
         }
       }
@@ -1450,9 +1501,37 @@ export interface paths {
                 rent?: {
                   amount?: number
                   vat?: number
+                  /**
+                   * Format: date-time
+                   * @description The day the total (amount, vat) is the rent
+                   * of. Today when the total was not recalculated
+                   * for the move-in day, which also happens when
+                   * the rows for that day look incomplete.
+                   */
+                  asOf?: string
                   rows?: Record<string, never>[]
                 }
               }[]
+            }
+          }
+        }
+        /**
+         * @description The request body is invalid, such as a rentAtByRentalObjectCode
+         * value that is not a valid day. The body lists the invalid
+         * fields (status and data). If only the leasing service rejects
+         * the request, the body is an error code instead (error).
+         */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              status?: 'error'
+              data?: {
+                message?: string
+                path?: string[]
+              }[]
+              /** @enum {string} */
+              error?: 'invalid-request'
             }
           }
         }
@@ -2037,6 +2116,211 @@ export interface paths {
       }
     }
   }
+  '/leases/home-insurances': {
+    /**
+     * List home insurance rows (staff)
+     * @description The home insurance rows of all leases, with the tenant's name, personal identity number, phone and email from the contacts service. Those four fields are null when the contacts service fails, when the tenant has a protected identity, or when the contacts service has no record of the tenant. A personnummer in q is looked up in the contacts service; one with no contact gives an empty list. Requires the home-insurance:read role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description A personnummer, or text matched against the lease ID, rental object code, contact code and address of the rental object, ignoring case. */
+          q?: string
+          /** @description Status as in the Länsförsäkringar file. G in force, K on a lease to come, * the row has an end date. */
+          status?: ('G' | 'K' | '*')[]
+          /** @description lf gives the rows of the Länsförsäkringar file, one per lease. all gives every home insurance row, for quality checks. */
+          rows?: 'lf' | 'all'
+          /** @description Only rows whose first and last day are the same day. */
+          sameDate?: boolean
+          sortBy?:
+            | 'leaseId'
+            | 'leaseStatus'
+            | 'leaseFromDate'
+            | 'leaseToDate'
+            | 'rentalObjectCode'
+            | 'address'
+            | 'rowFromDate'
+            | 'rowToDate'
+            | 'monthlyAmount'
+            | 'contactCode'
+          sortOrder?: 'asc' | 'desc'
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description One page of home insurance rows. A search without matches gives an empty list. */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['HomeInsuranceListItem'][]
+              _meta: components['schemas']['PaginationMeta']
+              _links: components['schemas']['PaginationLinks'][]
+            }
+          }
+        }
+        /** @description Invalid query parameters (error invalid-query). */
+        400: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceListErrorResponse']
+          }
+        }
+        /** @description The caller lacks the home-insurance:read role. */
+        403: {
+          content: never
+        }
+        /** @description Unexpected answer from the leasing service (error unknown). */
+        500: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceListErrorResponse']
+          }
+        }
+        /** @description The list is loading from the leasing system for the first time (error cache-warming, retry after the Retry-After header), or the leasing system or the contacts service could not be read (error upstream-failed). */
+        503: {
+          headers: {
+            /** @description Seconds to wait, sent with cache-warming. */
+            'Retry-After'?: number
+          }
+          content: {
+            'application/json': components['schemas']['HomeInsuranceListErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/leases/home-insurances/export': {
+    /**
+     * Export home insurance rows to Excel (staff)
+     * @description Every row of GET /leases/home-insurances that matches the filters, in the 18 columns of the Länsförsäkringar file. The person fields follow the same rules as the list: from the contacts service only, and empty for a protected identity or when the contacts service fails. Takes the same query parameters as the list, without page and limit. Requires the home-insurance:read role.
+     */
+    get: {
+      parameters: {
+        query?: {
+          q?: string
+          status?: ('G' | 'K' | '*')[]
+          rows?: 'lf' | 'all'
+          sameDate?: boolean
+          sortBy?:
+            | 'leaseId'
+            | 'leaseStatus'
+            | 'leaseFromDate'
+            | 'leaseToDate'
+            | 'rentalObjectCode'
+            | 'address'
+            | 'rowFromDate'
+            | 'rowToDate'
+            | 'monthlyAmount'
+            | 'contactCode'
+          sortOrder?: 'asc' | 'desc'
+        }
+      }
+      responses: {
+        /** @description Excel file download. */
+        200: {
+          content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
+          }
+        }
+        /** @description Invalid query parameters (error invalid-query). */
+        400: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceListErrorResponse']
+          }
+        }
+        /** @description The caller lacks the home-insurance:read role. */
+        403: {
+          content: never
+        }
+        /** @description Unexpected answer from the leasing service (error unknown), or the file could not be built. */
+        500: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceListErrorResponse']
+          }
+        }
+        /** @description The list is loading from the leasing system for the first time (error cache-warming, with Retry-After), or the leasing system or the contacts service could not be read (error upstream-failed). */
+        503: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceListErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/leases/{leaseId}/home-insurance/rows/{rowId}': {
+    /**
+     * End or remove a home insurance row (staff)
+     * @description Ends the home insurance row on endDate. action cancel removes the row when endDate is on or before its first day, and otherwise ends it on endDate. action set-end ends it on endDate, which may not be before its first day. Ending a row gives it a new rowId. rowId is the row as last read from GET /leases/{leaseId}/home-insurance or the list; if someone else changed the rows, the answer is 409 and the row must be read again. Leasing's errors are passed on as they are. Requires the home-insurance:write role.
+     */
+    patch: {
+      parameters: {
+        path: {
+          /** @description The ID of the lease. */
+          leaseId: string
+          /** @description The rowId of the home insurance row. */
+          rowId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': {
+            /**
+             * Format: date
+             * @description The last day the home insurance is in force, as yyyy-mm-dd.
+             */
+            endDate: string
+            /** @enum {string} */
+            action: 'cancel' | 'set-end'
+          }
+        }
+      }
+      responses: {
+        /** @description The row was removed (action deleted, row null) or ended (action ended, row is the new row). */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['UpdateHomeInsuranceRowResponse']
+            }
+          }
+        }
+        /** @description The request body is invalid (an InvalidRequestBodyResponse, with no error code), endDate is before the row's first day with action set-end (error end-date-before-start), or the row already ends on endDate (error end-date-unchanged). */
+        400: {
+          content: {
+            'application/json':
+              | components['schemas']['InvalidRequestBodyResponse']
+              | components['schemas']['HomeInsuranceErrorResponse']
+          }
+        }
+        /** @description The caller lacks the home-insurance:write role. */
+        403: {
+          content: never
+        }
+        /** @description The lease was not found (error lease-not-found), or it has no home insurance row (error home-insurance-row-not-found). */
+        404: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
+        }
+        /** @description The lease has no row with this rowId, or the rows were changed by someone else during the write (error home-insurance-row-changed). Read the row again. */
+        409: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
+        }
+        /** @description Unexpected answer from the leasing service, or no answer (error unknown). The row may have been written. */
+        500: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
+        }
+        /** @description The leasing system could not be read or written, or the write could not be checked (error upstream-failed). */
+        503: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
+        }
+      }
+    }
+  }
   '/leases/{id}': {
     /**
      * Get lease by ID
@@ -2099,7 +2383,10 @@ export interface paths {
     }
   }
   '/leases/{leaseId}/home-insurance': {
-    /** Get home insurance for a lease */
+    /**
+     * Get home insurance for a lease
+     * @description The lease's current home insurance row: the row in force today, else the next one to start, else the one that ended last. rowId identifies the row for PATCH /leases/{leaseId}/home-insurance/rows/{rowId}.
+     */
     get: {
       parameters: {
         path: {
@@ -2110,15 +2397,29 @@ export interface paths {
       responses: {
         /** @description Home insurance retrieved. */
         200: {
-          content: never
+          content: {
+            'application/json': {
+              content: components['schemas']['HomeInsuranceRow']
+            }
+          }
         }
-        /** @description Lease or home insurance not found. */
+        /** @description The lease was not found (error lease-not-found), or it has no home insurance row (error home-insurance-row-not-found). */
         404: {
-          content: never
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
         }
-        /** @description Internal server error. */
+        /** @description Unexpected answer from the leasing service (error unknown). */
         500: {
-          content: never
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
+        }
+        /** @description The leasing system could not be read (error upstream-failed). */
+        503: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
         }
       }
     }
@@ -2188,13 +2489,39 @@ export interface paths {
         }
       }
       responses: {
-        /** @description Home insurance cancelled. */
+        /** @description Home insurance cancelled: the row in force on endDate now ends on it, and rows that would start after it are removed. Without a row in force on endDate, the first row to start after it ends on its own first day. One row is always kept. */
         200: {
           content: never
         }
-        /** @description Internal server error. */
+        /** @description The request body is invalid. */
+        400: {
+          content: {
+            'application/json': components['schemas']['InvalidRequestBodyResponse']
+          }
+        }
+        /** @description The lease was not found (error lease-not-found), or it has no home insurance row (error home-insurance-row-not-found). */
+        404: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
+        }
+        /** @description A row to end or remove was changed by someone else at the same time (error home-insurance-row-changed). Nothing was written; try again. */
+        409: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
+        }
+        /** @description Unexpected answer from the leasing service, or no answer (error unknown). */
         500: {
-          content: never
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
+        }
+        /** @description The leasing system could not be read or written (error upstream-failed). */
+        503: {
+          content: {
+            'application/json': components['schemas']['HomeInsuranceErrorResponse']
+          }
         }
       }
     }
@@ -12347,6 +12674,80 @@ export interface paths {
       }
     }
   }
+  '/reports/open-invoices': {
+    /**
+     * List open invoices (restlista)
+     * @description Every invoice that is not paid, credited or cancelled and still has money left to pay, the oldest due date first. Each row has the lease status from leasing, the cost centre of the rental object and the tenant's name and address from the contacts service. The name and address are empty when the contacts service fails, when the contact has a protected identity or when it has no record of the contact. Requires the open-invoices:read role.
+     */
+    get: {
+      responses: {
+        /** @description The open invoices. None gives an empty list. */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['OpenInvoiceReportRow'][]
+            }
+          }
+        }
+        /** @description The caller lacks the open-invoices:read role. */
+        403: {
+          content: never
+        }
+        /** @description Unexpected answer from the economy service (error unknown). */
+        500: {
+          content: {
+            'application/json': components['schemas']['OpenInvoiceReportErrorResponse']
+          }
+        }
+        /** @description The invoices, their cost centres or the status of a lease could not be read (error upstream-failed), or leasing's lease cache is loading for the first time (error cache-warming, retry after the Retry-After header). */
+        503: {
+          headers: {
+            /** @description Seconds to wait, sent with cache-warming. */
+            'Retry-After'?: number
+          }
+          content: {
+            'application/json': components['schemas']['OpenInvoiceReportErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/reports/open-invoices/export': {
+    /**
+     * Export open invoices to Excel (restlista)
+     * @description The rows of GET /reports/open-invoices in the columns of the unpaid invoice report (Bosociala): invoice number, invoice date, due date, amount, debt, days past due, rental object, name, contact code, address, lease status and cost centre. The name and address follow the same rules as the list. Requires the open-invoices:read role.
+     */
+    get: {
+      responses: {
+        /** @description Excel file download. */
+        200: {
+          content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
+          }
+        }
+        /** @description The caller lacks the open-invoices:read role. */
+        403: {
+          content: never
+        }
+        /** @description Unexpected answer from the economy service (error unknown), or the file could not be built. */
+        500: {
+          content: {
+            'application/json': components['schemas']['OpenInvoiceReportErrorResponse']
+          }
+        }
+        /** @description The invoices, their cost centres or the status of a lease could not be read (error upstream-failed), or leasing's lease cache is loading for the first time (error cache-warming, retry after the Retry-After header). */
+        503: {
+          headers: {
+            /** @description Seconds to wait, sent with cache-warming. */
+            'Retry-After'?: number
+          }
+          content: {
+            'application/json': components['schemas']['OpenInvoiceReportErrorResponse']
+          }
+        }
+      }
+    }
+  }
   '/v1/contacts': {
     /**
      * List and filter(search) for contact information
@@ -12989,6 +13390,54 @@ export interface paths {
       }
     }
   }
+  '/v1/contacts/sync-to-leasing': {
+    /**
+     * Make leasing pull the current data of a list of contacts
+     * @description Asks leasing to fetch each contact from ONECore again and update its tenant, e.g. after tenants were stored with outdated or redacted data. Changes nothing in the contacts service. Answers 200 with an outcome per contact code once every code has been tried — check `failed`: synced, skipped (leasing has no tenant for the code), sync-failed (leasing answered with an error), leasing-unreachable (whether the tenant was updated is unknown) or not-attempted (leasing stopped answering, so the code was never sent). Every outcome is safe to retry.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['SyncContactsToLeasingRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                results: {
+                  contactCode: string
+                  /** @enum {string} */
+                  status:
+                    | 'synced'
+                    | 'skipped'
+                    | 'sync-failed'
+                    | 'leasing-unreachable'
+                    | 'not-attempted'
+                }[]
+                synced: number
+                skipped: number
+                /** @description Codes with status sync-failed, leasing-unreachable or not-attempted. */
+                failed: number
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error: 'invalid-request'
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/v1/contacts/by-phone-number/{phoneNumber}': {
     /** List contacts by phone number */
     get: {
@@ -13198,6 +13647,112 @@ export interface components {
       contract_end_date?: string
       contract_type: string
     }
+    HomeInsuranceRow: {
+      rowId: string
+      monthlyAmount: number
+      from?: string
+      to?: string
+    }
+    UpdateHomeInsuranceRowResponse:
+      | {
+          /** @enum {string} */
+          action: 'ended'
+          row: {
+            rowId: string
+            monthlyAmount: number
+            from?: string
+            to?: string
+          }
+        }
+      | {
+          /** @enum {string} */
+          action: 'deleted'
+          /** @enum {unknown|null} */
+          row: 'null' | null
+        }
+    HomeInsuranceErrorResponse: {
+      /** @enum {string} */
+      error:
+        | 'lease-not-found'
+        | 'home-insurance-row-not-found'
+        | 'home-insurance-row-changed'
+        | 'home-insurance-already-exists'
+        | 'end-date-before-start'
+        | 'end-date-unchanged'
+        | 'upstream-failed'
+        | 'invalid-request'
+        | 'unknown'
+      reason: string
+    }
+    InvalidRequestBodyResponse: {
+      /** @enum {string} */
+      status: 'error'
+      data: {
+        message: string
+        path: (string | number)[]
+      }[]
+    }
+    HomeInsuranceListItem: {
+      leaseId: string
+      /** @enum {string} */
+      leaseStatus: 'G' | 'K' | '*'
+      /** @enum {number} */
+      leaseStage: 0 | 1 | 2 | 3 | 4 | 5 | 6
+      leaseFromDate: string
+      leaseToDate: string | null
+      rentalObjectCode: string | null
+      numberOfRooms: number | null
+      squareMeters: number | null
+      address: string | null
+      postalCode: string | null
+      city: string | null
+      rowId: string
+      rowFromDate: string | null
+      rowToDate: string | null
+      monthlyAmount: number
+      articleText: string
+      contactCode: string | null
+      isCompany: boolean
+      fullName: string | null
+      nationalIdNumber: string | null
+      phoneNumber: string | null
+      email: string | null
+    }
+    HomeInsuranceListErrorResponse: {
+      /** @enum {string} */
+      error: 'invalid-query' | 'cache-warming' | 'upstream-failed' | 'unknown'
+      details?: unknown[]
+    }
+    OpenInvoiceReportRow: {
+      invoiceNumber: string
+      ocr: string | null
+      invoiceDate: string | null
+      dueDate: string | null
+      amount: number
+      remainingAmount: number
+      rentalObjectCode: string | null
+      leaseId: string | null
+      contactCode: string | null
+      /** @enum {string} */
+      state:
+        | 'new'
+        | 'unmatched'
+        | 'overdue'
+        | 'partially-paid'
+        | 'reminded'
+        | 'deferred'
+      costCentre: string | null
+      /** @enum {number|null} */
+      leaseStatus: 0 | 1 | 2 | 3 | 4 | 5 | 6 | null
+      fullName: string | null
+      address: string | null
+      daysPastDue: number | null
+    }
+    OpenInvoiceReportErrorResponse: {
+      /** @enum {string} */
+      error: 'cache-warming' | 'upstream-failed' | 'unknown'
+      reason: string
+    }
     Lease: {
       leaseId: string
       leaseNumber: string
@@ -13238,6 +13793,7 @@ export interface components {
               fromDate?: string
               /** Format: date-time */
               toDate?: string
+              includedInRent?: boolean
             }[]
           }
           rentalTenureType: {
@@ -13472,6 +14028,7 @@ export interface components {
           fromDate?: string
           /** Format: date-time */
           toDate?: string
+          includedInRent?: boolean
         }[]
       }
     }
@@ -16587,6 +17144,7 @@ export interface components {
                 fromDate?: string
                 /** Format: date-time */
                 toDate?: string
+                includedInRent?: boolean
               }[]
             }
             rentalTenureType: {
@@ -16956,6 +17514,7 @@ export interface components {
                 fromDate?: string
                 /** Format: date-time */
                 toDate?: string
+                includedInRent?: boolean
               }[]
             }
             rentalTenureType: {
@@ -17417,6 +17976,7 @@ export interface components {
                 fromDate?: string
                 /** Format: date-time */
                 toDate?: string
+                includedInRent?: boolean
               }[]
             }
             rentalTenureType: {
@@ -18506,6 +19066,10 @@ export interface components {
       relatedContactCode: string
       /** @enum {string} */
       roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
+    }
+    SyncContactsToLeasingRequest: {
+      /** @description Contact codes to sync, at most 50. Duplicates are synced once. */
+      contactCodes: string[]
     }
     SendLeaseTerminationConfirmationRequest: {
       leaseId: string

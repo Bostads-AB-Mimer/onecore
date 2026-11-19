@@ -27,7 +27,9 @@ export { getPropertyIdentifier } from './lib/property'
 export { sortLeasesByStatus } from './lib/sorting'
 
 // Hooks
+export { useHomeInsurances } from './hooks/useHomeInsurances'
 export { useLeaseFilters } from './hooks/useLeaseFilters'
+export { useLeaseHomeInsurance } from './hooks/useLeaseHomeInsurance'
 export { useLeasesByContactCode } from './hooks/useLeasesByContactCode'
 export { useLeasesByRentalProperty } from './hooks/useLeasesByRentalProperty'
 export { useLeaseSearch } from './hooks/useLeaseSearch'

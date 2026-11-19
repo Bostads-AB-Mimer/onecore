@@ -2,6 +2,7 @@
 export { TenantCard } from './ui/TenantCard'
 export { TenantContactActions } from './ui/TenantContactActions'
 export { TenantLeaseCard } from './ui/TenantLeaseCard'
+export { TenantNameLink } from './ui/TenantNameLink'
 export { TenantPersonalInfo } from './ui/TenantPersonalInfo'
 
 // Formatting utilities
@@ -26,6 +27,7 @@ export {
 } from './lib/relations'
 
 // Hooks
+export { useOpenInvoices } from './hooks/useOpenInvoices'
 export { useRelatedContacts } from './hooks/useRelatedContacts'
 export { useTenant } from './hooks/useTenant'
 export { useTenantComments } from './hooks/useTenantComments'

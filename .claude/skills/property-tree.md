@@ -60,6 +60,8 @@ Cross-cutting domains that apply across the hierarchy:
 | Rum | Room | |
 | Hyresgäst | Customer | Codebase says "tenant" but includes queue applicants |
 | Hyreskontrakt | Lease | |
+| Hemförsäkring | Home insurance | |
+| Restlista | Open invoices report | |
 | Bilplats | Parking space | |
 | Underhållsenhet | Maintenance unit | |
 | Besiktning | Inspection | |
@@ -94,6 +96,8 @@ Cross-cutting domains that apply across the hierarchy:
 | **maintenance-units** | Maintenance unit tracking |
 | **tenants** | Customer profiles and contacts (includes queue applicants, not just active tenants) |
 | **leases** | Lease search, filtering, bulk actions, export |
+| **home-insurance** | Staff list of home insurances (LF selection, all rows / same-date quality check), Excel export, cancel or change T.o.m. |
+| **open-invoices** | Restlista of unpaid invoices from the leasing system, with Excel export |
 | **inspections** | Inspection records |
 | **work-orders** | Maintenance errands, integrated with Odoo |
 | **documents** | File upload and storage |

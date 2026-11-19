@@ -1,3 +1,18 @@
+/** Saves a blob (e.g. an Excel export) as a file in the browser. */
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  // Revoking right away can cancel the download in some browsers.
+  setTimeout(() => {
+    URL.revokeObjectURL(url)
+    link.remove()
+  }, 1000)
+}
+
 /**
  * Downloads a file from a base64-encoded string
  * @param base64Data - The base64-encoded file data
@@ -16,15 +31,5 @@ export function downloadFileFromBase64(
     byteNumbers[i] = byteCharacters.charCodeAt(i)
   }
   const byteArray = new Uint8Array(byteNumbers)
-  const blob = new Blob([byteArray], { type: mimeType })
-
-  // Create download link
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(url)
+  downloadBlob(new Blob([byteArray], { type: mimeType }), filename)
 }

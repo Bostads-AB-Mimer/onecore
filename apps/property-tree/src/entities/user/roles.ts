@@ -11,6 +11,15 @@ export const INVOICE_DEFERRAL_ROLE = 'invoice-deferral'
  */
 export const CONTACTS_WRITE_ROLE = 'contacts:write'
 
+/** Permission to list and export home insurances, with the tenants' personal data. */
+export const HOME_INSURANCE_READ_ROLE = 'home-insurance:read'
+
+/** Permission to end a home insurance row or change its T.o.m. */
+export const HOME_INSURANCE_WRITE_ROLE = 'home-insurance:write'
+
+/** Permission to see the restlista: tenants' names next to what they owe. */
+export const OPEN_INVOICES_READ_ROLE = 'open-invoices:read'
+
 export function hasAnyRole(user: User, roles: string[]) {
   // A token without any role claim means "no roles", never a crash.
   const userRoles = user.roles ?? []

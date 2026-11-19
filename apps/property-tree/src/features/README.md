@@ -23,7 +23,7 @@ features/
     └── index.ts     # Public barrel exports
 ```
 
-Current features: `auth`, `buildings`, `companies`, `component-library`, `documents`, `facilities`, `inspections`, `leases`, `maintenance-units`, `parking-spaces`, `properties`, `rental-blocks`, `residences`, `rooms`, `search`, `tenants`, `work-orders`
+Current features: `auth`, `buildings`, `companies`, `component-library`, `documents`, `facilities`, `home-insurance`, `inspections`, `leases`, `maintenance-units`, `open-invoices`, `parking-spaces`, `properties`, `rental-blocks`, `residences`, `rooms`, `search`, `tenants`, `work-orders`
 
 ## Import rules
 

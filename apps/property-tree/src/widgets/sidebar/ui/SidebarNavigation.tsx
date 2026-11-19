@@ -19,8 +19,16 @@ import {
   Receipt,
   Send,
   Settings,
+  ShieldCheck,
   ShieldX,
+  Wallet,
 } from 'lucide-react'
+
+import {
+  HOME_INSURANCE_READ_ROLE,
+  OPEN_INVOICES_READ_ROLE,
+  RequireRole,
+} from '@/entities/user'
 
 import { routes } from '@/shared/routes'
 import { SidebarNavLink } from '@/shared/ui/layout'
@@ -170,6 +178,13 @@ function SidebarNavigationContent() {
           icon={FileText}
           label="Hyreskontrakt"
         />
+        <RequireRole roles={[HOME_INSURANCE_READ_ROLE]}>
+          <SidebarNavLink
+            to={routes.homeInsurances}
+            icon={ShieldCheck}
+            label="Hemförsäkringar"
+          />
+        </RequireRole>
         {/* UTSKICK - collapsible with Mallar nested under it */}
         <Collapsible
           open={isUtskickExpanded}
@@ -233,6 +248,13 @@ function SidebarNavigationContent() {
           icon={ListOrdered}
           label="Ströfakturor"
         />
+        <RequireRole roles={[OPEN_INVOICES_READ_ROLE]}>
+          <SidebarNavLink
+            to={routes.openInvoices}
+            icon={Wallet}
+            label="Restlista"
+          />
+        </RequireRole>
         <SidebarNavLink
           to={routes.components}
           icon={Settings}
