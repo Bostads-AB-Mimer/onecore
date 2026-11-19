@@ -23,6 +23,7 @@ jest.mock('../../../adapters/xpand/lease-search-adapter', () => ({
   getRentalObjectCodesByAreaCodes: jest.fn(),
   getRentalObjectCodesByDistrictNames: jest.fn(),
   getRentalObjectCodesByKvvAreaCodes: jest.fn(),
+  getParkingSpaceTypesByRentalObjectCode: jest.fn(),
 }))
 
 jest.mock('../../../adapters/xpand/tenant-lease-adapter', () => ({
@@ -37,6 +38,25 @@ const xpandCache = xpandEndedLeaseCache as unknown as {
 const mockedTenfastGetAll = leaseCache.getAll as jest.MockedFunction<
   typeof leaseCache.getAll
 >
+
+const mockedGetParkingSpaceTypesByRentalObjectCode =
+  xpandLeaseSearchAdapter.getParkingSpaceTypesByRentalObjectCode as jest.MockedFunction<
+    typeof xpandLeaseSearchAdapter.getParkingSpaceTypesByRentalObjectCode
+  >
+
+// Stands in for Xpand's parking spaces: rental object code -> babpt code and
+// caption. Like the real lookup, passing type codes returns only those types.
+const mockXpandParkingSpaces = (
+  spaces: Record<string, { code: string; caption: string }>
+) =>
+  mockedGetParkingSpaceTypesByRentalObjectCode.mockImplementation(
+    async (typeCodes) =>
+      new Map(
+        Object.entries(spaces)
+          .filter(([, type]) => !typeCodes || typeCodes.includes(type.code))
+          .map(([rentalObjectCode, type]) => [rentalObjectCode, type.caption])
+      )
+  )
 
 const makeResult = (
   id: string,
@@ -107,6 +127,136 @@ describe('lease search with ended Xpand leases', () => {
     mockedTenfastGetAll.mockReturnValue([makeResult('tenfast-current')])
     xpandCache.isReady.mockReturnValue(true)
     xpandCache.getAll.mockReturnValue([makeXpandEnded('xpand-ended')])
+    // The export always looks up the garage spaces; one garage keeps the
+    // "no garage at all" warning out of tests that count warnings.
+    mockXpandParkingSpaces({
+      'GARAGE-0': { code: 'VARMG', caption: 'Varmgarage' },
+    })
+  })
+
+  describe('contract type (leaseType)', () => {
+    const parking = (
+      make: typeof makeResult,
+      id: string,
+      rentalObjectCode: string,
+      leaseType: LeaseType
+    ) => make(id, { objectTypeCode: 'Parkering', rentalObjectCode, leaseType })
+
+    beforeEach(() => {
+      // Spaces GARAGE-1 and GARAGE-2 have a garage type today.
+      mockXpandParkingSpaces({
+        'GARAGE-1': { code: 'VARMG', caption: 'Varmgarage' },
+        'GARAGE-2': { code: 'KALLG', caption: 'Kallgarage' },
+        'OPEN-1': { code: 'PPLUEL', caption: 'P-plats utan el' },
+      })
+      mockedTenfastGetAll.mockReturnValue([
+        parking(
+          makeResult,
+          'tenfast-garage',
+          'GARAGE-1',
+          LeaseType.ParkingSpaceContract
+        ),
+      ])
+      xpandCache.getAll.mockReturnValue([
+        // Was a P-Platskontrakt in Xpand although the space is a garage now.
+        parking(
+          makeXpandEnded,
+          'xpand-p-plats',
+          'GARAGE-2',
+          LeaseType.ParkingSpaceContract
+        ),
+        // Was a Garagekontrakt in Xpand on a space that has no garage type.
+        parking(
+          makeXpandEnded,
+          'xpand-garage',
+          'OPEN-1',
+          LeaseType.GarageContract
+        ),
+      ])
+    })
+
+    const typesById = (rows: leasing.v1.LeaseSearchResult[]) =>
+      Object.fromEntries(rows.map((r) => [r.leaseId, r.leaseType]))
+
+    it('keeps the contract type a lease had in Xpand, and derives it for Tenfast leases', async () => {
+      const garages = await search({
+        includeEnded: true,
+        leaseType: ['Garagekontrakt'],
+      })
+      const parkingSpaces = await search({
+        includeEnded: true,
+        leaseType: ['P-Platskontrakt'],
+      })
+
+      expect(typesById(garages)).toEqual({
+        'tenfast-garage': LeaseType.GarageContract,
+        'xpand-garage': LeaseType.GarageContract,
+      })
+      expect(typesById(parkingSpaces)).toEqual({
+        'xpand-p-plats': LeaseType.ParkingSpaceContract,
+      })
+    })
+
+    it('counts a contract type only ended Xpand leases have as Övrigt', async () => {
+      xpandCache.getAll.mockReturnValue([
+        makeXpandEnded('xpand-campus', { leaseType: LeaseType.CampusContract }),
+        makeXpandEnded('xpand-housing'),
+      ])
+
+      const other = await search({ status: ['ended'], leaseType: ['Övrigt'] })
+      const housing = await search({
+        status: ['ended'],
+        leaseType: ['Bostadskontrakt'],
+      })
+
+      expect(ids(other)).toEqual(['xpand-campus'])
+      // The row keeps its own type; only the filter groups it under Övrigt.
+      expect(other[0].leaseType).toBe(LeaseType.CampusContract)
+      expect(ids(housing)).toEqual(['xpand-housing'])
+      expect(
+        mockedGetParkingSpaceTypesByRentalObjectCode
+      ).not.toHaveBeenCalled()
+    })
+
+    it('lists the same leases with all five contract types chosen as with none', async () => {
+      xpandCache.getAll.mockReturnValue([
+        ...xpandCache.getAll(),
+        makeXpandEnded('xpand-campus', { leaseType: LeaseType.CampusContract }),
+        makeXpandEnded('xpand-housing'),
+      ])
+
+      const all = await search({
+        includeEnded: true,
+        leaseType: [
+          'Bostadskontrakt',
+          'Lokalkontrakt',
+          'Garagekontrakt',
+          'P-Platskontrakt',
+          'Övrigt',
+        ],
+      })
+      const unfiltered = await search({ includeEnded: true })
+
+      expect(ids(all).sort()).toEqual(ids(unfiltered).sort())
+      expect(all).toHaveLength(5)
+    })
+
+    it('exports the Xpand contract type for ended Xpand leases', async () => {
+      const rows = await tenfastLeaseSearchAdapter.fetchAllLeasesForExport(
+        paged({ includeEnded: true }),
+        mockCtx
+      )
+
+      expect(typesById(rows)).toEqual({
+        'tenfast-garage': LeaseType.GarageContract,
+        'xpand-p-plats': LeaseType.ParkingSpaceContract,
+        'xpand-garage': LeaseType.GarageContract,
+      })
+      // The caption column comes from the lookup over every parking space.
+      expect(
+        rows.find((r) => r.leaseId === 'xpand-garage')?.parkingSpaceType
+      ).toBe('P-plats utan el')
+    })
   })
 
   describe('searchLeases', () => {

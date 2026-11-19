@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { LEASE_TYPE_FILTER_OPTIONS } from '../lib/leaseType'
 import { useLeaseFilters } from './useLeaseFilters'
 
 const useLeaseSearchMock = vi.hoisted(() => vi.fn())
@@ -129,6 +130,72 @@ describe('useLeaseFilters page size', () => {
     render('/leases?pageSize=250')
 
     expect(result.hasActiveFilters).toBe(false)
+  })
+})
+
+describe('useLeaseFilters contract type (Kontraktstyp)', () => {
+  /** The leaseType the last search was made with */
+  const searchedLeaseTypes = () =>
+    useLeaseSearchMock.mock.lastCall?.[0].leaseType
+
+  it('offers exactly the five contract types the search can tell apart', () => {
+    expect(LEASE_TYPE_FILTER_OPTIONS.map((o) => o.value)).toEqual([
+      'Bostadskontrakt',
+      'Lokalkontrakt',
+      'Garagekontrakt',
+      'P-Platskontrakt',
+      'Övrigt',
+    ])
+  })
+
+  it('searches with the contract types in a saved link', () => {
+    render('/leases?leaseType=Garagekontrakt&leaseType=Bostadskontrakt')
+
+    expect(result.selectedLeaseTypes).toEqual([
+      'Garagekontrakt',
+      'Bostadskontrakt',
+    ])
+    expect(searchedLeaseTypes()).toEqual(['Garagekontrakt', 'Bostadskontrakt'])
+  })
+
+  it('drops a contract type the filter does not offer instead of filtering on it unseen', () => {
+    render('/leases?leaseType=Campuskontrakt&leaseType=Lokalkontrakt')
+
+    expect(result.selectedLeaseTypes).toEqual(['Lokalkontrakt'])
+    expect(searchedLeaseTypes()).toEqual(['Lokalkontrakt'])
+  })
+
+  it('searches without a contract type when the link only holds ones it does not offer', () => {
+    render('/leases?leaseType=Campuskontrakt')
+
+    expect(searchedLeaseTypes()).toBeUndefined()
+  })
+
+  it('writes the chosen contract types to the URL and goes back to page 1', () => {
+    render('/leases?page=3&status=current')
+
+    act(() =>
+      result.setFilterValues('leaseType', ['Garagekontrakt', 'Lokalkontrakt'])
+    )
+
+    expect(location.getAll('leaseType')).toEqual([
+      'Garagekontrakt',
+      'Lokalkontrakt',
+    ])
+    expect(location.has('page')).toBe(false)
+    expect(location.get('status')).toBe('current')
+    expect(searchedLeaseTypes()).toEqual(['Garagekontrakt', 'Lokalkontrakt'])
+    expect(searchedPage()).toBe(1)
+  })
+
+  it('clears the contract type with the other filters', () => {
+    render('/leases?leaseType=Garagekontrakt')
+    expect(result.hasActiveFilters).toBe(true)
+
+    act(() => result.clearFilters())
+
+    expect(location.has('leaseType')).toBe(false)
+    expect(searchedLeaseTypes()).toBeUndefined()
   })
 })
 

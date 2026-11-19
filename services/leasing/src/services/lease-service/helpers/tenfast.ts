@@ -80,6 +80,47 @@ export const mapTenfastTypToLeaseType = (
   return TENFAST_TYP_TO_LEASE_TYPE[typ.toLowerCase()] ?? LeaseType.OtherContract
 }
 
+/**
+ * Parking-space type codes (Xpand babpt.code) that count as a garage. Which
+ * parking-space types count as garage is a OneCore rule (AVTAL-566): Tenfast
+ * has no contract type and calls every parking lease P-Platskontrakt, so a
+ * parking lease on a space with one of these types is a Garagekontrakt.
+ * Matched on code, never on caption.
+ */
+export const GARAGE_PARKING_SPACE_TYPE_CODES = [
+  'VARMG',
+  'KALLG',
+  'KGAREL',
+  'TERMOG',
+  'CENTG',
+  'MCGAR',
+  'GARAGE',
+]
+
+// Xpand codes are space-padded and SQL compares them ignoring case and
+// trailing blanks; JavaScript doesn't, so both sides go through this.
+export const normaliseRentalObjectCode = (code: string): string =>
+  code.trim().toUpperCase()
+
+/**
+ * The contract type of a lease row from Tenfast: P-Platskontrakt becomes
+ * Garagekontrakt when the parking space is in `garageObjectCodes`
+ * (normalised rental object codes of spaces with a garage type). Every
+ * other contract type is returned as it is.
+ */
+export const deriveTenfastLeaseType = (
+  leaseType: LeaseType,
+  rentalObjectCode: string | null,
+  garageObjectCodes: ReadonlySet<string>
+): LeaseType => {
+  if (leaseType !== LeaseType.ParkingSpaceContract || !rentalObjectCode) {
+    return leaseType
+  }
+  return garageObjectCodes.has(normaliseRentalObjectCode(rentalObjectCode))
+    ? LeaseType.GarageContract
+    : leaseType
+}
+
 export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
   const { stage } = lease
 

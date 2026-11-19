@@ -10,6 +10,7 @@ import {
 import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
 import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFilterDropdown'
 
+import { isLeaseTypeFilter } from '../lib/leaseType'
 import { DEFAULT_PAGE_SIZE, parsePageSize } from '../lib/pageSize'
 import { useLeaseSearch } from './useLeaseSearch'
 
@@ -133,8 +134,10 @@ export function useLeaseFilters() {
     () => urlSearchParams.getAll('status').filter(isLeaseStatusFilter),
     [urlSearchParams]
   )
+  // A saved link may hold a contract type the filter no longer offers
+  // (e.g. Campuskontrakt); dropped rather than sent as a hidden filter.
   const selectedLeaseTypes = useMemo(
-    () => urlSearchParams.getAll('leaseType'),
+    () => urlSearchParams.getAll('leaseType').filter(isLeaseTypeFilter),
     [urlSearchParams]
   )
   const selectedTenantName = urlSearchParams.get('tenantName') || ''
