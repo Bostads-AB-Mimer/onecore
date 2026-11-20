@@ -45,7 +45,7 @@ De tre scripten delar kärnan [`shared/run-cmlog-sync.ts`](./shared/run-cmlog-sy
 
 ### cmlog som ändringskälla
 
-Xpand loggar varje ändring som en rad i tabellen `cmlog`, med ett fritextfält `logmemo` och en tidsstämpel `logtime`. Synken läser nya rader och tolkar texten. Läsningen sker i respektive tjänst: Contacts för kontakter, Leasing för avtal och hyresobjektstyper.
+Xpand loggar varje ändring som en rad i tabellen `cmlog`, med ett fritextfält `logmemo` och en tidsstämpel `logtime`. Synken läser nya rader och väljer dem på texten. Läsningen sker i respektive tjänst: Contacts för kontakter, Leasing för avtal och hyresobjektstyper.
 
 Hitta posten en rad gäller via `keydbtbl` (tabellen) och `keycode` (postens nyckel), inte via en kod i `logmemo`. Texten skrivs en gång och uppdateras inte när Xpand byter kod på posten.
 
