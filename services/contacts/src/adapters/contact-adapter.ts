@@ -189,8 +189,8 @@ export interface ContactsRepository {
   getByEmailAddress: (emailAddress: string) => Promise<Contact[]>
 
   /**
-   * Retrieves contact codes for contacts changed since the given timestamp,
-   * each paired with the latest logtime for that code. Results are ordered
+   * Retrieves the current contact codes of contacts changed since the given
+   * timestamp, each paired with the latest logtime for that contact. Results are ordered
    * by timestamp ascending. If no timestamp is provided, returns all
    * matching rows.
    *
