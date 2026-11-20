@@ -32,7 +32,7 @@ export function BulkActionBar({
         className
       )}
     >
-      <div className="container mx-auto flex items-center justify-between">
+      <div className="container mx-auto flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium">
             {selectedCount.toLocaleString('sv-SE')} valda
@@ -50,7 +50,7 @@ export function BulkActionBar({
             &times; Rensa
           </button>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={onSendSms} disabled={isLoading}>
             <MessageSquare className="mr-2 h-4 w-4" />
             {isLoading ? 'Laddar...' : 'Skicka SMS'}
