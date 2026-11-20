@@ -4,7 +4,7 @@ import {
   placeholderPhoneNumber,
 } from '../../src/contact-details'
 
-const env = (vars: Record<string, string>) => vars as NodeJS.ProcessEnv
+const env = (vars: Record<string, string>) => vars as typeof process.env
 
 describe('contactDetailsMode', () => {
   it.each(['real', 'placeholder', 'redacted'] as const)(

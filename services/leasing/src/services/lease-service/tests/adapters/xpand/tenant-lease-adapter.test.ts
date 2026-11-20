@@ -58,7 +58,7 @@ jest.mock('knex', () => () => ({
     }),
 }))
 
-let savedEnv: NodeJS.ProcessEnv
+let savedEnv: typeof process.env
 
 beforeEach(() => {
   savedEnv = process.env

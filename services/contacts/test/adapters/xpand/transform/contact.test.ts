@@ -99,7 +99,7 @@ describe('transformDbContactRows: contact details mode', () => {
       ...overrides,
     })
 
-  let originalEnv: NodeJS.ProcessEnv
+  let originalEnv: typeof process.env
 
   beforeEach(() => {
     originalEnv = { ...process.env }

@@ -1,7 +1,7 @@
 export type ContactDetailsMode = 'real' | 'placeholder' | 'redacted'
 
 export const contactDetailsMode = (
-  env: NodeJS.ProcessEnv = process.env
+  env: typeof process.env = process.env
 ): ContactDetailsMode => {
   const mode = env.CONTACT_DETAILS__MODE
   if (mode === undefined || mode === '') {
