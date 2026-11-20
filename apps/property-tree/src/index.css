@@ -106,3 +106,38 @@
     border-color 0.3s ease,
     color 0.2s ease;
 }
+
+/* Print only the element marked by printElement() (shared/lib/print.ts).
+   Everything that neither is, contains nor sits inside the target is hidden,
+   and the target's ancestors lose their app layout (fixed heights, overflow,
+   spacing) so the target starts at the top of the first page. */
+@media print {
+  body:has([data-print-target])
+    *:not(
+      [data-print-target],
+      [data-print-target] *,
+      :has([data-print-target])
+    ) {
+    display: none !important;
+  }
+
+  body:has([data-print-target]),
+  body *:has([data-print-target]) {
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  [data-print-target] img {
+    display: block;
+    max-width: 100%;
+    max-height: 100vh;
+    margin: 0 auto;
+  }
+}

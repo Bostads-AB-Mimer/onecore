@@ -133,7 +133,8 @@ sequenceDiagram
     Economy -->> Core: Invoices
 
     break when fetching Invoices for Internal Credit Check fails
-        Core-->User: show error message
+        Note over Economy: Xledger down: retried, then 503
+        Core-->User: 503 service-unavailable (try again later), otherwise 500 internal-error
     end
 
     Core ->> Core: Filter to Invoices sent to Debt<br/>Collection — pass if none found

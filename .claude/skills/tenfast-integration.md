@@ -181,7 +181,8 @@ a date, so Tenfast can't give the rent for another day.
 - **`includeInContract: false`** marks a row outside the total, such as the
   optional home insurance. `consolidationLabel` ("Summarad" in the Tenfast UI)
   only merges rows into one line on the invoice and says nothing about the
-  total.
+  total. It must be in `TenfastInvoiceRowSchema`: `z.object` strips unknown
+  keys, and new leases lost the label when it was missing.
 - **Future rows are in `hyror` already.** A rent raised at the turn of the
   year is a row ending 12-31 and a new row from 01-01.
 
@@ -219,7 +220,30 @@ The day comes from:
   `rentAtByRentalObjectCode` on the batch route).
 
 `includeInContract` is read only. `createLease` and `importLease` strip it
-before sending the rental object's rows to Tenfast.
+before sending the rental object's rows to Tenfast. `consolidationLabel` is
+sent along with each row.
+
+Both `createLease` and `importLease` set `aviseringsTyp: 'stralfors'`
+(`NEW_LEASE_NOTIFICATION_TYPE`). Leaving it out, as `importLease` used to, gives
+"Aviseras ej" in Tenfast.
+
+## Co-invoicing (samavisering) is Tenfast's, and hangs on the invoice settings
+
+Tenfast groups a new lease with the tenant's other leases when it is created,
+not when it is signed. We send nothing about it: no field to pick the group, and
+not `disableAutoSamAvisering`, which turns it off for a lease. Tenfast's API docs
+(test, 2026-11-17) have no field to pick the group. `parentAvtal` links an
+addendum to its main lease and has nothing to do with co-invoicing.
+
+Leases are grouped only when their tenants are equal or one set is a subset of
+the other, and `aviseringsFrekvens`, `forskottAvisering`, `betalasForskott`,
+`betalningsOffset` and internal/external all match. So the values that
+`createLease` and `importLease` send (`1m`, `2v`, `1d`, `true`) must match the
+existing leases in Tenfast. In November 2026 Tenfast set `forskottAvisering` to
+`12d` on all leases, so leases created after their import could not be
+co-invoiced properly until it was set back to `2v` on 2026-11-17.
+
+Rules and examples: `core/src/processes/invoicedistribution/DOCS_Co_Invoicing.md`.
 
 ## Home insurance rows: pick the current one, and verify every write
 

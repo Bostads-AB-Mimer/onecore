@@ -46,6 +46,38 @@ describe('Invoice Service', () => {
       expect(res.status).toBe(400)
     })
 
+    it('responds with 503 and xledger-unavailable when Xledger is unavailable', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
+        .mockRejectedValueOnce(new xledgerAdapter.XledgerUnavailableError(503))
+      jest
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([])
+
+      const res = await request(app.callback()).get(
+        `/invoices/bycontactcode/P123456`
+      )
+
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('xledger-unavailable')
+    })
+
+    it('responds with 500 on other errors', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
+        .mockRejectedValueOnce(new Error('Something broke'))
+      jest
+        .spyOn(tenfastAdapter, 'getInvoicesByContactCode')
+        .mockResolvedValueOnce([])
+
+      const res = await request(app.callback()).get(
+        `/invoices/bycontactcode/P123456`
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBeUndefined()
+    })
+
     it('responds with invoices', async () => {
       jest
         .spyOn(xledgerAdapter, 'getInvoicesByContactCode')
@@ -408,6 +440,45 @@ describe('Invoice Service', () => {
 
       expect(res.status).toBe(500)
       expect(res.body.code).toBe('xledger-failed')
+    })
+  })
+
+  describe('GET /invoices/:invoiceNumber/file', () => {
+    it('returns 200 with the pdf bytes', async () => {
+      const pdfBuffer = Buffer.from('%PDF-1.4 mock')
+      jest
+        .spyOn(xledgerAdapter, 'getInvoiceFile')
+        .mockResolvedValueOnce({ ok: true, data: pdfBuffer })
+
+      const res = await request(app.callback()).get('/invoices/1234567/file')
+
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toMatch('application/pdf')
+      expect(Buffer.from(res.body).equals(pdfBuffer)).toBe(true)
+    })
+
+    it.each(['invoice-not-found', 'file-not-found'] as const)(
+      'returns 404 with reason %s',
+      async (reason) => {
+        jest
+          .spyOn(xledgerAdapter, 'getInvoiceFile')
+          .mockResolvedValueOnce({ ok: false, err: reason })
+
+        const res = await request(app.callback()).get('/invoices/1234567/file')
+
+        expect(res.status).toBe(404)
+        expect(res.body.reason).toBe(reason)
+      }
+    )
+
+    it('returns 500 when the download fails', async () => {
+      jest
+        .spyOn(xledgerAdapter, 'getInvoiceFile')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get('/invoices/1234567/file')
+
+      expect(res.status).toBe(500)
     })
   })
 

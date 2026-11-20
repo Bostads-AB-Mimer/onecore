@@ -60,6 +60,7 @@ import {
   HomeInsuranceListRouteErrorCode,
   InvalidRequestBodyResponseSchema,
 } from './schemas/home-insurance'
+import { runWithConcurrency } from '../../utils/concurrency'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 registerSchema('HomeInsuranceRow', leasing.HomeInsuranceRowSchema)
@@ -74,6 +75,13 @@ registerSchema(
   'HomeInsuranceListErrorResponse',
   HomeInsuranceListErrorResponseSchema
 )
+
+// Same cap as the lease search in leasing. Each lease on a page gets a contact
+// and a rental object lookup, so a full page makes about 1000 calls.
+const CSC_MAX_PAGE_SIZE = 500
+// Leases looked up at once, so a full page doesn't send all its lookups to
+// leasing and property-management in one burst.
+const CSC_LOOKUP_CONCURRENCY = 20
 
 export const routes = (router: KoaRouter) => {
   // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
@@ -133,10 +141,24 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
    *     tags:
    *       - Lease service
-   *     description: Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
+   *     description: Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates. The filtering runs after paging, so a page can hold fewer rows than `limit` while more pages remain; page until `_meta.page * _meta.limit >= _meta.totalRecords`.
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number. Values below 1 count as 1.
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 500
+   *           maximum: 500
+   *         description: Leases per page, before filtering. Values above 500 count as 500, values below 1 as 1.
    *     responses:
    *       '200':
-   *         description: Successfully retrieved upcoming move-ins
+   *         description: Successfully retrieved residential leases for the CSC report
    *         content:
    *           application/json:
    *             schema:
@@ -148,10 +170,24 @@ export const routes = (router: KoaRouter) => {
    *                     $ref: '#/components/schemas/CustomerScoreCardInfoSchema'
    *                 _meta:
    *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                       description: Current residential leases, before filtering
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                       description: The page size used
+   *                     count:
+   *                       type: integer
+   *                       description: Rows on this page, after filtering
    *       '400':
-   *         description: Invalid query parameters
+   *         description: Invalid query parameters, e.g. a page or limit that is not a number
    *       '500':
    *         description: Internal server error
+   *       '503':
+   *         description: The lease service is warming up; try again shortly
    *     security:
    *       - bearerAuth: []
    */
@@ -161,14 +197,14 @@ export const routes = (router: KoaRouter) => {
     try {
       // Filter leases on object type 'Bostad' and current leases but allow additional filtering by query params, ie for paging
       const leaseSearchParams = {
-        limit: '500',
+        limit: String(CSC_MAX_PAGE_SIZE),
         ...ctx.query,
         objectType: 'bostad',
         status: LeaseStatus[LeaseStatus.Current],
       }
 
-      // Set limit to max 500
-      if (Number(leaseSearchParams.limit) > 500) leaseSearchParams.limit = '500'
+      if (Number(leaseSearchParams.limit) > CSC_MAX_PAGE_SIZE)
+        leaseSearchParams.limit = String(CSC_MAX_PAGE_SIZE)
 
       const leaseSearchResult =
         await leasingAdapter.searchLeases(leaseSearchParams)
@@ -180,14 +216,16 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 200
         ctx.body = {
           content: [],
+          _meta: { ...leaseSearchResult._meta, count: 0 },
           ...metadata,
         }
         return
       }
 
       //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
-      const parsedContent = await Promise.all(
-        leaseSearchResult.content.map(async (lease) => {
+      const parsedContent = await runWithConcurrency(
+        leaseSearchResult.content,
+        async (lease) => {
           const rentalObjectCode =
             lease.leaseId.split('/')[0] != ''
               ? lease.leaseId.split('/')[0]
@@ -322,7 +360,8 @@ export const routes = (router: KoaRouter) => {
             )
             return null
           }
-        })
+        },
+        CSC_LOOKUP_CONCURRENCY
       )
 
       const filteredLeases = parsedContent.filter(Boolean)
@@ -341,6 +380,15 @@ export const routes = (router: KoaRouter) => {
       if (axios.isAxiosError(error) && error.response?.status === 503) {
         ctx.status = 503
         ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid query parameters',
+          reason: error.response.data?.details,
+          ...metadata,
+        }
         return
       }
       logger.error({ error, metadata }, 'Error getting leases for CSC report')

@@ -17,6 +17,31 @@ export function isDeferralErrorCode(
   return DeferralErrorCodes.some((code) => code === value)
 }
 
+// Why POST /invoices/{invoiceId}/send could not email the invoice.
+export const SendInvoiceEmailErrorCodes = [
+  'invoice-not-found',
+  'pdf-not-found',
+  'no-recipient',
+  'no-email',
+  'missing-due-date',
+  'send-failed',
+  'unknown',
+] as const
+
+export type SendInvoiceEmailErrorCode =
+  (typeof SendInvoiceEmailErrorCodes)[number]
+
+/** Request body for POST /invoices/{invoiceId}/send. */
+export const SendInvoiceEmailRequestSchema = z.object({
+  // The invoice's type, when the caller already knows it. A miscellaneous
+  // invoice ('Other') is never a rent notice, so core skips that lookup.
+  invoiceType: z.enum(['Regular', 'Other']).optional(),
+  // The contact whose ledger the invoice is sent from. A rent notice on a
+  // shared lease is in every tenant's ledger; this picks which of them gets
+  // the email. Without it the first tenant on the lease does.
+  contactCode: z.string().trim().min(1).optional(),
+})
+
 export const XledgerDeferralRequestSchema = z.object({
   endDate: z.string().regex(isoDateRegex, 'endDate must be YYYY-MM-DD'),
 })

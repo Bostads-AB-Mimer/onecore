@@ -13,10 +13,12 @@ import {
 
 import {
   getAllInvoicesWithMatchIds,
+  getInvoiceFile,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   getMiscellaneousInvoices,
   submitMiscellaneousInvoice,
+  XledgerUnavailableError,
 } from '../common/adapters/xledger-adapter'
 import { getPropertyCodeAndCostCentreForLease } from '../common/adapters/xpand-db-adapter'
 import {
@@ -316,14 +318,22 @@ export const routes = (router: KoaRouter) => {
 
       ctx.status = 200
       ctx.body = makeSuccessResponseBody(invoices, metadata)
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error(
         { err: error, contactCode: contactCode },
         'Error getting invoices for contact code'
       )
+      if (error instanceof XledgerUnavailableError) {
+        ctx.status = 503
+        ctx.body = {
+          error: 'xledger-unavailable',
+          message: error.message,
+        }
+        return
+      }
       ctx.status = 500
       ctx.body = {
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
       }
     }
   })
@@ -345,6 +355,59 @@ export const routes = (router: KoaRouter) => {
       ).replace(/[\r\n]/g, '')
     )
     ctx.body = result.data.data
+  })
+
+  /**
+   * @swagger
+   * /invoices/{invoiceNumber}/file:
+   *   get:
+   *     summary: Download the PDF Xledger keeps for an invoice
+   *     description: Used for miscellaneous invoices. Rent notices are fetched via /invoices/{ocr}/pdf.
+   *     tags:
+   *       - Invoices
+   *     parameters:
+   *       - in: path
+   *         name: invoiceNumber
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: The invoice PDF
+   *         content:
+   *           application/pdf:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       404:
+   *         description: The invoice or its file was not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   enum: [invoice-not-found, file-not-found]
+   *       500:
+   *         description: The file could not be downloaded
+   */
+  router.get('(.*)/invoices/:invoiceNumber/file', async (ctx) => {
+    const result = await getInvoiceFile(ctx.params.invoiceNumber)
+
+    if (!result.ok) {
+      if (result.err === 'unknown') {
+        ctx.status = 500
+        return
+      }
+      ctx.status = 404
+      ctx.body = { reason: result.err }
+      return
+    }
+
+    ctx.status = 200
+    ctx.set('Content-Type', 'application/pdf')
+    ctx.body = result.data
   })
 
   router.get('(.*)/invoices/by-ocr/:ocr', async (ctx) => {

@@ -1132,6 +1132,7 @@ describe(tenfastAdapter.createLease, () => {
       const rentRow = factory.tenfastInvoiceRow.build({
         article: baseArticle._id,
         vat: 0,
+        consolidationLabel: 'Hyra lokal',
       })
       const mockRentalObject = factory.tenfastRentalObject.build({
         hyror: [rentRow],
@@ -1162,6 +1163,7 @@ describe(tenfastAdapter.createLease, () => {
       // Assert
       expect(leaseRequestData.hyror[0].article).toBe(vatArticle._id)
       expect(leaseRequestData.hyror[0].vat).toBe(0.25)
+      expect(leaseRequestData.hyror[0].consolidationLabel).toBe('Hyra lokal')
       expect(leaseRequestData.vatEnabled).toBe(true)
     })
 
@@ -1332,6 +1334,7 @@ describe(tenfastAdapter.createLease, () => {
       article: 'some-article-id',
       vat: 0.25,
       includeInContract: false,
+      consolidationLabel: 'Hyra bilplats',
     })
     const mockRentalObject = factory.tenfastRentalObject.build({
       hyror: [rentRow],
@@ -1365,7 +1368,9 @@ describe(tenfastAdapter.createLease, () => {
     expect(leaseRequestData.hyror[0].vat).toBe(0.25)
     // Read for the rent total only, never sent back to Tenfast.
     expect(leaseRequestData.hyror[0]).not.toHaveProperty('includeInContract')
+    expect(leaseRequestData.hyror[0].consolidationLabel).toBe('Hyra bilplats')
     expect(leaseRequestData.vatEnabled).toBe(false)
+    expect(leaseRequestData.aviseringsTyp).toBe('stralfors')
   })
 
   it('should return lease when all dependencies succeed and status is 201', async () => {
@@ -1706,8 +1711,14 @@ describe(tenfastAdapter.importLease, () => {
     })
 
     // includeInContract is read for the rent total only, never sent back.
+    // consolidationLabel must reach the lease's rows.
     const mockRentalObject = factory.tenfastRentalObject.build({
-      hyror: [factory.tenfastInvoiceRow.build({ includeInContract: false })],
+      hyror: [
+        factory.tenfastInvoiceRow.build({
+          includeInContract: false,
+          consolidationLabel: 'Hyra bostad',
+        }),
+      ],
     })
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
@@ -1739,6 +1750,7 @@ describe(tenfastAdapter.importLease, () => {
       hyresobjekt: [mockRentalObject._id],
       startDate: fromDate.toISOString(),
       avtalsbyggare: false,
+      aviseringsTyp: 'stralfors',
       aviseringsFrekvens: '1m',
       forskottAvisering: '2v',
       betalningsOffset: '1d',
@@ -1752,6 +1764,7 @@ describe(tenfastAdapter.importLease, () => {
       method: 'import',
       signed: true,
     })
+    expect(call.data.hyror[0].consolidationLabel).toBe('Hyra bostad')
   })
 
   it('returns "could-not-retrieve-tenant" when getTenantByContactCode fails', async () => {

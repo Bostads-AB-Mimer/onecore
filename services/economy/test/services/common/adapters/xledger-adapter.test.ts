@@ -116,11 +116,105 @@ describe('makeXledgerRequest rate limiting', () => {
   })
 })
 
+describe('makeXledgerRequest when Xledger is unavailable', () => {
+  const defaultPolicy = { ...adapter.xledgerRequestPolicy }
+
+  beforeEach(() => {
+    adapter.setXledgerRequestPolicy({
+      baseDelayMs: 1,
+      maxDelayMs: 5,
+      unavailableMaxAttempts: 3,
+    })
+  })
+
+  afterEach(() => {
+    adapter.setXledgerRequestPolicy(defaultPolicy)
+  })
+
+  it('retries after a 503 and succeeds', async () => {
+    nock(origin).post(pathname).reply(503)
+    nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+    expect(nock.isDone()).toBe(true)
+  })
+
+  it('gives up after unavailableMaxAttempts with XledgerUnavailableError', async () => {
+    const scope = nock(origin).post(pathname).times(3).reply(503)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    const result = adapter.getInvoiceMatchId('1')
+
+    await expect(result).rejects.toBeInstanceOf(adapter.XledgerUnavailableError)
+    await expect(result).rejects.toMatchObject({ status: 503 })
+    expect(scope.isDone()).toBe(true)
+    expect(extra.isDone()).toBe(false)
+  })
+
+  it('retries a read after a 502', async () => {
+    nock(origin).post(pathname).reply(502)
+    nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+  })
+
+  it('does not retry a 504, since it may mean a slow query', async () => {
+    nock(origin).post(pathname).reply(504)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    const result = adapter.getInvoiceMatchId('1')
+
+    await expect(result).rejects.not.toBeInstanceOf(
+      adapter.XledgerUnavailableError
+    )
+    await expect(result).rejects.toThrow(/status code 504/)
+    expect(extra.isDone()).toBe(false)
+  })
+
+  it.each(['ECONNREFUSED', 'ECONNRESET'])(
+    'retries a read after %s',
+    async (code) => {
+      nock(origin).post(pathname).replyWithError({ code })
+      nock(origin).post(pathname).reply(200, matchIdBody)
+
+      await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+    }
+  )
+
+  it('rethrows other errors unchanged', async () => {
+    nock(origin).post(pathname).reply(400)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    const result = adapter.getInvoiceMatchId('1')
+
+    await expect(result).rejects.not.toBeInstanceOf(
+      adapter.XledgerUnavailableError
+    )
+    await expect(result).rejects.toThrow(/status code 400/)
+    expect(extra.isDone()).toBe(false)
+  })
+})
+
 describe(adapter.getInvoicesByContactCode, () => {
   it('returns null when customer does not exist', async () => {
     nock(origin).post(pathname).reply(200, {
       data: null,
     })
+
+    const result = await adapter.getInvoicesByContactCode('P12345')
+    expect(result).toBeNull()
+  })
+
+  it('returns null when Xledger finds no customer with the code', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          customers: {
+            edges: [],
+          },
+        },
+      })
 
     const result = await adapter.getInvoicesByContactCode('P12345')
     expect(result).toBeNull()
@@ -823,6 +917,22 @@ describe(adapter.updateInvoiceDeferralDate, () => {
     },
   }
 
+  it('does not retry the mutation when Xledger is unavailable, since it may have been applied', async () => {
+    nock(origin).post(pathname).reply(200, mockDbIdResponse)
+    nock(origin).post(pathname).reply(200, mockInvoiceResponse(null))
+    const mutation = nock(origin).post(pathname).reply(503)
+    const retry = nock(origin).post(pathname).reply(200, mutationReply)
+
+    const result = adapter.updateInvoiceDeferralDate(invoiceNumber, newDueDate)
+
+    await expect(result).rejects.not.toBeInstanceOf(
+      adapter.XledgerUnavailableError
+    )
+    await expect(result).rejects.toThrow(/status code 503/)
+    expect(mutation.isDone()).toBe(true)
+    expect(retry.isDone()).toBe(false)
+  })
+
   it('sends "Anstånd till YYYY-MM-DD" as text variable when invoice has no existing text', async () => {
     let mutationBody: any
     nock(origin).post(pathname).reply(200, mockDbIdResponse)
@@ -1221,6 +1331,88 @@ describe(adapter.getMiscellaneousInvoices, () => {
 
     const result = await adapter.getMiscellaneousInvoices({})
 
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(adapter.getInvoiceFile, () => {
+  const fileUrl = 'https://files.xledger.example.com/invoice/12345.pdf'
+  const invoiceNode = (invoiceFile: { url: string } | null) => ({
+    data: {
+      arTransactions: {
+        edges: [
+          {
+            node: {
+              invoiceNumber: '12345',
+              invoiceDate: '2025-01-01',
+              invoiceRemaining: 100,
+              subledger: { code: 'P12345', description: 'Test Tenant' },
+              period: { fromDate: '2025-01-01', toDate: '2025-01-01' },
+              dueDate: '2025-01-31',
+              text: null,
+              headerTransactionSourceDbId: 600,
+              amount: 100,
+              invoiceFile,
+            },
+          },
+        ],
+      },
+    },
+  })
+
+  it('downloads the file Xledger links to', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, invoiceNode({ url: fileUrl }))
+    nock('https://files.xledger.example.com')
+      .get('/invoice/12345.pdf')
+      .reply(200, Buffer.from('%PDF-1.4 mock'))
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: true, data: Buffer.from('%PDF-1.4 mock') })
+  })
+
+  it('returns invoice-not-found when Xledger has no such invoice', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: false, err: 'invoice-not-found' })
+  })
+
+  it('returns file-not-found when the invoice has no file', async () => {
+    // Arrange
+    nock(origin).post(pathname).reply(200, invoiceNode(null))
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: false, err: 'file-not-found' })
+  })
+
+  it('returns unknown when the file download fails', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, invoiceNode({ url: fileUrl }))
+    nock('https://files.xledger.example.com')
+      .get('/invoice/12345.pdf')
+      .reply(403)
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })

@@ -1839,25 +1839,45 @@ export interface paths {
   '/leases/for-csc': {
     /**
      * Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
-     * @description Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
+     * @description Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates. The filtering runs after paging, so a page can hold fewer rows than `limit` while more pages remain; page until `_meta.page * _meta.limit >= _meta.totalRecords`.
      */
     get: {
+      parameters: {
+        query?: {
+          /** @description Page number. Values below 1 count as 1. */
+          page?: number
+          /** @description Leases per page, before filtering. Values above 500 count as 500, values below 1 as 1. */
+          limit?: number
+        }
+      }
       responses: {
-        /** @description Successfully retrieved upcoming move-ins */
+        /** @description Successfully retrieved residential leases for the CSC report */
         200: {
           content: {
             'application/json': {
               content?: components['schemas']['CustomerScoreCardInfoSchema'][]
-              _meta?: Record<string, never>
+              _meta?: {
+                /** @description Current residential leases, before filtering */
+                totalRecords?: number
+                page?: number
+                /** @description The page size used */
+                limit?: number
+                /** @description Rows on this page, after filtering */
+                count?: number
+              }
             }
           }
         }
-        /** @description Invalid query parameters */
+        /** @description Invalid query parameters, e.g. a page or limit that is not a number */
         400: {
           content: never
         }
         /** @description Internal server error */
         500: {
+          content: never
+        }
+        /** @description The lease service is warming up; try again shortly */
+        503: {
           content: never
         }
       }
@@ -2587,7 +2607,7 @@ export interface paths {
   '/contacts/from-lease-search': {
     /**
      * Get contacts matching lease search filters
-     * @description Retrieves contact information for tenants matching the given lease search filters.
+     * @description Returns the contacts on every lease that /leases/search lists for the same filters, one per contact. Phone and e-mail come from the contacts service only. They are empty for a contact with protected identity and for a contact the contacts service has no record of.
      */
     get: {
       parameters: {
@@ -2655,8 +2675,20 @@ export interface paths {
             }
           }
         }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
         /** @description Internal server error */
         500: {
+          content: never
+        }
+        /** @description Phone and e-mail could not be read from the contacts service (error contacts-lookup-failed). No contacts are returned. */
+        502: {
+          content: never
+        }
+        /** @description The lease service is still loading its leases. Retry shortly. */
+        503: {
           content: never
         }
       }
@@ -3622,9 +3654,25 @@ export interface paths {
       }
       responses: {
         /** @description Lease successfully created */
-        201: {
+        200: {
           content: {
-            'application/json': Record<string, never>
+            'application/json': {
+              content?: {
+                leaseId?: string
+                message?: string
+                /** @enum {string} */
+                creditCheckType?: 'extern' | 'intern'
+                /** @description Whether the lease got VAT, and why. No VAT when the tenant has a current or upcoming housing contract in the parking space's residential area. */
+                vat?: {
+                  includeVAT?: boolean
+                  /** @enum {string} */
+                  reason?:
+                    | 'housing-contract-in-area'
+                    | 'no-housing-contract-in-area'
+                    | 'not-a-tenant'
+                }
+              }
+            }
           }
         }
         /** @description Bad request */
@@ -3640,14 +3688,25 @@ export interface paths {
         409: {
           content: never
         }
-        /** @description Internal server error */
+        /** @description Internal server error. error is get-tenant-failed when the applicant's housing contracts could not be fetched to decide VAT; no lease was created then. */
         500: {
           content: {
             'application/json': {
-              /** @example A technical error has occured. */
-              message?: string
+              /** @enum {string} */
+              error?:
+                | 'get-tenant-failed'
+                | 'fetch-invoices-failed'
+                | 'create-lease-failed'
+                | 'internal-error'
+              content?: {
+                message?: string
+              }
             }
           }
+        }
+        /** @description The internal credit check could not be done because invoices are temporarily unavailable. error is fetch-invoices-failed. Trying again later may work. */
+        503: {
+          content: never
         }
       }
     }
@@ -3688,6 +3747,10 @@ export interface paths {
               message?: string
             }
           }
+        }
+        /** @description The internal credit check could not be done because invoices are temporarily unavailable (errorCode service-unavailable). Trying again later may work. */
+        503: {
+          content: never
         }
       }
     }
@@ -9107,6 +9170,33 @@ export interface paths {
       }
     }
   }
+  '/invoices/{ocr}/pdf': {
+    /** Download the rent notice PDF for an invoice */
+    get: {
+      parameters: {
+        path: {
+          /** @description The OCR number of the rent notice */
+          ocr: string
+        }
+      }
+      responses: {
+        /** @description The rent notice PDF */
+        200: {
+          content: {
+            'application/pdf': string
+          }
+        }
+        /** @description There is no rent notice with this OCR number */
+        404: {
+          content: never
+        }
+        /** @description The PDF could not be fetched */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/invoices/{invoiceId}/deferral': {
     /**
      * Set a grace period (anstånd) on an invoice
@@ -9177,10 +9267,75 @@ export interface paths {
       }
     }
   }
+  '/invoices/{invoiceId}/send': {
+    /**
+     * Email an invoice to the customer
+     * @description Emails the invoice with its PDF attached. A rent notice goes to the
+     * tenant given as contactCode, or the first tenant on its lease, with
+     * the rent notice PDF. A miscellaneous
+     * invoice goes to the customer it is billed to with the PDF from the
+     * ledger. Outside production the email goes to the test inbox.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The invoice number (the OCR number for a rent notice) */
+          invoiceId: string
+        }
+      }
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @description The invoice's type, when the caller knows it. For Other (a miscellaneous invoice) the rent notice lookup is skipped.
+             * @enum {string}
+             */
+            invoiceType?: 'Regular' | 'Other'
+            /** @description The tenant a rent notice is emailed to, for a lease with several tenants. Must be a tenant on the lease. Without it the first tenant is emailed. Not used for a miscellaneous invoice. */
+            contactCode?: string
+          }
+        }
+      }
+      responses: {
+        /** @description The email was sent */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                sent: boolean
+              }
+            }
+          }
+        }
+        /** @description The request body is invalid */
+        400: {
+          content: never
+        }
+        /** @description The invoice or its PDF was not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['SendInvoiceEmailError']
+          }
+        }
+        /** @description The invoice has no recipient, the recipient has no email address, or the invoice has no due date */
+        422: {
+          content: {
+            'application/json': components['schemas']['SendInvoiceEmailError']
+          }
+        }
+        /** @description The email could not be sent */
+        500: {
+          content: {
+            'application/json': components['schemas']['SendInvoiceEmailError']
+          }
+        }
+      }
+    }
+  }
   '/invoices/notify-batch': {
     /**
      * Send invoice notification emails for a selection of invoices
-     * @description For each OCR number, fetches invoice data and PDF from economy, contact info from leasing, then sends a notification email with the invoice PDF attached.
+     * @description For each OCR number, fetches invoice data and PDF from economy, the lease from leasing and the tenant's contact info from the contacts service, then sends a notification email with the invoice PDF attached.
      */
     post: {
       requestBody: {
@@ -9198,7 +9353,11 @@ export interface paths {
             'application/json': {
               content?: {
                 sent?: string[]
-                failed?: Record<string, never>[]
+                failed?: {
+                  ocr: string
+                  /** @description not-found, unknown, pdf-not-found, pdf-unknown, no-lease-id, lease-not-found, no-contact-code, protected-identity, no-email or missing-expiration-date */
+                  error: string
+                }[]
                 totalSent?: number
                 totalFailed?: number
               }
@@ -19005,6 +19164,17 @@ export interface components {
           templated?: boolean
         }
       }
+    }
+    SendInvoiceEmailError: {
+      /** @enum {string} */
+      reason:
+        | 'invoice-not-found'
+        | 'pdf-not-found'
+        | 'no-recipient'
+        | 'no-email'
+        | 'missing-due-date'
+        | 'send-failed'
+        | 'unknown'
     }
     CreateContactRequest: {
       nationalId: string

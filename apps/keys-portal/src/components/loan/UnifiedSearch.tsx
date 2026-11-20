@@ -20,7 +20,7 @@ interface UnifiedSearchProps {
 const isValidPnr = (value: string) =>
   /^(?:\d{6}|\d{8})-?\d{4}$/.test(value.trim())
 
-// Prefix set mirrors leasing's searchTermAnalyzer: P = person, F = company,
+// Contact code prefixes: P = person, F = company,
 // K = municipal/public sector (e.g. K010000 Västerås Stad), plus I, L, S, Ö.
 const isContactCode = (value: string) => {
   const trimmed = value.trim().toUpperCase()

@@ -7,7 +7,11 @@ import {
 } from '../../adapters/leasing-adapter'
 import { getRentalPropertyInfoFromXpand } from '../../adapters/property-management-adapter'
 import { makeContactsAdapter } from '../../adapters/contacts-adapter'
-import { syncInvoiceRecipientToEconomy } from '../../processes/contacts'
+import {
+  revealProtectedTenant,
+  syncInvoiceRecipientToEconomy,
+} from '../../processes/contacts'
+import type { ContactLookup } from '../../processes/contacts/sync-invoice-recipient'
 import { undoContactSyncInEconomy } from '../../adapters/economy-adapter'
 import { runSyncSteps, syncStep, SyncStep } from '../../processes/sync-steps'
 import { ProcessStatus } from '../../common/types'
@@ -51,8 +55,8 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
 
   if (lease.action === 'create') {
     const contactsAdapter = makeContactsAdapter(config.contactsService.url)
-    const contactResult = await contactsAdapter.getByContactCode(
-      lease.contactCode
+    const contactResult = await revealProtectedTenant(
+      await contactsAdapter.getByContactCode(lease.contactCode)
     )
     if (!contactResult.ok) {
       throw new Error(
@@ -63,35 +67,46 @@ const syncLease = async (lease: LeaseChange): Promise<void> => {
     const otherInvoiceRecipient = contactResult.data.relatedContacts?.find(
       (r) => r.role === 'otherInvoiceRecipient'
     )
-    if (otherInvoiceRecipient) {
-      steps.push(
-        syncStep({
-          name: 'xledger',
-          run: async () => {
-            logger.info(
-              { leaseId: lease.leaseId, action: lease.action },
-              'syncing other invoice recipient'
-            )
-            const synced = await syncInvoiceRecipientToEconomy(
-              contactsAdapter,
-              otherInvoiceRecipient.contactCode
-            )
-            if (!synced.ok) {
-              return {
-                ...synced,
-                detail: `recipient ${otherInvoiceRecipient.contactCode}${synced.detail ? `: ${synced.detail}` : ''}`,
-              }
-            }
+    const tenant = contactResult.data
+    const receiverCode = otherInvoiceRecipient
+      ? otherInvoiceRecipient.contactCode
+      : lease.contactCode
+    const receiverLookup: ContactLookup = otherInvoiceRecipient
+      ? contactsAdapter
+      : { getByContactCode: async () => ({ ok: true, data: tenant }) }
+
+    steps.push(
+      syncStep({
+        name: 'xledger',
+        run: async () => {
+          logger.info(
+            {
+              leaseId: lease.leaseId,
+              action: lease.action,
+              invoiceReceiver: otherInvoiceRecipient
+                ? 'otherInvoiceRecipient'
+                : 'tenant',
+            },
+            'syncing invoice receiver'
+          )
+          const synced = await syncInvoiceRecipientToEconomy(
+            receiverLookup,
+            receiverCode
+          )
+          if (!synced.ok) {
             return {
-              ok: true,
-              data: { skipped: false, undo: synced.data?.undo },
+              ...synced,
+              detail: `recipient ${receiverCode}${synced.detail ? `: ${synced.detail}` : ''}`,
             }
-          },
-          undo: (undo) =>
-            undoContactSyncInEconomy(otherInvoiceRecipient.contactCode, undo),
-        })
-      )
-    }
+          }
+          return {
+            ok: true,
+            data: { skipped: false, undo: synced.data?.undo },
+          }
+        },
+        undo: (undo) => undoContactSyncInEconomy(receiverCode, undo),
+      })
+    )
   }
 
   const contactCode = lease.action === 'create' ? lease.contactCode : undefined

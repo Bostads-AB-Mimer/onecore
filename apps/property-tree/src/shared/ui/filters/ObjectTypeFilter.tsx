@@ -37,6 +37,17 @@ interface ObjectTypeFilterProps {
   loadParkingSpaceTypes?: () => Promise<ParkingSpaceTypeOption[]>
   selectedParkingSpaceTypes?: string[]
   onParkingSpaceTypeChange?: (values: string[]) => void
+  /**
+   * Called instead of onObjectTypeChange + onParkingSpaceTypeChange when
+   * both change together (mutual exclusion, "Rensa filter"). Two separate
+   * calls in the same handler would each write against the same stale URL
+   * snapshot, so the second overwrites the first — callers that persist
+   * these to the URL must write both in one step.
+   */
+  onObjectAndParkingSpaceTypeChange?: (
+    objectTypes: string[],
+    parkingSpaceTypes: string[]
+  ) => void
   placeholder?: string
   className?: string
 }
@@ -49,6 +60,7 @@ export function ObjectTypeFilter({
   loadParkingSpaceTypes,
   selectedParkingSpaceTypes = [],
   onParkingSpaceTypeChange,
+  onObjectAndParkingSpaceTypeChange,
   placeholder = 'Objekttyp',
   className,
 }: ObjectTypeFilterProps) {
@@ -116,15 +128,29 @@ export function ObjectTypeFilter({
     parkingSpaceTypes,
   ])
 
+  // Sets both filters in one step when provided, so a change to one that
+  // clears the other doesn't lose either write — see
+  // onObjectAndParkingSpaceTypeChange above.
+  const setBoth = (objectTypes: string[], parkingSpaceTypes: string[]) => {
+    if (onObjectAndParkingSpaceTypeChange) {
+      onObjectAndParkingSpaceTypeChange(objectTypes, parkingSpaceTypes)
+    } else {
+      onObjectTypeChange(objectTypes)
+      onParkingSpaceTypeChange?.(parkingSpaceTypes)
+    }
+  }
+
   const toggleObjectType = (value: string, checked: boolean) => {
     if (checked) {
-      onObjectTypeChange([...selectedObjectTypes, value])
+      const nextObjectTypes = [...selectedObjectTypes, value]
       // Checking Bilplats ("all parking") clears any specific subtype selections
       if (
         value === parkingOptionValue &&
         selectedParkingSpaceTypes.length > 0
       ) {
-        onParkingSpaceTypeChange?.([])
+        setBoth(nextObjectTypes, [])
+      } else {
+        onObjectTypeChange(nextObjectTypes)
       }
     } else {
       onObjectTypeChange(selectedObjectTypes.filter((v) => v !== value))
@@ -134,15 +160,18 @@ export function ObjectTypeFilter({
   const toggleParkingSpaceType = (code: string, checked: boolean) => {
     if (!onParkingSpaceTypeChange) return
     if (checked) {
-      onParkingSpaceTypeChange([...selectedParkingSpaceTypes, code])
+      const nextParkingSpaceTypes = [...selectedParkingSpaceTypes, code]
       // Checking a specific subtype clears the "all parking" parent selection
       if (
         parkingOptionValue &&
         selectedObjectTypes.includes(parkingOptionValue)
       ) {
-        onObjectTypeChange(
-          selectedObjectTypes.filter((v) => v !== parkingOptionValue)
+        setBoth(
+          selectedObjectTypes.filter((v) => v !== parkingOptionValue),
+          nextParkingSpaceTypes
         )
+      } else {
+        onParkingSpaceTypeChange(nextParkingSpaceTypes)
       }
     } else {
       onParkingSpaceTypeChange(
@@ -152,8 +181,7 @@ export function ObjectTypeFilter({
   }
 
   const clearAll = () => {
-    onObjectTypeChange([])
-    onParkingSpaceTypeChange?.([])
+    setBoth([], [])
   }
 
   const triggerButton = (
