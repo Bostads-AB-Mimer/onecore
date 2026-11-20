@@ -197,10 +197,10 @@ async function submitMiscellaneousInvoice(
   // empty body yields `error: undefined` and must not be treated as success.
   if (!response.ok) {
     const type = (error as { type?: string } | undefined)?.type
-    if (type === SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound) {
+    if (type === SubmitMiscellaneousInvoiceErrorCodes.CustomerCreationFailed) {
       throw new ApiError(
         response.status,
-        SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
+        SubmitMiscellaneousInvoiceErrorCodes.CustomerCreationFailed
       )
     }
     throw new ApiError(

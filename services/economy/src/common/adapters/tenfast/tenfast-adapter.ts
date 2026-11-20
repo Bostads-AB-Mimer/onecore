@@ -8,6 +8,7 @@ import {
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
   TenfastInvoicesByExportedResponseSchema,
+  TenfastInvoiceRecipientsPageSchema,
   TenfastTenantSchema,
   TenfastInvoiceSchema,
   TenfastRentalLoss,
@@ -1266,6 +1267,44 @@ const enrichInvoiceRowsWithAccounting = async (
   return {
     invoiceRows: invoiceRowsWithAccounting,
     errors,
+  }
+}
+
+export const getRecipientCodesOfInvoicesNotExported = async (
+  company: MimerCompany
+): Promise<AdapterResult<string[], TenfastPagesError>> => {
+  try {
+    const pagesResult = await fetchAllTenfastPages(
+      '/v1/hyresvard/hyror',
+      {
+        isManuallyExported: 'false',
+        isCancelled: 'false',
+        status: 'issued',
+        hyresvard: company.tenfastId,
+        limit: TENFAST_INVOICES_PAGE_SIZE,
+      },
+      TenfastInvoiceRecipientsPageSchema,
+      { companyId: company.xpandId }
+    )
+    if (!pagesResult.ok) {
+      return pagesResult
+    }
+
+    const codes = new Set<string>()
+    for (const record of pagesResult.data) {
+      const code = record.avtal[0]?.hyresgaster[0]?.externalId.trim()
+      if (code) {
+        codes.add(code)
+      }
+    }
+    return { ok: true, data: [...codes] }
+  } catch (err: unknown) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { companyId: company.xpandId, status, error: errorMessage(err) },
+      'tenfast-adapter.getRecipientCodesOfInvoicesNotExported'
+    )
+    return { ok: false, err: 'request-failed' }
   }
 }
 

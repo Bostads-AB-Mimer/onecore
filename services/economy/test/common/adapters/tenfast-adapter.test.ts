@@ -19,6 +19,7 @@ import {
   getLeasesByTenantId,
   markInvoicesAsExported,
   getInvoicesNotExported,
+  getRecipientCodesOfInvoicesNotExported,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import { MimerCompany } from '@src/common/types/typesv2'
 import { LeaseType, PaymentStatus } from '@onecore/types'
@@ -2277,5 +2278,83 @@ describe(getInvoicesNotExported, () => {
         error: 'Kunde inte hämta hyresartikeln a-1 från Tenfast',
       },
     ])
+  })
+})
+
+describe(getRecipientCodesOfInvoicesNotExported, () => {
+  const company = {
+    tenfastId: 'test-hyresvard-id',
+    xpandId: '001',
+  } as MimerCompany // only the ids are read
+
+  const record = (externalIds: string[]) => ({
+    avtal: [{ hyresgaster: externalIds.map((externalId) => ({ externalId })) }],
+  })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('walks every page with the export filters and returns trimmed, unique codes', async () => {
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: [record(['P1']), record(['P2 '])],
+          next: 'cursor-1',
+        },
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [record(['P1'])], next: null },
+      })
+
+    const result = await getRecipientCodesOfInvoicesNotExported(company)
+
+    assert(result.ok)
+    expect(result.data).toEqual(['P1', 'P2'])
+    expect(mockAxios.request).toHaveBeenCalledTimes(2)
+    const [firstPage, secondPage] = mockAxios.request.mock.calls.map(
+      ([config]) => config.params
+    )
+    const filters = {
+      isManuallyExported: 'false',
+      isCancelled: 'false',
+      status: 'issued',
+      hyresvard: 'test-hyresvard-id',
+    }
+    expect(firstPage).toEqual(expect.objectContaining(filters))
+    expect(firstPage).not.toHaveProperty('paginate')
+    expect(secondPage).toEqual(
+      expect.objectContaining({ ...filters, paginate: 'cursor-1' })
+    )
+  })
+
+  it('skips records without avtal or hyresgaster, and empty codes', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [
+          { avtal: [] },
+          { avtal: [{ hyresgaster: [] }] },
+          record(['  ']),
+          record(['P7']),
+        ],
+        next: null,
+      },
+    })
+
+    const result = await getRecipientCodesOfInvoicesNotExported(company)
+
+    assert(result.ok)
+    expect(result.data).toEqual(['P7'])
+  })
+
+  it('fails when a page fails', async () => {
+    mockAxios.request.mockResolvedValueOnce({ status: 500, data: {} })
+
+    const result = await getRecipientCodesOfInvoicesNotExported(company)
+
+    expect(result).toEqual({ ok: false, err: 'request-failed' })
   })
 })

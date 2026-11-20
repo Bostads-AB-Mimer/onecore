@@ -68,15 +68,15 @@ export function MiscellaneousInvoiceForm() {
       handleReset()
     },
     onError: (error: unknown) => {
-      const customerNotFoundInXledger =
+      const customerCreationFailed =
         error instanceof ApiError &&
         error.message ===
-          SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
+          SubmitMiscellaneousInvoiceErrorCodes.CustomerCreationFailed
 
       toast({
         title: 'Fel',
-        description: customerNotFoundInXledger
-          ? 'Kunden finns inte upplagd i Xledger ännu, vilket ofta gäller hyresgäster med enbart kommande kontrakt. Kontakta ekonomiavdelningen för att lägga upp kunden och försök sedan igen.'
+        description: customerCreationFailed
+          ? 'Kunden kunde inte läggas upp i Xledger, så underlaget skickades inte. Kontakta ekonomiavdelningen.'
           : 'Kunde inte skicka underlaget. Försök igen.',
         variant: 'destructive',
       })
