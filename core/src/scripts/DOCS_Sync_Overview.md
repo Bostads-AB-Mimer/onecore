@@ -16,7 +16,7 @@ Det här dokumentet beskriver vad som synkas, när, och vad som händer om någo
 
 | Ändring i Xpand                                  | `cmlog`-rad som läses                       | Tenfast                                   | Xledger                                            | Odoo                                         |
 | ------------------------------------------------ | ------------------------------------------- | ----------------------------------------- | -------------------------------------------------- | -------------------------------------------- |
-| Kontaktuppgifter (namn, e-post, telefon, adress) | `Kontakt …`                                 | Hyresgästen hämtar nya uppgifter          | Befintlig kund uppdateras (namn, adress, e-post)   | Hyresgäst uppdateras (namn, e-post, telefon) |
+| Kontaktuppgifter (namn, e-post, telefon, adress) | `Kontakt …`, utom skickade meddelanden      | Hyresgästen hämtar nya uppgifter          | Befintlig kund uppdateras (namn, adress, e-post)   | Hyresgäst uppdateras (namn, e-post, telefon) |
 | Kontrakt undertecknat                            | `Hyreskontrakt …`, fältet `Undertecknat`    | Avtalet skapas, med hyresgäst och PDF     | Fakturamottagaren skapas eller uppdateras som kund | –                                            |
 | Kontrakt uppsagt                                 | `Hyreskontrakt …`, fältet `Uppsagt datum`   | Avtalet sägs upp, uppsägnings-PDF bifogas | –                                                  | –                                            |
 | Kontrakt makulerat                               | `Hyreskontrakt …`, fältet `Makulerat datum` | Avtalet makuleras                         | –                                                  | –                                            |
@@ -163,6 +163,6 @@ Y --> Z
 
 ## Att känna till
 
-- **Bara rader som börjar med rätt text läses.** Ett script ser bara de `cmlog`-rader det letar efter. En ändring som Xpand loggar på ett annat sätt, eller inte loggar alls, synkas aldrig.
+- **Bara rader som börjar med rätt text läses.** Ett script ser bara de `cmlog`-rader det letar efter. En ändring som Xpand loggar på ett annat sätt, eller inte loggar alls, synkas aldrig. `sync-contacts` hoppar dessutom över rader som bara loggar ett skickat SMS eller mejl.
 - **Relationer synkas inte härifrån** — se [Synka Kontakter](./sync-contacts/DOCS_Sync_Contacts.md#relationer).
 - **Avvisar Economy en kund köas raden.** Saknar kontakten t.ex. namn i Xpand svarar Economy med ett 4xx-fel. Raden räknas då som misslyckad och köas med mejl, i både `sync-contacts` och för fakturamottagaren i `sync-leases`. I `sync-leases` hämtas mottagaren på nytt vid varje försök, så ett återförsök lyckas när uppgiften rättats i Xpand. I `sync-contacts` skickar den köade raden samma uppgifter varje gång och lyckas aldrig; rättelsen skriver en ny `cmlog`-rad som ersätter den.
