@@ -4,6 +4,7 @@ import {
   logger,
   makeSuccessResponseBody,
 } from '@onecore/utilities'
+import { economy } from '@onecore/types'
 import { z } from 'zod'
 
 import {
@@ -60,8 +61,62 @@ export function routes(router: KoaRouter) {
     }
   })
 
-  // Records a payment transaction in Tenfast for the invoice identified by OCR number.
-  // Tenfast updates the invoice state internally based on accumulated transactions.
+  /**
+   * @swagger
+   * /invoices/{invoiceId}/payments:
+   *   post:
+   *     summary: Record a payment in Tenfast
+   *     description: Records a payment transaction in Tenfast for the invoice identified by OCR number. Tenfast updates the invoice state from its accumulated transactions.
+   *     tags: [Payments]
+   *     parameters:
+   *       - in: path
+   *         name: invoiceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The invoice's OCR number
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - amount
+   *               - dateTime
+   *               - method
+   *             properties:
+   *               amount:
+   *                 type: number
+   *                 description: Payment amount. Negative Xledger amounts are recorded as positive.
+   *               dateTime:
+   *                 type: string
+   *                 format: date-time
+   *               method:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Payment recorded.
+   *       400:
+   *         description: Invalid request body.
+   *       404:
+   *         description: No invoice with this OCR number in Tenfast.
+   *       409:
+   *         description: Tenfast refused the payment, e.g. because the invoice is voided or the payment date is in a locked accounting period.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   enum: [payment-rejected]
+   *                 reason:
+   *                   type: string
+   *                   description: Tenfast's reason for refusing the payment.
+   *       500:
+   *         description: Tenfast could not be reached or answered unexpectedly.
+   */
   router.post('(.*)/invoices/:invoiceId/payments', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 
@@ -93,6 +148,14 @@ export function routes(router: KoaRouter) {
           ctx.body = {
             message: `Invoice with OCR ${invoiceId} not found in Tenfast`,
           }
+          return
+        }
+        if (result.err === 'payment-rejected') {
+          ctx.status = 409
+          ctx.body = {
+            error: 'payment-rejected',
+            reason: result.detail ?? '',
+          } satisfies economy.RecordPaymentRejectedResponse
           return
         }
         ctx.status = 500

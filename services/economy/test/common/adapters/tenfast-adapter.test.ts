@@ -1390,6 +1390,54 @@ describe(recordPaymentForInvoice, () => {
     expect(result).toEqual({ ok: false, err: 'not-found' })
   })
 
+  it.each([
+    [400, { message: 'Invoice is voided' }, 'Invoice is voided'],
+    [
+      403,
+      { error: 'Accounting period is locked' },
+      'Accounting period is locked',
+    ],
+    [400, 'Bad request', 'Bad request'],
+    // Never the raw body: it is logged and emailed (DEV-128).
+    [403, { code: 42 }, 'Tenfast responded with HTTP 403'],
+    [400, { message: '' }, 'Tenfast responded with HTTP 400'],
+    [400, '', 'Tenfast responded with HTTP 400'],
+    [400, 'x'.repeat(250), `${'x'.repeat(200)}…`],
+  ])(
+    'returns payment-rejected with the reason when transaction POST returns %i',
+    async (status, data, reason) => {
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoiceFactory.build(),
+        })
+        .mockResolvedValueOnce({ status, data })
+
+      const result = await recordPaymentForInvoice(payment)
+
+      expect(result).toEqual({
+        ok: false,
+        err: 'payment-rejected',
+        statusCode: status,
+        detail: reason,
+      })
+    }
+  )
+
+  it('handles every transaction POST status itself instead of letting axios throw', async () => {
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: TenfastInvoiceFactory.build(),
+      })
+      .mockResolvedValueOnce({ status: 201, data: {} })
+
+    await recordPaymentForInvoice(payment)
+
+    const postConfig = mockAxios.request.mock.calls[1][0]
+    expect(postConfig.validateStatus?.(400)).toBe(true)
+  })
+
   it('returns unknown when transaction POST returns unexpected status', async () => {
     const invoice = TenfastInvoiceFactory.build()
 

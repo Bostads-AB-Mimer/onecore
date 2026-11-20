@@ -37,6 +37,31 @@ describe('economy-adapter.recordInvoicePayment', () => {
     })
   })
 
+  it('returns payment-rejected with the reason on 409', async () => {
+    nock(config.economyService.url)
+      .post(`/invoices/${invoiceId}/payments`)
+      .reply(409, { error: 'payment-rejected', reason: 'Invoice is voided' })
+
+    const result = await economyAdapter.recordInvoicePayment(invoiceId, payment)
+
+    expect(result).toEqual({
+      ok: false,
+      err: 'payment-rejected',
+      statusCode: 409,
+      detail: 'Invoice is voided',
+    })
+  })
+
+  it('returns unknown on a 409 without a payment-rejected body', async () => {
+    nock(config.economyService.url)
+      .post(`/invoices/${invoiceId}/payments`)
+      .reply(409, { message: 'something else' })
+
+    const result = await economyAdapter.recordInvoicePayment(invoiceId, payment)
+
+    expect(result).toMatchObject({ ok: false, err: 'unknown', statusCode: 409 })
+  })
+
   it('returns unknown on unexpected status', async () => {
     nock(config.economyService.url)
       .post(`/invoices/${invoiceId}/payments`)

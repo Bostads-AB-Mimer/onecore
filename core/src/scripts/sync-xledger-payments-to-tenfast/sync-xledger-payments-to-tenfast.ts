@@ -1,6 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
-import { logger } from '@onecore/utilities'
+import { errorMessage, logger } from '@onecore/utilities'
 import { PaymentSyncEvent } from '@onecore/types'
 import {
   getLatestPaymentCursor,
@@ -19,14 +19,31 @@ const getStateFile = () =>
   path.join(process.env.DATA_DIR ?? '/data', 'last-xledger-payment-sync.txt')
 
 export const fileCursorStore: CursorStore = {
+  // Only a missing file means no cursor has been saved. Anything else must
+  // stop the run: read as "no cursor" it would restart the sync from
+  // Xledger's latest payment and silently skip every payment in between.
   async read() {
+    const stateFile = getStateFile()
+    let content: string
     try {
-      const content = await fs.readFile(getStateFile(), 'utf-8')
-      const cursor = content.trim()
-      return cursor.length > 0 ? cursor : null
-    } catch {
-      return null
+      content = await fs.readFile(stateFile, 'utf-8')
+    } catch (err: unknown) {
+      // fs rejects with a NodeJS.ErrnoException; same check as
+      // shared/last-timestamp.ts (instanceof Error fails across Jest realms).
+      if ((err as { code?: string }).code === 'ENOENT') {
+        return null
+      }
+      throw new Error(
+        `Could not read payment sync cursor from ${stateFile}: ${errorMessage(err)}`
+      )
     }
+
+    const cursor = content.trim()
+    // save() writes atomically, so an empty file is corruption, not a first run.
+    if (cursor.length === 0) {
+      throw new Error(`Payment sync cursor file ${stateFile} is empty`)
+    }
+    return cursor
   },
   // Saved after every payment, so write to a temp file and rename it over the
   // state file: a crash mid-write must never leave an empty cursor, which
@@ -68,10 +85,90 @@ async function notifySyncFailure(err: unknown) {
   }
 }
 
+type RejectedPayment = { event: PaymentSyncEvent; reason: string }
+
+const describeRejectedPayment = ({ event, reason }: RejectedPayment) =>
+  `invoice ${event.invoiceId}, ${Math.abs(event.amount)} paid ${event.paymentDate.toISOString().slice(0, 10)}: ${reason}`
+
+// A rejected payment is skipped and never tried again, so this message is the
+// only way someone learns to book it by hand. Returns whether it was sent.
+async function notifyRejectedPayments(
+  rejected: readonly RejectedPayment[]
+): Promise<boolean> {
+  if (!config.emailAddresses.economy) {
+    logger.error(
+      { invoiceIds: rejected.map(({ event }) => event.invoiceId) },
+      'config.emailAddresses.economy is not set — cannot report payments rejected by Tenfast'
+    )
+    return false
+  }
+
+  const result = await sendEmail({
+    to: config.emailAddresses.economy,
+    subject:
+      'Betalningar avvisade av Tenfast: sync-xledger-payments-to-tenfast',
+    body: [
+      'Tenfast avvisade följande betalningar från Xledger. De är inte registrerade i Tenfast och synken har gått vidare förbi dem, så de behöver hanteras manuellt.',
+      '',
+      ...rejected.map(
+        ({ event, reason }) =>
+          // Xledger payments are negative AR credits; show what was paid.
+          `- Faktura ${event.invoiceId}: ${Math.abs(event.amount)} kr, betalningsdatum ${event.paymentDate.toISOString().slice(0, 10)}. Orsak: ${reason}`
+      ),
+    ].join('\n'),
+  })
+
+  if (!result.ok) {
+    logger.error(
+      {
+        err: result.err,
+        statusCode: result.statusCode,
+        invoiceIds: rejected.map(({ event }) => event.invoiceId),
+      },
+      'failed to send rejected payments notification'
+    )
+    return false
+  }
+  return true
+}
+
+// A missing cursor looks the same on the first run as on a new or emptied
+// state volume, where starting from the latest payment skips every payment
+// since the last good run. This message is how someone notices the latter.
+// Returns whether it was sent.
+async function notifyStartedFromLatest(cursor: string): Promise<boolean> {
+  if (!config.emailAddresses.economy) {
+    logger.error(
+      { cursor },
+      'config.emailAddresses.economy is not set — cannot report that the sync started from the latest payment'
+    )
+    return false
+  }
+
+  const result = await sendEmail({
+    to: config.emailAddresses.economy,
+    subject: 'Betalningssynken startade om: sync-xledger-payments-to-tenfast',
+    body: [
+      `Synkronisering av betalningar från Xledger till Tenfast saknade sparad markör och startade från Xledgers senaste betalning (markör ${cursor}).`,
+      '',
+      'Betalningar före den har inte registrerats i Tenfast. Om det inte var den första körningen behöver betalningarna sedan förra lyckade körningen hanteras manuellt.',
+    ].join('\n'),
+  })
+
+  if (!result.ok) {
+    logger.error(
+      { err: result.err, statusCode: result.statusCode, cursor },
+      'failed to send start-from-latest notification'
+    )
+    return false
+  }
+  return true
+}
+
 // First run: start from Xledger's latest payment. Earlier payments are not
 // synced.
 async function startFromLatestCursor(store: CursorStore) {
-  logger.info('no saved cursor, fetching latest cursor from Xledger')
+  logger.warn('no saved cursor, fetching latest cursor from Xledger')
   const latest = await getLatestPaymentCursor()
   if (!latest.ok) {
     throw new Error('Failed to fetch latest cursor from Xledger')
@@ -80,10 +177,15 @@ async function startFromLatestCursor(store: CursorStore) {
     throw new Error('No cursor found in Xledger — ledger may be empty')
   }
   await store.save(latest.data)
-  logger.info(
+  logger.warn(
     { lastCursor: latest.data },
     'latest cursor saved, starting from here on next run'
   )
+  if (!(await notifyStartedFromLatest(latest.data))) {
+    throw new Error(
+      `Sync started from Xledger's latest payment (cursor ${latest.data}) but this could not be reported by email`
+    )
+  }
 }
 
 async function fetchPaymentsAfter(cursor: string) {
@@ -102,17 +204,14 @@ async function fetchPaymentsAfter(cursor: string) {
   return { events, lastCursor }
 }
 
-// Records one payment in Tenfast. Takes and returns the invoices known to be
-// missing from Tenfast, so later payments to them are skipped without asking
-// again.
-async function recordPayment(
-  notInTenfast: ReadonlySet<string>,
-  event: PaymentSyncEvent
-): Promise<ReadonlySet<string>> {
-  if (notInTenfast.has(event.invoiceId)) {
-    return notInTenfast
-  }
+type RecordOutcome =
+  | { status: 'recorded' }
+  | { status: 'not-in-tenfast' }
+  | { status: 'rejected'; reason: string }
 
+// Records one payment in Tenfast. Throws on errors that may be temporary, so
+// the run stops and the payment is tried again next time.
+async function recordPayment(event: PaymentSyncEvent): Promise<RecordOutcome> {
   const result = await recordInvoicePayment(event.invoiceId, {
     amount: event.amount,
     dateTime: event.paymentDate,
@@ -124,7 +223,7 @@ async function recordPayment(
       { invoiceId: event.invoiceId, amount: event.amount },
       'payment recorded in Tenfast'
     )
-    return notInTenfast
+    return { status: 'recorded' }
   }
 
   // Expected — ströfakturor and procurement invoices won't exist in Tenfast
@@ -133,7 +232,23 @@ async function recordPayment(
       { invoiceId: event.invoiceId },
       'invoice not found in Tenfast, skipping'
     )
-    return new Set(notInTenfast).add(event.invoiceId)
+    return { status: 'not-in-tenfast' }
+  }
+
+  // Tenfast will refuse this payment on every retry (e.g. a voided invoice),
+  // so retrying would block every payment after it. Skip it and report it.
+  if (result.err === 'payment-rejected') {
+    const reason = result.detail ?? 'no reason given'
+    logger.error(
+      {
+        invoiceId: event.invoiceId,
+        amount: event.amount,
+        paymentDate: event.paymentDate,
+        reason,
+      },
+      'payment rejected by Tenfast, skipping'
+    )
+    return { status: 'rejected', reason }
   }
 
   throw new Error(
@@ -149,25 +264,60 @@ async function syncPayments(store: CursorStore = fileCursorStore) {
 
   const { events, lastCursor } = await fetchPaymentsAfter(cursor)
 
-  // Payments are recorded in Xledger order and the cursor is saved after each
-  // one, so a run that fails part-way resumes after the last recorded payment
-  // instead of posting the earlier ones to Tenfast again.
-  let notInTenfast: ReadonlySet<string> = new Set()
-  for (const event of events) {
-    notInTenfast = await recordPayment(notInTenfast, event)
-    await store.save(event.cursor)
+  // Invoices known to be missing from Tenfast: later payments to them are
+  // skipped without asking again.
+  const notInTenfast = new Set<string>()
+  const rejected: RejectedPayment[] = []
+  let runError: unknown = null
+
+  try {
+    // Payments are recorded in Xledger order and the cursor is saved after
+    // each one, so a run that fails part-way resumes after the last recorded
+    // payment instead of posting the earlier ones to Tenfast again.
+    for (const event of events) {
+      if (!notInTenfast.has(event.invoiceId)) {
+        const outcome = await recordPayment(event)
+        if (outcome.status === 'not-in-tenfast') {
+          notInTenfast.add(event.invoiceId)
+        } else if (outcome.status === 'rejected') {
+          rejected.push({ event, reason: outcome.reason })
+        }
+      }
+      await store.save(event.cursor)
+    }
+
+    // Also covers rows after the last payment that Xledger returned but that
+    // had no invoice reference to sync.
+    if (lastCursor) {
+      await store.save(lastCursor)
+    }
+  } catch (err: unknown) {
+    runError = err
   }
 
-  // Also covers rows after the last payment that Xledger returned but that
-  // had no invoice reference to sync.
-  if (lastCursor) {
-    await store.save(lastCursor)
+  // Rejected payments are behind the saved cursor and won't be tried again,
+  // so report them even when the run failed part-way.
+  const rejectedReported =
+    rejected.length === 0 || (await notifyRejectedPayments(rejected))
+
+  if (!rejectedReported) {
+    // The failure notification is now the only report left, so it must carry
+    // the rejected payments as well as any error that stopped the run.
+    const unreported = `${rejected.length} payment(s) rejected by Tenfast could not be reported by email: ${rejected.map(describeRejectedPayment).join('; ')}`
+    throw new Error(
+      runError ? `${errorMessage(runError)}. Also, ${unreported}` : unreported,
+      { cause: runError ?? undefined }
+    )
+  }
+  if (runError) {
+    throw runError
   }
 
   logger.info(
     {
       payments: events.length,
       notInTenfast: [...notInTenfast],
+      rejected: rejected.map(({ event }) => event.invoiceId),
       cursor: lastCursor ?? cursor,
     },
     'payment sync done'

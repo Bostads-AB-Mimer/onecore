@@ -820,13 +820,41 @@ export const setGracePeriod = async (params: {
   }
 }
 
+// Tenfast's error bodies are not documented: take its message when there is
+// one. The reason is logged and emailed, so never fall back to the raw body
+// (DEV-128) and cap its length in case Tenfast sends a whole page as text.
+const TenfastErrorBodySchema = z.union([
+  z.object({ message: z.string().min(1) }).transform((body) => body.message),
+  z.object({ error: z.string().min(1) }).transform((body) => body.error),
+  z.string().min(1),
+])
+
+const MAX_TENFAST_REASON_LENGTH = 200
+
+const tenfastErrorReason = (data: unknown, status: number): string => {
+  const parsed = TenfastErrorBodySchema.safeParse(data)
+  if (!parsed.success) {
+    return `Tenfast responded with HTTP ${status}`
+  }
+  return parsed.data.length > MAX_TENFAST_REASON_LENGTH
+    ? `${parsed.data.slice(0, MAX_TENFAST_REASON_LENGTH)}…`
+    : parsed.data
+}
+
+export type RecordPaymentError =
+  'not-found' | 'payment-rejected' | 'unknown' | 'schema-error'
+
+/**
+ * For 'payment-rejected', `detail` is Tenfast's reason for refusing the
+ * payment.
+ */
 export const recordPaymentForInvoice = async (params: {
   ocr: string
   amount: number
   dateTime: Date
   // TODO: confirm valid method values with Tenfast (e.g. 'bank', 'bankgiro', 'autogiro')
   method: string
-}): Promise<AdapterResult<null, 'not-found' | 'unknown' | 'schema-error'>> => {
+}): Promise<AdapterResult<null, RecordPaymentError>> => {
   try {
     const result = await fetchTenfastInvoiceByOcr(params.ocr)
     if (!result.ok) {
@@ -849,6 +877,9 @@ export const recordPaymentForInvoice = async (params: {
         method: params.method,
         hyra: invoice._id,
       },
+      // Handle every status here: a refused payment must come back as a
+      // typed error, not a thrown AxiosError that reads as 'unknown'.
+      validateStatus: () => true,
     })
 
     if (res.status === 200 || res.status === 201) {
@@ -858,13 +889,33 @@ export const recordPaymentForInvoice = async (params: {
       return { ok: false, err: 'not-found' }
     }
 
+    // Tenfast refuses a payment it can't book against this invoice, e.g. a
+    // voided invoice (400) or a payment date in a locked accounting period
+    // (403). The caller decides whether to skip the payment.
+    if (res.status === 400 || res.status === 403) {
+      const reason = tenfastErrorReason(res.data, res.status)
+      logger.warn(
+        { ocr: params.ocr, status: res.status, reason },
+        'tenfast-adapter.recordPaymentForInvoice: payment rejected by Tenfast'
+      )
+      return {
+        ok: false,
+        err: 'payment-rejected',
+        statusCode: res.status,
+        detail: reason,
+      }
+    }
+
     logger.error(
       { status: res.status },
       'tenfast-adapter.recordPaymentForInvoice: unexpected status'
     )
     return { ok: false, err: 'unknown' }
-  } catch (err: any) {
-    logger.error(err, 'tenfast-adapter.recordPaymentForInvoice')
+  } catch (err: unknown) {
+    logger.error(
+      { error: errorMessage(err) },
+      'tenfast-adapter.recordPaymentForInvoice'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
