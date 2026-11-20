@@ -17,6 +17,7 @@ import { leaseSearchService } from '@/services/api/core/leaseSearchService'
 import { tenantService } from '@/services/api/core/tenantService'
 
 import { useBulkMessaging } from '@/shared/hooks/useBulkMessaging'
+import { personnummerSearchHint } from '@/shared/lib/personnummerSearchHint'
 import { BulkActionBar } from '@/shared/ui/BulkActionBar'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
@@ -209,14 +210,7 @@ const LeasesPage = () => {
               searchPlaceholder="Sök på kontraktsnummer, kundnummer, personnummer, adress..."
               hasActiveFilters={filters.hasActiveFilters}
               onClearFilters={filters.clearFilters}
-              hint={
-                /^\d+$/.test(filters.searchInput) &&
-                filters.searchInput.length >= 4 &&
-                filters.searchInput.length !== 10 &&
-                filters.searchInput.length !== 12
-                  ? 'Ange hela personnumret (10 eller 12 siffror) för att söka på personnummer.'
-                  : undefined
-              }
+              hint={personnummerSearchHint(filters.searchInput)}
             >
               <ObjectTypeFilter
                 objectTypeOptions={objectTypeOptions.map((o) => ({

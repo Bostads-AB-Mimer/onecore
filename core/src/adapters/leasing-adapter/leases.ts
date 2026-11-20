@@ -8,6 +8,7 @@ import z from 'zod'
 
 import { AdapterResult } from '../types'
 import config from '../../common/config'
+import { errorLogFields } from '../../utils/error-log'
 
 const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
@@ -15,7 +16,6 @@ type GetLeasesOptions = z.infer<typeof leasing.v1.GetLeasesOptionsSchema>
 type GetLeasesByContactCodeOptions = z.infer<
   typeof leasing.v1.GetLeasesByContactCodeOptionsSchema
 >
-type LeaseHomeInsurance = z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
 type HomeInsuranceExportRow = z.infer<
   typeof schemas.v1.HomeInsuranceExportRowSchema
 >
@@ -166,50 +166,382 @@ export async function addLeaseHomeInsurance(
   }
 }
 
-export async function getLeaseHomeInsurance(
-  leaseId: string
-): Promise<AdapterResult<LeaseHomeInsurance, 'not-found' | 'unknown'>> {
-  const result = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance`
-  )
+/**
+ * What leasing's home insurance routes for one lease can fail with: leasing's
+ * own error code, a request body leasing rejected, or a response this adapter
+ * does not recognise.
+ */
+export type HomeInsuranceAdapterError =
+  leasing.HomeInsuranceErrorCode | 'invalid-request' | 'unknown'
 
-  if (result.status === 200) {
-    return { ok: true, data: result.data.content }
-  }
-
-  if (result.status === 404) {
-    return { ok: false, err: 'not-found' }
-  }
-
-  logger.error(
-    { error: JSON.stringify(result.data) },
-    'Unknown error when fetching home insurance'
-  )
-
-  return { ok: false, err: 'unknown' }
+export type HomeInsuranceAdapterFailure = {
+  ok: false
+  err: HomeInsuranceAdapterError
+  statusCode?: number
+  detail?: string
 }
 
+const HomeInsuranceErrorBodySchema = z.object({
+  error: leasing.HomeInsuranceErrorCodeSchema,
+})
+
+// The body leasing's parseRequestBody answers 400 with.
+const InvalidRequestBodySchema = z.object({
+  data: z.array(z.object({ message: z.string() })),
+})
+
+const HomeInsuranceRowResponseSchema = z.object({
+  content: leasing.HomeInsuranceRowSchema,
+})
+
+const UpdateHomeInsuranceRowResponseBodySchema = z.object({
+  content: leasing.UpdateHomeInsuranceRowResponseSchema,
+})
+
+/**
+ * Maps a non-200 answer from a home insurance route to its error. Leasing's
+ * own code is passed through as it is, so the route can answer with the same
+ * status and code.
+ */
+const toHomeInsuranceFailure = (
+  response: { status: number; data: unknown },
+  context: string
+): HomeInsuranceAdapterFailure => {
+  const statusCode = response.status
+
+  const known = HomeInsuranceErrorBodySchema.safeParse(response.data)
+  if (known.success) {
+    // Leasing has already logged the Tenfast failure as an error.
+    if (known.data.error === 'upstream-failed') {
+      logger.warn({ status: statusCode, error: known.data.error }, context)
+    }
+    return { ok: false, err: known.data.error, statusCode }
+  }
+
+  if (statusCode === 400) {
+    const invalid = InvalidRequestBodySchema.safeParse(response.data)
+    return {
+      ok: false,
+      err: 'invalid-request',
+      statusCode,
+      detail: invalid.success
+        ? invalid.data.data.map((issue) => issue.message).join('; ')
+        : undefined,
+    }
+  }
+
+  logger.error({ status: statusCode }, context)
+  return {
+    ok: false,
+    err: statusCode === 503 ? 'upstream-failed' : 'unknown',
+    statusCode,
+  }
+}
+
+const homeInsuranceUrl = (leaseId: string) =>
+  `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance`
+
+/** The lease's current home insurance row, with the rowId to end it by. */
+export async function getLeaseHomeInsurance(
+  leaseId: string
+): Promise<AdapterResult<leasing.HomeInsuranceRow, HomeInsuranceAdapterError>> {
+  try {
+    // Every status is handled here instead of by the process-wide default.
+    const response = await axios.get(homeInsuranceUrl(leaseId), {
+      validateStatus: () => true,
+    })
+
+    if (response.status === 200) {
+      return {
+        ok: true,
+        data: HomeInsuranceRowResponseSchema.parse(response.data).content,
+      }
+    }
+
+    return toHomeInsuranceFailure(
+      response,
+      'leasing-adapter.getLeaseHomeInsurance'
+    )
+  } catch (err: unknown) {
+    logger.error(errorLogFields(err), 'leasing-adapter.getLeaseHomeInsurance')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/**
+ * Ends the lease's current home insurance row on endDate (Mina sidor). The
+ * row is never removed.
+ */
 export async function cancelLeaseHomeInsurance(
   leaseId: string,
   params: { endDate: Date }
-): Promise<AdapterResult<null, 'unknown' | 'not-found'>> {
-  const result = await axios.post(
-    `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/home-insurance/cancel`,
-    params
-  )
-
-  if (result.status === 404) {
-    return { ok: false, err: 'not-found' }
-  }
-
-  if (result.status === 200) {
-    return { ok: true, data: null }
-  } else {
-    logger.error(
-      { err: JSON.stringify(result.data) },
-      'Unknown error when deleting home insurance'
+): Promise<AdapterResult<null, HomeInsuranceAdapterError>> {
+  try {
+    const response = await axios.post(
+      `${homeInsuranceUrl(leaseId)}/cancel`,
+      params,
+      { validateStatus: () => true }
     )
 
+    if (response.status === 200) {
+      return { ok: true, data: null }
+    }
+
+    return toHomeInsuranceFailure(
+      response,
+      'leasing-adapter.cancelLeaseHomeInsurance'
+    )
+  } catch (err: unknown) {
+    // The write may have reached Tenfast, so the outcome is unknown.
+    logger.error(
+      errorLogFields(err),
+      'leasing-adapter.cancelLeaseHomeInsurance'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/**
+ * Ends or removes one home insurance row (staff). rowId is the row the
+ * client last read; leasing answers home-insurance-row-changed when that row
+ * is gone or was changed during the write.
+ */
+export async function updateLeaseHomeInsuranceRow(
+  leaseId: string,
+  rowId: string,
+  body: leasing.UpdateHomeInsuranceRowRequest
+): Promise<
+  AdapterResult<
+    leasing.UpdateHomeInsuranceRowResponse,
+    HomeInsuranceAdapterError
+  >
+> {
+  try {
+    const response = await axios.patch(
+      `${homeInsuranceUrl(leaseId)}/rows/${encodeURIComponent(rowId)}`,
+      body,
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      return {
+        ok: true,
+        data: UpdateHomeInsuranceRowResponseBodySchema.parse(response.data)
+          .content,
+      }
+    }
+
+    return toHomeInsuranceFailure(
+      response,
+      'leasing-adapter.updateLeaseHomeInsuranceRow'
+    )
+  } catch (err: unknown) {
+    // The write may have reached Tenfast, or its answer did not parse: the
+    // outcome is unknown, never a success.
+    logger.error(
+      errorLogFields(err),
+      'leasing-adapter.updateLeaseHomeInsuranceRow'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export type HomeInsuranceListAdapterError =
+  leasing.HomeInsuranceListErrorCode | 'unknown'
+
+export type HomeInsuranceListFailure = {
+  ok: false
+  err: HomeInsuranceListAdapterError
+  statusCode?: number
+  detail?: string
+  // Leasing's Retry-After header, sent with cache-warming.
+  retryAfter?: string
+}
+
+export type HomeInsuranceListResult =
+  | {
+      ok: true
+      data: PaginatedResponse<leasing.HomeInsuranceListItem>
+    }
+  | HomeInsuranceListFailure
+
+const HomeInsuranceListErrorBodySchema = z.object({
+  error: leasing.HomeInsuranceListErrorCodeSchema,
+})
+
+const HomeInsuranceListResponseSchema = schemas.paginatedResponseSchema(
+  leasing.HomeInsuranceListItemSchema
+)
+
+const HomeInsuranceListAllResponseSchema = z.object({
+  content: z.array(leasing.HomeInsuranceListItemSchema),
+})
+
+// The list query as leasing reads it.
+const homeInsuranceListParams = (
+  query: leasing.HomeInsuranceListAllQueryParams
+) => ({
+  q: query.q,
+  // Joined rather than repeated: axios leaves out an empty array, but an
+  // empty contactCodes must still reach leasing, where it matches nothing
+  // instead of everything.
+  contactCodes: query.contactCodes?.join(','),
+  status: query.status?.join(','),
+  rows: query.rows,
+  sameDate: query.sameDate === undefined ? undefined : String(query.sameDate),
+  sortBy: query.sortBy,
+  sortOrder: query.sortOrder,
+})
+
+/** Maps a non-200 answer from a home insurance list route to its error. */
+const toHomeInsuranceListFailure = (
+  response: {
+    status: number
+    data: unknown
+    headers: { [key: string]: unknown }
+  },
+  context: string
+): HomeInsuranceListFailure => {
+  const known = HomeInsuranceListErrorBodySchema.safeParse(response.data)
+  if (known.success) {
+    const retryAfter = response.headers['retry-after']
+    if (known.data.error === 'upstream-failed') {
+      // Leasing has already logged the Tenfast failure as an error.
+      logger.warn({ status: response.status, error: known.data.error }, context)
+    }
+    return {
+      ok: false,
+      err: known.data.error,
+      statusCode: response.status,
+      retryAfter: typeof retryAfter === 'string' ? retryAfter : undefined,
+    }
+  }
+
+  logger.error({ status: response.status }, context)
+  return { ok: false, err: 'unknown', statusCode: response.status }
+}
+
+/**
+ * One page of leasing's home insurance list. The list holds no person data:
+ * the tenant is only a contactCode.
+ */
+export async function listHomeInsurances(
+  query: leasing.HomeInsuranceListQueryParams
+): Promise<HomeInsuranceListResult> {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/home-insurances`,
+      {
+        params: {
+          ...homeInsuranceListParams(query),
+          page: query.page,
+          limit: query.limit,
+        },
+        validateStatus: () => true,
+      }
+    )
+
+    if (response.status === 200) {
+      return {
+        ok: true,
+        data: HomeInsuranceListResponseSchema.parse(response.data),
+      }
+    }
+
+    return toHomeInsuranceListFailure(
+      response,
+      'leasing-adapter.listHomeInsurances'
+    )
+  } catch (err: unknown) {
+    logger.error(errorLogFields(err), 'leasing-adapter.listHomeInsurances')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/**
+ * Every item of leasing's home insurance list that matches the query, in its
+ * order, from one read of leasing's cache, for the Excel export.
+ */
+export async function listAllHomeInsurances(
+  query: leasing.HomeInsuranceListAllQueryParams
+): Promise<
+  { ok: true; data: leasing.HomeInsuranceListItem[] } | HomeInsuranceListFailure
+> {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/home-insurances/all`,
+      { params: homeInsuranceListParams(query), validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      return {
+        ok: true,
+        data: HomeInsuranceListAllResponseSchema.parse(response.data).content,
+      }
+    }
+
+    return toHomeInsuranceListFailure(
+      response,
+      'leasing-adapter.listAllHomeInsurances'
+    )
+  } catch (err: unknown) {
+    logger.error(errorLogFields(err), 'leasing-adapter.listAllHomeInsurances')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export type LeaseStatusesAdapterError =
+  leasing.LeaseStatusesErrorCode | 'unknown'
+
+const LeaseStatusesResponseBodySchema = z.object({
+  content: leasing.LeaseStatusesResponseSchema,
+})
+
+const LeaseStatusesErrorBodySchema = z.object({
+  error: leasing.LeaseStatusesErrorCodeSchema,
+})
+
+/**
+ * The status of each lease, in one call. Leasing fails the whole call when it
+ * cannot read a lease, so a lease missing from the answer is one Tenfast does
+ * not have (notFoundLeaseIds), never one that failed.
+ */
+export async function getLeaseStatuses(
+  leaseIds: string[]
+): Promise<
+  AdapterResult<leasing.LeaseStatusesResponse, LeaseStatusesAdapterError>
+> {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/statuses`,
+      { leaseIds },
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      return {
+        ok: true,
+        data: LeaseStatusesResponseBodySchema.parse(response.data).content,
+      }
+    }
+
+    const known = LeaseStatusesErrorBodySchema.safeParse(response.data)
+    if (known.success) {
+      // Leasing has already logged the Tenfast failure as an error.
+      logger.warn(
+        { status: response.status, error: known.data.error },
+        'leasing-adapter.getLeaseStatuses'
+      )
+      return { ok: false, err: known.data.error }
+    }
+
+    logger.error(
+      { status: response.status },
+      'leasing-adapter.getLeaseStatuses'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err: unknown) {
+    logger.error(errorLogFields(err), 'leasing-adapter.getLeaseStatuses')
     return { ok: false, err: 'unknown' }
   }
 }

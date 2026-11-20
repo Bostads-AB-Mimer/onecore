@@ -22,6 +22,13 @@ vi.mock('../hooks/useHierarchicalSelection', () => ({
   }),
 }))
 vi.mock('./CompanyList', () => ({ CompanyList: () => null }))
+// RequireRole reads the signed-in user, whose API client needs window. The
+// role-gated links are not what these tests are about, so they are shown.
+vi.mock('@/entities/user', () => ({
+  RequireRole: ({ children }: { children: unknown }) => children,
+  HOME_INSURANCE_READ_ROLE: 'home-insurance:read',
+  OPEN_INVOICES_READ_ROLE: 'open-invoices:read',
+}))
 // The test runs in node, where window.matchMedia doesn't exist.
 vi.mock('@/shared/hooks/useMobile', () => ({
   useIsMobile: () => false,

@@ -34,6 +34,14 @@ export function generateAuthorAbbreviation(fullName: string): string {
   return (firstName + lastName).toUpperCase()
 }
 
+// Kronor with öre, e.g. "1 234,50 kr". formatCurrency in entities/lease
+// rounds to whole kronor; amounts owed and billed need the exact value.
+const sekFormat = new Intl.NumberFormat('sv-SE', {
+  style: 'currency',
+  currency: 'SEK',
+})
+export const formatSek = (amount: number) => sekFormat.format(amount)
+
 export const formatISODate = (isoDateString: string | null | undefined) => {
   if (!isoDateString) return '-'
   const date = new Date(isoDateString)

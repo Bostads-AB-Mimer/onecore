@@ -34,6 +34,7 @@ import {
   isClaimingLease,
   LeaseStageInfo,
   mapTenfastRentalObjectToAvailabilityInfo,
+  toSwedishDay,
 } from './tenfast-rental-object-helpers'
 
 const tenfastBaseUrl = config.tenfast.baseUrl
@@ -1614,12 +1615,6 @@ export const getLeaseByExternalId = async (
   }
 }
 
-// Swedish day, so UTC midnight and Swedish midnight give the same date.
-const toSwedishDay = (date: Date) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(
-    date
-  )
-
 const hasEnded = (endDate: Date | null | undefined, now: Date) =>
   !!endDate && toSwedishDay(endDate) < toSwedishDay(now)
 
@@ -1706,11 +1701,18 @@ export const getSubletLeases = async (
   }
 }
 
+// not-found: Tenfast has no such lease. bad-request: Tenfast refused the rows
+// (400), which includes a row in rowsToDelete that is no longer on the lease;
+// the whole write is then refused. upstream-failed: any other answer, or no
+// answer.
+export type UpdateLeaseInvoiceRowsError =
+  'not-found' | 'bad-request' | 'upstream-failed'
+
 export async function updateLeaseInvoiceRows(params: {
   leaseId: string
   rowsToDelete: string[]
   rowsToAdd: Omit<TenfastInvoiceRow, '_id'>[]
-}): Promise<AdapterResult<null, 'unknown'>> {
+}): Promise<AdapterResult<null, UpdateLeaseInvoiceRowsError>> {
   try {
     const res = await tenfastApi.request({
       method: 'patch',
@@ -1725,14 +1727,50 @@ export async function updateLeaseInvoiceRows(params: {
 
     if (res.status === 200) {
       return { ok: true, data: null }
-    } else {
-      throw { status: res.status, data: res.data }
     }
-  } catch (err) {
-    logger.error(mapHttpError(err), 'tenfast-adapter.updateLeaseInvoiceRows')
-    return { ok: false, err: 'unknown' }
+
+    if (res.status === 404) {
+      logger.warn(
+        { leaseId: params.leaseId, status: res.status },
+        'tenfast-adapter.updateLeaseInvoiceRows: lease not found'
+      )
+      return { ok: false, err: 'not-found' }
+    }
+
+    const error = new TenfastHttpError(res.status, res.data)
+    if (res.status === 400) {
+      // Tenfast also answers 400 when a row to delete is already gone, which
+      // a write at the same time causes. The caller finds out which it is and
+      // logs a real failure.
+      logger.warn(
+        { leaseId: params.leaseId, ...tenfastErrorLogFields(error) },
+        'tenfast-adapter.updateLeaseInvoiceRows: rows refused'
+      )
+      return { ok: false, err: 'bad-request' }
+    }
+
+    logger.error(
+      { leaseId: params.leaseId, ...tenfastErrorLogFields(error) },
+      'tenfast-adapter.updateLeaseInvoiceRows'
+    )
+    return { ok: false, err: 'upstream-failed' }
+  } catch (err: unknown) {
+    logger.error(
+      { leaseId: params.leaseId, ...tenfastErrorLogFields(err) },
+      'tenfast-adapter.updateLeaseInvoiceRows'
+    )
+    return { ok: false, err: 'upstream-failed' }
   }
 }
+
+// The lease stages getLeasesWithHomeInsurance reads: the only values Tenfast's
+// articles endpoint accepts, as any other state gives a 400.
+export const HOME_INSURANCE_LEASE_STAGES = [
+  'active',
+  'upcoming',
+  'preTermination',
+  'terminationScheduled',
+] as const
 
 export const getLeasesWithHomeInsurance = async (): Promise<
   AdapterResult<TenfastLease[], 'unknown'>
@@ -1746,8 +1784,7 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     const params = new URLSearchParams({
       hyresvard: tenfastCompanyId,
       populate: 'hyresgaster,hyresobjekt',
-      // The only values this endpoint accepts; any other state gives a 400.
-      states: 'active,upcoming,preTermination,terminationScheduled',
+      states: HOME_INSURANCE_LEASE_STAGES.join(','),
     })
 
     const records = await fetchAllPages(
@@ -1759,7 +1796,7 @@ export const getLeasesWithHomeInsurance = async (): Promise<
     )
 
     return { ok: true, data: records }
-  } catch (err: any) {
+  } catch (err: unknown) {
     return handleTenfastError(err, 'unknown')
   }
 }

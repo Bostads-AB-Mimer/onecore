@@ -889,3 +889,54 @@ export const undoContactSyncInEconomy = async (
     ? { ok: false, err: 'not-found' }
     : { ok: true, data: null }
 }
+
+const OpenInvoicesResponseSchema = z.object({
+  content: z.array(economy.OpenInvoiceSchema),
+})
+
+export type OpenInvoicesAdapterError = economy.OpenInvoicesErrorCode
+
+/**
+ * Every open invoice, from the economy service. Economy's 503 is
+ * upstream-failed; any other failure, or a 200 that does not parse, is
+ * unknown.
+ */
+export async function getOpenInvoices(): Promise<
+  AdapterResult<economy.OpenInvoice[], OpenInvoicesAdapterError>
+> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/invoices/open`,
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      const parsed = OpenInvoicesResponseSchema.safeParse(response.data)
+      if (!parsed.success) {
+        logger.error(
+          { error: parsed.error.issues },
+          'economy-adapter.getOpenInvoices: response did not parse'
+        )
+        return { ok: false, err: 'unknown' }
+      }
+      return { ok: true, data: parsed.data.content }
+    }
+
+    if (response.status === 503) {
+      logger.error(
+        { status: response.status },
+        'economy-adapter.getOpenInvoices: economy could not read its sources'
+      )
+      return { ok: false, err: 'upstream-failed', statusCode: 503 }
+    }
+
+    logger.error({ status: response.status }, 'economy-adapter.getOpenInvoices')
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  } catch (err: unknown) {
+    logger.error(
+      { error: errorMessage(err), name: errorName(err) },
+      'economy-adapter.getOpenInvoices'
+    )
+    return { ok: false, err: 'unknown', statusCode: 500 }
+  }
+}

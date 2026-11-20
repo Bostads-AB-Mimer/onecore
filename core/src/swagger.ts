@@ -35,6 +35,7 @@ export const swaggerSpec = {
     `${basePath}/services/file-storage-service/*.{ts,js}`,
     `${basePath}/services/keys-service/*.{ts,js}`,
     `${basePath}/services/guides-service/*.{ts,js}`,
+    `${basePath}/services/reports-service/*.{ts,js}`,
   ],
   paths: [],
 }

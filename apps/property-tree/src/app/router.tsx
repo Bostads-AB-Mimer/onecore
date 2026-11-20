@@ -11,12 +11,14 @@ import { GuideCategoryPage } from '@/pages/GuideCategoryPage'
 import { GuideEditorPage } from '@/pages/GuideEditorPage'
 import { GuidePage } from '@/pages/GuidePage'
 import { GuidesPage } from '@/pages/GuidesPage'
+import { HomeInsurancePage } from '@/pages/HomeInsurancePage'
 import { ImdPage } from '@/pages/ImdPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
 import { MessageTemplatesPage } from '@/pages/MessageTemplatesPage'
 import { MiscellaneousInvoicesPage } from '@/pages/MiscellaneousInvoicesPage'
+import { OpenInvoicesPage } from '@/pages/OpenInvoicesPage'
 import { ParkingSpacePage } from '@/pages/ParkingSpacePage'
 import { PropertyAreasPage } from '@/pages/PropertyAreasPage'
 import { PropertyPage } from '@/pages/PropertyPage'
@@ -144,6 +146,11 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'Hyreskontrakt' },
           },
           {
+            path: routes.homeInsurances,
+            element: <HomeInsurancePage />,
+            handle: { title: 'Hemförsäkringar' },
+          },
+          {
             path: routes.dispatchCentre,
             element: <DispatchCentrePage />,
             handle: { title: 'Utskick' },
@@ -167,6 +174,11 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: routes.miscellaneousInvoices,
             element: <MiscellaneousInvoicesPage />,
             handle: { title: 'Ströfakturor' },
+          },
+          {
+            path: routes.openInvoices,
+            element: <OpenInvoicesPage />,
+            handle: { title: 'Restlista' },
           },
           {
             path: routes.releaseNotesAdmin,

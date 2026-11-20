@@ -1,5 +1,9 @@
+import { LeaseStatus } from '@onecore/types'
 import * as factory from './factories'
-import { mapLeasesToLfExportRows } from '../services/lf-export'
+import {
+  mapLeasesToLfExportRows,
+  mapLeasesToLfListItems,
+} from '../services/lf-export'
 import { toYearMonthDayString } from '../adapters/tenfast/schemas'
 
 const ARTICLE_ID = 'home-insurance-article-id'
@@ -170,6 +174,32 @@ describe(mapLeasesToLfExportRows, () => {
     })
   })
 
+  describe('row selection', () => {
+    const ended = makeInsuranceRow({
+      _id: 'ended',
+      amount: 80,
+      from: toYearMonthDayString(new Date('2020-01-01')),
+      to: toYearMonthDayString(new Date('2020-12-31')),
+    })
+    const current = makeInsuranceRow({
+      _id: 'current',
+      amount: 93,
+      from: toYearMonthDayString(new Date('2021-01-01')),
+      to: null,
+    })
+
+    it('exports the row in force, not an ended row listed before it', () => {
+      const rows = mapLeasesToLfExportRows(
+        [makeLease({ hyror: [ended, current] })],
+        ARTICLE_ID
+      )
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({ leaseStatus: 'G', annualRent: 93 })
+      expect(rows[0].rowToDate).toBeNull()
+    })
+  })
+
   describe('field mapping', () => {
     it('maps lease and tenant fields correctly', () => {
       const tenant = factory.tenfastTenant.build({
@@ -233,5 +263,84 @@ describe(mapLeasesToLfExportRows, () => {
       expect(rows).toHaveLength(1)
       expect(rows[0].squareMeters).toBe(76)
     })
+  })
+})
+
+describe(mapLeasesToLfListItems, () => {
+  it('lists the same leases as the file, in the same order', () => {
+    const leases = [
+      makeLease({ externalId: 'L1' }),
+      makeLease({
+        externalId: 'L2',
+        hyresgaster: [factory.tenfastTenant.build({ isCompany: true })],
+      }),
+      makeLease({
+        externalId: 'L3',
+        hyror: [makeInsuranceRow({ amount: -93 })],
+      }),
+      makeLease({ externalId: 'L4', stage: 'upcoming' }),
+    ]
+
+    const items = mapLeasesToLfListItems(leases, ARTICLE_ID, '2026-11-13')
+    const rows = mapLeasesToLfExportRows(leases, ARTICLE_ID)
+
+    expect(items.map((item) => [item.leaseId, item.leaseStatus])).toEqual(
+      rows.map((row) => [row.leaseId, row.leaseStatus])
+    )
+  })
+
+  it('carries rowId, leaseStage and contactCode and no person data', () => {
+    const tenant = factory.tenfastTenant.build({
+      externalId: 'P123456',
+      idbeteckning: '199001011234',
+      name: { first: 'Anna', last: 'Svensson' },
+      phone: '0701234567',
+      invoiceEmail: 'anna@example.com',
+    })
+    const lease = factory.tenfastLease.build({
+      externalId: 'LEASE-001',
+      startDate: new Date('2022-12-31T23:00:00Z'),
+      endDate: null,
+      stage: 'upcoming',
+      hyror: [makeInsuranceRow({ _id: 'row-1', amount: 93 })],
+      hyresgaster: [tenant],
+      hyresobjekt: [
+        factory.tenfastRentalObject.build({
+          externalId: 'RO-001',
+          postadress: 'Ibbarbo 6',
+          roomCount: 3,
+          kvm: 75.4,
+        }),
+      ],
+    })
+
+    const [item] = mapLeasesToLfListItems([lease], ARTICLE_ID, '2026-11-13')
+
+    expect(item).toEqual({
+      leaseId: 'LEASE-001',
+      leaseStatus: 'K',
+      leaseStage: LeaseStatus.Upcoming,
+      // A Swedish day: midnight in Stockholm, the day before in UTC.
+      leaseFromDate: '2023-01-01',
+      leaseToDate: null,
+      rentalObjectCode: 'RO-001',
+      numberOfRooms: 3,
+      squareMeters: 75,
+      address: 'Ibbarbo 6',
+      postalCode: '73113',
+      city: 'KOLSVA',
+      rowId: 'row-1',
+      rowFromDate: '2024-01-01',
+      rowToDate: null,
+      monthlyAmount: 93,
+      articleText: 'Mimers Hemförsäkring',
+      contactCode: 'P123456',
+      isCompany: false,
+    })
+    const serialized = JSON.stringify(item)
+    expect(serialized).not.toContain('199001011234')
+    expect(serialized).not.toContain('Svensson')
+    expect(serialized).not.toContain('0701234567')
+    expect(serialized).not.toContain('anna@example.com')
   })
 })

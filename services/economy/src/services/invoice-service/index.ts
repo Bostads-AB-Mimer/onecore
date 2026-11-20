@@ -428,6 +428,106 @@ export const routes = (router: KoaRouter) => {
     ctx.body = makeSuccessResponseBody(result.data, metadata)
   })
 
+  /**
+   * @swagger
+   * /invoices/open:
+   *   get:
+   *     summary: List open invoices
+   *     description: >
+   *       Every invoice that is not paid, credited or cancelled and still has
+   *       money left to pay, with the cost centre of its rental object.
+   *       Registered before /invoices/{invoiceNumber}, which would otherwise
+   *       take "open" as an invoice number.
+   *     tags: [Invoices]
+   *     responses:
+   *       200:
+   *         description: The open invoices. None gives an empty list.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     required: [invoiceNumber, ocr, invoiceDate, dueDate, amount, remainingAmount, rentalObjectCode, leaseId, contactCode, state, costCentre]
+   *                     properties:
+   *                       invoiceNumber:
+   *                         type: string
+   *                       ocr:
+   *                         type: string
+   *                         nullable: true
+   *                       invoiceDate:
+   *                         type: string
+   *                         format: date
+   *                         nullable: true
+   *                       dueDate:
+   *                         type: string
+   *                         format: date
+   *                         nullable: true
+   *                       amount:
+   *                         type: number
+   *                       remainingAmount:
+   *                         type: number
+   *                         description: What is left to pay, always above 0.
+   *                       rentalObjectCode:
+   *                         type: string
+   *                         nullable: true
+   *                       leaseId:
+   *                         type: string
+   *                         nullable: true
+   *                       contactCode:
+   *                         type: string
+   *                         nullable: true
+   *                       state:
+   *                         type: string
+   *                         enum: [new, unmatched, overdue, partially-paid, reminded, deferred]
+   *                       costCentre:
+   *                         type: string
+   *                         nullable: true
+   *       503:
+   *         description: The invoices or the cost centres could not be read (error upstream-failed).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   enum: [upstream-failed]
+   *                 reason:
+   *                   type: string
+   *       500:
+   *         description: Unexpected error (error unknown).
+   */
+  router.get('(.*)/invoices/open', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    try {
+      const result = await invoiceService.getOpenInvoices()
+      if (!result.ok) {
+        ctx.status = 503
+        ctx.body = {
+          error: result.err,
+          reason: 'The invoices or their cost centres could not be read',
+          ...metadata,
+        }
+        return
+      }
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
+    } catch (err: unknown) {
+      logger.error(
+        { error: errorMessage(err) },
+        'GET /invoices/open: unexpected error'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'unknown', ...metadata }
+    }
+  })
+
   router.get('(.*)/invoices/:invoiceNumber', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
 

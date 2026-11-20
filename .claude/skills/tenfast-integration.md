@@ -245,6 +245,86 @@ co-invoiced properly until it was set back to `2v` on 2026-11-17.
 
 Rules and examples: `core/src/processes/invoicedistribution/DOCS_Co_Invoicing.md`.
 
+## Home insurance rows: pick the current one, and verify every write
+
+Home insurance is a rent row in the lease's `hyror` with the article
+`config.tenfast.leaseRentRows.homeInsurance.articleId`. A lease can hold
+several such rows (an ended one and a new one, or a row that ends before it
+starts, left behind by cancels before AVTAL-526). Leases imported from Xpand
+can also hold a second row of the article with a negative amount, which Xpand
+used to pay money back: such a row is never the insurance, and cancel never
+ends or removes it. Never take
+`hyror.find()`: use `selectCurrentHomeInsuranceRow`
+(`services/home-insurance.ts`), which picks the row in force today, else the
+next to start, else the last ended; when that row has a `to` and an
+open-ended row starts after it (a price change), it picks that row instead.
+GET and the LF export use it. Add answers 422 when any row of the article is
+open-ended or still to start (`hasOpenOrUpcomingHomeInsuranceRow`). Cancel
+(`planHomeInsuranceCancel`) ends the row in force on `endDate` and removes
+rows that would start after it, always keeping one row. The staff PATCH acts
+on the row named by `rowId`.
+
+Rows are changed with `PATCH …/extras/avtal/{id}/rows` (`rowsToDelete` ids,
+`rowsToAdd` rows), via `updateLeaseInvoiceRows`: 404 maps to `not-found`,
+400 to `bad-request`, anything else to `upstream-failed`.
+
+**Verified against Tenfast test (AVTAL-526 spike, 2026-11-13):**
+
+- Ending a row means deleting it and adding a copy with the new `to`. The
+  copy gets a new `_id`, the old one is gone, and the lease's `hyra` is
+  unchanged.
+- A `rowsToDelete` id that is no longer on the lease makes Tenfast refuse
+  the **whole** write with 400 `{"error":"All rowsToDelete must exist in the
+avtal"}`. Nothing is added, so a second write on the same row can never
+  leave a duplicate.
+- A row added without `includeInContract` gets `false`. Tenfast accepts the
+  field in `rowsToAdd`, so a replacement copies the original value
+  (`withEndDate`); otherwise a row that counts in the rent total would drop
+  out of it.
+
+So the routes write through `writeHomeInsuranceRows` (leasing routes): on a
+400 it reads the lease again rather than matching Tenfast's message. A row in
+`rowsToDelete` that is gone gives 409 `home-insurance-row-changed` (staff
+PATCH, Mina sidor cancel and add alike), with nothing written; otherwise the
+400 is a real failure (503 `upstream-failed`, one `logger.error`). The
+adapter logs a 400 as a warning only, so a race is not logged as an error.
+
+After a successful write the routes still read the lease again
+(`checkHomeInsuranceWrite`): it puts the lease in the list cache, gives the
+new `rowId`, and catches rows someone else added at the same time. The staff
+PATCH answers 409 on a mismatch (503 when the read fails), never 200; Mina
+sidor cancel and add log it with `addedRowIds` and still answer 200/201. The
+one race Tenfast cannot refuse is two adds on a lease with no home insurance
+row (nothing in `rowsToDelete`); the log names the rows to remove.
+
+### The staff list holds the leases in memory
+
+`GET /leases/home-insurances` (leasing) lists home insurance rows for staff.
+Tenfast's articles endpoint (`getLeasesWithHomeInsurance`) can neither
+search, sort nor page, so `services/home-insurance-cache.ts` holds every
+lease it returns in memory, and leasing filters, sorts and pages:
+
+- The first read loads (one load shared by everyone asking) and waits up to
+  10 s, then answers 503 `cache-warming` with `Retry-After: 30`. A failed
+  load answers 503 `upstream-failed` and is not retried for 30 s.
+- After five minutes a read is answered from memory while a load refreshes
+  it in the background. A failed refresh keeps the old data.
+- Writes go through: the staff PATCH, add and cancel put the lease they read
+  after the write (for the check above) in place. A lease written during a
+  load is put in place again on top of it. When the lease can't be read
+  after a write, the next read reloads.
+- Each pod has its own copy: a write shows at once on the pod that made it,
+  and on the others at their next load, at most five minutes later.
+- The LF export (`GET /leases/lf-export`) never uses the cache.
+- Core's Excel export reads `GET /leases/home-insurances/all`: every matching
+  item from one read of the cache, unpaged. Paging through
+  `/leases/home-insurances` could mix pods or loads.
+
+`rows=lf` uses the LF file's selection (`mapLeasesToLfListItems`), `rows=all`
+lists every home insurance row (`mapHomeInsuranceRows`). Items carry the
+tenant's `contactCode` only; names and personal identity numbers come from
+contacts, in core.
+
 ## `cancellation.requested` vs `cancellation.cancelled` — easy to get backwards
 
 On a lease's `cancellation` object:
@@ -315,6 +395,15 @@ filter[stage]=terminationScheduled&filter[hyresobjekt][typ]=parkering
 The `populate` param controls whether nested refs (`hyresobjekt`,
 `hyresgaster`) come back as raw ObjectId strings or fully-populated objects
 — see the schema-leniency section above for why this matters.
+
+`/v1/hyresvard/hyror/search` takes the same filters on invoices. Economy's
+`getOpenInvoices` uses `filter[state]=ny,ej-avprickad,forsenad,delvis-betald,pamind,gracePeriod`
+for the list of open invoices (see `core/src/processes/reports/DOCS_Open_Invoices.md`).
+Its response shape is not yet verified against Tenfast test, so its schema
+(`TenfastSearchInvoiceSchema`) is lenient: refs may come back as ids or
+objects. Economy's `fetchAllTenfastPages` stops at 100 pages, so if this
+endpoint also caps pages at 100 records, more than 10,000 open invoices
+fails as `pagination-error` rather than returning a partial list.
 
 **Debugging with curl:** `curl` interprets literal `[...]` in a URL as its
 own range/glob syntax and fails with `bad range in URL` — this is a

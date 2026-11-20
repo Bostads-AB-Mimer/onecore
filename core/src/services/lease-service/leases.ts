@@ -8,6 +8,8 @@ import {
   joinField,
   formatDateForExcel,
   setExcelDownloadHeaders,
+  buildPaginationLinks,
+  PaginatedResponse,
 } from '@onecore/utilities'
 import {
   leasing,
@@ -38,9 +40,41 @@ import {
 } from '../../adapters/contacts-adapter/lease-query'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { registerSchema } from '../../utils/openapi'
+import { errorLogFields } from '../../utils/error-log'
+import { HOME_INSURANCE_LF_COLUMNS } from '../../processes/reports/converters/home-insurance-columns'
+import {
+  HOME_INSURANCE_LIST_ERROR_STATUS,
+  HOME_INSURANCE_LIST_RETRY_AFTER_SECONDS,
+  homeInsuranceListLinkParams,
+  sendHomeInsuranceFailure,
+  toHomeInsuranceLfColumnValues,
+  toLeasingHomeInsuranceQuery,
+  withHomeInsuranceContacts,
+} from './helpers/home-insurance'
+import {
+  HomeInsuranceErrorResponseSchema,
+  HomeInsuranceListErrorResponseSchema,
+  HomeInsuranceListItemWithContact,
+  HomeInsuranceListItemWithContactSchema,
+  HomeInsuranceListQuerySchema,
+  HomeInsuranceListRouteErrorCode,
+  InvalidRequestBodyResponseSchema,
+} from './schemas/home-insurance'
 import { runWithConcurrency } from '../../utils/concurrency'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
+registerSchema('HomeInsuranceRow', leasing.HomeInsuranceRowSchema)
+registerSchema(
+  'UpdateHomeInsuranceRowResponse',
+  leasing.UpdateHomeInsuranceRowResponseSchema
+)
+registerSchema('HomeInsuranceErrorResponse', HomeInsuranceErrorResponseSchema)
+registerSchema('InvalidRequestBodyResponse', InvalidRequestBodyResponseSchema)
+registerSchema('HomeInsuranceListItem', HomeInsuranceListItemWithContactSchema)
+registerSchema(
+  'HomeInsuranceListErrorResponse',
+  HomeInsuranceListErrorResponseSchema
+)
 
 // Same cap as the lease search in leasing. Each lease on a page gets a contact
 // and a rental object lookup, so a full page makes about 1000 calls.
@@ -1162,6 +1196,463 @@ export const routes = (router: KoaRouter) => {
   })
 
   /**
+   * Answers a failed home insurance list or export with its status and code.
+   * cache-warming keeps leasing's Retry-After.
+   */
+  const sendHomeInsuranceListFailure = (
+    ctx: KoaRouter.RouterContext,
+    failure: { err: HomeInsuranceListRouteErrorCode; retryAfter?: string },
+    metadata: object
+  ) => {
+    if (failure.err === 'cache-warming') {
+      ctx.set(
+        'Retry-After',
+        failure.retryAfter ?? HOME_INSURANCE_LIST_RETRY_AFTER_SECONDS
+      )
+    }
+    ctx.status = HOME_INSURANCE_LIST_ERROR_STATUS[failure.err]
+    ctx.body = { error: failure.err, ...metadata }
+  }
+
+  /**
+   * @swagger
+   * /leases/home-insurances:
+   *   get:
+   *     summary: List home insurance rows (staff)
+   *     description: >
+   *       The home insurance rows of all leases, with the tenant's name,
+   *       personal identity number, phone and email from the contacts
+   *       service. Those four fields are null when the contacts service
+   *       fails, when the tenant has a protected identity, or when the
+   *       contacts service has no record of the tenant. A personnummer in q
+   *       is looked up in the contacts service; one with no contact gives an
+   *       empty list. Requires the home-insurance:read role.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *         description: A personnummer, or text matched against the lease ID, rental object code, contact code and address of the rental object, ignoring case.
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [G, K, '*']
+   *         style: form
+   *         explode: false
+   *         description: Status as in the Länsförsäkringar file. G in force, K on a lease to come, * the row has an end date.
+   *       - in: query
+   *         name: rows
+   *         schema:
+   *           type: string
+   *           enum: [lf, all]
+   *           default: lf
+   *         description: lf gives the rows of the Länsförsäkringar file, one per lease. all gives every home insurance row, for quality checks.
+   *       - in: query
+   *         name: sameDate
+   *         schema:
+   *           type: boolean
+   *         description: Only rows whose first and last day are the same day.
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseId, leaseStatus, leaseFromDate, leaseToDate, rentalObjectCode, address, rowFromDate, rowToDate, monthlyAmount, contactCode]
+   *           default: leaseId
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: asc
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           default: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 500
+   *           default: 50
+   *     responses:
+   *       '200':
+   *         description: One page of home insurance rows. A search without matches gives an empty list.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [content, _meta, _links]
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/HomeInsuranceListItem'
+   *                 _meta:
+   *                   $ref: '#/components/schemas/PaginationMeta'
+   *                 _links:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/PaginationLinks'
+   *       '400':
+   *         description: Invalid query parameters (error invalid-query).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceListErrorResponse'
+   *       '403':
+   *         description: The caller lacks the home-insurance:read role.
+   *       '500':
+   *         description: Unexpected answer from the leasing service (error unknown).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceListErrorResponse'
+   *       '503':
+   *         description: >
+   *           The list is loading from the leasing system for the first time (error
+   *           cache-warming, retry after the Retry-After header), or the leasing system or
+   *           the contacts service could not be read (error upstream-failed).
+   *         headers:
+   *           Retry-After:
+   *             schema:
+   *               type: integer
+   *             description: Seconds to wait, sent with cache-warming.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceListErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/home-insurances', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const parsed = HomeInsuranceListQuerySchema.safeParse(ctx.query)
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'invalid-query',
+        details: parsed.error.issues,
+        ...metadata,
+      }
+      return
+    }
+    const query = parsed.data
+
+    const leasingQuery = await toLeasingHomeInsuranceQuery(query)
+    if (!leasingQuery.ok) {
+      sendHomeInsuranceListFailure(ctx, leasingQuery, metadata)
+      return
+    }
+
+    const result = await leasingAdapter.listHomeInsurances(leasingQuery.query)
+    if (!result.ok) {
+      sendHomeInsuranceListFailure(ctx, result, metadata)
+      return
+    }
+
+    const { content, _meta } = result.data
+    const body: PaginatedResponse<HomeInsuranceListItemWithContact> = {
+      content: await withHomeInsuranceContacts(content),
+      _meta,
+      _links: buildPaginationLinks(
+        ctx,
+        _meta.page,
+        _meta.limit,
+        Math.ceil(_meta.totalRecords / _meta.limit),
+        homeInsuranceListLinkParams(query)
+      ),
+    }
+
+    ctx.status = 200
+    ctx.body = body
+  })
+
+  /**
+   * @swagger
+   * /leases/home-insurances/export:
+   *   get:
+   *     summary: Export home insurance rows to Excel (staff)
+   *     description: >
+   *       Every row of GET /leases/home-insurances that matches the filters,
+   *       in the 18 columns of the Länsförsäkringar file. The person fields
+   *       follow the same rules as the list: from the contacts service only,
+   *       and empty for a protected identity or when the contacts service
+   *       fails. Takes the same query parameters as the list, without page
+   *       and limit. Requires the home-insurance:read role.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [G, K, '*']
+   *         style: form
+   *         explode: false
+   *       - in: query
+   *         name: rows
+   *         schema:
+   *           type: string
+   *           enum: [lf, all]
+   *           default: lf
+   *       - in: query
+   *         name: sameDate
+   *         schema:
+   *           type: boolean
+   *       - in: query
+   *         name: sortBy
+   *         schema:
+   *           type: string
+   *           enum: [leaseId, leaseStatus, leaseFromDate, leaseToDate, rentalObjectCode, address, rowFromDate, rowToDate, monthlyAmount, contactCode]
+   *           default: leaseId
+   *       - in: query
+   *         name: sortOrder
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *           default: asc
+   *     responses:
+   *       '200':
+   *         description: Excel file download.
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       '400':
+   *         description: Invalid query parameters (error invalid-query).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceListErrorResponse'
+   *       '403':
+   *         description: The caller lacks the home-insurance:read role.
+   *       '500':
+   *         description: Unexpected answer from the leasing service (error unknown), or the file could not be built.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceListErrorResponse'
+   *       '503':
+   *         description: The list is loading from the leasing system for the first time (error cache-warming, with Retry-After), or the leasing system or the contacts service could not be read (error upstream-failed).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceListErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/home-insurances/export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const parsed = HomeInsuranceListQuerySchema.safeParse(ctx.query)
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'invalid-query',
+        details: parsed.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    const leasingQuery = await toLeasingHomeInsuranceQuery(parsed.data)
+    if (!leasingQuery.ok) {
+      sendHomeInsuranceListFailure(ctx, leasingQuery, metadata)
+      return
+    }
+
+    const result = await leasingAdapter.listAllHomeInsurances(
+      leasingQuery.query
+    )
+    if (!result.ok) {
+      sendHomeInsuranceListFailure(ctx, result, metadata)
+      return
+    }
+
+    try {
+      const rows = await withHomeInsuranceContacts(result.data)
+      const buffer = await createExcelExport<HomeInsuranceListItemWithContact>({
+        sheetName: 'Hemförsäkring',
+        columns: HOME_INSURANCE_LF_COLUMNS.map((column) => ({
+          header: column.header,
+          key: column.key,
+          width: 20,
+        })),
+        data: rows,
+        rowMapper: toHomeInsuranceLfColumnValues,
+      })
+
+      setExcelDownloadHeaders(ctx, 'hemforsakringar')
+      ctx.body = buffer
+    } catch (err: unknown) {
+      // Named fields only: metadata holds the request URL, whose q can be
+      // a personal identity number.
+      logger.error(
+        { ...errorLogFields(err), rows: result.data.length },
+        'Error building the home insurance Excel export'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'unknown', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/home-insurance/rows/{rowId}:
+   *   patch:
+   *     summary: End or remove a home insurance row (staff)
+   *     description: >
+   *       Ends the home insurance row on endDate. action cancel removes the
+   *       row when endDate is on or before its first day, and otherwise ends
+   *       it on endDate. action set-end ends it on endDate, which may not be
+   *       before its first day. Ending a row gives it a new rowId. rowId is
+   *       the row as last read from GET /leases/{leaseId}/home-insurance or
+   *       the list; if someone else changed the rows, the answer is 409 and
+   *       the row must be read again. Leasing's errors are passed on as they
+   *       are. Requires the home-insurance:write role.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The ID of the lease.
+   *       - in: path
+   *         name: rowId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rowId of the home insurance row.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - endDate
+   *               - action
+   *             properties:
+   *               endDate:
+   *                 type: string
+   *                 format: date
+   *                 description: The last day the home insurance is in force, as yyyy-mm-dd.
+   *               action:
+   *                 type: string
+   *                 enum: [cancel, set-end]
+   *     responses:
+   *       '200':
+   *         description: The row was removed (action deleted, row null) or ended (action ended, row is the new row).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [content]
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/UpdateHomeInsuranceRowResponse'
+   *       '400':
+   *         description: >
+   *           The request body is invalid (an InvalidRequestBodyResponse,
+   *           with no error code), endDate is before the row's first day with
+   *           action set-end (error end-date-before-start), or the row already
+   *           ends on endDate (error end-date-unchanged).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               oneOf:
+   *                 - $ref: '#/components/schemas/InvalidRequestBodyResponse'
+   *                 - $ref: '#/components/schemas/HomeInsuranceErrorResponse'
+   *       '403':
+   *         description: The caller lacks the home-insurance:write role.
+   *       '404':
+   *         description: The lease was not found (error lease-not-found), or it has no home insurance row (error home-insurance-row-not-found).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
+   *       '409':
+   *         description: The lease has no row with this rowId, or the rows were changed by someone else during the write (error home-insurance-row-changed). Read the row again.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
+   *       '500':
+   *         description: Unexpected answer from the leasing service, or no answer (error unknown). The row may have been written.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
+   *       '503':
+   *         description: The leasing system could not be read or written, or the write could not be checked (error upstream-failed).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.patch(
+    '/leases/:leaseId/home-insurance/rows/:rowId',
+    parseRequestBody(leasing.UpdateHomeInsuranceRowRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { leaseId, rowId } = ctx.params
+      const { endDate, action } = ctx.request.body
+
+      const result = await leasingAdapter.updateLeaseHomeInsuranceRow(
+        leaseId,
+        rowId,
+        { endDate, action }
+      )
+
+      // Audit trail of who changed which row. No tenant data.
+      logger.info(
+        {
+          leaseId,
+          rowId,
+          action,
+          endDate,
+          outcome: result.ok ? result.data.action : result.err,
+          newRowId: result.ok ? (result.data.row?.rowId ?? null) : null,
+          user: ctx.state.user?.preferred_username ?? null,
+        },
+        'Home insurance row update'
+      )
+
+      if (!result.ok) {
+        sendHomeInsuranceFailure(ctx, result, metadata)
+        return
+      }
+
+      ctx.status = 200
+      ctx.body =
+        makeSuccessResponseBody<leasing.UpdateHomeInsuranceRowResponse>(
+          result.data,
+          metadata
+        )
+    }
+  )
+
+  /**
    * @swagger
    * /leases/{id}:
    *   get:
@@ -1363,6 +1854,11 @@ export const routes = (router: KoaRouter) => {
    * /leases/{leaseId}/home-insurance:
    *   get:
    *     summary: Get home insurance for a lease
+   *     description: >
+   *       The lease's current home insurance row: the row in force today,
+   *       else the next one to start, else the one that ended last. rowId
+   *       identifies the row for PATCH
+   *       /leases/{leaseId}/home-insurance/rows/{rowId}.
    *     tags:
    *       - Lease service
    *     parameters:
@@ -1375,10 +1871,32 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       200:
    *         description: Home insurance retrieved.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [content]
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/HomeInsuranceRow'
    *       404:
-   *         description: Lease or home insurance not found.
+   *         description: The lease was not found (error lease-not-found), or it has no home insurance row (error home-insurance-row-not-found).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
    *       500:
-   *         description: Internal server error.
+   *         description: Unexpected answer from the leasing service (error unknown).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
+   *       503:
+   *         description: The leasing system could not be read (error upstream-failed).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
    */
   router.get('/leases/:leaseId/home-insurance', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -1387,27 +1905,15 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!result.ok) {
-      if (result.err === 'not-found') {
-        ctx.status = 404
-        ctx.body = {
-          error: 'Not found',
-          ...metadata,
-        }
-        return
-      }
-
-      ctx.status = 500
-      ctx.body = {
-        error: result.err,
-        ...metadata,
-      }
+      sendHomeInsuranceFailure(ctx, result, metadata)
       return
     }
 
     ctx.status = 200
-    ctx.body = makeSuccessResponseBody<
-      z.infer<typeof schemas.v1.LeaseHomeInsuranceSchema>
-    >(result.data, metadata)
+    ctx.body = makeSuccessResponseBody<leasing.HomeInsuranceRow>(
+      result.data,
+      metadata
+    )
   })
 
   /**
@@ -1650,68 +2156,57 @@ export const routes = (router: KoaRouter) => {
    *                 description: Desired end date for home insurance.
    *     responses:
    *       200:
-   *         description: Home insurance cancelled.
+   *         description: >
+   *           Home insurance cancelled: the row in force on endDate now ends
+   *           on it, and rows that would start after it are removed. Without
+   *           a row in force on endDate, the first row to start after it ends
+   *           on its own first day. One row is always kept.
+   *       400:
+   *         description: The request body is invalid.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/InvalidRequestBodyResponse'
+   *       404:
+   *         description: The lease was not found (error lease-not-found), or it has no home insurance row (error home-insurance-row-not-found).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
+   *       409:
+   *         description: A row to end or remove was changed by someone else at the same time (error home-insurance-row-changed). Nothing was written; try again.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
    *       500:
-   *         description: Internal server error.
+   *         description: Unexpected answer from the leasing service, or no answer (error unknown).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
+   *       503:
+   *         description: The leasing system could not be read or written (error upstream-failed).
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HomeInsuranceErrorResponse'
    */
   router.post(
     '/leases/:leaseId/home-insurance/cancel',
     parseRequestBody(leasing.v1.CancelLeaseHomeInsuranceRequestSchema),
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
-      const lease = await leasingAdapter.getLease(ctx.params.leaseId)
 
-      if (!lease) {
-        ctx.status = 404
-        ctx.body = {
-          error: 'Lease not found',
-          ...metadata,
-        }
-        return
-      }
-
-      const homeInsurance = await leasingAdapter.getLeaseHomeInsurance(
-        ctx.params.leaseId
-      )
-
-      if (!homeInsurance.ok) {
-        if (homeInsurance.err === 'not-found') {
-          ctx.status = 404
-          ctx.body = {
-            error: 'Home insurance not found',
-            ...metadata,
-          }
-          return
-        }
-
-        ctx.status = 500
-        ctx.body = {
-          error: homeInsurance.err,
-          ...metadata,
-        }
-        return
-      }
-
-      if (!homeInsurance.data) {
-        ctx.status = 404
-        ctx.body = {
-          error: 'Home insurance not found',
-          ...metadata,
-        }
-        return
-      }
-
+      // No checks before the write: leasing finds the lease and its row and
+      // answers with a typed error when either is missing.
       const cancelLeaseHomeInsuranceResult =
         await leasingAdapter.cancelLeaseHomeInsurance(ctx.params.leaseId, {
           endDate: ctx.request.body.endDate,
         })
 
       if (!cancelLeaseHomeInsuranceResult.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: cancelLeaseHomeInsuranceResult.err,
-          ...metadata,
-        }
+        sendHomeInsuranceFailure(ctx, cancelLeaseHomeInsuranceResult, metadata)
         return
       }
 

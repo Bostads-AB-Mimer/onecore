@@ -171,9 +171,13 @@ const RentSourceCard = ({
 export const RentRowsTabContent = ({
   rentalObjectCode,
   lease,
+  leaseAction,
 }: {
   rentalObjectCode: string
   lease?: Lease
+  /** Shown under the rows, e.g. ending the lease's home insurance. A slot,
+   * since this feature may not import another feature. */
+  leaseAction?: ReactNode
 }) => {
   const { tenfastQuery, legacyQuery } = useRentalObjectRents(rentalObjectCode)
 
@@ -288,6 +292,7 @@ export const RentRowsTabContent = ({
           emptyText="Inget aktivt kontrakt med hyresrader hittades."
         />
       </div>
+      {leaseAction}
     </TabLayout>
   )
 }

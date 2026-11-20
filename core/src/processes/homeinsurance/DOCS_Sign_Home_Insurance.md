@@ -22,10 +22,13 @@ E --> Eo{Residence Found?}
 Eo --> |No| O
 Eo --> |Yes| F{Price Tier Exists<br/>for Room Count?}
 F --> |No| O
-F --> |Yes| G{Existing Active Home<br/>Insurance on Lease?}
+F --> |Yes| G{Any Home Insurance Row<br/>open-ended or still to start?}
 G --> |Yes| O
-G --> |No| H[Add Rent Row in Tenfast,<br/>tagged Home Insurance]
-H --> O
+G --> |No| H[Add Rent Row in Tenfast,<br/>tagged Home Insurance,<br/>replacing the current Row if any]
+H --> V(Read the Lease again)
+V --> |Rows not as intended| LOG[logger.error with addedRowIds,<br/>still 201]
+V --> |As intended| O
+LOG --> O
 ```
 
 ## Sekvensdiagram
@@ -85,21 +88,45 @@ sequenceDiagram
     Tenfast -->> Leasing: Lease
 
     break when Lease not found in Tenfast
-        Leasing-->Core: 404
+        Leasing-->Core: 404 lease-not-found
         Core-->MimerAPI: 404
         MimerAPI-->User: reject
     end
 
-    break when an Active (uncancelled) Home<br/>Insurance Row already exists on the Lease
-        Leasing-->Core: 422 insurance-already-exists
+    break when Tenfast could not be read
+        Leasing-->Core: 503 upstream-failed
+        Core-->MimerAPI: 500 (the legacy add adapter has no validateStatus)
+        MimerAPI-->User: reject
+    end
+
+    break when any Home Insurance Row is open-ended<br/>or still to start, even if the Row in force<br/>today has an end date
+        Leasing-->Core: 422 home-insurance-already-exists
         Core-->MimerAPI: 422
         MimerAPI-->User: reject
     end
 
-    Leasing ->> Tenfast: Update Lease Invoice Rows<br/>(remove old cancelled row if any,<br/>add new row tagged Home Insurance)
+    note over Leasing: The Row to replace is the current Row<br/>(selectCurrentHomeInsuranceRow): in force today,<br/>else next to start, else last ended. Not the first Row.
+
+    Leasing ->> Tenfast: Update Lease Invoice Rows<br/>(remove the current row if any,<br/>add new row tagged Home Insurance)
+
+    break when Tenfast refuses or fails the write
+        Leasing-->Core: 404 lease-not-found / 503 upstream-failed
+        Core-->MimerAPI: 404 / 500 (503 becomes 500, see above)
+        MimerAPI-->User: reject
+    end
+
     Tenfast -->> Leasing: Updated
-    Leasing -->> Core: Result
+    Leasing ->> Tenfast: Get Lease again, to check the write
+    note over Leasing: Rows not as intended (a write at the same<br/>time): logger.error with addedRowIds, answer<br/>still 201. Read failed: logger.warn, still 201.
+    Leasing -->> Core: 201
     Core -->> MimerAPI: 200
     MimerAPI -->> User: Home Insurance signed!
 
 ```
+
+## Regler i leasing
+
+- **Redan försäkrad.** Leasing svarar 422 `home-insurance-already-exists` när någon hemförsäkringsrad saknar slutdatum eller ännu inte har börjat (`hasOpenOrUpcomingHomeInsuranceRow`). Tidigare tittade leasing bara på den första raden med artikeln, och sedan bara på den rad som gäller i dag. En rad som slutar med en tillsvidarerad efter sig gav då en ny rad bredvid den, och hyresgästen debiterades två gånger.
+- **Vilken rad som ersätts.** Finns en rad som slutar (uppsagd) ersätts raden som gäller nu (`selectCurrentHomeInsuranceRow`), inte den första raden med artikeln.
+- **Fel.** Leasing svarar med typade koder: 404 `lease-not-found` och 503 `upstream-failed` när Tenfast inte kunde läsas eller skrivas. Core-adaptern för teckning (`addLeaseHomeInsurance`) har ingen `validateStatus` och mappar inte koderna, så 503 blir ett axios-fel och 500 i core. Att flytta den till de typade felen, som GET och cancel redan använder, är ett separat kort: svaret till Mina sidor ändras då.
+- **Kontroll efter skrivningen.** Som vid uppsägning läser leasing om kontraktet efter skrivningen och loggar `addedRowIds` om raderna inte blev som skrivningen skulle lämna. Se [Säg upp Hemförsäkring](./DOCS_Cancel_Home_Insurance.md#regler-i-leasing).

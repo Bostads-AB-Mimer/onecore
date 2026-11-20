@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 
 import { DocumentsTabContent } from '@/features/documents'
+import { LeaseHomeInsuranceAction } from '@/features/home-insurance'
 import { InspectionsTabContent } from '@/features/inspections'
 import { LeasesTabContent } from '@/features/leases'
 import { MaintenanceUnitsTabContent } from '@/features/maintenance-units'
@@ -99,7 +100,13 @@ export const ResidenceTabsMobile = ({
       icon: Receipt,
       title: 'Hyresrader',
       content: rentalId ? (
-        <RentRowsTabContent rentalObjectCode={rentalId} lease={currentLease} />
+        <RentRowsTabContent
+          rentalObjectCode={rentalId}
+          lease={currentLease}
+          leaseAction={
+            currentLease && <LeaseHomeInsuranceAction lease={currentLease} />
+          }
+        />
       ) : null,
     },
     {

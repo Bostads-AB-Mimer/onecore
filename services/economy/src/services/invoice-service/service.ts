@@ -27,8 +27,10 @@ import {
 import { economy, Invoice, InvoiceRow, PaymentStatus } from '@onecore/types'
 import { errorMessage, logger } from '@onecore/utilities'
 import {
+  getCostCentresByRentalObjectCodes,
   getInvoiceRows,
   getPropertyCodeAndCostCentreForLease,
+  rentalObjectCodeKey,
 } from '../common/adapters/xpand-db-adapter'
 import {
   extractLeaseIdsFromInvoiceRows,
@@ -63,6 +65,7 @@ import {
   getInvoicesNotExported,
   getInvoicesByOcr,
   getRentalLosses,
+  getOpenInvoices as getTenfastOpenInvoices,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import config, { isRentalLossExcludedAccount } from '@src/common/config'
 import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
@@ -2082,4 +2085,43 @@ export const uploadRentalLossCsvFile = async (
     aggregateFilename,
     rentalLossAccountingCsv.join('\n')
   )
+}
+
+/**
+ * Every open invoice, with the cost centre of its rental object from Xpand.
+ * Fails when either Tenfast or Xpand fails: a list with blank cost centres
+ * would look complete.
+ */
+export const getOpenInvoices = async (): Promise<
+  AdapterResult<economy.OpenInvoice[], 'upstream-failed'>
+> => {
+  const invoicesResult = await getTenfastOpenInvoices()
+  if (!invoicesResult.ok) {
+    logger.error(
+      { error: invoicesResult.err },
+      'invoice-service.getOpenInvoices: open invoices could not be read'
+    )
+    return { ok: false, err: 'upstream-failed' }
+  }
+
+  const costCentresResult = await getCostCentresByRentalObjectCodes(
+    invoicesResult.data.flatMap((invoice) =>
+      invoice.rentalObjectCode ? [invoice.rentalObjectCode] : []
+    )
+  )
+  if (!costCentresResult.ok) {
+    return { ok: false, err: 'upstream-failed' }
+  }
+
+  return {
+    ok: true,
+    data: invoicesResult.data.map((invoice) => ({
+      ...invoice,
+      costCentre: invoice.rentalObjectCode
+        ? (costCentresResult.data.get(
+            rentalObjectCodeKey(invoice.rentalObjectCode)
+          ) ?? null)
+        : null,
+    })),
+  }
 }

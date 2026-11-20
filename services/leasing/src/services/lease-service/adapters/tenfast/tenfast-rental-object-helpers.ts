@@ -157,6 +157,22 @@ export const isIncludedInRent = (
   row: Pick<TenfastInvoiceRow, 'includeInContract'>
 ): boolean => row.includeInContract !== false
 
+// The Swedish day of a date as yyyy-mm-dd, so UTC midnight and Swedish
+// midnight give the same date.
+export const toSwedishDay = (date: Date): string =>
+  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(
+    date
+  )
+
+/**
+ * Whether the rent row is in force on the day (yyyy-mm-dd). Tenfast's from
+ * and to are days, both included, and a missing one leaves that end open.
+ */
+export const isRentRowInForceOn = (
+  row: Pick<TenfastInvoiceRow, 'from' | 'to'>,
+  day: string
+): boolean => (!row.from || row.from <= day) && (!row.to || row.to >= day)
+
 export const mapTenfastRentalObjectToAvailabilityInfo = (
   includeVAT: boolean,
   tenfastRentalObject: TenfastRentalObject,

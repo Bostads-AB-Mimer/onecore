@@ -31,6 +31,9 @@ import {
   TenfastInvoiceRow,
   TenfastRentArticleSchema,
   TenfastRentArticle,
+  TenfastInvoiceState,
+  TenfastSearchInvoice,
+  TenfastSearchInvoicesResponseSchema,
 } from './schemas'
 
 import {
@@ -267,6 +270,144 @@ export const getInvoicesForTenant = async (
     logger.error(
       { tenantId, status, error: errorMessage(err) },
       'tenfast-adapter.getInvoicesForTenant'
+    )
+    return { ok: false, err: 'request-failed' }
+  }
+}
+
+// Tenfast's states for an invoice that is not paid, credited or cancelled,
+// and the neutral state each one is exposed as.
+const OPEN_INVOICE_STATES: Partial<
+  Record<TenfastInvoiceState, economy.OpenInvoiceState>
+> = {
+  ny: 'new',
+  'ej-avprickad': 'unmatched',
+  forsenad: 'overdue',
+  'delvis-betald': 'partially-paid',
+  pamind: 'reminded',
+  gracePeriod: 'deferred',
+}
+
+const isoDayPattern = /^\d{4}-\d{2}-\d{2}$/
+
+// sv-SE formats a date as yyyy-mm-dd.
+const swedishDayFormat = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Europe/Stockholm',
+})
+
+/**
+ * The day of a Tenfast date as yyyy-mm-dd in Swedish time. Tenfast sends
+ * midnight Swedish time as UTC, so cutting the string at the T would give
+ * the day before. Null when the value is missing or not a date.
+ */
+export const toSwedishDay = (
+  value: string | null | undefined
+): string | null => {
+  if (!value) return null
+  if (isoDayPattern.test(value)) return value
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : swedishDayFormat.format(date)
+}
+
+type TenfastExternalRef = NonNullable<
+  NonNullable<TenfastSearchInvoice['snapshot']>['hyresgaster']
+>[number]
+
+const refObjects = (refs: TenfastExternalRef[] | null | undefined) =>
+  (refs ?? []).flatMap((ref) => (typeof ref === 'string' ? [] : [ref]))
+
+const firstExternalId = (
+  refs: TenfastExternalRef[] | null | undefined
+): string | null =>
+  refObjects(refs)
+    .map((ref) => ref.externalId?.trim())
+    .find((externalId) => !!externalId) ?? null
+
+/**
+ * An open invoice from Tenfast's search, without its cost centre. Null when
+ * nothing is left to pay or the state is not an open one. The tenant, lease
+ * and rental object are taken from the snapshot, as the invoice was sent,
+ * and from the populated leases when the snapshot lacks them.
+ */
+const toOpenInvoice = (
+  invoice: TenfastSearchInvoice
+): Omit<economy.OpenInvoice, 'costCentre'> | null => {
+  const state = OPEN_INVOICE_STATES[invoice.state]
+  // Rounded to whole öre: the subtraction leaves floating point noise.
+  const remainingAmount =
+    Math.round((invoice.amount - invoice.amountPaid) * 100) / 100
+  if (!state || remainingAmount <= 0) return null
+
+  const leases = (invoice.avtal ?? []).flatMap((lease) =>
+    typeof lease === 'string' ? [] : [lease]
+  )
+  const leaseId =
+    firstExternalId(invoice.snapshot?.avtal) ?? firstExternalId(leases)
+
+  // A person before a company, when the lease has both.
+  const tenants = refObjects(invoice.snapshot?.hyresgaster).filter(
+    (tenant) => !!tenant.externalId?.trim()
+  )
+  const tenant = tenants.find((t) => !t.isCompany) ?? tenants[0]
+  const contactCode =
+    tenant?.externalId?.trim() ??
+    firstExternalId(leases.flatMap((lease) => lease.hyresgaster ?? []))
+
+  return {
+    invoiceNumber: invoice.reference ?? invoice.ocrNumber ?? '',
+    ocr: invoice.ocrNumber ?? null,
+    invoiceDate: toSwedishDay(
+      invoice.activatedAt ?? invoice.expectedInvoiceDate ?? invoice.createdAt
+    ),
+    dueDate: toSwedishDay(invoice.due),
+    amount: invoice.amount,
+    remainingAmount,
+    // A lease ID is the rental object code, a slash and a sequence number.
+    rentalObjectCode:
+      firstExternalId(invoice.snapshot?.hyresobjekt) ??
+      (leaseId ? leaseId.split('/')[0] : null),
+    leaseId,
+    contactCode,
+    state,
+  }
+}
+
+/**
+ * Every invoice that is not paid, credited or cancelled and still has money
+ * left to pay, without cost centres.
+ */
+export const getOpenInvoices = async (): Promise<
+  AdapterResult<Omit<economy.OpenInvoice, 'costCentre'>[], TenfastPagesError>
+> => {
+  try {
+    const pagesResult = await fetchAllTenfastPages(
+      '/v1/hyresvard/hyror/search',
+      {
+        hyresvard: companyId,
+        limit: TENFAST_INVOICES_PAGE_SIZE,
+        'filter[state]': Object.keys(OPEN_INVOICE_STATES).join(','),
+      },
+      TenfastSearchInvoicesResponseSchema,
+      {}
+    )
+    if (!pagesResult.ok) {
+      return pagesResult
+    }
+
+    return {
+      ok: true,
+      data: pagesResult.data.flatMap((invoice) => {
+        const openInvoice = toOpenInvoice(invoice)
+        return openInvoice ? [openInvoice] : []
+      }),
+    }
+  } catch (err: unknown) {
+    // Never the raw error: an AxiosError carries the request headers,
+    // including the API token.
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { status, error: errorMessage(err) },
+      'tenfast-adapter.getOpenInvoices'
     )
     return { ok: false, err: 'request-failed' }
   }
