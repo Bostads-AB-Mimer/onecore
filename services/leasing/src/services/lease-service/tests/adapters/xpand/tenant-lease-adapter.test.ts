@@ -3,6 +3,9 @@ import { sub } from 'date-fns'
 
 import { lease } from '../../factories'
 import * as tenantLeaseAdapter from '../../../adapters/xpand/tenant-lease-adapter'
+import { xpandDb } from '../../../adapters/xpand/xpandDb'
+
+const { placeholderPhoneNumber } = jest.requireActual('@onecore/utilities')
 
 jest.mock('knex', () => () => ({
   raw: jest.fn().mockReturnThis(),
@@ -11,6 +14,7 @@ jest.mock('knex', () => () => ({
   innerJoin: jest.fn().mockReturnThis(),
   leftJoin: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
+  whereIn: jest.fn().mockReturnThis(),
   whereNotNull: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   orderByRaw: jest.fn().mockReturnThis(),
@@ -54,6 +58,18 @@ jest.mock('knex', () => () => ({
     }),
 }))
 
+let savedEnv: NodeJS.ProcessEnv
+
+beforeEach(() => {
+  savedEnv = process.env
+  process.env = { ...savedEnv }
+  delete process.env.CONTACT_DETAILS__MODE
+})
+
+afterEach(() => {
+  process.env = savedEnv
+})
+
 describe(tenantLeaseAdapter.getContactByContactCode, () => {
   it('returns a contact with trimmed string fields', async () => {
     const contact = await tenantLeaseAdapter.getContactByContactCode(
@@ -81,7 +97,7 @@ describe(tenantLeaseAdapter.getContactByContactCode, () => {
         },
         phoneNumbers: [
           {
-            phoneNumber: '070123456',
+            phoneNumber: 'redacted',
             type: 'mobil',
             isMainNumber: true,
           },
@@ -400,5 +416,119 @@ describe('transformFromDbContact', () => {
       false
     )
     expect(contact.address?.street2).toBeUndefined()
+  })
+
+  describe('contact details mode', () => {
+    const phoneRow = {
+      phoneNumber: '070-000 00 00',
+      type: 'mobil',
+      isMainNumber: true,
+    }
+
+    it('placeholder mode gives a placeholder email and phone from the contact code', () => {
+      process.env.CONTACT_DETAILS__MODE = 'placeholder'
+      const contact = tenantLeaseAdapter.transformFromDbContact(
+        [buildRow()],
+        [phoneRow],
+        [],
+        false
+      )
+      expect(contact.emailAddress).toBe('redacted+P123456@example.invalid')
+      expect(contact.phoneNumbers).toStrictEqual([
+        {
+          phoneNumber: placeholderPhoneNumber('P123456'),
+          type: 'mobil',
+          isMainNumber: true,
+        },
+      ])
+    })
+
+    it('placeholder mode leaves email undefined and phones empty when Xpand has none', () => {
+      process.env.CONTACT_DETAILS__MODE = 'placeholder'
+      const contact = tenantLeaseAdapter.transformFromDbContact(
+        [buildRow({ emailAddress: null })],
+        [],
+        [],
+        false
+      )
+      expect(contact.emailAddress).toBeUndefined()
+      expect(contact.phoneNumbers).toStrictEqual([])
+    })
+
+    it('real mode gives the email and phones from Xpand', () => {
+      process.env.CONTACT_DETAILS__MODE = 'real'
+      process.env.NODE_ENV = 'test'
+      const contact = tenantLeaseAdapter.transformFromDbContact(
+        [buildRow()],
+        [phoneRow],
+        [],
+        false
+      )
+      expect(contact.emailAddress).toBe('noreply@mimer.nu')
+      expect(contact.phoneNumbers).toStrictEqual([phoneRow])
+    })
+
+    it('real mode hides the email of a protected identity and keeps phones', () => {
+      process.env.CONTACT_DETAILS__MODE = 'real'
+      process.env.NODE_ENV = 'test'
+      const contact = tenantLeaseAdapter.transformFromDbContact(
+        [buildRow({ protectedIdentity: 1 })],
+        [phoneRow],
+        [],
+        false
+      )
+      expect(contact.emailAddress).toBeUndefined()
+      expect(contact.phoneNumbers).toStrictEqual([phoneRow])
+    })
+
+    it('placeholder mode redacts email and phones of a protected identity', () => {
+      process.env.CONTACT_DETAILS__MODE = 'placeholder'
+      const contact = tenantLeaseAdapter.transformFromDbContact(
+        [buildRow({ protectedIdentity: 1 })],
+        [phoneRow],
+        [],
+        false
+      )
+      expect(contact.emailAddress).toBe('redacted')
+      expect(contact.phoneNumbers).toStrictEqual([
+        { phoneNumber: 'redacted', type: 'mobil', isMainNumber: true },
+      ])
+    })
+
+    it('unset mode in production gives the email and phones from Xpand', () => {
+      process.env.NODE_ENV = 'production'
+      const contact = tenantLeaseAdapter.transformFromDbContact(
+        [buildRow()],
+        [phoneRow],
+        [],
+        false
+      )
+      expect(contact.emailAddress).toBe('noreply@mimer.nu')
+      expect(contact.phoneNumbers).toStrictEqual([phoneRow])
+    })
+  })
+})
+
+describe(tenantLeaseAdapter.getContacts, () => {
+  it('placeholder mode gives a placeholder email and phone from the contact code', async () => {
+    process.env.CONTACT_DETAILS__MODE = 'placeholder'
+    ;(xpandDb as unknown as { then: jest.Mock }).then.mockImplementationOnce(
+      (callback: (rows: unknown[]) => unknown) =>
+        callback([
+          buildRow({ phoneNumber: '070-000 00 00', keycmobj: '12345' }),
+        ])
+    )
+
+    const contacts = await tenantLeaseAdapter.getContacts(['P123456'])
+
+    expect(contacts).toHaveLength(1)
+    expect(contacts[0].emailAddress).toBe('redacted+P123456@example.invalid')
+    expect(contacts[0].phoneNumbers).toStrictEqual([
+      {
+        phoneNumber: placeholderPhoneNumber('P123456'),
+        type: '',
+        isMainNumber: true,
+      },
+    ])
   })
 })
