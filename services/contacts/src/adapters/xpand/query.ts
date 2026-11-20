@@ -227,12 +227,20 @@ export const contactCodeForNationalId = async (
   return row?.contactCode ?? null
 }
 
+// cmlog categories (logcat) that record sent messages, not contact changes
+const SKIPPED_CONTACT_CHANGE_LOGCATS = [
+  'SMS har skapats',
+  'E-post skickat',
+  'Skickad via SMS',
+]
+
 /**
  * Retrieves cmlog rows for contact changes recorded since the given timestamp.
  *
  * Only rows whose logmemo starts with "Kontakt " are returned, as these
- * represent changes to contacts. If no timestamp is provided, returns all
- * matching rows.
+ * represent changes to contacts. Rows whose logcat is a sent-message category
+ * are skipped; rows with no logcat are kept. If no timestamp is provided,
+ * returns all matching rows.
  *
  * @param db - The Knex database connection to use
  * @param since - The timestamp to query changes from, or null for all rows
@@ -245,6 +253,11 @@ export const cmlogContactChanges = (
   const base = db
     .from('cmlog')
     .whereLike('logmemo', 'Kontakt %')
+    .where((qb) =>
+      qb
+        .whereNull('logcat')
+        .orWhereNotIn('logcat', SKIPPED_CONTACT_CHANGE_LOGCATS)
+    )
     .orderBy('logtime', 'asc')
 
   return since ? base.andWhere('logtime', '>', since) : base
