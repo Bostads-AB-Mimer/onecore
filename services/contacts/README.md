@@ -83,7 +83,9 @@ return. Both read it on every request.
 
 Placeholders replace values that exist; a contact with no email or phone in Xpand gets none.
 Unset or empty falls back to `real` when `NODE_ENV` is `production`, else `redacted`. An unknown
-value gives `redacted`. Protected identities keep the handling above in every mode.
+value gives `redacted`. Protected identities keep the handling above in every mode. Leasing's
+legacy contact model gives a protected identity `redacted` email and phone in `placeholder` and
+`redacted` mode, and no email in `real` mode.
 
 ### Build
 

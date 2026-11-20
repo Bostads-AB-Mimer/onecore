@@ -512,12 +512,13 @@ describe('transformFromDbContact', () => {
 describe(tenantLeaseAdapter.getContacts, () => {
   it('placeholder mode gives a placeholder email and phone from the contact code', async () => {
     process.env.CONTACT_DETAILS__MODE = 'placeholder'
-    ;(xpandDb as unknown as { then: jest.Mock }).then.mockImplementationOnce(
-      (callback: (rows: unknown[]) => unknown) =>
+    ;(xpandDb as unknown as { then: jest.Mock }).then
+      .mockReset()
+      .mockImplementationOnce((callback: (rows: unknown[]) => unknown) =>
         callback([
           buildRow({ phoneNumber: '070-000 00 00', keycmobj: '12345' }),
         ])
-    )
+      )
 
     const contacts = await tenantLeaseAdapter.getContacts(['P123456'])
 
