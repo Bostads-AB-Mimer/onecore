@@ -37,6 +37,7 @@ const changed = () =>
 
 beforeAll(async () => {
   await xpandResource.init()
+  await contactsResource.init()
   xpand = xpandResource.get()
 })
 
@@ -47,6 +48,7 @@ beforeEach(async () => {
 afterAll(async () => {
   await xpand('cmlog').del()
   await xpandResource.close()
+  await contactsResource.close()
 })
 
 describe('getChangedContactCodes message categories', () => {
