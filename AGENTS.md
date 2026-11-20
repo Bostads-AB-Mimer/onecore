@@ -109,6 +109,7 @@ No `as` or `!` without a comment saying why; use `catch (err: unknown)`. `satisf
 - Return specific, semantically correct error codes — never `'unknown'`.
 - Use `parseRequestBody` middleware instead of manual body parsing.
 - Use `.parse()` inside try/catch — not `.safeParse()`-then-throw. Use `.safeParse()` only when you need `{ ok: false }` return semantics and you are not inside a try/catch.
+- A service's `.jest/sql/create.sql` guards each table with `IF OBJECT_ID(...) IS NULL`, so a column added to an existing table never reaches a local test DB that already has it. Add every column the table will need when you first create it, or drop the table in the same change.
 
 ---
 
