@@ -340,8 +340,8 @@ export const xpandContactsRepository = (
     },
 
     /**
-     * Retrieves contact codes for contacts updated since the given timestamp,
-     * each paired with the latest logtime for that code. Results are ordered
+     * Retrieves the current contact codes of contacts updated since the given
+     * timestamp, each paired with the latest logtime for that contact. Results are ordered
      * by timestamp ascending so callers can checkpoint per item. If no
      * timestamp is provided, returns all matching rows.
      *
@@ -351,18 +351,7 @@ export const xpandContactsRepository = (
     getChangedContactCodes: async (
       since: Date | null
     ): Promise<{ contactCode: string; timestamp: Date }[]> => {
-      const rows = await cmlogContactChanges(db.get(), since)
-
-      const byContactCode = new Map<string, Date>()
-      for (const row of rows) {
-        const match = (row['logmemo'] as string)?.match(/^Kontakt (\S+)/)
-        if (!match) continue
-        byContactCode.set(match[1], row['logtime'] as Date)
-      }
-
-      const contactCodes = Array.from(byContactCode.entries())
-        .map(([contactCode, timestamp]) => ({ contactCode, timestamp }))
-        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+      const contactCodes = await cmlogContactChanges(db.get(), since)
 
       logger.info(
         { contactCodes: contactCodes.map((c) => c.contactCode) },
