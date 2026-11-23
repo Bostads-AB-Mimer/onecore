@@ -865,10 +865,14 @@ export const recordPaymentForInvoice = async (params: {
     )
     return { ok: false, err: 'unknown' }
   } catch (err: unknown) {
-    // Tenfast explains a rejected transaction (e.g. 400) only in the body.
+    // Tenfast explains a rejected transaction (e.g. 400) only in the body. The logger's
+    // serializer strips `error` to type/message/stack, so stringify it under its own key.
     if (axios.isAxiosError(err) && err.response) {
       logger.error(
-        { status: err.response.status, error: err.response.data },
+        {
+          status: err.response.status,
+          responseBody: JSON.stringify(err.response.data),
+        },
         'tenfast-adapter.recordPaymentForInvoice'
       )
     } else {
