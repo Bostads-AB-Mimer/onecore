@@ -864,8 +864,16 @@ export const recordPaymentForInvoice = async (params: {
       'tenfast-adapter.recordPaymentForInvoice: unexpected status'
     )
     return { ok: false, err: 'unknown' }
-  } catch (err: any) {
-    logger.error(err, 'tenfast-adapter.recordPaymentForInvoice')
+  } catch (err: unknown) {
+    // Tenfast explains a rejected transaction (e.g. 400) only in the body.
+    if (axios.isAxiosError(err) && err.response) {
+      logger.error(
+        { status: err.response.status, error: err.response.data },
+        'tenfast-adapter.recordPaymentForInvoice'
+      )
+    } else {
+      logger.error({ err }, 'tenfast-adapter.recordPaymentForInvoice')
+    }
     return { ok: false, err: 'unknown' }
   }
 }
