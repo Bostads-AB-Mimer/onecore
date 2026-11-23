@@ -230,6 +230,13 @@ export const contactCodeForNationalId = async (
 // Table key of cmctc in cmlog.keydbtbl
 const CONTACT_TABLE_KEY = '_RXJ0UWYHC'
 
+// cmlog categories (logcat) that record sent messages, not contact changes
+const SKIPPED_CONTACT_CHANGE_LOGCATS = [
+  'SMS har skapats',
+  'E-post skickat',
+  'Skickad via SMS',
+]
+
 /**
  * Retrieves the contacts changed since the given timestamp, each with the
  * latest cmlog time for it.
@@ -237,7 +244,9 @@ const CONTACT_TABLE_KEY = '_RXJ0UWYHC'
  * A cmlog row counts when it belongs to the contact table, its logmemo starts
  * with "Kontakt " and it was logged after `since`. The contact is found
  * through cmlog.keycode = cmctc.keycmctc, so the code is the one the contact
- * has now, not the one written in logmemo. Ordered by timestamp ascending.
+ * has now, not the one written in logmemo.
+ * Rows whose logcat is a sent-message category are skipped; rows with no
+ * logcat are kept. Ordered by timestamp ascending.
  *
  * @param db - The Knex database connection to use
  * @param since - The timestamp to query changes from, or null for all rows
@@ -252,6 +261,11 @@ export const cmlogContactChanges = async (
     .innerJoin('cmctc', 'cmlog.keycode', 'cmctc.keycmctc')
     .where('cmlog.keydbtbl', CONTACT_TABLE_KEY)
     .whereLike('cmlog.logmemo', 'Kontakt %')
+    .where((qb) =>
+      qb
+        .whereNull('cmlog.logcat')
+        .orWhereNotIn('cmlog.logcat', SKIPPED_CONTACT_CHANGE_LOGCATS)
+    )
     .select({ contactCode: db.raw('RTRIM(cmctc.cmctckod)') })
     .select({ timestamp: db.raw('MAX(cmlog.logtime)') })
     .groupBy('cmctc.cmctckod')
