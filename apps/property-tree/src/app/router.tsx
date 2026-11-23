@@ -14,6 +14,7 @@ import { GuidesPage } from '@/pages/GuidesPage'
 import { ImdPage } from '@/pages/ImdPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
+import { ListsPage } from '@/pages/ListsPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
 import { MessageTemplatesPage } from '@/pages/MessageTemplatesPage'
 import { MiscellaneousInvoicesPage } from '@/pages/MiscellaneousInvoicesPage'
@@ -162,6 +163,11 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: routes.imd,
             element: <ImdPage />,
             handle: { title: 'IMD' },
+          },
+          {
+            path: routes.lists,
+            element: <ListsPage />,
+            handle: { title: 'Listor' },
           },
           {
             path: routes.miscellaneousInvoices,

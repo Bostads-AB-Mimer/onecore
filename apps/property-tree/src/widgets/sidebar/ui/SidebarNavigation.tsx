@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ClipboardList,
   Contact,
+  FileSpreadsheet,
   FileText,
   Gauge,
   Home,
@@ -223,6 +224,11 @@ function SidebarNavigationContent() {
           label="Besiktningar"
         />
         <SidebarNavLink to={routes.imd} icon={Gauge} label="IMD" />
+        <SidebarNavLink
+          to={routes.lists}
+          icon={FileSpreadsheet}
+          label="Listor"
+        />
         <SidebarNavLink
           to={routes.economy}
           icon={Receipt}

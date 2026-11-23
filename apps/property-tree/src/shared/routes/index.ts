@@ -31,6 +31,7 @@ export const routes = {
   messageTemplates: '/mallar',
   inspections: '/besiktningar',
   imd: '/imd',
+  lists: '/listor',
   economy: '/economy',
   miscellaneousInvoices: '/strofakturor',
   components: '/komponenter',

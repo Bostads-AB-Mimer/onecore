@@ -1,9 +1,21 @@
 import { GET } from './baseApi'
-import { components } from './generated/api-types'
+import type { components, paths } from './generated/api-types'
 
 type ParkingSpace = components['schemas']['ParkingSpace']
 
+export type VacantParkingSpace = NonNullable<
+  paths['/vacant-parkingspaces']['get']['responses'][200]['content']['application/json']['content']
+>[number]
+
 export const parkingSpaceService = {
+  async getVacant(): Promise<VacantParkingSpace[]> {
+    const { data, error } = await GET('/vacant-parkingspaces')
+
+    if (error) throw error
+
+    return data.content ?? []
+  },
+
   async getByRentalId(rentalId: string): Promise<ParkingSpace> {
     const { data, error } = await GET(
       '/parking-spaces/by-rental-id/{rentalId}',
