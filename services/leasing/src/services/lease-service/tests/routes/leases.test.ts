@@ -710,6 +710,18 @@ describe('POST /leases', () => {
     includeVAT: false,
   }
 
+  let xpandLeaseIdsSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    xpandLeaseIdsSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getLeaseIdsByRentalObjectCode')
+      .mockResolvedValue({ ok: true, data: ['P123/01', 'P123/02'] })
+  })
+
+  afterEach(() => {
+    xpandLeaseIdsSpy.mockRestore()
+  })
+
   it('returns 200 and lease content when lease is created successfully', async () => {
     const contact = factory.contact.build()
     jest
@@ -808,12 +820,31 @@ describe('POST /leases', () => {
 
     await request(app.callback()).post('/leases').send(validRequestBody)
 
+    expect(xpandLeaseIdsSpy).toHaveBeenCalledWith('P123')
     expect(createLeaseSpy).toHaveBeenCalledWith(
       contact,
       'P123',
       new Date('2026-06-01T00:00:00.000Z'),
-      false
+      false,
+      ['P123/01', 'P123/02']
     )
+  })
+
+  it('returns 500 without creating a lease when the Xpand leases cannot be read', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+    xpandLeaseIdsSpy.mockResolvedValueOnce({ ok: false, err: 'unknown' })
+    const createLeaseSpy = jest.spyOn(tenfastAdapter, 'createLease')
+
+    const res = await request(app.callback())
+      .post('/leases')
+      .send(validRequestBody)
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('could-not-get-xpand-lease-ids')
+    expect(createLeaseSpy).not.toHaveBeenCalled()
+    createLeaseSpy.mockRestore()
   })
 
   it('returns 500 when an unexpected exception is thrown', async () => {

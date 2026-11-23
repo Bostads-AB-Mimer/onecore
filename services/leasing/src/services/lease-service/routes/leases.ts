@@ -5,6 +5,7 @@ import { z } from 'zod'
 import {
   getContacts,
   getContactByContactCode,
+  getLeaseIdsByRentalObjectCode,
 } from '../adapters/xpand/tenant-lease-adapter'
 import { getParkingSpaceTypes } from '../adapters/xpand/lease-search-adapter'
 import {
@@ -1189,7 +1190,11 @@ export const routes = (router: KoaRouter) => {
    *           then, or a next tenant has a lease on it that is signed or
    *           not yet signed. error is rental-object-not-available.
    *       500:
-   *         description: Internal server error. Failed to create lease.
+   *         description: >
+   *           Internal server error. Failed to create lease. error is
+   *           could-not-get-xpand-lease-ids when the rental object's leases in
+   *           Xpand, which the new lease number continues from, could not be
+   *           read.
    */
   router.post('(.*)/leases', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -1229,11 +1234,28 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      // Tenfast only got the leases that were running or to come at the
+      // migration, so the new lease's number must continue from Xpand's too.
+      // Without them it could repeat an Xpand lease's number, so no lease is
+      // created (AVTAL-612).
+      const xpandLeaseIdsResult = await getLeaseIdsByRentalObjectCode(
+        request.parkingSpaceId
+      )
+      if (!xpandLeaseIdsResult.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: 'could-not-get-xpand-lease-ids',
+          ...metadata,
+        }
+        return
+      }
+
       const createLeaseTenfastResult = await tenfastAdapter.createLease(
         contactResult.data,
         request.parkingSpaceId,
         fromDate,
-        request.includeVAT
+        request.includeVAT,
+        xpandLeaseIdsResult.data
       )
 
       if (createLeaseTenfastResult.ok) {
