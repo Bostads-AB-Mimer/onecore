@@ -77,28 +77,16 @@ const buildSecuritasCsv = async () => {
     )
     .map((space) => [
       space.rentalObjectCode ?? '',
-      space.objectTypeCaption ?? '',
       space.address ?? '',
-      space.propertyCaption ?? '',
-      space.districtCaption ?? '',
-      space.vacantFrom?.slice(0, 10) ?? '',
-      space.rent?.amount ?? '',
+      space.objectTypeCaption ?? '',
+      space.residentialAreaCaption ?? '',
+      // Every remaining space is vacant from today or earlier.
+      'Ledig',
     ])
 
   return {
     filename: `securitas-${date}.csv`,
-    csv: toCsv(
-      [
-        'Hyres-ID',
-        'Typ',
-        'Adress',
-        'Fastighet',
-        'Distrikt',
-        'Ledig från',
-        'Hyra',
-      ],
-      rows
-    ),
+    csv: toCsv(['Hyres-ID', 'Adress', 'Typ', 'Stadsdel', 'Status'], rows),
     rowCount: rows.length,
   }
 }
