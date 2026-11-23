@@ -1,8 +1,5 @@
-import { Check, Copy } from 'lucide-react'
-
-import { useClipboardCopy } from '@/shared/hooks/useClipboardCopy'
-import { useToast } from '@/shared/hooks/useToast'
 import { Button } from '@/shared/ui/Button'
+import { CopyButton } from '@/shared/ui/CopyButton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 
 interface ActionButton {
@@ -25,56 +22,14 @@ export function CopyableField({
   emptyText = '-',
   actions,
 }: CopyableFieldProps) {
-  const { toast } = useToast()
-  const { copyToClipboard, isCopied } = useClipboardCopy({
-    onSuccess: () => {
-      toast({
-        title: 'Kopierad!',
-        description: `${label} kopierades till urklipp`,
-      })
-    },
-    onError: (error) => {
-      toast({
-        title: 'Kunde inte kopiera',
-        description: error.message,
-      })
-    },
-  })
-
   const displayValue = value || emptyText
-  const canCopy = !!value
-
-  const handleCopy = () => {
-    if (canCopy) {
-      copyToClipboard(value)
-    }
-  }
 
   return (
     <div>
       <p className="text-sm text-muted-foreground">{label}</p>
       <div className="flex items-center gap-2">
         <p className="font-medium">{displayValue}</p>
-        {canCopy && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCopy}
-                className="h-6 w-6 shrink-0"
-                aria-label={`Kopiera ${label}`}
-              >
-                {isCopied ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Klicka för att kopiera</TooltipContent>
-          </Tooltip>
-        )}
+        {value && <CopyButton label={label} value={value} />}
         {actions?.map((action, index) => (
           <Tooltip key={index}>
             <TooltipTrigger asChild>
