@@ -454,4 +454,63 @@ describe('parseLeaseChanges', () => {
       expect(result[1].timestamp).toEqual(new Date('2026-04-29T10:00:00Z'))
     })
   })
+
+  describe('voided leases signed afterwards', () => {
+    it('emits nothing for a Makulerat row where only Undertecknat is set', () => {
+      const rows = [
+        {
+          logmemo:
+            "Hyreskontrakt 508-007-10-0201/09M2, KARLFELDTSGATAN 38 A, P140676, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.",
+          logtime: new Date('2026-11-18T10:00:00Z'),
+        },
+      ]
+
+      expect(parseLeaseChanges(rows)).toEqual([])
+    })
+
+    it('emits only a void when a Makulerat row holds both Undertecknat and Makulerat datum', () => {
+      const rows = [
+        {
+          logmemo:
+            "Hyreskontrakt 508-007-10-0201/09M2, KARLFELDTSGATAN 38 A, P140676, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.\nVärdet i fältet 'Makulerat datum' ändrat från '' till '2026-11-18'.\nVärdet i fältet 'Kontraktsnummer' ändrat från '508-007-10-0201/09' till '508-007-10-0201/09M2'.",
+          logtime: new Date('2026-11-18T10:00:00Z'),
+        },
+      ]
+
+      expect(parseLeaseChanges(rows)).toEqual([
+        {
+          leaseId: '508-007-10-0201/09',
+          contactCode: 'P140676',
+          rentalObjectId: '508-007-10-0201',
+          action: 'void',
+          timestamp: new Date('2026-11-18T10:00:00Z'),
+        },
+      ])
+    })
+
+    it('keeps the Kommande create and drops the later Makulerat Undertecknat row', () => {
+      const rows = [
+        {
+          logmemo:
+            "Hyreskontrakt 508-007-10-0201/02, KARLFELDTSGATAN 38 A, P140676, Bostadskontrakt (Kommande)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-17'.",
+          logtime: new Date('2026-11-17T10:00:00Z'),
+        },
+        {
+          logmemo:
+            "Hyreskontrakt 508-007-10-0201/02M2, KARLFELDTSGATAN 38 A, P140676, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.",
+          logtime: new Date('2026-11-18T10:00:00Z'),
+        },
+      ]
+
+      expect(parseLeaseChanges(rows)).toEqual([
+        {
+          leaseId: '508-007-10-0201/02',
+          contactCode: 'P140676',
+          rentalObjectId: '508-007-10-0201',
+          action: 'create',
+          timestamp: new Date('2026-11-17T10:00:00Z'),
+        },
+      ])
+    })
+  })
 })
