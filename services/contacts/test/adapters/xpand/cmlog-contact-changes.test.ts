@@ -1,19 +1,31 @@
 import { Knex } from 'knex'
+import { ConnectionPool } from 'mssql'
 import config from '@src/common/config'
 import { xpandDbClient } from '@src/adapters/xpand/db'
 import { contactsDbClient } from '@src/adapters/db'
 import { xpandContactsRepository } from '@src/adapters/xpand/repository'
 import { cmlogContactChanges } from '@src/adapters/xpand/query'
 import { requireXpandTestDb } from '../../db-support'
+import { connect, prepareDataSet } from '../../e2e/app-fixture'
 import { FULL_TEST_DATA_SET } from '../../e2e/data-set'
 
 requireXpandTestDb()
 
+const CONTACT_TABLE = '_RXJ0UWYHC'
+
+// keycmctc of the seeded contacts
+const KEY: Record<string, string> = {
+  P000111: '_0J4157AAA',
+  P000222: '_0J4157BBB',
+  P000333: '_0J4157CCC',
+}
+
 const xpandResource = xpandDbClient(config.xpandDatabase)
 const contactsResource = contactsDbClient(config.contactsDatabase)
+let pool: ConnectionPool
 let xpand: Knex
 
-const code = FULL_TEST_DATA_SET[0]
+const code = 'P000111'
 const t1 = new Date('2026-01-01T10:00:00.000Z')
 const t2 = new Date('2026-01-01T11:00:00.000Z')
 const t3 = new Date('2026-01-01T12:00:00.000Z')
@@ -22,8 +34,8 @@ let seq = 0
 const addLog = (logcat: string | null, logtime: Date, contactCode = code) =>
   xpand('cmlog').insert({
     keycmlog: `L${String(++seq).padStart(6, '0')}`,
-    keydbtbl: 'cmctc',
-    keycode: contactCode,
+    keydbtbl: CONTACT_TABLE,
+    keycode: KEY[contactCode],
     logtime,
     logcat,
     logmemo: `Kontakt ${contactCode}`,
@@ -36,6 +48,8 @@ const changed = () =>
   ).getChangedContactCodes(null)
 
 beforeAll(async () => {
+  pool = await connect()
+  await prepareDataSet(pool, FULL_TEST_DATA_SET)
   await xpandResource.init()
   await contactsResource.init()
   xpand = xpandResource.get()
@@ -49,6 +63,7 @@ afterAll(async () => {
   await xpand('cmlog').del()
   await xpandResource.close()
   await contactsResource.close()
+  await pool.close()
 })
 
 describe('getChangedContactCodes message categories', () => {
@@ -86,13 +101,11 @@ describe('getChangedContactCodes message categories', () => {
 describe('cmlogContactChanges', () => {
   it('returns only kept lines after since', async () => {
     await addLog('Värde ändrat', t1)
-    await addLog('Värde ändrat', t3, FULL_TEST_DATA_SET[1])
-    await addLog('E-post skickat', t3, FULL_TEST_DATA_SET[2])
+    await addLog('Värde ändrat', t3, 'P000222')
+    await addLog('E-post skickat', t3, 'P000333')
 
-    const rows = await cmlogContactChanges(xpand, t2)
-
-    expect(rows.map((r) => r['logmemo'])).toEqual([
-      `Kontakt ${FULL_TEST_DATA_SET[1]}`,
+    expect(await cmlogContactChanges(xpand, t2)).toEqual([
+      { contactCode: 'P000222', timestamp: t3 },
     ])
   })
 })

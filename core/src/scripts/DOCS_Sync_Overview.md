@@ -45,7 +45,9 @@ De tre scripten delar kärnan [`shared/run-cmlog-sync.ts`](./shared/run-cmlog-sy
 
 ### cmlog som ändringskälla
 
-Xpand loggar varje ändring som en rad i tabellen `cmlog`, med ett fritextfält `logmemo` och en tidsstämpel `logtime`. Synken läser nya rader och tolkar texten. Läsningen sker i respektive tjänst: Contacts för kontakter, Leasing för avtal och hyresobjektstyper.
+Xpand loggar varje ändring som en rad i tabellen `cmlog`, med ett fritextfält `logmemo` och en tidsstämpel `logtime`. Synken läser nya rader och väljer dem på texten. Läsningen sker i respektive tjänst: Contacts för kontakter, Leasing för avtal och hyresobjektstyper.
+
+Hitta posten en rad gäller via `keydbtbl` (tabellen) och `keycode` (postens nyckel), inte via en kod i `logmemo`. Texten skrivs en gång och uppdateras inte när Xpand byter kod på posten.
 
 `logtime` är en `datetime` utan tidszon, som Xpand fyller med svensk lokaltid och hela sekunder. Den når Core som svensk lokaltid märkt som UTC, så Core räknar om sin egen klocka till svensk lokaltid på samma sätt innan de jämförs (`onXpandClock` i `run-cmlog-sync.ts`) — poddens tidszon spelar ingen roll. Varje körning läser om ett fönster några minuter bakåt från sparad position och hoppar över de rader den redan hanterat (se [Sparad position](#sparad-position)). Det fångar en rad som syns i `cmlog` först en stund efter sin `logtime`, eftersom Xpand sätter tiden innan raden sparas.
 
