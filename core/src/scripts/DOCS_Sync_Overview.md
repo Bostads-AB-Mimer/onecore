@@ -14,13 +14,13 @@ Det här dokumentet beskriver vad som synkas, när, och vad som händer om någo
 
 ## Vad synkas
 
-| Ändring i Xpand                                  | `cmlog`-rad som läses                       | Tenfast                                   | Xledger                                            | Odoo                                         |
-| ------------------------------------------------ | ------------------------------------------- | ----------------------------------------- | -------------------------------------------------- | -------------------------------------------- |
-| Kontaktuppgifter (namn, e-post, telefon, adress) | `Kontakt …`, utom skickade meddelanden      | Hyresgästen hämtar nya uppgifter          | Befintlig kund uppdateras (namn, adress, e-post)   | Hyresgäst uppdateras (namn, e-post, telefon) |
-| Kontrakt undertecknat                            | `Hyreskontrakt …`, fältet `Undertecknat`    | Avtalet skapas, med hyresgäst och PDF     | Fakturamottagaren skapas eller uppdateras som kund | –                                            |
-| Kontrakt uppsagt                                 | `Hyreskontrakt …`, fältet `Uppsagt datum`   | Avtalet sägs upp, uppsägnings-PDF bifogas | –                                                  | –                                            |
-| Kontrakt makulerat                               | `Hyreskontrakt …`, fältet `Makulerat datum` | Avtalet makuleras                         | –                                                  | –                                            |
-| Hyresobjektstyp ändrad                           | `Hyresobjekt …`, fältet `Hyresobjekttyp`    | Hyresobjektets kategori sätts             | –                                                  | –                                            |
+| Ändring i Xpand                                  | `cmlog`-rad som läses                                        | Tenfast                                   | Xledger                                            | Odoo                                         |
+| ------------------------------------------------ | ------------------------------------------------------------ | ----------------------------------------- | -------------------------------------------------- | -------------------------------------------- |
+| Kontaktuppgifter (namn, e-post, telefon, adress) | `Kontakt …`, utom skickade meddelanden                       | Hyresgästen hämtar nya uppgifter          | Befintlig kund uppdateras (namn, adress, e-post)   | Hyresgäst uppdateras (namn, e-post, telefon) |
+| Kontrakt undertecknat                            | `Hyreskontrakt …`, fältet `Undertecknat`, ej makulerat avtal | Avtalet skapas, med hyresgäst och PDF     | Fakturamottagaren skapas eller uppdateras som kund | –                                            |
+| Kontrakt uppsagt                                 | `Hyreskontrakt …`, fältet `Uppsagt datum`                    | Avtalet sägs upp, uppsägnings-PDF bifogas | –                                                  | –                                            |
+| Kontrakt makulerat                               | `Hyreskontrakt …`, fältet `Makulerat datum`                  | Avtalet makuleras                         | –                                                  | –                                            |
+| Hyresobjektstyp ändrad                           | `Hyresobjekt …`, fältet `Hyresobjekttyp`                     | Hyresobjektets kategori sätts             | –                                                  | –                                            |
 
 Avtalssynken tar bara med lägenheter och förråd — se [Synka Avtal](./sync-leases/DOCS_Sync_Leases.md#vilka-objekt-som-är-i-scope). Ingenting synkas åt andra hållet, från Tenfast, Xledger eller Odoo tillbaka till Xpand.
 
