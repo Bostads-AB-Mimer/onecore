@@ -2,7 +2,7 @@
 
 _Del av [processöversikten](./DOCS_Overview.md) för poängsatta bilplatser._
 
-En hyresgäst anmäler intresse för en poängsatt bilplats (kösystem), antingen direkt via Mina Sidor eller å sökandens vägnar av en handläggare via Uthyrningsgränssnittet. Processen kräver att sökanden redan är hyresgäst, validerar områdes- och fastighetsspecifika uthyrningsregler, gör en intern kreditkontroll baserad på betalningshistorik, och placerar sökanden i bilplatskön. En befintlig, tidigare återkallad ansökan återaktiveras istället för att skapa en ny. Sökanden blir därmed aktuell när [Create Offer](./DOCS_Create_Offer_for_Scored_Parking_Space.md)-processen skapar erbjudanden för annonser vars visningsperiod gått ut.
+En hyresgäst anmäler intresse för en poängsatt bilplats (kösystem), antingen direkt via Mina Sidor eller å sökandens vägnar av en handläggare via Uthyrningsgränssnittet. Processen kräver att sökanden redan är hyresgäst och inte har sagt upp sitt enda bostadskontrakt utan att ha ett kommande. En sådan hyresgäst räknas som hyresgäst tills kontraktet tar slut, men får inte söka en ny poängsatt bilplats. Bara en undertecknad uppsägning räknas: ett tidsbegränsat kontrakt utan uppsägning, eller en uppsägning som väntar på hyresgästens signatur, spärrar inte. Processen validerar sedan områdes- och fastighetsspecifika uthyrningsregler, gör en intern kreditkontroll baserad på betalningshistorik, och placerar sökanden i bilplatskön. En befintlig, tidigare återkallad ansökan återaktiveras istället för att skapa en ny. Sökanden blir därmed aktuell när [Create Offer](./DOCS_Create_Offer_for_Scored_Parking_Space.md)-processen skapar erbjudanden för annonser vars visningsperiod gått ut.
 
 ## Flödesdiagram
 
@@ -17,7 +17,9 @@ C --> |No| O[End]
 C --> |Yes| D[Get Contact]
 D --> E{Is Contact<br/>a Tenant?}
 E --> |No| O
-E --> |Yes| F{Is Applicant Eligible <br/>to Rent Parking Space <br/>with Specific Rental Rule?}
+E --> |Yes| T{Has Applicant Given Notice<br/>on Only Housing Contract,<br/>with None Upcoming?}
+T --> |Yes| O
+T --> |No| F{Is Applicant Eligible <br/>to Rent Parking Space <br/>with Specific Rental Rule?}
 F --> |No| O
 F --> |Yes| P[Perform Internal Credit Check]
 P --> Q{Is Applicant Eligible for Lease?}
@@ -96,7 +98,16 @@ sequenceDiagram
         Core-->User: show error message
     end
 
-    par Validate Residential Area Rental Rules
+    par Get Tenant
+        Core ->> Leasing: Get Tenant
+        Leasing ->> XPandDB: Get Contact
+        XPandDB -->> Leasing: Contact
+        Leasing ->> Tenfast: Get Tenant and Leases
+        Tenfast -->> Leasing: Tenant and Leases
+        Leasing ->> XPandDB: Get Residential Area and<br/>Estate Code for each Lease
+        XPandDB -->> Leasing: Residential Areas and Estate Codes
+        Leasing -->> Core: Tenant (isAboutToLeave)
+    and Validate Residential Area Rental Rules
         Core ->> Leasing: Validate Residential Area Rental Rules
         alt Area has no Specific Rental Rules
             note over Leasing: Early exit — checked against a<br/>hardcoded list of area codes, no<br/>XPandDB or Tenfast calls made.
@@ -119,6 +130,14 @@ sequenceDiagram
             Tenfast -->> Leasing: Tenant and Leases
             Leasing -->> Core: Property Validation Result
         end
+    end
+
+    break when Tenant has signed notice on their only housing contract and has no upcoming one
+        Core-->User: 403 housing-contract-terminated
+    end
+
+    break when Tenant lookup failed (other than not-a-tenant)
+        Core-->User: 500 internal-error
     end
 
     break when Applicant is not Eligible to Rent in Parking Space with Specific Rental Rule
