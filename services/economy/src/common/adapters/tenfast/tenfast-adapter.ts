@@ -1665,34 +1665,40 @@ export const getAutogiroConsentByNationalRegistrationNumber = async (
   nationalRegistrationNumber: string
 ): Promise<AdapterResult<TenfastAutogiroConsent | null, string>> => {
   try {
-    const responses = await Promise.all(
-      payerSsnForms(nationalRegistrationNumber).map((payerSSN) =>
-        makeTenfastRequest('/v1/hyresvard/autogiro/consents/search', {
+    // payerSSN in autogiro consent has a dash before the last 4 digits, we need to add it to nationalRegistrationNumber if missing
+    const formattedNationalRegistrationNumber =
+      nationalRegistrationNumber.includes('-')
+        ? nationalRegistrationNumber
+        : `${nationalRegistrationNumber.slice(0, -4)}-${nationalRegistrationNumber.slice(-4)}`
+
+    const autogiroConsentResponse = await makeTenfastRequest(
+      '/v1/hyresvard/autogiro/consents/search',
+      {
+        params: {
+          'filter[payerSSN]': formattedNationalRegistrationNumber,
           // More than one, so an older cancelled consent cannot hide an
           // active one.
-          params: { 'filter[payerSSN]': payerSSN, limit: 10 },
-        })
-      )
-    )
-
-    const failed = responses.find((response) => response.status !== 200)
-    if (failed) {
-      return { ok: false, err: failed.statusText, statusCode: failed.status }
-    }
-
-    const records = []
-    for (const response of responses) {
-      const parsed = TenfastAutogiroConsentResponseSchema.safeParse(
-        response.data
-      )
-      if (!parsed.success) {
-        logger.warn(JSON.stringify(parsed.error, null, 2))
-        return { ok: false, err: 'schema-error' }
+          limit: 10,
+        },
       }
-      records.push(...parsed.data.records)
+    )
+    if (autogiroConsentResponse.status !== 200) {
+      return {
+        ok: false,
+        err: autogiroConsentResponse.statusText,
+        statusCode: autogiroConsentResponse.status,
+      }
     }
 
-    const activeConsent = records.find(
+    const parsedResponse = TenfastAutogiroConsentResponseSchema.safeParse(
+      autogiroConsentResponse.data
+    )
+    if (!parsedResponse.success) {
+      logger.warn(JSON.stringify(parsedResponse.error, null, 2))
+      return { ok: false, err: 'schema-error' }
+    }
+
+    const activeConsent = parsedResponse.data.records.find(
       (record) => record.status !== 'CANCELLED'
     )
     if (!activeConsent) return { ok: true, data: null }
@@ -1714,27 +1720,6 @@ export const getAutogiroConsentByNationalRegistrationNumber = async (
     )
     return { ok: false, err: errorMessage(err) }
   }
-}
-
-/**
- * The payerSSN forms to search autogiro consents by. Tenfast stores payerSSN
- * with a dash before the last four digits, mostly as YYYYMMDD-NNNN but for a
- * few consents as YYMMDD-NNNN (2 of 500 sampled in prod, Nov 2026), so a
- * twelve-digit number is searched in both forms.
- */
-export const payerSsnForms = (nationalRegistrationNumber: string): string[] => {
-  const digits = nationalRegistrationNumber.replace(/[^0-9]/g, '')
-  const withDash = (value: string) => `${value.slice(0, -4)}-${value.slice(-4)}`
-
-  if (digits.length === 12) {
-    return [withDash(digits), withDash(digits.slice(2))]
-  }
-
-  return [
-    nationalRegistrationNumber.includes('-')
-      ? nationalRegistrationNumber
-      : withDash(nationalRegistrationNumber),
-  ]
 }
 
 const emptyToUndefined = (

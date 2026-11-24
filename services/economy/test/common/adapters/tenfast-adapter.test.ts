@@ -1514,46 +1514,18 @@ describe(getInvoicePdf, () => {
 })
 
 describe(getAutogiroConsentByNationalRegistrationNumber, () => {
-  const searchedPayerSsn = ({ params }: { params?: unknown }) =>
-    typeof params === 'object' &&
-    params !== null &&
-    'filter[payerSSN]' in params
-      ? String(params['filter[payerSSN]'])
-      : ''
-
-  // Answers each consent search with the records stored under its payerSSN
-  const respondByPayerSsn = (recordsBySsn: Record<string, unknown[]>) =>
-    mockAxios.request.mockImplementation(async (request) => {
-      const records = recordsBySsn[searchedPayerSsn(request)] ?? []
-      return {
-        status: 200,
-        data: { records, prev: null, next: null, totalCount: records.length },
-      }
-    })
-
   beforeEach(() => {
-    mockAxios.request.mockReset()
-  })
-
-  afterAll(() => {
-    mockAxios.request.mockReset()
+    jest.clearAllMocks()
   })
 
   it('returns consent when found', async () => {
-    const consent = TenfastAutogiroConsentFactory.build()
-    respondByPayerSsn({ '19900101-1234': [consent] })
-
-    const result =
-      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
-
-    expect(result).toEqual({ ok: true, data: consent })
-  })
-
-  it('finds a consent stored with a ten-digit payerSSN', async () => {
     const consent = TenfastAutogiroConsentFactory.build({
-      payerSSN: '900101-1234',
+      payerSSN: '199001011234',
     })
-    respondByPayerSsn({ '900101-1234': [consent] })
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [consent], prev: null, next: null, totalCount: 1 },
+    })
 
     const result =
       await getAutogiroConsentByNationalRegistrationNumber('199001011234')
@@ -1562,7 +1534,10 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
   })
 
   it('returns null when no consent found', async () => {
-    respondByPayerSsn({})
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [], prev: null, next: null, totalCount: 0 },
+    })
 
     const result =
       await getAutogiroConsentByNationalRegistrationNumber('199001019999')
@@ -1570,9 +1545,47 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
     expect(result).toEqual({ ok: true, data: null })
   })
 
+  it('formats nationalRegistrationNumber without dash before sending', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [], prev: null, next: null, totalCount: 0 },
+    })
+
+    await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    expect(mockAxios.request).toHaveBeenCalledTimes(1)
+    expect(mockAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: { 'filter[payerSSN]': '19900101-1234', limit: 10 },
+      })
+    )
+  })
+
+  it('does not reformat nationalRegistrationNumber that already has dash', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: { records: [], prev: null, next: null, totalCount: 0 },
+    })
+
+    await getAutogiroConsentByNationalRegistrationNumber('19900101-1234')
+
+    expect(mockAxios.request).toHaveBeenCalledTimes(1)
+    expect(mockAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: { 'filter[payerSSN]': '19900101-1234', limit: 10 },
+      })
+    )
+  })
+
   it('returns null when the only consent is cancelled, even without payer fields', async () => {
-    respondByPayerSsn({
-      '19900101-1234': [{ _id: 'cancelled-1', status: 'CANCELLED' }],
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [{ _id: 'cancelled-1', status: 'CANCELLED' }],
+        prev: null,
+        next: null,
+        totalCount: 1,
+      },
     })
 
     const result =
@@ -1583,8 +1596,14 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
 
   it('returns the active consent when a cancelled one comes first', async () => {
     const consent = TenfastAutogiroConsentFactory.build()
-    respondByPayerSsn({
-      '19900101-1234': [{ _id: 'cancelled-1', status: 'CANCELLED' }, consent],
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [{ _id: 'cancelled-1', status: 'CANCELLED' }, consent],
+        prev: null,
+        next: null,
+        totalCount: 2,
+      },
     })
 
     const result =
@@ -1593,30 +1612,11 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
     expect(result).toEqual({ ok: true, data: consent })
   })
 
-  it('searches both payerSSN forms, with or without a dash in the input', async () => {
-    respondByPayerSsn({})
-
-    await getAutogiroConsentByNationalRegistrationNumber('199001011234')
-    await getAutogiroConsentByNationalRegistrationNumber('19900101-1234')
-
-    const searched = mockAxios.request.mock.calls.map(([request]) =>
-      searchedPayerSsn(request)
-    )
-    expect(searched).toEqual([
-      '19900101-1234',
-      '900101-1234',
-      '19900101-1234',
-      '900101-1234',
-    ])
-  })
-
   it('returns error on non-200 response', async () => {
-    mockAxios.request
-      .mockResolvedValueOnce({ status: 503, statusText: 'Service Unavailable' })
-      .mockResolvedValueOnce({
-        status: 200,
-        data: { records: [], prev: null, next: null, totalCount: 0 },
-      })
+    mockAxios.request.mockResolvedValueOnce({
+      status: 503,
+      statusText: 'Service Unavailable',
+    })
 
     const result =
       await getAutogiroConsentByNationalRegistrationNumber('199001011234')
@@ -1629,7 +1629,7 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
   })
 
   it('returns schema-error on invalid response format', async () => {
-    mockAxios.request.mockResolvedValue({
+    mockAxios.request.mockResolvedValueOnce({
       status: 200,
       data: { invalid: true },
     })
@@ -1642,8 +1642,14 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
   })
 
   it('returns schema-error on an unknown consent status', async () => {
-    respondByPayerSsn({
-      '19900101-1234': [{ _id: 'consent-1', status: 'PENDING' }],
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [{ _id: 'consent-1', status: 'PENDING' }],
+        prev: null,
+        next: null,
+        totalCount: 1,
+      },
     })
 
     const result =
@@ -1658,7 +1664,7 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
       isAxiosError: true,
       config: { headers: { 'api-token': 'secret-token' } },
     })
-    mockAxios.request.mockRejectedValue(error)
+    mockAxios.request.mockRejectedValueOnce(error)
     mockAxios.isAxiosError.mockReturnValueOnce(true)
     const logSpy = jest.spyOn(logger, 'error').mockImplementation(() => {})
 
