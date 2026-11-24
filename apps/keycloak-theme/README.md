@@ -67,7 +67,10 @@ and prod, `mimer-contacts` is set up by hand, so check each of these there:
   into the access token, and an audience mapper adding `webapi` (the .NET API's
   `KeycloakConfiguration:Audience`), or the .NET API rejects the token. Core's
   `AUTH__KEYCLOAK__CONTACTS__SET_PASSWORD_REDIRECT_URI` must be one of its valid
-  redirect URIs, or Keycloak refuses the set-password e-mail.
+  redirect URIs, or Keycloak refuses the set-password e-mail. A _Home URL_ (Base URL)
+  pointing at Mina sidor: Keycloak's error page (for example a BankID login with no
+  matching user) shows "Tillbaka till applikationen" only when the client has one, and
+  otherwise leaves the tenant on a page with no way back.
 - **`mimer-contacts-provisioning` client:** service account with `realm-management`
   `view-users` and `manage-users`.
 
