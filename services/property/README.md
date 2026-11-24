@@ -80,7 +80,7 @@ In addition to the Xpand mirror tables (read-only), this service owns a few tabl
 
 These tables are modeled in Prisma like any other model, but because the schema was originally introspected from Xpand and has no Prisma migration history, schema changes are applied via **hand-written SQL files** checked into [prisma/migrations/](prisma/migrations/). Run them manually against each environment (dev → staging → prod) with a SQL client. Files are written to be idempotent (`IF NOT EXISTS` guards) so they can be re-run safely.
 
-Each migration ships with a companion `*.rollback.sql` file that undoes it (drops the tables in reverse FK order, guarded by `IF EXISTS`). Run the rollback file manually if you need to revert.
+Each migration ends with a commented `-- Rollback` block holding the statements that undo it, in reverse FK order. Guard new rollback statements with `IF EXISTS` / `IF OBJECT_ID(...) IS NOT NULL`. Copy and run those statements by hand if you need to revert. The comment keeps the rollback next to the change it undoes and can't be run by accident.
 
 #### Seeding management-area tables
 

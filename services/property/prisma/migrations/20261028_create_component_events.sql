@@ -67,4 +67,4 @@ BEGIN CATCH
 END CATCH;
 
 -- Rollback (run by hand if the migration must be undone; deletes all component events):
---   DROP TABLE dbo.component_events;
+--   IF OBJECT_ID('dbo.component_events') IS NOT NULL DROP TABLE dbo.component_events;
