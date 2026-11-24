@@ -64,6 +64,7 @@ echo "== clients"
 # The .NET API accepts these tokens only with its own audience (KeycloakConfiguration:Audience).
 api POST "/$R/clients" '{"clientId": "mina-sidor", "publicClient": false, "secret": "mina-sidor-secret",
   "standardFlowEnabled": true, "directAccessGrantsEnabled": false,
+  "baseUrl": "https://localhost:3000/mina-sidor/",
   "redirectUris": ["http://localhost:3000/*", "https://localhost:3000/*"], "webOrigins": ["http://localhost:3000", "https://localhost:3000"],
   "attributes": {"pkce.code.challenge.method": "S256"},
   "protocolMappers": [{"name": "contact_code", "protocol": "openid-connect",
