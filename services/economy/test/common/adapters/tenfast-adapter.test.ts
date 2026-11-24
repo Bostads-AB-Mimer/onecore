@@ -951,7 +951,7 @@ describe('Tenfast Adapter', () => {
       })
     })
 
-    it('returns null for a rental object whose lease only partially covers the period', async () => {
+    it('enriches a rental object whose only lease starts during the period', async () => {
       makeBatchResponse([
         {
           _id: 'obj-1',
@@ -975,7 +975,128 @@ describe('Tenfast Adapter', () => {
         periodEnd,
       })
 
-      expect(result.get('306-008-01-0201')).toBeNull()
+      expect(result.get('306-008-01-0201')).toMatchObject({
+        leaseId: '306-008-01-0201/01',
+      })
+    })
+
+    it('returns MultipleLeaseMatch when one lease ends and another starts during the period', async () => {
+      makeBatchResponse([
+        {
+          _id: 'obj-1',
+          externalId: '306-008-01-0201',
+          avtal: [
+            TenfastLeaseFactory.build({
+              externalId: '306-008-01-0201/01',
+              startDate: new Date('2025-01-01'),
+              endDate: new Date('2026-01-15'),
+              stage: 'terminated',
+              hyresgaster: [],
+              hyresobjekt: [],
+            }),
+            TenfastLeaseFactory.build({
+              externalId: '306-008-01-0201/02',
+              startDate: new Date('2026-01-16'),
+              endDate: null,
+              stage: 'active',
+              hyresgaster: [],
+              hyresobjekt: [],
+            }),
+          ],
+        },
+      ])
+
+      const result = await getActiveLeasesByRentalObjectCodes({
+        rentalObjectCodes: ['306-008-01-0201'],
+        periodStart,
+        periodEnd,
+      })
+
+      expect(result.get('306-008-01-0201')).toEqual({
+        leaseIds: ['306-008-01-0201/01', '306-008-01-0201/02'],
+      })
+    })
+
+    it('ignores leases that end before or start after the period', async () => {
+      makeBatchResponse([
+        {
+          _id: 'obj-1',
+          externalId: '306-008-01-0201',
+          avtal: [
+            TenfastLeaseFactory.build({
+              externalId: '306-008-01-0201/01',
+              startDate: new Date('2024-01-01'),
+              endDate: new Date('2025-12-31'),
+              stage: 'terminated',
+              hyresgaster: [],
+              hyresobjekt: [],
+            }),
+            TenfastLeaseFactory.build({
+              externalId: '306-008-01-0201/02',
+              startDate: new Date('2026-01-10'),
+              endDate: new Date('2026-02-28'),
+              stage: 'terminated',
+              hyresgaster: [],
+              hyresobjekt: [],
+            }),
+            TenfastLeaseFactory.build({
+              externalId: '306-008-01-0201/03',
+              startDate: new Date('2026-03-01'),
+              endDate: null,
+              stage: 'active',
+              hyresgaster: [],
+              hyresobjekt: [],
+            }),
+          ],
+        },
+      ])
+
+      const result = await getActiveLeasesByRentalObjectCodes({
+        rentalObjectCodes: ['306-008-01-0201'],
+        periodStart,
+        periodEnd,
+      })
+
+      expect(result.get('306-008-01-0201')).toMatchObject({
+        leaseId: '306-008-01-0201/02',
+      })
+    })
+
+    it('ignores a voided lease in the period', async () => {
+      makeBatchResponse([
+        {
+          _id: 'obj-1',
+          externalId: '306-008-01-0201',
+          avtal: [
+            TenfastLeaseFactory.build({
+              externalId: '306-008-01-0201/01',
+              startDate: new Date('2026-01-01'),
+              endDate: null,
+              stage: 'voided',
+              hyresgaster: [],
+              hyresobjekt: [],
+            }),
+            TenfastLeaseFactory.build({
+              externalId: '306-008-01-0201/02',
+              startDate: new Date('2026-01-15'),
+              endDate: null,
+              stage: 'active',
+              hyresgaster: [],
+              hyresobjekt: [],
+            }),
+          ],
+        },
+      ])
+
+      const result = await getActiveLeasesByRentalObjectCodes({
+        rentalObjectCodes: ['306-008-01-0201'],
+        periodStart,
+        periodEnd,
+      })
+
+      expect(result.get('306-008-01-0201')).toMatchObject({
+        leaseId: '306-008-01-0201/02',
+      })
     })
 
     it('returns null when lease ended before period end', async () => {
