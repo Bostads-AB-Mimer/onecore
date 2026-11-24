@@ -1,3 +1,5 @@
+import { TableExternalLink } from '@/components/ui/table'
+import { cn } from '@/lib/utils'
 import { getTenantViewLink } from '@/utils/externalLinks'
 
 type Props = {
@@ -8,29 +10,19 @@ type Props = {
 
 /**
  * Shows a customer number (contactCode) as a link to the customer card in
- * Property Tree. Falls back to plain text when the Property Tree URL is not
- * configured.
+ * Property Tree. Falls back to muted plain text when the Property Tree URL is
+ * not configured.
  */
-export function CustomerNumberLink({
-  contactCode,
-  prefix,
-  className = '',
-}: Props) {
+export function CustomerNumberLink({ contactCode, prefix, className }: Props) {
   const href = getTenantViewLink(contactCode)
   const text = prefix ? `${prefix} ${contactCode}` : contactCode
 
-  if (!href) {
-    return <span className={`text-muted-foreground ${className}`}>{text}</span>
-  }
-
   return (
-    <a
+    <TableExternalLink
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`text-blue-600 hover:text-blue-800 hover:underline ${className}`}
+      className={cn(!href && 'text-muted-foreground', className)}
     >
       {text}
-    </a>
+    </TableExternalLink>
   )
 }

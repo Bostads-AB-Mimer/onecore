@@ -30,7 +30,7 @@ function TableExternalLink({
   children: React.ReactNode
   className?: string
 } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
-  if (!href) return <span>{children}</span>
+  if (!href) return <span className={className}>{children}</span>
   return (
     <a
       href={href}
