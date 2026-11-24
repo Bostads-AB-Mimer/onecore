@@ -126,6 +126,14 @@ sequenceDiagram
         Core-->User: show error message
     end
 
+    Leasing ->> XPandDB: Get Lease Ids on Rental Object
+    XPandDB -->> Leasing: Lease Ids
+
+    break when the Lease Ids cannot be read from XPand
+        Leasing -->> Core: 500 could-not-get-xpand-lease-ids
+        Core-->User: show error message, no lease created
+    end
+
     Leasing ->> Tenfast: Search Leases on Rental Object
     Tenfast -->> Leasing: Leases
 
@@ -134,7 +142,8 @@ sequenceDiagram
         Core-->User: 409, offer stays open
     end
 
-    Leasing ->> Tenfast: Create Lease
+    note over Leasing: Lease id: the highest number among the<br/>XPand and Tenfast leases on the object,<br/>voided ones included, plus 1 (AVTAL-612).
+    Leasing ->> Tenfast: Create Lease with that id
     Tenfast -->> Leasing: Lease
     Leasing -->> Core: Lease
     note over Core: VAT is hardcoded to false here —<br/>must be checked manually before signing.

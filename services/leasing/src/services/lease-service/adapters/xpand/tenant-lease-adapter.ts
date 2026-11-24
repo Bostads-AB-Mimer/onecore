@@ -826,7 +826,37 @@ const formatDate = (date: Date) => {
   return date.toISOString().split('T')[0]
 }
 
+/**
+ * The ids (`<rental object code>/NN`) of every lease Xpand has on the rental
+ * object, ended and voided (/NNM) ones included, so a lease created in Tenfast
+ * can continue the numbering (AVTAL-612).
+ */
+const getLeaseIdsByRentalObjectCode = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<string[], 'could-not-get-lease-ids'>> => {
+  try {
+    // [, % and _ are wildcards in a LIKE pattern. The pattern is cast to the
+    // column's type: a string binding is sent as NVARCHAR, and comparing the
+    // VARCHAR column with it converts the column on every row, so SQL Server
+    // cannot use its index.
+    const pattern = `${rentalObjectCode.replace(/[[%_]/g, '[$&]')}/%`
+    const rows: Array<{ leaseId: string }> = await xpandDb
+      .from('hyobj')
+      .select('hyobj.hyobjben as leaseId')
+      .whereRaw('hyobj.hyobjben LIKE CAST(? AS VARCHAR(60))', [pattern])
+
+    return { ok: true, data: rows.map((row) => row.leaseId.trim()) }
+  } catch (err) {
+    logger.error(
+      { err, rentalObjectCode },
+      'tenantLeaseAdapter.getLeaseIdsByRentalObjectCode'
+    )
+    return { ok: false, err: 'could-not-get-lease-ids' }
+  }
+}
+
 export {
+  getLeaseIdsByRentalObjectCode,
   getLeases,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,
