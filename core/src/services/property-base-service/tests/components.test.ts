@@ -1212,6 +1212,190 @@ describe('Components API', () => {
   })
 })
 
+describe('Component Events API', () => {
+  const componentId = '00000000-0000-0000-0004-000000000001'
+  const validBody = {
+    eventType: 'REPAIRED',
+    occurredAt: '2026-10-28',
+    sourceType: 'WORK_ORDER',
+    sourceId: 'od-1',
+    actor: 'jdoe',
+  }
+
+  describe('POST /components/:id/events', () => {
+    it('returns 201 when property created the event', async () => {
+      const event = factory.componentEvent.build()
+      const createSpy = jest
+        .spyOn(propertyBaseAdapter, 'createComponentEvent')
+        .mockResolvedValueOnce({ ok: true, data: event, statusCode: 201 })
+
+      const res = await request(app.callback())
+        .post(`/components/${componentId}/events`)
+        .send(validBody)
+
+      expect(res.status).toBe(201)
+      expect(() =>
+        schemas.ComponentEventSchema.parse(res.body.content)
+      ).not.toThrow()
+      expect(createSpy).toHaveBeenCalledWith(componentId, validBody)
+    })
+
+    it('returns 200 when the event already existed', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'createComponentEvent')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: factory.componentEvent.build(),
+          statusCode: 200,
+        })
+
+      const res = await request(app.callback())
+        .post(`/components/${componentId}/events`)
+        .send(validBody)
+
+      expect(res.status).toBe(200)
+    })
+
+    it('rejects an invalid body without calling property', async () => {
+      const createSpy = jest.spyOn(propertyBaseAdapter, 'createComponentEvent')
+
+      const res = await request(app.callback())
+        .post(`/components/${componentId}/events`)
+        .send({ ...validBody, sourceId: undefined })
+
+      expect(res.status).toBe(400)
+      expect(createSpy).not.toHaveBeenCalled()
+    })
+
+    it('rejects an invalid component id', async () => {
+      const res = await request(app.callback())
+        .post('/components/not-a-uuid/events')
+        .send(validBody)
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 404 when the component does not exist', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'createComponentEvent')
+        .mockResolvedValueOnce({ ok: false, err: 'not_found' })
+
+      const res = await request(app.callback())
+        .post(`/components/${componentId}/events`)
+        .send(validBody)
+
+      expect(res.status).toBe(404)
+    })
+
+    it("passes on property's message when it refuses the event", async () => {
+      const message = 'Invalid relatedComponentId: component does not exist'
+      jest
+        .spyOn(propertyBaseAdapter, 'createComponentEvent')
+        .mockResolvedValueOnce({ ok: false, err: 'bad_request', message })
+
+      const res = await request(app.callback())
+        .post(`/components/${componentId}/events`)
+        .send(validBody)
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe(message)
+    })
+
+    it('returns 500 when the adapter throws', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'createComponentEvent')
+        .mockRejectedValueOnce(new Error('boom'))
+
+      const res = await request(app.callback())
+        .post(`/components/${componentId}/events`)
+        .send(validBody)
+
+      expect(res.status).toBe(500)
+    })
+  })
+
+  describe('GET /components/:id/events', () => {
+    it("returns the component's events", async () => {
+      const events = factory.componentEvent.buildList(2)
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponentEvents')
+        .mockResolvedValueOnce({ ok: true, data: events })
+
+      const res = await request(app.callback()).get(
+        `/components/${componentId}/events`
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+    })
+
+    it('returns 404 when the component does not exist', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponentEvents')
+        .mockResolvedValueOnce({ ok: false, err: 'not_found' })
+
+      const res = await request(app.callback()).get(
+        `/components/${componentId}/events`
+      )
+
+      expect(res.status).toBe(404)
+    })
+
+    it('rejects an invalid component id', async () => {
+      const res = await request(app.callback()).get(
+        '/components/not-a-uuid/events'
+      )
+
+      expect(res.status).toBe(400)
+    })
+  })
+
+  describe('GET /component-events', () => {
+    it('returns the events of one source', async () => {
+      const getSpy = jest
+        .spyOn(propertyBaseAdapter, 'getComponentEventsBySource')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [factory.componentEvent.build({ sourceId: 'od-1' })],
+        })
+
+      const res = await request(app.callback()).get(
+        '/component-events?sourceType=WORK_ORDER&sourceId=od-1'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(getSpy).toHaveBeenCalledWith('WORK_ORDER', 'od-1')
+    })
+
+    it('requires sourceId', async () => {
+      const getSpy = jest.spyOn(
+        propertyBaseAdapter,
+        'getComponentEventsBySource'
+      )
+
+      const res = await request(app.callback()).get(
+        '/component-events?sourceType=WORK_ORDER'
+      )
+
+      expect(res.status).toBe(400)
+      expect(getSpy).not.toHaveBeenCalled()
+    })
+
+    it('returns 500 when property fails', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getComponentEventsBySource')
+        .mockResolvedValueOnce({ ok: false, err: 'upstream_error' })
+
+      const res = await request(app.callback()).get(
+        '/component-events?sourceType=WORK_ORDER&sourceId=od-1'
+      )
+
+      expect(res.status).toBe(500)
+    })
+  })
+})
+
 describe('Component Installations API', () => {
   describe('GET /component-installations', () => {
     it('returns list on success', async () => {

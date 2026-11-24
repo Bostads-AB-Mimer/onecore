@@ -7,6 +7,7 @@
  * - component-model.ts: Manufacturer models (e.g., "Bosch Series 5000")
  * - component-instance.ts: Physical instances with serial numbers
  * - component-installation.ts: Installation records (where/when installed)
+ * - component-event.ts: Event history (repaired, replaced, inspected, ...)
  */
 
 export * from './component-category'
@@ -15,4 +16,5 @@ export * from './component-subtype'
 export * from './component-model'
 export * from './component-instance'
 export * from './component-installation'
+export * from './component-event'
 export * from './ai-analysis'

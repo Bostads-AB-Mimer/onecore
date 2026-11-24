@@ -861,6 +861,15 @@ export const ComponentInstallationsQueryParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
 
+export const ComponentEventSchema = property.ComponentEventSchema
+
+export type ComponentEvent = property.ComponentEvent
+
+export const CreateComponentEventSchema = property.CreateComponentEventSchema
+
+export const ComponentEventsBySourceQueryParamsSchema =
+  property.ComponentEventsBySourceQuerySchema
+
 export const CreateComponentCategorySchema = z.object({
   categoryName: z.string().trim().min(1, 'Category name is required'),
   description: z.string().trim().min(1, 'Description is required'),

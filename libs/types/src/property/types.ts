@@ -6,7 +6,12 @@ import {
   ApartmentTemperaturePointSchema,
   ApartmentTemperatureSeriesSchema,
   ApartmentTemperaturesResponseSchema,
+  ComponentEventSchema,
+  ComponentEventSourceTypeSchema,
+  ComponentEventsBySourceQuerySchema,
+  ComponentEventTypeSchema,
   CostCenterRefSchema,
+  CreateComponentEventSchema,
   KvvAreaRefSchema,
   KvvAreaWithCostCenterSchema,
   MarketAreaSchema,
@@ -43,4 +48,14 @@ export type ApartmentTemperatureSeries = z.infer<
 >
 export type ApartmentTemperaturesResponse = z.infer<
   typeof ApartmentTemperaturesResponseSchema
+>
+
+export type ComponentEventType = z.infer<typeof ComponentEventTypeSchema>
+export type ComponentEventSourceType = z.infer<
+  typeof ComponentEventSourceTypeSchema
+>
+export type ComponentEvent = z.infer<typeof ComponentEventSchema>
+export type CreateComponentEvent = z.infer<typeof CreateComponentEventSchema>
+export type ComponentEventsBySourceQuery = z.infer<
+  typeof ComponentEventsBySourceQuerySchema
 >
