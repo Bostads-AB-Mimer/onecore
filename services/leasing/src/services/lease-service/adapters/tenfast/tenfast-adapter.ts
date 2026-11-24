@@ -625,14 +625,15 @@ let articlesCachedAt = 0
 
 // Fetches the hyresvard's full article catalog. Used to find the VAT
 // counterpart of a rent row's article when building a lease with VAT
-// included — see applyVatToRentRows below.
+// included — see applyVatToRentRows below — and to show article codes in
+// the rent row list.
 // Unlike getTags (where an empty fallback on failure only degrades display
 // info), a silently-empty article list here would make createLease build a
 // lease with vatEnabled:true but no row actually switched to its VAT
 // article — wrong and undetectable by the caller. So failures are
 // re-thrown rather than swallowed; the caller (createLease) decides how to
 // handle them.
-const getArticles = (): Promise<TenfastArticle[]> => {
+export const getArticles = (): Promise<TenfastArticle[]> => {
   if (articlesCache && Date.now() - articlesCachedAt < ARTICLES_CACHE_TTL_MS) {
     return articlesCache
   }

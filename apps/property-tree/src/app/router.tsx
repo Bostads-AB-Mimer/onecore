@@ -14,6 +14,7 @@ import { GuidesPage } from '@/pages/GuidesPage'
 import { HomeInsurancePage } from '@/pages/HomeInsurancePage'
 import { ImdPage } from '@/pages/ImdPage'
 import InspectionsView from '@/pages/InspectionsPage'
+import LeaseRentRowsPage from '@/pages/LeaseRentRowsPage'
 import LeasesPage from '@/pages/LeasesPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
 import { MessageTemplatesPage } from '@/pages/MessageTemplatesPage'
@@ -159,6 +160,11 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             path: routes.messageTemplates,
             element: <MessageTemplatesPage />,
             handle: { title: 'Mallar' },
+          },
+          {
+            path: routes.homeInsuranceRentRows,
+            element: <LeaseRentRowsPage />,
+            handle: { title: 'Avtalsrader' },
           },
           {
             path: 'economy',

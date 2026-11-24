@@ -20,6 +20,7 @@ import {
 } from '../../services/home-insurance-cache'
 import * as factory from '../factories'
 import config from '../../../../common/config'
+import type { CachedLease } from '../../../../common/lease-cache'
 import { schemas } from '@onecore/types'
 
 jest.mock('../../adapters/xpand/ended-lease-adapter', () => ({
@@ -1665,10 +1666,8 @@ describe('GET /leases/home-insurances/all', () => {
 })
 
 describe('POST /leases/statuses', () => {
-  const cachedLease = (
-    leaseId: string,
-    status: LeaseStatus
-  ): leasing.v1.LeaseSearchResult => ({
+  const cachedLease = (leaseId: string, status: LeaseStatus): CachedLease => ({
+    rentRows: [],
     leaseId,
     objectTypeCode: 'Bostad',
     leaseType: LeaseType.HousingContract,

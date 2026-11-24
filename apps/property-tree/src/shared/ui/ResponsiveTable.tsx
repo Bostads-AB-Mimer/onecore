@@ -44,6 +44,8 @@ interface ResponsiveTableProps {
   onSort?: (sortKey: string, sortOrder: 'asc' | 'desc' | undefined) => void
   /** When set, rows can be expanded to show extra content. Return null for a row with nothing to show. */
   expandableContent?: (item: any) => ReactNode | null
+  /** Extra classes for a row in the desktop table, e.g. to highlight it */
+  rowClassName?: (item: any) => string | undefined
 }
 
 export function ResponsiveTable({
@@ -56,6 +58,7 @@ export function ResponsiveTable({
   sortOrder,
   onSort,
   expandableContent,
+  rowClassName,
 }: ResponsiveTableProps) {
   const isMobile = useIsMobile()
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -222,7 +225,7 @@ export function ResponsiveTable({
 
             return (
               <Fragment key={itemKey}>
-                <TableRow className="min-h-[44px]">
+                <TableRow className={cn('min-h-[44px]', rowClassName?.(item))}>
                   {expandableContent && (
                     <TableCell className="py-3">
                       {content && (

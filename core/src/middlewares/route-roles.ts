@@ -73,6 +73,17 @@ export const requiredRolesFor = (rawPath: string, method: string): string[] => {
     return ['home-insurance:write']
   }
 
+  // The rent row list sits under Hemförsäkringar in property-tree and shows
+  // every lease's rent rows, so it is gated like the home insurance list.
+  // Setting a home insurance end date from it is a write.
+  if (/^\/leases\/rent-rows(\/|$)/.test(path)) {
+    return ['home-insurance:read']
+  }
+
+  if (/^\/leases\/.+\/rent-rows\/home-insurance-end-date$/.test(path)) {
+    return ['home-insurance:write']
+  }
+
   // The list of open invoices names tenants next to what they owe. Not
   // api-access, for the same reason as the home insurance list. Matched on
   // every method, so its export and a route added later are gated too.

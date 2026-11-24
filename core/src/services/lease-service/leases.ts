@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import type { Context } from 'koa'
 import axios from 'axios'
 import {
   generateRouteMetadata,
@@ -82,6 +83,31 @@ const CSC_MAX_PAGE_SIZE = 500
 // Leases looked up at once, so a full page doesn't send all its lookups to
 // leasing and property-management in one burst.
 const CSC_LOOKUP_CONCURRENCY = 20
+registerSchema('LeaseRentRowListItem', leasing.v1.LeaseRentRowListItemSchema)
+registerSchema('LeaseRentRowsResponse', leasing.v1.LeaseRentRowsResponseSchema)
+registerSchema(
+  'SetHomeInsuranceEndDateRequest',
+  leasing.v1.SetHomeInsuranceEndDateRequestSchema
+)
+registerSchema(
+  'SetHomeInsuranceEndDateResponse',
+  leasing.v1.SetHomeInsuranceEndDateResponseSchema
+)
+
+const setRentRowsErrorResponse = (
+  ctx: Context,
+  err: leasingAdapter.GetLeaseRentRowsError,
+  metadata: ReturnType<typeof generateRouteMetadata>
+) => {
+  if (err === 'warming-up') {
+    ctx.set('Retry-After', '30')
+    ctx.status = 503
+    ctx.body = { error: 'Lease service is warming up', ...metadata }
+    return
+  }
+  ctx.status = err === 'bad-request' ? 400 : 500
+  ctx.body = { error: err, ...metadata }
+}
 
 export const routes = (router: KoaRouter) => {
   // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
@@ -1649,6 +1675,329 @@ export const routes = (router: KoaRouter) => {
           result.data,
           metadata
         )
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/rent-rows:
+   *   get:
+   *     summary: List rent rows (avtalsrader) of all leases
+   *     description: |
+   *       One item per rent row. Search on lease id, contact code, article
+   *       code, label or row id, and filter on lease status or kind of row.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [current, upcoming, about-to-end, ended, pending-signature, preliminary-terminated, not-sent]
+   *         style: form
+   *         explode: true
+   *       - in: query
+   *         name: filter
+   *         schema:
+   *           type: string
+   *           enum: [homeInsurance, sameDate]
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *           maximum: 500
+   *     responses:
+   *       '200':
+   *         description: Rent rows
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/LeaseRentRowsResponse'
+   *       '400':
+   *         description: Invalid query parameters
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       '503':
+   *         description: The lease list is still loading, retry shortly
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/rent-rows', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const parsed = leasing.v1.LeaseRentRowsQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: parsed.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    const result = await leasingAdapter.getLeaseRentRows(parsed.data)
+    if (!result.ok) {
+      setRentRowsErrorResponse(ctx, result.err, metadata)
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { ...result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /leases/rent-rows/export:
+   *   get:
+   *     summary: Export rent rows (avtalsrader) to Excel
+   *     description: Same filters as /leases/rent-rows, every matching row.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: status
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [current, upcoming, about-to-end, ended, pending-signature, preliminary-terminated, not-sent]
+   *         style: form
+   *         explode: true
+   *       - in: query
+   *         name: filter
+   *         schema:
+   *           type: string
+   *           enum: [homeInsurance, sameDate]
+   *     responses:
+   *       '200':
+   *         description: Excel file
+   *         content:
+   *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       '400':
+   *         description: Invalid query parameters
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       '503':
+   *         description: The lease list is still loading, retry shortly
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       '500':
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('/leases/rent-rows/export', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const parsed = leasing.v1.LeaseRentRowsQueryParamsSchema.omit({
+      page: true,
+      limit: true,
+    }).safeParse(ctx.query)
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: parsed.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    // No page: leasing returns every matching row
+    const result = await leasingAdapter.getLeaseRentRows(parsed.data)
+    if (!result.ok) {
+      setRentRowsErrorResponse(ctx, result.err, metadata)
+      return
+    }
+
+    try {
+      const buffer = await createExcelExport<leasing.v1.LeaseRentRowListItem>({
+        sheetName: 'Avtalsrader',
+        columns: [
+          { header: 'Kontraktsnummer', key: 'leaseId', width: 20 },
+          { header: 'Kontaktnummer', key: 'contactCodes', width: 18 },
+          { header: 'Status', key: 'leaseStatus', width: 15 },
+          { header: 'Artikel', key: 'articleCode', width: 14 },
+          { header: 'Avitext', key: 'label', width: 35 },
+          { header: 'Belopp', key: 'amount', width: 12 },
+          { header: 'Fr.o.m.', key: 'from', width: 12 },
+          { header: 'T.o.m.', key: 'to', width: 12 },
+          { header: 'Artikel skapad', key: 'articleCreatedAt', width: 26 },
+          { header: 'Artikel uppdaterad', key: 'articleUpdatedAt', width: 26 },
+          { header: 'Hyresrad-id', key: 'rowId', width: 28 },
+        ],
+        data: result.data.content,
+        rowMapper: (row: leasing.v1.LeaseRentRowListItem) => ({
+          leaseId: row.leaseId,
+          contactCodes: row.contactCodes.join(', '),
+          leaseStatus:
+            LeaseStatusLabel[row.leaseStatus] ?? String(row.leaseStatus),
+          articleCode: row.articleCode ?? '',
+          label: row.label,
+          amount: row.amount,
+          from: row.from ?? '',
+          to: row.to ?? '',
+          // Full timestamps, as the leasing system sends them (UTC)
+          articleCreatedAt: row.articleCreatedAt ?? '',
+          articleUpdatedAt: row.articleUpdatedAt ?? '',
+          rowId: row.rowId,
+        }),
+      })
+
+      setExcelDownloadHeaders(ctx, 'avtalsrader')
+      ctx.status = 200
+      ctx.body = buffer
+    } catch (error: unknown) {
+      logger.error({ error, metadata }, 'Error exporting rent rows to Excel')
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+    }
+  })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/rent-rows/home-insurance-end-date:
+   *   post:
+   *     summary: Change T.o.m. (end date) of a home insurance rent row
+   *     description: |
+   *       Only rows with the home insurance article can be changed. The row is
+   *       replaced by an identical one with the new end date, so it gets a new
+   *       row id. Returns the lease's rent rows after the change.
+   *     tags:
+   *       - Lease service
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/SetHomeInsuranceEndDateRequest'
+   *     responses:
+   *       '200':
+   *         description: Changed
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/SetHomeInsuranceEndDateResponse'
+   *       '400':
+   *         description: Invalid request body
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       '404':
+   *         description: Lease or row not found (error is lease-not-found or row-not-found)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       '422':
+   *         description: Row is not home insurance, the end date is before the start date or unchanged (error is not-home-insurance, end-before-start or unchanged)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *       '500':
+   *         description: Reading or saving the lease failed (error is lease-fetch-failed, update-failed or unknown)
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/leases/:leaseId/rent-rows/home-insurance-end-date',
+    parseRequestBody(leasing.v1.SetHomeInsuranceEndDateRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const leaseId = ctx.params.leaseId
+
+      const result = await leasingAdapter.setHomeInsuranceEndDate(
+        leaseId,
+        ctx.request.body
+      )
+
+      if (!result.ok) {
+        const status: Record<typeof result.err, number> = {
+          'lease-not-found': 404,
+          'row-not-found': 404,
+          'not-home-insurance': 422,
+          'end-before-start': 422,
+          unchanged: 422,
+          'lease-fetch-failed': 500,
+          'update-failed': 500,
+          unknown: 500,
+        }
+        ctx.status = status[result.err]
+        ctx.body = { error: result.err, ...metadata }
+        return
+      }
+
+      logger.info(
+        {
+          leaseId,
+          rowId: ctx.request.body.rowId,
+          endDate: ctx.request.body.endDate,
+          changedBy:
+            ctx.state.user?.preferred_username ?? ctx.state.user?.name ?? null,
+          ...metadata,
+        },
+        'Home insurance end date changed'
+      )
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(result.data, metadata)
     }
   )
 

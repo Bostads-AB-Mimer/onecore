@@ -117,6 +117,9 @@ export const TenfastArticleSchema = z.object({
   _id: z.string(),
   code: z.string(),
   vat: z.number(),
+  // ISO timestamps of when the article was created/last changed in Tenfast
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
 })
 
 export type TenfastArticle = z.infer<typeof TenfastArticleSchema>

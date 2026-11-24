@@ -5,6 +5,7 @@ import * as tenfastLeaseSearchAdapter from '../../../adapters/tenfast/tenfast-le
 import * as xpandLeaseSearchAdapter from '../../../adapters/xpand/lease-search-adapter'
 import * as leaseCache from '../../../../../common/lease-cache'
 import * as xpandEndedLeaseCache from '../../../../../common/xpand-ended-lease-cache'
+import type { CachedLease } from '../../../../../common/lease-cache'
 
 jest.mock('../../../../../common/lease-cache', () => ({
   getAll: jest.fn(),
@@ -61,7 +62,8 @@ const mockXpandParkingSpaces = (
 const makeResult = (
   id: string,
   overrides: Partial<leasing.v1.LeaseSearchResult> = {}
-): leasing.v1.LeaseSearchResult => ({
+): CachedLease => ({
+  rentRows: [],
   leaseId: id,
   objectTypeCode: 'Bostad',
   leaseType: LeaseType.HousingContract,

@@ -2341,6 +2341,161 @@ export interface paths {
       }
     }
   }
+  '/leases/rent-rows': {
+    /**
+     * List rent rows (avtalsrader) of all leases
+     * @description One item per rent row. Search on lease id, contact code, article
+     * code, label or row id, and filter on lease status or kind of row.
+     */
+    get: {
+      parameters: {
+        query?: {
+          q?: string
+          status?: (
+            | 'current'
+            | 'upcoming'
+            | 'about-to-end'
+            | 'ended'
+            | 'pending-signature'
+            | 'preliminary-terminated'
+            | 'not-sent'
+          )[]
+          filter?: 'homeInsurance' | 'sameDate'
+          page?: number
+          limit?: number
+        }
+      }
+      responses: {
+        /** @description Rent rows */
+        200: {
+          content: {
+            'application/json': components['schemas']['LeaseRentRowsResponse']
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description The lease list is still loading, retry shortly */
+        503: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/leases/rent-rows/export': {
+    /**
+     * Export rent rows (avtalsrader) to Excel
+     * @description Same filters as /leases/rent-rows, every matching row.
+     */
+    get: {
+      parameters: {
+        query?: {
+          q?: string
+          status?: (
+            | 'current'
+            | 'upcoming'
+            | 'about-to-end'
+            | 'ended'
+            | 'pending-signature'
+            | 'preliminary-terminated'
+            | 'not-sent'
+          )[]
+          filter?: 'homeInsurance' | 'sameDate'
+        }
+      }
+      responses: {
+        /** @description Excel file */
+        200: {
+          content: {
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
+          }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description The lease list is still loading, retry shortly */
+        503: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
+  '/leases/{leaseId}/rent-rows/home-insurance-end-date': {
+    /**
+     * Change T.o.m. (end date) of a home insurance rent row
+     * @description Only rows with the home insurance article can be changed. The row is
+     * replaced by an identical one with the new end date, so it gets a new
+     * row id. Returns the lease's rent rows after the change.
+     */
+    post: {
+      parameters: {
+        path: {
+          leaseId: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['SetHomeInsuranceEndDateRequest']
+        }
+      }
+      responses: {
+        /** @description Changed */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['SetHomeInsuranceEndDateResponse']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Lease or row not found (error is lease-not-found or row-not-found) */
+        404: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Row is not home insurance, the end date is before the start date or unchanged (error is not-home-insurance, end-before-start or unchanged) */
+        422: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+        /** @description Reading or saving the lease failed (error is lease-fetch-failed, update-failed or unknown) */
+        500: {
+          content: {
+            'application/json': components['schemas']['ErrorResponse']
+          }
+        }
+      }
+    }
+  }
   '/leases/{id}': {
     /**
      * Get lease by ID
@@ -13911,6 +14066,73 @@ export interface components {
       /** @enum {string} */
       error: 'cache-warming' | 'upstream-failed' | 'unknown'
       reason: string
+    }
+    LeaseRentRowListItem: {
+      leaseId: string
+      /** @enum {number} */
+      leaseStatus: 0 | 1 | 2 | 3 | 4 | 5 | 6
+      contactCodes: string[]
+      rowId: string
+      articleId: string | null
+      articleCode: string | null
+      label: string
+      amount: number
+      from: string | null
+      to: string | null
+      isHomeInsurance: boolean
+      articleCreatedAt: string | null
+      articleUpdatedAt: string | null
+    }
+    LeaseRentRowsResponse: {
+      content: {
+        leaseId: string
+        /** @enum {number} */
+        leaseStatus: 0 | 1 | 2 | 3 | 4 | 5 | 6
+        contactCodes: string[]
+        rowId: string
+        articleId: string | null
+        articleCode: string | null
+        label: string
+        amount: number
+        from: string | null
+        to: string | null
+        isHomeInsurance: boolean
+        articleCreatedAt: string | null
+        articleUpdatedAt: string | null
+      }[]
+      _meta: {
+        totalRecords: number
+        page: number
+        limit: number
+        count: number
+        syncedAt: string | null
+      }
+    }
+    SetHomeInsuranceEndDateRequest: {
+      rowId: string
+      endDate: string
+    }
+    SetHomeInsuranceEndDateResponse: {
+      /** @enum {boolean} */
+      changed: true
+      rentRows:
+        | {
+            leaseId: string
+            /** @enum {number} */
+            leaseStatus: 0 | 1 | 2 | 3 | 4 | 5 | 6
+            contactCodes: string[]
+            rowId: string
+            articleId: string | null
+            articleCode: string | null
+            label: string
+            amount: number
+            from: string | null
+            to: string | null
+            isHomeInsurance: boolean
+            articleCreatedAt: string | null
+            articleUpdatedAt: string | null
+          }[]
+        | null
     }
     Lease: {
       leaseId: string

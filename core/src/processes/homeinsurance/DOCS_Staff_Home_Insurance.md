@@ -4,11 +4,16 @@ _Del av [processöversikten](./DOCS_Overview.md) för hemförsäkring._
 
 Personal kan lista alla hemförsäkringsrader, exportera listan till Excel och avsluta eller ändra T.o.m. på en enskild rad. Allt går via core. Leasing äger raderna (Tenfast) och contacts äger persondata. Core lägger ihop dem och styr åtkomsten med två roller.
 
-| Route i core                                          | Roll                   | Vad den gör                                             |
-| ----------------------------------------------------- | ---------------------- | ------------------------------------------------------- |
-| `GET /leases/home-insurances`                         | `home-insurance:read`  | En sida av listan, med persondata från contacts         |
-| `GET /leases/home-insurances/export`                  | `home-insurance:read`  | Hela urvalet som Excel, i LF-filens 18 kolumner         |
-| `PATCH /leases/{leaseId}/home-insurance/rows/{rowId}` | `home-insurance:write` | Avslutar eller tar bort raden, eller ändrar dess T.o.m. |
+| Route i core                                               | Roll                   | Vad den gör                                             |
+| ---------------------------------------------------------- | ---------------------- | ------------------------------------------------------- |
+| `GET /leases/home-insurances`                              | `home-insurance:read`  | En sida av listan, med persondata från contacts         |
+| `GET /leases/home-insurances/export`                       | `home-insurance:read`  | Hela urvalet som Excel, i LF-filens 18 kolumner         |
+| `PATCH /leases/{leaseId}/home-insurance/rows/{rowId}`      | `home-insurance:write` | Avslutar eller tar bort raden, eller ändrar dess T.o.m. |
+| `GET /leases/rent-rows`                                    | `home-insurance:read`  | Avtalsrader: alla hyresrader på kontrakten i Tenfast    |
+| `GET /leases/rent-rows/export`                             | `home-insurance:read`  | Avtalsrader: hela urvalet                               |
+| `POST /leases/{leaseId}/rent-rows/home-insurance-end-date` | `home-insurance:write` | Avtalsrader: ändrar T.o.m. på en hemförsäkringsrad      |
+
+I property-tree ligger Avtalsrader som undermeny under Hemförsäkringar (`/hemforsakringar/avtalsrader`). Leasing läser raderna ur samma lease-cache som kontraktssökningen; sökning och export tar bort `rentRows` innan de svarar.
 
 Rollerna ges inte via `api-access` (`core/src/middlewares/route-roles.ts`). Annars skulle alla med en api-access-token kunna läsa hyresgästernas personnummer och avsluta försäkringar. Rollerna måste finnas i Keycloak i dev, test och prod och tilldelas personal före release. Den som ska avsluta rader behöver båda rollerna, eftersom listan kräver `home-insurance:read`.
 
