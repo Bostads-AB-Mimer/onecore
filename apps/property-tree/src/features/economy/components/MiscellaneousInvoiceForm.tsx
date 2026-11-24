@@ -534,7 +534,7 @@ export function MiscellaneousInvoiceForm() {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Vi vet inte om underlaget kom fram</AlertTitle>
               <AlertDescription>
-                Underlaget kan ha skapats trots felet. Kontrollera i{' '}
+                Kontrollera i{' '}
                 <Link to={routes.miscellaneousInvoices} className="underline">
                   listan över ströfakturor
                 </Link>{' '}
@@ -542,7 +542,8 @@ export function MiscellaneousInvoiceForm() {
                 <a href="mailto:ekonomi@mimer.nu" className="underline">
                   ekonomi@mimer.nu
                 </a>{' '}
-                innan du skickar det igen, annars kan kunden få dubbla fakturor.
+                innan du skickar underlaget igen, annars kan kunden få dubbla
+                fakturor.
               </AlertDescription>
             </Alert>
           )}
