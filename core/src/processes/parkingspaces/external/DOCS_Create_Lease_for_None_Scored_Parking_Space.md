@@ -131,6 +131,14 @@ sequenceDiagram
 
         note over Core: Start date: the one given, otherwise the day<br/>the parking space is free (vacantFrom, or today).
         Core ->> Leasing: Create Lease
+        Leasing ->> XPandDB: Get Lease Ids on Rental Object
+        XPandDB -->> Leasing: Lease Ids
+
+        break when the Lease Ids cannot be read from XPand
+            Leasing -->> Core: 500 could-not-get-xpand-lease-ids
+            Core-->User: show error message, no lease created
+        end
+
         Leasing ->> Tenfast: Search Leases on Rental Object
         Tenfast -->> Leasing: Leases
 
@@ -139,7 +147,8 @@ sequenceDiagram
             Core-->User: 409, listing status unchanged
         end
 
-        Leasing ->> Tenfast: Create Lease
+        note over Leasing: Lease id: the highest number among the<br/>XPand and Tenfast leases on the object,<br/>voided ones included, plus 1 (AVTAL-612).
+        Leasing ->> Tenfast: Create Lease with that id
         Tenfast -->> Leasing: Create Lease Result
         Leasing -->> Core: Create Lease Result
 

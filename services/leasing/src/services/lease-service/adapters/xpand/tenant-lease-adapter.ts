@@ -833,7 +833,7 @@ const formatDate = (date: Date) => {
  */
 const getLeaseIdsByRentalObjectCode = async (
   rentalObjectCode: string
-): Promise<AdapterResult<string[], 'unknown'>> => {
+): Promise<AdapterResult<string[], 'could-not-get-lease-ids'>> => {
   try {
     // [, % and _ are wildcards in a LIKE pattern. The pattern is cast to the
     // column's type: a string binding is sent as NVARCHAR, and comparing the
@@ -851,7 +851,7 @@ const getLeaseIdsByRentalObjectCode = async (
       { err, rentalObjectCode },
       'tenantLeaseAdapter.getLeaseIdsByRentalObjectCode'
     )
-    return { ok: false, err: 'unknown' }
+    return { ok: false, err: 'could-not-get-lease-ids' }
   }
 }
 

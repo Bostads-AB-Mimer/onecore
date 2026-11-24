@@ -834,7 +834,10 @@ describe('POST /leases', () => {
     jest
       .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
       .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
-    xpandLeaseIdsSpy.mockResolvedValueOnce({ ok: false, err: 'unknown' })
+    xpandLeaseIdsSpy.mockResolvedValueOnce({
+      ok: false,
+      err: 'could-not-get-lease-ids',
+    })
     const createLeaseSpy = jest.spyOn(tenfastAdapter, 'createLease')
 
     const res = await request(app.callback())

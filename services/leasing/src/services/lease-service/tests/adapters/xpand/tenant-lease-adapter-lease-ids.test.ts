@@ -48,12 +48,12 @@ describe(tenantLeaseAdapter.getLeaseIdsByRentalObjectCode, () => {
     ])
   })
 
-  it('returns "unknown" when the query fails', async () => {
+  it('returns "could-not-get-lease-ids" when the query fails', async () => {
     mockResult = Promise.reject(new Error('connection lost'))
 
     const result =
       await tenantLeaseAdapter.getLeaseIdsByRentalObjectCode('704-703-00-0006')
 
-    expect(result).toEqual({ ok: false, err: 'unknown' })
+    expect(result).toEqual({ ok: false, err: 'could-not-get-lease-ids' })
   })
 })

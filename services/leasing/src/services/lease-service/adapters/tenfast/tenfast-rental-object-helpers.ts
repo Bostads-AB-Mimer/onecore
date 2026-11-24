@@ -150,7 +150,9 @@ export const getVacantFrom = (leases: LeaseStageInfo[]): Date | undefined => {
  * above the highest number among the object's earlier leases, at least two
  * digits, and /01 if it has had none. Only the leading digits of a number
  * count, so a voided lease (/04M) or an Xpand suffix such as /04T counts as 4.
- * Ids that belong to another rental object are skipped.
+ * Ids that belong to another rental object are skipped. Codes are compared
+ * trimmed and ignoring case, as Xpand's SQL compares them: an id skipped by
+ * mistake would let a number be reused.
  *
  * Without an id of our own Tenfast numbers a lease from its own leases only,
  * which restarts at /01 on objects that only have history in Xpand
@@ -160,15 +162,16 @@ export const getNextLeaseId = (
   rentalObjectCode: string,
   earlierLeaseIds: string[]
 ): string => {
-  const prefix = `${rentalObjectCode}/`
+  const code = rentalObjectCode.trim()
+  const prefix = `${code.toUpperCase()}/`
   const highest = earlierLeaseIds.reduce((max, leaseId) => {
-    const id = leaseId.trim()
+    const id = leaseId.trim().toUpperCase()
     if (!id.startsWith(prefix)) return max
     const digits = /^\d+/.exec(id.slice(prefix.length))
     return digits ? Math.max(max, Number(digits[0])) : max
   }, 0)
 
-  return `${prefix}${String(highest + 1).padStart(2, '0')}`
+  return `${code}/${String(highest + 1).padStart(2, '0')}`
 }
 
 /**

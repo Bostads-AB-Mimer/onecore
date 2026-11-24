@@ -118,8 +118,8 @@ const fetchAllPages = async <
 /**
  * Creates a lease on the rental object and returns its id. The id continues
  * from the highest number among the object's Tenfast leases (voided ones
- * included) and `earlierLeaseIds`, the leases it has had outside Tenfast:
- * leases that ended before the migration exist only in Xpand (AVTAL-612).
+ * included) and `earlierLeaseIds`, the object's leases in Xpand: leases that
+ * ended before the migration exist only there (AVTAL-612).
  */
 export const createLease = async (
   contact: Contact,
@@ -215,18 +215,20 @@ export const createLease = async (
     })
     if (leaseResponse.status !== 200 && leaseResponse.status !== 201) {
       logger.error(
-        { externalId: newLeaseId, status: leaseResponse.status },
+        {
+          externalId: newLeaseId,
+          status: leaseResponse.status,
+          error: leaseResponse.data?.error,
+        },
         'tenfast-adapter.createLease: Tenfast did not create the lease with this id'
       )
-      return leaseResponse.status === 400
-        ? handleTenfastError(
-            leaseResponse.data.error,
-            'create-lease-bad-request'
-          )
-        : handleTenfastError(
-            { error: leaseResponse.data.error, status: leaseResponse.status },
-            'lease-could-not-be-created'
-          )
+      return {
+        ok: false,
+        err:
+          leaseResponse.status === 400
+            ? 'create-lease-bad-request'
+            : 'lease-could-not-be-created',
+      }
     }
 
     // Only the id is needed by callers (see leases.ts route docs: response
@@ -247,12 +249,14 @@ export const createLease = async (
 
     return { ok: true, data: leaseId }
   } catch (err) {
+    // A 5xx reply, a timeout or a network error lands here. Tenfast may still
+    // have created the lease, so the id it would have is logged too.
     const responseData = isAxiosError(err) ? err.response?.data : undefined
     logger.error(
-      { err, responseData },
+      { err, responseData, externalId: newLeaseId },
       'tenfast-adapter.createLease: caught exception'
     )
-    return handleTenfastError(err, 'lease-could-not-be-created')
+    return { ok: false, err: 'lease-could-not-be-created' }
   }
 }
 

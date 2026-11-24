@@ -1048,8 +1048,11 @@ describe(tenfastAdapter.createLease, () => {
       data: mockRentalObject,
     })
 
-    // Mock tenfastApi.request to return a successful lease response
-    const mockLease = factory.tenfastLease.build()
+    // Mock tenfastApi.request to return a successful lease response, created
+    // with the id createLease sends (the object has no earlier leases)
+    const mockLease = factory.tenfastLease.build({
+      externalId: 'RENTAL_CODE/01',
+    })
     const mockLeaseResponse = {
       status: 200,
       data: mockLease,
@@ -1090,7 +1093,7 @@ describe(tenfastAdapter.createLease, () => {
     ;(request as jest.Mock).mockResolvedValue({
       status: 200,
       data: {
-        externalId: '216-704-00-0022/02',
+        externalId: 'RENTAL_CODE/01',
         hyresgaster: ['tenant-object-id'],
         hyresobjekt: ['rental-object-id'],
       },
@@ -1107,7 +1110,7 @@ describe(tenfastAdapter.createLease, () => {
     )
 
     // Assert
-    expect(result).toEqual({ ok: true, data: '216-704-00-0022/02' })
+    expect(result).toEqual({ ok: true, data: 'RENTAL_CODE/01' })
   })
 
   describe('lease number (AVTAL-612)', () => {
@@ -1115,7 +1118,7 @@ describe(tenfastAdapter.createLease, () => {
     let tenantSpy: jest.SpyInstance
     let rentalObjectSpy: jest.SpyInstance
     let errorSpy: jest.SpyInstance
-    let sentLease: any
+    let sentLease: { externalId?: string } | undefined
 
     beforeEach(() => {
       sentLease = undefined
@@ -1158,15 +1161,29 @@ describe(tenfastAdapter.createLease, () => {
     it('sends /01 when the object has no leases in Tenfast or Xpand', async () => {
       const result = await createLease([])
 
-      expect(sentLease.externalId).toBe(`${code}/01`)
+      expect(sentLease?.externalId).toBe(`${code}/01`)
       expect(result).toEqual({ ok: true, data: `${code}/01` })
     })
 
     it('continues from the earlier leases when Tenfast has none, as on an object vacant at the migration', async () => {
       const result = await createLease([`${code}/01`, `${code}/04`])
 
-      expect(sentLease.externalId).toBe(`${code}/05`)
+      expect(sentLease?.externalId).toBe(`${code}/05`)
       expect(result).toEqual({ ok: true, data: `${code}/05` })
+    })
+
+    it('continues from the earlier leases when they go higher than the Tenfast leases, as on an object that already got a clashing number', async () => {
+      leaseStagesSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [
+          { externalId: `${code}/01`, stage: 'terminated', endDate: null },
+          { stage: 'voided', endDate: null },
+        ],
+      })
+
+      await createLease([`${code}/03`, `${code}/04`])
+
+      expect(sentLease?.externalId).toBe(`${code}/05`)
     })
 
     it('continues from the highest of the Tenfast leases, voided ones included, and the earlier leases', async () => {
@@ -1180,21 +1197,41 @@ describe(tenfastAdapter.createLease, () => {
 
       await createLease([`${code}/06`])
 
-      expect(sentLease.externalId).toBe(`${code}/08`)
+      expect(sentLease?.externalId).toBe(`${code}/08`)
     })
 
-    it('logs the id it sent when Tenfast refuses the lease', async () => {
-      ;(request as jest.Mock).mockResolvedValue({
-        status: 400,
-        data: { error: 'refused' },
-      })
+    it.each([
+      [400, 'create-lease-bad-request'],
+      [409, 'lease-could-not-be-created'],
+    ])(
+      'logs the id it sent, once, when Tenfast refuses the lease with %i',
+      async (status, err) => {
+        ;(request as jest.Mock).mockResolvedValue({
+          status,
+          data: { error: 'refused' },
+        })
+
+        const result = await createLease([`${code}/04`])
+
+        expect(result).toEqual({ ok: false, err })
+        expect(errorSpy).toHaveBeenCalledTimes(1)
+        expect(errorSpy).toHaveBeenCalledWith(
+          { externalId: `${code}/05`, status, error: 'refused' },
+          expect.stringContaining('did not create the lease with this id')
+        )
+      }
+    )
+
+    it('logs the id it sent when the create throws, as on a 5xx reply or a timeout', async () => {
+      ;(request as jest.Mock).mockRejectedValue(new Error('timeout'))
 
       const result = await createLease([`${code}/04`])
 
-      expect(result).toEqual({ ok: false, err: 'create-lease-bad-request' })
+      expect(result).toEqual({ ok: false, err: 'lease-could-not-be-created' })
+      expect(errorSpy).toHaveBeenCalledTimes(1)
       expect(errorSpy).toHaveBeenCalledWith(
-        { externalId: `${code}/05`, status: 400 },
-        expect.stringContaining('did not create the lease with this id')
+        expect.objectContaining({ externalId: `${code}/05` }),
+        expect.stringContaining('caught exception')
       )
     })
 

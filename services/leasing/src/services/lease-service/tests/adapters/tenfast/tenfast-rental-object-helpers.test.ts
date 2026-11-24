@@ -566,5 +566,9 @@ describe('tenfast-rental-object-helpers', () => {
     it('reads ids with padding left around them', () => {
       expect(getNextLeaseId(code, [` ${code}/06  `])).toBe(`${code}/07`)
     })
+
+    it('matches the rental object code trimmed and ignoring case', () => {
+      expect(getNextLeaseId('p123 ', ['P123/04', 'p123/05m'])).toBe('p123/06')
+    })
   })
 })
