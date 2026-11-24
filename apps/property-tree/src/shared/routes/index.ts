@@ -30,6 +30,7 @@ export const routes = {
   homeInsurances: '/hemforsakringar',
   dispatchCentre: '/utskick',
   messageTemplates: '/mallar',
+  homeInsuranceRentRows: '/hemforsakringar/avtalsrader',
   inspections: '/besiktningar',
   imd: '/imd',
   economy: '/economy',

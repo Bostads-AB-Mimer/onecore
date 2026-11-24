@@ -1,6 +1,8 @@
 import KoaRouter from '@koa/router'
 import { Lease, leasing } from '@onecore/types'
 import { mapLeasesToLfExportRows } from '../services/lf-export'
+import * as rentRowsService from '../services/lease-rent-rows'
+import * as leaseCache from '../../../common/lease-cache'
 import { z } from 'zod'
 import {
   getContacts,
@@ -1615,6 +1617,239 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = makeSuccessResponseBody<leasing.LeaseStatusesResponse>(
         result.data,
+        metadata
+      )
+    }
+  )
+
+  /**
+   * @swagger
+   * /leases/rent-rows:
+   *   get:
+   *     summary: List rent rows (avtalsrader) of all leases
+   *     description: |
+   *       One item per rent row, served from the lease cache. Filter on lease
+   *       status, free text (lease id, contact code, article code, label, row
+   *       id) or kind of row. Leave out page to get every matching row.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: query
+   *         name: q
+   *         schema: { type: string }
+   *       - in: query
+   *         name: status
+   *         schema: { type: array, items: { type: string } }
+   *       - in: query
+   *         name: filter
+   *         schema: { type: string, enum: [homeInsurance, sameDate] }
+   *       - in: query
+   *         name: page
+   *         schema: { type: integer }
+   *       - in: query
+   *         name: limit
+   *         schema: { type: integer }
+   *     responses:
+   *       200:
+   *         description: Rent rows.
+   *       400:
+   *         description: Invalid query parameters.
+   *       503:
+   *         description: Lease cache is warming up.
+   */
+  router.get('(.*)/leases/rent-rows', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'q',
+      'status',
+      'filter',
+      'page',
+      'limit',
+    ])
+
+    const queryParams = leasing.v1.LeaseRentRowsQueryParamsSchema.safeParse(
+      ctx.query
+    )
+    if (!queryParams.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: queryParams.error.issues,
+        ...metadata,
+      }
+      return
+    }
+    const params = queryParams.data
+
+    const leases = await tenfastLeaseSearchAdapter.readFreshLeaseCache()
+    if (!leases) {
+      ctx.set('Retry-After', '30')
+      ctx.status = 503
+      ctx.body = {
+        error: 'Lease cache is warming up — retry shortly',
+        ...metadata,
+      }
+      return
+    }
+
+    // Articles only add code and timestamps for display, so a failed
+    // lookup still returns the rows, with those fields empty.
+    const articles = await tenfastAdapter.getArticles().catch((error) => {
+      logger.warn({ error }, 'rent-rows: could not fetch articles')
+      return []
+    })
+
+    const items = rentRowsService.filterRentRowListItems(
+      rentRowsService.toRentRowListItems(
+        leases,
+        articles,
+        config.tenfast.leaseRentRows.homeInsurance.articleId
+      ),
+      params
+    )
+
+    const limit = params.limit ?? 100
+    const content = params.page
+      ? items.slice((params.page - 1) * limit, params.page * limit)
+      : items
+    const body: leasing.v1.LeaseRentRowsResponse = {
+      content,
+      _meta: {
+        totalRecords: items.length,
+        page: params.page ?? 1,
+        limit: params.page ? limit : items.length,
+        count: content.length,
+        syncedAt: leaseCache.getCacheInfo().lastSyncedAt?.toISOString() ?? null,
+      },
+    }
+
+    ctx.status = 200
+    ctx.body = { ...body, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /leases/{leaseId}/rent-rows/home-insurance-end-date:
+   *   post:
+   *     summary: Change T.o.m. (end date) of a home insurance rent row
+   *     description: |
+   *       Only rows with the home insurance article can be changed. Tenfast
+   *       can't edit a row in place, so the row is replaced by an identical
+   *       one with the new end date, which gets a new row id. Returns the
+   *       lease's rent rows as they are in Tenfast after the change.
+   *     tags: [Leases]
+   *     parameters:
+   *       - in: path
+   *         name: leaseId
+   *         required: true
+   *         schema: { type: string }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [rowId, endDate]
+   *             properties:
+   *               rowId: { type: string }
+   *               endDate: { type: string, format: date }
+   *     responses:
+   *       200:
+   *         description: Changed. Body has the lease's rent rows.
+   *       404:
+   *         description: Lease or row not found.
+   *       422:
+   *         description: Row is not home insurance, end date is before start or unchanged.
+   *       500:
+   *         description: Tenfast error.
+   */
+  router.post(
+    '(.*)/leases/:leaseId/rent-rows/home-insurance-end-date',
+    parseRequestBody(leasing.v1.SetHomeInsuranceEndDateRequestSchema),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const leaseId = ctx.params.leaseId
+      const homeInsuranceArticleId =
+        config.tenfast.leaseRentRows.homeInsurance.articleId
+
+      const lease = await tenfastAdapter.getLeaseByExternalId(leaseId)
+      if (!lease.ok) {
+        const notFound = lease.err === 'not-found'
+        if (notFound) {
+          logger.warn({ leaseId }, 'rent-rows: lease not found')
+        } else {
+          logger.error(
+            { leaseId, err: lease.err },
+            'rent-rows: could not fetch lease'
+          )
+        }
+        const error: leasing.v1.SetHomeInsuranceEndDateError = notFound
+          ? 'lease-not-found'
+          : 'lease-fetch-failed'
+        ctx.status = notFound ? 404 : 500
+        ctx.body = { error, ...metadata }
+        return
+      }
+
+      const planned = rentRowsService.planHomeInsuranceEndDate(
+        lease.data,
+        ctx.request.body,
+        homeInsuranceArticleId
+      )
+      if (!planned.ok) {
+        ctx.status = planned.err === 'row-not-found' ? 404 : 422
+        ctx.body = { error: planned.err, ...metadata }
+        return
+      }
+
+      const oldRow = lease.data.hyror.find(
+        (r) => r._id === ctx.request.body.rowId
+      )
+      const update = await tenfastAdapter.updateLeaseInvoiceRows({
+        leaseId,
+        ...planned.plan,
+      })
+      if (!update.ok) {
+        // updateLeaseInvoiceRows already logged the failure
+        const error: leasing.v1.SetHomeInsuranceEndDateError = 'update-failed'
+        ctx.status = 500
+        ctx.body = { error, ...metadata }
+        return
+      }
+
+      logger.info(
+        {
+          leaseId,
+          rowId: ctx.request.body.rowId,
+          oldTo: oldRow?.to ?? null,
+          newTo: ctx.request.body.endDate,
+          ...metadata,
+        },
+        'rent-rows: home insurance end date changed in Tenfast'
+      )
+
+      // Read the lease back so the answer shows what Tenfast actually saved,
+      // and update the cache so the list shows it without waiting for sync.
+      const updated = await tenfastAdapter.getLeaseByExternalId(leaseId)
+      if (!updated.ok) {
+        ctx.status = 200
+        ctx.body = makeSuccessResponseBody(
+          { changed: true, rentRows: null },
+          metadata
+        )
+        return
+      }
+      const cached = tenfastLeaseSearchAdapter.updateCachedLease(updated.data)
+      const articles = await tenfastAdapter.getArticles().catch(() => [])
+
+      ctx.status = 200
+      ctx.body = makeSuccessResponseBody(
+        {
+          changed: true,
+          rentRows: rentRowsService.toRentRowListItems(
+            [cached],
+            articles,
+            homeInsuranceArticleId
+          ),
+        },
         metadata
       )
     }

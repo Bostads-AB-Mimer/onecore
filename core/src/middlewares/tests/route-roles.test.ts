@@ -88,6 +88,24 @@ describe('requiredRolesFor', () => {
     ).toEqual(['home-insurance:write'])
   })
 
+  it('gates the rent row list and export on home-insurance:read alone', () => {
+    expect(requiredRolesFor('/leases/rent-rows', 'GET')).toEqual([
+      'home-insurance:read',
+    ])
+    expect(requiredRolesFor('/leases/rent-rows/export', 'GET')).toEqual([
+      'home-insurance:read',
+    ])
+  })
+
+  it('gates setting a home insurance end date on home-insurance:write alone', () => {
+    expect(
+      requiredRolesFor(
+        '/leases/705-001-01-0101%2F1/rent-rows/home-insurance-end-date',
+        'POST'
+      )
+    ).toEqual(['home-insurance:write'])
+  })
+
   it('gates the open invoice list and export on open-invoices:read alone', () => {
     expect(requiredRolesFor('/reports/open-invoices', 'GET')).toEqual([
       'open-invoices:read',

@@ -610,3 +610,110 @@ export const getHomeInsuranceExport = async (): Promise<
     return { ok: false, err: 'unknown' }
   }
 }
+
+// Leasing answers 503 while its lease cache is warming up after a restart.
+export type GetLeaseRentRowsError = 'warming-up' | 'bad-request' | 'unknown'
+
+/** Rent rows (avtalsrader) of all leases, filtered and paginated by leasing. */
+export const getLeaseRentRows = async (
+  queryParams: leasing.v1.LeaseRentRowsQueryParamsInput
+): Promise<
+  AdapterResult<leasing.v1.LeaseRentRowsResponse, GetLeaseRentRowsError>
+> => {
+  try {
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/leases/rent-rows`,
+      {
+        params: queryParams,
+        // Repeat array params (status=a&status=b), which leasing parses
+        paramsSerializer: { indexes: null },
+        // Set explicitly: the legacy defaults treat every status < 500 as OK
+        validateStatus: () => true,
+      }
+    )
+
+    if (response.status === 503) return { ok: false, err: 'warming-up' }
+    if (response.status === 400) {
+      logger.warn(
+        { status: response.status, error: response.data?.error },
+        'leases/rent-rows rejected the query'
+      )
+      return { ok: false, err: 'bad-request' }
+    }
+    if (response.status !== 200) {
+      logger.error(
+        { status: response.status, error: response.data?.error },
+        'leases/rent-rows returned unexpected status'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return {
+      ok: true,
+      data: leasing.v1.LeaseRentRowsResponseSchema.parse(response.data),
+    }
+  } catch (err: unknown) {
+    logger.error({ err }, 'leasingAdapter.getLeaseRentRows')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+/**
+ * Changes T.o.m. (end date) of one home insurance rent row. Leasing refuses
+ * every other article; its error code is passed through as is.
+ */
+export const setHomeInsuranceEndDate = async (
+  leaseId: string,
+  body: leasing.v1.SetHomeInsuranceEndDateRequest
+): Promise<
+  AdapterResult<
+    leasing.v1.SetHomeInsuranceEndDateResponse,
+    leasing.v1.SetHomeInsuranceEndDateError | 'unknown'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/leases/${encodeURIComponent(leaseId)}/rent-rows/home-insurance-end-date`,
+      body,
+      // Set explicitly: the legacy defaults treat every status < 500 as OK
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      return {
+        ok: true,
+        data: leasing.v1.SetHomeInsuranceEndDateResponseSchema.parse(
+          response.data?.content
+        ),
+      }
+    }
+
+    const reason = leasing.v1.SetHomeInsuranceEndDateErrorSchema.safeParse(
+      response.data?.error
+    )
+    if (reason.success) {
+      const logFields = { status: response.status, error: reason.data, leaseId }
+      if (response.status >= 500) {
+        logger.error(
+          logFields,
+          'leases/rent-rows/home-insurance-end-date failed'
+        )
+      } else {
+        logger.warn(
+          logFields,
+          'leases/rent-rows/home-insurance-end-date refused'
+        )
+      }
+      return { ok: false, err: reason.data }
+    }
+
+    logger.error(
+      { status: response.status, leaseId },
+      'leases/rent-rows/home-insurance-end-date returned unexpected status'
+    )
+    return { ok: false, err: 'unknown' }
+  } catch (err: unknown) {
+    logger.error({ err }, 'leasingAdapter.setHomeInsuranceEndDate')
+    return { ok: false, err: 'unknown' }
+  }
+}

@@ -970,7 +970,10 @@ export {
   getBuildingManagers,
   searchLeases,
   getHomeInsuranceExport,
+  getLeaseRentRows,
+  setHomeInsuranceEndDate,
 } from './leases'
+export type { GetLeaseRentRowsError } from './leases'
 
 export {
   applyForListing,

@@ -71,9 +71,10 @@ const mockedGetParkingSpaceTypesByRentalObjectCode =
 
 const makeLeaseResult = (
   id: string,
-  overrides: Partial<leasing.v1.LeaseSearchResult> = {}
-): leasing.v1.LeaseSearchResult => ({
+  overrides: Partial<leaseCache.CachedLease> = {}
+): leaseCache.CachedLease => ({
   leaseId: id,
+  rentRows: [],
   objectTypeCode: 'Bostad',
   leaseType: LeaseType.HousingContract,
   contacts: [

@@ -11,7 +11,10 @@ import * as tenfastAdapter from './tenfast-adapter'
 import * as leaseCache from '../../../../common/lease-cache'
 import * as xpandEndedLeaseCache from '../../../../common/xpand-ended-lease-cache'
 import { mergeTenfastFirst } from '../../helpers/merge-tenfast-first'
-import type { DeltaSyncResult } from '../../../../common/lease-cache'
+import type {
+  CachedLease,
+  DeltaSyncResult,
+} from '../../../../common/lease-cache'
 import {
   mapTenfastTypToLeaseType,
   calculateLeaseStatus,
@@ -20,6 +23,7 @@ import {
   deriveTenfastLeaseType,
   normaliseRentalObjectCode,
   GARAGE_PARKING_SPACE_TYPE_CODES,
+  mapToOnecoreRentRow,
 } from '../../helpers/tenfast'
 import {
   getRentalObjectCodesByBuildingManager,
@@ -90,6 +94,30 @@ function mapTenfastLeaseToSearchResult(
     status: calculateLeaseStatus(lease),
   }
 }
+
+/** Search result plus rent rows, as kept in the lease cache. */
+export function mapTenfastLeaseToCachedLease(lease: TenfastLease): CachedLease {
+  return {
+    ...mapTenfastLeaseToSearchResult(lease),
+    rentRows: lease.hyror.map(mapToOnecoreRentRow),
+  }
+}
+
+/** Puts a lease just fetched from Tenfast into the cache right away. */
+export function updateCachedLease(lease: TenfastLease): CachedLease {
+  const cached = mapTenfastLeaseToCachedLease(lease)
+  leaseCache.upsert(cached)
+  return cached
+}
+
+// Search and export return only the search result, not the rent rows the
+// cache keeps on Tenfast leases. Xpand rows have none, hence optional.
+const toSearchResult = ({
+  rentRows: _rentRows,
+  ...searchResult
+}: leasing.v1.LeaseSearchResult & {
+  rentRows?: CachedLease['rentRows']
+}): leasing.v1.LeaseSearchResult => searchResult
 
 // objectTypeCode label → UI objectType param; any other label counts as 'ovrigt'.
 const OBJECT_TYPE_LABEL_TO_PARAM: Record<string, string> = {
@@ -321,7 +349,7 @@ function buildSearchPool(
  * Undefined while the cache loads for the first time.
  */
 export async function readFreshLeaseCache(): Promise<
-  leasing.v1.LeaseSearchResult[] | undefined
+  CachedLease[] | undefined
 > {
   if (leaseCache.getAll().length === 0) {
     const ready = await leaseCache.ensureReady(STALE_SYNC_TIMEOUT_MS)
@@ -363,9 +391,10 @@ export async function fetchAllLeasesForExport(
   )
 
   const parkingSpaceTypesByCode = await parkingSpaceTypesPromise
-  if (!parkingSpaceTypesByCode) return rows
+  const searchResults = rows.map(toSearchResult)
+  if (!parkingSpaceTypesByCode) return searchResults
 
-  return rows.map((row) => {
+  return searchResults.map((row) => {
     const typeName = row.rentalObjectCode
       ? parkingSpaceTypesByCode.get(row.rentalObjectCode)
       : undefined
@@ -407,16 +436,14 @@ export async function fetchContactsForLeaseSearch(
  * Fetches all leases for the in-memory cache using full cursor pagination.
  * Uses getAllLeases() which follows the `next` cursor across all pages.
  */
-export async function fetchAllLeasesForCache(): Promise<
-  leasing.v1.LeaseSearchResult[]
-> {
+export async function fetchAllLeasesForCache(): Promise<CachedLease[]> {
   const result = await tenfastAdapter.getAllLeases()
   if (!result.ok) {
     throw new Error(
       `fetchAllLeasesForCache: failed to fetch leases — ${result.err}`
     )
   }
-  return result.data.map((l) => mapTenfastLeaseToSearchResult(l))
+  return result.data.map(mapTenfastLeaseToCachedLease)
 }
 
 /**
@@ -441,7 +468,7 @@ export async function fetchLeasesUpdatedSinceForCache(
   const rest = result.data.filter((l) => l.stage !== 'archived')
 
   return {
-    changed: rest.map((l) => mapTenfastLeaseToSearchResult(l)),
+    changed: rest.map(mapTenfastLeaseToCachedLease),
     removedLeaseIds: archived.map((l) => l.externalId),
   }
 }
@@ -805,7 +832,7 @@ export const searchLeases = async (
   )
 
   return {
-    content: pageSlice,
+    content: pageSlice.map(toSearchResult),
     _meta: { totalRecords: totalCount, page, limit, count: pageSlice.length },
     _links: buildPaginationLinks(ctx, page, limit, totalPages),
   }

@@ -1,4 +1,4 @@
-import { leasing } from '@onecore/types'
+import { leasing, LeaseRentRow } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 type CacheStatus = 'uninitialized' | 'syncing' | 'ready' | 'error'
@@ -7,15 +7,24 @@ const DELTA_BUFFER_MS = 30_000
 const FULL_RESYNC_INTERVAL_MS = 24 * 60 * 60 * 1000
 const INITIAL_SYNC_RETRY_COOLDOWN_MS = 30_000
 
-type FetchFn = () => Promise<leasing.v1.LeaseSearchResult[]>
+/**
+ * A lease as kept in the cache: the search result plus its rent rows, so the
+ * rent row list can be served from the cache too. Search responses strip
+ * rentRows again (see tenfast-lease-search-adapter).
+ */
+export type CachedLease = leasing.v1.LeaseSearchResult & {
+  rentRows: LeaseRentRow[]
+}
+
+type FetchFn = () => Promise<CachedLease[]>
 export type DeltaSyncResult = {
-  changed: leasing.v1.LeaseSearchResult[]
+  changed: CachedLease[]
   removedLeaseIds: string[]
 }
 type DeltaFetchFn = (since: Date) => Promise<DeltaSyncResult>
 
 const state: {
-  leases: leasing.v1.LeaseSearchResult[]
+  leases: CachedLease[]
   lastSyncedAt: Date | null
   status: CacheStatus
   fullFetchFn: FetchFn | null
@@ -36,8 +45,20 @@ export function isReady(): boolean {
   return state.status === 'ready'
 }
 
-export function getAll(): leasing.v1.LeaseSearchResult[] {
+export function getAll(): CachedLease[] {
   return state.leases
+}
+
+/**
+ * Replaces (or adds) one lease right away, e.g. after this service changed it
+ * in Tenfast, so readers don't have to wait for the next delta sync.
+ */
+export function upsert(lease: CachedLease): void {
+  const index = state.leases.findIndex((l) => l.leaseId === lease.leaseId)
+  state.leases =
+    index === -1
+      ? [...state.leases, lease]
+      : state.leases.map((l, i) => (i === index ? lease : l))
 }
 
 export function getCacheInfo() {

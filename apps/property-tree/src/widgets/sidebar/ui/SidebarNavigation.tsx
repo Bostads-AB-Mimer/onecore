@@ -17,6 +17,7 @@ import {
   LayoutTemplate,
   ListOrdered,
   Receipt,
+  Rows3,
   Send,
   Settings,
   ShieldCheck,
@@ -78,6 +79,17 @@ function SidebarNavigationContent() {
   React.useEffect(() => {
     if (isOnUtskickPage) setIsUtskickExpanded(true)
   }, [isOnUtskickPage])
+
+  // Hemförsäkringar group: open while on either of its pages, collapsible otherwise.
+  const isOnHomeInsurancePage =
+    location.pathname === routes.homeInsurances ||
+    location.pathname === routes.homeInsuranceRentRows
+  const [isHomeInsuranceExpanded, setIsHomeInsuranceExpanded] = React.useState(
+    isOnHomeInsurancePage
+  )
+  React.useEffect(() => {
+    if (isOnHomeInsurancePage) setIsHomeInsuranceExpanded(true)
+  }, [isOnHomeInsurancePage])
 
   // Auto-expand logic
   const shouldAutoExpandFastighetsdata =
@@ -178,12 +190,54 @@ function SidebarNavigationContent() {
           icon={FileText}
           label="Hyreskontrakt"
         />
+        {/* HEMFÖRSÄKRINGAR - collapsible with Avtalsrader nested under it */}
         <RequireRole roles={[HOME_INSURANCE_READ_ROLE]}>
-          <SidebarNavLink
-            to={routes.homeInsurances}
-            icon={ShieldCheck}
-            label="Hemförsäkringar"
-          />
+          <Collapsible
+            open={isHomeInsuranceExpanded}
+            onOpenChange={setIsHomeInsuranceExpanded}
+            className="group/home-insurance-collapsible"
+          >
+            <SidebarGroup>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === routes.homeInsurances}
+                      tooltip="Hemförsäkringar"
+                    >
+                      <Link to={routes.homeInsurances}>
+                        <ShieldCheck />
+                        <span>Hemförsäkringar</span>
+                        <ChevronRight className="ml-auto transition-transform group-data-[state=open]/home-insurance-collapsible:rotate-90" />
+                      </Link>
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent>
+                    <SidebarGroupContent className="ml-4">
+                      <SidebarMenu>
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={
+                              location.pathname === routes.homeInsuranceRentRows
+                            }
+                            tooltip="Avtalsrader"
+                          >
+                            <Link to={routes.homeInsuranceRentRows}>
+                              <Rows3 />
+                              <span>Avtalsrader</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroup>
+          </Collapsible>
         </RequireRole>
         {/* UTSKICK - collapsible with Mallar nested under it */}
         <Collapsible
