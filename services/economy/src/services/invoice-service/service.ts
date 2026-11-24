@@ -63,6 +63,7 @@ import {
   getInvoicesByOcr,
   getRentalLosses,
   getRecipientCodesOfInvoicesNotExported,
+  ParsedTenfastInvoice,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import config, { isRentalLossExcludedAccount } from '@src/common/config'
 import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
@@ -335,9 +336,45 @@ const hasRentNoticePdf = (tenfastInvoice: Invoice): boolean =>
   tenfastInvoice.invoiceId !== ''
 
 /*
+ * Tenfast invoices for a shared lease billed to the other lease holder are
+ * missed by the contact-scoped Xledger lookup, so they are looked up by
+ * invoice number. Best-effort: on failure they stay Tenfast-only.
+ */
+const getXledgerInvoicesMissedForContact = async (
+  tenfastInvoices: ParsedTenfastInvoice[],
+  xledgerInvoices: ParsedXledgerInvoice[],
+  contactCode: string
+): Promise<ParsedXledgerInvoice[]> => {
+  const xledgerInvoiceIds = new Set(
+    xledgerInvoices.map((parsed) => parsed.invoice.invoiceId)
+  )
+  // Credited Tenfast invoices have no OCR (invoiceId is '') to look up.
+  const missedInvoiceIds = tenfastInvoices
+    .map((parsed) => parsed.invoice.invoiceId)
+    .filter(
+      (invoiceId) => invoiceId !== '' && !xledgerInvoiceIds.has(invoiceId)
+    )
+  if (missedInvoiceIds.length === 0) {
+    return []
+  }
+
+  try {
+    return await getXledgerInvoicesByInvoiceNumbers(missedInvoiceIds)
+  } catch {
+    logger.warn(
+      { contactCode },
+      'getInvoicesByContactCode: could not look up Tenfast invoices in Xledger by invoice number, returning them from Tenfast'
+    )
+    return []
+  }
+}
+
+/*
  * A contact's invoices from Xledger, Tenfast and Xpand.
  *
- * Xledger is the base list. Tenfast adds invoices not yet in Xledger, Xpand
+ * Xledger is the base list, including invoices on a shared lease billed to a
+ * co-holder that are looked up by invoice number. Tenfast adds invoices not
+ * yet in Xledger, Xpand
  * adds invoices that predate Xledger (the contact's own, and those billed to
  * a co-holder on a shared lease). For the period and the invoice rows,
  * Tenfast takes precedence over Xpand, and Xpand over Xledger.
@@ -352,7 +389,15 @@ export const getInvoicesByContactCode = async (
     getTenfastInvoicesByContactCode(contactCode, { from }),
     getXpandInvoicesIfAvailable(contactCode, from),
   ])
-  const xledgerInvoices = xledgerResult ?? []
+  const contactXledgerInvoices = xledgerResult ?? []
+  const xledgerInvoices = [
+    ...contactXledgerInvoices,
+    ...(await getXledgerInvoicesMissedForContact(
+      tenfastInvoices,
+      contactXledgerInvoices,
+      contactCode
+    )),
+  ]
   const isXpandAvailable = xpandResult !== undefined
   const xpandInvoices = xpandResult ?? []
 
