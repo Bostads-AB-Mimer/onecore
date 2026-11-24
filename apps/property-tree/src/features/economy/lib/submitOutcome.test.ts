@@ -5,20 +5,7 @@ import { SubmitMiscellaneousInvoiceError } from '@/services/api/core/economyServ
 
 import { getSubmitOutcome } from './submitOutcome'
 
-// The real baseApi reads the app environment at import, so it is replaced.
-vi.mock('@/services/api/core/baseApi', () => ({
-  GET: vi.fn(),
-  POST: vi.fn(),
-  PUT: vi.fn(),
-  ApiError: class ApiError extends Error {
-    constructor(
-      public status: number,
-      message: string
-    ) {
-      super(message)
-    }
-  },
-}))
+vi.mock('@/services/api/core/baseApi')
 
 const submitError = (
   status: number,
