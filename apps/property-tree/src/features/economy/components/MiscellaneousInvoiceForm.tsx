@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
   MiscellaneousInvoicePayload,
   MiscellaneousInvoiceRow,
@@ -9,7 +9,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
-import { AlertTriangle, CalendarIcon } from 'lucide-react'
+import { CalendarIcon } from 'lucide-react'
 
 import { useLeasesByContactCode } from '@/entities/lease'
 import { useRentalProperties } from '@/entities/rental-property'
@@ -22,8 +22,6 @@ import { economyService } from '@/services/api/core/economyService'
 
 import { useToast } from '@/shared/hooks/useToast'
 import { cn } from '@/shared/lib/utils'
-import { routes } from '@/shared/routes'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/Alert'
 import { Button } from '@/shared/ui/Button'
 import { Calendar } from '@/shared/ui/Calendar'
 import { Card } from '@/shared/ui/Card'
@@ -51,6 +49,7 @@ import {
   MiscellaneousInvoiceReceiptData,
 } from './MiscellaneousInvoiceReceipt'
 import { TenantSearchSection } from './TenantSearchSection'
+import { UnknownSubmitOutcomeAlert } from './UnknownSubmitOutcomeAlert'
 
 interface FormErrors {
   reference?: string
@@ -76,7 +75,8 @@ export function MiscellaneousInvoiceForm() {
   const [receipt, setReceipt] =
     useState<MiscellaneousInvoiceReceiptData | null>(null)
   // The last send failed in a way where the invoice may still have been created
-  const [outcomeUnknown, setOutcomeUnknown] = useState(false)
+  const [unknownOutcome, setUnknownOutcome] =
+    useState<MiscellaneousInvoiceReceiptData | null>(null)
 
   const submitInvoiceMutation = useMutation({
     mutationFn: async ({
@@ -89,14 +89,17 @@ export function MiscellaneousInvoiceForm() {
     },
     onSuccess: (_data, variables) => {
       setReceipt(variables.receipt)
+      // A reload on the receipt must not prefill the same customer again
+      setContactCodeParam(null)
       scrollToTop()
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, variables) => {
       const outcome = getSubmitOutcome(error)
 
       if (outcome.kind === 'unknown') {
         // Never suggest sending again here: the invoice may already exist
-        setOutcomeUnknown(true)
+        setUnknownOutcome(variables.receipt)
+        scrollToTop()
         return
       }
 
@@ -297,7 +300,7 @@ export function MiscellaneousInvoiceForm() {
 
     const rows = buildInvoiceRowsForSubmission(invoiceRows, administrativeCosts)
 
-    setOutcomeUnknown(false)
+    setUnknownOutcome(null)
     setIsSubmitting(true)
 
     // Xledger only accepts one attachment, so multiple files are merged into
@@ -398,6 +401,10 @@ export function MiscellaneousInvoiceForm() {
       <Card className="p-4">
         Nytt ströfaktura-underlag
         <div className="space-y-6">
+          {unknownOutcome && (
+            <UnknownSubmitOutcomeAlert invoice={unknownOutcome} />
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-3">
               <Label>Datum</Label>
@@ -529,25 +536,6 @@ export function MiscellaneousInvoiceForm() {
           </div>
 
           <Separator />
-
-          {outcomeUnknown && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Vi vet inte om underlaget kom fram</AlertTitle>
-              <AlertDescription>
-                Kontrollera i{' '}
-                <Link to={routes.miscellaneousInvoices} className="underline">
-                  listan över ströfakturor
-                </Link>{' '}
-                eller med{' '}
-                <a href="mailto:ekonomi@mimer.nu" className="underline">
-                  ekonomi@mimer.nu
-                </a>{' '}
-                innan du skickar underlaget igen, annars kan kunden få dubbla
-                fakturor.
-              </AlertDescription>
-            </Alert>
-          )}
 
           <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
             <Button

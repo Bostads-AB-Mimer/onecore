@@ -31,4 +31,4 @@ The form is only sent with the send button; Enter in a field does not submit it.
 
 - **200**: a receipt with customer, lease and amount replaces the form until staff choose to create a new invoice.
 - **4xx, `customer-creation-failed`, `customer-not-found-after-create`**: the invoice was not sent. A toast explains why and the form keeps its values.
-- **500 `unknown`, any other 5xx, network failure or timeout**: the invoice may have been created. A persistent warning asks staff to check the list of miscellaneous invoices or with the finance team before sending again. It never says "try again", and nothing is resent automatically. The warning stays when the form is cleared and goes away only when staff send again.
+- **500 `unknown`, any other 5xx, network failure or timeout**: the invoice may have been created. A persistent warning at the top of the form names the customer, lease and amount and asks staff to check the list of miscellaneous invoices or with the finance team before sending again. It never says "try again", and nothing is resent automatically. The warning stays when the form is cleared and goes away only when staff send again.
