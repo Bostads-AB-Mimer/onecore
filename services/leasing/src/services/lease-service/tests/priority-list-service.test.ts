@@ -42,6 +42,19 @@ describe(isTenantAboutToLeave, () => {
     expect(isTenantAboutToLeave(underNotice, upcoming)).toBe(false)
   })
 
+  it.each([
+    ['a draft', LeaseStatus.NotSent],
+    ['waiting for signature', LeaseStatus.PendingSignature],
+  ])('is true when the upcoming housing contract is %s', (_label, status) => {
+    const unsignedUpcoming = factory.lease.build({
+      type: leaseTypes.housingContract,
+      status,
+      leaseStartDate: thirtyDaysInTheFutureDate,
+    })
+
+    expect(isTenantAboutToLeave(underNotice, unsignedUpcoming)).toBe(true)
+  })
+
   it('is false when the current housing contract is not under notice', () => {
     expect(isTenantAboutToLeave(notUnderNotice, undefined)).toBe(false)
   })

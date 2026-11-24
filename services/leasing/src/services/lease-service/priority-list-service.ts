@@ -290,18 +290,21 @@ const isLeaseAboutToEnd = (lease: Lease) => {
 
 // The tenant is moving out: they have a signed, scheduled notice on their
 // current housing contract (status AboutToEnd, Tenfast stage
-// terminationScheduled) and no upcoming housing contract. They still count as
-// a tenant until the lease ends (VAT on the parking spaces they already have),
-// but they may not rent a new internal (scored) parking space.
+// terminationScheduled) and no signed upcoming housing contract. They still
+// count as a tenant until the lease ends (VAT on the parking spaces they
+// already have), but they may not rent a new internal (scored) parking space.
 // Only the status counts, not the end date: a notice still waiting for the
 // tenant's signature (PreliminaryTerminated) and a fixed-term lease without
 // notice have an end date but don't block, nor does a withdrawn notice whose
 // end date Tenfast left behind on an active lease.
+// Likewise only a signed upcoming lease (status Upcoming) lifts the block: a
+// draft (NotSent) or a lease waiting for signature (PendingSignature) can be
+// left behind in Tenfast and never start.
 const isTenantAboutToLeave = (
   currentHousingContract: Lease | undefined,
   upcomingHousingContract: Lease | undefined
 ): boolean =>
-  !upcomingHousingContract &&
+  upcomingHousingContract?.status !== LeaseStatus.Upcoming &&
   currentHousingContract?.status === LeaseStatus.AboutToEnd
 
 const parseLeasesForParkingSpaces = (
