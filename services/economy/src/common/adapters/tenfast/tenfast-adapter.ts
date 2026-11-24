@@ -657,29 +657,6 @@ export const getInvoiceArticle = async (
   }
 }
 
-let rentArticles: TenfastRentArticle[]
-
-const retrieveRentArticles = async () => {
-  const result = await makeTenfastRequest(`/v1/hyresvard/articles`)
-
-  if (result.status !== 200) {
-    logger.error(result.status)
-    throw new Error('Could not retrieve rent articles from Tenfast')
-  }
-
-  const correctArticles = result.data.filter((article: any) => article.category)
-
-  const parsedResponse = z
-    .array(TenfastRentArticleSchema)
-    .safeParse(correctArticles)
-  if (!parsedResponse.success) {
-    logger.error(parsedResponse)
-    throw new Error('Could not retrieve rent articles from Tenfast')
-  }
-
-  rentArticles = parsedResponse.data
-}
-
 /*const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
   const remainingAmount = tenfastInvoice.amount - tenfastInvoice.amountPaid
 

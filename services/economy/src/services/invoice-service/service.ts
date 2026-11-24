@@ -58,8 +58,6 @@ import {
   getInvoiceByOcr,
   setGracePeriod,
   getInvoicesByContactCode as getTenfastInvoicesByContactCode,
-  getInvoicesForTenant,
-  getTenantByContactCode,
   getAutogiroConsentByNationalRegistrationNumber,
   getInvoicesNotExported,
   getInvoicesByOcr,
@@ -620,68 +618,6 @@ export const getInvoiceDetails = async (
   })
 }
 
-export const getInvoiceDetailsForContactCode = async (
-  contactCode: string,
-  from?: Date
-): Promise<Invoice[]> => {
-  const tenfastTenantResult = await getTenantByContactCode(contactCode)
-  if (!tenfastTenantResult.ok || tenfastTenantResult.data === null) {
-    return []
-  }
-
-  const tenfastInvoicesResult = await getInvoicesForTenant(
-    tenfastTenantResult.data._id,
-    from
-  )
-  if (!tenfastInvoicesResult.ok) {
-    return []
-  }
-
-  return enrichInvoices(
-    tenfastInvoicesResult.data.map((parsed) =>
-      withInvoiceDeferral(parsed.invoice, {
-        tenfastDeferral: parsed.tenfastDeferral,
-      })
-    )
-  )
-}
-
-const enrichInvoices = async (invoices: Invoice[]): Promise<Invoice[]> => {
-  const allInvoiceRows = invoices.flatMap((i) => i.invoiceRows)
-  const articleIds = allInvoiceRows.reduce<string[]>((acc, ir) => {
-    if (ir.rentArticle) {
-      acc.push(ir.rentArticle)
-    }
-    return acc
-  }, [])
-
-  const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticle(id))
-  )
-  const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
-    if (ar.ok) {
-      acc.push(ar.data)
-    }
-    return acc
-  }, [])
-
-  return invoices.map((i): Invoice => {
-    return {
-      ...i,
-      invoiceRows: i.invoiceRows.map((ir) => {
-        const article = articles.find((a) => {
-          return a._id === ir.rentArticle
-        })
-
-        return {
-          ...ir,
-          invoiceRowText: article?.title ?? null,
-        }
-      }),
-    }
-  })
-}
-
 const enrichInvoiceRowsWithText = async (
   invoiceRows: InvoiceRow[]
 ): Promise<InvoiceRow[]> => {
@@ -692,8 +628,9 @@ const enrichInvoiceRowsWithText = async (
     return acc
   }, [])
 
+  // One lookup per article, even when several rows use it.
   const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticle(id))
+    [...new Set(articleIds)].map((id) => getInvoiceArticle(id))
   )
   const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
     if (ar.ok) {

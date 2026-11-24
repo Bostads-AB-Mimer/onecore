@@ -381,8 +381,8 @@ describe('Rental Invoice Service', () => {
 
       const result = await getInvoiceDetails('55123456')
 
-      // Should call getInvoiceArticle for each unique article ID
-      expect(mockGetInvoiceArticle).toHaveBeenCalledTimes(2)
+      // Should call getInvoiceArticle once per unique article ID
+      expect(mockGetInvoiceArticle).toHaveBeenCalledTimes(1)
       expect(mockGetInvoiceArticle).toHaveBeenCalledWith('HYRAB')
 
       expect(result).toEqual({
