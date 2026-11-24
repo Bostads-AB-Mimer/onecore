@@ -378,7 +378,8 @@ export function MiscellaneousInvoiceForm() {
     setAttachedFiles([])
     setErrors({})
     setContactCodeParam(null)
-    setOutcomeUnknown(false)
+    // The unknown-outcome warning is kept on purpose: clearing the form does
+    // not tell us whether the last invoice basis reached Xledger
     setReceipt(null)
     scrollToTop()
   }
