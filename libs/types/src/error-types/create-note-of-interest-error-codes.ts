@@ -3,6 +3,9 @@ enum CreateNoteOfInterestErrorCodes {
   ParkingspaceNotInternal = 'parkingspace-not-internal',
   ApplicantNotFound = 'applicant-not-found',
   ApplicantNotTenant = 'applicant-not-tenant',
+  // The applicant has given notice on their only housing contract and has no
+  // upcoming one, so they may not rent a scored parking space.
+  HousingContractTerminated = 'housing-contract-terminated',
   NotEligibleToRent = 'not-eligible-to-rent',
   InternalCreditCheckFailed = 'internal-credit-check-failed',
   InternalError = 'internal-error',

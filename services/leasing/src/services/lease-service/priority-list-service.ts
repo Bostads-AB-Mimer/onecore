@@ -60,6 +60,22 @@ const assignPriorityToApplicantBasedOnRentalRules = (
   }
 
   if (
+    isTenantAboutToLeave(
+      applicant.currentHousingContract,
+      applicant.upcomingHousingContract
+    )
+  ) {
+    logger.info(
+      { contactCode: applicant.contactCode, listingId: listing.id },
+      'priority null - Applicant has given notice on their only housing contract and has no upcoming housing contract'
+    )
+    return {
+      ...applicant,
+      priority: null,
+    }
+  }
+
+  if (
     listing.rentalObject.residentialAreaCode &&
     isListingInAreaWithSpecificRentalRules(
       listing.rentalObject.residentialAreaCode
@@ -257,13 +273,11 @@ const isCurrentLease = (lease: Lease, currentDate: Date) => {
   return hasLeaseStarted && compatibleLastDebitDate
 }
 
-const isUpcomingLease = (lease: Lease, currentDate: Date) => {
-  const lastDebitDateNotSet =
-    lease.lastDebitDate === null || lease.lastDebitDate === undefined
-  const isLeaseUpcoming = lease.leaseStartDate > currentDate
-
-  return lastDebitDateNotSet && isLeaseUpcoming
-}
+// A lease that starts in the future, with or without an end date: a
+// fixed-term lease to come (e.g. a student apartment) counts too. Leases that
+// have ended are filtered out before this (isLeaseActiveOrUpcoming).
+const isUpcomingLease = (lease: Lease, currentDate: Date) =>
+  lease.leaseStartDate > currentDate
 
 const isLeaseAboutToEnd = (lease: Lease) => {
   const currentDate = new Date()
@@ -273,6 +287,25 @@ const isLeaseAboutToEnd = (lease: Lease) => {
 
   return !!lastDebitDate && currentDate <= lastDebitDate
 }
+
+// The tenant is moving out: they have a signed, scheduled notice on their
+// current housing contract (status AboutToEnd, Tenfast stage
+// terminationScheduled) and no signed upcoming housing contract. They still
+// count as a tenant until the lease ends (VAT on the parking spaces they
+// already have), but they may not rent a new internal (scored) parking space.
+// Only the status counts, not the end date: a notice still waiting for the
+// tenant's signature (PreliminaryTerminated) and a fixed-term lease without
+// notice have an end date but don't block, nor does a withdrawn notice whose
+// end date Tenfast left behind on an active lease.
+// Likewise only a signed upcoming lease (status Upcoming) lifts the block: a
+// draft (NotSent) or a lease waiting for signature (PendingSignature) can be
+// left behind in Tenfast and never start.
+const isTenantAboutToLeave = (
+  currentHousingContract: Lease | undefined,
+  upcomingHousingContract: Lease | undefined
+): boolean =>
+  upcomingHousingContract?.status !== LeaseStatus.Upcoming &&
+  currentHousingContract?.status === LeaseStatus.AboutToEnd
 
 const parseLeasesForParkingSpaces = (
   leases: Array<Lease & { propertyType?: string }>
@@ -288,4 +321,5 @@ export {
   parseLeasesForParkingSpaces,
   isLeaseActiveOrUpcoming,
   isLeaseAboutToEnd,
+  isTenantAboutToLeave,
 }

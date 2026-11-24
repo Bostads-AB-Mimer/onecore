@@ -4,6 +4,7 @@ import {
   addPriorityToApplicantsBasedOnRentalRules,
   assignPriorityToApplicantBasedOnRentalRules,
   isLeaseActiveOrUpcoming,
+  isTenantAboutToLeave,
   parseLeasesForHousingContracts,
   parseLeasesForParkingSpaces,
   sortApplicantsBasedOnRentalRules,
@@ -16,6 +17,87 @@ import { addDays, parseISO } from 'date-fns'
 const currentDate = new Date()
 const thirtyDaysInThePastDate = addDays(currentDate, -30)
 const thirtyDaysInTheFutureDate = addDays(currentDate, 30)
+
+describe(isTenantAboutToLeave, () => {
+  const underNotice = factory.lease.build({
+    type: leaseTypes.housingContract,
+    status: LeaseStatus.AboutToEnd,
+    lastDebitDate: thirtyDaysInTheFutureDate,
+  })
+  const notUnderNotice = factory.lease.build({
+    type: leaseTypes.housingContract,
+    lastDebitDate: undefined,
+  })
+  const upcoming = factory.lease.build({
+    type: leaseTypes.housingContract,
+    status: LeaseStatus.Upcoming,
+    leaseStartDate: thirtyDaysInTheFutureDate,
+  })
+
+  it('is true when the only housing contract is under notice', () => {
+    expect(isTenantAboutToLeave(underNotice, undefined)).toBe(true)
+  })
+
+  it('is false when there is an upcoming housing contract', () => {
+    expect(isTenantAboutToLeave(underNotice, upcoming)).toBe(false)
+  })
+
+  it.each([
+    ['a draft', LeaseStatus.NotSent],
+    ['waiting for signature', LeaseStatus.PendingSignature],
+  ])('is true when the upcoming housing contract is %s', (_label, status) => {
+    const unsignedUpcoming = factory.lease.build({
+      type: leaseTypes.housingContract,
+      status,
+      leaseStartDate: thirtyDaysInTheFutureDate,
+    })
+
+    expect(isTenantAboutToLeave(underNotice, unsignedUpcoming)).toBe(true)
+  })
+
+  it('is false when the current housing contract is not under notice', () => {
+    expect(isTenantAboutToLeave(notUnderNotice, undefined)).toBe(false)
+  })
+
+  it('is false without a current housing contract', () => {
+    expect(isTenantAboutToLeave(undefined, upcoming)).toBe(false)
+  })
+
+  it('is false for a fixed-term housing contract without notice', () => {
+    const fixedTerm = factory.lease.build({
+      type: leaseTypes.housingContract,
+      status: LeaseStatus.Current,
+      lastDebitDate: thirtyDaysInTheFutureDate,
+    })
+
+    expect(isTenantAboutToLeave(fixedTerm, undefined)).toBe(false)
+  })
+
+  it('is false while the notice still waits for the tenant to sign it', () => {
+    // Tenfast stage terminationSigningInProgress: the end date comes from the
+    // signing request (preliminaryEndDate).
+    const noticeNotSigned = factory.lease.build({
+      type: leaseTypes.housingContract,
+      status: LeaseStatus.PreliminaryTerminated,
+      lastDebitDate: thirtyDaysInTheFutureDate,
+    })
+
+    expect(isTenantAboutToLeave(noticeNotSigned, undefined)).toBe(false)
+  })
+
+  it('is false when the notice was withdrawn and the end date left behind', () => {
+    // An active lease (status Current) that kept the end date of a withdrawn
+    // notice, as getLeasedUntil in tenfast-rental-object-helpers allows for.
+    const noticeWithdrawn = factory.lease.build({
+      type: leaseTypes.housingContract,
+      status: LeaseStatus.Current,
+      noticeGivenBy: 'tenant',
+      lastDebitDate: thirtyDaysInTheFutureDate,
+    })
+
+    expect(isTenantAboutToLeave(noticeWithdrawn, undefined)).toBe(false)
+  })
+})
 
 describe(isLeaseActiveOrUpcoming, () => {
   it('keeps a terminated lease that still runs, even when terminationDate has passed', () => {
@@ -269,6 +351,30 @@ describe('parseLeasesForHousingContract', () => {
     }
   })
 
+  it('returns a fixed-term housing contract to come as the upcoming housing contract', () => {
+    const underNotice = factory.lease.build({
+      type: leaseTypes.housingContract,
+      leaseStartDate: parseISO('2022-02-01T00:00:00.000Z'),
+      lastDebitDate: thirtyDaysInTheFutureDate,
+      status: LeaseStatus.AboutToEnd,
+    })
+    const upcomingFixedTerm = factory.lease.build({
+      type: leaseTypes.housingContract,
+      leaseStartDate: thirtyDaysInTheFutureDate,
+      lastDebitDate: addDays(currentDate, 365),
+      status: LeaseStatus.Upcoming,
+    })
+
+    const result = parseLeasesForHousingContracts([
+      underNotice,
+      upcomingFixedTerm,
+    ])
+
+    assert(result)
+    expect(result[0]?.leaseId).toBe(underNotice.leaseId)
+    expect(result[1]?.leaseId).toBe(upcomingFixedTerm.leaseId)
+  })
+
   it('should return undefined for leases without housing contract', async () => {
     const result = parseLeasesForHousingContracts([])
     expect(result).toBeUndefined()
@@ -407,6 +513,86 @@ describe('assignPriorityToApplicantBasedOnRentalRules', () => {
     )
 
     expect(result.priority).toBe(1)
+  })
+
+  describe('applicant has given notice on their only housing contract', () => {
+    const listing = factory.listing
+      .params({
+        rentalObject: factory.rentalObject
+          .params({ residentialAreaCode: 'XYZ' })
+          .build(),
+      })
+      .build()
+
+    const housingContractUnderNotice = factory.lease
+      .params({
+        type: leaseTypes.housingContract,
+        residentialArea: { code: 'XYZ' },
+        status: LeaseStatus.AboutToEnd,
+        lastDebitDate: thirtyDaysInTheFutureDate,
+      })
+      .build()
+
+    it('gets no priority without an upcoming housing contract', () => {
+      const applicant = factory.detailedApplicant
+        .params({
+          currentHousingContract: housingContractUnderNotice,
+          upcomingHousingContract: undefined,
+          listingId: listing.id,
+        })
+        .build()
+
+      const result = assignPriorityToApplicantBasedOnRentalRules(
+        listing,
+        applicant
+      )
+
+      expect(result.priority).toBeNull()
+    })
+
+    it('gets no priority when replacing a parking space they already have', () => {
+      const applicant = factory.detailedApplicant
+        .params({
+          applicationType: 'Replace',
+          parkingSpaceContracts: [
+            factory.lease.build({ status: LeaseStatus.Current }),
+          ],
+          currentHousingContract: housingContractUnderNotice,
+          upcomingHousingContract: undefined,
+          listingId: listing.id,
+        })
+        .build()
+
+      const result = assignPriorityToApplicantBasedOnRentalRules(
+        listing,
+        applicant
+      )
+
+      expect(result.priority).toBeNull()
+    })
+
+    it('keeps their priority with an upcoming housing contract', () => {
+      const applicant = factory.detailedApplicant
+        .params({
+          currentHousingContract: housingContractUnderNotice,
+          upcomingHousingContract: factory.lease
+            .params({
+              type: leaseTypes.housingContract,
+              residentialArea: { code: 'XYZ' },
+              status: LeaseStatus.Upcoming,
+            })
+            .build(),
+          listingId: listing.id,
+        })
+        .build()
+
+      const result = assignPriorityToApplicantBasedOnRentalRules(
+        listing,
+        applicant
+      )
+
+      expect(result.priority).toBe(1)
+    })
   })
 
   it('applicant should get priority 1 if has active parking space contract and applicationType equals Replace', () => {

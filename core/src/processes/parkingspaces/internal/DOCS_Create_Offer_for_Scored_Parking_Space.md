@@ -11,6 +11,8 @@ Ett erbjudande om en poängsatt bilplats skapas till nästa berättigade sökand
 
 Oavsett hur den startar går processen igenom kölistan i prioritetsordning och diskvalificerar sökande som inte uppfyller områdes- eller fastighetsspecifika uthyrningsregler, tills en berättigad sökande hittas. Den sökanden får ett erbjudande via e-post, som kan [accepteras](./DOCS_Accept_Offer.md) eller [nekas](./DOCS_Deny_Offer.md). Hittas ingen berättigad sökande stängs annonsen.
 
+Sökande utan prioritet hoppas över. Det gäller bland annat den som har en undertecknad uppsägning på sitt enda bostadskontrakt och saknar kommande bostadskontrakt, även om uppsägningen kom efter ansökan. Ansökan ligger kvar men leder aldrig till ett erbjudande.
+
 ## Flödesdiagram
 
 Processens beslutslogik: vilka kontroller som styr om flödet går vidare till nästa steg, och vad som händer vid godkännande, nekande eller fel. System- och integrationsdetaljer är medvetet utelämnade här — se sekvensdiagrammet nedan för det.
