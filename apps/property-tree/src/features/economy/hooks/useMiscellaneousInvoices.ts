@@ -3,12 +3,14 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 
 import { economyService } from '@/services/api/core/economyService'
 
+export const miscellaneousInvoicesQueryKey = ['miscellaneous-invoices']
+
 export function useMiscellaneousInvoices(filters?: {
   from?: string
   to?: string
 }) {
   const query = useInfiniteQuery({
-    queryKey: ['miscellaneous-invoices', filters?.from, filters?.to],
+    queryKey: [...miscellaneousInvoicesQueryKey, filters?.from, filters?.to],
     queryFn: ({ pageParam }) =>
       economyService.getMiscellaneousInvoices({
         from: filters?.from,

@@ -56,7 +56,8 @@ export function MiscellaneousInvoiceReceipt({
         <dt className="text-muted-foreground">Antal rader</dt>
         <dd>{receipt.rowCount}</dd>
         <dt className="text-muted-foreground">Belopp</dt>
-        <dd className="font-medium">{formatCurrency(receipt.total)}</dd>
+        {/* Shown with öre so staff can check it against what they entered */}
+        <dd className="font-medium">{formatCurrency(receipt.total, 2)}</dd>
       </dl>
 
       <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
