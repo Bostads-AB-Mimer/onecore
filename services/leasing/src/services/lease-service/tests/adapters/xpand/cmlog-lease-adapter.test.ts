@@ -460,7 +460,7 @@ describe('parseLeaseChanges', () => {
       const rows = [
         {
           logmemo:
-            "Hyreskontrakt 508-007-10-0201/09M2, KARLFELDTSGATAN 38 A, P140676, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.",
+            "Hyreskontrakt 100-001-01-0001/09M2, TESTGATAN 1, P000001, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.",
           logtime: new Date('2026-11-18T10:00:00Z'),
         },
       ]
@@ -472,16 +472,16 @@ describe('parseLeaseChanges', () => {
       const rows = [
         {
           logmemo:
-            "Hyreskontrakt 508-007-10-0201/09M2, KARLFELDTSGATAN 38 A, P140676, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.\nVärdet i fältet 'Makulerat datum' ändrat från '' till '2026-11-18'.\nVärdet i fältet 'Kontraktsnummer' ändrat från '508-007-10-0201/09' till '508-007-10-0201/09M2'.",
+            "Hyreskontrakt 100-001-01-0001/09M2, TESTGATAN 1, P000001, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.\nVärdet i fältet 'Makulerat datum' ändrat från '' till '2026-11-18'.\nVärdet i fältet 'Kontraktsnummer' ändrat från '100-001-01-0001/09' till '100-001-01-0001/09M2'.",
           logtime: new Date('2026-11-18T10:00:00Z'),
         },
       ]
 
       expect(parseLeaseChanges(rows)).toEqual([
         {
-          leaseId: '508-007-10-0201/09',
-          contactCode: 'P140676',
-          rentalObjectId: '508-007-10-0201',
+          leaseId: '100-001-01-0001/09',
+          contactCode: 'P000001',
+          rentalObjectId: '100-001-01-0001',
           action: 'void',
           timestamp: new Date('2026-11-18T10:00:00Z'),
         },
@@ -492,21 +492,21 @@ describe('parseLeaseChanges', () => {
       const rows = [
         {
           logmemo:
-            "Hyreskontrakt 508-007-10-0201/02, KARLFELDTSGATAN 38 A, P140676, Bostadskontrakt (Kommande)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-17'.",
+            "Hyreskontrakt 100-001-01-0001/02, TESTGATAN 1, P000001, Bostadskontrakt (Kommande)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-17'.",
           logtime: new Date('2026-11-17T10:00:00Z'),
         },
         {
           logmemo:
-            "Hyreskontrakt 508-007-10-0201/02M2, KARLFELDTSGATAN 38 A, P140676, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.",
+            "Hyreskontrakt 100-001-01-0001/02M2, TESTGATAN 1, P000001, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.",
           logtime: new Date('2026-11-18T10:00:00Z'),
         },
       ]
 
       expect(parseLeaseChanges(rows)).toEqual([
         {
-          leaseId: '508-007-10-0201/02',
-          contactCode: 'P140676',
-          rentalObjectId: '508-007-10-0201',
+          leaseId: '100-001-01-0001/02',
+          contactCode: 'P000001',
+          rentalObjectId: '100-001-01-0001',
           action: 'create',
           timestamp: new Date('2026-11-17T10:00:00Z'),
         },
