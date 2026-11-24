@@ -259,6 +259,7 @@ describe('Invoice Service', () => {
       expect(() =>
         schemas.v1.InvoiceSchema.parse(res.body.content)
       ).not.toThrow()
+      expect(res.body.content.invoiceRows[0].invoiceRowText).toBe('Hyra bostad')
     })
 
     it('accepts invoice numbers with a K suffix', async () => {
