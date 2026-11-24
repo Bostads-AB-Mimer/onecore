@@ -355,6 +355,23 @@ export const getInvoicesByContactCode = async (
 }
 
 /**
+ * The article code (e.g. HYRAB) for each Tenfast article id, looked up once
+ * per id. An article that can't be fetched is left out; getInvoiceArticle
+ * logs the failure.
+ */
+export const getArticleCodesById = async (
+  articleIds: string[]
+): Promise<Map<string, string>> => {
+  const entries = await Promise.all(
+    [...new Set(articleIds)].map(async (articleId) => {
+      const result = await getInvoiceArticle(articleId)
+      return result.ok ? ([[articleId, result.data.code]] as const) : []
+    })
+  )
+  return new Map(entries.flat())
+}
+
+/**
  * Tenfast invoice rows reference their article by Tenfast's internal id.
  * Shown to users, replace it with the article code (e.g. HYRAB). Only on
  * this read path: the accounting export looks articles up by id. A row whose
@@ -364,19 +381,8 @@ const replaceRentArticleIdsWithCodes = async (
   invoices: ParsedTenfastInvoice[]
 ) => {
   const rows = invoices.flatMap((parsed) => parsed.invoice.invoiceRows)
-  const articleIds = [
-    ...new Set(
-      rows.flatMap((row) => (row.rentArticle ? [row.rentArticle] : []))
-    ),
-  ]
-
-  const codeById = new Map(
-    await Promise.all(
-      articleIds.map(async (articleId) => {
-        const result = await getInvoiceArticle(articleId)
-        return [articleId, result.ok ? result.data.code : undefined] as const
-      })
-    )
+  const codeById = await getArticleCodesById(
+    rows.flatMap((row) => (row.rentArticle ? [row.rentArticle] : []))
   )
 
   for (const row of rows) {
@@ -549,7 +555,11 @@ const transformToLease = (tenfastLease: TenfastLease): Lease => {
   }
 }
 
-const fetchTenfastInvoiceByOcr = async (
+/**
+ * The whole invoice with its leases (`avtal`, with their rental objects) and
+ * rows, as Tenfast returns it.
+ */
+export const fetchTenfastInvoiceByOcr = async (
   ocr: string
 ): Promise<
   AdapterResult<TenfastInvoice, 'not-found' | 'unknown' | 'schema-error'>
@@ -564,14 +574,17 @@ const fetchTenfastInvoiceByOcr = async (
     )
 
     if (result.status === 404) {
-      logger.info({ ocr }, 'deferral: Tenfast OCR lookup returned 404')
+      logger.info(
+        { ocr },
+        'tenfast-adapter.fetchTenfastInvoiceByOcr: invoice not found'
+      )
       return { ok: false, err: 'not-found' }
     }
 
     if (result.status !== 200) {
       logger.info(
         { ocr, status: result.status },
-        'deferral: Tenfast OCR lookup returned unexpected status'
+        'tenfast-adapter.fetchTenfastInvoiceByOcr: unexpected status'
       )
       return { ok: false, err: 'unknown' }
     }
@@ -586,8 +599,12 @@ const fetchTenfastInvoiceByOcr = async (
     }
 
     return { ok: true, data: parsed.data }
-  } catch (err: any) {
-    logger.error(err, 'tenfast-adapter.fetchTenfastInvoiceByOcr')
+  } catch (err: unknown) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { ocr, status, error: errorMessage(err) },
+      'tenfast-adapter.fetchTenfastInvoiceByOcr'
+    )
     return { ok: false, err: 'unknown' }
   }
 }

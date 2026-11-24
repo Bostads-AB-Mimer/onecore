@@ -1,5 +1,6 @@
 import knex from 'knex'
 import { RentInvoiceRow } from '@onecore/types'
+import { errorMessage, logger } from '@onecore/utilities'
 
 import config from '../../../common/config'
 import trimStrings from '../../../utils/trimStrings'
@@ -149,4 +150,22 @@ export const getPropertyCodeAndCostCentreForLease = async (
   }
 
   return null
+}
+
+/**
+ * The latest year Xpand has cost centres for. Looking a cost centre up with a
+ * year is fast; without one, a rental object with no match takes several
+ * seconds, which is too slow for a report.
+ */
+export const getLatestCostCentreYear = async (): Promise<number | null> => {
+  try {
+    const [row] = await db('repsk').max('year as latestYear')
+    return row?.latestYear ?? null
+  } catch (err: unknown) {
+    logger.error(
+      { error: errorMessage(err) },
+      'xpand-db-adapter.getLatestCostCentreYear'
+    )
+    throw err
+  }
 }

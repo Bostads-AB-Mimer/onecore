@@ -25,7 +25,13 @@ import {
   updateInvoiceDeferralDate,
   uploadFile as uploadFileToXledger,
 } from '../common/adapters/xledger-adapter'
-import { economy, Invoice, InvoiceRow, PaymentStatus } from '@onecore/types'
+import {
+  economy,
+  Invoice,
+  InvoiceRow,
+  PaymentStatus,
+  RentInvoiceRow,
+} from '@onecore/types'
 import { errorMessage, logger } from '@onecore/utilities'
 import {
   getInvoiceRows,
@@ -53,6 +59,11 @@ import {
 import { TenfastRentArticle } from '@src/common/adapters/tenfast/schemas'
 import { AdapterResult } from '@src/common/types'
 import { withInvoiceDeferral } from '@src/common/invoice-deferral'
+import {
+  getTenfastInvoicesByOcr,
+  toLeaseDetails,
+  toRentInvoiceRows,
+} from './tenfast-report-invoices'
 import {
   getInvoiceArticle,
   getInvoiceByOcr,
@@ -101,8 +112,26 @@ export const uploadInvoiceFile = async (
   await uploadFileToXledger(filename, csvContent)
 }
 
+// Rent invoice numbers that Xpand has no rows for, to look up in Tenfast instead,
+// where the invoice number in Xledger is the OCR number. Rent invoice numbers
+// start with 55; other invoices are not in Tenfast, so they aren't looked up.
+const rentInvoiceIdsWithoutRows = (
+  invoiceIds: string[],
+  rows: { invoiceNumber: string }[]
+) => {
+  const withRows = new Set(rows.map((row) => row.invoiceNumber))
+  return [...new Set(invoiceIds)].filter(
+    (id) => id.startsWith('55') && !withRows.has(id)
+  )
+}
+
 export const fetchInvoiceRows = async (invoiceIds: string[]) => {
-  return getInvoiceRows(invoiceIds)
+  const xpandRows = await getInvoiceRows(invoiceIds)
+  const missing = rentInvoiceIdsWithoutRows(invoiceIds, xpandRows)
+  if (missing.length === 0) return xpandRows
+
+  const tenfastInvoices = await getTenfastInvoicesByOcr(missing)
+  return [...xpandRows, ...(await toRentInvoiceRows(tenfastInvoices))]
 }
 
 export const fetchPaymentEvents = async (matchIds: number[]) => {
@@ -111,7 +140,32 @@ export const fetchPaymentEvents = async (matchIds: number[]) => {
 
 export const getLeaseDetails = async (invoiceIds: string[]) => {
   const invoiceRows = await getInvoiceRows(invoiceIds)
+  const missing = rentInvoiceIdsWithoutRows(invoiceIds, invoiceRows)
+  const missingIds = new Set(missing)
 
+  const [xpandDetails, tenfastDetails] = await Promise.all([
+    getXpandLeaseDetails(
+      invoiceIds.filter((id) => !missingIds.has(id)),
+      invoiceRows
+    ),
+    missing.length > 0
+      ? getTenfastInvoicesByOcr(missing).then(toLeaseDetails)
+      : Promise.resolve([]),
+  ])
+
+  const detailsById = new Map(
+    [...xpandDetails, ...tenfastDetails].map((d) => [d.invoiceId, d])
+  )
+  // An invoice found in neither system gets no leases, as before
+  return invoiceIds.map(
+    (invoiceId) => detailsById.get(invoiceId) ?? { invoiceId, details: [] }
+  )
+}
+
+const getXpandLeaseDetails = async (
+  invoiceIds: string[],
+  invoiceRows: RentInvoiceRow[]
+) => {
   return Promise.all(
     invoiceIds.map(async (id) => {
       const invoiceRowsForInvoice = invoiceRows.filter(

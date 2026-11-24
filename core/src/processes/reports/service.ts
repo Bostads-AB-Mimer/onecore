@@ -166,7 +166,8 @@ export const getBosociala = async (): Promise<BosocialaObject[]> => {
 
       if (mainLeaseDetails) {
         lease = allLeases.find((l) => l.leaseId === mainLeaseDetails.leaseId)
-        costCentre = mainLeaseDetails.costCentre
+        // Keep Xledger's cost centre when the lease's isn't known
+        costCentre = mainLeaseDetails.costCentre ?? costCentre
       }
     }
 
