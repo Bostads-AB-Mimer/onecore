@@ -26,6 +26,7 @@ import {
   TenfastOutboundExportListSchema,
   TenfastOutboundExport,
   TenfastAutogiroConsentResponseSchema,
+  TenfastAutogiroConsentSchema,
   TenfastAutogiroConsent,
   isVisibleTenfastInvoice,
   TenfastInvoice,
@@ -1703,7 +1704,9 @@ export const getAutogiroConsentByNationalRegistrationNumber = async (
       {
         params: {
           'filter[payerSSN]': formattedNationalRegistrationNumber,
-          limit: 1,
+          // More than one, so an older cancelled consent cannot hide an
+          // active one.
+          limit: 10,
         },
       }
     )
@@ -1723,13 +1726,27 @@ export const getAutogiroConsentByNationalRegistrationNumber = async (
       return { ok: false, err: 'schema-error' }
     }
 
-    return {
-      ok: true,
-      data: parsedResponse.data.records[0] ?? null,
+    const activeConsent = parsedResponse.data.records.find(
+      (record) => record.status !== 'CANCELLED'
+    )
+    if (!activeConsent) return { ok: true, data: null }
+
+    const parsedConsent = TenfastAutogiroConsentSchema.safeParse(activeConsent)
+    if (!parsedConsent.success) {
+      logger.warn(JSON.stringify(parsedConsent.error, null, 2))
+      return { ok: false, err: 'schema-error' }
     }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+
+    return { ok: true, data: parsedConsent.data }
+  } catch (err: unknown) {
+    // Never the raw error: an AxiosError carries the request headers,
+    // including the API token.
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { status, error: errorMessage(err) },
+      'tenfast-adapter.getAutogiroConsentByNationalRegistrationNumber'
+    )
+    return { ok: false, err: errorMessage(err) }
   }
 }
 
