@@ -39,6 +39,11 @@ import {
 import { parseRequestBody } from '../../middlewares/parse-request-body'
 import { registerSchema } from '../../utils/openapi'
 import { runWithConcurrency } from '../../utils/concurrency'
+import {
+  CSC_LEASE_STATUSES,
+  hasLeaseEnded,
+  hasMovedToNewerLease,
+} from './helpers/customer-score-card'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
 
@@ -107,7 +112,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
    *     tags:
    *       - Lease service
-   *     description: Returns a list of current residential leases, including contact and rental object info. A lease under notice counts as current until it ends, and contract_end_date is set only for those. Filters out protected identities, deceased tenants, and certain property types/estates. The filtering runs after paging, so a page can hold fewer rows than `limit` while more pages remain; page until `_meta.page * _meta.limit >= _meta.totalRecords`.
+   *     description: Returns a list of current residential leases, including contact and rental object info. A lease under notice (including a notice waiting for signing) counts as current until its end date has passed, and contract_end_date is set only for those. On an internal move only the lease the tenant has moved into is returned: a lease under notice is left out when the tenant has another housing lease that has started later. Filters out protected identities, deceased tenants, and certain property types/estates. The filtering runs after paging, so a page can hold fewer rows than `limit` while more pages remain; page until `_meta.page * _meta.limit >= _meta.totalRecords`.
    *     parameters:
    *       - in: query
    *         name: page
@@ -162,16 +167,13 @@ export const routes = (router: KoaRouter) => {
 
     try {
       // Filter leases on object type 'Bostad' and current leases but allow additional filtering by query params, ie for paging.
-      // A lease under notice (AboutToEnd) is still current until it ends, and
-      // it is the only kind that has an end date for contract_end_date.
+      // A lease under notice is still current until it ends, and it is the
+      // only kind that has an end date for contract_end_date.
       const leaseSearchParams = {
         limit: String(CSC_MAX_PAGE_SIZE),
         ...ctx.query,
         objectType: 'bostad',
-        status: [
-          LeaseStatus[LeaseStatus.Current],
-          LeaseStatus[LeaseStatus.AboutToEnd],
-        ],
+        status: CSC_LEASE_STATUSES.map((status) => LeaseStatus[status]),
       }
 
       if (Number(leaseSearchParams.limit) > CSC_MAX_PAGE_SIZE)
@@ -193,6 +195,8 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      const now = new Date()
+
       //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
       const parsedContent = await runWithConcurrency(
         leaseSearchResult.content,
@@ -201,6 +205,10 @@ export const routes = (router: KoaRouter) => {
             lease.leaseId.split('/')[0] != ''
               ? lease.leaseId.split('/')[0]
               : lease.leaseId.substring(0, lease.leaseId.lastIndexOf('-'))
+
+          // The status comes from the leasing system's stage, not from the
+          // dates, so a lease whose end date has passed is left out here.
+          if (hasLeaseEnded(lease, now)) return null
 
           if (!lease.contacts || lease.contacts.length === 0) {
             logger.error(
@@ -212,6 +220,9 @@ export const routes = (router: KoaRouter) => {
           }
 
           const primaryContactCode = lease.contacts[0].contactCode //TODO: Vilken contact ska väljas när det finns flera?
+
+          if (await hasMovedToNewerLease(lease, primaryContactCode, now))
+            return null
 
           const [contactResult, rentalPropertyResult] = await Promise.all([
             leasingAdapter.getContactByContactCode(primaryContactCode),
