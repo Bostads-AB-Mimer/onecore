@@ -375,6 +375,107 @@ describe('parseLeasesForHousingContract', () => {
     expect(result[1]?.leaseId).toBe(upcomingFixedTerm.leaseId)
   })
 
+  describe('two current housing contracts, both under notice', () => {
+    const endsFirst = factory.lease.build({
+      type: leaseTypes.housingContract,
+      leaseStartDate: parseISO('2020-02-01T00:00:00.000Z'),
+      lastDebitDate: thirtyDaysInTheFutureDate,
+      status: LeaseStatus.AboutToEnd,
+    })
+    const endsLast = factory.lease.build({
+      type: leaseTypes.housingContract,
+      leaseStartDate: parseISO('2022-02-01T00:00:00.000Z'),
+      lastDebitDate: addDays(currentDate, 60),
+      status: LeaseStatus.AboutToEnd,
+    })
+
+    it('returns the one that ends last as the current housing contract', () => {
+      const result = parseLeasesForHousingContracts(
+        [endsFirst, endsLast].filter(isLeaseActiveOrUpcoming)
+      )
+
+      assert(result)
+      expect(result[0]?.leaseId).toBe(endsLast.leaseId)
+      expect(result[1]).toBeUndefined()
+    })
+
+    it('returns the one that ends last whatever the order', () => {
+      const result = parseLeasesForHousingContracts(
+        [endsLast, endsFirst].filter(isLeaseActiveOrUpcoming)
+      )
+
+      assert(result)
+      expect(result[0]?.leaseId).toBe(endsLast.leaseId)
+    })
+
+    it('counts the tenant as about to leave', () => {
+      const result = parseLeasesForHousingContracts(
+        [endsFirst, endsLast].filter(isLeaseActiveOrUpcoming)
+      )
+
+      assert(result)
+      expect(isTenantAboutToLeave(result[0], result[1])).toBe(true)
+    })
+  })
+
+  describe('a fixed-term housing contract and one under notice', () => {
+    const underNotice = (lastDebitDate: Date) =>
+      factory.lease.build({
+        type: leaseTypes.housingContract,
+        leaseStartDate: parseISO('2020-02-01T00:00:00.000Z'),
+        lastDebitDate,
+        status: LeaseStatus.AboutToEnd,
+      })
+    // A fixed-term lease has an end date without any notice.
+    const fixedTerm = (lastDebitDate: Date) =>
+      factory.lease.build({
+        type: leaseTypes.housingContract,
+        leaseStartDate: parseISO('2024-08-15T00:00:00.000Z'),
+        lastDebitDate,
+        status: LeaseStatus.Current,
+      })
+
+    it('does not count the tenant as about to leave when the fixed-term one ends last', () => {
+      const fixed = fixedTerm(addDays(currentDate, 365))
+
+      const result = parseLeasesForHousingContracts(
+        [underNotice(thirtyDaysInTheFutureDate), fixed].filter(
+          isLeaseActiveOrUpcoming
+        )
+      )
+
+      assert(result)
+      expect(result[0]?.leaseId).toBe(fixed.leaseId)
+      expect(isTenantAboutToLeave(result[0], result[1])).toBe(false)
+    })
+
+    it('counts the tenant as about to leave when the one under notice ends last', () => {
+      const notice = underNotice(addDays(currentDate, 365))
+
+      const result = parseLeasesForHousingContracts(
+        [notice, fixedTerm(thirtyDaysInTheFutureDate)].filter(
+          isLeaseActiveOrUpcoming
+        )
+      )
+
+      assert(result)
+      expect(result[0]?.leaseId).toBe(notice.leaseId)
+      expect(isTenantAboutToLeave(result[0], result[1])).toBe(true)
+    })
+
+    it('prefers the one without notice when both end the same day, whatever the order', () => {
+      const fixed = fixedTerm(thirtyDaysInTheFutureDate)
+      const notice = underNotice(thirtyDaysInTheFutureDate)
+
+      const first = parseLeasesForHousingContracts([notice, fixed])
+      const second = parseLeasesForHousingContracts([fixed, notice])
+
+      assert(first && second)
+      expect(first[0]?.leaseId).toBe(fixed.leaseId)
+      expect(second[0]?.leaseId).toBe(fixed.leaseId)
+    })
+  })
+
   it('should return undefined for leases without housing contract', async () => {
     const result = parseLeasesForHousingContracts([])
     expect(result).toBeUndefined()

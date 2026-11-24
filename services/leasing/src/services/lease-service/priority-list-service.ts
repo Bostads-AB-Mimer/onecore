@@ -253,9 +253,13 @@ const parseLeasesForHousingContracts = (
     isCurrentLease(l, currentDate)
   )
 
+  // With several current housing leases, the tenant lives in the one that is
+  // not ending. If all of them are ending (e.g. two leases under notice), they
+  // still live in the one that ends last until it ends.
   const activeLease =
     activeLeases.length > 1
-      ? activeLeases.find((l) => !isLeaseAboutToEnd(l))
+      ? (activeLeases.find((l) => !isLeaseAboutToEnd(l)) ??
+        leaseEndingLast(activeLeases))
       : activeLeases[0]
 
   const upcomingLease = housingContracts.find((l) =>
@@ -278,6 +282,23 @@ const isCurrentLease = (lease: Lease, currentDate: Date) => {
 // have ended are filtered out before this (isLeaseActiveOrUpcoming).
 const isUpcomingLease = (lease: Lease, currentDate: Date) =>
   lease.leaseStartDate > currentDate
+
+// Only called with leases that all have an end date (isLeaseAboutToEnd). On
+// the same end date, a lease without a notice wins over one under notice, so
+// the result doesn't depend on the order Tenfast returns them in.
+const leaseEndingLast = (leases: Lease[]): Lease | undefined => {
+  const endTime = (lease: Lease) =>
+    lease.lastDebitDate ? new Date(lease.lastDebitDate).getTime() : Infinity
+  const endsLater = (lease: Lease, last: Lease) =>
+    endTime(lease) > endTime(last) ||
+    (endTime(lease) === endTime(last) &&
+      last.status === LeaseStatus.AboutToEnd &&
+      lease.status !== LeaseStatus.AboutToEnd)
+  return leases.reduce<Lease | undefined>(
+    (last, lease) => (!last || endsLater(lease, last) ? lease : last),
+    undefined
+  )
+}
 
 const isLeaseAboutToEnd = (lease: Lease) => {
   const currentDate = new Date()
