@@ -9,7 +9,7 @@ import { RentalPropertyKeysCard } from './RentalPropertyKeysCard'
 import { KeyNoteDisplay } from './KeyNoteDisplay'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 import { getPriorityContractId } from '@/utils/contractPriority'
-import { getTenantViewLink } from '@/utils/externalLinks'
+import { CustomerNumberLink } from './CustomerNumberLink'
 import { rentalObjectSearchService } from '@/services/api/rentalObjectSearchService'
 
 function formatAddress(addr?: Address): string {
@@ -225,20 +225,11 @@ export function TenantInfo({
                           {isCompany ? 'Organisationsnummer' : 'Personnummer'}:{' '}
                           {t.nationalRegistrationNumber}
                         </p>
-                        {getTenantViewLink(t.contactCode) ? (
-                          <a
-                            href={getTenantViewLink(t.contactCode)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:text-blue-800 hover:underline block"
-                          >
-                            Kundnummer: {t.contactCode}
-                          </a>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            Kundnummer: {t.contactCode}
-                          </p>
-                        )}
+                        <CustomerNumberLink
+                          contactCode={t.contactCode}
+                          prefix="Kundnummer:"
+                          className="text-sm block"
+                        />
                         {t.emailAddress && (
                           <p className="text-sm text-muted-foreground">
                             E-post: {t.emailAddress}
