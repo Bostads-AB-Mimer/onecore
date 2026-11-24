@@ -8,6 +8,7 @@ import {
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
   TenfastInvoicesByExportedResponseSchema,
+  TenfastInvoiceRecipientsPageSchema,
   TenfastTenantSchema,
   TenfastInvoiceSchema,
   TenfastRentalLoss,
@@ -863,8 +864,20 @@ export const recordPaymentForInvoice = async (params: {
       'tenfast-adapter.recordPaymentForInvoice: unexpected status'
     )
     return { ok: false, err: 'unknown' }
-  } catch (err: any) {
-    logger.error(err, 'tenfast-adapter.recordPaymentForInvoice')
+  } catch (err: unknown) {
+    // Tenfast explains a rejected transaction (e.g. 400) only in the body. The logger's
+    // serializer strips `error` to type/message/stack, so stringify it under its own key.
+    if (axios.isAxiosError(err) && err.response) {
+      logger.error(
+        {
+          status: err.response.status,
+          responseBody: JSON.stringify(err.response.data),
+        },
+        'tenfast-adapter.recordPaymentForInvoice'
+      )
+    } else {
+      logger.error({ err }, 'tenfast-adapter.recordPaymentForInvoice')
+    }
     return { ok: false, err: 'unknown' }
   }
 }
@@ -1266,6 +1279,44 @@ const enrichInvoiceRowsWithAccounting = async (
   return {
     invoiceRows: invoiceRowsWithAccounting,
     errors,
+  }
+}
+
+export const getRecipientCodesOfInvoicesNotExported = async (
+  company: MimerCompany
+): Promise<AdapterResult<string[], TenfastPagesError>> => {
+  try {
+    const pagesResult = await fetchAllTenfastPages(
+      '/v1/hyresvard/hyror',
+      {
+        isManuallyExported: 'false',
+        isCancelled: 'false',
+        status: 'issued',
+        hyresvard: company.tenfastId,
+        limit: TENFAST_INVOICES_PAGE_SIZE,
+      },
+      TenfastInvoiceRecipientsPageSchema,
+      { companyId: company.xpandId }
+    )
+    if (!pagesResult.ok) {
+      return pagesResult
+    }
+
+    const codes = new Set<string>()
+    for (const record of pagesResult.data) {
+      const code = record.avtal[0]?.hyresgaster[0]?.externalId.trim()
+      if (code) {
+        codes.add(code)
+      }
+    }
+    return { ok: true, data: [...codes] }
+  } catch (err: unknown) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { companyId: company.xpandId, status, error: errorMessage(err) },
+      'tenfast-adapter.getRecipientCodesOfInvoicesNotExported'
+    )
+    return { ok: false, err: 'request-failed' }
   }
 }
 

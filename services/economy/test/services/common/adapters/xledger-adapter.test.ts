@@ -195,6 +195,105 @@ describe('makeXledgerRequest when Xledger is unavailable', () => {
   })
 })
 
+type CustomerCodesBody = {
+  variables: { filter: { code_in: string[] }; after?: string }
+}
+
+describe('getExistingCustomerCodes', () => {
+  const defaultPolicy = { ...adapter.xledgerRequestPolicy }
+
+  beforeEach(() => {
+    adapter.setXledgerRequestPolicy({ baseDelayMs: 1, maxDelayMs: 5 })
+  })
+
+  afterEach(() => {
+    adapter.setXledgerRequestPolicy(defaultPolicy)
+  })
+
+  const customersReply = (codes: string[], hasNextPage = false) => ({
+    data: {
+      customers: {
+        edges: codes.map((code) => ({ cursor: `c-${code}`, node: { code } })),
+        pageInfo: { hasNextPage },
+      },
+    },
+  })
+
+  it('sends codes in chunks of 100 and returns the codes Xledger knows', async () => {
+    const requests: string[][] = []
+    nock(origin)
+      .post(pathname, (body: CustomerCodesBody) => {
+        requests.push(body.variables.filter.code_in)
+        return true
+      })
+      .times(2)
+      .reply(200, (_uri, body) => {
+        const known = (body as CustomerCodesBody).variables.filter.code_in
+        return customersReply(known.filter((c) => c === 'P1' || c === 'P150'))
+      })
+    const codes = Array.from({ length: 150 }, (_, i) => `P${i + 1}`)
+
+    const result = await adapter.getExistingCustomerCodes(codes)
+
+    expect(requests.map((r) => r.length)).toEqual([100, 50])
+    expect(requests.flat()).toEqual(codes)
+    expect([...result].sort()).toEqual(['P1', 'P150'])
+  })
+
+  it('follows the cursor when Xledger has more pages', async () => {
+    const afters: (string | undefined)[] = []
+    nock(origin)
+      .post(pathname, (body: CustomerCodesBody) => {
+        afters.push(body.variables.after)
+        return true
+      })
+      .reply(200, customersReply(['P1'], true))
+    nock(origin)
+      .post(pathname, (body: CustomerCodesBody) => {
+        afters.push(body.variables.after)
+        return true
+      })
+      .reply(200, customersReply(['P2'], false))
+
+    const result = await adapter.getExistingCustomerCodes(['P1', 'P2'])
+
+    expect(afters).toEqual([undefined, 'c-P1'])
+    expect(result).toEqual(['P1', 'P2'])
+  })
+
+  it('returns [] without calling Xledger when given no codes', async () => {
+    const scope = nock(origin).post(pathname).reply(200, customersReply([]))
+
+    await expect(adapter.getExistingCustomerCodes([])).resolves.toEqual([])
+    expect(scope.isDone()).toBe(false)
+  })
+
+  it('rejects when Xledger answers with an error that is not a rate limit', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        errors: [{ code: 'BAD_REQUEST.SOMETHING_ELSE', message: 'Nope' }],
+      })
+
+    await expect(adapter.getExistingCustomerCodes(['P1'])).rejects.toThrow()
+  })
+
+  it.each([
+    'BAD_REQUEST.BURST_LIMIT_REACHED',
+    'BAD_REQUEST.CONCURRENCY_LIMIT_REACHED',
+  ])('retries once after %s', async (code) => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, { errors: [{ code, message: 'Rate limited' }] })
+    nock(origin).post(pathname).reply(200, customersReply(['P1']))
+
+    await expect(adapter.getExistingCustomerCodes(['P1'])).resolves.toEqual([
+      'P1',
+    ])
+    expect(nock.isDone()).toBe(true)
+  })
+})
+
 describe(adapter.getInvoicesByContactCode, () => {
   it('returns null when customer does not exist', async () => {
     nock(origin).post(pathname).reply(200, {
@@ -1331,6 +1430,88 @@ describe(adapter.getMiscellaneousInvoices, () => {
 
     const result = await adapter.getMiscellaneousInvoices({})
 
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(adapter.getInvoiceFile, () => {
+  const fileUrl = 'https://files.xledger.example.com/invoice/12345.pdf'
+  const invoiceNode = (invoiceFile: { url: string } | null) => ({
+    data: {
+      arTransactions: {
+        edges: [
+          {
+            node: {
+              invoiceNumber: '12345',
+              invoiceDate: '2025-01-01',
+              invoiceRemaining: 100,
+              subledger: { code: 'P12345', description: 'Test Tenant' },
+              period: { fromDate: '2025-01-01', toDate: '2025-01-01' },
+              dueDate: '2025-01-31',
+              text: null,
+              headerTransactionSourceDbId: 600,
+              amount: 100,
+              invoiceFile,
+            },
+          },
+        ],
+      },
+    },
+  })
+
+  it('downloads the file Xledger links to', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, invoiceNode({ url: fileUrl }))
+    nock('https://files.xledger.example.com')
+      .get('/invoice/12345.pdf')
+      .reply(200, Buffer.from('%PDF-1.4 mock'))
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: true, data: Buffer.from('%PDF-1.4 mock') })
+  })
+
+  it('returns invoice-not-found when Xledger has no such invoice', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: false, err: 'invoice-not-found' })
+  })
+
+  it('returns file-not-found when the invoice has no file', async () => {
+    // Arrange
+    nock(origin).post(pathname).reply(200, invoiceNode(null))
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: false, err: 'file-not-found' })
+  })
+
+  it('returns unknown when the file download fails', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, invoiceNode({ url: fileUrl }))
+    nock('https://files.xledger.example.com')
+      .get('/invoice/12345.pdf')
+      .reply(403)
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })

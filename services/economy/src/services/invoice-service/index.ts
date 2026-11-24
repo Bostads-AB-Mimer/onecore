@@ -13,6 +13,7 @@ import {
 
 import {
   getAllInvoicesWithMatchIds,
+  getInvoiceFile,
   getInvoiceMatchId,
   getInvoicePaymentEvents,
   getMiscellaneousInvoices,
@@ -41,6 +42,7 @@ import {
   getAutogiroConsent,
   getPublicInvoiceByOcr,
   PartialCsvUploadError,
+  getInvoiceRecipientsMissingAsCustomers,
 } from './service'
 import * as invoiceService from './service'
 import { getInvoicePdf } from '../../common/adapters/tenfast/tenfast-adapter'
@@ -62,6 +64,61 @@ const parseAcceptedDifference = (value: unknown): number | null => {
 }
 
 export const routes = (router: KoaRouter) => {
+  /**
+   * @swagger
+   * /accounting/invoice-recipients/{companyId}/missing-customers:
+   *   get:
+   *     summary: List invoice recipients that are missing as customers in Xledger
+   *     description: Collects the external recipients (contact codes not starting with "I") of every invoice not yet exported for the company, and returns those Xledger has no customer for.
+   *     tags: [Invoices]
+   *     parameters:
+   *       - in: path
+   *         name: companyId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The Xpand id of the company
+   *     responses:
+   *       200:
+   *         description: Recipient count and the contact codes missing in Xledger
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 recipients:
+   *                   type: number
+   *                 missingCustomerCodes:
+   *                   type: array
+   *                   items:
+   *                     type: string
+   *       404:
+   *         description: Unknown company (error is unknown-company)
+   *       502:
+   *         description: Tenfast or Xledger failed (error is tenfast-failed or xledger-failed)
+   */
+  router.get(
+    '(.*)/accounting/invoice-recipients/:companyId/missing-customers',
+    async (ctx) => {
+      const result = await getInvoiceRecipientsMissingAsCustomers(
+        ctx.params.companyId
+      )
+
+      if (result.ok) {
+        ctx.status = 200
+        ctx.body =
+          result.data satisfies economy.InvoiceRecipientsMissingAsCustomersResponse
+        return
+      }
+
+      ctx.status = result.err === 'unknown-company' ? 404 : 502
+      ctx.body = {
+        error: result.err,
+        reason: result.reason,
+      } satisfies economy.InvoiceRecipientsMissingAsCustomersErrorResponse
+    }
+  )
+
   router.post('(.*)/accounting/import-invoices/{:companyId}', async (ctx) => {
     try {
       const companyId = ctx.params.companyId
@@ -115,6 +172,7 @@ export const routes = (router: KoaRouter) => {
           (invoice) => invoice.invoiceId
         ),
         markFailures,
+        missingCustomerCodes: invoicesResult.missingCustomerCodes,
       } satisfies economy.ImportInvoicesResponse
     } catch (err: unknown) {
       if (err instanceof PartialCsvUploadError) {
@@ -354,6 +412,59 @@ export const routes = (router: KoaRouter) => {
       ).replace(/[\r\n]/g, '')
     )
     ctx.body = result.data.data
+  })
+
+  /**
+   * @swagger
+   * /invoices/{invoiceNumber}/file:
+   *   get:
+   *     summary: Download the PDF Xledger keeps for an invoice
+   *     description: Used for miscellaneous invoices. Rent notices are fetched via /invoices/{ocr}/pdf.
+   *     tags:
+   *       - Invoices
+   *     parameters:
+   *       - in: path
+   *         name: invoiceNumber
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: The invoice PDF
+   *         content:
+   *           application/pdf:
+   *             schema:
+   *               type: string
+   *               format: binary
+   *       404:
+   *         description: The invoice or its file was not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   enum: [invoice-not-found, file-not-found]
+   *       500:
+   *         description: The file could not be downloaded
+   */
+  router.get('(.*)/invoices/:invoiceNumber/file', async (ctx) => {
+    const result = await getInvoiceFile(ctx.params.invoiceNumber)
+
+    if (!result.ok) {
+      if (result.err === 'unknown') {
+        ctx.status = 500
+        return
+      }
+      ctx.status = 404
+      ctx.body = { reason: result.err }
+      return
+    }
+
+    ctx.status = 200
+    ctx.set('Content-Type', 'application/pdf')
+    ctx.body = result.data
   })
 
   router.get('(.*)/invoices/by-ocr/:ocr', async (ctx) => {

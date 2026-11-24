@@ -12,7 +12,11 @@ import {
   leasing,
   schemas as typesSchemas,
 } from '@onecore/types'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import {
+  logger,
+  generateRouteMetadata,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -40,7 +44,10 @@ import { routes as keysExportRoutes } from './keys-export'
 import { registerSchema } from '../../utils/openapi'
 import { Contact, Lease, RentalObjectRentInfo } from './schemas/lease'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
-import { resolvePersonnummerInQuery } from '../../adapters/contacts-adapter/lease-query'
+import {
+  resolvePersonnummerInQuery,
+  toMessageRecipients,
+} from '../../adapters/contacts-adapter/lease-query'
 import {
   tenantAwareContactLookup,
   withProtectedIdentityDetails,
@@ -82,8 +89,6 @@ export const routes = (router: KoaRouter) => {
   textContentRoutes(router)
   areaTextContentRoutes(router)
   keysExportRoutes(router)
-
-  leasesRoutes(router)
 
   /**
    * @swagger
@@ -133,6 +138,10 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  // Must be registered before leasesRoutes: /leases/:id would otherwise
+  // swallow /leases/parking-space-types.
+  leasesRoutes(router)
+
   /**
    * @swagger
    * /contacts/from-lease-search:
@@ -140,7 +149,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get contacts matching lease search filters
    *     tags:
    *       - Lease service
-   *     description: Retrieves contact information for tenants matching the given lease search filters.
+   *     description: Returns the contacts on every lease that /leases/search lists for the same filters, one per contact. Phone and e-mail come from the contacts service only. They are empty for a contact with protected identity and for a contact the contacts service has no record of.
    *     parameters:
    *       - in: query
    *         name: q
@@ -269,8 +278,14 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/ContactInfo'
+   *       '400':
+   *         description: Invalid query parameters
    *       '500':
    *         description: Internal server error
+   *       '502':
+   *         description: Phone and e-mail could not be read from the contacts service (error contacts-lookup-failed). No contacts are returned.
+   *       '503':
+   *         description: The lease service is still loading its leases. Retry shortly.
    *     security:
    *       - bearerAuth: []
    */
@@ -293,6 +308,16 @@ export const routes = (router: KoaRouter) => {
     const result = await leasingAdapter.getContactsByFilters(contactsQuery)
 
     if (!result.ok) {
+      if (result.err === 'invalid-request') {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid query parameters', ...metadata }
+        return
+      }
+      if (result.err === 'service-unavailable') {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       ctx.status = 500
       ctx.body = {
         error: 'Unknown error occurred fetching contacts',
@@ -301,8 +326,18 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const recipients = await toMessageRecipients(
+      result.data,
+      'contacts/from-lease-search'
+    )
+    if (!recipients.ok) {
+      ctx.status = 502
+      ctx.body = { error: recipients.err, ...metadata }
+      return
+    }
+
     ctx.status = 200
-    ctx.body = result.data
+    ctx.body = makeSuccessResponseBody(recipients.data, metadata)
   })
 
   /**

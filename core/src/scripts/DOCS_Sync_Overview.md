@@ -16,7 +16,7 @@ Det här dokumentet beskriver vad som synkas, när, och vad som händer om någo
 
 | Ändring i Xpand                                  | `cmlog`-rad som läses                       | Tenfast                                   | Xledger                                            | Odoo                                         |
 | ------------------------------------------------ | ------------------------------------------- | ----------------------------------------- | -------------------------------------------------- | -------------------------------------------- |
-| Kontaktuppgifter (namn, e-post, telefon, adress) | `Kontakt …`                                 | Hyresgästen hämtar nya uppgifter          | Befintlig kund uppdateras (namn, adress, e-post)   | Hyresgäst uppdateras (namn, e-post, telefon) |
+| Kontaktuppgifter (namn, e-post, telefon, adress) | `Kontakt …`, utom skickade meddelanden      | Hyresgästen hämtar nya uppgifter          | Befintlig kund uppdateras (namn, adress, e-post)   | Hyresgäst uppdateras (namn, e-post, telefon) |
 | Kontrakt undertecknat                            | `Hyreskontrakt …`, fältet `Undertecknat`    | Avtalet skapas, med hyresgäst och PDF     | Fakturamottagaren skapas eller uppdateras som kund | –                                            |
 | Kontrakt uppsagt                                 | `Hyreskontrakt …`, fältet `Uppsagt datum`   | Avtalet sägs upp, uppsägnings-PDF bifogas | –                                                  | –                                            |
 | Kontrakt makulerat                               | `Hyreskontrakt …`, fältet `Makulerat datum` | Avtalet makuleras                         | –                                                  | –                                            |
@@ -45,7 +45,9 @@ De tre scripten delar kärnan [`shared/run-cmlog-sync.ts`](./shared/run-cmlog-sy
 
 ### cmlog som ändringskälla
 
-Xpand loggar varje ändring som en rad i tabellen `cmlog`, med ett fritextfält `logmemo` och en tidsstämpel `logtime`. Synken läser nya rader och tolkar texten. Läsningen sker i respektive tjänst: Contacts för kontakter, Leasing för avtal och hyresobjektstyper.
+Xpand loggar varje ändring som en rad i tabellen `cmlog`, med ett fritextfält `logmemo` och en tidsstämpel `logtime`. Synken läser nya rader och väljer dem på texten. Läsningen sker i respektive tjänst: Contacts för kontakter, Leasing för avtal och hyresobjektstyper.
+
+Hitta posten en rad gäller via `keydbtbl` (tabellen) och `keycode` (postens nyckel), inte via en kod i `logmemo`. Texten skrivs en gång och uppdateras inte när Xpand byter kod på posten.
 
 `logtime` är en `datetime` utan tidszon, som Xpand fyller med svensk lokaltid och hela sekunder. Den når Core som svensk lokaltid märkt som UTC, så Core räknar om sin egen klocka till svensk lokaltid på samma sätt innan de jämförs (`onXpandClock` i `run-cmlog-sync.ts`) — poddens tidszon spelar ingen roll. Varje körning läser om ett fönster några minuter bakåt från sparad position och hoppar över de rader den redan hanterat (se [Sparad position](#sparad-position)). Det fångar en rad som syns i `cmlog` först en stund efter sin `logtime`, eftersom Xpand sätter tiden innan raden sparas.
 
@@ -163,6 +165,6 @@ Y --> Z
 
 ## Att känna till
 
-- **Bara rader som börjar med rätt text läses.** Ett script ser bara de `cmlog`-rader det letar efter. En ändring som Xpand loggar på ett annat sätt, eller inte loggar alls, synkas aldrig.
+- **Bara rader som börjar med rätt text läses.** Ett script ser bara de `cmlog`-rader det letar efter. En ändring som Xpand loggar på ett annat sätt, eller inte loggar alls, synkas aldrig. `sync-contacts` hoppar dessutom över rader som bara loggar ett skickat SMS eller mejl.
 - **Relationer synkas inte härifrån** — se [Synka Kontakter](./sync-contacts/DOCS_Sync_Contacts.md#relationer).
 - **Avvisar Economy en kund köas raden.** Saknar kontakten t.ex. namn i Xpand svarar Economy med ett 4xx-fel. Raden räknas då som misslyckad och köas med mejl, i både `sync-contacts` och för fakturamottagaren i `sync-leases`. I `sync-leases` hämtas mottagaren på nytt vid varje försök, så ett återförsök lyckas när uppgiften rättats i Xpand. I `sync-contacts` skickar den köade raden samma uppgifter varje gång och lyckas aldrig; rättelsen skriver en ny `cmlog`-rad som ersätter den.

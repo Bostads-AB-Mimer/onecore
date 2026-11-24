@@ -431,6 +431,73 @@ describe(getInvoicesByContactCode, () => {
     })
   })
 
+  describe('hasRentNoticePdf', () => {
+    it('is set on an Xledger invoice that is also in Tenfast', async () => {
+      // Arrange
+      const invoiceId = '552000000001'
+      getXledgerInvoices.mockResolvedValueOnce([
+        parsed(xledgerInvoice({ invoiceId })),
+      ])
+      getTenfastInvoices.mockResolvedValueOnce([
+        parsed(factory.invoice.build({ invoiceId, source: 'next' })),
+      ])
+
+      // Act
+      const result = await getInvoicesByContactCode(contactCode)
+
+      // Assert
+      expect(result).toHaveLength(1)
+      expect(result[0].hasRentNoticePdf).toBe(true)
+    })
+
+    it('is set on a Tenfast invoice that is not yet in Xledger', async () => {
+      // Arrange
+      getTenfastInvoices.mockResolvedValueOnce([
+        parsed(
+          factory.invoice.build({ invoiceId: '552000000002', source: 'next' })
+        ),
+      ])
+
+      // Act
+      const result = await getInvoicesByContactCode(contactCode)
+
+      // Assert
+      expect(result).toHaveLength(1)
+      expect(result[0].hasRentNoticePdf).toBe(true)
+    })
+
+    it('is not set on a Tenfast invoice without an OCR number', async () => {
+      // Arrange
+      getTenfastInvoices.mockResolvedValueOnce([
+        parsed(factory.invoice.build({ invoiceId: '', source: 'next' })),
+      ])
+
+      // Act
+      const result = await getInvoicesByContactCode(contactCode)
+
+      // Assert
+      expect(result).toHaveLength(1)
+      expect(result[0].hasRentNoticePdf).toBe(false)
+    })
+
+    it('is not set on Xledger-only and Xpand-only invoices', async () => {
+      // Arrange
+      getXledgerInvoices.mockResolvedValueOnce([
+        parsed(xledgerInvoice({ invoiceId: '552000000003' })),
+      ])
+      getXpandInvoices.mockResolvedValueOnce([
+        xpandInvoice({ invoiceId: '552000000004', reference: contactCode }),
+      ])
+
+      // Act
+      const result = await getInvoicesByContactCode(contactCode)
+
+      // Assert
+      expect(result).toHaveLength(2)
+      expect(result.every((invoice) => !invoice.hasRentNoticePdf)).toBe(true)
+    })
+  })
+
   it('returns each invoice once when it is in Xledger, Tenfast and Xpand', async () => {
     // Arrange
     const inAllSources = '552000000001'

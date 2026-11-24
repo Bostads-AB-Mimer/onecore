@@ -57,11 +57,13 @@ Always use `pnpm` — never `npm` or `yarn`.
 - New non-trivial logic (utilities, adapters, helpers) must ship with unit tests.
 - NEVER use `any` typing. If types need to be generated, stop and prompt the user — never add temporary `any`.
 - Errors keep their meaning end to end: use typed error codes, never decide by matching message text, and never report or log a failed or unknown outcome as success.
+- Retry or resend a write to an external system (e.g. Xledger) only after a definite rejection such as customer-not-found — never after an unknown outcome, since the write may have been applied.
 - A lookup of one specific resource that doesn't exist returns 404 with a specific error code. A search or list with no matches returns 200 with an empty array — never 404. A 404 is not a server failure, so the service logs it at `warn` or lower. If the caller expected the resource to exist (e.g. a code taken from another record), the caller logs it with `logger.error`. Keep `logger.error` for real failures, logged once.
 - Remove code your change supersedes in the same PR, not just unused imports.
 - Filter, sort and paginate at the data source. Run independent calls in parallel. No N+1 or repeated identical queries.
 - Check-then-write is a race: decide inside the transaction or rely on a unique index and map the violation to 409. Never hold a transaction open across a network call. Enforce invariants on every write path (create, update, move, re-parent).
 - Xpand char codes are space-padded and SQL compares them ignoring trailing blanks and case — JavaScript doesn't. Trim and normalise both sides before comparing, and handle NULL.
+- Xpand text is Swedish: a regex over it must not use `\w` or `[a-z]` for letters, since `\w` stays ASCII even with the `u` flag and misses Å, Ä and Ö. Use `\p{L}` with `u`.
 - Keep the diff to the change: no unrelated generated-type, lockfile or notes churn. Don't add backward-compatibility machinery for internal tools unless asked.
 - When you change a flow, update its `DOCS_*.md`, `ARCHITECTURE.md` and any `.claude/skills` file that describes it, including failure branches.
 
@@ -107,6 +109,7 @@ No `as` or `!` without a comment saying why; use `catch (err: unknown)`. `satisf
 - Return specific, semantically correct error codes — never `'unknown'`.
 - Use `parseRequestBody` middleware instead of manual body parsing.
 - Use `.parse()` inside try/catch — not `.safeParse()`-then-throw. Use `.safeParse()` only when you need `{ ok: false }` return semantics and you are not inside a try/catch.
+- A service's `.jest/sql/create.sql` guards each table with `IF OBJECT_ID(...) IS NULL`, so a column added to an existing table never reaches a local test DB that already has it. Add every column the table will need when you first create it, or drop the table in the same change.
 
 ---
 

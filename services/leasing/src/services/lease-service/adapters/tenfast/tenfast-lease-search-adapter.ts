@@ -17,6 +17,9 @@ import {
   calculateLeaseStatus,
   buildTenfastLeaseUrl,
   getLeaseEndDate,
+  deriveTenfastLeaseType,
+  normaliseRentalObjectCode,
+  GARAGE_PARKING_SPACE_TYPE_CODES,
 } from '../../helpers/tenfast'
 import {
   getRentalObjectCodesByBuildingManager,
@@ -24,6 +27,7 @@ import {
   getRentalObjectCodesByBuildingCodes,
   getRentalObjectCodesByAreaCodes,
   getRentalObjectCodesByDistrictNames,
+  getParkingSpaceTypesByRentalObjectCode,
 } from '../xpand/lease-search-adapter'
 
 const STALE_THRESHOLD_MS = 60_000
@@ -155,6 +159,93 @@ async function resolveXpandRentalObjectCodes(
   return new Set(codes)
 }
 
+/**
+ * Resolves the parkingSpaceType filter to the set of rental object codes
+ * that have one of the chosen types. Returns null when the filter is absent
+ * (don't restrict by type), and an empty set when it is present but matches
+ * no parking space — those are different outcomes, so callers must check
+ * `!== undefined`/`!== null` rather than truthiness.
+ *
+ * Kept separate from resolveXpandRentalObjectCodes: that set is AND-ed
+ * across every Xpand-bridged filter, so merging the two would make
+ * Bostad + a parking-space type return nothing.
+ */
+async function resolveParkingSpaceObjectCodes(
+  params: leasing.v1.LeaseSearchQueryParams
+): Promise<Set<string> | null> {
+  if (!params.parkingSpaceType || params.parkingSpaceType.length === 0) {
+    return null
+  }
+
+  const typesByCode = await getParkingSpaceTypesByRentalObjectCode(
+    params.parkingSpaceType
+  )
+  return new Set(typesByCode.keys())
+}
+
+const normaliseLeaseType = (leaseType: string): string =>
+  leaseType.trim().toLowerCase()
+
+// The two contract types only the garage lookup can tell apart.
+const PARKING_LEASE_TYPES = new Set(
+  [LeaseType.GarageContract, LeaseType.ParkingSpaceContract].map(
+    normaliseLeaseType
+  )
+)
+
+// leaseType filter value a row matches; any other type counts as Övrigt,
+// the way an unknown objectTypeCode counts as 'ovrigt'. Campuskontrakt,
+// Korttidsuthyrning and the like only exist on leases that ended in Xpand.
+const LEASE_TYPES_WITH_OWN_FILTER = new Set(
+  [
+    LeaseType.HousingContract,
+    LeaseType.CommercialTenantContract,
+    LeaseType.GarageContract,
+    LeaseType.ParkingSpaceContract,
+  ].map(normaliseLeaseType)
+)
+
+const leaseTypeFilterValue = (leaseType: LeaseType): string => {
+  const normalised = normaliseLeaseType(leaseType)
+  return LEASE_TYPES_WITH_OWN_FILTER.has(normalised)
+    ? normalised
+    : normaliseLeaseType(LeaseType.OtherContract)
+}
+
+function leaseTypeFilterNeedsGarageCodes(
+  params: leasing.v1.LeaseSearchQueryParams
+): boolean {
+  return (params.leaseType ?? []).some((t) =>
+    PARKING_LEASE_TYPES.has(normaliseLeaseType(t))
+  )
+}
+
+/**
+ * Normalised rental object codes of the parking spaces whose type counts as
+ * a garage. Rejects when Xpand can't be read — callers must not fall back to
+ * "no garages", or every garage lease would pass as P-Platskontrakt.
+ */
+async function resolveGarageObjectCodes(): Promise<Set<string>> {
+  const typesByCode = await getParkingSpaceTypesByRentalObjectCode(
+    GARAGE_PARKING_SPACE_TYPE_CODES
+  )
+  const garageObjectCodes = new Set(
+    [...typesByCode.keys()].map(normaliseRentalObjectCode)
+  )
+  // Mimer has garages, so none at all points at the data or the type codes.
+  // Still answered as is: every parking lease is then P-Platskontrakt.
+  if (garageObjectCodes.size === 0) {
+    logger.warn(
+      {
+        garageSpaceCount: garageObjectCodes.size,
+        typeCodes: GARAGE_PARKING_SPACE_TYPE_CODES,
+      },
+      'lease-search: no parking space has a garage type'
+    )
+  }
+  return garageObjectCodes
+}
+
 function statusNamesEnded(params: leasing.v1.LeaseSearchQueryParams): boolean {
   return (params.status ?? []).some(
     (s) => STATUS_PARAM_TO_LEASE_STATUS[s.toLowerCase()] === LeaseStatus.Ended
@@ -170,14 +261,29 @@ let mergedPool: {
   tenfastRows: leasing.v1.LeaseSearchResult[]
   xpandRows: leasing.v1.LeaseSearchResult[]
   rows: leasing.v1.LeaseSearchResult[]
+  // Built on first use, by the contract-type derivation only.
+  xpandRowSet?: Set<leasing.v1.LeaseSearchResult>
 } | null = null
+
+type SearchPool = {
+  rows: leasing.v1.LeaseSearchResult[]
+  // Rows from the ended Xpand cache keep the contract type Xpand gave them;
+  // only Tenfast rows get a derived one. Told apart by object identity, as
+  // the merged pool holds the cached row objects themselves.
+  isEndedXpandRow: (row: leasing.v1.LeaseSearchResult) => boolean
+}
+
+const tenfastOnly = (rows: leasing.v1.LeaseSearchResult[]): SearchPool => ({
+  rows,
+  isEndedXpandRow: () => false,
+})
 
 function buildSearchPool(
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
-): leasing.v1.LeaseSearchResult[] {
+): SearchPool {
   const tenfastRows = leaseCache.getAll()
-  if (!wantsEnded(params)) return tenfastRows
+  if (!wantsEnded(params)) return tenfastOnly(tenfastRows)
 
   if (!xpandEndedLeaseCache.isReady()) {
     if (statusNamesEnded(params)) {
@@ -186,7 +292,7 @@ function buildSearchPool(
       })
     }
     logger.warn('Ended Xpand leases not loaded, serving Tenfast rows only')
-    return tenfastRows
+    return tenfastOnly(tenfastRows)
   }
 
   const xpandRows = xpandEndedLeaseCache.getAll()
@@ -200,42 +306,85 @@ function buildSearchPool(
       rows: mergeTenfastFirst(tenfastRows, xpandRows),
     }
   }
-  return mergedPool.rows
+  const pool = mergedPool
+  return {
+    rows: pool.rows,
+    isEndedXpandRow: (row) => {
+      pool.xpandRowSet ??= new Set(pool.xpandRows)
+      return pool.xpandRowSet.has(row)
+    },
+  }
 }
 
 export async function fetchAllLeasesForExport(
   params: leasing.v1.LeaseSearchQueryParams,
   ctx: Context
 ): Promise<leasing.v1.LeaseSearchResult[]> {
-  if (leaseCache.getAll().length === 0) {
-    const ready = await leaseCache.ensureReady(STALE_SYNC_TIMEOUT_MS)
-    if (!ready) {
-      ctx.throw(503, 'Lease cache is warming up — retry shortly', {
-        headers: { 'Retry-After': '30' },
-      })
-    }
-  }
+  // Looked up once for every parking space, not once per row — the pool can
+  // hold ~145,000 ended Xpand rows with Status "Upphört". If this lookup
+  // fails, export without the type rather than failing the whole export:
+  // the Objekttyp column falls back to "Parkering", which is not wrong.
+  // Started first so it runs next to the other Xpand reads; the catch is
+  // attached right away so it can't go unhandled if those throw first.
+  const parkingSpaceTypesPromise: Promise<Map<string, string> | null> =
+    getParkingSpaceTypesByRentalObjectCode().catch((err: unknown) => {
+      logger.error(
+        { err },
+        'lease-cache: export: parking-space type lookup failed'
+      )
+      return null
+    })
 
-  await leaseCache.refreshIfStale(STALE_THRESHOLD_MS, STALE_SYNC_TIMEOUT_MS)
-
-  const pool = buildSearchPool(params, ctx)
-
-  const rentalObjectCodes = await resolveXpandRentalObjectCodes(params)
-  if (rentalObjectCodes && rentalObjectCodes.size === 0) return []
-
-  const filtered = applyCacheFilters(
-    pool,
-    params,
-    rentalObjectCodes ?? undefined
-  )
-  const sorted = applySorting(filtered, params)
+  // The Kontraktstyp column needs the garage codes on every export. If the
+  // lookup fails the export fails with it, the same way a failed district
+  // filter does, rather than write each garage lease as P-Platskontrakt.
+  const garageObjectCodes = await resolveGarageObjectCodes()
+  const { rows } = await findMatchingLeases(params, ctx, garageObjectCodes)
 
   logger.info(
-    { totalInCache: leaseCache.getAll().length, afterFilters: sorted.length },
+    { totalInCache: leaseCache.getAll().length, afterFilters: rows.length },
     'lease-cache: export served from cache'
   )
 
-  return sorted
+  const parkingSpaceTypesByCode = await parkingSpaceTypesPromise
+  if (!parkingSpaceTypesByCode) return rows
+
+  return rows.map((row) => {
+    const typeName = row.rentalObjectCode
+      ? parkingSpaceTypesByCode.get(row.rentalObjectCode)
+      : undefined
+    return typeName ? { ...row, parkingSpaceType: typeName } : row
+  })
+}
+
+/**
+ * The contacts on the leases a search with these params lists, one per
+ * contact code. "Select all" on the lease list sends SMS and e-mail to these,
+ * so they come from the same pool and filters as the list.
+ */
+export async function fetchContactsForLeaseSearch(
+  params: leasing.v1.LeaseSearchQueryParams,
+  ctx: Context
+): Promise<leasing.v1.ContactInfo[]> {
+  const { rows: leases } = await findMatchingLeases(params, ctx)
+
+  // Tenfast and Xpand rows are mixed here and JavaScript compares codes
+  // exactly, so the same contact in another case or padding would get the
+  // message twice.
+  const contactsByCode = new Map<string, leasing.v1.ContactInfo>()
+  for (const lease of leases) {
+    for (const contact of lease.contacts ?? []) {
+      const key = contact.contactCode.trim().toUpperCase()
+      if (!contactsByCode.has(key)) contactsByCode.set(key, contact)
+    }
+  }
+
+  logger.info(
+    { leases: leases.length, contacts: contactsByCode.size },
+    'lease-cache: contacts served from cache'
+  )
+
+  return [...contactsByCode.values()]
 }
 
 /**
@@ -348,18 +497,33 @@ const applySorting = (
  * Filter all leases from the in-memory cache according to the given params.
  * `rentalObjectCodes` is pre-resolved from Xpand for Xpand-bridged filters
  * (buildingCodes, areaCodes, kvvAreaCodes, buildingManager); pass undefined
- * when none of those filters are active.
+ * when none of those filters are active. `leaseTypeOf` gives the contract
+ * type the leaseType filter matches on.
  */
 function applyCacheFilters(
   leases: leasing.v1.LeaseSearchResult[],
   params: leasing.v1.LeaseSearchQueryParams,
-  rentalObjectCodes?: Set<string>
+  rentalObjectCodes: Set<string> | undefined,
+  parkingSpaceObjectCodes: Set<string> | undefined,
+  leaseTypeOf: (lease: leasing.v1.LeaseSearchResult) => LeaseType
 ): leasing.v1.LeaseSearchResult[] {
+  const hasParkingSpaceTypeFilter = parkingSpaceObjectCodes !== undefined
+  const allowedLeaseTypes =
+    params.leaseType && params.leaseType.length > 0
+      ? new Set(params.leaseType.map(normaliseLeaseType))
+      : null
+
   return leases.filter((lease) => {
     if (
       rentalObjectCodes &&
       (!lease.rentalObjectCode ||
         !rentalObjectCodes.has(lease.rentalObjectCode))
+    )
+      return false
+
+    if (
+      allowedLeaseTypes &&
+      !allowedLeaseTypes.has(leaseTypeFilterValue(leaseTypeOf(lease)))
     )
       return false
 
@@ -372,12 +536,29 @@ function applyCacheFilters(
       if (!allowed.has(lease.status)) return false
     }
 
-    if (params.objectType && params.objectType.length > 0) {
-      const paramTypes = params.objectType.map((t) => t.toLowerCase())
+    if (
+      (params.objectType && params.objectType.length > 0) ||
+      hasParkingSpaceTypeFilter
+    ) {
       const rowType =
         OBJECT_TYPE_LABEL_TO_PARAM[lease.objectTypeCode] ?? 'ovrigt'
-      const matches = paramTypes.includes(rowType)
-      if (!matches) return false
+
+      // "Bilplats" and a parking-space type can't both be chosen in the UI,
+      // but a stale saved link could still send both — a parking-space type
+      // filter always replaces plain "parkering" matching.
+      const objectTypeParams = (params.objectType ?? [])
+        .map((t) => t.toLowerCase())
+        .filter((t) => !hasParkingSpaceTypeFilter || t !== 'parkering')
+
+      const matchesObjectType =
+        objectTypeParams.length > 0 && objectTypeParams.includes(rowType)
+
+      const matchesParkingSpaceType =
+        hasParkingSpaceTypeFilter &&
+        !!lease.rentalObjectCode &&
+        parkingSpaceObjectCodes!.has(lease.rentalObjectCode)
+
+      if (!matchesObjectType && !matchesParkingSpaceType) return false
     }
 
     if (params.q) {
@@ -443,88 +624,81 @@ const sortedMemo: {
 }[] = []
 
 function getFilteredSorted(
-  pool: leasing.v1.LeaseSearchResult[],
+  pool: SearchPool,
   params: leasing.v1.LeaseSearchQueryParams,
-  rentalObjectCodes: Set<string> | null
+  rentalObjectCodes: Set<string> | null,
+  parkingSpaceObjectCodes: Set<string> | null,
+  garageObjectCodes: Set<string> | null
 ): leasing.v1.LeaseSearchResult[] {
   const { page: _page, limit: _limit, ...rest } = params
   const key = JSON.stringify([
     rest,
     rentalObjectCodes ? [...rentalObjectCodes].sort() : null,
+    parkingSpaceObjectCodes ? [...parkingSpaceObjectCodes].sort() : null,
+    garageObjectCodes ? [...garageObjectCodes].sort() : null,
   ])
-  const hit = sortedMemo.findIndex((m) => m.pool === pool && m.key === key)
+  const hit = sortedMemo.findIndex((m) => m.pool === pool.rows && m.key === key)
   if (hit >= 0) {
     const [entry] = sortedMemo.splice(hit, 1)
     sortedMemo.unshift(entry)
     return entry.rows
   }
 
-  const rows = applySorting(
-    applyCacheFilters(pool, params, rentalObjectCodes ?? undefined),
+  const leaseTypeOf = (lease: leasing.v1.LeaseSearchResult): LeaseType =>
+    garageObjectCodes &&
+    lease.leaseType === LeaseType.ParkingSpaceContract &&
+    !pool.isEndedXpandRow(lease)
+      ? deriveTenfastLeaseType(
+          lease.leaseType,
+          lease.rentalObjectCode,
+          garageObjectCodes
+        )
+      : lease.leaseType
+
+  const sorted = applySorting(
+    applyCacheFilters(
+      pool.rows,
+      params,
+      rentalObjectCodes ?? undefined,
+      parkingSpaceObjectCodes ?? undefined,
+      leaseTypeOf
+    ),
     params
   )
-  sortedMemo.unshift({ pool, key, rows })
+
+  // The derived type goes on copies: the pool holds the cached rows.
+  const rows = garageObjectCodes
+    ? sorted.map((lease) => {
+        const leaseType = leaseTypeOf(lease)
+        return leaseType === lease.leaseType ? lease : { ...lease, leaseType }
+      })
+    : sorted
+
+  sortedMemo.unshift({ pool: pool.rows, key, rows })
   sortedMemo.length = Math.min(sortedMemo.length, SORTED_MEMO_SIZE)
   return rows
 }
 
-async function searchLeasesFromCache(
+/**
+ * Every lease that matches the params, sorted, across all pages. The list,
+ * the export and "select all" all read this one function, so they cannot
+ * drift apart. The rows are shared with the results cache — do not mutate.
+ *
+ * Parking rows from Tenfast carry the derived contract type (Garagekontrakt
+ * or P-Platskontrakt) only when the garage codes were looked up: when the
+ * leaseType filter names one of those two, or when the caller passes
+ * `garageObjectCodes` (the export). Any other search returns Tenfast parking
+ * rows as P-Platskontrakt, skipping an Xpand query the result doesn't need.
+ */
+async function findMatchingLeases(
   params: leasing.v1.LeaseSearchQueryParams,
-  ctx: Context
-): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> {
-  const page = Math.max(1, params.page ?? 1)
-  const limit = Math.max(1, params.limit ?? 20)
-
-  const pool = buildSearchPool(params, ctx)
-
-  const xpandStart = Date.now()
-  const rentalObjectCodes = await resolveXpandRentalObjectCodes(params)
-  const xpandMs = Date.now() - xpandStart
-
-  if (rentalObjectCodes && rentalObjectCodes.size === 0) {
-    logger.info(
-      { xpandMs },
-      'lease-cache: xpand filter returned no codes, skipping cache search'
-    )
-    return {
-      content: [],
-      _meta: { totalRecords: 0, page, limit, count: 0 },
-      _links: [],
-    }
-  }
-
-  const filterStart = Date.now()
-  const sorted = getFilteredSorted(pool, params, rentalObjectCodes)
-  const filterMs = Date.now() - filterStart
-
-  const totalCount = sorted.length
-  const totalPages = Math.ceil(totalCount / limit)
-  const pageSlice = sorted.slice((page - 1) * limit, page * limit)
-
-  logger.info(
-    {
-      totalInCache: leaseCache.getAll().length,
-      afterFilters: totalCount,
-      page,
-      xpandMs,
-      filterMs,
-    },
-    'lease-cache: search served from cache'
-  )
-
-  return {
-    content: pageSlice,
-    _meta: { totalRecords: totalCount, page, limit, count: pageSlice.length },
-    _links: buildPaginationLinks(ctx, page, limit, totalPages),
-  }
-}
-
-export const searchLeases = async (
-  params: leasing.v1.LeaseSearchQueryParams,
-  ctx: Context
-): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
-  const requestStart = Date.now()
-
+  ctx: Context,
+  garageObjectCodes?: Set<string>
+): Promise<{
+  rows: leasing.v1.LeaseSearchResult[]
+  xpandMs: number
+  filterMs: number
+}> {
   if (leaseCache.getAll().length === 0) {
     const ready = await leaseCache.ensureReady(STALE_SYNC_TIMEOUT_MS)
     if (!ready) {
@@ -538,10 +712,85 @@ export const searchLeases = async (
   // Timeout falls back to existing data so the request never hangs indefinitely.
   await leaseCache.refreshIfStale(STALE_THRESHOLD_MS, STALE_SYNC_TIMEOUT_MS)
 
-  const result = await searchLeasesFromCache(params, ctx)
+  const pool = buildSearchPool(params, ctx)
+
+  const xpandStart = Date.now()
+  // A failed garage lookup rejects the search rather than matching no
+  // garages: "select all" would otherwise message every other lease.
+  const [rentalObjectCodes, parkingSpaceObjectCodes, garageCodes] =
+    await Promise.all([
+      resolveXpandRentalObjectCodes(params),
+      resolveParkingSpaceObjectCodes(params),
+      garageObjectCodes ??
+        (leaseTypeFilterNeedsGarageCodes(params)
+          ? resolveGarageObjectCodes()
+          : null),
+    ])
+  const xpandMs = Date.now() - xpandStart
+
+  // Only rentalObjectCodes can short-circuit here: it's AND-ed uniformly
+  // over every row regardless of type, so an empty set really does mean no
+  // lease can match. parkingSpaceObjectCodes instead unions with objectType
+  // inside applyCacheFilters (Bostad + a type gives housing leases too), so
+  // an empty set there must still flow through — short-circuiting on it
+  // would turn "Bostad + a type that matches no parking space" into zero
+  // results instead of every housing lease. applyCacheFilters already
+  // handles an empty parkingSpaceObjectCodes set correctly on its own.
+  // The same goes for an empty garageCodes set: it only reclassifies rows,
+  // so Garagekontrakt + Bostadskontrakt still lists every housing lease.
+  if (rentalObjectCodes && rentalObjectCodes.size === 0) {
+    logger.info(
+      { xpandMs },
+      'lease-cache: xpand filter returned no codes, skipping cache search'
+    )
+    return { rows: [], xpandMs, filterMs: 0 }
+  }
+
+  const filterStart = Date.now()
+  const rows = getFilteredSorted(
+    pool,
+    params,
+    rentalObjectCodes,
+    parkingSpaceObjectCodes,
+    garageCodes
+  )
+  const filterMs = Date.now() - filterStart
+
+  return { rows, xpandMs, filterMs }
+}
+
+export const searchLeases = async (
+  params: leasing.v1.LeaseSearchQueryParams,
+  ctx: Context
+): Promise<PaginatedResponse<leasing.v1.LeaseSearchResult>> => {
+  const requestStart = Date.now()
+  const page = Math.max(1, params.page ?? 1)
+  const limit = Math.max(1, params.limit ?? 20)
+
+  const { rows, xpandMs, filterMs } = await findMatchingLeases(params, ctx)
+
+  const totalCount = rows.length
+  const totalPages = Math.ceil(totalCount / limit)
+  const pageSlice = rows.slice((page - 1) * limit, page * limit)
+
+  logger.info(
+    {
+      totalInCache: leaseCache.getAll().length,
+      afterFilters: totalCount,
+      page,
+      xpandMs,
+      filterMs,
+    },
+    'lease-cache: search served from cache'
+  )
   logger.info(
     { totalMs: Date.now() - requestStart },
     'lease-cache: searchLeases complete'
   )
-  return result
+
+  return {
+    content: pageSlice,
+    _meta: { totalRecords: totalCount, page, limit, count: pageSlice.length },
+    _links: buildPaginationLinks(ctx, page, limit, totalPages),
+  }
 }

@@ -710,6 +710,18 @@ describe('POST /leases', () => {
     includeVAT: false,
   }
 
+  let xpandLeaseIdsSpy: jest.SpyInstance
+
+  beforeEach(() => {
+    xpandLeaseIdsSpy = jest
+      .spyOn(tenantLeaseAdapter, 'getLeaseIdsByRentalObjectCode')
+      .mockResolvedValue({ ok: true, data: ['P123/01', 'P123/02'] })
+  })
+
+  afterEach(() => {
+    xpandLeaseIdsSpy.mockRestore()
+  })
+
   it('returns 200 and lease content when lease is created successfully', async () => {
     const contact = factory.contact.build()
     jest
@@ -808,12 +820,34 @@ describe('POST /leases', () => {
 
     await request(app.callback()).post('/leases').send(validRequestBody)
 
+    expect(xpandLeaseIdsSpy).toHaveBeenCalledWith('P123')
     expect(createLeaseSpy).toHaveBeenCalledWith(
       contact,
       'P123',
       new Date('2026-06-01T00:00:00.000Z'),
-      false
+      false,
+      ['P123/01', 'P123/02']
     )
+  })
+
+  it('returns 500 without creating a lease when the Xpand leases cannot be read', async () => {
+    jest
+      .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+      .mockResolvedValueOnce({ ok: true, data: factory.contact.build() })
+    xpandLeaseIdsSpy.mockResolvedValueOnce({
+      ok: false,
+      err: 'could-not-get-lease-ids',
+    })
+    const createLeaseSpy = jest.spyOn(tenfastAdapter, 'createLease')
+
+    const res = await request(app.callback())
+      .post('/leases')
+      .send(validRequestBody)
+
+    expect(res.status).toBe(500)
+    expect(res.body.error).toBe('could-not-get-xpand-lease-ids')
+    expect(createLeaseSpy).not.toHaveBeenCalled()
+    createLeaseSpy.mockRestore()
   })
 
   it('returns 500 when an unexpected exception is thrown', async () => {
@@ -1086,6 +1120,66 @@ describe('GET /leases/search', () => {
     expect(res.status).toBe(503)
     expect(res.headers['retry-after']).toBe('30')
     expect(res.body.error).toBe('Lease cache is warming up — retry shortly')
+  })
+})
+
+describe('GET /contacts/from-lease-search', () => {
+  it('returns the contacts from the Tenfast lease search for the same filters', async () => {
+    const contacts = [
+      {
+        name: 'Test',
+        contactCode: 'P123456',
+        email: null,
+        phone: null,
+        contactType: 'tenant' as const,
+      },
+    ]
+    const contactsSpy = jest
+      .spyOn(tenfastLeaseSearchAdapter, 'fetchContactsForLeaseSearch')
+      .mockResolvedValueOnce(contacts)
+
+    const res = await request(app.callback()).get(
+      '/contacts/from-lease-search?status=pendingsignature&name=Test&property=KOLMILAN%201'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual(contacts)
+    expect(contactsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: ['pendingsignature'],
+        name: 'Test',
+        property: ['KOLMILAN 1'],
+      }),
+      expect.anything()
+    )
+  })
+
+  it('returns 503 with Retry-After header when the cache is warming up', async () => {
+    jest
+      .spyOn(tenfastLeaseSearchAdapter, 'fetchContactsForLeaseSearch')
+      .mockRejectedValueOnce(
+        Object.assign(new Error('Lease cache is warming up — retry shortly'), {
+          status: 503,
+          headers: { 'Retry-After': '30' },
+        })
+      )
+
+    const res = await request(app.callback()).get('/contacts/from-lease-search')
+
+    expect(res.status).toBe(503)
+    expect(res.headers['retry-after']).toBe('30')
+    expect(res.body.error).toBe('Lease cache is warming up — retry shortly')
+  })
+
+  it('returns 500 when the lookup throws', async () => {
+    jest
+      .spyOn(tenfastLeaseSearchAdapter, 'fetchContactsForLeaseSearch')
+      .mockRejectedValueOnce(new Error('Xpand is down'))
+
+    const res = await request(app.callback()).get('/contacts/from-lease-search')
+
+    expect(res.status).toBe(500)
+    expect(res.body.content).toBeUndefined()
   })
 })
 

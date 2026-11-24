@@ -56,6 +56,47 @@ export async function getInvoicePdf(
   }
 }
 
+const InvoiceFileNotFoundBodySchema = z.object({
+  reason: z.enum(['invoice-not-found', 'file-not-found']),
+})
+
+// The PDF Xledger keeps for an invoice, e.g. a miscellaneous invoice.
+export async function getInvoiceFile(
+  invoiceNumber: string
+): Promise<
+  AdapterResult<Buffer, 'invoice-not-found' | 'file-not-found' | 'unknown'>
+> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/invoices/${encodeURIComponent(invoiceNumber)}/file`,
+      { responseType: 'arraybuffer', validateStatus: () => true }
+    )
+
+    if (response.status === 404) {
+      const body = InvoiceFileNotFoundBodySchema.parse(
+        JSON.parse(Buffer.from(response.data).toString('utf-8'))
+      )
+      return { ok: false, err: body.reason }
+    }
+
+    if (response.status !== 200) {
+      logger.error(
+        { invoiceNumber, status: response.status },
+        'economy-adapter.getInvoiceFile'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: Buffer.from(response.data) }
+  } catch (err: unknown) {
+    logger.error(
+      { invoiceNumber, error: errorMessage(err) },
+      'economy-adapter.getInvoiceFile'
+    )
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function getInvoiceByInvoiceId(
   invoiceId: string
 ): Promise<AdapterResult<Invoice, 'not-found' | 'unknown'>> {
@@ -231,6 +272,65 @@ export async function importInvoices(
     }
   } catch (err: unknown) {
     logger.error({ error: errorMessage(err) }, 'economy-adapter.importInvoices')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+export type GetInvoiceRecipientsMissingAsCustomersError =
+  'unknown-company' | 'tenfast-failed' | 'xledger-failed' | 'unknown'
+
+/**
+ * Lists the external recipients of a company's unexported invoices that are
+ * missing as customers in the economy system. `detail` is the reason given
+ * by the economy service.
+ */
+export async function getInvoiceRecipientsMissingAsCustomers(
+  companyId: string
+): Promise<
+  AdapterResult<
+    economy.InvoiceRecipientsMissingAsCustomersResponse,
+    GetInvoiceRecipientsMissingAsCustomersError
+  >
+> {
+  try {
+    const response = await axios.get(
+      `${config.economyService.url}/accounting/invoice-recipients/${encodeURIComponent(companyId)}/missing-customers`,
+      { validateStatus: () => true }
+    )
+
+    if (response.status === 200) {
+      return {
+        ok: true,
+        data: economy.InvoiceRecipientsMissingAsCustomersResponseSchema.parse(
+          response.data
+        ),
+      }
+    }
+
+    const errorBody =
+      economy.InvoiceRecipientsMissingAsCustomersErrorResponseSchema.safeParse(
+        response.data
+      )
+    logger.error(
+      { status: response.status, error: errorBody.data?.error },
+      'economy-adapter.getInvoiceRecipientsMissingAsCustomers'
+    )
+
+    if (!errorBody.success) {
+      return { ok: false, err: 'unknown', statusCode: response.status }
+    }
+
+    return {
+      ok: false,
+      err: errorBody.data.error,
+      statusCode: response.status,
+      detail: errorBody.data.reason,
+    }
+  } catch (err: unknown) {
+    logger.error(
+      { error: errorMessage(err) },
+      'economy-adapter.getInvoiceRecipientsMissingAsCustomers'
+    )
     return { ok: false, err: 'unknown' }
   }
 }

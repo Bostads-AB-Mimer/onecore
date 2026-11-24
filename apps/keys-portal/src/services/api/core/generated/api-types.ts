@@ -367,6 +367,206 @@ export interface paths {
       }
     }
   }
+  '/message-templates': {
+    /**
+     * List message templates
+     * @description Alphabetical. `status=active` (default) hides archived templates; `archived` lists only those; `all` lists both.
+     */
+    get: {
+      parameters: {
+        query?: {
+          status?: 'active' | 'archived' | 'all'
+        }
+      }
+      responses: {
+        /** @description Templates */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate'][]
+            }
+          }
+        }
+        /** @description Invalid status filter */
+        400: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Create an SMS template
+     * @description Name must be unique among active templates (409 TEMPLATE_NAME_TAKEN otherwise).
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateMessageTemplate']
+        }
+      }
+      responses: {
+        /** @description The created template */
+        201: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description Invalid request body */
+        400: {
+          content: never
+        }
+        /** @description TEMPLATE_NAME_TAKEN */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/message-templates/{id}': {
+    /** Get a message template */
+    get: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The template (archived ones resolve too) */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update a template in place
+     * @description Only the supplied fields change. Past dispatches keep their sent text; only the "Mall" label follows a rename.
+     */
+    put: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateMessageTemplate']
+        }
+      }
+      responses: {
+        /** @description The updated template */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description Invalid or empty request body */
+        400: {
+          content: never
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description TEMPLATE_NAME_TAKEN */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/message-templates/{id}/archive': {
+    /**
+     * Archive a template
+     * @description Hidden from the picker and the default list; past dispatches still show its name. Idempotent.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The archived template */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/message-templates/{id}/restore': {
+    /**
+     * Restore an archived template
+     * @description Makes it active again; 409 TEMPLATE_NAME_TAKEN when an active template holds the name.
+     */
+    post: {
+      parameters: {
+        path: {
+          id: string
+        }
+      }
+      responses: {
+        /** @description The restored template */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplate']
+            }
+          }
+        }
+        /** @description TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description TEMPLATE_NAME_TAKEN */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/communication-log/customers/{contactCode}/messages': {
     /**
      * Get the communication timeline for a customer
@@ -1106,9 +1306,22 @@ export interface paths {
     /**
      * Get availability for a rental object
      * @description Fetches availability for a rental object by Rental Object Code.
+     * The rent total (rent.amount, rent.vat) is the rent of today, unless
+     * a later move-in day is known. For a parking space that day is its
+     * vacantFrom. For other rental objects vacantFrom is not set, so the
+     * caller gives the day as rentAt. The total is then the sum of the
+     * rent rows in force that day with includedInRent set.
      */
     get: {
       parameters: {
+        query?: {
+          /**
+           * @description The day to give the rent total for (yyyy-mm-dd), for rental
+           * objects that are not parking spaces. Left out, today or earlier
+           * gives the rent of today. Ignored for parking spaces.
+           */
+          rentAt?: string
+        }
         path: {
           /** @description The rental object code of the availability to fetch. */
           rentalObjectCode: string
@@ -1126,9 +1339,26 @@ export interface paths {
                 rent?: {
                   amount?: number
                   vat?: number
+                  /**
+                   * Format: date-time
+                   * @description The day the total (amount, vat) is the rent of.
+                   * Today when the total was not recalculated for
+                   * the move-in day, which also happens when the
+                   * rows for that day look incomplete.
+                   */
+                  asOf?: string
                   rows?: Record<string, never>[]
                 }
               }
+            }
+          }
+        }
+        /** @description rentAt is not a valid day (error invalid-rent-at). */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error?: 'invalid-rent-at'
             }
           }
         }
@@ -1221,6 +1451,11 @@ export interface paths {
     /**
      * Get availabilities for rental objects
      * @description Fetches availabilities for rental objects by Rental Object Codes.
+     * The rent total (rent.amount, rent.vat) is the rent of today, unless
+     * a later move-in day is known. For a parking space that day is its
+     * vacantFrom. For other rental objects vacantFrom is not set, so the
+     * caller gives the day in rentAtByRentalObjectCode. The total is then
+     * the sum of the rent rows in force that day with includedInRent set.
      */
     post: {
       requestBody?: {
@@ -1235,6 +1470,22 @@ export interface paths {
              * ]
              */
             rentalObjectCodes?: string[]
+            /**
+             * @description The day to give the rent total for (yyyy-mm-dd), per
+             * rental object code, for rental objects that are not
+             * parking spaces. A code left out, today or earlier gives
+             * the rent of today. Ignored for parking spaces. Codes
+             * are matched without regard to case or surrounding
+             * blanks. rent.asOf in the response says which day each
+             * total is the rent of.
+             *
+             * @example {
+             *   "ABC123": "2027-01-16"
+             * }
+             */
+            rentAtByRentalObjectCode?: {
+              [key: string]: string
+            }
           }
         }
       }
@@ -1250,9 +1501,37 @@ export interface paths {
                 rent?: {
                   amount?: number
                   vat?: number
+                  /**
+                   * Format: date-time
+                   * @description The day the total (amount, vat) is the rent
+                   * of. Today when the total was not recalculated
+                   * for the move-in day, which also happens when
+                   * the rows for that day look incomplete.
+                   */
+                  asOf?: string
                   rows?: Record<string, never>[]
                 }
               }[]
+            }
+          }
+        }
+        /**
+         * @description The request body is invalid, such as a rentAtByRentalObjectCode
+         * value that is not a valid day. The body lists the invalid
+         * fields (status and data). If only the leasing service rejects
+         * the request, the body is an error code instead (error).
+         */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              status?: 'error'
+              data?: {
+                message?: string
+                path?: string[]
+              }[]
+              /** @enum {string} */
+              error?: 'invalid-request'
             }
           }
         }
@@ -1560,25 +1839,45 @@ export interface paths {
   '/leases/for-csc': {
     /**
      * Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
-     * @description Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
+     * @description Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates. The filtering runs after paging, so a page can hold fewer rows than `limit` while more pages remain; page until `_meta.page * _meta.limit >= _meta.totalRecords`.
      */
     get: {
+      parameters: {
+        query?: {
+          /** @description Page number. Values below 1 count as 1. */
+          page?: number
+          /** @description Leases per page, before filtering. Values above 500 count as 500, values below 1 as 1. */
+          limit?: number
+        }
+      }
       responses: {
-        /** @description Successfully retrieved upcoming move-ins */
+        /** @description Successfully retrieved residential leases for the CSC report */
         200: {
           content: {
             'application/json': {
               content?: components['schemas']['CustomerScoreCardInfoSchema'][]
-              _meta?: Record<string, never>
+              _meta?: {
+                /** @description Current residential leases, before filtering */
+                totalRecords?: number
+                page?: number
+                /** @description The page size used */
+                limit?: number
+                /** @description Rows on this page, after filtering */
+                count?: number
+              }
             }
           }
         }
-        /** @description Invalid query parameters */
+        /** @description Invalid query parameters, e.g. a page or limit that is not a number */
         400: {
           content: never
         }
         /** @description Internal server error */
         500: {
+          content: never
+        }
+        /** @description The lease service is warming up; try again shortly */
+        503: {
           content: never
         }
       }
@@ -2060,7 +2359,7 @@ export interface paths {
   '/contacts/from-lease-search': {
     /**
      * Get contacts matching lease search filters
-     * @description Retrieves contact information for tenants matching the given lease search filters.
+     * @description Returns the contacts on every lease that /leases/search lists for the same filters, one per contact. Phone and e-mail come from the contacts service only. They are empty for a contact with protected identity and for a contact the contacts service has no record of.
      */
     get: {
       parameters: {
@@ -2128,8 +2427,20 @@ export interface paths {
             }
           }
         }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
         /** @description Internal server error */
         500: {
+          content: never
+        }
+        /** @description Phone and e-mail could not be read from the contacts service (error contacts-lookup-failed). No contacts are returned. */
+        502: {
+          content: never
+        }
+        /** @description The lease service is still loading its leases. Retry shortly. */
+        503: {
           content: never
         }
       }
@@ -3095,9 +3406,25 @@ export interface paths {
       }
       responses: {
         /** @description Lease successfully created */
-        201: {
+        200: {
           content: {
-            'application/json': Record<string, never>
+            'application/json': {
+              content?: {
+                leaseId?: string
+                message?: string
+                /** @enum {string} */
+                creditCheckType?: 'extern' | 'intern'
+                /** @description Whether the lease got VAT, and why. No VAT when the tenant has a current or upcoming housing contract in the parking space's residential area. */
+                vat?: {
+                  includeVAT?: boolean
+                  /** @enum {string} */
+                  reason?:
+                    | 'housing-contract-in-area'
+                    | 'no-housing-contract-in-area'
+                    | 'not-a-tenant'
+                }
+              }
+            }
           }
         }
         /** @description Bad request */
@@ -3113,14 +3440,25 @@ export interface paths {
         409: {
           content: never
         }
-        /** @description Internal server error */
+        /** @description Internal server error. error is get-tenant-failed when the applicant's housing contracts could not be fetched to decide VAT; no lease was created then. */
         500: {
           content: {
             'application/json': {
-              /** @example A technical error has occured. */
-              message?: string
+              /** @enum {string} */
+              error?:
+                | 'get-tenant-failed'
+                | 'fetch-invoices-failed'
+                | 'create-lease-failed'
+                | 'internal-error'
+              content?: {
+                message?: string
+              }
             }
           }
+        }
+        /** @description The internal credit check could not be done because invoices are temporarily unavailable. error is fetch-invoices-failed. Trying again later may work. */
+        503: {
+          content: never
         }
       }
     }
@@ -3161,6 +3499,10 @@ export interface paths {
               message?: string
             }
           }
+        }
+        /** @description The internal credit check could not be done because invoices are temporarily unavailable (errorCode service-unavailable). Trying again later may work. */
+        503: {
+          content: never
         }
       }
     }
@@ -8580,6 +8922,33 @@ export interface paths {
       }
     }
   }
+  '/invoices/{ocr}/pdf': {
+    /** Download the rent notice PDF for an invoice */
+    get: {
+      parameters: {
+        path: {
+          /** @description The OCR number of the rent notice */
+          ocr: string
+        }
+      }
+      responses: {
+        /** @description The rent notice PDF */
+        200: {
+          content: {
+            'application/pdf': string
+          }
+        }
+        /** @description There is no rent notice with this OCR number */
+        404: {
+          content: never
+        }
+        /** @description The PDF could not be fetched */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/invoices/{invoiceId}/deferral': {
     /**
      * Set a grace period (anstånd) on an invoice
@@ -8650,10 +9019,75 @@ export interface paths {
       }
     }
   }
+  '/invoices/{invoiceId}/send': {
+    /**
+     * Email an invoice to the customer
+     * @description Emails the invoice with its PDF attached. A rent notice goes to the
+     * tenant given as contactCode, or the first tenant on its lease, with
+     * the rent notice PDF. A miscellaneous
+     * invoice goes to the customer it is billed to with the PDF from the
+     * ledger. Outside production the email goes to the test inbox.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description The invoice number (the OCR number for a rent notice) */
+          invoiceId: string
+        }
+      }
+      requestBody?: {
+        content: {
+          'application/json': {
+            /**
+             * @description The invoice's type, when the caller knows it. For Other (a miscellaneous invoice) the rent notice lookup is skipped.
+             * @enum {string}
+             */
+            invoiceType?: 'Regular' | 'Other'
+            /** @description The tenant a rent notice is emailed to, for a lease with several tenants. Must be a tenant on the lease. Without it the first tenant is emailed. Not used for a miscellaneous invoice. */
+            contactCode?: string
+          }
+        }
+      }
+      responses: {
+        /** @description The email was sent */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                sent: boolean
+              }
+            }
+          }
+        }
+        /** @description The request body is invalid */
+        400: {
+          content: never
+        }
+        /** @description The invoice or its PDF was not found */
+        404: {
+          content: {
+            'application/json': components['schemas']['SendInvoiceEmailError']
+          }
+        }
+        /** @description The invoice has no recipient, the recipient has no email address, or the invoice has no due date */
+        422: {
+          content: {
+            'application/json': components['schemas']['SendInvoiceEmailError']
+          }
+        }
+        /** @description The email could not be sent */
+        500: {
+          content: {
+            'application/json': components['schemas']['SendInvoiceEmailError']
+          }
+        }
+      }
+    }
+  }
   '/invoices/notify-batch': {
     /**
      * Send invoice notification emails for a selection of invoices
-     * @description For each OCR number, fetches invoice data and PDF from economy, contact info from leasing, then sends a notification email with the invoice PDF attached.
+     * @description For each OCR number, fetches invoice data and PDF from economy, the lease from leasing and the tenant's contact info from the contacts service, then sends a notification email with the invoice PDF attached.
      */
     post: {
       requestBody: {
@@ -8671,7 +9105,11 @@ export interface paths {
             'application/json': {
               content?: {
                 sent?: string[]
-                failed?: Record<string, never>[]
+                failed?: {
+                  ocr: string
+                  /** @description not-found, unknown, pdf-not-found, pdf-unknown, no-lease-id, lease-not-found, no-contact-code, protected-identity, no-email or missing-expiration-date */
+                  error: string
+                }[]
                 totalSent?: number
                 totalFailed?: number
               }
@@ -11879,7 +12317,7 @@ export interface paths {
   '/guides': {
     /**
      * List guides
-     * @description Published guides ordered by category and title. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
+     * @description Published guides ordered by title, each with every category it is listed under. Users with the guides-admin role may pass includeDrafts=true to also see drafts.
      */
     get: {
       parameters: {
@@ -11913,7 +12351,7 @@ export interface paths {
     }
     /**
      * Create a guide
-     * @description Requires the guides-admin role. Images are added afterwards through the image upload endpoint.
+     * @description Requires the guides-admin role. The guide is listed under every category in categories (at least one, no duplicates). Images are added afterwards through the image upload endpoint.
      */
     post: {
       requestBody: {
@@ -11930,7 +12368,7 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found or category-parent-not-top-level for any of the categories, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
             'application/json': {
@@ -12079,7 +12517,7 @@ export interface paths {
             }
           }
         }
-        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found, category-parent-not-top-level, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
+        /** @description Validation failed in core or in the communication service; error holds the code (e.g. category-not-found or category-parent-not-top-level for any of the categories, image-not-in-step, step-belongs-to-other-guide) and issues the zod details when the payload failed validation. */
         400: {
           content: {
             'application/json': {
@@ -12789,6 +13227,54 @@ export interface paths {
       }
     }
   }
+  '/v1/contacts/sync-to-leasing': {
+    /**
+     * Make leasing pull the current data of a list of contacts
+     * @description Asks leasing to fetch each contact from ONECore again and update its tenant, e.g. after tenants were stored with outdated or redacted data. Changes nothing in the contacts service. Answers 200 with an outcome per contact code once every code has been tried — check `failed`: synced, skipped (leasing has no tenant for the code), sync-failed (leasing answered with an error), leasing-unreachable (whether the tenant was updated is unknown) or not-attempted (leasing stopped answering, so the code was never sent). Every outcome is safe to retry.
+     */
+    post: {
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['SyncContactsToLeasingRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              content: {
+                results: {
+                  contactCode: string
+                  /** @enum {string} */
+                  status:
+                    | 'synced'
+                    | 'skipped'
+                    | 'sync-failed'
+                    | 'leasing-unreachable'
+                    | 'not-attempted'
+                }[]
+                synced: number
+                skipped: number
+                /** @description Codes with status sync-failed, leasing-unreachable or not-attempted. */
+                failed: number
+              }
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              error: 'invalid-request'
+              detail?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/v1/contacts/by-phone-number/{phoneNumber}': {
     /** List contacts by phone number */
     get: {
@@ -13038,6 +13524,7 @@ export interface components {
               fromDate?: string
               /** Format: date-time */
               toDate?: string
+              includedInRent?: boolean
             }[]
           }
           rentalTenureType: {
@@ -13272,6 +13759,7 @@ export interface components {
           fromDate?: string
           /** Format: date-time */
           toDate?: string
+          includedInRent?: boolean
         }[]
       }
     }
@@ -16387,6 +16875,7 @@ export interface components {
                 fromDate?: string
                 /** Format: date-time */
                 toDate?: string
+                includedInRent?: boolean
               }[]
             }
             rentalTenureType: {
@@ -16756,6 +17245,7 @@ export interface components {
                 fromDate?: string
                 /** Format: date-time */
                 toDate?: string
+                includedInRent?: boolean
               }[]
             }
             rentalTenureType: {
@@ -17217,6 +17707,7 @@ export interface components {
                 fromDate?: string
                 /** Format: date-time */
                 toDate?: string
+                includedInRent?: boolean
               }[]
             }
             rentalTenureType: {
@@ -17697,6 +18188,7 @@ export interface components {
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        templateName: string | null
         workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
@@ -17749,6 +18241,7 @@ export interface components {
         inReplyToDispatchId: string | null
         /** Format: uuid */
         templateId: string | null
+        templateName: string | null
         workOrderCode: string | null
         /** Format: date-time */
         createdAt: string
@@ -17799,6 +18292,7 @@ export interface components {
       inReplyToDispatchId: string | null
       /** Format: uuid */
       templateId: string | null
+      templateName: string | null
       workOrderCode: string | null
       /** Format: date-time */
       createdAt: string
@@ -17942,6 +18436,28 @@ export interface components {
     ReleaseNoteCapabilities: {
       canManage: boolean
     }
+    MessageTemplate: {
+      /** Format: uuid */
+      id: string
+      name: string
+      channels: ('sms' | 'email' | 'my-pages')[]
+      subject: string | null
+      body: string
+      categories: string[]
+      isActive: boolean
+      /** Format: date-time */
+      createdAt: string
+      /** Format: date-time */
+      updatedAt: string
+    }
+    CreateMessageTemplate: {
+      name: string
+      body: string
+    }
+    UpdateMessageTemplate: {
+      name?: string
+      body?: string
+    }
     GuideCategory: {
       /** Format: uuid */
       id: string
@@ -17961,7 +18477,7 @@ export interface components {
       description: string
       /** @enum {string} */
       status: 'draft' | 'published'
-      category: {
+      categories: {
         /** Format: uuid */
         id: string
         name: string
@@ -17971,7 +18487,7 @@ export interface components {
         createdAt: string
         /** Format: date-time */
         updatedAt: string
-      }
+      }[]
       stepCount: number
       createdBy: string
       updatedBy: string
@@ -18005,7 +18521,7 @@ export interface components {
       description: string
       /** @enum {string} */
       status: 'draft' | 'published'
-      category: {
+      categories: {
         /** Format: uuid */
         id: string
         name: string
@@ -18015,7 +18531,7 @@ export interface components {
         createdAt: string
         /** Format: date-time */
         updatedAt: string
-      }
+      }[]
       stepCount: number
       createdBy: string
       updatedBy: string
@@ -18068,7 +18584,7 @@ export interface components {
       /** @default */
       description?: string
       slug: string
-      category:
+      categories: (
         | {
             /** Format: uuid */
             id: string
@@ -18078,6 +18594,7 @@ export interface components {
             /** Format: uuid */
             parentId?: string
           }
+      )[]
       /** @enum {string} */
       status: 'draft' | 'published'
       steps: {
@@ -18103,7 +18620,7 @@ export interface components {
       /** @default */
       description?: string
       slug: string
-      category:
+      categories: (
         | {
             /** Format: uuid */
             id: string
@@ -18113,6 +18630,7 @@ export interface components {
             /** Format: uuid */
             parentId?: string
           }
+      )[]
       /** @enum {string} */
       status: 'draft' | 'published'
       steps: {
@@ -18219,6 +18737,17 @@ export interface components {
         }
       }
     }
+    SendInvoiceEmailError: {
+      /** @enum {string} */
+      reason:
+        | 'invoice-not-found'
+        | 'pdf-not-found'
+        | 'no-recipient'
+        | 'no-email'
+        | 'missing-due-date'
+        | 'send-failed'
+        | 'unknown'
+    }
     CreateContactRequest: {
       nationalId: string
       firstName: string
@@ -18279,6 +18808,10 @@ export interface components {
       relatedContactCode: string
       /** @enum {string} */
       roleType: 'god_man' | 'forvaltare' | 'annan_fakturamottagare'
+    }
+    SyncContactsToLeasingRequest: {
+      /** @description Contact codes to sync, at most 50. Duplicates are synced once. */
+      contactCodes: string[]
     }
     SendLeaseTerminationConfirmationRequest: {
       leaseId: string

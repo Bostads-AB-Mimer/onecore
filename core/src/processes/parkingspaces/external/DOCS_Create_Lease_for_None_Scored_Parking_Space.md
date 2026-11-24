@@ -2,6 +2,8 @@
 
 En sökande ansöker om en icke-poängsatt bilplats (först till kvarn), antingen direkt via Mina Sidor eller å sökandens vägnar av en handläggare via Uthyrningsgränssnittet. Processen validerar annons och sökande, gör en automatisk kreditkontroll (extern via Creditsafe, eller intern via betalningshistorik om sökanden redan har ett kontrakt) och skapar kontraktet i Tenfast vid godkännande. Sökanden och uthyrningsteamet notifieras om utfallet oavsett utgång.
 
+Tenfast samaviserar bilplatsen med hyresgästens andra avtal om hyresgästerna och aviseringsinställningarna matchar. Det sker redan när bilplatsen skapas, innan den är signerad, men den kommer med på avin först när den har signerats. Se [Samavisering](../../invoicedistribution/DOCS_Co_Invoicing.md).
+
 ## Flödesdiagram
 
 Processens beslutslogik: vilka kontroller som styr om flödet går vidare till nästa steg, och vad som händer vid godkännande, nekande eller fel. System- och integrationsdetaljer är medvetet utelämnade här — se sekvensdiagrammet nedan för det.
@@ -129,6 +131,14 @@ sequenceDiagram
 
         note over Core: Start date: the one given, otherwise the day<br/>the parking space is free (vacantFrom, or today).
         Core ->> Leasing: Create Lease
+        Leasing ->> XPandDB: Get Lease Ids on Rental Object
+        XPandDB -->> Leasing: Lease Ids
+
+        break when the Lease Ids cannot be read from XPand
+            Leasing -->> Core: 500 could-not-get-xpand-lease-ids
+            Core-->User: show error message, no lease created
+        end
+
         Leasing ->> Tenfast: Search Leases on Rental Object
         Tenfast -->> Leasing: Leases
 
@@ -137,7 +147,8 @@ sequenceDiagram
             Core-->User: 409, listing status unchanged
         end
 
-        Leasing ->> Tenfast: Create Lease
+        note over Leasing: Lease id: the highest number among the<br/>XPand and Tenfast leases on the object,<br/>voided ones included, plus 1 (AVTAL-612).
+        Leasing ->> Tenfast: Create Lease with that id
         Tenfast -->> Leasing: Create Lease Result
         Leasing -->> Core: Create Lease Result
 

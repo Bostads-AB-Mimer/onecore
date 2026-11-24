@@ -92,6 +92,12 @@ export class XledgerUnavailableError extends Error {
   }
 }
 
+const RETRY_ERROR_CODES = new Set([
+  'BAD_REQUEST.BURST_RATE_LIMIT_REACHED',
+  'BAD_REQUEST.BURST_LIMIT_REACHED',
+  'BAD_REQUEST.CONCURRENCY_LIMIT_REACHED',
+])
+
 // Xledger is down or the request never reached it. 504 is left out since it
 // may also mean a slow query, and retrying that only adds load.
 const UNAVAILABLE_STATUSES = new Set([502, 503])
@@ -250,9 +256,7 @@ const makeXledgerHttpRequest = async (
 
   if (result.status === 200) {
     if (result.data && result.data.errors) {
-      if (
-        result.data.errors[0].code === 'BAD_REQUEST.BURST_RATE_LIMIT_REACHED'
-      ) {
+      if (RETRY_ERROR_CODES.has(result.data.errors[0].code)) {
         return { status: 'retry', data: {} }
       } else {
         return { status: 'error', data: result.data.errors, query: query.query }
@@ -705,6 +709,59 @@ export const getCustomers = async (
   }
 
   return customers
+}
+
+const CUSTOMER_CODE_CHUNK_SIZE = 100
+
+export const getExistingCustomerCodes = async (
+  contactCodes: string[]
+): Promise<string[]> => {
+  const query = gql`
+    query ($first: Int!, $filter: Customer_Filter, $after: String) {
+      customers(first: $first, filter: $filter, after: $after) {
+        edges {
+          cursor
+          node {
+            code
+          }
+        }
+        pageInfo {
+          hasNextPage
+        }
+      }
+    }
+  `
+  const existing: string[] = []
+
+  for (let i = 0; i < contactCodes.length; i += CUSTOMER_CODE_CHUNK_SIZE) {
+    const chunk = contactCodes.slice(i, i + CUSTOMER_CODE_CHUNK_SIZE)
+    let after: string | undefined
+
+    for (;;) {
+      const result = await makeXledgerRequest({
+        query,
+        variables: {
+          first: CUSTOMER_CODE_CHUNK_SIZE,
+          filter: { code_in: chunk },
+          after,
+        },
+      })
+
+      const {
+        edges,
+        pageInfo,
+      }: {
+        edges: { cursor: string; node: { code: string } }[]
+        pageInfo: { hasNextPage: boolean }
+      } = result.data.customers
+      existing.push(...edges.map((edge) => String(edge.node.code).trim()))
+
+      if (!pageInfo.hasNextPage || edges.length === 0) break
+      after = edges[edges.length - 1].cursor
+    }
+  }
+
+  return existing
 }
 
 export const getProjects = async (
@@ -1384,6 +1441,51 @@ export async function getInvoiceByInvoiceNumber(
   } catch (err) {
     logger.error(err, 'Error getting invoice from Xledger')
     throw err
+  }
+}
+
+/*
+ * Downloads the PDF Xledger keeps for an invoice (e.g. a miscellaneous
+ * invoice). invoiceFile.url is a link Xledger hands out that opens without an
+ * Xledger login, so no auth header is sent with it.
+ */
+export async function getInvoiceFile(
+  invoiceNumber: string
+): Promise<
+  AdapterResult<Buffer, 'invoice-not-found' | 'file-not-found' | 'unknown'>
+> {
+  let parsed: ParsedXledgerInvoice | null
+  try {
+    parsed = await getInvoiceByInvoiceNumber(invoiceNumber)
+  } catch {
+    // getInvoiceByInvoiceNumber has already logged the failure.
+    return { ok: false, err: 'unknown' }
+  }
+  if (!parsed) return { ok: false, err: 'invoice-not-found' }
+
+  const fileUrl = parsed.invoice.invoiceFileUrl
+  if (!fileUrl) return { ok: false, err: 'file-not-found' }
+
+  try {
+    const response = await axios.get(fileUrl, {
+      responseType: 'arraybuffer',
+      timeout: xledgerRequestPolicy.timeoutMs,
+      validateStatus: () => true,
+    })
+
+    if (response.status === 404) return { ok: false, err: 'file-not-found' }
+    if (response.status !== 200) {
+      logger.error(
+        { invoiceNumber, status: response.status },
+        'xledger-adapter.getInvoiceFile'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: Buffer.from(response.data) }
+  } catch (err: unknown) {
+    logger.error({ err, invoiceNumber }, 'xledger-adapter.getInvoiceFile')
+    return { ok: false, err: 'unknown' }
   }
 }
 

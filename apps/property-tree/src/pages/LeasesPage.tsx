@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 
 import { leaseColumns, LeaseMobileCard } from '@/features/leases'
 import { usePropertySearch } from '@/features/properties'
 import { useCostCenters } from '@/features/property-areas'
 
-import { useLeaseFilters } from '@/entities/lease'
+import {
+  LEASE_TYPE_FILTER_OPTIONS,
+  PAGE_SIZE_OPTIONS,
+  useLeaseFilters,
+} from '@/entities/lease'
 
 import { ApiError } from '@/services/api/core/baseApi'
 import type { LeaseSearchResult } from '@/services/api/core/leaseSearchService'
@@ -37,19 +41,6 @@ const objectTypeOptions = [
   { label: 'Lokal', value: 'lokal' },
 ] as const
 
-// TODO: Enable when leaseType filtering is supported by the search API
-// const leaseTypeOptions = [
-//   { label: 'Bostadskontrakt', value: 'Bostadskontrakt' },
-//   { label: 'Campuskontrakt', value: 'Campuskontrakt' },
-//   { label: 'Garagekontrakt', value: 'Garagekontrakt' },
-//   { label: 'Kooperativ hyresrätt', value: 'Kooperativ hyresrätt' },
-//   { label: 'Korttidsuthyrning', value: 'Korttidsuthyrning' },
-//   { label: 'Lokalkontrakt', value: 'Lokalkontrakt' },
-//   { label: 'Omförhandlingskontrakt', value: 'Omförhandlingskontrakt' },
-//   { label: 'Övrigt', value: 'Övrigt' },
-//   { label: 'P-Platskontrakt', value: 'P-Platskontrakt' },
-// ] as const
-
 const statusOptions = [
   { label: 'Gällande', value: 'current' },
   { label: 'Kommande', value: 'upcoming' },
@@ -67,19 +58,13 @@ const LeasesPage = () => {
   const searchProperties = usePropertySearch()
   const { data: costCenters } = useCostCenters()
 
-  // TODO: Enable when leaseType filtering is supported by the search API
-  // const searchLeaseTypes = useCallback(
-  //   async (query: string): Promise<SearchFilterOption[]> => {
-  //     const q = query.toLowerCase()
-  //     return leaseTypeOptions
-  //       .filter((opt) => opt.label.toLowerCase().includes(q))
-  //       .map((opt) => ({ label: opt.label, value: opt.value }))
-  //   },
-  //   []
-  // )
-
   const handlePageChange = (newPage: number) => {
     filters.setPage(newPage)
+    cardRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    filters.setPageSize(newPageSize)
     cardRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
@@ -146,6 +131,12 @@ const LeasesPage = () => {
   useEffect(() => {
     clearSelection()
   }, [filters.searchParams, clearSelection])
+
+  const selectionIncludesOtherPages = useMemo(() => {
+    if (allResultsSelected) return false
+    const idsOnPage = new Set(filters.leases.map((lease) => lease.leaseId))
+    return selectedLeaseIds.some((id) => !idsOnPage.has(id))
+  }, [allResultsSelected, filters.leases, selectedLeaseIds])
 
   const selectColumn = {
     key: 'select',
@@ -236,6 +227,15 @@ const LeasesPage = () => {
                 onObjectTypeChange={(vals) =>
                   filters.setFilterValues('objectType', vals)
                 }
+                parkingOptionValue="parkering"
+                loadParkingSpaceTypes={filters.loadParkingSpaceTypes}
+                selectedParkingSpaceTypes={filters.selectedParkingSpaceTypes}
+                onParkingSpaceTypeChange={(vals) =>
+                  filters.setFilterValues('parkingSpaceType', vals)
+                }
+                onObjectAndParkingSpaceTypeChange={
+                  filters.setObjectAndParkingSpaceType
+                }
                 placeholder="Objekttyp"
               />
 
@@ -266,18 +266,17 @@ const LeasesPage = () => {
                 searchPlaceholder="Sök hyresgästnamn"
               />
 
-              {/* TODO: Enable when leaseType filtering is supported by the search API
-              <MultiSelectSearchFilterDropdown
-                searchFn={searchLeaseTypes}
-                minSearchLength={0}
+              <MultiSelectFilterDropdown
+                options={LEASE_TYPE_FILTER_OPTIONS.map((o) => ({
+                  label: o.label,
+                  value: o.value,
+                }))}
                 selectedValues={filters.selectedLeaseTypes}
                 onSelectionChange={(vals) =>
                   filters.setFilterValues('leaseType', vals)
                 }
                 placeholder="Kontraktstyp"
-                searchPlaceholder="Sök kontraktstyp"
               />
-              */}
 
               <MultiSelectSearchFilterDropdown
                 searchFn={searchProperties}
@@ -394,12 +393,15 @@ const LeasesPage = () => {
             pageSize={filters.pageSize}
             onPageChange={handlePageChange}
             isFetching={filters.isFetching}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onPageSizeChange={handlePageSizeChange}
           />
         </CardContent>
       </Card>
 
       <BulkActionBar
         selectedCount={selectedCount}
+        includesOtherPages={selectionIncludesOtherPages}
         onClear={clearSelection}
         onSendSms={handleOpenSmsModal}
         onSendEmail={handleOpenEmailModal}

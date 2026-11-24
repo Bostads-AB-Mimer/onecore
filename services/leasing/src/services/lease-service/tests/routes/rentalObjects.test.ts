@@ -785,6 +785,51 @@ describe('parking spaces', () => {
       expect(res.body.content).toHaveLength(1)
       expect(res.body.content[0].rentalObjectCode).toBe('vacant-code')
     })
+
+    it('should filter out parking spaces with an indefinite block that starts later', async () => {
+      // Arrange: a block without an end date from tomorrow, which is what
+      // the adapter reports when a block running today is followed by one
+      // without an end date
+      const tomorrow = new Date()
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+
+      const blockedParkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'blocked-code',
+        blockStartDate: tomorrow,
+        blockEndDate: undefined,
+      })
+      const vacantParkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'vacant-code',
+      })
+
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForVacantRentalObjects')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'blocked-code',
+            }),
+            factory.rentalObjectAvailabilityInfo.build({
+              rentalObjectCode: 'vacant-code',
+            }),
+          ],
+        })
+      jest
+        .spyOn(rentalObjectAdapter, 'getParkingSpaces')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: [blockedParkingSpace, vacantParkingSpace],
+        })
+
+      // Act
+      const res = await request(app.callback()).get('/vacant-parkingspaces')
+
+      // Assert
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0].rentalObjectCode).toBe('vacant-code')
+    })
   })
 
   describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {

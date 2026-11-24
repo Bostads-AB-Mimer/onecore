@@ -2,6 +2,7 @@ import { economy } from '@onecore/types'
 
 import {
   addBatchToReport,
+  addCustomersToReport,
   buildExportReportEmail,
   createCompanyExportReport,
   groupExportErrors,
@@ -16,6 +17,7 @@ const emptyBatch = {
   successfulInvoices: [],
   skippedInvoices: [],
   markFailures: [],
+  missingCustomerCodes: [],
 }
 
 describe('addBatchToReport', () => {
@@ -192,6 +194,167 @@ describe('buildExportReportEmail', () => {
     expect(body).toContain(
       'Körningen avbröts: exporten misslyckades. Xpand timeout'
     )
+  })
+})
+
+describe('held-back invoices', () => {
+  const heldBack = (
+    invoiceNumber: string
+  ): economy.RentalInvoiceExportError => ({
+    invoiceNumber,
+    code: 'missing-customer',
+    error: 'Kunden P5 finns inte i Xledger',
+  })
+
+  it('drops a held-back invoice from the errors once a later batch exports it', () => {
+    const report = createCompanyExportReport('001')
+    addBatchToReport(report, {
+      ...emptyBatch,
+      errors: [heldBack('7')],
+      missingCustomerCodes: ['P5'],
+    })
+    addBatchToReport(report, { ...emptyBatch, successfulInvoices: ['7'] })
+
+    expect(report.exportedCount).toBe(1)
+    expect([...report.errors.values()]).toEqual([])
+  })
+
+  it('lists only the invoices still held back at the end of the run', () => {
+    const report = createCompanyExportReport('001')
+    addBatchToReport(report, {
+      ...emptyBatch,
+      errors: [heldBack('7'), heldBack('8')],
+      missingCustomerCodes: ['P5'],
+    })
+    addBatchToReport(report, { ...emptyBatch, successfulInvoices: ['7'] })
+
+    const { subject, body } = buildExportReportEmail(
+      [report],
+      startedAt,
+      finishedAt
+    )
+
+    expect(subject).toBe('Fel i körning: export av hyresavier till Xledger')
+    expect(body).toContain('Avier med fel (exporterades inte): 1')
+    expect(body).toContain('Kunden finns inte i Xledger (1 avi):')
+    expect(body).toContain('- 8: Kunden P5 finns inte i Xledger')
+    expect(body).not.toContain('- 7: Kunden P5 finns inte i Xledger')
+  })
+})
+
+describe('customers in the report', () => {
+  it('starts every company with an empty customer section', () => {
+    expect(createCompanyExportReport('001').customers).toEqual({
+      created: [],
+      updated: [],
+      failed: [],
+    })
+  })
+
+  it('lists the customers the run created and keeps the plain subject', () => {
+    const report = createCompanyExportReport('001')
+    addBatchToReport(report, { ...emptyBatch, successfulInvoices: ['1'] })
+    addCustomersToReport(report, {
+      created: ['P1', 'P2'],
+      updated: [],
+      failed: [],
+    })
+
+    const { subject, body } = buildExportReportEmail(
+      [report],
+      startedAt,
+      finishedAt
+    )
+
+    expect(subject).toBe('Körning: export av hyresavier till Xledger')
+    expect(body).toContain('Nya kunder i Xledger: 2')
+    expect(body.some((line) => line.includes('P1, P2'))).toBe(true)
+  })
+
+  it('names a customer missing in the contact register and flags the run', () => {
+    const report = createCompanyExportReport('001')
+    addCustomersToReport(report, {
+      created: [],
+      updated: [],
+      failed: [{ contactCode: 'P3', reason: 'contact-not-found' }],
+    })
+
+    const { subject, body } = buildExportReportEmail(
+      [report],
+      startedAt,
+      finishedAt
+    )
+
+    expect(subject).toBe('Fel i körning: export av hyresavier till Xledger')
+    expect(
+      body.some((line) => line.includes('P3') && /kontaktregistret/i.test(line))
+    ).toBe(true)
+  })
+
+  it('says the customer check could not run and flags the run', () => {
+    const report = createCompanyExportReport('001')
+    addCustomersToReport(report, {
+      created: [],
+      updated: [],
+      failed: [],
+      lookupFailure: 'xledger-failed',
+    })
+
+    const { subject, body } = buildExportReportEmail(
+      [report],
+      startedAt,
+      finishedAt
+    )
+
+    expect(subject).toBe('Fel i körning: export av hyresavier till Xledger')
+    expect(
+      body.some((line) => /kunderna kunde inte kontrolleras/i.test(line))
+    ).toBe(true)
+    expect(body.some((line) => line.includes('xledger-failed'))).toBe(true)
+  })
+
+  it('caps the listed customer codes', () => {
+    const report = createCompanyExportReport('001')
+    const created = Array.from({ length: 120 }, (_, i) => `P${i + 1}`)
+    addCustomersToReport(report, { created, updated: [], failed: [] })
+
+    const { body } = buildExportReportEmail([report], startedAt, finishedAt)
+
+    expect(body).toContain('Nya kunder i Xledger: 120')
+    const listed = body.find((line) => line.includes('och 110 till'))
+    expect(listed).toContain(created.slice(0, 10).join(', '))
+    expect(listed).not.toContain('P11')
+  })
+
+  it('leaves the body as before when no customer was touched', () => {
+    const plain = createCompanyExportReport('001')
+    addBatchToReport(plain, { ...emptyBatch, successfulInvoices: ['1'] })
+    const withEmptyCustomers = createCompanyExportReport('001')
+    addBatchToReport(withEmptyCustomers, {
+      ...emptyBatch,
+      successfulInvoices: ['1'],
+    })
+    addCustomersToReport(withEmptyCustomers, {
+      created: [],
+      updated: [],
+      failed: [],
+    })
+
+    const before = buildExportReportEmail([plain], startedAt, finishedAt)
+    const after = buildExportReportEmail(
+      [withEmptyCustomers],
+      startedAt,
+      finishedAt
+    )
+
+    expect(after).toEqual(before)
+    expect(
+      after.body.some((line) =>
+        /kunder i Xledger|kontaktregistret|kontrolleras|uppdaterade|kunde inte skapas/i.test(
+          line
+        )
+      )
+    ).toBe(false)
   })
 })
 

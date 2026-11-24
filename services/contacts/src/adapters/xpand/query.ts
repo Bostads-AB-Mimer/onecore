@@ -227,27 +227,57 @@ export const contactCodeForNationalId = async (
   return row?.contactCode ?? null
 }
 
+// Table key of cmctc in cmlog.keydbtbl
+const CONTACT_TABLE_KEY = '_RXJ0UWYHC'
+
+// cmlog categories (logcat) that record sent messages, not contact changes
+const SKIPPED_CONTACT_CHANGE_LOGCATS = [
+  'SMS har skapats',
+  'E-post skickat',
+  'Skickad via SMS',
+]
+
 /**
- * Retrieves cmlog rows for contact changes recorded since the given timestamp.
+ * Retrieves the contacts changed since the given timestamp, each with the
+ * latest cmlog time for it.
  *
- * Only rows whose logmemo starts with "Kontakt " are returned, as these
- * represent changes to contacts. If no timestamp is provided, returns all
- * matching rows.
+ * A cmlog row counts when it belongs to the contact table, its logmemo starts
+ * with "Kontakt " and it was logged after `since`. The contact is found
+ * through cmlog.keycode = cmctc.keycmctc, so the code is the one the contact
+ * has now, not the one written in logmemo.
+ * Rows whose logcat is a sent-message category are skipped; rows with no
+ * logcat are kept. Ordered by timestamp ascending.
  *
  * @param db - The Knex database connection to use
  * @param since - The timestamp to query changes from, or null for all rows
- * @returns A promise that resolves to an array of cmlog rows
+ * @returns A promise that resolves to contact codes with timestamps
  */
-export const cmlogContactChanges = (
+export const cmlogContactChanges = async (
   db: knex.Knex,
   since: Date | null
-): Promise<Record<string, unknown>[]> => {
-  const base = db
+): Promise<{ contactCode: string; timestamp: Date }[]> => {
+  const query = db
     .from('cmlog')
-    .whereLike('logmemo', 'Kontakt %')
-    .orderBy('logtime', 'asc')
+    .innerJoin('cmctc', 'cmlog.keycode', 'cmctc.keycmctc')
+    .where('cmlog.keydbtbl', CONTACT_TABLE_KEY)
+    .whereLike('cmlog.logmemo', 'Kontakt %')
+    .where((qb) =>
+      qb
+        .whereNull('cmlog.logcat')
+        .orWhereNotIn('cmlog.logcat', SKIPPED_CONTACT_CHANGE_LOGCATS)
+    )
+    .select({ contactCode: db.raw('RTRIM(cmctc.cmctckod)') })
+    .select({ timestamp: db.raw('MAX(cmlog.logtime)') })
+    .groupBy('cmctc.cmctckod')
+    .orderByRaw('MAX(cmlog.logtime) asc, cmctc.cmctckod asc')
 
-  return since ? base.andWhere('logtime', '>', since) : base
+  if (since) query.andWhere('cmlog.logtime', '>', since)
+
+  const rows = await query
+  return rows.map((row) => ({
+    contactCode: String(row.contactCode).trim(),
+    timestamp: row.timestamp as Date,
+  }))
 }
 
 /**

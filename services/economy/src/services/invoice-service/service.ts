@@ -18,6 +18,7 @@ import {
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
   getInvoicesByInvoiceNumbers as getXledgerInvoicesByInvoiceNumbers,
   ParsedXledgerInvoice,
+  getExistingCustomerCodes,
   getPeriodInformationFromDateStrings,
   setInvoiceRowsTaxRule,
   transformContact,
@@ -63,6 +64,7 @@ import {
   getInvoicesNotExported,
   getInvoicesByOcr,
   getRentalLosses,
+  getRecipientCodesOfInvoicesNotExported,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import config, { isRentalLossExcludedAccount } from '@src/common/config'
 import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
@@ -329,6 +331,11 @@ const getXpandInvoiceRowsByInvoiceId = async (
   }
 }
 
+// A rent notice PDF is fetched from Tenfast by OCR. Credited Tenfast invoices
+// have no OCR (invoiceId is ''), so there is nothing to look up.
+const hasRentNoticePdf = (tenfastInvoice: Invoice): boolean =>
+  tenfastInvoice.invoiceId !== ''
+
 /*
  * A contact's invoices from Xledger, Tenfast and Xpand.
  *
@@ -398,7 +405,10 @@ export const getInvoicesByContactCode = async (
         fromDate: periodSource.fromDate,
         toDate: periodSource.toDate,
       }),
-      ...(tenfastInvoice && { invoiceRows: tenfastInvoice.invoiceRows }),
+      ...(tenfastInvoice && {
+        invoiceRows: tenfastInvoice.invoiceRows,
+        hasRentNoticePdf: hasRentNoticePdf(tenfastInvoice),
+      }),
     }
 
     return withInvoiceDeferral(invoice, {
@@ -410,9 +420,13 @@ export const getInvoicesByContactCode = async (
   const tenfastOnlyInvoices = tenfastInvoices
     .filter((parsed) => !xledgerInvoiceIds.has(parsed.invoice.invoiceId))
     .map((parsed) =>
-      withInvoiceDeferral(parsed.invoice, {
-        tenfastDeferral: parsed.tenfastDeferral,
-      })
+      withInvoiceDeferral(
+        {
+          ...parsed.invoice,
+          hasRentNoticePdf: hasRentNoticePdf(parsed.invoice),
+        },
+        { tenfastDeferral: parsed.tenfastDeferral }
+      )
     )
 
   const xpandOnlyInvoices = xpandInvoices.filter(
@@ -806,6 +820,108 @@ const prepareInvoicesForAccounting = async (
   return { invoices: prepared, errors }
 }
 
+export const isInternalRecipient = (contactCode: string | undefined) =>
+  contactCode?.startsWith('I') ?? false
+
+export type InvoiceRecipientsMissingAsCustomersResult =
+  | { ok: true; data: economy.InvoiceRecipientsMissingAsCustomersResponse }
+  | {
+      ok: false
+      err: economy.InvoiceRecipientsMissingAsCustomersErrorResponse['error']
+      reason: string
+    }
+
+export const getInvoiceRecipientsMissingAsCustomers = async (
+  companyId: string
+): Promise<InvoiceRecipientsMissingAsCustomersResult> => {
+  const company = config.companies.find(
+    (company) => company.xpandId.localeCompare(companyId) === 0
+  )
+  if (!company) {
+    return {
+      ok: false,
+      err: 'unknown-company',
+      reason: `Could not find company ${companyId}`,
+    }
+  }
+
+  const recipientsResult = await getRecipientCodesOfInvoicesNotExported(company)
+  if (!recipientsResult.ok) {
+    return { ok: false, err: 'tenfast-failed', reason: recipientsResult.err }
+  }
+
+  const recipients = recipientsResult.data.filter(
+    (code) => !isInternalRecipient(code)
+  )
+  if (recipients.length === 0) {
+    return { ok: true, data: { recipients: 0, missingCustomerCodes: [] } }
+  }
+
+  try {
+    const existing = new Set(await getExistingCustomerCodes(recipients))
+    return {
+      ok: true,
+      data: {
+        recipients: recipients.length,
+        missingCustomerCodes: recipients.filter((code) => !existing.has(code)),
+      },
+    }
+  } catch (err: unknown) {
+    logger.error(
+      { companyId, error: errorMessage(err) },
+      'Could not look up existing Xledger customers'
+    )
+    return { ok: false, err: 'xledger-failed', reason: errorMessage(err) }
+  }
+}
+
+const holdBackInvoicesWithMissingCustomer = async (
+  invoices: InvoiceWithAccounting[]
+): Promise<{
+  invoices: InvoiceWithAccounting[]
+  errors: economy.RentalInvoiceExportError[]
+  missingCustomerCodes: string[]
+}> => {
+  const recipientCodes = [
+    ...new Set(
+      invoices.flatMap((invoice) =>
+        invoice.recipientContactCode
+          ? [invoice.recipientContactCode.trim()]
+          : []
+      )
+    ),
+  ]
+  if (recipientCodes.length === 0) {
+    return { invoices, errors: [], missingCustomerCodes: [] }
+  }
+
+  const existing = new Set(await getExistingCustomerCodes(recipientCodes))
+  const missingCustomerCodes = recipientCodes.filter(
+    (code) => !existing.has(code)
+  )
+  if (missingCustomerCodes.length === 0) {
+    return { invoices, errors: [], missingCustomerCodes }
+  }
+
+  const missing = new Set(missingCustomerCodes)
+  const errors: economy.RentalInvoiceExportError[] = []
+  const kept: InvoiceWithAccounting[] = []
+  for (const invoice of invoices) {
+    const code = invoice.recipientContactCode?.trim()
+    if (code && missing.has(code)) {
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        code: 'missing-customer',
+        error: `Customer ${code} is missing in Xledger`,
+      })
+    } else {
+      kept.push(invoice)
+    }
+  }
+
+  return { invoices: kept, errors, missingCustomerCodes }
+}
+
 export const exportRentalInvoicesAccounting = async (
   companyId: string,
   numberOfChunks: number = 1
@@ -813,12 +929,14 @@ export const exportRentalInvoicesAccounting = async (
   exportedInvoices: InvoiceWithAccounting[]
   skippedInvoices: InvoiceWithAccounting[]
   errors: economy.RentalInvoiceExportError[]
+  missingCustomerCodes: string[]
 }> => {
   try {
     const errors: economy.RentalInvoiceExportError[] = []
     const CHUNK_SIZE = 1000 // 100
     const invoices: InvoiceWithAccounting[] = []
     const skippedInvoices: InvoiceWithAccounting[] = []
+    const missingCustomerCodes = new Set<string>()
 
     const company = config.companies.find(
       (company) => company.xpandId.localeCompare(companyId) === 0
@@ -845,11 +963,11 @@ export const exportRentalInvoicesAccounting = async (
 
       // TODO: add logic for internal customers instead of filtering them out.
       let chunkInvoices = invoicesResult.data.invoices.filter((invoice) => {
-        return !invoice.recipientContactCode?.startsWith('I')
+        return !isInternalRecipient(invoice.recipientContactCode)
       })
 
       let skipped = invoicesResult.data.invoices.filter((invoice) => {
-        return invoice.recipientContactCode?.startsWith('I')
+        return isInternalRecipient(invoice.recipientContactCode)
       })
 
       skippedInvoices.push(...skipped)
@@ -866,8 +984,16 @@ export const exportRentalInvoicesAccounting = async (
           exportedInvoices: [],
           skippedInvoices,
           errors,
+          missingCustomerCodes: [...missingCustomerCodes],
         }
       }
+
+      const heldBack = await holdBackInvoicesWithMissingCustomer(chunkInvoices)
+      errors.push(...heldBack.errors)
+      heldBack.missingCustomerCodes.forEach((code) =>
+        missingCustomerCodes.add(code)
+      )
+      chunkInvoices = heldBack.invoices
 
       const prepared = await prepareInvoicesForAccounting(
         company,
@@ -904,6 +1030,7 @@ export const exportRentalInvoicesAccounting = async (
       exportedInvoices: invoices,
       skippedInvoices,
       errors,
+      missingCustomerCodes: [...missingCustomerCodes],
     }
   } catch (error: any) {
     logger.error(error, 'Error importing invoices')
@@ -948,11 +1075,11 @@ export const exportRentalInvoicesAccountingByOcr = async (
 
   // TODO: add logic for internal customers instead of filtering them out.
   const skippedInvoices = invoicesResult.data.invoices.filter((invoice) => {
-    return invoice.recipientContactCode?.startsWith('I')
+    return isInternalRecipient(invoice.recipientContactCode)
   })
 
   const relevantInvoices = invoicesResult.data.invoices.filter((invoice) => {
-    return !invoice.recipientContactCode?.startsWith('I')
+    return !isInternalRecipient(invoice.recipientContactCode)
   })
 
   const prepared = await prepareInvoicesForAccounting(company, relevantInvoices)

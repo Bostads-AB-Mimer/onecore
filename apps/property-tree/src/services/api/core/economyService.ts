@@ -10,7 +10,7 @@ import { MiscellaneousInvoicePayload } from '@onecore/types/src/economy/miscella
 import { XledgerContact } from '@onecore/types/src/types'
 
 import { ApiError, GET, POST, PUT } from './baseApi'
-import type { paths } from './generated/api-types'
+import type { components, paths } from './generated/api-types'
 
 // TODO: Fix the @ts-expect-error by updating the OpenAPI spec
 // Economy service is not properly set up for swagger generation :(
@@ -197,10 +197,10 @@ async function submitMiscellaneousInvoice(
   // empty body yields `error: undefined` and must not be treated as success.
   if (!response.ok) {
     const type = (error as { type?: string } | undefined)?.type
-    if (type === SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound) {
+    if (type === SubmitMiscellaneousInvoiceErrorCodes.CustomerCreationFailed) {
       throw new ApiError(
         response.status,
-        SubmitMiscellaneousInvoiceErrorCodes.XledgerCustomerNotFound
+        SubmitMiscellaneousInvoiceErrorCodes.CustomerCreationFailed
       )
     }
     throw new ApiError(
@@ -261,6 +261,49 @@ async function updateInvoiceDeferralDate(params: {
   if (error) throw error
 }
 
+// Null when there is no rent notice PDF for the invoice.
+async function getInvoicePdf(invoiceId: string): Promise<Blob | null> {
+  const { data, error, response } = await GET('/invoices/{ocr}/pdf', {
+    params: { path: { ocr: invoiceId } },
+    parseAs: 'blob',
+  })
+
+  if (response.status === 404) return null
+  if (error || !response.ok) {
+    throw new ApiError(
+      response.status,
+      `Failed to download invoice PDF (status ${response.status})`
+    )
+  }
+
+  // openapi-typescript types binary responses as `string`, but parseAs:'blob'
+  // makes openapi-fetch return an actual Blob at runtime.
+  return data as unknown as Blob
+}
+
+export type SendInvoiceError = components['schemas']['SendInvoiceEmailError']
+
+// invoiceType lets core skip the rent notice lookup for a miscellaneous
+// invoice. contactCode is the contact whose ledger the invoice is sent from,
+// so a rent notice on a shared lease goes to that tenant.
+async function sendInvoiceToCustomer(params: {
+  invoiceId: string
+  invoiceType: Invoice['type']
+  contactCode?: string
+}): Promise<void> {
+  const { error, response } = await POST('/invoices/{invoiceId}/send', {
+    params: { path: { invoiceId: params.invoiceId } },
+    body: { invoiceType: params.invoiceType, contactCode: params.contactCode },
+  })
+
+  // Branch on the raw status: a failed response without a body has no
+  // `error`, and must not be read as sent.
+  if (!response.ok) {
+    const sendError: SendInvoiceError = { reason: error?.reason ?? 'unknown' }
+    throw sendError
+  }
+}
+
 export const economyService = {
   getInvoicesByContactCode,
   getInvoiceByNumber,
@@ -273,4 +316,6 @@ export const economyService = {
   getXledgerContacts,
   getXledgerProjects,
   updateInvoiceDeferralDate,
+  getInvoicePdf,
+  sendInvoiceToCustomer,
 }

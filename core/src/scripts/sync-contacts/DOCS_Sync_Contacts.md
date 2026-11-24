@@ -6,7 +6,7 @@ Ett fristående script (`core/src/scripts/sync-contacts/index.ts`) hämtar de ko
 
 ## Vilka ändringar som plockas upp
 
-Contacts-tjänsten (`GET /contacts/sync`) läser `cmlog`-rader som börjar med `Kontakt ` och plockar ut kontaktkoden ur första ordet efter. Flera ändringar av samma kontakt blir en synk, med den senaste tidsstämpeln. Kontaktuppgifterna läses därefter ur Xpand, i en enda fråga för alla ändrade koder. En kontaktkod som inte längre finns i Xpand faller bort tyst. Det kan även en befintlig kontakt göra: frågan begränsas till lika många kontaktrader som koder, så om en kod har två rader i Xpands kontakttabell trängs en annan ändrad kontakt ut — utan logg och utan mejl. Om sådana dubbletter finns i Xpand i dag är inte kontrollerat.
+Contacts-tjänsten (`GET /contacts/sync`) läser `cmlog`-rader på kontakttabellen (`keydbtbl` = `_RXJ0UWYHC`) som börjar med `Kontakt `, och hittar kontakten via radens `keycode` (= `cmctc.keycmctc`). Synken använder alltså kontaktens nuvarande kod, inte koden i texten: kontakter som skapas via mimer.nu får ofta ny kod direkt efter att de skapats, och texten uppdateras inte då. Rader vars kategori (`logcat`) är ett skickat meddelande — `SMS har skapats`, `E-post skickat` eller `Skickad via SMS` — hoppas över, så ett massutskick från Xpand ger ingen synk. Alla andra kategorier läses, även nya som Xpand lägger till och rader utan kategori. Ny adress, e-postadress eller telefon loggar ingen egen `Kontakt`-rad, men kommer nästan alltid med en `Värde ändrat`-rad inom en minut. Flera ändringar av samma kontakt blir en synk, med den senaste tidsstämpeln. Kontaktuppgifterna läses därefter ur Xpand, i en enda fråga för alla ändrade koder. En kontaktkod som inte längre finns i Xpand faller bort tyst. Det kan även en befintlig kontakt göra: frågan begränsas till lika många kontaktrader som koder, så om en kod har två rader i Xpands kontakttabell trängs en annan ändrad kontakt ut — utan logg och utan mejl. Om sådana dubbletter finns i Xpand i dag är inte kontrollerat.
 
 ## Vad som synkas
 
@@ -101,7 +101,7 @@ sequenceDiagram
     PVC -->> Core: Saved position (or none — sync everything)
 
     Core ->> Contacts: GET /contacts/sync?since={position}
-    Contacts ->> Xpand: cmlog rows starting "Kontakt "
+    Contacts ->> Xpand: contact-table cmlog rows starting "Kontakt ", joined to cmctc, minus sent-message categories
     Xpand -->> Contacts: Rows
     note over Contacts: One entry per contact code —<br/>latest logtime wins
     Contacts ->> Xpand: Contacts by code

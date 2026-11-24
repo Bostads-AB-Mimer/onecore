@@ -154,6 +154,31 @@ describe('leases routes', () => {
       expect(res.status).toBe(500)
       expect(res.body).toMatchObject({ error: 'Invalid lease data' })
     })
+
+    it('responds with every lease when a holder is an organisation without an organisation number', async () => {
+      const person = factory.contactsServiceContact.build()
+      const organisation =
+        factory.contactsServiceOrganisationWithoutNumber('I000001')
+      jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({ ok: true, data: [person, organisation] })
+      jest
+        .spyOn(tenantLeaseAdapter, 'getLeasesByRentalObjectCode')
+        .mockResolvedValue([
+          factory.lease.build({ tenantContactIds: [person.contactCode] }),
+          factory.lease.build({ tenantContactIds: [organisation.contactCode] }),
+        ])
+
+      const res = await request(app.callback()).get(
+        '/leases/by-rental-object-code/123?includeContacts=true'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(2)
+      expect(res.body.content[1].tenants).toMatchObject([
+        { contactCode: 'I000001', nationalRegistrationNumber: '' },
+      ])
+    })
   })
 
   describe('GET /leases/by-contact-code/:contactCode', () => {

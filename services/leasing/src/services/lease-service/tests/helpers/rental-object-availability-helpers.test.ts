@@ -1,5 +1,5 @@
 import {
-  hasIndefiniteActiveBlock,
+  hasIndefiniteBlock,
   determineVacantFrom,
   withRentAt,
 } from '../../helpers/rental-object-availability-helpers'
@@ -19,10 +19,10 @@ describe('rental-object-availability-helpers', () => {
     jest.useRealTimers()
   })
 
-  describe('hasIndefiniteActiveBlock', () => {
+  describe('hasIndefiniteBlock', () => {
     it('returns false when there is no blockStartDate', () => {
       const ps = RentalObjectFactory.build()
-      expect(hasIndefiniteActiveBlock(ps)).toBe(false)
+      expect(hasIndefiniteBlock(ps)).toBe(false)
     })
 
     it('returns false when block has an end date, even while currently active', () => {
@@ -30,28 +30,28 @@ describe('rental-object-availability-helpers', () => {
         blockStartDate: new Date('2026-03-01'),
         blockEndDate: new Date('2026-04-30'),
       })
-      expect(hasIndefiniteActiveBlock(ps)).toBe(false)
+      expect(hasIndefiniteBlock(ps)).toBe(false)
     })
 
     it('returns true when an indefinite block started today', () => {
       const ps = RentalObjectFactory.build({
         blockStartDate: new Date('2026-03-31'),
       })
-      expect(hasIndefiniteActiveBlock(ps)).toBe(true)
+      expect(hasIndefiniteBlock(ps)).toBe(true)
     })
 
     it('returns true when an indefinite block started in the past', () => {
       const ps = RentalObjectFactory.build({
         blockStartDate: new Date('2026-03-01'),
       })
-      expect(hasIndefiniteActiveBlock(ps)).toBe(true)
+      expect(hasIndefiniteBlock(ps)).toBe(true)
     })
 
-    it('returns false when an indefinite block starts in the future', () => {
+    it('returns true when an indefinite block starts in the future', () => {
       const ps = RentalObjectFactory.build({
         blockStartDate: new Date('2026-04-01'),
       })
-      expect(hasIndefiniteActiveBlock(ps)).toBe(false)
+      expect(hasIndefiniteBlock(ps)).toBe(true)
     })
   })
 
