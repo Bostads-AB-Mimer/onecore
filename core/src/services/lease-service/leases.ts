@@ -112,7 +112,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
    *     tags:
    *       - Lease service
-   *     description: Returns a list of current residential leases, including contact and rental object info. A lease under notice (including a notice waiting for signing) counts as current until its end date has passed, and contract_end_date is set only for those. On an internal move only the lease the tenant has moved into is returned: a lease under notice is left out when the tenant has another housing lease that has started later. Filters out protected identities, deceased tenants, and certain property types/estates. The filtering runs after paging, so a page can hold fewer rows than `limit` while more pages remain; page until `_meta.page * _meta.limit >= _meta.totalRecords`.
+   *     description: Returns a list of current residential leases, including contact and rental object info. A lease under notice (including a notice waiting for signing) counts as current until its end date has passed, and contract_end_date is set only for those. On an internal move only the lease the tenant has moved into is returned; a lease under notice is left out when the tenant has another housing lease that has started later. Filters out protected identities, deceased tenants, and certain property types/estates. The filtering runs after paging, so a page can hold fewer rows than `limit` while more pages remain; page until `_meta.page * _meta.limit >= _meta.totalRecords`.
    *     parameters:
    *       - in: query
    *         name: page
