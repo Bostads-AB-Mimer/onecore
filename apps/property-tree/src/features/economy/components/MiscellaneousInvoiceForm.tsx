@@ -6,7 +6,7 @@ import {
   XledgerContact,
   XledgerProject,
 } from '@onecore/types'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { AlertTriangle, CalendarIcon } from 'lucide-react'
@@ -33,6 +33,7 @@ import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 import { Separator } from '@/shared/ui/Separator'
 
 import { useMiscellaneousInvoiceDataForLease } from '../hooks/useMiscellaneousInvoiceDataForLease'
+import { miscellaneousInvoicesQueryKey } from '../hooks/useMiscellaneousInvoices'
 import { useXledgerContacts } from '../hooks/useXledgerContacts'
 import { useXledgerProjects } from '../hooks/useXledgerProjects'
 import {
@@ -68,6 +69,7 @@ function scrollToTop() {
 export function MiscellaneousInvoiceForm() {
   const userState = useUser()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
   // Shown instead of the form after a successful send, until the user starts a new one
@@ -106,6 +108,8 @@ export function MiscellaneousInvoiceForm() {
     },
     onSettled: () => {
       setIsSubmitting(false)
+      // Staff are sent to the list to check the result, so it must not show a cached page
+      queryClient.invalidateQueries({ queryKey: miscellaneousInvoicesQueryKey })
     },
   })
 
