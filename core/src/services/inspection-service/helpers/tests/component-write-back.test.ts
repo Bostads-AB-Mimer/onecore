@@ -75,6 +75,7 @@ describe('writeBackComponentInspectionStates', () => {
 
     expect(result).toEqual([])
     expect(updateComponentInspectionState).not.toHaveBeenCalled()
+    expect(createComponentEvent).not.toHaveBeenCalled()
   })
 
   it('returns [] when rooms is missing', async () => {
@@ -84,9 +85,10 @@ describe('writeBackComponentInspectionStates', () => {
 
     expect(result).toEqual([])
     expect(updateComponentInspectionState).not.toHaveBeenCalled()
+    expect(createComponentEvent).not.toHaveBeenCalled()
   })
 
-  it('writes mapped condition and endedAt per component', async () => {
+  it('writes mapped condition and the Swedish date of endedAt per component', async () => {
     await writeBackComponentInspectionStates(
       makeInspection({}, [
         { componentId: 'c-1', label: 'Golv', condition: 'Skadad' },
@@ -98,15 +100,15 @@ describe('writeBackComponentInspectionStates', () => {
     expect(updateComponentInspectionState).toHaveBeenCalledTimes(3)
     expect(updateComponentInspectionState).toHaveBeenCalledWith('c-1', {
       condition: 'DAMAGED',
-      lastInspectionDate: '2026-06-14T10:00:00.000Z',
+      lastInspectionDate: '2026-06-14T00:00:00.000Z',
     })
     expect(updateComponentInspectionState).toHaveBeenCalledWith('c-2', {
       condition: 'GOOD',
-      lastInspectionDate: '2026-06-14T10:00:00.000Z',
+      lastInspectionDate: '2026-06-14T00:00:00.000Z',
     })
     expect(updateComponentInspectionState).toHaveBeenCalledWith('c-3', {
       condition: 'FAIR',
-      lastInspectionDate: '2026-06-14T10:00:00.000Z',
+      lastInspectionDate: '2026-06-14T00:00:00.000Z',
     })
   })
 
@@ -188,6 +190,11 @@ describe('writeBackComponentInspectionStates', () => {
         'c-1',
         expect.objectContaining({ occurredAt: '2026-06-15' })
       )
+      // The condition write gets the same day, not the UTC date of endedAt
+      expect(updateComponentInspectionState).toHaveBeenCalledWith('c-1', {
+        condition: 'DAMAGED',
+        lastInspectionDate: '2026-06-15T00:00:00.000Z',
+      })
     })
 
     it('does not create events for skipped components', async () => {

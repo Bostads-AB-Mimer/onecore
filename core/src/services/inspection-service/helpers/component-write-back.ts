@@ -53,7 +53,11 @@ export const writeBackComponentInspectionStates = async (
     return []
   }
 
-  const lastInspectionDate = inspection.endedAt
+  // Both the condition write and the event use the Swedish date of endedAt,
+  // so an inspection finished just after local midnight gets the same day on
+  // both. lastInspectionDate must be a datetime; property stores its date.
+  const occurredAt = formatSwedishDate(inspection.endedAt)
+  const lastInspectionDate = `${occurredAt}T00:00:00.000Z`
   const tasks: WriteBackTask[] = []
 
   for (const room of inspection.rooms) {
@@ -92,7 +96,6 @@ export const writeBackComponentInspectionStates = async (
       'Inspection has no inspector, skipping component events'
     )
   }
-  const occurredAt = formatSwedishDate(inspection.endedAt)
 
   const [conditionResults, eventResults] = await Promise.all([
     Promise.allSettled(
