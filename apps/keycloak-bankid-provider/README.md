@@ -34,10 +34,14 @@ The case that happens in normal use: someone with BankID but no Keycloak user (n
 not imported yet) logs in. Keycloak then logs
 `ERROR IdpDetectExistingBrokerUserAuthenticator: The user <personnummer> should be already registered…`
 and `WARN org.keycloak.events … IDENTITY_PROVIDER_FIRST_LOGIN_ERROR … identity_provider_identity="<personnummer>"`.
+A logout logs it too when a client in the session cannot be logged out (seen on auth.dev.mimer.nu
+with `mina-sidor`):
+`WARN org.keycloak.services.managers.AuthenticationManager: Some clients have not been logged out for user <personnummer> in mimer-contacts realm: mina-sidor`.
 The plugin cannot change that. It is decided in the cluster's Keycloak config, for example by
-raising the level of those two log categories (`KC_LOG_LEVEL=INFO,<category>:<level>`; raising
-`org.keycloak.events` hides every failed-login event, not just these) or by changing the realm's
-event listeners.
+raising the level of those three log categories (`KC_LOG_LEVEL=INFO,<category>:<level>`; raising
+`org.keycloak.events` hides every failed-login event, and raising
+`org.keycloak.services.managers.AuthenticationManager` hides its other warnings, not just these)
+or by changing the realm's event listeners.
 
 The callback needs its own `@Path`: a bare `@GET` on `/endpoint` answers 405 in Keycloak 26.3.3.
 
