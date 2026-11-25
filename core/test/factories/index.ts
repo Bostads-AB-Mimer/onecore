@@ -80,3 +80,4 @@ export {
   contactsServiceOrganisationWithoutNumber,
 } from './contacts-service-contact'
 export { KvvAreaWithCostCenterFactory as kvvAreaWithCostCenter } from './kvv-area-with-cost-center'
+export { LeaseSearchResultFactory as leaseSearchResult } from './lease-search-result'
