@@ -58,7 +58,7 @@ jobs:
       HEAD_TAG: ${{ github.event.workflow_run.head_branch == null && github.ref_type == 'tag' && github.ref_name || '' }}
       HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     outputs:
-      matrix: ${{ steps.read-matrix.outputs.matrix }}
+      matrix: ${{ steps.skip-unchanged.outputs.matrix }}
       build_type: ${{ steps.build-type.outputs.build_type }}
       build_tag_base: ${{ steps.build-type.outputs.build_tag_base }}
       build_tag_inc: ${{ steps.build-type.outputs.build_tag_inc }}
@@ -161,6 +161,55 @@ jobs:
           echo "build_tag=${BRANCH_TAG}.${NEXT}" >> $GITHUB_OUTPUT
           echo "Using tag: ${BRANCH_TAG}.${NEXT}"
 
+      # A matrix entry with "skipUnlessChanged" (a list of repo paths) is only
+      # built when one of those paths changed since the newest image with this
+      # build's tag base, e.g. the Keycloak theme and provider, where every new
+      # tag restarts Keycloak. The commit an image was built from is read from
+      # the source-commit label set in build-and-push below. Without a previous
+      # image, that label, or that commit in the history, the entry is built.
+      # Release builds always build every image.
+      - name: Skip images whose sources did not change
+        id: skip-unchanged
+        shell: bash
+        env:
+          MATRIX: ${{ steps.read-matrix.outputs.matrix }}
+          BUILD_TAG_INC: ${{ steps.build-type.outputs.build_tag_inc }}
+          BRANCH_TAG: ${{ steps.build-type.outputs.build_tag_base }}
+        run: |
+          if [[ "$BUILD_TAG_INC" != "true" ]]; then
+            echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          KEEP='[]'
+          while read -r ENTRY; do
+            PATHS=()
+            while read -r P; do PATHS+=("$P"); done < <(jq -r '.skipUnlessChanged // [] | .[]' <<<"$ENTRY")
+            if [[ ${#PATHS[@]} -gt 0 ]]; then
+              IMAGE="ghcr.io/bostads-ab-mimer/onecore/$(jq -r '.imageName // .name' <<<"$ENTRY")"
+              LAST=$(crane ls "$IMAGE" 2>/dev/null \
+                | grep "^${BRANCH_TAG}\." \
+                | sed "s/^${BRANCH_TAG}\.//" \
+                | sort -n \
+                | tail -1 || true)
+              BUILT_FROM=""
+              if [[ -n "$LAST" ]]; then
+                BUILT_FROM=$(crane config "${IMAGE}:${BRANCH_TAG}.${LAST}" 2>/dev/null \
+                  | jq -r '.config.Labels["nu.mimer.onecore.source-commit"] // empty' || true)
+              fi
+              if [[ -n "$BUILT_FROM" ]] \
+                && git cat-file -e "${BUILT_FROM}^{commit}" 2>/dev/null \
+                && git diff --quiet "$BUILT_FROM" "$HEAD_SHA" -- "${PATHS[@]}"; then
+                echo "Skipping ${IMAGE}: ${PATHS[*]} unchanged since ${BRANCH_TAG}.${LAST} (${BUILT_FROM})"
+                continue
+              fi
+              echo "Building ${IMAGE}: ${PATHS[*]} changed, or no earlier build to compare with"
+            fi
+            KEEP=$(jq -c --argjson entry "$ENTRY" '. + [$entry]' <<<"$KEEP")
+          done < <(jq -c '.[]' <<<"$MATRIX")
+
+          echo "matrix=${KEEP}" >> $GITHUB_OUTPUT
+
       - name: Enforce package.json matches release version
         if: steps.build-type.outputs.build_tag_version != ''
         run: |
@@ -211,6 +260,7 @@ jobs:
           labels: |
             org.opencontainers.image.title=${{ matrix.label }}
             org.opencontainers.image.description=${{ needs.prepare.outputs.description }}
+            nu.mimer.onecore.source-commit=${{ env.HEAD_SHA }}
 
       - name: Render build_args
         id: render-build-args
