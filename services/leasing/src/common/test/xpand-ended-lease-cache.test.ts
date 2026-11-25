@@ -14,6 +14,7 @@ const makeLease = (id: string): leasing.v1.LeaseSearchResult => ({
   endDate: null,
   lastDebitDate: null,
   signedAt: null,
+  createdAt: null,
   status: LeaseStatus.Ended,
   rentalObjectCode: null,
 })

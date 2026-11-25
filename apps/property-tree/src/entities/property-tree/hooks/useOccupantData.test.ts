@@ -34,6 +34,7 @@ const lease = (
   endDate: null,
   lastDebitDate: null,
   signedAt: null,
+  createdAt: null,
   status: 0, // Current
   rentalObjectCode,
 })

@@ -31,6 +31,8 @@ export type LeaseSearchQueryParams = {
   startDateTo?: string
   endDateFrom?: string
   endDateTo?: string
+  createdDateFrom?: string
+  createdDateTo?: string
   property?: string[]
   buildingCodes?: string[]
   areaCodes?: string[]

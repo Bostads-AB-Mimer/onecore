@@ -51,6 +51,7 @@ const buildLeaseSearchResult = (
   endDate: null,
   lastDebitDate: null,
   signedAt: null,
+  createdAt: null,
   status: LeaseStatus.Current,
   rentalObjectCode: '705-001-01-0101',
   ...overrides,

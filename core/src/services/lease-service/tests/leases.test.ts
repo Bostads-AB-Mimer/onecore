@@ -82,6 +82,7 @@ const buildLeaseSearchResult = (
   endDate: null,
   lastDebitDate: null,
   signedAt: null,
+  createdAt: null,
   status: LeaseStatus.Current,
   rentalObjectCode: '705-001-01-0101',
   ...overrides,
@@ -1161,6 +1162,33 @@ describe('leases routes', () => {
         'fran-contacts-service@example.com'
       )
       expect(exportArgs.data[0].contacts[0].phone).toBe('0709998877')
+    })
+
+    it('exports the created date in the Skapad column', async () => {
+      ;(utilities.createExcelExport as jest.Mock).mockResolvedValue(
+        Buffer.from('excel')
+      )
+      jest.spyOn(tenantLeaseAdapter, 'getLeasesForExport').mockResolvedValue({
+        ok: true,
+        data: [
+          buildLeaseSearchResult({
+            createdAt: new Date('2026-11-19T10:00:00Z'),
+            contacts: [],
+          }),
+        ],
+      })
+
+      const res = await request(app.callback()).get('/leases/export')
+
+      expect(res.status).toBe(200)
+      const exportArgs = (utilities.createExcelExport as jest.Mock).mock
+        .calls[0][0]
+      expect(exportArgs.columns).toContainEqual(
+        expect.objectContaining({ header: 'Skapad', key: 'createdAt' })
+      )
+      expect(exportArgs.rowMapper(exportArgs.data[0]).createdAt).toBe(
+        '2026-11-19'
+      )
     })
   })
 

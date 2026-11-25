@@ -1048,6 +1048,7 @@ describe('GET /leases/search', () => {
           endDate: null,
           lastDebitDate: null,
           signedAt: null,
+          createdAt: null,
           status: LeaseStatus.Current,
         },
       ],

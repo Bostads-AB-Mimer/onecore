@@ -1922,6 +1922,10 @@ export interface paths {
           endDateFrom?: string
           /** @description Maximum end date (YYYY-MM-DD) */
           endDateTo?: string
+          /** @description Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateFrom?: string
+          /** @description Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateTo?: string
           /** @description Property/estate names */
           property?: string[]
           /** @description Building codes */
@@ -2099,6 +2103,10 @@ export interface paths {
           endDateFrom?: string
           /** @description Maximum end date (YYYY-MM-DD) */
           endDateTo?: string
+          /** @description Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateFrom?: string
+          /** @description Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateTo?: string
           /** @description Property/estate names */
           property?: string[]
           /** @description Building codes */
@@ -2395,6 +2403,10 @@ export interface paths {
           endDateFrom?: string
           /** @description Maximum end date (YYYY-MM-DD) */
           endDateTo?: string
+          /** @description Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateFrom?: string
+          /** @description Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateTo?: string
           /** @description Property/estate names */
           property?: string[]
           /** @description Building codes */
@@ -3490,6 +3502,10 @@ export interface paths {
               message?: string
             }
           }
+        }
+        /** @description The applicant may not rent a scored parking space. errorCode applicant-not-tenant when they have no current or upcoming lease, or housing-contract-terminated when they have given notice on their only housing contract and have no upcoming one. */
+        403: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -13687,6 +13703,8 @@ export interface components {
       lastDebitDate: string | null
       /** Format: date-time */
       signedAt: string | null
+      /** Format: date-time */
+      createdAt: string | null
       /** @enum {number} */
       status: 0 | 1 | 2 | 3 | 4 | 5 | 6
       rentalObjectCode: string | null

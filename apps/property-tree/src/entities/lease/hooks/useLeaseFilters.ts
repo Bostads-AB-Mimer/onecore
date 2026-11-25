@@ -31,6 +31,8 @@ const FILTER_KEYS = [
   'startDateTo',
   'endDateFrom',
   'endDateTo',
+  'createdDateFrom',
+  'createdDateTo',
   'sortBy',
   'sortOrder',
 ] as const
@@ -169,6 +171,8 @@ export function useLeaseFilters() {
   const startDateTo = urlSearchParams.get('startDateTo') || ''
   const endDateFrom = urlSearchParams.get('endDateFrom') || ''
   const endDateTo = urlSearchParams.get('endDateTo') || ''
+  const createdDateFrom = urlSearchParams.get('createdDateFrom') || ''
+  const createdDateTo = urlSearchParams.get('createdDateTo') || ''
 
   const searchParams = useMemo(
     () => ({
@@ -196,6 +200,8 @@ export function useLeaseFilters() {
       startDateTo: startDateTo || undefined,
       endDateFrom: endDateFrom || undefined,
       endDateTo: endDateTo || undefined,
+      createdDateFrom: createdDateFrom || undefined,
+      createdDateTo: createdDateTo || undefined,
       sortBy,
       sortOrder,
     }),
@@ -213,6 +219,8 @@ export function useLeaseFilters() {
       startDateTo,
       endDateFrom,
       endDateTo,
+      createdDateFrom,
+      createdDateTo,
       sortBy,
       sortOrder,
     ]
@@ -305,6 +313,8 @@ export function useLeaseFilters() {
     startDateTo,
     endDateFrom,
     endDateTo,
+    createdDateFrom,
+    createdDateTo,
 
     // Sorting
     sortBy,

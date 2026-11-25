@@ -24,6 +24,7 @@ const makeLease = (
   endDate: null,
   lastDebitDate: null,
   signedAt: null,
+  createdAt: null,
   status: LeaseStatus.Current,
   rentalObjectCode: 'OBJ-001',
   ...overrides,

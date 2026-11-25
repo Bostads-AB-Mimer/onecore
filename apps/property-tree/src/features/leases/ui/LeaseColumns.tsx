@@ -141,6 +141,13 @@ export const leaseColumns = [
     render: (lease: LeaseSearchResult) => formatDate(lease.lastDebitDate),
   },
   {
+    key: 'createdAt',
+    label: 'Skapad',
+    className: 'px-2',
+    render: (lease: LeaseSearchResult) => formatDate(lease.createdAt),
+    hideOnMobile: true,
+  },
+  {
     key: 'status',
     label: 'Status',
     className: 'px-2',

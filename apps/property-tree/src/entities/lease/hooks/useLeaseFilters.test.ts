@@ -199,6 +199,50 @@ describe('useLeaseFilters contract type (Kontraktstyp)', () => {
   })
 })
 
+describe('useLeaseFilters created date (Skapad)', () => {
+  /** The search params the last search was made with */
+  const searched = () => useLeaseSearchMock.mock.lastCall?.[0]
+
+  it('searches with the created date range in a saved link', () => {
+    render('/leases?createdDateFrom=2026-11-19&createdDateTo=2026-11-25')
+
+    expect(result.createdDateFrom).toBe('2026-11-19')
+    expect(result.createdDateTo).toBe('2026-11-25')
+    expect(searched().createdDateFrom).toBe('2026-11-19')
+    expect(searched().createdDateTo).toBe('2026-11-25')
+  })
+
+  it('writes the chosen created date range to the URL and goes back to page 1', () => {
+    render('/leases?page=3&startDateFrom=2026-12-01')
+
+    act(() =>
+      result.setDateRange(
+        'createdDateFrom',
+        'createdDateTo',
+        '2026-11-19',
+        null
+      )
+    )
+
+    expect(location.get('createdDateFrom')).toBe('2026-11-19')
+    expect(location.has('createdDateTo')).toBe(false)
+    expect(location.has('page')).toBe(false)
+    expect(location.get('startDateFrom')).toBe('2026-12-01')
+    expect(searched().createdDateFrom).toBe('2026-11-19')
+    expect(searched().createdDateTo).toBeUndefined()
+  })
+
+  it('clears the created date range with the other filters', () => {
+    render('/leases?createdDateFrom=2026-11-19')
+    expect(result.hasActiveFilters).toBe(true)
+
+    act(() => result.clearFilters())
+
+    expect(location.has('createdDateFrom')).toBe(false)
+    expect(searched().createdDateFrom).toBeUndefined()
+  })
+})
+
 describe('useLeaseFilters object type / parking space type', () => {
   it('two setFilterValues calls in the same tick lose the first write', () => {
     // Demonstrates the bug this card fixes: ObjectTypeFilter used to call

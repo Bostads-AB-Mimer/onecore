@@ -220,6 +220,18 @@ export const routes = (router: KoaRouter) => {
    *           format: date
    *         description: Maximum end date (YYYY-MM-DD)
    *       - in: query
+   *         name: createdDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD)
+   *       - in: query
+   *         name: createdDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD)
+   *       - in: query
    *         name: property
    *         schema:
    *           type: array

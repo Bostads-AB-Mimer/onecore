@@ -95,6 +95,7 @@ const makeLeaseResult = (
   endDate: null,
   lastDebitDate: null,
   signedAt: null,
+  createdAt: null,
   status: LeaseStatus.Current,
   ...overrides,
 })
@@ -741,6 +742,89 @@ describe('tenfast-lease-search-adapter', () => {
 
       expect(result.content).toHaveLength(1)
       expect(result.content[0].leaseId).toBe('lease-sep')
+    })
+
+    it('filters by created date, including both bound days', async () => {
+      mockedGetAll.mockReturnValue([
+        // 2026-11-18 23:30 in Sweden, so the day before the range
+        makeLeaseResult('created-before', {
+          createdAt: new Date('2026-11-18T22:30:00Z'),
+        }),
+        // 2026-11-19 00:30 in Sweden, though still 2026-11-18 in UTC
+        makeLeaseResult('created-first-day', {
+          createdAt: new Date('2026-11-18T23:30:00Z'),
+        }),
+        // Afternoon of the last day must still match
+        makeLeaseResult('created-last-day', {
+          createdAt: new Date('2026-11-25T13:00:00Z'),
+        }),
+        makeLeaseResult('created-after', {
+          createdAt: new Date('2026-11-26T08:00:00Z'),
+        }),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          createdDateFrom: '2026-11-19',
+          createdDateTo: '2026-11-25',
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(result.content.map((l) => l.leaseId).sort()).toEqual([
+        'created-first-day',
+        'created-last-day',
+      ])
+    })
+
+    it('excludes leases without created date when created date filter is set', async () => {
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('with-created', {
+          createdAt: new Date('2026-11-20T10:00:00Z'),
+        }),
+        makeLeaseResult('without-created', { createdAt: null }),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        { createdDateFrom: '2026-11-19', page: 1, limit: 20 },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('with-created')
+    })
+
+    it('combines start date and created date filters', async () => {
+      mockedGetAll.mockReturnValue([
+        makeLeaseResult('new-starts-dec', {
+          startDate: new Date('2026-12-01'),
+          createdAt: new Date('2026-11-20T10:00:00Z'),
+        }),
+        makeLeaseResult('old-starts-dec', {
+          startDate: new Date('2026-12-01'),
+          createdAt: new Date('2026-10-01T10:00:00Z'),
+        }),
+        makeLeaseResult('new-starts-jan', {
+          startDate: new Date('2027-01-01'),
+          createdAt: new Date('2026-11-20T10:00:00Z'),
+        }),
+      ])
+
+      const result = await tenfastLeaseSearchAdapter.searchLeases(
+        {
+          startDateFrom: '2026-12-01',
+          startDateTo: '2026-12-01',
+          createdDateFrom: '2026-11-19',
+          page: 1,
+          limit: 20,
+        },
+        mockCtx
+      )
+
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0].leaseId).toBe('new-starts-dec')
     })
 
     // Sort

@@ -447,6 +447,18 @@ export const routes = (router: KoaRouter) => {
    *           format: date
    *         description: Maximum end date (YYYY-MM-DD)
    *       - in: query
+   *         name: createdDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD)
+   *       - in: query
+   *         name: createdDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD)
+   *       - in: query
    *         name: property
    *         schema:
    *           type: array
@@ -1015,6 +1027,18 @@ export const routes = (router: KoaRouter) => {
    *           format: date
    *         description: Maximum end date (YYYY-MM-DD)
    *       - in: query
+   *         name: createdDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD)
+   *       - in: query
+   *         name: createdDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD)
+   *       - in: query
    *         name: property
    *         schema:
    *           type: array
@@ -1119,6 +1143,7 @@ export const routes = (router: KoaRouter) => {
           { header: 'Distrikt', key: 'district', width: 15 },
           { header: 'Startdatum', key: 'startDate', width: 12 },
           { header: 'Slutdatum', key: 'endDate', width: 12 },
+          { header: 'Skapad', key: 'createdAt', width: 12 },
           { header: 'Status', key: 'status', width: 15 },
         ],
         data: enrichedLeases,
@@ -1142,6 +1167,7 @@ export const routes = (router: KoaRouter) => {
           district: lease.districtName || '',
           startDate: formatDateForExcel(lease.startDate),
           endDate: formatDateForExcel(lease.lastDebitDate),
+          createdAt: formatDateForExcel(lease.createdAt),
           status: LeaseStatusLabel[lease.status] ?? String(lease.status),
         }),
       })

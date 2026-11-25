@@ -149,6 +149,7 @@ type EndedLeaseSearchRow = {
   objectTypeCode: string | null
   startDate: Date | null
   lastDebitDate: Date | null
+  createdDate: Date | null
   address: string | null
   postalCode: string | null
   city: string | null
@@ -211,6 +212,7 @@ const toSearchResults = (
       endDate: row.lastDebitDate ?? null,
       lastDebitDate: row.lastDebitDate ?? null,
       signedAt: null,
+      createdAt: row.createdDate ?? null,
       status: LeaseStatus.Ended,
       rentalObjectCode: row.rentalObjectCode || null,
       property: row.property || null,
@@ -233,6 +235,8 @@ export const getAllEndedLeasesForSearch = async (): Promise<
         'cmctc.cmctckod as contactCode',
         'cmobj.keycmobt as objectTypeCode',
         'hyobj.fdate as startDate',
+        // avtalsdat is the date the contract was created in Xpand
+        'hyobj.avtalsdat as createdDate',
         'cmadr.adress1 as address',
         'cmadr.adress3 as postalCode',
         'cmadr.adress4 as city',
