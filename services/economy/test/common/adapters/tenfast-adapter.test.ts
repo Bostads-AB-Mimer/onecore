@@ -106,7 +106,8 @@ describe('Tenfast Adapter', () => {
         config: { headers: { 'api-token': 'secret-token' } },
       })
       mockAxios.request.mockRejectedValue(requestError)
-      mockAxios.isAxiosError.mockReturnValueOnce(true)
+      // Once for the timeout check in makeTenfastRequest, once in the catch.
+      mockAxios.isAxiosError.mockReturnValueOnce(true).mockReturnValueOnce(true)
 
       // Act
       const result = await getTenantByContactCode('P999999')

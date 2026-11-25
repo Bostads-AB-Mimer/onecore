@@ -66,6 +66,32 @@ const baseUrl = config.tenfast.baseUrl
 const apiKey = config.tenfast.apiKey
 const companyId = config.tenfast.companyId
 
+// Without a timeout axios waits forever, so a Tenfast call that never answers
+// would hang a report or a route without any error.
+export const TENFAST_READ_TIMEOUT_MS = 30_000
+// File downloads (exports, reports) can be large and slow.
+export const TENFAST_DOWNLOAD_TIMEOUT_MS = 120_000
+
+export class TenfastTimeoutError extends Error {
+  constructor(method: string, url: string, timeoutMs: number) {
+    super(`Tenfast ${method} ${url} timed out after ${timeoutMs} ms`)
+    this.name = 'TenfastTimeoutError'
+  }
+}
+
+// axios reports a timeout as ECONNABORTED, or as ETIMEDOUT with
+// transitional.clarifyTimeoutError.
+const isTimeout = (err: unknown) =>
+  axios.isAxiosError(err) &&
+  (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT')
+
+/**
+ * GET requests time out after TENFAST_READ_TIMEOUT_MS unless timeoutMs says
+ * otherwise. Other methods have no timeout unless one is passed: a write that
+ * times out may still have been applied in Tenfast, and callers such as the
+ * payment sync would send it again. Pass timeoutMs only for a POST that just
+ * reads, such as a batch lookup.
+ */
 export const makeTenfastRequest = async (
   url: string,
   config?: {
@@ -74,21 +100,37 @@ export const makeTenfastRequest = async (
     data?: any
     validateStatus?: (status: number) => boolean
     responseType?: 'json' | 'arraybuffer'
+    timeoutMs?: number
   }
 ) => {
-  return axios.request({
-    baseURL: baseUrl,
-    url,
-    method: config?.method ?? 'GET',
-    data: config?.data,
-    params: config?.params,
-    headers: {
-      'Content-type': 'application/json',
-      'api-token': apiKey,
-    },
-    ...(config?.validateStatus && { validateStatus: config.validateStatus }),
-    ...(config?.responseType && { responseType: config.responseType }),
-  })
+  const method = config?.method ?? 'GET'
+  const timeoutMs =
+    config?.timeoutMs ??
+    (method === 'GET' ? TENFAST_READ_TIMEOUT_MS : undefined)
+
+  try {
+    return await axios.request({
+      baseURL: baseUrl,
+      url,
+      method,
+      data: config?.data,
+      params: config?.params,
+      headers: {
+        'Content-type': 'application/json',
+        'api-token': apiKey,
+      },
+      ...(timeoutMs && { timeout: timeoutMs }),
+      ...(config?.validateStatus && { validateStatus: config.validateStatus }),
+      ...(config?.responseType && { responseType: config.responseType }),
+    })
+  } catch (err: unknown) {
+    // The url is the path without query params, so nothing from the query ends
+    // up in the error message.
+    if (timeoutMs && isTimeout(err)) {
+      throw new TenfastTimeoutError(method, url, timeoutMs)
+    }
+    throw err
+  }
 }
 
 export const getTenantByContactCode = async (
@@ -943,6 +985,8 @@ export const getActiveLeasesByRentalObjectCodes = async (params: {
         method: 'POST',
         params: { hyresvard: companyId, includeAvtal: 'all' },
         data: { externalIds: batch },
+        // A lookup sent as POST because of the id list; safe to time out.
+        timeoutMs: TENFAST_READ_TIMEOUT_MS,
       }
     )
 
@@ -1560,6 +1604,8 @@ export const downloadOutboundExport = async (
         method: 'POST',
         params: { hyresvard: companyId },
         responseType: 'arraybuffer',
+        // Only fetches the file; markOutboundExportSent is the call that changes it.
+        timeoutMs: TENFAST_DOWNLOAD_TIMEOUT_MS,
         validateStatus: () => true,
       }
     )
@@ -1661,6 +1707,8 @@ export const getInvoicePdf = async (
       headers: {
         'api-token': apiKey,
       },
+      // One invoice PDF, small enough for the read timeout.
+      timeout: TENFAST_READ_TIMEOUT_MS,
       validateStatus: () => true,
     })
 
@@ -2012,6 +2060,7 @@ export const getRentalLosses = async (
   const result = await makeTenfastRequest(
     `/v1/hyresvard/reports/${encodeURIComponent(reportId)}/download`,
     {
+      timeoutMs: TENFAST_DOWNLOAD_TIMEOUT_MS,
       params: {
         hyresvard: company.tenfastId,
         /*paginate:
