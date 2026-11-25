@@ -14,7 +14,11 @@ import {
   ContactType,
   ObjectKey,
 } from '@src/domain/contact'
-import { redact, trimRow } from './common'
+import {
+  placeholderEmailAddress,
+  placeholderPhoneNumber,
+} from '@onecore/utilities'
+import { applyContactDetailsMode, REDACTED, trimRow } from './common'
 import { transformPhoneNumbers } from './phone'
 import { transformEmailAddresses } from './email'
 import { toAddresses } from './address'
@@ -36,15 +40,24 @@ export const toCommunicationFragment = (
   protectedIdentity: boolean
 ) => {
   return {
-    phoneNumbers: redact(
+    phoneNumbers: applyContactDetailsMode(
       transformPhoneNumbers(contactDetails.phoneNumbers),
-      'phoneNumber',
-      protectedIdentity
+      protectedIdentity,
+      (phone) => ({ ...phone, phoneNumber: REDACTED }),
+      (phone) => ({
+        ...phone,
+        phoneNumber: placeholderPhoneNumber(row.contactCode),
+        comment: undefined,
+      })
     ),
-    emailAddresses: redact(
+    emailAddresses: applyContactDetailsMode(
       transformEmailAddresses(contactDetails.emailAddresses),
-      'emailAddress',
-      protectedIdentity
+      protectedIdentity,
+      (email) => ({ ...email, emailAddress: REDACTED }),
+      (email) => ({
+        ...email,
+        emailAddress: placeholderEmailAddress(row.contactCode),
+      })
     ),
     specialAttention: !!row.specialAttention,
   }

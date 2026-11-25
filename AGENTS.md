@@ -73,6 +73,7 @@ Always use `pnpm` — never `npm` or `yarn`.
 - Never interpolate input into SQL, LIKE patterns or GraphQL.
 - No secrets in query strings. Never log a raw AxiosError; log `{ status, error }`.
 - Protected identity (skyddad identitet): contact data comes only from the contacts service, and that path fails closed.
+- Environment behaviour keys off its own setting (e.g. `CONTACT_DETAILS__MODE`), never off `NODE_ENV === 'production'` in a non-production environment: core treats production as real mail to real people.
 
 ### Types
 
