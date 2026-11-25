@@ -687,7 +687,9 @@ const getContactsByFilters = async (
 
 const getLeasesForExport = async (
   queryParams: Record<string, string | string[] | undefined>
-): Promise<AdapterResult<leasing.v1.LeaseSearchResult[], 'unknown'>> => {
+): Promise<
+  AdapterResult<leasing.v1.LeaseSearchResult[], 'invalid-request' | 'unknown'>
+> => {
   try {
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/leases/export`,
@@ -703,11 +705,21 @@ const getLeasesForExport = async (
     )
 
     return { ok: true, data: response.data.content }
-  } catch (err) {
+  } catch (err: unknown) {
     // Let 503s (cache warming up) bubble up so the route can detect them,
     // same as searchLeases.
     if (err instanceof AxiosError && err.response?.status === 503) throw err
-    logger.error({ err }, 'leasingAdapter.getLeasesForExport')
+
+    const status = err instanceof AxiosError ? err.response?.status : undefined
+
+    if (status === 400) {
+      return { ok: false, err: 'invalid-request', statusCode: 400 }
+    }
+
+    logger.error(
+      { status, error: err instanceof Error ? err.message : String(err) },
+      'leasingAdapter.getLeasesForExport'
+    )
     return { ok: false, err: 'unknown' }
   }
 }

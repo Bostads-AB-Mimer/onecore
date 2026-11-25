@@ -7,7 +7,7 @@ export const formatDate = (date: Date | string | null | undefined) => {
   if (!date) return '-'
   const d = typeof date === 'string' ? new Date(date) : date
   // Swedish calendar day regardless of the browser's timezone, matching the
-  // backend's date filters
+  // backend's created-date filter
   return d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })
 }
 

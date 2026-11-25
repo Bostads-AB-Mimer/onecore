@@ -1130,6 +1130,12 @@ export const routes = (router: KoaRouter) => {
       const exportQuery = await resolvePersonnummerInQuery(resolved.query)
       const result = await leasingAdapter.getLeasesForExport(exportQuery)
 
+      if (!result.ok && result.err === 'invalid-request') {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid query parameters', ...metadata }
+        return
+      }
+
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Lease export failed')
         ctx.status = 500

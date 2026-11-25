@@ -2137,6 +2137,10 @@ export interface paths {
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
           }
         }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
+        }
         /** @description Internal server error */
         500: {
           content: never

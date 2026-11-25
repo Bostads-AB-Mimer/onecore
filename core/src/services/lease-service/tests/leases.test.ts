@@ -1176,6 +1176,19 @@ describe('leases routes', () => {
       expect(exportSpy).not.toHaveBeenCalled()
     })
 
+    it('returns 400 when leasing rejects the export query', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'getLeasesForExport').mockResolvedValue({
+        ok: false,
+        err: 'invalid-request',
+        statusCode: 400,
+      })
+
+      const res = await request(app.callback()).get('/leases/export')
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid query parameters')
+    })
+
     it('exports the created date in the Skapad column', async () => {
       ;(utilities.createExcelExport as jest.Mock).mockResolvedValue(
         Buffer.from('excel')
