@@ -52,6 +52,12 @@ These files can currently contain 3 things:
 A cronjob runs the `src/scripts/import-debt-collection.ts` script every day.
 The script downloads any new files from the Xledger SFTP server, processes them, and uploads the results to the Sergel Inkasso (Mimers current debt collection partner) SFTP server in the format that they require.
 
+### Data sources
+
+While Mimer moves from Xpand to Tenfast, contacts, invoices, leases and rental properties can be in either system.
+Each one is looked up in Tenfast first; only what Tenfast doesn't have (404) is looked up in Xpand.
+A failed Tenfast lookup fails the whole file instead of falling back to Xpand.
+
 ### Local testing
 
 There are 3 endpoints in the debt collection service that can be used to test the processing of each type of file.

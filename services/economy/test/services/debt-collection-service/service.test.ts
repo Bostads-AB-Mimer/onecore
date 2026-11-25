@@ -5,11 +5,19 @@ import {
   importInvoicesFromCsv,
   importBalanceCorrectionsFromCsv,
   aggregateRows,
+  aggregateXpandRows,
+  addRoundoffToFirstRow,
+  toInvoiceRow,
   CsvError,
 } from '@src/services/debt-collection-service/service'
+import { DebtCollectionInvoice } from '@src/services/common/types'
 
 jest.mock('@src/common/adapters/tenfast/tenfast-adapter', () =>
   require('./__mocks__/tenfast-adapter')
+)
+
+jest.mock('@src/services/common/adapters/xpand-db-adapter', () =>
+  require('./__mocks__/xpand-db-adapter')
 )
 
 jest.mock('@src/services/common/adapters/xledger-adapter', () =>
@@ -43,6 +51,7 @@ import {
   resetMocks,
   createMockRentInvoiceRow,
   createMockRentInvoice,
+  createMockRentalProperty,
 } from './__mocks__/tenfast-adapter'
 
 import {
@@ -50,6 +59,20 @@ import {
   setupDefaultMocks as setupXledgerDefaultMocks,
   resetMocks as resetXledgerMocks,
 } from './__mocks__/xledger-adapter'
+
+import {
+  getContacts as getXpandContacts,
+  getInvoices as getXpandInvoices,
+  getInvoiceRows as getXpandInvoiceRows,
+  getRentalProperties as getXpandRentalProperties,
+  setupDefaultMocks as setupXpandDefaultMocks,
+  resetMocks as resetXpandMocks,
+  createMockXpandContact,
+  createMockXpandInvoice,
+  createMockXpandInvoiceRow,
+  createMockXpandInvoiceRows,
+  createMockXpandRentalProperty,
+} from './__mocks__/xpand-db-adapter'
 
 import {
   createRentInvoiceCsv,
@@ -66,6 +89,7 @@ describe('Debt Collection Service', () => {
   beforeEach(() => {
     setupDefaultMocks()
     setupXledgerDefaultMocks()
+    setupXpandDefaultMocks()
     ;(generateInkassoSergelFile as jest.Mock).mockClear()
     ;(generateBalanceCorrectionFile as jest.Mock).mockClear()
   })
@@ -73,8 +97,26 @@ describe('Debt Collection Service', () => {
   afterEach(() => {
     resetMocks()
     resetXledgerMocks()
+    resetXpandMocks()
     jest.clearAllMocks()
   })
+
+  // The debtors passed to the mocked file generator
+  const getGeneratedInvoices = (): {
+    contact: { contactCode: string }
+    invoice: DebtCollectionInvoice
+  }[] => (generateInkassoSergelFile as jest.Mock).mock.calls[0][0]
+
+  // An Xpand-only invoice: Tenfast doesn't know the invoice or rental property
+  const mockXpandOnlyInvoice = () => {
+    getInvoiceByOcr.mockResolvedValue({ ok: true, data: null })
+    getRentalProperty.mockResolvedValue({ ok: true, data: null })
+    getXpandInvoices.mockResolvedValue([createMockXpandInvoice()])
+    getXpandInvoiceRows.mockResolvedValue(createMockXpandInvoiceRows())
+    getXpandRentalProperties.mockResolvedValue([
+      createMockXpandRentalProperty(),
+    ])
+  }
 
   describe('enrichRentInvoices', () => {
     const validCsv = createRentInvoiceCsv([sampleRentInvoiceData])
@@ -215,6 +257,168 @@ describe('Debt Collection Service', () => {
         expect.any(Date)
       )
     })
+
+    it('falls back to Xpand for a contact Tenfast does not have', async () => {
+      getContactByContactCode.mockResolvedValue({ ok: true, data: null })
+      getXpandContacts.mockResolvedValue([
+        createMockXpandContact({ contactCode: 'CONTACT001' }),
+      ])
+
+      const result = await enrichRentInvoices(validCsv)
+
+      expect(result.ok).toBe(true)
+      expect(getXpandContacts).toHaveBeenCalledWith(['CONTACT001'])
+      expect(getGeneratedInvoices()[0].contact).toEqual(
+        expect.objectContaining({ fullName: 'Jane Doe' })
+      )
+    })
+
+    it('does not ask Xpand for contacts Tenfast has', async () => {
+      await enrichRentInvoices(validCsv)
+
+      expect(getXpandContacts).toHaveBeenCalledWith([])
+    })
+
+    it('builds an invoice from Xpand when Tenfast does not have it', async () => {
+      mockXpandOnlyInvoice()
+      const csv = createRentInvoiceCsv([
+        {
+          ...sampleRentInvoiceData,
+          invoiceNumber: 'XINV001',
+          totalAmount: '4625',
+          remainingAmount: '4625',
+        },
+      ])
+
+      const result = await enrichRentInvoices(csv)
+
+      expect(result.ok).toBe(true)
+      expect(getXpandInvoices).toHaveBeenCalledWith(['XINV001'])
+      expect(getXpandRentalProperties).toHaveBeenCalledWith(['XPA-NDR-00-2002'])
+
+      const { invoice } = getGeneratedInvoices()[0]
+      expect(invoice.invoiceNumber).toBe('XINV001')
+      expect(invoice.reference).toBe('XPA-NDR-00-2002/01')
+      expect(invoice.lastDebitDate).toEqual(new Date('2023-06-30'))
+      expect(invoice.rentalProperties[0].rentalPropertyId).toBe(
+        'XPA-NDR-00-2002'
+      )
+      // Hyra bostad 4000 + Värme 500 + VAT 125, grouped under the header
+      expect(invoice.rows).toHaveLength(1)
+      expect(invoice.rows[0].invoiceRowText).toBe('Hyra bostad')
+      expect(invoice.amount).toBe(4625)
+    })
+
+    it('adds the Xpand roundoff to the first row', async () => {
+      mockXpandOnlyInvoice()
+      getXpandInvoices.mockResolvedValue([
+        createMockXpandInvoice({ roundoff: 0.4 }),
+      ])
+      const csv = createRentInvoiceCsv([
+        {
+          ...sampleRentInvoiceData,
+          invoiceNumber: 'XINV001',
+          totalAmount: '4625.4',
+          remainingAmount: '4625.4',
+        },
+      ])
+
+      await enrichRentInvoices(csv)
+
+      expect(getGeneratedInvoices()[0].invoice.amount).toBeCloseTo(4625.4)
+    })
+
+    it('handles a CSV with both Tenfast and Xpand invoices', async () => {
+      getInvoiceByOcr.mockImplementation(async (ocr: string) => ({
+        ok: true,
+        data: ocr === 'INV001' ? { invoice: createMockRentInvoice() } : null,
+      }))
+      getXpandInvoices.mockResolvedValue([createMockXpandInvoice()])
+      getXpandInvoiceRows.mockResolvedValue(createMockXpandInvoiceRows())
+      getRentalProperty.mockImplementation(async (id: string) => ({
+        ok: true,
+        data: id === 'REN-TAL-00-1001' ? createMockRentalProperty() : null,
+      }))
+      getXpandRentalProperties.mockResolvedValue([
+        createMockXpandRentalProperty(),
+      ])
+      const csv = createRentInvoiceCsv([
+        sampleRentInvoiceData,
+        { ...sampleRentInvoiceData, invoiceNumber: 'XINV001' },
+      ])
+
+      const result = await enrichRentInvoices(csv)
+
+      expect(result.ok).toBe(true)
+      expect(getXpandInvoices).toHaveBeenCalledWith(['XINV001'])
+      expect(getXpandRentalProperties).toHaveBeenCalledWith(['XPA-NDR-00-2002'])
+      expect(
+        getGeneratedInvoices().map(({ invoice }) => [
+          invoice.invoiceNumber,
+          invoice.rentalProperties[0].rentalPropertyId,
+        ])
+      ).toEqual([
+        ['INV001', 'REN-TAL-00-1001'],
+        ['XINV001', 'XPA-NDR-00-2002'],
+      ])
+    })
+
+    it('falls back to Xpand for the rental property of a Tenfast invoice', async () => {
+      getRentalProperty.mockResolvedValue({ ok: true, data: null })
+      getXpandRentalProperties.mockResolvedValue([
+        createMockXpandRentalProperty({ rentalPropertyId: 'REN-TAL-00-1001' }),
+      ])
+
+      const result = await enrichRentInvoices(validCsv)
+
+      expect(result.ok).toBe(true)
+      expect(getXpandRentalProperties).toHaveBeenCalledWith(['REN-TAL-00-1001'])
+    })
+
+    it('uses the rental id in the lease id when Tenfast lacks the lease', async () => {
+      getLease.mockResolvedValue({ ok: true, data: null })
+
+      const result = await enrichRentInvoices(validCsv)
+
+      expect(result.ok).toBe(true)
+      expect(getRentalProperty).toHaveBeenCalledWith('REN-TAL-00-1001')
+      expect(getGeneratedInvoices()[0].invoice.lastDebitDate).toBeUndefined()
+    })
+
+    it('fails without asking Xpand when a Tenfast lookup fails', async () => {
+      getInvoiceByOcr.mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const result = await enrichRentInvoices(validCsv)
+
+      expect(result.ok).toBe(false)
+      expect(getXpandInvoices).not.toHaveBeenCalled()
+    })
+
+    it('returns an error when neither Tenfast nor Xpand has the invoice', async () => {
+      getInvoiceByOcr.mockResolvedValue({ ok: true, data: null })
+
+      const result = await enrichRentInvoices(validCsv)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.message).toContain(
+          "Invoice not found for invoice number 'INV001'"
+        )
+      }
+    })
+
+    it('returns an error when no source has the rental property', async () => {
+      getRentalProperty.mockResolvedValue({ ok: true, data: null })
+
+      const result = await enrichRentInvoices(validCsv)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.message).toContain(
+          'Rental properties not found for invoice INV001'
+        )
+      }
+    })
   })
 
   describe('enrichOtherInvoices', () => {
@@ -245,6 +449,34 @@ describe('Debt Collection Service', () => {
       const result = await enrichOtherInvoices(validCsv)
 
       expect(result.ok).toBe(false)
+    })
+
+    it('falls back to Xpand for a contact Tenfast does not have', async () => {
+      getContactByContactCode.mockResolvedValue({ ok: true, data: null })
+      getXpandContacts.mockResolvedValue([
+        createMockXpandContact({ contactCode: 'CONTACT001' }),
+      ])
+
+      const result = await enrichOtherInvoices(validCsv)
+
+      expect(result.ok).toBe(true)
+      expect(getGeneratedInvoices()[0].contact).toEqual(
+        expect.objectContaining({ fullName: 'Jane Doe' })
+      )
+    })
+
+    it('returns an error when no source has the contact', async () => {
+      getContactByContactCode.mockResolvedValue({ ok: true, data: null })
+      getXledgerCustomers.mockResolvedValueOnce([])
+
+      const result = await enrichOtherInvoices(validCsv)
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.error.message).toContain(
+          "Contact not found for contact code 'CONTACT001'"
+        )
+      }
     })
   })
 
@@ -282,6 +514,40 @@ describe('Debt Collection Service', () => {
       const result = await enrichBalanceCorrections(validCsv)
 
       expect(result.ok).toBe(false)
+    })
+
+    it('uses an Xpand invoice when Tenfast does not have it', async () => {
+      mockXpandOnlyInvoice()
+      const csv = createBalanceCorrectionCsv([
+        { ...sampleBalanceCorrectionData, invoiceNumber: 'XINV001' },
+      ])
+
+      const result = await enrichBalanceCorrections(csv)
+
+      expect(result.ok).toBe(true)
+      const [correction] = (generateBalanceCorrectionFile as jest.Mock).mock
+        .calls[0][0]
+      expect(correction).toEqual(
+        expect.objectContaining({
+          hasInvoice: true,
+          reference: 'XPA-NDR-00-2002/01',
+          lastDebitDate: new Date('2023-06-30'),
+          rentalProperty: expect.objectContaining({
+            rentalPropertyId: 'XPA-NDR-00-2002',
+          }),
+        })
+      )
+    })
+
+    it('marks the correction as without invoice when no source has it', async () => {
+      getInvoiceByOcr.mockResolvedValue({ ok: true, data: null })
+
+      const result = await enrichBalanceCorrections(validCsv)
+
+      expect(result.ok).toBe(true)
+      const [correction] = (generateBalanceCorrectionFile as jest.Mock).mock
+        .calls[0][0]
+      expect(correction.hasInvoice).toBe(false)
     })
   })
 
@@ -414,6 +680,95 @@ describe('Debt Collection Service', () => {
       it('should return empty array when no rows provided', () => {
         const result = aggregateRows([])
         expect(result).toEqual([])
+      })
+    })
+
+    describe('aggregateXpandRows', () => {
+      it('groups the rows after a header row and sums reduction and vat', () => {
+        const result = aggregateXpandRows(createMockXpandInvoiceRows())
+
+        expect(result).toHaveLength(1)
+        expect(result[0].text).toBe('Hyra bostad')
+        expect(result[0].amount).toBe(4625)
+      })
+
+      it('ends a group at a new print group', () => {
+        const result = aggregateXpandRows([
+          ...createMockXpandInvoiceRows(),
+          createMockXpandInvoiceRow({
+            text: 'Påminnelseavgift',
+            printGroup: null,
+            amount: 60,
+          }),
+        ])
+
+        expect(result.map((r) => r.amount)).toEqual([4625, 60])
+      })
+
+      it('keeps rows without a header as they are', () => {
+        const rows = [
+          createMockXpandInvoiceRow({ printGroup: 'N', amount: 100 }),
+          createMockXpandInvoiceRow({ printGroup: 'N', amount: 200 }),
+        ]
+
+        expect(aggregateXpandRows(rows).map((r) => r.amount)).toEqual([
+          100, 200,
+        ])
+      })
+
+      it('ignores a header row at the end', () => {
+        const [header] = createMockXpandInvoiceRows()
+
+        expect(aggregateXpandRows([header])).toEqual([])
+      })
+
+      it('throws when a header row does not start with a lease id', () => {
+        expect(() =>
+          aggregateXpandRows([
+            createMockXpandInvoiceRow({ rowType: 3, text: 'Not a lease' }),
+          ])
+        ).toThrow('does not match regular expression for lease ids')
+      })
+    })
+
+    describe('addRoundoffToFirstRow', () => {
+      it('adds the roundoff to the first row only', () => {
+        const rows = [
+          createMockXpandInvoiceRow({ amount: 100 }),
+          createMockXpandInvoiceRow({ amount: 200 }),
+        ]
+
+        expect(addRoundoffToFirstRow(rows, -0.5).map((r) => r.amount)).toEqual([
+          99.5, 200,
+        ])
+      })
+
+      it('returns no rows for no rows', () => {
+        expect(addRoundoffToFirstRow([], 1)).toEqual([])
+      })
+    })
+
+    describe('toInvoiceRow', () => {
+      it('maps text and amount, with reduction and vat already included', () => {
+        const result = toInvoiceRow(
+          createMockXpandInvoiceRow({
+            text: 'Hyra bostad',
+            amount: 4625,
+            code: 'HYRA',
+          })
+        )
+
+        expect(result).toEqual(
+          expect.objectContaining({
+            invoiceNumber: 'XINV001',
+            invoiceRowText: 'Hyra bostad',
+            amount: 4625,
+            totalAmount: 4625,
+            deduction: 0,
+            vat: 0,
+            rentArticle: 'HYRA',
+          })
+        )
       })
     })
   })
