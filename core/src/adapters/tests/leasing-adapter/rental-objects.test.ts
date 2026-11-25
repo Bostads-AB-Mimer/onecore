@@ -6,6 +6,43 @@ import * as leasingAdapter from '../../leasing-adapter'
 import * as factory from '../../../../test/factories'
 
 describe('rental-objects adapter', () => {
+  describe(leasingAdapter.getParkingSpaceByCode, () => {
+    it('returns the parking space on 200', async () => {
+      // Arrange
+      const parkingSpace = factory.rentalObject.build({
+        rentalObjectCode: 'P-1',
+      })
+      nock(config.tenantsLeasesService.url)
+        .get('/parking-spaces/by-code/P-1')
+        .reply(200, { content: parkingSpace })
+
+      // Act
+      const result = await leasingAdapter.getParkingSpaceByCode('P-1')
+
+      // Assert
+      assert(result.ok)
+      expect(result.data.rentalObjectCode).toBe('P-1')
+    })
+
+    it.each([
+      [404, 'not-found'],
+      [503, 'unavailable'],
+      [500, 'unknown'],
+    ] as const)('maps %i to %s', async (status, err) => {
+      // Arrange
+      nock(config.tenantsLeasesService.url)
+        .get('/parking-spaces/by-code/P-1')
+        .reply(status, { error: 'whatever' })
+
+      // Act
+      const result = await leasingAdapter.getParkingSpaceByCode('P-1')
+
+      // Assert
+      assert(!result.ok)
+      expect(result.err).toBe(err)
+    })
+  })
+
   describe(leasingAdapter.getRentalObjectAvailabilityByCode, () => {
     it('should return availability info when rentalObjectCode exists', async () => {
       //Arrange

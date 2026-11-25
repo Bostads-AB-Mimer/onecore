@@ -108,7 +108,9 @@ describe('replyToOffer', () => {
       any
     >,
     getParkingSpaceByCodeSpy: jest.SpyInstance<
-      Promise<AdapterResult<RentalObject, 'not-found' | 'unknown'>>,
+      Promise<
+        AdapterResult<RentalObject, 'not-found' | 'unavailable' | 'unknown'>
+      >,
       [rentalObjectCode: string],
       any
     >,

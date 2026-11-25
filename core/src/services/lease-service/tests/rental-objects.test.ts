@@ -115,8 +115,30 @@ describe('GET /parking-spaces/by-code/:rentalObjectCode', () => {
 
     // Assert
     expect(res.status).toBe(500)
-    expect(res.body).toMatchObject({ error: 'Unknown error' })
+    expect(res.body).toMatchObject({ error: 'unknown' })
   })
+
+  it.each([
+    ['not-found', 404],
+    ['unavailable', 503],
+  ] as const)(
+    'should respond with the matching status when the adapter returns %s',
+    async (err, status) => {
+      // Arrange
+      jest
+        .spyOn(leasingAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValueOnce({ ok: false, err })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/parking-spaces/by-code/ANYCODE'
+      )
+
+      // Assert
+      expect(res.status).toBe(status)
+      expect(res.body).toMatchObject({ error: err })
+    }
+  )
 })
 describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {
   describe('GET /rental-objects/by-code/:rentalObjectCode/availability', () => {

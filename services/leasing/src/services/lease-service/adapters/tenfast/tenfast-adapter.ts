@@ -1033,6 +1033,9 @@ export const getAvailabilityForRentalObject = async (
 ): Promise<
   AdapterResult<
     RentalObjectAvailabilityInfo,
+    // rental-object-not-found: Tenfast answered but doesn't have the object.
+    // The other errors mean the lookup itself failed.
+    | 'rental-object-not-found'
     | 'could-not-find-rental-object'
     | 'could-not-parse-rental-object'
     | 'could-not-find-leases'
@@ -1055,7 +1058,7 @@ export const getAvailabilityForRentalObject = async (
   if (!rentalObjectResult.data) {
     return {
       ok: false,
-      err: 'could-not-find-rental-object',
+      err: 'rental-object-not-found',
     }
   }
 

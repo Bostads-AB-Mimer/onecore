@@ -372,7 +372,7 @@ describe('parking spaces', () => {
       )
     })
 
-    it('should respond with 200 and not include availability if availability is not found', async () => {
+    it('should respond with 200 and not include availability if Tenfast does not have the parking space', async () => {
       // Arrange
       const parkingSpace = factory.rentalObject.build({
         rentalObjectCode: 'code-1',
@@ -385,7 +385,7 @@ describe('parking spaces', () => {
         .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
         .mockResolvedValue({
           ok: false,
-          err: 'could-not-find-rental-object',
+          err: 'rental-object-not-found',
         })
 
       // Act
@@ -396,6 +396,50 @@ describe('parking spaces', () => {
       // Assert
       expect(res.status).toBe(200)
       expect(res.body.content.availabilityInfo).toBeUndefined()
+    })
+
+    it.each(['could-not-find-rental-object', 'could-not-find-leases'] as const)(
+      'should respond with 503 when the availability lookup fails (%s)',
+      async (err) => {
+        // Arrange
+        jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValue({
+          ok: true,
+          data: factory.rentalObject.build({ rentalObjectCode: 'code-1' }),
+        })
+        jest
+          .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+          .mockResolvedValue({ ok: false, err })
+
+        // Act
+        const res = await request(app.callback()).get(
+          '/parking-spaces/by-code/code-1'
+        )
+
+        // Assert
+        expect(res.status).toBe(503)
+        expect(res.body.error).toBe('availability-unavailable')
+        expect(res.body.content).toBeUndefined()
+      }
+    )
+
+    it("should respond with 500 when Tenfast's answer cannot be parsed", async () => {
+      // Arrange
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValue({
+        ok: true,
+        data: factory.rentalObject.build({ rentalObjectCode: 'code-1' }),
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValue({ ok: false, err: 'could-not-parse-rental-object' })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/parking-spaces/by-code/code-1'
+      )
+
+      // Assert
+      expect(res.status).toBe(500)
+      expect(res.body.content).toBeUndefined()
     })
 
     it('should respond with 404 if parking space is not found', async () => {
@@ -910,7 +954,7 @@ describe('parking spaces', () => {
         .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
         .mockResolvedValueOnce({
           ok: false,
-          err: 'could-not-find-rental-object',
+          err: 'rental-object-not-found',
         })
 
       // Act
@@ -923,6 +967,29 @@ describe('parking spaces', () => {
       expect(res.body.error).toBe(
         `Availability not found for rental object code: ${rentalObjectCode}`
       )
+    })
+
+    it('should respond with 503 if the availability lookup fails', async () => {
+      // Arrange
+      jest.spyOn(rentalObjectAdapter, 'getParkingSpace').mockResolvedValueOnce({
+        ok: true,
+        data: factory.rentalObject.build({ rentalObjectCode: 'R1' }),
+      })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValueOnce({
+          ok: false,
+          err: 'could-not-find-rental-object',
+        })
+
+      // Act
+      const res = await request(app.callback()).get(
+        '/rental-objects/by-code/R1/availability'
+      )
+
+      // Assert
+      expect(res.status).toBe(503)
+      expect(res.body.error).toBe('availability-unavailable')
     })
 
     it('should respond with 500 if another error occurs', async () => {
@@ -1078,6 +1145,9 @@ describe('parking spaces', () => {
       jest
         .spyOn(rentalObjectAdapter, 'getParkingSpace')
         .mockResolvedValueOnce({ ok: false, err: 'parking-space-not-found' })
+      jest
+        .spyOn(tenfastAdapter, 'getAvailabilityForRentalObject')
+        .mockResolvedValueOnce({ ok: false, err: 'rental-object-not-found' })
 
       // Act
       const res = await request(app.callback()).get(
