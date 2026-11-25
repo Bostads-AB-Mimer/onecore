@@ -67,9 +67,7 @@ function showPage(items: Lease[]) {
 const smsCodes = () => result.smsRecipients.map((r) => r.id).sort()
 const emailCodes = () => result.emailRecipients.map((r) => r.id).sort()
 const selectedIds = () =>
-  result.selection.target.mode === 'include'
-    ? result.selection.target.ids
-    : []
+  result.selection.target.mode === 'include' ? result.selection.target.ids : []
 
 beforeEach(() => {
   container = document.createElement('div')
