@@ -240,6 +240,67 @@ describe('Report Service', () => {
       )
     })
 
+    it('sums all rows with the same code on an invoice', async () => {
+      const xledgerInvoices = [
+        xledgerInvoiceFactory.build({
+          invoiceId: '5500001',
+          amount: 1000,
+          paidAmount: 500,
+        }),
+      ]
+
+      // Two periods of the same article on one invoice, as Tenfast sends them
+      const invoiceRows = [
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'HEMFÖR',
+          amount: 69,
+        }),
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'HEMFÖR',
+          amount: 69,
+        }),
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'HYRSÄT',
+          amount: 80,
+          vat: 20,
+        }),
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'HYRSÄT',
+          amount: 80,
+          vat: 20,
+        }),
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'VHK906',
+          amount: 100,
+        }),
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'VHK906',
+          amount: 50,
+          reduction: -10,
+        }),
+      ]
+
+      mockGetInvoices.mockResolvedValue({ ok: true, data: xledgerInvoices })
+      mockGetInvoiceRows.mockResolvedValue({ ok: true, data: invoiceRows })
+
+      const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
+
+      expect(result[0]).toMatchObject({
+        hemforTotal: 138,
+        hemforDebt: 69,
+        hyrsatTotal: 200,
+        hyrsatDebt: 100,
+        vhk906Total: 140,
+        vhk906Debt: 70,
+      })
+    })
+
     it('should handle partial payments correctly', async () => {
       const xledgerInvoices = [
         xledgerInvoiceFactory.build({

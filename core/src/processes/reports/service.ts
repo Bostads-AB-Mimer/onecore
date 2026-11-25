@@ -64,27 +64,28 @@ export const getUnpaidInvoicePaymentSummaries = async (
       return
     }
 
-    const hemfor = invoiceRowsForInvoice.find((r) =>
-      r.code?.startsWith('HEMFÖR')
+    const hemforTotal = sumRows(invoiceRowsForInvoice, (code) =>
+      code.startsWith('HEMFÖR')
     )
-    const hyrsat = invoiceRowsForInvoice.find((r) =>
-      r.code?.startsWith('HYRSÄT')
+    const hyrsatTotal = sumRows(invoiceRowsForInvoice, (code) =>
+      code.startsWith('HYRSÄT')
     )
-
-    const hemforTotal = hemfor
-      ? hemfor.amount + hemfor.reduction + hemfor.vat
-      : 0
-    const hyrsatTotal = hyrsat
-      ? hyrsat.amount + hyrsat.reduction + hyrsat.vat
-      : 0
-
-    const vhkRows = invoiceRowsForInvoice.filter((row) =>
-      row.code?.startsWith('VHK')
+    const vhk906Total = sumRows(
+      invoiceRowsForInvoice,
+      (code) => code === 'VHK906'
     )
-    const vhk906Total = getVerksamhetskostnadTotal(vhkRows, 'VHK906')
-    const vhk933Total = getVerksamhetskostnadTotal(vhkRows, 'VHK933')
-    const vhk934Total = getVerksamhetskostnadTotal(vhkRows, 'VHK934')
-    const vhk936Total = getVerksamhetskostnadTotal(vhkRows, 'VHK936')
+    const vhk933Total = sumRows(
+      invoiceRowsForInvoice,
+      (code) => code === 'VHK933'
+    )
+    const vhk934Total = sumRows(
+      invoiceRowsForInvoice,
+      (code) => code === 'VHK934'
+    )
+    const vhk936Total = sumRows(
+      invoiceRowsForInvoice,
+      (code) => code === 'VHK936'
+    )
 
     const fractionPaid = i.paidAmount / i.amount
 
@@ -109,10 +110,15 @@ export const getUnpaidInvoicePaymentSummaries = async (
   return invoicePaymentSummaries
 }
 
-const getVerksamhetskostnadTotal = (rows: RentInvoiceRow[], code: string) => {
-  const vhkRow = rows.find((r) => r.code === code)
-  return vhkRow ? vhkRow.amount + vhkRow.reduction + vhkRow.vat : 0
-}
+// An invoice can have the same code on several rows, e.g. HEMFÖR for two
+// periods or after a change of insurance, so all of them count.
+const sumRows = (
+  rows: RentInvoiceRow[],
+  matchesCode: (code: string) => boolean
+) =>
+  rows
+    .filter((r) => r.code && matchesCode(r.code))
+    .reduce((total, r) => total + r.amount + r.reduction + r.vat, 0)
 
 export const getBosociala = async (): Promise<BosocialaObject[]> => {
   const now = new Date()
