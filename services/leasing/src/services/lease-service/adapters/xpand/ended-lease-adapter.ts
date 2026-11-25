@@ -235,7 +235,9 @@ export const getAllEndedLeasesForSearch = async (): Promise<
         'cmctc.cmctckod as contactCode',
         'cmobj.keycmobt as objectTypeCode',
         'hyobj.fdate as startDate',
-        // avtalsdat is the date the contract was created in Xpand
+        // Xpand has no record-creation date on hyobj; avtalsdat (contract date)
+        // is the closest match to Tenfast's createdAt
+        // (agreed in MIM-2266)
         'hyobj.avtalsdat as createdDate',
         'cmadr.adress1 as address',
         'cmadr.adress3 as postalCode',
