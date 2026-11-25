@@ -1095,6 +1095,8 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: string
    *               format: binary
+   *       400:
+   *         description: Invalid query parameters
    *       500:
    *         description: Internal server error
    *     security:
@@ -1102,6 +1104,20 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    // Validate here, as /leases/search does: leasing rejects the same params
+    // with 400, which would otherwise surface as a 500 or an empty file.
+    const parsed = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(ctx.query)
+
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: parsed.error.issues,
+        ...metadata,
+      }
+      return
+    }
 
     const resolved = await resolveBuildingManagerToKvvAreaCodes(ctx.query)
     if (!resolved.ok) {

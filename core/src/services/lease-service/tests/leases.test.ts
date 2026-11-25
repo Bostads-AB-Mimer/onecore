@@ -1164,6 +1164,18 @@ describe('leases routes', () => {
       expect(exportArgs.data[0].contacts[0].phone).toBe('0709998877')
     })
 
+    it('returns 400 without calling leasing when createdDateFrom is not a real date', async () => {
+      const exportSpy = jest.spyOn(tenantLeaseAdapter, 'getLeasesForExport')
+
+      const res = await request(app.callback()).get(
+        '/leases/export?createdDateFrom=2026-02-31'
+      )
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid query parameters')
+      expect(exportSpy).not.toHaveBeenCalled()
+    })
+
     it('exports the created date in the Skapad column', async () => {
       ;(utilities.createExcelExport as jest.Mock).mockResolvedValue(
         Buffer.from('excel')

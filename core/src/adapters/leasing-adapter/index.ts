@@ -696,6 +696,9 @@ const getLeasesForExport = async (
         paramsSerializer: {
           indexes: null,
         },
+        // Explicit validateStatus: the process-wide default (<500) would read
+        // a 400 as success and return undefined content
+        validateStatus: (status) => status === 200,
       }
     )
 
