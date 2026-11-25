@@ -1,21 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
-import { useBlocker, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Eye, Plus, Save, Trash2, Upload } from 'lucide-react'
 
 import { type GuideWithUrls, useGuideCategories } from '@/entities/guide'
 
+import { useLeavePageGuard } from '@/shared/hooks/useLeavePageGuard'
 import { useToast } from '@/shared/hooks/useToast'
 import { paths, routes } from '@/shared/routes'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/shared/ui/AlertDialog'
 import { Button } from '@/shared/ui/Button'
 import {
   Dialog,
@@ -25,6 +16,7 @@ import {
 } from '@/shared/ui/Dialog'
 import { Input } from '@/shared/ui/Input'
 import { Label } from '@/shared/ui/Label'
+import { LeavePageDialog } from '@/shared/ui/LeavePageDialog'
 import { SortableList } from '@/shared/ui/SortableList'
 import { Textarea } from '@/shared/ui/Textarea'
 
@@ -85,27 +77,10 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
   useRevokeObjectUrls(pendingImageUrls(state))
 
   // Block in-app navigation and tab close while there are unsaved changes.
-  // Programmatic redirects after a save or delete set the ref so the blocker
-  // lets that one navigation through even though the closure still sees the
-  // pre-dispatch state.
-  const allowNextNavigation = useRef(false)
-  // Set while the blocker dialog's "Lämna sidan" closes the dialog.
-  const proceedingNavigation = useRef(false)
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-    if (allowNextNavigation.current) {
-      allowNextNavigation.current = false
-      return false
-    }
-    return dirty && currentLocation.pathname !== nextLocation.pathname
-  })
-  useEffect(() => {
-    if (!dirty) return
-    const handler = (event: BeforeUnloadEvent) => {
-      event.preventDefault()
-    }
-    window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
-  }, [dirty])
+  // Programmatic redirects after a save or delete set allowNextNavigation so
+  // the blocker lets that one navigation through even though the closure
+  // still sees the pre-dispatch state.
+  const { blocker, allowNextNavigation } = useLeavePageGuard(dirty)
 
   const save = async (status: GuideStatus) => {
     if (isSaving || imageRequestsInFlight > 0) return
@@ -411,40 +386,11 @@ export function GuideEditor({ initialGuide, authorName }: GuideEditorProps) {
         onConfirm={remove}
       />
 
-      <AlertDialog
-        open={blocker.state === 'blocked'}
-        onOpenChange={(open) => {
-          // Escape and outside clicks close the dialog without hitting a
-          // button, so the blocker has to be released here too. Radix also
-          // closes on "Lämna sidan", where the blocker is already proceeding.
-          if (open) return
-          if (proceedingNavigation.current) {
-            proceedingNavigation.current = false
-            return
-          }
-          blocker.reset?.()
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Lämna utan att spara?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Du har osparade ändringar som går förlorade om du lämnar sidan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Stanna kvar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                proceedingNavigation.current = true
-                blocker.proceed?.()
-              }}
-            >
-              Lämna sidan
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <LeavePageDialog
+        blocker={blocker}
+        title="Lämna utan att spara?"
+        description="Du har osparade ändringar som går förlorade om du lämnar sidan."
+      />
     </form>
   )
 }
