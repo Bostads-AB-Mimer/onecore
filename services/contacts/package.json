@@ -35,7 +35,7 @@
     "lint:fix": "eslint src/ --fix",
     "migrate:down": "knex migrate:down --knexfile knexfile.cjs --env development",
     "migrate:make": "knex migrate:make --knexfile knexfile.cjs",
-    "migrate:up": "knex migrate:latest --knexfile knexfile.cjs",
+    "migrate:up": "knex migrate:latest --knexfile knexfile.cjs --env development",
     "prepare:dotenv": "[ -f .env ] || cp .env.template .env",
     "prettier": "prettier --check ./src",
     "start": "pnpm migrate:up && node -r dotenv/config build/esm/index",
